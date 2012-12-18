@@ -48,6 +48,9 @@ task :deploy => :build do
   system "git push origin master"
 end
 
+desc "start up an instance of server on the output files"
+task :serve => 'serve:start'
+
 namespace :serve do
   desc "start up an instance of serve on the output files"
   task :start => :stop do
@@ -83,11 +86,12 @@ end
 desc "Watch the site and regenerate when it changes"
 task :watch do
   require 'fssm'
-  puts ">>> Watching for Changes <<<"
-  FSSM.monitor("#{File.dirname(__FILE__)}/content", '**/*') do
-    update {|base, relative| rebuild_site(relative)}
-    delete {|base, relative| rebuild_site(relative)}
-    create {|base, relative| rebuild_site(relative)}
+  [ ['',%w(config.yaml Rules)], ['/content','**/*'] ].each do |path, glob|
+    FSSM.monitor("#{File.dirname(__FILE__)}#{path}", glob) do
+      update {|base, relative| rebuild_site(relative)}
+      delete {|base, relative| rebuild_site(relative)}
+      create {|base, relative| rebuild_site(relative)}
+    end
   end
 end
 
