@@ -25,7 +25,7 @@ end
 desc "generate website in output directory"
 task :generate => :clean do
   puts "Generating website..."
-  system "bin/nanoc co"
+  system "nanoc co"
 end
 
 desc "build and commit the website in the master branch"
