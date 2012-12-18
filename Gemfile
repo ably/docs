@@ -6,3 +6,4 @@ gem "git"
 gem "serve"
 gem "rake"
 gem "adsf"
+gem 'fssm'
