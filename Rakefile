@@ -39,7 +39,7 @@ task :build => :generate_all do
   Dir["**/*"].each {|f| repo.add(f) }
   repo.status.deleted.each {|f, s| repo.remove(f)}
   message = ENV["MESSAGE"] || "Site updated at #{Time.now.utc}"
-  repo.commit(message)
+  repo.commit(message) unless system('git status | grep "nothing to commit"')
   repo.branch("source").checkout
 end
 
