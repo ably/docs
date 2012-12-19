@@ -86,7 +86,7 @@ end
 
 desc "Watch the site and regenerate when it changes"
 task :watch do
-  `nanoc watch`
+  `nanoc watch -V`
 end
 
 def departialize(target)
