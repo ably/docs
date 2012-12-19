@@ -1,0 +1,178 @@
+---
+title: Authentication
+section: other
+---
+
+h1. Overview
+
+Both the REST API and the Realtime API use common authentication mechanisms.
+
+Each is based on having a series of keys set up, via the dashboard, for each application. Each key is exposed by the dashboard as a single string which contains information that identifies the key as well as containing the "secret" key value.
+
+If you are using an Ably client library then the key can be considered simply to be an opaque string, supplied when the library is instanced; however, if you are using the Ably REST authentication endpoint directly then it is necessary to understand the format of the key.
+
+A key is optionally also associated with a set of capabilities - ie an explicit indication of which actions are allowable using that key. Each capability consists of a resource (which is either a channel namespace, or a specific channel) and a set of operations permitted for that resource (ie one or more of publish, subscribe, and presence).
+
+In the case that no capabilities are specified for the key, the key is implicitly capable of all operations on all resources (for that app).
+
+The simplest method of using the API is to use HTTP Basic authentication, passing the key identifier as the username and the key secret value as the password. In the case of a WebSocket realtime connection, the credentials are passed in the Authorisation header.
+
+This method is simple, but suffers from a number of problems that might make it unsuitable for certain use cases:
+
+* the secret is passed directly by the client, so it is not suitable for connections that are not over TLS (HTTPS or non-encrypted real-time connections);
+
+* the secret may be required to be embedded in a script on a public site;
+
+* all of the configured capabilities of the key are implicitly possible in any request, and clients that legitimately obtain the secret may then abuse the rights conferred by that key.
+
+These issues are addressed with the second, token-based, method. Tokens are authentication credentials that only have a short lifetime, and therefore they may more readily be distributed to clients where there is a risk of compromise. Tokens may also be issued with a particular scope - such as a limited set of access rights, or being limited to use by a specific client - and therefore token-based authentication provides the flexibility to implement access control policies in the application. Tokens may be obtained via the [[[REST API]]].
+
+++ Selecting an authentication mechanism
+
+When first experimenting with the Ably API it is simplest just to instance the library with the key string, and then use Basic authentication for all operations. However, there are many situations in which it is preferable to use the token-based system instead. The following guidance aims to help you choose which system to use in any given situation.
+
+When deciding the mechanism to use, it is necessary to bear in mind the //principle of least privilege//: a client should ideally only possess the credentials and rights that it needs to accomplish what it wants; this way, if the credentials are compromised, and rights that can be abused by an attacker are minimised.
+
+Basic authentication is appropriate where:
+
+* the script, program or system holding the key is not exposed; a key should not be embedded in a script in a public-facing web page, for example;
+* a secure, unmediated connection exists between the client and the Ably service. Keys should only really be sent over a TLS conection (that's either an HTTPS connection, or an encrypted realtime connection). A key should not be used over a proxied connection unless the prixy is trusted;
+* access needs to be granted selectively to groups of clients to specific channels or channel namespaces, but only a small number of such access control groups need to be established.
+
+Token authentication is appropriate when:
+
+* there is a risk of exposure of the client's credentials, either directly or over an insecure, or insecurely proxied, connection;
+* a client is only intended to have use of the service for a limited period of time;
+* a client needs to have the ability to authenticate its specific identity, but cannot be trusted sufficiently not to masquerade as a different client identity;
+* fine-grained access needs to be given on a per-client basis to specific channels;
+* there may be a requirement to be able to revoke the rights of a client individually.
+
+Note that many applications will most naturally use a mixed strategy: one or more application servers will use basic authentication to access the service, and to issue tokens, but browser or device clients will use individually-issued tokens.
+
+++ Token requests
+
+The Ably REST client libraries aim to make things as simple as possible, and it is not necessary to understand all of the details of token requests to interact with the service and issue tokens for clients. However,  the details below are relevant if using the REST token endpoint directly, or if you are creating token requests on behalf of a client.
+
++++ Key format
+
+A key string is structured as a triple {{<app id>:<key id>:<key value>}}, where:
+
+* {{app id}} is the identifier for the application: this id is used in the [[[REST API]]] and is needed to instance the REST or Realtime client library if you do not have a key string.
+
+* {{key id}} is a (public) identifier for the key in question: this uniquely identifies the key and is a system-assigned, URL-safe, identifier.
+
+* {{key value}} is the key "secret": a secret string, system-generated, uniquely associated with this key.
+
++++ Token request format
+
+A token request is made against the {{requestToken}} endpoint, with a //token request// in the request body. The token request comprises:
+
+* the key id;
+
+* a capability (ie a set of resource paths and, for each, a set of operations) which should be a subset of the set of capability associated with that token;
+
+* optionally, a clientId;
+
+* optionally, an expiry time;
+
+* a timestamp;
+
+* a unique nonce string, randomly-generated by the client.
+
+A signed token request also contains:
+
+* a signature, generated as an HMAC of each of the above components, using the key secret value.
+
+The receiving server verifies the signature if present, the timestamp (which must be within 2 minutes of the current time), verifies that the nonce/timestamp combination has not been used previously, verifies that the requested validity period is permitted, and verifies that the requested capabilities are permitted for that token.
+
+The server may choose to subset the capabilities based on the capabilities of the key.
+
+The server replies with an access token, which is essentially a signed version of the resolved set of capabilities, plus other metadata associated with the token (such as expiry time).
+
+This access token can then be used for subsequent REST requests or Realtime connections. If a clientId was included in the request, then the token is associated with that clientId, and may be used to autheticate that clientId in operations that require authentication (eg joining a channel that requires authentication).
+
++++ Parameter canonicalisation
+
+The parameters of the token request are normalised/canonicalised as follows:
+
+**key id**: no action required
+
+**expires**: the decimal integer representation, without leading zeros, of the time of the of the token expiry in seconds since the epoch.
+
+**capability**: this is a canonicalised representation of the resource paths and associated operations in the capability. It is the JSON stringified value of an object of the form:
+
+[[code]]
+{
+  resource1: [operation1a, operation1b, operation1c, ...],
+  resource2: [operation2a, operation2b, operation2c, ...].
+  ...
+}
+[[/code]]
+
+with the following constraints:
+
+* all whitespace is removed;
+* resources are listed in forward lexicographic order;
+* operations are listed in forward lexicographic order;
+* there is no trailing comma on any list of array or object elements;
+* all strings are quoted and escaped as per the JSON standard.
+
+**clientId**: the canonical form is the unquoted and unescaped string. In the case that no clientId is included in the request, the empty string is used.
+
+**timestamp**: the decimal integer representation, without leading zeros, of the time of the of the request in seconds since the epoch.
+
+**nonce**: an unquoted, unescaped random string of at least 16 characters.
+
++++ HMAC calculation
+
+First the canonicalised request text, constructed as follows:
+
+* start with the empty string
+* for each of the following fields in order: key id, expires, capabilities, client id, timestamp, nonce, even when empty
+*   append the canonicalised string value for that field
+*   append a newline (0xa) character.
+Note that a newline character is added for each field, including any empty client id string, and the last (nonce) field.
+
+The resulting string must then the UTF8-encoded and then HMAC value is computed with {{hmac-sha-256}} using the key secret value.
+
+The HMAC value is then base-64 encoded.
+
++++ Request body format
+
+In the case of a signed token request, the request body is the JSON stringified representation of the object with the form:
+
+[[code]]
+{
+  id: <key id>,
+  expires: <expiry>,
+  capability: <capability>,
+  client_id: <client id>, (optional)
+  timestamp: <timestamp>,
+  nonce: <nonce>,
+  mac: <base 64-encoded HMAC value>
+}
+[[/code]]
+
+An unsigned token request is identical except that the mac property is omitted. Note that Basic auth must be used in order to request a token with an unsigned request.
+
++++ Response body format
+
+If successful, the authorisation request returns the JSON stringified representation of an object containing the token:
+
+[[code]]
+{
+  access_token: <access token details>
+}
+[[/code]]
+
+Each token details object has the form:
+
+[[code]]
+{
+  id: <token value>,
+  issued_at: <timestamp>,
+  expires: <timestamp>,
+  capability: <canonical capability text>,
+  client_id: <client id>, (optional)
+}
+[[/code]]
