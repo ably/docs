@@ -8,3 +8,4 @@ gem "rake"
 gem "adsf"
 gem 'listen'
 gem 'fssm'
+gem 'sass'
