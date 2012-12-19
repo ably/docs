@@ -57,6 +57,7 @@ namespace :serve do
     cd "#{site}" do
       print "Starting serve..."
       ok_failed system("serve #{port} > /dev/null 2>&1 &")
+      puts "Server up at http://localhost:#{port}"
     end
   end
 
