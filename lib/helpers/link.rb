@@ -4,3 +4,5 @@ module LinkHelper
     link_to text, target, attributes
   end
 end
+
+include LinkHelper
