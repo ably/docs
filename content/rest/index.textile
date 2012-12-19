@@ -1,0 +1,459 @@
+---
+title: Overview
+section: rest
+---
+
++ Overview
+
+The Ably REST API provides a way for a wide range of server and client devices to communication with the Ably service. The REST API does not support real-time connections, but in all other respects is a simple subset of the full Realtime messaging API.
+
+The primary use-case for the REST API is for servers that are part of the back-end of an application such as a web application. Such a server is able to issue access tokens (temporary, and client-specific, authentication credentials) for its various clients, submit real-time messages originating from those clients, and obtain message history for the application.
+
+Subsidiary use-cases for the REST API are:
+
+* client devices that wish to interact with the service, to send messages and retrieve history, but not necessarily in real time;
+* processes that need to access application usage statistics and/or message history for administrative or billing purposes.
+
+The functional scope of the REST API therefore includes:
+
+* authentication: authentication to the service as a client, plus creation of tokens for use by other clients;
+* publication of messages;
+* retrieval of message history;
+* retrieval of presence state and presence;
+* retrieval of statistics for application usage.
+
+The API is defined at the REST level of in terms of the available routes, supported parameters and expected request and response data types; these are set out below. Ably also provides client libraries for a range of languages:
+
+* [[[REST library for Javascript]]] (for node.js);
+* [[[REST library for Java]]];
+* [[[REST library for Python]]];
+* [[[REST library for PHP]]].
+
+Note also that since the REST API is also a direct subset of the Realtime API, all [[Realtime client libraries]] also provide access to the REST API.
+
++ Authentication
+
+++ Auth types
+
+To understand the REST API it is easiest first to understand the various authentication methods that Ably supports.
+
+Clients can access Ably, whether using REST or the Realtime service, by two methods.
+
+**Basic Authentication**, using one of the application keys created via the application dashboard. Basic Authentication is the simplest method to use but has two important limitations:
+
+* the application key is transmitted over the network as part of a request; therefore it may only be used over TLS (HTTPS or "SSL") connections. This can be a performance disadvantage in some network environments where long round-trip times are amplified by the SSL handshake.
+* the client using the API must be in possession of the application key, which potentially exposes the key to compromise. For example, it is not advisable simply to embed the key in a script in a public web page.
+
+**Token Authentication**, using a token obtained via the REST API. Tokens are authentication tokens that only have a short lifetime, and therefore they may more readily be distributed to clients where there is a risk of compromise. Tokens may also be issued with a particular scope - such as a limited set of access rights, or being limited to use by a specific client - and therefore token-based authentication provides the flexibility to implement access control policies in the application. See [[[Authentication]]] for more details.
+
+++ Usage
+
+The REST API may be accessed using either Basic or Token Authentication. Additionally the {{requestToken}} endpoint may be used without explicit authentication, relying on the implicit authentication of submitting a validly signed token request.
+
+Both authentication methods use the {{Authorization}} header when using the REST API, as follows.
+
++++ Basic authentication.
+
+[[code]]
+Authorization: Basic <Base64-encoded key>
+[[/code]]
+
+where {{<Base64-encoded key>}} is the full application key string obtained through the dashboard, encoded with RFC 4648
+base64.
+
+When using a generic HTTP client library that accepts separate username and password arguments for an HTTP request, the application key can be split at the first colon, with the initial segment being used as the username, and the remaining string (without the leading colon) used as the password. (In reality that library will simply be re-joining those two components with a colon character to arrive at the original key string, and it is equally valid to split at the second colon.)
+
++++ Token authentication
+
+[[code]]
+Authorization: Bearer <token string>
+[[/code]]
+
+The token string does not need to be encoded or escaped. If using a generic HTTP client library it will be probably be necessary to add the Authorization header explicitly.
+
+++ Common API behaviour
+
+The REST API defaults to returning results, and expects request bodies, in JSON format. An Accept header is used to specify an alternative response format, and the following formats are allowed:
+
+* {{applicaton/javascript}}: for JSONP. A {{callback}} query parameter is also expected, which defaults simply to "callback";
+* {{text/xml}}: for XML; XML support is planned for the future.
+* {{text/html}}: HTML.
+
+It is also possible to specify the response format with the {{format}} query parameter (with supported values being {{json}}, {{jsonp}}, {{html}}, {{xml}}. Any Accept header takes precedence over a {{format}} parameter.
+
+Response data types and layouts are documented in the context of each API or route.
+
+A response statusCode of 200, or 201 in the case of POST, indicates success. A successful result will typically provide a response body but certain operations (such as DELETE) may respond with an empty response body.
+
+All other status codes signify an error. Errors from all APIs are returned as an object of the form:
+
+[[code]]
+{
+    error: {
+        code: <ably error code>,
+        reason: <reason string>,
+        statusCode: <http status code>
+    }
+}
+[[/code]]
+
+The error code is a specific reason code as defined in the public errors definition (link TBD), where one is known. Where a reason code is not available, the statusCode provides a generic indication of the nature of the failure.
+
+The reason string is an English language string that aims to provide useful information to the developer. It is not necessarily intended to be an informative string for the end user.
+
+Wherever possible, success response bodies contain links, in HATEOS style, to other resources relevant to the response; where these are present these are included as {{href}} attributes on the applicable part of the response object.
+
+GET, PUT, POST and DELETE are available in all contexts where they make sense. GET is always idempotent.
+
++ API routes
+
+++ Utilities
+
++++ GET /time
+Get the service time.
+
+Path: {{/time}}
+
+Methods: {{GET}}
+Params: none
+Request body: not applicable
+Content-Type: not applicable
+Accept: {{application/json}}
+Authentication required: no
+
+Returns: {{ [ <time> ] }}
+
+This returns the service time in milliseconds since the epoch. This may be used by clients that do not have local access to a sufficiently accurate time source when generating a token request. (Token requests include a timestamp and have a limited validity period to help defend against replay attacks.)
+
+The result is a JSON-encoded array of length 1 containing the time result as a number.
+
+++ Token generation
+
++++ POST .../requestToken
+
+Request an access token.
+
+Path: {{/apps/<appId>/requestToken}}
+
+Methods: {{POST}}
+Params: none
+Request body: signed or unsigned token request
+Content-Type: {{text/plain}}
+Accept: {{application/json}}
+Authentication required: no (for signed token requests), yes (basic or token) (for unsigned token requests)
+
+Returns: {{ <token response> }}
+
+This is the means by which clients obtain access tokens to use the service. The construction of a token request is described in the [[[Authentication]]] page. The resulting {{token response}} object contains the token properties as defined in [[[Authentication]]].
+
+++ Application routes
+
+Routes providing access to the messaging service within an application scope.
+
++++ GET /apps/<app id>/history
+
+Retrieve message history for an application.
+
+Path: {{/apps/<app id>/history}}
+
+Methods: {{GET}}
+Params: see below
+Request body: not applicable
+Content-Type: not applicable
+Accept: {{application/json}} by default, or {{text/html}}, {{text/xml}}
+Authentication required: yes (basic or token)
+
+Returns: see below.
+
+The message history for an application can be queried, and results are provided aggregated across all channels in use in the application in the specified period. This might typically be used when initially connecting to the service in order to obtain recent history. For channels that are configured to be persistent, this API can be used to retrieve messages from any interval in the persistence period for the app.
+
+History queries are made by specifying a query //interval// and the granularity expected in the results. The query interval is expressed as a start and end time, each being a timestamp in milliseconds since the epoch.
+
+The full set of query parameters are as follows.
+
+||~ Param name ||~ Default value ||~ Description ||
+|| {{start}} || the beginning of time || The start of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if its system timestamp (not necessarily the same as a timestamp applied by the client before submission) is equal to, or greater than, this time. ||
+|| {{end}} || now || The end of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if its system timestamp is equal to, or less than, this time. ||
+|| {{limit}} || 1000 || The maximum number of records to return. A limit greater than 10000 is invalid. ||
+|| {{direction}} || 'backwards' || The direction of this query. The direction determines the order of the returned result array, but also determines which end of the query interval is the start point for the search. ||
+|| {{by}} || {{message}} || One of the values {{message}}, {{bundle}} or {{hour}}. If {{message}}, the result is an array of individual message records containg the message data together with message metadata. If {{bundle}}, the result is an array of references to message 'bundles', which are the unit of persistence of channel messages. If {{hour}}, the result is an array of references to (channel + hour) pairs, signifying those channels and times during which there were messages within the query interval. ||
+
+In each case a successful result is an array containing the items that match the query (and it may be empty).
+
+In the case of a 'message' query, each member is a message object of the form:
+
+[[code]]
+{
+    name: <event name>,
+    channel: <channel id>,
+    data: <message payload>,
+    timestamp: <message timestamp>
+}
+[[/code]]
+
+In the case of a 'bundle' query, each member is a bundle reference. (Detailed description TBD.)
+
+In the case of an 'hour' query, each member is a channel/hour reference. (Detailed description TBD.)
+
++++ GET /apps/<app id>/stats
+
+Retrieve usage statistics for an application.
+
+Path: {{/apps/<app id>/stats}}
+
+Methods: {{GET}}
+Params: see below
+Request body: not applicable
+Content-Type: not applicable
+Accept: {{application/json}} by default, or {{text/html}}, {{text/xml}}
+Authentication required: yes (basic or token)
+
+Returns: see below.
+
+The Ably system can be queried to obtain usage statistics for a given application, and results are provided aggregated across all channels in use in the application in the specified period. Stats may be used to track usage against account quotas.
+
+Stats queries are made by specifying a query //interval// and the granularity expected in the results. The query interval is expressed as a start and end time, each being a timestamp in milliseconds since the epoch. Stats are aggregated by the system in 'subminute' intervals of 6s (ie 0.1m), so query interval start and end times are rounded down to the nearest subminute boundary.
+
+The full set of query parameters are as follows.
+
+||~ Param name ||~ Default value ||~ Description ||
+|| {{start}} || the beginning of time || The start of the query interval as a time in milliseconds since the epoch. ||
+|| {{end}} || now || The end of the query interval as a time in milliseconds since the epoch. ||
+|| {{limit}} || 1000 || The maximum number of records to return. A limit greater than 10000 is invalid. ||
+|| {{direction}} || 'backwards' || The direction of this query. The direction determines the order of the returned result array, but also determines which end of the query interval is the start point for the search. ||
+|| {{by}} || {{minute}} || One of the values {{minute}}, {{hour}}, {{day}} or {{month}}, specifying the unit of aggregation in the returned results. ||
+
+In each case a successful result is an array containing the items that match the query (and it may be empty).
+
+Each member is a stats object of the form:
+
+[[code]]
+{
+    published: {
+        messageCount: <>,
+        messageSize: <>
+    },
+    deliveredAll: {
+        messageCount: <>,
+        messageSize: <>
+    },
+    deliveredRest: {
+        messageCount: <>,
+        messageSize: <>
+    },
+    deliveredRealtime: {
+        messageCount: <>,
+        messageSize: <>
+    },
+    deliveredPost: {
+        messageCount: <>,
+        messageSize: <>
+    }
+}
+[[/code]]
+
+where:
+
+* {{published}} corresponds to messages published (ie sent from a client to Ably) by all methods (REST + Realtime).
+
+* {{deliveredRealtime}} corresponds to messages delivered (ie sent from Ably to a client) over Realtime connections. Each client that receives a message is counted separately (ie one message sent to 2 clients counts as 2).
+
+* {{deliveredRest}} corresponds to messages obtained via the REST history API (ie messages retrieved by clients by querying the history, not in real time). Again each separate client access is counted.
+
+* {{deliveredPost}} corresponds to messages delivered (ie sent from Ably to a client) over a webhook. Each client that receives a message is counted separately.
+
+* {{deliveredAll}} is the sum of all of the deliveredXxx above, and is the number that is checked when enforcing account limits.
+
+For each of these, there is separately an indication of:
+
+* {{messageCount}}: the number of individual messages;
+
+* {{messageSize}}: the aggregate size of those messages; Ably calculates {{messageSize}} for a given message as the size of the message payload when encoded in bytes plus the byte length of the message event name.
+
+++ Channel routes
+
+Routes providing access to the messaging service within a channel scope.
+
++++ GET .../channels/<channel id>/history
+
+Retrieve message history for a channel.
+
+Path: {{/apps/<app id>/channels/<channel id>/history}}
+Path: {{/channels/<channel id>/history}}
+
+Methods: {{GET}}
+Params: see below
+Request body: not applicable
+Content-Type: not applicable
+Accept: {{application/json}} by default, or {{text/html}}, {{text/xml}}
+Authentication required: yes (basic or token)
+
+Returns: as for application history, above.
+
+The message history for a channel can be queried, in the same manner as for application history above.
+
+The full set of query parameters are as follows.
+
+||~ Param name ||~ Default value ||~ Description ||
+|| {{start}} || the beginning of time || The start of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if its system timestamp (not necessarily the same as a timestamp applied by the client before submission) is equal to, or greater than, this time. ||
+|| {{end}} || now || The end of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if its system timestamp is equal to, or less than, this time. ||
+|| {{limit}} || 1000 || The maximum number of records to return. A limit greater than 10000 is invalid. ||
+|| {{direction}} || 'backwards' || The direction of this query. The direction determines the order of the returned result array, but also determines which end of the query interval is the start point for the search. ||
+|| {{by}} || {{message}} || One of the values {{message}}, {{bundle}} or {{hour}}. If {{message}}, the result is an array of individual message records containg the message data together with message metadata. If {{bundle}}, the result is an array of references to message 'bundles', which are the unit of persistence of channel messages. If {{hour}}, the result is an array of references to (channel + hour) pairs, signifying those channels and times during which there were messages within the query interval. ||
+
+In each case a successful result is an array containing the items that match the query (and it may be empty).
+
+In the case of a 'message' query, each member is a message object of the form:
+
+[[code]]
+{
+    name: <event name>,
+    channel: <channel id>,
+    data: <message payload>,
+    timestamp: <message timestamp>
+}
+[[/code]]
+
+In the case of a 'bundle' query, each member is a bundle reference. (Detailed description TBD.)
+
+In the case of an 'hour' query, each member is a channel/hour reference. (Detailed description TBD.)
+
++++ GET .../channels/<channel id>/stats
+
+Retrieve usage statistics for a channel.
+
+Path: {{/apps/<app id>/channels/<channel id>/stats}}
+Path: {{/channels/<channel id>/stats}}
+
+Methods: {{GET}}
+Params: see below
+Request body: not applicable
+Content-Type: not applicable
+Accept: {{application/json}} by default, or {{text/html}}, {{text/xml}}
+Authentication required: yes (basic or token)
+
+Returns: as for application stats, above.
+
+The stats for a channel can be queried, in the same manner as for application stats above.
+
+The full set of query parameters are as follows.
+
+||~ Param name ||~ Default value ||~ Description ||
+|| {{start}} || the beginning of time || The start of the query interval as a time in milliseconds since the epoch. ||
+|| {{end}} || now || The end of the query interval as a time in milliseconds since the epoch. ||
+|| {{limit}} || 1000 || The maximum number of records to return. A limit greater than 10000 is invalid. ||
+|| {{direction}} || 'backwards' || The direction of this query. The direction determines the order of the returned result array, but also determines which end of the query interval is the start point for the search. ||
+|| {{by}} || {{minute}} || One of the values {{minute}}, {{hour}}, {{day}} or {{month}}, specifying the unit of aggregation in the returned results. ||
+
+In each case a successful result is an array containing the items that match the query (and it may be empty).
+
+Each member is a stats object of the form:
+
+[[code]]
+{
+    published: {
+        messageCount: <>,
+        messageSize: <>
+    },
+    deliveredAll: {
+        messageCount: <>,
+        messageSize: <>
+    },
+    deliveredRest: {
+        messageCount: <>,
+        messageSize: <>
+    },
+    deliveredRealtime: {
+        messageCount: <>,
+        messageSize: <>
+    },
+    deliveredPost: {
+        messageCount: <>,
+        messageSize: <>
+    }
+}
+[[/code]]
+
+where:
+
+* {{published}} corresponds to messages published (ie sent from a client to Ably) by all methods (REST + Realtime).
+
+* {{deliveredRealtime}} corresponds to messages delivered (ie sent from Ably to a client) over Realtime connections. Each client that receives a message is counted separately (ie one message sent to 2 clients counts as 2).
+
+* {{deliveredRest}} corresponds to messages obtained via the REST history API (ie messages retrieved by clients by querying the history, not in real time). Again each separate client access is counted.
+
+* {{deliveredPost}} corresponds to messages delivered (ie sent from Ably to a client) over a webhook. Each client that receives a message is counted separately.
+
+* {{deliveredAll}} is the sum of all of the deliveredXxx above, and is the number that is checked when enforcing account limits.
+
+For each of these, there is separately an indication of:
+
+* {{messageCount}}: the number of individual messages;
+
+* {{messageSize}}: the aggregate size of those messages; Ably calculates {{messageSize}} for a given message as the size of the message payload when encoded in bytes plus the byte length of the message event name.
+
++++ GET .../channels/<channel id>/presence
+
+Retrieve instantaneous presence status for a channel.
+
+Path: {{/apps/<app id>/channels/<channel id>/presence}}
+Path: {{/channels/<channel id>/presence}}
+
+Methods: {{GET}}
+Params: see below
+Request body: not applicable
+Content-Type: not applicable
+Accept: {{application/json}} by default, or {{text/html}}, {{text/xml}}
+Authentication required: yes (basic or token)
+
+Detailed description TBD.
+
++++ GET .../channels/<channel id>/presence/history
+
+Retrieve presence history for a channel.
+
+Path: {{/apps/<app id>/channels/<channel id>/presence/history}}
+Path: {{/channels/<channel id>/presence/history}}
+
+Methods: {{GET}}
+Params: see below
+Request body: not applicable
+Content-Type: not applicable
+Accept: {{application/json}} by default, or {{text/html}}, {{text/xml}}
+Authentication required: yes (basic or token)
+
+Detailed description TBD.
+
++++ POST .../channels/<channel id>/publish
+
+Publish one or more events on a channel.
+
+Path: {{/apps/<app id>/channels/<channel id>/publish}}
+Path: {{/channels/<channel id>/publish}}
+
+Methods: {{POST}}
+Params: none
+Request body: see below
+Content-Type: {{application/json}}
+Accept: not applicable
+Authentication required: yes (basic or token)
+
+Returns: none
+
+Publish a message on a channel. Note that since the REST API is stateless, publication using this API is of single messages, outside the context of any specific connection.
+
+The request body contains message details and is an object of the form:
+
+[[code]]
+{
+    name: <event name>,
+    data: <message payload>
+}
+[[/code]]
+
+In JSON format, the accepted types for the payload are:
+
+* boolean
+* number;
+* string;
+* any JSON-encodable Array or Object.
