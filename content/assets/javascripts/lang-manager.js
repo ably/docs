@@ -42,5 +42,7 @@ $(function() {
     }
   });
 
+  $('h3 + blockquote').each(function() { $(this).replaceWith('<code class="prettyprint">' + $(this).html() + '</code>'); });
+
   prettyPrint();
 });
