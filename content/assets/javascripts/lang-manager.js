@@ -4,7 +4,8 @@ $(function() {
         tag = this.nodeName.toLowerCase(),
         $siblings = $first.nextUntil(':not(' + tag + ')');
 
-    if (tag == 'pre') $first.addClass('prettyprint').addClass('linenums');
+    // convert all pre formatted text except those within a definition list to pretty code blocks
+    if ( (tag == 'pre') && (!$first.parents('dl').length) ) $first.addClass('prettyprint').addClass('linenums');
 
     if (!$first.hasClass('with-lang-nav')) {
       if ($siblings.length) {
