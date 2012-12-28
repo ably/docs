@@ -1,8 +1,13 @@
 module NavHelper
   def nav_items(section)
     results = []
-    @items.select { |d| d[:section] == section }.each do |item|
-      results << "<li><a href='#{html_escape(item.path)}'>#{html_escape(item[:title])}</a></li>"
+    last_group = nil
+    @items.select { |d| d[:section] == section }.map.sort { |a,b| (a[:index].to_i || 100) <=> (b[:index].to_i || 100) }.each do |item|
+      if item[:group] && item[:group] != last_group
+        results << "<li>#{html_escape(item[:group])}</li>"
+        last_group = item[:group]
+      end
+      results << "<li class='#{item == @item ? 'selected' : ''}'><a href='#{html_escape(item.path)}'>#{html_escape(item[:title])}</a></li>"
     end
     results.join("\n")
   end
