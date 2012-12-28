@@ -1,11 +1,16 @@
 $(function() {
-  $('pre:has(code),p[lang],span[lang]').each(function() {
+  $('pre:has(code),p[lang],span[lang],div[lang]').each(function() {
     var $first = $(this),
         tag = this.nodeName.toLowerCase(),
-        $siblings = $first.nextUntil(':not(' + tag + ')');
+        $siblings = $first.nextUntil(':not(' + tag + '),:not([lang])'),
+        dlParent = $first.parents('dl').length;
 
-    // convert all pre formatted text except those within a definition list to pretty code blocks
-    if ( (tag == 'pre') && (!$first.parents('dl').length) ) $first.addClass('prettyprint').addClass('linenums');
+    // convert all pre formatted text except those within a definition list without a language to pretty code blocks
+    // pre tags within dls without language are used for alternate paths
+    if ( (tag == 'pre') && (!dlParent || (dlParent && $first.attr('lang'))) ) {
+      if ($first.attr('lang')) $first.addClass('lang-' + $first.attr('lang'));
+      $first.addClass('prettyprint').addClass('linenums');
+    }
 
     if (!$first.hasClass('with-lang-nav')) {
       if ($siblings.length) {
@@ -43,7 +48,7 @@ $(function() {
     }
   });
 
-  $('h3 + blockquote').each(function() { $(this).replaceWith('<code class="prettyprint">' + $(this).html() + '</code>'); });
+  $('h3 + blockquote, h6 + blockquote').each(function() { $(this).replaceWith('<code class="prettyprint">' + $(this).html() + '</code>'); });
 
   prettyPrint();
 });
