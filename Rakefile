@@ -15,6 +15,8 @@ end
 
 port = "4000"
 site = "output"
+readme_source = "README.md"
+readme_master = "Readme.md"
 
 desc "remove files in output directory"
 task :clean do
@@ -33,8 +35,9 @@ task :build => :generate_all do
   require 'git'
   repo = Git.open('.')
   repo.branch("master").checkout
-  (Dir["*"] - [site]).each { |f| rm_rf(f) }
+  (Dir["*"] - [site, readme_source]).each { |f| rm_rf(f) }
   Dir["#{site}/*"].each {|f| mv(f, ".")}
+  mv(readme_source, readme_master)
   rm_rf(site)
   Dir["**/*"].each {|f| repo.add(f) }
   repo.status.deleted.each {|f, s| repo.remove(f)}
