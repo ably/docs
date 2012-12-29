@@ -15,8 +15,7 @@ end
 
 port = "4000"
 site = "output"
-readme_source = "README.md"
-readme_master = "Readme.md"
+readme = "README.md"
 
 desc "remove files in output directory"
 task :clean do
@@ -32,12 +31,21 @@ end
 
 desc "build and commit the website in the master branch"
 task :build => :generate_all do
+  readme_content = File.open(readme).read if File.exists?(readme) # load readme if it exists
+
   require 'git'
   repo = Git.open('.')
   repo.branch("master").checkout
-  (Dir["*"] - [site, readme_source]).each { |f| rm_rf(f) }
+  (Dir["*"] - [site]).each { |f| rm_rf(f) }
   Dir["#{site}/*"].each {|f| mv(f, ".")}
-  mv(readme_source, readme_master)
+
+  if readme_content
+    File.open(readme, 'w') do |file|
+      file.write readme_content
+    end
+    puts "Copied #{readme}"
+  end
+
   rm_rf(site)
   Dir["**/*"].each {|f| repo.add(f) }
   repo.status.deleted.each {|f, s| repo.remove(f)}
