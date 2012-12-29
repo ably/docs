@@ -43,9 +43,16 @@ task :build => :generate_all do
   repo.branch("source").checkout
 end
 
-desc "generate and deploy website"
+desc "generate and deploy website to origin remote"
 task :deploy => :build do
   system "git push origin master"
+end
+
+desc "generate and deploy website to production remote"
+namespace :deploy do
+  task :origin => :build do
+    system "git push production master"
+  end
 end
 
 desc "start up an instance of server on the output files"
