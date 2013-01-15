@@ -22,6 +22,7 @@ module NavHelper
       else
         link_title.downcase
       end
+      link = link.gsub(/\s/,'-')
       html << "<li><a href='##{link}'>#{link_title}</a></li>"
     elsif context.kind_of?(Array)
       html << "<ul>"
