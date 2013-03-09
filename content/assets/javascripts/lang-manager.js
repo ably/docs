@@ -5,7 +5,10 @@ $.expr[":"].langequals = function(obj, index, meta, stack) {
 
 $(function() {
   var friendlyLanguageNames = {
-    <%= Ably::DOCUMENTATION_LANGUAGES.map { |lang_id, lang_name| "\"#{lang_id}\": \"#{lang_name}\"" }.join(',') %>
+    <%= Ably::DOCUMENTATION_LANGUAGES.reject { |lang_d, lang| lang[:ignore_from_language_selector] }.map { |lang_id, lang| "\"#{lang_id}\": \"#{lang[:name]}\"" }.join(',') %>
+  };
+  var langaugeExtensions = {
+    <%= Ably::DOCUMENTATION_LANGUAGES.map { |lang_id, lang| "\"#{lang_id}\": \"#{lang[:extension]}\"" }.join(',') %>
   };
 
   function friendlyLanguageFromId(languageId) {
@@ -42,7 +45,7 @@ $(function() {
     // convert all pre formatted text except those within a definition list without a language to pretty code blocks
     // pre tags within dls without language are used for alternate paths
     if ( (tag === 'pre') && (!dlParent || (dlParent && $first.attr('lang'))) ) {
-      if ($first.attr('lang')) $first.addClass('lang-' + $first.attr('lang'));
+      if ($first.attr('lang')) $first.addClass('lang-' + langaugeExtensions[$first.attr('lang')]);
       $first.addClass('prettyprint').addClass('linenums');
     }
 
