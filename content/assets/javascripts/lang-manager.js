@@ -1,13 +1,32 @@
-// exact contains sizzle matcher
-$.expr[":"].econtains = function(obj, index, meta, stack){
-  return (obj.textContent || obj.innerText || $(obj).text() || "").toLowerCase() == meta[3].toLowerCase();
+// exact contains sizzle matcher using lowercase
+$.expr[":"].langequals = function(obj, index, meta, stack) {
+  return ($(obj).attr('lang') || "").toLowerCase() == meta[3].toLowerCase();
 };
 
 $(function() {
+  var friendlyLanguageNames = {
+    "javascript": "Javascript",
+    "java": "Java",
+    "python": "Python",
+    "ruby": "Ruby",
+    "nodejs": "Node.js",
+    "ios": "iOS",
+    "csharp": "C# .Net",
+    "cplusplus": "C++",
+    "c": "C",
+    "appcelerator": "Appcelerator",
+    "phonehap": "PhoneGap",
+    "html": "HTML"
+  };
+
+  function friendlyLanguageFromId(languageId) {
+    return friendlyLanguageNames[languageId.toLowerCase()] || languageId;
+  }
+
   // select language tab event callback for individual language element
   function selectLang() {
     var $this = $(this),
-        selectedLang = $this.text(),
+        selectedLang = $this.attr('lang'),
         langSelector = $this.parent('ul'),
         $first = langSelector.next(),
         tag = $first[0].nodeName.toLowerCase(),
@@ -24,6 +43,7 @@ $(function() {
     }
   }
 
+  // find all elements that have a language specified and make them language selectable
   $('pre:has(code),p[lang],span[lang],div[lang]').each(function() {
     var $first = $(this),
         tag = this.nodeName.toLowerCase(),
@@ -32,25 +52,30 @@ $(function() {
 
     // convert all pre formatted text except those within a definition list without a language to pretty code blocks
     // pre tags within dls without language are used for alternate paths
-    if ( (tag == 'pre') && (!dlParent || (dlParent && $first.attr('lang'))) ) {
+    if ( (tag === 'pre') && (!dlParent || (dlParent && $first.attr('lang'))) ) {
       if ($first.attr('lang')) $first.addClass('lang-' + $first.attr('lang'));
       $first.addClass('prettyprint').addClass('linenums');
     }
 
+    // if element has with-lang-nav class, then this element has already been converted by this script when operating on one of it's siblings
     if (!$first.hasClass('with-lang-nav')) {
       if ($siblings.length) {
         var langs = [$first.attr('lang')],
-            langSelector = $('<ul class="lang-selector"></ul>');
+            langSelector = $('<ul class="lang-selector"></ul>'),
+            uniqueLangs = [];
 
-        if (tag != 'pre') langSelector.addClass('inline');
+        // pre blocks have navigation above as tabs
+        // inline language selector is shown for all p/span/div tags instead, but has different more subtle styling, apply
+        if (tag !== 'pre') langSelector.addClass('inline');
 
         // we will be building a nav so change the class so it's aware and this code block is selected
         $first.addClass('with-lang-nav').addClass('selected');
 
         // find all siblings and add to the language nav, and set up with correct class
-        $siblings.each(function() { langs.push($(this).attr('lang')); }).addClass('with-lang-nav');
-        $.each(langs, function(i, n) {
-          langSelector.append('<li>' + n + '</li>');
+        $siblings.each(function() { langs.push($(this).attr('lang').toLowerCase()); }).addClass('with-lang-nav');
+        $.each(langs, function(i, el) { if($.inArray(el, uniqueLangs) === -1) uniqueLangs.push(el); });
+        $.each(uniqueLangs, function(i, n) {
+          langSelector.append('<li lang="' + n + '">' + friendlyLanguageFromId(n) + '</li>');
         });
         langSelector.find('li:first').addClass('selected');
 
@@ -70,21 +95,23 @@ $(function() {
     languages[$(this).text()] = true;
   });
 
-  var globalLangSelector = $('<ul class="global-lang-selector"></ul>');
+  var globalLangSelector = $('<ul class="global-lang-selector"></ul>'),
+      friendlyLang;
   for (var language in languages) {
-    if (language.toLowerCase() != 'default') globalLangSelector.append('<li>' + language.toLowerCase() + '</li>');
+    friendlyLang = friendlyLanguageFromId(language);
+    if (language.toLowerCase() != 'default') globalLangSelector.append('<li data-lang="' + language.toLowerCase() + '">' + friendlyLang + '</li>');
   }
   if (globalLangSelector.find('li').length) $('body').append(globalLangSelector);
 
   // event callback for the global language navigation selection
   function selectGlobalLanguage() {
-    var lang = $(this).text();
+    var lang = $(this).data('lang');
     $(this).siblings('li').removeClass('selected');
     $(this).addClass('selected');
     $('ul.lang-selector').each(function() {
       var langSelector = $(this),
-          languageTab = langSelector.find('li:not(.warning):econtains("' + lang + '")'),
-          allOtherLanguagesTab = langSelector.find('li:not(.warning):econtains(default)'); // special tab that allows content to be dispayed as default
+          languageTab = langSelector.find('li:not(.warning):langequals("' + lang + '")'),
+          allOtherLanguagesTab = langSelector.find('li:not(.warning):langequals(default)'); // special tab that allows content to be dispayed as default
       if (languageTab.length) {
         selectLang.apply(languageTab);
         langSelector.hide();
