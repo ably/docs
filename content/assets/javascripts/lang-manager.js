@@ -82,7 +82,7 @@ $(function() {
         // insert nav before this first code block
         $first.before(langSelector);
 
-        langSelector.on('click', 'li', selectLang);
+        langSelector.on('click', 'li[lang]', selectLang);
       }
     }
   });
