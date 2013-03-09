@@ -98,11 +98,13 @@ $(function() {
   if (langList.find('li').length) $('body').append(globalLangContainer);
 
   // event callback for the global language navigation selection
-  function selectGlobalLanguage() {
+  function selectGlobalLanguage(cookieStrategy) {
     var lang = $(this).data('lang'),
         friendlyLang = $(this).text();
     $(this).siblings('li').removeClass('selected');
     $(this).addClass('selected');
+    if (cookieStrategy !== 'do-not-save') $.cookie("preferred_lang", lang, { expires : 31, path: '/' });
+
     $('ul.lang-selector').each(function() {
       var langSelector = $(this),
           languageTab = langSelector.find('li:not(.warning):langequals("' + lang + '")'),
@@ -131,7 +133,11 @@ $(function() {
     });
   }
 
-  selectGlobalLanguage.apply(langList.find('li:first'));
+  if ($.cookie("preferred_lang") && langList.find('li[data-lang=' + $.cookie("preferred_lang") + ']').length) {
+    selectGlobalLanguage.call(langList.find('li[data-lang=' + $.cookie("preferred_lang") + ']:first'), 'do-not-save');
+  } else {
+    selectGlobalLanguage.call(langList.find('li:first'), 'do-not-save');
+  }
   langList.on('click', 'li', selectGlobalLanguage);
 
   prettyPrint();
