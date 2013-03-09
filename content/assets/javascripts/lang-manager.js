@@ -15,7 +15,7 @@ $(function() {
     "cplusplus": "C++",
     "c": "C",
     "appcelerator": "Appcelerator",
-    "phonehap": "PhoneGap",
+    "phonegap": "PhoneGap",
     "html": "HTML"
   };
 
@@ -95,13 +95,14 @@ $(function() {
     languages[$(this).text()] = true;
   });
 
-  var globalLangSelector = $('<ul class="global-lang-selector"></ul>'),
+  var globalLangContainer = $('<div class="global-lang-container"><ul></ul></div>'),
+      langList = globalLangContainer.find('ul'),
       friendlyLang;
   for (var language in languages) {
     friendlyLang = friendlyLanguageFromId(language);
-    if (language.toLowerCase() != 'default') globalLangSelector.append('<li data-lang="' + language.toLowerCase() + '">' + friendlyLang + '</li>');
+    if (language.toLowerCase() != 'default') langList.append('<li data-lang="' + language.toLowerCase() + '">' + friendlyLang + '</li>');
   }
-  if (globalLangSelector.find('li').length) $('body').append(globalLangSelector);
+  if (langList.find('li').length) $('body').append(globalLangContainer);
 
   // event callback for the global language navigation selection
   function selectGlobalLanguage() {
@@ -136,8 +137,8 @@ $(function() {
     });
   }
 
-  selectGlobalLanguage.apply(globalLangSelector.find('li:first'));
-  globalLangSelector.on('click', 'li', selectGlobalLanguage);
+  selectGlobalLanguage.apply(langList.find('li:first'));
+  langList.on('click', 'li', selectGlobalLanguage);
 
   prettyPrint();
 });
