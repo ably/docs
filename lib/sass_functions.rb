@@ -4,7 +4,7 @@ require File.expand_path('../documentation_languages', __FILE__)
 module Sass::Script::Functions
   def language_name(id)
     assert_type id, :String
-    Sass::Script::String.new(Ably::DOCUMENTATION_LANGUAGES[id.to_s])
+    Sass::Script::String.new(Ably::DOCUMENTATION_LANGUAGES[id.to_s][:name])
   end
   declare :language_name, :args => [:string]
 
