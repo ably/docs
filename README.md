@@ -26,8 +26,8 @@ Forking and running locally
 * Checkout the source branch: `git checkout source`
 * Create your own branch and check it out out: `git checkout -b [your-branch]`
 * `rake serve` to start up a web server at <http://localhost:4000>
-* `rake watch` to watch for changes and rebuild the site
-* Make any changes you wish and they should be visible nearly immediately in the browser.  If they are not, check your console where `rake watch` is running for errors.
+* `nanoc watch` to watch for changes and rebuild the site
+* Make any changes you wish and they should be visible nearly immediately in the browser.  If they are not, check your console where `nanoc watch` is running for errors.
 * Commit your changes, push your branch and send us a pull request
 
 Help and contact
