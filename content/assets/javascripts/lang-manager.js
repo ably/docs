@@ -106,7 +106,8 @@ $(function() {
 
   // event callback for the global language navigation selection
   function selectGlobalLanguage() {
-    var lang = $(this).data('lang');
+    var lang = $(this).data('lang'),
+        friendlyLang = $(this).text();
     $(this).siblings('li').removeClass('selected');
     $(this).addClass('selected');
     $('ul.lang-selector').each(function() {
@@ -122,7 +123,7 @@ $(function() {
       } else {
         langSelector.show();
         langSelector.find('li.warning').remove();
-        langSelector.append('<li class="warning">' + lang + ' is not supported</li>');
+        langSelector.append('<li class="warning">' + friendlyLang + ' is not supported</li>');
       }
 
       /* if language selector for this content area is not visible, and the element is a span, lets no longer show it as a block */
