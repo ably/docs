@@ -5,18 +5,7 @@ $.expr[":"].langequals = function(obj, index, meta, stack) {
 
 $(function() {
   var friendlyLanguageNames = {
-    "javascript": "Javascript",
-    "java": "Java",
-    "python": "Python",
-    "ruby": "Ruby",
-    "nodejs": "Node.js",
-    "ios": "iOS",
-    "csharp": "C# .Net",
-    "cplusplus": "C++",
-    "c": "C",
-    "appcelerator": "Appcelerator",
-    "phonegap": "PhoneGap",
-    "html": "HTML"
+    <%= Ably::DOCUMENTATION_LANGUAGES.map { |lang_id, lang_name| "\"#{lang_id}\": \"#{lang_name}\"" }.join(',') %>
   };
 
   function friendlyLanguageFromId(languageId) {
