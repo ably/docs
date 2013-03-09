@@ -74,9 +74,10 @@ $(function() {
         // find all siblings and add to the language nav, and set up with correct class
         $siblings.each(function() { langs.push($(this).attr('lang').toLowerCase()); }).addClass('with-lang-nav');
         $.each(langs, function(i, el) { if($.inArray(el, uniqueLangs) === -1) uniqueLangs.push(el); });
-        $.each(uniqueLangs, function(i, n) {
-          langSelector.append('<li lang="' + n + '">' + friendlyLanguageFromId(n) + '</li>');
+        $.each(friendlyLanguageNames, function(key, val) {
+          if (uniqueLangs.indexOf(key) !== -1) langSelector.append('<li lang="' + key + '">' + val + '</li>');
         });
+        if (uniqueLangs.indexOf('default') !== -1) langSelector.append('<li lang="default">default</li>');
         langSelector.find('li:first').addClass('selected');
 
         // insert nav before this first code block
@@ -91,16 +92,19 @@ $(function() {
   $('h3 + blockquote, h6 + blockquote').each(function() { $(this).replaceWith('<code class="prettyprint">' + $(this).html() + '</code>'); });
 
   var languages = {};
-  $('ul.lang-selector li').each(function() {
-    languages[$(this).attr('lang')] = true;
+  $('ul.lang-selector li[lang]').each(function() {
+    languages[$(this).attr('lang').toLowerCase()] = true;
   });
 
   var globalLangContainer = $('<div class="global-lang-container"><ul></ul></div>'),
       langList = globalLangContainer.find('ul'),
-      friendlyLang;
-  for (var language in languages) {
-    friendlyLang = friendlyLanguageFromId(language);
-    if (language.toLowerCase() != 'default') langList.append('<li data-lang="' + language.toLowerCase() + '">' + friendlyLang + '</li>');
+      friendlyLang, langID;
+  for (langID in friendlyLanguageNames) {
+    friendlyLang = friendlyLanguageFromId(langID);
+    if (languages[langID]) langList.append('<li data-lang="' + langID.toLowerCase() + '">' + friendlyLang + '</li>');
+  }
+  for (langID in langList) {
+    if ((langID !== 'default') && !friendlyLanguageFromId(langID)) if (console.warn) console.warn('Language ' + langID + ' is not supported and not shown');
   }
   if (langList.find('li').length) $('body').append(globalLangContainer);
 
@@ -123,7 +127,7 @@ $(function() {
       } else {
         langSelector.show();
         langSelector.find('li.warning').remove();
-        langSelector.append('<li class="warning">' + friendlyLang + ' is not supported</li>');
+        langSelector.append('<li class="warning">No ' + friendlyLang + ' example exists</li>');
       }
 
       /* if language selector for this content area is not visible, and the element is a span, lets no longer show it as a block */
