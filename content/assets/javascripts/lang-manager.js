@@ -92,7 +92,7 @@ $(function() {
 
   var languages = {};
   $('ul.lang-selector li').each(function() {
-    languages[$(this).text()] = true;
+    languages[$(this).attr('lang')] = true;
   });
 
   var globalLangContainer = $('<div class="global-lang-container"><ul></ul></div>'),
