@@ -58,6 +58,9 @@ desc "generate and deploy website to origin remote"
 task :deploy => :build do
   system "git push origin master"
 end
+namespace :deploy do
+  task :origin => :deploy
+end
 
 desc "generate and deploy website to production remote"
 namespace :deploy do
