@@ -1,15 +1,23 @@
 module NavHelper
-  def nav_items(section)
-    results = []
-    last_group = nil
-    @items.select { |d| d[:section] == section }.map.sort { |a,b| (a[:index].to_i || 100) <=> (b[:index].to_i || 100) }.each do |item|
-      if item[:group] && item[:group] != last_group
-        results << "<li>#{html_escape(item[:group])}</li>"
-        last_group = item[:group]
+  def nav_items(section, options = {})
+    items = @items.select { |d| d[:section] == section }
+    if items.empty?
+      ""
+    else
+      results = ['<ul>']
+      last_group = nil
+      results.unshift "<h2>#{html_escape(options[:title])}</h2>" if options.has_key?(:title)
+      items.map.sort { |a,b| (a[:index].to_i || 100) <=> (b[:index].to_i || 100) }.each do |item|
+        if item[:group] && item[:group] != last_group
+          results << "<li>#{html_escape(item[:group])}</li>"
+          last_group = item[:group]
+        end
+        results << "<li class='#{item == @item ? 'selected' : ''}'><a href='#{html_escape(item.path)}'>#{html_escape(item[:title])}</a></li>"
       end
-      results << "<li class='#{item == @item ? 'selected' : ''}'><a href='#{html_escape(item.path)}'>#{html_escape(item[:title])}</a></li>"
+      results += options[:append].kind_of?(Array) ? options[:append] : [options[:append]] if options.has_key?(:append)
+      results << '</ul>'
+      results.join("\n")
     end
-    results.join("\n")
   end
 
   def toc_items(context)
