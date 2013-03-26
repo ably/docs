@@ -6,7 +6,15 @@ module NavHelper
     else
       results = ['<ul>']
       last_group = nil
-      results.unshift "<h2>#{html_escape(options[:title])}</h2>" if options.has_key?(:title)
+      if options.has_key?(:title)
+        index_item = items.find { |d| d[:index].to_i == 0 }
+        if index_item
+          results.unshift "<h2><a href=\"#{html_escape(index_item.path)}\">#{html_escape(options[:title])}</a></h2>"
+          items.delete index_item
+        else
+          results.unshift "<h2>#{html_escape(options[:title])}</h2>"
+        end
+      end
       items.map.sort { |a,b| (a[:index].to_i || 100) <=> (b[:index].to_i || 100) }.each do |item|
         if item[:group] && item[:group] != last_group
           results << "<li>#{html_escape(item[:group])}</li>"
