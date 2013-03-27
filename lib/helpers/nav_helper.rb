@@ -9,7 +9,7 @@ module NavHelper
       if options.has_key?(:title)
         index_item = items.find { |d| d[:index].to_i == 0 }
         if index_item
-          results.unshift "<h2><a href=\"#{html_escape(index_item.path)}\">#{html_escape(options[:title])}</a></h2>"
+          results.unshift "<h2#{index_item == @item ? ' class="selected"' : ''}><a href=\"#{html_escape(index_item.path)}\">#{html_escape(options[:title])}</a></h2>"
           items.delete index_item
         else
           results.unshift "<h2>#{html_escape(options[:title])}</h2>"
@@ -22,7 +22,10 @@ module NavHelper
         end
         results << "<li class='#{item == @item ? 'selected' : ''}'><a href='#{html_escape(item.path)}'>#{html_escape(item[:title])}</a></li>"
       end
-      results += options[:append].kind_of?(Array) ? options[:append] : [options[:append]] if options.has_key?(:append)
+      if options.has_key?(:append)
+        append_items = options[:append].kind_of?(Array) ? options[:append] : [options[:append]]
+        results += append_items.map { |d| "<li>#{d}</li>" }
+      end
       results << '</ul>'
       results.join("\n")
     end
