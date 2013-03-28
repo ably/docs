@@ -144,4 +144,7 @@ $(function() {
   langList.on('click', 'li', selectGlobalLanguage);
 
   prettyPrint();
+
+  // clean up list definition headers which should not have trailing :
+  $('dl dt > code').parent().addClass('header');
 });
