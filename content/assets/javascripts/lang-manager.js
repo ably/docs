@@ -15,22 +15,26 @@ $(function() {
     return friendlyLanguageNames[languageId.toLowerCase()] || languageId;
   }
 
+  // returns a list of tags equivalent to the passed in tag allowing grouping of elements into single language groups
+  function equalTags(tag) {
+    tag = tag.toLowerCase();
+    return (tag === 'dt' || tag === 'dd' ? 'dt,dd' : tag);
+  }
+
   // select language tab event callback for individual language element
   function selectLang() {
     var $this = $(this);
     // when tabs should not be shown and no language block should be shown, $this is set to ul
     if ($this[0].nodeName.toLowerCase() == 'ul') {
       var $first = $(this).next(),
-          $children = $first.nextUntil(':not(' + $first[0].nodeName.toLowerCase() + '),:not([lang])').addBack();
+          $languageElements = $first.nextUntil(':not(' + equalTags($first[0].nodeName) + '),:not([lang])').addBack();
       $(this).find('> li').removeClass('selected');
-      $children.removeClass('selected');
+      $languageElements.removeClass('selected');
     } else {
       var selectedLang = $this.attr('lang'),
         langSelector = $this.parent('ul'),
         $first = langSelector.next(),
-        tag = $first[0].nodeName.toLowerCase(),
-        $languageElements = $first.nextUntil(':not(' + tag + (tag === 'dt' ? ',dd' : '') + '),:not([lang])').addBack();
-
+        $languageElements = $first.nextUntil(':not(' + equalTags($first[0].nodeName) + '),:not([lang])').addBack();
 
       langSelector.find('li').removeClass('selected');
       $(this).addClass('selected'); // select the navigation tab
@@ -50,10 +54,9 @@ $(function() {
   // find all elements that have a language specified and make them language selectable
   $('pre[lang]:has(code),p[lang],span[lang],div[lang],h2[lang],h3[lang],h4[lang],dt[lang],dd[lang]').each(function() {
     var $first = $(this),
-        tag = this.nodeName.toLowerCase(),
-        $siblings = $first.nextUntil(':not(' + tag + (tag === 'dt' ? ',dd' : '') + '),:not([lang])'),
+        $siblings = $first.nextUntil(':not(' + equalTags(this.nodeName) + '),:not([lang])'),
         dlParent = $first.parents('dl').length,
-        hasLanguageNav = (tag === 'pre'),
+        hasLanguageNav = (this.nodeName.toLowerCase() === 'pre'),
         languageClass = hasLanguageNav ? 'with-lang-nav' : 'lang-resource';
 
     // convert all pre formatted text except those within a definition list without a language to pretty code blocks
@@ -140,10 +143,6 @@ $(function() {
           selectLang.call(langSelector);
         }
       }
-
-      /* if language selector for this content area is not visible, and the element is a span, lets no longer show it as a block */
-      var contentAreaTag = langSelector.next()[0].tagName.toLowerCase(),
-          selectedSibling = langSelector.nextUntil(':not(' + contentAreaTag + '),:not([lang])').filter('.selected');
     });
   }
 
