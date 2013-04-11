@@ -147,4 +147,7 @@ $(function() {
 
   // clean up list definition headers which should not have trailing :
   $('dl dt > strong').parent().addClass('header');
+
+  // simple roll over hint to explain why inline language copy has a dotted line around it
+  $('span.with-lang-nav').attr('title', 'This inline text is highlighted to indicate that it will change based on the language selected');
 });
