@@ -146,5 +146,5 @@ $(function() {
   prettyPrint();
 
   // clean up list definition headers which should not have trailing :
-  $('dl dt > code').parent().addClass('header');
+  $('dl dt > strong').parent().addClass('header');
 });
