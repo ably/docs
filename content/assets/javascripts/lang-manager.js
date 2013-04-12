@@ -1,6 +1,7 @@
 // exact contains sizzle matcher using lowercase
-$.expr[":"].langequals = function(obj, index, meta, stack) {
-  return ($(obj).attr('lang') || "").toLowerCase() == meta[3].toLowerCase();
+$.expr[":"].langcontains = function(obj, index, meta, stack) {
+  var langs = ($(obj).attr('lang') || "").toLowerCase().replace(/\s/,"").split(',');
+  return (langs.indexOf(meta[3].toLowerCase()) !== -1);
 };
 
 $(function() {
@@ -21,6 +22,8 @@ $(function() {
     return (tag === 'dt' || tag === 'dd' ? 'dt,dd' : tag);
   }
 
+  function splitLangs(lang) { return lang.toLowerCase().replace(/\s/,"").split(','); }
+
   // select language tab event callback for individual language element
   function selectLang() {
     var $this = $(this);
@@ -39,7 +42,10 @@ $(function() {
       langSelector.find('li').removeClass('selected');
       $(this).addClass('selected'); // select the navigation tab
       $languageElements.removeClass('selected');
-      $languageElements.each(function() { if ($(this).attr('lang') == selectedLang) $(this).addClass('selected'); });
+      $languageElements.each(function() {
+        var langs = splitLangs($(this).attr('lang'));
+        if (langs.indexOf(selectedLang) !== -1) $(this).addClass('selected');
+      });
     }
   }
 
@@ -69,7 +75,7 @@ $(function() {
     // if element has class indicating it's a langauge resource, then this element has already been converted by this script when operating on one of it's siblings
     if (!$first.hasClass(languageClass)) {
       if ($siblings.length || !hasLanguageNav) {
-        var langs = [$first.attr('lang')],
+        var langs = splitLangs($first.attr('lang')),
             langSelector = $('<ul class="lang-selector"></ul>'),
             uniqueLangs = [];
 
@@ -77,7 +83,7 @@ $(function() {
         $first.addClass(languageClass).addClass('selected');
 
         // find all siblings and add to the language nav, and set up with correct class
-        $siblings.each(function() { langs.push($(this).attr('lang').toLowerCase()); }).addClass(languageClass);
+        $siblings.each(function() { langs = langs.concat(splitLangs($(this).attr('lang'))); }).addClass(languageClass);
         $.each(langs, function(i, el) { if($.inArray(el, uniqueLangs) === -1) uniqueLangs.push(el); });
         $.each(friendlyLanguageNames, function(key, val) {
           if (uniqueLangs.indexOf(key) !== -1) langSelector.append('<li lang="' + key + '">' + val + '</li>');
@@ -125,8 +131,8 @@ $(function() {
     $('ul.lang-selector').each(function() {
       var langSelector = $(this),
           inline = langSelector.next().hasClass('lang-resource'),
-          languageTab = langSelector.find('li:not(.warning):langequals("' + lang + '")'),
-          allOtherLanguagesTab = langSelector.find('li:not(.warning):langequals(default)'); // special tab that allows content to be dispayed as default
+          languageTab = langSelector.find('li:not(.warning):langcontains("' + lang + '")'),
+          allOtherLanguagesTab = langSelector.find('li:not(.warning):langcontains(default)'); // special tab that allows content to be dispayed as default
       if (languageTab.length) {
         selectLang.apply(languageTab);
         langSelector.hide();
