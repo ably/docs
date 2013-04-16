@@ -166,4 +166,12 @@ $(function() {
 
   // simple roll over hint to explain why inline language copy has a dotted line around it
   $('.lang-resource').attr('title', 'This inline text is highlighted to indicate that it will change based on the language selected');
+
+  // remove language breakers <span class="breaker"></span> as they are only there to stop consecutive blocks being linked unintentionally
+  $('p:has(span.breaker),span.breaker').remove();
+
+  // div language blocks often commence with breaks and empty P tags because of incorrect Textile interpretation
+  $('div[lang] > br, div[lang] > p').each(function() {
+    if (!$(this).text()) $(this).remove()
+  });
 });

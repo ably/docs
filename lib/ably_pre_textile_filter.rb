@@ -8,11 +8,14 @@ class AblyPreTextileFilter < Nanoc::Filter
     # becomes
     # bc[json]. { "a": true }
     # bc[javascript]. { "a": true }
-    content.gsub(/(bc|p|h[1-6])\[([^\]]+)\]\.(.*?)(?:[\n\r]\s*[\n\r]|\Z)/m) do |match|
+    content = content.gsub(/(bc|p|h[1-6])\[([^\]]+)\]\.(.*?)(?:[\n\r]\s*[\n\r]|\Z)/m) do |match|
       block, languages, content = $~.captures
       languages.split(/\s*,/).map do |lang|
         "#{block}[#{lang}].#{content}"
       end.join("\n\n") + "\n\n"
     end
+
+    # remove white space between language divs
+    content = content.gsub(/\<\/div\>\s+\<div\slang=["']([^"']+)["']>/, '</div><div lang="\1">')
   end
 end
