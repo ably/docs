@@ -58,7 +58,7 @@ $(function() {
   });
 
   // find all elements that have a language specified and make them language selectable
-  $('pre[lang]:has(code),p[lang],span[lang],div[lang],h2[lang],h3[lang],h4[lang],dt[lang],dd[lang]').each(function() {
+  $('pre[lang]:has(code),p[lang],span[lang],div[lang],h2[lang],h3[lang],h4[lang],h6[lang],dt[lang],dd[lang]').each(function() {
     var $first = $(this),
         $siblings = $first.nextUntil(':not(' + equalTags(this.nodeName) + '),:not([lang])'),
         dlParent = $first.parents('dl').length,
