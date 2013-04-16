@@ -1,9 +1,11 @@
-# Sourced from https://github.com/chriseppstein/chriseppstein.github.com/blob/source/Rakefile
+# Originally sourced from https://github.com/chriseppstein/chriseppstein.github.com/blob/source/Rakefile
 
-require "rubygems"
-require "bundler/setup"
+require 'rubygems'
+require 'bundler/setup'
+require 'fog'
 
 require 'nanoc3/tasks'
+require File.join(__FILE__, '../config/config')
 
 def ok_failed(condition)
   if (condition)
@@ -54,19 +56,35 @@ task :build => :generate_all do
   repo.branch("source").checkout
 end
 
-desc "generate and deploy website to origin remote"
+desc "generate and deploy website to S3 and remote 'production' repository"
 task :deploy => :build do
-  system "git push origin master"
-end
-namespace :deploy do
-  task :origin => :deploy
-end
+  config = Ably::Config.new
 
-desc "generate and deploy website to production remote"
-namespace :deploy do
-  task :production => :build do
-    system "git push production master"
+  s3 = Fog::Storage.new(host: config.s3_host, :provider => :aws, aws_access_key_id: config.aws_access_key_id, aws_secret_access_key: config.aws_secret_access_key)
+  s3 = s3.directories.get(config.s3_bucket)
+  if s3.nil?
+    puts "Error! Could not connect to S3 repository, aborting"
+    exit 1
   end
+
+  # as we are publishing this to S3 i.e. the public website, the production repo must match
+  system "git push production master"
+  repo = Git.open('.')
+  repo.branch("master").checkout
+
+  files = Dir.glob('**/*.{html,js,css,png,jpg,jpeg,pdf,woff,ico}')
+  puts "Uploading #{files.count} file(s) to S3 bucket '#{config.s3_bucket}'"
+  files.each do |file_path|
+    s3.files.create(
+      :key    => file_path,
+      :body   => File.open(file_path)
+    )
+    print '.'
+  end
+
+  puts "\nFinished uploading #{files.count} files to S3"
+  puts "Site is now up at http://#{config.s3_bucket}/"
+  repo.branch("source").checkout
 end
 
 desc "start up an instance of server on the output files"
