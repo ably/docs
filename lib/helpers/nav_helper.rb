@@ -59,6 +59,35 @@ module NavHelper
     end
     html.join("\n")
   end
+
+  # jump_to method returns a list of optgroup and option tags based on the context
+  # context argument is a Hash or Array of jump to items
+  def jump_to(context)
+    options = []
+    if context.kind_of?(String)
+      nav_link_reg = /^(.+)#([^#]+)$/
+      link_title = context
+      link = if context.match(nav_link_reg)
+        link_title, link_id = context.match(nav_link_reg)[1..2]
+        link_id
+      else
+        link_title.downcase
+      end
+      link = link.gsub(/\s/,'-')
+      options << "<option id=\"#{link}\">#{html_escape(link_title)}</option>"
+    elsif context.kind_of?(Array)
+      context.each do |item|
+        options << jump_to(item)
+      end
+    elsif context.kind_of?(Hash)
+      context.each do |key, val|
+        options << "<optgroup label='#{html_escape(key)}'>"
+        options << jump_to(val)
+        options << "</optgroup>"
+      end
+    end
+    options.join("\n")
+  end
 end
 
 include NavHelper
