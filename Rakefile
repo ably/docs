@@ -68,7 +68,9 @@ task :deploy => :build do
   end
 
   # as we are publishing this to S3 i.e. the public website, the production repo must match
+  puts "\nNow pushing master and source branches up to the production remote (Github)"
   system "git push production master"
+  system "git push production source"
   repo = Git.open('.')
   repo.branch("master").checkout
 
