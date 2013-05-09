@@ -12,6 +12,12 @@ $(function() {
       $('body').animate({ scrollTop: idTag.offset().top - 50 }, 'fast', function() {
         setTimeout(function() { navIsScrolling = false; }, 750);
       });
+      var newUrl = document.location.href.replace(/#[^#]*$/,'') + '#' + aid;
+      if (window.history.pushState) {
+        window.history.pushState($('article:first').html(), document.title + ' : ' + aid, newUrl);
+      } else {
+        document.location.href = newUrl;
+      }
     }
   };
 
