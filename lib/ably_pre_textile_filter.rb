@@ -17,5 +17,12 @@ class AblyPreTextileFilter < Nanoc::Filter
 
     # remove white space between language divs
     content = content.gsub(/\<\/div\>\s+\<div\slang=["']([^"']+)["']>/, '</div><div lang="\1">')
+
+    # insert inline table of contents
+    content = content.gsub(/^inline\-toc\.\s*$(.*?)^\s*$/m) do |match|
+      yaml_raw = $~.captures[0]
+      yaml = YAML::load(yaml_raw)
+      NavHelper.inline_toc_items(yaml)
+    end
   end
 end
