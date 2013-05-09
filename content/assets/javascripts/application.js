@@ -3,19 +3,30 @@ $(function() {
       navIsScrolling = false;
 
   // On selecting a nav section, scroll it into view
-  jumpToNav.on('change', function() {
+  var jumpToCallback = function(aid) {
+    var idTag = $("a[name='"+ aid +"'],h1[id='"+ aid +"'],h2[id='"+ aid +"'],h3[id='"+ aid +"'],h4[id='"+ aid +"'],h6[id='"+ aid +"']");
+    navIsScrolling = true;
+    if (!idTag.length) {
+      if (console.error) { console.error('Hash tag target #' + aid + ' is missing.  Could not scroll'); }
+    } else {
+      $('body').animate({ scrollTop: idTag.offset().top - 50 }, 'fast', function() {
+        setTimeout(function() { navIsScrolling = false; }, 750);
+      });
+    }
+  };
+
+  jumpToNav.on('change', function(evt) {
     var selected = $(this).find('option:selected'),
-        aid = selected.attr('id');
-    if (aid) {
-      var idTag = $("a[name='"+ aid +"'],h1[id='"+ aid +"'],h2[id='"+ aid +"'],h3[id='"+ aid +"'],h4[id='"+ aid +"'],h6[id='"+ aid +"']");
-      navIsScrolling = true;
-      if (!idTag.length) {
-        if (console.error) { console.error('Hash tag target #' + aid + ' is missing.  Could not scroll'); }
-      } else {
-        $('body').animate({ scrollTop: idTag.offset().top - 50 }, 'fast', function() {
-          setTimeout(function() { navIsScrolling = false; }, 750);
-        });
-      }
+        aid = selected.attr('id').replace(/^anchor-/,'');
+    if (aid) jumpToCallback(aid);
+  });
+
+  // if a user clicks on an anchor link, scroll nicely and position correctly
+  $('a[href]').on('click', function(evt) {
+    var href = $(this).attr('href');
+    if (href.match(/^#.+/)) {
+      jumpToCallback.call(this, href.replace(/^#/, ''));
+      evt.preventDefault();
     }
   });
 
