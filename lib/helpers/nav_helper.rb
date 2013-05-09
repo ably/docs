@@ -31,9 +31,18 @@ module NavHelper
     end
   end
 
-  def toc_items(context)
+  # returns an inline TOC
+  def inline_toc_items(context, root=true)
     html = []
-    if context.kind_of?(String)
+    if root
+      html << '<notextile><div class="inline-toc">'
+      context.each do |section, props|
+        html << "<ul><li>#{section}"
+        html << inline_toc_items(props, false)
+        html << '</li></ul>'
+      end
+      html << '</div></notextile>'
+    elsif context.kind_of?(String)
       link_title = context
       link = if context.match(/(.+)#(.+)/)
         link_title, link_id = context.match(/(.+)#(.+)/)[1..2]
@@ -46,14 +55,14 @@ module NavHelper
     elsif context.kind_of?(Array)
       html << "<ul>"
       context.each do |item|
-        html << toc_items(item)
+        html << inline_toc_items(item, false)
       end
       html << "</ul>"
     elsif context.kind_of?(Hash)
       context.each do |key, val|
         html << "<li>"
         html << key
-        html << toc_items(val)
+        html << inline_toc_items(val, false)
         html << "</li>"
       end
     end
@@ -74,7 +83,7 @@ module NavHelper
         link_title.downcase
       end
       link = link.gsub(/\s/,'-')
-      options << "<option id=\"#{link}\">#{html_escape(link_title)}</option>"
+      options << "<option id=\"anchor-#{link}\">#{html_escape(link_title)}</option>"
     elsif context.kind_of?(Array)
       context.each do |item|
         options << jump_to(item)
