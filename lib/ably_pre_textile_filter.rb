@@ -24,5 +24,9 @@ class AblyPreTextileFilter < Nanoc::Filter
       yaml = YAML::load(yaml_raw)
       NavHelper.inline_toc_items(yaml)
     end
+
+    # convert code editor class tags into a format that can be decoded on the front end
+    folder = @item.path.match(/\/([^\/]+)\/?$/)[1]
+    content = content.gsub(/\(code-editor:([^\)]+)\)/i, "(code-editor load-file___#{folder}___\\1)")
   end
 end
