@@ -62,7 +62,7 @@ $(function() {
     var $first = $(this),
         $siblings = $first.nextUntil(':not(' + equalTags(this.nodeName) + '),:not([lang])'),
         dlParent = $first.parents('dl').length,
-        hasLanguageNav = (this.nodeName.toLowerCase() === 'pre'),
+        hasLanguageNav = (this.nodeName.toLowerCase() === 'pre'), // we only show the language tab nav for pre code blocks
         languageClass = hasLanguageNav ? 'with-lang-nav' : 'lang-resource';
 
     // convert all pre formatted text except those within a definition list without a language to pretty code blocks
@@ -72,7 +72,7 @@ $(function() {
       $first.addClass('prettyprint').addClass('linenums');
     }
 
-    // if element has class indicating it's a langauge resource, then this element has already been converted by this script when operating on one of it's siblings
+    // if element has class indicating it's a language resource, then this element has already been converted by this script when operating on one of it's siblings
     if (!$first.hasClass(languageClass)) {
       if ($siblings.length || !hasLanguageNav) {
         var langs = splitLangs($first.attr('lang')),
@@ -146,7 +146,7 @@ $(function() {
           langSelector.append('<li class="warning">No ' + friendlyLang + ' example exists</li>');
         } else {
           langSelector.hide();
-          selectLang.call(langSelector);
+          selectLang.call(langSelector); // pass langSelector indicating that a language nav tab system should never appear as it's not a code block
         }
       }
     });
