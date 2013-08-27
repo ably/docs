@@ -4,94 +4,140 @@ section: realtime
 index: 20
 ---
 
-Top-level Ably interface
+h2. Overview
 
-The Ably interface is the entry point to the API. A caller will first create an instance of the Ably interface. The Ably instance obtained is then used to publish and subscribe to events.
+The Ably Realtime library establishes and maintain a connection to the Ably service. The Ably realtime protocol
+operates over that connection, and all channel traffic is multiplexed over that connection.
 
-h2(#constructor). Constructor
+Within the Ably system and protocol, all connection state is temporary; the protocol provides continuity of
+message delivery between the client and the service, and continuity of other connection state, provided that a
+dropped connection is reestablished within a limited interval (typically around 1 minute). Beyond that, the
+connection state is stale and the system will not attempt to make a transparent connection recovery. The lifecycle
+of a connection, and the strategy for reconnecting on failure, reflect the transient nature of the connection
+state.
 
-bq. Ably.Realtime("AblyOption":/realtime/types#ablyoption options)
+The library's ConnectionManager is responsible for managing the connection; this includes selecting a transport
+(in those environments supporting multiple transports), selecting a host to connect to (selecting a fallback host
+if the principal Ably host is unreachable), and managing continuity of operation when the connection drops.
 
-Constructs an instance of the Ably interface, which succeeds without blocking, and then asynchronously triggers an attempt to connect to the service. The state of the connection at any time can be observed via the connection property.
+If connectivity to the service is available, the library will establish a connection immediately, and if the
+connection drops at any time it will attempt to re-establish it by making repeated connection attempts every 15
+seconds for up to two minutes.
 
-h4. Parameters
+If, after that time, there has been no connection, the library falls back to a lower level of activity, still
+periodically attempting reconnection but at two minute intervals. This reflects the assumption that there will no
+longer be recoverable connection state and may be offline for a period of time. As soon as a reconnection attempt
+has been successful, the system reverts to the more active connection behaviour. Further, a client can explicitly
+trigger a reconnection attempt at any time, and does not need to wait for the timeout if it wishes to implement a
+different strategy.
 
-- options := options for this connection, refer to "AblyOption":/realtime/types#ablyoption
+The connection object provides methods to observe the lifecycle of the connection and to trigger certain state
+transitions.
 
-h4. Example
+h3. Connection states
 
-bc[javascript]. var ably = new Ably('juewrhdfusddsasf');
+A series of connection states is defined.
 
-bc[java]. String id = ACCOUNT_ID;
-AblyOptions opts = new AblyOptions();
-opts.id = id;
-opts.encrypted = true;
-Ably ably = new Ably(opts);
+initialised
+A connection object having this state has been initialised but no connection has yet been attempted.
 
-bc[python]. x.counter = 1
-while x.counter < 10:
-  x.counter = x.counter * 2
-print x.counter
-del x.counter
+connecting
+A connection attempt has been initiated. The connecting state is entered as soon as the library has completed
+initialisation, and is reentered each time connection is re-attempted following disconnection.
 
-Some other element here
+connected
+A connection exists and is active.
 
-bc[javascript]. var ably = new Ably('juewrhdfusddsasf');
+disconnected
+A temporary failure condition. No current connection exists because there is no network connectivity or no host
+is unavailable.
 
-Example where some documentation only applies to a particular language
+The disconnected state is entered if an established connection is dropped, or if a connection attempt was
+unsuccessful. In the disconnected state the library will trigger a new connection attempt after a short period,
+anticipating that the connection will be re-established soon, and connection continuity will be possible. Clients
+can continue to publish messages, and these will be queued, to be sent as soon as a connection is established.
 
-p[default]. Some text that applies to all other languages
+suspended
+A long term failure condition. No current connection exists because there is no network connectivity or no host
+is unavailable.
 
-p[python]. Some python text here
+The suspended state is entered after a failed connection attempt if there has then been no connection for a period
+of two minutes. A new connection attempt will be triggered after a further two minutes. In the suspended state
+clients are unable to publish messages. A new connection attempt can also be triggered by an explicit call to
+connect() on the connection object.
 
-p[javascript]. Some text that applies to Javascript
+closed
+The connection has been explicitly closed by the client.
 
-p[nodejs]. Some text that applies to Node.js
+In the closed state, no reconnection attempts are made automatically by the library, and clients may not publish
+messages. No connection state is preserved by the service or by the library. A new connection attempt can be triggered
+by an explicit call to connect() on the connection object, which will result in a new connection.
 
-p[ruby]. Some text that applies to Ruby
+failed
+An indefinite failure condition. This state is entered if a connection error has been received from the Ably service
+(such as an attempt to connect with a non-existent appId or with invalid credentials). A failed state may also be
+triggered by the client library directly as a result of some local permanent error.
 
-p[csharp]. Some text that applies to C#
+In the failed state, no reconnection attempts are made automatically by the library, and clients may not publish
+messages. A new connection attempt can be triggered by an explicit call to connect() on the connection object.
 
-p[cplusplus]. Some text that applies to C++
+h4. Example state sequences
 
-p[c]. Some text that applies to C
+The library is initialised and initiates a successful connection.
 
-p[ios]. Some text that applies to iOS
+initialised --> connecting --> connected
 
-p[appcelerator]. Some text that applies to Appcelerator
+An existing connection is dropped and reestablished on the first attempt.
 
-p[phonegap]. Some text that applies to PhoneGap
+connected --> disconnected --> connecting --> connected
 
-h2(#methods). Methods
+An existing connection is dropped, and reestablished after several attempts but within a two minute interval
 
-h6(#disconnect). disconnect
+connected --> disconnected --> (connecting --> disconnected -->)+ connecting --> connected
 
-bq. void disconnect()
+There is no connection established after initialising the library
 
-This method closes the connection to the Ably service. No further events are delivered, and any published events that have not yet been indicated as delivered are liable to be discarded. After calling this method, it is not possible to reconnect using this Ably instance.
+initialised --> (connecting --> disconnected -->)+ connecting --> suspended
 
-If @disconnect@() is called whilst in the unavailable state, then the disconnected state is entered, and there are no further attempts to establish the connection.
+After a period of being offline a connection is reestablished.
 
-If @disconnect@() is called whilst in the disconnected or failed states, then it silently does nothing.
+suspended --> (connecting --> suspended -->)+ connecting --> connected
 
-h6(#connect). connect
+h2. Methods
 
-bq. Channel subscribe(String channel, "CompletionListener":/realtime/types#completionlistener listener, "SubscribeOptions":/realtime/types#subscribeoptions);
+connect. Causes the library to re-attempt connection, if it was previously explicitly closed by the user, or was closed as
+a result of an unrecoverable error.
 
-p(tip). Here is a tip that we show the user about this particular area of the API documentation
+close. Causes the connection to close, entering the closed state, from any state except the failed state. Once closed, the
+library will not attempt to re-establish the connection without a call to connect().
 
-This method opens the connection to the Ably service when a connection has not been explicitly opened.  A connection is not opened automatically if no authenticaiton details are provided in the @options@ of the @Ably.Realtime@ constructor.
+h2. Members
 
-h4. Parameters
+state. Indicates the current state of this connection.
 
-- channel := the name of the channel
-- listener := a listener to be notified of the success or failure of the request
-- options := the options for this channel subscription
+id. The (String) id of the current connection. This string may be used when recovering connection state.
 
-h2(#attributes). Attributes
+serial. The serial number of the last message received on this connection. The serial number may be used when
+recovering connection state.
 
-h6(#connected). connected
+reason. Information relating to the transition to the current state, as an Ably ErrorInfo object. This contains an
+error code and message and, in the failed state in particular, provides diagnostic error information.
 
-bq. boolean connected
+java: listeners. A collection of listener objects that will be notified of connection state changes.
 
-Returns true if a connection to the Ably service is established.
+h2. Listening for state changes.
+
+Clients can listen for state changes by 
+(java) adding an implementation of ConnectionStateListener to the listeners collection.
+(js) registering for any or all of the connection state events ('connecting', 'connected' etc)
+via the EventEmitter interface.
+
+Listeners are passed a ConnectionStateChange object containing:
+
+previous (state): the previous state;
+current (state): the new state;
+reason (ErrorInfo): any information relating to the transition
+retryIn (long): the time in milliseconds, relative to the present time, at which the library will retry.
+
+h3. Code examples.
+
