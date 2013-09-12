@@ -2,142 +2,186 @@
 title: Connection
 section: realtime
 index: 20
+jump_to:
+  Help with:
+    - Connection#title
+  Connection API reference:
+    - connect
+    - close
+  Related types:
+    - ConnectionState#connection-state
+    - ConnectionStateListener#connection-state-listener
+    - ConnectionStateChange#connection-state-change
 ---
 
 h2. Overview
 
-The Ably Realtime library establishes and maintain a connection to the Ably service. The Ably realtime protocol
-operates over that connection, and all channel traffic is multiplexed over that connection.
+The Ably Realtime library establishes and maintain a connection to the Ably service. The Ably realtime protocol operates and multiplexes all channel traffic over that connection.
 
-Within the Ably system and protocol, all connection state is temporary; the protocol provides continuity of
-message delivery between the client and the service, and continuity of other connection state, provided that a
-dropped connection is reestablished within a limited interval (typically around 1 minute). Beyond that, the
-connection state is stale and the system will not attempt to make a transparent connection recovery. The lifecycle
-of a connection, and the strategy for reconnecting on failure, reflect the transient nature of the connection
-state.
+Within the Ably system and protocol, all connection state is temporary; the protocol provides continuity of message delivery between the client and the service, and continuity of other connection state, provided that a dropped connection is reestablished within a limited interval (typically around 1 minute). Beyond that, the connection state is stale and the system will not attempt to make a transparent connection recovery. The lifecycle
+of a connection, and the strategy for reconnecting on failure, reflect the transient nature of the connection state.
 
-The library's ConnectionManager is responsible for managing the connection; this includes selecting a transport
-(in those environments supporting multiple transports), selecting a host to connect to (selecting a fallback host
-if the principal Ably host is unreachable), and managing continuity of operation when the connection drops.
+The library's ConnectionManager is responsible for managing the connection; this includes selecting a transport (in those environments supporting multiple transports), selecting a host to connect to (selecting a fallback host if the principal Ably host is unreachable), and managing continuity of operation when the connection drops.
 
-If connectivity to the service is available, the library will establish a connection immediately, and if the
-connection drops at any time it will attempt to re-establish it by making repeated connection attempts every 15
-seconds for up to two minutes.
+If connectivity to the service is available, the library will establish a connection immediately, and if the connection drops at any time it will attempt to re-establish it by making repeated connection attempts every 15 seconds for up to two minutes.
 
-If, after that time, there has been no connection, the library falls back to a lower level of activity, still
-periodically attempting reconnection but at two minute intervals. This reflects the assumption that there will no
-longer be recoverable connection state and may be offline for a period of time. As soon as a reconnection attempt
-has been successful, the system reverts to the more active connection behaviour. Further, a client can explicitly
-trigger a reconnection attempt at any time, and does not need to wait for the timeout if it wishes to implement a
-different strategy.
+If, after that time, there has been no connection, the library falls back to a lower level of activity, still periodically attempting reconnection but at two minute intervals. This reflects the assumption that there will no longer be recoverable connection state and the client may be offline for a period of time. As soon as a reconnection attempt has been successful, the system reverts to the more active connection behaviour. Further, a client can explicitly trigger a reconnection attempt at any time, and does not need to wait for the timeout if it wishes to implement a different strategy.
 
-The connection object provides methods to observe the lifecycle of the connection and to trigger certain state
-transitions.
+The connection object provides methods to observe the lifecycle of the connection and to trigger certain state transitions.
 
-h3. Connection states
+h3(#connection-states). Connection states
 
 A series of connection states is defined.
 
-initialised
-A connection object having this state has been initialised but no connection has yet been attempted.
+- initialised := A connection object having this state has been initialised but no connection has yet been attempted.
 
-connecting
-A connection attempt has been initiated. The connecting state is entered as soon as the library has completed
-initialisation, and is reentered each time connection is re-attempted following disconnection.
+- connecting := A connection attempt has been initiated. The connecting state is entered as soon as the library has completed initialisation, and is reentered each time connection is re-attempted following disconnection.
 
-connected
-A connection exists and is active.
+- connected := A connection exists and is active.
 
-disconnected
-A temporary failure condition. No current connection exists because there is no network connectivity or no host
-is unavailable.
+- disconnected := A temporary failure condition. No current connection exists because there is no network connectivity or no host is unavailable.<br><br>The disconnected state is entered if an established connection is dropped, or if a connection attempt was unsuccessful. In the disconnected state the library will trigger a new connection attempt after a short period, anticipating that the connection will be re-established soon, and connection continuity will be possible. Clients can continue to publish messages, and these will be queued, to be sent as soon as a connection is established.
 
-The disconnected state is entered if an established connection is dropped, or if a connection attempt was
-unsuccessful. In the disconnected state the library will trigger a new connection attempt after a short period,
-anticipating that the connection will be re-established soon, and connection continuity will be possible. Clients
-can continue to publish messages, and these will be queued, to be sent as soon as a connection is established.
+- suspended := A long term failure condition. No current connection exists because there is no network connectivity or no host is unavailable.<br><br>The suspended state is entered after a failed connection attempt if there has then been no connection for a period of two minutes. A new connection attempt will be triggered after a further two minutes. In the suspended state clients are unable to publish messages. A new connection attempt can also be triggered by an explicit call to connect() on the connection object.
 
-suspended
-A long term failure condition. No current connection exists because there is no network connectivity or no host
-is unavailable.
+- closed := The connection has been explicitly closed by the client.<br><br>In the closed state, no reconnection attempts are made automatically by the library, and clients may not publish messages. No connection state is preserved by the service or by the library. A new connection attempt can be triggered by an explicit call to connect() on the connection object, which will result in a new connection.
 
-The suspended state is entered after a failed connection attempt if there has then been no connection for a period
-of two minutes. A new connection attempt will be triggered after a further two minutes. In the suspended state
-clients are unable to publish messages. A new connection attempt can also be triggered by an explicit call to
-connect() on the connection object.
+- failed := An indefinite failure condition. This state is entered if a connection error has been received from the Ably service (such as an attempt to connect with a non-existent appId or with invalid credentials). A failed state may also be triggered by the client library directly as a result of some local permanent error.<br><br>In the failed state, no reconnection attempts are made automatically by the library, and clients may not publish messages. A new connection attempt can be triggered by an explicit call to connect() on the connection object.
 
-closed
-The connection has been explicitly closed by the client.
-
-In the closed state, no reconnection attempts are made automatically by the library, and clients may not publish
-messages. No connection state is preserved by the service or by the library. A new connection attempt can be triggered
-by an explicit call to connect() on the connection object, which will result in a new connection.
-
-failed
-An indefinite failure condition. This state is entered if a connection error has been received from the Ably service
-(such as an attempt to connect with a non-existent appId or with invalid credentials). A failed state may also be
-triggered by the client library directly as a result of some local permanent error.
-
-In the failed state, no reconnection attempts are made automatically by the library, and clients may not publish
-messages. A new connection attempt can be triggered by an explicit call to connect() on the connection object.
-
-h4. Example state sequences
+h4. Typical state sequences
 
 The library is initialised and initiates a successful connection.
 
-initialised --> connecting --> connected
+bq. initialised &rarr; connecting &rarr; connected
 
 An existing connection is dropped and reestablished on the first attempt.
 
-connected --> disconnected --> connecting --> connected
+bq. connected &rarr; disconnected &rarr; connecting &rarr; connected
 
-An existing connection is dropped, and reestablished after several attempts but within a two minute interval
+An existing connection is dropped, and reestablished after several attempts but within a two minute interval.
 
-connected --> disconnected --> (connecting --> disconnected -->)+ connecting --> connected
+bq. connected &rarr; disconnected &rarr; connecting &rarr; disconnected &rarr; &hellip; &rarr; connecting &rarr; connected
 
-There is no connection established after initialising the library
+There is no connection established after initialising the library.
 
-initialised --> (connecting --> disconnected -->)+ connecting --> suspended
+bq. initialised &rarr; connecting &rarr; disconnected &rarr; connecting &rarr; &hellip; &rarr; suspended
 
 After a period of being offline a connection is reestablished.
 
-suspended --> (connecting --> suspended -->)+ connecting --> connected
+bq. suspended &rarr; connecting &rarr; suspended &rarr; &hellip; &rarr; connecting &rarr; connected
 
-h2. Methods
+h4. Listening for state changes
 
-connect. Causes the library to re-attempt connection, if it was previously explicitly closed by the user, or was closed as
-a result of an unrecoverable error.
+<div lang="javascript,nodejs">
+The @connection@ object is an @EventEmitter@ and emits an event whose name is the new state whenever there is a connection state change. An event listener function is passed a "ConnectionStateChange":#connection-state-change object as the first argument for state change events.
 
-close. Causes the connection to close, entering the closed state, from any state except the failed state. Once closed, the
-library will not attempt to re-establish the connection without a call to connect().
+<pre><code lang="javascript,nodejs">realtime.connection.on('connected', function(stateChange) {
+  console.log('Ably is connected');
+});
+</code></pre>
 
-h2. Members
+Alternatively a listener may be registered so that it receives all state change events.
 
-state. Indicates the current state of this connection.
+<pre><code lang="javascript,nodejs">realtime.connection.on(function(stateChange) {
+  console.log('New connection state is ' + stateChange.current);
+});
+</code></pre>
 
-id. The (String) id of the current connection. This string may be used when recovering connection state.
+Previously registered listeners can be removed individually or all together.
 
-serial. The serial number of the last message received on this connection. The serial number may be used when
-recovering connection state.
+<pre><code lang="javascript,nodejs">/* remove a listener registered for a single event */
+realtime.connection.off('connected', myListener);
 
-reason. Information relating to the transition to the current state, as an Ably ErrorInfo object. This contains an
-error code and message and, in the failed state in particular, provides diagnostic error information.
+/* remove a listener registered for all events */
+realtime.connection.off(myListener);
 
-java: listeners. A collection of listener objects that will be notified of connection state changes.
+/* remove all event listeners */
+realtime.connection.off();
+</code></pre>
 
-h2. Listening for state changes.
+</div>
 
-Clients can listen for state changes by 
-(java) adding an implementation of ConnectionStateListener to the listeners collection.
-(js) registering for any or all of the connection state events ('connecting', 'connected' etc)
-via the EventEmitter interface.
+<div lang="java">
+A client can register for connection state changes by implementing "ConnectionStateListener":#connection-state-listener and adding it to the @listeners@ Collection. The listener is passed a "ConnectionStateChange":#connection-state-change instance on each state change event.
 
-Listeners are passed a ConnectionStateChange object containing:
+<pre><code lang="java">realtime.connection.listeners.add(new ConnectionStateListener() {
+	@Override
+	public void onConnectionStateChanged(ConnectionStateChange change) {
+		System.out.println("New state is " + change.current.name());
+	}});
+</code></pre>
 
-previous (state): the previous state;
-current (state): the new state;
-reason (ErrorInfo): any information relating to the transition
-retryIn (long): the time in milliseconds, relative to the present time, at which the library will retry.
+Previously registered listeners can be removed individually or all together.
 
-h3. Code examples.
+<pre><code lang="java">/* remove a single listener */
+realtime.connection.listeners.remove(myListener);
 
+/* remove all event listeners */
+realtime.connection.listeners.clear();
+</code></pre>
+
+</div>
+
+h4(#connection-state-recovery). Connection state recovery
+
+The Ably system preserves connection state to allow connections to continue transparently across short disconnections. The connection state that is tracked includes the messages sent to the client on the connection and the set of channels that the client is attached to.
+
+There are two modes of connection state recovery:
+
+* @resume@: this is transparent recovery of a live client instance across disconnections. The library will automatically re-attempt connection and, once connection is re-established, any missed messages will be sent to the client. The client does not need to do anything to trigger this behaviour; all client channel event listeners remain attached and are called when the backlog of messages is received.
+
+* @recover@: this addresses the case in which a new client library instance wishes to connect and recover the state of an earlier connection. This occurs typically in a browser environment when the page has been refreshed and therefore no client state is retained. In this case any message listeners associated with channels will no longer exist so it is not possible for the library simply to send the message backlog on reconnection; instead the client must re-subscribe to each channel it is interested in, and its message listener(s) will be called with any message backlog for that channel. A client requests recovery of connection state by including a recovery string in the "options":/realtime/usage#options when instancing the Realtime library.
+
+In either case, the need to send a message backlog does not prevent new messages being sent to the client as soon as they are available, or messages could be indefinitely deferred on very heavily loaded connections. Therefore the system does not guarantee that messages received after reconnection are delivered in the same order that would have occurred if the connection had not been dropped. In the @recover@ case, in particular, the order of the message delivery depends on the timing of the re-attachment of each channel.
+
+Each time a reconnection is attempted, the client library decides which transport to use (in those environments supporting multiple transports). Connection state recovery works in the same way irrespective of the transport used prior to, and after, reconnection.
+
+h5(#connection-recovery-options). Connection recovery options
+
+In @recover@ mode it is necessary to request recovery mode in the "options":/realtime/usage#options when instancing the library. Recovery requires that the library knows the connection @id@ and the @serial@ number of the last message received. In the browser environment a @window close@ event causes those parameters to be saved in a cookie; a client can then request recovery simply by including <code>recover: true</code> in the initialisation options.
+
+Alternative, if it is necessary to be explicit about the connection @id@ and @serial@ - for example if there are multiple tabs and the cookies would conflict, or if third-party cookies are disabled - by including an explicit recovery @specifier string@ with the format <code><id>:<serial></code>. Each of @id@ and @serial@ is available as a public member of the @connection@ object.
+
+Connection recovery requires that the new client library instance uses credentials that are compatible with those used for the inherited connection; this requires that the same authentication mode is used, with the same key. If token auth was used, the same token is not required, but the token used must have the same @capability@ and @clientId@. This ensures that the client recovering the connection cannot receive a backlog of messages that its new credentials are not entitled to access. Incompatible credentials will result in an unrecoverable connection error.
+
+h1. Connection API reference
+
+h2(#methods). Methods
+
+h6(#connect)[default]. connect()
+
+h6(#connect)[java]. public void connect()
+
+Causes the library to re-attempt connection, if it was previously explicitly closed by the user, or was closed as a result of an unrecoverable error.
+
+h6(#close)[default]. close()
+
+h6(#close)[java]. public void close()
+
+Causes the connection to close, entering the @closed@ state. Once closed, the library will not attempt to re-establish the connection without a call to @connect()@.
+
+h2(#members). Public members
+
+The connection object exposes the following public members.
+
+- <span lang="java">public ConnectionState</span>state := Indicates the current state of this connection.
+
+- <span lang="java">public String</span>id := The id of the current connection. This string may be used when "recovering connection state":#connection-recovery-options.
+
+- <span lang="java">public long</span>serial := The serial number of the last message received on this connection. The serial number may be used when "recovering connection state":#connection-recovery-options.
+
+- <span lang="java">public long</span>reason := Information relating to the transition to the current state, as an Ably @ErrorInfo@ object. This contains an error code and message and, in the failed state in particular, provides diagnostic error information.
+
+- <div lang="java">listeners</div> := A collection of "ConnectionStateListener":#connection-state-listener objects that will be notified of connection state changes.
+
+h2(#connection-state-listener). ConnectionStateListener
+
+A <span lang="default">function</span><span lang="java">implementation of the @ConnectionStateListener@ interface</span> may be registered to be notified of connection state changes. Each time a listener is called it is passed a "ConnectionStateChange":#connection-state-change object indicating the parameters of the change.
+
+h2(#connection-state-change). ConnectionStateChange
+
+A @ConnectionStateChange@ object is passed to each listener whenever there is a state change, containing the following <span lang="default">properties</span><span lang="java">fields</span>.
+
+- <span lang="java">public ConnectionState</span>previous := the previous state
+- <span lang="java">public ConnectionState</span>current := the new state
+- <span lang="java">public ErrorInfo</span>reason := an @ErrorInfo@ containing any information relating to the transition
+- <span lang="java">public long</span>retryIn := the time in milliseconds, relative to the present time, at which the library will retry the connection.
