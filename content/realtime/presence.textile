@@ -2,68 +2,306 @@
 title: Presence
 section: realtime
 index: 40
+jump_to:
+  Help with:
+    - Presence#title
+  Presence API reference:
+    - enter
+    - enterClient#enter-client
+    - update
+    - updateClient#update-client
+    - leave
+    - leaveClient#leave-client
+    - subscribe
+    - unsubscribe
+    - get
+  Related types:
+    - PresenceMessage#presence-message
+    - PresenceListener#presence-listener
 ---
 
 h2. Overview
 
-Ably Channels support the concept of presence. Each channel may have a presence set associated with it, which
-is a set of clientIds for those clients that have announced their presence by enter()ing the channel.
+Ably Channels support the concept of presence. Each channel may have a presence set associated with it, which is a set of clientIds for those clients that have announced their presence by entering the channel.
 
-A client must be attached to a channel, and must have the relevant permission, in order to enter, although the
-library implicitly calls attach() if the client is not attached at the time enter() is called. As with other
-channel messages, the library allows presence messages to be submitted immediately, and these are queued
-until such time as the channel is attached, or the attach fails (or the connection fails). Ably maintains
-the presence set for each channel, broadcasts enter/leave events to all subscribed clients, and allows clients
-to query to obtain the set of present clients at any time.
+A client must be attached to a channel, and must have the relevant permission, in order to enter, although the library implicitly calls @attach()@ if the client is not attached at the time @enter()@ is called. As with other channel messages, the library allows presence messages to be submitted immediately, and these are queued until such time as the channel is attached, or the attach fails (or the connection fails). Ably maintains the presence set for each channel, broadcasts enter/leave events to all subscribed clients, and allows clients to query to obtain the set of present clients at any time.
 
 A client that has access to presence state for a channel is passed the current presence state once it attaches.
 
-A client's clientId must be authenticated in order that the client may enter a channel. This means either that
-the client connects using basic auth (a client in possession of a key can uphold any claimed identity) or using
-a token that has been issued for that clientId.
+A client's @clientId@ must be authenticated in order that the client may enter a channel. This means either that the client connects using basic auth (a client in possession of a key can uphold any claimed identity) or using a token that has been issued for that @clientId@.
 
-A given clientId might be present multiple times, via different connections. As far as Ably is concerned these
-are different members of the presence set. A member of the presence set is, therefore, the combination of a
-clientId string and a memberId string unique to a connection.
+A given @clientId@ might be present multiple times, via different connections. As far as Ably is concerned these are different members of the presence set. A member of the presence set is, therefore, the combination of a @clientId@ string and a @memberId@ string unique to a connection.
 
-Each member entering a presence channel may include a payload in the clientData attribute of the PresenceMessage
-and this is then included in the presence updates broadcast to subscribed clients. Clients can update this
-clientData whilst being members of the channel; each PresenceMessage is therefore one of three types: enter,
-leave and update.
+Each member entering a presence channel may include a payload in the @clientData@ attribute of the @PresenceMessage@ and this is then included in the presence updates broadcast to subscribed clients. Clients can update this @clientData@ whilst being members of the channel.
 
-The client library does not itself track the presence state of the member it represents; a client may send a
-leave or update event, for example, without having previously entered via that client instance. This is because
-that same clientId might have entered the channel on an earlier connection, and the present connection, having
-inherited from that earlier connection, will adopt that clientId/memberId combination.
+A number of presence actions are therefore defined.
 
-The Ably service tracks members presence as clients detach from channels and as connections are dropped, generating
-leave events as appropriate.
+- enter := A clientId, or a clientId/memberId combination, is entering the presence channel.
+
+- leave := A clientId, or a clientId/memberId combination, is leaving the presence channel.
+
+- update := An already-present clientId or clientId/memberId combination has been updated.
+
+The client library does not itself track the presence state of the member it represents; a client may send a @leave@ or @update@ event, for example, without having previously entered via that client instance. This is because that same @clientId@ might have entered the channel on an earlier connection, and the present connection, having inherited from that earlier connection, will adopt that @clientId@/@memberId@ combination.
+
+The Ably service tracks members' presence as clients detach from channels and as connections are dropped, generating @leave@ events as appropriate.
+
+h2. Presence Messages
+
+An Ably Realtime @PresenceMessage@ has an @action@, a @clientId@, and optionally a @clientData@ member carrying a status message or other data associated with the action. As with Message payloads, various primitive and object types are portably defined and supported in all clients, enabling clients to be interoperable across languages and environments.
+
+h3. Presence subscription
+
+<div lang="javascript,nodejs">
+A client can subscribe to all presence messages for a channel by passing a listener function to the @subscribe@ method.
+
+<pre lang="javascript,nodejs"><code lang="javascript,nodejs">channel.presence.subscribe(function(message) {
+  console.log('presence message received with action ' + message.action);
+  console.log('message clientData:' + message.clientData);
+});
+</code></pre>
+
+Previously registered listeners can be removed.
+
+<pre lang="javascript,nodejs"><code lang="javascript,nodejs">channel.presence.unsubscribe(myListener);
+</code></pre>
+
+</div>
+
+<div lang="java">
+A client can register for presence messages for a channel by implementing "PresenceListener":#presence-listener and calling the @subscribe(PresenceListener listener)@ method. The listener is passed the new @PresenceMessage@ on each message.
+
+<pre lang="java"><code lang="java">channel.presence.subscribe(new PresenceListener() {
+	@Override
+	public void onPresenceMessage(PresenceMessage[] messages) {
+		System.out.println(messages.length " new presence messages arrived");
+	}});
+</code></pre>
+
+Previously registered listeners can be removed.
+
+<pre lang="java"><code lang="java">channel.presence.unsubscribe(myListener);
+</code></pre>
+
+</div>
+
+h3. Getting channel presence state
+
+A Channel's @presence@ <span lang="default">property</span><span lang="java">field</span> exposes a @get@ method whereby a client can discover the set of all members present on the channel.
+
+bc[javascript,nodejs]. var members = channel.presence.get();
+console.log('There are ' + members.length + ' members present');
+
+bc[java]. PresenceMessage[] members = channel.presence.get();
+System.out.println("There are " + members.length + " members present");
+
+The client keeps track of the presence set from the time that the channel is attached; a up to date presence set is delivered to the client following attach, and the presence set is updated on each message seen subsequently. Thus this @get@ method synchronously returns the already-known presence set, and does not trigger a new request to the Ably service.
+
+h3. Publishing presence changes
+
+A Channel's @presence@ <span lang="default">property</span><span lang="java">field</span> exposes methods for each of the presence actions whereby a client can publish presence changes.
+
+bc[javascript,nodejs]. channel.presence.enter('I\'m here', function(err) {
+  if(err)
+    console.log('Unable to publish presence; err = ' + err.message);
+  else
+    console.log('Presence channel successfully entered');
+});
+
+bc[java]. import io.ably.realtime.CompletionListener;
+channel.presence.enter("I'm here", new CompletionListener() {
+	@Override
+	public void onError(ErrorInfo reason) {
+		System.out.println("Unable to publish presence; err = " + reason.message);
+	}			
+	@Override
+	public void onSuccess() {
+		System.out.println("Presence channel successfully entered");
+	}
+});
+
+An Ably client instance might, if on an application server for example, publish messages on behalf of multiple distinct clientIds. The channel's @presence@ object therefore also supports methods that enable presence messages to be published for a clientId specified at the time of the call, rather than for a clientId specified when the library was instanced.
+
+In order to be able to publish presence changes for arbitrary clientIds, the client library must have been instanced either with a key, or with a token bound to the wildcard clientId.
+
+bc[javascript,nodejs]. channel.presence.enterClient('someClient', 'I\'m here', function(err) {
+  if(err)
+    console.log('Unable to publish presence; err = ' + err.message);
+  else
+    console.log('Presence channel successfully entered for someClient');
+});
+
+bc[java]. import io.ably.realtime.CompletionListener;
+channel.presence.enterClient("someClient", "I'm here", new CompletionListener() {
+	@Override
+	public void onError(ErrorInfo reason) {
+		System.out.println("Unable to publish presence; err = " + reason.message);
+	}			
+	@Override
+	public void onSuccess() {
+		System.out.println("Presence channel successfully entered for someClient");
+	}
+});
+
+h1. API Reference
+
+inline-toc.
+  Presence reference:
+    - Methods:
+      - enter
+      - enterClient#enter-client
+      - update
+      - updateClient#update-client
+      - leave
+      - leaveClient#leave-client
+      - subscribe
+      - unsubscribe
+      - get
+    - Related types:
+      - PresenceMessage#presence-message
+      - PresenceListener#presence-listener
 
 h2. Methods
 
-enter. Enter this presence channel. The Ably library must have been initialised with a clientId, and must have
-been supplied either with a key, or a token bound to that clientId. This method sends a PresenceMessage for
-the client's clientId and optional clientData.
+h6(#enter)[default]. enter(clientData, callback)
 
-enterClient. Enter this presence channel for the given clientId. This method is provided to support connections
-(eg connections from application server instances) that act on behalf of multiple clientIds. In order to be able
-to enter the channel with this method, the client library must have been instanced either with a key, or with a
-token bound to the wildcard clientId.
+h6(#enter)[java]. public void enter(Object clientData, CompletionListener listener)
 
-update. Update the clientData for this member in the presence channel. The Ably library must have been initialised
-with a clientId, and must have been supplied either with a key, or a token bound to that clientId. This method
-sends a PresenceMessage with the update action and updated clientData.
+Enter this presence channel. The Ably library must have been initialised with a @clientId@, and must have been supplied either with a key, or a token bound to that @clientId@.
 
-updateClient. This is the analogue of enterClient, for the update action.
+This method sends a @PresenceMessage@ for the client's @clientId@ and optional @clientData@. A <span lang="default">callback</span><span lang="java">listener</span> may optionally be passed in to this call to be notified of success or failure of the operation.
 
-leave. Leave this presence channel. This is subject to the same authentication requirements as the enter method
-above.
+h4. Parameters
 
-leaveClient. This is the analogue of enterClient, for the leave action.
+- <span lang="java">Object</span>clientData := An optional payload for the message.
 
-subscribe. Subscribe to presence messages for this presence channel. The caller must supply an implementation of
-the PresenceMessageListener interface.
+- <div lang="javascript,nodejs">callback</div> := Callback to be called on completion.
 
-unsubscribe. Remove a previously subscribed listener.
+- <div lang="java">listener</div> := Listener to be notified on completion.
 
-get. Obtain the current presence set for this channel.
+h6(#enter-client)[default]. enterClient(clientId, clientData, callback)
+
+h6(#enter-client)[java]. public void enter(String clientId, Object clientData, CompletionListener listener)
+
+Enter this presence channel for the given clientId. This method is provided to support connections (eg connections from application server instances) that act on behalf of multiple clientIds. In order to be able to enter the channel with this method, the Ably library must have been instanced either with a key, or with a token bound to the wildcard clientId.
+
+This method sends a @PresenceMessage@ for the given @clientId@ and optional @clientData@. A <span lang="default">callback</span><span lang="java">listener</span> may optionally be passed in to this call to be notified of success or failure of the operation.
+
+h4. Parameters
+
+- <span lang="java">String</span>clientId := The clientId for the message.
+
+- <span lang="java">Object</span>clientData := An optional payload for the message.
+
+- <div lang="javascript,nodejs">callback</div> := Callback to be called on completion.
+
+- <div lang="java">listener</div> := Listener to be notified on completion.
+
+h6(#update)[default]. update(clientData, callback)
+
+h6(#update)[java]. public void update(Object clientData, CompletionListener listener)
+
+Update the presence data for this client. The Ably library must have been initialised with a @clientId@, and must have been supplied either with a key, or a token bound to that @clientId@.
+
+This method sends a @PresenceMessage@ for the client's @clientId@ and optional @clientData@. A <span lang="default">callback</span><span lang="java">listener</span> may optionally be passed in to this call to be notified of success or failure of the operation.
+
+h4. Parameters
+
+- <span lang="java">Object</span>clientData := An optional payload for the message.
+
+- <div lang="javascript,nodejs">callback</div> := Callback to be called on completion.
+
+- <div lang="java">listener</div> := Listener to be notified on completion.
+
+h6(#update-client)[default]. updateClient(clientId, clientData, callback)
+
+h6(#update-client)[java]. public void updateClient(String clientId, Object clientData, CompletionListener listener)
+
+Enter update the @clientData@ for the given present clientId on this presence channel. This is the analogue of @enterClient@, for the update action.
+
+h4. Parameters
+
+- <span lang="java">String</span>clientId := The clientId for the message.
+
+- <span lang="java">Object</span>clientData := An optional payload for the message.
+
+- <div lang="javascript,nodejs">callback</div> := Callback to be called on completion.
+
+- <div lang="java">listener</div> := Listener to be notified on completion.
+
+h6(#leave)[default]. leave(callback)
+
+h6(#leave)[java]. public void leave(CompletionListener listener)
+
+Leave this presence channel. This is subject to the same authentication requirements as the "enter":#enter method above.
+
+This method sends a @PresenceMessage@ for the client's @clientId@ and optional @clientData@. A <span lang="default">callback</span><span lang="java">listener</span> may optionally be passed in to this call to be notified of success or failure of the operation.
+
+h4. Parameters
+
+- <div lang="javascript,nodejs">callback</div> := Callback to be called on completion.
+
+- <div lang="java">listener</div> := Listener to be notified on completion.
+
+h6(#leave-client)[default]. leaveClient(clientId, callback)
+
+h6(#leave-client)[java]. public void leaveClient(String clientId, CompletionListener listener)
+
+This is the analogue of "enterClient":#enter-client, for the @leave@ action.
+
+h4. Parameters
+
+- <span lang="java">String</span>clientId := The clientId for the message.
+
+- <div lang="javascript,nodejs">callback</div> := Callback to be called on completion.
+
+- <div lang="java">listener</div> := Listener to be notified on completion.
+
+h6(#subscribe)[default]. subscribe(listener)
+
+h6(#subscribe)[java]. public void subscribe(PresenceListener listener)
+
+Subscribe to presence messages for this channel. The caller supplies <span lang="default">a listener function</span><span lang="java">an implementation of the PresenceListener interface</span>, which is called each time one or more messages arrives on the channel.
+
+h4. Parameters
+
+- <div lang="javascript,nodejs">listener</div> := The listener function to call for each message.
+
+- <div lang="java">listener</div> := The MessageListener to be notified on completion.
+
+h6(#unsubscribe)[default]. unsubscribe(listener)
+
+h6(#unsubscribe)[java]. public void unsubscribe(PresenceListener listener)
+
+Unsubscribe a previously subscribed listener.
+
+h4. Parameters
+
+- <div lang="javascript,nodejs">listener</div> := The listener function registered on subscription.
+
+- <div lang="java">listener</div> := The PresenceListener registered on subscription.
+
+h6(#get)[default]. get()
+
+h6(#get)[java]. public PresenceMessage[] get()
+
+Get the current presence set for this channel. This returns synchronously with the presence set already known by the client.
+
+h2(#presence-message). PresenceMessage
+
+A @PresenceMessage@ encapsulates an individual presence update sent or received in Ably. A presence message has the following members.
+
+- <span lang="java">String</span>clientId := The id of the client associated with the update. This <span lang="default">property</span><span lang="java">field</span> is populated by the system, where the clientId is known, for messages delivered to subscribers. It is not required to populate the clientId of a message before publishing it.
+
+- <span lang="java">String</span>memberId := A unique id for the client associated with the update, to disambiguate in the case that a single clientId is simultaneously present multiple times (eg on different connections). This <span lang="default">property</span><span lang="java">field</span> is populated by the system, where the memberId is known, for messages delivered to subscribers.
+
+- <span lang="java">Object</span>clientData := An optional message payload for a status line or other data associated with the presence update. The data may be one of the supported payload datatypes.
+
+h2(#presence-listener). PresenceListener
+
+<div lang="javascript,nodejs">
+A @PresenceListener@ function may be subscribed for all presence messages received on the channel. The message is passed as the first argument to the listener.
+</div>
+<div lang="java">
+A implementation of the @PresenceListener@ interface may be registered to be notified of  arrival of presence messages on the channel. A @PresenceMessage[]@ is passed as the first argument of the listener's @onPresenceMessage@ method whenever a presence message is received on the channel.
+</div>
