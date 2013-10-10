@@ -15,8 +15,8 @@ class AblyPreTextileFilter < Nanoc::Filter
       end.join("\n\n") + "\n\n"
     end
 
-    # remove white space between language divs
-    content = content.gsub(/\<\/div\>\s+\<div\slang=["']([^"']+)["']>/, '</div><div lang="\1">')
+    # remove white space between language divs or spans
+    content = content.gsub(/\<\/(div|span)\>\s+\<\1\slang=["']([^"']+)["']>/, '</\1><\1 lang="\2">')
 
     # insert inline table of contents
     content = content.gsub(/^inline\-toc\.\s*$(.*?)^\s*$/m) do |match|
@@ -24,6 +24,26 @@ class AblyPreTextileFilter < Nanoc::Filter
       yaml = YAML::load(yaml_raw)
       NavHelper.inline_toc_items(yaml)
     end
+
+    # blockquote for method definitions use format
+    #
+    # bq(definition). definition
+    #
+    #   -- or --
+    #
+    # bq(definition).
+    #   default: definition
+    #   lang:    definition
+    # --- white space required ---
+    #
+    # transform to
+    # bq(definition). <span lang="default">definition</span><span lang="lang">definition</span>
+    content = content.gsub(/^bq\(definition(\#[^\)]+)?\)\.\s*\n.*?\n\s*\n/m) do |match|
+      lang_definitions = match.scan(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/)
+      lang_spans = lang_definitions.map { |lang, definition| "<span lang='#{lang}'>#{definition}</span>" }.join('')
+      "bq(definition). #{lang_spans}\n\n"
+    end
+
 
     # convert code editor class tags into a format that can be decoded on the front end
     folder = @item.path.match(/\/([^\/]+)\/?$/)[1]
