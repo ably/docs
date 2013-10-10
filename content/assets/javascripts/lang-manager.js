@@ -101,7 +101,7 @@ $(function() {
   });
 
   // blockquote are used to indicate method code example blocks, which are valid, but need to be changed to code blocks for styling
-  $('h3 + blockquote, h6 + blockquote').each(function() { $(this).replaceWith('<code class="prettyprint">' + $(this).html() + '</code>'); });
+  $('blockquote.definition').each(function() { $(this).replaceWith('<code class="prettyprint">' + $(this).html() + '</code>'); });
 
   var languages = {};
   $('ul.lang-selector li[lang]').each(function() {
