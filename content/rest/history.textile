@@ -6,12 +6,56 @@ jump_to:
   Help with:
     - History#title
   API reference:
-    - Application history#history
     - Channel history#channel-history
 ---
 
-The REST client library provides message history at either an application level or channel level.
+The REST client library provides message history for channels. For channels that have persistence enabled, all messages are persisted every few seconds and are then retrievable via the REST API.
 
+h3. History queries
+
+The REST API, provides a @/history@ route on an channel, which performs a history query against the database. These queries may be scoped by @start@ and @end@ time, may be queried in a given @direction@ and may include a @limit@ on the number of records returned.
+
+History results are paginated and therefore accompanied with one or more relative links relating to the current query. Where the number of results returned exceeds the query limit - which is either the value of the @limit@ param or the default limit of 100 - the query result contains pages with the limited number of records, and a relative link to the next page.
+
+Responses contain one or more of the following relative links:
+
+- @first@ := a link to the first page of results for this query. This link also makes the query stable; where params are resolved at query time (particularly @end@ which is resolved to the current time if not specified explicitly) then the @first@ link contains the resolved values of those params so that it will repeatably resolve to the same param values each time. (This does not necessarily mean that the query results will be identical, if the last remaining messages for a given time interval are persisted between two invocations of the same query.)
+
+- current := a stable link to the current page of results.
+
+- next := on each page except the last in a paginated result, the next link is a link to the next page of results.
+
+It is not possible to navigate backwards through a result set, but each page can be obtained by navigating to it by going back to @first@ and then @next@. Of course, if the intention is to display results in the opposite order, the @direction@ param should be used in the initial query to specify the intended direction of pagination.
+
+Relative links are presented by default as an "RFC 5988 Link HTTP response header":http://tools.ietf.org/html/rfc5988; there is a separate Link header for each relative link accompanying the response. The rel types used are @first@, @next@ and @current@ as specified in the RFC. A Link header has the format:
+
+bq. 
+Link: &lt;&lt;url&gt;&gt;; rel="&lt;rel&gt;"
+
+where @<url>@ is the URL of the link and @<rel>@ is the relation type.
+
+For example:
+
+bq. 
+Link: &lt;./history?start=1380794880000&end=1380794881058&limit=100&by=minute
+&direction=forwards&format=json&first_start=1380794880000&gt;; rel="first"
+
+In principle the URL might be any valid URL but in practice it will always be a relative URL, and it must be interpreted relative to the query URL. Clients should treat the URL opaquely; in particular, params (such as @first_start@ in the example above) are undocumented and unsupported except where a client uses the link URL in its entirety.
+
+In the case of a JSON response body format it is also possible to request that the rel response metadata is inline in the response body by specifying @rel_format=inline@ in the request URL. (The @rel_format@ param also takes the value @rel_format=link@ to request Link header metadata explicitly.) In the inline case the response body then has the format:
+
+<pre>
+{
+    "data": [ ... messages ... ],
+    "rel": {
+        "first": <URL>,
+        ...
+    }
+}
+
+</pre>
+
+where the @data@ member references the history result in the usual format and each of the rel links associated with the response is present in the @rel@ member, with the link URL in the same format as above.
 
 h1. API reference
 
@@ -22,33 +66,6 @@ inline-toc.
   Channel object history:
     - Methods:
       - History#channel-history
-
-h2(#history). Application history
-
-With the REST client library, the REST object must be created in order to retrieve history the required application:
-
-bc[javascript]. var Rest = new Ably.Rest(options);
-
-bc[ruby]. rest = Ably::Rest.new(options)
-
-h3. Methods
-
-h6. history
-
-bq(definition). Rest.history(options, callback)
-
-This call queries the REST "@/apps/<app id>/history@":/rest/spec#history API
-
-h4. Parameters
-
-- options := is an optional object containing the query parameters, as specified in the "REST API":/rest/spec#history documentation.
-- callback := is a function of the form: @callback(err, result)@
-where:
-<ul>
-<li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest/spec#common documentation</li>
-<li>On success, @result@ contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest/spec#history</li>
-</ul>
-
 
 h2(#channel-history). Channel object history
 
@@ -77,3 +94,30 @@ where:
 <li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest/spec#common documentation</li>
 <li>On success, @result@ contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest/spec#channel-history</li>
 </ul>
+
+h4. Request options
+
+The following options are supported.
+
+- start := Specifies the start of interval covered by the query. Defaults to the beginning of time.<br><br>
+The value is either a number (milliseconds since the epoch) or a date/time string that can be parsed by JS Date (eg 2012-12-09:16:38).<br><br>
+The given start time is rounded down to the start of the relevant interval depending on the granularity of the query (see below). So, for example, if the query is for stats by minute (which is the default), then the given time will be rounded down to the nearest minute.
+
+- end := Specifies the end of interval covered by the query. Defaults to the current time.<br><br>
+The value is either a number (milliseconds since the epoch) or a date/time string that can be parsed by JS Date (eg 2012-12-09:16:38).<br><br>
+The interval covered by the query always includes the end time, and covers the entire interval at the requested granularity that includes the end time. (In a sense it is "rounded up", except that the end of the query interval is not a "round" time; it's the last second of the interval containing the given end time.)
+
+- direction := Specifies the direction that results are to be returned, either backwards (ie most recent interval first) or forwards (ie oldest interval first).<br><br>
+The start time and end time are always that - ie start is earlier than first, even if the direction is backwards. Therefore, when querying backwards, the first returned result will cover the end time.<br><br>
+Default is backwards.
+
+- limit := Specifies the maximum number of records to return.
+
+- format := Specifies a format for the response, which can be:<br><br>
+<ul>
+<li>json</li>
+<li>html</li>
+<li>binary (returns records encoded as Thrift. Note that this feature is at risk for the stats API)</li>
+If a format is not specified, it is inferred from an Accept or Content-Type header. The header takes precedence.<br><br>
+Similarly, in the special case of json only, the request path may include the extension .json which makes a json request.
+
