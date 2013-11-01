@@ -1,0 +1,146 @@
+---
+title: Encryption
+section: rest
+index: 70
+jump_to:
+  Help with:
+    - encryption#title
+  API Reference:
+    - getDefaultParams#getdefaultparams
+  Related types:
+    - CipherParams#cipher-params
+    - CipherData#cipher-data
+---
+
+Ably client libraries support encryption of message content, making it easier to build apps that encrypt content fully end-to-end.
+
+h2. Objectives and Scope
+
+The libraries support encryption purely as a convenience; the libraries ensure interoperability between environments by having compatible implementations of encryption algorithms and by making common choices on format, mode, padding etc. However,  Ably intentionally does not manage the distribution of keys between clients, and end-to-end encryption is enabled without exposing keys to the Ably service at all. This has the advantage that Ably demonstrably has no access to the unencrypted contents of your messages, but also means that each app is responsible for enabling the distribution of keys to clients independently of Ably.
+
+The client library support for encryption supports symmetric encryption only, and requires each participating client to each specify the correct secret key when creating a @Channel@ instance. Clients that do not specify a key will be delivered the still-encrypted message payloads that they may then still wish to decrypt offline.
+
+The client libraries are designed to be extensible, but initially only support the AES algorithm (with a default key length of 128 bits) and CBC mode. These defaults are intended to ensure that encryption support can be provided in all target environments and platforms.
+
+Encryption is supported for both REST and Realtime publish operations. Decryption is supported in Realtime message subscriptions and in REST and Realtime history operations.
+
+The key in use at any given time is known the client library, but the Ably service has no visibility of the key; it knows only that a given message payload was encrypted. When accessing messages via the history API, it is the caller's responsibility to ensure that the correct key is used for the requested interval.
+
+Encryption options (algorithm, key, etc) are specified on a per-channel basis; it is expected that apps will wish to have both unencrypted and encrypted channels on a single connection.
+
+h2. Encrypted message format
+
+h3. Message representation
+
+Ably messages contain a typed @data@ member, with various supported data types. Encrypted messages carry the same type information - which is the type of the plaintext data - but the data payload is a buffer (ie a byte array containing binary data) containing the ciphertext. A given encrypted message can be exchanged using either the binary (Thrift) or JSON protocol and encryption and decryption are interoperable between the environments.
+
+In the Thrift encoding, an encrypted message is a Thrift-encoded version of the following @TMessage@:
+
+<pre>{
+	name: <name>,
+	timestamp: <timestamp>,
+	data: {
+		type: <TType for unencrypted data value>,
+		cipherData: <binary data for ciphertext>
+	}
+}
+
+</pre>
+
+In the JSON encoding, an encrypted message is represented as follows:
+
+<pre>{
+	name: <name>,
+	timestamp: <timestamp>,
+	"data": <string containing base64-encoded representation of ciphertext>,
+	"type": <TType ordinal value of unencrypted data value>,
+	"encoding": "cipher+base64"
+}
+
+</pre>
+
+h3. Plaintext
+
+Each possible data value type is canonically converted to a byte array before being encrypted, as follows:
+
+- INT32 := the 4-byte array containing the big-endian representation of the int32 value;
+
+- INT64 := the 8-byte array containing the big-endian representation of the int64 value;
+
+- DOUBLE := the 8-byte array containing the big-endian representation of the IEEE754 int64-encoded value;
+
+- STRING := the utf8-encoding of the string, without any trailing null byte;
+
+- BUFFER := the unmodified buffer contents;
+
+- JSONOBJECT := the utf8-encoding of the JSON-stringified value of the object;
+
+- JSONARRAY := the utf8-encoding of the JSON-stringified value of the array;.
+
+Note that Boolean values, having a type only and no value member, are unencrypted.
+
+h3. Conversion to ciphertext
+
+Conversion from plaintext to ciphertext requires the following steps:
+
+* Obtain an initialisation vector (IV). This can be obtained from a local secure random source or might be sourced externally and provided by the caller. In the Ably client libraries, an initial IV is obtained from a local Secure Random source, and IVs for subsequent messages in a channel are obtained by taking a snapshop of intermediate cipher state.
+
+* Pad the plaintext. The plaintext is padded to be a multiple of 16 bytes (the AES block length) using PKCS#7 ("RFC 5652":http://tools.ietf.org/html/rfc5652#section-6.3).
+
+* Encrypt the plaintext. This is performed using AES-CBC using the IV and padded plaintext.
+
+* Construct the ciphertext message payload. This is the concatenation of the 16-byte IV followed by the ciphertext bytes.
+
+By including the IV explicitly in each message, the client library can decrypt any message independently, knowing only the secret key; it is not necessary to know any earlier message. However, the entire sequce, from the point of view of the sender, is effectively encrypted as a stream, avoiding the need to obtain new entropy for the IV for each message, which would risk entropy exhaustion when there are high message volumes originating from a single sender.
+
+h1. API Reference
+
+inline-toc.
+  Encryption reference:
+    - Methods:
+      - getDefaultParams#getdefaultparams
+    - Related types:
+      - CipherParams#cipher-params
+      - CipherData#cipher-data
+
+h2(#methods). Methods
+
+bq(definition#getdefaultparams).
+  nodejs: Crypto.getDefaultParams([key, ]callback)
+  ruby:   Crypto.getDefaultParams(options) → CipherParams
+  java:   public static Crypto.getDefaultParams() → CipherParams
+  java:   public static Crypto.getDefaultParams(byte[] key) → CipherParams
+
+This call obtains a @CipherParams@ instance with default values for the implementation, either taking a supplied cipher key or generating a key.
+
+A non-default key length may be specified by passing in a caller-generated key of the desired key length.
+
+h4. Parameters
+
+- key := an optional <span lang="java">byte[]</span><span lang=default>buffer</span> containing the secret key.
+
+- <div lang="nodejs">callback</div> := a callback with callback signature (@err@, @CipherParams@).
+
+h2(#cipher-params). CipherParams
+
+A @CipherParams@ contains configuration options for a channel cipher, including algorithm, mode, key length and key. Ably client libraries current support AES with CBC, PKCS#7 with a default key length of 128 bits. All implementations also support AES256.
+
+Individual client libraries may support the client instancing a @CipherParams@ directly, but as a minimum are expected to enable a @CipherParams@ with default values to be obtained via "Crypto.getDefaultParams()":#getdefaultparams.
+
+A @CipherParams@ includes the following members.
+
+- <span lang="java">public String</span>algorithm := The name of the algorithm in the default system provider, or the lower-cased version of it; eg "aes" or "AES".
+- <div lang="java">public SecretKeySpec</div> := A @KeySpec@ for the cipher key.
+- <div lang="default">key</div> := A buffer containing the cipher key.
+- <div lang="java">public IvParameterSpec</div> := A @IvParameterSpec@ for the cipher IV.
+- <div lang="default">iv</div> := A buffer containing the cipher IV.
+
+h2(#cipher-data). CipherData
+
+A @CipherData@ instance contains an encrypted message payload. It is presented to a client if it is received on a channel and no cipher has been specified locally on that channel.
+
+A @CipherData@ contains the following members.
+
+- <span lang="java">public TType</span>type := the type of the unencrypted value, specified as a @TType@ <span lang="default>ordinal</span><span lang="java">enum</span>.
+
+- <span lang="java">publiv byte[]</span>buffer := the encrypted text (comprising the concatenated IV and , specified as a @TType@ <span lang="default>ordinal</span><span lang="java">enum</span>.
