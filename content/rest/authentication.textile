@@ -5,116 +5,207 @@ index: 40
 jump_to:
   Help with:
     - Authentication#title
-  API reference:
-    - Rest.auth object#rest-auth
+  Auth API reference:
     - requestToken
     - authorise
     - createTokenRequest
+  Related types:
+    - AuthOptions#auth-options
+    - TokenParams#token-params
+    - TokenDetails#token-details
 ---
 
-The REST client library provides the ability to issue tokens using the the "@requestToken@ endpoint":/rest/rest#requesttoken, and also provides a number of helper functions to simplify the use of the authentication API.
+Clients can access Ably, whether using REST or the Realtime service, by two methods.
 
-As explained in the "constructor documentation":/rest/usage#constructor, the REST library would typically be instanced with either a @key@ or a @token@ option, and these given credentials are used to authenticate requests made by the library. In this situation, the library assumes responsibility for authentication operations, calling any @authUrl@ or @authCallback@ as needed. REST operations, such as publication of messages, or retrieval of message history or stats, can then proceed using the given credentials with no need to make further calls to the auth-specific functionality in the library.
+*Basic Authentication* directly uses one of the application keys created via the application dashboard. Basic Authentication is the simplest method to use but has two important limitations:
+
+* the application key is transmitted over the network as part of a request; therefore it may only be used over TLS (HTTPS or "SSL") connections. This can be a performance disadvantage in some network environments where long round-trip times are amplified by the SSL handshake.
+* the client using the API must be in possession of the application key, which potentially exposes the key to compromise. For example, it is not advisable simply to embed the key in a script in a public web page.
+
+*Token Authentication* uses a token obtained via the REST API "@requestToken@":#requesttoken endpoint. Tokens are authentication tokens that only have a short lifetime, and therefore they may more readily be distributed to clients where there is a risk of compromise. Tokens may also be issued with a particular scope - such as a limited set of access rights, or being limited to use by a specific client - and therefore token-based authentication provides the flexibility to implement access control policies in the application. See "Authentication":/authentication for more details.
+
+Both the "REST":/rest/usage#constructor and "Realtime":/realtime/usage#constructor, libraries would typically be instanced with either a @key@ or a @token@ option, and these given credentials are used to authenticate requests made by the library. In this situation, the library assumes responsibility for authentication operations, calling any @authUrl@ or @authCallback@ as needed. REST operations and Realtime connections can then proceed using the given credentials with no need to make further calls to the authentication-specific functionality in the library.
 
 The principal use-case for @auth@ object is to make requests for tokens to issue to other clients. A subsidiary use-case is to preemptively trigger renewal of a token or to acquire a new token with a revised set of capabilities.
+
+The REST client library provides the ability to issue tokens using the the "@requestToken@
+endpoint":/rest/rest#requesttoken, and also provides a number of helper functions to simplify the use of the authentication API.
+
+The "@requestToken@":#requesttoken endpoint may itself be used without explicit authentication, relying on the implicit authentication of submitting a validly signed token request.
 
 h1. API Reference
 
 inline-toc.
-  Rest.auth reference:
+  Auth object reference:
     - Methods:
       - requestToken
       - authorise
       - createTokenRequest
+    - Related types:
+      - AuthOptions#auth-options
+      - TokenParams#token-params
+      - TokenDetails#token-details
 
-h2(#rest-auth). Rest.auth object
+h2(#auth). Auth object
 
-The Auth object is available as a static property of the Rest object.
+The Auth object is available as a <span lang="java">field</span><span lang="default">property</span> of the top-level Ably Realtime instance.
 
-bc[javascript]. var Rest = new Ably.Rest(options),
-    Rest.auth.<method>
+h3(#methods). Methods
 
-bc[ruby]. rest = Ably::Rest.new(options)
-rest.auth.<method>
+h6(#requesttoken)[default]. requestToken(options, callback)
 
-h3. Methods
+h6(#requesttoken)[java]. public TokenDetails requestToken(AuthOptions options, TokenParams params)
 
-h6(#requesttoken). requestToken
+Calls the "@requestToken@ endpoint":/rest/rest#requesttoken to obtain a token according to the specified <span lang="default">options</span><span lang="java">authOptions and  tokenParams</span>. If the request is successful the resulting "TokenDetails":#token-details instance <span lang="java">is returned</span><span lang="default">is passed back in the callback</span>. If the request is unsuccessful <span lang="java">an appropriate Exception is thrown</span><span lang="default">an appropriate error object is passed to the callback</span>.
 
-bq(definition). Rest.auth.requestToken(options, callback)
+bc[nodejs,javascript,ruby]. realtime.auth.requestToken(options, function(err, tokenDetails){
+  if(err)
+    console.log('An error occurred; err = ' + err.message);
+  else
+    console.log('Success; token = ' + tokenDetails.id);
+});
 
-Calls the "@requestToken@ endpoint":/rest/rest#requesttoken to obtain a token according to the specified options.
-
-h4. Parameters
-
-- options := an optional object containing the query parameters, as specified in the "REST API":/rest/spec#requesttoken and "described below":#requesttokenoptions.
-- callback := is a function of the form: @callback(err, result)@
-where:
-<ul>
-<li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest/spec#common documentation</li>
-<li>On success, @result@ contains the response object as documented in "Authentication":/authentication, which is of the form:
-<pre lang="json">@{
-  id: <token value>,
-  issued_at: <timestamp>,
-  expires: <timestamp>,
-  capability: <canonical capability text>,
-  client_id: <client id>, (optional)
-}@</pre>
-
-
-</li>
-</ul>
-
-h4(#requesttokenoptions). Options
-
-The options supported by @requestToken()@ are as follows. Note that in many cases these options may be used to override the corresponding options given at the time the library is instanced.
-
-- keyId := (optional, overrides instance-wide value) The id of the key to use.
-- keyValue := (optional, overrides instance-wide value) The secret value of the key; if not specified, a key passed in constructing the REST interface will be used; or if no key is available, a token request callback or url will be used.
-- authCallback := (optional, overrides instance-wide value) A Javascript callback to be used, passing a set of token request params, to get a signed token request.
-- authUrl := (optional, overrides instance-wide value) A URL to be used to GET or POST a set of token request params, to obtain a signed token request.
-- authHeaders := (optional, overrides instance-wide value) A set of application-specific headers to be added to any request made to the authUrl.
-- authParams := (optional, overrides instance-wide value) A set of application-specific query params to be added to any request made to the authUrl.
-- expires := (optional) The requested life of the token in seconds. If none is specified a default of 1 hour is provided. The maximum lifetime is 24hours; any request exceeding that lifetime will be rejected with an error.
-- capability := (optional) The capability to associate with the access token. If none is specified, a token will be requested with all of the capabilities of the specified key.
-- clientId := (optional, overrides instance-wide value) A client Id to associate with the token.
-- timestamp := (optional) The time in seconds since the epoch. If none is specified, the system will be queried for a time value to use.
-- queryTime := (optional) Boolean indicating that the Ably system should be queried for the current time when none is specified explicitly. Use this option for platforms that do not have a sufficiently accurate local time source available.
-
-h6(#authorise). authorise
-
-bq(definition). Rest.auth.authorise(options, callback)
-
-Ensures valid auth credentials are present. This may rely on an already-known and valid token, and will obtain a new token if necessary or explicitly requested.
-
-h4. Options
-
-All of the options permitted for "@requestToken@":requesttoken are supported, plus the following additional option.
-
-- force := (optional) Boolean indicating that a new token should be requested, even if a current token is still valid.
-
-h6(#createtokenrequest). createTokenRequest
-
-bq(definition). Rest.auth.createTokenRequest(options, callback)
-
-Creates and signs a token request based on the given options. Note this can only be used when the key value is available locally. Otherwise, signed token requests must be obtained from the key owner (either using the token request callback or url). Use this to generate signed token requests in order to implement a token request callback for use by other clients.
+bc[java]. try {
+  TokenDetails tokenDetails = realtime.auth.requestToken(authOptions, tokenParams);
+  System.out.println("Success; token = " + tokenDetails.id);
+} catch(AblyException e) {
+  System.out.println("An error occurred; err = " + e.getMessage());
+}
 
 h4. Parameters
 
-- options := an optional object containing the query parameters, as "specified below":#createtokenrequestoptions.
-- callback := is a function of the form: @callback(err, result)@
+- <div lang="default">options</div> := an optional object containing any "AuthOptions":#auth-options required to supplement or override the options given when instancing the library, plus any required "TokenParams":#token-params options.
+- <div lang="default">callback</div> := is a function of the form: @callback(err, result)@
 where:
-<ul>
-<li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest/spec#common documentation.</li>
-<li>On success, @result@ contains the signed token request text response object as documented in "Authentication":/authentication.</li>
-</ul>
+<ul><li>@err@ contains an error object containing the error details</li>
+<li>On success, @result@ contains the "TokenDetails":#token-details result.</li></ul>
+- <div lang="java">AuthOptions authOptions</div> := An "AuthOptions":#auth-options instance containing any options to supplement or override the Options given when instancing the library.
 
-h4(#createtokenrequestoptions). Options
+- <div lang="java">TokenParams tokenParams</div> := A "TokenParams":#token-params instance containing the specific parameters of the token request.
 
-- keyId := (optional, overrides instance-wide value) The id of the key to use.
-- keyValue := (optional, overrides instance-wide value) The secret value of the key; if not specified, a key passed in constructing the REST interface will be used; or if no key is available, a token request callback or url will be used.
-- expires := (optional) The requested life of the token in seconds. If none is specified a default of 1 hour is provided. The maximum lifetime is 24hours; any request exceeding that lifetime will be rejected with an error.
-- capability := (optional) The capability to associate with the access token. If none is specified, a token will be requested with all of the capabilities of the specified key.
-- clientId := (optional, overrides instance-wide value) A client Id to associate with the token.
-- timestamp := (optional) The time in seconds since the epoch. If none is specified, the system will be queried for a time value to use.
-- queryTime := (optional) Boolean indicating that the Ably system should be queried for the current time when none is specified explicitly. Use this option for platforms that do not have a sufficiently accurate local time source available.
+h6(#authorise)[default]. authorise(options, callback)
+
+h6(#authorise)[java]. public void TokenDetails authorise(AuthOptions options, TokenParams params, boolean force)
+
+Ensures valid auth credentials are present for the library instance. This may rely on an already-known and valid token, and will obtain a new token if necessary or explicitly requested via the "@requestToken@ endpoint":/rest/rest#requesttoken.
+
+In the event that a new token request is made, the specified <span lang="default">options</span><span lang="java">authOptions and tokenParams</span> are used. If the check or a subsequent request is successful the resulting "TokenDetails":#token-details instance <span lang="java">is returned</span><span lang="default">is passed back in the callback</span>. If the request is unsuccessful <span lang="java">an appropriate Exception is thrown</span><span lang="default">an appropriate error object is passed to the callback</span>.
+
+bc[nodejs,javascript,ruby]. realtime.auth.authorise(options, function(err, tokenDetails){
+  if(err)
+    console.log('An error occurred; err = ' + err.message);
+  else
+    console.log('Success; token = ' + tokenDetails.id);
+});
+
+bc[java]. try {
+  TokenDetails tokenDetails = realtime.auth.authorise(authOptions, tokenParams, false);
+  System.out.println("Success; token = " + tokenDetails.id);
+} catch(AblyException e) {
+  System.out.println("An error occurred; err = " + e.getMessage());
+}
+
+h4. Parameters
+
+- <div lang="default">options</div> := an optional object containing any "AuthOptions":#auth-options required to supplement or override the options given when instancing the library, plus any required "TokenParams":#token-params options. A further boolean @force@ option is supported which indicates that a new token should be requested, even if a current token is still valid.
+- <div lang="default">callback</div> := is a function of the form: @callback(err, result)@
+where:
+<ul><li>@err@ contains an error object containing the error details</li>
+<li>On success, @result@ contains the "TokenDetails":#token-details result.</li></ul>
+- <div lang="java">AuthOptions authOptions</div> := An "AuthOptions":#auth-options instance containing any options to supplement or override the Options given when instancing the library.
+
+- <div lang="java">TokenParams tokenParams</div> := A "TokenParams":#token-params instance containing the specific parameters of the token request.
+
+- <div lang="java">boolean force</div> := A boolean indicating that a new token should be requested, even if a current token is still valid.
+
+h6(#createtokenrequest)[default]. createTokenRequest(options, callback)
+
+h6(#createtokenrequest)[java]. public void String createTokenRequest(AuthOptions options, TokenParams params)
+
+Creates and signs a token request based on the specified <span lang="default">options</span><span lang="java">authOptions and  tokenParams</span>. Note this can only be used when the key value is available locally. Otherwise, signed token requests must be obtained from the key owner (either using the token request callback or url). Use this to generate signed token requests in order to implement a token request callback for use by other clients.
+
+If the request is successful the resulting token request is JSON-encoded and <span lang="java">returned</span><span lang="default">passed back in the callback</span>. If the request is unsuccessful <span lang="java">an appropriate Exception is thrown</span><span lang="default">an appropriate error object is passed to the callback</span>.
+
+bc[nodejs,javascript,ruby]. realtime.auth.createTokenRequest(options, function(err, tokenRequest){
+  if(err)
+    console.log('An error occurred; err = ' + err.message);
+  else
+    console.log('Success; token request = ' + tokenRequest);
+});
+
+bc[java]. try {
+  String tokenRequest = realtime.auth.createTokenRequest(authOptions, tokenParams);
+  System.out.println("Success; token = " + tokenRequest);
+} catch(AblyException e) {
+  System.out.println("An error occurred; err = " + e.getMessage());
+}
+
+h4. Parameters
+
+- <div lang="default">options</div> := an optional object containing any "AuthOptions":#auth-options required to supplement or override the options given when instancing the library, plus any required "TokenParams":#token-params options.
+- <div lang="default">callback</div> := is a function of the form: @callback(err, result)@
+where:
+<ul><li>@err@ contains an error object containing the error details</li>
+<li>On success, @result@ contains the "TokenDetails":#token-details result.</li></ul>
+- <div lang="java">AuthOptions authOptions</div> := An "AuthOptions":#auth-options instance containing any options to supplement or override the Options given when instancing the library.
+
+- <div lang="java">TokenParams tokenParams</div> := A "TokenParams":#token-params instance containing the specific parameters of the token request.
+
+h2(#auth-options). AuthOptions
+
+An @AuthOptions@ object contains credentials and related options in support of interacting with the Ably service. @AuthOptions@ are a subset of the Ably library "Options":/realtime/usage#options. Various methods on the Auth object take <span lang="java">an AuthOptions argument</span><span lang="default">one or more AuthOptions options</span> to enable the authentication of the requesting client to the service.
+Options specified in this way will supplement or override the corresponding options given when the library was instanced.
+
+AuthOptions <span lang="java">fields</span><span lang="default">options</span> are as follows.
+
+- <span lang="java">public TokenCallback</span> authCallback := A callback to call to obtain a signed token request. This enables a client to obtain token requests from another entity, so tokens can be renewed without the client requiring access to keys.
+
+- <span lang="java">public String</span> authUrl := A URL to queryto obtain a signed token request. This enables a client to obtain token requests from another entity, so tokens can be renewed without the client requiring access to keys.
+
+- <span lang="java">public String</span> keyId := A keyId. This is used in instances where a full key or token are not provided at initialisation.
+
+- <span lang="java">public String</span> keyValue := The secret keyValue for an Ably key associated with this client.
+
+- <span lang="java">public String</span> authToken := An authentication token issued for this application against a specific key and TokenParams
+
+- <span lang="java">public Param[]</span> authHeaders := Headers to be included in any request made by the library to the authURL.
+
+- <span lang="java">public Param[]</span> authParams := Query params to be included in any request made by the library to the authURL.
+
+- <span lang="java">public boolean</span> queryTime := This may be set in instances that the library is to sign token requests based on a given key. If true, the library will query the Ably system for the current time instead of relying on a locally-available time of day.
+
+h2(#token-params). TokenParams
+
+A @TokenParams@ object is associated with a token request and contains the parameters of the request, corresponding to the desired attributes of the token. Methods on the Auth object that may trigger a token request take <span lang="java">a TokenParams argument</span><span lang="default">one or more TokenParams options</span>.
+
+TokenParams <span lang="java">fields</span><span lang="default">options</span> are as follows.
+
+- <span lang="java">public String</span> id := The id of the key against which this request is made.
+
+- <span lang="java">public long</span> ttl := Requested time to live for the token in seconds. If none is specified a default of 1 hour is provided. The maximum lifetime is 24 hours or less depending on application settings and the attributes of the issuing key; any request exceeding that lifetime will be rejected with an error.
+
+- <span lang="java">public String</span> capability :=  The capability to associate with the access token. If none is specified, a token will be requested with all of the capabilities of the specified key. If the token request is successful, the capability of the returned token will be the intersection of this capability with the capability of the issuing key.
+
+- <span lang="java">public String</span> client_id := A clientId to associate with this token. The generated token may be used to authenticate as this clientId.
+
+- <span lang="java">public long</span> timestamp := The timestamp (in seconds since the epoch) of this request. Timestamps, in conjunction with the nonce, are used to prevent token requests from being replayed.
+
+- <span lang="java">public String</span> nonce := An opaque nonce string of at least 16 characters to ensure uniqueness of this request. Any subsequent request using the same nonce will be rejected.
+
+- <span lang="java">public String</span> mac := The Message Authentication Code (MAC) for this request. See "the Authentication documentation":/rest-api/authentication for more details on the construction of the MAC.
+
+h2(#token-details). TokenDetails
+
+A @TokenDetails@ object contains the parameters of a response from a successful token request the service. This contains the token string itself plus various items of metadata relating to that token.
+
+TokenDetails <span lang="java">fields</span><span lang="default">properties</span> are as follows.
+
+- <span lang="java">public String</span> id := The token itself.
+
+- <span lang="java">public long</span> expires := The time (in seconds since the epoch) at which this token expires.
+
+- <span lang="java">public long</span> issuedAt := The time (in seconds since the epoch) at which this token was issued.
+
+- <span lang="java">public String</span> capability := The capability associated with this token. See "the Authentication documentation":/rest-api/authentication for more details on capabilities.
+
+- <span lang="java">public String</span> clientId := The clientId, if any, bound to this token. If a clientId is included, then the token authenticates its bearer as that clientId, and the token may only be used to perform operations on behalf of that clientId.
