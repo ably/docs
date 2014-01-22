@@ -40,24 +40,33 @@ Ably also provides "REST client libraries for a range of languages":/rest/client
 
 h2(#common). Common API behaviour
 
-The REST API defaults to returning results, and expects request bodies, in JSON format. An Accept header is used to specify an alternative response format, and the following formats are allowed:
+h3. General
 
+The REST API defaults to returning results, and expects request bodies, in JSON format. An Accept header is used to specify a specific response format - JSON or an alternative - and the following formats are allowed:
+
+* @applicaton/json@: JSON;
 * @applicaton/javascript@: for JSONP. A @callback@ query parameter is also expected, which defaults simply to "callback";
-* @text/xml@: for XML; XML support is planned for the future.
-* @text/html@: HTML.
+* @application/x-thrift@: the Apache Thrift binary encoding for certain Ably-specific types relating to the Ably API;
+* @text/html@: HTML
 
-It is also possible to specify the response format with the @format@ query parameter (with supported values being @json@, @jsonp@, @html@, @xml@). Any Accept header takes precedence over a @format@ parameter.
+It is also possible to specify the response format with the @format@ query parameter (with supported values being @json@, @jsonp@, @binary@, @html@). Any Accept header takes precedence over a @format@ parameter.
 
-Response data types and layouts are documented in the context of each API or route.
+Similarly, POST requests may contain a request body in JSON or other formats as indicated by a @Content-Type@ header. The supported content types are:
 
-A response statusCode of 200, or 201 in the case of POST, indicates success. A successful result will typically provide a response body but certain operations (such as DELETE) may respond with an empty response body.
+* @applicaton/json@: JSON;
+* @application/x-thrift@: the Apache Thrift binary encoding for certain Ably-specific types relating to the Ably API;
+* @application/x-www-form-urlencoded@: Form-encoded.
+
+Specific request and response data types are documented in the context of each API or route.
+
+A response status code of 20X (200, 201 or 204) indicates success. A successful result will typically provide a response body but certain operations (such as DELETE) may respond with a 204 response and no response body.
 
 All other "standard HTTP statusCodes":http://en.wikipedia.org/wiki/List_of_HTTP_status_codes signify an error. Errors from all APIs are returned as an object of the form:
 
 bc[json]. {
   error: {
     code: <ably error code>,
-    reason: <reason string>,
+    message: <string>,
     statusCode: <http status code>
   }
 }
@@ -66,11 +75,66 @@ The properties of error are:
 
 - code := A specific reason code as defined in the public errors definition (link TBD), where one is known
 - statusCode := Where a code is not available, the statusCode provides a generic indication of the nature of the failure
-- reason := The reason string is an English language string that aims to provide useful information to the developer. It is not necessarily intended to be an informative string for the end user
+- message := The message string is an English language string that aims to provide useful information to the developer. It is not necessarily intended to be an informative string for the end user
 
 Wherever possible, success response bodies contain links, in "HATEOS":http://en.wikipedia.org/wiki/HATEOAS style, to other resources relevant to the response; where these are present these are included as @href@ attributes on the applicable part of the response object.
 
 GET, PUT, POST and DELETE are available in all contexts where they make sense. GET is always idempotent.
+
+h3. Pagination
+
+REST APIs whose responses may have unbounded size have paginated responses; that is, if a full response to the query could exceed a limit (a default or a @limit@ given as a parameter to the call) the first response contains a subset of the results, and further "pages" of the result are available on subsequent requests. Each response (the initial response and responses to each subsequent request) is accompanied by one or more relative links relating to the current query.
+
+Responses contain one or more of the following relative links:
+
+- @first@ := a link to the first page of results for this query. This link also makes the query repeatable; any params that are resolved at query time (for example default values for omitted time-related params) have their resolved values included explicitly in the @first@ link.
+
+- current := a stable link to the current page of results.
+
+- next := on each page except the last in a paginated result, the next link is a link to the next page of results.
+
+Relative links are presented by default as an "RFC 5988 Link HTTP response header":http://tools.ietf.org/html/rfc5988; there is a separate @Link@ header for each relative link accompanying the response. The rel types used are @first@, @next@ and @current@ as specified in the RFC.
+
+A @Link@ header has the format:
+
+bq. 
+Link: &lt;&lt;url&gt;&gt;; rel="&lt;rel&gt;"
+
+where @<url>@ is the URL of the link and @<rel>@ is the relation type.
+
+For example:
+
+bq. 
+Link: &lt;./stats?start=1380794880000&end=1380794881058&limit=100&unit=minute
+&direction=forwards&format=json&first_start=1380794880000&gt;; rel="first"
+
+In principle the link URL might be any valid URL but in practice it will always be a relative URL, and it must be interpreted relative to the original query URL. Clients should treat link URLs opaquely; in particular, params (such as @first_start@ in the example above) may be undocumented and unsupported except where a client uses the link URL in its entirety.
+
+Clients that are unable to process response headers may also request an @envelope@ response type.
+
+h3. Envelope response format
+
+A client that is unable to access response headers or status code can request an @envelope@ response that contains the usual response, plus @Link@ header information and the response status code wrapped in an object as a single response body. This is useful for JSONP and may be useful in other environments. Envelope responses are only supported for JSON, JSONP and HTML formats.
+
+A client requests an envelope response by including an @envelope=true@ param in the request.
+
+An envelope response body then has the format:
+
+<pre>
+{
+    "statusCode": <status code>,
+    "response": <result of API call>,
+    "rel": {
+        "first": <URL>,
+        ...
+    }
+}
+
+</pre>
+
+where the @response@ member references the API result in the usual format. The @rel@ member, present only in paginated responses, includes each of the rel links associated with the response.
+
+Envelope responses always are always made with a 200 status code; the status of the API request itself must be obtained from the @statusCode@ member of the response body.
 
 h2. Authentication
 
