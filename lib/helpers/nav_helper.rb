@@ -1,6 +1,7 @@
 module NavHelper
   def nav_items(section, options = {})
     items = @items.select { |d| d[:section] == section }
+    items += [options[:append]].flatten.map { |item| { index: 1_000, html: item }} if options.has_key?(:append)
     if items.empty?
       ""
     else
@@ -16,15 +17,15 @@ module NavHelper
         end
       end
       items.map.sort { |a,b| (a[:index].to_i || 100) <=> (b[:index].to_i || 100) }.each do |item|
-        if item[:group] && item[:group] != last_group
-          results << "<li>#{html_escape(item[:group])}</li>"
-          last_group = item[:group]
+        if item[:html]
+          results << "<li>#{item[:html]}</li>"
+        else
+          if item[:group] && item[:group] != last_group
+            results << "<li>#{html_escape(item[:group])}</li>"
+            last_group = item[:group]
+          end
+          results << "<li class='#{item == @item ? 'selected' : ''}'><a href='#{html_escape(item.path)}'>#{html_escape(item[:title])}</a></li>"
         end
-        results << "<li class='#{item == @item ? 'selected' : ''}'><a href='#{html_escape(item.path)}'>#{html_escape(item[:title])}</a></li>"
-      end
-      if options.has_key?(:append)
-        append_items = options[:append].kind_of?(Array) ? options[:append] : [options[:append]]
-        results += append_items.map { |d| "<li>#{d}</li>" }
       end
       results << '</ul>'
       results.join("\n")
