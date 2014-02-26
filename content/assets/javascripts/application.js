@@ -1,6 +1,7 @@
 $(function() {
   var jumpToNav = $('select#jump-to-nav'),
-      navIsScrolling = false;
+      navIsScrolling = false,
+      inlineTOCs = $('.inline-toc ul')
 
   function findAnchorTag(anchorId) {
     var tags = 'a,h1,h2,h3,h4,h5,h6',
@@ -30,17 +31,24 @@ $(function() {
     }
   };
 
-  var syncJumpToNavWithLanguageSpecificContent = function() {
-    jumpToNav.find('option[id]').each(function() {
-      var anchorId = $(this).attr('id').replace(/^anchor-/,''),
-          anchorTag = findAnchorTag(anchorId),
-          languageContentWithinTag = anchorTag.find('span[lang].lang-resource.selected');
+  var syncNavsWithLanguageSpecificContent = function() {
+    var matchers = [
+      { nodes: jumpToNav.find('option[id]'), attribute: 'id' },
+      { nodes: inlineTOCs.find('a[href^="#"]'), attribute: 'href' }
+    ];
 
-      if (languageContentWithinTag.length) {
-        $(this).text(languageContentWithinTag.text());
-      }
+    $.each(matchers, function(item, matcher) {
+      matcher.nodes.each(function() {
+        var anchorId = $(this).attr(matcher.attribute).replace(/^(#|anchor-)/,''),
+            anchorTag = findAnchorTag(anchorId),
+            languageContentWithinTag = anchorTag.find('span[lang].lang-resource.selected');
+
+        if (languageContentWithinTag.length) {
+          $(this).text(languageContentWithinTag.text());
+        }
+      });
     });
-  }
+  };
 
   jumpToNav.on('change', function(evt) {
     var selected = $(this).find('option:selected'),
@@ -48,8 +56,8 @@ $(function() {
     if (aid) jumpToCallback(aid);
   });
 
-  $(document).on('language-change', syncJumpToNavWithLanguageSpecificContent);
-  syncJumpToNavWithLanguageSpecificContent();
+  $(document).on('language-change', syncNavsWithLanguageSpecificContent);
+  syncNavsWithLanguageSpecificContent();
 
   // if a user clicks on an anchor link, scroll nicely and position correctly
   $('a[href]').on('click', function(evt) {
