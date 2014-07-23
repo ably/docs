@@ -49,6 +49,10 @@ task :build => :generate_all do
   end
 
   rm_rf(site)
+
+  # Git lock still existed for some reason, pause briefly to allow lock to be released
+  sleep 0.5
+
   Dir["**/*"].each {|f| repo.add(f) }
   repo.status.deleted.each {|f, s| repo.remove(f)}
   message = ENV["MESSAGE"] || "Site updated at #{Time.now.utc}"
