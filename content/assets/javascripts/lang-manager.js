@@ -150,6 +150,8 @@ $(function() {
         }
       }
     });
+
+    $(document).trigger('language-change');
   }
 
   if ($.cookie("preferred_lang") && langList.find('li[data-lang=' + $.cookie("preferred_lang") + ']').length) {

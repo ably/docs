@@ -44,6 +44,25 @@ class AblyPreTextileFilter < Nanoc::Filter
       "bq(definition). #{lang_spans}\n\n"
     end
 
+    # h[1-6] for method definitions use format
+    #
+    # h6(#optional-anchor). method
+    #
+    #   -- or --
+    #
+    # h6(#optional-anchor).
+    #   default: method
+    #   lang:    method
+    # --- white space required ---
+    #
+    # transform to
+    # h6(#optional-anchor). <span lang="default">method</span><span lang="lang">method</span>
+    content = content.gsub(%r{^(h[1-6])(\(#[^\)]+\))?\.\s*\n.+?\n\s*\n}m) do |match|
+      h_tag, anchor = $1, $2
+      lang_definitions = match.scan(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/)
+      lang_spans = lang_definitions.map { |lang, definition| "<span lang='#{lang}'>#{definition}</span>" }.join('')
+      "#{h_tag}#{anchor}. #{lang_spans}\n\n"
+    end
 
     # convert code editor class tags into a format that can be decoded on the front end
     folder = @item.path.match(/\/([^\/]+)\/?$/)[1]
