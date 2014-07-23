@@ -1,10 +1,20 @@
 $(function() {
   var jumpToNav = $('select#jump-to-nav'),
-      navIsScrolling = false;
+      navIsScrolling = false,
+      inlineTOCs = $('.inline-toc ul')
+
+  function findAnchorTag(anchorId) {
+    var tags = 'a,h1,h2,h3,h4,h5,h6',
+        matchers = [];
+    $.each(tags.split(','), function(index, tag) {
+      matchers.push(tag + "[id='" + anchorId + "']");
+    });
+    return $(matchers.join(','));
+  }
 
   // On selecting a nav section, scroll it into view
   var jumpToCallback = function(aid) {
-    var idTag = $("a[name='"+ aid +"'],h1[id='"+ aid +"'],h2[id='"+ aid +"'],h3[id='"+ aid +"'],h4[id='"+ aid +"'],h6[id='"+ aid +"']");
+    var idTag = findAnchorTag(aid);
     navIsScrolling = true;
     if (!idTag.length) {
       if (console.error) { console.error('Hash tag target #' + aid + ' is missing.  Could not scroll'); }
@@ -21,11 +31,33 @@ $(function() {
     }
   };
 
+  var syncNavsWithLanguageSpecificContent = function() {
+    var matchers = [
+      { nodes: jumpToNav.find('option[id]'), attribute: 'id' },
+      { nodes: inlineTOCs.find('a[href^="#"]'), attribute: 'href' }
+    ];
+
+    $.each(matchers, function(item, matcher) {
+      matcher.nodes.each(function() {
+        var anchorId = $(this).attr(matcher.attribute).replace(/^(#|anchor-)/,''),
+            anchorTag = findAnchorTag(anchorId),
+            languageContentWithinTag = anchorTag.find('span[lang].lang-resource.selected');
+
+        if (languageContentWithinTag.length) {
+          $(this).text(languageContentWithinTag.text());
+        }
+      });
+    });
+  };
+
   jumpToNav.on('change', function(evt) {
     var selected = $(this).find('option:selected'),
         aid = selected.attr('id').replace(/^anchor-/,'');
     if (aid) jumpToCallback(aid);
   });
+
+  $(document).on('language-change', syncNavsWithLanguageSpecificContent);
+  syncNavsWithLanguageSpecificContent();
 
   // if a user clicks on an anchor link, scroll nicely and position correctly
   $('a[href]').on('click', function(evt) {
