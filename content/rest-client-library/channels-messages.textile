@@ -1,5 +1,5 @@
 ---
-title: Channels & Messages
+title: Channels and Messages
 section: rest
 index: 20
 jump_to:
@@ -14,57 +14,99 @@ jump_to:
     - presence
 ---
 
-h2(#help-join). Joining a channel
+The Ably Realtime service organises the traffic within any application into named channels. Channels are the "unit" of message distribution; clients attach to channels to subscribe to messages, and every message broadcast by the service is associated with a unique channel.
 
-In the REST client library, a @Channel@ object must be obtained in order to publish messages on that channel, or access the channel methods or classes:
+h3. Channels in the REST API
 
-bc[nodejs]. var Rest = new Ably.Rest(options),
-    channel = Rest.channels.get('channel0');
+Channels are not pre-configured; they are created on demand when realtime clients attach, and remain active until such time that there are no remaining attached clients. Applications do have, however, the ability to pre-configure one or more channel namespaces (ie name prefixes), and associate different attributes and access rights with those namespaces.
 
-bc[ruby]. rest = Ably::Rest.new(options)
-channel = rest.channels.get('channel0')
+In the REST API, channels are stateless; a "publish":#publish operation causes the channel to be established within the realtime system if it does not already exist, but this state is invisible to the REST client.
 
-bc[java]. Rest rest = new Ably.Rest(options);
-Channel channel = rest.channels.get('channel0');
+h4. Obtaining a channel instance
 
-A shortcut method is also provided to retrieve a @Channel@:
+A @Channel@ object is a reference to a single channel. A channel instance is obtained from the @channels@ collection of the Ably @Rest@ instance.
 
-bc[nodejs]. var channel = Rest.channel('channel0');
+bc[javascript,nodejs]. var channel = rest.channels.get('myChannel');
 
-bc[ruby]. channel = Rest.channel('channel0')
+bc[java]. import io.ably.realtime.Channel;
+Channel channel = rest.channels.get("myChannel");
 
-bc[java]. Channel channel = Rest.channel("channel0");
+A set of "channel options":#channel-options may also be passed when getting a channel instance.
 
-h2(#help-publish). Publishing messages
+bc[javascript,nodejs]. var channel = rest.channels.get('myChannel', channelOpts);
 
-Publishing a message to a channel requires an event identifier for the message and an arbitrary payload.  Payloads can be either a primitive serializable data type, or a binary object.  If a message could not be delivered successfully, then an error will be returned.
+bc[java]. import io.ably.rest.Channel;
+Channel channel = rest.channels.get("myChannel", channelOpts);
 
-bc[nodejs]. var channel = Rest.channel('channel0');
-channel.publish('announcement', { message: 'Luke has arrived'});
+h3. Channel namespaces
 
-bc[ruby]. channel = Rest.channel('channel0')
-channel.publish 'announcement', { message: 'Luke has arrived'}
+One or more channel namespaces, or channel name prefixes, may be configured for an app. When a channel is created whose name is prefixed with one of the namespaces, the channel assumes certain configured attributes associated with that namespace.
 
-bc[java]. Channel channel = Rest.channel("channel0");
-channel.publish('announcement', { message: 'Luke has arrived'});
+Namespace-prefixed names are delimited by a single colon ':'; the first component of the channel name (from the start up to and including the last character before the colon) is the namespace. A channel name may validly contain a colon even if the namespace component does not correspond to a namespace; also, a channel may contain multiple colons and only the component up to the first colon will be matched with a namespace. The only restriction on channel names is that a channel name may not start with a colon and may not be empty.
 
-The channel-specific calls in the client library directly mirror the "REST API":/rest-api.
+Namespaces are defined and configured via the application dashboard. Namespace attributes that can be configured are:
+* whether or not channels belonging to that namespace require clients to be authenticated;
+* whether or not channel messages are persisted;
+* whether or not clients are required to be connected over a TLS connection.
+
+Key or token capabilities can also specify access rights based on channel namespace.
+
+h2. Messages
+
+An Ably Realtime Message has a @data@ member carrying the payload of the message. Various primitive and object types are portably defined and supported in all clients, enabling clients to be interoperable despite being hosted in different languages or environments.
+
+The supported payload types are primitive types (boolean, int32, double, string), JSON-encoded objects and arrays, and buffers containing arbitrary binary data. Client libraries detect the supplied message payload and encode the message appropriately.
+
+h3. Publishing messages
+
+Channels expose a @publish@ method whereby a client can publish either a single message or an array of messages to a channel. A listener optionally passed in to the @publish@ method enables the client to know whether or not the operation succeeded.
+
+bc[javascript,nodejs]. channel.publish("myEvent", "This is my message", function(err) {
+  if(err)
+    console.log('Unable to publish message; err = ' + err.message);
+  else
+    console.log('Message successfully sent');
+});
+
+bc[java]. import io.ably.rest.CompletionListener;
+channel.publish("myEvent", "This is my message", new CompletionListener() {
+	@Override
+	public void onError(ErrorInfo reason) {
+		System.out.println("Unable to publish message; err = " + reason.message);
+	}
+	@Override
+	public void onSuccess() {
+		System.out.println("Message successfully sent");
+	}
+});
+
+h3. Retrieving message history
+
+Channels expose a @history@ method whereby a client can obtain message history. See the "history":/rest-client-library/history documentation for details.
+
+h2. Presence
+
+Channels expose a @presence@ member which a client can use to obtain channel presence information. See the "presence":/rest-client-library/presence documentation for details.
 
 h1. API Reference
 
 inline-toc.
-  Channel object reference:
+  Channels and messages reference:
     - Methods:
-      - publish
-      - history
-      - stats
-      - presence
+      - publish(name, data)#publish-data
+      - publish(message)#publish-msg
+      - publish(messages)#publish-msg-array
+      - history()#history
+    - Members:
+      - name#members
+      - presence#members
+    - Related types:
+      - Message#message
+      - MessageListener#message-listener
+      - CompletionListener#completion-listener
+      - ChannelOptions#channel-options
 
-h2(#channel-object). Channel Object Reference
-
-The Channel object is is created by getting a channel from the "@Ably object":/rest-client-library/usage#constructor channels class.
-
-h3. Methods
+h2. Methods
 
 h6(#publish). publish
 
@@ -73,7 +115,7 @@ bq(definition).
   ruby:   channel.publish(event, data) → success
   java:   channel.publish(String event, Object data) → Boolean success
 
-This call queries the REST "@/apps/<app id>/channels/<channel id>/publish@":/rest-api#publish API.
+This call queries the REST "@channels/<channel id>/publish@":/rest-api#publish API.
 
 h4. Parameters
 
@@ -113,11 +155,11 @@ bq(definition).
   ruby:   channel.history(options) → json_result
   java:   channel.history(OptionsHash options) → JSONResult
 
-This call queries the REST "@/apps/<app id>/channels/<channel id>/history@":/rest-api#channel-history API.
+Get message history for this channel. See the "history":/realtime/history API documentation for details.
 
 h4. Parameters
 
-- options := an optional object containing the query parameters, as specified in the "REST API":/rest-api#channel-history.
+- options := an optional object containing the query parameters, as specified in the "history":/realtime/history API documentation.
 - <div lang="nodejs">callback</div> := is a function of the form: @callback(err, result)@
 where:
 <ul>
@@ -170,7 +212,7 @@ bq(definition).
   ruby:   channel.stats(options) → json_result
   java:   channel.stats(OptionsHash options) → JSONResult
 
-This call queries the REST "@/apps/<app id>/channels/<channel id>/stats@":/rest-api#channel-stats API.
+This call queries the REST "@channels/<channel id>/stats@":/rest-api#channel-stats API.
 
 h4. Parameters
 
@@ -216,7 +258,6 @@ Failure to retrieve the stats will raise an exception - typical exceptions inclu
 
 </div>
 
-
 h6(#presence). presence
 
 bq(definition).
@@ -224,7 +265,7 @@ bq(definition).
   ruby:   channel.presence(options) → json_result
   java:   channel.presence(OptionsHash options) → JSONResult
 
-This call queries the REST "@/apps/<app id>/channels/<channel id>/presence@":/rest-api#channel-presence API.
+This call queries the REST "@channels/<channel id>/presence@":/rest-api#channel-presence API.
 
 h4. Parameters
 
