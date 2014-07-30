@@ -9,6 +9,7 @@ jump_to:
     - publish
     - subscribe
     - unsubscribe
+    - history
     - attach
     - detach
   Related types:
@@ -21,11 +22,13 @@ jump_to:
 
 The Ably Realtime service organises the traffic within any application into named channels. Channels are the "unit" of message distribution; clients attach to channels to subscribe to messages, and every message broadcast by the service is associated with a unique channel.
 
-h3. Channel lifecycle
+h3. Channels in the Realtime API
 
 Channels are not pre-configured; they are created on demand when clients attach, and remain active until such time that there are no remaining attached clients. Applications do have, however, the ability to pre-configure one or more channel namespaces (ie name prefixes), and associate different attributes and access rights with those namespaces.
 
 Clients attach to a channel in order to participate on that channel in any way (either to publish, subscribe, or be present on the channel). Channel attach and detach operations are synchronous - after initiating an attach request, the client must wait for a response that confirms that the channel is established on the service, and that the client has the rights necessary to access the channel.
+
+h4. Channel states
 
 A number of states are therefore defined for a channel.
 
@@ -50,6 +53,13 @@ bc[javascript,nodejs]. var channel = realtime.channels.get('myChannel');
 
 bc[java]. import io.ably.realtime.Channel;
 Channel channel = realtime.channels.get("myChannel");
+
+A set of "channel options":#channel-options may also be passed when getting a channel instance.
+
+bc[javascript,nodejs]. var channel = realtime.channels.get('myChannel', channelOpts);
+
+bc[java]. import io.ably.realtime.Channel;
+Channel channel = realtime.channels.get("myChannel", channelOpts);
 
 h4. Listening for state changes
 
@@ -207,6 +217,14 @@ channel.publish("myEvent", "This is my message", new CompletionListener() {
 	}
 });
 
+h3. Retrieving message history
+
+Channels expose a @history@ method whereby a client can obtain message history. See the "history":/realtime/history documentation for details.
+
+h2. Presence
+
+Channels expose a @presence@ member which a client can use to obtain channel presence information and to enter and leave the presence channel itself. See the "presence":/realtime/presence documentation for details.
+
 h1. API Reference
 
 inline-toc.
@@ -220,8 +238,13 @@ inline-toc.
       - subscribe(names, listener)#subscribe-event-array
       - unsubscribe(listener)#unsubscribe-listener
       - unsubscribe(name, listener)#unsubscribe-event
+      - history()#history
       - attach()#attach
       - detach()#detach
+    - Members:
+      - state#members
+      - name#members
+      - presence#members
     - Related types:
       - Message#message
       - MessageListener#message-listener
@@ -339,13 +362,72 @@ h4. Parameters
 
 - <div lang="java">listener</div> := The "MessageListener":#message-listener registered on subscription.
 
+h6(#history). history
+
+bq(definition).
+  nodejs: channel.history(options, callback)
+  ruby:   channel.history(options) → json_result
+  java:   channel.history(OptionsHash options) → JSONResult
+
+Get message history for this channel. See the "history":/realtime/history API documentation for details.
+
+h4. Parameters
+
+- options := an optional object containing the query parameters, as specified in the "history":/realtime/history API documentation.
+- <div lang="nodejs">callback</div> := is a function of the form: @callback(err, result)@
+where:
+<ul>
+<li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest-api#common documentation</li>
+<li>On success, @result@ contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api#channel-history.
+  Example @result@:
+  <pre lang="json"><code>[{
+    "name": "<event name>",
+    "channel": "<channel id>",
+    "data": "<message payload>",
+    "timestamp": "<message timestamp>"
+  }]</code></pre>
+</li>
+</ul>
+
+<div lang="ruby,java">
+h4. Returns
+
+On success, <span lang="ruby">@json_result@</span><span lang="java">@JSONResult@</span> contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api/#channel-history.
+
+Example <span lang="ruby">@json_result@</span><span lang="java">@JSONResult@</span>:
+
+bc[json]. [{
+  "name": "<event name>",
+  "channel": "<channel id>",
+  "data": "<message payload>",
+  "timestamp": "<message timestamp>"
+}]
+
+Failure to retrieve the history will raise an exception - typical exceptions include:
+  <div lang="ruby">
+
+* @Ably::NetworkUnavailableException@
+* @Ably::QuotaExceededException@
+* @Ably::AuthenticationFailureException@
+  </div>
+  <div lang="java">
+
+* @Ably.NetworkUnavailableException@
+* @Ably.QuotaExceededException@
+* @Ably.AuthenticationFailureException@
+  </div>
+
+</div>
+
 h6(#attach). attach
 
 bq(definition).
   default: attach()
   java:    attach()
 
-Attach to this channel. This will be called implicitly when required if the client calls either @publish()@ or @subscribe()@.
+Attach to this channel. Any resulting channel state change will be indicated to any registered "ChannelStateListener"#channel-state-listener.
+
+@attach()@ will be called implicitly when required if the client calls either @publish()@ or @subscribe()@.
 
 h6(#detach). detach
 
@@ -353,9 +435,9 @@ bq(definition).
   default: detach()
   java:    public void detach()
 
-Detach from this channel.
+Detach from this channel. Any resulting channel state change will be indicated to any registered "ChannelStateListener"#channel-state-listener.
 
-h2. Public members
+h2(#members). Public members
 
 A @Channel@ object exposes the following public members.
 
