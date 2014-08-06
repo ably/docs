@@ -10,7 +10,6 @@ jump_to:
     - Channel object
     - publish
     - history
-    - stats
     - presence
 ---
 
@@ -82,7 +81,36 @@ channel.publish("myEvent", "This is my message", new CompletionListener() {
 
 h3. Retrieving message history
 
-Channels expose a @history@ method whereby a client can obtain message history. See the "history":/rest-client-library/history documentation for details.
+Channels expose a @history@ method whereby a client can obtain messages previously sent on  those channels that have persistence enabled.
+
+History results are paginated and therefore accompanied with one or more relative links relating to the current query. Where the number of results returned exceeds the query limit - which is either the value of the @limit@ param or the default limit of 100 - the query result contains pages with the limited number of records, and a relative link to the next page.
+
+bc[javascript,nodejs]. var params = {direction: 'backwards', limit: '100'};
+channel.history(params, function(err, messages, rel) {
+  if(err) {
+    console.log('Unable to get channel history; err = ' + err.message);
+  } else {
+    console.log(messages.length + ' messages received in first result');
+    if(rel && rel.next) {
+      channel.history(rel.next, function(...) { ... });
+    }
+});
+
+bc[java]. import io.ably.types.Message;
+import io.ably.types.Param;
+import io.ably.types.PaginatedResult;
+Param[] params = new Param[] {
+  new Param("direction", "backwards"),
+  new Param("limit", 100)
+};
+PaginatedResult<Message> messages = channel.history(params);
+System.out.println(messages.asArray().length + " messages received in first result");
+if(messages.getNext()) {
+  PaginatedResult<Message> nextPage = channel.history(messages.getNext());
+  System.out.println(...);
+}
+
+See the "history":/rest-client-library/history documentation for further details of the supported query parameters.
 
 h2. Presence
 
@@ -151,36 +179,40 @@ Returns @true@ if successful.  Failure to publish will raise an exception - typi
 h6(#history). history
 
 bq(definition).
-  nodejs: channel.history(options, callback)
+  nodejs: channel.history(params, callback)
   ruby:   channel.history(options) → json_result
-  java:   channel.history(OptionsHash options) → JSONResult
+  java:   public PaginatedResult&lt;Message&gt; history(Param[] params)
 
-Get message history for this channel. See the "history":/realtime/history API documentation for details.
+Get message history for this channel.
 
 h4. Parameters
 
-- options := an optional object containing the query parameters, as specified in the "history":/realtime/history API documentation.
-- <div lang="nodejs">callback</div> := is a function of the form: @callback(err, result)@
+- params := an optional object containing the query parameters, as specified in the "history":/realtime/history API documentation.
+- <div lang="nodejs,javascript">callback</div> := is a function of the form: @callback(err, messages, relParams)@
 where:
 <ul>
 <li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest-api#common documentation</li>
-<li>On success, @result@ contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api#channel-history.
-  Example @result@:
-  <pre lang="json"><code>[{
-    "name": "<event name>",
-    "channel": "<channel id>",
-    "data": "<message payload>",
-    "timestamp": "<message timestamp>"
-  }]</code></pre>
-</li>
+<li>on success, @messages@ contains the query result as an array of Message objects.</li>
+<li>where applicable, @relParams@ is a map containing query params for each of the pagination links in the query response (see below).</li>
 </ul>
 
-<div lang="ruby,java">
+Further details of the supported query params are in the "history API":/rest/history documentation.
+
+<div lang="java">
 h4. Returns
 
-On success, <span lang="ruby">@json_result@</span><span lang="java">@JSONResult@</span> contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api/#channel-history.
+On success, the returned "PaginatedResult":#paginated-result encapsulates a collection of @Message@ objects corresponding to the current page of results, and also provides query parameters for any applicable related (eg @first@ or @next@ result pages).
 
-Example <span lang="ruby">@json_result@</span><span lang="java">@JSONResult@</span>:
+Failure to retrieve the history will raise an @AblyException@.
+
+</div>
+
+<div lang="ruby">
+h4. Returns
+
+On success, <span lang="ruby">@json_result@</span> contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api/#channel-history.
+
+Example <span lang="ruby">@json_result@</span>:
 
 bc[json]. [{
   "name": "<event name>",
@@ -196,66 +228,22 @@ Failure to retrieve the history will raise an exception - typical exceptions inc
 * @Ably::QuotaExceededException@
 * @Ably::AuthenticationFailureException@
   </div>
-  <div lang="java">
-
-* @Ably.NetworkUnavailableException@
-* @Ably.QuotaExceededException@
-* @Ably.AuthenticationFailureException@
-  </div>
 
 </div>
 
-h6(#stats). stats
+<div lang="nodejs,javascript">
 
-bq(definition).
-  nodejs: channel.stats(options, callback)
-  ruby:   channel.stats(options) → json_result
-  java:   channel.stats(OptionsHash options) → JSONResult
+h4. Pagination
 
-This call queries the REST "@channels/<channel id>/stats@":/rest-api#channel-stats API.
-
-h4. Parameters
-
-- options := an optional object containing the query parameters, as specified in the "REST API":/rest-api#channel-stats.
-- <div lang="nodejs">callback</div> := is a function of the form: @callback(err, result)@
-where:
-<ul>
-<li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest-api#common documentation</li>
-<li>On success, @result@ contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api#channel-stats.
-  Example @result@:
+A paginated result is indicated in the @relParams@ callback argument. For each available link, @relParams@ contains a map of params to pass to a subsequent @history()@ call.
+  Example @relParams@:
   <pre lang="json"><code>[{
-    "an example": "<needs to be inserted here>",
-    "illustrating": "<a simple stats result>"
+    "first": {"start": 1380794880000, "end": 138079488105, ...},
+    "current": {"start": 1380794880000, "end": 138079488105, ...},
+    "next": {"start": 1380794880000, "end": 138079488105, ...}
   }]</code></pre>
-</li>
-</ul>
 
-<div lang="ruby,java">
-h4. Returns
-
-On success, <span lang="ruby">@json_result@</span><span lang="java">@JSONResult@</span> contains an array of statistics for the request granularity as specified in "REST API":/rest-api#channel-stats.
-
-Example <span lang="ruby">@json_result@</span><span lang="java">@JSONResult@</span>:
-
-bc[json]. [{
-    "an example": "<needs to be inserted here>",
-    "illustrating": "<a simple stats result>"
-  }]
-
-Failure to retrieve the stats will raise an exception - typical exceptions include:
-  <div lang="ruby">
-
-* @Ably::NetworkUnavailableException@
-* @Ably::QuotaExceededException@
-* @Ably::AuthenticationFailureException@
-  </div>
-  <div lang="java">
-
-* @Ably.NetworkUnavailableException@
-* @Ably.QuotaExceededException@
-* @Ably.AuthenticationFailureException@
-  </div>
-
+Further details of the paginated response are in the "history API":/realtime/history documentation.
 </div>
 
 h6(#presence). presence
@@ -308,5 +296,40 @@ Failure to retrieve the presence will raise an exception - typical exceptions in
 * @Ably.QuotaExceededException@
 * @Ably.AuthenticationFailureException@
   </div>
+
+</div>
+
+h2(#message). Message
+
+A @Message@ encapsulates an individual message sent or received in Ably. A message has the following members.
+
+- <span lang="java">String</span>name := The event name for the message. The name may be used to allow listeners to subscribed selectively for only a subset of the messages on the channel.
+
+- <span lang="java">Object</span>data := The payload of the message. The data may be one of the supported payload datatypes.
+
+- <span lang="java">String</span>clientId := The clientId of the client that published the message. This <span lang="default">property</span><span lang="java">field</span> is populated by the system, where the clientId is known, for messages delivered to subscribers. It is not required to populate the clientId of a message before publishing it.
+
+- <span lang="java">long</span>timestamp := The system timestamp of the message, in milliseconds since the epoch. This <span lang="default">property</span><span lang="java">field</span> is populated by the system for messages delivered to subscribers. It is not required to populate the timestamp of a message before publishing it.
+
+h2(#channel-options). ChannelOptions
+
+A @ChannelOptions@ may optionally be specified when instancing a Channel, and this may be used to specify channel-specific options.
+
+Currently the only supported channel options are encryption-related.
+
+- <span lang="java">public boolean</span>encrypted := Requests encryption for this channel.
+
+- <span lang="java">public Object</span>cipherParams := Specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). Default cipher params for the implementation may be obtained by calling @Crypto.getDefaultParams()@.
+
+<div lang="java">
+h2(#paginated-result). PaginatedResult
+
+A @PaginatedResult@ is an interface that represents the result of a query that supports pagination. An instance of @PaginatedResult@ encapsulates a collection of @Message@ objects representing the current page of results, and provides the means - in the form of @Param[]@ to perform queries for subsequent or related pages.
+
+- public Message[] asArray() := Returns the current page of results as an Array.
+- public List&lt;Message&gt; := Returns the current page of results as a List.
+- public Param[] getFirst() := Returns the params to pass to a @history()@ call to reproduce the first call in this paginated sequence.
+- public Param[] getCurrent() := Returns the params to pass to a @history()@ call to reproduce the current call in this paginated sequence.
+- public Param[] getNext() := Returns the params to pass to a @history()@ call to reproduce the next call in this paginated sequence.
 
 </div>
