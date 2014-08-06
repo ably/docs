@@ -143,7 +143,38 @@ channel.presence.enterClient("someClient", "I'm here", new CompletionListener() 
 
 h3. Retrieving presence history
 
-A Presence instance exposes a @history@ method whereby a client can obtain presence history for the associated channel. See the "history":/realtime/history documentation for details.
+The @Presence@ API exposes a @history@ method whereby a client can obtain presence updates previously sent on the channel. It provides access to the persisted history, as with the REST API, but also enables access to instantaneous or "live" history for attached channels.
+
+This live history provides the ability to obtain continuous presence history up to the point that a realtime channel was attached and also supports recent history for channels that do not have persistence enabled.
+
+History results are paginated and therefore accompanied with one or more relative links relating to the current query. Where the number of results returned exceeds the query limit - which is either the value of the @limit@ param or the default limit of 100 - the query result contains pages with the limited number of records, and a relative link to the next page.
+
+bc[javascript,nodejs]. var params = {direction: 'backwards', limit: '100'};
+channel.presence.history(params, function(err, messages, rel) {
+  if(err) {
+    console.log('Unable to get presence history; err = ' + err.message);
+  } else {
+    console.log(messages.length + ' presence messages received in first result');
+    if(rel && rel.next) {
+      channel.presence.history(rel.next, function(...) { ... });
+    }
+});
+
+bc[java]. import io.ably.types.PresenceMessage;
+import io.ably.types.Param;
+import io.ably.types.PaginatedResult;
+Param[] params = new Param[] {
+  new Param("direction", "backwards"),
+  new Param("limit", 100)
+};
+PaginatedResult<PresenceMessage> messages = channel.presence.history(params);
+System.out.println(messages.asArray().length + " presence messages received in first result");
+if(messages.getNext()) {
+  PaginatedResult<PresenceMessage> nextPage = channel.presence.history(messages.getNext());
+  System.out.println(...);
+}
+
+See the "history":/realtime/history documentation for further details of the supported query parameters.
 
 h1. API Reference
 
@@ -290,6 +321,76 @@ h6(#get)[java]. public PresenceMessage[] get()
 
 Get the current presence set for this channel. This returns synchronously with the presence set already known by the client.
 
+h6(#history). history
+
+bq(definition).
+  nodejs: presence.history(params, callback)
+  ruby:   presence.history(options) → json_result
+  java:   public PaginatedResult&lt;PresenceMessage&gt; history(Param[] params)
+
+Get presence history for this channel.
+
+h4. Parameters
+
+- params := an optional object containing the query parameters, as specified in the "history":/realtime/history API documentation.
+- <div lang="nodejs,javascript">callback</div> := is a function of the form: @callback(err, messages, relParams)@
+where:
+<ul>
+<li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest-api#common documentation</li>
+<li>on success, @messages@ contains the query result as an array of PresenceMessage objects.</li>
+<li>where applicable, @relParams@ is a map containing query params for each of the pagination links in the query response (see below).</li>
+</ul>
+
+Further details of the supported query params are in the "history API":/realtime/history documentation.
+
+<div lang="java">
+h4. Returns
+
+On success, the returned "PaginatedResult":#paginated-result encapsulates a collection of @PresenceMessage@ objects corresponding to the current page of results, and also provides query parameters for any applicable related (eg @first@ or @next@ result pages).
+
+Failure to retrieve the history will raise an @AblyException@.
+
+</div>
+
+<div lang="ruby">
+h4. Returns
+
+On success, <span lang="ruby">@json_result@</span> contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api/#channel-history.
+
+Example <span lang="ruby">@json_result@</span>:
+
+bc[json]. [{
+  "name": "<event name>",
+  "channel": "<channel id>",
+  "data": "<message payload>",
+  "timestamp": "<message timestamp>"
+}]
+
+Failure to retrieve the history will raise an exception - typical exceptions include:
+  <div lang="ruby">
+
+* @Ably::NetworkUnavailableException@
+* @Ably::QuotaExceededException@
+* @Ably::AuthenticationFailureException@
+  </div>
+
+</div>
+
+<div lang="nodejs,javascript">
+
+h4. Pagination
+
+A paginated result is indicated in the @relParams@ callback argument. For each available link, @relParams@ contains a map of params to pass to a subsequent @history()@ call.
+  Example @relParams@:
+  <pre lang="json"><code>[{
+    "first": {"start": 1380794880000, "end": 138079488105, ...},
+    "current": {"start": 1380794880000, "end": 138079488105, ...},
+    "next": {"start": 1380794880000, "end": 138079488105, ...}
+  }]</code></pre>
+
+Further details of the paginated response are in the "history API":/realtime/history documentation.
+</div>
+
 h2(#presence-message). PresenceMessage
 
 A @PresenceMessage@ encapsulates an individual presence update sent or received in Ably. A presence message has the following members.
@@ -307,4 +408,17 @@ A @PresenceListener@ function may be subscribed for all presence messages receiv
 </div>
 <div lang="java">
 A implementation of the @PresenceListener@ interface may be registered to be notified of  arrival of presence messages on the channel. A @PresenceMessage[]@ is passed as the first argument of the listener's @onPresenceMessage@ method whenever a presence message is received on the channel.
+</div>
+
+<div lang="java">
+h2(#paginated-result). PaginatedResult
+
+A @PaginatedResult@ is an interface that represents the result of a query that supports pagination. An instance of @PaginatedResult@ encapsulates a collection of @PresenceMessage@ objects representing the current page of results, and provides the means - in the form of @Param[]@ to perform queries for subsequent or related pages.
+
+- public PresenceMessage[] asArray() := Returns the current page of results as an Array.
+- public List&lt;PresenceMessage&gt; := Returns the current page of results as a List.
+- public Param[] getFirst() := Returns the params to pass to a @history()@ call to reproduce the first call in this paginated sequence.
+- public Param[] getCurrent() := Returns the params to pass to a @history()@ call to reproduce the current call in this paginated sequence.
+- public Param[] getNext() := Returns the params to pass to a @history()@ call to reproduce the next call in this paginated sequence.
+
 </div>
