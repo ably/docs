@@ -54,7 +54,13 @@ task :build => :generate_all do
   sleep 0.5
 
   Dir["**/*"].each {|f| repo.add(f) }
-  repo.status.deleted.each {|f, s| repo.remove(f)}
+  repo.status.deleted.each do |file, s|
+    begin
+      repo.remove(file)
+    rescue Git::GitExecuteError => e
+      puts "Warning: #{e.message}"
+    end
+  end
   message = ENV["MESSAGE"] || "Site updated at #{Time.now.utc}"
   repo.commit(message) unless system('git status | grep "nothing to commit"')
   repo.branch("source").checkout
@@ -64,7 +70,13 @@ desc "generate and deploy website to S3 and remote 'production' repository"
 task :deploy => :build do
   config = Ably::Config.new
 
-  s3 = Fog::Storage.new(host: config.s3_host, :provider => :aws, aws_access_key_id: config.aws_access_key_id, aws_secret_access_key: config.aws_secret_access_key)
+  s3 = Fog::Storage.new(
+    host: config.s3_host,
+    :provider => :aws,
+    aws_access_key_id: config.aws_access_key_id,
+    aws_secret_access_key: config.aws_secret_access_key,
+    path_style: true
+  )
   s3 = s3.directories.get(config.s3_bucket)
   if s3.nil?
     puts "Error! Could not connect to S3 repository, aborting"
@@ -101,14 +113,14 @@ namespace :serve do
   task :start => :stop do
     cd "#{site}" do
       print "Starting serve..."
-      ok_failed system("serve #{port} > /dev/null 2>&1 &")
+      ok_failed system("nanoc view #{port} > /dev/null 2>&1 &")
       puts "Server up at http://localhost:#{port}"
     end
   end
 
   desc "stop all instances of serve"
   task :stop do
-    pid = `ps auxw | awk '/bin\\/serve\\ #{port}/ { print $2 }'`.strip
+    pid = `ps auxw | awk '/nanoc view #{port}/ { print $2 }'`.strip
     if pid.empty?
       puts "Serve is not running"
     else

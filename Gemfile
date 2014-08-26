@@ -1,6 +1,9 @@
 source 'http://rubygems.org/'
 
+ruby '2.1.2'
+
 gem 'nanoc'
+gem 'guard-nanoc'
 gem 'RedCloth'
 gem 'git'
 gem 'serve'
@@ -13,4 +16,4 @@ gem 'fog'
 gem 'gist'
 gem 'jsbin-client'
 gem 'pry'
-gem 'pry-debugger'
+gem 'pry-byebug'
