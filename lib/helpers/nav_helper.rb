@@ -91,7 +91,7 @@ module NavHelper
       end
     elsif context.kind_of?(Hash)
       context.each do |key, val|
-        options << "<optgroup label='#{html_escape(key)}'>"
+        options << "<optgroup label='#{html_escape(key.to_s)}'>"
         options << jump_to(val)
         options << "</optgroup>"
       end

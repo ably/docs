@@ -2,7 +2,7 @@
 # before nanoc starts compiling.
 
 require 'pry'
-require 'pry-debugger'
+require 'pry-byebug'
 
 include Nanoc::Helpers::LinkTo
 include Nanoc::Helpers::HTMLEscape
