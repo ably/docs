@@ -28,7 +28,7 @@ Forking and running locally
 * `bundle install` to install the necessary gems
 * `nanoc` to generate the site for the first time
 * `nanoc view -p 4000` to start up a web server at <http://localhost:4000>
-* `guard` to watch for changes and rebuild the site
+* `bundle exec guard` to watch for changes and rebuild the site
 * Make any changes you wish and they should be visible nearly immediately in the browser.  If they are not, check your console where `guard` is running for errors.
 * Commit your changes, push your branch and send us a pull request
 
