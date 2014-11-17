@@ -1,28 +1,44 @@
-class AblyPreTextileFilter < Nanoc::Filter
-  identifier :ably_pre_textile
-  type :text
+require_relative './helpers/nav_helper'
 
-  def run(content, params = {})
+class AblyPreTextileFilter
+  class << self
+    def run(content, path)
+      content = duplicate_language_blocks(content)
+      content = trim_white_space_between_language_elements(content)
+      content = insert_inline_table_of_contents(content)
+      content = add_language_support_for_block_quotes(content)
+      content = add_language_support_for_headings(content)
+      content = add_support_for_inline_code_editor(content, path)
+    end
+
+    private
+
     # language blocks in textile don't support multiple languages, so simply copy & split out
     # bc[json,javascript]. { "a": true }
     # becomes
     # bc[json]. { "a": true }
     # bc[javascript]. { "a": true }
-    content = content.gsub(/(bc|p|h[1-6])\[([^\]]+)\]\.(.*?)(?:[\n\r]\s*[\n\r]|\Z)/m) do |match|
-      block, languages, content = $~.captures
-      languages.split(/\s*,/).map do |lang|
-        "#{block}[#{lang}].#{content}"
-      end.join("\n\n") + "\n\n"
+    def duplicate_language_blocks(content)
+      content.gsub(/(bc|p|h[1-6])\[([^\]]+)\]\.(.*?)(?:[\n\r]\s*[\n\r]|\Z)/m) do |match|
+        block, languages, content = $~.captures
+        languages.split(/\s*,/).map do |lang|
+          "#{block}[#{lang}].#{content}"
+        end.join("\n\n") + "\n\n"
+      end
     end
 
     # remove white space between language divs or spans
-    content = content.gsub(/\<\/(div|span)\>\s+\<\1\slang=["']([^"']+)["']>/, '</\1><\1 lang="\2">')
+    def trim_white_space_between_language_elements(content)
+      content.gsub(/\<\/(div|span)\>\s+\<\1\slang=["']([^"']+)["']>/, '</\1><\1 lang="\2">')
+    end
 
     # insert inline table of contents
-    content = content.gsub(/^inline\-toc\.\s*$(.*?)^\s*$/m) do |match|
-      yaml_raw = $~.captures[0]
-      yaml = YAML::load(yaml_raw)
-      NavHelper.inline_toc_items(yaml)
+    def insert_inline_table_of_contents(content)
+      content.gsub(/^inline\-toc\.\s*$(.*?)^\s*$/m) do |match|
+        yaml_raw = $~.captures[0]
+        yaml = YAML::load(yaml_raw)
+        NavHelper.inline_toc_items(yaml)
+      end
     end
 
     # blockquote for method definitions use format
@@ -38,10 +54,12 @@ class AblyPreTextileFilter < Nanoc::Filter
     #
     # transform to
     # bq(definition). <span lang="default">definition</span><span lang="lang">definition</span>
-    content = content.gsub(/^bq\(definition(\#[^\)]+)?\)\.\s*\n.*?\n\s*\n/m) do |match|
-      lang_definitions = match.scan(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/)
-      lang_spans = lang_definitions.map { |lang, definition| "<span lang='#{lang}'>#{definition}</span>" }.join('')
-      "bq(definition). #{lang_spans}\n\n"
+    def add_language_support_for_block_quotes(content)
+      content.gsub(/^bq\(definition(\#[^\)]+)?\)\.\s*\n.*?\n\s*\n/m) do |match|
+        lang_definitions = match.scan(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/)
+        lang_spans = lang_definitions.map { |lang, definition| "<span lang='#{lang}'>#{definition}</span>" }.join('')
+        "bq(definition). #{lang_spans}\n\n"
+      end
     end
 
     # h[1-6] for method definitions use format
@@ -57,15 +75,19 @@ class AblyPreTextileFilter < Nanoc::Filter
     #
     # transform to
     # h6(#optional-anchor). <span lang="default">method</span><span lang="lang">method</span>
-    content = content.gsub(%r{^(h[1-6])(\(#[^\)]+\))?\.\s*\n.+?\n\s*\n}m) do |match|
-      h_tag, anchor = $1, $2
-      lang_definitions = match.scan(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/)
-      lang_spans = lang_definitions.map { |lang, definition| "<span lang='#{lang}'>#{definition}</span>" }.join('')
-      "#{h_tag}#{anchor}. #{lang_spans}\n\n"
+    def add_language_support_for_headings(content)
+      content.gsub(%r{^(h[1-6])(\(#[^\)]+\))?\.\s*\n.+?\n\s*\n}m) do |match|
+        h_tag, anchor = $1, $2
+        lang_definitions = match.scan(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/)
+        lang_spans = lang_definitions.map { |lang, definition| "<span lang='#{lang}'>#{definition}</span>" }.join('')
+        "#{h_tag}#{anchor}. #{lang_spans}\n\n"
+      end
     end
 
-    # convert code editor class tags into a format that can be decoded on the front end
-    folder = @item.path.match(/\/([^\/]+)\/?$/)[1]
-    content = content.gsub(/\(code-editor:([^\)]+)\)/i, "(code-editor load-file___#{folder}___\\1)")
+    # Convert code editor class tags into a format that can be decoded on the front end
+    def add_support_for_inline_code_editor(content, path)
+      folder = path.match(/\/([^\/]+)\/?$/)[1]
+      content.gsub(/\(code-editor:([^\)]+)\)/i, "(code-editor load-file___#{folder}___\\1)")
+    end
   end
 end
