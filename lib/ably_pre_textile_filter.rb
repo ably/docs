@@ -3,6 +3,7 @@ require_relative './helpers/nav_helper'
 class AblyPreTextileFilter
   class << self
     def run(content, path)
+      content = add_language_support_for_github_style_code(content)
       content = duplicate_language_blocks(content)
       content = trim_white_space_between_language_elements(content)
       content = insert_inline_table_of_contents(content)
@@ -38,6 +39,20 @@ class AblyPreTextileFilter
         yaml_raw = $~.captures[0]
         yaml = YAML::load(yaml_raw)
         NavHelper.inline_toc_items(yaml)
+      end
+    end
+
+    # Convert backtick ``` code blocks into standard textile bc[] blocks
+    def add_language_support_for_github_style_code(content)
+      lang_regex = '(?:\\[([^\]]+)\\])?'
+      content.gsub(/^```#{lang_regex}\s*?\n?(.+?)^```/m) do |match|
+        languages, content = $~.captures
+        if languages
+          puts "bc[#{languages}]. #{strip_heredoc(content)}"
+          "bc[#{languages}]. #{strip_heredoc(content)}"
+        else
+          "bc. #{strip_heredoc(content)}"
+        end.gsub(/^\s*\n/m, '{{{github_br}}}')
       end
     end
 
@@ -88,6 +103,16 @@ class AblyPreTextileFilter
     def add_support_for_inline_code_editor(content, path)
       folder = path.match(/\/([^\/]+)\/?$/)[1]
       content.gsub(/\(code-editor:([^\)]+)\)/i, "(code-editor load-file___#{folder}___\\1)")
+    end
+
+    def strip_heredoc(string)
+      min = string.scan(/^[ \t]*(?=\S)/).min
+      indent = if min.respond_to?(:size)
+        min.size
+      else
+        0
+      end
+      string.gsub(/^[ \t]{#{indent}}/, '')
     end
   end
 end
