@@ -39,7 +39,6 @@ class JsBins
 
       jsbin_client = JsBinClient.new(host: config.jsbin_host, port: config.jsbin_port, ssl: config.jsbin_ssl, api_key: config.jsbin_api_key)
       id = jsbin_client.create(files)['url']
-      asdsadsa
       data['jsbin_id'][path] = hash(content)
       data['jsbin_hash'][hash(content)] = id
 
