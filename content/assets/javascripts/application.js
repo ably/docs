@@ -80,4 +80,35 @@ $(function() {
       }
     }
   });
+
+  $.get('https://ably.io/ably-auth/api-key/docs', function(apiKey, status) {
+    if (status === 'success') {
+      if (typeof(window.onApiKeyRetrieved) === 'function') {
+        window.onApiKeyRetrieved(apiKey);
+      }
+
+      $('pre[lang]').each(function() {
+        this.innerHTML = this.innerHTML.
+          replace(/{{API_KEY_ID}}/g, apiKey.match(/([^\.]+\.[^:]+):.*/)[1]).
+          replace(/{{API_KEY}}/g, apiKey).
+          replace(/{{API_KEY_BASE64}}/g, Base64.encode(apiKey));
+      });
+    }
+  });
+
+  $.get('https://ably.io/ably-auth/token/docs', function(token, status) {
+    if (status === 'success') {
+      $('pre[lang]').each(function() {
+        this.innerHTML = this.innerHTML.
+          replace(/{{TOKEN}}/g, token).
+          replace(/{{TOKEN_BASE_64}}/g, Base64.encode(token));
+      });
+    }
+  });
+
+  $('pre[lang]').each(function() {
+    this.innerHTML = this.innerHTML.
+      replace(/{{MS_SINCE_EPOCH}}/g, new Date().getTime()).
+      replace(/{{SECONDS_SINCE_EPOCH}}/g, Math.round(new Date().getTime() / 1000));
+  });
 });

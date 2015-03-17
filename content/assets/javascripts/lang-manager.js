@@ -70,6 +70,9 @@ $(function() {
     if ( hasLanguageNav && (!dlParent || (dlParent && $first.attr('lang'))) ) {
       if ($first.attr('lang')) $first.addClass('lang-' + languageExtensions[$first.attr('lang')]);
       $first.addClass('prettyprint').addClass('linenums');
+      if ($first.attr('lang') === 'sh') {
+        $first.addClass('bash');
+      }
     }
 
     // if element has class indicating it's a language resource, then this element has already been converted by this script when operating on one of it's siblings
