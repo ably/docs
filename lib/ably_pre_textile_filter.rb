@@ -3,6 +3,7 @@ require_relative './helpers/nav_helper'
 class AblyPreTextileFilter
   class << self
     def run(content, path)
+      content = strip_comments(content)
       content = add_language_support_for_github_style_code(content)
       content = duplicate_language_blocks(content)
       content = trim_white_space_between_language_elements(content)
@@ -40,6 +41,11 @@ class AblyPreTextileFilter
         yaml = YAML::load(yaml_raw)
         NavHelper.inline_toc_items(yaml)
       end
+    end
+
+    def strip_comments(content)
+      regex = /<!--.*?-->\s*/
+      content.gsub(regex, '')
     end
 
     # Convert backtick ``` code blocks into standard textile bc[] blocks
