@@ -106,9 +106,23 @@ $(function() {
     }
   });
 
-  $('pre[lang]').each(function() {
+  var preLangBlocks = $('pre[lang]'),
+      msSinceEpoch = new Date().getTime();
+
+  preLangBlocks.each(function() {
     this.innerHTML = this.innerHTML.
-      replace(/{{MS_SINCE_EPOCH}}/g, new Date().getTime()).
-      replace(/{{SECONDS_SINCE_EPOCH}}/g, Math.round(new Date().getTime() / 1000));
+      replace(/{{MS_SINCE_EPOCH}}/g, msSinceEpoch).
+      replace(/{{SECONDS_SINCE_EPOCH}}/g, Math.round(msSinceEpoch / 1000));
   });
+
+  window.setInterval(function() {
+    var oldEpoch = msSinceEpoch;
+    msSinceEpoch = new Date().getTime();
+
+    preLangBlocks.each(function() {
+      this.innerHTML = this.innerHTML.
+        replace(new RegExp(String(oldEpoch), "g"), msSinceEpoch).
+        replace(new RegExp(String(Math.round(oldEpoch / 1000)), "g"), Math.round(msSinceEpoch / 1000));
+    });
+  }, 1000);
 });
