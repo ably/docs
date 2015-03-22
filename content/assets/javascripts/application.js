@@ -107,22 +107,31 @@ $(function() {
   });
 
   var preLangBlocks = $('pre[lang]'),
-      msSinceEpoch = new Date().getTime();
+      msSinceEpoch = new Date().getTime(),
+      msSinceEpochBlocks,
+      sSinceEpochBlocks;
 
   preLangBlocks.each(function() {
     this.innerHTML = this.innerHTML.
-      replace(/{{MS_SINCE_EPOCH}}/g, msSinceEpoch).
-      replace(/{{SECONDS_SINCE_EPOCH}}/g, Math.round(msSinceEpoch / 1000));
+      replace(/{{MS_SINCE_EPOCH}}/g, '<span class="ms-since-epoch">' + msSinceEpoch + '</span>').
+      replace(/{{SECONDS_SINCE_EPOCH}}/g, '<span class="s-since-epoch">' + Math.round(msSinceEpoch / 1000) + '</span>');
   });
 
+  function replaceInBlocks(blocks, oldValue, newValue) {
+    blocks.each(function() {
+      this.innerHTML = this.innerHTML.
+        replace(new RegExp(String(oldValue), "g"), newValue);
+    });
+  }
+
   window.setInterval(function() {
+    if (!msSinceEpochBlocks) { msSinceEpochBlocks = $('span.ms-since-epoch'); }
+    if (!sSinceEpochBlocks) { sSinceEpochBlocks = $('span.s-since-epoch'); }
+
     var oldEpoch = msSinceEpoch;
     msSinceEpoch = new Date().getTime();
 
-    preLangBlocks.each(function() {
-      this.innerHTML = this.innerHTML.
-        replace(new RegExp(String(oldEpoch), "g"), msSinceEpoch).
-        replace(new RegExp(String(Math.round(oldEpoch / 1000)), "g"), Math.round(msSinceEpoch / 1000));
-    });
+    replaceInBlocks(msSinceEpochBlocks, oldEpoch, msSinceEpoch);
+    replaceInBlocks(sSinceEpochBlocks, Math.round(oldEpoch / 1000), Math.round(msSinceEpoch / 1000));
   }, 1000);
 });
