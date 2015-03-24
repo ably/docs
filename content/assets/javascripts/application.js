@@ -81,13 +81,18 @@ $(function() {
     }
   });
 
+  var preLangBlocks = $('pre[lang],code'),
+      msSinceEpoch = new Date().getTime(),
+      msSinceEpochBlocks,
+      sSinceEpochBlocks;
+
   $.get('https://ably.io/ably-auth/api-key/docs', function(apiKey, status) {
     if (status === 'success') {
       if (typeof(window.onApiKeyRetrieved) === 'function') {
         window.onApiKeyRetrieved(apiKey);
       }
 
-      $('pre[lang]').each(function() {
+      preLangBlocks.each(function() {
         this.innerHTML = this.innerHTML.
           replace(/{{API_KEY_ID}}/g, apiKey.match(/([^\.]+\.[^:]+):.*/)[1]).
           replace(/{{API_KEY}}/g, apiKey).
@@ -98,18 +103,13 @@ $(function() {
 
   $.get('https://ably.io/ably-auth/token/docs', function(token, status) {
     if (status === 'success') {
-      $('pre[lang]').each(function() {
+      preLangBlocks.each(function() {
         this.innerHTML = this.innerHTML.
           replace(/{{TOKEN}}/g, token).
           replace(/{{TOKEN_BASE_64}}/g, Base64.encode(token));
       });
     }
   });
-
-  var preLangBlocks = $('pre[lang]'),
-      msSinceEpoch = new Date().getTime(),
-      msSinceEpochBlocks,
-      sSinceEpochBlocks;
 
   preLangBlocks.each(function() {
     this.innerHTML = this.innerHTML.
