@@ -88,15 +88,26 @@ $(function() {
 
   $.get('https://ably.io/ably-auth/api-key/docs', function(apiKey, status) {
     if (status === 'success') {
+      var keyId = apiKey.match(/([^\.]+\.[^:]+):.+/)[1],
+          keyValue = apiKey.match(/[^\.]+\.[^:]+:(.+)/)[1];
+
       if (typeof(window.onApiKeyRetrieved) === 'function') {
         window.onApiKeyRetrieved(apiKey);
       }
 
-      preLangBlocks.each(function() {
-        this.innerHTML = this.innerHTML.
-          replace(/{{API_KEY_ID}}/g, apiKey.match(/([^\.]+\.[^:]+):.*/)[1]).
-          replace(/{{API_KEY}}/g, apiKey).
-          replace(/{{API_KEY_BASE64}}/g, Base64.encode(apiKey));
+      // Todo: change when https://github.com/ably/ably-js/issues/21 resolved
+      new Ably.Realtime({ key: apiKey }).auth.createTokenRequest(
+        { keyId: keyId, keyValue: keyValue },
+        { "ttl": 600, "capability": JSON.stringify({ "*":["*"] }) },
+        function(err, token) {
+          preLangBlocks.each(function() {
+            this.innerHTML = this.innerHTML.
+              replace(/{{API_KEY_ID}}/g, keyId).
+              replace(/{{API_KEY}}/g, apiKey).
+              replace(/{{API_KEY_BASE64}}/g, Base64.encode(apiKey)).
+              replace(/{{SIGNED_TOKEN_REQUEST_EXAMPLE}}/g, JSON.stringify(token, null, "  "));
+          }
+        );
       });
     }
   });
