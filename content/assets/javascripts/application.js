@@ -81,6 +81,21 @@ $(function() {
     }
   });
 
+  // Enable the code editor for JSBin
+  $('pre.code-editor.open-jsbin').each(function() {
+    var addTryItButton = function() {
+      if ($(this).hasClass('prettyprint')) {
+        var binId = $(this).attr('class').match(/open-jsbin-(\w+)/i)[1],
+            btn = $('<a href="//jsbin.ably.io/' + binId + '/latest/edit?javascript,live" target="_blank" class="try-it-button">Try it</a>');
+        $(this).append(btn);
+      } else {
+        setTimeout(addTryItButton, 500);
+      }
+    }.bind(this);
+    addTryItButton();
+  });
+
+  /* Replace Handlebar variables with values such as API keys & tokens for demos */
   var preLangBlocks = $('pre[lang],code'),
       msSinceEpoch = new Date().getTime(),
       msSinceEpochBlocks,
@@ -96,7 +111,7 @@ $(function() {
       }
 
       // Todo: change when https://github.com/ably/ably-js/issues/21 resolved
-      new Ably.Realtime({ key: apiKey }).auth.createTokenRequest(
+      new Ably.Rest({ key: apiKey }).auth.createTokenRequest(
         { keyId: keyId, keyValue: keyValue },
         { "ttl": 600, "capability": JSON.stringify({ "*":["*"] }) },
         function(err, token) {
@@ -117,15 +132,21 @@ $(function() {
       preLangBlocks.each(function() {
         this.innerHTML = this.innerHTML.
           replace(/{{TOKEN}}/g, token).
-          replace(/{{TOKEN_BASE_64}}/g, Base64.encode(token));
+          replace(/{{TOKEN_BASE64}}/g, Base64.encode(token));
       });
     }
   });
 
+  var nouns = 'people history way art world information map two family government health system computer meat year thanks music person reading method data food understanding theory law bird literature problem software control knowledge power ability economics love internet television science library nature fact product idea temperature investment area society activity story industry media thing oven community definition safety quality development language management player variety video week security country exam movie organization equipment physics analysis policy series thought basis boyfriend direction strategy technology army camera freedom paper environment child instance month truth marketing university writing article department difference goal news audience fishing growth income marriage user combination failure meaning medicine philosophy teacher communication night chemistry disease disk energy nation road role soup advertising location success addition apartment education math moment painting politics attention decision event property shopping student wood competition distribution entertainment office population president unit category cigarette context introduction opportunity performance driver flight length magazine newspaper relationship teaching cell dealer finding lake member message phone scene appearance association concept customer death discussion housing inflation insurance mood woman advice blood effort expression importance opinion payment reality responsibility situation skill statement wealth application city county depth estate foundation people history way art world information map two family government health system computer meat year thanks music person reading method data food understanding theory law bird literature problem software control knowledge power ability economics love internet television science library nature fact product idea temperature investment area society activity story industry media thing oven community definition safety quality development language management player variety video week security country exam movie organization equipment physics analysis policy series thought basis boyfriend direction strategy technology army camera freedom paper environment child instance month truth marketing university writing article department difference goal news audience fishing growth income marriage user combination failure meaning medicine philosophy teacher communication night chemistry disease disk energy nation road role soup advertising location success addition apartment education math moment painting politics attention decision event property shopping student wood competition distribution entertainment office population president unit category cigarette context introduction opportunity performance driver flight length magazine newspaper relationship teaching cell dealer finding lake member message phone scene appearance association concept customer death discussion housing inflation insurance mood woman advice blood effort expression importance opinion payment reality responsibility situation skill statement wealth application city county depth estate foundation grandmother heart perspective photo recipe studio topic collection depression imagination passion percentage resource setting ad agency college connection criticism debt description memory patience secretary solution administration aspect attitude director personality psychology recommendation response selection storage version alcohol argument complaint contract emphasis highway loss membership possession preparation steak union agreement cancer currency employment engineering entry interaction mixture preference region republic tradition virus actor classroom delivery device difficulty drama election engine football guidance hotel owner priority protection suggestion tension variation anxiety atmosphere awareness bath bread candidate climate comparison confusion construction elevator emotion employee employer guest height leadership mall manager operation recording sample transportation charity cousin disaster editor efficiency excitement extent feedback guitar homework leader mom outcome permission presentation promotion reflection refrigerator resolution revenue session singer tennis basket bonus cabinet childhood'.split(' '),
+      randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+
+  window.randomChannelName = randomNoun;
+
   preLangBlocks.each(function() {
     this.innerHTML = this.innerHTML.
       replace(/{{MS_SINCE_EPOCH}}/g, '<span class="ms-since-epoch">' + msSinceEpoch + '</span>').
-      replace(/{{SECONDS_SINCE_EPOCH}}/g, '<span class="s-since-epoch">' + Math.round(msSinceEpoch / 1000) + '</span>');
+      replace(/{{SECONDS_SINCE_EPOCH}}/g, '<span class="s-since-epoch">' + Math.round(msSinceEpoch / 1000) + '</span>').
+      replace(/{{RANDOM_CHANNEL_NAME}}/g, randomNoun);
   });
 
   function replaceInBlocks(blocks, oldValue, newValue) {
