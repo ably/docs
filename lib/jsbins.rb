@@ -4,7 +4,6 @@ require 'jsbin-client'
 
 class JsBins
   YAML_PATH = 'data/jsbins.yaml' unless defined?(YAML_PATH)
-  DEPENDENCIES = ['//ajax.googleapis.com/ajax/libs/jquery-1.9.1.min.js', '//cdn.ably.io/lib/ably.min.js'] unless defined?(DEPENDENCIES)
 
   class << self
     attr_accessor :data
@@ -28,7 +27,7 @@ class JsBins
         when 'css'
           files[:css] = content
         when 'html'
-          files[:html] = DEPENDENCIES.map { |d| "<script src='#{d}' type='text/javascript'></script>" }.join("\n") + "\n\n#{content}"
+          files[:html] = content
         else
           raise "Unknown content type #{type}.  Please use Javascript, HTML or CSS only."
         end

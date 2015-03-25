@@ -106,8 +106,15 @@ class AblyPreTextileFilter
 
     # Convert code editor class tags into a format that can be decoded on the front end
     def add_support_for_inline_code_editor(content, path)
-      folder = path.match(/\/([^\/]+)\/?$/)[1]
-      content.gsub(/\(code-editor:([^\)]+)\)/i, "(code-editor load-file___#{folder}___\\1)")
+      content.gsub(/\(code-editor:([^\)>]+)\)/i) do
+        jsbin_id = JsBins.jsbin_id_from_path(Regexp.last_match[1])
+        if jsbin_id
+          "(code-editor open-jsbin open-jsbin-#{jsbin_id})"
+        else
+          puts "Warning: Code-editor for JSBin '#{Regexp.last_match[1]}' not found, skipping"
+          Regexp.last_match[0]
+        end
+      end
     end
 
     def strip_heredoc(string)
