@@ -121,7 +121,10 @@ $(function() {
   for (langID in langList) {
     if ((langID !== 'default') && !friendlyLanguageFromId(langID)) if (console.warn) console.warn('Language ' + langID + ' is not supported and not shown');
   }
-  if (langList.find('li').length) $('body').append(globalLangContainer);
+  if (langList.find('li').length) {
+    $('body').append(globalLangContainer);
+    $('#documentation').addClass('with-langauage-selector');
+  }
 
   // event callback for the global language navigation selection
   function selectGlobalLanguage(cookieStrategy) {
