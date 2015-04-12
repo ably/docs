@@ -177,9 +177,4 @@ $(function() {
 
   // remove language breakers <span class="breaker"></span> as they are only there to stop consecutive blocks being linked unintentionally
   $('p:has(span.breaker),span.breaker').remove();
-
-  // div language blocks often commence with breaks and empty P tags because of incorrect Textile interpretation
-  $('div[lang] > br, div[lang] > p').each(function() {
-    if (!$(this).text()) $(this).remove()
-  });
 });
