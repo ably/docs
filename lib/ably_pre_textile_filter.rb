@@ -1,10 +1,20 @@
 require_relative './helpers/nav_helper'
 
 class AblyPreTextileFilter
+  BLANG_REGEX = %r{
+    ^[^\S\n]*
+    blang\[
+      ([\w,]+)
+    \]\.
+    [^\S\n]*
+  $}xm unless defined?(BLANG_REGEX)
+
   class << self
     def run(content, path)
       content = strip_comments(content)
       content = add_language_support_for_github_style_code(content)
+      content = convert_blang_blocks_to_html(content)
+      content = add_language_support_for_github_style_code(content) # after blank blocks indentation is removed, two runs needed
       content = duplicate_language_blocks(content)
       content = trim_white_space_between_language_elements(content)
       content = insert_inline_table_of_contents(content)
@@ -125,6 +135,52 @@ class AblyPreTextileFilter
         0
       end
       string.gsub(/^[ \t]{#{indent}}/, '')
+    end
+
+    # Find blang[lang] markup and wraps for later post textile processing
+    #
+    # This method finds every occurrence of blang[lang,lang]. markup,
+    #   determines how many subsequent lines are part of the block based on indentation,
+    #   and then wraps the blocks in {{LANG_BLOCK[language,language]}} ... {{/LANG_BLOCK}}
+    #   that are processed post textile processing.
+    #
+    def convert_blang_blocks_to_html(content)
+      while position = content.index(BLANG_REGEX)
+        languages = content[BLANG_REGEX, 1]
+        subsequent_lines = content[position..-1].split(/\n\r|\n/)
+        blang_block = subsequent_lines.shift
+        break if subsequent_lines.empty?
+
+        puts subsequent_lines[0]
+
+        indentation = subsequent_lines[0][/^\s+/, 0]
+        raise "blang[langauge]. blocks must be followed by indentation. Offending block: '#{blang_block}'" unless indentation
+
+        line_index = 1
+        while valid_blang_line?(subsequent_lines[line_index], indentation)
+          line_index += 1
+          break if last_line?(subsequent_lines, line_index)
+        end
+
+        content = [
+          content[0...position],
+          "{{LANG_BLOCK[#{languages}]}}\n",
+          subsequent_lines[0...line_index].map { |d| d.gsub(/^#{indentation}/, '') },
+          "\n{{/LANG_BLOCK}}\n",
+          subsequent_lines[line_index..-1]
+        ].flatten.compact.join("\n")
+      end
+
+      content
+    end
+
+    private
+    def valid_blang_line?(line, indentation)
+      line.start_with?(indentation) || line.match(/^\s*$/)
+    end
+
+    def last_line?(subsequent_lines, line_index)
+      line_index == subsequent_lines.length - 1
     end
   end
 end
