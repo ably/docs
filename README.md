@@ -1,22 +1,22 @@
 Ably Documentation Overview
 ===========================
 
-[Ably](https://ably.io) is a hugely scalable, superfast and secure hosted realtime messaging service for web-enabled devices.
+[Ably](https://www.ably.io) is a hugely scalable, superfast and secure hosted realtime messaging service for web-enabled devices.
 
-This Git repository contains most of the [Ably API documentation](https://ably.io/documentation) that resides at <https://ably.io/documentation> in [Textile](redcloth.org/textile) format.  [Nanoc](http://nanoc.stoneship.org/) is used to build the static site from the `source` branch.
+This Git repository contains most of the [Ably API documentation](https://www.ably.io/documentation) that resides at <https://www.ably.io/documentation> in [Textile](redcloth.org/textile) format.  [Nanoc](http://nanoc.stoneship.org/) is used to build the static site from the `source` branch.
 
 The Ably documentation was intentionally created as a public repository using a simple text based markup language so that:
 
 * It can be maintained by Ably staff and developers.
 * 3rd parties can fork the repository, and submit pull requests to improve the documentation.  We welcome the community's suggestions and input.
-* This documentation is later merged upstream to the [Ably primary website documentation](https://ably.io/documentation) with each website releas.
+* This documentation is later merged upstream to the [Ably primary website documentation](https://www.ably.io/documentation) with each website releas.
 
 Viewing the documentation
 ------
 
-The static site generated from this documentation repository is hosted at <http://docs.ably.io>.  We frequently publish updates from this repository so is typically more up to date than the [official Ably API documentation](https://ably.io/documentation).
+The static site generated from this documentation repository is hosted at <http://docs.ably.io>.  We frequently publish updates from this repository so is typically more up to date than the [official Ably API documentation](https://www.ably.io/documentation).
 
-The official complete Ably documentation that incoporates all the documentation in this repository can be found at <https://ably.io/documentation>
+The official complete Ably documentation that incoporates all the documentation in this repository can be found at <https://www.ably.io/documentation>
 
 Forking and running locally
 ------
@@ -35,4 +35,4 @@ Forking and running locally
 Help and contact
 ----
 
-If you have any questions or suggestions, please [get in touch with us at Ably](https://ably.io/contact)
+If you have any questions or suggestions, please [get in touch with us at Ably](https://www.ably.io/contact)
