@@ -101,7 +101,7 @@ $(function() {
       msSinceEpochBlocks,
       sSinceEpochBlocks;
 
-  $.get('https://ably.io/ably-auth/api-key/docs', function(apiKey, status) {
+  $.get('https://www.ably.io/ably-auth/api-key/docs', function(apiKey, status) {
     if (status === 'success') {
       var keyId = apiKey.match(/([^\.]+\.[^:]+):.+/)[1],
           keyValue = apiKey.match(/[^\.]+\.[^:]+:(.+)/)[1];
@@ -127,7 +127,7 @@ $(function() {
     }
   });
 
-  $.get('https://ably.io/ably-auth/token/docs', function(token, status) {
+  $.get('https://www.ably.io/ably-auth/token/docs', function(token, status) {
     if (status === 'success') {
       preLangBlocks.each(function() {
         this.innerHTML = this.innerHTML.
