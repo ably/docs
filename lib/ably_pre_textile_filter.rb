@@ -151,8 +151,6 @@ class AblyPreTextileFilter
         blang_block = subsequent_lines.shift
         break if subsequent_lines.empty?
 
-        puts subsequent_lines[0]
-
         indentation = subsequent_lines[0][/^\s+/, 0]
         raise "blang[langauge]. blocks must be followed by indentation. Offending block: '#{blang_block}'" unless indentation
 
