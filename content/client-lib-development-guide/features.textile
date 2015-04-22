@@ -8,53 +8,52 @@ A detailed "test specification":https://github.com/ably/ably-ruby/blob/master/SP
 
 However, we have found the "test specification":https://github.com/ably/ably-ruby/blob/master/SPEC.md can be difficult as a reference because of both its breadth and the fact that it applies to the Ruby client library which may be unfamiliar as a language for a lot of developers.
 
-As a result, this document outlines the complete feature set of both the REST and Realtime client libraries.  It is expected that every client library developer refers to this document to ensure that their client library provides the same API and features as the existing Ably client libraries. In addition to this, it is essential that there is test coverage over all of the features described below. We recommend you use the "Ably Java":https://github.com/ably/ably-java as a reference when reviewing how the API has been implemented as the implementation is straightforward and Java is a language most people are familiar with.
+As a result, this document outlines the complete feature set of both the REST and Realtime client libraries.  It is expected that every client library developer refers to this document to ensure that their client library provides the same API and features as the existing Ably client libraries. In addition to this, it is essential that there is test coverage over all of the features described below. We recommend you use the "Ably Java":https://github.com/ably/ably-java library as a reference when reviewing how the API has been implemented as the implementation is straightforward and Java is a language most people are familiar with.
 
 h2(#rest). REST client library features
 
 * @RestClient@
 ** The constructor accepts either an API key, a token string, or a set of "@ClientOptions@":#options.  An exception is raised if invalid arguments are provided such as no API key, token and no means to create a token
-** The logger by default outputs to @STDOUT@ and the log level is set to warning
+** The logger by default outputs to @STDOUT@ (or other logging medium as appropriate to the platform) and the log level is set to warning
 ** The log level can be changed
 ** A custom logger can be provided in the constructor
 ** @RestClient#auth@ attribute provides access to the @Auth@ object that was instanced with the @ClientOptions@ provided in the @RestClient@ constructor
 ** @RestClient#stats@ function:
-*** Returns a @PaginatedResource@ page containing @Stats@ objects in the @PaginatedResource#items@ attribute returned from the stats request
+*** Returns a @PaginatedResult@ page containing @Stats@ objects in the @PaginatedResult#items@ attribute returned from the stats request
 *** Supports the following params:
-**** @start@ and @end@ are timestamp fields represented as milliseconds since epoch, or where suitable to the language, Time objects. @start@ must be equal to or less than @end@ and is unaffected by the request direction
-**** @direction@ backwards or forwards, must explicitly default to backwards
-**** @limit@ supports up to 1,000 items, must explicitly default to 100
-**** @unit@ is the period for which the stats will be aggregated by, values supported are @minute@, @hour@, @day@ or @month@, must explicitly default to @minute@
-** @RestClient#time@ function sends a get request to @rest.ably.io/time@ and returns the server time in milliseconds since epoch or as a Time object where suitable
+**** @start@ and @end@ are timestamp fields represented as milliseconds since epoch, or where suitable to the language, Date or Time objects. @start@ must be equal to or less than @end@ and is unaffected by the request direction
+**** @direction@ backwards or forwards; if omitted the direction defaults to the REST API default (backwards)
+**** @limit@ supports up to 1,000 items; if omitted the limit defaults to the REST API default (100)
+**** @unit@ is the period for which the stats will be aggregated by, values supported are @minute@, @hour@, @day@ or @month@; if omitted the unit defaults to the REST API default (@minute@)
+** @RestClient#time@ function sends a get request to @rest.ably.io/time@ and returns the server time in milliseconds since epoch or as a Date/Time object where suitable
 
-* @Connection@ (this is not a public object but an internal class used by @RestClient@, this pattern or approach is not required so long as the features below are met)
 ** Sends REST requests over HTTP and HTTPS to the REST end-point @rest.ably.io@
 ** Supports two protocols:
-*** "MessagePack":http://msgpack.org/ binary protocol (this is the default)
+*** "MessagePack":http://msgpack.org/ binary protocol (this is the default for environments having a suitable level or support for binary data)
 *** JSON text protocol (used when @useBinaryProtocol@ option is false)
 ** REST endpoint is configurable in the Client constructor
 ** Uses @Auth@ to establish what authentication scheme to use, how to authenticate, and automatic issuing of tokens when necessary
-** If a REST request responds with 401 with code 40140, then the server is indicating the token is no longer valid.  Using the @Auth@ class a token should be automatically issued if possible, otherwise an exception should be raised.
-** Requests are sent to the default end point @rest.ably.io@. However, if the @host@ option is configured, the client will send requests to the specified host. If @environment@ option is configured, the environment name is prefixed to the default host end point and the @host@ is reconfigured. For example, if the @environment@ is set to sandbox, then the @host@ end point will become @sandbox-rest.ably.io@
+** If a REST request responds with 401 with code 40140, then the server is indicating the token is no longer valid. Using the @Auth@ class a token should be automatically issued if possible, otherwise an error should be indicated (eg exception raised or an error passed in callback as appropriate to the language).
+** Requests are sent to the default end point @rest.ably.io@. However, if the @host@ option is set, the client will send requests to the specified host. If @environment@ option is configured, the environment name is prefixed to the default host end point and the @host@ is set accordingly. For example, if the @environment@ is set to sandbox, then the @host@ end point will become @sandbox-rest.ably.io@
 ** The client library must use "default connection and request timeouts":https://github.com/ably/ably-ruby/blob/master/lib/ably/rest/client.rb#L24-L30. Ideally these default timeouts should be configurable by the developer.
 ** Authentication
-*** Supports basic authenticate when an API key is provided with the @key@ option.  The API key follows the format @"KEY_NAME:KEY_SECRET"@ so when authenticating using basic auth, the key name can be used as the username and the key secret as the password.
-*** Supports token authentication if a @token@, @tokenDetails@, @authCallback@ or @authUrl@ is provided.  If @useTokenAuth@ is true or a @clientId@ is provided when the library is instanced, then token authentication is always used.
-*** When a @token@ or @tokenDetails@ is used to instance the library, and no means to renew the token is provided (either an API key, @authCallback@ or @authUrl@), if the server responds with 40140 (token expired) to a request, the client library should raise an exception and not retry the request.
+*** Supports basic authentication when an API key is provided with the @key@ option.  The API key follows the format @"KEY_NAME:KEY_SECRET"@ so when authenticating using basic auth, the key name can be used as the username and the key secret as the password.
+*** Supports token authentication if one or more of @token@, @tokenDetails@, @authCallback@ or @authUrl@ are provided.  If @useTokenAuth@ is true or a @clientId@ is provided when the library is instanced, then token authentication is always used.
+*** When a @token@ or @tokenDetails@ is used to instance the library, and no means to renew the token is provided (either an API key, @authCallback@ or @authUrl@), if the server responds with 40140 (token expired) to a request, the client library should indicate an error and not retry the request.
 *** When the client does have a means to renew the token automatically, and the token has expired or the server has responded with 40140 (token expired), then the client should automatically renew the token and resend the request.
 ** Host Fallback
-*** All HTTP requests sent to Ably are fault tolerant and will fallback to an alternative host name if the default host end point fails to service the request and the @host@ and @environment@ options are not configured. This ensures that a client library is able to work around routing or other problems with the user's closest data center.  For example, if a @POST@ request to @rest.ably.io@ results in a connection failure at the transport level or an unsuccessful HTTP status code, then the @POST@ request should be retried again against all the fallback hosts @[a-e].ably-realtime.com@.  See the "default fallback hosts":https://github.com/ably/ably-java/blob/master/src/io/ably/transport/Defaults.java#L7 and the "fallback mechanism implemented in Java for POST requests":https://github.com/ably/ably-java/blob/master/src/io/ably/http/Http.java#L204-L224 as an example.
-*** Automatic retries to fallback hosts will not occur for all unsuccessful HTTP status codes. For example, if the credentials are invalid or the maxmimum message length has been exceeded, then resending the request to an alternative data center will not fix the problem and will only increase the load on other data centers. See the "complete list of Ably error codes":https://github.com/ably/ably-common/blob/master/protocol/errors.json#L11 and a "discussion in the Java library about this":https://github.com/ably/ably-java/issues/14
+*** All HTTP requests sent to Ably are fault-tolerant and will fallback to an alternative host name if the default host end point is unreachable, or indicates that it is unserviceable with a 500 or 503 status code. This ensures that a client library is able to work around routing or other problems with the user's closest data center.  For example, if a @POST@ request to @rest.ably.io@ fails because the default endpoint is unreachable or unserviceable, then the @POST@ request should be retried again against all the fallback hosts @[a-e].ably-realtime.com@.  This fallback behaviour only applies to the default @rest.ably.io@ endpoint; if either @host@ or @environment@ options are set, no fallback host is used. See the "default fallback hosts":https://github.com/ably/ably-java/blob/master/src/io/ably/transport/Defaults.java#L7 and the "fallback mechanism implemented in Java for POST requests":https://github.com/ably/ably-java/blob/master/src/io/ably/http/Http.java#L204-L224 as an example.
+*** Automatic retries to fallback hosts will not occur for any other HTTP status codes. For example, if the credentials are invalid or the maxmimum message length has been exceeded, then resending the request to an alternative data center will not fix the problem and will only increase the load on other data centers. See the "complete list of Ably error codes":https://github.com/ably/ably-common/blob/master/protocol/errors.json#L11 and a "discussion in the Java library about this":https://github.com/ably/ably-java/issues/14
 
 * @Auth@
 ** Basic auth over HTTPS, will raise an exception over HTTP as insecure
 ** Basic auth is the default authentication scheme if an API key exists
-** Token auth over HTTP or HTTPs using the token string
+** Token auth over HTTP or HTTPS using the token string
 ** Token auth is the default if option @useTokenAuth@ is set to true, a @clientId@ is specified, @authUrl@ or @authCallback@ is configured, or a an explicit @token@ is provided
-** TTL for new tokens defaults to 1 hour represented in milliseconds, and the @capability@ defaults to allow all operations on all channels
-** If a @clientId@ is provided in the options, then the string will be encoded in UTF-8 format before it is sent to Ably
+** TTL for new tokens is specified in milliseconds and defaults to the REST API default (1 hour)
+** The @capability@, if not specified, defaults to allow all operations permitted for the key associated with the token
 ** @Auth#authorise@ function:
-*** Instructs the library to create a token if needed and use Token auth for all future requests
+*** Ensures that credentials are available, resulting in the creation of a token if needed
 *** Supports all @AuthOptions@ and @TokenParams@ in the function arguments
 *** Will not create a new token unless no previous token exists or current token has expired
 *** Providing the option @force@ set to true will force @authorise@ to issue a new token even if an existing token exists.
@@ -63,15 +62,15 @@ h2(#rest). REST client library features
 ** @Auth#requestToken@ function:
 *** Supports all @TokenParams@ in the function arguments, which override defaults for @Client@ @Auth@. If a @clientId@ option is used, clients using that token will be restricted to using that @clientId@.
 *** Returns a signed @TokenRequest@ object that can be used to obtain a token from Ably
-*** When @authUrl@ option is set, it will retrieve the token from the provided URL using the HTTP @authHeaders@, query string @authParams@ and @authMethod@ (@GET@ or @POST@) HTTP verb.  The token retrieved can simply be a token string if the response is @"text/html"@, or it can be a @TokenDetails@ object in JSON format
+*** When @authUrl@ option is set, it will retrieve the token from the provided URL using the HTTP @authHeaders@, query string @authParams@ and @authMethod@ (@GET@ or @POST@) HTTP verb.  The token retrieved is assumed by the library to be a token string if the response is @"text/plain"@, or taken to be a @TokenRequest@ or @TokenDetails@ object if the response has type @"application/json"@
 *** When @authCallback@ option is set, it will execute the callback and will expect either a token string, a @TokenDetails@ object or a @TokenRequest@ object which will in turn be used to request a token from Ably.
 ** @Auth#createTokenRequest@ function:
 *** Supports all @AuthOptions@
 *** Generates a unique 16+ character @nonce@ if none is provided, nonce is used to prevent replays
 *** Generates a @timestamp@ from current time if not provided, will retrieve the server time if @queryTime@ is true
-*** TTL is configurable in milliseconds
-*** Capability JSON or Stringified JSON can be provided that specifies the channel(s) and privileges for each channel that the token will be authorised for
-*** A valid HMAC is created using the private API key to sign the @TokenRequest@ so that it can be used by any client to request a token without having or exchanging any secrets
+*** TTL is optional and specified in milliseconds
+*** Capability JSON text can be provided that specifies the rights of the token in terms of the channel(s) authorised and the permitted operations on each
+*** A valid HMAC is created using the key secret  to sign the @TokenRequest@ so that it can be used by any client to request a token without having or exchanging any secrets
 
 * @Channels@
 ** @Channels@ is a collection of @Channel@ objects accessible through @Rest#channels@.
@@ -83,52 +82,52 @@ h2(#rest). REST client library features
 
 * @Channel@
 ** @Channels#publish@ function:
-*** Expects either an array of @Message@ objects or a @name@ UTF-8 string and @data@ payload.
+*** Expects either an array of @Message@ objects or a @name@ string and @data@ payload.
 *** When @name@ and @data@ is provided, a single message is published to Ably
 *** When an array of @Message@ objects is provided, a single request is made to Ably. When publishing multiple messages, this approach is more efficient
-*** Raises an exception if the message was not successfully published to Ably
+*** Indicates an error if the message was not successfully published to Ably
 ** @Channel#history@ function:
-*** Returns a @PaginatedResource@ page containing the first page of messages in the @PaginatedResource#items@ attribute returned from the history request
+*** Returns a @PaginatedResult@ page containing the first page of messages in the @PaginatedResult#items@ attribute returned from the history request
 *** Supports the following params:
 **** @start@ and @end@ are timestamp fields represented as milliseconds since epoch, or where suitable to the language, Time objects. @start@ must be equal to or less than @end@ and is unaffected by the request direction.
-**** @direction@ backwards or forwards, must explicitly default to backwards
-**** @limit@ supports up to 1,000 items, must explicitly default to 100
+**** @direction@ backwards or forwards; if omitted the direction defaults to the REST API default (backwards)
+**** @limit@ supports up to 1,000 items; if omitted the direction defaults to the REST API default (100)
 ** @Channel#presence@ attribute returns a @Presence@ object for this channel
 ** Message encoding
-*** Payloads must be binary, strings, or JSON objects. Any other data type should not be permitted and an exception should be raised
+*** Payloads must be binary, strings, or objects capable of JSON representation. Any other data type should not be permitted and an exception should be raised
 *** If a message is encoded, the @encoding@ attribute represents the encoding(s) applied in right to left format i.e. "utf-8/base64" indicates that the original payload has "utf-8" encoding and has subsequently been encoded in Base64 format.
-*** When using MessagePack
-**** Messages sent with binary payloads are not encoded as MessagePack supports binary
-**** Messages sent with string payloads are sent unchanged
-**** Messages sent with JSON payloads are not encoded as MessagePack supports JSON objects
-**** All messages received will deliver payloads in the format they were sent in i.e. binary, string, or JSON
-*** When using JSON
-**** Messages sent with binary payloads are encoded as Base64 and the @encoding@ attribute is set to "base64"
-**** Messages sent with string payloads are sent unchanged
-**** Messages sent with JSON payloads are stringified and the @encoding@ attribute is set to "utf-8/json"
-**** All messages received will be decoded based on the @encoding@ field and deliver payloads in the format they were sent in i.e. binary, string, or JSON
-** Message cryptography
-*** When a @Channel@ is instanced with the option @encrypted@ true, messages will be automtically encrypted when sent to Ably and decrypted when received on this channel. The cipher configuration is set with the @cipherParams@
+*** When using MessagePack Message encoding
+**** a binary Message payload is encoded as MessagePack binary type
+**** a string Message payload is encoded as MessagePack string type
+**** a JSON Message payload is stringified either as a JSON Object or Array and encoded as MessagePack string type and the @encoding@ attribute is set to "json"
+**** All messages received will deliver payloads in the format they were sent in i.e. binary, string, or a structured type containing the parsed JSON
+*** When using JSON Message encoding
+**** a binary Message payload is encoded as Base64 and represented as a JSON string the @encoding@ attribute is set to "base64"
+**** a string Message payload is represented as a JSON string
+**** a JSON Message payload is stringified either as a JSON Object or Array and represented as a JSON string and the @encoding@ attribute is set to "json"
+**** All messages received will be decoded based on the @encoding@ field and deliver payloads in the format they were sent in i.e. binary, string, or a structured type containing the parsed JSON
+** Message payload encryption
+*** When a @Channel@ is instanced with the option @encrypted@ true, message payloads will be automtically encrypted when sent to Ably and decrypted when received on this channel. The cipher configuration is set with the @cipherParams@
 *** AES 256 and 128 CBC encryption must be supported
 *** Tests must exist that encrypt and decrypt the following fixture data for "AES 128":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-128.json and "AES 256":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-256.json to ensure the client library encryption is compatible across libraries
 
 * @Presence@
 ** Presence object is associated with a single channel and is accessible through @Channel#presence@
 ** There is no way to register a member as present on a channel via the REST API
-** @Channels#get@ function:
-*** Returns a @PaginatedResource@ page containing the first page of members present in the @PaginatedResource#items@ attribute returned from the history request. Each member is represented as a @PresenceMessage@
-**** @limit@ supports up to 1,000 items, must explicitly default to 100
+** @Presence#get@ function:
+*** Returns a @PaginatedResult@ page containing the first page of members present in the @PaginatedResult#items@ attribute returned from the presence request. Each member is represented as a @PresenceMessage@
+**** @limit@ supports up to 1,000 items; if unspecified it defaults to the REST API default (100)
 ** @Channel#history@ function:
-*** Returns a @PaginatedResource@ page containing the first page of messages in the @PaginatedResource#items@ attribute returned from the history request
+*** Returns a @PaginatedResult@ page containing the first page of messages in the @PaginatedResult#items@ attribute returned from the presence request
 *** Supports the following params:
-**** @start@ and @end@ are timestamp fields represented as milliseconds since epoch, or where suitable to the language, Time objects. @start@ must be equal to or less than @end@ and is unaffected by the request direction.
-**** @direction@ backwards or forwards, must explicitly default to backwards
-**** @limit@ supports up to 1,000 items, must explicitly default to 100
+**** @start@ and @end@ are timestamp fields represented as milliseconds since epoch, or where appropriate to the language, Date/Time objects. @start@ must be equal to or less than @end@ and is unaffected by the request direction.
+**** @direction@ backwards or forwards; if unspecified defaults to the REST API default (backwards)
+**** @limit@ supports up to 1,000 items; if unspecified defaults to the REST API default (100)
 ** Presence Messages retrieved are decoded in the same way that messages are decoded
 
 * General
-** Every test should be executed using all supported protocols such as JSON and "MessagePack":http://msgpack.org/.  This includes both sending & receiving data.
-** All tests by default are run against a special Ably sandbox environment.  This environment allows apps to be provisioned without any authentication that can then be used for client library testing. Bear in mind that all apps created in the sandbox environment are automatically deleted within 60 minutes and have low limits to prevent abuse. Apps are configured by sending a @POST@ request to @https://sandbox-rest.ably.io/apps@ with a JSON body that specifies the keys and their associated capabilities, channel namespace rules and any presence fixture data that is required, see "ably-common test-app-setup.json":https://github.com/ably/ably-common/blob/master/test-resources/test-app-setup.json.  See the "Java test setup":https://github.com/ably/ably-java/blob/master/test/io/ably/test/rest/RestSetup.java. Presence fixture data is necessary for the REST library presence tests as there is no way to register presence on a channel in the REST library.
+** Every test should be executed using all supported protocols (ie JSON and "MessagePack":http://msgpack.org/ if supported).  This includes both sending & receiving data.
+** All tests by default are run against a special Ably sandbox environment.  This environment allows apps to be provisioned without any authentication that can then be used for client library testing. Bear in mind that all apps created in the sandbox environment are automatically deleted after 60 minutes and have low limits to prevent abuse. Apps are configured by sending a @POST@ request to @https://sandbox-rest.ably.io/apps@ with a JSON body that specifies the keys and their associated capabilities, channel namespace rules and any presence fixture data that is required; see "ably-common test-app-setup.json":https://github.com/ably/ably-common/blob/master/test-resources/test-app-setup.json.  See the "Java test setup":https://github.com/ably/ably-java/blob/master/test/io/ably/test/rest/RestSetup.java. Presence fixture data is necessary for the REST library presence tests as there is no way to register presence on a channel in the REST library.
 ** Testing statistics can be tricky due to timing issues and slow test suites as a result of sending requests to generate statistics.  As such, we provide a special stats end point in our sandbox environment that allows stats to be injected into our metrics system so that stats tests can make predictable assertions.  To create stats you must send an authenticated @POST@ request to the stats JSON to @https://sandbox-rest.ably.io/stats@ with the stats data you wish to create. See the "Javascript stats fixture":https://github.com/ably/ably-js/blob/4e65d4e13eb8750a375b9511e4dd059092c0e481/spec/rest/stats.test.js#L8-L51 and "setup helper":https://github.com/ably/ably-js/blob/4e65d4e13eb8750a375b9511e4dd059092c0e481/spec/common/modules/testapp_manager.js#L158-L182 as an example.
 
 h2(#realtime). Realtime client library features (WIP, not complete)
