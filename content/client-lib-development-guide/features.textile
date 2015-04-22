@@ -29,6 +29,7 @@ h2(#rest). REST client library features
 
 * @Connection@ (this is not a public object but an internal class used by @RestClient@, this pattern or approach is not required so long as the features below are met)
 ** Sends REST requests over HTTP and HTTPS to the REST end-point @rest.ably.io@
+** If @ClientOptions#tls@ is true, then all communication os over HTTPS. If false, all communication is over HTTP however trying to use Basic Auth over HTTP will raise an exception as private keys cannot be submitted over an insecure connection
 ** Supports two protocols:
 *** "MessagePack":http://msgpack.org/ binary protocol (this is the default)
 *** JSON text protocol (used when @useBinaryProtocol@ option is false)
@@ -85,7 +86,7 @@ h2(#rest). REST client library features
 ** @Channels#publish@ function:
 *** Expects either an array of @Message@ objects or a @name@ UTF-8 string and @data@ payload.
 *** When @name@ and @data@ is provided, a single message is published to Ably
-*** When an array of @Message@ objects is provided, a single request is made to Ably. When publishing multiple messages, this approach is more efficient
+*** When an array of @Message@ objects is provided, a single request is made to Ably. When publishing multiple messages, this approach is more efficient. However, a yet to be implemented feature should limit the total number of messages bundled in a single POST based on the default max request size, and would raise an exception if any single message exceeds that limit.
 *** Raises an exception if the message was not successfully published to Ably
 ** @Channel#history@ function:
 *** Returns a @PaginatedResource@ page containing the first page of messages in the @PaginatedResource#items@ attribute returned from the history request
@@ -101,16 +102,17 @@ h2(#rest). REST client library features
 **** Messages sent with binary payloads are not encoded as MessagePack supports binary
 **** Messages sent with string payloads are sent unchanged
 **** Messages sent with JSON payloads are not encoded as MessagePack supports JSON objects
-**** All messages received will deliver payloads in the format they were sent in i.e. binary, string, or JSON
 *** When using JSON
 **** Messages sent with binary payloads are encoded as Base64 and the @encoding@ attribute is set to "base64"
 **** Messages sent with string payloads are sent unchanged
 **** Messages sent with JSON payloads are stringified and the @encoding@ attribute is set to "utf-8/json"
-**** All messages received will be decoded based on the @encoding@ field and deliver payloads in the format they were sent in i.e. binary, string, or JSON
 ** Message cryptography
 *** When a @Channel@ is instanced with the option @encrypted@ true, messages will be automtically encrypted when sent to Ably and decrypted when received on this channel. The cipher configuration is set with the @cipherParams@
 *** AES 256 and 128 CBC encryption must be supported
 *** Tests must exist that encrypt and decrypt the following fixture data for "AES 128":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-128.json and "AES 256":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-256.json to ensure the client library encryption is compatible across libraries
+** Message decoding
+*** All messages received will be decoded automatically based on the @encoding@ field and the payloads will be converted into the format they were originally sent using i.e. binary, string, or JSON
+*** If, for example, incompatible encryption details are provided or invalid Base64 is detected in the message payload, an error message will be sent to the logger, but the message will still be delivered with last successful decoding and the @encoding@ field. For example, if a message had a decoding of "utf-8/cipher+aes-128-cbc/base64", and the payload was successfully Base64 decoded but the payload could not be encrypted because the @CipherParam@ details were not configured, the message would be delivered with a binary payload and an @encoding@ with the value "utf-8/cipher+aes-128-cbc"
 
 * @Presence@
 ** Presence object is associated with a single channel and is accessible through @Channel#presence@
@@ -131,15 +133,63 @@ h2(#rest). REST client library features
 ** All tests by default are run against a special Ably sandbox environment.  This environment allows apps to be provisioned without any authentication that can then be used for client library testing. Bear in mind that all apps created in the sandbox environment are automatically deleted within 60 minutes and have low limits to prevent abuse. Apps are configured by sending a @POST@ request to @https://sandbox-rest.ably.io/apps@ with a JSON body that specifies the keys and their associated capabilities, channel namespace rules and any presence fixture data that is required, see "ably-common test-app-setup.json":https://github.com/ably/ably-common/blob/master/test-resources/test-app-setup.json.  See the "Java test setup":https://github.com/ably/ably-java/blob/master/test/io/ably/test/rest/RestSetup.java. Presence fixture data is necessary for the REST library presence tests as there is no way to register presence on a channel in the REST library.
 ** Testing statistics can be tricky due to timing issues and slow test suites as a result of sending requests to generate statistics.  As such, we provide a special stats end point in our sandbox environment that allows stats to be injected into our metrics system so that stats tests can make predictable assertions.  To create stats you must send an authenticated @POST@ request to the stats JSON to @https://sandbox-rest.ably.io/stats@ with the stats data you wish to create. See the "Javascript stats fixture":https://github.com/ably/ably-js/blob/4e65d4e13eb8750a375b9511e4dd059092c0e481/spec/rest/stats.test.js#L8-L51 and "setup helper":https://github.com/ably/ably-js/blob/4e65d4e13eb8750a375b9511e4dd059092c0e481/spec/common/modules/testapp_manager.js#L158-L182 as an example.
 
-h2(#realtime). Realtime client library features (WIP, not complete)
+h2(#realtime). Realtime client library features
+
+Please note the threading and/or asynchronous model for each realtime library will vary by language and it is therefore up to the developer to decide on the best approach for each given client library.  For example, Node.js and Ruby (EventMachine) use a similar callback single threaded evented approach that ensures all public methods are non-blocking. Java and .NET use a threaded model whereby the Connection runs in its own thread. Go makes extensive use of go routines and channels.
+
+The REST library is a subset of the Realtime library and as such all Realtime libaries offer all functionality available in the REST library.
+
+* @RealtimeClient@
+** Supports all the same @ClientOptions@ as the @RestClient@ in addition to:
+*** @echoMessages@ is true by default. If false, it prevents messages originating from this connection being echoed back on the same connection
+*** @recover@ string when set will ensure the connection inherits the state of a previous connection that may have existed under a different instance of the Realtime library
+*** @connectAutomatically@ is true by default and as soon as the client library is instantiated it will connect to Ably. One can optionally set this to false and an explicit connect is then required
+** @RealtimeClient#connection@ provides access to the underlying @Connection@ object
 
 * @Connection@
-** Supports
+** If connection option @connectAutomatically@ is true, any action that would implicitly or explicitly attach a channel will trigger the connection to be opened automatically.
+** Implements @EventEmitter@ and emits events for state changes @INITIALIZED@, @CONNECTING@, @CONNECTED@, @DISCONNECTED@, @SUSPENDED@, @CLOSED@, @CLOSING@, @FAILED@
+** Additionally, an @ERROR@ event is emitted that contains an @ErrorInfo@ object with details on an error that has occurred for the @Connection@
+** A test should exist that instances many (50+) clients simultaneously and performs a few basic operations such as attaching to a channel, publishing a message, and expecting all of those messages to arrive on all clients to ensure that there are no concurrency issues with the client library.
 
 * @Channel@
+** Implements @EventEmitter@ and emits events for state changes @INITIALIZED@, @ATTACHING@, @ATTACHED@, @DETACHING@, @DETACHED@, @FAILED@
+** Additionally, an @ERROR@ event is emitted that contains an @ErrorInfo@ object with details on an error that has occurred for the @Channel@
+** As soon as a @Channel@ becomes attached, all incoming messages and presence messages are processed and emitted where applicable.  @PRESENCE@ and @SYNC@ messages are passed to the @Presence@ object ensuring it maintains a map of current members on a channel in realtime.
+** If the connection state changes to @FAILED@ then an @ATTACHING@ or @ATTACHED@ channel state will transition to @FAILED@, set the @errorReason@ and emit the error event
+** If the connection state changes to @CLOSED@ then an @ATTACHING@ or @ATTACHED@ channel state will transition to @CLOSED@
+** @Channel#attach@ function:
+*** If already @ATTACHED@ or @ATTACHING@ nothing is done
+*** If the connection state is @CLOSED@, @CLOSING@, @SUSPENDED@ or @FAILED@, an exception should be thrown immediately
+*** Otherwise an @ATTACH@ ProtocolMessage is sent to the server, the state changes to @ATTACHING@ and the channel becomes @ATTACHED@ when the confirmation @ATTACHED@ ProtocolMessage is received
+*** If the language permits, a callback can be provided that is called when the channel is attached successfully or the attach fails and the the @ErrorInfo@ error is passed as an argument to the callback.
+*** If the user does not have sufficient permissions to attach to the channel, the channel state @FAILED@ is emitted with the error @ErrorInfo@. An error event is also emitted, and the @errorReason@ attribute of the @Channel@ is set to the error @ErrorInfo@ object
+** @Channel#detach@ function:
+*** If state is @INITIALISED@, @DETACHED@ or @DETACHING@ nothing is done
+*** If state is @FAILED@ an exception should be thrown immediately
+*** If the connection state is @CLOSED@, @CLOSING@, @SUSPENDED@ or @FAILED@, an exception should be thrown immediately
+*** Otherwise a @DETACH@ ProtocolMessage is sent to the server, the state changes to @DETACHING@ and the channel becomes @DETACHED@ when the confirmation @DETACHED@ ProtocolMessage is received
+*** If the language permits, a callback can be provided that is called when the channel is detached successfully or the detach fails and the the @ErrorInfo@ error is passed as an argument to the callback.
+** @Channel#publish@ function:
+*** Messages are encoded in the same way as the REST @Channel#publish@ method
+*** An optional callback can be provided to the @#publish@ method that is called when the message is successfully delivered or upon failure with the appropriate @ErrorInfo@ error.
+*** If the connection is @CONNECTED@ then the messages are published immediately
+*** If the connection is @CONNECTING@ or @SUSPENDED@, and @ClientOptions#queueMessages@ has not been explicitly set to false, then the message will be queued and delivered as soon as the connection state returns to @CONNECTED@
+*** Else an exception is raised preventing the message publishing
+*** Messages are delivered using a single @ProtocolMessage@ where possible by bundling in all messages for that channel into the @ProtocolMessage#messages@ array. However, a yet to be implemented feature should limit the total number of messages bundled per @ProtocolMessage@ based on the default max message size, and would raise an exception if any single message exceeds that limit.
 ** @Channel#subscribe@ function:
-** Subscribe with no arguments subscribes a listener to all messages
-** Subscribe with a single name argument subscribes a listener to only messages matching the string name
+*** Subscribe with no arguments subscribes a listener to all messages
+*** Subscribe with a single name argument subscribes a listener to only messages matching the string name
+*** Implicitly attaches the channel if not attached
+*** Messages delivered are automatically decoded based on the @encoding@ attribute, see REST @Channel@ encoding features. If there is an error decoding a message, the message is still delivered, but in addition to sending an error message to the logger, an @ErrorInfo@ error object is emitted as an error on the @Channel@
+** @Channel#unsubscribe@ function:
+*** Unsubscribe with no arguments unsubscribes the provided listener to all messages if subscribed
+*** Unsubscribe with a single name argument unsubscribes the provided listener to all messages matching the string name
+** @Channel#history@ function:
+*** Supports all the same params as REST @Channel#history@
+*** Additionally supports the param @untilAttach@, which if true, will only retrive messages since the channel was attached. Limiting messages to messages published before the channel was attached is done by passing the querystring param @from_serial@ with the serial number assigned to the channel when it received the @ATTACHED@ @ProtocolMessage@. If the @untilAttach@ param is specified when the channel is not attached an exception should be raised.
+*** Returns a @PaginatedResource@ page containing the first page of messages in the @PaginatedResource#items@ attribute returned from the history request.
+
 
 * @EventEmitter mixin / interface@
 ** @EventEmitter@ is not an object or class but a mixin that defines behaviour where included in other objects.  For example, the @Connection@ object emits events for connection state and mixes in @EventEmitter@ behaviour
@@ -147,7 +197,7 @@ h2(#realtime). Realtime client library features (WIP, not complete)
 ** @EventEmitter#on@ registers a listener for the specified event if provided, else it is registered for all events
 ** @EventEmitter#once@ registers a listener that is called only once for the specified event if provided, else it is registered for all events
 ** @EventEmitter#off@ deregisters a listener for the specified event if provided, else it is deregisters that listener for all events
-** @EventEmitter#emit@ emits event with the event name any arguments that get passed to the listeners.  If an error is raised in any of the listeners, the error is caught by the @EventEmitter@ and an the error is logged to the Ably logger
+** @EventEmitter#emit@ emits event with the event name any arguments that get passed to the listeners. If an exception is raised in any of the listeners, the exception is caught by the @EventEmitter@ and the exception is logged to the Ably logger
 
 
 h2. Types
@@ -244,6 +294,8 @@ h3(#options). Option types used when
 * @ClientOptions@ - Ably library options used when instancing a REST or Realtime client library, see "Java Options":https://github.com/ably/ably-java/blob/master/src/io/ably/types/Options.java
 * @ChannelOptions@ - options provided when instancing a channel, see "Java ChannelOptions":https://github.com/ably/ably-java/blob/master/src/io/ably/types/ChannelOptions.java
 * @CipherParams@ - params to configure encryption for a channel, see "Java CipherParams class":https://github.com/ably/ably-java/blob/master/src/io/ably/util/Crypto.java#L52
+
+Note: @ClientOptions@ does not currently define a default for max message size or request size. This will be added in the future to ensure that a ProtocolMessage or REST request does not exceed the limits before the request is made to the server.
 
 
 
