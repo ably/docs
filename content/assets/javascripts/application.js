@@ -103,17 +103,17 @@ $(function() {
 
   $.get('https://www.ably.io/ably-auth/api-key/docs', function(apiKey, status) {
     if (status === 'success') {
-      var keyId = apiKey.match(/([^\.]+\.[^:]+):.+/)[1],
-          keyValue = apiKey.match(/[^\.]+\.[^:]+:(.+)/)[1];
+      var keyName = apiKey.match(/([^\.]+\.[^:]+):.+/)[1],
+          keySecret = apiKey.match(/[^\.]+\.[^:]+:(.+)/)[1];
 
       if (typeof(window.onApiKeyRetrieved) === 'function') {
         window.onApiKeyRetrieved(apiKey);
       }
 
-      // Todo: change when https://github.com/ably/ably-js/issues/21 resolved
-      new Ably.Rest({ key: apiKey }).auth.createTokenRequest(
-        { keyId: keyId, keyValue: keyValue },
-        { "ttl": 600, "capability": JSON.stringify({ "*":["*"] }) },
+      var tokenValidity = 12 * 60 * 60 * 1000; // 12 hours
+
+      new Ably.Rest({ key: apiKey }).auth.createTokenRequest({},
+        { "ttl": tokenValidity, "capability": JSON.stringify({ "*":["*"] }) },
         function(err, token) {
           preLangBlocks.each(function() {
             this.innerHTML = this.innerHTML.
