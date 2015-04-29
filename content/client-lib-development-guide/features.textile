@@ -165,9 +165,9 @@ h2(#realtime). Realtime client library features
 
 The Ably Realtime client libraries establish and maintain a persistent connection to Ably and provide methods to publish and subscribe to messages over a low latency realtime connection.
 
-The REST library is a subset of the Realtime library and as such all Realtime libaries provide the functionality available in the REST library in addition to Realtime specific features.
+The Realtime library is a superset of the REST library and as such all Realtime libaries provide the functionality available in the REST library in addition to Realtime-specific features.
 
-The threading and/or asynchronous model for each realtime library will vary by language and it is therefore up to the developer to decide on the best approach for each given client library. For example, Node.js and Ruby (EventMachine) use a similar callback single threaded evented approach that ensures all public methods are non-blocking. Java and .NET use a threaded model whereby the @Connection@ runs in its own thread. Go makes extensive use of go routines and channels.
+The threading and/or asynchronous model for each realtime library will vary by language and it is therefore up to the developer to decide on the best approach for each given client library. For example, Node.js and Ruby (EventMachine) use a similar callback single threaded evented approach that ensures all public methods are non-blocking. Java and .NET use a threaded model whereby the @Connection@ runs in its own thread. Go makes extensive use of goroutines and channels.
 
 h3(#realtimeclient). RealtimeClient
 
@@ -175,8 +175,8 @@ h3(#realtimeclient). RealtimeClient
 ** @echoMessages@ boolean is true by default. If false, it prevents messages originating from this connection being echoed back on the same connection
 ** @connectAutomatically@ boolean is true by default. If true, as soon as the client library is instanced, it will connect to Ably. If false, the client library will wait for an explicit @Connection#connect@ to be called before connecting
 ** @recover@ string, when set, will attempt to recover the connection state of a previous connection
-** @realtimeHost@ string, when set, will modify the realtime endpoint used by this client library
-** @environment@ string, when set, will modify both the REST and realtime end points by prefixing the environment to the default end points with a hypen delimiter. For example, a @RealtimClient@ with an @environment@ of "sandbox", would use "sandbox-rest.ably.io" as the @restHost@ and @sandbox-realtime.ably.io@ as the @realtimeHost@
+** @realtimeHost@ string, when set, will modify the realtime endpoint host used by this client library
+** @environment@ string, when set, will modify both the REST and realtime endpoint hosts by prefixing the environment to the default endpoint host with a hypen delimiter. For example, a @RealtimeClient@ with an @environment@ of "sandbox", would use "sandbox-rest.ably.io" as the @restHost@ and @sandbox-realtime.ably.io@ as the @realtimeHost@
 * @RealtimeClient#connection@ attribute provides access to the underlying @Connection@ object
 * @RealtimeClient#channels@ attribute provides access to the underlying @Channels@ object
 * @RealtimeClient#auth@ attribute provides access to the @Auth@ object that was instanced with the @ClientOptions@ provided in the @RealtimeClient@ constructor
@@ -188,12 +188,11 @@ h3(#realtimeclient). RealtimeClient
 
 h3(#realtime-connection). Connection
 
-* @Connection@ connects to the Ably service using WebSockets. The "ably-js library":https://github.ably.io/ably/ably-js supports additional transports such as Comet and XHR streaming, however non-browser client libraries typically use only a WebSockets transport
+* @Connection@ connects to the Ably service using a websocket connection. The "ably-js library":https://github.ably.io/ably/ably-js supports additional transports such as Comet and XHR streaming; however non-browser client libraries typically use only a websocket transport
 * The default endpoint used for realtime websocket connections is @realtime.ably.io@, and the following query string params should be used when opening a new connection:
 ** @timestamp@ current time in milliseconds since epoch
 ** @format@ should be @msgpack@ (default) or @json@
-** @echo@ shoudl be @true@ by default, @false@ will prevent messages published by the client being echoed back
-* If connection option @connectAutomatically@ is true, any action that would implicitly or explicitly attach a channel will trigger the connection to be opened automatically.
+** @echo@ should be @true@ by default, @false@ will prevent messages published by the client being echoed back
 * EventEmitter and states:
 ** Implements @EventEmitter@ and emits events for state changes @INITIALIZED@, @CONNECTING@, @CONNECTED@, @DISCONNECTED@, @SUSPENDED@, @CLOSING@, @CLOSED@, @FAILED@
 ** A new connection will emit the following events in order when connecting: @CONNECTING@, then @CONNECTED@
@@ -201,7 +200,7 @@ h3(#realtime-connection). Connection
 ** @Connection#state@ attribute is the current state of the connection
 ** Additionally, an @ERROR@ event can be emitted that contains an @ErrorInfo@ object with details on an error that has occurred for the @Connection@
 * A test should exist that instances many (50+) clients simultaneously and performs a few basic operations such as attaching to a channel, publishing a message, and expecting all of those messages to arrive on all clients to ensure that there are no concurrency issues with the client library
-* A @Connection@ is successful and considered @CONNECTED@ once the WebSocket connection is open and the intial @CONNECTED@ @ProtocolMessage@ has been received
+* A @Connection@ is successful and considered @CONNECTED@ once the websocket connection is open and the intial @CONNECTED@ @ProtocolMessage@ has been received
 * @ACK@ and @NACK@:
 ** All @ProtocolMessage@ @Presence@ and @Message@ objects sent to Ably expect either an @ACK@ or @NACK@ from Ably to confirm successful receipt and acceptance or failure respectively
 ** Every @ProtocolMessage@ sent must contain a unique serially incrementing @msgSerial@ integer value starting at zero. The @msgSerial@ along with the @count@ for incoming @ACK@ and @NACK@ @ProtocolMessages@ indicates which messages succeeded or failed to be delivered
@@ -218,7 +217,7 @@ h3(#realtime-connection). Connection
 ** The last known @ProtocolMessage@ @connectionSerial@ is used when restoring connection state
 * @Connection#connect@ function:
 ** Explicitly connects to the Ably service if not already connected.
-** An exception will be raised if the state is @CLOSING@ as the connection must complete the close request before reconnecting
+** An error will be indicated if the state is @CLOSING@ as the connection must complete the close request before reconnecting
 ** Where the language permits, a callback with a success and failure state can be provided
 * @Connection#close@ function:
 ** Sends a @CLOSE@ @ProtocolMessage@ to the server, sets the state to @CLOSING@ and waits for a @CLOSED@ @ProtocolMessage@ to be received
@@ -240,7 +239,7 @@ h3(#realtime-connection). Connection
 *** @resume@ is the private connection key assigned to the connection when the first @CONNECTED@ @ProtocolMessage@ was received
 *** @connection_serial@ is the most recent @ProtocolMessage#connectionSerial@ received from Ably or @Connection#serial@ which should be identical
 ** When a new connection is made using the @resume@ and @connection_serial@ params, the client library must consider the resume failed if the @CONNECTED@ @ProtocolMessage@ contains an error or if the @Connection#id@ or @Connection#key@ has changed. When a @Connection@ resume has failed, all channels should be detach with a suitable error reason
-** Client libraries should have test coverage to ensure connection state recovery is working as expected by forcefully disconnecting a client and checking that messages published on channels are delivered once the connection is resumed
+** Client libraries should have test coverage to ensure connection state recovery is working as expected by forciby disconnecting a client and checking that messages published on channels are delivered once the connection is resumed
 * @Connection@ recovery:
 ** Connection recovery is similar to the automatic connection resume except that connection state is recovered explicitly because a @recover@ key is passed to the Realtime library when instanced. Once a connection is recovered, all channels must be explicitly attached by the developer, and any messages queued to be delivered whilst the client was disconnected will be delivered
 ** @Connection#recoveryKey@ is an attribute composed of the connection key and latest serial received on the connection
@@ -248,12 +247,12 @@ h3(#realtime-connection). Connection
 ** When a connection is successfully recovered, the @Connection#id@ and @Connection#key@ will be identical to the @id@ & @key@ of the connection that was recovered
 ** If the @recover@ option is missing or no longer valid when connecting to Ably, the client will connect anyway but emit an error the connection object and set the @Connection#errorReason@
 * Host Fallback
-** All HTTP requests sent to Ably are fault-tolerant and will fallback to an alternative host name if the default host endpoint is unreachable, or indicates that it is unserviceable with a 500 to 504 status code. This ensures that a client library is able to work around routing or other problems with the user's closest data center. For example, if a connection attempt to @realtime.ably.io@ fails because the default endpoint is unreachable or unserviceable, then the @Connection@ manager should check if an internet connection is available by sending a request to our CDN @internet-up.ably-realtime.com/is-the-internet-up.txt@ and looking for the text "yes" in the response.  If the text "yes" is included in the response, then the the client library can assume it has a valid internet connection and should then automatically retry the connection against all the fallback hosts @[a-e].ably-realtime.com@ in attempt to find an alternate healthy data center.
+** All HTTP requests sent to Ably are fault-tolerant and will fallback to an alternative host name if the default host endpoint is unreachable, or indicates that it is unserviceable with a 500 to 504 status code. This ensures that a client library is able to work around routing or other problems with the user's closest datacenter. For example, if a connection attempt to @realtime.ably.io@ fails because the default endpoint is unreachable or unserviceable, then the @Connection@ manager should check if an internet connection is available by sending a request to our CDN @internet-up.ably-realtime.com/is-the-internet-up.txt@ and looking for the text "yes" in the response.  If the text "yes" is included in the response, then the the client library can assume it has a viable internet connection and should then automatically retry the connection against all the fallback hosts @[a-e].ably-realtime.com@ in attempt to find an alternate healthy datacenter.
 ** The fallback behaviour only applies to the default @realtime.ably.io@ endpoint; if either @host@ or @environment@ options are set, no fallback host is used.
 ** See the "default fallback hosts":https://github.com/ably/ably-java/blob/master/src/io/ably/transport/Defaults.java#L7 and the "fallback mechanism implemented in the Java ConnectionManager":https://github.com/ably/ably-java/blob/39f3f0226bd995bd6baffa1df47a0a4957d29c43/src/io/ably/transport/ConnectionManager.java#L428-L455 as an example.
 * Connection state change side effects:
-** When a channel enters the @DISCONNECTED@ state, it will have no effect on the the channel states. Channels in the @ATTACHED@ state will queue messages that are sent as soon as the connection is resumed
-** When a channel enters the @SUSPENDED@ state, all channels will move to the @DETACHED@ state. Channels in the @DETACHED@ state should reject publishing of messages
+** When a connection enters the @DISCONNECTED@ state, it will have no effect on the the channel states. Channels in the @ATTACHED@ state will queue messages that are sent as soon as the connection is resumed
+** When a connection enters the @SUSPENDED@ state, all channels will move to the @DETACHED@ state. Channels in the @DETACHED@ state should reject publishing of messages
 ** When a channel enters the @FAILED@ state, all channels will move to the @FAILED@ state. Channels in the @FAILED@ state should reject publishing of messages
 
 h3(#realtime-channels). Channels
