@@ -20,7 +20,7 @@ class AblyPreTextileFilter
       content = insert_inline_table_of_contents(content)
       content = add_language_support_for_block_quotes(content)
       content = add_language_support_for_headings(content)
-      content = add_support_for_inline_code_editor(content, path)
+      add_support_for_inline_code_editor(content, path)
     end
 
     private
