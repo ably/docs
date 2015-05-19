@@ -151,6 +151,7 @@ $(function() {
           inline = langSelector.next().hasClass('lang-resource'),
           languageTab = langSelector.find('li:not(.warning):langcontains("' + lang + '")'),
           allOtherLanguagesTab = langSelector.find('li:not(.warning):langcontains(default)'); // special tab that allows content to be dispayed as default
+
       if (languageTab.length) {
         selectLang.apply(languageTab);
         langSelector.hide();

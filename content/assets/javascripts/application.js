@@ -5,7 +5,7 @@ $(function() {
       inlineTOCs = $('.inline-toc ul')
 
   function findAnchorTag(anchorId) {
-    var tags = 'a,h1,h2,h3,h4,h5,h6',
+    var tags = 'a,p,h1,h2,h3,h4,h5,h6',
         matchers = [];
     $.each(tags.split(','), function(index, tag) {
       matchers.push(tag + "[id='" + anchorId + "']");
@@ -43,6 +43,13 @@ $(function() {
         var anchorId = $(this).attr(matcher.attribute).replace(/^(#|anchor-)/,''),
             anchorTag = findAnchorTag(anchorId),
             languageContentWithinTag = anchorTag.find('span[lang].lang-resource.selected');
+
+        // If there is no matching anchor tag, hide this navigation item
+        if (anchorTag.is(':visible')) {
+          $(this).show();
+        } else {
+          $(this).hide();
+        }
 
         if (languageContentWithinTag.length) {
           $(this).text(languageContentWithinTag.text());
