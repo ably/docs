@@ -12,9 +12,8 @@ class AblyPreTextileFilter
   class << self
     def run(content, path)
       content = strip_comments(content)
-      content = add_language_support_for_github_style_code(content)
       content = convert_blang_blocks_to_html(content)
-      content = add_language_support_for_github_style_code(content) # after blank blocks indentation is removed, two runs needed
+      content = add_language_support_for_github_style_code(content)
       content = duplicate_language_blocks(content)
       content = trim_white_space_between_language_elements(content)
       content = insert_inline_table_of_contents(content)

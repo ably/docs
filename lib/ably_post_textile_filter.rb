@@ -7,7 +7,7 @@ class AblyPostTextileFilter
 
     # Line breaks when using Github notation insert <br /> tags, replace them with actual HTML <br />
     def add_github_line_breaks(content)
-      content.gsub('{{{github_br}}}', '<br/>')
+      content.gsub('{{{github_br}}}', "\n")
     end
 
     # Find blang[lang]. converted blocks in form {{LANG_BLOCK[lang]}} and convert to
