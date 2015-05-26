@@ -120,7 +120,7 @@ $(function() {
 
       var tokenValidity = 12 * 60 * 60 * 1000; // 12 hours
 
-      new Ably.Rest({ key: apiKey }).auth.createTokenRequest({},
+      new Ably.Rest({ key: apiKey }).auth.createTokenRequest({ key: apiKey },
         { "ttl": tokenValidity, "capability": JSON.stringify({ "*":["*"] }) },
         function(err, token) {
           preLangBlocks.each(function() {
