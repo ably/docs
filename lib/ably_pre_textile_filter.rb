@@ -1,13 +1,7 @@
 require_relative './helpers/nav_helper'
 
 class AblyPreTextileFilter
-  BLANG_REGEX = %r{
-    ^[^\S\n]*
-    blang\[
-      ([\w,]+)
-    \]\.
-    [^\S\n]*
-  $}xm unless defined?(BLANG_REGEX)
+  BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/ unless defined?(BLANG_REGEX)
 
   class << self
     def run(content, path)
