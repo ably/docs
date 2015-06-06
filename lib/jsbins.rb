@@ -17,6 +17,17 @@ class JsBins
       data['jsbin_hash'][jsbin_hash]
     end
 
+    def all
+      data['jsbin_id'].map do |path, hash|
+        {
+          path: path,
+          hash: hash,
+          jsbin_id: data.fetch('jsbin_hash').fetch(hash),
+          jsbin_url: jsbin_client.url_for(data.fetch('jsbin_hash').fetch(hash))
+        }
+      end
+    end
+
     def publish_jsbin(path, content)
       parts = content.scan(/\[\-{3} (\w+) \-{3}\]\s*(.+)\s*\[\-{3} \/\1 \-{3}\]/m)
       files = {}
@@ -34,9 +45,6 @@ class JsBins
       end
       raise "You must specify at least one code block such as Javascript, CSS or HTML" if files.empty?
 
-      config = Ably::Config.new
-
-      jsbin_client = JsBinClient.new(host: config.jsbin_host, port: config.jsbin_port, ssl: config.jsbin_ssl, api_key: config.jsbin_api_key)
       id = jsbin_client.create(files)['url']
       data['jsbin_id'][path] = hash(content)
       data['jsbin_hash'][hash(content)] = id
@@ -58,6 +66,13 @@ class JsBins
     private
       def hash(content)
         Digest::SHA1.base64digest(content)
+      end
+
+      def jsbin_client
+        @jsbin_client ||= begin
+          config = Ably::Config.new
+          JsBinClient.new(host: config.jsbin_host, port: config.jsbin_port, ssl: config.jsbin_ssl, api_key: config.jsbin_api_key)
+        end
       end
   end
 
