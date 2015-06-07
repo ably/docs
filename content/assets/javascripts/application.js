@@ -46,7 +46,17 @@ $(function() {
 
         // If there is no matching anchor tag, hide this navigation item
         if (anchorTag.is(':visible')) {
-          $(this).show();
+          if (anchorTag.find('ul.lang-selector').length > 0) {
+            // Anchor contains language specific content, make sure the content is visible
+            if (anchorTag.find(':visible').length > 0) {
+              $(this).show();
+            } else {
+              $(this).hide();
+            }
+          } else {
+            // Anchor tag does not contain language specific content
+            $(this).show();
+          }
         } else {
           $(this).hide();
         }
