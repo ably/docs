@@ -53,11 +53,13 @@ class AblyPreTextileFilter
 
     # Convert backtick ``` code blocks into standard textile bc[] blocks
     def add_language_support_for_github_style_code(content)
-      lang_regex = '(?:\\[([^\]]+)\\])?'
-      content.gsub(/^```#{lang_regex}\s*?\n?(.+?)^```\s*$/m) do |match|
-        languages, content = $~.captures
+      lang_regex = '\\[([^\\]]+)\\]'
+      code_editor_regex = '\\(([^\\)]+)\\)'
+      lang_and_editor_regex = "(?:#{lang_regex})?(?:#{code_editor_regex})?"
+      content.gsub(/^```#{lang_and_editor_regex}\s*?\n?(.+?)^```\s*$/m) do |match|
+        languages, code_editor, content = $~.captures
         if languages
-          "bc[#{languages}]. #{strip_heredoc(content)}"
+          "bc[#{languages}]#{"(#{code_editor})" if code_editor}. #{strip_heredoc(content)}"
         else
           "bc. #{strip_heredoc(content)}"
         end.gsub(/^\s*\n/m, '{{{github_br}}}')
