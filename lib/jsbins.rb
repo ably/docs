@@ -59,7 +59,7 @@ class JsBins
 
       {
         id: id,
-        url: jsbin_client.url_for(id)
+        url: jsbin_client.url_for(id).gsub(/latest/, '1')
       }
     end
 

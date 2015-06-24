@@ -21,6 +21,9 @@ gem 'fssm'
 gem 'rake'
 gem 'git'
 
+# Allow URLs to be copied to the clipboard
+gem 'clipboard'
+
 # Debugging
 gem 'pry'
 gem 'pry-byebug'
