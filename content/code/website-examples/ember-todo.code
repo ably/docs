@@ -1,0 +1,330 @@
+[--- Javascript ---]
+// create Ember app
+var App = Ember.Application.create();
+var channelName = '{{RANDOM_CHANNEL_NAME}}';
+
+// Ember To Do model definition
+App.ToDo = Ember.Object.extend({
+  title: null,
+  init: function() {
+    if (!this.get('id')) { this.set('id', Math.random()); }
+    this._super();
+  }
+});
+
+// Ember To Do List model collection as Array Proxy definition
+App.ToDoList = Ember.ArrayProxy.extend({
+  realtimeDisabled: true,
+  init: function() {
+    var model = this,
+        ably = new Ably.Realtime('{{DEMO_API_KEY}}');
+
+    // open a channel for publishing and subscribing to model change messages
+    this.set('channel', ably.channels.get(channelName));
+
+    // indicate to user when the Ably connection is open and ready
+    ably.connection.on('connected', function() { model.set('realtimeDisabled', false); });
+
+    // subscribe to add/remove model messages and replicate changes to this object
+    this.get('channel').subscribe('add', function(msg) {
+      if (msg.data && msg.data.id) {
+        if (!model.get('content').find(function(item) { return item.id === msg.data.id; })) {
+          model.pushObject(App.ToDo.create(msg.data));
+        }
+      } else if (msg.data) { // REST post with simple string payload
+        model.pushObject(App.ToDo.create({ id: msg.id, title: msg.data }));
+      }
+    });
+    this.get('channel').subscribe('remove', function(msg) {
+      if (msg.data && msg.data.id) {
+        var deleteObj = model.get('content').find(function(item) { return item.id === msg.data.id; });
+        if (deleteObj) model.removeObject(deleteObj);
+      }
+    });
+    this._super();
+  },
+  publish: function(eventName, arr) { // helper method to publish events to Ably channel
+    arr.forEach(function(elem) {
+      this.get('channel').publish(eventName, elem);
+    }, this);
+  },
+  arrayDidChange: function(arr, idx, removedCnt, addedCnt) {
+    if (addedCnt) this.publish('add', arr.slice(idx, idx + addedCnt)); // Items have been added, push each change across Ably
+    this._super(arr, idx, removedCnt, addedCnt);
+  },
+  arrayWillChange: function(arr, idx, removedCnt, addedCnt) {
+    if (removedCnt) this.publish('remove', arr.slice(idx, idx + removedCnt)); // Items have been removed, push each change across Ably
+    this._super(arr, idx, removedCnt, addedCnt);
+  }
+});
+
+// Ember model representing a collection of 2 separate To Do Lists, each with their own Ably connection
+App.toDoLists = Ember.ArrayProxy.create({
+  content: Ember.A([
+    App.ToDoList.create({ side: 'left', content: Ember.A([]) }),
+    App.ToDoList.create({ side: 'right', content: Ember.A([]) })
+  ])
+});
+
+// Ember view for the To Do List used on each side
+App.ToDoListView = Ember.View.extend({
+  elementId: function() { return this.get('content').get('side'); }.property('content.side'),
+  templateName: "todo-container",
+  addToDo: function() {
+    if (this.get('newToDoTextValue')) {
+      this.get('content').pushObject(App.ToDo.create({ title: this.get('newToDoTextValue') }));
+      this.set('newToDoTextValue', '');
+    }
+  }
+});
+
+// Ember view for each To Do item
+App.ToDoView = Ember.View.extend({
+  templateName: 'todo',
+  click: function() { this.get('parentView').get('content').removeObject(this.get('content')); }
+});
+
+// Ember view for the text field
+App.CreateToDoTextView = Ember.TextField.extend({
+  valueBinding: 'parentView.newToDoTextValue',
+  placeholder: function() {
+    return this.get('parentView').get('content').get('realtimeDisabled') ? 'Please wait, connecting to Ably...' : 'Enter something to do here';
+  }.property('parentView.content.realtimeDisabled'),
+  insertNewline: function() {
+    this.get('parentView').addToDo.apply(this.get('parentView'));
+  }
+});
+
+App.CreateToDoButtonView = Ember.Button.extend({
+  attributeBindings: ['disabled'],
+  disabledBinding: 'parentView.content.realtimeDisabled',
+  click: function() { this.get('parentView').addToDo.apply(this.get('parentView')); }
+});
+[--- /Javascript ---]
+
+[--- HTML ---]
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="//jsbin-files.ably.io/js/jquery-1.8.3.min.js"></script>
+    <script src="//jsbin-files.ably.io/js/ember-0.9.8.1.min.js"></script>
+    <script type="text/javascript" src="//cdn.ably.io/lib/ably.min.js"></script>
+    <meta charset=utf-8 />
+  </head>
+
+<body>
+  <a class="logo" href="https://www.ably.io/examples" target="_blank" title="Ably.io examples"><img src="//jsbin-files.ably.io/images/logo.png"></a>
+
+  <h1>Ember.js: To-Do List Example</h1>
+
+  <script type="text/x-handlebars">
+    {{collection contentBinding="App.toDoLists" itemViewClass="App.ToDoListView"}}
+  </script>
+
+  <p class="instructions">
+    Both To-do lists are built with <a href="http://emberjs.com/">Ember.js</a>, each connected in real-time via <a href="https://www.ably.io">Ably realtime messaging</a>.
+    <br><br>
+    When you add/update a To-Do list item, a message is published to Ably using its connection. The other To-Do list is subsequently updated when it receives a message on its connection.
+    <br><br>
+    Enter a new to do item to see how quickly a message is sent from from your browser to Ably and back to your browser. Alternatively, send a message in your terminal via the <a href="https://www.ably.io/documentation/rest-api" target="_blank">Ably REST API</a>:
+  </p>
+
+  <pre id="curl"><code>curl -X POST https://rest.ably.io/channels/{{RANDOM_CHANNEL_NAME}}/messages \
+  -u "{{DEMO_API_KEY}}" \
+  -H "Content-Type: application/json" \
+  --data '{ "name": "add", "data": "added by curl" }'
+  </code></pre>
+
+  <p class="copyright">
+    <a href="https://www.ably.io">Copyright Ably</a>
+  </p>
+</body>
+
+<script type="text/x-handlebars" data-template-name="todo-container">
+  <div class="container">
+    <h2>Real-time To-do list ({{content.side}})</h2>
+    <div class="entry">
+      {{view App.CreateToDoTextView}}
+      {{#view App.CreateToDoButtonView}}{{#if disabled}}Connecting...{{else}}Add{{/if}}{{/view}}
+    </div>
+    {{collection contentBinding="content" tagName="ul" classNames="todo-list" itemViewClass="App.ToDoView"}}
+  </div>
+</script>
+
+<script type="text/x-handlebars" data-template-name="todo">
+{{content.title}}
+</script>
+
+</html>
+[--- /HTML ---]
+
+[--- CSS ---]
+html,
+body {
+  margin: 1em 0.5em;
+  padding: 0;
+}
+
+body {
+  font: 14px 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  line-height: 1.4em;
+  background: #eaeaea url(//jsbin-files.ably.io/images/bg/diagonal_waves.png);
+  color: #4d4d4d;
+}
+
+a {
+  color: #179DD6;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+a.logo {
+  float: left;
+  position: relative;
+  top: 0;
+}
+
+h1 {
+  width: 100%;
+  font-size: 35px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1em;
+  color: #666;
+  text-shadow: 1px 1px rgba(0, 0, 0, 0.2);
+  margin: 0 0 35px 0;
+}
+
+h2 {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-size: 20px;
+  text-align: center;
+  color: #F48B1C;
+  padding: 12px 0 15px 0;
+  margin-top: 0;
+}
+
+#left {
+  width: 48%;
+  float: left;
+}
+#right {
+  margin-left: 52%;
+}
+
+.container {
+  border: 1px solid #AAA;
+  padding-bottom: 15px;
+  background: #dadada url(//jsbin-files.ably.io/images/bg/carbon_fibre.png);
+  border-radius: 10px;
+  width: auto;
+  text-align: center;
+}
+
+input[type=text] {
+  border: 1px solid #CCC;
+  font-size: 14px;
+  height: 23px;
+  width: 70%;
+  color: #666;
+  border-radius: 3px;
+  padding: 0 5px;
+}
+
+.entry {
+  margin: 0 auto;
+  padding: 0 10px 13px 20px;
+  position: relative;
+  text-align: left;
+  border-bottom: 3px solid rgba(255,255,255,0.2);
+}
+.entry label  {
+  position:absolute;
+  top: 2px;
+  left: 25px;
+  font-size: 14px;
+}
+
+button {
+  border: 1px solid #CCC;
+  border-radius: 3px;
+  box-shadow: 0 -1px 0 0 rgba(0, 0, 0, 0.2);
+  background: #CCC;
+  height: 25px;
+  top: -1px;
+  position: relative;
+  margin-left: 5px;
+}
+
+button.enabled:hover {
+  background: #DDD;
+  box-shadow: 0 -1px 0 0 rgba(0, 0, 0, 0.3);
+}
+
+ul {
+  margin: 0 0 -15px 0;
+  padding: 9px 10px 10px 10px;
+}
+
+li {
+  border-bottom: 1px solid #CCC;
+  margin: 0;
+  padding: 5px 10px;
+  list-style: none;
+  background: #EEE url(//jsbin-files.ably.io/images/bg/cream_dust.png);
+  font-weight: bold;
+  text-align: left;
+}
+
+li:before {
+  color: #999;
+  content: 'Task:';
+  padding-right: 10px;
+  font-weight: normal;
+}
+
+li:first-child {
+  border-radius: 3px 3px 0 0;
+}
+
+li:last-child {
+  border-radius: 0 0 3px 3px;
+  border-bottom: none;
+}
+
+li:last-child:first-child {
+  border-radius: 3px 3px 3px 3px;
+  border-bottom: none;
+}
+
+li:hover:after {
+  content: '(click to delete)';
+  float: right;
+  color: #A00;
+  font-weight: normal
+}
+
+li:hover {
+  cursor: pointer;
+}
+
+p.instructions {
+  clear: both;
+  padding: 2em 1em 0em 1em;
+  text-align: center;
+}
+
+p.copyright {
+  text-align: center;
+}
+
+pre {
+  border: 1px solid #999;
+  border-radius: 5px;
+  padding: 10px;
+  background-color: white;
+  margin: 0;
+  font-size: 11px;
+}[--- /CSS ---]
