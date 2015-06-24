@@ -1,0 +1,328 @@
+[--- Javascript ---]
+
+$(function() {
+
+var channelName = '{{RANDOM_CHANNEL_NAME}}';
+
+var ToDo = Backbone.Model.extend({
+      initialize: function() {
+        if (!this.get('id')) this.set('id', Math.random()); // unique ID for each is required
+      }
+    });
+
+var ToDoList = Backbone.Collection.extend({
+      model: ToDo,
+      initialize: function(models, options) {
+        var collection = this,
+            ably = new Ably.Realtime('{{DEMO_API_KEY}}'),
+            channel = ably.channels.get(channelName);
+
+        // Notify user once connected to Ably and ready to start sending & receiving messages
+        ably.connection.on('connected', function() { collection.trigger('connectedToAbly'); });
+
+        // Publish changes from this collection to Ably
+        this.on('all', function(eventName, model) {
+          if (['add', 'remove'].indexOf(eventName) !== -1) {
+            channel.publish(eventName, model.attributes);
+          }
+        });
+
+        // Subscribe to add and remove events
+        channel.subscribe('add', function(msg) {
+          if (msg.data && msg.data.id) {
+            if (!collection.get(msg.data.id)) collection.add([msg.data]);
+          } else if (msg.data) { // REST post with simple string payload
+            collection.add([{ id: msg.id, title: msg.data }]);
+          }
+        });
+        channel.subscribe('remove', function(msg) {
+          if (msg.data && msg.data.id) {
+            if (collection.get(msg.data.id)) collection.remove(collection.get(msg.data.id));
+          }
+        });
+      }
+    });
+
+// Backbone view representing a single to do item
+var ToDoRowView = Backbone.View.extend({
+  tagName: "li",
+  events: { "click": "destroy" },
+  initialize: function() {
+    this.model.on('remove', this.remove, this); // replicate model remove events to this view
+  },
+  render: function() {
+    return this.$el.text(this.model.get('title'));
+  },
+  destroy: function() {
+    this.model.collection.remove(this.model);
+  }
+});
+
+// Backbone view for the entire to do list container
+var ToDosView = Backbone.View.extend({
+  events: {
+    'click button': 'add',
+    'keypress input': 'keyPress'
+  },
+  initialize: function() {
+    var view = this;
+    this.options.collection
+      .on('add', this.addToDoToView, this)
+      .on('connectedToAbly', function() {
+        view.$('button').text('Add').addClass('enabled').removeAttr('disabled');
+        view.$('label').text('Enter something to do here');
+      });
+  },
+  render: function() {
+    var template = _.template($('#todo-template').html());
+    return this.$el.html(template({ position: this.options.position }));
+  },
+  addToDoToView: function(todo) {
+    var view = new ToDoRowView({ model: todo });
+    this.$("ul").prepend(view.render());
+  },
+  add: function() {
+    this.options.collection.add([{ title: this.$('input').val() }]);
+    this.$('input').val('');
+  },
+  keyPress: function(e) {
+    if(e.which == 13) this.add();
+  }
+});
+
+// Create the left and right side Backbone To Do List views and collections
+_(['left','right']).each(function(side) {
+  var toDoListView = new ToDosView({ position: side, collection: new ToDoList() });
+  $('#lists').append(toDoListView.render());
+});
+
+// jQuery helper for labels over input fields
+$("label").inFieldLabels();
+
+});
+[--- /Javascript ---]
+
+[--- HTML ---]
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="//jsbin-files.ably.io/js/jquery-1.8.3.min.js"></script>
+    <script src="//jsbin-files.ably.io/js/underscore-min.js"></script>
+    <script src="//jsbin-files.ably.io/js/backbone-min.js"></script>
+    <script src="//jsbin-files.ably.io/js/jquery.infieldlabel.min.js"></script>
+    <script type="text/javascript" src="//cdn.ably.io/lib/ably.min.js"></script>
+    <meta charset=utf-8 />
+  </head>
+
+<body>
+  <a class="logo" href="https://www.ably.io/examples" target="_blank" title="Ably.io examples"><img src="//jsbin-files.ably.io/images/logo.png"></a>
+
+  <h1>Backbone: To-Do List Example</h1>
+
+  <div id="lists"></div>
+
+  <p class="instructions">
+    Both To-Do lists are built with <a href="http://backbonejs.org/">Backbone.js</a>, each connected in real-time via <a href="https://www.ably.io">Ably realtime messaging</a>.
+    <br><br>
+    When you add/update a To-Do list item, a message is published to Ably using its connection. The other To-Do list is subsequently updated when it receives a message on its connection.
+    <br><br>
+    Enter a new to do item to see how quickly a message is sent from from your browser to Ably and back to your browser, or try adding a new item using curl via the <a href="https://www.ably.io/documentation/rest-api" target="_blank">REST API</a>.
+  </p>
+
+  <pre id="curl"><code>curl -X POST https://rest.ably.io/channels/{{RANDOM_CHANNEL_NAME}}/messages \
+  -u "{{DEMO_API_KEY}}" \
+  -H "Content-Type: application/json" \
+  --data '{ "name": "add", "data": "added by curl" }'
+</code></pre>
+
+  <p class="copyright">
+    <a href="https://www.ably.io">Copyright Ably</a>
+  </p>
+</body>
+
+<script type="text/template" id="todo-template">
+  <div id="<%= position %>">
+    <div class="container">
+      <h2>Real-time To-do list (<%= position %>)</h2>
+      <div class="entry">
+        <label for="new_to_do<%= position %>">Please wait, connecting to Ably...</label>
+        <input class="add" type="text" value="" id="new_to_do<%= position %>"><button class="add" disabled="true">connecting...</button>
+      </div>
+      <ul class="todo-list"></ul>
+    </div>
+  </div>
+</script>
+
+</html>
+[--- /HTML ---]
+
+[--- CSS ---]
+html,
+body {
+  margin: 1em 0.5em;
+  padding: 0;
+}
+
+body {
+  font: 14px 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  line-height: 1.4em;
+  background: #eaeaea url(//jsbin-files.ably.io/images/bg/diagonal_waves.png);
+  color: #4d4d4d;
+}
+
+a {
+  color: #179DD6;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+a.logo {
+  float: left;
+  position: relative;
+  top: 0;
+}
+
+h1 {
+  width: 100%;
+  font-size: 35px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1em;
+  color: #666;
+  text-shadow: 1px 1px rgba(0, 0, 0, 0.2);
+  margin: 0 0 35px 0;
+}
+
+h2 {
+  background-color: rgba(255, 255, 255, 0.2);
+  font-size: 20px;
+  text-align: center;
+  color: #F48B1C;
+  padding: 12px 0 15px 0;
+  margin-top: 0;
+}
+
+#left {
+  width: 48%;
+  float: left;
+}
+#right {
+  margin-left: 52%;
+}
+
+.container {
+  border: 1px solid #AAA;
+  padding-bottom: 15px;
+  background: #dadada url(//jsbin-files.ably.io/images/bg/carbon_fibre.png);
+  border-radius: 10px;
+  width: auto;
+  text-align: center;
+}
+
+input[type=text] {
+  border: 1px solid #CCC;
+  font-size: 14px;
+  height: 23px;
+  width: 70%;
+  color: #666;
+  border-radius: 3px;
+  padding: 0 5px;
+}
+
+.entry {
+  margin: 0 auto;
+  padding: 0 10px 13px 20px;
+  position: relative;
+  text-align: left;
+  border-bottom: 3px solid rgba(255,255,255,0.2);
+}
+.entry label  {
+  position:absolute;
+  top: 2px;
+  left: 25px;
+  font-size: 14px;
+}
+
+button {
+  border: 1px solid #CCC;
+  border-radius: 3px;
+  box-shadow: 0 -1px 0 0 rgba(0, 0, 0, 0.2);
+  background: #CCC;
+  height: 25px;
+  top: -1px;
+  position: relative;
+  margin-left: 5px;
+}
+
+button.enabled:hover {
+  background: #DDD;
+  box-shadow: 0 -1px 0 0 rgba(0, 0, 0, 0.3);
+}
+
+ul {
+  margin: 0 0 -15px 0;
+  padding: 9px 10px 10px 10px;
+}
+
+li {
+  border-bottom: 1px solid #CCC;
+  margin: 0;
+  padding: 5px 10px;
+  list-style: none;
+  background: #EEE url(//jsbin-files.ably.io/images/bg/cream_dust.png);
+  font-weight: bold;
+  text-align: left;
+}
+
+li:before {
+  color: #999;
+  content: 'Task:';
+  padding-right: 10px;
+  font-weight: normal;
+}
+
+li:first-child {
+  border-radius: 3px 3px 0 0;
+}
+
+li:last-child {
+  border-radius: 0 0 3px 3px;
+  border-bottom: none;
+}
+
+li:last-child:first-child {
+  border-radius: 3px 3px 3px 3px;
+  border-bottom: none;
+}
+
+li:hover:after {
+  content: '(click to delete)';
+  float: right;
+  color: #A00;
+  font-weight: normal
+}
+
+li:hover {
+  cursor: pointer;
+}
+
+p.instructions {
+  clear: both;
+  padding: 2em 1em 0em 1em;
+  text-align: center;
+}
+
+p.copyright {
+  text-align: center;
+}
+
+pre {
+  border: 1px solid #999;
+  border-radius: 5px;
+  padding: 10px;
+  background-color: white;
+  margin: 0;
+  font-size: 11px;
+}[--- /CSS ---]
