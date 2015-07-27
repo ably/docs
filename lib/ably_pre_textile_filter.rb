@@ -1,7 +1,19 @@
 require_relative './helpers/nav_helper'
 
 class AblyPreTextileFilter
-  BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/ unless defined?(BLANG_REGEX)
+  remove_const :BLANG_REGEX if defined?(BLANG_REGEX)
+  remove_const :MULTI_LANG_BLOCK_REGEX if defined?(MULTI_LANG_BLOCK_REGEX)
+
+  BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/
+
+  MULTI_LANG_BLOCK_REGEX = /
+    (bc|p|h[1-6])           # code or language tag - capture [0] = tag
+       \[([^\]]+)\]         # language selector in format [javascript,ruby] - capture [1] = langs
+    (?:\(([^\)]+)\))?       # optional class(es) in format (class) - capture [2] = class(es)
+    \.                      # ends with . such as p[ruby].
+    (.*?)                   # body - capture [3] = body
+    (?:[\n\r]\s*[\n\r]|\Z)  # non-capturing empty line break or EOF
+  /mx
 
   class << self
     def run(content, path, attributes)
@@ -24,11 +36,11 @@ class AblyPreTextileFilter
     # becomes
     # bc[json]. { "a": true }
     # bc[javascript]. { "a": true }
-    def duplicate_language_blocks(content)
-      content.gsub(/(bc|p|h[1-6])\[([^\]]+)\](\([^\)]+\))?\.(.*?)(?:[\n\r]\s*[\n\r]|\Z)/m) do |match|
-        block, languages, code_editor, content = $~.captures
+    def duplicate_language_blocks(textile)
+      textile.gsub(MULTI_LANG_BLOCK_REGEX) do |match|
+        block, languages, classes, content = $~.captures
         languages.split(/\s*,/).map do |lang|
-          "#{block}[#{lang}]#{code_editor}.#{content}"
+          "#{block}[#{lang}]#{"(#{classes})" if classes}.#{content}"
         end.join("\n\n") + "\n\n"
       end
     end
