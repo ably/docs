@@ -3,6 +3,7 @@ require_relative './helpers/nav_helper'
 class AblyPreTextileFilter
   remove_const :BLANG_REGEX if defined?(BLANG_REGEX)
   remove_const :MULTI_LANG_BLOCK_REGEX if defined?(MULTI_LANG_BLOCK_REGEX)
+  remove_const :JSALL_REGEX if defined?(JSALL_REGEX)
 
   BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/
 
@@ -15,9 +16,28 @@ class AblyPreTextileFilter
     (?:[\n\r]\s*[\n\r]|\Z)  # non-capturing empty line break or EOF
   /mx
 
+  JSALL_REGEX = /
+    (?:
+      \[         # language enclosure [lang]
+      ([^\]]+,)? # additional optional languages
+      jsall      # indicates this applies to node.js and javascript
+      (,[^\]]+)? # additional optional languages
+      \]         # language closure [lang]
+    )
+    |
+    (?:
+      lang=(["']) # language enclosure lang=""
+      ([^"']+,)? # additional optional languages
+      jsall       # indicates this applies to node.js and javascript
+      (,[^"']+)? # additional optional languages
+      \3          # language closure lang=""
+    )
+  /mx
+
   class << self
     def run(content, path, attributes)
       content = strip_comments(content)
+      content = convert_jsall_lang_to_node_and_javascript(content)
       content = convert_blang_blocks_to_html(content)
       content = add_language_support_for_github_style_code(content)
       content = duplicate_language_blocks(content)
@@ -30,6 +50,21 @@ class AblyPreTextileFilter
     end
 
     private
+
+    # To simplify the Textile markup when writing examples or docs that apply to both
+    # Node.js and Javascript, a single language jsall is supported, that is converted
+    # to javascript,nodejs when compiled
+    def convert_jsall_lang_to_node_and_javascript(textile)
+      textile.gsub(JSALL_REGEX) do |match|
+        lang_before, lang_after, quote, lang_before_2, lang_after_2 = $~.captures
+        langs = [lang_before || lang_before_2, lang_after || lang_after_2].compact
+        if quote
+          %(lang="javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}")
+        else
+          "[javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}]"
+        end
+      end
+    end
 
     # language blocks in textile don't support multiple languages, so simply copy & split out
     # bc[json,javascript]. { "a": true }
