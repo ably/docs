@@ -66,7 +66,7 @@ task :build => :generate_all do
   repo.branch("source").checkout
 end
 
-desc "generate and deploy website to S3 and remote 'production' repository"
+desc "generate and deploy website to S3 and remote 'origin' repository"
 task :deploy => :build do
   config = Ably::Config.new
 
@@ -83,10 +83,10 @@ task :deploy => :build do
     exit 1
   end
 
-  # as we are publishing this to S3 i.e. the public website, the production repo must match
-  puts "\nNow pushing master and source branches up to the production remote (Github)"
-  system "git push production master"
-  system "git push production source"
+  # as we are publishing this to S3 i.e. the public website, the origin repo must match
+  puts "\nNow pushing master and source branches up to the origin remote (Github)"
+  system "git push origin master"
+  system "git push origin source"
   repo = Git.open('.')
   repo.branch("master").checkout
 
