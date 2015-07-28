@@ -17,6 +17,7 @@ end
 
 port = "4000"
 site = "output"
+config_folder = "config"
 readme = "README.md"
 
 desc "remove files in output directory"
@@ -38,8 +39,11 @@ task :build => :generate_all do
   require 'git'
   repo = Git.open('.')
   repo.branch("master").checkout
-  (Dir["*"] - [site]).each { |f| rm_rf(f) }
-  Dir["#{site}/*"].each {|f| mv(f, ".")}
+  (Dir["*"] - [site, config_folder]).each { |f| rm_rf(f) }
+
+  mv config_folder, ".#{config_folder}" # hide config folder as we need to retain config files not committed in git
+
+  Dir["#{site}/*"].each { |f| mv(f, ".") }
 
   if readme_content
     File.open(readme, 'w') do |file|
@@ -62,7 +66,14 @@ task :build => :generate_all do
     end
   end
   message = ENV["MESSAGE"] || "Site updated at #{Time.now.utc}"
-  repo.commit(message) unless system('git status | grep "nothing to commit"')
+
+  unless system('git status | grep "nothing to commit"')
+    attempt { repo.commit(message) }
+  end
+
+  rm_rf config_folder
+  mv ".#{config_folder}", config_folder # restore config folder
+
   repo.branch("source").checkout
 end
 
@@ -93,6 +104,7 @@ task :deploy => :build do
   files = Dir.glob('**/*.{html,js,css,png,jpg,jpeg,pdf,woff,ico}')
   puts "Uploading #{files.count} file(s) to S3 bucket '#{config.s3_bucket}'"
   files.each do |file_path|
+    puts file_path
     s3.files.create(
       :key    => file_path,
       :body   => File.open(file_path)
