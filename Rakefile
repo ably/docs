@@ -15,6 +15,20 @@ def ok_failed(condition)
   end
 end
 
+# Allows a few small failures
+# With Git, index.lock locks can cause intermittent failures when using
+# multiple Git clients
+def attempt(attempts = 0)
+  yield
+rescue StandardError => e
+  attempts += 1
+  if attempts < 3
+    sleep 0.1
+    retry
+  end
+  raise e
+end
+
 port = "4000"
 site = "output"
 config_folder = "config"
@@ -57,10 +71,13 @@ task :build => :generate_all do
   # Git lock still existed for some reason, pause briefly to allow lock to be released
   sleep 0.5
 
-  Dir["**/*"].each {|f| repo.add(f) }
+  Dir["**/*"].each do |file|
+    attempt { repo.add(file) }
+  end
+
   repo.status.deleted.each do |file, s|
     begin
-      repo.remove(file)
+      attempt { repo.remove(file) }
     rescue Git::GitExecuteError => e
       puts "Warning: #{e.message}"
     end
