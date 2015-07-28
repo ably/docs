@@ -121,12 +121,13 @@ task :deploy => :build do
   files = Dir.glob('**/*.{html,js,css,png,jpg,jpeg,pdf,woff,ico}')
   puts "Uploading #{files.count} file(s) to S3 bucket '#{config.s3_bucket}'"
   files.each do |file_path|
-    puts file_path
-    s3.files.create(
-      :key    => file_path,
-      :body   => File.open(file_path)
-    )
-    print '.'
+    unless file_path.start_with?(config_folder, ".#{config_folder}")
+      s3.files.create(
+        :key    => file_path,
+        :body   => File.open(file_path)
+      )
+      print '.'
+    end
   end
 
   puts "\nFinished uploading #{files.count} files to S3"
