@@ -80,10 +80,11 @@ class AblyPreTextileFilter
     # transform to
     # bq(definition). <span lang="default">definition</span><span lang="lang">definition</span>
     def add_language_support_for_block_quotes(content)
-      content.gsub(/^bq\(definition(\#[^\)]+)?\)\.\s*\n.*?\n\s*\n/m) do |match|
+      content.gsub(/^bq\(definition(?<anchor>\#[^\)]+)?\)\.\s*\n.*?\n\s*\n/m) do |match|
+        anchor = $~.captures[0]
         lang_definitions = match.scan(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/)
         lang_spans = lang_definitions.map { |lang, definition| "<span lang='#{lang}'>#{definition}</span>" }.join('')
-        "bq(definition). #{lang_spans}\n\n"
+        "bq(definition#{anchor}). #{lang_spans}\n\n"
       end
     end
 
