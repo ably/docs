@@ -87,17 +87,22 @@ h3(#rest-auth). Auth
 ** @(RSA3c)@ For Realtime connections, the querystring param @access_token@ is appended to the URL endpoint
 * @(RSA4)@ Token Auth is used if @useTokenAuth@ is set to true, or if @useTokenAuth@ is unspecified and any one of the following conditions cause token auth to be selected as the default: a @clientId@ is specified; @authUrl@ or @authCallback@ is provided; an explicit @token@ or @TokenDetails@ is provided
 * @(RSA14)@ If Token Auth is selected, an exception will be raised if a token is not provided or there is no means to generate a token. For example, if only the option @useTokenAuth@ is specified, and a @key@ is not provided, then the client library is unable to authenticate or issue a token
-* @(RSA15)@ If Token Auth is selected and @clientId@ has been set in the @ClientOptions@ when the library was instanced, any @clientId@ present in the token must match the @clientId@ provided in @ClientOptions@. Following an auth request which uses a @TokenDetails@ or @TokenRequest@ object that contains an incompatible @clientId@, the library should change the connection state to @FAILED@ and emit an error
+* @(RSA15)@ If Token Auth is selected and @clientId@ has been set in the @ClientOptions@ when the library was instanced:
+** @(RSA15a)@ Any @clientId@ provided in @ClientOptions@ must match any non @null@ @clientId@ value in @TokenDetails@ or @connectionDetails@ of the @CONNECTED@ @ProtocolMessage@, where applicable
+** @(RSA15b)@ If the @clientId@ from @TokenDetails@ or @connectionDetails@ contains only a wildcard string @'*'@, then the client is permitted to be either unauthenticated (effectively anonymous without a @clientId@) or authenticated providing a @clientId@ when communicating with Ably
+** @(RSA15c)@ Following an auth request which uses a @TokenDetails@ or @TokenRequest@ object that contains an incompatible @clientId@, the library should change the connection state to @FAILED@ and emit an error
 * @(RSA5)@ TTL for new tokens is specified in milliseconds and defaults to the REST API default (1 hour)
 * @(RSA6)@ The @capability@, if not specified, defaults to allow all operations permitted for the key associated with the token
 * @(RSA7)@ @clientId@ and authenticated clients:
-** @(RAS7a)@ If a @clientId@ is provided in the @ClientOptions@, or is present in the current authentication token, then the client is considered to be authenticated i.e. it has an identity that is implicit in all operations. The following applies to authenticated clients:
+** @(RAS7a)@ If a @clientId@ is provided in the @ClientOptions@, or is present in the current authentication token, then the client is considered to be authenticated (it has a @clientId@ that is implicit in all operations). Note that an authentication token @clientId@ wildcard value of @'*'@ is the exception where the client is not necessarily authenticated and any @clientId@ is permitted. The following applies to authenticated clients:
 *** @(RAS7a1)@ All operations (such as message publishing or presence) will have an implicit @clientId@. The Ably service automatically updates the @clientId@ attribute (when empty) for all @Message@ and @PresenceMessage@ messages received from that authenticated client, and any messages then published from the Ably service, will have the @clientId@ attribute populated. It is therefore expected that Ably client libraries do not explicitly set the @clientId@ field on messages published when @clientId@ is implicit in the connection or authentication scheme
-*** @(RSA7a3)@ @Auth#clientId@ attribute returns a string value for the authenticated client's @clientId@. If the client is not authenticated and a @clientId@ value was not provided when instanced with @ClientOptions@, then @Auth#clientId@ is @null@
+*** @(RSA7a3)@ @Auth#clientId@ attribute returns a string value for the authenticated client's @clientId@
+** @(RSA12)@ @Auth#clientId@ attribute is @null@, when following authentication, the @clientId@ attribute of the @TokenDetails@ is a wildcard @'*'@, indicating that any @clientId@ can be used by this client
 ** @(RSA7b)@ @Auth#clientId@ is not @null@ when:
 *** @(RSA7b1)@ A @clientId@ is provided in the @ClientOptions@. @clientId@ should be a string
-*** @(RSA7b2)@ Token authentication is being used, and the @TokenRequest@ or @TokenDetails@ object, used for authentication, has a @clientId@ value
-*** @(RSA7b3)@ Following a realtime connection being established, if the @CONNECTED@ @ProtocolMessages@ contains a @clientId@ in the @ConnectionDetails@ object, which is optionally present in @ProtocolMessage#connectionDetails@
+*** @(RSA7b2)@ Token authentication is being used, and the @TokenRequest@ or @TokenDetails@ object, used for authentication, has a @clientId@ value that is not @null@ or a wildcard string @'*'@
+*** @(RSA7b3)@ Following a realtime connection being established, if the @CONNECTED@ @ProtocolMessages@ contains a @clientId@ that is both not @null@ and not a wildcard string @'*'@. @clientId@ is an attribute of @ProtocolMessage#connectionDetails@ within a @CONNECTED@ @ProtocolMessage@
+** @(RSA7c)@ A @clientId@ provided in the @ClientOptions@ when instancing the library must be either @null@ or a string, and cannot contain only a wilcard @'*'@ value which is reserved
 * @(RSA8)@ @Auth#requestToken@ function:
 ** @(RSA8e)@ Method signature is @requestToken(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When provided, the values supersede matching client library configured params and options.
 ** @(RSA8a)@ Implicitly creates a @TokenRequest@ if required, and requests a token from Ably if required. Returns a @TokenDetails@ object
@@ -109,6 +114,11 @@ h3(#rest-auth). Auth
 *** @(RSA8c2)@ @TokenParams@ take precedence over any configured @authParams@ when a name conflict occurs
 *** @(RSA8c3)@ Specifying @authParams@ as part of @AuthOptions@ replaces any configured @authParams@ specified in @ClientOptions@. As the key/value pairs are not merged, this enables a developer to delete @authParams@ where necessary by providing an entire new set of @authParams@
 ** @(RSA8d)@ When @authCallback@ option is set, it will invoke the callback, passing in the @TokenParams@, and expects either a token string, a @TokenDetails@ object or a @TokenRequest@ object to be returned, which will in turn be used to request a token from Ably
+** @(RSA8e)@ A test should exist for the following:
+*** @(RSA8e1)@ Request a token with a @null@ value @clientId@, authenticate a client with the token, publish a message without an explicit @clientId@, and ensure the message published does not have a @clientId@. Check that @Auth#clientId@ is @null@
+*** @(RSA8e2)@ Request a token with a @null@ value @clientId@, authenticate a client with the token, publish a message with an explicit @clientId@ value, and ensure that the message is rejected
+*** @(RSA8e1)@ Request a token with a wildcard @'*'@ value @clientId@, authenticate a client with the token, publish a message without an explicit @clientId@, and ensure the message published does not have a @clientId@. Check that @Auth#clientId@ is @null@
+*** @(RSA8e2)@ Request a token with a wildcard @'*'@ value @clientId@, authenticate a client with the token, publish a message with an explicit @clientId@ value, and ensure that the message published has the provided @clientId@
 * @(RSA9)@ @Auth#createTokenRequest@ function:
 ** @(RSA9h)@ Method signature is @createTokenRequest(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When provided, the values supersede any client library configured params and options.
 ** @(RSA9a)@ Returns a signed @TokenRequest@ object that can be used to obtain a token from Ably. This is useful for servers that can create a @TokenRequest@ signed with the API key without communicating with Ably directly. The @TokenRequest@ can then be passed to a designated client that is then responsible for communicating with Ably and requesting a token for authentication from that @TokenRequest@
@@ -223,7 +233,7 @@ h3(#realtimeclient). RealtimeClient
 * @(RTC2)@ @RealtimeClient#connection@ attribute provides access to the underlying @Connection@ object
 * @(RTC3)@ @RealtimeClient#channels@ attribute provides access to the underlying @Channels@ object
 * @(RTC4)@ @RealtimeClient#auth@ attribute provides access to the @Auth@ object that was instanced with the @ClientOptions@ provided in the @RealtimeClient@ constructor
-** @(RTC4a)@ Unlike the stateless REST client library, the @Auth#clientId@ may be populated when the connection is established.  The @CONNECTED@ @ProtocolMessage@ may contain a @clientId@ that notifies the @RealtimeClient@ that all further operations are implicitly for that @clientId@, and operations for any other @clientId@ are no longer permitted. See Auth for further details
+** @(RTC4a)@ Unlike the stateless REST client library, the @Auth#clientId@ may be populated when the connection is established.  The @CONNECTED@ @ProtocolMessage@ may contain a @clientId@ that notifies the @RealtimeClient@ that all further operations are implicitly for that @clientId@, and operations for any other @clientId@ are no longer permitted. See @RSA7b@ for complete details
 * @(RTC5)@ @RealtimeClient#stats@ function:
 ** @(RTC5a)@ Proxy to @RestClient#stats@ presented with an async or threaded interface as appropriate
 ** @(RTC5b)@ Accepts all the same params as @RestClient#stats@ and provides all the same functionality
@@ -256,7 +266,7 @@ h3(#realtime-connection). Connection
 ** @(RTN7b)@ Every @ProtocolMessage@ sent must contain a unique serially incrementing @msgSerial@ integer value starting at zero. The @msgSerial@ along with the @count@ for incoming @ACK@ and @NACK@ @ProtocolMessages@ indicates which messages succeeded or failed to be delivered
 ** @(RTN7c)@ If a connection enters the @CLOSED@ or @FAILED@ state, or if the connection state is lost, and a @ACK@ or @NACK@ has not yet been received for a message, the client should consider the delivery of those messages as failed
 * @(RTN8)@ @Connection#id@ attribute:
-** @(RTN8a)@ Is @Null@ until connected
+** @(RTN8a)@ Is @null@ until connected
 ** @(RTN8b)@ Is a unique string provided by Ably. You should have a test to ensure multiple connected clients have unique connection IDs
 * @(RTN9)@ @Connection#key@ attribute:
 ** @(RTN9a)@ Is Null until connected
@@ -350,7 +360,7 @@ h3(#realtime-channel). Channel
 ** @(RTL6i)@ Expects either an array of @Message@ objects or a @name@ string and @data@ payload:
 ** @(RTL6i1)@ When @name@ and @data@ is provided, a single @ProtocolMessage@ containing one @Message@ is published to Ably
 ** @(RTL6i2)@ When an array of @Message@ objects is provided, a single @ProtocolMessage@ is used to publish all @Message@ objects in the array. However, a yet to be implemented feature should limit the total number of messages bundled in a single ProtocolMessage based on the default max message size.
-** @(RTL6i3)@ Allows @name@ and or @data@ to be @Null@.  If any of the values are null, then key is not sent to Ably i.e. a payload with a @Null@ value for @data@ would be sent as follows @{ "name": "click" }@
+** @(RTL6i3)@ Allows @name@ and or @data@ to be @null@.  If any of the values are null, then key is not sent to Ably i.e. a payload with a @null@ value for @data@ would be sent as follows @{ "name": "click" }@
 ** @(RTL6c)@ Connection state conditions:
 *** @(RTL6c1)@ If the connection is @CONNECTED@ then the messages are published immediately
 *** @(RTL6c2)@ If the connection is @CONNECTING@ or @DISCONNECTED@, and @ClientOptions#queueMessages@ has not been explicitly set to false, then the message will be queued and delivered as soon as the connection state returns to @CONNECTED@
@@ -411,12 +421,12 @@ h3(#realtime-presence). Presence
 ** @(RTP8c)@ A @PRESENCE ProtocolMessage@ with a @PresenceMessage@ with the action @ENTER@ is sent to the Ably service. The @clientId@ attribute of the @PresenceMessage@ must not be present. Entering without an explicit @PresenceMessage#clientId@, implicitly uses the @clientId@ for the current connection
 ** @(RTP8d)@ Implicitly attaches to the channel if not attached
 ** @(RTP8e)@ Optional data can be included when entering a channel that will be encoded / decoded as with normal messages. A test should exist to ensure data used with enter is encoded & decoded correctly. Also, when data is provided when entering, but no data is provided when leaving, the data attribute should be emitted in the @LEAVE@ event for this client
-** @(RTP8f)@ Raises an exception if the client library is using basic auth (i.e. no @clientId@ is configured)
+** @(RTP8f)@ Raises an exception if the client library is not authenticated (i.e. no @clientId@ is configured)
 ** @(RTP8g)@ Raises an exception if the channel is @DETACHED@ or @FAILED@
 ** @(RTP8h)@ Fails and emits an error if the client does not have required presence permission
 ** @(RTP8i)@ Fails and emits an error if the current client is not authenticated, and no implicit @clientId@ is assigned by the Ably service
 * @(RTP9)@ @Presence#update@ function:
-** @(RTP9a)@ Updates the data for the present member with a value or @Null@
+** @(RTP9a)@ Updates the data for the present member with a value or @null@
 ** @(RTP9b)@ If the client was not already entered, it enters this client into this channel
 ** @(RTP9c)@ Optionally a callback can be provided that is called for both success or failure to update
 ** @(RTP9d)@ A @PRESENCE ProtocolMessage@ with a @PresenceMessage@ with the action @UPDATE@ is sent to the Ably service. The @clientId@ attribute of the @PresenceMessage@ must not be present. Updating without an explicit @PresenceMessage#clientId@, implicitly uses the @clientId@ for the current connection
@@ -519,7 +529,7 @@ h4. PaginatedResult
 * @(TG1)@ A @PaginatedResult@ is a type that represents a page of results from a "paginated query":/rest-api/#pagination. The response is accompanied by metadata that indicates the relative queries available.
 * @(TG2)@ @PaginatedResult@ wraps all message and presence history, stats and REST presence requests.  The type must not raise an exception if paging headers are not returned from the REST API.
 * @(TG3)@ @PaginatedResult#items@ attribute contains a page of results (for example an Array of @Message@ objects for a channel history request).
-* @(TG4)@ @PaginatedResult#next@ function returns a new @PaginatedResult@ loaded with the next page of results. If there are no further pages, then @Null@ is returned.
+* @(TG4)@ @PaginatedResult#next@ function returns a new @PaginatedResult@ loaded with the next page of results. If there are no further pages, then @null@ is returned.
 * @(TG5)@ @PaginatedResult#first@ function returns a new @PaginatedResult@ for the first page of results.
 * @(TG6)@ @PaginatedResult#hasNext@ function returns @true@ if there are further pages
 * @(TG7)@ @PaginatedResult#isLast@ function returns @true@ if this page is not the last page i.e. @!hasNext@
@@ -538,7 +548,7 @@ h4. TokenDetails
 * @(TD3)@ @TokenDetails#expires@ attribute contains the expiry time in milliseconds.  Where idiomatic in the language, this can be a Date/Time object
 * @(TD4)@ @TokenDetails#issued@ attribute contains the time the token was issued in milliseconds.  Where idiomatic in the language, this can be a Date/Time object
 * @(TD5)@ @TokenDetails#capability@ attribute contains the capability JSON stringified
-* @(TD6)@ @TokenDetails#clientId@ attribute contains the clientId assigned to the token if provided
+* @(TD6)@ @TokenDetails#clientId@ attribute contains the @clientId@ assigned to the token. If @clientId@ is @null@ or omitted, then the token is prohibited from assuming a @clientId@ in any operations, however if @clientId@ is a wildcard string @'*'@, then the token is permitted to assume any @clientId@. Any other string value for @clientId@ implies that the @clientId@ is both enforced and assumed for all operations for this token
 
 h4. Stats
 
@@ -573,7 +583,7 @@ h4. ConnectionDetails
 
 * @(CD1)@ Connection details are optionally passed to the client library in the @CONNECTED@ @ProtocolMessage#connectionDetails@ attribute to inform the client about any constraints it should adhere to, and provide additional metadata about the connection. For example, if a request is made to publish a message that exceeds the @maxMessageSize@, the client library can reject the message immediately, without communicating with the Ably service
 * @(CD2)@ Attributes available in @ConnectionDetails@:
-** @(CD2a)@ @clientId@ contains the client ID assigned to the token, when present
+** @(CD2a)@ @clientId@ contains the client ID assigned to the token. If @clientId@ is @null@ or omitted, then the client is prohibited from assuming a @clientId@ in any operations, however if @clientId@ is a wildcard string @'*'@, then the client is permitted to assume any @clientId@. Any other string value for @clientId@ implies that the @clientId@ is both enforced and assumed for all operations from this client
 ** @(CD2b)@ @connectionKey@ is the connection secret key string that is used to resume a connection and its state
 ** @(CD2c)@ @maxMessageSize@ is the maximum individual message size in bytes
 ** @(CD2d)@ @maxFrameSize@ is the maximum size for a single frame of data sent to Ably. This restriction applies to a @ProtocolMessage@ sent over a realtime connection, or the total body size for a REST request
@@ -625,7 +635,7 @@ h4. TokenParams
 * @(TK2)@ The attributes of @TokenParams@ consist of:
 * @(TK2a)@ @ttl@ long - Requested time to live for the token in milliseconds
 * @(TK2b)@ @capability@ string - Capability requirements JSON stringified for the token.
-* @(TK2c)@ @clientId@ string -  A @clientId@ to associate with this token
+* @(TK2c)@ @clientId@ string - A @clientId@ string to associate with this token. If @clientId@ is @null@ or omitted, then the token is prohibited from assuming a @clientId@ in any operations, however if @clientId@ is a wildcard string @'*'@, then the token is permitted to assume any @clientId@. Any other string value for @clientId@ implies that the @clientId@ is both enforced and assumed for all operations for this token
 * @(TK2d)@ @timestamp@ long - The timestamp (in millis since the epoch) of this request. Timestamps, in conjunction with the @nonce@, are used to prevent n requests from being replayed
 
 h4. AuthOptions
