@@ -63,7 +63,7 @@ h3(#restclient). RestClient
 * @(RSC10)@ If a REST request responds with 401 with code 40140, then the server is indicating the token is no longer valid. Using the @Auth@ class a token should be automatically issued if possible, otherwise an error should be indicated (e.g. exception raised or an error passed in callback as appropriate to the language).
 * @(RSC11)@ Requests are sent to the default endpoint @rest.ably.io@. However, if the @host@ option is set, the client will send requests to the specified host. If @environment@ option is configured, the environment name is prefixed to the default host endpoint and the @host@ is set accordingly. For example, if the @environment@ is set to sandbox, then the @host@ endpoint will become @sandbox-rest.ably.io@
 * @(RSC12)@ REST endpoint host is configurable in the Client constructor with the option @restHost@
-* @(RSC13)@ The client library must use "default connection and request timeouts":https://github.com/ably/ably-ruby/blob/master/lib/ably/rest/client.rb#L24-L30. Ideally these default timeouts should be configurable by the developer.
+* @(RSC13)@ The client library must use the connection and request timeouts specified in the @ClientOptions@, falling back to the defaults described in @ClientOptions@ below
 * @(RSC14)@ Authentication
 ** @(RSC14a)@ Supports basic authentication when an API key is provided with the @key@ option.  The API key follows the format @"KEY_NAME:KEY_SECRET"@ so when authenticating using basic auth, the key name can be used as the username and the key secret as the password.
 ** @(RSC14b)@ Supports token authentication if one or more of @token@, @tokenDetails@, @authCallback@ or @authUrl@ are provided.  If @useTokenAuth@ is true or a @clientId@ is provided when the library is instanced, then token authentication is always used.
@@ -232,6 +232,7 @@ h3(#realtimeclient). RealtimeClient
 ** @(RTC5b)@ Accepts all the same params as @RestClient#stats@ and provides all the same functionality
 * @(RTC6)@ @RealtimeClient#time@ function:
 ** @(RTC6a)@ Proxy to @RestClient#time@ presented with an async or threaded interface as appropriate
+* @(RTC7)@ The client library must use the configured timeouts specified in the @ClientOptions@, falling back to the "client library defaults":#defaults and defaults described in @ClientOptions@ below
 
 h3(#realtime-connection). Connection
 
@@ -252,6 +253,7 @@ h3(#realtime-connection). Connection
 ** @(RTN4f)@ Additionally, a @ConnectionStateChange@ can be emitted that contains an @errorReason@ which contains an @ErrorInfo@ object with details of the error that has occurred for the @Connection@.
 * @(RTN5)@ A test should exist that instances many (50+) clients simultaneously and performs a few basic operations such as attaching to a channel, publishing a message, and expecting all of those messages to arrive on all clients to ensure that there are no concurrency issues with the client library
 * @(RTN6)@ A @Connection@ is successful and considered @CONNECTED@ once the websocket connection is open and the intial @CONNECTED@ @ProtocolMessage@ has been received
+* @(RTN19)@ If the @CONNECTED@ @ProtocolMessage@ contains a @connectionDetails@ property, the attributes within @ConnectionDetails@ will be used as the defaults for this client library, overriding any configured options at the time the @CONNECTED@ @ProtocolMessage@ is received
 * @(RTN7)@ @ACK@ and @NACK@:
 ** @(RTN7a)@ All @ProtocolMessage@ @Presence@ and @Message@ objects sent to Ably expect either an @ACK@ or @NACK@ from Ably to confirm successful receipt and acceptance or failure respectively
 ** @(RTN7b)@ Every @ProtocolMessage@ sent must contain a unique serially incrementing @msgSerial@ integer value starting at zero. The @msgSerial@ along with the @count@ for incoming @ACK@ and @NACK@ @ProtocolMessages@ indicates which messages succeeded or failed to be delivered
@@ -272,17 +274,18 @@ h3(#realtime-connection). Connection
 ** @(RTN11c)@ Where the language permits, a callback with a success and failure state can be provided
 * @(RTN12)@ @Connection#close@ function:
 ** @(RTN12a)@ Sends a @CLOSE@ @ProtocolMessage@ to the server, sets the state to @CLOSING@ and waits for a @CLOSED@ @ProtocolMessage@ to be received
-** @(RTN12b)@ If the @CLOSED@ @ProtocolMessage@ is not received within the "configured close timeout":https://github.com/ably/ably-ruby/blob/master/lib/ably/realtime/connection/connection_manager.rb, the transport will be disconnected and the connection will automatically move to the @CLOSED@ state
+** @(RTN12b)@ If the @CLOSED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the transport will be disconnected and the connection will automatically move to the @CLOSED@ state
 ** @(RTN12c)@ If the transport is abruptly closed following a @CLOSE@ @ProtocolMessage@ being sent, then the connection will automatically move to the @CLOSED@ state
 * @(RTN13)@ @Connection#ping@ function:
 ** @(RTN13a)@ Will send a @ProtocolMessage@ with action @HEARTBEAT@ the Ably service when connected and expects a @HEARTBEAT@ message in response. If the client library language supports callbacks, then the callback will be called with the response time or error
 ** @(RTN13b)@ Will immediately raise an exception if in the @CLOSED@ or @FAILED@ state
+** @(RTN13c)@ Will fail if a @HEARTBEAT@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults
 * @(RTN14)@ @Connection@ opening failures:
 ** @(RTN14a)@ If an API key is invalid, then the connection will enter the @FAILED@ state and the @errorReason@ will be set on the @Connection@ object as well as the emitted @ConnectionStateChange@
 ** @(RTN14b)@ If a connection request fails because the token has expired, and the token is renewable, then a new token will be created and subsequent requests will be made without changing the state or emitting an error. If the token is not renewable, the connection will transition to the @FAILED@ state
-** @(RTN14c)@ A new connection attempt will fail if not connected within the "configured open timeout":https://github.com/ably/ably-ruby/blob/master/lib/ably/realtime/connection/connection_manager.rb
-** @(RTN14d)@ If a connection attempt fails for any recoverable reason (i.e. not an authentication failure), the @Connection#state@ will change to @DISCONNECTED@, the @Connection#errorReason@ will be updated, a @ConnectionStateChange@ with the @errorReason@ will be emitted, and new connection attempts will periodically be made until the maximum time in that state threshold is reached.  The @retryIn@ attribute of the @ConnectionStateChange@ object will contain the time in milliseconds until the next connection attempt. See "disconnected retry config":https://github.com/ably/ably-ruby/blob/master/lib/ably/realtime/connection/connection_manager.rb. Each time a new connection attempt is made the state will change to @CONNECTING@ and then to @CONNECTED@ if successful, or @DISCONNECTED@ if unsuccessful and the "disconnected state threshold":https://github.com/ably/ably-ruby/blob/master/lib/ably/realtime/connection/connection_manager.rb has not been exceeded.
-** @(RTN14e)@ Once the connection state has been in the @DISCONNECTED@ state for more than the "disconnected state threshold":https://github.com/ably/ably-ruby/blob/master/lib/ably/realtime/connection/connection_manager.rb, the state will change to @SUSPENDED@ and be emitted with the @errorReason@, and the @Connection#errorReason@ will be updated. In this state, a new connection attempt will be made periodically as defined in the "suspended state threshold":https://github.com/ably/ably-ruby/blob/master/lib/ably/realtime/connection/connection_manager.rb
+** @(RTN14c)@ A new connection attempt will fail if not connected within the "default realtime request timeout":#defaults
+** @(RTN14d)@ If a connection attempt fails for any recoverable reason (i.e. not an authentication failure), the @Connection#state@ will change to @DISCONNECTED@, the @Connection#errorReason@ will be updated, a @ConnectionStateChange@ with the @errorReason@ will be emitted, and new connection attempts will periodically be made until the maximum time in that state threshold is reached.  The @retryIn@ attribute of the @ConnectionStateChange@ object will contain the time in milliseconds until the next connection attempt. See the @disconnectedRetryFrequency@ of @ClientOptions@ below. Each time a new connection attempt is made the state will change to @CONNECTING@ and then to @CONNECTED@ if successful, or @DISCONNECTED@ if unsuccessful and the "default @connectionStateTtl@":#defaults has not been exceeded.
+** @(RTN14e)@ Once the connection state has been in the @DISCONNECTED@ state for more than the "default @connectionStateTtl@":#defaults, the state will change to @SUSPENDED@ and be emitted with the @errorReason@, and the @Connection#errorReason@ will be updated. In this state, a new connection attempt will be made periodically as specified within @suspendedRetryFrequency@ of @ClientOptions@
 ** @(RTN14f)@ The connection will remain in the @SUSPENDED@ state indefinitely, whilst periodically attempting to reestablish a connection
 * @(RTN15)@ @Connection@ failures once @CONNECTED@:
 ** @(RTN15a)@ If a @Connection@ transport is disconnected unexpectedly or if a token expires, then the @Connection@ manager will immediately attempt to reconnect and restore the connection state. Connection state recovery is provided by the Ably service and ensures that whilst the client is disconnected, all events are queued and channel state is retained on the Ably servers. When a new connection is made with the correct connection recovery key, the client is able to catch up by receiving the queued @ProtocolMessages@ from Ably. Connection state is only maintained for a brief period, up to a minute, so if a client is disconnected for a longer period connection state cannot be resumed
@@ -292,14 +295,17 @@ h3(#realtime-connection). Connection
 ** @(RTN15c)@ When a new connection is made using the @resume@ and @connection_serial@ params, the client library must consider the resume to have failed if the @CONNECTED@ @ProtocolMessage@ contains an error or if the @Connection#id@ has changed. When a @Connection@ resume has failed, all channels should be detach with a suitable error reason
 ** @(RTN15d)@ Client libraries should have test coverage to ensure connection state recovery is working as expected by forciby disconnecting a client and checking that messages published on channels are delivered once the connection is resumed
 ** @(RTN15e)@ When a connection is resumed, the @Connection#key@ may change and will be provided in the first @CONNECTED@ @ProtocolMessage#connectionDetails@ when the connection is established. The client library must update the @Connection#key@ value with the new @connectionKey@ value every time
+* @(RTN20)@ When the client library can subscribe to the Operating System events for network/internet connectivity changes:
+** @(RTN20a)@ When @CONNECTED@, @CONNECTING@ or @DISCONNECTING@, if the operating system indicates that the underlying internet connection is no longer available, then the client library should immediately change state to @DISCONNECTED@ with a suitable @errorReason@. This state change will automatically trigger the client library to attempt to reconnect, see @RTN15@ above
+** @(RTN20b)@ When @DISCONNECTED@ or @SUSPENDED@, if the operating system indicates that the underlying internet connection is now available, the client library should immediately attempt to connect
 * @(RTN16)@ @Connection@ recovery:
 ** @(RTN16a)@ Connection recovery is similar to the automatic connection resume except that connection state is recovered explicitly because a @recover@ key is passed to the Realtime library when instanced. Once a connection is recovered, all channels must be explicitly attached by the developer, and any messages queued to be delivered whilst the client was disconnected will be delivered
 ** @(RTN16b)@ @Connection#recoveryKey@ is an attribute composed of the connection key and latest serial received on the connection
-** @(RTN16c)@ @Connection#recoveryKey@ is @Null@ when a connection is explicitly @CLOSED@ as connection state is not retained for connections closed at the request of the client
+** @(RTN16c)@ @Connection#recoveryKey@ becomes @Null@ when a connection is explicitly @CLOSED@ or @CLOSED@ by the server, as connection state is not retained for connections closed intentionally. The @Connection#key@ and @Connection#id@ is set to @Null@
 ** @(RTN16d)@ When a connection is successfully recovered, the @Connection#id@ and @Connection#key@ will be identical to the @id@ & @key@ of the connection that was recovered
 ** @(RTN16e)@ If the @recover@ option is missing or no longer valid when connecting to Ably, the client will connect anyway, but emit a @ConnectionStateChange@ with an @errorReason@, and will additionally set the @Connection#errorReason@ with an @ErrorInfo@ object describing the failure
 * @(RTN17)@ Host Fallback
-** @(RTN17a)@ All HTTP requests sent to Ably are fault-tolerant and will fallback to an alternative host if the default host is unreachable, or indicates that it is unserviceable with a 500 to 504 status code. This ensures that a client library is able to work around routing or other problems with the user's closest datacenter. For example, if a connection attempt to @realtime.ably.io@ fails because the default endpoint is unreachable or unserviceable, then the @Connection@ manager should check if an internet connection is available by sending a request to our CDN @internet-up.ably-realtime.com/is-the-internet-up.txt@ and looking for the text "yes" in the response.  If the text "yes" is included in the response, then the the client library can assume it has a viable internet connection and should then automatically retry the connection against all the fallback hosts @[a-e].ably-realtime.com@ in attempt to find an alternate healthy datacenter.
+** @(RTN17a)@ All requests sent to Ably are fault-tolerant and will fallback to an alternative host if the default host is unreachable, or indicates that it is unserviceable with a 500 to 504 status code. This ensures that a client library is able to work around routing or other problems with the user's closest datacenter. For example, if a connection attempt to @realtime.ably.io@ fails because the default endpoint is unreachable or unserviceable, then the @Connection@ manager should check if an internet connection is available by sending a request to our CDN @internet-up.ably-realtime.com/is-the-internet-up.txt@ and looking for the text "yes" in the response.  If the text "yes" is included in the response, then the client library can assume it has a viable internet connection and should then immediately retry the connection against all the fallback hosts @[a-e].ably-realtime.com@ in attempt to find an alternate healthy datacenter.
 ** @(RTN17b)@ The fallback behaviour only applies to the default @realtime.ably.io@ endpoint; if either @host@ or @environment@ options are set, no fallback host is used.
 ** @(RTN17c)@ See the "default fallback hosts":https://github.com/ably/ably-java/blob/master/src/io/ably/transport/Defaults.java#L7 and the "fallback mechanism implemented in the Java ConnectionManager":https://github.com/ably/ably-java/blob/39f3f0226bd995bd6baffa1df47a0a4957d29c43/src/io/ably/transport/ConnectionManager.java#L428-L455 as an example.
 * @(RTN18)@ Connection state change side effects:
@@ -332,12 +338,14 @@ h3(#realtime-channel). Channel
 ** @(RTL4a)@ If already @ATTACHED@ or @ATTACHING@ nothing is done
 ** @(RTL4b)@ If the connection state is @CLOSED@, @CLOSING@, @SUSPENDED@ or @FAILED@, an exception should be thrown immediately
 ** @(RTL4c)@ Otherwise an @ATTACH@ ProtocolMessage is sent to the server, the state changes to @ATTACHING@ and the channel becomes @ATTACHED@ when the confirmation @ATTACHED@ ProtocolMessage is received
+** @(RTL4f)@ Once an @ATTACH@ @ProtocolMessage@ is sent, if an @ATTACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the attach request should be treated as though it has failed
 ** @(RTL4d)@ If the language permits, a callback can be provided that is called when the channel is attached successfully or the attach fails and the the @ErrorInfo@ error is passed as an argument to the callback.
 ** @(RTL4e)@ If the user does not have sufficient permissions to attach to the channel, the channel state @FAILED@ is emitted with the error @ErrorInfo@. An error event is also emitted, and the @errorReason@ attribute of the @Channel@ is set to the error @ErrorInfo@ object
 * @(RTL5)@ @Channel#detach@ function:
 ** @(RTL5a)@ If state is @INITIALISED@, @DETACHED@ or @DETACHING@ nothing is done
 ** @(RTL5b)@ If state is @FAILED@ an exception should be thrown immediately
 ** @(RTL5d)@ Otherwise a @DETACH@ ProtocolMessage is sent to the server, the state changes to @DETACHING@ and the channel becomes @DETACHED@ when the confirmation @DETACHED@ ProtocolMessage is received
+** @(RTL5f)@ Once a @DETACH@ @ProtocolMessage@ is sent, if a @DETACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the detach request should be treated as though it has failed
 ** @(RTL5e)@ If the language permits, a callback can be provided that is called when the channel is detached successfully or the detach fails and the the @ErrorInfo@ error is passed as an argument to the callback.
 * @(RTL6)@ @Channel#publish@ function:
 ** @(RTL6a)@ Messages are encoded in the same way as the REST @Channel#publish@ method
@@ -500,7 +508,7 @@ h4. ProtocolMessage
 ** @(TR4d)@ @connectionId@ string
 ** @(TR4e)@ @connectionKey@ string
 ** @(TR4f)@ @connectionSerial@ long
-** @(TR4n)@ @connectionDetails@ @ConnectionDetails@ object - provides details on the constraints for the connection such as max message size or client ID
+** @(TR4n)@ @connectionDetails@ @ConnectionDetails@ object - provides details on the constraints or defaults for the connection such as max message size, client ID or connection state TTL
 ** @(TR4g)@ @count@ integer
 ** @(TR4h)@ @errorInfo@ @ErrorInfo@ object
 ** @(TR4i)@ @flags@ integer
@@ -560,7 +568,7 @@ h4. ConnectionStateChange
 * @(TA3)@ If the connection state change includes error information, then the @errorReason@ attribute will contain an @ErrorInfo@ object describing the reason for the error
 * @(TA4)@ See the [Java library implementation](https://github.com/ably/ably-java/blob/245a3f20a6dce0d34413ddfed19c5da8ea647422/src/io/ably/realtime/ConnectionStateListener.java#L15-L20) of this object.  Note that @reason@ will be changed in a future release to @errorReason@ in line with this specification
 
-h4. Capability - *API not agreed yet*
+h4. Capability - *API not defined yet*
 * @(TC1)@ This type represents a capability for a key or token
 * @(TC2)@ For now a string representation of the JSON will suffice wherever @capability@ is used
 
@@ -573,6 +581,7 @@ h4. ConnectionDetails
 ** @(CD2c)@ @maxMessageSize@ is the maximum individual message size in bytes
 ** @(CD2d)@ @maxFrameSize@ is the maximum size for a single frame of data sent to Ably. This restriction applies to a @ProtocolMessage@ sent over a realtime connection, or the total body size for a REST request
 ** @(CD2e)@ @maxInboundRate@ is the maximum allowable number of requests per second from a client or Ably. In the case of a realtime connection, this restriction applies to the number of @ProtocolMessage@ objects sent, whereas in the case of REST, it is the total number of REST requests per second
+** @(CD2f)@ @connectionStateTtl@ is the duration that Ably will persist the connection state when a Realtime client is abruptly disconnected
 
 h3(#options). Option types
 
@@ -606,6 +615,13 @@ h4. ClientOptions
 *** @(TO3k3)@ @realtimeHost@ string - for development environments only; allows a non-default Ably Realtime host to be specified
 *** @(TO3k4)@ @port@ integer - for development environments only; allows a non-default Ably non-TLS port to be specified
 *** @(TO3k5)@ @tlsPort@ integer - for development environments only; allows a non-default Ably TLS port to be specified
+** @(TO3l)@ The follow attributes, if set, are used to change the default behaviour of the libary:
+*** @(TO3l1)@ @disconnectedRetryFrequency@ integer - default 15,000 (15s). When the connection is in the @DISCONNECTED@ state, this delay in milliseconds controls how frequently the client library attempts to reconnect automatically
+*** @(TO3l2)@ @suspendedRetryFrequency@ integer - default 30,000 (30s). When the connection is in the @SUSPENDED@ state, this delay in milliseconds controls how frequently the client library attempts to reconnect automatically
+*** @(TO3l3)@ @httpOpenTimeout@ integer - default 4,000 (4s). Timeout for opening the connection, available in the client library if supported by the transport
+*** @(TO3l4)@ @httpRequestTimeout@ integer - default 15,000 (15s). Timeout for any single HTTP request and response
+*** @(TO3l5)@ @httpMaxRetryCount@ integer - default 3. Max number of fallback host retries for HTTP requests that fail due to network issues or server problems
+*** @(TO3l6)@ @httpMaxRetryDuration@ integer - default 10,000 (10s). Max elapsed time in which fallback host retries for HTTP requests will be attempted i.e. if the first default host attempt takes 5s, and then the subsequent fallback retry attempt takes 7s, no further fallback host attempts will be made as the total elapsed time of 12s exceeds the default 10s limit
 
 h4. TokenParams
 * @(TK1)@ A class providing parameters of a token request. These params are used when invoking @Auth#authorise@, @Auth#requestToken@ and @Auth#createTokenRequest@
@@ -642,3 +658,12 @@ h4. CipherParams
 * @(TZ3)@ @Crypto#getDefaultParams@ function
 ** @(TZ3a)@ returns a complete @CipherParams@ instance with randomly generated key and iv
 ** @(TZ3b)@ takes an optional key parameter, returning a @CipherParams@ instance created with that key and with a keyLength calculated from that key
+
+h3(#defaults). Client Library defaults
+
+The following default values are configured for the client library:
+
+* @(DF1)@ Realtime defaults:
+** @(DF1a)@ @connectionStateTtl@ integer - default 60s. The duration that Ably will persist the connection state when a Realtime client is abruptly disconnected. When the client is in the @DISCONNECTED@ state, once this TTL has passed, the client should change the state to the @SUSPENDED@ state signifying that the state is now lost i.e. channels need to be reattached manually.
+Note that this default is override by any @connectionStateTtl@ specified in the @ConnectionDetails@ of the @CONNECTED@ @ProtocolMessage@
+** @(DF1b)@ @realtimeRequestTimeout@ - default 10s. When a realtime client library is establishing a connection with Ably, or sending a @HEARTBEAT@, @CLOSE@, @ATTACH@, @DETACH@ or @CLOSE@ @ProtocolMessage@ to Ably, this is the amount of time that the client library will wait before considering that request as failed and triggering a suitable failure condition
