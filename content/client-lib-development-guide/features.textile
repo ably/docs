@@ -299,7 +299,13 @@ h3(#realtime-connection). Connection
 ** @(RTN15b)@ In order for a connection to be resumed and connection state to be recovered, the client library reconnects to the websocket endpoint with two additional querystring params:
 *** @(RTN15b1)@ @resume@ is the private connection key assigned to the connection when the first @CONNECTED@ @ProtocolMessage@ was received
 *** @(RTN15b2)@ @connection_serial@ is the most recent @ProtocolMessage#connectionSerial@ received from Ably or @Connection#serial@ which should be identical
-** @(RTN15c)@ When a new connection is made using the @resume@ and @connection_serial@ params, the client library must consider the resume to have failed if the @CONNECTED@ @ProtocolMessage@ contains an error or if the @Connection#id@ has changed. When a @Connection@ resume has failed, all channels should be detach with a suitable error reason
+** @(RTN15c)@ The system's response to a resume request will be one of the following:
+**** @(RTN15c1)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and no @error@. In this case, the server is indicating that the resume succeeded, all channels are still attached, and all backlog messages are available
+**** @(RTN15c2)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and an @error@. In this case, the server is indicating that the resume succeeded but with a non-fatal error, all channels are still attached, and some backlog messages may be unavailable. The @ErrorInfo@ received should be emitted on the client @Connection@ as well as all @ATTACHED@ @Channel@ objects.
+**** @(RTN15c3)@ @CONNECTED@ @ProtocolMessage@ with a new @connectionId@, and an error in @error@. In this case, a new connection has been established, the resume has failed, the channels are no longer attached, and the error indicates the resume problem which should be emitted. The client library should immediately detach all channels and set the @errorReason@ on each detached @Channel@
+**** @(RTN15c4)@ @ERROR@ @ProtocolMessage@ indicating a fatal error in the connection. The server will close the transport immediately after. If the @ERROR@ is non-recoverable, the client will move to the @FAILED@ state triggering all attached channels to move to the @FAILED@ state as well
+** @(RTN15g)@ When the connection resume has failed, all channels should be detached with a suitable error reason
+** @(RTN15f)@ @ACK@ and @NACK@ responses for published messages can only ever be received on the transport connection on which those messages were sent. Therefore, once a transport drops, the client library must either fail the publish attempt, or re-attempt by re-sending the messages on a new transport if the resume was successful (i.e. the @CONNECTED@ response includes the expected @connectionId@)
 ** @(RTN15d)@ Client libraries should have test coverage to ensure connection state recovery is working as expected by forciby disconnecting a client and checking that messages published on channels are delivered once the connection is resumed
 ** @(RTN15e)@ When a connection is resumed, the @Connection#key@ may change and will be provided in the first @CONNECTED@ @ProtocolMessage#connectionDetails@ when the connection is established. The client library must update the @Connection#key@ value with the new @connectionKey@ value every time
 * @(RTN20)@ When the client library can subscribe to the Operating System events for network/internet connectivity changes:
@@ -319,6 +325,10 @@ h3(#realtime-connection). Connection
 ** @(RTN18a)@ When a connection enters the @DISCONNECTED@ state, it will have no effect on the the channel states. Channels in the @ATTACHED@ state will queue messages that are sent as soon as the connection is resumed
 ** @(RTN18b)@ When a connection enters the @SUSPENDED@ state, all channels will move to the @DETACHED@ state. Channels in the @DETACHED@ state should reject publishing of messages
 ** @(RTN18c)@ When a channel enters the @FAILED@ state, all channels will move to the @FAILED@ state. Channels in the @FAILED@ state should reject publishing of messages
+* @(RTN19)@ Transport state side effects - when a transport is upgraded or disconnected for any reason:
+** @(RTN19a)@ Any @ProtocolMessage@ that is awaiting an @ACK@/@NACK@ on the old transport will not receive the @ACK@/@NACK@ on the new transport. The client library must therefore resend any @ProtocolMessage@ that is awaiting a @ACK@/@NACK@ to Ably in order to receive the expected @ACK@/@NACK@ for that message. The Ably service is responsible for keeping track of messages, ignoring duplicates and responding with suitable @ACK@/@NACK@ messages
+** @(RTN19b)@ If there are any pending channels i.e. in the @ATTACHING@ or @DETACHING@ state, the respective @ATTACH@ or @DETACH@ message should be resent to Ably
+** @(RTN19b)@ If a @SYNC@ is underway, ensure the client library adheres to @RTP3@
 
 h3(#realtime-channels). Channels
 
@@ -399,7 +409,7 @@ h3(#realtime-presence). Presence
 
 * @(RTP1)@ When a channel @ATTACHED@ @ProtocolMessage@ is received, the @ProtocolMessage@ may contain a bit flag with value 1 indicating that there are currently members present on the channel. If members are present, subsequent @ProtocolMessage SYNC@ messages will be delivered with presence members (messages) until the @SYNC@ operation is complete. If there is no flag or the right most bit is zero, then the presence map should be considered in sync immediately as there are no members present on the channel at the time of attach
 * @(RTP2)@ A "PresenceMap":https://github.com/ably/ably-java/blob/master/src/io/ably/realtime/Presence.java#L384-L529 should be used to maintain a list of members present on a channel. As there are no guarantees that during the @SYNC@ phase presence events will arrive in order i.e. a leave event for a member can arrive before that member is later registered as as present as part of the initial @SYNC@ operation. As such, until the @SYNC@ operation is complete, timestamps must be recorded for all members to ensure the most recent present state is used, see the "Java implementation":https://github.com/ably/ably-java/blob/master/src/io/ably/realtime/Presence.java#L418-L431.  Once a @SYNC@ event is complete, the members that are now considered @ABSENT@ can be removed from the map, see the "Java implementation":https://github.com/ably/ably-java/blob/master/src/io/ably/realtime/Presence.java#L504-L509
-* @(RTP3)@ If a @SYNC@ operation is underway but not yet complete, and the connection is disconnected unexpectedly, then if the connection is resumed successfully, it is the responsibility of the client library to complete the @SYNC@ operation. The client library requests a @SYNC@ resume by sending a @SYNC@ @ProtocolMessage@ with the last received sync serial number. See the "Ruby implementation":https://github.com/ably/ably-ruby/blob/7b18a20/lib/ably/realtime/presence/members_map.rb#L169-L176 and the "Ruby test":https://github.com/ably/ably-ruby/blob/7b18a20/spec/acceptance/realtime/presence_spec.rb#L1338-L1357
+* @(RTP3)@ If a @SYNC@ operation is underway but not yet complete, and the transport is disconnected unexpectedly, then if the connection is resumed successfully, it is the responsibility of the client library to complete the @SYNC@ operation. The client library requests a @SYNC@ resume by sending a @SYNC@ @ProtocolMessage@ with the last received sync serial number. See the "Ruby implementation":https://github.com/ably/ably-ruby/blob/7b18a20/lib/ably/realtime/presence/members_map.rb#L169-L176 and the "Ruby test":https://github.com/ably/ably-ruby/blob/7b18a20/spec/acceptance/realtime/presence_spec.rb#L1338-L1357
 * @(RTP4)@ Ensure a test exists that enters 250 members using @Presence#enterClient@ on a single connection, and checks for @PRESENT@ events to be emitted on another connection for each member, and once sync is complete, all 250 members should be present in a @Presence#get@ request
 * @(RTP5)@ Channel state change side effects:
 ** @(RTP5a)@ If the channel enters the @DETACHED@ or @FAILED@ state then all queued presence messages will fail immediately
@@ -517,7 +527,7 @@ h4. ProtocolMessage
 ** @(TR4f)@ @connectionSerial@ long
 ** @(TR4n)@ @connectionDetails@ @ConnectionDetails@ object - provides details on the constraints or defaults for the connection such as max message size, client ID or connection state TTL
 ** @(TR4g)@ @count@ integer
-** @(TR4h)@ @errorInfo@ @ErrorInfo@ object
+** @(TR4h)@ @error@ @ErrorInfo@ object
 ** @(TR4i)@ @flags@ integer
 ** @(TR4j)@ @messageSerial@ long
 ** @(TR4k)@ @messages@ Array of @Message@ objects
