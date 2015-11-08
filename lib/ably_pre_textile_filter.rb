@@ -4,7 +4,7 @@ class AblyPreTextileFilter
   BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/ unless defined?(BLANG_REGEX)
 
   class << self
-    def run(content, path)
+    def run(content, path, attributes)
       content = strip_comments(content)
       content = convert_blang_blocks_to_html(content)
       content = add_language_support_for_github_style_code(content)
@@ -13,6 +13,7 @@ class AblyPreTextileFilter
       content = insert_inline_table_of_contents(content)
       content = add_language_support_for_block_quotes(content)
       content = add_language_support_for_headings(content)
+      content = add_spec_anchor_links(content, attributes)
       add_support_for_inline_code_editor(content, path)
     end
 
@@ -165,6 +166,16 @@ class AblyPreTextileFilter
         ].flatten.compact.join("\n")
       end
 
+      content
+    end
+
+    def add_spec_anchor_links(content, attributes)
+      if attributes[:anchor_specs]
+        content = content.gsub(%r{\* @\((\w+)\)@}) do
+          spec_id = Regexp.last_match[1]
+          "* <a id='#{spec_id}' name='#{spec_id}' href='##{spec_id}'>@(#{spec_id})@</a>"
+        end
+      end
       content
     end
 

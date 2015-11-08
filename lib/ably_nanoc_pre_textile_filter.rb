@@ -5,6 +5,6 @@ class AblyNanocPreTextileFilter < Nanoc::Filter
   type :text
 
   def run(content, params = {})
-    AblyPreTextileFilter.run(content, @item.path)
+    AblyPreTextileFilter.run(content, @item.path, @item.attributes)
   end
 end
