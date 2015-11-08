@@ -26,6 +26,7 @@ Forking and running locally
 * Checkout the source branch: `git checkout source`
 * Create your feature or fix branch and check it out: `git checkout -b [your-branch]`
 * `bundle install` to install the necessary gems
+* Create a jsbin config file: `cp config/jsbin_config.example.yaml config/jsbin_config.yaml`
 * `nanoc` to generate the site for the first time
 * `nanoc view -p 4000` to start up a web server at <http://localhost:4000>
 * `bundle exec guard` to watch for changes and rebuild the site automatically
