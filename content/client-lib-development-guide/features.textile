@@ -35,6 +35,7 @@ h2(#test-guidelines). Test guidelines
 * @(G1)@ Every test should be executed using all supported protocols (i.e. JSON and "MessagePack":http://msgpack.org/ if supported).  This includes both sending & receiving data.
 * @(G2)@ All tests by default are run against a special Ably sandbox environment.  This environment allows apps to be provisioned without any authentication that can then be used for client library testing. Bear in mind that all apps created in the sandbox environment are automatically deleted after 60 minutes and have low limits to prevent abuse. Apps are configured by sending a @POST@ request to @https://sandbox-rest.ably.io/apps@ with a JSON body that specifies the keys and their associated capabilities, channel namespace rules and any presence fixture data that is required; see "ably-common test-app-setup.json":https://github.com/ably/ably-common/blob/master/test-resources/test-app-setup.json.  See the "Java test setup":https://github.com/ably/ably-java/blob/master/test/io/ably/test/rest/RestSetup.java. Presence fixture data is necessary for the REST library presence tests as there is no way to register presence on a channel in the REST library.
 * @(G3)@ Testing statistics can be tricky due to timing issues and slow test suites as a result of sending requests to generate statistics.  As such, we provide a special stats endpoint in our sandbox environment that allows stats to be injected into our metrics system so that stats tests can make predictable assertions.  To create stats you must send an authenticated @POST@ request to the stats JSON to @https://sandbox-rest.ably.io/stats@ with the stats data you wish to create. See the "Javascript stats fixture":https://github.com/ably/ably-js/blob/4e65d4e13eb8750a375b9511e4dd059092c0e481/spec/rest/stats.test.js#L8-L51 and "setup helper":https://github.com/ably/ably-js/blob/4e65d4e13eb8750a375b9511e4dd059092c0e481/spec/common/modules/testapp_manager.js#L158-L182 as an example.
+* @(G4)@ All REST requests and WebSocket connections to Ably must include the current API version @0.8@. Should any new API version with breaking changes be released, the client library will continue to use the API version explicitly requested
 
 h2(#rest). REST client library
 
@@ -56,6 +57,7 @@ h3(#restclient). RestClient
 *** @(RSC6b4)@ @unit@ is the period for which the stats will be aggregated by, values supported are @minute@, @hour@, @day@ or @month@; if omitted the unit defaults to the REST API default (@minute@)
 * @(RSC16)@ @RestClient#time@ function sends a get request to @rest.ably.io/time@ and returns the server time in milliseconds since epoch or as a Date/Time object where suitable
 * @(RSC7)@ Sends REST requests over HTTP and HTTPS to the REST end-point @rest.ably.io@
+** @(RSC7a)@ The header @X-Ably-Version: 0.8@ must be included in all REST requests to the Ably end-point
 * @(RSC18)@ If @ClientOptions#tls@ is true, then all communication is over HTTPS. If false, all communication is over HTTP however Basic Auth over HTTP will raise an exception as private keys cannot be submitted over an insecure connection. See @Auth@ below
 * @(RSC8)@ Supports two protocols:
 ** @(RSC8a)@ "MessagePack":http://msgpack.org/ binary protocol (this is the default for environments having a suitable level or support for binary data)
@@ -252,6 +254,7 @@ h3(#realtime-connection). Connection
 ** @(RTN2b)@ @echo@ should be @true@ by default; @false@ will prevent messages published by the client being echoed back
 ** @(RTN2d)@ @clientId@ contains the provided @clientId@ option of @ClientOptions@, unless @clientId@ is @null@
 ** @(RTN2e)@ Depending on the authentication scheme, either @accessToken@ contains the token string, or @key@ contains the API key
+** @(RTN2f)@ API version param @v@ should be @0.8@
 * @(RTN3)@ If connection option @autoConnect@ is true, a connection is initiated immediately; otherwise a connection is only initiated following an explicit call to @connect()@.
 * @(RTN4)@ EventEmitter and states:
 ** @(RTN4a)@ Implements @EventEmitter@ and emits events for state changes @INITIALIZED@, @CONNECTING@, @CONNECTED@, @DISCONNECTED@, @SUSPENDED@, @CLOSING@, @CLOSED@, @FAILED@
@@ -303,7 +306,7 @@ h3(#realtime-connection). Connection
 *** @(RTN15b2)@ @connection_serial@ is the most recent @ProtocolMessage#connectionSerial@ received from Ably or @Connection#serial@ which should be identical
 ** @(RTN15c)@ The system's response to a resume request will be one of the following:
 **** @(RTN15c1)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and no @error@. In this case, the server is indicating that the resume succeeded, all channels are still attached, and all backlog messages are available. The client should not change the state of attached channels, and immediately process any queued messages for that channel
-**** @(RTN15c2)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and an @error@. In this case, the server is indicating that the resume succeeded but with a non-fatal error, all channels are still attached, and some backlog messages may be unavailable. The @ErrorInfo@ received should be emitted on the client @Connection@ as well as all @ATTACHED@ @Channel@ objects, and the @errorReason@ should be set. The client should not change the state of attached channels, and immediately process any queued messages for that channel
+**** @(RTN15c2)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and an @error@. In this case, the server is indicating that the resume succeeded but with a non-fatal error, all channels are still attached, and some backlog messages may be unavailable. The @ErrorInfo@ received should be emitted on the client @Connection@ and the @errorReason@ should be set. The client should not change the state of attached channels, and immediately process any queued messages for that channel. Any channels that are not resumed in full may receive an @ATTACHED@ @ProtocolMessage@ with an @error@, see "@RTL12@":#RTL12
 **** @(RTN15c3)@ @CONNECTED@ @ProtocolMessage@ with a new @connectionId@, and an error in @error@. In this case, a new connection has been established, the resume has failed, the channels are no longer attached, and the error indicates the resume problem which should be emitted. The client library should immediately detach all channels, fail any queued messages on those channels, and set the @errorReason@ on each detached @Channel@
 **** @(RTN15c4)@ @ERROR@ @ProtocolMessage@ indicating a fatal error in the connection. The server will close the transport immediately after. If the @ERROR@ is non-recoverable, the client will move to the @FAILED@ state triggering all attached channels to move to the @FAILED@ state as well
 ** @(RTN15g)@ When the connection resume has failed, all channels should be detached with a suitable error reason
@@ -353,6 +356,7 @@ h3(#realtime-channel). Channel
 * @(RTL3)@ Connection state change side effects:
 ** @(RTL3a)@ If the connection state changes to @FAILED@ then an @ATTACHING@ or @ATTACHED@ channel state will transition to @FAILED@, set the @errorReason@ and emit the error event
 ** @(RTL3b)@ If the connection state changes to @CLOSED@ then an @ATTACHING@ or @ATTACHED@ channel state will transition to @CLOSED@
+* @(RTL11)@ If a channel enters the @DETACHED@ or @FAILED@ state, then all messages that are still queued for send on that channel should fail to be published and removed from the queue
 * @(RTL4)@ @Channel#attach@ function:
 ** @(RTL4a)@ If already @ATTACHED@ or @ATTACHING@ nothing is done
 ** @(RTL4b)@ If the connection state is @CLOSED@, @CLOSING@, @SUSPENDED@ or @FAILED@, an exception should be thrown immediately
@@ -406,6 +410,7 @@ h3(#realtime-channel). Channel
 ** @(RTL10b)@ Additionally supports the param @untilAttach@, which if true, will only retrive messages prior to the moment that the channel was attached. This bound is specified by passing the querystring param @from_serial@ with the serial number assigned to the channel in the @ATTACHED@ @ProtocolMessage@. If the @untilAttach@ param is specified when the channel is not attached an exception should be raised.
 ** @(RTL10c)@ Returns a @PaginatedResult@ page containing the first page of messages in the @PaginatedResult#items@ attribute returned from the history request.
 ** @(RTL10d)@ A test should exist that publishes messages from one client, and upon confirmation of message delivery, a history request should be made on another client to ensure all messages are available
+* @(RTL12)@ An attached channel may receive an additional @ATTACHED@ @ProtocolMessage@ from Ably at any point, however this is typically triggered following a transport being upgraded or resumed. If the @ATTACHED@ message contains an @error@, the error should be emitted on the channel, the @errorReason@ should be set, and the channel should remain attached. An @ATTACHED@ state change event should not be emitted by the @Channel@ if the @Channel@ is already @ATTACHED@ (i.e. no state change has occurred)
 
 h3(#realtime-presence). Presence
 
