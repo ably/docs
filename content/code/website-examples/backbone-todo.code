@@ -27,9 +27,10 @@ var ToDoList = Backbone.Collection.extend({
         // Subscribe to add and remove events
         channel.subscribe('add', function(msg) {
           if (msg.data && msg.data.id) {
+            msg.data.timestamp = msg.timestamp;
             if (!collection.get(msg.data.id)) collection.add([msg.data]);
           } else if (msg.data) { // REST post with simple string payload
-            collection.add([{ id: msg.id, title: msg.data }]);
+            collection.add([{ id: msg.id, title: msg.data.title, from: msg.data.from, timestamp: msg.timestamp }]);
           }
         });
         channel.subscribe('remove', function(msg) {
@@ -48,7 +49,8 @@ var ToDoRowView = Backbone.View.extend({
     this.model.on('remove', this.remove, this); // replicate model remove events to this view
   },
   render: function() {
-    return this.$el.text(this.model.get('title'));
+    var template = _.template($('#todo-item-template').html());
+    return this.$el.html(template({ title: this.model.get('title'), from: this.model.get('from'), timestamp: this.model.get('timestamp') }));
   },
   destroy: function() {
     this.model.collection.remove(this.model);
@@ -67,7 +69,6 @@ var ToDosView = Backbone.View.extend({
       .on('add', this.addToDoToView, this)
       .on('connectedToAbly', function() {
         view.$('button').text('Add').addClass('enabled').removeAttr('disabled');
-        view.$('label').text('Enter something to do here');
       });
   },
   render: function() {
@@ -79,7 +80,7 @@ var ToDosView = Backbone.View.extend({
     this.$("ul").prepend(view.render());
   },
   add: function() {
-    this.options.collection.add([{ title: this.$('input').val() }]);
+    this.options.collection.add([{ title: this.$('input').val(), from: this.options.position }]);
     this.$('input').val('');
   },
   keyPress: function(e) {
@@ -89,10 +90,7 @@ var ToDosView = Backbone.View.extend({
 
 // Create the left and right side Backbone To Do List views and collections
 $(function() {
-  // jQuery helper for labels over input fields
-  $("label").inFieldLabels();
-
-  _(['left','right']).each(function(side) {
+  _(['Jack','Jill']).each(function(side) {
     var toDoListView = new ToDosView({ position: side, collection: new ToDoList() });
     $('#lists').append(toDoListView.render());
   });
@@ -106,7 +104,7 @@ $(function() {
     <script src="//jsbin-files.ably.io/js/jquery-1.8.3.min.js"></script>
     <script src="//jsbin-files.ably.io/js/underscore-min.js"></script>
     <script src="//jsbin-files.ably.io/js/backbone-min.js"></script>
-    <script src="//jsbin-files.ably.io/js/jquery.infieldlabel.min.js"></script>
+    <script src="//jsbin-files.ably.io/js/moment.min.js"></script>
     <script type="text/javascript" src="//cdn.ably.io/lib/ably.min.js"></script>
     <meta charset=utf-8 />
   </head>
@@ -121,16 +119,15 @@ $(function() {
   <p class="instructions">
     Both To-Do lists are built with <a href="http://backbonejs.org/">Backbone.js</a>, each connected in real-time via <a href="https://www.ably.io">Ably realtime messaging</a>.
     <br><br>
-    When you add/update a To-Do list item, a message is published to Ably using its connection. The other To-Do list is subsequently updated when it receives a message on its connection.
+    When you add, or remove by clicking a To-Do list item, a message is published to Ably using its connection. The other To-Do list is subsequently updated when it receives a message on its connection.
     <br><br>
-    Enter a new to do item to see how quickly a message is sent from from your browser to Ably and back to your browser. Alternatively, send a message in your terminal via the <a href="https://www.ably.io/documentation/rest-api" target="_blank">Ably REST API</a>:
+    Enter a new to do item to see how quickly a message is sent from from your browser to Ably and back to your browser's other connection. Alternatively, send a message in your terminal via the <a href="https://www.ably.io/documentation/rest-api" target="_blank">Ably REST API</a>:
   </p>
 
   <pre id="curl"><code>curl -X POST https://rest.ably.io/channels/{{RANDOM_CHANNEL_NAME}}/messages \
   -u "{{DEMO_API_KEY}}" \
   -H "Content-Type: application/json" \
-  --data '{ "name": "add", "data": "added by curl" }'
-  </code></pre>
+  --data '{ "name": "add", "data": { "title": "Do X via curl", "from": "John" } }'</code></pre>
 
   <p class="copyright">
     <a href="https://www.ably.io">Copyright Ably</a>
@@ -142,12 +139,17 @@ $(function() {
     <div class="container">
       <h2>Real-time To-do list (<%= position %>)</h2>
       <div class="entry">
-        <label for="new_to_do<%= position %>">Please wait, connecting to Ably...</label>
-        <input class="add" type="text" value="" id="new_to_do<%= position %>"><button class="add" disabled="true">connecting...</button>
+        <input class="add" type="text" placeholder="Enter a message here" id="new_to_do<%= position %>"><button class="add" disabled="true">connecting...</button>
       </div>
       <ul class="todo-list"></ul>
     </div>
   </div>
+</script>
+
+<script type="text/template" id="todo-item-template">
+  <%= title %>
+  <div class="from"><%= from %></div>
+  <div class="time"><%= moment(timestamp).format('h:mm:ss a') %></div>
 </script>
 
 </html>
@@ -201,11 +203,11 @@ h2 {
   margin-top: 0;
 }
 
-#left {
+#Jack {
   width: 48%;
   float: left;
 }
-#right {
+#Jill {
   margin-left: 52%;
 }
 
@@ -235,12 +237,6 @@ input[type=text] {
   text-align: left;
   border-bottom: 3px solid rgba(255,255,255,0.2);
 }
-.entry label  {
-  position:absolute;
-  top: 2px;
-  left: 25px;
-  font-size: 14px;
-}
 
 button {
   border: 1px solid #CCC;
@@ -268,16 +264,27 @@ li {
   margin: 0;
   padding: 5px 10px;
   list-style: none;
-  background: #EEE url(//jsbin-files.ably.io/images/bg/cream_dust.png);
+  background: #EEE;
   font-weight: bold;
   text-align: left;
 }
 
-li:before {
+li:hover {
+  background-color: #DDD;
+}
+
+li .from {
   color: #999;
-  content: 'Task:';
   padding-right: 10px;
   font-weight: normal;
+  width: 3em;
+  float: left;
+}
+
+li .time {
+  color: #999;
+  font-weight: normal;
+  float: right;
 }
 
 li:first-child {
@@ -296,6 +303,7 @@ li:last-child:first-child {
 
 li:hover:after {
   content: '(click to delete)';
+  padding-right: 10px;
   float: right;
   color: #A00;
   font-weight: normal
