@@ -23,7 +23,7 @@ class JsBins
           path: path,
           hash: hash,
           jsbin_id: data.fetch('jsbin_hash').fetch(hash),
-          jsbin_url: jsbin_client.url_for(data.fetch('jsbin_hash').fetch(hash))
+          jsbin_url: jsbin_url_for(data.fetch('jsbin_hash').fetch(hash))
         }
       end
     end
@@ -59,11 +59,15 @@ class JsBins
 
       {
         id: id,
-        url: jsbin_client.url_for(id).gsub(/latest/, '1')
+        url: jsbin_url_for(id)
       }
     end
 
     private
+      def jsbin_url_for(id)
+        jsbin_client.url_for(id).gsub(/latest/, '1')
+      end
+
       def hash(content)
         Digest::SHA1.base64digest(content)
       end
