@@ -104,7 +104,7 @@ $(function() {
     var addTryItButton = function() {
       if ($(this).hasClass('prettyprint')) {
         var binId = $(this).attr('class').match(/open-jsbin-(\w+)/i)[1],
-            btn = $('<a href="//jsbin.ably.io/' + binId + '/latest/edit?javascript,live" target="_blank" class="try-it-button">Try it</a>');
+            btn = $('<a href="//jsbin.ably.io/' + binId + '/1/edit?javascript,live" target="_blank" class="try-it-button">Try it</a>');
         $(this).append(btn);
       } else {
         setTimeout(addTryItButton, 500);
