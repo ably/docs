@@ -19,4 +19,4 @@ class AblyDocs
 end
 
 # Full path is required to YAML files when loaded as Gem
-YAML_PATH = File.join(AblyDocs.data_path, 'jsbins.yaml')
+YAML_PATH = File.join(AblyDocs.data_path, 'jsbins.yaml') unless defined?(YAML_PATH)
