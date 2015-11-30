@@ -101,15 +101,17 @@ h3(#rest-auth). Auth
 *** @(RSA7a1)@ All operations (such as message publishing or presence) will have an implicit @clientId@. The Ably service automatically updates the @clientId@ attribute (when empty) for all @Message@ and @PresenceMessage@ messages received from that authenticated client, and any messages then published from the Ably service, will have the @clientId@ attribute populated. It is therefore expected that Ably client libraries do not explicitly set the @clientId@ field on messages published when @clientId@ is implicit in the connection or authentication scheme
 *** @(RSA7a2)@ If @clientId@ is provided in @ClientOptions@, and an API key is provided along with no other means to generate a token, the client library will authenticate with Ably and obtain a token using the provided @clientId@ ensuring the token is restricted to operations for that @clientId@
 *** @(RSA7a4)@ When a @clientId@ value is provided in both @ClientOptions#clientId@ and @ClientOptions#defaultTokenParams@, the @ClientOptions#clientId@ takes precendence and is used for all Auth operations
-** @(RSA12)@ @Auth#clientId@ attribute returns @null@, when following authentication, the @clientId@ attribute of the @TokenDetails@ (or @ConnectionDetails@ where applicable) is @null@ indicating that a @clientId@ identity cannot be assumed by this client i.e. the client is anonymous for all operations
+** @(RSA12)@ @Auth#clientId@ attribute is @null@ when:
+*** @(RSA12a)@ The @clientId@ attribute of a @TokenRequest@ or @TokenDetails@ used for authentication is @null@, or @ConnectionDetails#clientId@ is @null@ following a connection to Ably. In this case, the @null@ value indicates that a @clientId@ identity may not be assumed by this client i.e. the client is anonymous for all operations
+*** @(RSA12b)@ The client was instanced without assigning a value for @ClientOptions#clientId@ (@null@), and the client has not yet authenticated or connected to Ably. In this case, the @null@ value indicates that the client has not yet been able to confirm its identity, and therefore may change following later authentication or establishment of a connection with Ably
 ** @(RSA7b)@ @Auth#clientId@ is not @null@ when:
 *** @(RSA7b1)@ A @clientId@ is provided in the @ClientOptions@. @clientId@ should be a string
 *** @(RSA7b2)@ Token authentication is being used, and the @TokenRequest@ or @TokenDetails@ object, used for authentication, has a @clientId@ value that is not @null@
 *** @(RSA7b3)@ Following a realtime connection being established, if the @CONNECTED@ @ProtocolMessages@ contains a @clientId@ that is not @null@. @clientId@ is an attribute of @ProtocolMessage#connectionDetails@ within a @CONNECTED@ @ProtocolMessage@
-*** @(RSA7b4)@ When a wildcard string @'*'@ is present in the @TokenRequest@, @TokenDetails@, or @ProtocolMessage#connectionDetails@ object, then the client does not have a @clientId@ but is allowed to assume any identity performing operations with Ably. As such, @Auth#clientId@ should contain the string value @'*'@ indicating that the current client is allowed to perform operations on behalf of any @clientId@
+*** @(RSA7b4)@ When a wildcard string @'*'@ is present in the @TokenRequest@, @TokenDetails@, or @ProtocolMessage#connectionDetails@ object, then the client does not have an identity but is allowed to assume an identity when performing operations with Ably. As such, @Auth#clientId@ should contain the string value @'*'@ indicating that the current client is allowed to perform operations on behalf of any @clientId@
 ** @(RSA7c)@ A @clientId@ provided in the @ClientOptions@ when instancing the library must be either @null@ or a string, and cannot contain only a wildcard @'*'@ string value as that client ID value is reserved
 * @(RSA8)@ @Auth#requestToken@ function:
-** @(RSA8e)@ Method signature is @requestToken(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When provided, the values supersede matching client library configured params and options.
+** @(RSA8e)@ Method signature is @requestToken(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When provided, the values supersede matching client library configured params and options
 ** @(RSA8a)@ Implicitly creates a @TokenRequest@ if required, and requests a token from Ably if required. Returns a @TokenDetails@ object
 ** @(RSA8b)@ Supports all @TokenParams@ in the function arguments, which override defaults for @Client@ @Auth@.
 ** @(RSA8c)@ When @authUrl@ option is set, it will query the provided URL to obtain a @TokenRequest@ or the token itself (either a token string or a @TokenDetails@). The query is performed using the given URL using the HTTP method in @authMethod@, headers (from @authHeaders@) and supplementary params (from @authParams@). The token retrieved is assumed by the library to be a token string if the response has @Content-Type@ @"text/plain"@, or taken to be a @TokenRequest@ or @TokenDetails@ object if the response has @Content-Type@ @"application/json"@. @authMethod@ can be either @GET@ or @POST@, or if not specified, will default to @GET@. It can be quite difficult to add test coverage for these scenarios - as such, we have developed a simple echo server that can be used in your tests, see the "ably-js authUrl echo tests":https://github.com/ably/ably-js/commit/e77b2c6c197bc71f3d27084fe54524724a00bc92
@@ -143,7 +145,7 @@ h3(#rest-auth). Auth
 ** @(RSA10e)@ Adheres to the implementation of @requestToken@ when issuing new tokens
 ** @(RSA10f)@ Returns a @TokenDetails@ object that contains the token string + token metadata
 ** @(RSA10g)@ Stores the @AuthOptions@ and @TokenParams@ arguments as defaults for subsequent authorisations
-** @(RSA10h)@ Will use the configured @Auth#clientId@ by default, if not @null@
+** @(RSA10h)@ Will use the value from @Auth#clientId@ by default, if not @null@
 ** @(RSA10i)@ Adheres to all requirements in @RSA8@ relating to @TokenParams@, @authCallback@ and @authUrl@
 
 h3(#rest-channels). Channels
@@ -170,7 +172,7 @@ h3(#rest-channel). Channel
 ** @(RSL1g)@ Authenticated clients with a @clientId@ (as a result of either an explicitly configured @clientId@ in @ClientOptions@, or implicitly through token auth):
 *** @(RSL1g1)@ When publishing a @Message@ with the @clientId@ attribute set to @null@:
 **** @(RSL1g1a)@ It is unnecessary for the client to set the @clientId@ of the @Message@ before publishing
-**** @(RSL1g1b)@ Ably is expected to automatically assign a @clientId@ upon receiving the @Message@. A test should assert via the history API that the @clientId@ value is populated for the @Message@ when received
+**** @(RSL1g1b)@ Ably will not assign a @clientId@ upon receiving the @Message@. A test should assert via the history API that the @clientId@ value is @null@ for the @Message@ when received
 *** @(RSL1g2)@ When publishing a @Message@ with the @clientId@ attribute value set to the authenticated client's @clientId@, Ably will accept the message and publish it. A test should assert that the @clientId@ value is populated for the @Message@ when received
 *** @(RSL1g3)@ When publishing a @Message@ with a different @clientId@ attribute value to the authenticated @clientId@, the client library should reject the message, and indicate an error. The connection and channel remains available for further operations
 *** @(RSL1g4)@ When publishing a message with an explicit @clientId@ that is incompatible with the @clientId@ (either inferred or explicitly configured in the token or @ClientOptions@), the library will reject the message immediately and indicate an error
@@ -238,7 +240,7 @@ h3(#realtimeclient). RealtimeClient
 * @(RTC2)@ @RealtimeClient#connection@ attribute provides access to the underlying @Connection@ object
 * @(RTC3)@ @RealtimeClient#channels@ attribute provides access to the underlying @Channels@ object
 * @(RTC4)@ @RealtimeClient#auth@ attribute provides access to the @Auth@ object that was instanced with the @ClientOptions@ provided in the @RealtimeClient@ constructor
-** @(RTC4a)@ Unlike the stateless REST client library, the @Auth#clientId@ may be populated when the connection is established.  The @CONNECTED@ @ProtocolMessage@ may contain a @clientId@ that notifies the @RealtimeClient@ that all further operations are implicitly for that @clientId@, and operations for any other @clientId@ are no longer permitted. See "@RSA7b@":#RSA7b for complete details
+** @(RTC4a)@ Unlike the stateless REST client library, the @Auth#clientId@ is populated when the connection is established.  The @CONNECTED@ @ProtocolMessage@ contains the confirmed @clientId@ for this connected client. See "@RSA7b@":#RSA7b and "@RSA12@":#RSA12 for futher info
 * @(RTC5)@ @RealtimeClient#stats@ function:
 ** @(RTC5a)@ Proxy to @RestClient#stats@ presented with an async or threaded interface as appropriate
 ** @(RTC5b)@ Accepts all the same params as @RestClient#stats@ and provides all the same functionality
@@ -382,11 +384,11 @@ h3(#realtime-channel). Channel
 *** @(RTL6c3)@ Implicitly attaches the @Channel@. However, if the channel is in the @FAILED@ state, an exception is raised
 ** @(RTL6d)@ Messages are delivered using a single @ProtocolMessage@ where possible by bundling in all messages for that channel into the @ProtocolMessage#messages@ array. However, a yet to be implemented feature should limit the total number of messages bundled per @ProtocolMessage@ based on the default max message size, and would reject the publish and indicate an error if any single message exceeds that limit
 ** @(RTL6e)@ Unauthenticated clients using basic auth without a @clientId@ (i.e. any @clientId@ is permitted):
-*** @(RTL6e1)@When a @Message@ with a @clientId@ value is published, Ably will accept and publish that message with the provided @clientId@. A test should assert that the @clientId@ of the published @Message@ is populated
+*** @(RTL6e1)@ When a @Message@ with a @clientId@ value is published, Ably will accept and publish that message with the provided @clientId@. A test should assert that the @clientId@ of the published @Message@ is populated
 ** @(RTL6g)@ Authenticated clients with a @clientId@ (as a result of either an explicitly configured @clientId@ in @ClientOptions@, or implicitly through token auth):
 *** @(RTL6g1)@ When publishing a @Message@ with the @clientId@ attribute set to @null@:
 **** @(RTL6g1a)@ It is unnecessary for the client to set the @clientId@ of the @Message@ before publishing
-**** @(RTL6g1b)@ Ably is expected to automatically assign a @clientId@ upon receiving the @Message@. A test should assert that the @clientId@ value is populated for the @Message@ when received
+**** @(RTL6g1b)@ Ably will not assign a @clientId@ upon receiving the @Message@. A test should assert that the @clientId@ value is @null@ for the @Message@ when received
 *** @(RTL6g2)@ When publishing a @Message@ with the @clientId@ attribute value set to the authenticated client's @clientId@, Ably will accept the message and publish it. A test should assert that the @clientId@ value is populated for the @Message@ when received
 *** @(RTL6g3)@ When publishing a @Message@ with a different @clientId@ attribute value to the authenticated @clientId@, the client library should reject publishing immediately. The message should not be sent to Ably and the errr callback should be called. The connection and channel must remain available for further publishing and other operations
 *** @(RTL6g4)@ When using token auth, unless a @clientId@ has been provided in @ClientOptions@ or inferred following authentication, the client library will not be constrained when publishing messages with any explicit @clientId@. If a @Message@ with a @clientId@ value is published before the @clientId@ is configured or inferred following authentication, the client library should not reject any explicit @clientId@ specified in a message. A test should instance a library without an explicit @clientId@ and an @authCallback@ that returns a @tokenDetails@ object with a @clientId@, then publish a message with the same @clientId@ before authentication, and ensure that the message is published following authentication and received back with the @clientId@ intact. A further test should follow the same sequence of events, but should instead use an incompatible @clientId@ in the message, expecting that the message is rejected by the Ably service and the message error should contain the server error message, and the connection and channel should remain available for further operations
@@ -437,7 +439,7 @@ h3(#realtime-presence). Presence
 ** @(RTP8c)@ A @PRESENCE ProtocolMessage@ with a @PresenceMessage@ with the action @ENTER@ is sent to the Ably service. The @clientId@ attribute of the @PresenceMessage@ must not be present. Entering without an explicit @PresenceMessage#clientId@, implicitly uses the @clientId@ for the current connection
 ** @(RTP8d)@ Implicitly attaches the @Channel@. However, if the channel is in the @FAILED@ state, an exception is raised
 ** @(RTP8e)@ Optional data can be included when entering a channel that will be encoded / decoded as with normal messages. A test should exist to ensure data used with enter is encoded & decoded correctly. Also, when data is provided when entering, but no data is provided when leaving, the data attribute should be emitted in the @LEAVE@ event for this client
-** @(RTP8f)@ Raises an exception if the client library is not authenticated (i.e. no @clientId@ is configured)
+** @(RTP8f)@ Raises an exception if the client library is not authenticated (i.e. assigned a wildcard @'*'@ or using Basic Auth without a @clientId@)
 ** @(RTP8g)@ Raises an exception if the channel is @DETACHED@ or @FAILED@
 ** @(RTP8h)@ Fails and emits an error if the client does not have required presence permission
 ** @(RTP8i)@ Fails and emits an error if the current client is not authenticated, and no implicit @clientId@ is assigned by the Ably service
