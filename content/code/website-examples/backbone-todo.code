@@ -14,37 +14,37 @@ var ToDoList = Backbone.Collection.extend({
             ably = new Ably.Realtime('{{DEMO_API_KEY}}'),
             channel = ably.channels.get(channelName);
 
+        this.channel = channel;
+
         // Notify user once connected to Ably and ready to start sending & receiving messages
         ably.connection.on('connected', function() { collection.trigger('connectedToAbly'); });
 
-        // Publish changes from this collection to Ably
-        this.on('all', function(eventName, model) {
-          if (['add', 'remove'].indexOf(eventName) !== -1) {
-            channel.publish(eventName, model.attributes);
-          }
-        });
-
-        // Subscribe to add and remove events
+        // Subscribe to add events and add to Collection
         channel.subscribe('add', function(msg) {
           if (msg.data && msg.data.id) {
             msg.data.timestamp = msg.timestamp;
-            if (!collection.get(msg.data.id)) collection.add([msg.data]);
+            collection.add([msg.data]);
           } else if (msg.data) { // REST post with simple string payload
             collection.add([{ id: msg.id, title: msg.data.title, from: msg.data.from, timestamp: msg.timestamp }]);
           }
         });
+
+        // Subscribe to remove events and remove from Collection
         channel.subscribe('remove', function(msg) {
-          if (msg.data && msg.data.id) {
-            if (collection.get(msg.data.id)) collection.remove(collection.get(msg.data.id));
-          }
+          if (collection.get(msg.data.id)) collection.remove(collection.get(msg.data.id));
         });
+      },
+
+      // Publish data change over Ably, UI will be updated when message is echoed back
+      broadcast: function(event, data) {
+        this.channel.publish(event, data);
       }
     });
 
 // Backbone view representing a single to do item
 var ToDoRowView = Backbone.View.extend({
   tagName: "li",
-  events: { "click": "destroy" },
+  events: { "click": "destroyClick" },
   initialize: function() {
     this.model.on('remove', this.remove, this); // replicate model remove events to this view
   },
@@ -52,8 +52,8 @@ var ToDoRowView = Backbone.View.extend({
     var template = _.template($('#todo-item-template').html());
     return this.$el.html(template({ title: this.model.get('title'), from: this.model.get('from'), timestamp: this.model.get('timestamp') }));
   },
-  destroy: function() {
-    this.model.collection.remove(this.model);
+  destroyClick: function() {
+    this.model.collection.broadcast('remove', { id: this.model.get('id') });
   }
 });
 
@@ -80,7 +80,7 @@ var ToDosView = Backbone.View.extend({
     this.$("ul").prepend(view.render());
   },
   add: function() {
-    this.options.collection.add([{ title: this.$('input').val(), from: this.options.position }]);
+    this.options.collection.broadcast('add', { title: this.$('input').val(), from: this.options.position });
     this.$('input').val('');
   },
   keyPress: function(e) {

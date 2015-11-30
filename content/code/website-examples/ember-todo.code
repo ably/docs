@@ -24,47 +24,39 @@ App.ToDoList = Ember.ArrayProxy.extend({
     var model = this,
         ably = new Ably.Realtime('{{DEMO_API_KEY}}');
 
-    // open a channel for publishing and subscribing to model change messages
+    // Open a channel for publishing and subscribing to data change messages
     this.set('channel', ably.channels.get(channelName));
 
-    // indicate to user when the Ably connection is open and ready
+    // Indicate to user when the Ably connection is open and ready
     ably.connection.on('connected', function() { model.set('realtimeDisabled', false); });
 
-    // subscribe to add/remove model messages and replicate changes to this object
+    // Subscribe to add events and add data to this model collection
     this.get('channel').subscribe('add', function(msg) {
       if (msg.data && msg.data.id) {
-        if (!model.get('content').find(function(item) { return item.id === msg.data.id; })) {
-          msg.data.timestamp = msg.timestamp;
-          model.unshiftObject(App.ToDo.create(msg.data));
-        }
+        msg.data.timestamp = msg.timestamp;
+        model.unshiftObject(App.ToDo.create(msg.data));
       } else if (msg.data) { // REST post with simple string payload
         model.unshiftObject(App.ToDo.create({ id: msg.id, title: msg.data.title, from: msg.data.from, timestamp: msg.timestamp }));
       }
     });
+
+    // Subscribe to remove events and remove models from this collection
     this.get('channel').subscribe('remove', function(msg) {
-      if (msg.data && msg.data.id) {
+      if (msg.data.id) {
         var deleteObj = model.get('content').find(function(item) { return item.id === msg.data.id; });
         if (deleteObj) model.removeObject(deleteObj);
       }
     });
     this._super();
   },
-  publish: function(eventName, arr) { // helper method to publish events to Ably channel
-    arr.forEach(function(elem) {
-      this.get('channel').publish(eventName, elem);
-    }, this);
-  },
-  arrayDidChange: function(arr, idx, removedCnt, addedCnt) {
-    if (addedCnt) this.publish('add', arr.slice(idx, idx + addedCnt)); // Items have been added, push each change across Ably
-    this._super(arr, idx, removedCnt, addedCnt);
-  },
-  arrayWillChange: function(arr, idx, removedCnt, addedCnt) {
-    if (removedCnt) this.publish('remove', arr.slice(idx, idx + removedCnt)); // Items have been removed, push each change across Ably
-    this._super(arr, idx, removedCnt, addedCnt);
+
+  // Publish data change over Ably, UI will be updated when message is echoed back
+  broadcast: function(event, data) {
+    this.get('channel').publish(event, data);
   }
 });
 
-// Ember model representing a collection of 2 separate To Do Lists, each with their own Ably connection
+// Ember model representing a collection of two separate To Do Lists, each with their own Ably connection
 App.toDoLists = Ember.ArrayProxy.create({
   content: Ember.A([
     App.ToDoList.create({ side: 'Jack', content: Ember.A([]) }),
@@ -78,7 +70,11 @@ App.ToDoListView = Ember.View.extend({
   templateName: "todo-container",
   addToDo: function() {
     if (this.get('newToDoTextValue')) {
-      this.get('content').unshiftObject(App.ToDo.create({ title: this.get('newToDoTextValue'), from: this.get('elementId'), timestamp: new Date().getTime() }));
+      this.get('content').broadcast('add', {
+        title: this.get('newToDoTextValue'),
+        from: this.get('elementId'),
+        timestamp: new Date().getTime()
+      });
       this.set('newToDoTextValue', '');
     }
   }
@@ -87,7 +83,9 @@ App.ToDoListView = Ember.View.extend({
 // Ember view for each To Do item
 App.ToDoView = Ember.View.extend({
   templateName: 'todo',
-  click: function() { this.get('parentView').get('content').removeObject(this.get('content')); }
+  click: function() {
+    this.get('parentView').get('content').broadcast('remove', { id: this.get('content').get('id') });
+  }
 });
 
 // Ember view for the text field
