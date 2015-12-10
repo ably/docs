@@ -130,14 +130,14 @@ $(function() {
 
       var tokenValidity = 12 * 60 * 60 * 1000; // 12 hours
 
-      new Ably.Rest({ key: apiKey }).auth.createTokenRequest({ key: apiKey },
-        { "ttl": tokenValidity, "capability": JSON.stringify({ "*":["*"] }) },
+      new Ably.Rest({ key: apiKey }).auth.createTokenRequest({ "ttl": tokenValidity, "capability": JSON.stringify({ "*":["*"] }) }, null,
         function(err, token) {
           preLangBlocks.each(function() {
             this.innerHTML = this.innerHTML.
               replace(/{{API_KEY_NAME}}/g, keyName).
               replace(/{{API_KEY}}/g, apiKey).
               replace(/{{API_KEY_BASE64}}/g, Base64.encode(apiKey)).
+              replace(/{{APP_ID}}/g, keyName.split('.')[0]).
               replace(/{{SIGNED_TOKEN_REQUEST_EXAMPLE}}/g, JSON.stringify(token, null, "  "));
           }
         );
