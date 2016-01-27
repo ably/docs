@@ -3,6 +3,11 @@ require 'redcloth'
 # AblyDocs is only used by other apps that load in this repo as a Gem and need paths to the files
 #
 class AblyDocs
+  module Rails
+    class Engine < ::Rails::Engine
+    end
+  end
+
   class << self
     def content_path
       File.expand_path("../content", File.dirname(__FILE__))
