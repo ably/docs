@@ -25,10 +25,10 @@ class AblyPreTextileFilter
     # bc[json]. { "a": true }
     # bc[javascript]. { "a": true }
     def duplicate_language_blocks(content)
-      content.gsub(/(bc|p|h[1-6])\[([^\]]+)\]\.(.*?)(?:[\n\r]\s*[\n\r]|\Z)/m) do |match|
-        block, languages, content = $~.captures
+      content.gsub(/(bc|p|h[1-6])\[([^\]]+)\](\([^\)]+\))?\.(.*?)(?:[\n\r]\s*[\n\r]|\Z)/m) do |match|
+        block, languages, code_editor, content = $~.captures
         languages.split(/\s*,/).map do |lang|
-          "#{block}[#{lang}].#{content}"
+          "#{block}[#{lang}]#{code_editor}.#{content}"
         end.join("\n\n") + "\n\n"
       end
     end
