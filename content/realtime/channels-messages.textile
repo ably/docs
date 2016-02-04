@@ -4,6 +4,7 @@ section: realtime
 index: 30
 jump_to:
   Help with:
+    - Getting started#getting-started
     - Channels
     - Channel lifecycle
     - Channel states
@@ -18,22 +19,69 @@ jump_to:
     - history
     - attach
     - detach
-    - on
+    - on#on
     - once
-    - off
+    - off#off
   Related types:
+    - ChannelState#channel-state
     - Message#message
-    - MessageListener#message-listener
+    - ChannelOptions#channel-options
     - ChannelStateListener#channel-state-listener
     - CompletionListener#completion-listener
-    - ChannelOptions#channel-options
+    - MessageListener#message-listener
+    - PaginatedResult#paginated-result
 ---
 
-The Ably Realtime service organises the traffic within any application into named channels. Channels are the "unit" of message distribution; clients attach to channels to subscribe to messages, and every message published to a unique channel is broadcast by Ably to all subscribers. This scalable and resilient messaging pattern is commonly called "pub/sub":https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern.
+The Ably Realtime service organises the message traffic within applications into named channels. Channels are the "unit" of message distribution; clients attach to channels to subscribe to messages, and every message published to a unique channel is broadcast by Ably to all subscribers. This scalable and resilient messaging pattern is commonly called "pub/sub":https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern.
 
-h2(#channels). Channels in the Realtime API
+h2(#getting-started). Getting started
 
-In order to publish, subscribe to, or be present on a channel, you must first obtain a channel instance and then attach the channel. In most instances, as a convenience, it is unnecessary to explicitly attach a channel as it will implicitly attached when performing any operation on the channel such as publishing or subscribing.
+The Ably Realtime client library provides a straightforward API for publishing and subscribing to messages on a channel. If the channel does not exist at the time the client is attached, a channel will be created in the Ably system immediately.
+
+```[javascript](code-editor:realtime/channel-publish)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    alert('Received: ' + message.data);
+  });
+  channel.publish('example', 'message published successfully');
+```
+
+```[nodejs](code-editor:realtime/channel-publish)
+  var Ably = require('ably-js');
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    alert("Received: "  message.data);
+  });
+  channel.publish("example", "message published successfully");
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.subscribe do |message|
+    puts "Received: #{message.data}"
+  end
+  channel.publish 'example', 'message published successfully'
+```
+
+```[java]
+  import io.ably.lib.realtime;
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.subscribe(new MessageListener() {
+    @Override
+    public void onMessage(Message[] messages) {
+      System.out.println(messages.length + " new messages arrived");
+    }});
+  end
+  channel.publish("example", "message published successfully");
+```
+
+h2(#channels). Channels
+
+In order to publish, subscribe to, or be present on a channel, you must first obtain a channel instance and then attach to that channel. In most instances, as a convenience, it is unnecessary to explicitly attach a channel as it will implicitly attached when performing any operation on the channel such as publishing or subscribing.
 
 h3. Obtaining a channel instance
 
@@ -123,21 +171,21 @@ h3(#channel-states). Channel states
 
 A channel can exist in any of the following states:
 
-- initialised := A channel object having this state has been initialised but no attach has yet been attempted
+- initialised := A @Channel@ object having this state has been initialised but no attach has yet been attempted
 
 - attaching := An attach has been initiated by sending a request to Ably. This is a transient state; it will be followed either by a transition to attached or failed
 
 - attached := Attach has succeeded. In the attached state a client may publish and subscribe to messages, or be present
 
-- detaching := A detach has been initiated on the attached channel by sending a request to Ably. This is a transient state; it will be followed either by a transition to detached or failed
+- detaching := A detach has been initiated on the attached @Channel@ by sending a request to Ably. This is a transient state; it will be followed either by a transition to detached or failed
 
-- detached := The channel, having previously been attached, has been detached
+- detached := The @Channel@, having previously been attached, has been detached
 
-- failed := An indefinite failure condition. This state is entered if a channel error has been received from the Ably service (such as an attempt to attach without the necessary access rights)
+- failed := An indefinite failure condition. This state is entered if a @Channel@ error has been received from the Ably service (such as an attempt to attach without the necessary access rights)
 
 h3. Listening for state changes
 
-The @channel@ object is an @EventEmitter@ and emits an event whose name is the new state whenever there is a channel state change. <span lang="jsall">As with all events from an @EventEmitter@ in the Ably library, @this@ within the listener function is a reference to an event object whose @name@ property is the name of the event that fired. This allows a listener to listen for all events with a single registration and know, which event fired when it is entered.</span>
+The @Channel@ object is an @EventEmitter@ and emits an event whose name is the new state whenever there is a channel state change. <span lang="jsall">As with all events from an @EventEmitter@ in the Ably library, @this@ within the listener function is a reference to an event object whose @event@ property is the name of the event that fired. This allows a listener to listen for all events with a single registration and know, which event fired when it is entered.</span>
 
 bc[jsall]. channel.on('attached', function() {
   console.log('channel ' + channel.name + ' is now attached');
@@ -156,7 +204,7 @@ bc[java]. channel.on(ChannelState.attached, new ChannelStateListener() {
 
 Alternatively a listener may be registered so that it receives all state change events.
 
-bc[jsall]. var myListener = function() {
+bc[jsall](code-editor:realtime/channel-states). var myListener = function() {
   console.log('channel state is ' + this.event);
 });
 channel.on(myListener);
@@ -252,11 +300,11 @@ h3(#message-subscription). Subscribing to messages
 The @name@ <span lang="default">property</span><span lang="java">member</span><span lang="ruby">attribute</span> of published messages does not affect the distribution of a channel message to clients but may be used as a subscription filter, allowing a client to register a listener that only sees a subset of the messages received on the channel. When subscribing, a message listener can subscribe to see all messages on the channel or only a subset whose name matches a given @name@ string.
 
 <div lang="jsall">
-A client can subscribe to all messages on a channel by passing a listener function to the @subscribe@ method. The listener is passed a "@Message@":/realtime/types#message object for each message received.
+A client can subscribe to all messages on a channel by passing a listener function to the @subscribe@ method. The listener is passed a "@Message@":#message object for each message received.
 </div><div lang="java">
-A client can register for messages on a channel by implementing "MessageListener":#message-listener and calling the @subscribe(MessageListener listener)@ or @subscribe(String name, MessageListener listener)@ method. The listener is passed an array of one or more "@Message@":/realtime/types#message objects when messages are received.
+A client can register for messages on a channel by implementing "MessageListener":#message-listener and calling the @subscribe(MessageListener listener)@ or @subscribe(String name, MessageListener listener)@ method. The listener is passed an array of one or more "@Message@":#message objects when messages are received.
 </div><div lang="ruby">
-A client can subscribe to all messages on a channel by passing a block to the @subscribe@ method. The block is passed a "@Message@":/realtime/types#message object for each message are received.
+A client can subscribe to all messages on a channel by passing a block to the @subscribe@ method. The block is passed a "@Message@":#message object for each message are received.
 </div>
 
 bc[jsall](code-editor:realtime/channel-publish). channel.subscribe(function(message) {
@@ -396,10 +444,10 @@ h2. Presence
 
 Channels expose a @presence@ member which a client can use to obtain channel presence information and to enter and leave the presence channel itself. See the "presence":/realtime/presence documentation for details.
 
-h1. API Reference
+h1. Channel API Reference
 
 inline-toc.
-  Channels and messages reference:
+  Channel reference:
     - Methods:
       - publish(name, data)#publish-data
       - publish(messages)#publish-msg-array
@@ -412,16 +460,52 @@ inline-toc.
       - history()#history
       - attach()#attach
       - detach()#detach
+      - on(state, listener)#on-state-listener
+      - on(listener)#on-listener
+      - once(state, listener)#once-state-listener
+      - once(listener)#once-listener
+      - off(state, listener)#off-state-listener
+      - off(listener)#off-listener
     - Members:
-      - state#members
-      - name#members
-      - presence#members
+      - state#state
+      - errorReason#error-reason
+      - name#name
+      - presence#presence
     - Related types:
+      - ChannelState#channel-state
       - Message#message
-      - MessageListener#message-listener
+      - ChannelOptions#channel-options
+      - ChannelStateChange#channel-state-change
       - ChannelStateListener#channel-state-listener
       - CompletionListener#completion-listener
-      - ChannelOptions#channel-options
+      - MessageListener#message-listener
+      - PaginatedResult#paginated-result
+
+h2(#members).
+  default: Channel Properties
+  ruby: Ably::Realtime::Channel Attributes
+  java: io.ably.lib.realtime.Channel Members
+
+The @Channel@ object exposes the following public <span lang="default">properties</span><span lang="ruby">attributes</span><span lang="java">members</span>:
+
+h6(#state). state
+
+The current <span lang="java">"@io.ably.lib.realtime.ChannelState@":#channel-state @state@</span><span lang="ruby">"@Ably::Realtime::Channel::STATE@":#channel-state @state@</span><span lang="default">"@ChannelState@":#channel-state</span> of this @Channel@. See the supported "channel states":#channel-states for more information.
+
+h6(#error-reason).
+  default: errorReason
+  java:    reason
+  ruby:    error_reason
+
+When a channel failure occurs this <span lang="default,ruby">attribute</span><span lang="java">member</span><span lang="jsall">property</span> contains the <span lang="java,ruby">"@AblyException@":/realtime/types#ably-exception</span><span lang="jsall">"@ErrorInfo@":/realtime/types#error-info</span>.
+
+h6(#name). name
+
+The name String unique to this channel.
+
+h6(#presence). presence
+
+Provides access to the "Presence":/realtime/presence object for this channel which can be used to access members present on the channel, or participate in presence.
 
 h2. Methods
 
@@ -430,15 +514,15 @@ h6(#publish). publish
 There are two overloaded versions of this method:
 
 bq(definition#publish-data).
-  default:  publish(name, data, callback("ErrorInfo":/realtime/types#error-info err))
-  ruby:     "Deferrable":/realtime/types#deferrable publish(name, data) -> yields
+  default:  publish(String name, Object data, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:     "Deferrable":/realtime/types#deferrable publish(String name, Object data) -> yields
   java:     public void publish(String name, Object data, "CompletionListener":#completion-listener listener)
 
 Publish a single message on this channel based on a given event name and payload. A <span lang="default">callback</span><span lang="java">listener</span> may optionally be passed in to this call to be notified of success <span lang="default">or failure</span><span lang="ruby"></span> of the operation.
 
 bq(definition#publish-msg-array).
-  default: publish(messages, callback("ErrorInfo":/realtime/types#error-info err))
-  ruby:    "Deferrable":/realtime/types#deferrable publish(messages) -> yields
+  default: publish(Object[] messages, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable publish(Message[] messages) -> yields
   java:    public void publish(Message[] messages, "CompletionListener":#completion-listener listener)
 
 Publish several messages on this channel. A <span lang="default">callback</span><span lang="java">listener</span><span lang="ruby">block</span> may optionally be passed in to this call to be notified of success <span lang="default">or failure</span><span lang="ruby"></span> of the operation.
@@ -451,7 +535,7 @@ h4. Parameters
 - <div lang="java">Object data</div> := data payload for the message. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.
 - <div lang="ruby">Object data</div> := data payload for the message. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.
 
-- <span lang="default">"Message":/realtime/types#message[] messages</span> := An array of message objects to publish
+- <span lang="default">"Message":#message[] messages</span> := An array of message objects to publish
 
 - <div lang="jsall">callback</div> := is a function of the form: @callback(err)@
 - <div lang="java">"CompletionListener":#completion-listener listener</div> := Listener to be notified on completion
@@ -472,30 +556,30 @@ blang[ruby].
 
   A "@Deferrable@":/realtime/types#deferrable object is returned from the stats method.
 
-  On successful publish of the message, the registered success callbacks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield. On failure to publish the message, the errback callbacks of the "@Deferrable@":/realtime/types#deferrable are called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+  On successful publish of the message, the registered success callbacks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield. On failure to publish the message, the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable are called with an "@ErrorInfo@":#error-info argument describing the failure reason.
 
 h6(#subscribe). subscribe
 
 There are three overloaded versions of this method:
 
 bq(definition#subscribe-listener).
-  default:  subscribe(callback("Message":/realtime/types#message))
+  default:  subscribe(callback("Message":#message))
   java:     public void subscribe("MessageListener":#message-listener listener)
-  ruby:     subscribe → yields "Message":/realtime/types#message
+  ruby:     subscribe → yields "Message":#message
 
 Subscribe to messages on this channel. The caller supplies <span lang="default">a listener function</span><span lang="java">an implementation of the "MessageListener":#message-listener interface</span><span lang="ruby">a block</span>, which is called each time one or more messages arrives on the channel.
 
 bq(definition#subscribe-event).
-  default: subscribe(name, callback("Message":/realtime/types#message))
+  default: subscribe(String name, callback("Message":#message))
   java:    public void subscribe(String name, "MessageListener":#message-listener listener)
-  ruby:    subscribe(name) → yields "Message":/realtime/types#message
+  ruby:    subscribe(String name) → yields "Message":#message
 
 Subscribe to messages with a given event @name@ on this channel. The caller supplies <span lang="default">a listener function</span><span lang="java">an implementation of the "MessageListener":#message-listener interface</span><span lang="ruby">a block</span>, which is called each time one or more matching messages arrives on the channel.
 
 bq(definition#subscribe-event-array).
-  default: subscribe(names, callback("Message":/realtime/types#message))
+  default: subscribe(String[] names, callback("Message":#message))
   java:    public void subscribe(String[] names, "MessageListener":#message-listener listener)
-  ruby:    subscribe(*name) → yields "Message":/realtime/types#message
+  ruby:    subscribe(String *name) → yields "Message":#message
 
 Subscribe a single listener to messages on this channel for multiple event @name@ values.
 
@@ -514,9 +598,9 @@ h6(#unsubscribe). unsubscribe
 There are three overloaded versions of this method:
 
 bq(definition#unsubscribe-event).
-  default: unsubscribe(name, listenerCallback)
+  default: unsubscribe(String name, listenerCallback)
   java:    public void unsubscribe(String name, "MessageListener":#message-listener listener)
-  ruby:    unsubscribe(name, &listener_proc)
+  ruby:    unsubscribe(String name, &listener_proc)
 
 Unsubscribe to messages on this channel for the specified event name. This removes an earlier event-specific subscription.
 
@@ -531,6 +615,8 @@ bq(definition#unsubscribe-all).
   default: unsubscribe()
   java:    public void unsubscribe()
 
+Unsubscribes all listeners to messages on this channel. This removes all earlier subscriptions.
+
 h4. Parameters
 
 - String name := The event name to subscribe to
@@ -542,9 +628,9 @@ h4. Parameters
 h6(#history). history
 
 bq(definition).
-  default: history(params, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":/realtime/types#paginated-result<"Message":/realtime/types#message> resultPage))
-  ruby:    "Deferrable":/realtime/types#deferrable history(Hash options) -> yields "PaginatedResult":/realtime/types#paginated-result<"Message":/realtime/types#message>
-  java:    public "PaginatedResult":/realtime/types#paginated-result<"Message":/realtime/types#message> history(Param[] params)
+  default: history(Object params, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"Message":#message> resultPage))
+  ruby:    "Deferrable":/realtime/types#deferrable history(Hash options) -> yields "PaginatedResult":#paginated-result<"Message":#message>
+  java:    public "PaginatedResult":#paginated-result<"Message":#message> history(Param[] params)
 
 Gets a paginated set of historical messages for this channel. If the "channel is configured to persist messags to disk":https://support.ably.io/support/solutions/articles/3000030059-how-long-are-messages-stored-for-, then message history will "typically go back 24 - 72 hours":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If not, messages are only retained in memory for two minutes.
 
@@ -561,14 +647,14 @@ Further details of the supported query params are in the "history API documentat
 blang[jsall].
   h4. Callback result
 
-  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@Message@":/realtime/types#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
 
   On failure to retrieve message history, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
 
 blang[java].
   h4. Returns
 
-  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@Message@":/realtime/types#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next@":#paginated-result and "@first@":#paginated-result methods.
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next@":#paginated-result and "@first@":#paginated-result methods.
 
   Failure to retrieve the message history will raise an "@AblyException@":/realtime/types/#ably-exception
 
@@ -577,9 +663,9 @@ blang[ruby].
 
   A "@Deferrable@":/realtime/types#deferrable object is returned from the message method.
 
-  On success, the registered success callbacks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yields a "PaginatedResult":#paginated-result that encapsulates an array of "@Message@":/realtime/types#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+  On success, the registered success callbacks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yields a "PaginatedResult":#paginated-result that encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
 
-  Failure to retrieve the message history will trigger the errback callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+  Failure to retrieve the message history will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
 
 h6(#attach). attach
 
@@ -592,90 +678,187 @@ Attach to this channel ensuring the channel is created in the Ably system and al
 
 As a convenience, @attach()@ will be called implicitly if either "@publish()@":#publish or "@subscribe()@":#subscribe for the @Channel@ is called, or "@enter@":/realtime/presence#enter or "@subscribe@":/realtime/presence#subscribe is called on the "@Presence@":/realtime/presence for this @Channel@.
 
+h4.
+  jsall: Parameters
+  ruby:  Parameters
+
+- <div lang="jsall">callback</div> := is a function of the form @callback(err)@ and is called once the channel attach succeeds or fails
+- <div lang="ruby">&block</div> := yields once the channel becomes attached
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the attach method.
+
+  On successful attachment, the success callbacks for the "@Deferrable@":/realtime/types#deferrable are called and any block provided to the method is yielded. Failure to attach will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
 h6(#detach). detach
 
 bq(definition).
-  default: detach()
+  default: detach(callback("ErrorInfo":/realtime/types#error-info err))
   java:    public void detach()
+  ruby:     "Deferrable":/realtime/types#deferrable detach -> yields
 
-Detach from this channel. Once there are clients attached to the channel globally, the channel will be released in the Ably system within two minutes. Any resulting channel state change will be emitted to any listeners registered using the "@on@":#on or "@once@":once methods.
+p(tip). Once all clients globally have detached from the channel, the channel will be released in the Ably service within two minutes.
 
-h2(#members). Public members
+Detach from this channel. Any resulting channel state change will be emitted to any listeners registered using the "@on@":#on or "@once@":once methods.
 
-A @Channel@ object exposes the following public members.
+h4.
+  jsall: Parameters
+  ruby:  Parameters
 
-- <span lang="java">public ChannelState</span>state := Indicates the current state of this channel.
+- <div lang="jsall">callback</div> := is a function of the form @callback(err)@ and is called once the channel detach succeeds or fails
+- <div lang="ruby">&block</div> := yields once the channel becomes detached
 
-- <span lang="java">public String</span>name := The channel name of the this channel.
+blang[ruby].
+  h4. Returns
 
-- <span lang="java">public Presence</span>presence := The "presence":/realtime/presence object for this channel.
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the detach method.
 
-- <span lang="java">public ErrorInfo</span>reason := Information relating to the transition to the current state, as an Ably @ErrorInfo@ object. This contains an error code and message and, in the failed state in particular, provides diagnostic error information.
+  On successful detachment, the success callbacks for the "@Deferrable@":/realtime/types#deferrable are called and any block provided to the method is yielded. Failure to detach will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
 
-- <div lang="java">stateListeners</div> := A collection of "ChannelStateListener":#channel-state-listener objects that will be notified of channel state changes.
+h6(#on). on
 
-h2(#message). Message
+There are two overloaded versions of this method:
 
-A @Message@ encapsulates an individual message sent or received in Ably. A message has the following members.
+bq(definition#on-state-listener).
+  default: on(String state, listener())
+  ruby:    on("ChannelState":#channel-state *state) -> yields "ChannelStateChange":#channel-state-change
+  java:    public void on("ChannelState":#channel-state state, "ChannelStateListener":#channel-state-listener listener)
 
-- <span lang="java">String</span>name := The event name for the message. The name may be used to allow listeners to subscribed selectively for only a subset of the messages on the channel.
+Register the given listener <span lang="ruby">block</span> for the specified "ChannelState":#channel-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span><span lang="java">@state@</span> changes on the @Channel@.
+<span class="default">The listener is passed the current state<span lang="jsall"> as the @event@ property of @this@</span>.</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span>.
 
-- <span lang="java">Object</span>data := The payload of the message. The data may be one of the supported payload datatypes.
+bq(definition#on-listener).
+  default: on(listener())
+  ruby:    on -> yields "ChannelStateChange":#channel-state-change
+  java:    public void on("ChannelStateListener":#channel-state-listener listener)
 
-- <span lang="java">String</span>clientId := The clientId of the client that published the message. This <span lang="default">property</span><span lang="java">field</span> is populated by the system, where the clientId is known, for messages delivered to subscribers. It is not required to populate the clientId of a message before publishing it.
+Register the given listener <span lang="ruby">block</span> for all "ChannelState":#channel-state changes on the @Channel@.
+<span class="default">The listener is passed the current state<span lang="jsall"> as the @event@ property of @this@</span>.</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span>.
 
-- <span lang="java">long</span>timestamp := The system timestamp of the message, in milliseconds since the epoch. This <span lang="default">property</span><span lang="java">field</span> is populated by the system for messages delivered to subscribers. It is not required to populate the timestamp of a message before publishing it.
+h4. Parameters
 
-h2(#message-listener). MessageListener
+- <div lang="jsall">String state</div> := the channel state to subscribe to, see "ChannelState":#channel-state for supported channel states
+- <div lang="java">"ChannelState":#channel-state state</div> := the channel state to subscribe to
+- <div lang="ruby">"ChannelState":#channel-state state</div> := the channel state as a Symbol such as @:attached@ or a @ChannelState@ object to subscribe to
 
-<div lang="jsall">
-A @MessageListener@ function may be subscribed for all messages, or messages having specific event names, received on the channel. The message is passed as the first argument to the listener, and the message event @name@ will be the @name@ property of @this@ when the listener is called.
-</div>
-<div lang="java">
-A implementation of the @MessageListener@ interface may be registered to be notified of message arrival on the channel. A @Message[]@ is passed as the first argument of the listener's @onMessage@ method whenever a message matching the listener's registration is received on the channel.
-</div>
+- <div lang="jsall">listener</div> := is a function of the form @listener()@ to be notified for matching state changes. The current state is available as @this.event@
+- <div lang="java">"ChannelStateListener":#channel-state-listener listener</div> := listener to be notified for matching state changes
+- <div lang="ruby">&block</div> := listener block that is yielded to for matching state changes
 
-h2(#channel-state-listener). ChannelStateListener
+h4. Example
 
-<div lang="jsall">
-The @Channel@ instance is an @EventEmitter@ and emits events corresponding to each of the channel states, ie @pending@, @attached@, @detached@ or @failed@. A @ChannelStateListener@ function may be registered for any of these events and will be notified on any transition to that state. A listener may register for multiple, or all, events, and the event name (thus the new channel state) will be the @name@ property of @this@ when the listener is called.
-</div>
-<div lang="java">
-A implementation of the @ChannelStateListener@ interface may be registered to be notified of channel state changes. Each time a listener is called it is passed a @ChannelState@ indicating the new state.
-</div>
+"(external) Browser @ChannelState@ change example":<%= JsBins.url_for('realtime/channel-states') %>
 
-h2(#completion-listener). CompletionListener
+h6(#once). once
 
-Channel @publish@ operations optionally take <span lang="default">callback</span><span lang="java">implementation of the <code>CompletionListener</code> interface</span> to be called on completion of the operation with an indication of success or failure.
+There are two overloaded versions of this method:
 
-<div lang="jsall">
-The callback is called with an optional error argument. An omitted or falsy error argument indicates success. On error, the error argument contains details of the error.
-</div>
-<div lang="java">
-On success the listener's <code>onSuccess()</code> method is called. If the operation failed, the listener's <code>onError()</code> method is called with an <code>ErrorInfo</code> contains details of the error.
-</div>
+bq(definition#once-state-listener).
+  default: once(String state, listener())
+  ruby:    once("ChannelState":#channel-state *state) -> yields "ChannelStateChange":#channel-state-change
+  java:    public void once("ChannelState":#channel-state state, "ChannelStateListener":#channel-state-listener listener)
 
-h2(#channel-options). ChannelOptions
+Register the given listener <span lang="ruby">block</span> for a single occurence of the specified "ChannelState":#channel-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span><span lang="java">@state@</span> change on the @Channel@. Once the listener has been called, it is removed as a registered listener and will not be called again.
+<span class="default">The listener is passed the current state<span lang="jsall"> as the @event@ property of @this@</span>.</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span>.
 
-A @ChannelOptions@ may optionally be specified when instancing a Channel, and this may be used to specify channel-specific options.
+bq(definition#once-listener).
+  default: once(listener())
+  ruby:    once -> yields "ChannelStateChange":#channel-state-change
+  java:    public void once("ChannelStateListener":#channel-state-listener listener)
 
-Currently the only supported channel options are encryption-related.
+Register the given listener <span lang="ruby">block</span> for a single occurence of any "ChannelState":#channel-state change on the @Channel@. Once the listener has been called, it is removed as a registered listener and will not be called again.
+<span class="default">The listener is passed the current state<span lang="jsall"> as the @event@ property of @this@</span>.</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span>.
 
-- <span lang="java">public boolean</span>encrypted := Requests encryption for this channel.
+h4. Parameters
 
-- <span lang="java">public Object</span>cipherParams := Specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). Default cipher params for the implementation may be obtained by calling @Crypto.getDefaultParams()@.
+- <div lang="jsall">String state</div> := the channel state to subscribe to, see "ChannelState":#channel-state for supported channel states
+- <div lang="java">"ChannelState":#channel-state state</div> := the channel state to subscribe to
+- <div lang="ruby">"ChannelState":#channel-state state</div> := the channel state as a Symbol such as @:attached@ or a @ChannelState@ object to subscribe to
 
-<div lang="java">
-h2(#paginated-result). PaginatedResult
+- <div lang="jsall">listener</div> := is a function of the form @listener()@ to be notified for a single occurence of a matching state change. The current state is available as @this.event@
+- <div lang="java">"ChannelStateListener":#channel-state-listener listener</div> := listener to be notified for a single occurence of a matching state change
+- <div lang="ruby">&block</div> := listener block that is yielded to for a single occurence of a matching state change
 
-A @PaginatedResult@ is an interface that represents the result of a query that supports pagination. An instance of @PaginatedResult@ encapsulates a collection of @Message@ objects representing the current page of results, and provides the means - in the form of @Param[]@ to perform queries for subsequent or related pages.
+h6(#off). off
 
-- public Message[] asArray() := Returns the current page of results as an Array.
-- public List&lt;Message&gt; := Returns the current page of results as a List.
-- public Param[] getFirst() := Returns the params to pass to a @history()@ call to reproduce the first call in this paginated sequence.
-- public Param[] getCurrent() := Returns the params to pass to a @history()@ call to reproduce the current call in this paginated sequence.
-- public Param[] getNext() := Returns the params to pass to a @history()@ call to reproduce the next call in this paginated sequence.
+There are two overloaded versions of this method:
 
-</div>
+bq(definition#off-state-listener).
+  default: off(String state, listener)
+  ruby:    off("ChannelState":#channel-state *state, &block)
+  java:    public void off("ChannelState":#channel-state state, "ChannelStateListener":#channel-state-listener listener)
 
-h2(#error-info). ErrorInfo
+Remove the given listener <span lang="ruby">block</span> for the "ChannelState":#channel-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span><span lang="java">@state@</span>.
+
+bq(definition#off-listener).
+  default: off(listener)
+  ruby:    off(&block)
+  java:    public void off("ChannelStateListener":#channel-state-listener listener)
+
+Remove the given listener <span lang="ruby">block</span> for all "ChannelState":#channel-state states.
+
+h4. Parameters
+
+- <div lang="jsall">String state</div> := the channel state to unsubscribe from
+- <div lang="java">"ChannelState":#channel-state state</div> := the channel state to unsubscribe from
+- <div lang="ruby">"ChannelState":#channel-state state</div> := the channel state as a Symbol such as @:detached@ or a @ChannelState@ object to unsubscribe from
+
+- <div lang="jsall">listener</div> := is the listener function to be removed
+- <div lang="java">"ChannelStateListener":#channel-state-listener listener</div> := is the listener to be removed
+- <div lang="ruby">&block</div> := is the listener block to be removed
+
+h2(#related-types). Related types
+
+h3(#channel-state).
+  default: ChannelState
+  ruby:    Channel::STATE Enum
+  java:    io.ably.lib.realtime.ChannelState Enum
+
+<%= partial 'types/_channel_state' %>
+
+h3(#message).
+  default: Message
+  ruby:    Ably::Models::Message Enum
+  java:    io.ably.lib.types.Message
+
+<%= partial 'types/_message' %>
+
+h3(#channel-options).
+  default: ChannelOptions Object
+  ruby:    ChannelOptions Hash
+  java:    io.ably.lib.types.ChannelOptions
+
+<%= partial 'types/_channel_options' %>
+
+h3(#channel-state-change).
+  ruby:    ChannelStateChange
+
+blang[ruby].
+  <%= partial 'types/_channel_state_change', indent: 2, skip_first_indent: true %>
+
+h3(#channel-state-listener).
+  java: io.ably.lib.realtime.ChannelStateListener
+
+blang[java].
+  <%= partial 'types/_channel_state_listener', indent: 2, skip_first_indent: true %>
+
+h3(#completion-listener).
+  java:   io.ably.lib.realtime.CompletionListener
+
+blang[java].
+  <%= partial 'types/_completion_listener', indent: 2, skip_first_indent: true %>
+
+h3(#message-listener).
+  java:   io.ably.lib.realtime.Channel.MessageListener
+
+blang[java].
+  <%= partial 'types/_message_listener', indent: 2, skip_first_indent: true %>
+
+h3(#paginated-result).
+  default: PaginatedResult
+  ruby:    Ably::Models::PaginatedResult
+  java:    io.ably.lib.types.PaginatedResult
+
+<%= partial 'types/_paginated_result' %>
