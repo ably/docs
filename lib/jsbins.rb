@@ -19,13 +19,13 @@ class JsBins
 
     def all
       data['jsbin_id'].map do |path, hash|
-        {
-          path: path,
-          hash: hash,
-          jsbin_id: data.fetch('jsbin_hash').fetch(hash),
-          jsbin_url: jsbin_url_for(data.fetch('jsbin_hash').fetch(hash))
-        }
+        bin_attributes(path, hash)
       end
+    end
+
+    def url_for(path)
+      hash = data['jsbin_id'].fetch(path) { raise "Code for '#{path}' does not exist" }
+      "#{jsbin_client.url_for(data.fetch('jsbin_hash').fetch(hash))}?javascript,live"
     end
 
     def publish_jsbin(path, content)
@@ -77,6 +77,15 @@ class JsBins
           config = Ably::Config.new
           JsBinClient.new(host: config.jsbin_host, port: config.jsbin_port, ssl: config.jsbin_ssl, api_key: config.jsbin_api_key)
         end
+      end
+
+      def bin_attributes(path, hash)
+        {
+          path: path,
+          hash: hash,
+          jsbin_id: data.fetch('jsbin_hash').fetch(hash),
+          jsbin_url: jsbin_url_for(data.fetch('jsbin_hash').fetch(hash))
+        }
       end
   end
 
