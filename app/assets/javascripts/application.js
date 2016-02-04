@@ -13,6 +13,11 @@ $(function() {
     return $(matchers.join(','));
   }
 
+  function stripNamespace(text) {
+    var parts = text.split(/::|\./);
+    return parts[parts.length-1];
+  }
+
   // On selecting a nav section, scroll it into view
   var jumpToCallback = function(aid) {
     var idTag = findAnchorTag(aid);
@@ -62,7 +67,7 @@ $(function() {
         }
 
         if (languageContentWithinTag.length) {
-          $(this).text(languageContentWithinTag.text());
+          $(this).text(stripNamespace(languageContentWithinTag.text()));
         }
       });
     });
