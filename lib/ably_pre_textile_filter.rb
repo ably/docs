@@ -1,11 +1,43 @@
 require_relative './helpers/nav_helper'
 
 class AblyPreTextileFilter
-  BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/ unless defined?(BLANG_REGEX)
+  remove_const :BLANG_REGEX if defined?(BLANG_REGEX)
+  remove_const :MULTI_LANG_BLOCK_REGEX if defined?(MULTI_LANG_BLOCK_REGEX)
+  remove_const :JSALL_REGEX if defined?(JSALL_REGEX)
+
+  BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/
+
+  MULTI_LANG_BLOCK_REGEX = /
+    (bc|p|h[1-6])           # code or language tag - capture [0] = tag
+       \[([^\]]+)\]         # language selector in format [javascript,ruby] - capture [1] = langs
+    (?:\(([^\)]+)\))?       # optional class(es) in format (class) - capture [2] = class(es)
+    \.                      # ends with . such as p[ruby].
+    (.*?)                   # body - capture [3] = body
+    (?:[\n\r]\s*[\n\r]|\Z)  # non-capturing empty line break or EOF
+  /mx
+
+  JSALL_REGEX = /
+    (?:
+      \[         # language enclosure [lang]
+      ([^\]]+,)? # additional optional languages
+      jsall      # indicates this applies to node.js and javascript
+      (,[^\]]+)? # additional optional languages
+      \]         # language closure [lang]
+    )
+    |
+    (?:
+      lang=(["']) # language enclosure lang=""
+      ([^"']+,)? # additional optional languages
+      jsall       # indicates this applies to node.js and javascript
+      (,[^"']+)? # additional optional languages
+      \3          # language closure lang=""
+    )
+  /mx
 
   class << self
     def run(content, path, attributes)
       content = strip_comments(content)
+      content = convert_jsall_lang_to_node_and_javascript(content)
       content = convert_blang_blocks_to_html(content)
       content = add_language_support_for_github_style_code(content)
       content = duplicate_language_blocks(content)
@@ -19,16 +51,31 @@ class AblyPreTextileFilter
 
     private
 
+    # To simplify the Textile markup when writing examples or docs that apply to both
+    # Node.js and Javascript, a single language jsall is supported, that is converted
+    # to javascript,nodejs when compiled
+    def convert_jsall_lang_to_node_and_javascript(textile)
+      textile.gsub(JSALL_REGEX) do |match|
+        lang_before, lang_after, quote, lang_before_2, lang_after_2 = $~.captures
+        langs = [lang_before || lang_before_2, lang_after || lang_after_2].compact
+        if quote
+          %(lang="javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}")
+        else
+          "[javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}]"
+        end
+      end
+    end
+
     # language blocks in textile don't support multiple languages, so simply copy & split out
     # bc[json,javascript]. { "a": true }
     # becomes
     # bc[json]. { "a": true }
     # bc[javascript]. { "a": true }
-    def duplicate_language_blocks(content)
-      content.gsub(/(bc|p|h[1-6])\[([^\]]+)\]\.(.*?)(?:[\n\r]\s*[\n\r]|\Z)/m) do |match|
-        block, languages, content = $~.captures
+    def duplicate_language_blocks(textile)
+      textile.gsub(MULTI_LANG_BLOCK_REGEX) do |match|
+        block, languages, classes, content = $~.captures
         languages.split(/\s*,/).map do |lang|
-          "#{block}[#{lang}].#{content}"
+          "#{block}[#{lang}]#{"(#{classes})" if classes}.#{content}"
         end.join("\n\n") + "\n\n"
       end
     end

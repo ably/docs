@@ -4,7 +4,9 @@ require 'redcloth'
 #
 class AblyDocs
   module Rails
-    class Engine < ::Rails::Engine
+    if defined?(::Rails::Engine)
+      class Engine < ::Rails::Engine
+      end
     end
   end
 

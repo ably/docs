@@ -4,51 +4,87 @@ section: realtime
 index: 20
 jump_to:
   Help with:
-    - Connection#title
-    - Connection states
+    - Getting started#title
+    - Connection state explained
+    - Available connection states#connection-states
     - Connection state recovery
   Connection API properties:
     - id
-    - error reason
     - key
+    - state
+    - error#error-reason
     - recovery key
     - serial
-    - state
   Connection API methods:
-    - close
     - connect
+    - close
+    - on#on
+    - once
+    - off#off
     - ping
   Related types:
     - Completion listener
     - Connection state
+    - Connection state listener
     - Connection state change
 ---
 
 The Ably Realtime library establishes and maintains a connection to the Ably service, using the most efficient transport available, typically WebSockets. The Ably realtime protocol operates and multiplexes all channel traffic over that connection.
 
-Although connection state is temporary, the Ably protocol provides continuity of message delivery between the client and the service, provided that a dropped connection is reestablished by the client within a limited interval (typically around 1 minute). Beyond that, the connection becomes stale and the system will not attempt to recover the connection state. The lifecycle of a connection, and the strategy for reconnecting on failure, reflect the transient nature of the connection state.
+h3(#getting-started). Getting started
+
+The Ably Realtime library will open and maintain a connection to the Ably realtime servers as soon as it is instanced. The @Connection@ object provides a straightforward API to monitor and manage connection state. The following example simply connects to Ably:
+
+bc[javascript](code-editor:realtime/connection). var ably = new Ably.Realtime('{{API_KEY}}');
+ably.connection.on('connected', function() {
+  alert('Connected, that was easy');
+})
+
+bc[nodejs](code-editor:realtime/connection). var Ably = require('ably-js');
+var ably = new Ably.Realtime('{{API_KEY}}');
+ably.connection.on('connected', function() {
+  alert('Connected, that was easy');
+})
+
+bc[ruby]. ably = Ably::Realtime.new('{{API_KEY}}')
+ably.connection.on(:connected) do |message|
+  puts "Connected, that was easy"
+end
+
+bc[java]. import io.ably.lib.realtime;
+AblyRealtime ably = new AblyRealtime("{{API_KEY}}");
+ably.connection.on('connected', new ConnectionStateListener() {
+  @Override
+  public void onConnectionStateChanged(ConnectionStateChange change) {
+    System.out.println("Connected, that was easy");
+  }
+});
+
+h2(#connection-state-explained). Connection state explained
+
+Although connection state is temporary, the Ably protocol provides continuity of message delivery between the client and the service, provided that a dropped connection is reestablished by the client within a limited interval (typically around 2 minutes). Beyond that, the connection becomes stale and the system will not attempt to recover the connection state. The lifecycle of a connection, and the strategy for reconnecting on failure, reflect the transient nature of the connection state.
 
 The client library is responsible for managing the connection; this includes selecting a transport (in those environments supporting multiple transports), selecting a host to connect to (automatically falling back to an alternate data centre host if the closest data centre is unreachable), and managing continuity of operation when the connection drops.
 
 When the library is instanced, if connectivity to the service is available, the library will establish a connection immediately, and if the connection drops at any time it will attempt to re-establish it by making repeated connection attempts every 15 seconds for up to two minutes.
 
-If, after that time, there has been no connection, the library falls back to a lower level of activity, still periodically attempting reconnection at two minute intervals. This reflects the assumption that there will no longer be recoverable connection state and the client may be offline for a period of time. As soon as a reconnection attempt has been successful, the system reverts to the more active connection behaviour. Further, you can explicitly trigger a reconnection attempt at any time if you wish to implement a different reconnection strategy.
+If, after that time, there has been no connection, the library falls back to a lower level of activity, still periodically attempting reconnection at 30 second intervals. This reflects the assumption that there will no longer be recoverable connection state and the client may be offline for a period of time. As soon as a reconnection attempt has been successful, the system reverts to the more active connection behaviour. Further, you can explicitly trigger a reconnection attempt at any time if you wish to implement a different reconnection strategy.
 
 The connection object provides methods to observe the lifecycle of the connection and to trigger state transitions.
 
-h3(#connection-states). Connection states
+h3(#connection-states). Available connection states
 
 A series of connection states is defined as follows:
 
-- initialised := A connection object having this state has been initialised but no connection has yet been attempted.
+- initialised := A @Connection@ object having this state has been initialised but no connection has yet been attempted.
 
 - connecting := A connection attempt has been initiated. The connecting state is entered as soon as the library has completed initialisation, and is reentered each time connection is re-attempted following disconnection.
 
 - connected := A connection exists and is active.
 
-- disconnected := A temporary failure condition. No current connection exists because there is no network connectivity or no host is available.<br><br>The disconnected state is entered if an established connection is dropped, or if a connection attempt was unsuccessful. In the disconnected state the library will periodically attempt to open a new connection (approximately every 15 seconds), anticipating that the connection will be re-established soon and thus connection and channel continuity will be possible. <br><br>In this state, developers can continue to publish messages as they are automatically placed in a local queue, and sent as soon as a connection is established. <br>Messages published by other clients to the Ably service, whilst this client is disconnected, are queued and delivered to this client upon reconnection, so long as the connection is resumed within 1 minute. <br><br>If connection state recovery is not possible following a new connection being established, all channels are detached, thus ensuring the developer is made aware that continuity on the channel was not possible. The developer is then responsible for reattaching channels and recovering state, if required, using the "history API":/realtime/history.
+- disconnected := A temporary failure condition. No current connection exists because there is no network connectivity or no host is available.<br><br>The disconnected state is entered if an established connection is dropped, or if a connection attempt was unsuccessful. In the disconnected state the library will periodically attempt to open a new connection (approximately every 15 seconds), anticipating that the connection will be re-established soon and thus connection and channel continuity will be possible. <br><br>In this state, developers can continue to publish messages as they are automatically placed in a local queue, and sent as soon as a connection is established. <br>Messages published by other clients to the Ably service, whilst this client is disconnected, are queued and delivered to this client upon reconnection, so long as the connection is resumed within 2 minutes. <br><br>If connection state recovery is not possible following a new connection being established, all channels are detached, thus ensuring the developer is made aware that continuity on the channel was not possible. The developer is then responsible for reattaching channels and recovering state, if required, using the "history API":/realtime/history.
 
-- suspended := A long term failure condition. No current connection exists because there is no network connectivity or no host is available.<br><br>The suspended state is entered after a failed connection attempt if there has then been no connection for a period of two minutes. In the suspended state, the library will periodically attempt to open a new connection every two minutes. Developers are unable to publish messages in this state. A new connection attempt can also be triggered by an explicit call to <span lang="default">"@connect()@":#connect</span><span lang="ruby">"@connect@":#connect</span> on the @Connection@ object.
+- suspended := A long term failure condition. No current connection exists because there is no network connectivity or no host is available.<br><br>The suspended state is entered after a failed connection attempt if there has then been no connection for a period of two minutes. In the suspended state, the library will periodically attempt to open a new connection every 30 seconds. Developers are unable to publish messages in this state. A new connection attempt can also be triggered by an explicit call to <span lang="default">"@connect()@":#connect</span><span lang="ruby">"@connect@":#connect</span> on the @Connection@ object.
 
 - closing := An explicit request by the developer to close the connection has been sent to the Ably service. If a reply is not received from Ably within a short period of time, the connection will be forcibly terminated and the connection state will become @closed@.
 
@@ -82,8 +118,8 @@ h4. Listening for state changes
 
 The @Connection@ object is an @EventEmitter@ and emits an event whose name is the new state whenever there is a connection state change. <span lang="default">An event listener function is passed a "ConnectionStateChange":#connection-state-change object as the first argument for state change events.</span><span lang="ruby">The event block is passed the new state and an optional "@ErrorInfo@":/realtime/types#error-info object</span>
 
-blang[javascript,nodejs].
-  ```[javascript,nodejs]
+blang[jsall].
+  ```[jsall]
     realtime.connection.on('connected', function(stateChange) {
       console.log('Ably is connected');
     });
@@ -91,7 +127,7 @@ blang[javascript,nodejs].
 
   Alternatively a listener may be registered so that it receives all state change events.
 
-  ```[javascript,nodejs]
+  ```[jsall]
     realtime.connection.on(function(stateChange) {
       console.log('New connection state is ' + stateChange.current);
     });
@@ -99,7 +135,7 @@ blang[javascript,nodejs].
 
   Previously registered listeners can be removed individually or all together.
 
-  ```[javascript,nodejs]
+  ```[jsall]
     /* remove a listener registered for a single event */
     realtime.connection.off('connected', myListener);
 
@@ -143,7 +179,7 @@ blang[java].
 
 blang[ruby].
   ```[ruby]
-    realtime.connection.on('connected') do
+    realtime.connection.on(:connected) do
       puts 'Ably is connected'
     end
   ```
@@ -151,8 +187,8 @@ blang[ruby].
   Alternatively a listener may be registered so that it receives all state change events.
 
   ```[ruby]
-    realtime.connection.on do |state|
-      puts "New connection state is #{state}"
+    realtime.connection.on do |state_change|
+      puts "New connection state is #{state_change.current}"
     end
   ```
 
@@ -160,7 +196,7 @@ blang[ruby].
 
   ```[ruby]
     # remove a listener registered for a single even
-    realtime.connection.off 'connected', &block
+    realtime.connection.off :connected, &block
 
     # remove a listener registered for all events
     realtime.connection.off &block
@@ -175,17 +211,15 @@ The Ably system preserves connection state to allow connections to continue tran
 
 There are two modes of connection state recovery:
 
-* @resume@: this is transparent recovery of a live client instance across disconnections. Upon disconnection, the library will automatically re-attempt connection and, once connection is re-established, any missed messages will be sent to the client. The developer does not need to do anything to trigger this behaviour; all client channel event listeners remain attached and are called when the backlog of messages is received.
+* @resume@: this is transparent recovery of a live client instance across disconnections. Upon disconnection, the library will automatically re-attempt connection and, once the connection is re-established, any missed messages will be sent to the client. The developer does not need to do anything to trigger this behaviour; all client channel event listeners remain attached and are called when the backlog of messages is received.
 
-* @recover@: this addresses the case in which a new client library instance wishes to connect and recover the state of an earlier connection. This occurs typically in a browser environment when the page has been refreshed and therefore no client state is retained. In this case any message listeners associated with channels will no longer exist so it is not possible for the library simply to send the message backlog on reconnection; instead the client must re-subscribe to each channel it is interested in, and its message listener(s) will be called with any message backlog for that channel. A client requests recovery of connection state by including a recovery string in the "client options":/realtime/usage#client-options when instancing the Realtime library.  See "connection state recover options":#connection-state-recover-options for more info.
+* @recover@: this addresses the case in which a new client library instance wishes to connect and recover the state of an earlier connection. This occurs typically in a browser environment when the page has been refreshed and therefore the client instance is disposed and no client state is retained. In this case any message listeners associated with channels will no longer exist so it is not possible for the library simply to send the message backlog on reconnection; instead the client must re-subscribe to each channel it is interested in, and its message listener(s) will be called with any message backlog for that channel. A client requests recovery of connection state by including a recovery string in the "client options":/realtime/usage#client-options when instancing the Realtime library.  See "connection state recover options":#connection-state-recover-options for more info.
 
-In either case, the need to send a message backlog does not prevent new messages being sent to the client as soon as they are available, or messages could be indefinitely deferred on very heavily loaded connections. Therefore the system does not guarantee that messages received after reconnection are delivered in the same order that would have occurred if the connection had not been dropped. In the @recover@ case, in particular, the order of the message delivery depends on the timing of the re-attachment of each channel.
-
-Each time a reconnection is attempted, the client library decides which transport to use (in those environments supporting multiple transports). Connection state recovery works in the same way irrespective of the transport used prior to, and after, reconnection.
+In either case, when a connection is resumed or recovered, the message backlog held on the server will be pushed to the client. However, any new messages published will be sent as they become available or messages could be indefinitely deferred on very heavily loaded connections. Therefore the system does not guarantee that messages received after reconnection are delivered in the same order that would have occurred if the connection had not been dropped. In the @recover@ case, in particular, the order of the message delivery depends on the timing of the re-attachment of each channel.
 
 h4(#connection-state-recover-options). Connection state recover options
 
-In @recover@ mode it is necessary to request recovery mode in the "client options":/realtime/usage#client-options when instancing the library. Recovery requires that the library knows the most previous connection's <span lang="default">"@recoveryKey@":#recovery-key</span><span lang="ruby">"@recovery_key@":#recovery-key</span> value, which includes both the "@Connection#key@":#key and the last message serial received on that connection.
+In @recover@ mode it is necessary to request recovery mode in the "client options":/realtime/usage#client-options when instancing the library. Recovery requires that the library knows the most previous connection's <span lang="default">"@recoveryKey@":#recovery-key</span><span lang="ruby">"@recovery_key@":#recovery-key</span> value, which includes both the private unique "@Connection#key@":#key and the last message serial received on that connection. As the recovery key is never shared with any other clients, it allows Ably to safely resend message backlogs to the original client.
 
 blang[javascript].
   In the browser environment a @window close@ event causes those parameters to be saved in a cookie; a client can then request recovery simply by including @recover: true@ in the initialisation options.
@@ -196,22 +230,53 @@ Connection recovery requires that the new client library instance uses credentia
 
 h1. Connection API reference
 
+inline-toc.
+  Connection API reference:
+    - Methods:
+      - connect()#connect
+      - close()#close
+      - on(state, listener)#on-state-listener
+      - on(listener)#on-listener
+      - once(state, listener)#once-state-listener
+      - once(listener)#once-listener
+      - off(state, listener)#off-state-listener
+      - off(listener)#off-listener
+      - ping()#ping
+    - Members:
+      - id#id
+      - state#state
+      - errorReason#error-reason
+      - key#key
+      - recoveryKey#recover-key
+      - serial#serial
+    - Related types:
+      - CompletionListener#completion-listener
+      - ConnectionState#connection-state
+      - ConnectionStateListener#connection-state-listener
+      - ConnectionStateChange#connection-state-change
+
+
 h2(#members).
   default: Connection Properties
   ruby: Ably::Realtime::Connection Attributes
-  java: io.ably.realtime.Connection Members
+  java: io.ably.lib.realtime.Connection Members
 
-The @Connection@ object exposes the following public <span lang="default">properties</span><span lang="ruby">attributes</span><span lang="java">members</span>.
+The @Connection@ object exposes the following public <span lang="default">properties</span><span lang="ruby">attributes</span><span lang="java">members</span>:
 
 h6(#id). id
 
 A unique public identifier @String@ for this connection, used to identify this member in presence events and messages.
 
+h6(#state). state
+
+The current <span lang="java">"@io.ably.lib.realtime.ConnectionState@":#connection-state @state@</span><span lang="ruby">"@Ably::Realtime::Connection::STATE@":#connection-state @state@</span><span lang="default">@state String@</span> of this Connection. See the "@Connection@ states":#connection-states for more information.
+
 h6(#error-reason).
-  default: reason
+  default: errorReason
+  java:    reason
   ruby:    error_reason
 
-When a connection failure occurs this <span lang="default">attribute</span><span lang="java">member</span><span lang="javascript,nodejs">property</span> contains the <span lang="javascript,nodejs">"@ErrorInfo@":/realtime/types#error-info</span><span lang="java,ruby">"@AblyException@":/realtime/types#ably-exception</span>.
+When a connection failure occurs this <span lang="default,ruby">attribute</span><span lang="java">member</span><span lang="jsall">property</span> contains the <span lang="jsall">"@ErrorInfo@":/realtime/types#error-info</span><span lang="java,ruby">"@AblyException@":/realtime/types#ably-exception</span>.
 
 h6(#key). key
 
@@ -225,41 +290,18 @@ The recovery key @String@ can be used by another client to recover this connecti
 
 h6(#serial). serial
 
-The serial number @Integer@ of the last message to be received on this connection, used to recover or resume a connection. When recovering a connection explicitly, the <span lang="default">@recoveryKey@</span><span lang="ruby">@recovery_key@</span> is used in the @recover@ "client options":/realtime/usage#client-options as it contains both the @key@ and the last message @serial@.
-
-h6(#state). state
-
-The current <span lang="java">"@io.ably.realtime.ConnectionState@":#connection-state @state@</span><span lang="ruby">"@Ably::Realtime::Connection::STATE@":#connection-state @state@</span><span lang="default">@state String@</span> of this Connection. See the "@Connection@ states":#connection-states for more information.
-
+The serial number @Integer@ of the last message to be received on this connection, used automatically by the library when recovering or resuming a connection. When recovering a connection explicitly, the <span lang="default">@recoveryKey@</span><span lang="ruby">@recovery_key@</span> is used in the @recover@ "client options":/realtime/usage#client-options as it contains both the @key@ and the last message @serial@.
 
 h2(#methods).
   default: Connection Methods
   ruby: Ably::Realtime::Connection Methods
-  java: io.ably.realtime.Connection Methods
-
-h6(#close). close
-
-bq(definition).
-  default: close()
-  ruby:    close -> "EventMachine::Deferrable":/realtime/types#deferrable -> yields "@Connection@":/realtime/connection
-  java:    public void close()
-
-Causes the connection to close, entering the @closing@ state. Once @closed@, the library will not attempt to re-establish the connection without an explicit call to <span lang="default">"@connect()@":#connect</span><span lang="ruby">"@connect@":#connect</span>.
-
-blang[ruby].
-  h4. Returns
-
-  A "@Deferrable@":/realtime/types#deferrable object is returned from this method.
-
-  On successfully closing the connection, the registered success callbacks for the "@Deferrable@":/realtime/types#deferrable and any block provided to this method yields a "@Connection@":/realtime/connection object.
-
-  Failure to close the connection will trigger the errback callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object containing an error response as defined in the "REST API":/rest-api#common documentation.
+  java: io.ably.lib.realtime.Connection Methods
 
 h6(#connect). connect
 
 bq(definition).
   default: connect()
-  ruby:    connect -> "EventMachine::Deferrable":/realtime/types#deferrable -> yields "@Connection@":/realtime/connection
+  ruby:    "Deferrable":/realtime/types#deferrable connect -> yields "@Connection@":/realtime/connection
   java:    public void connect()
 
 Explicitly calling @connect@ is unnecessary unless the "@ClientOption@":#client-option <span lang="default">@connectAutomatically@</span><span lang="ruby">@connect_automatically@</span> is disabled. Unless already @connected@ or @connecting@, this method causes the connection to open, entering the @connecting@ state.
@@ -273,11 +315,117 @@ blang[ruby].
 
   Failure to connect will trigger the errback callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object containing an error response as defined in the "REST API":/rest-api#common documentation.
 
+h6(#close). close
+
+bq(definition).
+  default: close()
+  ruby:    "Deferrable":/realtime/types#deferrable close -> yields "@Connection@":/realtime/connection
+  java:    public void close()
+
+Causes the connection to close, entering the @closing@ state. Once @closed@, the library will not attempt to re-establish the connection without an explicit call to <span lang="default">"@connect()@":#connect</span><span lang="ruby">"@connect@":#connect</span>.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from this method.
+
+  On successfully closing the connection, the registered success callbacks for the "@Deferrable@":/realtime/types#deferrable and any block provided to this method yields a "@Connection@":/realtime/connection object.
+
+  Failure to close the connection will trigger the errback callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object containing an error response as defined in the "REST API":/rest-api#common documentation.
+
+h6(#on). on
+
+There are two overloaded versions of this method:
+
+bq(definition#on-state-listener).
+  default: on(String state, listener("ConnectionStateChange":#connection-state-change stateChange))
+  ruby:    on("ConnectionState":#connection-state *state) -> yields "ConnectionStateChange":#connection-state-change
+  java:    public void on("ConnectionState":#connection-state state, "ConnectionStateListener":#connection-state-listener listener)
+
+Register the given listener <span lang="ruby">block</span> for the specified "ConnectionState":#connection-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span><span lang="java">@state@</span> changes on the @Connection@. The listener is passed a "ConnectionStateChange":#connection-state-change object that contains the current state, previous state, and an optional reason for the state change.</span>
+
+bq(definition#on-listener).
+  default: on(listener("ConnectionStateChange":#connection-state-change stateChange))
+  ruby:    on -> yields "ConnectionStateChange":#connection-state-change
+  java:    public void on("ConnectionStateListener":#connection-state-listener listener)
+
+Register the given listener <span lang="ruby">block</span> for all "ConnectionState":#connection-state changes on the @Connection@. The listener is passed a "ConnectionStateChange":#connection-state-change object that contains the current state, previous state, and an optional reason for the state change.</span>
+
+h4. Parameters
+
+- <div lang="jsall">String state</div> := the connection state to subscribe to
+- <div lang="java">"ConnectionState":#connection-state state</div> := the connection state to subscribe to
+- <div lang="ruby">"ConnectionState":#connection-state state</div> := the connection state as a Symbol such as @:connected@ or @ConnectionState@ object to subscribe to
+
+- <div lang="jsall">listener</div> := is a function of the form @listener(stateChange)@ to be notified for matching state changes
+- <div lang="java">"ConnectionStateListener":#connection-state-listener listener</div> := listener to be notified for matching state changes
+- <div lang="ruby">&block</div> := listener block that is yielded to for matching state changes
+
+h4. Example
+
+"(external) Browser @ConnectionState@ change example":<%= JsBins.url_for('realtime/connection-states') %>
+
+h6(#once). once
+
+There are two overloaded versions of this method:
+
+bq(definition#once-state-listener).
+  default: once(String state, listener("ConnectionStateChange":#connection-state-change stateChange))
+  ruby:    once("ConnectionState":#connection-state *state) -> yields "ConnectionStateChange":#connection-state-change
+  java:    public void once("ConnectionState":#connection-state state, "ConnectionStateListener":#connection-state-listener listener)
+
+Register the given listener <span lang="ruby">block</span> for a single occurence of the specified "ConnectionState":#connection-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span><span lang="java">@state@</span> change on the @Connection@. Once the listener has been called, it is removed as a registered listener and will not be called again. The listener is passed a "ConnectionStateChange":#connection-state-change object that contains the current state, previous state, and an optional reason for the state change.
+
+bq(definition#once-listener).
+  default: once(listener("ConnectionStateChange":#connection-state-change stateChange))
+  ruby:    once -> yields "ConnectionStateChange":#connection-state-change
+  java:    public void once("ConnectionStateListener":#connection-state-listener listener)
+
+Register the given listener <span lang="ruby">block</span> for a single occurence of any "ConnectionState":#connection-state change on the @Connection@. Once the listener has been called, it is removed as a registered listener and will not be called again. The listener is passed a "ConnectionStateChange":#connection-state-change object that contains the current state, previous state, and an optional reason for the state change.
+
+h4. Parameters
+
+- <div lang="jsall">String state</div> := the connection state to subscribe to
+- <div lang="java">"ConnectionState":#connection-state state</div> := the connection state to subscribe to
+- <div lang="ruby">"ConnectionState":#connection-state state</div> := the connection state as a Symbol such as @:connected@ or @ConnectionState@ object to subscribe to
+
+- <div lang="jsall">listener</div> := is a function of the form @listener(stateChange)@ to be notified for a single occurence of a matching state change
+- <div lang="java">"ConnectionStateListener":#connection-state-listener listener</div> := listener to be notified for a single occurence of a matching state change
+- <div lang="ruby">&block</div> := listener block that is yielded to for a single occurence of a matching state change
+
+h6(#off). off
+
+There are two overloaded versions of this method:
+
+bq(definition#off-state-listener).
+  default: off(String state, listener)
+  ruby:    off("ConnectionState":#connection-state *state, &block)
+  java:    public void off("ConnectionState":#connection-state state, "ConnectionStateListener":#connection-state-listener listener)
+
+Remove the given listener <span lang="ruby">block</span> for the "ConnectionState":#connection-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span><span lang="java">@state@</span>.
+
+bq(definition#off-listener).
+  default: off(listener)
+  ruby:    off(&block)
+  java:    public void off("ConnectionStateListener":#connection-state-listener listener)
+
+Remove the given listener <span lang="ruby">block</span> for all "ConnectionState":#connection-state states.
+
+h4. Parameters
+
+- <div lang="jsall">String state</div> := the connection state to unsubscribe from
+- <div lang="java">"ConnectionState":#connection-state state</div> := the connection state to unsubscribe from
+- <div lang="ruby">"ConnectionState":#connection-state state</div> := the connection state as a Symbol such as @:connected@ or @ConnectionState@ object to unsubscribe from
+
+- <div lang="jsall">listener</div> := is the listener function to be removed
+- <div lang="java">"ConnectionStateListener":#connection-state-listener listener</div> := is the listener to be removed
+- <div lang="ruby">&block</div> := is the listener block to be removed
+
 h6(#ping). ping
 
 bq(definition).
   default: ping(callback("ErrorInfo":/realtime/types#error-info err))
-  ruby:    ping -> "EventMachine::Deferrable":/realtime/types#deferrable -> yields @Integer milliseconds@
+  ruby:    "Deferrable":/realtime/types#deferrable ping -> yields @Integer milliseconds@
   java:    public void ping("CompletionListener":#completion-listener listener)
 
 When connected, sends a heartbeat ping to the Ably server and <span lang="default">executes the callback</span><span lang="java">calls the listener</span><span lang="ruby">yields the elapsed time in milliseconds</span> when a heartbeat ping request is echoed from the server. This can be useful for measuring true roundtrip latency to the connected Ably server.
@@ -291,26 +439,32 @@ blang[ruby].
 
   Failure to receive a heartbeat ping will trigger the errback callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object containing an error response as defined in the "REST API":/rest-api#common documentation.
 
-h2(#related-types).
-  java,javascript,nodejs, ruby: Related types
+h2(#related-types). Related types
 
 h3(#completion-listener).
-  java:   io.ably.realtime.CompletionListener
+  java:   io.ably.lib.realtime.CompletionListener
 
 blang[java].
   <%= partial 'types/_completion_listener', indent: 2, skip_first_indent: true %>
 
 h3(#connection-state).
-  ruby:   Connection::STATE enum
-  java:   io.ably.realtime.ConnectionState enum
+  default: ConnectionState
+  ruby:    Connection::STATE Enum
+  java:    io.ably.lib.realtime.ConnectionState Enum
 
 <%= partial 'types/_connection_state' %>
 
-h3(#connection-state-change).
-  javascript,nodejs:    ConnectionStateChange Object
-  java:                 ConnectionStateChange
+h3(#connection-state-listener).
+  java: io.ably.lib.realtime.ConnectionStateListener
 
-blang[java,javascript,nodejs].
-  <%= partial 'types/_connection_state_change', indent: 2, skip_first_indent: true %>
+blang[java].
+  <%= partial 'types/_connection_state_listener', indent: 2, skip_first_indent: true %>
+
+h3(#connection-state-change).
+  default: ConnectionStateChange Object
+  java:    io.ably.lib.realtime.ConnectionStateListener.ConnectionStateChange
+  ruby:    ConnectionStateChange
+
+<%= partial 'types/_connection_state_change' %>
 
 &nbsp;
