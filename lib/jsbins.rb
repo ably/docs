@@ -25,7 +25,7 @@ class JsBins
 
     def url_for(path)
       hash = data['jsbin_id'].fetch(path) { raise "Code for '#{path}' does not exist" }
-      "#{jsbin_client.url_for(data.fetch('jsbin_hash').fetch(hash))}?javascript,live"
+      "#{jsbin_url_for(data.fetch('jsbin_hash').fetch(hash))}?javascript,live"
     end
 
     def publish_jsbin(path, content)
