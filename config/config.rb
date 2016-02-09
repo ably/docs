@@ -1,5 +1,10 @@
 module Ably
   class Config
+    JSBIN_HOST    = "jsbin.ably.io"
+    JSBIN_SSL     = true
+    JSBIN_PORT    = 443
+    JSBIN_API_KEY = "readonly"
+
     def aws_access_key_id
       fog_yaml['default']['aws_access_key_id']
     end
@@ -17,19 +22,19 @@ module Ably
     end
 
     def jsbin_host
-      jsbin_config_yaml['host']
+      @jsbin_host ||= jsbin_config_yaml['host'] || JSBIN_HOST
     end
 
     def jsbin_port
-      jsbin_config_yaml['port']
+      @jsbin_port ||= jsbin_config_yaml['port'] || JSBIN_PORT
     end
 
     def jsbin_ssl
-      jsbin_config_yaml['ssl']
+      @jsbin_ssl ||= jsbin_config_yaml['ssl'] || JSBIN_SSL
     end
 
     def jsbin_api_key
-      jsbin_config_yaml['api_key']
+      @jsbin_api_key ||= jsbin_config_yaml['api_key'] || JSBIN_API_KEY
     end
 
     private
@@ -46,8 +51,7 @@ module Ably
         begin
           YAML::load(open(File.expand_path('../jsbin_config.yaml', __FILE__)))
         rescue StandardError => e
-          puts "Error loading JsBin config.  Have you created this in config using the example YAML file?"
-          raise e
+          {}
         end
       end
   end
