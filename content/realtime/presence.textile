@@ -4,7 +4,13 @@ section: realtime
 index: 40
 jump_to:
   Help with:
-    - Presence#title
+    - Getting started#getting-started
+    - Presence
+    - Presence states and events#presence-states
+    - Presence data
+    - Presence member list
+    - Presence history
+    - Multiple client IDs#presence-multiple-client-id
   Presence API reference:
     - enter
     - enterClient#enter-client
@@ -20,191 +26,276 @@ jump_to:
     - PresenceListener#presence-listener
 ---
 
-Presence provides awareness of other clients that are connected and present on a channel. Each member present on a channel has a unique client identifier and an optional payload that can be used to describe the member's status or attributes. Presence allows you to quickly build apps such as chat rooms or multiplayer games as Ably will automatically keep track of who is present in real time across any device.
+Presence enables clients to be aware of other clients that are currently "present" on a channel. Each member present on a channel has a unique self-assigned client identifier and system-assigned connection identifier, along with an optional payload that can be used to describe the member's status or attributes. Presence allows you to quickly build apps such as chat rooms and multiplayer games by automatically keeping track of who is present in real time across any device.
 
-h3. Broadcast your presence & subcribe to presence events
+h2(#getting-started). Getting started
 
-Ably Channels support the concept of presence. Each channel may have a presence set associated with it, which is a set of clientIds for those clients that have announced their presence by entering the channel.
+The @Presence@ object provides a straightforward API to subscribe to presence events such as members entering or leaving, retrieve a list of members present, or register the connected client as "present" on a channel. Here is a simple presence example using the "@presence@":/realtime/channels-messages#presence <span lang="default">property</span><span lang="java">field</span><span lang="ruby">attribute</span> of the "@Channel@":/realtime/channels-messages object to enter a channel and subscribe to presence events.
 
-```[ruby]
-EventMachine.run do
-  client = Ably::Realtime::Client.new(api_key: '<%= %>', client_id: 'bob')
-
-  client.channel('realtime-chat').attach do |channel|
-    channel.presence.on(:enter) do |presence_message|
-      puts "#{presence_message.client_id} entered realtime-chat"
-    end
-
-    channel.presence.enter
-  end
-end
-```
-
-```[jsall]
-var client = Ably.Realtime.Client({ key: '', clientId: 'bob' });
-
-client.channel('realtime-chat').attach(function(channel) {
-  channel.presence.on('enter', function(presenceMessage) {
-    console.log(presenceMessage.memberKey() + ' entered realtime-chat');
+```[javascript](code-editor:realtime/presence-simple)
+  var realtime = new Ably.Realtime({
+    key: '{{API_KEY}}',
+    clientId: 'bob' }
+  );
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.presence.subscribe('enter', function(member) {
+    alert('Member ' + member.clientId + ' entered');
   });
-
   channel.presence.enter();
-});
 ```
 
-A client must be attached to a channel, and must have the relevant permission, in order to enter. Although, the library implicitly calls <span lang="ruby">#attach</span><span lang="jsall">attach()</span> if the client is not attached at the time <span lang="jsall">enter()</span> is called.
-
-A given <span lang="jsall">clientId</span><span lang="ruby">client_id</span> might be present multiple times, via different connections. As far as Ably is concerned these are different members of the presence set. A member of the presence set is, therefore, the combination of a <span lang="jsall">clientId</span><span lang="ruby">client_id</span> string and a <span lang="jsall">connectionId</span><span lang="ruby">connection_id</span> string unique to a connection.
-
-h3. Managing multiple client ID
-
-An Ably client instance might, if on an application server for example, publish messages on behalf of multiple distinct clientIds. The channel's @presence@ object therefore also supports methods that enable presence messages to be published for a clientId specified at the time of the call, rather than for a clientId specified when the library was instanced.
-
-In order to be able to publish presence changes for arbitrary clientIds, the client library must have been instanced either with a key, or with a token bound to the wildcard clientId.
+```[nodejs](code-editor:realtime/presence-simple)
+  var Ably = require('ably-js');
+  var realtime = new Ably.Realtime({
+    key: '{{API_KEY}}',
+    clientId: 'bob' }
+  );
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.presence.subscribe('enter', function(member) {
+    alert('Member ' + member.clientId + ' entered');
+  });
+  channel.presence.enter();
+```
 
 ```[ruby]
-channel = client.channel('realtime-chat')
-
-channel.presence.on(:enter) do |presence_message|
-  puts "#{presence_message.client_id} entered realtime-chat"
-end
-
-channel.presence.enter_client('bob') # bob entered realtime-chat
-channel.presence.enter_client('mary') # mary entered realtime-chat
-```
-
-```[jsall]
-var channel = client.channel('realtime-chat');
-
-channel.presence.on('enter', function(presenceMessage) {
-  console.log(presenceMessage.client_id + 'entered realtime-chat');
-});
-
-channel.presence.enterClient('bob'); // bob entered realtime-chat
-channel.presence.enterClient('mary'); // mary entered realtime-chat
-```
-
-In this example, you have to connect with a different client ID. Submitting the same client ID wouldn't submit any other @ENTER@ event.
-
-```[ruby]
-channel.presence.on(:enter) do |presence_message|
-  puts "#{presence_message.client_id} entered realtime-chat"
-end
-
-channel.presence.enter_client('bob') # bob entered realtime-chat
-channel.presence.enter_client('bob') # (this prints nothing)
-```
-
-```[jsall]
-channel.presence.on('enter', function(presenceMessage) {
-  console.log(presenceMessage.clientId + " entered realtime-chat");
-});
-
-channel.presence.enterClient('bob'); // bob entered realtime-chat
-channel.presence.enterClient('bob'); // (this prints nothing)
-```
-
-h3. Payload
-
-In addition to the <span lang="jsall">clientId</span><span lang="ruby">client_id</span> for members on a channel, it is also possible to include a data payload. Clients can "update":#update their data at any point whilst present on a channel.
-
-```[ruby]
-channel.presence.on(:enter) do |presence_message|
-  puts presence_message.client_id # => bob
-  puts presence_message.data      # => robert@example.com
-end
-
-channel.presence.enter(client_id: 'bob', data: 'robert@example.com')
-```
-
-```[jsall]
-channel.presence.on('enter', function(presenceMessage) {
-  console.log(presenceMessage.clientId); // => bob
-  console.log(presenceMessage.data);     // => robert@example.com
-});
-end
-
-channel.presence.enter({ clientId: 'bob', data: 'robert@example.com' })
-```
-
-A number of presence actions are therefore defined.
-
-- enter := A clientId, or a clientId/connectionId combination, is entering the presence channel.
-
-- leave := A clientId, or a clientId/connectionId combination, is leaving the presence channel.
-
-- update := An already-present clientId or clientId/connectionId combination has been updated.
-
-- present := An already-present clientId or clientId/connectionId combination is signaling its presence on the channel. (happens only when a listener is bound to the channel)
-
-h3. Presence list
-
-A Channel's @presence@ <span lang="default">property</span><span lang="java">field</span> exposes a @get@ method whereby a client can discover the set of all members present on the channel.
-
-```[ruby]
-channel.presence.get do |members|
-  puts "There are #{members.size} members on this channel"
-end
-```
-
-```[jsall]
-channel.presence.get(function(members) {
-  console.log("There are " + members.length + " members on this channel")
-});
-```
-
-The client keeps track of the presence set from the time that the channel is attached; a up to date presence set is delivered to the client following attach, and the presence set is updated on each message seen subsequently. Thus this @get@ method synchronously returns the already-known presence set, and does not trigger a new request to the Ably service.
-
-h3. Presence History
-
-The @Presence@ API exposes a @history@ method whereby a client can obtain presence updates previously sent on the channel. It provides access to the persisted history, as with the REST API, but also enables access to instantaneous or "live" history for attached channels.
-
-This live history provides the ability to obtain continuous presence history up to the point that a realtime channel was attached and also supports recent history for channels that do not have persistence enabled.
-
-History results are paginated and therefore accompanied with one or more relative links relating to the current query. Where the number of results returned exceeds the query limit - which is either the value of the @limit@ param or the default limit of 100 - the query result contains pages with the limited number of records, and a relative link to the next page.
-
-```[ruby]
-channel.presence.history(direction: :backwards) do |messages|
-  messages.each do |presence_message|
-    puts "#{presence_message.action}: #{presence_message.client_id}"
+  realtime = Ably::Realtime.new(key: '{{API_KEY}}', client_id: 'bob')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.presence.subscribe(:enter) do |member|
+    puts "Member #{member.client_id} entered"
   end
-end
+  channel.presence.enter
 ```
 
-```[jsall]
-var params = {direction: 'backwards', limit: '100'};
-
-channel.presence.history(params, function(err, messages, rel) {
-  if(err) {
-    console.log('Unable to get presence history; err = ' + err.message);
-  } else {
-    console.log(messages.length + ' presence messages received in first result');
-    if(rel && rel.next) {
-      channel.presence.history(rel.next, function(...) { ... });
+```[java]
+  ClientOptions options = new ClientOptions("{{API_KEY}}");
+  options.clientId = "bob";
+  AblyRealtime realtime = new AblyRealtime(options);
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.presence.subscribe(new PresenceListener() {
+    @Override
+    public void onPresenceMessage(PresenceMessage[] messages) {
+      PresenceMessage member = messages[0]; // use only first for this example
+      System.out.println("Member " + member.clientId + " : " + member.action.toString());
     }
+  });
+  channel.presence.enter(null, new CompletionListener());
+```
+
+h2(#presence). Presence
+
+In order to be present on a channel, a client must "be identified by having a client ID":https://support.ably.io/solution/articles/3000038608-authenticated-and-identified-clients, "have permission to be present":https://support.ably.io/solution/articles/3000048535-using-capabilities-to-manage-client-access-privileges-on-channels, and be attached to the channel. For simplicity, the library will implicitly attach to a channel when entering or subscribing to presence events. Clients are assigned a <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span> when using token authentication, "find out more about token authentication":/general/authentication#token-authentication.
+
+A single <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span> may be present multiple times on the same channel via different client connections. As far as Ably is concerned, these are different members of the presence set for the channel, however they will be differentiated by their unique <span lang="default">"@connectionId@":/realtime/connection#id</span><span lang="ruby">"@connection_id@":/realtime/connection/#id</span>. For example, if a client with ID "Sarah" is connected to a chat channel on both a desktop and a mobile device simultaneously, "Sarah" will be present twice in the member set with the same client ID, yet will have two unique connection IDs. A member of the presence set is therefore unique by the combination of the <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span> and <span lang="default">"@connectionId@":/realtime/connection#id</span><span lang="ruby">"@connection_id@":/realtime/connection/#id</span> strings.
+
+h3(#presence-states). Presence states and events
+
+Whenever a member enters or leaves a channel, or updates "their member data":#member-data, a presence event is emitted to all presence subscribers on that channel. Subscribing to presence events makes it incredibly easy to build an app that shows, in real time, any changes to clients connected to Ably and present on a channel.
+
+The following presence events are emitted:
+
+- <span lang="ruby">@:enter@</span><span lang="java">@Action.ENTER@</span><span lang="default">@enter@</span> := A new member has entered the channel
+
+- <span lang="ruby">@:leave@</span><span lang="java">@Action.LEAVE@</span><span lang="default">@leave@</span> := A member who was present has now left the channel. This may be a result of an explicit request to leave or implicitly when detaching from the channel. Alternatively, if a member's connection is abruptly disconnected and they do not resume their connection within a minute, Ably treats this as a leave event as the client is no longer present
+
+- <span lang="ruby">@:update@</span><span lang="java">@Action.UPDATE@</span><span lang="default">@update@</span> := An already present member has updated their "member data":#member-data. Being notified of member data updates can be very useful, for example, it can be used to update the status of a user when they are typing a message
+
+- <span lang="ruby">@:present@</span><span lang="java">@Action.PRESENT@</span><span lang="default">@present@</span> := When subscribing to presence events on a channel that already has members present, this event is emitted for every member already present on the channel before the subscribe listener was registered
+
+"View a presence states and events example":<%= JsBins.url_for('realtime/presence-events') %>
+
+h3(#member-data). Member data
+
+In addition to the <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span> for members on a channel, it is also possible to include data when entering a channel. Clients can "update":#update their data at any point which will be broadcasted to all presence subscribers as an <span lang="ruby">@:update@</span><span lang="java">@Action.UPDATE@</span><span lang="default">@update@</span> event.
+
+```[jsall]
+/* Subscribe to presence enter events */
+channel.presence.on('enter', function(member) {
+  console.log(member.data); // => not moving
+});
+
+/* Subscribe to presence update events */
+channel.presence.on('update', function(member) {
+  console.log(member.data); // => travelling North
+});
+
+/* Enter this client with data and update once entered */
+channel.presence.enter('not moving', function(err) {
+  channel.presence.update('travelling North');
 });
 ```
 
 ```[java]
-import io.ably.lib.types.PresenceMessage;
-import io.ably.lib.types.Param;
-import io.ably.lib.types.PaginatedResult;
+/* Subscribe to presence enter and update events */
+channel.presence.subscribe(new PresenceListener() {
+  @Override
+  public void onPresenceMessage(PresenceMessage[] messages) {
+    PresenceMessage member = messages[0]; // use only first for this example
+    switch (member.action) {
+      case ENTER: {
+        System.out.println(member.data); // => not moving
+        break;
+      }
+      case UPDATE: {
+        System.out.println(member.data); // => travelling North
+        break;
+      }
+    }
+  }
+});
 
-Param[] params = new Param[] {
-  new Param("direction", "backwards"),
-  new Param("limit", 100)
-};
+/* Enter this client with data and update once entered */
+channel.presence.enter("not moving", new CompletionListener() {
+  @Override
+  public void onSuccess() {
+    channel.presence.update("travelling North", new CompletionListener());
+  }
+});
+```
 
-PaginatedResult<PresenceMessage> messages = channel.presence.history(params);
-System.out.println(messages.asArray().length + " presence messages received in first result");
+```[ruby]
+# Subscribe to presence enter events
+channel.presence.subscribe(:enter) do |member|
+  puts member.data # => not moving
+end
 
-if(messages.getNext()) {
-  PaginatedResult<PresenceMessage> nextPage = channel.presence.history(messages.getNext());
-  System.out.println(...);
+# Subscribe to presence update events
+channel.presence.subscribe(:update) do |member|
+  puts member.data # => travelling North
+end
+
+# Enter this client with data and update once entered
+channel.presence.enter(data: 'not moving') do
+  channel.presence.update(data: 'travelling North')
+end
+```
+
+h3(#member-list). Presence member list
+
+The @Presence@ object exposes a "@get@":#get method allowing a client to retrieve an array of all members present on the channel. The Ably client is responsible for keeping track of the presence set from the time that the channel is attached; an up to date presence set is pushed to the client following attach and the presence set is updated on each subsequent presence event. Thus @get@ returns the already-known presence set retained in memory and does not trigger a new request to the Ably service.
+
+```[jsall]
+channel.presence.get(function(err, members) {
+  console.log('There are ' + members.length + ' members on this channel');
+  console.log('The first member has client ID: ' + members[0].clientId);
+});
+```
+
+```[ruby]
+channel.presence.get do |members|
+  puts "There are #{members.size} members on this channel"
+  puts "The first member has client ID: #{members.first.client_id}"
+end
+```
+
+```[java]
+PresenceMessage[] members = channel.presence.get();
+System.out.println("There are " + members.length + " members on this channel");
+System.out.println("The first member has client ID: " + members[0].clientId);
+```
+
+h3(#presence-history). Presence History
+
+The @Presence@ object exposes a "@history@":#history method allowing a client to retrieve historical presence events on the channel. Presence history can be used to return continuous presence event history up to the exact point a realtime channel was attached.
+
+History provides access to instantaneous "live" history as well as the longer term persisted history for presence channels. If "persisted history":/realtime/history#persisted-history is enabled for the channel, then presence events will "typically be stored for 24 - 72 hours":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If persisted history is not enabled, Ably retains the last two minutes of presence event history in memory.
+
+The following example retrieves the first two pages of historical presence events published up until the point the channel was attached.
+
+bc[jsall]. channel.attach(function() {
+  var presence = channel.presence;
+  presence.history({ untilAttach: true }, function(err, resultPage) {
+    if(err) {
+      console.log('Unable to get presence history; err = ' + err.message);
+    } else {
+      console.log(resultPage.items.length + ' presence events received in first page');
+      if(resultPage.hasNext()) {
+        resultPage.next(function(err, nextPage) { ... });
+      }
+  });
+});
+
+bc[ruby]. channel.attach do
+  presence = channel.presence
+  presence.history(until_attach: true) do |result_page|
+    puts "#{result_page.items.length} presence events received in first page"
+    if result_page.has_next?
+      result_page.next { |next_page| ... }
+    end
+  end
+end
+
+```[java]
+PaginatedResult<PresenceMessage> resultPage = channel.presence.history(null);
+System.out.println(resultPage.items().length + " presence events received in first page");
+if(resultPage.hasNext()) {
+  PaginatedResult<PresenceMessage> nextPage = resultPage.next();
+  System.out.println(nextPage.items().length + " presence events received in 2nd page");
 }
 ```
 
 See the "history":/realtime/history documentation for further details of the supported query parameters.
+
+h3(#presence-multiple-client-id). Managing multiple client IDs
+
+An Ably client instance might, if on an application server for example, publish messages and be present on channels on behalf of multiple distinct "client IDs":/realtime/usage#client-id. The channel's @Presence@ object therefore also supports methods that enable presence messages to be emitted for a <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span> specified at the time of the call, rather than implicitly based on the <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span> "specified when the library is instanced or authenticated":/realtime/usage#client-id.
+
+In order to be able to publish presence changes for arbitrary client IDs, the client library must have been instanced either with an "API key":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key, or with a "token bound to a wildcard client ID":https://support.ably.io/solution/articles/3000048586-can-a-client-emulate-any-client-id-i-e-use-a-wildcard-client-id. Also,
+
+```[jsall](code-editor:realtime/presence-multiple-client-id)
+var rest = new Ably.Rest({ key: '{{API_KEY}}' });
+/* request a wildcard token */
+rest.auth.requestToken({ clientId: '*' }, function(err, token) {
+  var realtime = new Ably.Realtime({ token: token });
+  var channel = realtime.channels.get('realtime-chat');
+
+  channel.presence.subscribe('enter', function(member) {
+    console.log(member.client_id + 'entered realtime-chat');
+  });
+
+  channel.presence.enterClient('Bob'); // => Bob entered realtime-chat
+  channel.presence.enterClient('Mary'); // => Mary entered realtime-chat
+});
+```
+
+```[ruby]
+rest = Ably::Rest.new(key: '{{API_KEY}}')
+# request a wildcard token
+rest.auth.requestToken(clientId: '*') do |token|
+  realtime = Ably::Realtime.new(token: token)
+  channel = realtime.channels.get('realtime-chat')
+
+  channel.presence.subscribe(:enter) do |member|
+    puts "#{member.client_id} entered realtime-chat"
+  end
+
+  channel.presence.enter_client 'Bob' # => Bob entered realtime-chat
+  channel.presence.enter_client 'Mary' # => Mary entered realtime-chat
+end
+```
+
+```[java]
+/* request a wildcard token */
+AblyRest rest = new AblyRest('{{API_KEY}}');
+TokenParams params = new TokenParams();
+params.clientId = "*";
+ClientOptions options = new ClientOptions();
+options.tokenDetails = rest.auth.requestToken(null, params);
+
+AblyRealtime realtime = new AblyRealtime(options);
+Channel channel = realtime.channels.get("realtime-chat");
+
+channel.presence.subscribe(new PresenceListener() {
+  @Override
+  public void onPresenceMessage(PresenceMessage[] messages) {
+    PresenceMessage member = messages[0]; /* use only first for this example */
+    System.out.println(member.clientId + " entered realtime-chat");
+  }
+});
+
+CompletionListener noop = new CompletionListener();
+channel.presence.enterClient("Bob", noop); /* => Bob entered realtime-chat */
+channel.presence.enterClient('Mary', noop); /* => Mary entered realtime-chat */
+```
 
 h1. API Reference
 
