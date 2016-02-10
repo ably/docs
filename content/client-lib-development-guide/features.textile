@@ -22,13 +22,17 @@ jump_to:
   Types:
     - Data types#types
     - Options#options
+  Interface Definition:
+    - Complete API IDL#idl
 ---
 
 A detailed "test specification":https://github.com/ably/ably-ruby/blob/master/SPEC.md that applies to all client libraries is generated from the Ably Ruby client library's acceptance and test suites.  Whilst every official Ably client library has test coverage, the amount of test coverage varies, and as such our recommendation is to refer to the official "test specification":https://github.com/ably/ably-ruby/blob/master/SPEC.md when developing a client library.
 
 However, we have found the "test specification":https://github.com/ably/ably-ruby/blob/master/SPEC.md can be difficult as a reference because of both its breadth and the fact that it applies to the Ruby client library which may be unfamiliar as a language for a lot of developers.
 
-As a result, this document outlines the complete feature set of both the REST and Realtime client libraries.  It is expected that every client library developer refers to this document to ensure that their client library provides the same API and features as the existing Ably client libraries. In addition to this, it is essential that there is test coverage over all of the features described below. We recommend you use the "Ably Java":https://github.com/ably/ably-java library as a reference when reviewing how the API has been implemented as the implementation is straightforward and Java is a language most people are familiar with.
+As a result, this document outlines the complete feature set of both the REST and Realtime client libraries.  It is expected that every client library developer refers to this document to ensure that their client library provides the same API and features as the existing Ably client libraries. In addition to this, it is essential that there is test coverage over all of the features described below.
+
+We recommend you use the "IDL (Interface Definition Language)":#idl and the "Ably Java library":https://github.com/ably/ably-java as a reference when reviewing how the API has been implemented.
 
 h2(#test-guidelines). Test guidelines
 
@@ -560,6 +564,7 @@ h4. TokenRequest
 * @(TE1)@ @TokenRequest@ is a type containing the token request details sent to the "REST requestToken endpoint":/rest-api/#requesttoken
 * @(TE2)@ String attributes @keyName@, @clientId@, @nonce@ and @mac@
 * @(TE3)@ @capability@ is a string attribute containing capabilities JSON stringified
+* @(TE5)@ @timestamp@ long - The timestamp (in milliseconds since the epoch) of this request. Timestamps, in conjunction with the @nonce@, are used to prevent requests from being replayed
 * @(TE4)@ @ttl@ attribute represents time to live (expiry) of this token in milliseconds
 
 h4. TokenDetails
@@ -680,10 +685,11 @@ h4. ChannelOptions
 ** @(TB2b)@ @cipherParams@ @CipherParams@ - when encrypted is true, the cipher params are required
 
 h4. CipherParams
-* @(TZ1)@ params to configure encryption for a channel, see "Java CipherParams class":https://github.com/ably/ably-java/blob/master/src/io/ably/util/Crypto.java#L52 as a reference
+* @(TZ1)@ params to configure encryption for a channel, see "Java CipherParams class":https://github.com/ably/ably-java/blob/8a151b4edfa228ddef806fa10d2f9ce2be1ac09c/lib/src/main/java/io/ably/lib/util/Crypto.java as a reference
 * @(TZ2)@ The attributes of @CipherParams@ consist of anything necessary to implement the supported algorithms (eg key and iv), in addition to the following standardised attributes:
 ** @(TZ2a)@ @algorithm@ string - Default is @AES@. Optionally specify the algorithm to use for encryption, currently only @AES@ is supported
 ** @(TZ2b)@ @keyLength@ integer - An integer, from an algorithm-dependent range of possible values. If unspecified, an algorithm-dependent default is used. For AES the allowed values at least include 128 and 256, with a default of 128
+** @(TZ2d)@ @key@ string / byte array - private key used to encrypt and decrypt payloads
 ** @(TZ2c)@ @mode@ string - Default is @CBC@. Optionally specify cipher mode, currently only @CBC@ is supported
 * @(TZ3)@ @Crypto#getDefaultParams@ function
 ** @(TZ3a)@ returns a complete @CipherParams@ instance with randomly generated key and iv
@@ -696,3 +702,362 @@ The following default values are configured for the client library:
 * @(DF1)@ Realtime defaults:
 ** @(DF1a)@ @connectionStateTtl@ integer - default 60s. The duration that Ably will persist the connection state when a Realtime client is abruptly disconnected. When the client is in the @DISCONNECTED@ state, once this TTL has passed, the client should change the state to the @SUSPENDED@ state signifying that the state is now lost i.e. channels need to be reattached manually. Note that this default is overriden by @connectionStateTtl@, if specified in the @ConnectionDetails@ of the @CONNECTED@ @ProtocolMessage@
 ** @(DF1b)@ @realtimeRequestTimeout@ - default 10s. When a realtime client library is establishing a connection with Ably, or sending a @HEARTBEAT@, @CONNECT@, @ATTACH@, @DETACH@ or @CLOSE@ @ProtocolMessage@ to Ably, this is the amount of time that the client library will wait before considering that request as failed and triggering a suitable failure condition
+
+h2(#idl). Interface Definition
+
+The following bespoke IDL (Interface Definition Language) describes the types and classes present in the Rest and Realtime client libraries.
+
+Please note the following conventions:
+
+* Types are capitalized
+* Attribute and method names are lowercase
+* Attributes are denoted as @attributeName: Type@
+* Instance methods are denoted as @methodName(argName: Type, argName: Type) -> ReturnType@ (@ReturnType@ may be omitted)
+* Callback functions / closures are denoted as @(argName: Type, argName: Type) -> ReturnType@ (@ReturnType@ is usually omitted)
+* Values produced by I/O (e.g. a request) are prefixed with @=> io@. In some platforms (JS) those values are passed as arguments to a callback argument, instead of being returned. I/O always can fail, but how do they fail is undefined in the spec, so it's also undefined here
+* Enums are denoted as @.A | .B | .C@
+* @Type?@ denotes a nullable type
+* @Type default value@ denotes that the thing being annotated with @Type@ has @value@ as default. @Type api-default value@ denotes that the Ably server API uses those defaults and therefore it is unnecessary for the client library to send these default values to the API
+* Class fields (as opposed to instance fields) are prefixed with a @+@
+* @Duration@ and @Time@ types are typically represented as milliseconds since the epoch. Where needed, a more idiomatic language specific duration may be used such as @seconds@ or @Time@ respectively for Ruby
+* @Data@ is a message payload type, see "RSL4a":#RSL4a for a list of supported payload types
+
+```[python]
+class Rest:
+  constructor(keyStr: String) // RSC1
+  constructor(tokenStr: String) // RSC1
+  constructor(ClientOptions) // RSC1
+  auth: Auth // RSC5
+  channels: Channels<RestChannel> // RSN1
+  stats(
+    start: Time, // RSC6b1
+    end: Time api-default now(), // RSC6b1
+    direction: .Backwards | .Forwards api-default .Backwards, // RSC6b2
+    limit: int api-default 100, // RSC6b3
+    unit: .Minute | .Hour | .Day | .Month api-default .Minute // RSC6b4
+  ) => io PaginatedResult<Stats> // RSC6a
+  time() => io Time // RSC16
+
+class Realtime:
+  constructor(keyStr: String) // RSC1
+  constructor(tokenStr: String) // RSC1
+  constructor(ClientOptions) // RSC1
+  auth: Auth // RTC4
+  channels: Channels<RealtimeChannel> // RTC3, RTS1
+  clientId: String? // proxy for RSA7
+  connection: Connection // RTC2
+  stats: // Same as Rest.stats, RTC5a
+  close() // proxy for RTN12
+  connect() // proxy for RTN11
+  time() => io Time // RTC6a
+
+class ClientOptions:
+  embeds AuthOptions // TO3j
+  autoConnect: Bool default true // RTC1b, TO3e
+  clientId: String? // RSC17, RSA4, RSA15, TO3a
+  defaultTokenParams: TokenParams? // TO3j11
+  echoMessages: Bool default true // RTC1a, TO3h
+  environment: String? // RSC15b, TO3k1
+  logHandler: // platform specific - TO3c
+  logLevel: // platform specific - TO3b
+  port: Int default 80 // TO3k4
+  queueMessages: Bool default true // RTP16b, TO3g
+  restHost: String default "rest.ably.io" // RSC12, TO3k2
+  realtimeHost: String default "realtime.ably.io" // RTC1d, TO3k3
+  recover: String? // RTC1c, TO3i
+  tls: Bool default true // RSC18, TO3d
+  tlsPort: Int default 443 // TO3k5
+  useBinaryProtocol: Bool default true // TO3f
+  // configurable retry and failure defaults
+  disconnectedRetryTimeout: Duration default 15s // TO311
+  suspendedRetryTimeout: Duration default 30s // RTN14d, TO312
+  httpOpenTimeout: Duration default 4s // TO313
+  httpRequestTimeout: Duration default 15s // TO314
+  httpMaxRetryCount: Int default 3 // TO315
+  httpMaxRetryDuration: Duration default 10s // TO315
+
+class AuthOptions: // RSA8e
+  authCallback: (String | TokenDetails | TokenRequest) ->? // RSC14c, RSA4, TO3j5, AO2b
+  authHeaders: [(String, String)]? // RSA8c3, TO3j8, AO2e
+  authMethod: .GET | .POST default .GET // RSA8c, TO3j7, AO2d
+  authParams: [String: [String]]? // RSA8c3, RSA8c1, TO3j9, AO2f
+  authUrl: String? // RSC14c, RSA4, RSA8c, TO3j6, AO2c
+  force: Bool default false // RSA10d, AO2h
+  key: String? // RSC14a, RSA14, TO3j1, AO2a
+  queryTime: Bool default false // RSA9d, TO3j10, AO2a
+  token: String? | TokenDetails? // RSC14c, RSA4, TO3j2
+  tokenDetails: TokenDetails? // RSC14c, RSA4, TO3j3
+  useTokenAuth: Bool? // RSA4, RSA14, TO3j4
+
+class TokenParams: // RSAA8e
+  capability: String api-default '{"*":["*"]}' // RSA9f, TK2b
+  clientId: String? // TK2c
+  nonce: String? // RSA9c, Tk2d
+  timestamp: Time? // RSA9d, Tk2d
+  ttl: Duration api-default 60min // RSA9e, TK2a
+
+class Auth:
+  clientId: String? // RSA7, RSC17, RSA12
+  authorise(TokenParams?, AuthOptions?) => io TokenDetails // RSA10
+  createTokenRequest(TokenParams?, AuthOptions?) => io TokenRequest // RSA9
+  requestToken(TokenParams?, AuthOptions?) => io TokenDetails // RSA8e
+
+class TokenDetails:
+  capability: String // TD5
+  clientId: String? // TD6
+  expires: Time // TD3
+  issued: Time // TD4
+  token: String // TD2
+
+class TokenRequest:
+  capability: String // TE3
+  clientId: String? // TE2
+  keyName: String // TE2
+  mac: String // TE2
+  nonce: String // TE2
+  timestamp: Time? // TE5
+  ttl: Duration? api-default 60min // TE4
+
+class Channels<ChannelType>:
+  exists(String) -> Bool // RSN2, RTS2
+  get(String) -> ChannelType // RSN3a, RTS3a
+  get(String, ChannelOptions) -> ChannelType // RSN3c, RTS3c
+  iterate() -> Iterator<ChannelType> // RSN2, RTS2
+  release(String) // RSN4, RTS4
+
+class RestChannel:
+  name: String?
+  presence: RestPresence // RSL3
+  history(
+    start: Time, // RSL2b1
+    end: Time api-default now(), // RSL2b1
+    direction: .Backwards | .Forwards api-default .Backwards, // RSL2b2
+    limit: int api-default 100 // RSL2b3
+  ) => io PaginatedResult<Message> // RSL2a
+  publish([Message]) => io Error? // RSL1, RTL6
+  publish(name: String?, data: Data?) => io Error? // RSL1, RTL6
+  publish(name: String?, data: Data?, clientId: String) => io Error? // RSL1h, RTL6h
+
+class RealtimeChannel extends RestChannel:
+  embeds EventEmitter<ChannelState, ErrorInfo?> // RTL2
+  errorReason: ErrorInfo? // RTL4e
+  state: ChannelState // RTL2b
+  presence: RealtimePresence // RTL9
+  attach() => io ErrorInfo? // RTL4d
+  detach() => io ErrorInfo? // RTL5e
+  history(
+    start: Time, // RTL10a
+    end: Time api-default now(), // RTL10a
+    direction: .Backwards | .Forwards api-default .Backwards, // RTL10a
+    limit: int api-default 100, // RTL10a
+    untilAttach: Bool default false // RTL10b
+  ) => io PaginatedResult<Message> // RSL2a
+  subscribe((Message) ->) // RTL7a
+  subscribe(String, (Message) ->) // RTL7b
+  unsubscribe() // RTL8a, RTE5
+  unsubscribe((Message) ->) // RTL8a
+  unsubscribe(String, (Message) ->) // RTL8a
+
+enum ChannelState:
+  INITIALIZED
+  ATTACHING
+  ATTACHED
+  DETACHING
+  DETACHED
+  FAILED
+
+class ChannelOptions:
+  cipherParams: CipherParams? // RSL5a, TB2b
+  encrypted: Bool // RSL5a, TB2a
+
+class CipherParams:
+  algorithm: String default "AES" // TZ2a
+  key: String // TZ2d
+  keyLength: Int? // TZ2b
+  mode: String default "CBC" // TZ2c
+
+class Crypto:
+  +getDefaultParams(key: String?) -> CipherParams // TZ3
+
+class RestPresence:
+  get(
+    limit: int api-default 100, // RSP3a
+    clientId: String?, // RSP3a2
+    connectionId: String?, // RSP3a3
+  ) => io PaginatedResult<PresenceMessage> // RSPa
+  history(
+    start: Time, // RSP4b1
+    end: Time api-default now(), // RSP4b1
+    direction: .Backwards | .Forwards api-default .Backwards, // RSP4b2
+    limit: int api-default 100, // RSP4b3
+  ) => io PaginatedResult<PresenceMessage> // RSP4a
+
+class RealtimePresence:
+  syncComplete: Bool // RTP13
+  get(
+    waitForSync: Bool default true, // RTP11c1
+    clientId: String?, // RTP11c2
+    connectionId: String?, // RTP11c3
+  ) => io PaginatedResult<PresenceMessage> // RTP11
+  history(
+    start: Time, // RTP12a
+    end: Time, // RTP12a
+    direction: .Backwards | .Forwards api-default .Backwards, // RTP12a
+    limit: int api-default 100, // RTP12a
+    untilAttach: Bool default false // RTP12b
+  ) => io PaginatedResult<PresenceMessage> // RTP12c
+  subscribe((PresenceMessage) ->) // RTP6a
+  subscribe(PresenceAction, (PresenceMessage) ->) // RTP6b
+  unsubscribe() // RTP7a, RTE5
+  unsubscribe((PresenceMessage) ->) // RTP7a
+  unsubscribe(PresenceAction, (PresenceMessage) ->) // RTP7b
+  // presence state modifiers
+  enter(Data?) => io ErrorInfo? // RTP8
+  update(Data?) => io ErrorInfo? // RTP9
+  leave(Data?) => io ErrorInfo? // RTP10
+  enterClient(clientId: String, Data?) => io ErrorInfo? // RTP4, RTP14, RTP15
+  updateClient(clientId: String, Data?) => io ErrorInfo? // RTP15
+  leaveClient(clientId: String, Data?) => io ErrorInfo? // RTP15
+
+enum PresenceAction:
+  ABSENT // TP2
+  PRESENT // TP2
+  ENTER // TP2
+  LEAVE // TP2
+  UPDATE // TP2
+
+class ConnectionDetails:
+  clientId: String? // RSA12a, CD2a
+  connectionKey: String // RTN15e, CD2b
+  connectionStateTtl: Duration // CD2f, RTN14e, DF1a
+  maxFrameSize: Int // CD2d
+  maxInboundRate: Int // CD2e
+  maxMessageSize: Int // CD2c
+  serverId: String // CD2g
+
+class Message:
+  constructor(name: String?, data: Data?) // TM2
+  constructor(name: String?, data: Data?, clientId: String?) // TM2
+  clientId: String? // RSL1g1, TM2b
+  connectionId: String? // TM2c
+  data: Data? // TM2d
+  encoding: String? // TM2e
+  id: String // TM2a
+  name: String? // TM2g
+  timestamp: Time // TM2f
+
+class PresenceMessage
+  action: PresenceAction // TP3b
+  clientId: String // TP3c
+  connectionId: String // TP3d
+  data: Data? // TP3e
+  encoding: String? // TP3f
+  id: String // TP3a
+  timestamp: Time // TP3g
+  memberKey() -> String // TP3h
+
+class ProtocolMessage:
+  action: ProtocolMessageAction // TR2, TR4a
+  channel: String? // TR4b
+  channelSerial: String? // TR4c
+  connectionDetails: ConnectionDetails? // RSA7b3, RTN19, TR4o
+  connectionId: String? // RTN15c1, TR4d
+  connectionKey: String? // TR4e
+  connectionSerial: Int? // RTN10c, TR4f
+  count: Int? // TR4g
+  error: ErrorInfo? // RTN15c2, TR4h
+  flags: .HAS_PRESENCE & .HAS_BACKLOG ? // RTP1, TR3, TR4i
+  id: String? // TR4b
+  messages: [Message]? // TR4k
+  msgSerial: Int? // RTN7b, TR4j
+  presence: [PresenceMessage]? // TR4l
+  timestamp: Time? // TR4m
+
+enum ProtocolMessageAction:
+  HEARTBEAT // TR2
+  ACK // TR2
+  NACK // TR2
+  CONNECT // TR2
+  CONNECTED // TR2
+  DISCONNECT // TR2
+  DISCONNECTED // TR2
+  CLOSE // TR2
+  CLOSED // TR2
+  ERROR // TR2
+  ATTACH // TR2
+  ATTACHED // TR2
+  DETACH // TR2
+  DETACHED // TR2
+  PRESENCE // TR2
+  MESSAGE // TR2
+  SYNC // TR2
+
+class Connection:
+  embeds EventEmitter<ConnectionState, ConnectionStateChange> // RTN4a, RTN4e
+  errorReason: ErrorInfo? // RTN14a
+  id: String? // RTN8
+  key: String? // RTN9
+  recoveryKey: String? // RTN16b, RTN16c
+  serial: Int // RTN10
+  state: ConnectionState // RTN4d
+  close() // RTN12
+  connect() // RTC1b, RTN3, RTN11
+  ping() => io // RTN13
+
+enum ConnectionState:
+  INITIALIZED
+  CONNECTING
+  CONNECTED
+  DISCONNECTED
+  SUSPENDED
+  CLOSING
+  CLOSED
+  FAILED
+
+class ConnectionStateChange:
+  current: ConnectionState // TA2
+  previous: ConnectionState // TA2
+  reason: ErrorInfo? // RTN4f, TA3
+  retryIn: Duration? // RTN14d, TA2
+
+class Stats:
+  all: StatsMessageTypes // http://goo.gl/TpIh5I
+  apiRequests: StatsRequestCount // http://goo.gl/lFhZLC
+  channels: StatsResourceCount // http://goo.gl/jfu0q1
+  connections: StatsConnectionTypes // http://goo.gl/72fQ7Z
+  inbound: StatsMessageTraffic // http://goo.gl/8SjQAJ
+  intervalGranularity: StatsIntervalGranularity
+  intervalId: String
+  intervalTime: Time
+  outbound: StatsMessageTraffic // http://goo.gl/8SjQAJ
+  persisted: StatsMessageTypes // http://goo.gl/TpIh5I
+  tokenRequests: StatsRequestCount // http://goo.gl/lFhZLC
+
+enum StatsIntervalGranularity:
+  MINUTE
+  HOUR
+  DAY
+  MONTH
+
+class ErrorInfo:
+  code: Int // TI1
+  message: String // TI1
+  statusCode: Int // TI1
+
+class EventEmitter<Event, Data>:
+  on((Data...) ->) // RTE4
+  on(Event, (Data...) ->) // RTE4
+  once((Data...) ->) // RTE4
+  once(Event, (Data...) ->) // RTE4
+  off() // RTE5
+  off((Data...) ->) // RTE5
+  off(Event, (Data...) ->) // RTE5
+  emit(Event, Data...)  // RTE6
+
+class PaginatedResult<T>:
+  items: [T] // TG3
+  first() => io PaginatedResult<T> // TG5
+  hasNext() -> Bool // TG6
+  isLast() -> Bool // TG7
+  next() => io PaginatedResult<T>? // TG4
+```
