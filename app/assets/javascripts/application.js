@@ -14,8 +14,17 @@ $(function() {
   }
 
   function stripNamespace(text) {
-    var parts = text.split(/::|\./);
-    return parts[parts.length-1];
+    var parts = text.split(/::|\./),
+        splitter = text.match(/::|\./g),
+        lastPart = parts[parts.length-1];
+
+    if (splitter && lastPart.match(/^[A-Z0-9]+$/)) {
+      // Namespace is Ruby constant so needs previous part to make sense
+      // i.e. PresenceMessage::ACTION
+      return parts[parts.length-2] + splitter[splitter.length-1] + lastPart;
+    } else {
+      return lastPart;
+    }
   }
 
   // On selecting a nav section, scroll it into view
