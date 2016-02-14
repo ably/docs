@@ -4,90 +4,135 @@ section: realtime
 index: 50
 jump_to:
   Help with:
-    - History#title
+    - Getting started
+    - Channel and Presence history#channel-and-presence
+    - Persisted history
+    - Continuous history
   API reference:
-    - Channel history#channel-history
+    - Message history#message
+    - Presence history#presence
+  Related types:
+    - Message
+    - PresenceMessage#presence-message
+    - Presence action
+    - PaginatedResult#paginated-result
 ---
 
-The Realtime client library provides message history for channels. It provides access to the persisted history, as with the REST API, but also enables access to instantaneous or "live" history for attached channels.
+The Realtime client library provides message and presence event history for channels. Channel history can be used to return continuous message history up to the exact point a realtime channel was attached, and combines both instantaneous "live" history as well as the longer term "persisted history":#persisted-history. If "persisted history":#persisted-history is enabled for the channel, then messages will "typically be stored for 24 - 72 hours on disk":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If persisted history is not enabled, Ably retains the last two minutes of instantaneous "live" message history in memory.
 
-This live history provides the ability to obtain continuous message history up to the point that a realtime channel was attached and also supports recent history for channels that do not have persistence enabled.
+h2(#getting-started). Getting started
+
+The Ably Realtime client library provides a straightforward API to retrieve "paginated":#paginated-result message or presence event history. Each page of history, by default, contains up to 100 messages. Message ordering, by default, is from most recent to oldest.
+
+```[jsall](code-editor:realtime/channel-history)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish('example', 'message data', function(err) {
+    channel.history(function(err, resultPage) {
+      var lastMessage = resultPage.items[0];
+      alert('Last message: ' + lastMessage.id + ' - ' + lastMessage.data);
+    });
+  });
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.publish 'example', 'message data' do
+    channel.history do |result_page|
+      last_message = result_page.items.last
+      puts "Last message: #{last_message.message.id} - #{last_message.data}")
+    end
+  end
+```
+
+```[java]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.publish("example", "message data", new CompletionListener() {
+    @Override
+    public void onError(ErrorInfo reason) {
+      System.out.println("Unable to publish message; err = " + reason.message);
+    }
+    @Override
+    public void onSuccess() {
+      PaginatedResult<Message> resultPage = channel.history(null);
+      Message lastMessage = resultPage.items[0];
+      System.out.println("Last message: " + lastMessage.id + " - " + lastMessage.data);
+    }
+  });
+```
+
+h2(#channel-and-presence). Channel & Presence history
+
+Both the "@Channel@":/realtime/channels-messages and "@Presence@":/realtime/presence objects provide history. The "@Channel@":/realtime/channels-messages object provides the history of "@Message@":#message objects published on the channel, whereas the "@Presence@":/realtime/presence object provides presence event history of that channel i.e. members entering, updating or leaving the channel as "@PresenceMessage@":#presence-message objects.
 
 h3(#persisted-history). Enabling persistent history
 
-To enable history on a channel, it is necessary to add a channel rule in your "Application" settings.
+By default, persisted history on channels is disabled and messages are only stored by the Ably service for two minutes in memory. If persisted history is enabled for the channel, then messages will "typically be stored for 24 - 72 hours on disk":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for.
 
-In your "Account Dashboard", click on Manage on any of your applications, then click on the "Settings" tab. From this page, you will be able to manage your channel rules and create new ones.
+Every message that is persisted to or retrieved from disk counts as an extra message towards your monthly quote. For example, for a channel that has persistence enabled, if a message is published, two messages will be deducted from your monthly quota. If the message is later retrieved from history, another message will be deducted from your monthly quota.
 
-Click on "Add new rule" and fill the form to create a new restriction on a specific channel. Particularly, you can check the checkbox for "Persist Messages" to store a day worth of messages.
+To enable history on a channel, it is necessary to add a channel rule in the settings of your "application dashboard":https://support.ably.io/solution/articles/3000030053-how-do-i-access-my-app-dashboard. See the "documentation on channel rules":https://support.ably.io/solution/articles/3000030057-what-are-channel-rules-and-how-can-i-use-them-in-my-app for further information on what they are and how to configure them.
 
-h3. History queries
+h3(#continuous-history). Continuous history
 
-The REST API provides a @GET /messages@ route on a channel, which performs a query for message history on the channel. These queries may be scoped by @start@ and @end@ time, may be queried in a given @direction@ and may include a @limit@ on the number of records returned.
+It is possible to obtain message history that is continuous with the realtime messages received on an attached channel, in the backwards direction from the point of attachment. When a @Channel@ instance is attached, it's automatically populated by the Ably service with the serial number of the last published message on the channel. As such, using this serial number, the client library is able to make a history request to the the Ably service for all messages received since the channel was attached. Any new messages therefore are received in realtime via the attached channel, and any historical messages are accessible via the history method.
 
-History results are paginated and therefore accompanied with one or more relative links relating to the current query. Where the number of results returned exceeds the query limit - which is either the value of the @limit@ param or the default limit of 100 - the query result contains pages with the limited number of records, and a relative link to the next page.
+In order to benefit from this functionality, the @untilAttach@ option can be used when making history requests on attached channels. If the channel is not yet attached, this will result in an error.
 
-Responses contain one or more of the following relative links:
+```[jsall](code-editor:realtime/channel-history-until-attach)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channnel.attach(function(err) {
+    channel.history({ untilAttach: true}, function(err, resultPage) {
+      var lastMessage = resultPage.items[0];
+      alert('Last message before attach: ' + lastMessage.data);
+    });
+  });
+```
 
-- first := a link to the first page of results for this query. This link also makes the query stable; where params are resolved at query time (particularly @end@ which is resolved to the current time if not specified explicitly) then the @first@ link contains the resolved values of those params so that it will repeatably resolve to the same param values each time. (This does not necessarily mean that the query results will be identical, if the last remaining messages for a given time interval are persisted between two invocations of the same query.)
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channnel.attach do
+    channel.history(until_attach: true) do |result_page|
+      last_message = result_page.items.last
+      puts "Last message before attach: #{last_message.data}")
+    end
+  end
+```
 
-- current := a stable link to the current page of results.
-
-- next := on each page except the last in a paginated result, the next link is a link to the next page of results.
-
-It is not possible to navigate backwards through a result set, but each page can be obtained by navigating to it by going back to @first@ and then @next@. Of course, if the intention is to display results in the opposite order, the @direction@ param should be used in the initial query to specify the intended direction of pagination.
-
-Relative links are presented by default as an "RFC 5988 Link HTTP response header":http://tools.ietf.org/html/rfc5988; there is a separate Link header for each relative link accompanying the response. The rel types used are @first@, @next@ and @current@ as specified in the RFC. A Link header has the format:
-
-bq. Link: &lt;&lt;url&gt;&gt;; rel="&lt;rel&gt;"
-
-where @<url>@ is the URL of the link and @<rel>@ is the relation type.
-
-For example:
-
-bq. Link: &lt;./history?start=1380794880000&end=1380794881058&limit=100&
-by=minute&direction=forwards&format=json&first_start=1380794880000&gt;; rel="first"
-
-In principle the URL might be any valid URL but in practice it will always be a relative URL, and it must be interpreted relative to the query URL. Clients should treat the URL opaquely; in particular, params (such as @first_start@ in the example above) are undocumented and unsupported except where a client uses the link URL in its entirety.
-
-In the case of a JSON response body format it is also possible to request that the rel response metadata is inline in the response body by specifying @rel_format=inline@ in the request URL. (The @rel_format@ param also takes the value @rel_format=link@ to request Link header metadata explicitly.) In the inline case the response body then has the format:
-
-<pre>
-{
-    "data": [ ... messages ... ],
-    "rel": {
-        "first": <URL>,
-        ...
+```[java]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.attach();
+  channel.on(ChannelState.attached, new ChannelStateListener() {
+    @Override
+    public void onChannelStateChanged(ChannelState state, ErrorInfo reason) {
+      Param[] options = new Param[]{ new Param("untilAttach", "true") };
+      PaginatedResult<Message> resultPage = channel.history(options);
+      Message lastMessage = resultPage.items[0];
+      System.out.println("Last message before attach: " + lastMessage.data);
     }
-}
-
-</pre>
-
-where the @data@ member references the history result in the usual format and each of the rel links associated with the response is present in the @rel@ member, with the link URL in the same format as above.
-
-h3. Live vs persistent history
-
-If persistence is enabled for a channel, messages are persisted within the Ably system and can later be retrieved via the history API.
-
-There is a single system-wide view of the persistent history. In practice, however, messages on a channel will not necessarily be delivered in the same order to all clients; messages originating in one region will typically be delivered to other clients in that region sooner than messages originating from other regions. When querying persistent history the messages returned will generally be in timestamp order and will not necessarily have been delivered in that order to any client.
-
-When querying very recent history, however, it is possible to query for the "live" history, effectively replaying the event order was it occurred for a specific connection or in a specific region. This live history is available even for channels that do not have persistence enabled.
-
-The live history makes it possible to obtain a history that is continuous with the messages received on an attached channel, in the backwards direction from the point of attachment. When a @Channel@ instance is attached, its @attachSerial@ property is populated with a serial number. This serial can be passed as the value of the @from_serial@ option when querying the history. The serial number must be treated opaquely by the client, and does not necessarily have any meaning outside of the context of the client instance that received that value on attach.
-
-Continuity of message history, form the instantaneous live history back to persistent history, is assured by the Ably system when responding to queries from a realtime client.
+  });
+```
 
 h1. API reference
 
 inline-toc.
-  Application history:
-    - Methods:
-      - History
-  Channel object history:
-    - Methods:
-      - History#channel-history
+  History API:
+    - Channel:
+      - history#messages
+    - Presence:
+      - history#presence
+    - Related types:
+      - Message
+      - PresenceMessage#presence-message
+      - Presence action
+      - PaginatedResult#paginated-result
 
-h2(#channel-history). Channel object history
+h2(#channel-history). Channel object message history
 
 With the REST client library, the Channel object must be created in order to retrieve history or stats for the required channel:
 
@@ -107,7 +152,7 @@ This call queries the REST "@/apps/<app id>/channels/<channel id>/history@":/res
 
 h4. Parameters
 
-- options := is an optional object containing the query parameters, as specified in the "REST API":/rest-api#message-history documentation.
+- options := is an optional object containing the query parameters, as specified in the "query options below":#messages-option-params.
 - callback := is a function of the form: @callback(err, result)@
 where:
 <ul>
@@ -115,7 +160,7 @@ where:
 <li>On success, @result@ contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api#message-history</li>
 </ul>
 
-h4. Request options
+h4(messages-option-params). Query options
 
 The following options are supported.
 
@@ -143,3 +188,32 @@ Default is backwards.
 If a format is not specified, it is inferred from an Accept or Content-Type header. The header takes precedence.<br><br>
 Similarly, in the special case of json only, the request path may include the extension .json which makes a json request.
 
+h2(#related-types). Related types
+
+h3(#message).
+  default: Message
+  ruby:    Ably::Models::Message Enum
+  java:    io.ably.lib.types.Message
+
+<%= partial 'types/_message' %>
+
+h3(#presence-message).
+  default: PresenceMessage
+  ruby:    Ably::Models::PresenceMessage Enum
+  java:    io.ably.lib.types.PresenceMessage
+
+<%= partial 'types/_presence_message' %>
+
+h3(#presence-action).
+  default: Presence action
+  java:    io.ably.lib.types.PresenceMessage.Action
+  ruby:    Ably::Models::PresenceMessage::ACTION
+
+<%= partial 'types/_presence_action' %>
+
+h3(#paginated-result).
+  default: PaginatedResult
+  ruby:    Ably::Models::PaginatedResult
+  java:    io.ably.lib.types.PaginatedResult
+
+<%= partial 'types/_paginated_result' %>
