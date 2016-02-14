@@ -9,8 +9,8 @@ jump_to:
     - Persisted history
     - Continuous history
   API reference:
-    - Message history#message
-    - Presence history#presence
+    - Message history#channel-history
+    - Presence history#presence-history
   Related types:
     - Message
     - PresenceMessage#presence-message
@@ -123,7 +123,7 @@ h1. API reference
 inline-toc.
   History API:
     - Channel:
-      - history#messages
+      - history#channel-history
     - Presence:
       - history#presence
     - Related types:
@@ -132,61 +132,111 @@ inline-toc.
       - Presence action
       - PaginatedResult#paginated-result
 
-h2(#channel-history). Channel object message history
+h2. Channel object
 
-With the REST client library, the Channel object must be created in order to retrieve history or stats for the required channel:
-
-bc[javascript]. var Rest = new Ably.Rest(options),
-    channel = Rest.channels.get('channel0');
-
-bc[ruby]. rest = Ably::Rest.new(options)
-channel = rest.channels.get('channel0')
+The "Realtime @Channel@ object":/realtime/channels-messages exposes the following public method to obtain "@Message@":#message history.
 
 h3. Methods
 
-h6. history
+h6(#channel-history). history
 
-bq(definition). channel.history(options, callback)
+bq(definition).
+  default: history(Object option, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"Message":#message> resultPage))
+  ruby:    "Deferrable":/realtime/types#deferrable history(Hash option) -> yields "PaginatedResult":#paginated-result<"Message":#message>
+  java:    public "PaginatedResult":#paginated-result<"Message":#message> history(Param[] option)
 
-This call queries the REST "@/apps/<app id>/channels/<channel id>/history@":/rest-api#message-history API
+Gets a "paginated":#paginated-result set of historical messages for this channel.
 
 h4. Parameters
 
-- options := is an optional object containing the query parameters, as specified in the "query options below":#messages-option-params.
-- callback := is a function of the form: @callback(err, result)@
-where:
-<ul>
-<li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest-api#common documentation</li>
-<li>On success, @result@ contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api#message-history</li>
-</ul>
+- <span lang="default">option</span><span lang="java">Param[] option</span> := <span lang="default">an optional object containing the query parameters</span><span lang="ruby">an optional set of key value pairs containing the query parameters</span>, as specified below.
 
-h4(messages-option-params). Query options
+- <div lang="jsall">callback</div> := is a function of the form: @callback(err, resultPage)@
+- <div lang="ruby">&block</div> := yields a @PaginatedResult<Message>@ array
 
-The following options are supported.
+h4. @options@ parameters
 
-- start := Specifies the start of interval covered by the query. Defaults to the beginning of time.<br><br>
-The value is either a number (milliseconds since the epoch) or a date/time string that can be parsed by JS Date (eg 2012-12-09:16:38).<br><br>
-The given start time is rounded down to the start of the relevant interval depending on the granularity of the query (see below). So, for example, if the query is for stats by minute (which is the default), then the given time will be rounded down to the nearest minute.
+- <span lang="ruby">:</span>start := _beginning of time_ earliest <span lang="ruby">@Time@ or </span>millisecond since epoch time for any message retrieved<br>__Type: Long<span lang="ruby">, Time</span>__
+- <span lang="ruby">:</span>end := _current time_ latest <span lang="ruby">@Time@ or </span>millisecond since epoch time for any messages retrieved<br>__Type: Long<span lang="ruby">, Time</span>__
+- <span lang="ruby">:</span>direction := _backwards_ <span lang="ruby">@:@</span>@forwards@ or <span lang="ruby">@:@</span>@backwards@<br>__Type: <span lang="default">String</span><span lang="ruby">Symbol</span>__
+- <span lang="ruby">:</span>limit := _100_ maximum number of messages to retrieve up to 1,000<br>__Type: Integer__
+- <span lang="default">untilAttach</span><span lang="ruby">:until_attach</span> := _false_ when true, ensures message history is up until the point of the channel being attached. See "continuous history":#continuous-history for more info. If the @Channel@ is not attached, enabling this option will result in error<br>__Type: Boolean__
 
-- end := Specifies the end of interval covered by the query. Defaults to the current time.<br><br>
-The value is either a number (milliseconds since the epoch) or a date/time string that can be parsed by JS Date (eg 2012-12-09:16:38).<br><br>
-The interval covered by the query always includes the end time, and covers the entire interval at the requested granularity that includes the end time. (In a sense it is "rounded up", except that the end of the query interval is not a "round" time; it's the last second of the interval containing the given end time.)
+blang[jsall].
+  h4. Callback result
 
-- direction := Specifies the direction that results are to be returned, either backwards (ie most recent interval first) or forwards (ie oldest interval first).<br><br>
-The start time and end time are always that - ie start is earlier than first, even if the direction is backwards. Therefore, when querying backwards, the first returned result will cover the end time.<br><br>
-Default is backwards.
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
 
-- limit := Specifies the maximum number of records to return.
+  On failure to retrieve message history, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
 
-- from_serial := Specifies a message serial number, requesting a history starting from that specific message. A contiguous history, to mesh precisely with the messages received in realtime from an attached channel, can be obtained by passing the appropriate serial number in this option.
+blang[java].
+  h4. Returns
 
-- format := Specifies a format for the response, which can be:<br><br>
-<ul>
-<li>json</li>
-<li>html</li>
-<li>binary (returns records encoded as Thrift. Note that this feature is at risk for the stats API)</li>
-If a format is not specified, it is inferred from an Accept or Content-Type header. The header takes precedence.<br><br>
-Similarly, in the special case of json only, the request path may include the extension .json which makes a json request.
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next@":#paginated-result and "@first@":#paginated-result methods.
+
+  Failure to retrieve the message history will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield a "PaginatedResult":#paginated-result that encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  Failure to retrieve the message history will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h2. Presence object
+
+"Realtime @Presence@ object":/realtime/presence exposes the following public method to obtain presence event history such as enter, update and leave events. These events are represented as "@PresenceMessage@":#presence-message objects.
+
+h3. Methods
+
+h6(#presence-history). history
+
+bq(definition).
+  default: history(Object option, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message> resultPage))
+  ruby:    "Deferrable":/realtime/types#deferrable history(Hash option) -> yields "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message>
+  java:    public "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message> history(Param[] option)
+
+Gets a "paginated":#paginated-result set of historical presence events for this channel.
+
+h4. Parameters
+
+- <span lang="default">option</span><span lang="java">Param[] option</span> := <span lang="default">an optional object containing the query parameters</span><span lang="ruby">an optional set of key value pairs containing the query parameters</span>, as specified below.
+
+- <div lang="jsall">callback</div> := is a function of the form: @callback(err, resultPage)@
+- <div lang="ruby">&block</div> := yields a @PaginatedResult<PresenceMessage>@ array
+
+h4. @options@ parameters
+
+- <span lang="ruby">:</span>start := _beginning of time_ earliest <span lang="ruby">@Time@ or </span>millisecond since epoch time for any presence event retrieved<br>__Type: Long<span lang="ruby">, Time</span>__
+- <span lang="ruby">:</span>end := _current time_ latest <span lang="ruby">@Time@ or </span>millisecond since epoch time for any presence events retrieved<br>__Type: Long<span lang="ruby">, Time</span>__
+- <span lang="ruby">:</span>direction := _backwards_ <span lang="ruby">@:@</span>@forwards@ or <span lang="ruby">@:@</span>@backwards@<br>__Type: <span lang="default">String</span><span lang="ruby">Symbol</span>__
+- <span lang="ruby">:</span>limit := _100_ maximum number of presence event messages to retrieve up to 1,000<br>__Type: Integer__
+- <span lang="default">untilAttach</span><span lang="ruby">:until_attach</span> := _false_ when true, ensures presence event history is up until the point of the channel being attached. See "continuous history":#continuous-history for more info. If the @Channel@ is not attached, enabling this option will result in error<br>__Type: Boolean__
+
+blang[jsall].
+  h4. Callback result
+
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  On failure to retrieve presence event history, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[java].
+  h4. Returns
+
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next@":#paginated-result and "@first@":#paginated-result methods.
+
+  Failure to retrieve the presence event history will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield a "PaginatedResult":#paginated-result that encapsulates an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  Failure to retrieve the presence event history will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
 
 h2(#related-types). Related types
 
