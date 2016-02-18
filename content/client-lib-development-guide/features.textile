@@ -388,7 +388,7 @@ h3(#realtime-channel). Channel
 ** @(RTL6c)@ Connection state conditions:
 *** @(RTL6c1)@ If the connection is @CONNECTED@ then the messages are published immediately
 *** @(RTL6c2)@ If the connection is @CONNECTING@ or @DISCONNECTED@, and @ClientOptions#queueMessages@ has not been explicitly set to false, then the message will be queued and delivered as soon as the connection state returns to @CONNECTED@
-*** @(RTL6c3)@ Implicitly attaches the @Channel@. However, if the channel is in the @FAILED@ state, the @publish@ request results in an error
+*** @(RTL6c3)@ Implicitly attaches the @Channel@. However, if the channel is in or moves to the @FAILED@ state before the operation succeeds, it will result in an error
 ** @(RTL6d)@ Messages are delivered using a single @ProtocolMessage@ where possible by bundling in all messages for that channel into the @ProtocolMessage#messages@ array. However, a yet to be implemented feature should limit the total number of messages bundled per @ProtocolMessage@ based on the default max message size, and would reject the publish and indicate an error if any single message exceeds that limit
 ** @(RTL6e)@ Unidentified clients using "Basic Auth":https://en.wikipedia.org/wiki/Basic_access_authentication (i.e. any @clientId@ is permitted as no @clientId@ specified):
 *** @(RTL6e1)@ When a @Message@ with a @clientId@ value is published, Ably will accept and publish that message with the provided @clientId@. A test should assert that the @clientId@ of the published @Message@ is populated
@@ -404,7 +404,7 @@ h3(#realtime-channel). Channel
 * @(RTL7)@ @Channel#subscribe@ function:
 ** @(RTL7a)@ Subscribe with no arguments subscribes a listener to all messages
 ** @(RTL7b)@ Subscribe with a single name argument subscribes a listener to only messages whose @name@ member matches the string name
-** @(RTL7c)@ Implicitly attaches the @Channel@. However, if the channel is in the @FAILED@ state, the @subscribe@ request result in an error
+** @(RTL7c)@ Implicitly attaches the @Channel@. However, if the channel is in or moves to the @FAILED@ state before the operation succeeds, it will result in the listener not being registered and an error being indicated, typically to the optional callback where the language permits
 ** @(RTL7d)@ Messages delivered are automatically decoded based on the @encoding@ attribute; see REST @Channel@ encoding features. If there is an error decoding a message, the message is still delivered, but in addition to sending an error message to the logger, an @ErrorInfo@ error object is emitted as an error on the @Channel@. Tests should exist to publish and subscribe to encoded messages using the "AES 128":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-128.json and "AES 256":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-256.json fixture test data
 ** @(RTL7e)@ If a message cannot be decoded or decrypted successfully, it should be delivered to the listener with the @encoding@ attribute set indicating the residual encoding state, and an error should be emitted on the channel
 ** @(RTL7f)@ A test should exist ensuring published messages are not echoed back to the subscriber when @echoMessages@ is set to false in the @Realtime@ library constructor
@@ -436,7 +436,7 @@ h3(#realtime-presence). Presence
 * @(RTP6)@ @Presence#subscribe@ function:
 ** @(RTP6a)@ Subscribe with no arguments subscribes a listener to all presence messages
 ** @(RTP6b)@ Subscribe with a single action argument - such as @ENTER@, @LEAVE@, @UPDATE@ or @PRESENT@ - subscribes a listener to receive only presence messages with that action
-** @(RTP6c)@ Implicitly attaches the @Channel@. However, if the channel is in the @FAILED@ state, the @subscribe@ request results in an error
+** @(RTP6c)@ Implicitly attaches the @Channel@. However, if the channel is in or moves to the @FAILED@ state before the operation succeeds, it will result in the listener not being registered and an error being indicated, typically to the optional callback where the language permits
 * @(RTP7)@ @Presence#unsubscribe@ function:
 ** @(RTP7a)@ Unsubscribe with no arguments unsubscribes the listener if previously subscribed with an action-specific subscription
 ** @(RTP7b)@ Unsubscribe with a single action argument unsubscribes the provided listener to all presence messages for that action
@@ -464,7 +464,7 @@ h3(#realtime-presence). Presence
 ** @(RTP10e)@ In all other ways, this method is identical to @Presence#enter@ and should have matching tests
 * @(RTP11)@ @Presence#get@ function:
 ** @(RTP11a)@ Returns the list of current members on the channel in a callback. By default, will wait for the @SYNC@ to be completed, see "RTP11c1":#RTP11c1
-** @(RTP11b)@ Implicitly attaches the @Channel@. However, if the channel is in the @FAILED@ state, it will result in an error
+** @(RTP11b)@ Implicitly attaches the @Channel@. However, if the channel is in or moves to the @FAILED@ state before the operation succeeds, it will result in an error
 ** @(RTP11c)@ An optional set of params can be provided:
 *** @(RTP11c1)@ @waitForSync@ (default @true@). When @true@, method will wait until @SYNC@ is complete before returning a list of members. When @false@, known set of presence members is returned immediately, which may be incomplete if the @SYNC@ is not finished
 *** @(RTP11c2)@ @clientId@ filters members by the provided @clientId@
@@ -485,7 +485,7 @@ h3(#realtime-presence). Presence
 ** @(RTP15b)@ Tests should use @enterClient@, @updateClient@ and @leaveClient@ for many members from one @Realtime@ client and check that the operations are reflected in the presence map and the expected events are emitted on a separate client
 ** @(RTP15c)@ Tests should also ensure that using these methods has no side effects on a client that has entered normally using @Presence#enter@
 ** @(RTP15d)@ A callback can be provided that will be called upon success or failure
-** @(RTP15e)@ Implicitly attaches the @Channel@. However, if the channel is in the @FAILED@ state, it will result in an error
+** @(RTP15e)@ Implicitly attaches the @Channel@. However, if the channel is in or moves to the @FAILED@ state before the operation succeeds, it will result in an error
 ** @(RTP15f)@ If the client is identified and has a valid @clientId@, and the @clientId@ argument does not match the client's @clientId@, then it should indicate an error. The connection and channel remain available for further operations
 
 h3(#eventemitter). EventEmitter mixin / interface
@@ -834,17 +834,17 @@ class RestChannel:
     direction: .Backwards | .Forwards api-default .Backwards, // RSL2b2
     limit: int api-default 100 // RSL2b3
   ) => io PaginatedResult<Message> // RSL2a
-  publish([Message]) => io Error? // RSL1, RTL6
-  publish(name: String?, data: Data?) => io Error? // RSL1, RTL6
-  publish(name: String?, data: Data?, clientId: String) => io Error? // RSL1h, RTL6h
+  publish([Message]) => io // RSL1
+  publish(name: String?, data: Data?) => io // RSL1
+  publish(name: String?, data: Data?, clientId: String) => io // RSL1h
 
-class RealtimeChannel extends RestChannel:
+class RealtimeChannel:
   embeds EventEmitter<ChannelState, ErrorInfo?> // RTL2
   errorReason: ErrorInfo? // RTL4e
   state: ChannelState // RTL2b
   presence: RealtimePresence // RTL9
-  attach() => io ErrorInfo? // RTL4d
-  detach() => io ErrorInfo? // RTL5e
+  attach() => io // RTL4d
+  detach() => io // RTL5e
   history(
     start: Time, // RTL10a
     end: Time api-default now(), // RTL10a
@@ -852,8 +852,11 @@ class RealtimeChannel extends RestChannel:
     limit: int api-default 100, // RTL10a
     untilAttach: Bool default false // RTL10b
   ) => io PaginatedResult<Message> // RSL2a
-  subscribe((Message) ->) // RTL7a
-  subscribe(String, (Message) ->) // RTL7b
+  publish([Message]) => io // RTL6i
+  publish(name: String?, data: Data?) => io // RTL6i
+  publish(name: String?, data: Data?, clientId: String) => io // RTL6h
+  subscribe((Message) ->) => io // RTL7a
+  subscribe(String, (Message) ->) => io // RTL7b
   unsubscribe() // RTL8a, RTE5
   unsubscribe((Message) ->) // RTL8a
   unsubscribe(String, (Message) ->) // RTL8a
@@ -906,18 +909,18 @@ class RealtimePresence:
     limit: int api-default 100, // RTP12a
     untilAttach: Bool default false // RTP12b
   ) => io PaginatedResult<PresenceMessage> // RTP12c
-  subscribe((PresenceMessage) ->) // RTP6a
-  subscribe(PresenceAction, (PresenceMessage) ->) // RTP6b
+  subscribe((PresenceMessage) ->) => io // RTP6a
+  subscribe(PresenceAction, (PresenceMessage) ->) => io // RTP6b
   unsubscribe() // RTP7a, RTE5
   unsubscribe((PresenceMessage) ->) // RTP7a
   unsubscribe(PresenceAction, (PresenceMessage) ->) // RTP7b
   // presence state modifiers
-  enter(Data?) => io ErrorInfo? // RTP8
-  update(Data?) => io ErrorInfo? // RTP9
-  leave(Data?) => io ErrorInfo? // RTP10
-  enterClient(clientId: String, Data?) => io ErrorInfo? // RTP4, RTP14, RTP15
-  updateClient(clientId: String, Data?) => io ErrorInfo? // RTP15
-  leaveClient(clientId: String, Data?) => io ErrorInfo? // RTP15
+  enter(Data?) => io // RTP8
+  update(Data?) => io // RTP9
+  leave(Data?) => io // RTP10
+  enterClient(clientId: String, Data?) => io // RTP4, RTP14, RTP15
+  updateClient(clientId: String, Data?) => io // RTP15
+  leaveClient(clientId: String, Data?) => io // RTP15
 
 enum PresenceAction:
   ABSENT // TP2
