@@ -14,8 +14,21 @@ $(function() {
   }
 
   function stripNamespace(text) {
-    var parts = text.split(/::|\./);
-    return parts[parts.length-1];
+    var parts = text.split(/::|\./),
+        splitter = text.match(/::|\./g),
+        lastPart = parts[parts.length-1];
+
+    if (splitter && (lastPart.match(/^[A-Z0-9]+$/) || (lastPart.length <= 6))) {
+      /* If the last part of the definition is a Ruby constant
+         i.e. PresenceMessage::ACTION
+         then show the class to add context.
+         Equally, if the last part is very short
+         i.e. PresenceMessage.Action
+         then it to needs context */
+      return parts[parts.length-2] + splitter[splitter.length-1] + lastPart;
+    } else {
+      return lastPart;
+    }
   }
 
   // On selecting a nav section, scroll it into view

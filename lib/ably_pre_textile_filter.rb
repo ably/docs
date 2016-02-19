@@ -131,7 +131,13 @@ class AblyPreTextileFilter
       content.gsub(/^bq\(definition(?<anchor>\#[^\)]+)?\)\.\s*\n.*?\n\s*\n/m) do |match|
         anchor = $~.captures[0]
         lang_definitions = match.scan(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/)
-        lang_spans = lang_definitions.map { |lang, definition| "<span lang='#{lang}'>#{definition}</span>" }.join('')
+        lang_spans = lang_definitions.map do |lang, definition|
+          if lang == 'jsall'
+            "<span lang='javascript,nodejs'>#{definition}</span>"
+          else
+            "<span lang='#{lang}'>#{definition}</span>"
+          end
+        end.join('')
         "bq(definition#{anchor}). #{lang_spans}\n\n"
       end
     end
@@ -196,12 +202,17 @@ class AblyPreTextileFilter
         break if subsequent_lines.empty?
 
         indentation = subsequent_lines[0][/^\s+/, 0]
-        raise "blang[langauge]. blocks must be followed by indentation. Offending block: '#{blang_block}'" unless indentation
+        raise "blang[langauge]. blocks must be followed by indentation. Offending block: '#{blang_block}'\n#{subsequent_lines[0..2].join("\n")}" unless indentation
 
         line_index = 1
         while valid_blang_line?(subsequent_lines[line_index], indentation)
           line_index += 1
-          break if last_line?(subsequent_lines, line_index)
+          if last_line?(subsequent_lines, line_index)
+            # If last line, increase index by one i.e. beyond this line
+            #  so that the last line is included in the blang block
+            line_index += 1
+            break
+          end
         end
 
         content = [
