@@ -4,116 +4,168 @@ section: rest
 index: 20
 jump_to:
   Help with:
-    - Joining a channel#help-join
-    - Publishing messages#help-publish
-  API Reference:
-    - Channel object
+    - Getting started#getting-started
+    - Channels#channels
+    - Channel namespaces
+    - Subscribing to messages#message-subscription
+    - Publishing messages#message-publish
+    - Retrieving message history#message-history
+  Channel API properties:
+    - name
+    - presence
+  Channel API methods:
     - publish
     - history
-    - presence
 ---
 
-The Ably Realtime service organises the traffic within any application into named channels. Channels are the "unit" of message distribution; clients attach to channels to subscribe to messages, and every message broadcast by the service is associated with a unique channel.
+The Ably Realtime service organises the message traffic within applications into named channels. Channels are the "unit" of message distribution; clients attach to channels to subscribe to messages, and every message published to a unique channel is broadcast by Ably to all subscribers. This scalable and resilient messaging pattern is commonly called "pub/sub":https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern.
 
-h3. Channels in the REST API
+h2(#getting-started). Getting started
 
+The Ably REST client library provides a straightforward API for publishing and retrieve history messages on a channel.
 
-h4. Obtaining a channel instance
+```[javascript](code-editor:rest/channel-history)
+  var rest = new Ably.Rest('{{API_KEY}}');
+  var channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish('example', 'message data', function() {
+    channel.history(function(err, resultPage) {
+      console.log('Last published message:' + resultPage.items[0]);
+    });
+  });
+```
 
-A @Channel@ object is a reference to a single channel. A channel instance is obtained from the @channels@ collection of the Ably @Rest@ instance.
+```[nodejs](code-editor:rest/channel-history)
+  var rest = new Ably.Rest('{{API_KEY}}');
+  var channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish('example', 'message data', function() {
+    channel.history(function(err, resultPage) {
+      console.log('Last published message:' + resultPage.items[0]);
+    });
+  });
+```
 
-bc[jsall]. var channel = rest.channels.get('myChannel');
+```[ruby]
+  realtime = Ably::Rest.new('{{API_KEY}}')
+  channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.publish 'example', 'message data'
+  result_page = channel.history()
+  puts "Last published message: #{result_page.items.first}"
+```
 
-bc[java]. import io.ably.lib.realtime.Channel;
-Channel channel = rest.channels.get("myChannel");
+```[java]
+  AblyRest rest = new AblyRest("{{API_KEY}}");
+  Channel channel = rest.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.publish("example", "message data");
+  PaginatedResult<Message> resultPage = channel.history(null);
+  System.out.println("Last published message ID: " + resultPage.items[0].id);
+```
 
-A set of "channel options":#channel-options may also be passed when getting a channel instance.
+h2(#channels). Channels
 
-bc[jsall]. var channel = rest.channels.get('myChannel', channelOpts);
+In order to publish, retrieve message history or access presence history, you must first obtain a REST channel instance.
 
-bc[java]. import io.ably.lib.rest.Channel;
-Channel channel = rest.channels.get("myChannel", channelOpts);
+h3. Obtaining a channel instance
+
+A @Channel@ object is a reference to a single channel. A channel instance is obtained from the "@channels@ collection":/rest/usage/#channels of the <span lang="ruby">@Rest::Client@</span><span lang="default">@Rest@</span> instance, and is uniquely identified by its unicode string name. Find out more about "channel naming":https://support.ably.io/solution/articles/3000046824-what-restrictions-exist-for-the-name-field-of-a-channel
+
+bc[jsall]. var channel = realtime.channels.get('channelName');
+
+bc[java]. Channel channel = realtime.channels.get("channelName");
+
+bc[ruby]. channel = realtime.channels.get('channelName')
+
+To find out more about subscribing to messages published on channels in realtime, see the "Realtime channel API":/realtime/channels-messages.
+
+h4. Setting channel options and encryption
+
+A set of "channel options":#channel-options may also be passed to configure a channel for encryption. Find out more about "symmetrical message encryption":/rest/encryption.
+
+bc[jsall]. Crypto.generateRandomKey(function(err, key) {
+  var options = { cipher: { key: key } };
+  var channel = rest.channels.get('channelName', options);
+});
+
+bc[java]. CipherParams params = Crypto.getDefaultParams(key);
+ChannelOptions options = new ChannelOptions();
+options.cipher = params;
+Channel channel = rest.channels.get("channelName", channelOpts);
+
+bc[ruby]. key = Ably::Util::Crypto.generate_random_key
+options = { cipher: { key: key } }
+channel = rest.channels.get('channelName', options)
 
 h3. Channel namespaces
 
-One or more channel namespaces, or channel name prefixes, may be configured for an app. When a channel is created whose name is prefixed with one of the namespaces, the channel assumes certain configured attributes associated with that namespace.
-
-Namespace-prefixed names are delimited by a single colon ':'; the first component of the channel name (from the start up to and including the last character before the colon) is the namespace. A channel name may validly contain a colon even if the namespace component does not correspond to a namespace; also, a channel may contain multiple colons and only the component up to the first colon will be matched with a namespace. The only restriction on channel names is that a channel name may not start with a colon and may not be empty.
-
-Namespaces are defined and configured via the application dashboard. Namespace attributes that can be configured are:
-* whether or not channels belonging to that namespace require clients to be authenticated;
-* whether or not channel messages are persisted;
-* whether or not clients are required to be connected over a TLS connection.
-
-Key or token capabilities can also specify access rights based on channel namespace.
+<%= partial 'realtime/_channel_namespaces' %>
 
 h2. Messages
 
-An Ably Realtime Message has a @data@ member carrying the payload of the message. Various primitive and object types are portably defined and supported in all clients, enabling clients to be interoperable despite being hosted in different languages or environments.
+Each message published has an optional event @name@ <span lang="default">property</span><span lang="java">member</span><span lang="ruby">attribute</span> and a @data@ <span lang="default">property</span><span lang="java">member</span><span lang="ruby">attribute</span> carrying the payload of the message. Various primitive and object types are portably defined and supported in all clients, enabling clients to be interoperable despite being hosted in different languages or environments.
 
-The supported payload types are primitive types (boolean, int32, double, string), JSON-encoded objects and arrays, and buffers containing arbitrary binary data. Client libraries detect the supplied message payload and encode the message appropriately.
+The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and Null objects. Client libraries detect the supplied message payload and encode the message appropriately.
 
-h3. Publishing messages
+h3(#message-subscription). Subscribing to messages
 
-Channels expose a @publish@ method whereby a client can publish either a single message or an array of messages to a channel. A listener optionally passed in to the @publish@ method enables the client to know whether or not the operation succeeded.
+The @name@ <span lang="default">property</span><span lang="java">member</span><span lang="ruby">attribute</span> of published messages does not affect the distribution of a channel message to clients but may be used as a subscription filter, allowing a client to register a listener that only sees a subset of the messages received on the channel. When subscribing, a message listener can subscribe to see all messages on the channel or only a subset whose name matches a given @name@ string.
 
-bc[jsall]. channel.publish("myEvent", "This is my message", function(err) {
-  if(err)
+Find out more about "subscribing to messages using the Realtime API":/realtime/channels-messages#message-subscription.
+
+h3(#message-publish). Publishing messages
+
+Channels expose a @publish@ method whereby a client can publish either a single message or an array of messages to a channel using the "REST API":/rest-api.
+
+bc[jsall](code-editor:realtime/channel). channel.publish('event', 'This is my payload', function(err) {
+  if(err) {
     console.log('Unable to publish message; err = ' + err.message);
-  else
+  } else {
     console.log('Message successfully sent');
+  }
 });
 
-bc[java]. import io.ably.lib.rest.CompletionListener;
-channel.publish("myEvent", "This is my message", new CompletionListener() {
-	@Override
-	public void onError(ErrorInfo reason) {
-		System.out.println("Unable to publish message; err = " + reason.message);
-	}
-	@Override
-	public void onSuccess() {
-		System.out.println("Message successfully sent");
-	}
-});
+bc[ruby]. channel.publish('event', 'This is my payload')
 
-h3. Retrieving message history
+bc[java]. channel.publish("event", "This is my payload");
 
-Channels expose a @history@ method whereby a client can obtain messages previously sent on  those channels that have persistence enabled.
+h3(#message-history). Retrieving message history
 
-History results are paginated and therefore accompanied with one or more relative links relating to the current query. Where the number of results returned exceeds the query limit - which is either the value of the @limit@ param or the default limit of 100 - the query result contains pages with the limited number of records, and a relative link to the next page.
+Channels expose a "@history@":#history method providing a means for clients to obtain messages previously sent on the channel. Channel history can be used to return continuous message history up to the exact point a realtime channel was attached.
 
-bc[jsall]. var params = {direction: 'backwards', limit: '100'};
-channel.history(params, function(err, messages, rel) {
+History provides access to instantaneous "live" history as well as the longer term persisted history for attached channels. If "persisted history":/rest/history#persisted-history is enabled for the channel, then messages will "typically be stored for 24 - 72 hours":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If persisted history is not enabled, Ably retains the last two minutes of message history in memory.
+
+The following example retrieves the first two pages of historical messages published up until the point the channel was attached.
+
+bc[jsall]. channel.history(function(err, resultPage) {
   if(err) {
     console.log('Unable to get channel history; err = ' + err.message);
   } else {
-    console.log(messages.length + ' messages received in first result');
-    if(rel && rel.next) {
-      channel.history(rel.next, function(...) { ... });
+    console.log(resultPage.items.length + ' messages received in first page');
+    if(resultPage.hasNext()) {
+      resultPage.next(function(err, nextPage) { ... });
     }
+  }
 });
 
-bc[java]. import io.ably.lib.types.Message;
-import io.ably.lib.types.Param;
-import io.ably.lib.types.PaginatedResult;
-Param[] params = new Param[] {
-  new Param("direction", "backwards"),
-  new Param("limit", 100)
-};
-PaginatedResult<Message> messages = channel.history(params);
-System.out.println(messages.asArray().length + " messages received in first result");
-if(messages.getNext()) {
-  PaginatedResult<Message> nextPage = channel.history(messages.getNext());
-  System.out.println(...);
+bc[java]. PaginatedResult<Message> resultPage = channel.history(null);
+System.out.println(resultPage.items().length + " messages received in first page");
+if(resultPage.hasNext()) {
+  PaginatedResult<Message> nextPage = resultPage.next();
+  System.out.println(nextPage.items().length + " messages received in second page");
 }
+
+bc[ruby]. result_page = channel.history
+puts "#{result_page.items.length} messages received in first page"
+if result_page.has_next?
+  next_page = result_page.next
+  puts "#{next_page.items.length} messages received in second page"
+end
 
 See the "history":/rest/history documentation for further details of the supported query parameters.
 
 h2. Presence
 
-Channels expose a @presence@ member which a client can use to obtain channel presence information. See the "presence":/rest/presence documentation for details.
+Channels expose a @presence@ member which a client can use to obtain channel presence information and to enter and leave the presence channel itself. See the "presence":/rest/presence documentation for details.
 
-h1. API Reference
+h1. Channel API Reference
 
 inline-toc.
   Channels and messages reference:
