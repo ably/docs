@@ -4,235 +4,354 @@ section: rest
 index: 40
 jump_to:
   Help with:
-    - Authentication#title
-  API reference:
-    - requestToken#request-token
+    - Understanding Auth
+    - Basic Authentication
+    - Token Authentication
+    - Auth object
+    - Identified clients
+  Channel API properties:
+    - clientId#client-id
+  Channel API methods:
     - authorise
     - createTokenRequest#create-token-request
-  Related types:
-    - AuthOptions#auth-options
-    - TokenParams#token-params
-    - TokenDetails#token-details
+    - requestToken#request-token
 ---
 
-Clients can access Ably, whether using REST or the Realtime service, by two methods.
+Ably clients can authenticate with Ably using "Basic Authentication":/general/authentication#basic-authentication (which uses the customer's "API key":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key), "Token Authentication":/general/authentication#token-authentication (which relies on a token customers obtain from Ably), or a token request that customers sign and issue to their clients. "Token Authentication":/general/authentication#token-authentication, in most cases, is the recommended strategy as it provides robust access control and stringent security measures.
 
-h3. Basic Authentication
+h2(#understanding-auth). Understanding the Ably authentication schemes
 
-*Basic Authentication* directly uses one of the application keys created via the application dashboard. Basic Authentication is the simplest method to use but has two important limitations:
+This page of documentation is intended to describe the Rest Authentication API and is not intended to explain in depth how Ably's authentication works. If you are new to Ably and/or the authentication schemes, we strongly recommend that you get acquainted with the following first:
 
-* the application key is transmitted over the network as part of a request; therefore it may only be used over TLS (HTTPS or "SSL") connections. This can be a performance disadvantage in some network environments where long round-trip times are amplified by the SSL handshake.
-* the client using the API must be in possession of the application key, which potentially exposes the key to compromise. For example, it is not advisable simply to embed the key in a script in a public web page.
+* "Getting started with Ably's authentication":/general/authentication/#getting-started
+* "Selecting the right authentication scheme":/general/authentication/#selecting-auth
+* "Basic Authentication explained":/general/authentication/#basic-authentication
+* "Token Authentication explained":/general/authentication/#token-authentication
 
-bc[ruby]. client = Ably::Rest::Client.new(api_key: '')
+h3(#basic-authentication). Basic Authentication
 
-h3. Token Authentication
+*Basic Authentication* uses one of the "api keys":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key "configured via the application dashboard":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys as the authentication token. Basic Authentication is the simplest method to use but has some important limitations described in detail in the "Basic Authentication documentation":/general/authentication/#basic-authentication.
 
-*Token Authentication* uses a token obtained via the REST API "@requestToken@":#request-token endpoint. Tokens are authentication tokens that only have a short lifetime, and therefore they may more readily be distributed to clients where there is a risk of compromise. Tokens may also be issued with a particular scope - such as a limited set of access rights, or being limited to use by a specific client - and therefore token-based authentication provides the flexibility to implement access control policies in the application. See "Authentication":/general/authentication for more details.
+Here is a straightfoward example of using Basic Authentication when instancing a Ably REST client library.
 
-Both the "REST":/rest/usage#constructor and "Realtime":/realtime/usage#constructor, libraries would typically be instanced with either a @key@ or a @token@ option, and these given credentials are used to authenticate requests made by the library. In this situation, the library assumes responsibility for authentication operations, calling any @authUrl@ or @authCallback@ as needed. REST operations and Realtime connections can then proceed using the given credentials with no need to make further calls to the authentication-specific functionality in the library.
+```[jsall](code-editor:realtime/connection)
+  var rest = new Ably.Rest({ key: '{{API_KEY}}' });
+```
 
-The principal use-case for @auth@ object is to make requests for tokens to issue to other clients. A subsidiary use-case is to preemptively trigger renewal of a token or to acquire a new token with a revised set of capabilities.
+```[ruby]
+  rest = Ably::Rest.new(key: '{{API_KEY}}')
+```
 
-The REST client library provides the ability to issue tokens using the "@requestToken@ API endpoint":/rest-api#request-token, and also provides a number of helper functions to simplify the use of the authentication API.
+```[java]
+  ClientOptions options = new ClientOptions();
+  options.key = "{{API_KEY}}";
+  AblyRest rest = new AblyRest(options);
+```
 
-The "@requestToken@":#request-token endpoint may itself be used without explicit authentication, relying on the implicit authentication of submitting a validly signed token request.
+h3(#token-authentication). Token Authentication
 
-h1. API Reference
+*Token Authentication* uses a token obtained via the REST API "@requestToken@":#request-token endpoint to authenticate with Ably. Tokens are authentication credentials that are short-lived, and therefore they may more readily be distributed to clients where there is a risk of compromise. Tokens may also be issued with a particular scope - such as a limited set of "access rights (capabilities)":/general/authentication#capabilities-explained or an "explicit @clientId@ identity":#identified-clients - and therefore token-based authentication provides the flexibility to implement access and identity control policies in the application. See the "Token Authentication documentation":/general/authentication#token-authentication for more details.
+
+When using Token Authentication, the "REST client library":/rest/usage#constructor will typically be instanced with a means to obtain a token as opposed to a short-lived token so that when the token expires, the library can assume responsibility to automatically obtain a new token and seamlessly continue operations with Ably. Conversely, if a library is instanced with a previously obtained "@Token@":#token-details by setting the <span lang="ruby">@:token@ or @:token_details@</span><span lang="default">@token@ or @tokenDetails@</span> attributes of "@ClientOptions@":#client-options, when the token expires, the client will no longer be able successfully issue REST requests to Ably as the library has no means to obtain a new token. It is therefore recommended that all client libraries that use token authentication have a means to issue new tokens using either the <span lang="ruby">"@auth_url@":#client-options or "@auth_callback@":#client-options</span><span lang="default">"@authUrl@":#client-options or "@authCallback@":#client-options</span> attribute of "@ClientOptions@":#client-options when instancing the library.
+
+Below is a rather contrived yet straightforward example that instances a Rest library using Token Authentication with a means to reissue tokens as required. Typically, in a browser environment, the @authUrl@ provided would be a relative URL to a local endpoint that is used to issue tokens to trusted clients. Client requests can, for example, be trusted based on session cookies. For non-browser clients, an authentication callback is preferred thus relying on your application to communicate securely with your own servers to obtain a token.
+
+```[jsall](code-editor:realtime/auth-token-callback)
+  var rest = new Ably.Rest({ authUrl: 'http://my.website/auth' });
+```
+
+```[ruby]
+  rest = Ably::Rest.new(auth_url: 'http://my.website/auth')
+```
+
+```[java]
+  ClientOptions options = new ClientOptions();
+  options.authUrl = "http://my.website/auth";
+  AblyRest rest = new AblyRest(options);
+```
+
+h3(#auth-object). Auth object
+
+The principal use-case for @Auth@ object is to "create signed token request objects":#create-token-request or "obtain tokens from Ably":#request-token, and then issue them to other "less trusted" clients. Typically, your servers should be the only devices to have a "private API key":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key, and this private API key is used to securely sign token requests or request tokens from Ably. Clients are then issued with short-lived tokens or token requests, and the libraries can then use these to authenticate with Ably. If you adopt this model, your private API key is never shared with clients directly.
+
+A subsidiary use-case for the @Auth@ object is to preemptively trigger renewal of a token or to acquire a new token with a revised set of capabilities by explicitly calling "@authorise@":#authorise
+
+h3(#identified-clients). Identified clients
+
+When a client has valid credentials to issue requests to Ably, they are considered to be an *authenticated client*. However, whilst an *authenticated client* has a verifiable means to authenticate with Ably, they do not necessarily have an identity. When a client is assigned a trusted identity (i.e. a <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span>), then they are considered to be an *identified client* and for all operations they perform with the Ably service, their <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span> field will be automatically populated and can be trusted by other clients.
+
+For example, assuming you were building a chat application and wanted to allow clients to publish messages on a channel via REST. If each client is assigned a trusted identity by your server, such as a unique email address or UUID, then all other subscribed clients can trust any messages they receive in the channel as being from that client. No other clients are permitted to assume a <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span> that they are not assigned in their token or token request, that is they are unable to masquerade as another <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span>.
+
+In Ably a client can be identified with a <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span> in three ways:
+
+* if the client is authenticated with a token that is issued for that <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span>. See <span lang="ruby">"@request_token@":#request-token</span><span lang="default">"@requestToken@":#request-token</span> and <span lang="ruby">"@create_token_request@":#create-token-request</span><span lang="default">"@createTokenRequest@":#create-token-request</span> documentation below;
+* if the client claims that <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span> and is authenticated using "Basic Authentication":#basic-authentication (using an API key);
+* if the client claims that <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span> and is authenticated with a token that is issued for a <span lang="ruby">"wildcard @client_id@":https://support.ably.io/solution/articles/3000048586-can-a-client-emulate-any-client-id-i-e-authenticate-using-a-wildcard-client-id</span><span lang="default">"wildcard @clientId@":https://support.ably.io/solution/articles/3000048586-can-a-client-emulate-any-client-id-i-e-authenticate-using-a-wildcard-client-id</span> (a special token privilege that allows any client identity to be assumed)
+
+We encourage customers to always issue tokens to clients so that they authenticate using the short-lived token and do not have access to a customer's private API keys. Since the customer can then control the <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span> that may be used by any of its clients, all other clients can rely on the validity of the <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span> in published messages.
+
+The following example demonstates how to issue a token with an explicit <span lang="ruby">@client_id@</span><span lang="default">@clientId@</span> that, when used by a client, will then be considered an *identified client*.
+
+```[jsall](code-editor:realtime/auth-client-id)
+  var rest = new Ably.Rest({ key: '{{API_KEY}}' });
+  rest.auth.createTokenRequest({ clientId: 'Bob' }, function(err, tokenRequest) {
+    /* ... issue the TokenRequest to a client ... */
+  })
+```
+
+```[ruby]
+  rest = Ably::Rest.new(key: '{{API_KEY}}')
+  rest.auth.createTokenRequest(client_id: 'Bob') do |token_request|
+    # ... issue the TokenRequest to a client ...
+  end
+```
+
+```[java]
+  ClientOptions options = new ClientOptions();
+  options.key = "{{API_KEY}}";
+  AblyRest rest = new AblyRest(options);
+  TokenParams tokenParams = new TokenParams();
+  tokenParams.clientId = "Bob";
+  TokenRequest tokenRequest;
+  tokenRequest = rest.auth.createTokenRequest(tokenParams, null);
+  /* ... issue the TokenRequest to a client ... */
+```
+
+h1. Auth API Reference
 
 inline-toc.
-  Auth object reference:
+  Auth reference:
     - Methods:
-      - requestToken#request-token
       - authorise
       - createTokenRequest#create-token-request
+      - requestToken#request-token
+    - Properties:
+      - clientId#client-id
     - Related types:
       - AuthOptions#auth-options
-      - TokenParams#token-params
       - TokenDetails#token-details
+      - TokenRequest#token-request
+      - TokenParams#token-params
 
-h2(#auth). Auth object
+The Auth object is available as the <span lang="java">"@auth@ field":/rest/usage#auth</span><span lang="default">"@auth@ property":/rest/usage#auth</span><span lang="ruby">"@auth@ attribute":/rest/usage#auth</span> of an "Ably Rest client instance":/rest/usage#constructor.
 
-The Auth object is available as a <span lang="java">field</span><span lang="default">property</span> of the top-level Ably Realtime instance.
+h2(#properties).
+  default: Auth Properties
+  java: io.ably.lib.rest.Auth Members
+  ruby: Ably::Auth Attributes
 
-h3(#methods). Methods
+The @Auth@ object exposes the following public <span lang="default">properties</span><span lang="ruby">attributes</span><span lang="java">members</span>:
 
-h6(#request-token).
-  default:  requestToken
-  ruby:     request_token
+h6(#client-id).
+  default: clientId
+  ruby:    client_id
 
-bq(definition).
-  nodejs: auth.requestToken(options, callback)
-  ruby:   auth.request_token(options) → json_result
-  java:   auth.requestToken(AuthOptions options, TokenParams params) → TokenDetails
+The client ID string, if any, configured for this client connection. See "identified clients":#identified-clients for more information on trusted client identifiers.
 
-h6(#request-token)[java]. public TokenDetails requestToken(AuthOptions options, TokenParams params)
-
-Calls the "@requestToken@ API endpoint":/rest-api#request-token to obtain a token according to the specified <span lang="default">options</span><span lang="java">authOptions and tokenParams</span>. If the request is successful the resulting "TokenDetails":#token-details instance <span lang="java">is returned</span><span lang="default">is passed back in the callback</span>. If the request is unsuccessful <span lang="java">an appropriate Exception is thrown</span><span lang="default">an appropriate error object is passed to the callback</span>.
-
-bc[jsall]. client.auth.requestToken(options, function(err, tokenDetails){
-  if(err)
-    console.log('An error occurred; err = ' + err.message);
-  else
-    console.log('Success; token = ' + tokenDetails.id);
-});
-
-bc[ruby]. begin
-  token = client.auth.request_token(options)
-  puts "Success; token = #{token[:id]}"
-rescue AblyException => e
-  warn e.message
-end
-
-bc[java]. try {
-  TokenDetails tokenDetails = client.auth.requestToken(authOptions, tokenParams);
-  System.out.println("Success; token = " + tokenDetails.id);
-} catch(AblyException e) {
-  System.out.println("An error occurred; err = " + e.getMessage());
-}
-
-h4. Parameters
-
-- <div lang="default">options</div> := an optional object containing any "AuthOptions":#auth-options required to supplement or override the options given when instancing the library, plus any required "TokenParams":#token-params options.
-- <div lang="default">callback</div> := is a function of the form: @callback(err, result)@
-where:
-<ul><li>@err@ contains an error object containing the error details</li>
-<li>On success, @result@ contains the "TokenDetails":#token-details result.</li></ul>
-- <div lang="java">AuthOptions authOptions</div> := An "AuthOptions":#auth-options instance containing any options to supplement or override the Options given when instancing the library.
-
-- <div lang="java">TokenParams tokenParams</div> := A "TokenParams":#token-params instance containing the specific parameters of the token request.
+h2(#methods).
+  default: Auth Methods
+  java: io.ably.lib.rest.Auth Methods
+  ruby: Ably::Auth Methods
 
 h6(#authorise). authorise
 
 bq(definition).
-  nodejs: auth.authorise(options, callback)
-  ruby:   auth.authorise(options) → json_result
-  java:   auth.authorise(AuthOptions options, TokenParams params, boolean force) → TokenDetails
+  default: authorise("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions, callback("ErrorInfo":/realtime/types#error-info err, "TokenDetails":#token-details tokenDetails))
+  ruby:    "TokenDetails":#token-details authorise("TokenParams":#token-params token_params, "AuthOptions":#auth-options auth_options)
+  java:    public "TokenDetails":#token-details authorise("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions)
 
-Ensures valid auth credentials are present for the library instance. This may rely on an already-known and valid token, and will obtain a new token if necessary or explicitly requested via the "@requestToken@ API endpoint":/rest-api#request-token.
+Ensures valid auth credentials are present for the library instance. This may rely on an already-known and valid token, and will obtain a new token if necessary or explicitly requested using "@requestToken@":#request-token.
 
-In the event that a new token request is made, the specified <span lang="default">options</span><span lang="java">authOptions and tokenParams</span> are used. If the check or a subsequent request is successful the resulting "TokenDetails":#token-details instance <span lang="java">is returned</span><span lang="default">is passed back in the callback</span>. If the request is unsuccessful <span lang="java">an appropriate Exception is thrown</span><span lang="default">an appropriate error object is passed to the callback</span>.
+In the event that a new token request is made, the specified <span lang="ruby">@token_params@ and @auth_options@</span><span lang="java">@tokenParams@ and @authOptions@</span> are used.
 
-bc[jsall]. client.auth.authorise(options, function(err, tokenDetails){
-  if(err)
+The <span lang="ruby">@token_params@ and @auth_options@</span><span lang="java">@tokenParams@ and @authOptions@</span> objects will supplement or override the existing client library defaults, and all subsequent explicit or implicit token requests will use these defaults.
+
+h4. Parameters
+
+- <span lang="ruby">token_params</span><span lang="default">tokenParams</span> := <span lang="default">an optional object containing the "token parameters":#token-params</span><span lang="java">an optional "@TokenParams@":#token-params object containing the token parameters</span><span lang="ruby">an optional set of key value pairs containing the "token parameters":#token-params</span> for the authorisation request<br>__Type: "TokenParams":#token-params__
+
+- <span lang="ruby">auth_options</span><span lang="default">authOptions</span> := <span lang="default">an optional object containing the "authentication options":#auth-options</span><span lang="java">an optional "@TokenParams@":#auth-options object containing the authentication options</span><span lang="ruby">an optional set of key value pairs containing the "authentication options":#auth-options</span> for the authorisation request<br>__Type: "AuthOptions":#auth-options__
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, tokenDetails)@
+
+blang[jsall].
+  h4. Callback result
+
+  On success, @tokenDetails@ contains a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string.
+
+  On failure to obtain a token, @err@ contains an "@ErrorInfo@":#error-info object with an error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+blang[java,ruby].
+  h4. Returns
+
+  On success, a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string is returned.
+
+  Failure to obtain a token will raise an "@AblyException@":#ably-exception.
+
+h4. Example
+
+bc[jsall]. client.auth.authorise({ clientId: 'bob' }, function(err, tokenDetails) {
+  if(err) {
     console.log('An error occurred; err = ' + err.message);
-  else
-    console.log('Success; token = ' + tokenDetails.id);
+  } else {
+    console.log('Success; token = ' + tokenDetails.token);
+  }
 });
 
 bc[java]. try {
-  TokenDetails tokenDetails = client.auth.authorise(authOptions, tokenParams, false);
-  System.out.println("Success; token = " + tokenDetails.id);
+  TokenParams tokenParams = new TokenParams();
+  tokenParams.clientId = "bob";
+  TokenDetails tokenDetails = client.auth.authorise(tokenParams, null);
+  System.out.println("Success; token = " + tokenDetails.token);
 } catch(AblyException e) {
   System.out.println("An error occurred; err = " + e.getMessage());
 }
 
-h4. Parameters
-
-- <div lang="default">options</div> := an optional object containing any "AuthOptions":#auth-options required to supplement or override the options given when instancing the library, plus any required "TokenParams":#token-params options. A further boolean @force@ option is supported which indicates that a new token should be requested, even if a current token is still valid.
-- <div lang="default">callback</div> := is a function of the form: @callback(err, result)@
-where:
-<ul><li>@err@ contains an error object containing the error details</li>
-<li>On success, @result@ contains the "TokenDetails":#token-details result.</li></ul>
-- <div lang="java">AuthOptions authOptions</div> := An "AuthOptions":#auth-options instance containing any options to supplement or override the Options given when instancing the library.
-
-- <div lang="java">TokenParams tokenParams</div> := A "TokenParams":#token-params instance containing the specific parameters of the token request.
-
-- <div lang="java">boolean force</div> := A boolean indicating that a new token should be requested, even if a current token is still valid.
+bc[ruby]. token_details = client.auth.authorise(client_id: 'bob')
+puts "Success; token = #{token_details.token}"
 
 h6(#create-token-request).
   default: createTokenRequest
   ruby:    create_token_request
 
 bq(definition).
-  nodejs: auth.createTokenRequest(options, callback)
-  ruby:   auth.create_token_request(options) → String
-  java:   auth.createTokenRequest(AuthOptions options, TokenParams params) → String
+  default: createTokenRequest("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions, callback("ErrorInfo":/realtime/types#error-info err, "TokenRequest":#token-request tokenRequest))
+  ruby:    "TokenRequest":#token-request create_token_request("TokenParams":#token-params token_params, "AuthOptions":#auth-options auth_options)
+  java:    public "TokenRequest":#token-request createTokenRequest("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions)
 
-Creates and signs a token request based on the specified <span lang="default">options</span><span lang="java">authOptions and  tokenParams</span>. Note this can only be used when the key value is available locally. Otherwise, signed token requests must be obtained from the key owner (either using the token request callback or url). Use this to generate signed token requests in order to implement a token request callback for use by other clients.
+Creates and signs a token request based on the specified <span lang="ruby">@token_params@ and @auth_options@</span><span lang="java">@tokenParams@ and @authOptions@</span>. Note this can only be used when the "API @key@":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key value is available locally. Otherwise, signed token requests must be obtained from the key owner. Use this to generate signed token requests in order to implement a token request callback for use by other clients.
 
-If the request is successful the resulting token request is JSON-encoded and <span lang="java">returned</span><span lang="default">passed back in the callback</span>. If the request is unsuccessful <span lang="java">an appropriate Exception is thrown</span><span lang="default">an appropriate error object is passed to the callback</span>.
+To understand why a token request may be issued to clients in favour of a token, see "Token Authentication explained":/general/authentication/#token-authentication.
 
-bc[jsall]. client.auth.createTokenRequest(options, function(err, tokenRequest){
-  if(err)
+h4. Parameters
+
+- <span lang="ruby">token_params</span><span lang="default">tokenParams</span> := <span lang="default">an optional object containing the "token parameters":#token-params</span><span lang="java">an optional "@TokenParams@":#token-params object containing the token parameters</span><span lang="ruby">an optional set of key value pairs containing the "token parameters":#token-params</span> for the token request<br>__Type: "TokenParams":#token-params__
+
+- <span lang="ruby">auth_options</span><span lang="default">authOptions</span> := <span lang="default">an optional object containing the "authentication options":#auth-options</span><span lang="java">an optional "@TokenParams@":#auth-options object containing the authentication options</span><span lang="ruby">an optional set of key value pairs containing the "authentication options":#auth-options</span> for the token request<br>__Type: "AuthOptions":#auth-options__
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, tokenRequest)@
+
+blang[jsall].
+  h4. Callback result
+
+  On success, @tokenRequest@ contains a "@TokenRequest@":#token-request JSON object.
+
+  On failure to issue a "@TokenRequest@":#token-request, @err@ contains an "@ErrorInfo@":#error-info object with an error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+blang[java,ruby].
+  h4. Returns
+
+  On success, a "@TokenRequest@":#token-request object is returned.
+
+  Failure to issue a "@TokenRequest@":#token-request will raise an "@AblyException@":#ably-exception.
+
+h4. Example
+
+bc[jsall]. client.auth.createTokenRequest({ clientId: 'bob' }, function(err, tokenRequest) {
+  if(err) {
     console.log('An error occurred; err = ' + err.message);
-  else
+  } else {
     console.log('Success; token request = ' + tokenRequest);
+  }
 });
 
 bc[java]. try {
-  String tokenRequest = client.auth.createTokenRequest(authOptions, tokenParams);
-  System.out.println("Success; token = " + tokenRequest);
+  TokenParams tokenParams = new TokenParams();
+  tokenParams.clientId = "bob";
+  TokenRequest tokenRequest = client.auth.createTokenRequest(tokenParams, null);
+  System.out.println("Success; token request issued");
 } catch(AblyException e) {
   System.out.println("An error occurred; err = " + e.getMessage());
 }
 
+bc[ruby]. token_request = client.auth.create_token_request(client_id: 'bob')
+puts "Success; token request = #{token_request}"
+
+h6(#request-token).
+  default:  requestToken
+  ruby:     request_token
+
+bq(definition).
+  default: requestToken("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions, callback("ErrorInfo":/realtime/types#error-info err, "TokenDetails":#token-details tokenDetails))
+  ruby:    "TokenDetails":#token-details request_token("TokenParams":#token-params token_params, "AuthOptions":#auth-options auth_options)
+  java:    public "TokenDetails":#token-details requestToken("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions)
+
+Calls the "@requestToken@ REST API endpoint":/rest-api#request-token to obtain a token according to the specified <span lang="ruby">@token_params@ and @auth_options@</span><span lang="java">@tokenParams@ and @authOptions@</span>.
+
+Both <span lang="ruby">@auth_options@ and @token_params@</span><span lang="java">@authOptions@ and @tokenParams@</span> are optional. When they are omitted or @null@, the default token parameters and authentication options for the client library are used, as specified in the @ClientOptions@ when the client library was instanced, or later updated with an explicit "@authorise@":#authorise request.
+
+To understand why a token request may be issued to clients in favour of a token, see "Token Authentication explained":/general/authentication/#token-authentication.
+
 h4. Parameters
 
-- <div lang="default">options</div> := an optional object containing any "AuthOptions":#auth-options required to supplement or override the options given when instancing the library, plus any required "TokenParams":#token-params options.
-- <div lang="default">callback</div> := is a function of the form: @callback(err, result)@
-where:
-<ul><li>@err@ contains an error object containing the error details</li>
-<li>On success, @result@ contains the "TokenDetails":#token-details result.</li></ul>
-- <div lang="java">AuthOptions authOptions</div> := An "AuthOptions":#auth-options instance containing any options to supplement or override the Options given when instancing the library.
+- <span lang="ruby">token_params</span><span lang="default">tokenParams</span> := <span lang="default">an optional object containing the "token parameters":#token-params</span><span lang="java">an optional "@TokenParams@":#token-params object containing the token parameters</span><span lang="ruby">an optional set of key value pairs containing the "token parameters":#token-params</span> for the requested token<br>__Type: "TokenParams":#token-params__
 
-- <div lang="java">TokenParams tokenParams</div> := A "TokenParams":#token-params instance containing the specific parameters of the token request.
+- <span lang="ruby">auth_options</span><span lang="default">authOptions</span> := <span lang="default">an optional object containing the "authentication options":#auth-options</span><span lang="java">an optional "@TokenParams@":#auth-options object containing the authentication options</span><span lang="ruby">an optional set of key value pairs containing the "authentication options":#auth-options</span> for the requested token<br>__Type: "AuthOptions":#auth-options__
 
-h2(#auth-options). AuthOptions
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, tokenDetails)@
 
-An @AuthOptions@ object contains credentials and related options in support of interacting with the Ably service. @AuthOptions@ are a subset of the Ably library "Options":/realtime/usage#options. Various methods on the Auth object take <span lang="java">an AuthOptions argument</span><span lang="default">one or more AuthOptions options</span> to enable the authentication of the requesting client to the service.
-Options specified in this way will supplement or override the corresponding options given when the library was instanced.
+blang[jsall].
+  h4. Callback result
 
-AuthOptions <span lang="java">fields</span><span lang="default">options</span> are as follows.
+  On success, @tokenDetails@ contains a "@TokenDetails@":#token-details object containing the details of the new token along with the token string.
 
-- <span lang="java">public TokenCallback</span> authCallback := A callback to call to obtain a signed token request. This enables a client to obtain token requests from another entity, so tokens can be renewed without the client requiring access to keys.
+  On failure to obtain a token, @err@ contains an "@ErrorInfo@":#error-info object with an error response as defined in the "Ably REST API":/rest-api#common documentation.
 
-- <span lang="java">public String</span> authUrl := A URL to query to obtain a signed token request. This enables a client to obtain token requests from another entity, so tokens can be renewed without the client requiring access to keys.
+blang[java,ruby].
+  h4. Returns
 
-- <span lang="java">public String</span> keyName := A key name. This is used in instances where a full key or token are not provided at initialisation.
+  On success, a "@TokenDetails@":#token-details object containing the details of the new token along with the token string is returned.
 
-- <span lang="java">public String</span> keySecret := The secret key value for an Ably key associated with this client.
+  Failure to obtain a token will raise an "@AblyException@":#ably-exception.
 
-- <span lang="java">public String</span> authToken := An authentication token issued for this application against a specific key and TokenParams
+h4. Example
 
-- <span lang="java">public Param[]</span> authHeaders := Headers to be included in any request made by the library to the authURL.
+bc[jsall]. client.auth.requestToken({ clientId: 'bob'}, function(err, tokenDetails){
+  if(err) {
+    console.log('An error occurred; err = ' + err.message);
+  } else {
+    console.log('Success; token = ' + tokenDetails.token);
+  }
+});
 
-- <span lang="java">public Param[]</span> authParams := Query params to be included in any request made by the library to the authURL.
+bc[ruby]. token_details = client.auth.request_token(client_id: 'bob')
+puts "Success; token = #{token_details.token}"
 
-- <span lang="java">public boolean</span> queryTime := This may be set in instances that the library is to sign token requests based on a given key. If true, the library will query the Ably system for the current time instead of relying on a locally-available time of day.
+bc[java]. try {
+  TokenParams tokenParams = new TokenParams();
+  tokenParams.clientId = "bob";
+  TokenDetails tokenDetails = client.auth.requestToken(tokenParams, null);
+  System.out.println("Success; token = " + tokenDetails.token);
+} catch(AblyException e) {
+  System.out.println("An error occurred; err = " + e.getMessage());
+}
 
-h2(#token-params). TokenParams
+h2(#related-types). Related types
 
-A @TokenParams@ object is associated with a token request and contains the parameters of the request, corresponding to the desired attributes of the token. Methods on the Auth object that may trigger a token request take <span lang="java">a TokenParams argument</span><span lang="default">one or more TokenParams options</span>.
+h3(#auth-options).
+  default:   AuthOptions Object
+  ruby:      AuthOptions Hash
+  java:      io.ably.lib.rest.Auth.AuthOptions
 
-TokenParams <span lang="java">fields</span><span lang="default">options</span> are as follows.
+<%= partial 'types/_auth_options' %>
 
-- <span lang="java">public String</span> keyName := The name part of the key against which this request is made.
+h3(#token-details).
+  default: TokenDetails
+  java:    io.ably.lib.types.TokenDetails
+  ruby:    Ably::Models::TokenDetails
 
-- <span lang="java">public long</span> ttl := [default = 3600 (1 hour)] Requested time to live for the token in seconds. If none is specified a default of 1 hour is provided. The maximum lifetime is 24 hours or less depending on application settings and the attributes of the issuing key; any request exceeding that lifetime will be rejected with an error.
+<%= partial 'types/_token_details' %>
 
-- <span lang="java">public String</span> capability := [default = "{\"*\": ["*"]}" (JSON string)] The capability to associate with the access token. If none is specified, a token will be requested with all of the capabilities of the specified key. If the token request is successful, the capability of the returned token will be the intersection of this capability with the capability of the issuing key.
+h3(#token-params).
+  default:   TokenParams Object
+  ruby:      TokenParams Hash
+  java:      io.ably.lib.rest.Auth.TokenParams
 
-- <span lang="java">public String</span> clientId := A clientId to associate with this token. The generated token may be used to authenticate as this clientId.
+<%= partial 'types/_token_params' %>
 
-- <span lang="java">public long</span> timestamp := The timestamp (in seconds since the epoch) of this request. Timestamps, in conjunction with the nonce, are used to prevent token requests from being replayed.
+h3(#token-request).
+  default:   TokenRequest Object
+  ruby:      Ably::Models::TokenRequest
+  java:      io.ably.lib.rest.Auth.TokenRequest
 
-- <span lang="java">public String</span> nonce := An opaque nonce string of at least 16 characters to ensure uniqueness of this request. Any subsequent request using the same nonce will be rejected.
-
-- <span lang="java">public String</span> mac := The Message Authentication Code (MAC) for this request. See "the Authentication documentation":/rest/authentication for more details on the construction of the MAC.
-
-h2(#token-details). TokenDetails
-
-A @TokenDetails@ object contains the parameters of a response from a successful token request the service. This contains the token string itself plus various items of metadata relating to that token.
-
-TokenDetails <span lang="java">fields</span><span lang="default">properties</span> are as follows.
-
-- <span lang="java">public String</span> token := The token itself.
-
-- <span lang="java">public long</span> expires := The time (in milliseconds since the epoch) at which this token expires.
-
-- <span lang="java">public long</span> issued := The time (in milliseconds since the epoch) at which this token was issued.
-
-- <span lang="java">public String</span> capability := The capability associated with this token. See "the Authentication documentation":/rest/authentication for more details on capabilities.
-
-- <span lang="java">public String</span> clientId := The clientId, if any, bound to this token. If a clientId is included, then the token authenticates its bearer as that clientId, and the token may only be used to perform operations on behalf of that clientId.
+<%= partial 'types/_token_request' %>

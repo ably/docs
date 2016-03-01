@@ -4,329 +4,297 @@ section: rest
 index: 20
 jump_to:
   Help with:
-    - Joining a channel#help-join
-    - Publishing messages#help-publish
-  API Reference:
-    - Channel object
+    - Getting started#getting-started
+    - Channels#channels
+    - Channel namespaces
+    - Subscribing to messages#message-subscription
+    - Publishing messages#message-publish
+    - Retrieving message history#message-history
+  Channel API properties:
+    - name
+    - presence
+  Channel API methods:
     - publish
     - history
-    - presence
 ---
 
-The Ably Realtime service organises the traffic within any application into named channels. Channels are the "unit" of message distribution; clients attach to channels to subscribe to messages, and every message broadcast by the service is associated with a unique channel.
+The Ably Realtime service organises the message traffic within applications into named channels. Channels are the "unit" of message distribution; clients attach to channels to subscribe to messages, and every message published to a unique channel is broadcast by Ably to all subscribers. This scalable and resilient messaging pattern is commonly called "pub/sub":https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern.
 
-h3. Channels in the REST API
+h2(#getting-started). Getting started
 
+The Ably REST client library provides a straightforward API for publishing and retrieve history messages on a channel.
 
-h4. Obtaining a channel instance
+```[javascript](code-editor:rest/channel-history)
+  var rest = new Ably.Rest('{{API_KEY}}');
+  var channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish('example', 'message data', function() {
+    channel.history(function(err, resultPage) {
+      console.log('Last published message:' + resultPage.items[0]);
+    });
+  });
+```
 
-A @Channel@ object is a reference to a single channel. A channel instance is obtained from the @channels@ collection of the Ably @Rest@ instance.
+```[nodejs](code-editor:rest/channel-history)
+  var rest = new Ably.Rest('{{API_KEY}}');
+  var channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish('example', 'message data', function() {
+    channel.history(function(err, resultPage) {
+      console.log('Last published message:' + resultPage.items[0]);
+    });
+  });
+```
 
-bc[jsall]. var channel = rest.channels.get('myChannel');
+```[ruby]
+  rest = Ably::Rest.new('{{API_KEY}}')
+  channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.publish 'example', 'message data'
+  result_page = channel.history()
+  puts "Last published message: #{result_page.items.first}"
+```
 
-bc[java]. import io.ably.lib.realtime.Channel;
-Channel channel = rest.channels.get("myChannel");
+```[java]
+  AblyRest rest = new AblyRest("{{API_KEY}}");
+  Channel channel = rest.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.publish("example", "message data");
+  PaginatedResult<Message> resultPage = channel.history(null);
+  System.out.println("Last published message ID: " + resultPage.items[0].id);
+```
 
-A set of "channel options":#channel-options may also be passed when getting a channel instance.
+h2(#channels). Channels
 
-bc[jsall]. var channel = rest.channels.get('myChannel', channelOpts);
+In order to publish, retrieve message history or access presence history, you must first obtain a REST channel instance.
 
-bc[java]. import io.ably.lib.rest.Channel;
-Channel channel = rest.channels.get("myChannel", channelOpts);
+h3. Obtaining a channel instance
+
+A @Channel@ object is a reference to a single channel. A channel instance is obtained from the "@channels@ collection":/rest/usage/#channels of the <span lang="ruby">@Rest::Client@</span><span lang="default">@Rest@</span> instance, and is uniquely identified by its unicode string name. Find out more about "channel naming":https://support.ably.io/solution/articles/3000046824-what-restrictions-exist-for-the-name-field-of-a-channel
+
+bc[jsall]. var channel = rest.channels.get('channelName');
+
+bc[java]. Channel channel = rest.channels.get("channelName");
+
+bc[ruby]. channel = rest.channels.get('channelName')
+
+To find out more about subscribing to messages published on channels in realtime, see the "Realtime channel API":/realtime/channels-messages.
+
+h4. Setting channel options and encryption
+
+A set of "channel options":#channel-options may also be passed to configure a channel for encryption. Find out more about "symmetrical message encryption":/rest/encryption.
+
+bc[jsall]. Crypto.generateRandomKey(function(err, key) {
+  var options = { cipher: { key: key } };
+  var channel = rest.channels.get('channelName', options);
+});
+
+bc[java]. CipherParams params = Crypto.getDefaultParams(key);
+ChannelOptions options = new ChannelOptions();
+options.cipher = params;
+Channel channel = rest.channels.get("channelName", channelOpts);
+
+bc[ruby]. key = Ably::Util::Crypto.generate_random_key
+options = { cipher: { key: key } }
+channel = rest.channels.get('channelName', options)
 
 h3. Channel namespaces
 
-One or more channel namespaces, or channel name prefixes, may be configured for an app. When a channel is created whose name is prefixed with one of the namespaces, the channel assumes certain configured attributes associated with that namespace.
-
-Namespace-prefixed names are delimited by a single colon ':'; the first component of the channel name (from the start up to and including the last character before the colon) is the namespace. A channel name may validly contain a colon even if the namespace component does not correspond to a namespace; also, a channel may contain multiple colons and only the component up to the first colon will be matched with a namespace. The only restriction on channel names is that a channel name may not start with a colon and may not be empty.
-
-Namespaces are defined and configured via the application dashboard. Namespace attributes that can be configured are:
-* whether or not channels belonging to that namespace require clients to be authenticated;
-* whether or not channel messages are persisted;
-* whether or not clients are required to be connected over a TLS connection.
-
-Key or token capabilities can also specify access rights based on channel namespace.
+<%= partial 'shared/_channel_namespaces' %>
 
 h2. Messages
 
-An Ably Realtime Message has a @data@ member carrying the payload of the message. Various primitive and object types are portably defined and supported in all clients, enabling clients to be interoperable despite being hosted in different languages or environments.
+Each message published has an optional event @name@ <span lang="default">property</span><span lang="java">member</span><span lang="ruby">attribute</span> and a @data@ <span lang="default">property</span><span lang="java">member</span><span lang="ruby">attribute</span> carrying the payload of the message. Various primitive and object types are portably defined and supported in all clients, enabling clients to be interoperable despite being hosted in different languages or environments.
 
-The supported payload types are primitive types (boolean, int32, double, string), JSON-encoded objects and arrays, and buffers containing arbitrary binary data. Client libraries detect the supplied message payload and encode the message appropriately.
+The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and Null objects. Client libraries detect the supplied message payload and encode the message appropriately.
 
-h3. Publishing messages
+h3(#message-subscription). Subscribing to messages
 
-Channels expose a @publish@ method whereby a client can publish either a single message or an array of messages to a channel. A listener optionally passed in to the @publish@ method enables the client to know whether or not the operation succeeded.
+The REST client library does not offer message realtime subscription but instead provides access to the "live" history using the "REST history API":/rest/history. Find out more about "subscribing to messages in realtime using the Realtime API":/realtime/channels-messages#message-subscription.
 
-bc[jsall]. channel.publish("myEvent", "This is my message", function(err) {
-  if(err)
+The @name@ <span lang="default">property</span><span lang="java">member</span><span lang="ruby">attribute</span> of published messages does not affect the distribution of a channel message to clients but may be used as a subscription filter, allowing a client to register a listener that only sees a subset of the messages received on the channel. Find out more about "registering listeners using the Realtime API":/realtime/channels-messages#subscribe.
+
+h3(#message-publish). Publishing messages
+
+Channels expose a @publish@ method whereby a client can publish either a single message or an array of messages to a channel over "REST":/rest-api#publish.
+
+bc[jsall](code-editor:rest/channel-publish). channel.publish('event', 'This is my payload', function(err) {
+  if(err) {
     console.log('Unable to publish message; err = ' + err.message);
-  else
+  } else {
     console.log('Message successfully sent');
+  }
 });
 
-bc[java]. import io.ably.lib.rest.CompletionListener;
-channel.publish("myEvent", "This is my message", new CompletionListener() {
-	@Override
-	public void onError(ErrorInfo reason) {
-		System.out.println("Unable to publish message; err = " + reason.message);
-	}
-	@Override
-	public void onSuccess() {
-		System.out.println("Message successfully sent");
-	}
-});
+bc[ruby]. channel.publish('event', 'This is my payload')
 
-h3. Retrieving message history
+bc[java]. channel.publish("event", "This is my payload");
 
-Channels expose a @history@ method whereby a client can obtain messages previously sent on  those channels that have persistence enabled.
+h3(#message-history). Retrieving message history
 
-History results are paginated and therefore accompanied with one or more relative links relating to the current query. Where the number of results returned exceeds the query limit - which is either the value of the @limit@ param or the default limit of 100 - the query result contains pages with the limited number of records, and a relative link to the next page.
+Channels expose a "@history@":#history method providing a means for clients to obtain messages previously sent on the channel. Channel history can be used to return continuous message history up to the exact point a realtime channel was attached.
 
-bc[jsall]. var params = {direction: 'backwards', limit: '100'};
-channel.history(params, function(err, messages, rel) {
+History provides access to instantaneous "live" history as well as the longer term persisted history for attached channels. If "persisted history":/rest/history#persisted-history is enabled for the channel, then messages will "typically be stored for 24 - 72 hours":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If persisted history is not enabled, Ably retains the last two minutes of message history in memory.
+
+The following example retrieves the first two pages of historical messages published up until the point the channel was attached.
+
+bc[jsall]. channel.history(function(err, resultPage) {
   if(err) {
     console.log('Unable to get channel history; err = ' + err.message);
   } else {
-    console.log(messages.length + ' messages received in first result');
-    if(rel && rel.next) {
-      channel.history(rel.next, function(...) { ... });
+    console.log(resultPage.items.length + ' messages received in first page');
+    if(resultPage.hasNext()) {
+      resultPage.next(function(err, nextPage) { ... });
     }
+  }
 });
 
-bc[java]. import io.ably.lib.types.Message;
-import io.ably.lib.types.Param;
-import io.ably.lib.types.PaginatedResult;
-Param[] params = new Param[] {
-  new Param("direction", "backwards"),
-  new Param("limit", 100)
-};
-PaginatedResult<Message> messages = channel.history(params);
-System.out.println(messages.asArray().length + " messages received in first result");
-if(messages.getNext()) {
-  PaginatedResult<Message> nextPage = channel.history(messages.getNext());
-  System.out.println(...);
+bc[java]. PaginatedResult<Message> resultPage = channel.history(null);
+System.out.println(resultPage.items().length + " messages received in first page");
+if(resultPage.hasNext()) {
+  PaginatedResult<Message> nextPage = resultPage.next();
+  System.out.println(nextPage.items().length + " messages received in second page");
 }
+
+bc[ruby]. result_page = channel.history
+puts "#{result_page.items.length} messages received in first page"
+if result_page.has_next?
+  next_page = result_page.next
+  puts "#{next_page.items.length} messages received in second page"
+end
 
 See the "history":/rest/history documentation for further details of the supported query parameters.
 
 h2. Presence
 
-Channels expose a @presence@ member which a client can use to obtain channel presence information. See the "presence":/rest/presence documentation for details.
+Channels expose a @presence@ member which a client can use to obtain present members and presence event history for the channel itself. See the "REST presence":/rest/presence documentation for details.
 
-h1. API Reference
+h1. Channel API Reference
 
 inline-toc.
-  Channels and messages reference:
+  Channel reference:
     - Methods:
       - publish(name, data)#publish-data
-      - publish(message)#publish-msg
       - publish(messages)#publish-msg-array
-      - history()#history
-    - Members:
-      - name#members
-      - presence#members
+      - history(options)#history
+    - Properties:
+      - name#name
+      - presence#presence
     - Related types:
       - Message#message
-      - MessageListener#message-listener
-      - CompletionListener#completion-listener
       - ChannelOptions#channel-options
+      - PaginatedResult#paginated-result
+      - Param
+
+h2(#properties).
+  default: Channel Properties
+  ruby: Ably::Realtime::Channel Attributes
+  java: io.ably.lib.realtime.Channel Members
+
+The @Channel@ object exposes the following public <span lang="default">properties</span><span lang="ruby">attributes</span><span lang="java">members</span>:
+
+h6(#name). name
+
+The name String unique to this channel.
+
+h6(#presence). presence
+
+Provides access to the "REST Presence":/rest/presence object for this channel which can be used to get members present on the channel, or retrieve presence event history.
 
 h2. Methods
 
 h6(#publish). publish
 
-bq(definition).
-  nodejs: channel.publish(event, data, callback)
-  ruby:   channel.publish(event, data) → success
-  java:   channel.publish(String event, Object data) → Boolean success
+There are two overloaded versions of this method:
 
-This call queries the REST "@channels/<channel id>/publish@":/rest-api#publish API.
+bq(definition#publish-data).
+  default:  publish(String name, Object data, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:     publish(String name, Object data)
+  java:     public void publish(String name, Object data)
+
+Publish a single message on this channel based on a given event name and payload. A <span lang="default">callback</span><span lang="java">listener</span> may optionally be passed in to this call to be notified of success <span lang="default">or failure</span><span lang="ruby"></span> of the operation.
+
+bq(definition#publish-msg-array).
+  default: publish(Object[] messages, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    publish(Message[] messages)
+  java:    public void publish(Message[] messages)
+
+Publish several messages on this channel. A <span lang="default">callback</span><span lang="java">listener</span><span lang="ruby">block</span> may optionally be passed in to this call to be notified of success <span lang="default">or failure</span><span lang="ruby"></span> of the operation.
 
 h4. Parameters
 
-- event := the name of the event to publish
-- data := the message payload
-- <div lang="nodejs">callback</div> := is a function of the form: @callback(err, result)@
-where:
-<ul>
-<li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest-api#common documentation</li>
-<li>On success, @result@ contains the object returned in the response body, which may be empty.</li>
-</ul>
+- <div lang="default">String name</div> := event name for the published message
 
-<div lang="ruby,java">
-h4. Returns
+- <div lang="jsall">Object data</div> := data payload for the message. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.
+- <div lang="java">Object data</div> := data payload for the message. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.
+- <div lang="ruby">Object data</div> := data payload for the message. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.
 
-Returns @true@ if successful.  Failure to publish will raise an exception - typical publishing exceptions include:
+- <span lang="default">"Message":#message[] messages</span> := An array of message objects to publish
 
-  <div lang="ruby">
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
 
-* @Ably::NetworkUnavailableException@
-* @Ably::QuotaExceededException@
-* @Ably::AuthenticationFailureException@
-  </div>
-  <div lang="java">
+blang[jsall].
+  h4. Callback result
 
-* @Ably.NetworkUnavailableException@
-* @Ably.QuotaExceededException@
-* @Ably.AuthenticationFailureException@
-  </div>
+  On successful publish of the message, @err@ is null. On failure to publish the message, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
 
-</div>
+blang[java,ruby].
+  h4. Failure
+
+  On failure to publish the message, an "@AblyException@":/rest/types#ably-exception will be raised.
 
 h6(#history). history
 
 bq(definition).
-  nodejs: channel.history(params, callback)
-  ruby:   channel.history(options) → json_result
-  java:   public PaginatedResult&lt;Message&gt; history(Param[] params)
+  default: history(Object options, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"Message":#message> resultPage))
+  ruby:    "PaginatedResult":#paginated-result<"Message":#message> history(Hash options)
+  java:    public "PaginatedResult":#paginated-result<"Message":#message> history("Param":#param[] options)
 
-Get message history for this channel.
-
-h4. Parameters
-
-- params := an optional object containing the query parameters, as specified in the "history":/realtime/history API documentation.
-- <div lang="jsall">callback</div> := is a function of the form: @callback(err, messages, relParams)@
-where:
-<ul>
-<li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest-api#common documentation</li>
-<li>on success, @messages@ contains the query result as an array of Message objects.</li>
-<li>where applicable, @relParams@ is a map containing query params for each of the pagination links in the query response (see below).</li>
-</ul>
-
-Further details of the supported query params are in the "history API":/rest/history documentation.
-
-<div lang="java">
-h4. Returns
-
-On success, the returned "PaginatedResult":#paginated-result encapsulates a collection of @Message@ objects corresponding to the current page of results, and also provides query parameters for any applicable related (eg @first@ or @next@ result pages).
-
-Failure to retrieve the history will raise an @AblyException@.
-
-</div>
-
-<div lang="ruby">
-h4. Returns
-
-On success, <span lang="ruby">@json_result@</span> contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api/#message-history.
-
-Example <span lang="ruby">@json_result@</span>:
-
-bc[json]. [{
-  "name": "<event name>",
-  "channel": "<channel id>",
-  "data": "<message payload>",
-  "timestamp": "<message timestamp>"
-}]
-
-Failure to retrieve the history will raise an exception - typical exceptions include:
-  <div lang="ruby">
-
-* @Ably::NetworkUnavailableException@
-* @Ably::QuotaExceededException@
-* @Ably::AuthenticationFailureException@
-  </div>
-
-</div>
-
-<div lang="jsall">
-
-h4. Pagination
-
-A paginated result is indicated in the @relParams@ callback argument. For each available link, @relParams@ contains a map of params to pass to a subsequent @history()@ call.
-  Example @relParams@:
-  <pre lang="json"><code>[{
-    "first": {"start": 1380794880000, "end": 138079488105, ...},
-    "current": {"start": 1380794880000, "end": 138079488105, ...},
-    "next": {"start": 1380794880000, "end": 138079488105, ...}
-  }]</code></pre>
-
-Further details of the paginated response are in the "history API":/realtime/history documentation.
-</div>
-
-h6(#presence). presence
-
-bq(definition).
-  nodejs: channel.presence(options, callback)
-  ruby:   channel.presence(options) → json_result
-  java:   channel.presence(OptionsHash options) → JSONResult
-
-This call queries the REST "@channels/<channel id>/presence@":/rest-api#channel-presence API.
+Gets a "paginated":#paginated-result set of historical messages for this channel. If the "channel is configured to persist messages to disk":https://support.ably.io/support/solutions/articles/3000030059-how-long-are-messages-stored-for, then message history will "typically be available for 24 - 72 hours":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If not, messages are only retained in memory by the Ably service for two minutes.
 
 h4. Parameters
 
-- options := an optional object containing the query parameters, as specified in the "REST API":/rest-api#channel-presence.
-- <div lang="nodejs">callback</div> := is a function of the form: @callback(err, result)@
-where:
-<ul>
-<li>@err@ contains an error value on the case of an error response as defined in the "REST API":/rest-api#common documentation</li>
-<li>On success, @result@ contains an array of results whose type corresponds to the result type for the request granularity as specified in "REST API":/rest-api#channel-presence.
-  Example @result@:
-  <pre lang="json"><code>[{
-    "an example": "<needs to be inserted here>",
-    "illustrating": "<a simple presence result>"
-  }]</code></pre>
-</li>
-</ul>
+- <span lang="default">options</span><span lang="java">"Param":#param[] options</span> := <span lang="default">an optional object containing the query parameters</span><span lang="ruby">an optional set of key value pairs containing the query parameters</span>, as specified in the "message history API documentation":/realtime/history#channel-history.
 
-<div lang="ruby,java">
-h4. Returns
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, resultPage)@
 
-On success, <span lang="ruby">@json_result@</span><span lang="java">@JSONResult@</span> contains an array representing each client present on the channel as specified in "REST API":/rest-api#channel-presence.
+Further details of the supported @option@ params, see "message history API documentation":/rest/history#channel-history.
 
-Example <span lang="ruby">@json_result@</span><span lang="java">@JSONResult@</span>:
+blang[jsall].
+  h4. Callback result
 
-bc[json]. [{
-    "an example": "<needs to be inserted here>",
-    "illustrating": "<a simple presence result>"
-  }]
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
 
-Failure to retrieve the presence will raise an exception - typical exceptions include:
-  <div lang="ruby">
+  On failure to retrieve message history, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
 
-* @Ably::NetworkUnavailableException@
-* @Ably::QuotaExceededException@
-* @Ably::AuthenticationFailureException@
-  </div>
-  <div lang="java">
+blang[java,ruby].
+  h4. Returns
 
-* @Ably.NetworkUnavailableException@
-* @Ably.QuotaExceededException@
-* @Ably.AuthenticationFailureException@
-  </div>
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next@":#paginated-result and "@first@":#paginated-result methods.
 
-</div>
+  Failure to retrieve the message history will raise an "@AblyException@":/realtime/types/#ably-exception
 
-h2(#message). Message
+h2(#related-types). Related types
 
-A @Message@ encapsulates an individual message sent or received in Ably. A message has the following members.
+h3(#message).
+  default: Message
+  ruby:    Ably::Models::Message Enum
+  java:    io.ably.lib.types.Message
 
-- <span lang="java">String</span>name := The event name for the message. The name may be used to allow listeners to subscribed selectively for only a subset of the messages on the channel.
+<%= partial 'types/_message' %>
 
-- <span lang="java">Object</span>data := The payload of the message. The data may be one of the supported payload datatypes.
+h3(#channel-options).
+  default: ChannelOptions Object
+  ruby:    ChannelOptions Hash
+  java:    io.ably.lib.types.ChannelOptions
 
-- <span lang="java">String</span>clientId := The clientId of the client that published the message. This <span lang="default">property</span><span lang="java">field</span> is populated by the system, where the clientId is known, for messages delivered to subscribers. It is not required to populate the clientId of a message before publishing it.
+<%= partial 'types/_channel_options' %>
 
-- <span lang="java">long</span>timestamp := The system timestamp of the message, in milliseconds since the epoch. This <span lang="default">property</span><span lang="java">field</span> is populated by the system for messages delivered to subscribers. It is not required to populate the timestamp of a message before publishing it.
+h3(#paginated-result).
+  default: PaginatedResult
+  ruby:    Ably::Models::PaginatedResult
+  java:    io.ably.lib.types.PaginatedResult
 
-h2(#channel-options). ChannelOptions
+<%= partial 'types/_paginated_result' %>
 
-A @ChannelOptions@ may optionally be specified when instancing a Channel, and this may be used to specify channel-specific options.
+h3(#param).
+  java:    io.ably.lib.types.Param
 
-Currently the only supported channel options are encryption-related.
-
-- <span lang="java">public boolean</span>encrypted := Requests encryption for this channel.
-
-- <span lang="java">public Object</span>cipherParams := Specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). Default cipher params for the implementation may be obtained by calling @Crypto.getDefaultParams()@.
-
-<div lang="java">
-h2(#paginated-result). PaginatedResult
-
-A @PaginatedResult@ is an interface that represents the result of a query that supports pagination. An instance of @PaginatedResult@ encapsulates a collection of @Message@ objects representing the current page of results, and provides the means - in the form of @Param[]@ to perform queries for subsequent or related pages.
-
-- public Message[] asArray() := Returns the current page of results as an Array.
-- public List&lt;Message&gt; := Returns the current page of results as a List.
-- public Param[] getFirst() := Returns the params to pass to a @history()@ call to reproduce the first call in this paginated sequence.
-- public Param[] getCurrent() := Returns the params to pass to a @history()@ call to reproduce the current call in this paginated sequence.
-- public Param[] getNext() := Returns the params to pass to a @history()@ call to reproduce the next call in this paginated sequence.
-
-</div>
+blang[java].
+  <%= partial 'types/_param', indent: 2, skip_first_indent: true %>
