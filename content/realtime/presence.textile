@@ -79,6 +79,28 @@ The @Presence@ object provides a straightforward API to subscribe to presence ev
   channel.presence.enter(null, new CompletionListener());
 ```
 
+```[objc]
+  ARTClientOptions *options = [[ARTClientOptions alloc] initWithKey:@"{{API_KEY}}"];
+  options.clientId = @"bob";
+  ARTRealtime *realtime = [[ARTRealtime alloc] initWithOptions:options];
+  ARTRealtimeChannel *channel = [realtime.channels get:@"{{RANDOM_CHANNEL_NAME}}"];
+  [channel.presence subscribe:ARTPresenceEnter cb:^(ARTPresenceMessage *member) {
+      NSLog(@"Member %@ entered", member.clientId);
+  }];
+  [channel.presence enter:nil];
+```
+
+```[swift]
+  let options = ARTClientOptions(key: "{{API_KEY}}")
+  options.clientId = "bob"
+  let realtime = ARTRealtime(options: options)
+  let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+  channel.presence.subscribe(.Enter) { member in
+      print("Member \(member.clientId) entered")
+  }
+  channel.presence.enter(nil)
+```
+
 h2(#presence). Presence
 
 In order to be present on a channel, a client must "be identified by having a client ID":https://support.ably.io/solution/articles/3000038608-authenticated-and-identified-clients, "have permission to be present":https://support.ably.io/solution/articles/3000048535-using-capabilities-to-manage-client-access-privileges-on-channels, and be attached to the channel. For simplicity, the library will implicitly attach to a channel when entering or subscribing to presence events. Clients are assigned a <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span> when using token authentication, "find out more about token authentication":/general/authentication#token-authentication.
@@ -156,6 +178,40 @@ channel.presence.enter(data: 'not moving') do
 end
 ```
 
+```[objc]
+// Subscribe to presence enter events
+[channel.presence subscribe:ARTPresenceEnter cb:^(ARTPresenceMessage *member) {
+    NSLog(@"%@", member.data); // prints "not moving"
+}];
+
+// Subscribe to presence update events
+[channel.presence subscribe:ARTPresenceUpdate cb:^(ARTPresenceMessage *member) {
+    NSLog(@"%@", member.data); // prints "travelling North"
+}];
+
+// Enter this client with data and update once entered
+[channel.presence enter:@"not moving" cb:^(ARTErrorInfo *error) {
+    [channel.presence update:@"travelling North"];
+}];
+```
+
+```[swift]
+// Subscribe to presence enter events
+channel.presence.subscribe(.Enter) { member in
+    print(member.data) // prints "not moving"
+}
+
+// Subscribe to presence update events
+channel.presence.subscribe(.Update) { member in
+    print(member.data) // prints "travelling North"
+}
+
+// Enter this client with data and update once entered
+channel.presence.enter("not moving") { error in
+    channel.presence.update("travelling North")
+}
+```
+
 h3(#member-list). Presence member list
 
 The @Presence@ object exposes a "@get@":#get method allowing a client to retrieve an array of all members present on the channel. The Ably client is responsible for keeping track of the presence set from the time that the channel is attached; an up to date presence set is pushed to the client following attach and the presence set is updated on each subsequent presence event. Thus @get@ returns the already-known presence set retained in memory and does not trigger a new request to the Ably service.
@@ -178,6 +234,20 @@ end
 PresenceMessage[] members = channel.presence.get();
 System.out.println("There are " + members.length + " members on this channel");
 System.out.println("The first member has client ID: " + members[0].clientId);
+```
+
+```[objc]
+[channel.presence get:^(NSArray<ARTPresenceMessage *> *members, NSError *error) {
+    NSLog(@"There are %lu members on this channel", [members count]);
+    NSLog(@"The first member has client ID: %@", members[0].clientId);
+}];
+```
+
+```[swift]
+channel.presence.get { members, error in
+    print("There are \(members.count) members on this channel")
+    print("The first member has client ID: \(members[0].clientId)")
+}
 ```
 
 h3(#presence-history). Presence History
@@ -217,6 +287,29 @@ System.out.println(resultPage.items().length + " presence events received in fir
 if(resultPage.hasNext()) {
   PaginatedResult<PresenceMessage> nextPage = resultPage.next();
   System.out.println(nextPage.items().length + " presence events received in 2nd page");
+}
+```
+
+```[objc]
+[channel.presence history:^(ARTPaginatedResult<ARTPresenceMessage *> *resultPage, NSError *error) {
+    NSLog(@"%lu presence events received in first page", [resultPage.items count]);
+    if (resultPage.hasNext) {
+        [resultPage next:^(ARTPaginatedResult<ARTPresenceMessage *> *nextPage, NSError *error) {
+            NSLog(@"%lu presence events received in 2nd page", [nextPage.items count]);
+        }];
+    }
+}];
+```
+
+```[swift]
+channel.presence.history { resultPage, error in
+    let resultPage = resultPage!
+    print("\(resultPage.items.count) presence events received in first page")
+    if resultPage.hasNext {
+        resultPage.next { nextPage, error in
+            print("\(nextPage!.items.count) presence events received in 2nd page")
+        }
+    }
 }
 ```
 
@@ -285,6 +378,39 @@ channel.presence.enterClient("Bob", noop); /* => Bob entered realtime-chat */
 channel.presence.enterClient('Mary', noop); /* => Mary entered realtime-chat */
 ```
 
+```[objc]
+ARTRest* rest = [[ARTRest alloc] initWithKey:@"{{API_KEY}}"];
+// request a wildcard token
+ARTTokenParams *tokenParams = [[ARTTokenParams alloc] initWithClientId:@"*"];
+[rest.auth requestToken:tokenParams withOptions:nil callback:^(ARTTokenDetails *tokenDetails, NSError *error) {
+    ARTRealtime *realtime = [[ARTRealtime alloc] initWithToken:tokenDetails.token];
+    ARTRealtimeChannel *channel = [realtime.channels get:@"realtime-chat"];
+
+    [channel.presence subscribe:ARTPresenceEnter cb:^(ARTPresenceMessage *member) {
+        NSLog(@"%@ entered realtime-chat", member.clientId);
+    }];
+
+    [channel.presence enterClient:@"Bob" data:nil]; // prints 'Bob entered realtime-chat'
+    [channel.presence enterClient:@"Mary" data:nil]; // prints 'Mary entered realtime-chat'
+}];
+```
+
+```[swift]
+let rest = ARTRest(key: "{{API_KEY}}")
+// request a wildcard token
+rest.auth.requestToken(ARTTokenParams(clientId: "*"), withOptions: nil) { tokenDetails, error in
+    let realtime = ARTRealtime(token: tokenDetails!.token)
+    let channel = realtime.channels.get("realtime-chat")
+
+    channel.presence.subscribe(.Enter) { member in
+        print("\(member.clientId) entered realtime-chat")
+    }
+
+    channel.presence.enterClient("Bob", data: nil) // prints 'Bob entered realtime-chat'
+    channel.presence.enterClient("Mary", data: nil) // prints 'Mary entered realtime-chat'
+}
+```
+
 h1. API Reference
 
 inline-toc.
@@ -320,6 +446,7 @@ inline-toc.
 
 h2(#properties).
   default: Presence Properties
+  objc,swift: ARTPresence Properties
   ruby: Ably::Realtime::Presence Attributes
   java: io.ably.lib.realtime.Presence Members
 
@@ -344,6 +471,7 @@ bq(definition#enter-none).
   default:  enter(callback("ErrorInfo":/realtime/types#error-info err))
   ruby:     "Deferrable":/realtime/types#deferrable enter() -> yields
   java:     public void enter("CompletionListener":#completion-listener listener)
+  objc,swift: enter(data: nil, cb: ((ARTErrorInfo?) -> Void)?)
 
 Enter a presence channel without any data.
 
@@ -351,6 +479,7 @@ bq(definition#enter-data).
   default: enter(Object data, callback("ErrorInfo":/realtime/types#error-info err))
   ruby:    "Deferrable":/realtime/types#deferrable enter(Object data) -> yields
   java:    public void enter(Object data, "CompletionListener":#completion-listener listener)
+  objc,swift: enter(data: AnyObject?, cb: ((ARTErrorInfo?) -> Void)?)
 
 Enter a presence channel and provide data that is associated with the current present member.
 
@@ -359,12 +488,14 @@ h4. Parameters
 - <div lang="jsall">Object data</div> := data payload for the current present member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.
 - <div lang="java">Object data</div> := data payload for the current present member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.
 - <div lang="ruby">Object data</div> := data payload for the current present member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.
+- <div lang="objc,swift">Object data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.
 
 - <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
 - <div lang="java">"CompletionListener":#completion-listener listener</div> := Listener to be notified on completion
 - <div lang="ruby">&block</div> := yields upon successfully entering the channel
+- <div lang="objc,swift">callback</div> := called upon successfully entering the channel, or with an error
 
-blang[jsall].
+blang[jsall,swift,objc].
   h4. Callback result
 
   On successfully entering the channel, @err@ is null. On failure to enter, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
@@ -391,6 +522,7 @@ bq(definition#leave-none).
   default:  leave(callback("ErrorInfo":/realtime/types#error-info err))
   ruby:     "Deferrable":/realtime/types#deferrable leave() -> yields
   java:     public void leave("CompletionListener":#completion-listener listener)
+  swift,objc: leave(data: nil, cb: ((ARTErrorInfo?) -> Void)?)
 
 Leave a presence channel without emitting any data.
 
@@ -398,6 +530,7 @@ bq(definition#leave-data).
   default: leave(Object data, callback("ErrorInfo":/realtime/types#error-info err))
   ruby:    "Deferrable":/realtime/types#deferrable leave(Object data) -> yields
   java:    public void leave(Object data, "CompletionListener":#completion-listener listener)
+  swift,objc: leave(data: AnyObject?, cb: ((ARTErrorInfo?) -> Void)?)
 
 Leave a presence channel and emit data that is associated with the current leaving member.
 
@@ -406,10 +539,12 @@ h4. Parameters
 - <div lang="jsall">Object data</div> := data payload for the current present member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.
 - <div lang="java">Object data</div> := data payload for the current present member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.
 - <div lang="ruby">Object data</div> := data payload for the current present member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.
+- <div lang="objc,swift">Object data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.
 
 - <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
 - <div lang="java">"CompletionListener":#completion-listener listener</div> := Listener to be notified on completion
 - <div lang="ruby">&block</div> := yields upon successfully leaving the channel
+- <div lang="objc,swift">callback</div> := called upon leaving the channel, or with an error
 
 h6(#update). update
 
@@ -421,6 +556,7 @@ bq(definition#update-data).
   default: update(Object data, callback("ErrorInfo":/realtime/types#error-info err))
   ruby:    "Deferrable":/realtime/types#deferrable update(Object data) -> yields
   java:    public void update(Object data, "CompletionListener":#completion-listener listener)
+  swift,objc: update(data: AnyObject?, cb: ((ARTErrorInfo?) -> Void)?)
 
 Update the current member's data and broadcast an update event to all subscribers. @data@ may be @null@.
 
@@ -429,12 +565,14 @@ h4. Parameters
 - <div lang="jsall">Object data</div> := data payload for the current present member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.
 - <div lang="java">Object data</div> := data payload for the current present member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.
 - <div lang="ruby">Object data</div> := data payload for the current present member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.
+- <div lang="objc,swift">Object data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.
 
 - <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
 - <div lang="java">"CompletionListener":#completion-listener listener</div> := Listener to be notified on completion
 - <div lang="ruby">&block</div> := yields upon successfully updating the member data
+- <div lang="objc,swift">callback</div> := called upon updating the channel, or with an error
 
-blang[jsall].
+blang[jsall,objc,swift].
   h4. Callback result
 
   On successfully updating the data, @err@ is null. On failure to update, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
@@ -461,23 +599,25 @@ bq(definition).
   default: get(Object options, callback("ErrorInfo":/realtime/types#error-info err, "PresenceMessage[]":#presence-message members))
   ruby:    "Deferrable":/realtime/types#deferrable get(Hash options) -> yields "PresenceMessage[]":#presence-message
   java:    public "PresenceMessage[]":#presence-message get("Param":#param[] options)
+  swift,objc: get(query: ARTRealtimePresenceQuery, cb: (["ARTPresenceMessage":#presence-message], NSError?) -> Void)
 
 Gets an array of members present on the channel as "PresenceMessage":#presence-message objects.
 
 h4. Parameters
 
-- <span lang="default">options</span><span lang="java">"Param":#param[] options</span><span lang="ruby">options</span> := <span lang="default">an optional object containing query parameters</span><span lang="ruby">an optional set of symbol key and value pairs containing the query parameters</span> as specified below.
+- <span lang="default">options</span><span lang="objc,swift">query</span><span lang="java">"Param":#param[] options</span><span lang="ruby">options</span> := <span lang="default">an optional object containing query parameters</span><span lang="ruby">an optional set of symbol key and value pairs containing the query parameters</span> as specified below.
 
 - <div lang="jsall">callback</div> := is a function of the form: @function(err, "PresenceMessage[]":#presence-message members)@
 - <div lang="ruby">&block</div> := yields a "@PresenceMessage[]@":#presence-message array
+- <div lang="objc,swift">callback</div> := called with a "@[ARTPresenceMessage]@":#presence-message, or with an error
 
-h4. @options@ parameters
+h4. <span lang="default">@options@ parameters</span><span lang="objc,swift">@ARTRealtimePresenceQuery@ properties</span>
 
 - <span lang="default">@clientId@</span><span lang="ruby">@:client_id@</span> := when provided, will filter array of members returned that match the provided <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span> string
 - <span lang="default">@connectionId@</span><span lang="ruby">@:connection_id@</span> := when provided, will filter array of members returned that match the provided <span lang="default">"@connectionId@":/realtime/connection#id</span><span lang="ruby">"@connection_id@":/realtime/connection/#id</span> string
 - <span lang="default">@waitForSync@</span><span lang="ruby">@:wait_for_sync@</span> := _true_ A boolean value that by default waits for the initial presence synchronisation following channel attachment to complete before returning the members present. When false, the current list of members is returned without waiting for a complete synchronisation
 
-blang[jsall].
+blang[jsall,swift,objc].
   h4. Callback result
 
   On success, @members@ contains an array of "@PresenceMessage@":#presence-message objects corresponding to the current set of present members on the channel.
@@ -506,19 +646,21 @@ bq(definition).
   default: history(Object option, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message> resultPage))
   ruby:    "Deferrable":/realtime/types#deferrable history(Hash option) -> yields "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message>
   java:    public "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message> history("Param":#param[] option)
+  objc,swift: history(query: ARTRealtimeHistoryQuery?, callback: ("ARTPaginatedResult":#paginated-result<"ARTPresenceMessage":#presence-message>?, NSError?) -> Void) throws
 
 Gets a "paginated":#paginated-result set of historical presence message events for this channel. If the "channel is configured to persist messages to disk":https://support.ably.io/support/solutions/articles/3000030059-how-long-are-messages-stored-for, then the presence message event history will "typically be available for 24 - 72 hours":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If not, presence message events are only retained in memory by the Ably service for two minutes.
 
 h4. Parameters
 
-- <span lang="default">option</span><span lang="java">"Param":#param[] option</span> := <span lang="default">an optional object containing query parameters</span><span lang="ruby">an optional set of key value pairs containing query parameters</span>, as specified in the "presence history API documentation":/realtime/history#presence-history.
+- <span lang="default">option</span><span lang="objc,swift">option</span><span lang="java">"Param":#param[] option</span> := <span lang="default">an optional object containing query parameters</span><span lang="ruby">an optional set of key value pairs containing query parameters</span>, as specified in the "presence history API documentation":/realtime/history#presence-history.
 
 - <div lang="jsall">callback</div> := is a function of the form: @function(err, resultPage)@
 - <div lang="ruby">&block</div> := yields a @PaginatedResult<Message>@ array
+- <div lang="swift,objc">callback</div> := called with a "ARTPaginatedResult":#paginated-result<"ARTPresenceMessage":#presence-message> object or an error
 
 Further details of the supported @option@ params, see "presence history API documentation":/realtime/history#presence-history.
 
-blang[jsall].
+blang[jsall,swift,objc].
   h4. Callback result
 
   On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
@@ -549,6 +691,7 @@ bq(definition#subscribe-listener).
   default:  subscribe(listener("PresenceMessage":#presence-message))
   java:     public void subscribe("PresenceListener":#presence-listener listener)
   ruby:     subscribe → yields "PresenceMessage":#presence-message
+  objc,swift: subscribe(cb: ("ARTPresenceMessage":#presence-message) -> Void) -> ARTEventListener
 
 Subscribe to presence message events on this channel. The caller supplies <span lang="default">a listener function</span><span lang="java">an implementation of the "PresenceListener":#presence-listener interface</span><span lang="ruby">a block</span>, which is called each time one or more presence events occurs such as a member entering or leaving a channel.
 
@@ -556,25 +699,33 @@ bq(definition#subscribe-event).
   default: subscribe(String "action":#presence-action, listener("PresenceMessage":#presence-message))
   java:    public void subscribe("PresenceMessage.Action":#presence-action action, "PresenceListener":#presence-listener listener)
   ruby:    subscribe("PresenceMessage::ACTION":#presence-action action) → yields "PresenceMessage":#presence-message
+  objc,swift: subscribe(action: ARTPresenceAction, cb: ("ARTPresenceMessage":#presence-message) -> Void) -> ARTEventListener
 
 Subscribe to presence message events with a given "@action@":#presence-action on this channel. The caller supplies <span lang="default">a listener function</span><span lang="java">an implementation of the "PresenceListener":#presence-listener interface</span><span lang="ruby">a block</span>, which is called each time one or more presence events occurs such as a member entering or leaving a channel.
 
+<div lang="objc,swift"></div>
+<div lang="default">
 bq(definition#subscribe-event-array).
   default: subscribe(String[] "actions":#presence-action, listener("PresenceMessage":#presence-message))
   java:    public void subscribe("PresenceMessage.Action[]":#presence-action actions, "PresenceListener":#presence-listener listener)
   ruby:    subscribe("PresenceMessage::ACTION":#presence-action *actions) → yields "PresenceMessage":#presence-message
 
 Subscribe a single listener to messages on this channel for multiple @name@ values.
+</div>
 
 h4. Parameters
 
 - String action := The presence "@action@ event":#presence-action to subscribe to
 
+<div lang="objc,swift"></div>
+<div lang="default">
 - <span lang="default">String[] </span><span lang="ruby">*</span>actions := An <span lang="ruby">argument</span> array of "@action@ events":#presence-action to subscribe to
+</div>
 
 - <div lang="jsall">listener</div> := is a function of the form @function(message)@ to be called for each amtching presence message event
 - <div lang="java">"PresenceListener":#presence-listener listener</div> := Message listener to be notified for matching presence message event
 - <div lang="ruby">&block</div> := yields matching presence message event when received on the channel
+- <div lang="swift,objc">callback</div> := called with each matching "@presence message@":#presence-message when received on the channel
 
 h6(#unsubscribe). unsubscribe
 
@@ -584,6 +735,7 @@ bq(definition#unsubscribe-event).
   default: unsubscribe(String action, listenerCallback)
   java:    public void unsubscribe("PresenceMessage.Action":#presence-action action, "PresenceListener":#presence-listener listener)
   ruby:    unsubscribe("PresenceMessage::ACTION":#presence-action action, &listener_proc)
+  objc,swift: unsubscribe(action: ARTPresenceAction, listener: ARTEventListener)
 
 Unsubscribe to presence message events on this channel for the given "@action@":#presence-action. This removes an earlier event-specific subscription.
 
@@ -591,12 +743,14 @@ bq(definition#unsubscribe-listener).
   default: unsubscribe(listenerCallback)
   java:    public void unsubscribe("PresenceListener":#presence-listener listener)
   ruby:    unsubscribe(&listener_proc)
+  objc,swift: unsubscribe(listener: ARTEventListener)
 
 Unsubscribe to presence message events on this channel. This removes an earlier subscription.
 
 bq(definition#unsubscribe-all).
   default: unsubscribe()
   java:    public void unsubscribe()
+  objc,swift: unsubscribe()
 
 Unsubscribes all listeners to presence message events on this channel. This removes all earlier subscriptions.
 
@@ -607,6 +761,7 @@ h4. Parameters
 - <div lang="jsall">listenerCallback</div> := is the callback listener function that was previously subscribed
 - <div lang="java">"PresenceListener":#presence-listener listener</div> := previously registered listener
 - <div lang="ruby">&listener_block</div> := previously registered listener block
+- <div lang="swift,objc">listener</div> := previous return value from a @subscribe@ call
 
 h6(#enter-client).
   default: enterClient
@@ -620,6 +775,7 @@ bq(definition#enter-client-none).
   default:  enterClient(String clientId, callback("ErrorInfo":/realtime/types#error-info err))
   ruby:     "Deferrable":/realtime/types#deferrable enter_client(String client_id) -> yields
   java:     public void enterClient(String clientId, "CompletionListener":#completion-listener listener)
+  objc,swift: enterClient(clientId: String, data: nil, cb: ((ARTErrorInfo?) -> Void)?)
 
 Enter a presence channel on behalf of the provided <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span> without any data.
 
@@ -627,6 +783,7 @@ bq(definition#enter-client-data).
   default: enterClient(String clientId, Object data, callback("ErrorInfo":/realtime/types#error-info err))
   ruby:    "Deferrable":/realtime/types#deferrable enter_client(String client_id, Object data) -> yields
   java:    public void enterClient(String clientId, Object data, "CompletionListener":#completion-listener listener)
+  objc,swift: enterClient(clientId: String, data: AnyObject?, cb: ((ARTErrorInfo?) -> Void)?)
 
 Enter a presence channel and provide data that is associated with the current present member.
 
@@ -635,12 +792,14 @@ h4. Parameters
 - <div lang="jsall">Object data</div> := data payload for the member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.
 - <div lang="java">Object data</div> := data payload for the member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.
 - <div lang="ruby">Object data</div> := data payload for the member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.
+- <div lang="objc,swift">Object data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.
 
 - <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
 - <div lang="java">"CompletionListener":#completion-listener listener</div> := Listener to be notified on completion
 - <div lang="ruby">&block</div> := yields upon successfully entering the channel
+- <div lang="objc,swift">callback</div> := called upon successfully entering the channel, or with an error
 
-blang[jsall].
+blang[jsall,swift,objc].
   h4. Callback result
 
   On successfully entering the channel, @err@ is null. On failure to enter, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
@@ -669,6 +828,7 @@ bq(definition#leave-client-none).
   default:  leaveClient(String clientId, callback("ErrorInfo":/realtime/types#error-info err))
   ruby:     "Deferrable":/realtime/types#deferrable leave_client(String client_id) -> yields
   java:     public void leaveClient(String clientId, "CompletionListener":#completion-listener listener)
+  swift,objc: leaveClient(clientId: String, data: nil, cb: ((ARTErrorInfo?) -> Void)?)
 
 Leave a presence channel on behalf of the provided <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span> without emitting any data.
 
@@ -676,6 +836,7 @@ bq(definition#leave-client-data).
   default: leaveClient(String clientId, Object data, callback("ErrorInfo":/realtime/types#error-info err))
   ruby:    "Deferrable":/realtime/types#deferrable leave_client(String client_id, Object data) -> yields
   java:    public void leaveClient(String clientId, Object data, "CompletionListener":#completion-listener listener)
+  swift,objc: leave(clientId: String, data: AnyObject?, cb: ((ARTErrorInfo?) -> Void)?)
 
 Leave a presence channel on behalf of the provided <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span> and emit data that is associated with the current leaving member.
 
@@ -684,10 +845,12 @@ h4. Parameters
 - <div lang="jsall">Object data</div> := data payload for the present member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.
 - <div lang="java">Object data</div> := data payload for the present member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.
 - <div lang="ruby">Object data</div> := data payload for the present member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.
+- <div lang="objc,swift">Object data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.
 
 - <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
 - <div lang="java">"CompletionListener":#completion-listener listener</div> := Listener to be notified on completion
 - <div lang="ruby">&block</div> := yields upon successfully leaving the channel
+- <div lang="objc,swift">callback</div> := called upon leaving the channel, or with an error
 
 h6(#update-client).
   default: updateClient
@@ -701,6 +864,7 @@ bq(definition#update-client-data).
   default: updateClient(String clientId, Object data, callback("ErrorInfo":/realtime/types#error-info err))
   ruby:    "Deferrable":/realtime/types#deferrable update_client(String client_id, Object data) -> yields
   java:    public void updateClient(String clientId, Object data, "CompletionListener":#completion-listener listener)
+  swift,objc: update(clientId: String, data: AnyObject?, cb: ((ARTErrorInfo?) -> Void)?)
 
 Update the member data on behalf of the provided <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span> and broadcast an update event to all subscribers. @data@ may be @null@.
 
@@ -709,12 +873,14 @@ h4. Parameters
 - <div lang="jsall">Object data</div> := data payload for the member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.
 - <div lang="java">Object data</div> := data payload for the member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.
 - <div lang="ruby">Object data</div> := data payload for the member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.
+- <div lang="objc,swift">Object data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.
 
 - <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
 - <div lang="java">"CompletionListener":#completion-listener listener</div> := Listener to be notified on completion
 - <div lang="ruby">&block</div> := yields upon successfully updating the member data
+- <div lang="objc,swift">callback</div> := called upon updating the channel, or with an error
 
-blang[jsall].
+blang[jsall,objc,swift].
   h4. Callback result
 
   On successfully updating the data, @err@ is null. On failure to update, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
@@ -735,6 +901,7 @@ h2(#related-types). Related types
 
 h3(#presence-message).
   default: PresenceMessage
+  swift,objc: ARTPresenceMessage
   ruby:    Ably::Models::PresenceMessage
   java:    io.ably.lib.types.PresenceMessage
 
@@ -742,6 +909,7 @@ h3(#presence-message).
 
 h3(#presence-action).
   default: Presence action
+  swift,objc: ARTPresenceAction
   java:    io.ably.lib.types.PresenceMessage.Action
   ruby:    Ably::Models::PresenceMessage::ACTION
 
@@ -755,6 +923,7 @@ blang[java].
 
 h3(#paginated-result).
   default: PaginatedResult
+  swift,objc: ARTPaginatedResult
   ruby:    Ably::Models::PaginatedResult
   java:    io.ably.lib.types.PaginatedResult
 
