@@ -5,7 +5,7 @@ module Ably
     'python' => { name: 'Python', extension: 'java' },
     'ruby' => { name: 'Ruby', extension: 'ruby' },
     'nodejs' => { name: 'Node.js', extension: 'js' },
-    'ios' => { name: 'iOS', extension: 'java' },
+    'objc' => { name: 'Obj-C', extension: 'm' },
     'swift' => { name: 'Swift', extension: 'swift' },
     'go' => { name: 'Swift', extension: 'go' },
     'csharp' => { name: 'C# .Net', extension: 'cs' },
