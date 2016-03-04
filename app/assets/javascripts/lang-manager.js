@@ -116,6 +116,12 @@ $(function() {
 
   var languages = {};
   $('ul.lang-selector li[lang]').each(function() {
+    if (window.NavLangs) {
+      // page has specified which languages to support in the lang nav
+      if (window.NavLangs.indexOf($(this).attr('lang').toLowerCase()) == -1) {
+        return;
+      }
+    }
     languages[$(this).attr('lang').toLowerCase()] = true;
   });
 
