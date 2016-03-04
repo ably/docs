@@ -14,8 +14,9 @@ $(function() {
   }
 
   function stripNamespace(text) {
-    var parts = text.split(/::|\./),
-        splitter = text.match(/::|\./g),
+    /* break on ::, ., or \ namespace separators */
+    var parts = text.split(/::|\\|\./),
+        splitter = text.match(/::|\\|\./g),
         lastPart = parts[parts.length-1];
 
     if (splitter && (lastPart.match(/^[A-Z0-9]+$/) || (lastPart.length <= 6))) {
