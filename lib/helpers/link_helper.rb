@@ -1,5 +1,5 @@
 module LinkHelper
-  CANONICAL_ROOT = 'https://www.ably.io/'
+  CANONICAL_ROOT = 'https://www.ably.io/' unless defined?(CANONICAL_ROOT)
 
   def link(text, target, attributes = {})
     target = "/#{target}" unless target.match(/^(\w+:\/\/|\/)/)
