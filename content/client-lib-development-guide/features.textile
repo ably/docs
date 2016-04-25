@@ -19,6 +19,7 @@ jump_to:
     - Channel#realtime-channel
     - Presence#realtime-presence
     - EventEmitter#eventemitter
+    - State conditions and operations#state-conditions-and-operations
   Types:
     - Data types#types
     - Options#options
@@ -303,12 +304,16 @@ h3(#realtime-connection). Connection
 ** @(RTN11a)@ Explicitly connects to the Ably service if not already connected
 ** @(RTN11b)@ An error will be indicated if the state is @CLOSING@ as the connection must complete the close request before reconnecting
 * @(RTN12)@ @Connection#close@ function:
-** @(RTN12a)@ Sends a @CLOSE@ @ProtocolMessage@ to the server, sets the state to @CLOSING@ and waits for a @CLOSED@ @ProtocolMessage@ to be received
+** @(RTN12f)@ If the connection state is @CONNECTING@, do the operation once the connection state is @CONNECTED@
+** @(RTN12a)@ If the connection state is @CONNECTED@, sends a @CLOSE@ @ProtocolMessage@ to the server, sets the state to @CLOSING@ and waits for a @CLOSED@ @ProtocolMessage@ to be received
 ** @(RTN12b)@ If the @CLOSED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the transport will be disconnected and the connection will automatically move to the @CLOSED@ state
 ** @(RTN12c)@ If the transport is abruptly closed following a @CLOSE@ @ProtocolMessage@ being sent, then the connection will automatically move to the @CLOSED@ state
+** @(RTN12d)@ If the connection state is @DISCONNECTED@, aborts the retry process described in "RTN14d":#RTN14d and moves the connection immediately to the @CLOSED@ state
+** @(RTN12e)@ If the connection state is @SUSPENDED@, aborts the retry process described in "RTN14e":#RTN14e and moves the connection immediately to the @CLOSED@ state
 * @(RTN13)@ @Connection#ping@ function:
+** @(RTN13c)@ If the connection state is @CONNECTING@ or @DISCONNECTED@, do the operation once the connection state is @CONNECTED@
 ** @(RTN13a)@ Will send a @ProtocolMessage@ with action @HEARTBEAT@ the Ably service when connected and expects a @HEARTBEAT@ message in response. If the client library language supports callbacks, then the callback will be called with the response time or error
-** @(RTN13b)@ Will immediately indicate an error if in the @CLOSED@ or @FAILED@ state
+** @(RTN13b)@ Will immediately indicate an error if in the @INITIALIZED@, @SUSPENDED@, @CLOSING@, @CLOSED@ or @FAILED@ state
 ** @(RTN13c)@ Will fail if a @HEARTBEAT@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults
 * @(RTN14)@ @Connection@ opening failures:
 ** @(RTN14a)@ If an API key is invalid, then the connection will enter the @FAILED@ state and the @Connection#errorReason@ will be set on the @Connection@ object as well as the emitted @ConnectionStateChange@
@@ -380,7 +385,10 @@ h3(#realtime-channel). Channel
 * @(RTL11)@ If a channel enters the @DETACHED@ or @FAILED@ state, then all messages that are still queued for send on that channel should be deleted from the queue triggering a failure for the publish or presence methods invoked for those messages
 * @(RTL4)@ @Channel#attach@ function:
 ** @(RTL4a)@ If already @ATTACHED@ or @ATTACHING@ nothing is done
-** @(RTL4b)@ If the connection state is @CLOSED@, @CLOSING@, @SUSPENDED@ or @FAILED@, the @attach@ request results in an error
+** @(RTL4e)@ If the channel is in the @DETACHING@ state, it will result in an error, as the channel must complete the detach request before reattaching
+** @(RTL4g)@ If state is @FAILED@, the @attach@ request results in an error
+** @(RTL4b)@ If the connection state is @INITIALIZED@, @CLOSED@, @CLOSING@, @SUSPENDED@ or @FAILED@, the @attach@ request results in an error
+** @(RTL4h)@ If the connection state is @CONNECTING@ or @DISCONNECTED@, do the operation once the connection state is @CONNECTED@
 ** @(RTL4c)@ Otherwise an @ATTACH@ ProtocolMessage is sent to the server, the state changes to @ATTACHING@ and the channel becomes @ATTACHED@ when the confirmation @ATTACHED@ ProtocolMessage is received
 ** @(RTL4f)@ Once an @ATTACH@ @ProtocolMessage@ is sent, if an @ATTACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the attach request should be treated as though it has failed
 ** @(RTL4d)@ If the language permits, a callback can be provided that is called when the channel is attached successfully or the attach fails and the @ErrorInfo@ error is passed as an argument to the callback
@@ -388,6 +396,8 @@ h3(#realtime-channel). Channel
 * @(RTL5)@ @Channel#detach@ function:
 ** @(RTL5a)@ If state is @INITIALIZED@, @DETACHED@ or @DETACHING@ nothing is done
 ** @(RTL5b)@ If state is @FAILED@, the @detach@ request results in an error
+** @(RTL5g)@ If the connection state is @INITIALIZED@, @CLOSED@, @CLOSING@, @SUSPENDED@ or @FAILED@, the @attach@ request results in an error
+** @(RTL5h)@ If the connection state is @CONNECTING@ or @DISCONNECTED@, or the channel state is @ATTACHING@, do the operation once the connection state is @CONNECTED@ and the channel state is @ATTACHED@
 ** @(RTL5d)@ Otherwise a @DETACH@ ProtocolMessage is sent to the server, the state changes to @DETACHING@ and the channel becomes @DETACHED@ when the confirmation @DETACHED@ ProtocolMessage is received
 ** @(RTL5f)@ Once a @DETACH@ @ProtocolMessage@ is sent, if a @DETACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the detach request should be treated as though it has failed
 ** @(RTL5e)@ If the language permits, a callback can be provided that is called when the channel is detached successfully or the detach fails and the @ErrorInfo@ error is passed as an argument to the callback
@@ -399,8 +409,9 @@ h3(#realtime-channel). Channel
 ** @(RTL6i2)@ When an array of @Message@ objects is provided, a single @ProtocolMessage@ is used to publish all @Message@ objects in the array. However, a yet to be implemented feature should limit the total number of messages bundled in a single ProtocolMessage based on the default max message size
 ** @(RTL6i3)@ Allows @name@ and or @data@ to be @null@.  If any of the values are null, then key is not sent to Ably i.e. a payload with a @null@ value for @data@ would be sent as follows @{ "name": "click" }@
 ** @(RTL6c)@ Connection state conditions:
-*** @(RTL6c1)@ If the connection is @CONNECTED@ then the messages are published immediately
-*** @(RTL6c2)@ If the connection is @CONNECTING@ or @DISCONNECTED@, and @ClientOptions#queueMessages@ has not been explicitly set to false, then the message will be queued and delivered as soon as the connection state returns to @CONNECTED@
+*** @(RTL6c1)@ If the connection is @CONNECTED@ and the channel is @ATTACHED@ then the messages are published immediately
+*** @(RTL6c2)@ If the connection is @CONNECTING@ or @DISCONNECTED@ or the channel is @ATTACHING@, and @ClientOptions#queueMessages@ has not been explicitly set to false, then the message will be queued and delivered as soon as the connection state returns to @CONNECTED@
+*** @(RTL6c4)@ If the connection is @INITIALIZED@, @SUSPENDED@, @CLOSING@, @CLOSED@, or @FAILED@, or the channel is @INITIALIZED@, @DETACHING@ or @DETACHED@, the operation will result in an error
 *** @(RTL6c3)@ Implicitly attaches the @Channel@. However, if the channel is in or moves to the @FAILED@ state before the operation succeeds, it will result in an error
 ** @(RTL6d)@ Messages are delivered using a single @ProtocolMessage@ where possible by bundling in all messages for that channel into the @ProtocolMessage#messages@ array. However, a yet to be implemented feature should limit the total number of messages bundled per @ProtocolMessage@ based on the default max message size, and would reject the publish and indicate an error if any single message exceeds that limit
 ** @(RTL6e)@ Unidentified clients using "Basic Auth":https://en.wikipedia.org/wiki/Basic_access_authentication (i.e. any @clientId@ is permitted as no @clientId@ specified):
@@ -443,8 +454,8 @@ h3(#realtime-presence). Presence
 ** @(RTP5a)@ If the channel enters the @DETACHED@ or @FAILED@ state then all queued presence messages will fail immediately
 ** @(RTP5b)@ If a channel enters the @ATTACHED@ state then all queued presence messages will be sent immediately and a presence @SYNC@ will be initiated implicitly
 * @(RTP16)@ Connection state conditions:
-** @(RTP16a)@ If the connection is @CONNECTED@ then all presence messages are published immediately
-** @(RTP16b)@ If the connection is @CONNECTING@ or @DISCONNECTED@, and @ClientOptions#queueMessages@ has not been explicitly set to false, then all presence messages will be queued and delivered as soon as the connection state returns to @CONNECTED@
+** @(RTP16a)@ If the connection is @CONNECTED@ and the channel is @ATTACHED@ then all presence messages are published immediately
+** @(RTP16b)@ If the connection is @CONNECTING@ or @DISCONNECTED@ or the channel is @ATTACHING@, and @ClientOptions#queueMessages@ has not been explicitly set to false, then all presence messages will be queued and delivered as soon as the connection state returns to @CONNECTED@
 ** @(RTP16c)@ Else publishing presence messages will result in an error
 * @(RTP6)@ @Presence#subscribe@ function:
 ** @(RTP6a)@ Subscribe with no arguments subscribes a listener to all presence messages
@@ -509,6 +520,268 @@ h3(#eventemitter). EventEmitter mixin / interface
 * @(RTE4)@ @EventEmitter#once@ registers the provided listener for either the first event that is emitted when no @event@ argument is provided, or for only the first occurence of a single named event when an @event@ argument is provided. If @once@ is called more than once with the same listener, the listener is added multiple times to its listener registry. Therefore, as an example, assuming the same listener is registered twice using @once@, and an event is emitted once, the listener would be invoked twice. However, all subsequent events emitted would not invoke the listener as @once@ ensures that each registration is only invoked once
 * @(RTE5)@ @EventEmitter#off@ deregisters a listener. If called with a specific event and a listener, it removes all registrations that match both the given listener and the given event; if called only with a listener, it removes all registrations matching the given listener, regardless of whether they are associated with an event or not; if called with no arguments, it removes all registrations, for all events and listeners
 * @(RTE6)@ @EventEmitter#emit@ emits an event, calling registered listeners with the given event name and any other given arguments. If an exception is raised in any of the listeners, the exception is caught by the @EventEmitter@ and the exception is logged to the Ably logger. Tests must exist to ensure exceptions raised in client code do not propagate and inhibit other event processing within the client library
+
+h2(#state-conditions-and-operations). State conditions and operations
+
+@Connection@ operation effects depending on current @Connnection.state@:
+
+<table id="connection-states-operations">
+
+<tr>
+  <th></th>
+  <th>Initialized</th>
+  <th>Connecting</th>
+  <th>Connected</th>
+  <th>Disconnected</th>
+  <th>Suspended</th>
+  <th>Closing</th>
+  <th>Closed</th>
+  <th>Failed</th>
+</tr>
+
+<tr>
+  <td>@connect@</td>
+
+  <!-- When INITIALIZED -->
+  <td>"RTN11a":#RTN11a</td>
+  <!-- When CONNECTING -->
+  <td>No-op</td>
+  <!-- When CONNECTED -->
+  <td>No-op</td>
+  <!-- When DISCONNECTED -->
+  <td>No-op</td>
+  <!-- When SUSPENDED -->
+  <td>No-op</td>
+  <!-- When CLOSING -->
+  <td>"RTN11b":#RTN11b</td>
+  <!-- When CLOSED -->
+  <td>"RTN11a":#RTN11a</td>
+  <!-- When FAILED -->
+  <td>No-op</td>
+
+</tr>
+
+<tr>
+  <td>@close@</td>
+
+  <!-- When INITIALIZED -->
+  <td>No-op</td>
+  <!-- When CONNECTING -->
+  <td>"RTN12f":#RTN12f</td>
+  <!-- When CONNECTED -->
+  <td>"RTN12a":#RTN12a</td>
+  <!-- When DISCONNECTED -->
+  <td>"RTN12d":#RTN12d</td>
+  <!-- When SUSPENDED -->
+  <td>"RTN12e":#RTN12e</td>
+  <!-- When CLOSING -->
+  <td>No-op</td>
+  <!-- When CLOSED -->
+  <td>No-op</td>
+  <!-- When FAILED -->
+  <td>No-op</td>
+
+</tr>
+
+<tr>
+  <td>@ping@</td>
+
+  <!-- When INITIALIZED -->
+  <td>"RTN13b":#RTN13b</td>
+  <!-- When CONNECTING -->
+  <td>"RTN13c":#RTN13c</td>
+  <!-- When CONNECTED -->
+  <td>"RTN13a":#RTN13a</td>
+  <!-- When DISCONNECTED -->
+  <td>"RTN13c":#RTN13c</td>
+  <!-- When SUSPENDED -->
+  <td>"RTN13b":#RTN13b</td>
+  <!-- When CLOSING -->
+  <td>"RTN13b":#RTN13b</td>
+  <!-- When CLOSED -->
+  <td>"RTN13b":#RTN13b</td>
+  <!-- When FAILED -->
+  <td>"RTN13b":#RTN13b</td>
+
+</tr>
+
+<tr>
+  <td>Channel @attach@</td>
+
+  <!-- When INITIALIZED -->
+  <td>"RTL4b":#RTL4b</td>
+  <!-- When CONNECTING -->
+  <td>"RTL4h":#RTL4h</td>
+  <!-- When CONNECTED -->
+  <td>"See channel table":#channel-states-operations</td>
+  <!-- When DISCONNECTED -->
+  <td>"RTL4h":#RTL4h</td>
+  <!-- When SUSPENDED -->
+  <td>"RTL4b":#RTL4b</td>
+  <!-- When CLOSING -->
+  <td>"RTL4b":#RTL4b</td>
+  <!-- When CLOSED -->
+  <td>"RTL4b":#RTL4b</td>
+  <!-- When FAILED -->
+  <td>"RTL4b":#RTL4b</td>
+
+</tr>
+
+<tr>
+  <td>Channel @detach@</td>
+
+  <!-- When INITIALIZED -->
+  <td>"RTL5g":#RTL5g</td>
+  <!-- When CONNECTING -->
+  <td>"RTL5h":#RTL5h</td>
+  <!-- When CONNECTED -->
+  <td>"See channel table":#channel-states-operations</td>
+  <!-- When DISCONNECTED -->
+  <td>"RTL5h":#RTL5h</td>
+  <!-- When SUSPENDED -->
+  <td>"RTL5g":#RTL5g</td>
+  <!-- When CLOSING -->
+  <td>"RTL5g":#RTL5g</td>
+  <!-- When CLOSED -->
+  <td>"RTL5g":#RTL5g</td>
+  <!-- When FAILED -->
+  <td>"RTL5g":#RTL5g</td>
+
+</tr>
+
+<tr>
+  <td>Channel @publish@</td>
+
+  <!-- When INITIALIZED -->
+  <td>"RTL6c4":#RTL6c4</td>
+  <!-- When CONNECTING -->
+  <td>"RTL6c2":#RTL6c2</td>
+  <!-- When CONNECTED -->
+  <td>"See channel table":#channel-states-operations</td>
+  <!-- When DISCONNECTED -->
+  <td>"RTL6c2":#RTL6c2</td>
+  <!-- When SUSPENDED -->
+  <td>"RTL6c4":#RTL6c4</td>
+  <!-- When CLOSING -->
+  <td>"RTL6c4":#RTL6c4</td>
+  <!-- When CLOSED -->
+  <td>"RTL6c4":#RTL6c4</td>
+  <!-- When FAILED -->
+  <td>"RTL6c4":#RTL6c4</td>
+
+</tr>
+
+<tr>
+  <td>Presence ops.</td>
+
+  <!-- When INITIALIZED -->
+  <td>"RTP16c":#RTP16c</td>
+  <!-- When CONNECTING -->
+  <td>"RTP16b":#RTP16b</td>
+  <!-- When CONNECTED -->
+  <td>"See channel table":#channel-states-operations</td>
+  <!-- When DISCONNECTED -->
+  <td>"RTP16b":#RTP16b</td>
+  <!-- When SUSPENDED -->
+  <td>"RTP16c":#RTP16c</td>
+  <!-- When CLOSING -->
+  <td>"RTP16c":#RTP16c</td>
+  <!-- When CLOSED -->
+  <td>"RTP16c":#RTP16c</td>
+  <!-- When FAILED -->
+  <td>"RTP16c":#RTP16c</td>
+
+</tr>
+
+</table>
+
+@RealtimeChannel@ operation effects depending on current @RealtimeChannel.state@:
+
+<table id="channel-states-operations">
+
+<tr>
+  <th></th>
+  <th>Initialized</th>
+  <th>Attaching</th>
+  <th>Attached</th>
+  <th>Detaching</th>
+  <th>Detached</th>
+  <th>Failed</th>
+</tr>
+
+<tr>
+  <td>@attach@</td>
+
+  <!-- When INITIALIZED -->
+  <td>"RTL4c":#RTL4c</td>
+  <!-- When ATTACHING -->
+  <td>"RTL4a":#RTL4a</td>
+  <!-- When ATTACHED -->
+  <td>"RTL4a":#RTL4a</td>
+  <!-- When DETACHING -->
+  <td>"RTL4e":#RTL4e</td>
+  <!-- When DETACHED -->
+  <td>"RTL4c":#RTL4c</td>
+  <!-- When FAILED -->
+  <td>"RTL4g":#RTL4g</td>
+
+</tr>
+
+<tr>
+  <td>@detach@</td>
+
+  <!-- When INITIALIZED -->
+  <td>"RTL5a":#RTL5a</td>
+  <!-- When ATTACHING -->
+  <td>"RTL5h":#RTL5h</td>
+  <!-- When ATTACHED -->
+  <td>"RTL5d":#RTL5d</td>
+  <!-- When DETACHING -->
+  <td>"RTL5a":#RTL5a</td>
+  <!-- When DETACHED -->
+  <td>"RTL5a":#RTL5a</td>
+  <!-- When FAILED -->
+  <td>"RTL5b":#RTL5b</td>
+
+</tr>
+
+<tr>
+  <td>@publish@</td>
+
+  <!-- When INITIALIZED -->
+  <td>"RTL6c4":#RTL6c4</td>
+  <!-- When ATTACHING -->
+  <td>"RTL6c2":#RTL6c2</td>
+  <!-- When ATTACHED -->
+  <td>"RTL6c1":#RTL6c1</td>
+  <!-- When DETACHING -->
+  <td>"RTL6c4":#RTL6c4</td>
+  <!-- When DETACHED -->
+  <td>"RTL6c4":#RTL6c4</td>
+  <!-- When FAILED -->
+  <td>"RTL6c3":#RTL6c3</td>
+
+</tr>
+
+<tr>
+  <td>Presence ops.</td>
+
+  <!-- When INITIALIZED -->
+  <td>"RTP16c":#RTP16c</td>
+  <!-- When ATTACHING -->
+  <td>"RTP16b":#RTP16b</td>
+  <!-- When ATTACHED -->
+  <td>"RTP16a":#RTP16a</td>
+  <!-- When DETACHING -->
+  <td>"RTP16c":#RTP16c</td>
+  <!-- When DETACHED -->
+  <td>"RTP16c":#RTP16c</td>
+  <!-- When FAILED -->
+  <td>"RTP16c":#RTP16c</td>
+
+</tr>
+
+</table>
 
 h2. Types
 
