@@ -115,7 +115,7 @@ h3(#rest-auth). Auth
 *** @(RSA7b4)@ When a wildcard string @'*'@ is present in the @TokenRequest@, @TokenDetails@, or @ProtocolMessage#connectionDetails@ object, then the client does not have an identity but is allowed to assume an identity when performing operations with Ably. As such, @Auth#clientId@ should contain the string value @'*'@ indicating that the current client is allowed to perform operations on behalf of any @clientId@
 ** @(RSA7c)@ A @clientId@ provided in the @ClientOptions@ when instancing the library must be either @null@ or a string, and cannot contain only a wildcard @'*'@ string value as that client ID value is reserved
 * @(RSA8)@ @Auth#requestToken@ function:
-** @(RSA8e)@ Method signature is @requestToken(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When provided, the values supersede matching client library configured params and options
+** @(RSA8e)@ Method signature is @requestToken(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When @TokenParams@ or @AuthOptions@ are provided, the values of each attribute are not merged with the configured client library defaults, but instead replace all corresponding values, even when @null@. If the object arguments are omitted, the client library configured defaults are used
 ** @(RSA8a)@ Implicitly creates a @TokenRequest@ if required, and requests a token from Ably if required. Returns a @TokenDetails@ object
 ** @(RSA8b)@ Supports all @TokenParams@ in the function arguments, which override defaults for @Client@ @Auth@
 ** @(RSA8c)@ When @authUrl@ option is set, it will query the provided URL to obtain a @TokenRequest@ or the token itself (either a token string or a @TokenDetails@). The query is performed using the given URL using the HTTP method in @authMethod@, headers (from @authHeaders@) and supplementary params (from @authParams@). The token retrieved is assumed by the library to be a token string if the response has @Content-Type@ @"text/plain"@, or taken to be a @TokenRequest@ or @TokenDetails@ object if the response has @Content-Type@ @"application/json"@. @authMethod@ can be either @GET@ or @POST@, or if not specified, will default to @GET@. It can be quite difficult to add test coverage for these scenarios - as such, we have developed a simple echo server that can be used in your tests, see the "ably-js authUrl echo tests":https://github.com/ably/ably-js/commit/e77b2c6c197bc71f3d27084fe54524724a00bc92
@@ -131,7 +131,7 @@ h3(#rest-auth). Auth
 *** @(RSA8f3)@ Request a token with a wildcard @'*'@ value @clientId@, authenticate a client with the token, publish a message without an explicit @clientId@, and ensure the message published does not have a @clientId@. Check that @Auth#clientId@ is a string with value @'*'@
 *** @(RSA8f4)@ Request a token with a wildcard @'*'@ value @clientId@, authenticate a client with the token, publish a message with an explicit @clientId@ value, and ensure that the message published has the provided @clientId@
 * @(RSA9)@ @Auth#createTokenRequest@ function:
-** @(RSA9h)@ Method signature is @createTokenRequest(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When provided, the values supersede any client library configured params and options
+** @(RSA9h)@ Method signature is @createTokenRequest(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional.When @TokenParams@ or @AuthOptions@ are provided, the values of each attribute are not merged with the configured client library defaults, but instead replace all corresponding values, even when @null@. If the object arguments are omitted, the client library configured defaults are used
 ** @(RSA9a)@ Returns a signed @TokenRequest@ object that can be used to obtain a token from Ably. This is useful for servers that can create a @TokenRequest@ signed with the API key without communicating with Ably directly. The @TokenRequest@ can then be passed to a designated client that is then responsible for communicating with Ably and requesting a token for authentication from that @TokenRequest@
 ** @(RSA9b)@ Supports all @AuthOptions@
 ** @(RSA9c)@ Generates a unique 16+ character @nonce@ if none is provided; the nonce is used to protect against replay attacks
@@ -142,13 +142,14 @@ h3(#rest-auth). Auth
 ** @(RSA9i)@ Adheres to all requirements in @RSA8@ relating to @TokenParams@
 * @(RSA10)@ @Auth#authorise@ function:
 ** @(RSA10a)@ Instructs the library to create a token if needed and uses Token Auth for all future requests
-** @(RSA10j)@ Method signature is @authorise(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When provided, the values supersede any client library configured params and options
+** @(RSA10j)@ Method signature is @authorise(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When the arguments are present, even if empty, the @TokenParams@ and @AuthOptions@ supersede any previously client library configured @TokenParams@ and @AuthOptions@. For example, if a client is initialised with @TokenParams#ttl@ configured with a custom value, and a @TokenParams@ object is passed in as an argument to @#authorise@ with a @null@ value for @ttl@, then the @ttl@ used for every subsequent authorisation will be @null@. See "@RSA10d@":#RSA10d for an exception
 ** @(RSA10b)@ Supports all @AuthOptions@ and @TokenParams@ in the function arguments
 ** @(RSA10c)@ Will not create a new token unless no previous token exists or current token has expired. Please note that a buffer of 15s for token expiry is recommended to avoid race conditions where the token is valid at the time of the request, but invalid when it reaches the server. Therefore, we recommend that a token is considered expired 15s before the time field `expires`
-** @(RSA10d)@ If the @AuthOption@ argument's @force@ attribute is true, it will force @Auth#authorise@ to issue a new token even if an existing token exists
+** @(RSA10d)@ If the @AuthOption@ argument's @force@ attribute is true, it will force @Auth#authorise@ to issue a new token even if an existing token exists. A special case convenience exists for @AuthOption@ stating that if all its attributes are @null@ apart from @force@, then when passed to @authorise@ as an argument, the previously configured authentication options will remain intact. This behaviour takes precedence over "@RSA10j@":#RSA10j
+** @(RSA10k)@ If the @AuthOption@ argument's @queryTime@ attribute is true, it will obtain the server time once and persist the offset from the local clock. All future token requests generated directly or indirectly via a call to authorise will not obtain the server time, but instead use the local clock offset to calculate the server time. A client MAY discard the cached local clock offset in situations in which it may have been invalidated, such as if there is a local change to the date, time, or timezone, of the client device
 ** @(RSA10e)@ Adheres to the implementation of @requestToken@ when issuing new tokens
 ** @(RSA10f)@ Returns a @TokenDetails@ object that contains the token string + token metadata
-** @(RSA10g)@ Stores the @AuthOptions@ and @TokenParams@ arguments as defaults for subsequent authorisations with the exception of the attributes @TokenParams#timestamp@ and @AuthOptions#force@
+** @(RSA10g)@ Stores the @AuthOptions@ and @TokenParams@ arguments as defaults for subsequent authorisations with the exception of the attributes @TokenParams#timestamp@, @AuthOptions#queryTime@ and @AuthOptions#force@
 ** @(RSA10h)@ Will use the value from @Auth#clientId@ by default, if not @null@
 ** @(RSA10i)@ Adheres to all requirements in @RSA8@ relating to @TokenParams@, @authCallback@ and @authUrl@
 
@@ -262,6 +263,7 @@ h3(#realtimeclient). RealtimeClient
 * @(RTC6)@ @RealtimeClient#time@ function:
 ** @(RTC6a)@ Proxy to @RestClient#time@ presented with an async or threaded interface as appropriate
 * @(RTC7)@ The client library must use the configured timeouts specified in the @ClientOptions@, falling back to the "client library defaults":#defaults and defaults described in @ClientOptions@ below
+* @(RTC8)@ Authentication token changes for the current connection are possible when the client is in the @CONNECTED@, @CONNECTING@ or @DISCONNECTED@ states. If @auth.authorise@ is called with @AuthOptions#force@ set to @true@ and the state is @CONNECTED@, @CONNECTING@, or @DISCONNECTED@, the client will obtain a new token, disconnect the current transport and resume the connection (see "@RTN15c@":#RTN15c for details on resume). A test should exist that performs an upgrade of capabilities without any message loss during the upgrade process. A test should also exist for a token change that fails due to an incompatible token, which should result in the connection entering the @FAILED@ state
 
 h3(#realtime-connection). Connection
 
@@ -675,7 +677,7 @@ h4(#token-params). TokenParams
 * @(TK2a)@ @ttl@ long - Requested time to live for the token in milliseconds. When omitted, the REST API default of 60 minutes is applied by Ably
 * @(TK2b)@ @capability@ string - Capability requirements JSON stringified for the token. When omitted, the REST API default to allow all operations is applied by Ably, with the string value @{"*":["*"]}@
 * @(TK2c)@ @clientId@ string - A @clientId@ string to associate with this token. If @clientId@ is @null@ or omitted, then the token is prohibited from assuming a @clientId@ in any operations, however if @clientId@ is a wildcard string @'*'@, then the token is permitted to assume any @clientId@. Any other string value for @clientId@ implies that the @clientId@ is both enforced and assumed for all operations for this token
-* @(TK2d)@ @timestamp@ long - The timestamp (in milliseconds since the epoch) of this request. Timestamps, in conjunction with the @nonce@, are used to prevent requests from being replayed
+* @(TK2d)@ @timestamp@ long - The timestamp (in milliseconds since the epoch) of this request. Timestamps, in conjunction with the @nonce@, are used to prevent requests from being replayed. @timestamp@ is a "one-time" value, and is valid in a request, but is not validly a member of any default token params such as @ClientOptions#defaultTokenParams@
 
 h4. AuthOptions
 * @(AO1)@ A class providing configurable authentication options used when authenticating or issuing tokens explicitly. These options are used when invoking @Auth#authorise@, @Auth#requestToken@ and @Auth#createTokenRequest@
