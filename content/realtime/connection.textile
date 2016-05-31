@@ -94,7 +94,7 @@ A series of connection states is defined as follows:
 
 - connected := A connection exists and is active.
 
-- disconnected := A temporary failure condition. No current connection exists because there is no network connectivity or no host is available.<br><br>The disconnected state is entered if an established connection is dropped, or if a connection attempt was unsuccessful. In the disconnected state the library will periodically attempt to open a new connection (approximately every 15 seconds), anticipating that the connection will be re-established soon and thus connection and channel continuity will be possible. <br><br>In this state, developers can continue to publish messages as they are automatically placed in a local queue, and sent as soon as a connection is established. <br>Messages published by other clients to the Ably service, whilst this client is disconnected, are queued and delivered to this client upon reconnection, so long as the connection is resumed within 2 minutes. <br><br>If connection state recovery is not possible following a new connection being established, all channels are detached, thus ensuring the developer is made aware that continuity on the channel was not possible. The developer is then responsible for reattaching channels and recovering state, if required, using the "history API":/realtime/history.
+- disconnected := A temporary failure condition. No current connection exists because there is no network connectivity or no host is available.<br><br>The disconnected state is entered if an established connection is dropped, or if a connection attempt was unsuccessful. In the disconnected state the library will periodically attempt to open a new connection (approximately every 15 seconds), anticipating that the connection will be re-established soon and thus connection and channel continuity will be possible. <br><br>In this state, developers can continue to publish messages as they are automatically placed in a local queue, and sent as soon as a connection is established. <br>Messages published by other clients to the Ably service, whilst this client is disconnected, are queued and delivered to this client upon reconnection, so long as the connection is resumed within 2 minutes. <br><br>If connection state recovery is not possible following a new connection being established, all channels are detached, thus ensuring the developer is made aware that continuity on the channel was not possible. The developer is then responsible for re-attaching channels and recovering state, if required, using the "history API":/realtime/history.
 
 - suspended := A long term failure condition. No current connection exists because there is no network connectivity or no host is available.<br><br>The suspended state is entered after a failed connection attempt if there has then been no connection for a period of two minutes. In the suspended state, the library will periodically attempt to open a new connection every 30 seconds. Developers are unable to publish messages in this state. A new connection attempt can also be triggered by an explicit call to <span lang="default">"@connect()@":#connect</span><span lang="ruby">"@connect@":#connect</span> on the @Connection@ object.
 
@@ -281,18 +281,35 @@ There are two modes of connection state recovery:
 
 * @resume@: this is transparent recovery of a live client instance across disconnections. Upon disconnection, the library will automatically re-attempt connection and, once the connection is re-established, any missed messages will be sent to the client. The developer does not need to do anything to trigger this behaviour; all client channel event listeners remain attached and are called when the backlog of messages is received.
 
-* @recover@: this addresses the case in which a new client library instance wishes to connect and recover the state of an earlier connection. This occurs typically in a browser environment when the page has been refreshed and therefore the client instance is disposed and no client state is retained. In this case any message listeners associated with channels will no longer exist so it is not possible for the library simply to send the message backlog on reconnection; instead the client must re-subscribe to each channel it is interested in, and its message listener(s) will be called with any message backlog for that channel. A client requests recovery of connection state by including a recovery string in the "client options":/realtime/usage#client-options when instancing the Realtime library.  See "connection state recover options":#connection-state-recover-options for more info.
+* @recover@: this addresses the case in which a new client library instance wishes to connect and recover the state of an earlier connection. This occurs typically in a browser environment when the page has been refreshed and therefore the client instance is disposed and no client state is retained. In this case any message listeners associated with channels will no longer exist so it is not possible for the library simply to send the message backlog on reconnection; instead the client must re-subscribe to each channel it is interested in within 15 seconds, and its message listener(s) will be called with any message backlog for that channel. If the previously attached channels are not re-attached within 15 seconds of a connection being recovered, the channels will automatically be detached by Ably. A client requests recovery of connection state by including a recovery string in the "client options":/realtime/usage#client-options when instancing the Realtime library. See "connection state recover options":#connection-state-recover-options for more info.
 
 In either case, when a connection is resumed or recovered, the message backlog held on the server will be pushed to the client. However, any new messages published will be sent as they become available or messages could be indefinitely deferred on very heavily loaded connections. Therefore the system does not guarantee that messages received after reconnection are delivered in the same order that would have occurred if the connection had not been dropped. In the @recover@ case, in particular, the order of the message delivery depends on the timing of the re-attachment of each channel.
 
 h4(#connection-state-recover-options). Connection state recover options
 
-In @recover@ mode it is necessary to request recovery mode in the "client options":/realtime/usage#client-options when instancing the library. Recovery requires that the library knows the most previous connection's <span lang="default">"@recoveryKey@":#recovery-key</span><span lang="ruby">"@recovery_key@":#recovery-key</span> value, which includes both the private unique "@Connection#key@":#key and the last message serial received on that connection. As the recovery key is never shared with any other clients, it allows Ably to safely resend message backlogs to the original client.
+In @recover@ mode it is necessary to request recovery mode in the "client options":/realtime/usage#client-options when instancing the library. Recovery requires that the library knows the previous connection's <span lang="default">"@recoveryKey@":#recovery-key</span><span lang="ruby">"@recovery_key@":#recovery-key</span> value (which includes both the private unique "@Connection#key@":#key and the last message serial received on that connection). As the recovery key is never shared with any other clients, it allows Ably to safely resend message backlogs to the original client.
 
 blang[javascript].
-  In the browser environment a @window close@ event causes those parameters to be saved in a cookie; a client can then request recovery simply by including @recover: true@ in the initialization options.
+  In the browser environment, if a callback is provided in the @recover@ option, when @window beforeunload@ event fires, the connection details, including the "@recoveryKey@":#recovery-key, are stored in the "browser's sessionStorage":https://www.w3.org/TR/webstorage/. The provided @recover@ callback is then invoked whenever the connection state can be recovered and just before a connection is established, passing in the "@LastConnectionDetails@":#last-connection-details. The callback is then responsible for confirming whether the connection state should be recovered or not. For example, it is common to recover connection state when the page is reloaded but not for different pages the user has navigated to. The callback allows the developer to decide if the connection should be recovered or not at the time the new connection is established by inspecting the "@LastConnectionDetails@":#last-connection-details and evaluating that against any other application state. Below is a straightforward example:
 
-  Alternatively, if it is necessary to be explicit about the connection @recoveryKey@ - for example if there are multiple tabs and the cookies would conflict, or if third-party cookies are disabled - the connection can be recovered by providing the last value of the connection's @recoveryKey@ value in the "client options":/realtime/usage#client-options @recover@ attribute when instancing the library.
+  ```[jsall]
+    var ably = new Ably.Realtime({
+      authUrl: '/obtainToken',
+      recover: function(lastConnectionDetails, cb) {
+        if (lastConnectionDetails.location.href === document.location.href) {
+          cb(true); /* recover connection as user has reloaded page */
+        } else {
+          cb(false); /* do not recover connection as URL has changed */
+        }
+      }
+    });
+  ```
+
+  Please note that as "@sessionStorage@":https://www.w3.org/TR/webstorage/ is used to persist the @LastConnectionDetails@ between page reloads, it is only available for pages in the same origin and top-level browsing context.
+
+  Alternatively, if it is necessary to be explicit about the connection @recoveryKey@ , the connection can be recovered by providing the last value of the connection's @recoveryKey@ value in the "client options":/realtime/usage#client-options @recover@ attribute when instancing the library.
+
+h4. Connection recovery constraints
 
 Connection recovery requires that the new client library instance uses credentials that are compatible with those used for the inherited connection; this requires that the same authentication mode is used, with the same key. If token auth was used, the same token is not required, but the token used must have the same @capability@ and <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span>. This ensures that the client recovering the connection cannot receive a backlog of messages that its new credentials are not entitled to access. Incompatible credentials will result in an unrecoverable connection error.
 
@@ -322,6 +339,7 @@ inline-toc.
       - ConnectionState#connection-state
       - ConnectionStateListener#connection-state-listener
       - ConnectionStateChange#connection-state-change
+      - LastConnectionDetails#last-connection-details
 
 h2(#properties).
   default: Connection Properties
@@ -550,3 +568,9 @@ h3(#connection-state-change).
   ruby:    ConnectionStateChange
 
 <%= partial 'types/_connection_state_change' %>
+
+h3(#last-connection-details).
+  javascript: LastConnectionDetails
+
+blang[javascript].
+  <%= partial 'types/_last_connection_details', indent: 2, skip_first_indent: true %>
