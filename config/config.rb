@@ -6,11 +6,11 @@ module Ably
     JSBIN_API_KEY = "readonly"
 
     def aws_access_key_id
-      fog_yaml['default']['aws_access_key_id']
+      fog_yaml['ably']['aws_access_key_id']
     end
 
     def aws_secret_access_key
-      fog_yaml['default']['aws_secret_access_key']
+      fog_yaml['ably']['aws_secret_access_key']
     end
 
     def s3_bucket
