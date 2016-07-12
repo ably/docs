@@ -400,7 +400,7 @@ h3(#realtime-channel). Channel
 ** @(RTL4b)@ If the connection state is @CLOSED@, @CLOSING@, @SUSPENDED@ or @FAILED@, the @attach@ request results in an error
 ** @(RTL4h)@ If the connection state is @INITIALIZED@, @CONNECTING@ or @DISCONNECTED@, do the operation once the connection state is @CONNECTED@
 ** @(RTL4c)@ Otherwise an @ATTACH@ ProtocolMessage is sent to the server, the state changes to @ATTACHING@ and the channel becomes @ATTACHED@ when the confirmation @ATTACHED@ ProtocolMessage is received
-** @(RTL4f)@ Once an @ATTACH@ @ProtocolMessage@ is sent, if an @ATTACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the attach request should be treated as though it has failed and the channel will return to its previous state
+** @(RTL4f)@ Once an @ATTACH@ @ProtocolMessage@ is sent, if an @ATTACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the attach request should be treated as though it has failed and the channel should move to the @SUSPENDED@ state. The channel will then be subsequently automatically re-attached as described in "RTL13":#RTL13
 ** @(RTL4d)@ If the language permits, a callback can be provided that is called when the channel is attached successfully or the attach fails and the @ErrorInfo@ error is passed as an argument to the callback
 ** @(RTL4e)@ If the user does not have sufficient permissions to attach to the channel, the channel state @FAILED@ is emitted with the error @ErrorInfo@. An error event is also emitted, and the @Channel#errorReason@ attribute of the @Channel@ is set to the error @ErrorInfo@ object
 * @(RTL5)@ @Channel#detach@ function:
@@ -455,6 +455,10 @@ h3(#realtime-channel). Channel
 ** @(RTL10c)@ Returns a @PaginatedResult@ page containing the first page of messages in the @PaginatedResult#items@ attribute returned from the history request
 ** @(RTL10d)@ A test should exist that publishes messages from one client, and upon confirmation of message delivery, a history request should be made on another client to ensure all messages are available
 * @(RTL12)@ An attached channel may receive an additional @ATTACHED@ @ProtocolMessage@ from Ably at any point, however this is typically triggered following a transport being upgraded or resumed. If the @ATTACHED@ message contains an @error@, the error should be emitted as a @ERROR@ event on the channel and the channel should remain attached. An @ATTACHED@ state change event should not be emitted by the @Channel@ if the @Channel@ is already @ATTACHED@ as no state change has occurred
+* @(RTL13)@ If the channel receives a server initiated @DETACHED@ message when it is in the @ATTACHING@, @ATTACHED@ or @SUSPENDED@ state (i.e. the client has not explicitly requested a detach putting the channel into the @DETACHING@ state), then the following applies:
+** @(RTL13a)@ An attempt to reattach the channel should be made immediately by sending a new @ATTACH@ message and the channel should move to the @ATTACHING@ state with the error emitted in the @ChannelStateChange@ event.
+** @(RTL13b)@ If the attempt to re-attach fails, the channel will move to the @SUSPENDED@ state and the error will be emitted in the @ChannelStateChange@ event. An attempt to re-attach the channel automatically will then be made after the period defined in @ClientOptions#channelRetryTimeout@. When re-attaching the channel, the channel will move to the @ATTACHING@ state. If that request to attach fails i.e. it times out or a @DETACHED@ message is received, then the process described here in @RTL13b@ will be repeated, indefinitely
+** @(RTL13c)@ If the connection is no longer @CONNECTED@, then the automatic attempts to re-attach the channel described in "RTL13b":#RTL13b must be cancelled as any implicit channel state changes subsequently will be covered by "RTL3":#RTL3
 
 h3(#realtime-presence). Presence
 
@@ -976,6 +980,7 @@ h4. ClientOptions
 ** @(TO3l)@ The follow attributes, if set, are used to change the default behaviour of the libary:
 *** @(TO3l1)@ @disconnectedRetryTimeout@ integer - default 15,000 (15s). When the connection enters the @DISCONNECTED@ state, after this delay in milliseconds, if the state is still @DISCONNECTED@, the client library will attempt to reconnect automatically
 *** @(TO3l2)@ @suspendedRetryTimeout@ integer - default 30,000 (30s). When the connection enters the @SUSPENDED@ state, after this delay in milliseconds, if the state is still @SUSPENDED@, the client library will attempt to reconnect automatically
+*** @(TO3l7)@ @channelRetryTimeout@ integer - default 15,000 (15s). When a channel becomes @SUSPENDED@ following a server initiated @DETACHED@, after this delay in milliseconds, if the channel is still @SUSPENDED@ and the connection is @CONNECTED@, the client library will attempt to re-attach the channel automatically
 *** @(TO3l3)@ @httpOpenTimeout@ integer - default 4,000 (4s). Timeout for opening the connection, available in the client library if supported by the transport
 *** @(TO3l4)@ @httpRequestTimeout@ integer - default 15,000 (15s). Timeout for any single HTTP request and response
 *** @(TO3l5)@ @httpMaxRetryCount@ integer - default 3. Max number of fallback hosts to use as a fallback when an HTTP request to the primary host is unreachable or indicates that it is unserviceable
