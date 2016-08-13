@@ -100,4 +100,4 @@ module NavHelper
   end
 end
 
-include NavHelper
+include NavHelper if defined?(Nanoc)

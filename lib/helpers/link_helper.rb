@@ -15,4 +15,4 @@ module LinkHelper
   end
 end
 
-include LinkHelper
+include LinkHelper if defined?(Nanoc)
