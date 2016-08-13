@@ -1,0 +1,399 @@
+---
+title: History
+section: realtime
+index: 50
+languages:
+  - javascript
+  - nodejs
+  - ruby
+  - java
+  - swift
+  - objc
+  - csharp
+jump_to:
+  Help with:
+    - Getting started
+    - Channel and Presence history#channel-and-presence
+    - Persisted history
+    - Continuous history
+  API reference:
+    - Message history#channel-history
+    - Presence history#presence-history
+---
+
+The Realtime client library provides message and presence event history for channels. Channel history can be used to return continuous message history up to the exact point a realtime channel was attached, and combines both instantaneous "live" history as well as the longer term "persisted history":#persisted-history. If "persisted history":#persisted-history is enabled for the channel, then messages will "typically be stored for 24 - 72 hours on disk":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If persisted history is not enabled, Ably retains the last two minutes of instantaneous "live" message history in memory.
+
+h2(#getting-started). Getting started
+
+The Ably Realtime client library provides a straightforward API to retrieve "paginated":#paginated-result message or presence event history. Each page of history, by default, contains up to 100 messages. Message ordering, by default, is from most recent to oldest.
+
+```[jsall](code-editor:realtime/channel-history)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish('example', 'message data', function(err) {
+    channel.history(function(err, resultPage) {
+      var lastMessage = resultPage.items[0];
+      alert('Last message: ' + lastMessage.id + ' - ' + lastMessage.data);
+    });
+  });
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.publish 'example', 'message data' do
+    channel.history do |result_page|
+      last_message = result_page.items.last
+      puts "Last message: #{last_message.message.id} - #{last_message.data}")
+    end
+  end
+```
+
+```[java]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.publish("example", "message data", new CompletionListener() {
+    @Override
+    public void onError(ErrorInfo reason) {
+      System.out.println("Unable to publish message; err = " + reason.message);
+    }
+    @Override
+    public void onSuccess() {
+      PaginatedResult<Message> resultPage = channel.history(null);
+      Message lastMessage = resultPage.items[0];
+      System.out.println("Last message: " + lastMessage.id + " - " + lastMessage.data);
+    }
+  });
+```
+
+```[csharp]
+  var realtime = new AblyRealtime("{{API_KEY}}");
+  var channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
+  channel.Publish("example", "message data", async (success, error) =>
+  {
+      PaginatedResult<Message> resultPage = await channel.HistoryAsync(null);
+      Message lastMessage = resultPage.Items[0];
+      Console.WriteLine("Last message: " + lastMessage.id + " - " + lastMessage.data);
+  });
+```
+
+```[objc]
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+ARTRealtimeChannel *channel = [realtime.channels get:@"RANDOM_CHANNEL_NAME"];
+[channel publish:@"example" data:@"message data" callback:^(ARTErrorInfo *error) {
+    if (error) {
+        NSLog(@"Unable to publish message; err = %@", error.message);
+        return;
+    }
+    [channel history:^(ARTPaginatedResult<ARTMessage *> *resultPage, ARTErrorInfo *error) {
+        ARTMessage *lastMessage = resultPage.items[0];
+        NSLog(@"Last message: %@ - %@", lastMessage.id,lastMessage.data);
+    }];
+}];
+```
+
+```[swift]
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+channel.publish("example", data: "message data") { error in
+    if let error = error {
+        print("Unable to publish message; err = \(error.message)")
+        return
+    }
+    channel.history { resultPage, error in
+        let lastMessage = resultPage!.items[0] as! ARTMessage
+        print("Last message: \(lastMessage.id) - \(lastMessage.data)")
+    }
+}
+```
+
+h2(#channel-and-presence). Channel & Presence history
+
+Both the "@Channel@":/realtime/channels-messages and "@Presence@":/realtime/presence objects provide history. The "@Channel@":/realtime/channels-messages object provides the history of "@Message@":#message objects published on the channel, whereas the "@Presence@":/realtime/presence object provides presence event history of that channel i.e. members entering, updating or leaving the channel as "@PresenceMessage@":#presence-message objects.
+
+h3(#persisted-history). Enabling persistent history
+
+By default, persisted history on channels is disabled and messages are only stored by the Ably service for two minutes in memory. If persisted history is enabled for the channel, then messages will "typically be stored for 24 - 72 hours on disk":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for.
+
+Every message that is persisted to or retrieved from disk counts as an extra message towards your monthly quote. For example, for a channel that has persistence enabled, if a message is published, two messages will be deducted from your monthly quota. If the message is later retrieved from history, another message will be deducted from your monthly quota.
+
+To enable history on a channel, it is necessary to add a channel rule in the settings of your "application dashboard":https://support.ably.io/solution/articles/3000030053-how-do-i-access-my-app-dashboard. See the "documentation on channel rules":https://support.ably.io/solution/articles/3000030057-what-are-channel-rules-and-how-can-i-use-them-in-my-app for further information on what they are and how to configure them.
+
+h3(#continuous-history). Continuous history
+
+It is possible to obtain message history that is continuous with the realtime messages received on an attached channel, in the backwards direction from the point of attachment. When a @Channel@ instance is attached, it's automatically populated by the Ably service with the serial number of the last published message on the channel. As such, using this serial number, the client library is able to make a history request to the Ably service for all messages received since the channel was attached. Any new messages therefore are received in realtime via the attached channel, and any historical messages are accessible via the history method.
+
+In order to benefit from this functionality, the <span lang="default">@untilAttach@</span><span lang="csharp">@untilAttached@</span> option can be used when making history requests on attached channels. If the channel is not yet attached, this will result in an error.
+
+```[jsall](code-editor:realtime/channel-history-until-attach)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channnel.attach(function(err) {
+    channel.history({ untilAttach: true}, function(err, resultPage) {
+      var lastMessage = resultPage.items[0];
+      alert('Last message before attach: ' + lastMessage.data);
+    });
+  });
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channnel.attach do
+    channel.history(until_attach: true) do |result_page|
+      last_message = result_page.items.last
+      puts "Last message before attach: #{last_message.data}")
+    end
+  end
+```
+
+```[java]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.attach();
+  channel.on(ChannelState.attached, new ChannelStateListener() {
+    @Override
+    public void onChannelStateChanged(ChannelState state, ErrorInfo reason) {
+      Param[] options = new Param[]{ new Param("untilAttach", "true") };
+      PaginatedResult<Message> resultPage = channel.history(options);
+      Message lastMessage = resultPage.items[0];
+      System.out.println("Last message before attach: " + lastMessage.data);
+    }
+  });
+```
+
+```[csharp]
+  var realtime = new AblyRealtime("{{API_KEY}}");
+  var channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
+  await channel.AttachAsync();
+  PaginatedResult<Message> resultPage = await channel.HistoryAsync(untilAttached: true);
+  Message lastMessage = resultPage.Items[0];
+  Console.WriteLine("Last message before attach: " + lastMessage.data);
+```
+
+```[objc]
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+ARTRealtimeChannel *channel = [realtime.channels get:@"RANDOM_CHANNEL_NAME"];
+[channel attach];
+[channel on:ARTChannelEventAttached call:^(ARTErrorInfo *error) {
+    ARTRealtimeHistoryQuery *query = [[ARTRealtimeHistoryQuery alloc] init];
+    query.untilAttach = YES;
+    [channel history:query callback:^(ARTPaginatedResult<ARTMessage *> *resultPage, ARTErrorInfo *error) {
+        ARTMessage *lastMessage = resultPage.items[0];
+        NSLog(@"Last message: %@ - %@", lastMessage.id,lastMessage.data);
+    } error:nil];
+}];
+```
+
+```[swift]
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+channel.attach()
+channel.on(.Attached) { error in
+    let query = ARTRealtimeHistoryQuery()
+    query.untilAttach = true
+    try! channel.history(query) { resultPage, error in
+        let lastMessage = resultPage!.items[0] as! ARTMessage
+        print("Last message before attach: \(lastMessage.id) - \(lastMessage.data)")
+    }
+}
+```
+
+h1. API reference
+
+inline-toc.
+  History API:
+    - Channel:
+      - history(options)#channel-history
+    - Presence:
+      - history(options)#presence-history
+    - Related types:
+      - Message
+      - PresenceMessage#presence-message
+      - Presence action
+      - PaginatedResult#paginated-result
+      - Param
+
+h2. Channel object
+
+The "Realtime @Channel@ object":/realtime/channels-messages exposes the following public method to obtain "@Message@":#message history.
+
+h3. Methods
+
+h6(#channel-history).
+  default: history
+  csharp: History
+
+bq(definition).
+  default: history(Object option, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"Message":#message> resultPage))
+  ruby:    "Deferrable":/realtime/types#deferrable history(Hash option) -> yields "PaginatedResult":#paginated-result<"Message":#message>
+  java:    "PaginatedResult":#paginated-result<"Message":#message> history("Param":#param[] option)
+  objc,swift: history(query: ARTRealtimeHistoryQuery?, callback: ("ARTPaginatedResult":#paginated-result<"ARTMessage":#message>?, ARTErrorInfo?) -> Void) throws
+  csharp:  Task<PaginatedResult<Message>> HistoryAsync("DataRequestQuery":#data-request-query dataQuery, bool untilAttached = false);
+
+Gets a "paginated":#paginated-result set of historical messages for this channel.
+
+h4. Parameters
+
+- <span lang="default">option</span><span lang="objc,swift">query</span><span lang="java">"Param":#param[] option</span><span lang="csharp">"DataRequestQuery":#data-request-query query</span> := <span lang="default">an optional object containing the query parameters</span><span lang="ruby">an optional set of key value pairs containing the query parameters</span>, as specified below.
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, resultPage)@
+- <div lang="ruby">&block</div> := yields a @PaginatedResult<Message>@ array
+- <div lang="swift,objc">callback</div> := called with a "ARTPaginatedResult":#paginated-result<"ARTMessage":#message> object or an error
+
+h4. <span lang="default">@options@ parameters</span><span lang="objc,swift">@ARTRealtimeHistoryQuery@ properties</span><span lang="csharp">"@DataRequestQuery@":#data-request-query properties</span>
+
+- <span lang="default">start</span><span lang="ruby">:start</span><span lang="csharp">Start</span> := _beginning of time_ earliest <span lang="csharp">@DateTimeOffset@ or </span><span lang="ruby">@Time@ or </span>time in milliseconds since the epoch for any messages retrieved<br>__Type: <span lang="default">@Long@</span><span lang="ruby">@Int or @Time@</span><span lang="csharp">@DateTimeOffset@</span>__
+- <span lang="default">end</span><span lang="ruby">:end</span><span lang="csharp">End</span> := _current time_ latest <span lang="csharp">@DateTimeOffset@ or </span><span lang="ruby">@Time@ or </span>time in milliseconds since the epoch for any messages retrieved<br>__Type: <span lang="default">@Long@</span><span lang="ruby">@Int or @Time@</span><span lang="csharp">@DateTimeOffset@</span>__
+- <span lang="default">direction</span><span lang="ruby">:direction</span><span lang="csharp">Direction</span> := _backwards_ <span lang="ruby">@:@</span>@forwards@ or <span lang="ruby">@:@</span>@backwards@<br>__Type: <span lang="default">@String@</span><span lang="ruby">@Symbol@</span><span lang="csharp">@Direction@ enum</span>__
+- <span lang="default">limit</span><span lang="ruby">:limit</span><span lang="csharp">Limit</span> := _100_ maximum number of messages to retrieve up to 1,000<br>__Type: @Integer@__
+- <span lang="default">untilAttach</span><span lang="ruby">:until_attach</span><span lang="csharp">untilAttached</span> := _false_ when true, ensures message history is up until the point of the channel being attached. See "continuous history":#continuous-history for more info. If the @Channel@ is not attached, enabling this option will result in error<br>__Type: @Boolean@__
+
+blang[jsall,objc,swift].
+  h4. Callback result
+
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  On failure to retrieve message history, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[java].
+  h4. Returns
+
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next@":#paginated-result and "@first@":#paginated-result methods.
+
+  Failure to retrieve the message history will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[csharp].
+  h4. Returns
+
+  Returns a @Task@ that needs to be awaited.
+
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@NextAsync@":#paginated-result and "@FirstAsync@":#paginated-result methods.
+
+  Failure to retrieve the message history will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield a "PaginatedResult":#paginated-result that encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  Failure to retrieve the message history will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h2. Presence object
+
+"Realtime @Presence@ object":/realtime/presence exposes the following public method to obtain presence event history such as enter, update and leave events. These events are represented as "@PresenceMessage@":#presence-message objects.
+
+h3. Methods
+
+h6(#presence-history).
+  default: history
+  csharp: History
+
+bq(definition).
+  default: history(Object option, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message> resultPage))
+  ruby:    "Deferrable":/realtime/types#deferrable history(Hash option) -> yields "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message>
+  java:    "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message> history("Param":#param[] option)
+  objc,swift: history(query: ARTRealtimeHistoryQuery?, callback: ("ARTPaginatedResult":#paginated-result<"ARTPresenceMessage":#presence-message>?, ARTErrorInfo?) -> Void) throws
+  csharp:  Task<"PaginatedResult":#paginated-result<"PresenceMessage":#presence-message>> HistoryAsync("DataRequestQuery":#data-request-query query, bool untilAttached = false)
+
+Gets a "paginated":#paginated-result set of historical presence events for this channel.
+
+h4. Parameters
+
+- <span lang="default">option</span><span lang="objc,swift">query</span><span lang="java">"Param":#param[] option</span><span lang="csharp">"DataRequestQuery":#data-request-query query</span> := <span lang="default">an optional object containing the query parameters</span><span lang="ruby">an optional set of key value pairs containing the query parameters</span>, as specified below.
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, resultPage)@
+- <div lang="ruby">&block</div> := yields a @PaginatedResult<PresenceMessage>@ array
+- <div lang="swift,objc">callback</div> := called with a "ARTPaginatedResult":#paginated-result<"ARTPresenceMessage":#presence-message> object or an error
+
+h4. <span lang="default">@options@ parameters</span><span lang="objc,swift">@ARTRealtimeHistoryQuery@ properties</span><span lang="csharp">"@DataRequestQuery@":#data-request-query properties</span>
+
+- <span lang="default">start</span><span lang="ruby">:start</span><span lang="csharp">Start</span> := _beginning of time_ earliest <span lang="csharp">@DateTimeOffset@ or </span><span lang="ruby">@Time@ or </span>time in milliseconds since the epoch for any presence events retrieved<br>__Type: <span lang="default">@Long@</span><span lang="ruby">@Int or @Time@</span><span lang="csharp">@DateTimeOffset@</span>__
+- <span lang="default">end</span><span lang="ruby">:end</span><span lang="csharp">End</span> := _current time_ latest <span lang="csharp">@DateTimeOffset@ or </span><span lang="ruby">@Time@ or </span>time in milliseconds since the epoch for any presence events retrieved<br>__Type: <span lang="default">@Long@</span><span lang="ruby">@Int or @Time@</span><span lang="csharp">@DateTimeOffset@</span>__
+- <span lang="default">direction</span><span lang="ruby">:direction</span><span lang="csharp">Direction</span> := _backwards_ <span lang="ruby">@:@</span>@forwards@ or <span lang="ruby">@:@</span>@backwards@<br>__Type: <span lang="default">@String@</span><span lang="ruby">@Symbol@</span><span lang="csharp">@Direction@ enum</span>__
+- <span lang="default">limit</span><span lang="ruby">:limit</span><span lang="csharp">Limit</span> := _100_ maximum number of presence events to retrieve up to 1,000<br>__Type: @Integer@__
+- <span lang="default">untilAttach</span><span lang="ruby">:until_attach</span><span lang="csharp">untilAttached</span> := _false_ when true, ensures presence event history is up until the point of the channel being attached. See "continuous history":#continuous-history for more info. If the @Channel@ is not attached, enabling this option will result in error<br>__Type: @Boolean@__
+
+blang[jsall,objc,swift].
+  h4. Callback result
+
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  On failure to retrieve presence event history, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[java].
+  h4. Returns
+
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next@":#paginated-result and "@first@":#paginated-result methods.
+
+  Failure to retrieve the presence event history will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[csharp].
+  h4. Returns
+
+  Returns a @Task@ that needs to be awaited.
+
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@NextAsync@":#paginated-result and "@FirstAsync@":#paginated-result methods.
+
+  Failure to retrieve the presence event history will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield a "PaginatedResult":#paginated-result that encapsulates an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  Failure to retrieve the presence event history will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h2(#related-types). Related types
+
+h3(#message).
+  default: Message
+  swift,objc: ARTMessage
+  ruby:    Ably::Models::Message Enum
+  java:    io.ably.lib.types.Message
+  csharp: IO.Ably.Message
+
+<%= partial 'types/_message' %>
+
+h3(#presence-message).
+  default: PresenceMessage
+  swift,objc: ARTPresenceMessage
+  ruby:    Ably::Models::PresenceMessage Enum
+  java:    io.ably.lib.types.PresenceMessage
+  csharp:  IO.Ably.PresenceMessage
+
+<%= partial 'types/_presence_message' %>
+
+h3(#presence-action).
+  default: Presence action
+  swift,objc: ARTPresenceAction
+  java:    io.ably.lib.types.PresenceMessage.Action
+  ruby:    Ably::Models::PresenceMessage::ACTION
+  csharp:  IO.Ably.PresenceAction
+
+<%= partial 'types/_presence_action' %>
+
+h3(#data-request-query).
+  csharp: IO.Ably.DataRequestQuery
+
+blang[csharp].
+  <%= partial 'types/_data_request_query', indent: 2, skip_first_indent: true %>
+
+h3(#paginated-result).
+  default: PaginatedResult
+  swift,objc: ARTPaginatedResult
+  ruby:    Ably::Models::PaginatedResult
+  java:    io.ably.lib.types.PaginatedResult
+  csharp:  IO.Ably.PaginatedResult
+
+<%= partial 'types/_paginated_result' %>
+
+h3(#param).
+  java:    io.ably.lib.types.Param
+
+blang[java].
+  <%= partial 'types/_param', indent: 2, skip_first_indent: true %>

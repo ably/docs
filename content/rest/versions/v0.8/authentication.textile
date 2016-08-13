@@ -1,0 +1,602 @@
+---
+title: Authentication
+section: rest
+index: 40
+jump_to:
+  Help with:
+    - Understanding Auth
+    - Basic Authentication
+    - Token Authentication
+    - Auth object
+    - Identified clients
+  Channel API properties:
+    - clientId#client-id
+  Channel API methods:
+    - authorize
+    - createTokenRequest#create-token-request
+    - requestToken#request-token
+---
+
+Ably clients can authenticate with Ably using "Basic Authentication":/general/authentication#basic-authentication (which uses the customer's "API key":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key), "Token Authentication":/general/authentication#token-authentication (which relies on a token customers obtain from Ably), or a token request that customers sign and issue to their clients. "Token Authentication":/general/authentication#token-authentication, in most cases, is the recommended strategy as it provides robust access control and stringent security measures.
+
+h2(#understanding-auth). Understanding the Ably authentication schemes
+
+This page of documentation is intended to describe the Rest Authentication API and is not intended to explain in depth how Ably's authentication works. If you are new to Ably and/or the authentication schemes, we strongly recommend that you get acquainted with the following first:
+
+* "Getting started with Ably's authentication":/general/authentication/#getting-started
+* "Selecting the right authentication scheme":/general/authentication/#selecting-auth
+* "Basic Authentication explained":/general/authentication/#basic-authentication
+* "Token Authentication explained":/general/authentication/#token-authentication
+
+h3(#basic-authentication). Basic Authentication
+
+*Basic Authentication* uses one of the "api keys":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key "configured via the application dashboard":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys as the authentication token. Basic Authentication is the simplest method to use but has some important limitations described in detail in the "Basic Authentication documentation":/general/authentication/#basic-authentication.
+
+Here is a straightfoward example of using Basic Authentication when instancing a Ably REST client library.
+
+```[jsall](code-editor:realtime/connection)
+  var rest = new Ably.Rest({ key: '{{API_KEY}}' });
+```
+
+```[ruby]
+  rest = Ably::Rest.new(key: '{{API_KEY}}')
+```
+
+```[python]
+  rest = AblyRest(key='{{API_KEY}}')
+```
+
+```[php]
+  $rest = new Ably\AblyRest(array('key' => '{{API_KEY}}'));
+```
+
+```[java]
+  ClientOptions options = new ClientOptions();
+  options.key = "{{API_KEY}}";
+  AblyRest rest = new AblyRest(options);
+```
+
+```[csharp]
+  var rest = new AblyRest("{{API_KEY}}");
+```
+
+```[swift]
+  let rest = ARTRest(key: "{{API_KEY}}")
+```
+
+```[objc]
+  ARTRest *rest = [[ARTRest alloc] initWithKey:@"{{API_KEY}}"];
+```
+
+h3(#token-authentication). Token Authentication
+
+*Token Authentication* uses a token obtained via the REST API <span lang="default">"@requestToken@":#request-token</span><span lang="csharp">"@RequestToken@":#request-token</span><span lang="ruby">"@request_token@":#request-token</span> endpoint to authenticate with Ably. Tokens are authentication credentials that are short-lived, and therefore they may more readily be distributed to clients where there is a risk of compromise. Tokens may also be issued with a particular scope - such as a limited set of "access rights or capabilities":#capabilities-explained or being limited to use by a specific "<span lang="default">@clientId@</span><span lang="csharp">@ClientId@</span> identity":/realtime/authentication#identified-clients - and therefore token-based authentication provides the flexibility to implement access and identity control policies in the application. See the "Token Authentication documentation":/general/authentication#token-authentication for more details.
+
+When using Token Authentication, the "REST client library":/rest/usage#constructor will typically be instanced with a means to obtain a token as opposed to a short-lived token so that when the token expires, the library can assume responsibility to automatically obtain a new token and seamlessly continue operations with Ably. Conversely, if a library is instanced with a previously obtained "@Token@":#token-details by setting the <span lang="ruby">@:token@ or @:token_details@</span><span lang="python">@token@ or @token_details@</span><span lang="csharp">@Token@ or @TokenDetails@</span><span lang="default">@token@ or @tokenDetails@</span> attributes of "@ClientOptions@":#client-options, when the token expires, the client will no longer be able successfully issue REST requests to Ably as the library has no means to obtain a new token. It is therefore recommended that all client libraries that use token authentication have a means to issue new tokens using either the <span lang="ruby,python">"@auth_url@":#client-options or "@auth_callback@":#client-options</span><span lang="csharp">"@AuthUrl@":#client-options or "@AuthCallback@":#client-options</span><span lang="default">"@authUrl@":#client-options or "@authCallback@":#client-options</span> attribute of "@ClientOptions@":#client-options when instancing the library.
+
+Below is a rather contrived yet straightforward example that instances a Rest library using Token Authentication with a means to reissue tokens as required. Typically, in a browser environment, the <span lang="default">@authUrl@</span><span lang="csharp">@AuthUrl@</span> provided would be a relative URL to a local endpoint that is used to issue tokens to trusted clients. Client requests can, for example, be trusted based on session cookies. For non-browser clients, an authentication callback is preferred thus relying on your application to communicate securely with your own servers to obtain a token.
+
+```[jsall](code-editor:realtime/auth-token-callback)
+  var rest = new Ably.Rest({ authUrl: 'https://my.website/auth' });
+```
+
+```[ruby]
+  rest = Ably::Rest.new(auth_url: 'https://my.website/auth')
+```
+
+```[python]
+  rest = AblyRest(auth_url='https://my.website/auth')
+```
+
+```[php]
+  $rest = new Ably\AblyRest(array('authUrl' => 'https://my.website/auth'));
+```
+
+```[java]
+  ClientOptions options = new ClientOptions();
+  options.authUrl = "https://my.website/auth";
+  AblyRest rest = new AblyRest(options);
+```
+
+```[csharp]
+  var rest = new AblyRest(new ClientOptions { AuthUrl = new Uri("https://my.website/auth") });
+```
+
+```[objc]
+  ARTClientOptions *options = [[ARTClientOptions alloc] init];
+  options.authUrl = [NSURL URLWithString:@"https://my.website/auth"];
+  ARTRest *rest = [[ARTRest alloc] initWithOptions:options];
+```
+
+```[swift]
+  let options = ARTClientOptions()
+  options.authUrl = NSURL(string: "https://my.website/auth")
+  let rest = ARTRest(options: options)
+```
+
+h3(#auth-object). Auth object
+
+The principal use-case for @Auth@ object is to "create signed token request objects":#create-token-request or "obtain tokens from Ably":#request-token, and then issue them to other "less trusted" clients. Typically, your servers should be the only devices to have a "private API key":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key, and this private API key is used to securely sign token requests or request tokens from Ably. Clients are then issued with short-lived tokens or token requests, and the libraries can then use these to authenticate with Ably. If you adopt this model, your private API key is never shared with clients directly.
+
+A subsidiary use-case for the @Auth@ object is to preemptively trigger renewal of a token or to acquire a new token with a revised set of capabilities by explicitly calling "<span lang="default">@authorize@</span><span lang="csharp">@Authorize@</span>":#authorize.
+
+h3(#identified-clients). Identified clients
+
+When a client has valid credentials to issue requests to Ably, they are considered to be an *authenticated client*. However, whilst an *authenticated client* has a verifiable means to authenticate with Ably, they do not necessarily have an identity. When a client is assigned a trusted identity (i.e. a <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span>), then they are considered to be an *identified client* and for all operations they perform with the Ably service, their <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span> field will be automatically populated and can be trusted by other clients.
+
+For example, assuming you were building a chat application and wanted to allow clients to publish messages on a channel via REST. If each client is assigned a trusted identity by your server, such as a unique email address or UUID, then all other subscribed clients can trust any messages they receive in the channel as being from that client. No other clients are permitted to assume a <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span> that they are not assigned in their token or token request, that is they are unable to masquerade as another <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span>.
+
+In Ably a client can be identified with a <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span> in three ways:
+
+* if the client is authenticated with a token that is issued for that <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span>. See <span lang="ruby,python">"@request_token@":#request-token</span><span lang="default">"@requestToken@":#request-token</span> and <span lang="ruby,python">"@create_token_request@":#create-token-request</span><span lang="default">"@createTokenRequest@":#create-token-request</span><span lang="csharp">"@CreateTokenRequestAsync@":#create-token-request</span> documentation below;
+* if the client claims that <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span> and is authenticated using "Basic Authentication":#basic-authentication (using an API key);
+* if the client claims that <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span> and is authenticated with a token that is issued for a "<span lang="ruby,python">wildcard @client_id@</span><span lang="csharp">wildcard @ClientId@</span><span lang="default">wildcard @clientId@</span>":https://support.ably.io/solution/articles/3000048586-can-a-client-emulate-any-client-id-i-e-authenticate-using-a-wildcard-client-id (a special token privilege that allows any client identity to be assumed)
+
+We encourage customers to always issue tokens to clients so that they authenticate using the short-lived token and do not have access to a customer's private API keys. Since the customer can then control the <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span> that may be used by any of its clients, all other clients can rely on the validity of the <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span> in published messages.
+
+The following example demonstates how to issue a token with an explicit <span lang="ruby,python">@client_id@</span><span lang="csharp">@ClientId@</span><span lang="default">@clientId@</span> that, when used by a client, will then be considered an *identified client*.
+
+```[jsall](code-editor:realtime/auth-client-id)
+  var rest = new Ably.Rest({ key: '{{API_KEY}}' });
+  rest.auth.createTokenRequest({ clientId: 'Bob' }, function(err, tokenRequest) {
+    /* ... issue the TokenRequest to a client ... */
+  })
+```
+
+```[ruby]
+  rest = Ably::Rest.new(key: '{{API_KEY}}')
+  token_request = rest.auth.create_token_request(client_id: 'Bob')
+  # ... issue the TokenRequest to a client ...
+```
+
+```[python]
+  rest = AblyRest(key='{{API_KEY}}')
+  token_request = rest.auth.create_token_request(client_id='Bob')
+  # ... issue the TokenRequest to a client ...
+```
+
+```[php]
+  $rest = new Ably\AblyRest(array('key' => '{{API_KEY}}'));
+  $tokenRequest = $rest->auth->createTokenRequest(array('clientId' => 'Bob'));
+  # ... issue the TokenRequest to a client ...
+```
+
+```[java]
+  ClientOptions options = new ClientOptions();
+  options.key = "{{API_KEY}}";
+  AblyRest rest = new AblyRest(options);
+  TokenParams tokenParams = new TokenParams();
+  tokenParams.clientId = "Bob";
+  TokenRequest tokenRequest;
+  tokenRequest = rest.auth.createTokenRequest(tokenParams, null);
+  /* ... issue the TokenRequest to a client ... */
+```
+
+```[csharp]
+  var rest = new AblyRest(new ClientOptions {Key = "{{API_KEY}}"});
+  var tokenParams = new TokenParams {ClientId = "Bob"};
+  TokenRequest tokenRequest = await rest.Auth.CreateTokenRequestAsync(tokenParams);
+  // ... issue the TokenRequest to a client ...
+```
+
+```[objc]
+  ARTRest *rest = [[ARTRest alloc] initWithKey:@"{{API_KEY}}"];
+  ARTTokenParams *tokenParams = [[ARTTokenParams alloc] initWithClientId:@"Bob"];
+  [rest.auth createTokenRequest:tokenParams options:nil
+    callback:^(ARTTokenRequest *tokenRequest, NSError *error) {
+      // ... issue the TokenRequest to a client ...
+  }];
+```
+
+```[swift]
+  let rest = ARTRest(key: "{{API_KEY}}")
+  let tokenParams = ARTTokenParams(clientId: "Bob")
+  rest.auth.createTokenRequest(tokenParams, options: nil) { tokenRequest, error in
+    // ... issue the TokenRequest to a client ...
+  }
+```
+
+h1. Auth API Reference
+
+inline-toc.
+  Auth reference:
+    - Methods:
+      - authorize
+      - createTokenRequest#create-token-request
+      - requestToken#request-token
+    - Properties:
+      - clientId#client-id
+    - Related types:
+      - AuthOptions#auth-options
+      - TokenDetails#token-details
+      - TokenRequest#token-request
+      - TokenParams#token-params
+
+The Auth object is available as the <span lang="java">"@auth@ field":/rest/usage#auth</span><span lang="default">"@auth@ property":/rest/usage#auth</span><span lang="csharp">"@Auth@ property":/rest/usage#auth</span><span lang="ruby">"@auth@ attribute":/rest/usage#auth</span> of an "Ably Rest client instance":/rest/usage#constructor.
+
+h2(#properties).
+  default: Auth Properties
+  php: Ably\Auth Properties
+  java: io.ably.lib.rest.Auth Members
+  ruby: Ably::Auth Attributes
+  python: Auth Attributes
+  objc,swift: ARTAuth Properties
+
+The <span lang="objc,swift">@ART@</span>@Auth@ object exposes the following public <span lang="default">properties</span><span lang="ruby,python">attributes</span><span lang="java">members</span>:
+
+h6(#client-id).
+  default: clientId
+  ruby:    client_id
+  python:  client_id
+  csharp:  ClientId
+
+The client ID string, if any, configured for this client connection. See "identified clients":#identified-clients for more information on trusted client identifiers.
+
+h2(#methods).
+  default: Auth Methods
+  java: io.ably.lib.rest.Auth Methods
+  ruby: Ably::Auth Methods
+  php: Ably\Auth Methods
+  objc,swift: ARTAuth Methods
+
+h6(#authorize).
+  default: authorize
+  csharp: Authorize
+
+<a name="authorise"></a>
+
+bq(definition).
+  default: authorize("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions, callback("ErrorInfo":/realtime/types#error-info err, "TokenDetails":#token-details tokenDetails))
+  ruby:    "TokenDetails":#token-details authorize("TokenParams":#token-params token_params, "AuthOptions":#auth-options auth_options)
+  python:  "TokenDetails":#token-details authorize(token_params="TokenParams":#token-params, auth_options="AuthOptions":#auth-options)
+  php:     "TokenDetails":#token-details authorize("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions)
+  java:    "TokenDetails":#token-details authorize("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions)
+  csharp:  Task<TokenDetails> AuthorizeAsync("TokenParams":#token-params tokenParams = null, "AuthOptions":#auth-options options = null);
+  swift,objc: authorize(tokenParams: "ARTTokenParams":#token-params?, authOptions: "ARTAuthOptions":#auth-options?, callback: ("ARTTokenDetails":#token-details?, NSError?) -> Void)
+
+Ensures valid auth credentials are present for the library instance. This may rely on an already-known and valid token, and will obtain a new token if necessary or explicitly requested using <span lang="default">"@requestToken@":#request-token</span><span lang="csharp">"@RequestToken@":#request-token</span><span lang="ruby,python">"@request_token@":#request-token</span>.
+
+In the event that a new token request is made, the specified <span lang="ruby,python">@token_params@ and @auth_options@</span><span lang="java,csharp">@tokenParams@ and @authOptions@</span> are used.
+
+The <span lang="ruby,python">@token_params@ and @auth_options@</span><span lang="java,csharp">@tokenParams@ and @authOptions@</span> objects will supplement or override the existing client library defaults, and all subsequent explicit or implicit token requests will use these defaults.
+
+h4. Parameters
+
+- <span lang="ruby,python">token_params</span><span lang="default">tokenParams</span> := <span lang="default">an optional object containing the "token parameters":#token-params</span><span lang="java">an optional "@TokenParams@":#token-params object containing the token parameters</span><span lang="python">an optional Dict containing the "token parameters":#token-params</span><span lang="ruby">an optional set of key value pairs containing the "token parameters":#token-params</span><span lang="php">an optional set of key value pairs in an associative array containing the "token parameters":#token-params</span> for the authorisation request<br>__Type: "@TokenParams@":#token-params__
+
+- <span lang="ruby,python">auth_options</span><span lang="default">authOptions</span> := <span lang="default">an optional object containing the "authentication options":#auth-options</span><span lang="java">an optional "@AuthOptions@":#auth-options object containing the authentication options</span><span lang="python">an optional Dict containing the "authentication options":#auth-options</span><span lang="ruby">an optional set of key value pairs containing the "authentication options":#auth-options</span><span lang="php">an optional set of key value pairs in an associative array containing the "authentication options":#auth-options</span> for the authorisation request<br>__Type: "@AuthOptions@":#auth-options__
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, tokenDetails)@
+- <div lang="swift,objc">callback</div> := called with a "@ARTTokenDetails@":#token-details object or an error
+
+blang[jsall,objc,swift].
+  h4. Callback result
+
+  On success, @tokenDetails@ contains a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string.
+
+  On failure to obtain a token, @err@ contains an <span lang="ruby">"@ErrorInfo@":#error-info</span><span lang="objc,swift">@NSError@</span> object with an error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+blang[java,ruby,php,python].
+  h4. Returns
+
+  On success, a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string is returned.
+
+  Failure to obtain a token will raise an "@AblyException@":#ably-exception.
+
+blang[csharp].
+  h4. Returns
+
+  The method is asyncronous and returns a @Task@ which needs to be awaited.
+
+  On success, a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string is returned.
+
+  Failure to obtain a token will raise an "@AblyException@":#ably-exception.
+
+h4. Example
+
+bc[jsall]. client.auth.authorize({ clientId: 'bob' }, function(err, tokenDetails) {
+  if(err) {
+    console.log('An error occurred; err = ' + err.message);
+  } else {
+    console.log('Success; token = ' + tokenDetails.token);
+  }
+});
+
+bc[java]. try {
+  TokenParams tokenParams = new TokenParams();
+  tokenParams.clientId = "bob";
+  TokenDetails tokenDetails = client.auth.authorize(tokenParams, null);
+  System.out.println("Success; token = " + tokenDetails.token);
+} catch(AblyException e) {
+  System.out.println("An error occurred; err = " + e.getMessage());
+}
+
+bc[csharp]. try
+{
+  TokenParams tokenParams = new TokenParams { ClientId = "bob" };
+  TokenDetails tokenDetails = await client.Auth.AuthorizeAsync(tokenParams);
+  Console.WriteLine("Success; token = " + tokenDetails.Token);
+}
+catch (AblyException e)
+{
+  Console.WriteLine("An error occurred; err = " + e.Message);
+}
+
+bc[ruby]. token_details = client.auth.authorize(client_id: 'bob')
+puts "Success; token = #{token_details.token}"
+
+bc[python]. token_details = client.auth.authorize(token_params={'client_id': 'bob'})
+print("Success; token = " + str(token_details.token))
+
+bc[php]. $tokenDetails = $client->auth->authorize(array('clientId' => 'bob'));
+echo("Success; token = " . $tokenDetails->token);
+
+bc[objc]. ARTTokenParams *tokenParams = [[ARTTokenParams alloc] initWithClientId:@"Bob"];
+[client.auth authorize:tokenParams options:nil callback:^(ARTTokenDetails *tokenDetails, NSError *error) {
+  if (error) {
+    NSLog(@"An error occurred; err = %@", error);
+  } else {
+    NSLog(@"Success; token = %@", tokenDetails.token);
+  }
+}];
+
+bc[swift]. let tokenParams = ARTTokenParams(clientId: "Bob")
+client.auth.authorize(tokenParams, options: nil) { tokenDetails, error in
+  guard let tokenDetails = tokenDetails else {
+    print("An error occurred; err = \(error!)")
+    return
+  }
+  print("Success; token = \(tokenDetails.token)")
+}
+
+
+h6(#create-token-request).
+  default: createTokenRequest
+  csharp:  CreateTokenRequest
+  ruby:    create_token_request
+  python:  create_token_request
+
+bq(definition).
+  default: createTokenRequest("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions, callback("ErrorInfo":/realtime/types#error-info err, "TokenRequest":#token-request tokenRequest))
+  ruby:    "TokenRequest":#token-request create_token_request("TokenParams":#token-params token_params, "AuthOptions":#auth-options auth_options)
+  python:  "TokenRequest":#token-request create_token_request(token_params="TokenParams":#token-params, key_name=String, key_secret=String)
+  php:     "TokenRequest":#token-request createTokenRequest("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions)
+  java:    "TokenRequest":#token-request createTokenRequest("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions)
+  csharp:  Task<TokenRequest> CreateTokenRequestAsync(TokenParams tokenParams = null, AuthOptions authOptions = null)
+  objc,swift: createTokenRequest(tokenParams: "ARTTokenParams":#token-params?, options: "ARTAuthOptions":#auth-options?, callback: ("ARTTokenRequest":#token-request?, NSError?) -> Void)
+
+
+Creates and signs a token request based on the specified <span lang="ruby,python">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span>. Note this can only be used when the "API @key@":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key value is available locally. Otherwise, signed token requests must be obtained from the key owner. Use this to generate signed token requests in order to implement a token request callback for use by other clients.
+
+To understand why a token request may be issued to clients in favour of a token, see "Token Authentication explained":/general/authentication/#token-authentication.
+
+h4. Parameters
+
+- <span lang="ruby,python">token_params</span><span lang="default">tokenParams</span> := <span lang="default">an optional object containing the "token parameters":#token-params</span><span lang="java">an optional "@TokenParams@":#token-params object containing the token parameters</span><span lang="python">an optional Dict containing the "token parameters":#token-params</span><span lang="ruby">an optional set of key value pairs containing the "token parameters":#token-params</span><span lang="php">an optional set of key value pairs in an associative array containing the "token parameters":#token-params</span> for the token request<br>__Type: "@TokenParams@":#token-params__
+
+- <span lang="ruby">auth_options</span><span lang="python">[auth options]</span><span lang="default">authOptions</span> := <span lang="default">an optional object containing the "authentication options":#auth-options</span><span lang="java">an optional "@TokenParams@":#auth-options object containing the authentication options</span><span lang="python">various keyword arguments with the "authentication options":#auth-options</span><span lang="ruby">an optional set of key value pairs containing the "authentication options":#auth-options</span><span lang="php">an optional set of key value pairs in an associative array containing the "authentication options":#auth-options</span><span lang="objc,swift">an optional "@ARTTokenParams@":#token-params containing the "authentication options":#auth-options</span> for the token request<br>__Type: "@AuthOptions@":#auth-options__
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, tokenRequest)@
+- <div lang="swift,objc">callback</div> := called with a "@ARTTokenRequest@":#token-request object or an error
+
+blang[jsall,objc,swift].
+  h4. Callback result
+
+  On success, @tokenRequest@ contains a "@TokenRequest@":#token-request JSON object.
+
+  On failure to issue a "@TokenRequest@":#token-request, @err@ contains an "@ErrorInfo@":#error-info object with an error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+blang[java,ruby,php,python].
+  h4. Returns
+
+  On success, a "@TokenRequest@":#token-request object is returned.
+
+  Failure to issue a "@TokenRequest@":#token-request will raise an "@AblyException@":#ably-exception.
+
+blang[csharp].
+  h4. Returns
+
+  The method is asyncronous and returns a @Task@ which needs to be awaited.
+
+  On success, a "@TokenRequest@":#token-request object is returned.
+
+  Failure to issue a "@TokenRequest@":#token-request will raise an "@AblyException@":#ably-exception.
+
+h4. Example
+
+bc[jsall]. client.auth.createTokenRequest({ clientId: 'bob' }, function(err, tokenRequest) {
+  if(err) {
+    console.log('An error occurred; err = ' + err.message);
+  } else {
+    console.log('Success; token request = ' + tokenRequest);
+  }
+});
+
+bc[java]. try {
+  TokenParams tokenParams = new TokenParams();
+  tokenParams.clientId = "bob";
+  TokenRequest tokenRequest = client.auth.createTokenRequest(tokenParams, null);
+  System.out.println("Success; token request issued");
+} catch(AblyException e) {
+  System.out.println("An error occurred; err = " + e.getMessage());
+}
+
+bc[csharp]. try
+{
+  TokenParams tokenParams = new TokenParams { ClientId = "bob" };
+  var tokenRequest = await client.Auth.CreateTokenRequestAsync(tokenParams);
+  Console.WriteLine("Success; token request issued");
+}
+catch (AblyException e)
+{
+  Console.WriteLine("An error occurred; err = " + e.Message);
+}
+
+bc[ruby]. token_request = client.auth.create_token_request(client_id: 'bob')
+puts "Success; token request = #{token_request}"
+
+bc[python]. token_request = client.auth.create_token_request(token_params={'client_id': 'bob'})
+print("Success; token request = ' + str(token_request)
+
+bc[php]. $tokenRequest = $client->auth->createTokenRequest(array('clientId' => 'bob'))
+echo("Success; token request = " . $tokenRequest);
+
+bc[objc]. ARTTokenParams *tokenParams = [[ARTTokenParams alloc] initWithClientId:@"Bob"];
+[client.auth createTokenRequest:tokenParams options:nil callback:^(ARTTokenRequest *tokenRequest, NSError *error) {
+    if (error) {
+        NSLog(@"An error occurred; err = %@", error);
+    } else {
+        NSLog(@"Success; token request = %@", tokenRequest);
+    }
+}];
+
+bc[swift]. let tokenParams = ARTTokenParams(clientId: "Bob")
+client.auth.createTokenRequest(tokenParams, options: nil) { tokenRequest, error in
+    guard let tokenRequest = tokenRequest else {
+        print("An error occurred; err = \(error!)")
+        return
+    }
+    print("Success; token request = \(tokenRequest)")
+}
+
+h6(#request-token).
+  default:  requestToken
+  ruby:     request_token
+  python:   request_token
+  csharp:   RequestToken
+
+bq(definition).
+  default: requestToken("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions, callback("ErrorInfo":/realtime/types#error-info err, "TokenDetails":#token-details tokenDetails))
+  ruby:    "TokenDetails":#token-details request_token("TokenParams":#token-params token_params, "AuthOptions":#auth-options auth_options)
+  python:  "TokenDetails":#token-details request_token(token_params="TokenParams":#token-params, key_name=String, key_secret=None, auth_callback=Lambda, auth_url=String, auth_method=String, auth_headers=Dict, auth_params=Dict, query_time=Boolean)
+  php:     "TokenDetails":#token-details requestToken("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authAptions)
+  csharp:  Task<TokenDetails> RequestTokenAsync(TokenParams tokenParams = null, AuthOptions options = null)
+  java:    "TokenDetails":#token-details requestToken("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions)
+  objc,swift: requestToken(tokenParams: "ARTTokenParams":#token-params?, withOptions: "ARTAuthOptions":#auth-options?, callback: ("ARTTokenDetails":#token-details?, NSError?) -> Void)
+
+Calls the "<span lang="default">@requestToken@</span><span lang="csharp">@RequestToken@</span> REST API endpoint":/rest-api#request-token to obtain a token according to the specified <span lang="ruby,python">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span>.
+
+Both <span lang="ruby">@auth_options@ and @token_params@</span><span lang="java">@authOptions@ and @tokenParams@</span> are optional. When they are omitted or <span lang="default">@null@</span><span lang="java">@Null@</span><span lang="python">@None@</span><span lang="ruby,objc,swift">@nil@</span>, the default token parameters and authentication options for the client library are used, as specified in the @ClientOptions@ when the client library was instanced, or later updated with an explicit "<span lang="default">@authorize@</span><span lang="csharp">@Authorize@</span>":#authorize request.
+
+To understand why a token request may be issued to clients in favour of a token, see "Token Authentication explained":/general/authentication/#token-authentication.
+
+h4. Parameters
+
+- <span lang="ruby,python">token_params</span><span lang="default">tokenParams</span> := <span lang="default">an optional object containing the "token parameters":#token-params</span><span lang="python">an optional Dict containing the "token parameters":#token-params</span><span lang="java">an optional "@TokenParams@":#token-params object containing the token parameters</span><span lang="ruby">an optional set of key value pairs containing the "token parameters":#token-params</span><span lang="php">an optional set of key value pairs in an associative array containing the "token parameters":#token-params</span> for the requested token<br>__Type: "@TokenParams@":#token-params__
+
+- <span lang="python">[auth options]</span><span lang="ruby">auth_options</span><span lang="default">authOptions</span> := <span lang="default">an optional object containing the "authentication options":#auth-options</span><span lang="python">various keyword arguments with the "authentication options":#auth-options</span><span lang="java">an optional "@TokenParams@":#auth-options object containing the authentication options</span><span lang="ruby">an optional set of key value pairs containing the "authentication options":#auth-options</span><span lang="php">an optional set of key value pairs in an associative array containing the "authentication options":#auth-options</span> for the requested token<br>__Type: "@AuthOptions@":#auth-options__
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, tokenDetails)@
+- <div lang="swift,objc">callback</div> := called with a "@ARTTokenDetails@":#token-details object or an error
+
+blang[jsall,objc,swift].
+  h4. Callback result
+
+  On success, @tokenDetails@ contains a "@TokenDetails@":#token-details object containing the details of the new token along with the token string.
+
+  On failure to obtain a token, @err@ contains an <span lang="ruby">"@ErrorInfo@":#error-info</span><span lang="objc,swift">@NSError@</span> object with an error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+blang[java,ruby,php,python].
+  h4. Returns
+
+  On success, a "@TokenDetails@":#token-details object containing the details of the new token along with the token string is returned.
+
+  Failure to obtain a token will raise an "@AblyException@":#ably-exception.
+
+blang[csharp].
+  h4. Returns
+
+  The method is asyncronous and returns a @Task@ which needs to be awaited.
+
+  On success, a "@TokenDetails@":#token-details object containing the details of the new token along with the token string is returned.
+
+  Failure to obtain a token will raise an "@AblyException@":#ably-exception.
+
+h4. Example
+
+bc[jsall]. client.auth.requestToken({ clientId: 'bob'}, function(err, tokenDetails){
+  if(err) {
+    console.log('An error occurred; err = ' + err.message);
+  } else {
+    console.log('Success; token = ' + tokenDetails.token);
+  }
+});
+
+bc[ruby]. token_details = client.auth.request_token(client_id: 'bob')
+puts "Success; token = #{token_details.token}"
+
+bc[python]. token_details = client.auth.request_token(token_params={'client_id': 'bob'})
+print("Success; token = " + str(token_details.token))
+
+bc[php]. $tokenDetails = $client->auth->requestToken(array('clientId' => 'bob'))
+echo("Success; token = " . $tokenDetails->token);
+
+bc[java]. try {
+  TokenParams tokenParams = new TokenParams();
+  tokenParams.clientId = "bob";
+  TokenDetails tokenDetails = client.auth.requestToken(tokenParams, null);
+  System.out.println("Success; token = " + tokenDetails.token);
+} catch(AblyException e) {
+  System.out.println("An error occurred; err = " + e.getMessage());
+}
+
+bc[csharp]. try {
+  TokenParams tokenParams = new TokenParams { ClientId = "bob" };
+  var tokenDetails = await client.Auth.RequestTokenAsync(tokenParams);
+  Console.WriteLine("Success; token = " + tokenDetails.Token);
+}
+catch (AblyException e)
+{
+  Console.WriteLine("An error occurred; err = " + e.Message);
+}
+
+bc[objc]. ARTTokenParams *tokenParams = [[ARTTokenParams alloc] initWithClientId:@"Bob"];
+[client.auth requestToken:tokenParams withOptions:nil callback:^(ARTTokenDetails *tokenDetails, NSError *error) {
+    if (error) {
+        NSLog(@"An error occurred; err = %@", error);
+    } else {
+        NSLog(@"Success; token = %@", tokenDetails.token);
+    }
+}];
+
+bc[swift]. let tokenParams = ARTTokenParams(clientId: "Bob")
+client.auth.requestToken(tokenParams, withOptions: nil) { tokenDetails, error in
+    guard let tokenDetails = tokenDetails else {
+        print("An error occurred; err = \(error!)")
+        return
+    }
+    print("Success; token = \(tokenDetails.token)")
+}
+
+h2(#related-types). Related types
+
+h3(#auth-options).
+  default:   AuthOptions Object
+  ruby:      AuthOptions Hash
+  java:      io.ably.lib.rest.Auth.AuthOptions
+
+<%= partial 'types/_auth_options' %>
+
+h3(#token-details).
+  default: TokenDetails
+  objc,swift: ARTTokenDetails
+  java:    io.ably.lib.types.TokenDetails
+  ruby:    Ably::Models::TokenDetails
+
+<%= partial 'types/_token_details' %>
+
+h3(#token-params).
+  default:   TokenParams Object
+  objc,swift:   ARTTokenParams
+  ruby:      TokenParams Hash
+  java:      io.ably.lib.rest.Auth.TokenParams
+
+<%= partial 'types/_token_params' %>
+
+h3(#token-request).
+  default:   TokenRequest Object
+  objc,swift:   ARTTokenRequest
+  ruby:      Ably::Models::TokenRequest
+  java:      io.ably.lib.rest.Auth.TokenRequest
+
+<%= partial 'types/_token_request' %>

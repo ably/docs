@@ -1,0 +1,1171 @@
+---
+title: Presence
+section: realtime
+index: 40
+languages:
+  - javascript
+  - nodejs
+  - ruby
+  - java
+  - swift
+  - objc
+  - csharp
+jump_to:
+  Help with:
+    - Getting started#getting-started
+    - Presence & events#presence
+    - Member data
+    - Presence member list#member-list
+    - Presence history
+    - Multiple client IDs#presence-multiple-client-id
+  Presence API properties:
+    - syncComplete#sync-complete
+  Presence API methods:
+    - enter
+    - leave
+    - update
+    - get
+    - history
+    - subscribe
+    - unsubscribe
+    - enterClient#enter-client
+    - updateClient#update-client
+    - leaveClient#leave-client
+---
+
+Presence enables clients to be aware of other clients that are currently "present" on a channel. Each member present on a channel has a unique self-assigned client identifier and system-assigned connection identifier, along with an optional payload that can be used to describe the member's status or attributes. Presence allows you to quickly build apps such as chat rooms and multiplayer games by automatically keeping track of who is present in real time across any device.
+
+h2(#getting-started). Getting started
+
+The @Presence@ object provides a straightforward API to subscribe to presence events such as members entering or leaving, retrieve a list of members present, or register the connected client as "present" on a channel. Here is a simple presence example using the "<span lang="default">@presence@</span><span lang="csharp">@Presence@</span>":/realtime/channels-messages#presence <span lang="default">property</span><span lang="java">field</span><span lang="ruby">attribute</span> of the "@Channel@":/realtime/channels-messages object to enter a channel and subscribe to presence events.
+
+```[javascript](code-editor:realtime/presence-simple)
+  var realtime = new Ably.Realtime({
+    key: '{{API_KEY}}',
+    clientId: 'bob' }
+  );
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.presence.subscribe('enter', function(member) {
+    alert('Member ' + member.clientId + ' entered');
+  });
+  channel.presence.enter();
+```
+
+```[nodejs](code-editor:realtime/presence-simple)
+  var Ably = require('ably');
+  var realtime = new Ably.Realtime({
+    key: '{{API_KEY}}',
+    clientId: 'bob' }
+  );
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.presence.subscribe('enter', function(member) {
+    alert('Member ' + member.clientId + ' entered');
+  });
+  channel.presence.enter();
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new(key: '{{API_KEY}}', client_id: 'bob')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.presence.subscribe(:enter) do |member|
+    puts "Member #{member.client_id} entered"
+  end
+  channel.presence.enter
+```
+
+```[java]
+  ClientOptions options = new ClientOptions("{{API_KEY}}");
+  options.clientId = "bob";
+  AblyRealtime realtime = new AblyRealtime(options);
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.presence.subscribe(new PresenceListener() {
+    @Override
+    public void onPresenceMessage(PresenceMessage member) {
+      System.out.println("Member " + member.clientId + " : " + member.action.toString());
+    }
+  });
+  channel.presence.enter(null, new CompletionListener());
+```
+
+```[csharp]
+  var options = new ClientOptions("{{API_KEY}}") { ClientId =  "bob"};
+  var realtime = new AblyRealtime(options);
+  var channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
+  channel.Presence.Subscribe(member => {
+    Console.WriteLine("Member " + member.clientId + " : " + member.action)
+  });
+  await channel.Presence.EnterAsync(null);
+```
+
+```[objc]
+  ARTClientOptions *options = [[ARTClientOptions alloc] initWithKey:@"{{API_KEY}}"];
+  options.clientId = @"bob";
+  ARTRealtime *realtime = [[ARTRealtime alloc] initWithOptions:options];
+  ARTRealtimeChannel *channel = [realtime.channels get:@"{{RANDOM_CHANNEL_NAME}}"];
+  [channel.presence subscribe:ARTPresenceEnter callback:^(ARTPresenceMessage *member) {
+      NSLog(@"Member %@ entered", member.clientId);
+  }];
+  [channel.presence enter:nil];
+```
+
+```[swift]
+  let options = ARTClientOptions(key: "{{API_KEY}}")
+  options.clientId = "bob"
+  let realtime = ARTRealtime(options: options)
+  let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+  channel.presence.subscribe(.Enter) { member in
+      print("Member \(member.clientId) entered")
+  }
+  channel.presence.enter(nil)
+```
+
+h2(#presence). Presence
+
+In order to be present on a channel, a client must "be identified by having a client ID":https://support.ably.io/solution/articles/3000038608-authenticated-and-identified-clients, "have permission to be present":https://support.ably.io/solution/articles/3000048535-using-capabilities-to-manage-client-access-privileges-on-channels, and be attached to the channel. For simplicity, the library will implicitly attach to a channel when entering or subscribing to presence events. Clients are assigned a <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span><span lang="csharp">"@ClientId@":/realtime/usage#client-id</span> when using token authentication, "find out more about token authentication":/general/authentication#token-authentication.
+
+A single <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span><span lang="csharp">"@ClientId@":/realtime/usage#client-id</span> may be present multiple times on the same channel via different client connections. As far as Ably is concerned, these are different members of the presence set for the channel, however they will be differentiated by their unique "<span lang="default">@connectionId@</span><span lang="csharp">@ConnectionId@</span><span lang="ruby">@connection_id@</span>":/realtime/connection/#id. For example, if a client with ID "Sarah" is connected to a chat channel on both a desktop and a mobile device simultaneously, "Sarah" will be present twice in the presence member set with the same client ID, yet will have two unique connection IDs. A member of the presence set is therefore unique by the combination of the <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span><span lang="csharp">"@ClientId@":/realtime/usage#client-id</span> and "<span lang="default">@connectionId@</span><span lang="csharp">@ConnectionId@</span><span lang="ruby">@connection_id@</span>":/realtime/connection/#id strings.
+
+h3(#presence-states). Presence states and events
+
+<%= partial 'shared/_presence_states' %>
+
+"View a presence states and events example":<%= JsBins.url_for('realtime/presence-events') %>
+
+h3(#member-data). Member data
+
+In addition to the <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span><span lang="csharp">"@ClientId@":/realtime/usage#client-id</span> for members on a channel, it is also possible to include data when entering a channel. Clients can "update":#update their data at any point which will be broadcasted to all presence subscribers as an <span lang="ruby">@:update@</span><span lang="java">@Action.UPDATE@</span><span lang="default">@update@</span> event.
+
+```[jsall]
+/* Subscribe to presence enter events */
+channel.presence.on('enter', function(member) {
+  console.log(member.data); // => not moving
+});
+
+/* Subscribe to presence update events */
+channel.presence.on('update', function(member) {
+  console.log(member.data); // => travelling North
+});
+
+/* Enter this client with data and update once entered */
+channel.presence.enter('not moving', function(err) {
+  channel.presence.update('travelling North');
+});
+```
+
+```[java]
+/* Subscribe to presence enter and update events */
+channel.presence.subscribe(new PresenceListener() {
+  @Override
+  public void onPresenceMessage(PresenceMessage member) {
+    switch (member.action) {
+      case ENTER: {
+        System.out.println(member.data); // => not moving
+        break;
+      }
+      case UPDATE: {
+        System.out.println(member.data); // => travelling North
+        break;
+      }
+    }
+  }
+});
+
+/* Enter this client with data and update once entered */
+channel.presence.enter("not moving", new CompletionListener() {
+  @Override
+  public void onSuccess() {
+    channel.presence.update("travelling North", new CompletionListener());
+  }
+});
+```
+
+```[csharp]
+/* Subscribe to presence enter and update events */
+channel.Presence.Subscribe(member =>
+{
+    switch (member.action)
+    {
+        case PresenceAction.Enter:
+        case PresenceAction.Update:
+            {
+                Console.WriteLine(member.data); // => travelling North
+                break;
+            }
+    }
+});
+
+/* Enter this client with data and update once entered */
+await channel.Presence.EnterAsync("not moving");
+await channel.Presence.UpdateAsync("travelling North");
+```
+
+```[ruby]
+# Subscribe to presence enter events
+channel.presence.subscribe(:enter) do |member|
+  puts member.data # => not moving
+end
+
+# Subscribe to presence update events
+channel.presence.subscribe(:update) do |member|
+  puts member.data # => travelling North
+end
+
+# Enter this client with data and update once entered
+channel.presence.enter(data: 'not moving') do
+  channel.presence.update(data: 'travelling North')
+end
+```
+
+```[objc]
+// Subscribe to presence enter events
+[channel.presence subscribe:ARTPresenceEnter callback:^(ARTPresenceMessage *member) {
+    NSLog(@"%@", member.data); // prints "not moving"
+}];
+
+// Subscribe to presence update events
+[channel.presence subscribe:ARTPresenceUpdate callback:^(ARTPresenceMessage *member) {
+    NSLog(@"%@", member.data); // prints "travelling North"
+}];
+
+// Enter this client with data and update once entered
+[channel.presence enter:@"not moving" callback:^(ARTErrorInfo *error) {
+    [channel.presence update:@"travelling North"];
+}];
+```
+
+```[swift]
+// Subscribe to presence enter events
+channel.presence.subscribe(.Enter) { member in
+    print(member.data) // prints "not moving"
+}
+
+// Subscribe to presence update events
+channel.presence.subscribe(.Update) { member in
+    print(member.data) // prints "travelling North"
+}
+
+// Enter this client with data and update once entered
+channel.presence.enter("not moving") { error in
+    channel.presence.update("travelling North")
+}
+```
+
+h3(#member-list). Presence member list
+
+The @Presence@ object exposes a "<span lang="default">@get@</span><span lang="csharp">@Get@</span>":#get method allowing a client to retrieve an array of all members present on the channel. The Ably client is responsible for keeping track of the presence set from the time that the channel is attached; an up to date presence set is pushed to the client following attach and the presence set is updated on each subsequent presence event. Thus "<span lang="default">@get@</span><span lang="csharp">@Get@</span>":#get returns the already-known presence set retained in memory and does not trigger a new request to the Ably service.
+
+```[jsall]
+channel.presence.get(function(err, members) {
+  console.log('There are ' + members.length + ' members on this channel');
+  console.log('The first member has client ID: ' + members[0].clientId);
+});
+```
+
+```[ruby]
+channel.presence.get do |members|
+  puts "There are #{members.size} members on this channel"
+  puts "The first member has client ID: #{members.first.client_id}"
+end
+```
+
+```[java]
+PresenceMessage[] members = channel.presence.get();
+System.out.println("There are " + members.length + " members on this channel");
+System.out.println("The first member has client ID: " + members[0].clientId);
+```
+
+```[csharp]
+IEnumerable<PresenceMessage> presence = await channel.Presence.GetAsync();
+Console.WriteLine($"There are {presence.Count()} members on this channel");
+Console.WriteLine($"The first member has client ID: {presence.First().clientId}");
+```
+
+```[objc]
+[channel.presence get:^(NSArray<ARTPresenceMessage *> *members, ARTErrorInfo *error) {
+    NSLog(@"There are %lu members on this channel", [members count]);
+    NSLog(@"The first member has client ID: %@", members[0].clientId);
+}];
+```
+
+```[swift]
+channel.presence.get { members, error in
+    print("There are \(members.count) members on this channel")
+    print("The first member has client ID: \(members[0].clientId)")
+}
+```
+
+h3(#presence-history). Presence History
+
+The @Presence@ object exposes a "<span lang="default">@history@</span><span lang="csharp">@History@</span>":#history method allowing a client to retrieve historical presence events on the channel. Presence history can be used to return continuous presence event history up to the exact point a realtime channel was attached.
+
+History provides access to instantaneous "live" history as well as the longer term persisted history for presence channels. If "persisted history":/realtime/history#persisted-history is enabled for the channel, then presence events will "typically be stored for 24 - 72 hours":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If persisted history is not enabled, Ably retains the last two minutes of presence event history in memory.
+
+The following example retrieves the first two pages of historical presence events published up until the point the channel was attached.
+
+bc[jsall]. channel.attach(function() {
+  var presence = channel.presence;
+  presence.history({ untilAttach: true }, function(err, resultPage) {
+    if(err) {
+      console.log('Unable to get presence history; err = ' + err.message);
+    } else {
+      console.log(resultPage.items.length + ' presence events received in first page');
+      if(resultPage.hasNext()) {
+        resultPage.next(function(err, nextPage) { ... });
+      }
+  });
+});
+
+bc[ruby]. channel.attach do
+  presence = channel.presence
+  presence.history(until_attach: true) do |result_page|
+    puts "#{result_page.items.length} presence events received in first page"
+    if result_page.has_next?
+      result_page.next { |next_page| ... }
+    end
+  end
+end
+
+```[java]
+Param[] options = new Param[]{ new Param("untilAttach", "true") }
+PaginatedResult<PresenceMessage> resultPage = channel.presence.history(options);
+System.out.println(resultPage.items().length + " presence events received in first page");
+if(resultPage.hasNext()) {
+  PaginatedResult<PresenceMessage> nextPage = resultPage.next();
+  System.out.println(nextPage.items().length + " presence events received in 2nd page");
+}
+```
+
+```[csharp]
+PaginatedResult<PresenceMessage> resultPage;
+resultPage = await channel.Presence.HistoryAsync(untilAttached: true);
+Console.WriteLine(resultPage.Items.Count + " presence events received in first page");
+if (resultPage.HasNext)
+{
+    PaginatedResult<PresenceMessage> nextPage = await resultPage.NextAsync();
+    Console.WriteLine(nextPage.Items.Count + " presence events received in 2nd page");
+}
+```
+
+```[objc]
+ARTRealtimeHistoryQuery *query = [[ARTRealtimeHistoryQuery alloc] init];
+query.untilAttach = YES;
+[channel.presence history:query callback:^(ARTPaginatedResult<ARTPresenceMessage *> *resultPage,
+                                           ARTErrorInfo *error) {
+    NSLog(@"%lu presence events received in first page", [resultPage.items count]);
+    if (resultPage.hasNext) {
+        [resultPage next:^(ARTPaginatedResult<ARTPresenceMessage *> *nextPage, ARTErrorInfo *error) {
+            NSLog(@"%lu presence events received in 2nd page", [nextPage.items count]);
+        }];
+    }
+}];
+```
+
+```[swift]
+let query = ARTRealtimeHistoryQuery()
+query.untilAttach = true
+channel.presence.history(query) { resultPage, error in
+    let resultPage = resultPage!
+    print("\(resultPage.items.count) presence events received in first page")
+    if resultPage.hasNext {
+        resultPage.next { nextPage, error in
+            print("\(nextPage!.items.count) presence events received in 2nd page")
+        }
+    }
+}
+```
+
+See the "presence history documentation":/realtime/history#presence-history for further details of the supported query parameters.
+
+h3(#presence-multiple-client-id). Managing multiple client IDs
+
+p(tip). Each unique <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span><span lang="csharp">"@ClientId@":/realtime/usage#client-id</span> may only be present once when entering on behalf of another client as the unique identifier for each member in a presence set is the combined <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span><span lang="csharp">"@ClientId@":/realtime/usage#client-id</span> and shared "<span lang="default">@connectionId@</span><span lang="csharp">@ConnectionId@</span><span lang="ruby">@connection_id@</span>":/realtime/connection/#id</span>
+
+An Ably client instance might, if on an application server for example, publish messages and be present on channels on behalf of multiple distinct "client IDs":/realtime/usage#client-id. The channel's @Presence@ object therefore also supports methods that enable presence messages to be emitted for a <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span><span lang="csharp">"@ClientId@":/realtime/usage#client-id</span> specified at the time of the call, rather than implicitly based on the <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span><span lang="csharp">"@ClientId@":/realtime/usage#client-id</span> "specified when the library is instanced or authenticated":/realtime/usage#client-id.
+
+In order to be able to publish presence changes for arbitrary client IDs, the client library must have been instanced either with an "API key":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key, or with a "token bound to a wildcard client ID":https://support.ably.io/solution/articles/3000048586-can-a-client-emulate-any-client-id-i-e-use-a-wildcard-client-id.
+
+```[jsall](code-editor:realtime/presence-multiple-client-id)
+var rest = new Ably.Rest({ key: '{{API_KEY}}' });
+/* request a wildcard token */
+rest.auth.requestToken({ clientId: '*' }, function(err, token) {
+  var realtime = new Ably.Realtime({ token: token });
+  var channel = realtime.channels.get('realtime-chat');
+
+  channel.presence.subscribe('enter', function(member) {
+    console.log(member.client_id + 'entered realtime-chat');
+  });
+
+  channel.presence.enterClient('Bob'); // => Bob entered realtime-chat
+  channel.presence.enterClient('Mary'); // => Mary entered realtime-chat
+});
+```
+
+```[ruby]
+rest = Ably::Rest.new(key: '{{API_KEY}}')
+# request a wildcard token
+rest.auth.requestToken(clientId: '*') do |token|
+  realtime = Ably::Realtime.new(token: token)
+  channel = realtime.channels.get('realtime-chat')
+
+  channel.presence.subscribe(:enter) do |member|
+    puts "#{member.client_id} entered realtime-chat"
+  end
+
+  channel.presence.enter_client 'Bob' # => Bob entered realtime-chat
+  channel.presence.enter_client 'Mary' # => Mary entered realtime-chat
+end
+```
+
+```[java]
+/* request a wildcard token */
+AblyRest rest = new AblyRest('{{API_KEY}}');
+TokenParams params = new TokenParams();
+params.clientId = "*";
+ClientOptions options = new ClientOptions();
+options.tokenDetails = rest.auth.requestToken(params, null);
+
+AblyRealtime realtime = new AblyRealtime(options);
+Channel channel = realtime.channels.get("realtime-chat");
+
+channel.presence.subscribe(new PresenceListener() {
+  @Override
+  public void onPresenceMessage(PresenceMessage member) {
+    System.out.println(member.clientId + " entered realtime-chat");
+  }
+});
+
+CompletionListener noop = new CompletionListener();
+channel.presence.enterClient("Bob", noop); /* => Bob entered realtime-chat */
+channel.presence.enterClient('Mary', noop); /* => Mary entered realtime-chat */
+```
+
+```[csharp]
+/* request a wildcard token */
+AblyRest rest = new AblyRest("{{API_KEY}}");
+TokenParams params = new TokenParams() { ClientId = "*"};
+ClientOptions options = new ClientOptions();
+options.TokenDetails = await rest.Auth.RequestTokenAsync(params, null);
+
+AblyRealtime realtime = new AblyRealtime(options);
+var channel = realtime.Channels.Get("realtime-chat");
+
+channel.Presence.Subscribe(member => {
+  Console.WriteLine(member.clientId + " entered realtime-chat");
+});
+
+await channel.Presence.EnterClientAsync("Bob", null); /* => Bob entered realtime-chat */
+await channel.Presence.EnterClientAsync("Mary", null); /* => Mary entered realtime-chat */
+```
+
+```[objc]
+ARTRest* rest = [[ARTRest alloc] initWithKey:@"{{API_KEY}}"];
+// request a wildcard token
+ARTTokenParams *tokenParams = [[ARTTokenParams alloc] initWithClientId:@"*"];
+[rest.auth requestToken:tokenParams withOptions:nil callback:^(ARTTokenDetails *tokenDetails,
+                                                              NSError *error) {
+    ARTRealtime *realtime = [[ARTRealtime alloc] initWithToken:tokenDetails.token];
+    ARTRealtimeChannel *channel = [realtime.channels get:@"realtime-chat"];
+
+    [channel.presence subscribe:ARTPresenceEnter callback:^(ARTPresenceMessage *member) {
+        NSLog(@"%@ entered realtime-chat", member.clientId);
+    }];
+
+    [channel.presence enterClient:@"Bob" data:nil]; // prints 'Bob entered realtime-chat'
+    [channel.presence enterClient:@"Mary" data:nil]; // prints 'Mary entered realtime-chat'
+}];
+```
+
+```[swift]
+let rest = ARTRest(key: "{{API_KEY}}")
+// request a wildcard token
+rest.auth.requestToken(ARTTokenParams(clientId: "*"), withOptions: nil) { tokenDetails, error in
+    let realtime = ARTRealtime(token: tokenDetails!.token)
+    let channel = realtime.channels.get("realtime-chat")
+
+    channel.presence.subscribe(.Enter) { member in
+        print("\(member.clientId) entered realtime-chat")
+    }
+
+    channel.presence.enterClient("Bob", data: nil) // prints 'Bob entered realtime-chat'
+    channel.presence.enterClient("Mary", data: nil) // prints 'Mary entered realtime-chat'
+}
+```
+
+h1. API Reference
+
+inline-toc.
+  Presence reference:
+    - Methods:
+      - enter()#enter-none
+      - enter(data)#enter-data
+      - leave()#leave-none
+      - leave(data)#leave-data
+      - update(data)#update-data
+      - get(options)#get
+      - history(options)#get
+      - subscribe(listener)#subscribe-listener
+      - subscribe(name, listener)#subscribe-event
+      - subscribe(names, listener)#subscribe-event-array
+      - unsubscribe(name, listener)#unsubscribe-event
+      - unsubscribe(listener)#unsubscribe-listener
+      - unsubscribe()#unsubscribe-all
+      - enterClient(clientId)#enter-client-none
+      - enterClient(clientId, data)#enter-client-data
+      - leaveClient(clientId)#leave-client-none
+      - leaveClient(clientId, data)#leave-client-data
+      - updateClient(clientId, data)#update-client-data
+    - Properties:
+      - syncComplete#sync-complete
+    - Related types:
+      - PresenceMessage#presence-message
+      - Presence action
+      - CompletionListener#completion-listener
+      - PaginatedResult#paginated-result
+      - PresenceListener#presence-listener
+      - Param
+
+h2(#properties).
+  default: Presence Properties
+  objc,swift: ARTPresence Properties
+  ruby: Ably::Realtime::Presence Attributes
+  java: io.ably.lib.realtime.Presence Members
+  csharp: IO.Ably.Realtime.Presence Properties
+
+The @Presence@ object exposes the following public <span lang="default">properties</span><span lang="ruby">attributes</span><span lang="java">members</span>:
+
+h6(#sync-complete).
+  default: syncComplete
+  ruby: sync_complete?
+  csharp: SyncComplete
+
+A @boolean@ field indicating whether the presence member set is synchronised with server after a channel attach.
+When a channel is attached, the Ably service immediately synchronises the presence member set with the client. Typically this process completes in milliseconds, however when the presence member set is very large, bandwidth constraints may slow this synchronisation process down.
+
+h2. Methods
+
+h6(#enter).
+  default: enter
+  csharp: EnterAsync
+
+In order to enter and be present on a channel, the client must "be identified by having a client ID":https://support.ably.io/solution/articles/3000038608-authenticated-and-identified-clients, "have permission to be present":https://support.ably.io/solution/articles/3000048535-using-capabilities-to-manage-client-access-privileges-on-channels, and be attached to the channel. For simplicity, the library will implicitly attach to a channel when entering. Entering when already entered is treated as an "update":#update.
+
+There are two overloaded versions of this method. <span lang="csharp"></span><span lang="default">
+  With both versions, a <span lang="default">callback</span><span lang="ruby">block</span><span lang="java">completion listener</span> can optionally be passed in to be notified of success or failure to enter.
+</span>
+
+bq(definition#enter-none).
+  default:  enter(callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:     "Deferrable":/realtime/types#deferrable enter() -> yields
+  java:     void enter("CompletionListener":#completion-listener listener)
+  objc,swift: enter(data: nil, callback: ((ARTErrorInfo?) -> Void)?)
+  csharp:   Task EnterAsync()
+
+Enter a presence channel without any data.
+
+bq(definition#enter-data).
+  default: enter(Object data, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable enter(Object data) -> yields
+  java:    void enter(Object data, "CompletionListener":#completion-listener listener)
+  objc,swift: enter(data: AnyObject?, callback: ((ARTErrorInfo?) -> Void)?)
+  csharp:  Task EnterAsync(object clientData)
+
+Enter a presence channel and provide data that is associated with the current present member.
+
+h4. Parameters
+
+- <div lang="jsall">data</div> := data payload for the current present member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.<br>__Type: @Object@__
+- <div lang="java">data</div> := data payload for the current present member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="csharp">data</div> := data payload for the current present member. The supported payload types are strings, plain object convertable to json, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="ruby">data</div> := data payload for the current present member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.<br>__Type: @Object@__
+- <div lang="objc,swift">data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.<br>__Type: @Object@__
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
+- <div lang="java">listener</div> := Listener to be notified on completion<br>__Type: "@CompletionListener@":#completion-listener__
+- <div lang="ruby">&block</div> := yields upon successfully entering the channel
+- <div lang="objc,swift">callback</div> := called upon successfully entering the channel, or with an error
+
+blang[jsall,swift,objc].
+  h4. Callback result
+
+  On successfully entering the channel, @err@ is null. On failure to enter, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[java].
+  h4. Listener result
+
+  On successfully entering the channel, the @onSuccess@ method of the "CompletionListener":#completion-listener is called. On failure to enter, the @onError@ method is called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[csharp].
+  h4. Task result
+
+  On successfully entering the channel, the method will complete. On failure to enter, an @AblyException@ will be thrown with an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On successfully entering the channel, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are executed. On failure to enter, the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable are called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+h6(#leave).
+  default: leave
+  csharp: Leave
+
+In order to leave the presence set of a channel, the client must have already "entered and been present":#enter.
+
+There are two overloaded versions of this method. <span lang="csharp"></span><span lang="default">
+  With both versions, a <span lang="default">callback</span><span lang="ruby">block</span><span lang="java">completion listener</span> can optionally be passed in to be notified of success or failure to leave.
+</span>
+
+bq(definition#leave-none).
+  default:  leave(callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:     "Deferrable":/realtime/types#deferrable leave() -> yields
+  java:     void leave("CompletionListener":#completion-listener listener)
+  swift,objc: leave(data: nil, callback: ((ARTErrorInfo?) -> Void)?)
+  csharp:   Task LeaveAsync()
+
+Leave a presence channel without emitting any data.
+
+bq(definition#leave-data).
+  default: leave(Object data, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable leave(Object data) -> yields
+  java:    void leave(Object data, "CompletionListener":#completion-listener listener)
+  swift,objc: leave(data: AnyObject?, callback: ((ARTErrorInfo?) -> Void)?)
+  csharp:  Task LeaveAsync(object clientData)
+
+Leave a presence channel and emit data that is associated with the current leaving member.
+
+h4. Parameters
+
+- <div lang="jsall">data</div> := data payload for the current present member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.<br>__Type: @Object@__
+- <div lang="java">data</div> := data payload for the current present member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="csharp">data</div> := data payload for the current present member. The supported payload types are strings, plain objects convertable to json, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="ruby">data</div> := data payload for the current present member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.<br>__Type: @Object@__
+- <div lang="objc,swift">data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.<br>__Type: @Object@__
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
+- <div lang="java">listener</div> := Listener to be notified on completion<br>__Type: "@CompletionListener@":#completion-listener__
+- <div lang="ruby">&block</div> := yields upon successfully leaving the channel
+- <div lang="objc,swift">callback</div> := called upon leaving the channel, or with an error
+
+blang[jsall,swift,objc].
+  h4. Callback result
+
+  On successfully leaving the channel, @err@ is null. On failure to leave, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[java].
+  h4. Listener result
+
+  On successfully leaving the channel, the @onSuccess@ method of the "CompletionListener":#completion-listener is called. On failure to leave, the @onError@ method is called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[csharp].
+  h4. Task result
+
+  On successfully leaving the channel, the method will complete. On failure to leave, an @AblyException@ will be thrown with an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On successfully leaving the channel, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are executed. On failure to leave, the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable are called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+h6(#update).
+  default: update
+  csharp: Update
+
+Clients can update their member data on the channel which will trigger a broadcast of this update to all presence subscribers. The "pre-requisites for <span lang="default">@update@</span><span lang="csharp">@Update@</span>":#update are the same as for "<span lang="default">@enter@</span><span lang="csharp">@Enter@</span>":#enter. If an attempt to <span lang="default">@update@</span><span lang="csharp">@Update@</span> is made before the client has entered the channel, the update is treated as an <span lang="default">@enter@</span><span lang="csharp">@Enter@</span>.
+
+<span lang="csharp"></span><span lang="default">
+  A <span lang="default">callback</span><span lang="ruby">block</span><span lang="java">completion listener</span> can optionally be passed in to be notified of success or failure to update the member data.
+</span>
+
+bq(definition#update-data).
+  default: update(Object data, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable update(Object data) -> yields
+  java:    void update(Object data, "CompletionListener":#completion-listener listener)
+  swift,objc: update(data: AnyObject?, callback: ((ARTErrorInfo?) -> Void)?)
+  csharp:  Task UpdateAsync(object clientData)
+
+Update the current member's data and broadcast an update event to all subscribers. @data@ may be @null@.
+
+h4. Parameters
+
+- <div lang="jsall">data</div> := data payload for the current present member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.<br>__Type: @Object@__
+- <div lang="java">data</div> := data payload for the current present member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="csharp">data</div> := data payload for the current present member. The supported payload types are strings, plain objects convertable to json, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="ruby">data</div> := data payload for the current present member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.<br>__Type: @Object@__
+- <div lang="objc,swift">data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.<br>__Type: @Object@__
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
+- <div lang="java">listener</div> := Listener to be notified on completion<br>__Type: "@CompletionListener@":#completion-listener__
+- <div lang="ruby">&block</div> := yields upon successfully updating the member data
+- <div lang="objc,swift">callback</div> := called upon updating the channel, or with an error
+
+blang[jsall,objc,swift].
+  h4. Callback result
+
+  On successfully updating the data, @err@ is null. On failure to update, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[java].
+  h4. Listener result
+
+  On successfully updating the data, the @onSuccess@ method of the "CompletionListener":#completion-listener is called. On failure to update, the @onError@ method is called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[csharp].
+  h4. Task result
+
+  On successfully entering the channel, the method will complete. On failure to enter, an @AblyException@ will be thrown with an "@ErrorInfo@":#error-info object describing the failure reason. The methods needs to be awaited otherwise the exception won't be thrown.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On successfully updating the data, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are executed. On failure to update, the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable are called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+h6(#get).
+  default: get
+  csharp: Get
+
+Get the current presence member set for this channel. Typically, this method returns the member set immediately as the member set is retained in memory by the client. However, by default this method will wait until the presence member set is synchronised, so if the synchronisation is not yet complete following a channel being attached, this method will wait until the presence member set is synchronised.
+
+When a channel is attached, the Ably service immediately synchronises the presence member set with the client. Typically this process completes in milliseconds, however when the presence member set is very large, bandwidth constraints may slow this synchronisation process down.
+
+bq(definition).
+  default: get(Object options, callback("ErrorInfo":/realtime/types#error-info err, "PresenceMessage[]":#presence-message members))
+  ruby:    "Deferrable":/realtime/types#deferrable get(Hash options) -> yields "PresenceMessage[]":#presence-message
+  java:    "PresenceMessage[]":#presence-message get("Param":#param[] options)
+  swift,objc: get(query: ARTRealtimePresenceQuery, callback: (["ARTPresenceMessage":#presence-message], ARTErrorInfo?) -> Void)
+  csharp:  Task<IEnumerable<PresenceMessage>> GetAsync(bool waitForSync = true, string clientId = "", string connectionId = "")
+
+Gets an array of members present on the channel as "PresenceMessage":#presence-message objects.
+
+blang[jsall,ruby,java,swift,objc].
+  h4. Parameters
+
+  - <span lang="default">options</span><span lang="objc,swift">query</span><span lang="java">"Param":#param[] options</span><span lang="ruby">options</span> := <span lang="default">an optional object containing query parameters</span><span lang="ruby">an optional set of symbol key and value pairs containing the query parameters</span><span lang="csharp">an optional set of parameters</span> as specified below.
+
+  - <div lang="jsall">callback</div> := is a function of the form: @function(err, "PresenceMessage[]":#presence-message members)@
+  - <div lang="ruby">&block</div> := yields a "@PresenceMessage[]@":#presence-message array
+  - <div lang="objc,swift">callback</div> := called with a "@[ARTPresenceMessage]@":#presence-message, or with an error
+
+h4. <span lang="default">@options@ parameters</span><span lang="objc,swift">@ARTRealtimePresenceQuery@ properties</span><span lang="csharp">Arguments</span>
+
+- <span lang="default">clientId</span><span lang="ruby">:client_id</span> := when provided, will filter array of members returned that match the provided <span lang="default">"@clientId@":/realtime/usage#client-id</span><span lang="ruby">"@client_id@":/realtime/usage#client-id</span><span lang="csharp">"@ClientId@":/realtime/usage#client-id</span> string
+- <span lang="default">connectionId</span><span lang="ruby">:connection_id</span> := when provided, will filter array of members returned that match the provided <span lang="default">@connectionId@</span><span lang="csharp">@ConnectionId@</span><span lang="ruby">@connection_id@</span>":/realtime/connection/#id string
+- <span lang="default">waitForSync</span><span lang="ruby">:wait_for_sync</span> := _true_ A boolean value that by default waits for the initial presence synchronisation following channel attachment to complete before returning the members present. When false, the current list of members is returned without waiting for a complete synchronisation
+
+blang[jsall,swift,objc].
+  h4. Callback result
+
+  On success, @members@ contains an array of "@PresenceMessage@":#presence-message objects corresponding to the current set of present members on the channel.
+
+  On failure to retrieve the current presence member set, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[java].
+  h4. Returns
+
+  On success, the returned array of "@PresenceMessage@":#presence-message objects corresponds to the current set of present members on the channel.
+
+  Failure to retrieve the current presence member set will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[csharp].
+  h4. Returns
+
+  On success, the returned enumerable of "#PresenceMessage@":#presence-message objects correspond to the current set of present members on the channel.
+
+  Failure to retrieve the current presence member set will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield an array of "@PresenceMessage@":#presence-message objects to the current set of present members on the channel.
+
+  Failure to retrieve the current presence member set will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#history).
+  default: history
+  csharp: History
+
+bq(definition).
+  default: history(Object options, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message> resultPage))
+  ruby:    "Deferrable":/realtime/types#deferrable history(Hash options) -> yields "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message>
+  java:    "PaginatedResult":#paginated-result<"PresenceMessage":#presence-message> history("Param":#param[] options)
+  objc,swift: history(query: ARTRealtimeHistoryQuery?, callback: ("ARTPaginatedResult":#paginated-result<"ARTPresenceMessage":#presence-message>?, ARTErrorInfo?) -> Void) throws
+  csharp:  Task<PaginatedResult<PresenceMessage>> HistoryAsync("DataRequestQuery":#data-request-query query, bool untilAttached = false)
+
+
+Gets a "paginated":#paginated-result set of historical presence message events for this channel. If the "channel is configured to persist messages to disk":https://support.ably.io/support/solutions/articles/3000030059-how-long-are-messages-stored-for, then the presence message event history will "typically be available for 24 - 72 hours":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If not, presence message events are only retained in memory by the Ably service for two minutes.
+
+h4. Parameters
+
+- <span lang="default">options</span><span lang="objc,swift">query</span><span lang="java">"Param":#param[] options</span><span lang="csharp">"DataRequestQuery":#data-request-query query</span> := <span lang="default">an optional object containing query parameters</span><span lang="ruby">an optional set of key value pairs containing query parameters</span>, as specified in the "presence history API documentation":/realtime/history#presence-history.
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, resultPage)@
+- <div lang="ruby">&block</div> := yields a @PaginatedResult<Message>@ array
+- <div lang="swift,objc">callback</div> := called with a "ARTPaginatedResult":#paginated-result<"ARTPresenceMessage":#presence-message> object or an error
+
+Further details of the supported @options@ params, see "presence history API documentation":/realtime/history#presence-history.
+
+blang[jsall,swift,objc].
+  h4. Callback result
+
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  On failure to retrieve message history, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[java].
+  h4. Returns
+
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next@":#paginated-result and "@first@":#paginated-result methods.
+
+  Failure to retrieve the message history will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[csharp].
+  h4. Returns
+
+  Returns a task that needs to be awaited.
+
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@NextAsync@":#paginated-result and "@FirstAsync@":#paginated-result methods.
+
+  Failure to retrieve the message history will raise an "@AblyException@":/realtime/types/#ably-exception. Only if the task is awaited.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield a "PaginatedResult":#paginated-result that encapsulates an array of "@PresenceMessage@":#presence-message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  Failure to retrieve the message history will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#subscribe).
+  default: subscribe
+  csharp: Subscribe
+
+There are overloaded versions of this method:
+
+bq(definition#subscribe-listener).
+  default:  subscribe(listener("PresenceMessage":#presence-message))
+  java:     void subscribe("PresenceListener":#presence-listener listener)
+  ruby:     subscribe → yields "PresenceMessage":#presence-message
+  objc,swift: subscribe(callback: ("ARTPresenceMessage":#presence-message) -> Void) -> ARTEventListener
+  csharp:   void Subscribe(Action<PresenceMessage> handler)
+
+Subscribe to presence message events on this channel. The caller supplies <span lang="default">a listener function</span><span lang="java">an implementation of the "PresenceListener":#presence-listener interface</span><span lang="ruby">a block</span><span lang="csharp">a handler</span>, which is called each time one or more presence events occurs such as a member entering or leaving a channel.
+
+bq(definition#subscribe-event).
+  default: subscribe(String "action":#presence-action, listener("PresenceMessage":#presence-message))
+  java:    void subscribe("PresenceMessage.Action":#presence-action action, "PresenceListener":#presence-listener listener)
+  ruby:    subscribe("PresenceMessage::ACTION":#presence-action action) → yields "PresenceMessage":#presence-message
+  objc,swift: subscribe(action: ARTPresenceAction, callback: ("ARTPresenceMessage":#presence-message) -> Void) -> ARTEventListener
+  csharp:  void Subscribe("PresenceAction":#presence-action action, Action<PresenceMessage> handler)
+
+Subscribe to presence message events with a given "@action@":#presence-action on this channel. The caller supplies <span lang="default">a listener function</span><span lang="java">an implementation of the "PresenceListener":#presence-listener interface</span><span lang="ruby">a block</span><span lang="csharp">a handler</span>, which is called each time one or more presence events occurs such as a member entering or leaving a channel.
+
+<div lang="objc,swift,csharp"></div>
+<div lang="default">
+bq(definition#subscribe-event-array).
+  default: subscribe(String[] "actions":#presence-action, listener("PresenceMessage":#presence-message))
+  java:    void subscribe("PresenceMessage.Action[]":#presence-action actions, "PresenceListener":#presence-listener listener)
+  ruby:    subscribe("PresenceMessage::ACTION":#presence-action *actions) → yields "PresenceMessage":#presence-message
+
+Subscribe a single listener to messages on this channel for multiple @name@ values.
+</div>
+
+h4. Parameters
+
+- action := The presence "@action@ event":#presence-action to subscribe to<br>__Type: <span lang="jsall">@String@</span><span lang="java">"@PresenceMessage.Action@":#presence-action</span><span lang="csharp">"@PresenceAction@":#presence-action</span><span lang="ruby">"@PresenceMessage::ACTION@":#presence-action action</span><span lang="objc,swift">@ARTPresenceAction@</span>__
+
+<div lang="objc,swift,csharp"></div>
+<div lang="default">
+- actions := An <span lang="ruby">argument</span> array of "@action@ events":#presence-action to subscribe to<br>__Type: <span lang="default">@String[]@</span><span lang="ruby">@*argument</span>__
+</div>
+
+- <div lang="jsall">listener</div> := is a function of the form @function(message)@ to be called for each amtching presence message event
+- <div lang="java">listener</div> := Message listener to be notified for matching presence message event<br>__Type: "@PresenceListener":#presence-listener__
+- <div lang="ruby">&block</div> := yields matching presence message event when received on the channel
+- <div lang="swift,objc">callback</div> := called with each matching "@presence message@":#presence-message when received on the channel
+- <div lang="csharp">handler</div> := called with each matching "@presence message@":#presence-message when received on the channel
+
+h6(#unsubscribe).
+  default: unsubscribe
+  csharp: Unsubscribe
+
+There are three overloaded versions of this method:
+
+bq(definition#unsubscribe-event).
+  default: unsubscribe(String action, listenerCallback)
+  java:    void unsubscribe("PresenceMessage.Action":#presence-action action, "PresenceListener":#presence-listener listener)
+  ruby:    unsubscribe("PresenceMessage::ACTION":#presence-action action, &listener_proc)
+  objc,swift: unsubscribe(action: ARTPresenceAction, listener: ARTEventListener)
+  csharp:  bool Unsubscribe("PresenceAction":#presence-action presenceAction, Action<PresenceMessage> handler)
+
+Unsubscribe to presence message events on this channel for the given "@action@":#presence-action. This removes an earlier event-specific subscription.
+
+bq(definition#unsubscribe-listener).
+  default: unsubscribe(listenerCallback)
+  java:    void unsubscribe("PresenceListener":#presence-listener listener)
+  ruby:    unsubscribe(&listener_proc)
+  objc,swift: unsubscribe(listener: ARTEventListener)
+  csharp:  bool Unsubscribe(Action<PresenceMessage> handler)
+
+Unsubscribe to presence message events on this channel. This removes an earlier subscription.
+
+bq(definition#unsubscribe-all).
+  default: unsubscribe()
+  java:    void unsubscribe()
+  objc,swift: unsubscribe()
+  csharp:  bool Unsubscribe()
+
+Unsubscribes all listeners to presence message events on this channel. This removes all earlier subscriptions.
+
+h4. Parameters
+
+- action := The presence "@action@ event":#presence-action to subscribe to<br>__Type: <span lang="jsall">@String@</span><span lang="java">"@PresenceMessage.Action@":#presence-action</span><span lang="ruby">"@PresenceMessage::ACTION@":#presence-action action</span><span lang="objc,swift">@ARTPresenceAction@</span>__
+
+- <div lang="jsall">listenerCallback</div> := is the callback listener function that was previously subscribed
+- <div lang="java">listener</div> := previously registered listener<br>__Type: "@PresenceListener":#presence-listener__
+- <div lang="csharp">handler</div> := previously registered handler
+- <div lang="ruby">&listener_block</div> := previously registered listener block
+- <div lang="swift,objc">listener</div> := previous return value from a @subscribe@ call
+
+h6(#enter-client).
+  default: enterClient
+  ruby: enter_client
+  csharp: EnterClientAsync
+
+Enter this presence channel for the given <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span><span lang="csharp">@ClientId@</span>. This method is provided to support typically server instances that act on behalf of multiple client IDs. See "Managing multiple client IDs":#presence-multiple-client-id for more info. In order to be able to publish presence changes for arbitrary client IDs, the client library must have been instanced either with an "API key":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key, or with a "token bound to a wildcard client ID":https://support.ably.io/solution/articles/3000048586-can-a-client-emulate-any-client-id-i-e-use-a-wildcard-client-id.
+
+There are two overloaded versions of this method.
+<span lang="csharp"></span><span lang="default">
+  With both versions, a <span lang="default">callback</span><span lang="ruby">block</span><span lang="java">completion listener</span> can optionally be passed in to be notified of success or failure to enter.
+</span>
+
+bq(definition#enter-client-none).
+  default:  enterClient(String clientId, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:     "Deferrable":/realtime/types#deferrable enter_client(String client_id) -> yields
+  java:     void enterClient(String clientId, "CompletionListener":#completion-listener listener)
+  objc,swift: enterClient(clientId: String, data: nil, callback: ((ARTErrorInfo?) -> Void)?)
+  csharp:   Task EnterClientAsync(string clientId, object clientData)
+
+Enter a presence channel on behalf of the provided <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span><span lang="csharp">@ClientId@</span> without any data.
+
+bq(definition#enter-client-data).
+  default: enterClient(String clientId, Object data, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable enter_client(String client_id, Object data) -> yields
+  java:    void enterClient(String clientId, Object data, "CompletionListener":#completion-listener listener)
+  objc,swift: enterClient(clientId: String, data: AnyObject?, callback: ((ARTErrorInfo?) -> Void)?)
+  csharp:  Task EnterClientAsync(string clientId, object clientData)
+
+Enter a presence channel and provide data that is associated with the current present member.
+
+h4. Parameters
+
+- <div lang="jsall">data</div> := data payload for the member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.<br>__Type: @Object@__
+- <div lang="java">data</div> := data payload for the member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="csharp">data</div> := data payload for the member. The supported payload types are strings, plain object convertable to json, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="ruby">data</div> := data payload for the member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.<br>__Type: @Object@__
+- <div lang="objc,swift">data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.<br>__Type: @Object@__
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
+- <div lang="java">listener</div> := Listener to be notified on completion<br>__Type: "@CompletionListener@":#completion-listener__
+- <div lang="ruby">&block</div> := yields upon successfully entering the channel
+- <div lang="objc,swift">callback</div> := called upon successfully entering the channel, or with an error
+
+blang[jsall,swift,objc].
+  h4. Callback result
+
+  On successfully entering the channel, @err@ is null. On failure to enter, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[java].
+  h4. Listener result
+
+  On successfully entering the channel, the @onSuccess@ method of the "CompletionListener":#completion-listener is called. On failure to enter, the @onError@ method is called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[csharp].
+  h4. Returns
+
+  The method returns a @Task@ that will need to be awaited. On success the method will complete and will not throw an exception. On failure to enter the method will throw an @AblyException@ with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On successfully entering the channel, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are executed. On failure to enter, the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable are called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+h6(#leave-client).
+  default: leaveClient
+  ruby: leave_client
+  csharp: LeaveClientAsync
+
+Leave this presence channel for the given <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span><span lang="csharp">@ClientId@</span>. This method is provided to support typically server instances that act on behalf of multiple client IDs. See "Managing multiple client IDs":#presence-multiple-client-id for more info. In order to leave the presence set of a channel, the client must have already "entered and been present":#enter-client.
+
+There are two overloaded versions of this method.
+<span lang="csharp"></span><span lang="default">
+  With both versions, a <span lang="default">callback</span><span lang="ruby">block</span><span lang="java">completion listener</span><span lang="csharp">handler</span> can optionally be passed in to be notified of success or failure to leave.
+</span>
+
+bq(definition#leave-client-none).
+  default:  leaveClient(String clientId, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:     "Deferrable":/realtime/types#deferrable leave_client(String client_id) -> yields
+  java:     void leaveClient(String clientId, "CompletionListener":#completion-listener listener)
+  swift,objc: leaveClient(clientId: String, data: nil, callback: ((ARTErrorInfo?) -> Void)?)
+  csharp:   Task LeaveClientAsync(string clientId, object data)
+
+Leave a presence channel on behalf of the provided <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span><span lang="csharp">@ClientId@</span> without emitting any data.
+
+bq(definition#leave-client-data).
+  default: leaveClient(String clientId, Object data, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable leave_client(String client_id, Object data) -> yields
+  java:    void leaveClient(String clientId, Object data, "CompletionListener":#completion-listener listener)
+  swift,objc: leave(clientId: String, data: AnyObject?, callback: ((ARTErrorInfo?) -> Void)?)
+  csharp:  Task LeaveClientAsync(string clientId, object data)
+
+Leave a presence channel on behalf of the provided <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span><span lang="csharp">@ClientId@</span> and emit data that is associated with the current leaving member.
+
+h4. Parameters
+
+- <div lang="jsall">data</div> := data payload for the member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.<br>__Type: @Object@__
+- <div lang="java">data</div> := data payload for the member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="csharp">data</div> := data payload for the member. The supported payload types are strings, plain object convertable to json, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="ruby">data</div> := data payload for the member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.<br>__Type: @Object@__
+- <div lang="objc,swift">data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.<br>__Type: @Object@__
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
+- <div lang="java">listener</div> := Listener to be notified on completion<br>__Type: "@CompletionListener@":#completion-listener__
+- <div lang="ruby">&block</div> := yields upon successfully entering the channel
+- <div lang="objc,swift">callback</div> := called upon successfully entering the channel, or with an error
+
+blang[jsall,swift,objc].
+  h4. Callback result
+
+  On successfully leaving the channel, @err@ is null. On failure to leave, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[java].
+  h4. Listener result
+
+  On successfully leaving the channel, the @onSuccess@ method of the "CompletionListener":#completion-listener is called. On failure to leave, the @onError@ method is called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[csharp].
+  h4. Returns
+
+  The method returns a @Task@ that will need to be awaited. On success the method will complete and will not throw an exception. On failure to leave the method will throw an @AblyException@ with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On successfully leaving the channel, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are executed. On failure to leave, the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable are called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+h6(#update-client).
+  default: updateClient
+  ruby: update_client
+  csharp: UpdateClientAsync
+
+Clients can update the member data on behalf of the given <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span><span lang="csharp">@ClientId@</span> which will trigger a broadcast of this update to all presence subscribers. This method is provided to support typically server instances that act on behalf of multiple client IDs. See "Managing multiple client IDs":#presence-multiple-client-id for more info. If an attempt to update is made before the member has entered the channel, the update is treated as an enter.
+
+<span lang="csharp"></span><span lang="default">
+  A <span lang="default">callback</span><span lang="ruby">block</span><span lang="java">completion listener</span> can optionally be passed in to be notified of success or failure to update the member data.
+</span>
+
+bq(definition#update-client-data).
+  default: updateClient(String clientId, Object data, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable update_client(String client_id, Object data) -> yields
+  java:    void updateClient(String clientId, Object data, "CompletionListener":#completion-listener listener)
+  swift,objc: update(clientId: String, data: AnyObject?, callback: ((ARTErrorInfo?) -> Void)?)
+  csharp:  Task UpdateClientAsync(string clientId, object data)
+
+Update the member data on behalf of the provided <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span><span lang="csharp">@ClientId@</span> and broadcast an update event to all subscribers. @data@ may be @null@.
+
+h4. Parameters
+
+- <div lang="jsall">data</div> := data payload for the member. The supported payload types are Strings, JSON objects and arrays, buffers containing arbitrary binary data, and null.<br>__Type: @Object@__
+- <div lang="java">data</div> := data payload for the member. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="csharp">data</div> := data payload for the member. The supported payload types are strings, plain object convertable to json, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="ruby">data</div> := data payload for the member. The supported payload types are Strings, Hash or Array objects that can be serialised to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null.<br>__Type: @Object@__
+- <div lang="objc,swift">data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialised to JSON, binary data as @NSData@, and @nil@.<br>__Type: @Object@__
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
+- <div lang="java">listener</div> := Listener to be notified on completion<br>__Type: "@CompletionListener@":#completion-listener__
+- <div lang="ruby">&block</div> := yields upon successfully entering the channel
+- <div lang="objc,swift">callback</div> := called upon successfully entering the channel, or with an error
+
+blang[jsall,objc,swift].
+  h4. Callback result
+
+  On successfully updating the data, @err@ is null. On failure to update, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[java].
+  h4. Listener result
+
+  On successfully updating the data, the @onSuccess@ method of the "CompletionListener":#completion-listener is called. On failure to update, the @onError@ method is called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[csharp].
+  h4. Returns
+
+  The method returns a Task that will need to be awaited. On success the method will complete and will not throw an exception. On failure to update the method will throw an @AblyException@ with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On successfully updating the data, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are executed. On failure to update, the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable are called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+h2(#related-types). Related types
+
+h3(#presence-message).
+  default: PresenceMessage
+  swift,objc: ARTPresenceMessage
+  ruby:    Ably::Models::PresenceMessage
+  java:    io.ably.lib.types.PresenceMessage
+  csharp:  IO.Ably.PresenceMessage
+
+<%= partial 'types/_presence_message' %>
+
+h3(#presence-action).
+  default: Presence action
+  swift,objc: ARTPresenceAction
+  java:    io.ably.lib.types.PresenceMessage.Action
+  ruby:    Ably::Models::PresenceMessage::ACTION
+  csharp:  IO.Ably.PresenceAction
+
+<%= partial 'types/_presence_action' %>
+
+h3(#data-request-query).
+  csharp: DataRequestQuery
+
+blang[csharp].
+  <%= partial 'types/_data_request_query', indent: 2, skip_first_indent: true %>
+
+h3(#completion-listener).
+  java:   io.ably.lib.realtime.CompletionListener
+
+blang[java].
+  <%= partial 'types/_completion_listener', indent: 2, skip_first_indent: true %>
+
+h3(#paginated-result).
+  default: PaginatedResult
+  swift,objc: ARTPaginatedResult
+  ruby:    Ably::Models::PaginatedResult
+  java:    io.ably.lib.types.PaginatedResult
+  csharp:  IO.Ably.PaginatedResult
+
+<%= partial 'types/_paginated_result' %>
+
+h3(#param).
+  java:    io.ably.lib.types.Param
+
+blang[java].
+  <%= partial 'types/_param', indent: 2, skip_first_indent: true %>
+
+h3(#presence-listener).
+  java:   io.ably.lib.realtime.PresenceListener
+
+blang[java].
+  <%= partial 'types/_presence_listener', indent: 2, skip_first_indent: true %>
