@@ -1,0 +1,40 @@
+Once a channel becomes attached, it will remain attached until any of the following occurs:
+
+* An explicit request to detach the channel is made;
+* The channel moves into the @failed@ state following an unrecoverable error sent from Ably. If for example permissions were revoked for that client on that channel, the channel would move to the @failed@ state;
+* The connection enters the @suspended@, @failed@ or @closed@ state;
+* The connection is not resumed fully as part of the "connection state recovery process":#connection-state-recovery
+
+Ably provides automatic message continuity for channels, even when connections are disconnected and later resumed. See "connection state recovery":/realtime/connection#connection-state-recovery for more details on how connections and channel state recovery allows you, as a developer, to publish and receive messages without having to worry about changing network conditions. However, there are times when connection recovery is not possible such as being disconnected from Ably for more than two minutes.  When this occurs, the channels that are attached can no longer provide guaranteed message continuity. We wanted developers to be aware of this discontinuity, and as such, our client libraries will automatically detach all attached channels that have lost continuity. It is then up to the developer to decide what action to take such as using the "history API":/realtime/history to retrieve old messages, or simply to reattach the channel and continue if messsage loss is not important.
+
+For customers who want to ensure that all channels are attached when a connection is available, regardless of whether messages may have been missed, we recommend the following approach:
+
+* Add a listener on the connection object for all @connected@ events
+* Reattach all channels you have created. If a channel is already attached, and you call the "<span lang="default">@channel#attach@</span><span lang="csharp">@channel#Attach@</span>":/realtime/channels-messages/#attach method, the channel will simply remain attached. It is therefore safe to simply attach all channels every time the connection becomes @connected@
+
+The following Javascript example demonstrates a trivial way to ensure all channels are attached when the client becomes connected or the channel becomes detached:
+
+```[javascript]
+function reattach(channel) {
+  channel.attach();
+  /* Example when using presence on the channel */
+  channel.presence.enter();
+}
+
+/* Connection state changes can trigger channels to become detached
+   Automatically re-attach channels, nothing will happen if alreay attached */
+client.connection.on('connected', function() {
+  for (let channelName in client.channels.all) {
+    let channel = client.channels.get(channelName);
+    reattach(channel);
+  }
+});
+
+/* If a channel becomes detached due to channel failure (some edge cases exist)
+   You should explicitly re-attach the channel if you are connected */
+channel.on('detached', function() {
+  if (client.connection.state === 'connected') {
+    reattach(channel);
+  }
+});
+```
