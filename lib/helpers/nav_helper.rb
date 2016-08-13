@@ -1,6 +1,6 @@
 module NavHelper
   def nav_items(section, options = {})
-    items = @items.select { |d| d[:section] == section }
+    items = @items.select { |d| d[:section] == section && !relative_url_versioned?(d.path) }
     items += [options[:append]].flatten.map { |item| { index: 1_000, html: item }} if options.has_key?(:append)
     if items.empty?
       ""
