@@ -11,4 +11,4 @@ module LanguageHelper
   end
 end
 
-include LanguageHelper
+include LanguageHelper if defined?(Nanoc)
