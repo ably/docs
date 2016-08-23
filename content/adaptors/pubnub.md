@@ -23,7 +23,8 @@ Please note:
 
 * For simplicity, the above example uses the Pubnub Javascript library. All other Pubnub client libraries can be instanced in a similar fashion. See the [complete list of Pubnub SDKs and their documentation](https://www.pubnub.com/docs).
 * You can add any other Pubnub options you would normally use in the initializer.
-* Note that the `ssl` option is not mandatory, but strongly recommended. The Pubnub client includes the raw api key in the path that it connects to, so we strongly advise you to use this option to prevent it being sent in plain text.
+* The `ssl` option is not mandatory, but strongly recommended. The Pubnub client includes the raw api key in the path that it connects to, so we strongly advise you to use this option to prevent it being sent in plain text.
+* We do not yet support Pubnub v4 client libraries.
 
 ## Supported features
 
@@ -34,7 +35,7 @@ Please note:
 - getstate
 - setstate
 - herenow
-- global herenow
+- global herenow (*Note: global herenow uses channel enumeration, which is in early alpha, and is not ready for production use. You may experience timeouts when using this feature; this is a known issue*)
 
 ## Unsupported features
 
@@ -67,6 +68,7 @@ Please note:
 - Pubnub's `UUID` is mapped to Ably's [`clientId`](https://www.ably.io/documentation/realtime/authentication#identified-clients).
 - Pubnub considers the same `UUID` to be the same member; Ably considers the same `clientid` on different connections to be different members of the presence set. As such, if you have multiple connections with the same `clientId`, the presence set will contain that `clientId` multiple times. Ably does this so that if you have multiple devices connected with the same `clientId` you can check which devices are present. If getting the state for a `clientId`, if there are multiple members in the set with the same `clientId`, the adaptor will just pick one and return its state.
 - Pubnub's member state is mapped to Ably's presence data. With presence data, member aren't permitted to change other members' presence data. So each client can only set its own state, not other people's.
+- The global herenow feature should not be considered ready for production use, as it uses channel enumeration, which is in early alpha. You may experience timeouts when using global herenow; this is a known issue.
 
 ### REST requests
 
