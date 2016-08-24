@@ -140,6 +140,30 @@ $(function() {
     $('#documentation').addClass('with-langauage-selector');
   }
 
+  function currentLang() {
+    return langList.find('>li.selected').data('lang');
+  }
+
+  function ensureVersionSupportedForCurrentLang() {
+    if (window.LangVersions) {
+      var currentLangConfig = window.LangVersions[currentLang()]
+      if (currentLangConfig) {
+        if (currentLangConfig.versions.indexOf(window.PageVersion) < 0) {
+          document.location.href = currentLangConfig.most_recent_path;
+        }
+      } else {
+        console.warn("window.LangVersions config for current lang '" + currentLang() + "' does not exist");
+      }
+
+    } else {
+      console.warn("window.LangVersions is not available");
+    }
+  }
+
+  /* Hook up the callback to ensure the current language exists for this version.
+     If not, navigate to latest for this language */
+  $(document).on('language-change', ensureVersionSupportedForCurrentLang);
+
   // event callback for the global language navigation selection
   function selectGlobalLanguage(cookieStrategy) {
     var lang = $(this).data('lang'),
