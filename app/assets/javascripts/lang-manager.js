@@ -144,19 +144,24 @@ $(function() {
     return langList.find('>li.selected').data('lang');
   }
 
+  function supportsMultipleLanguages() {
+    return langList.find('>li').length > 1;
+  }
+
   function ensureVersionSupportedForCurrentLang() {
-    if (window.LangVersions) {
-      var currentLangConfig = window.LangVersions[currentLang()]
-      if (currentLangConfig) {
-        if (currentLangConfig.versions.indexOf(window.PageVersion) < 0) {
-          document.location.href = currentLangConfig.most_recent_path;
+    if (supportsMultipleLanguages()) {
+      if (window.LangVersions) {
+        var currentLangConfig = window.LangVersions[currentLang()]
+        if (currentLangConfig) {
+          if (currentLangConfig.versions.indexOf(window.PageVersion) < 0) {
+            document.location.href = currentLangConfig.most_recent_path;
+          }
+        } else {
+          console.warn("window.LangVersions config for current lang '" + currentLang() + "' does not exist");
         }
       } else {
-        console.warn("window.LangVersions config for current lang '" + currentLang() + "' does not exist");
+        console.error("window.LangVersions is not available");
       }
-
-    } else {
-      console.warn("window.LangVersions is not available");
     }
   }
 
