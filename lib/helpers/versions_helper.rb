@@ -1,5 +1,5 @@
 module VersionsHelper
-  CURRENT_VERSION = '0.9'
+  CURRENT_VERSION = '0.9' unless defined?(CURRENT_VERSION)
 
   VERSIONED_FOLDERS = %w(
     client-lib-development-guide
@@ -9,7 +9,7 @@ module VersionsHelper
     rest-api
     shared
     types
-  )
+  ) unless defined?(VERSIONED_FOLDERS)
 
   def relative_url_versioned?(url)
     !!version_from_relative_url(url)
@@ -64,12 +64,19 @@ module VersionsHelper
     lang_versions = Ably::DOCUMENTATION_LANGUAGES.reject do |lang_id, lang|
       lang[:ignore_from_language_selector]
     end.map do |lang_id, lang|
-      [lang_id, supported_versions_for_language(@item, lang_id)]
+      [lang_id, supported_versions_for_language(@item.path, lang_id)]
     end.each_with_object({}) do |(lang_id, languages), hash|
-      hash[lang_id] = languages
+      hash[lang_id] = {
+        versions: languages,
+        most_recent_path: path_for_version(languages.first, @item.path)
+      }
     end
-    js = "window.LangVersions=#{JSON.dump(lang_versions)};window.CurrentVersion='#{CURRENT_VERSION}';"
-    %{<script type="text/javascript">#{js}</script>}
+    js = [
+      "window.LangVersions=#{JSON.dump(lang_versions)}",
+      "window.CurrentVersion='#{CURRENT_VERSION}'",
+      "window.PageVersion='#{version_from_relative_url(@item.path, current_default: true)}'"
+    ]
+    %{<script type="text/javascript">#{js.join(';')}</script>}
   end
 
   private
@@ -113,10 +120,15 @@ module VersionsHelper
   # 1. Determine if language constraints specified in `languages:` YAML in format language[,maxVer[,minVer]]
   # 2. Determine which version files exist for this content
   # 3. Return an ordered list of versions within the max & min
-  def supported_versions_for_language(item, language)
-    configuration_for_language = if item[:languages]
-      item[:languages].find do |item_language|
-        item_language.start_with?(language)
+  def supported_versions_for_language(path, language)
+    latest_item = @items.find do |it|
+      it.path == latest_version_of(path)
+    end
+    raise "Could not get latest version of '#{path}'" unless latest_item
+
+    configuration_for_language = if latest_item[:languages]
+      latest_item[:languages].find do |item_language|
+        item_language.split(',')[0] == language
       end
     end || language # if no explicit language specified, then no version constraints exist
 
@@ -125,15 +137,16 @@ module VersionsHelper
 
     min_supported_version = configuration_for_language.split(',')[2]
 
-    list_versions_for(item.path).each do |version|
+    list_versions_for(item.path).reject do |version|
       if min_supported_version
         # Use <=> to indicate whether this version is greater than or
         # equal to min_supported_version i.e. 1 or 0
         compare = major_minor(version) <=> major_minor(min_supported_version)
-        version if compare >= 0
-      else
-        version
+        next true if compare < 0
       end
+
+      compare = major_minor(version) <=> major_minor(max_supported_version)
+      next true if compare > 0
     end.sort_by do |version|
       major_minor(version)
     end.reverse
@@ -163,7 +176,7 @@ module VersionsHelper
   # True when the versioned or non-versioned path provided has a matching
   # current version i.e. without an explicit version
   def has_current_version_for?(path)
-    File.exist?(non_versioned_path(path))
+    file_with_any_ext_exists_for?(non_versioned_path(path))
   end
 
   def non_versioned_path(path)
@@ -174,15 +187,21 @@ module VersionsHelper
     _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
 
     base_path = if version == CURRENT_VERSION
-      "#{content_path}/#{root_folder}"
+      "#{root_folder}"
     else
-      "#{content_path}/#{root_folder}/versions/v#{version}"
+      "#{root_folder}/versions/v#{version}"
     end
 
+    file_with_any_ext_exists_for?(path)
+  end
+
+  def file_with_any_ext_exists_for?(path)
+    _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
+
     file_path = if relative_path == '/'
-      "#{base_path}/index"
+      "#{content_path}/#{root_folder}/index"
     else
-      "#{base_path}#{relative_path.gsub(%r{/$}, '')}"
+      "#{content_path}/#{root_folder}#{relative_path.gsub(%r{/$}, '')}"
     end
 
     !Dir.glob("#{file_path}.*").empty?
