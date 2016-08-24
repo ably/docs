@@ -10,7 +10,9 @@ module NavHelper
       if options.has_key?(:title)
         index_item = items.find { |d| d[:index].to_i == 0 }
         if index_item
-          results.unshift "<h2#{index_item == @item ? ' class="selected"' : ''}><a href=\"#{html_escape(index_item.path)}\">#{html_escape(options[:title])}</a></h2>"
+          nav_selected = non_versioned_path(index_item.path) == non_versioned_path(@item.path)
+          path = ensure_relative_url_matches_current_version(@item.path, index_item.path)
+          results.unshift "<h2#{' class="selected"' if nav_selected}><a href=\"#{html_escape(path)}\">#{html_escape(options[:title])}</a></h2>"
           items.delete index_item
         else
           results.unshift "<h2>#{html_escape(options[:title])}</h2>"
@@ -24,7 +26,9 @@ module NavHelper
             results << "<li>#{html_escape(item[:group])}</li>"
             last_group = item[:group]
           end
-          results << "<li class='#{item == @item ? 'selected' : ''}'><a href='#{html_escape(item.path)}'>#{html_escape(item[:title])}</a></li>"
+          nav_selected = non_versioned_path(item.path) == non_versioned_path(@item.path)
+          path = ensure_relative_url_matches_current_version(@item.path, item.path)
+          results << "<li class='#{'selected' if nav_selected}'><a href='#{html_escape(path)}'>#{html_escape(item[:title])}</a></li>"
         end
       end
       results << '</ul>'
