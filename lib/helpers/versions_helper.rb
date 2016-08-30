@@ -211,18 +211,18 @@ module VersionsHelper
     _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
 
     base_path = if version == CURRENT_VERSION
-      "#{root_folder}"
+      "/#{root_folder}"
     else
-      "#{root_folder}/versions/v#{version}"
+      "/#{root_folder}/versions/v#{version}"
     end
 
-    file_with_any_ext_exists_for?(path)
+    file_with_any_ext_exists_for?("#{base_path}#{relative_path}")
   end
 
   def file_with_any_ext_exists_for?(path)
     @file_with_any_ext_exists_for_cache ||= {}
     @file_with_any_ext_exists_for_cache[path] ||= begin
-      _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
+      _, root_folder, relative_path = split_relative_url(path)
 
       # Strip any params or hash locations
       relative_path = relative_path.gsub(/[\#\?].*$/, '')
