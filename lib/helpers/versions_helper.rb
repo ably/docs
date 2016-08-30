@@ -221,6 +221,9 @@ module VersionsHelper
     @file_with_any_ext_exists_for_cache[path] ||= begin
       _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
 
+      # Strip any params or hash locations
+      relative_path = relative_path.gsub(/[\#\?].*$/, '')
+
       file_path = if relative_path == '/'
         "#{content_path}/#{root_folder}/index"
       else
