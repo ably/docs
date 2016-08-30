@@ -73,18 +73,21 @@ module VersionsHelper
         lang[:ignore_from_language_selector]
       end.map do |lang_id, lang|
         [lang_id, supported_versions_for_language(@item.path, lang_id)]
-      end.each_with_object({}) do |(lang_id, languages), hash|
+      end.each_with_object({}) do |(lang_id, version), hash|
         hash[lang_id] = {
-          versions: languages,
-          most_recent_path: path_for_version(languages.first, @item.path)
+          versions: version,
+          most_recent_path: path_for_version(version.first, @item.path)
         }
       end
+      latest_version_and_path = page_versions_with_paths.first
       js = [
-        "window.LangVersions=#{JSON.dump(lang_versions)}",
-        "window.CurrentVersion='#{CURRENT_VERSION}'",
-        "window.PageVersion='#{version_from_relative_url(@item.path, current_default: true)}'"
+        "window.AblyVersionInfo={",
+          "'langVersions':#{JSON.dump(lang_versions)},",
+          "'latestForPage':{'version': '#{latest_version_and_path.first}', 'path': '#{latest_version_and_path.last}'},",
+          "'page':'#{version_from_relative_url(@item.path, current_default: true)}'",
+        "}"
       ]
-      %{<script type="text/javascript">#{js.join(';')}</script>}
+      %{<script type="text/javascript">#{js.join('')}</script>}
     end
   end
 

@@ -148,26 +148,72 @@ $(function() {
     return langList.find('>li').length > 1;
   }
 
+  /* Hack to stop the warnings showing about the current version not
+     being the latest whilst a redirect is underway */
+  var redirectingAsLanguageVersionNotSupported;
+
   function ensureVersionSupportedForCurrentLang() {
     if (supportsMultipleLanguages()) {
-      if (window.LangVersions) {
-        var currentLangConfig = window.LangVersions[currentLang()]
+      if (window.AblyVersionInfo && window.AblyVersionInfo.langVersions) {
+        var currentLangConfig = window.AblyVersionInfo.langVersions[currentLang()]
         if (currentLangConfig) {
-          if (currentLangConfig.versions.indexOf(window.PageVersion) < 0) {
+          if (currentLangConfig.versions.indexOf(window.AblyVersionInfo.page) < 0) {
             document.location.href = currentLangConfig.most_recent_path;
+            redirectingAsLanguageVersionNotSupported = true;
           }
         } else {
-          console.warn("window.LangVersions config for current lang '" + currentLang() + "' does not exist");
+          console.warn("window.AblyVersionInfo.langVersions config for current lang '" + currentLang() + "' does not exist");
         }
       } else {
-        console.error("window.LangVersions is not available");
+        console.error("window.AblyVersionInfo.langVersions is not available");
       }
     }
+  }
+
+  var $versionWarning = $('#version-not-latest-warning');
+
+  function showLatestVersionWarning(latestVersion, currentVersion, latestVersionPath) {
+    $versionWarning.html(
+      'Note: You are viewing v' + currentVersion + ' of this documentation. ' +
+      '<a href="' + latestVersionPath + '">A newer version v' + latestVersion + ' exists</a>'
+    ).show();
+  }
+
+  function hideLatestVersionWarning() {
+    $versionWarning.hide();
+  }
+
+  function showWarningIfNotLatestVersion() {
+    if (redirectingAsLanguageVersionNotSupported) {
+      return;
+    }
+
+    if (supportsMultipleLanguages()) {
+      if (window.AblyVersionInfo && window.AblyVersionInfo.langVersions) {
+        var currentLangConfig = window.AblyVersionInfo.langVersions[currentLang()]
+        if (currentLangConfig) {
+          if (currentLangConfig.versions.indexOf(window.AblyVersionInfo.page) !== 0) {
+            showLatestVersionWarning(currentLangConfig.versions[0], window.AblyVersionInfo.page, currentLangConfig.most_recent_path);
+            return;
+          }
+        }
+      }
+    } else {
+      if (window.AblyVersionInfo.page != window.AblyVersionInfo.latestForPage.version) {
+        showLatestVersionWarning(window.AblyVersionInfo.latestForPage.version, window.AblyVersionInfo.page, window.AblyVersionInfo.latestForPage.path);
+        return;
+      }
+    }
+    hideLatestVersionWarning();
   }
 
   /* Hook up the callback to ensure the current language exists for this version.
      If not, navigate to latest for this language */
   $(document).on('language-change', ensureVersionSupportedForCurrentLang);
+
+  /* Show warnings to users viewing an older version of documentation
+     if a newer version for the current lang (if applicable) exists */
+  $(document).on('language-change', showWarningIfNotLatestVersion);
 
   // event callback for the global language navigation selection
   function selectGlobalLanguage(cookieStrategy) {
