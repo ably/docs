@@ -5,8 +5,10 @@ module LanguageHelper
       # This is needed because sometimes types included in a page may include other
       # langauge definitions not suitable for the current page and as such
       # language detection breaks
-      js = "window.NavLangs=[#{@item[:languages].map { |lang| %{"#{lang.split(',')[0]}"} }.join(',')}];"
-      %{<script type="text/javascript">#{js}</script>}
+      @language_spec_cache ||= begin
+        js = "window.NavLangs=[#{@item[:languages].map { |lang| %{"#{lang.split(',')[0]}"} }.join(',')}];"
+        %{<script type="text/javascript">#{js}</script>}
+      end
     end
   end
 end
