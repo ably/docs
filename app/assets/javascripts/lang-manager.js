@@ -207,6 +207,31 @@ $(function() {
     hideLatestVersionWarning();
   }
 
+  var $versionDropdown = $('#version-container .dropdown'),
+      $versionDropdownVersions = $('#version-container ul > li');
+  function hideVersionsNotSupportedByCurrentLanguage() {
+    if (supportsMultipleLanguages()) {
+      if (window.AblyVersionInfo && window.AblyVersionInfo.langVersions) {
+        var currentLangConfig = window.AblyVersionInfo.langVersions[currentLang()]
+        if (currentLangConfig) {
+          $versionDropdownVersions.hide().removeClass('js-visible'); /* Hide all by default and show the version supported for this lang */
+          for (var versionIndex = 0; versionIndex < currentLangConfig.versions.length; versionIndex++) {
+            var version = currentLangConfig.versions[versionIndex];
+            $versionDropdownVersions.filter("[data-version='" + version + "']").show().addClass('js-visible')
+          }
+          if ($versionDropdownVersions.filter('.js-visible').length === 0) {
+            $versionDropdown.addClass('disabled');
+          } else {
+            $versionDropdown.removeClass('disabled');
+          }
+          return;
+        }
+      }
+    }
+    $versionDropdown.removeClass('disabled');
+    $versionDropdownVersions.show();
+  }
+
   /* Hook up the callback to ensure the current language exists for this version.
      If not, navigate to latest for this language */
   $(document).on('language-change', ensureVersionSupportedForCurrentLang);
@@ -214,6 +239,10 @@ $(function() {
   /* Show warnings to users viewing an older version of documentation
      if a newer version for the current lang (if applicable) exists */
   $(document).on('language-change', showWarningIfNotLatestVersion);
+
+  /* If the current language does not support all versions then hide those
+     versions in the version drop-down */
+  $(document).on('language-change', hideVersionsNotSupportedByCurrentLanguage);
 
   // event callback for the global language navigation selection
   function selectGlobalLanguage(cookieStrategy) {
