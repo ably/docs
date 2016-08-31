@@ -1,0 +1,228 @@
+---
+title: Realtime Protocol Definition
+section: client-lib-development-guide
+index: 10
+jump_to:
+  Help with:
+    - Overview
+    - Formats
+    - Actions
+    - Protocol Message fields
+    - Other message structs
+    - Message acknowledgement protocol
+---
+
+h2(#overview). Overview
+
+The Ably Realtime protocol operates over a connection-oriented, framed, transport. It supports a single connection (and thus a single application) at a time, and enables traffic belonging to multiple channels to be sent over that single connection.
+
+In the current Ably service the backend supports the Realtime protocol over a WebSocket transport and over a Comet transport. Other transports are possible and this document aims to define the protocol in a transport-independent manner.
+
+The protocol supports both a text-based format using "JSON":http://json.org/ and a binary format using "MessagePack":http://msgpack.org/. All structures passed on the wire are defined in a JSON-like format. Other encodings may be considered in the future.
+
+h2(#formats). Formats
+
+The unit of any protocol transmission is a @ProtocolMessage@ key value Hash object, referred to in this description as a Protocol Message.
+
+The WebSocket transport transmits Protocol Messages in a single WebSocket data frame. In the binary transport, these are sent as binary data frames, with the Protocol Message being encoded with MessagePack. In the text transport these are sent as text data frames, the text itself being the whitespace-free JSON encoding of the Protocol Message. Empty fields may be encoded as null, or may be handled as undefined (and thus absent from the JSON encoding) and clients should handle both possibilities. Handling empty fields as undefined is clearly preferable, however, since the encoded text is shorter and the encode and decode overhead is minimised. Binary data payloads are handled in the same was as JSON encoded payloads are handled.
+
+In the Comet protocol, all request and response bodies contain an array of one or more protocol messages. In the binary protocol this is standard MessagePack binary encoding of a MessageSet Hash object. In the text (JSON) protocol request and response bodies are simply JSON-encoded arrays containing the Protocol Message content, again either in binary or text encoding.
+
+Separate sections provide more detailed information on the WebSocket and Comet transports.
+
+h2(#actions). Actions
+
+Each Protocol Message has an @action@ that indicates the nature of the message.
+
+- HEARTBEAT (0) := A heartbeat message is sent periodically by the service over a connection in order to keep the connection alive (anticipating that proxies or other gateways may close the connection if it is idle indefinitely) and, in the Comet case, to prevent HTTP request timeout errors. The heartbeat interval is a configurable property of the realtime service and is not selectable by the client.<br><br>
+Heartbeat messages are not exposed to the client app, and are silently consumed in the transport layer of the client library. However, client library unit tests will typically wish to check for the presence of a heartbeat to confirm that a connection is intact, and therefore client libraries should expose some means for tests to observe the occurrence of heartbeats.<br><br>
+No other message fields are populated in a heartbeat message.
+
+- ACK (1) := An acknowledgement message, sent from the service to a client, to confirm receipt of one or more messages published by the client. Further details of the acknowledgement protocol is given below.
+
+- NACK (2) := An negative acknowledgement message, sent from the service to a client, that indicates failure of one or more messages published by the client. Further details of the acknowledgement protocol is given below.
+
+- CONNECT (3) := Unused. This is a placeholder for transports that might need to pass connection request parameters in a Protocol Message instead of in URI params as happens presently for the WebSocket and Comet transports.
+
+- CONNECTED (4) := Passed by the service back to a client to signify that a connection request has succeeded, and passing various connection parameters (such as the connection ID and connection Key). See connection information for each of the transports for more information.
+
+- DISCONNECT (5) := Unused. This is a placeholder for transports that might need to explicitly disconnect a transport but keep the connection open and connection state available.
+
+- DISCONNECTED (6) := Passed by the service to a client in response to a @DISCONNECT@ message or if a connection has been disconnected because of an error state with the error reason included in the @DISCONNECT@ Protocol Message.
+
+- CLOSE (7) := Passed by a client to the service to request that a connection is closed. Once this message is received by the service, a @CLOSED@ message will be sent by the service and the transport will be closed, if it has not already been closed by the client, and all connection state for that connection will be disposed. No connection state recovery is possible.<br><br>
+Note that to disconnect a transport without destroying connection state, the client simply closes the transport without sending any protocol message.
+
+- CLOSED (8) := Passed by the service back to the client to signify that a connection has been in response to a @CLOSE@ request from the client.  The transport will be closed by the service immediately after, and all connection state for that connection will be disposed. No connection state recovery is possible.
+
+- ERROR (9) := Passed by the service to a client to signify an unrecoverable error condition. The scope of the error might be the connection, or a single channel. @ERROR@ messages that apply to a channel have the channel field populated with the channel name; @ERROR@ messages that apply to the connection have no channel field value.<br><br>
+@ERROR@ messages will have a value in the error field that provides information about the failure condition. Client libraries must make a transition (either of the connection or the relevant channel) to the failed state, and pass the contained error information to the client.<br><br>
+Note that non-fatal errors may occur in various contexts (notably connection state recovery) and @CONNECTED@ and @ATTACHED@ response messages may also have the error field populated with information about those non-fatal conditions. These are handled differently from the unrecoverable conditions indicated with an @ERROR@ message.
+
+- ATTACH (10) := Sent by a client to the service to request attachment to a channel. The request must include the channel name in the channel field. Attachment is synchronous, and the client library must place the channel object into the pending state until it sees either an @ATTACHED@ (success) response or an @ERROR@ (failed) response.
+
+- ATTACHED (11) := Sent by the service to a client to indicate successful attachment to a channel. The message contains the channel name in the channel field, and may also contain non-fatal error information in the error field. Clients must move the channel to the attached state and, where present, pass the error information to the caller.<br><br>
+@ATTACHED@ messages may also include a presence flag (right most bit value 1), which if present, indicates that members are currently present on the channel and a presence @SYNC@ is about to commence. Equally, the service might send an @ATTACHED@ message with no presence flag thus indicating that at the time of attach no members are present on the channel and as such the client can assume the presence set is empty.<br>
+@ATTACHED@ messages are not required to be send in any order relative to their corresponding @ATTACH@ requests, and any other Protocol Message may intervene between the @ATTACH@ and @ATTACHED@ messages.<br><br>
+Clients must silently ignore an @ATTACHED@ response if the channel is not in the pending state.
+
+- DETACH (12) := Sent by a client to the service to request detachment to a channel. The request must include the channel name in the channel field. Detachment is acknowledged by the service, but the client library must place the channel object into the detached state immediately on sending the @DETACH@ request.
+
+- DETACHED (13) := Sent by the service to a client to indicate successful detachment from a channel. The message contains the channel name in the channel field, and may also contain non-fatal error information in the error field. Clients must move the channel to the detached state if not already detached and, where present, pass the error information to the caller.
+
+- PRESENCE (14) := Indicates that the Protocol Message has a payload of one or more PresenceMessages associated with a single channel. @PRESENCE@ messages may be sent in either direction. The channel associated with these presence updates is indicated in the channel field.<br><br>
+The serial number of the message must be included in the @msgSerial@ field (in the client &rarr; service direction) or in the @connectionSerial@ field (in the service &rarr; client direction). Further information on message serial numbering is given below.
+
+- MESSAGE (15) := Indicates that the Protocol Message has a payload of one or more Messages associated with a single channel. @MESSAGE@ messages may be sent in either direction. The channel associated with these messages is indicated in the channel field.<br><br>
+The serial number of the message must be included in the @msgSerial@ field (in the client &rarr; service direction) or in the @connectionSerial@ field (in the service &rarr; client direction). Further information on message serial numbering is given below.
+
+- SYNC (16) := Currently reserved for us with presence member synchronisation following a channel @ATTACHED@ Protocol Message being received by the client. Once a channel becomes attached, the server will automatically send a list of all members present on the channel to the client. Every @SYNC@ Protocol Message received will contain a channelSerial value and one or more PresenceMessages for each member currently present on the channel i.e. they are in the @PRESENT@ state.  The channelSerial serves two purposes, it provides a way for the client library to resume a @SYNC@ should the transport be disconnected, and it also provides a means for the client library to know when the sync is complete.  A channelSerial that is being synced will contian an ID with followed by a cursor after a colon such as "cf30e75054887:psl_7g:client:189", however the final page of @SYNC@ messages will have a serial with an empty cursor such as "cf30e75054887:".  A client can explicitly request a SYNC with an optional channelSerial; if no channelSerial is provided the server will send a complete set of members on the channel; if a channelSerial is provided, the server will resume the @SYNC@ operation.
+
+h2(#protocol-message-fields). Protocol Message fields
+
+ProtocolMessages are populated with one or more of the following fields.
+
+- i32 action := Indicates the purpose of the message. See "Actions":#actions above.
+
+- i32 count := The count field is used for @ACK@ and @NACK@ actions. See "message acknowledgement protocol":#message-acknowledgement.
+
+- Error := Contains error information. See @Error@ type description for details of the contained information. The error field is populated in an @ERROR@ message and may also be populated to provide supplementary information (eg for non-fatal errors) in various other message types (@CONNECTED@, @ATTACHED@, @DETACHED@, @ACK@, @NACK@).
+
+- string connectionId := Contains a public string connection ID. This field is populated in the first @CONNECTED@ Protocol Messages from the service to the client.  The connection ID is a public identifier used to uniquely identify each connected client.
+
+- string connectionKey := Contains a private string connection Key. This field is populated in the first @CONNECTED@ Protocol Messages from the service to the client.  The connection key is a private identifier used to recover and resume connections and their connection state.
+
+- i64 connectionSerial := Contains a serial number for a message on the current connection, in @MESSAGE@ and @PRESENCE@ protocol messages sent from the service to the client. The @connectionSerial@ is a zero-based, serially increasing number which, in combination with the @connectionId@, uniquely identifies an attempted delivery of a Protocol Message to the client. The client uses the connection serial to track the receipt of messages, and may specify the @connectionSerial@ when performing connection state recovery.
+
+- i64 msgSerial := Contains a serial number for a message sent from the client to the service. The @msgSerial@ is a zero-based, serially increasing number which, in combination with the @connectionId@, uniquely identifies the message across the system. The @msgSerial@ is also used in the message acknowledgement protocol.
+
+- i64 timestamp := An optional timestamp, applied by the service in messages sent to the client, to indicate the system time at which the message was sent. Note that this differs from the timestamp field of a @Message@ or @PresenceMessage@ which is an indication of the timestamp of receipt of that message by the system.<br><br>
+Currently there are no requirements for the client library to process or populate the timestamp.
+
+- i32 flags := Currently used to flag properties in messages such as the presence sync state of an @ATTACHED@ ProtocolMessage.  See the list of "currently implemented bit flags":https://github.com/ably/ably-java/blob/master/src/io/ably/types/ProtocolMessage.java.
+
+- list<Message> messages := A ProtocolMessage with a @MESSAGE@ action contains one or more messages belonging to a channel. The messages field of the ProtocolMessage contains a collection of messages.
+
+- list<Presence> presence := A ProtocolMessage with a @PRESENCE@ action contains one or more presence updates belonging to a channel. The presence field of the ProtocolMessage contains a collection of presence messages.
+
+h2(#other-message-structs). Other message object
+
+The protocol relies on a number of structs embedded in Protocol Messages.
+
+h3. Error
+
+An object containing error information. This is used for unrecoverable error conditions (relating to connections, channels or individual messages) and also "informatively" for non-fatal errors in @ATTACHED@ or @CONNECTED@ responses.
+
+Error contains the following fields.
+
+- i16 statusCode := An optional HTTP response code that most closely matches the nature of the error. This is typically also the actual HTTP response code if this error is reported as an HTTP response to a Comet request.
+- i16 code := An Ably-specific error code that indicates the specific error condition. The various codes are defined in errors.json. Implementations may use errors.json to provide descriptive error messages to clients.
+- string reason := An optional string message that indicates the error condition, and may contain specific identifying information (e.g. channel name or message serial, for example).
+
+h3. Data
+
+In transports that support JSON encoding, Strings and the JSON Object and Array types are represented as their natural JSON value in the enclosing type. For example, a Message with a string payload would be encoded in JSON (with whitespace added here for clarity) as:
+
+bc[json]. {
+  "name": "my_event",
+  "data": "my_string_payload"
+}
+
+For string and binary payload types, an @encoded@ member is optionally added to the enclosing type. The only supported encodings are "utf8" for strings, "json" for JSON and "base64" for binary. If the encoding member is omitted it defaults to "utf8".
+
+Therefore, the following encoded messages each have string type:
+
+bc[json]. {
+  "name": "my_event",
+  "data": "my string payload"
+}
+{
+  "name": "my_event",
+  "data": "my string payload",
+  "encoding": "utf8"
+}
+
+The following encoded message has binary type:
+
+bc[json]. {
+  "name": "my_event",
+  "data": "bXkgYmluYXJ5IHBheWxvYWQ=",
+  "encoding": "base64"
+}
+
+The base64 encoding used is RFC4648 and clients must accept and process values with or without linefeeds.
+
+The following encoded message has JSON type:
+
+bc[json]. {
+  "name": "my_event",
+  "data": "{\"id\":\"value\"}",
+  "encoding": "json"
+}
+
+h3. Message
+
+This is an individual channel message.
+
+The members are as follows.
+
+- string id := A globally unique identifier for this message
+
+- string name := The optional event name.
+
+- string clientId := The optional clientId of the client that sent the message.<br><br>
+Client libraries do not need to populate this field if the clientId is implicit (ie a clientId was specified when the library was initialized, and is therefore connection-wide. Also, this field will be empty if no clientId has been specified either on library initialization or when publishing the message.<br><br>
+Messages sent from the service to the client will contain a clientId if one is available.
+
+- i64 timestamp := This is the timestamp indicating the time at which the message was received by the system from the publishing client. The timestamp is included in messages sent by the service to the client. The field is expected to be empty in messages sent from a client to the service.
+
+- string or binary data := The payload of the message, binary is supported when using MessagePack.
+
+- string encoding := A string identifier indicating the encodings applied to the data payload in left to right order.  For example, an encoding with the value "utf-8/cipher+aes-128-cbc/base64" indicates that a UTF-8 payload was encrypted with AES 128 CBC encryption and then the binary cipher was encoded with Base64.
+
+- string connectionId := optional public connection ID of the message publisher.  The field is expected to be empty in messages sent from a client to the service.
+
+h3. Presence Message
+
+This is an individual channel presence update, as defined in the Thrift @TPresence@ struct.
+
+The members are as follows.
+
+- string id := A globally unique identifier for this presence message
+
+- Action state := The presence action (@ABSENT@, @PRESENT@, @ENTER@, @LEAVE@, or @UPDATE@) encoded as the ordinal in the "PresenceMessage Action":https://github.com/ably/ably-java/blob/master/src/io/ably/types/PresenceMessage.java enum.
+
+- string clientId := The clientId string.
+
+- string or binary data := The optional payload data for the members such as member status, binary is supported when using MessagePack.
+
+- string connectionId := An optional member connection identifier if required to disambiguate multiple connected and entered members having the same clientId. When there are multiple members with the same clientId entered to the channel there will be multiple corresponding @ENTER@ events.<br><br>
+If the connectionId of an already-entered member changes (eg in the situation that a new connection inherits from another connection, the new (clientId, connectionId) combination is not considered to be a new member but it is indicated as an @UPDATE@ of the already-entered member, with a change in the value of connectionId.
+
+h2(#message-acknowledgement). Message acknowledgement protocol
+
+The Ably client API allows a caller to provide a success callback when publishing messages, or presence updates, to the Ably service. The callback is called, either with success or a failure code, once the Ably service has indicated whether or not it has processed the message successfully. The callback is not simply an indication that the message sent without error; it is confirmation that the service has processed the message sufficiently that its onward delivery to relevant attached clients is now guaranteed.
+
+In the Comet transport, success or failure is indicated on a per-call basis with an @ACK@ or @NACK@ Message body in the HTTP response to the @send@ API call.
+
+In the WebSocket transport, the service indicates success or failure to the client with the message acknowledgement protocol. This is a simple series of @ACK@ or @NACK@ responses, each addressing a contiguous sequence (by @msgSerial@) of messages.
+
+An @ACK@ message contains a @msgSerial@ and @count@ value. Receipt of this message signifies that the messages whose serial numbers are:
+
+bc[json]. { msgSerial ... msgSerial + count - 1 }
+
+have been processed successfully.
+
+Similarly, a @NACK@ message contains a @msgSerial@ and @count@ value and usually also an @error@ value. Receipt of this message signifies that the messages whose serial numbers are:
+
+bc[json]. { msgSerial ... msgSerial + count - 1 }
+
+have encountered processing failures. The client library must call the callback, if supplied, with the contained error value, or with an error value that indicates an internal error.
+
+@ACK@ responses are sent so as to be responsive to the client but also to avoid sending a response for every single published message; when the client is publishing at a high rate the @ACK@ responses will be sent periodically with an interval of 500ms (say) so many hundreds of messages my be covered in a single @ACK@ response.
+
+@NACK@ responses are sent as soon as an error has arisen, and in any event only cover multiple messages to the extent that those messages are subject to the same underlying failure (since the error information is provided once for the group of @NACK@'d messages, not individually.
+
+It is a protocol error if the system sends an @ACK@ or @NACK@ that skips past one or more @msgSerial@ without there having been either and @ACK@ or @NACK@; but a client in this situation should treat this case as implicitly @NACK@ing the skipped messages.
+
+It is also a protocol error if the system sends an @ACK@ or @NACK@ that covers a @msgSerial@ that was covered by an earlier @ACK@ or @NACK@; in such cases the client library must silently ignore the response insofar as it relates to @msgSerial@s that were covered previously (whether the response is the same now or different).
