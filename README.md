@@ -27,10 +27,25 @@ Forking and running locally
 * Create your feature or fix branch and check it out: `git checkout -b [your-branch]`
 * `bundle install` to install the necessary gems
 * Create a jsbin config file: `cp config/jsbin_config.example.yaml config/jsbin_config.yaml`
-* `nanoc` to generate the site for the first time
+
+At this point you can either run the repo directly on your machine or via Docker.
+
+If you have Ruby and are comfortable working in a Ruby environment as follows:
+
+* `nanoc compile` to generate the site for the first time
 * `nanoc view -p 4000` to start up a web server at <http://localhost:4000>
-* `bundle exec guard` to watch for changes and rebuild the site automatically
-* Make your changes and they should be visible within seconds in the browser following a refresh.  If the changes are not visible, check your console where `guard` is running for errors.
+* `bundle exec guard` to watch for changes and rebuild the site automatically. This is normally run in conjunction with the `.nanoc view -p 4000` command so that you can see changes immediately
+
+If you would prefer to use Docker, then you can set up the env as follows:
+
+* `./docker-run build` to build the initial Docker image
+* `./docker-run compile` to compile the HTML for the static site (this is a once off command)
+* `./docker-run server` to start up a web server at <http://localhost:4000>
+* `./docker-run guard` to watch for changes and rebuild the site automatically. This is normally run in conjunction with the `./docker-run server` command so that you can see changes immediately
+
+General next steps:
+
+* Make your changes and they should be visible within seconds in the browser following a refresh (if using the `guard` command, else a manual `compile` is required).  If the changes are not visible, check your console where `guard` is running for errors.
 * Commit your changes, push your branch and send us a pull request
 
 Help and contact
