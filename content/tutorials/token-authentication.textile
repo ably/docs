@@ -58,6 +58,28 @@ blang[ruby].
 
   "See this step in Github":https://github.com/ably/tutorials/commit/9e06aaf
 
+blang[python].
+  To start using Ably you first need to install The REST library for Python, it's "hosted on Github":https://github.com/ably/ably-python and is "published on PyPI":https://pypi.python.org/pypi/ably and can be installed as follows:
+
+  ```[sh]
+    pip install ably
+  ```
+
+  Then it can be imported and instantiated as follows:
+
+  ```[python]
+    from ably import AblyRest
+    client = AblyRest(api_key)
+  ```
+
+  For the purpose of this tutorial let's create @server.py@ file with the code above, we'll be using this file as base later on.
+
+  h4. Note on string encodings
+
+  Since Ably supports both string and binary payloads, to avoid ambiguity, we recommend that strings passed to the library for publishing to Ably (eg as an event name or payload data) should be unicode strings. In Python 3 this is the normal string type, but in Python 2 it is not, so we suggest you prefix string literals with @u@ prefix (eg @u'eventname'@ - or alternatively, use @from __future__ import unicode_literals@, which will make this automatic), and to explicitly decode any user input (eg @raw_input().decode(sys.stdin.encoding@).
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/aff9d58
+
 h2. Step 3 - Set up your web server
 
 Before a client connects to Ably, it will check if it has suitable credentials to authenticate with Ably. As we'll be using the recommended "token authentication scheme":/general/authentication#token-authentication in the client for this demo, when the client starts up and attempt to connect to Ably, it will request a token immediately so that it can then authenticate with Ably.
@@ -128,6 +150,41 @@ blang[ruby].
 
   "See this step in Github":https://github.com/ably/tutorials/commit/0e9e6db
 
+blang[python].
+  "web.py":http://webpy.org/ is a simple web framework for Ruby. Django is arguably more popular as a web server framework, however for the purposes of this tutorial it is overkill.
+
+  Let's get going with a simple web.py web server now. Install @web.py@ using @pip@:
+
+  ```[sh]
+    pip install web.py
+  ```
+
+  Now set up a vanilla web.py server in @server.py@:
+
+  ```[python]
+    import web
+
+    class index:
+        def GET(self):
+            return 'Hello, I am a very simple server'
+
+
+    urls = (
+        '/', index
+    )
+
+    app = web.application(urls, globals())
+
+    if __name__ == "__main__":
+        app.run()
+  ```
+
+  In @web.py@ each resource is mapped to a class, which in turn takes action depending on HTTP method used. In this case it's main domain @'/'@, that will be handled by @index@ class, and it will support HTTP @GET@.
+
+  If you would like to try running the server now, you can do so with @python server.py@. Once running, open your browser to "http://localhost:8080/":http://localhost:8080/ and you should see the text "Hello, I am a very simple server". If you would like to change port, on which your site will be available, simply add it after command ieg. @python server.py 1234@ for port @1234@.
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/91ec78e
+
 h2. Step 4 - Respond to authentication requests
 
 Before we move onto the client, let's first make sure the web server is capable of issuing token request to clients that need to authenticate with Ably. However, instead of jumping into code, lets quickly talk about how token authentication works and what the difference is between a "@Token@":https://www.ably.io/documentation/realtime/authentication#token-details and "@TokenRequest@":https://www.ably.io/documentation/realtime/authentication#token-request is.
@@ -148,9 +205,11 @@ Token requests, unlike tokens, are created and signed by your server without hav
 
 Therefore, as it is possible to issue token requests without any communication to Ably (in the form of an HTTP request), we recommend that when a client needs to authenticate, you should provide a signed token request. This approach minimises the amount of work your servers need to do by distributing the task of obtaining a token from the Ably service using the token request to your clients instead.
 
-In this step we will get the local web server ready to respond to authentication requests by issuing a token request to the requesting client. By adding the following route to your Express.js server, it is now ready to service clients wanting to authenticate with Ably.
+In this step we will get the local web server ready to respond to authentication requests by issuing a token request to the requesting client.
 
 blang[nodejs].
+  By adding the following route to your Express.js server, it is now ready to service clients wanting to authenticate with Ably.
+
   ```[nodejs]
     /* Issue token requests to clients sending a request to the /auth endpoint */
     app.get('/auth', function (req, res) {
@@ -182,6 +241,8 @@ blang[nodejs].
   "See this step in Github":https://github.com/ably/tutorials/commit/6a40d84
 
 blang[ruby].
+  By adding the following route to your server, it is now ready to service clients wanting to authenticate with Ably.
+
   ```[ruby]
     require 'json'
 
@@ -207,11 +268,50 @@ blang[ruby].
 
   "See this step in Github":https://github.com/ably/tutorials/commit/5575d73
 
+blang[python].
+  By adding the following class and route to your urls, it is now ready to service clients wanting to authenticate with Ably.
+
+  ```[python]
+    import json
+
+    # Issue token requests to clients sending a request to the /auth endpoint
+    class auth:
+        def GET(self):
+            web.header('Content-Type', 'application/json')
+            return json.dumps(client.auth.create_token_request().to_dict())
+
+    # let's update urls
+    urls = (
+        '/', index,
+        '/auth', auth
+    )
+  ```
+
+  Try running your server again with @python server.py@ and visiting "http://localhost:8080/auth":http://localhost:8080/auth and you should see a JSON token request in the form:
+
+  ```[json]
+  {
+    "keyName": "I2ACJQ.Lv8AUQ",
+    "ttl": 3600000,
+    "timestamp": 1473894038255,
+    "capability": "{\"*\":[\"*\"]}",
+    "nonce": "f6799a8e7fa6f77b8e1dac55314789b1",
+    "mac": "35nifY9SRZ8KRDfKOPIS1qYWGP16r2lD59zJo9TH8pA="
+  }
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/7841d7e
+
 h2. Step 5 - Setting up a client to use token authentication
 
 Now that we have a web server running and an authentication endpoint, we are ready to setup the Ably Realtime client that uses token auth.
 
-First we need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.js@:
+blang[nodejs].
+  First we need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.js@:
+blang[ruby].
+  First we need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.rb@:
+blang[python].
+  First we need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.py@:
 
 ```[html]
 <html>
@@ -244,6 +344,16 @@ blang[ruby].
 
   Try running your server again with @bundle exec ruby server.rb@ and visiting "http://localhost:4567/":http://localhost:4567/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
 
+blang[python].
+  Now we need to serve a static home page. Let's replace the code that responds to the @/@ route (look for @ class index: def GET(self): ... @) with the following:
+
+  ```[python]
+    html = open('index.html')
+    return html.read()
+  ```
+
+  Try running your server again with @python server.py@ and visiting "http://localhost:8080/":http://localhost:8080/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
+
 Add the following above the closing @</html>@ tag in your @index.html@ file:
 
 ```[html]
@@ -263,6 +373,9 @@ blang[nodejs].
 
 blang[ruby].
   "See this step in Github":https://github.com/ably/tutorials/commit/ef41176
+
+blang[python].
+  "See this step in Github":https://github.com/ably/tutorials/commit/2627e67
 
 You've now covered the basics of client / server token authentication and your client has a means to renew the token whenever it needs one.
 
@@ -344,6 +457,37 @@ blang[ruby].
       cookies.delete 'username'
       redirect to('/')
     end
+  ```
+
+blang[python].
+  Now we need to enable the login and logout functionality in the web server. In order to keep this tutorial simple, when a user logs in we'll set a cookie, and when they log out we'll clear the cookie.
+
+  Add the following classes to your @server.py@ file.
+
+  ```[python]
+    # Set cookie when the user logs in
+    class login:
+        def GET(self):
+            username = web.input().get('username')
+            if username is not None:
+                web.setcookie('username', username)
+                raise web.seeother('/')
+            else:
+                raise web.InternalError('Username is required to login')
+
+    # Clear the cookie when the user logs outs
+    class logout:
+        def GET(self):
+            web.setcookie('username', None, -1)
+            raise web.seeother('/')
+
+    # update urls
+    urls = (
+        '/', index,
+        '/auth', auth,
+        '/login', login,
+        '/logout', logout
+    )
   ```
 
 Both the logged in and anonymous HTML panels will currently show on the HTML page, let's add quickly hide or show them based on the cookie set above. Add the following just before the final @</script>@ tag in @index.html@
@@ -430,6 +574,30 @@ blang[ruby].
     end
   ```
 
+blang[python].
+  Now that we have a means to determine if a user is logged in or logged out using the session cookie, we can issue restricted subscribe-only token requests for anonymous users and publish and subscribe token requests for logged in users. Replace the code for @auth@ class with the following:
+
+  ```[python]
+    class auth:
+        def GET(self):
+            username = web.cookies().get('username')
+            if username is not None:
+                token_params = {
+                    'capability': {
+                        '*': ['publish', 'subscribe']
+                    },
+                    'client_id': username
+                }
+            else:
+                token_params = {
+                    'capability': {
+                        'notifications': ['subscribe']
+                    }
+                }
+            web.header('Content-Type', 'application/json')
+            return json.dumps(client.auth.create_token_request(token_params).to_dict())
+  ```
+
 Finally, before we test this new functionality, let's update the alert so that it shows the authentication details after it connects to Ably. Replace @alert("We're connected...@ with the following:
 
 ```[javascript]
@@ -448,6 +616,9 @@ blang[nodejs].
 blang[ruby].
   Ok, we're ready to see all of this in action. Restart the local server @bundle exec ruby server.rb@ and then refresh the page at "http://localhost:4567/":http://localhost:4567/. You should receive an alert to confirm that you're connected as an anonymous with limited capabilities as follows:
 
+blang[python].
+  Ok, we're ready to see all of this in action. Restart the local server @python server.py@ and then refresh the page at "http://localhost:8080/":http://localhost:8080/. You should receive an alert to confirm that you're connected as an anonymous with limited capabilities as follows:
+
 <a href="/images/tutorials/token-authentication-anonymous.png" target="_blank">
   <img src="/images/tutorials/token-authentication-anonymous.png" style="width: 457px" alt="Token auth details for anonymous">
 </a>
@@ -463,6 +634,9 @@ blang[nodejs].
 
 blang[ruby].
   "See this step in Github":https://github.com/ably/tutorials/commit/5dda1dd
+
+blang[python].
+  "See this step in Github":https://github.com/ably/tutorials/commit/911640d
 
 We've covered a lot of ground in this tutorial. However authentication is one of the more challenging parts to understand as it requires you to have a good overall understanding of how it all works. We strongly recommend you see below for essential further reading to help you understand authentication in more detail for use in your servers and apps.
 
@@ -493,6 +667,24 @@ blang[ruby].
   bc[sh]. git checkout token-authentication-ruby
 
   And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @server.rb@ and running the demo @bundle exec ruby server.rb@
+
+blang[python].
+  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/token-authentication-python.
+
+  We recommend that you clone the repo locally:
+
+  bc[sh]. git clone https://github.com/ably/tutorials.git
+
+  Checkout the tutorial branch:
+
+  bc[sh]. git checkout token-authentication-python
+
+  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @server.py@, install required libraries:
+
+  bc[sh]. pip install ably web.py
+
+  and running the demo @python server.py@.
+
 
 h2. Next steps
 
