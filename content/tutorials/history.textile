@@ -1,0 +1,727 @@
+---
+title: History Tutorial
+section: tutorials
+index: 20
+---
+
+Ably's "history feature":/realtime/history enables you to store messages published on channels that can later be retrieved using the "channel history API":/realtime/history.
+
+By default, channels will only store messages in memory for up to two minutes. However, using "channel rules":https://support.ably.io/solution/articles/3000030057-what-are-channel-rules-and-how-can-i-use-them-in-my-app, you can configure messages published on matching channels to be persisted to disk for "typically 24 - 72 hours":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. Those messages will then be immediately available for retrieval via our Realtime and REST API clients for as long as the message is stored on disk.
+
+Using our "history API":/realtime/history is trivial.  Let's get started.
+
+<%= partial 'tutorials/_step-1-setup-free-account' %>
+
+h2. Step 2 - Configure all channels within a namespace to persist messages to disk
+
+Channels can be named using any unicode string characters with the only restriction that they cannot start with a @[@ or @:@ character as these are used as "special" characters. A colon @:@ is used to delimit channel namespaces in a format such as @namespace:channel@. Namespaces provide a flexible means to group channels together. Channel grouping can be useful when, for example, "configuring permissions (capabilities) for a set of channels within a client token":/general/authentication#capabilities-explained or setting up rules to apply to one or more channels.
+
+We will be using channel rules in this tutorial to ensure all channels in the @persisted@ namespace are configured to persist messages to disk i.e. we will explicitlyt enable the history feature. Follow these steps:
+
+# Visit your "account dashboard":https://support.ably.io/solution/articles/3000048664-how-do-i-access-my-account-dashboard, navigate to the same app you chose in Step 1 when obtaining your API key earlier
+# Click on the Settings tab and scroll down to the "Channel rules" section
+# Click the "Add new rule" button (see below)
+<a href="/images/tutorials/channel-rules-add-new-rule.png" target="_blank">
+  <img src="/images/tutorials/channel-rules-add-new-rule.png" style="width: 100%" alt="Add new channel rule screenshot">
+</a>
+# Once the modal has opened, enter "persisted" for the namespace, check the Persisted check box to enable history, and click the "Create channel rule" button (see below)
+<a href="/images/tutorials/channel-rules-create-modal.png" target="_blank">
+  <img src="/images/tutorials/channel-rules-create-modal.png" style="width: 100%" alt="Create channel rule screenshot">
+</a>
+
+You have now enabled history for all channels in the @persisted@ namespace i.e. any channel with a name matching the pattern @peristed:*@ will store published messages to disk.
+
+h2. Step 3 - Install Ably
+
+blang[javascript].
+  To start using Ably in your web app, you first need to include the Ably library. We recommend that you include the latest client library from our CDN using a simple @<script>@ tag. The client library must be instanced with the API key you copied in Step 1. Note in production we recommend you always use the "token authentication scheme":/general/authentication#token-authentication for browser clients, however in this example we use an API key for simplicity.
+
+  Include the code below just before your closing your HTML @</html>@ tag.
+
+  ```[javascript]
+    <!-- Include the latest Ably Library  -->
+    <script src="//cdn.ably.io/lib/ably-0.min.js"></script>
+
+    <!-- Instance the Ably library  -->
+    <script type="text/javascript">
+      var realtime = new Ably.Realtime(apiKey);
+    </script>
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/a55b855
+
+blang[ruby].
+  To start using Ably you first need to install the Ably RubyGem. The RubyGem can be installed as follows:
+
+  ```[sh]
+    gem install ably
+  ```
+
+  Or if using bundler, simply add the following to your Gemfile and run @bundle install@:
+
+  ```[ruby]
+    gem 'ably'
+  ```
+
+  The client library must be instanced with the API key you copied in Step 1. API keys used with "basic authentication":/general/authentication#basic-authentication for your own servers is generally preferred, however clients running on insecure devices should always use the "token authentication scheme":/general/authentication#token-authentication instead. In this example, we use an API key for simplicity.
+
+  As we do not need asynchronous access to the realtime API for this tutorial, we'll be using the simpler "REST client library":/rest. However, in some cases where users want to subscribe to events asynchronously from Ruby, we recommend the use of the "Realtime client library":/realtime.
+
+  ```[ruby]
+    require 'ably'
+    ably = Ably::Rest.new(key: api_key)
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/05e2e16
+
+blang[python].
+  The REST library for Python is "hosted on Github":https://github.com/ably/ably-python and is "published on PyPI":https://pypi.python.org/pypi/ably and can be installed as follows:
+
+  ```[sh]
+    pip install ably
+  ```
+
+  Then it can be imported and instantiated as follows:
+
+  ```[python]
+    from ably import AblyRest
+    client = AblyRest(api_key)
+  ```
+
+  For the purpose of this tutorial let's create @history.py@ file with the code above, we'll be using this file as base later on.
+
+  h4. Note on string encodings
+
+  Since Ably supports both string and binary payloads, to avoid ambiguity, we recommend that strings passed to the library for publishing to Ably (eg as an event name or payload data) should be unicode strings. In Python 3 this is the normal string type, but in Python 2 it is not, so we suggest you prefix string literals with @u@ prefix (eg @u'eventname'@ - or alternatively, use @from __future__ import unicode_literals@, which will make this automatic), and to explicitly decode any user input (eg @raw_input().decode(sys.stdin.encoding@).
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/0358242
+
+blang[php].
+  To start using Ably you first need to install "composer package on packagist":https://packagist.org/packages/ably/ably-php into your composer.
+
+  ```[sh]
+    composer require ably/ably-php --update-no-dev
+  ```
+
+  The client library must be instanced with the API key you copied in Step 1. API keys used with "basic authentication":/general/authentication#basic-authentication for your own servers is generally preferred, however clients running on insecure devices should always use the "token authentication scheme":/general/authentication#token-authentication instead. In this example, we use an API key for simplicity.
+
+  Add the following to a file named @history.php@ to instance the Ably library inside your php script:
+
+  ```[php]
+    require_once __DIR__ . '/../vendor/autoload.php';
+    $ably = new \Ably\AblyRest("{{ApiKey}}");
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/9430f46
+
+h2. Step 4 - Publishing messages to be stored with channel history
+
+Before we can use the history API to retrieve previously published messages, we need to publish some messages to a channel. In the example code below, we publish 3 messages to the channel.
+
+blang[javascript].
+  ```[javascript]
+    var channel = realtime.channels.get("persisted:sounds");
+    channel.publish("play", "bark");
+    channel.publish("play", "meow");
+    channel.publish("play", "cluck");
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/f460ba7
+
+blang[ruby].
+  ```[ruby]
+    channel = ably.channels.get('persisted:sounds')
+    channel.publish 'play', 'bark'
+    channel.publish 'play', 'meow'
+    channel.publish 'play', 'cluck'
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/c99d105
+
+blang[php].
+  ```[php]
+    $channel = $ably->channels->get("persisted:sounds");
+    $channel->publish("play", "bark");
+    $channel->publish("play", "meow");
+    $channel->publish("play", "cluck");
+  ```
+
+  Now you can check how it works by running @php history.php@ in console.
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/310f8db
+
+blang[python].
+  ```[python]
+    channel = client.channels.get('persisted:sounds')
+    channel.publish('play', 'bark')
+    channel.publish('play', 'meow')
+    channel.publish('play', 'cluck')
+  ```
+
+  If you would like to try running this now, you can do so with @python history.py@.
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/6a350c2
+
+h2. Step 5 - Retrieving messages from history
+
+Now that we have published messages on a channel that is configured to store messages on disk, we can retrieve them using the history method of the channel object.
+
+blang[javascript].
+  ```[javascript]
+    var channel = realtime.channels.get("persisted:sounds");
+    channel.history(function(err, resultPage) {
+      alert("Last message published: " + JSON.stringify(resultPage.items[0].data));
+    });
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/9716aa2
+
+blang[ruby].
+  ```[ruby]
+    channel = ably.channels.get('persisted:sounds')
+    result_page = channel.history
+    puts "Last message published: #{result_page.items.first.data}"
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/55ad113
+
+blang[python].
+  ```[python]
+    channel = client.channels.get('persisted:sounds')
+    paginatedResult = channel.history()
+    for message in paginatedResult.items:
+        print('Last message published: {}'.format(message.data))
+  ```
+
+  If you would like to try running this now, you can do so with @python history.py@.
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/771a63f
+
+blang[php].
+  ```[php]
+    $channel = $ably->channels->get("persisted:sounds");
+    $paginatedResult = $channel->history();
+    foreach ($paginatedResult->items as $message) {
+      echo sprintf(
+        "Latest message published: %s\n",
+        $message->data
+      );
+    }
+  ```
+
+  Run @php history.php@ to see messages retrieved from channel history.
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/868c4c2
+
+We're done, it's that simple. We have now shown you how to set up a channel to use persisted history using channel rules, then we published some messages on that channel, and later retrieved them using the history API.
+
+h2(#live-demo). Live demo
+
+In this demo we use the "history API":/realtime/history to replay up to the last 10 keys pressed on the piano. Try playing the piano, which in turn will publish a messag to Ably for each key. Then press the "Replay piano from Ably history" button, which will retrieve the piano key press history on the channel and play the sequence again on the piano.
+
+<style type="text/css">
+  /* Thanks to https://github.com/michaelmp/js-piano */
+  audio {
+    display: none;
+  }
+
+  .piano-javascript {
+    border: 3px solid #f88;
+    display: block;
+  }
+
+  .piano {
+    padding: 5px;
+    margin: 0 auto;
+    width: 550px;
+  }
+
+  .piano-container, .piano-javascript {
+    border-radius: 5px;
+    margin: 5px;
+    padding: 5px;
+  }
+
+  .piano-container {
+    text-align: center;
+  }
+
+  .piano-keys{
+    word-spacing: 0;
+    letter-spacing: 0;
+    font-size: 0;
+  }
+
+  .piano-pedal {
+    margin: 10px;
+    color: rgba(0, 0, 0, 0);
+  }
+
+  .piano-sustain {
+    color: black;
+  }
+
+  .piano-white, .piano-black {
+    display: inline-block;
+    position: relative;
+    vertical-align: top;
+    direction: ltr;
+    margin: 0;
+    padding: 0;
+  }
+
+  .piano-white, .piano-black-raised {
+    border-radius: 2px;
+    border-color: #222;
+    border-style: solid;
+    border-width: 1px 1px 1px 1px;
+    cursor: pointer;
+  }
+
+  .piano-white {
+    width: 24px;
+    height: 100px;
+    background-color: white;
+    z-index: 1;
+  }
+
+  .piano-black {
+    width: 0px;
+    height: 100px;
+    z-index: 2;
+  }
+
+  .piano-black-raised {
+    width: 16px;
+    height: 70px;
+    position: relative;
+    left: -10px;
+    background-color: black;
+  }
+</style>
+
+<audio id="sound-A2" src="https://files.ably.io/tutorials/piano/samples/A2.ogg" preload="auto"></audio>
+<audio id="sound-Bb2" src="https://files.ably.io/tutorials/piano/samples/Bb2.ogg" preload="auto"></audio>
+<audio id="sound-B2" src="https://files.ably.io/tutorials/piano/samples/B2.ogg" preload="auto"></audio>
+<audio id="sound-Ab3" src="https://files.ably.io/tutorials/piano/samples/Ab3.ogg" preload="auto"></audio>
+<audio id="sound-A3" src="https://files.ably.io/tutorials/piano/samples/A3.ogg" preload="auto"></audio>
+<audio id="sound-Bb3" src="https://files.ably.io/tutorials/piano/samples/Bb3.ogg" preload="auto"></audio>
+<audio id="sound-B3" src="https://files.ably.io/tutorials/piano/samples/B3.ogg" preload="auto"></audio>
+<audio id="sound-C3" src="https://files.ably.io/tutorials/piano/samples/C3.ogg" preload="auto"></audio>
+<audio id="sound-Db3" src="https://files.ably.io/tutorials/piano/samples/Db3.ogg" preload="auto"></audio>
+<audio id="sound-D3" src="https://files.ably.io/tutorials/piano/samples/D3.ogg" preload="auto"></audio>
+<audio id="sound-Eb3" src="https://files.ably.io/tutorials/piano/samples/Eb3.ogg" preload="auto"></audio>
+<audio id="sound-E3" src="https://files.ably.io/tutorials/piano/samples/E3.ogg" preload="auto"></audio>
+<audio id="sound-F3" src="https://files.ably.io/tutorials/piano/samples/F3.ogg" preload="auto"></audio>
+<audio id="sound-Gb3" src="https://files.ably.io/tutorials/piano/samples/Gb3.ogg" preload="auto"></audio>
+<audio id="sound-G3" src="https://files.ably.io/tutorials/piano/samples/G3.ogg" preload="auto"></audio>
+<audio id="sound-Ab4" src="https://files.ably.io/tutorials/piano/samples/Ab4.ogg" preload="auto"></audio>
+<audio id="sound-A4" src="https://files.ably.io/tutorials/piano/samples/A4.ogg" preload="auto"></audio>
+<audio id="sound-Bb4" src="https://files.ably.io/tutorials/piano/samples/Bb4.ogg" preload="auto"></audio>
+<audio id="sound-B4" src="https://files.ably.io/tutorials/piano/samples/B4.ogg" preload="auto"></audio>
+<audio id="sound-C4" src="https://files.ably.io/tutorials/piano/samples/C4.ogg" preload="auto"></audio>
+<audio id="sound-Db4" src="https://files.ably.io/tutorials/piano/samples/Db4.ogg" preload="auto"></audio>
+<audio id="sound-D4" src="https://files.ably.io/tutorials/piano/samples/D4.ogg" preload="auto"></audio>
+<audio id="sound-Eb4" src="https://files.ably.io/tutorials/piano/samples/Eb4.ogg" preload="auto"></audio>
+<audio id="sound-E4" src="https://files.ably.io/tutorials/piano/samples/E4.ogg" preload="auto"></audio>
+<audio id="sound-F4" src="https://files.ably.io/tutorials/piano/samples/F4.ogg" preload="auto"></audio>
+<audio id="sound-Gb4" src="https://files.ably.io/tutorials/piano/samples/Gb4.ogg" preload="auto"></audio>
+<audio id="sound-G4" src="https://files.ably.io/tutorials/piano/samples/G4.ogg" preload="auto"></audio>
+<audio id="sound-C5" src="https://files.ably.io/tutorials/piano/samples/C5.ogg" preload="auto"></audio>
+
+<div class="piano-container">
+  <div class="piano-keys">
+    <div class="piano-white piano-A2"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Bb2"></div></div>
+    <div class="piano-white piano-B2"></div>
+    <div class="piano-white piano-C3"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Db3"></div></div>
+    <div class="piano-white piano-D3"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Eb3"></div></div>
+    <div class="piano-white piano-E3"></div>
+    <div class="piano-white piano-F3"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Gb3"></div></div>
+    <div class="piano-white piano-G3"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Ab3"></div></div>
+    <div class="piano-white piano-A3"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Bb3"></div></div>
+    <div class="piano-white piano-B3"></div>
+    <div class="piano-white piano-C4"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Db4"></div></div>
+    <div class="piano-white piano-D4"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Eb4"></div></div>
+    <div class="piano-white piano-E4"></div>
+    <div class="piano-white piano-F4"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Gb4"></div></div>
+    <div class="piano-white piano-G4"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Ab4"></div></div>
+    <div class="piano-white piano-A4"></div>
+    <div class="piano-black"><div class="piano-black-raised piano-Bb4"></div></div>
+    <div class="piano-white piano-B4"></div>
+    <div class="piano-white piano-C5"></div>
+  </div>
+  <div class="piano-pedal">Sustain ON</div>
+</div>
+
+<div style="text-align: center">
+  <button id="replay-button">Replay piano from Ably history</button>
+</div>
+
+<div>
+  Ably console:<br>
+  <textarea id="result" rows="10" style="width: 100%; margin-top: 10px; font-family: courier, courier new; background-color: #333; color: orange" disabled></textarea>
+</div>
+
+<div style="text-align: center">
+  <br>
+  PS. You can also <a href="#" id="new-browser" target="_blank">open this piano in another browser window</a> and play together using our "realtime pub/sub channels":/tutorials/publish-subscribe.
+</div>
+
+h2. Download tutorial source code
+
+blang[javascript].
+  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/history-javascript.
+
+  We recommend that you clone the repo locally:
+
+  bc[sh]. git clone https://github.com/ably/tutorials.git
+
+  Checkout the tutorial branch:
+
+  bc[sh]. git checkout history-javascript
+
+  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @example.html@ and opening the page in your browser.
+
+blang[ruby].
+  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/history-ruby.
+
+  We recommend that you clone the repo locally:
+
+  bc[sh]. git clone https://github.com/ably/tutorials.git
+
+  Checkout the tutorial branch:
+
+  bc[sh]. git checkout history-ruby
+
+  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @example.rb@ and running the demo @bundle exec ruby example.rb@
+
+blang[php].
+  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/history-php.
+
+  We recommend that you clone the repo locally:
+
+  bc[sh]. git clone https://github.com/ably/tutorials.git
+
+  Checkout the tutorial branch:
+
+  bc[sh]. git checkout history-php
+
+  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @history.php@, install the composer dependencies with:
+
+  bc[sh]. composer install
+
+  and run this script with @php history.php@.
+
+blang[python].
+  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/history-python.
+
+  We recommend that you clone the repo locally:
+
+  bc[sh]. git clone https://github.com/ably/tutorials.git
+
+  Checkout the tutorial branch:
+
+  bc[sh]. git checkout history-python
+
+  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @history.py@, install the required libraries with:
+
+  bc[sh]. pip install ably
+
+  and run this script with @python history.py@.
+
+h2. Next steps
+
+1. If you would like to find out more about how to use the history API from your devices and apps, see the "Realtime history documentation":https://www.ably.io/documentation/realtime/history. Typically on servers customers prefer to use the "REST history API":https://www.ably.io/documentation/rest/history
+2. Learn more about "Ably features":https://www.ably.io/features by stepping through our other "Ably tutorials":https://www.ably.io/tutorials
+3. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
+4. "Get in touch if you need help":https://www.ably.io/contact
+
+<script src="//cdn.ably.io/lib/ably.min.js"></script>
+<script type="text/javascript">
+
+window.addEventListener("load", function() {
+  var ably = new Ably.Realtime({ authUrl: 'https://www.ably.io/ably-auth/token/docs', echoMessages: false }),
+      channelName = getQueryParam('channel') || ("persisted:" + getRandomChannelName()),
+      channel = ably.channels.get(channelName),
+      $result = $('#result'),
+      MaxReplayDelay = 2000,
+      MaxReplayDuration = 2000;
+
+  ably.connection.on('connecting', function() {
+    log("[Connecting to Ably...]");
+  });
+
+  ably.connection.on('connected', function() {
+    log("[Connected to Ably] Ready to publish...");
+  });
+
+  channel.attach(function() {
+    log("[Piano channel] Attached to channel " + channelName + ", ready to record...");
+  });
+
+  channel.subscribe(function(msg) {
+    var key = msg.data.key;
+    press(key, '#FF0000');
+    setTimeout(function() { depressed[key] = false; fade(key)(); }, msg.data.duration);
+  });
+
+  function recordKeyDepressed(key) {
+    var payload = {
+      key: key,
+      pressed: depressed[key],
+      duration: new Date().getTime() - depressed[key]
+    };
+    channel.publish('play', payload, function(err) {
+      if (err) { return log("[Publish FAILED] " + JSON.stringify(err)); }
+      log("[Published] " + JSON.stringify(payload));
+    });
+    depressed[key] = false;
+  }
+
+  $('button#replay-button').on('click', function() {
+    var lastKeyTimestamp, song = [], delay = 0;
+    log("[Loading history...]");
+
+    channel.history({ limit: 10 }, function(err, resultPage) {
+      if (err) { return log("[History FAILED] " + JSON.stringify(err)); }
+
+      resultPage.items.forEach(function(msg) {
+        if (!lastKeyTimestamp) { lastKeyTimestamp = msg.data.pressed; }
+        song.unshift({ key: msg.data.key, pressed: lastKeyTimestamp - msg.data.pressed, duration: msg.data.duration });
+      });
+
+      if (song.length) {
+        lastKeyTimestamp = song[0].pressed;
+        song.forEach(function(note) {
+          delay += Math.min(MaxReplayDelay, lastKeyTimestamp - note.pressed);
+          setTimeout(function() { press(note.key); }, delay);
+          setTimeout(function() { depressed[note.key] = false; fade(note.key)(); }, delay + Math.min(MaxReplayDuration, note.duration) + 10);
+          lastKeyTimestamp = note.pressed;
+        });
+        log("[History] Replaying " + song.map(function(note) { return note.key; }).join(' > '));
+      } else {
+        log("[No song to play as nothing in history] Play something first and try again");
+      }
+    })
+  });
+
+  var started = new Date().getTime();
+  function log(msg) {
+    var timePassed = Math.round((new Date().getTime() - started) / 100) / 10;
+    $result.text(timePassed + "s - " + msg + "\n" + $result.text());
+  }
+
+  /* Set up the link to open a new window with this random channel name */
+  var urlWithChannel = document.location.href.replace(/#.*$/, '');
+  if (urlWithChannel.indexOf('channel=') < 0) {
+    urlWithChannel += (urlWithChannel.indexOf('?') < 0 ? '?' : '&') + "channel=" + escape(channelName);
+  }
+  $('a#new-browser').attr('href', urlWithChannel + "#live-demo");
+
+  /* Piano thanks to https://github.com/michaelmp/js-piano */
+  /* Piano keyboard pitches. Names match sound files by ID attribute. */
+
+  var keys =[
+    'A2', 'Bb2', 'B2', 'C3', 'Db3', 'D3', 'Eb3', 'E3', 'F3', 'Gb3', 'G3', 'Ab3',
+    'A3', 'Bb3', 'B3', 'C4', 'Db4', 'D4', 'Eb4', 'E4', 'F4', 'Gb4', 'G4', 'Ab4',
+    'A4', 'Bb4', 'B4', 'C5'
+  ];
+
+  /* Corresponding keyboard keycodes, in order w/ 'keys'. */
+  /* QWERTY layout:
+  /*   upper register: Q -> P, with 1-0 as black keys. */
+  /*   lower register: Z -> M, , with A-L as black keys. */
+
+  var codes = [
+     90,   83,    88,   67,   70,    86,   71,    66,   78,   74,    77,   75,
+     81,   50,    87,   69,   52,    82,   53,    84,   89,   55,    85,   56,
+     73,   57,    79,   80
+  ];
+
+  var pedal = 32; /* Keycode for sustain pedal. */
+  var tonic = 'A2'; /* Lowest pitch. */
+
+  /* Piano state. */
+
+  var intervals = {};
+  var depressed = {};
+
+  /* Selectors */
+
+  function pianoClass(name) {
+    return '.piano-' + name;
+  };
+
+  function soundId(id) {
+    return 'sound-' + id;
+  };
+
+  function sound(id) {
+    var it = document.getElementById(soundId(id));
+    return it;
+  };
+
+  /* Virtual piano keyboard events. */
+
+  function keyup(code) {
+    var offset = codes.indexOf(code);
+    var k;
+    if (offset >= 0) {
+      k = keys.indexOf(tonic) + offset;
+      return keys[k];
+    }
+  };
+
+  function keydown(code) {
+    return keyup(code);
+  };
+
+  function press(key, color) {
+    var audio = sound(key);
+    if (depressed[key]) {
+      return;
+    }
+    clearInterval(intervals[key]);
+    if (audio) {
+      audio.pause();
+      audio.volume = 1.0;
+      if (audio.readyState >= 2) {
+        audio.currentTime = 0;
+        audio.play();
+        depressed[key] = new Date().getTime();
+      }
+    }
+    $(pianoClass(key)).css({
+      'backgroundColor': color || '#88FFAA'
+    });
+  };
+
+  /* Manually diminish the volume when the key is not sustained. */
+  /* These values are hand-selected for a pleasant fade-out quality. */
+
+  function fade(key) {
+    var audio = sound(key);
+    var stepfade = function() {
+      if (audio) {
+        if (audio.volume < 0.03) {
+          kill(key)();
+        } else {
+          if (audio.volume > 0.2) {
+            audio.volume = audio.volume * 0.95;
+          } else {
+            audio.volume = audio.volume - 0.01;
+          }
+        }
+      }
+    };
+    return function() {
+      clearInterval(intervals[key]);
+      intervals[key] = setInterval(stepfade, 5);
+    };
+  };
+
+  /* Bring a key to an immediate halt. */
+
+  function kill(key) {
+    var audio = sound(key);
+    return function() {
+      clearInterval(intervals[key]);
+      if (audio) {
+        audio.pause();
+      }
+      if (key.length > 2) {
+        $(pianoClass(key)).css({
+          'backgroundColor': 'black'
+        });
+      } else {
+        $(pianoClass(key)).css({
+          'backgroundColor': 'white'
+        });
+      }
+    };
+  };
+
+  /* Simulate a gentle release, as opposed to hard stop. */
+
+  var fadeout = true;
+
+  /* Sustain pedal, toggled by user. */
+
+  var sustaining = false;
+
+  /* Register mouse event callbacks. */
+
+  keys.forEach(function(key) {
+    $(pianoClass(key)).mousedown(function() {
+      $(pianoClass(key)).css({
+        'backgroundColor': '#88FFAA'
+      });
+      press(key);
+    });
+    if (fadeout) {
+      $(pianoClass(key)).mouseup(function() {
+        recordKeyDepressed(key);
+        if (!sustaining) {
+          fade(key)();
+        }
+      });
+    } else {
+      $(pianoClass(key)).mouseup(function() {
+        recordKeyDepressed(key);
+        if (!sustaining) {
+          kill(key)();
+        }
+      });
+    }
+  });
+
+  /* Register keyboard event callbacks. */
+
+  $(document).keydown(function(event) {
+    if (event.which === pedal) {
+      sustaining = true;
+      $(pianoClass('pedal')).addClass('piano-sustain');
+    }
+    press(keydown(event.which));
+  });
+
+  $(document).keyup(function(event) {
+    if (event.which === pedal) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      sustaining = false;
+      $(pianoClass('pedal')).removeClass('piano-sustain');
+      Object.keys(depressed).forEach(function(key) {
+        if (!depressed[key]) {
+          if (fadeout) {
+            fade(key)();
+          } else {
+            kill(key)();
+          }
+        }
+      });
+    }
+    if (keyup(event.which)) {
+      recordKeyDepressed(keyup(event.which));
+      if (!sustaining) {
+        if (fadeout) {
+          fade(keyup(event.which))();
+        } else {
+          kill(keyup(event.which))();
+        }
+      }
+    }
+  });
+
+});
+</script>

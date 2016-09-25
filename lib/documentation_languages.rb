@@ -2,6 +2,7 @@ module Ably
   DOCUMENTATION_LANGUAGES = {
     'javascript' => { name: 'Javascript', extension: 'js' },
     'java' => { name: 'Java', extension: 'java' },
+    'android' => { name: 'Android', extension: 'java' },
     'python' => { name: 'Python', extension: 'py' },
     'php' => { name: 'PHP', extension: 'php' },
     'ruby' => { name: 'Ruby', extension: 'ruby' },

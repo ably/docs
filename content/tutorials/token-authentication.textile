@@ -1,0 +1,884 @@
+---
+title: Client & Server Token Authentication Tutorial
+section: tutorials
+index: 50
+---
+
+Ably supports two types of authentication schemes. Basic authentication uses one of your private API keys and is the simplest scheme designed for use by your servers. Token authentication is mostly used by your device and browser clients whereby a short-lived secure token is issued to them by your servers.
+
+Most of our "other tutorials":/tutorials demonstrate the use of the simple "basic authentication scheme":/general/authentication#basic-authentication. In this tutorial we are focussing how you can use the recommended "token authentication scheme":/general/authentication#token-authentication for your untrusted clients.
+
+It is important to bear in mind that when using token authentication, unlike with basic authentication, the client should not be given a token at time is instanced. This is because the token will expire. Instead, the client should be configured with a means to obtain a token whenever it needs to authenticate with Ably. As tokens typically expire every hour, which minimises the impact of compromise on a client device or browser, it is necessary that the client can obtain a new token to authenticate whenever the token expires or needs refreshing.
+
+Let's get started and show you how a typical client server architecture using token authentication.
+
+<%= partial 'tutorials/_step-1-setup-free-account' %>
+
+h2. Step 2 - Install Ably on your server
+
+blang[nodejs].
+  To start using Ably on your Node.js server, you first need to install the NPM module. The NPM module can be installed as follows:
+
+  ```[sh]
+    npm install ably
+  ```
+
+  The server client library must be instanced with the private API key you copied in Step 1. This will ensure that the "basic authentication scheme":/general/authentication#basic-authentication is used, which is almost always the right choice for your own trusted servers where risk of compromise of your API key credentials is low.
+
+  Add the following to a file named @server.js@ to instance the Ably library inside your Node.js server:
+
+  ```[nodejs]
+    var Ably = require("ably");
+    var rest = new Ably.Rest({ key: apiKey });
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/d848af7
+
+blang[ruby].
+  To start using Ably you first need to install the Ably RubyGem. The RubyGem can be installed as follows:
+
+  ```[sh]
+    gem install ably
+  ```
+
+  Or if using bundler, simply add the following to your @Gemfile@ and run @bundle install@:
+
+  ```[ruby]
+    gem 'ably'
+  ```
+
+  The server client library must be instanced with the private API key you copied in Step 1. This will ensure that the "basic authentication scheme":/general/authentication#basic-authentication is used, which is almost always the right choice for your own trusted servers where risk of compromise of your API key credentials is low.
+
+  As we do not need asynchronous access to the realtime API for this tutorial, we'll be using the simpler "REST client library":/rest.
+
+  ```[ruby]
+    require 'ably'
+    ably = Ably::Rest.new(key: api_key)
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/9e06aaf
+
+blang[python].
+  To start using Ably you first need to install The REST library for Python, it's "hosted on Github":https://github.com/ably/ably-python and is "published on PyPI":https://pypi.python.org/pypi/ably and can be installed as follows:
+
+  ```[sh]
+    pip install ably
+  ```
+
+  Then it can be imported and instantiated as follows:
+
+  ```[python]
+    from ably import AblyRest
+    client = AblyRest(api_key)
+  ```
+
+  For the purpose of this tutorial let's create @server.py@ file with the code above, we'll be using this file as base later on.
+
+  h4. Note on string encodings
+
+  Since Ably supports both string and binary payloads, to avoid ambiguity, we recommend that strings passed to the library for publishing to Ably (eg as an event name or payload data) should be unicode strings. In Python 3 this is the normal string type, but in Python 2 it is not, so we suggest you prefix string literals with @u@ prefix (eg @u'eventname'@ - or alternatively, use @from __future__ import unicode_literals@, which will make this automatic), and to explicitly decode any user input (eg @raw_input().decode(sys.stdin.encoding@).
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/aff9d58
+
+blang[php].
+  To start using Ably you first need to install "composer package on packagist":https://packagist.org/packages/ably/ably-php into your composer.
+
+  ```[sh]
+    composer require ably/ably-php --update-no-dev
+  ```
+
+  The server client library must be instanced with the private API key you copied in Step 1. This will ensure that the "basic authentication scheme":/general/authentication#basic-authentication is used, which is almost always the right choice for your own trusted servers where risk of compromise of your API key credentials is low.
+
+  Create @public@ directory, it will serve as document root. Add the following to a file named @ably.php@ to instance the Ably library inside your php script:
+
+  ```[php]
+    require_once __DIR__ . '/../vendor/autoload.php';
+    $ably = new \Ably\AblyRest("{{ApiKey}}");
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/cd12634
+
+h2. Step 3 - Set up your web server
+
+Before a client connects to Ably, it will check if it has suitable credentials to authenticate with Ably. As we'll be using the recommended "token authentication scheme":/general/authentication#token-authentication in the client for this demo, when the client starts up and attempt to connect to Ably, it will request a token immediately so that it can then authenticate with Ably.
+
+As tokens are typically issued from your own web servers, we'll set up a simple web server now for this tutorial.
+
+blang[nodejs].
+  "Express.js":https://expressjs.com/ is a very popular and simple web framework for Node.js. Let's get this setup:
+
+  First we'll add the @express@ NPM module and create a @package.json@:
+
+  ```[json]
+  {
+    "name": "ably-tutorials",
+    "repository": "https://github.com/ably/tutorials",
+    "license": "Apache-2.0",
+    "engines": {
+      "node": ">=0.10"
+    },
+    "scripts": {
+      "start": "node ./server.js"
+    },
+    "dependencies": {
+      "ably": ">=0.8",
+      "express": "~4.0"
+    }
+  }
+  ```
+
+  Then we'll set up a vanilla HTTP Express.js server in @server.js@:
+
+  ```[nodejs]
+    const express = require('express'),
+          app = express();
+
+    app.get('/', function (req, res) {
+      res.send('Hello, I am a very simple server');
+    });
+
+    app.listen(3000, function () {
+      console.log('Web server listening on port 3000');
+    });
+  ```
+
+  If you would like to try running the server now, you can do so with @node server.js@. Once running, open your browser to "http://localhost:3000/":http://localhost:3000/ and you should see the text "Hello, I am a very simple server".
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/ec3b24c
+
+blang[ruby].
+  "Sinatra":http://www.sinatrarb.com/ is a very simple and popular web server framework for Ruby. Rails is arguably more popular as a web server framework, however for the purposes of this tutorial it is overkill. Bear in mind that all the code in this tutorial can be used as is within Rails. You will need to configure routes in @routes.rb@, add the code to a controller, and then add the HTML to a view.
+
+  Let's get going with a simple Sinatra web server now. Add the @sinatra@ RubyGem to your @Gemfile@ and then run @bundle install@:
+
+  ```[ruby]
+    gem 'sinatra'
+  ```
+
+  Now set up a vanilla Sinatra server in @server.rb@:
+
+  ```[ruby]
+    require 'sinatra'
+    get '/' do
+      'Hello, I am a very simple server'
+    end
+  ```
+
+  If you would like to try running the server now, you can do so with @bundle exec ruby server.rb@. Once running, open your browser to "http://localhost:4567/":http://localhost:4567/ and you should see the text "Hello, I am a very simple server".
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/0e9e6db
+
+blang[python].
+  "web.py":http://webpy.org/ is a simple web framework for Python. Django is arguably more popular as a web server framework, however for the purposes of this tutorial it is overkill.
+
+  Let's get going with a simple web.py web server now. Install @web.py@ using @pip@:
+
+  ```[sh]
+    pip install web.py
+  ```
+
+  Now set up a vanilla web.py server in @server.py@:
+
+  ```[python]
+    import web
+
+    class index:
+        def GET(self):
+            return 'Hello, I am a very simple server'
+
+
+    urls = (
+        '/', index
+    )
+
+    app = web.application(urls, globals())
+
+    if __name__ == "__main__":
+        app.run()
+  ```
+
+  In @web.py@ each resource is mapped to a class, which in turn takes action depending on HTTP method used. In this case it's main domain @'/'@, that will be handled by @index@ class, and it will support HTTP @GET@.
+
+  If you would like to try running the server now, you can do so with @python server.py@. Once running, open your browser to "http://localhost:8080/":http://localhost:8080/ and you should see the text "Hello, I am a very simple server". If you would like to change port, on which your site will be available, simply add it after command ieg. @python server.py 1234@ for port @1234@.
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/91ec78e
+
+blang[php].
+  PHP has built-in web server that allows to serve php scripts, and it's excellent for the purpose of this tutorial.
+
+  Create @index.php@:
+
+  ```[php]
+    <?php
+    echo "Hello, I am a very simple server";
+  ```
+
+  If you would like to try running the server now, you can do so with @php -S 0.0.0.0:8000@. Once running, open your browser to "http://localhost:8000/":http://localhost:8000/ and you should see the text "Hello, I am a very simple server".
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/2314a18
+
+h2. Step 4 - Respond to authentication requests
+
+Before we move onto the client, let's first make sure the web server is capable of issuing token request to clients that need to authenticate with Ably. However, instead of jumping into code, lets quickly talk about how token authentication works and what the difference is between a "@Token@":https://www.ably.io/documentation/realtime/authentication#token-details and "@TokenRequest@":https://www.ably.io/documentation/realtime/authentication#token-request is.
+
+When a client needs to authenticate, it will automatically send a request to the authentication URL you provide, which is normally a URL on your server. Alternatively if you provide a callback instead of an authentication URL, it will invoke your callback and wait for it to respond with token details. See the "auth options documentation":https://www.ably.io/documentation/realtime/authentication#auth-options for more info on the options available.
+
+Your web server or callback, following an authentication request, is then responsible for providing the client library with a "@Token@":https://www.ably.io/documentation/realtime/authentication#token-details or a "@TokenRequest@":https://www.ably.io/documentation/realtime/authentication#token-request. The token can contain permissions (we call then capabilities) and an identity for the client, but we'll look at that functionality later.
+
+For now you need to understand how token requests and tokens differ and why in most cases we recommend you issue token requests as opposed to tokens.
+
+h4. Tokens
+
+All clients authenticating with Ably must use either an API key or a token. Tokens are obtained by sending a "@TokenRequest@":https://www.ably.io/documentation/realtime/authentication#token-request containing the required token spec to the Ably service.  The token may include a set of capabilities (permissions such as subscribe access to a specific channel), an identity (such as logged-in user's unique ID) or a TTL (the time before it expires).
+
+h4. Token Requests
+
+Token requests, unlike tokens, are created and signed by your server without having to communicate with Ably. A token request is simply a JSON object that contains a pre-authorization from your servers for a client, effectively stating "Ably, with this signed token, I authorize you to issue a token according to the permissions, ID and TTL specied, to whoever hands this to you". Ably is then able to inspect the signature to ensure the token request is indeed from the your server and signed with your private API key, and issue a token to the client requesting the token. Ably ensures that token requests can only be used soon after creation and can only be used once.
+
+Therefore, as it is possible to issue token requests without any communication to Ably (in the form of an HTTP request), we recommend that when a client needs to authenticate, you should provide a signed token request. This approach minimises the amount of work your servers need to do by distributing the task of obtaining a token from the Ably service using the token request to your clients instead.
+
+In this step we will get the local web server ready to respond to authentication requests by issuing a token request to the requesting client.
+
+blang[nodejs].
+  By adding the following route to your Express.js server, it is now ready to service clients wanting to authenticate with Ably.
+
+  ```[nodejs]
+    /* Issue token requests to clients sending a request to the /auth endpoint */
+    app.get('/auth', function (req, res) {
+      var tokenParams = {}; /* Use token defaults for now */
+      rest.auth.createTokenRequest(tokenParams, function(err, tokenRequest) {
+        if (err) {
+          res.status(500).send('Error requesting token: ' + JSON.stringify(err));
+        } else {
+          res.setHeader('Content-Type', 'application/json');
+          res.send(JSON.stringify(tokenRequest));
+        }
+      });
+    });
+  ```
+
+  Try running your server again with @node server.js@ and visiting "http://localhost:3000/auth":http://localhost:3000/auth and you should see a JSON token request in the form:
+
+  ```[json]
+  {
+    "keyName": "I2ACJQ.Lv8AUQ",
+    "ttl": 3600000,
+    "timestamp": 1473894038255,
+    "capability": "{\"*\":[\"*\"]}",
+    "nonce": "f6799a8e7fa6f77b8e1dac55314789b1",
+    "mac": "35nifY9SRZ8KRDfKOPIS1qYWGP16r2lD59zJo9TH8pA="
+  }
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/6a40d84
+
+blang[ruby].
+  By adding the following route to your server, it is now ready to service clients wanting to authenticate with Ably.
+
+  ```[ruby]
+    require 'json'
+
+    # Issue token requests to clients sending a request to the /auth endpoint
+    get '/auth' do
+      content_type :json
+      ably.auth.create_token_request.to_json
+    end
+  ```
+
+  Try running your server again with @bundle exec ruby server.rb@ and visiting "http://localhost:4567/auth":http://localhost:4567/auth and you should see a JSON token request in the form:
+
+  ```[json]
+  {
+    "keyName": "I2ACJQ.Lv8AUQ",
+    "ttl": 3600000,
+    "timestamp": 1473894038255,
+    "capability": "{\"*\":[\"*\"]}",
+    "nonce": "f6799a8e7fa6f77b8e1dac55314789b1",
+    "mac": "35nifY9SRZ8KRDfKOPIS1qYWGP16r2lD59zJo9TH8pA="
+  }
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/5575d73
+
+blang[python].
+  By adding the following class and route to your urls, it is now ready to service clients wanting to authenticate with Ably.
+
+  ```[python]
+    import json
+
+    # Issue token requests to clients sending a request to the /auth endpoint
+    class auth:
+        def GET(self):
+            web.header('Content-Type', 'application/json')
+            return json.dumps(client.auth.create_token_request().to_dict())
+
+    # let's update urls
+    urls = (
+        '/', index,
+        '/auth', auth
+    )
+  ```
+
+  Try running your server again with @python server.py@ and visiting "http://localhost:8080/auth":http://localhost:8080/auth and you should see a JSON token request in the form:
+
+  ```[json]
+  {
+    "keyName": "I2ACJQ.Lv8AUQ",
+    "ttl": 3600000,
+    "timestamp": 1473894038255,
+    "capability": "{\"*\":[\"*\"]}",
+    "nonce": "f6799a8e7fa6f77b8e1dac55314789b1",
+    "mac": "35nifY9SRZ8KRDfKOPIS1qYWGP16r2lD59zJo9TH8pA="
+  }
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/7841d7e
+
+blang[php].
+  By adding the following script, it is now ready to service clients wanting to authenticate with Ably.
+
+  Create @auth.php@ script:
+
+  ```[php]
+    require_once 'ably.php'
+    header('Content-Type: application/json');
+    # Issue token requests to clients sending a request to the /auth.php endpoint
+    echo json_encode($ably->auth->createTokenRequest()->toArray());
+  ```
+
+  Try running your server again with @php -S 0.0.0.0:8000@ (if it's not up already) and visiting "http://localhost:8000/auth.php":http://localhost:8000/auth.php and you should see a JSON token request in the form:
+
+  ```[json]
+  {
+    "keyName": "I2ACJQ.Lv8AUQ",
+    "ttl": 3600000,
+    "timestamp": 1473894038255,
+    "capability": "{\"*\":[\"*\"]}",
+    "nonce": "f6799a8e7fa6f77b8e1dac55314789b1",
+    "mac": "35nifY9SRZ8KRDfKOPIS1qYWGP16r2lD59zJo9TH8pA="
+  }
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/f08a34f
+
+h2. Step 5 - Setting up a client to use token authentication
+
+Now that we have a web server running and an authentication endpoint, we are ready to setup the Ably Realtime client that uses token auth.
+
+blang[nodejs].
+  First we need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.js@:
+blang[ruby].
+  First we need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.rb@:
+blang[php].
+  First we need to set up a simple HTML page that will be served by the web server. Replace contents of @index.php@ with code below:
+blang[python].
+  First we need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.py@:
+
+```[html]
+<html>
+  <head>
+    <script src="https://cdn.ably.io/lib/ably.min.js" type="text/javascript"></script>
+  </head>
+  <body>
+    <h1>Token auth example</h1>
+  </body>
+</html>
+```
+
+blang[nodejs].
+  Now we need to serve a static home page. Let's replace the code that responds to the @/@ route (look for @get '/' do ... end@) with the following:
+
+  ```[nodejs]
+    app.use('/', express.static(__dirname));
+  ```
+
+  Try running your server again with @node server.js@ and visiting "http://localhost:3000/":http://localhost:3000/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
+
+blang[ruby].
+  Now we need to serve a static home page. Let's replace the code that responds to the @/@ route (look for @app.get('/', ...@) with the following:
+
+  ```[ruby]
+    get '/' do
+      File.read('index.html')
+    end
+  ```
+
+  Try running your server again with @bundle exec ruby server.rb@ and visiting "http://localhost:4567/":http://localhost:4567/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
+
+blang[python].
+  Now we need to serve a static home page. Let's replace the code that responds to the @/@ route (look for @index@ class) with the following:
+
+  ```[python]
+    class index:
+        def GET(self):
+            html = open('index.html')
+            return html.read()
+  ```
+
+  Try running your server again with @python server.py@ and visiting "http://localhost:8080/":http://localhost:8080/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
+
+blang[php].
+  Try running your server again with @php -S 0.0.0.0:8000@ (if it's not up already) and visiting "http://localhost:8000/":http://localhost:8000/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
+
+
+blang[nodejs,ruby,python].
+  Add the following above the closing @</html>@ tag in your @index.html@ file:
+
+  ```[html]
+    <script type="text/javascript">
+      /* Set up a Realtime client that authenticates with the local web server auth endpoint */
+      var realtime = new Ably.Realtime({ authUrl: '/auth' });
+      realtime.connection.once('connected', function() {
+        alert("We're connected using the token request from the server /auth endpoint!");
+      });
+    </script>
+  ```
+
+blang[php].
+  Add the following above the closing @</html>@ tag in your @index.php@ file:
+
+  ```[html]
+    <script type="text/javascript">
+      /* Set up a Realtime client that authenticates with the local web server auth endpoint */
+      var realtime = new Ably.Realtime({ authUrl: '/auth.php' });
+      realtime.connection.once('connected', function() {
+        alert("We're connected using the token request from the server /auth endpoint!");
+      });
+    </script>
+  ```
+
+
+So let's see what happens now. Restart the local server and refresh the page. You should receive an alert to confirm that you're connected to Ably which means your server has successfully issued a token request to the client, the client has then obtained a token from Ably with the token request, it has subsequently authenticated and finally connected.
+
+blang[nodejs].
+  "See this step in Github":https://github.com/ably/tutorials/commit/f63b65e
+
+blang[ruby].
+  "See this step in Github":https://github.com/ably/tutorials/commit/ef41176
+
+blang[python].
+  "See this step in Github":https://github.com/ably/tutorials/commit/2627e67
+
+blang[php].
+  "See this step in Github":https://github.com/ably/tutorials/commit/9bdec36
+
+You've now covered the basics of client / server token authentication and your client has a means to renew the token whenever it needs one.
+
+h2. Step 6 - Authenticating logged in users
+
+In the previous step we demonstrated how easy it is to issue a token request from your server for clients that need to authenticate with Ably. However, the example is quite contrived in that it is unlikely you would want to issue tokens to anonymous users with a full set of capabilities. At present, the token issued allows all users to publish, subscribe, be present, retrieve stats and history across all channels.
+
+In this step we'll show you how to issue subscribe only tokens limited to a single channel for anonymous users, and issue publish and subscribe tokens for logged in users. As the purpose of this tutorial is not demonstrate how to build an authentication system for your website, we have implemented a trivial and clearly flawed authentication system so that we can keep superfluous unrelated code to a minimum.
+
+blang[nodejs,ruby,python].
+  Let's get started. First we will add two panels, one that contains a simple login form, and the other with log out link to the HTML page. Add the following beneath the @</h1>@ tag in your @index.html@ file:
+
+  ```[html]
+    <div id="panel-anonymous">
+      <h3>Login</h3>
+      <form action="/login">
+        <input type="text" name="username" placeholder="Enter your username">
+        <input type="submit" value="Login">
+      </form>
+    </div>
+    <div id="panel-logged-in">
+      Your are logged in. <a href="/logout">Log out</a>
+    </div>
+  ```
+
+blang[php].
+  Let's get started. First we will add two panels, one that contains a simple login form, and the other with log out link to the HTML page. Add the following beneath the @</h1>@ tag in your @index.php@ file:
+
+  ```[html]
+    <div id="panel-anonymous">
+      <h3>Login</h3>
+      <form action="/login.php">
+        <input type="text" name="username" placeholder="Enter your username">
+        <input type="submit" value="Login">
+      </form>
+    </div>
+    <div id="panel-logged-in">
+      Your are logged in. <a href="/logout.php">Log out</a>
+    </div>
+  ```
+
+
+
+blang[nodejs].
+  Now we need to enable the login and logout functionality in the web server. In order to keep this tutorial simple, when a user logs in we'll set a cookie, and when they log out we'll clear the cookie. Add the following routes to your @server.js@ file.
+
+  ```[nodejs]
+    /* Set a cookie when the user logs in */
+    app.get('/login', function (req, res) {
+      /* Login the user without credentials.
+         This is an over simplified authentication system
+         to keep this tutorial simple */
+      if (req.query['username']) {
+        res.cookie('username', req.query['username']);
+        res.redirect('/');
+      } else {
+        res.status(500).send('Username is required to login');
+      }
+    });
+
+    /* Clear the cookie when the user logs outs */
+    app.get('/logout', function (req, res) {
+      res.clearCookie('username');
+      res.redirect('/');
+    });
+  ```
+
+blang[ruby].
+  Now we need to enable the login and logout functionality in the web server. In order to keep this tutorial simple, when a user logs in we'll set a cookie, and when they log out we'll clear the cookie.
+
+  We need to add cookie support to Sinatra, so add the following to your @Gemfile@ and @bundle install@:
+
+  ```[ruby]
+    gem 'sinatra-contrib'
+  ```
+
+  Add the following routes to your @server.rb@ file.
+
+  ```[ruby]
+    require 'sinatra/cookies'
+
+    # Set a cookie when the user logs in
+    get '/login' do
+      # Login the user without credentials.
+      # This is an over simplified authentication system
+      # to keep this tutorial simple
+      if request.params['username']
+        cookies[:username] = request.params['username']
+        redirect to('/')
+      else
+        status 500
+        'Username is required to login'
+      end
+    end
+
+    # Clear the cookie when the user logs outs
+    get '/logout' do
+      cookies.delete 'username'
+      redirect to('/')
+    end
+  ```
+
+blang[python].
+  Now we need to enable the login and logout functionality in the web server. In order to keep this tutorial simple, when a user logs in we'll set a cookie, and when they log out we'll clear the cookie.
+
+  Add the following classes to your @server.py@ file.
+
+  ```[python]
+    # Set cookie when the user logs in
+    class login:
+        def GET(self):
+            username = web.input().get('username')
+            if username is not None:
+                web.setcookie('username', username)
+                raise web.seeother('/')
+            else:
+                raise web.InternalError('Username is required to login')
+
+    # Clear the cookie when the user logs outs
+    class logout:
+        def GET(self):
+            web.setcookie('username', None, -1)
+            raise web.seeother('/')
+
+    # update urls
+    urls = (
+        '/', index,
+        '/auth', auth,
+        '/login', login,
+        '/logout', logout
+    )
+  ```
+
+blang[php].
+  Now we need to enable the login and logout functionality in the web server. In order to keep this tutorial simple, when a user logs in we'll set a cookie, and when they log out we'll clear the cookie.
+
+  We'll create two scripts that will serve as our login and logout functionality.
+
+  First create @login.php@:
+
+  ```[php]
+    <?php
+    if (isset($_REQUEST['username'])) {
+      setcookie('username', $_REQUEST['username']);
+      header('Location: /', true, 302);
+    } else {
+      http_response_code(500);
+      echo "Username is required to login";
+    }
+  ```
+
+  Second script will serve as logout, create @logout.php@:
+
+  ```[php]
+    <?php
+    setcookie('username', null, -1, '/');
+    header('Location: /', true, 302);
+  ```
+
+
+blang[nodejs,ruby,python].
+  Both the logged in and anonymous HTML panels will currently show on the HTML page, let's add quickly hide or show them based on the cookie set above. Add the following just before the final @</script>@ tag in @index.html@
+blang[php].
+  Both the logged in and anonymous HTML panels will currently show on the HTML page, let's add quickly hide or show them based on the cookie set above. Add the following just before the final @</script>@ tag in @index.php@
+
+
+```[javascript]
+  var loggedIn = document.cookie.indexOf('username') >= 0;
+  document.getElementById('panel-anonymous').
+    setAttribute('style', "display: " + (loggedIn ? 'none' : 'block'));
+  document.getElementById('panel-logged-in').
+    setAttribute('style', "display: " + (loggedIn ? 'block' : 'none'));
+```
+
+blang[nodejs].
+  Now that we have a means to determine if a user is logged in or logged out using the session cookie, we can issue restricted subscribe-only token requests for anonymous users and publish and subscribe token requests for logged in users. Replace the @var tokenParams = {};@ code in your @server.js@ with the following:
+
+  ```[nodejs]
+    var tokenParams;
+    /* Check if the user is logged in */
+    if (req.cookies.username) {
+      /* Issue a token request with pub & sub permissions on all channels +
+         configure the token with an indentity */
+      tokenParams = {
+        'capability': { '*': ['publish', 'subscribe'] },
+        'clientId': req.cookies.username
+      };
+    } else {
+      /* Issue a token with subscribe privileges restricted to one channel
+         and configure the token without an identity (anonymous) */
+      tokenParams = {
+        'capability': { 'notifications': ['subscribe'] }
+      };
+    }
+  ```
+
+  Unfortunately Express.js is very lightweight and does not support cookie parsing out of the box. We need to add the @cookie-parser@ NPM module to Express.js. Add the following to your @package.json@ file:
+
+  ```[json]
+  {
+    ...
+    "dependencies": {
+      "ably": ">=0.8",
+      "express": "~4.0",
+      "cookie-parser": "~1.4"
+    }
+  }
+  ```
+
+  And add the following to the top of your @server.js@ file, beneath the Express.js require, so that cookies are parsed:
+
+  ```[nodejs]
+    const cookieParser = require('cookie-parser');
+    app.use(cookieParser());
+  ```
+
+blang[ruby].
+  Now that we have a means to determine if a user is logged in or logged out using the session cookie, we can issue restricted subscribe-only token requests for anonymous users and publish and subscribe token requests for logged in users. Replace the @get '/auth' do ... end@ code in your @server.rb@ with the following:
+
+  ```[ruby]
+    require 'sinatra/cookies'
+
+    # Allow cookies to be read in the browser
+    set :cookie_options, httponly: false
+
+    # Issue token requests to clients sending a request to the /auth endpoint
+    get '/auth' do
+      content_type :json
+
+      # Check if the user is logged in
+      token_params = if cookies[:username]
+        # Issue a token request with pub & sub permissions on all channels +
+        #   configure the token with an indentity
+        {
+          capability: { '*' => ['publish', 'subscribe'] },
+          client_id: cookies[:username]
+        }
+      else
+        # Issue a token with subscribe privileges restricted to one channel
+        #   and configure the token without an identity (anonymous)
+        {
+          capability: { 'notifications' => ['subscribe'] }
+        }
+      end
+      ably.auth.create_token_request(token_params).to_json
+    end
+  ```
+
+blang[python].
+  Now that we have a means to determine if a user is logged in or logged out using the session cookie, we can issue restricted subscribe-only token requests for anonymous users and publish and subscribe token requests for logged in users. Replace the code for @auth@ class with the following:
+
+  ```[python]
+    class auth:
+        def GET(self):
+            username = web.cookies().get('username')
+            if username is not None:
+                token_params = {
+                    'capability': {
+                        '*': ['publish', 'subscribe']
+                    },
+                    'client_id': username
+                }
+            else:
+                token_params = {
+                    'capability': {
+                        'notifications': ['subscribe']
+                    }
+                }
+            web.header('Content-Type', 'application/json')
+            return json.dumps(client.auth.create_token_request(token_params).to_dict())
+  ```
+
+blang[php].
+  Now that we have a means to determine if a user is logged in or logged out using the session cookie, we can issue restricted subscribe-only token requests for anonymous users and publish and subscribe token requests for logged in users. Replace the code in your @auth.php@ with the following:
+
+  ```[php]
+    <?php
+    require_once 'ably.php';
+    // Check if the user is logged in
+    if (isset($_COOKIE['username'])) {
+      // Issue a token request with pub & sub permissions on all channels +
+      // configure the token with an identity
+      $tokenParams = [
+        'capability' => [
+          '*' => ['publish', 'subscribe']
+        ],
+        'clientId'  => $_COOKIE['username']
+      ];
+    } else {
+      // Issue a token with subscribe privileges restricted to one channel
+      // and configure the token without an identity (anonymous)
+      $tokenParams = [
+        'capability' => [
+          'notifications' => ['subscribe']
+        ]
+      ];
+    }
+    header('Content-Type: application/json');
+    echo json_encode($ably->auth->createTokenRequest($tokenParams)->toArray());
+  ```
+
+Finally, before we test this new functionality, let's update the alert so that it shows the authentication details after it connects to Ably. Replace @alert("We're connected...@ with the following:
+
+```[javascript]
+  var user = realtime.auth.tokenDetails.clientId || 'anonymous';
+  var capability = realtime.auth.tokenDetails.capability;
+  alert(
+    'You are now connected to Ably \n' +
+    'User: ' + user + ' \n' +
+    'Capabilities: ' + capability
+  );
+```
+
+blang[nodejs].
+  Ok, we're ready to see all of this in action. Restart the local server @node server.js@ and then refresh the page at "http://localhost:3000/":http://localhost:3000/. You should receive an alert to confirm that you're connected as an anonymous with limited capabilities as follows:
+
+blang[ruby].
+  Ok, we're ready to see all of this in action. Restart the local server @bundle exec ruby server.rb@ and then refresh the page at "http://localhost:4567/":http://localhost:4567/. You should receive an alert to confirm that you're connected as an anonymous with limited capabilities as follows:
+
+blang[python].
+  Ok, we're ready to see all of this in action. Restart the local server @python server.py@ and then refresh the page at "http://localhost:8080/":http://localhost:8080/. You should receive an alert to confirm that you're connected as an anonymous with limited capabilities as follows:
+
+blang[php].
+  Ok, we're ready to see all of this in action. Restart the local server @php -S 0.0.0.0:8000@ and then refresh the page at "http://localhost:8000/":http://localhost:8000/. You should receive an alert to confirm that you're connected as an anonymous with limited capabilities as follows:
+
+<a href="/images/tutorials/token-authentication-anonymous.png" target="_blank">
+  <img src="/images/tutorials/token-authentication-anonymous.png" style="width: 457px" alt="Token auth details for anonymous">
+</a>
+
+Now enter a username and click "login", and you should receive an alert confirming you are authenticated with Ably as an indentified user with additional privileges to subscribe and publish on all channels as follows:
+
+<a href="/images/tutorials/token-authentication-mike.png" target="_blank">
+  <img src="/images/tutorials/token-authentication-mike.png" style="width: 429px" alt="Token auth details for logged in user Mike">
+</a>
+
+blang[nodejs].
+  "See this step in Github":https://github.com/ably/tutorials/commit/ad72480
+
+blang[ruby].
+  "See this step in Github":https://github.com/ably/tutorials/commit/5dda1dd
+
+blang[python].
+  "See this step in Github":https://github.com/ably/tutorials/commit/911640d
+
+blang[php].
+  "See this step in Github":https://github.com/ably/tutorials/commit/fbf5c45
+
+We've covered a lot of ground in this tutorial. However authentication is one of the more challenging parts to understand as it requires you to have a good overall understanding of how it all works. We strongly recommend you see below for essential further reading to help you understand authentication in more detail for use in your servers and apps.
+
+h2. Download tutorial source code
+
+blang[nodejs].
+  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/token-authentication-nodejs.
+
+  We recommend that you clone the repo locally:
+
+  bc[sh]. git clone https://github.com/ably/tutorials.git
+
+  Checkout the tutorial branch:
+
+  bc[sh]. git checkout token-authentication-nodejs
+
+  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @server.js@ and running the demo @node server.js@
+
+blang[ruby].
+  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/token-authentication-ruby.
+
+  We recommend that you clone the repo locally:
+
+  bc[sh]. git clone https://github.com/ably/tutorials.git
+
+  Checkout the tutorial branch:
+
+  bc[sh]. git checkout token-authentication-ruby
+
+  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @server.rb@ and running the demo @bundle exec ruby server.rb@
+
+blang[python].
+  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/token-authentication-python.
+
+  We recommend that you clone the repo locally:
+
+  bc[sh]. git clone https://github.com/ably/tutorials.git
+
+  Checkout the tutorial branch:
+
+  bc[sh]. git checkout token-authentication-python
+
+  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @server.py@, install the required libraries:
+
+  bc[sh]. pip install ably web.py
+
+  and run the demo @python server.py@.
+
+blang[php].
+  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/token-authentication-php.
+
+  We recommend that you clone the repo locally:
+
+  bc[sh]. git clone https://github.com/ably/tutorials.git
+
+  Checkout the tutorial branch:
+
+  bc[sh]. git checkout token-authentication-php
+
+  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @ably.php@, install composer dependencies with:
+
+  bc[sh]. composer install
+
+  and running the demo @php -S 0.0.0.0:8000@.
+
+h2. Next steps
+
+1. Find out how "Basic Auth and Token Auth differ and how to choose the right authentication scheme":/general/authentication#selecting-auth
+2. Read up on "Basic Auth":/general/authentication#basic-authentication and "how to use Basic Auth on your server using the REST library":/rest/authentication#basic-authentication
+3. Read up on "Token Auth":/general/authentication#basic-authentication and "how to use Token Auth on a client using the Realtime library":/realtime/authentication#token-authentication
+4. "Understand and see some examples of how to define capabilities (permissions)":/general/authentication#capabilities-explained for tokens and token requests
+5. Discover how "identities in tokens allow clients and servers to trust other clients' identities":/realtime/authentication#identified-clients validated and provided by your servers
+6. Learn more about other "Ably features":https://www.ably.io/features by stepping through our other "Ably tutorials":https://www.ably.io/tutorials
+7. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
+8. "Get in touch if you need help":https://www.ably.io/contact
