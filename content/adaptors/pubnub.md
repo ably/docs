@@ -24,7 +24,7 @@ Please note:
 * For simplicity, the above example uses the Pubnub Javascript library. All other Pubnub client libraries can be instanced in a similar fashion. See the [complete list of Pubnub SDKs and their documentation](https://www.pubnub.com/docs).
 * You can add any other Pubnub options you would normally use in the initializer.
 * The `ssl` option is not mandatory, but strongly recommended. The Pubnub client includes the raw api key in the path that it connects to, so we strongly advise you to use this option to prevent it being sent in plain text.
-* We do not yet support Pubnub v4 client libraries.
+* We do not yet support Pubnub v4 client libraries. Note: some earlier client libraries also use the newer subscribe protocol (which Pubnub confusingly calls the v2 subscribe protocol), but usually have an option to disable it: for example, if using the Pubnub android java library 3.7.8 to 3.7.10, you can call the (undocumented) method "setV2(false)" on the pubnub client immediately after initializing it, or downgrade to 3.7.7.
 
 ## Supported features
 
