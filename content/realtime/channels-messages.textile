@@ -169,7 +169,7 @@ Channels are not pre-configured or provisioned by Ably in advance; they are crea
 
 The following example explicitly attaches to a channel, which results in the channel being provisioned in Ably's global realtime cluster. This channel will remain available globally until there are no more clients attached to the channel:
 
-bc[jsall]. realtime.channels.get('chatroom').attach(function() {
+bc[jsall]. realtime.channels.get('chatroom').attach(function(err) {
   console.log('"chatroom" exists and is now available globally in every data center');
 });
 
@@ -246,28 +246,36 @@ channel.subscribe("action") { message in
 }
 channel.publish("action", data: "boom!")
 
+<div lang="jsall">
+Normally, errors in attaching to a channel are communicated through the attach callback. For implicit attaches (and other cases where a channel is attached or reattached automatically), there is no callback, so instead, any failures to attach are emitted in @error@ events on the channel object with error code 91200.
+</div>
+
 h3(#channel-states). Channel states
 
 A channel can exist in any of the following states:
 
 - initialized := A @Channel@ object having this state has been initialized but no attach has yet been attempted
 
-- attaching := An attach has been initiated by sending a request to Ably. This is a transient state; it will be followed either by a transition to attached or failed
+- attaching := An attach has been initiated by sending a request to Ably. This is a transient state; it will be followed either by a transition to attached, suspended, or failed
 
 - attached := Attach has succeeded. In the attached state a client may publish and subscribe to messages, or be present
 
 - detaching := A detach has been initiated on the attached @Channel@ by sending a request to Ably. This is a transient state; it will be followed either by a transition to detached or failed
 
-- detached := The @Channel@, having previously been attached, has been detached
+- detached := The @Channel@, having previously been attached, has been detached by the user
+
+- suspended := The @Channel@, having previously been attached, has lost continuity, usually due to the client being disconnected from Ably for more than two minutes. It will automatically attempt to reattach as soon as connectivity is restored
 
 - failed := An indefinite failure condition. This state is entered if a @Channel@ error has been received from the Ably service (such as an attempt to attach without the necessary access rights)
 
 h3. Listening for state changes
 
-The @Channel@ object is an @EventEmitter@ and emits an event whose name is the new state whenever there is a channel state change. <span lang="jsall">As with all events from an @EventEmitter@ in the Ably library, @this@ within the listener function is a reference to an event object whose @event@ property is the name of the event that fired. This allows a listener to listen for all events with a single registration and know, which event fired when it is entered.</span>
+The @Channel@ object is an @EventEmitter@ and emits an event whose name is the new state whenever there is a channel state change. <span lang="jsall">Listeners are passed a "ChannelStateChange":#channel-state-change object in the first argument. This contains the @current@ and @previous@ states, a @resumed@ flag which indicated whether message continuity on this channel is preserved (from the last time that the channel was attached), and (sometimes) a @reason@ for the state change. As with all events from an @EventEmitter@ in the Ably library, @this@ within the listener function is a reference to an event object whose @event@ property is the name of the event that fired. This allows a listener to listen for all events with a single registration and know, which event fired when it is entered.</span>
 
-bc[jsall]. channel.on('attached', function() {
+bc[jsall]. channel.on('attached', function(stateChange) {
   console.log('channel ' + channel.name + ' is now attached');
+  console.log('Message continuity on this channel ' + \
+    (stateChange.resumed ? 'was' : 'was not') + ' preserved');
 });
 
 bc[ruby]. channel.on(:attached) do |channel_state_change|
@@ -296,8 +304,12 @@ bc[swift]. channel.on(.Attached) { error in
 
 Alternatively a listener may be registered so that it receives all state change events.
 
-bc[jsall](code-editor:realtime/channel-states). var myListener = function() {
-  console.log('channel state is ' + this.event);
+bc[jsall](code-editor:realtime/channel-states). var myListener = function(stateChange) {
+  console.log('channel state is ' + stateChange.current);
+  console.log('previous state was ' + stateChange.previous);
+  if(stateChange.reason) {
+    console.log('the reason for the state change was: ' + stateChange.reason.toString());
+  }
 });
 channel.on(myListener);
 
@@ -376,7 +388,7 @@ h3(#handling-failures). Handling channel failures
 
 Channel attach and detach operations are synchronous - after initiating an attach request, the client must wait for a response from Ably that confirms that the channel is established on the service.
 
-There are cases where an attach will fail deterministically, such as if the client doesn't have the necessary rights to access the channel.
+The client libraries will attempt to automatically recover from non-fatal error conditions. However, you can handle them yourself if you prefer. <span lang="jsall">For explicit attaches with a callback, both fatal and nonfatal errors will result in the callback being called with an @ErrorInfo@ argument</span>
 
 bc[jsall]. realtime.channels.get('private:chatroom').attach(function(err) {
   if (err) {
@@ -421,9 +433,30 @@ bc[swift]. realtime.channels.get("private:chatroom").attach { error in
     }
 }
 
+
+h4(#fatal-errors). Fatal channel errors
+
+Some classes of errors are fatal. These cause the channel to move to the @FAILED@ state. The client library will not attempt any automatic recovery actions. For example: attempting to attach to a channel that the token you're using does not have the @subscribe@ capability for will cause that channel to enter the @FAILED@ state.
+
+Note that while fatal errors won't get better on their own, they can be fixable. For example, if a channel goes into the @FAILED@ state due to the client not having the right capabilities to attach to it, that client could use "@Auth#authorize()@":/realtime/authentication#authorize to obtain a new token which does have the right capabilities, then call "@attach()@":/channels-messages#attach on the channel. While the library will not automatically reattach in the @FAILED@ state, explicit calls to "@attach()@":/realtime/channels-messages#attach will make the client try again.
+
+h4(#nonfatal-errors). Nonfatal errors
+
+Other types of error are nonfatal. For example, a client may have network connectivity issues, or a channel may experience a loss of strict message continuity. The library will automatically attempt to recover from these events. If channel continuity is lost in the process, the library will notify you though a @resumed@ flag in the @ATTACHED@ event, so you can decide how to handle that failure.
+
+For every channel @ATTACHED@ event, the "@ChannelStateChange@ object":/realtime/types/#channel-state-change contains a @resumed@ attribute. When true, there has been no loss of continuity from the last time the channel was attached. When false, there has been a loss of continuity. So for example:
+
+* The first time you attach to a channel on a fresh connection, @resumed@ will be false, as there was nothing to continue from.
+* If you "resume":#connection-state-recovery a connection successfully, all your channels will get @ATTACHED@ events with @resumed@ true (and will receive any messages they missed while you were disconnected).
+* If you "resume":#connection-state-recovery a connection unsuccessfully (so you get a fresh connection) — generally because you were disconnected for more than two minutes, which is how long Ably holds connection state for — continuity is lost. All your channels will still reattach automatically, and you will get @ATTACHED@ events with @resumed@ false.
+* If Ably needs to signal a loss of channel continuity, you will get an @ATTACHED@ event with @resumed@ false (usually after the channel goes very briefly into @ATTACHING@).
+
 h4. Connection state change side effects on channels
 
-<%= partial 'realtime/_reattach_strategy' %>
+* If the connection state becomes @CLOSED@, all channels will become @DETACHED@
+* If the connection state becomes @FAILED@, all channels will become @FAILED@
+* If the connection state becomes @SUSPENDED@, all previously-@ATTACHED@ or @ATTACHING@ channels will become @SUSPENDED@
+* If the connection state becomes @CONNECTED@, any channels that were @SUSPENDED@ will be automatically reattached
 
 h3(#channel-namespaces). Channel namespaces
 
@@ -908,25 +941,39 @@ h6(#unsubscribe).
   default: unsubscribe
   csharp: Unsubscribe
 
-There are three overloaded versions of this method:
+There are <span lang="jsall">six</span><span lang="default">three</span> overloaded versions of this method:
 
 bq(definition#unsubscribe-event).
-  default: unsubscribe(String name, listenerCallback)
+  default: unsubscribe(String name, listener)
   java:    void unsubscribe(String name, "MessageListener":#message-listener listener)
   csharp:  bool Unsubscribe(string eventName, Action<"Message":#message> handler)
   ruby:    unsubscribe(String name, &listener_proc)
   objc,swift: unsubscribe(name: String, listener: ARTEventListener)
 
-Unsubscribe to messages on this channel for the specified event name. This removes an earlier event-specific subscription.
+Unsubscribe the given listener for the specified event name. This removes an earlier event-specific subscription.
 
 bq(definition#unsubscribe-listener).
-  default: unsubscribe(listenerCallback)
+  default: unsubscribe(listener)
   java:    void unsubscribe("MessageListener":#message-listener listener)
   csharp:  bool Unsubscribe(Action<"Message":#message> handler)
   ruby:    unsubscribe(&listener_proc)
   objc,swift: unsubscribe(listener: ARTEventListener)
 
-Unsubscribe to messages on this channel. This removes an earlier subscription.
+Unsubscribe the given listener (for any/all event names). This removes an earlier subscription.
+
+<div lang="jsall">
+bq(definition). unsubscribe(String[] names, listener)
+
+Unsubscribe the given listener from all event names in the array.
+
+bq(definition). unsubscribe(String name)
+
+Unsubscribe all listeners for a given event name.
+
+bq(definition). unsubscribe(String[] names)
+
+Unsubscribe all listeners for all event names in the array.
+</div>
 
 bq(definition#unsubscribe-all).
   default: unsubscribe()
@@ -938,9 +985,9 @@ Unsubscribes all listeners to messages on this channel. This removes all earlier
 
 h4. Parameters
 
-- String name := The event name to unsubscribe from
-
-- <div lang="jsall">listenerCallback</div> := is the callback listener function that was previously subscribed
+- name := The event name to unsubscribe from<br>__Type: @String@__
+- <div lang="jsall">names</div> := An array of event names to unsubscribe from<br>__Type: @String[]@__
+- <div lang="jsall">listener</div> := is the callback listener function that was previously subscribed
 - <div lang="java">listener</div> := previously registered listener<br>__Type: "@MessageListener@":#message-listener__
 - <div lang="ruby">&listener_block</div> := previously registered listener block
 - <div lang="swift,objc">listener</div> := previous return value from a @subscribe@ call
@@ -1063,37 +1110,43 @@ h6(#on).
   default: on
   csharp: On
 
-There are two overloaded versions of this method:
+There are <span lang="jsall">three</span><span lang="default">two</span> overloaded versions of this method:
 
 bq(definition#on-state-listener).
-  default: on(String state, listener())
+  default: on(String state, listener("ChannelStateChange":#channel-state-change stateChange))
   ruby:    on("ChannelState":#channel-state *state) -> yields "ChannelStateChange":#channel-state-change
   java:    void on("ChannelState":#channel-state state, "ChannelStateListener":#channel-state-listener listener)
   csharp:  void On("ChannelState":#channel-state event, Action<ChannelStateChangedEventArgs> action)
   objc,swift: on(event: "ARTChannelEvent":#channel-event, call: ("ARTErrorInfo":#error-info?) -> Void) -> ARTEventListener
 
 Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span> for the specified "ChannelState":#channel-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span> changes on the @Channel@.
-<span class="default">The listener is passed the current state<span lang="jsall"> as the @event@ property of @this@</span></span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The listener is passed an optional reason for the state change</span>.
+<span lang="default">The listener is passed the current state</span><span lang="jsall">The listener is passed a "ChannelStateChange":#channel-state-change object that contains the current state, previous state, a boolean indicating whether the channel was resumed, and an optional reason for the state change.</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The listener is passed an optional reason for the state change</span>.
+
+<div lang="jsall">
+bq(definition). on(String[] states, listener("ChannelStateChange":#channel-state-change stateChange))
+
+Same as above, but registers multiple listeners, one for each state in the array.
+</div>
 
 bq(definition#on-listener).
-  default: on(listener())
+  default: on(listener("ChannelStateChange":#channel-state-change stateChange))
   ruby:    on -> yields "ChannelStateChange":#channel-state-change
   csharp:  void On(Action<ChannelStateChangedEventArgs> listener)
   java:    void on("ChannelStateListener":#channel-state-listener listener)
   objc,swift: on(call: (ARTErrorInfo?) -> Void) -> ARTEventListener
 
 Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span><span lang="csharp">lambda expression</span> for all "ChannelState":#channel-state changes on the @Channel@, plus when an error happens when attaching, detaching, or encoding or decoding a message.
-<span class="default">The listener is passed the current state<span lang="jsall"> as the @event@ property of @this@</span>.</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The callback is passed an optional reason for the state change or error</span>.
+<span lang="default">The listener is passed the current state</span><span lang="jsall">The listener is passed a "ChannelStateChange":#channel-state-change object that contains the current state, previous state, boolean indicating whether the channel was resumed, and an optional reason for the state change</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The callback is passed an optional reason for the state change or error</span>.
 
 h4. Parameters
 
-- <div lang="jsall">state</div> := the channel state to subscribe to, see "ChannelState":#channel-state for supported channel states<br>__Type: @String@__
+- <div lang="jsall">state(s)</div> := the channel state(s) to subscribe to, see "ChannelState":#channel-state for supported channel states<br>__Type: @String@ or @String[]@__
 - <div lang="java">state</div> := the channel state to subscribe to<br>__Type: "@ChannelState@":#channel-state__
 - <div lang="csharp">event</div> := the channel state to subscribe to<br>__Type: "@ChannelState@":#channel-state__
 - <div lang="ruby">state</div> := the channel state as a Symbol such as @:attached@ or a @ChannelState@ object to subscribe to<br>__Type: "@ChannelState@":#channel-state__
 - <div lang="swift,objc">event</div> := either a channel state to subscribe to, or "@ARTChannelEventError@":#channel-event to subscribe to errors not related to state changes<br>__Type: "@ARTChannelEvent@":#channel-event__
 
-- <div lang="jsall">listener</div> := is a function of the form @function()@ to be notified for matching state changes. The current state is available as @this.event@
+- <div lang="jsall">listener</div> := is a function of the form @function(stateChange)@ to be notified for matching state changes.
 - <div lang="java">listener</div> := listener to be notified for matching state changes<br>__Type: "@ChannelStateListener@":#channel-state-listener__
 - <div lang="csharp">action</div> := lambda expression to be notified for matching state changes<br>__Type: "@ChannelStateChangedEventArgs@":#channel-state-listener__
 - <div lang="ruby">&block</div> := listener block that is yielded to for matching state changes
@@ -1110,24 +1163,24 @@ h6(#once).
 There are two overloaded versions of this method:
 
 bq(definition#once-state-listener).
-  default: once(String state, listener())
+  default: once(String state, listener("ChannelStateChange":#channel-state-change stateChange))
   ruby:    once("ChannelState":#channel-state *state) -> yields "ChannelStateChange":#channel-state-change
   java:    void once("ChannelState":#channel-state state, "ChannelStateListener":#channel-state-listener listener)
   csharp:  void Once("ChannelState":#channel-state event, Action<ChannelStateChangedEventArgs> action)
   objc,swift: once(event: "ARTChannelEvent":#channel-event, call: ("ARTErrorInfo":#error-info?) -> Void) -> ARTEventListener
 
 Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span><span lang="csharp">lambda expression</span> for a single occurrence of the specified "ChannelState":#channel-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span><span lang="java">@state@</span> change on the @Channel@. Once the listener has been called, it is removed as a registered listener and will not be called again.
-<span class="default">The listener is passed the current state<span lang="jsall"> as the @event@ property of @this@</span></span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The listener is passed an optional reason for the state change</span>.
+<span lang="default">The listener is passed the current state</span><span lang="jsall">The listener is passed a "ChannelStateChange":#channel-state-change object that contains the current state, previous state, boolean indicating whether the channel was resumed, and an optional reason for the state change</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The callback is passed an optional reason for the state change or error</span>.
 
 bq(definition#once-listener).
-  default: once(listener())
+  default: once(listener("ChannelStateChange":#channel-state-change stateChange))
   ruby:    once -> yields "ChannelStateChange":#channel-state-change
   java:    void once("ChannelStateListener":#channel-state-listener listener)
   csharp:  void Once(Action<ChannelStateChangedEventArgs> listener)
   objc,swift: once(call: (ARTErrorInfo?) -> Void) -> ARTEventListener
 
 Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span><span lang="csharp">lambda expression</span> for a single occurrence of any "ChannelState":#channel-state change on the @Channel@. Once the listener has been called, it is removed as a registered listener and will not be called again.
-<span class="default">The listener is passed the current state<span lang="jsall"> as the @event@ property of @this@</span></span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The listener is passed an optional reason for the state change</span>.
+<span lang="default">The listener is passed the current state</span><span lang="jsall">The listener is passed a "ChannelStateChange":#channel-state-change object that contains the current state, previous state, boolean indicating whether the channel was resumed, and an optional reason for the state change</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The callback is passed an optional reason for the state change or error</span>.
 
 h4. Parameters
 
@@ -1147,7 +1200,7 @@ h6(#off).
   default: off
   csharp: Off
 
-There are two overloaded versions of this method:
+There are <span lang="jsall">six</span><span lang="default">two</span> overloaded versions of this method:
 
 bq(definition#off-state-listener).
   default: off(String state, listener)
@@ -1167,9 +1220,27 @@ bq(definition#off-listener).
 
 Remove the given listener <span lang="ruby">block</span> for all "ChannelState":#channel-state states.
 
+<div lang="jsall">
+bq(definition). off(String[] states, listener)
+
+Removes the given listener from all "ChannelState":#channel-state states in the array.
+
+bq(definition). off(String state)
+
+Removes all listeners for a given "ChannelState":#channel-state state.
+
+bq(definition). off(String[] states)
+
+Removes all listeners for all "ChannelState":#channel-state states in the array.
+
+bq(definition). off()
+
+Removes all listeners (including both those registered against specific states and those registered without a state).
+</div>
+
 h4. Parameters
 
-- <div lang="jsall">state</div> := the channel state to unsubscribe from<br>__Type: @String@__
+- <div lang="jsall">state(s)</div> := the channel state(s) to unsubscribe from<br>__Type: @String@ or @String[]@__
 - <div lang="java">state</div> := the channel state to unsubscribe from<br>__Type: "@ChannelState@":#channel-state__
 - <div lang="csharp">event</div> := the channel state to unsubscribe from<br>__Type: "@ChannelState@":#channel-state__
 - <div lang="ruby">state</div> := the channel state as a Symbol such as @:detached@ or a @ChannelState@ object to unsubscribe from<br>__Type: "@ChannelState@":#channel-state__
