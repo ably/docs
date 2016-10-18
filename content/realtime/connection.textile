@@ -309,15 +309,19 @@ blang[swift].
 
 h3(#handling-failures). Handling failures
 
-We recommend that you always handle both connection and channel failures explicitly. For example, a connection can move to the @FAILED@ state if the token cannot be renewed successfully, or a channel can move to the @DETACHED@ state if there is a loss of continuity on the channel. If you subscribe to these failure states that are not automatically recovered, you can perform your own recovery based on your specific application requirements. The failure states you need to consider are:
+The client libraries will attempt to automatically recover from non-fatal error conditions. However, it will emit events to say what it's doing, so you can handle them yourself if you prefer.
 
-* "@ConnectionState#failed@":/realtime/types#connection-state
-* "@ChannelState#detached@":/realtime/types#channel-state
-* "@ChannelState#failed@":/realtime/types#channel-state
+h4(#fatal-errors). Fatal errors
 
-h4. State change side effects on channels
+Some classes of errors are fatal. These cause the connection to move to the @FAILED@ state. The client library will not attempt any automatic recovery actions. For example, if your token expires and the client library has no way to get a new token (so no authUrl and authCallback), the connection will enter the @FAILED@ state
 
-<%= partial 'realtime/_reattach_strategy' %>
+While the library will not automatically attempt to reconnect in the @FAILED@ state, explicit calls to "@connect()@":#connect will make the client try again.
+
+h4(#nonfatal-errors). Nonfatal errors
+
+Other classes of error are nonfatal. For example, a client may have network connectivity issues. The library will attempt to automatically reconnect and recover from these sort of issues, as detailed in the @DISCONNECTED@ and @SUSPENDED@ explanations in the "Available connection states":#connection-states section.
+
+If message continuity is lost in the process, e.g. because you have been disconnected from Ably for more than two minutes, the library will notify you though the @resumed@-flag mechanism, detailed in the "Channels and Messages":/realtime/channels-messages#nonfatal-errors page.
 
 h3(#connection-state-recovery). Connection state recovery
 
@@ -336,7 +340,7 @@ h4(#connection-state-recover-options). Connection state recover options
 In @recover@ mode it is necessary to request recovery mode in the "client options":/realtime/usage#client-options when instancing the library. Recovery requires that the library knows the previous connection's "<span lang="default">@recoveryKey@</span><span lang="ruby">@recovery_key@</span><span lang="csharp">@RecoveryKey@</span>":#recovery-key value (which includes both the private unique "<span lang="default">@Connection#key@</span><span lang="csharp">@Connection#Key@</span>":#key and the last message serial received on that connection). As the recovery key is never shared with any other clients, it allows Ably to safely resend message backlogs to the original client.
 
 blang[javascript].
-  In the browser environment, if a callback is provided in the @recover@ option, when @window beforeunload@ event fires, the connection details, including the "@recoveryKey@":#recovery-key, are stored in the "browser's sessionStorage":https://www.w3.org/TR/webstorage/. The provided @recover@ callback is then invoked whenever the connection state can be recovered and just before a connection is established, passing in the "@LastConnectionDetails@":#last-connection-details. The callback is then responsible for confirming whether the connection state should be recovered or not. For example, it is common to recover connection state when the page is reloaded but not for different pages the user has navigated to. The callback allows the developer to decide if the connection should be recovered or not at the time the new connection is established by inspecting the "@LastConnectionDetails@":#last-connection-details and evaluating that against any other application state. Below is a straightforward example:
+  In the browser environment, if a callback is provided in the @recover@ option, when the @window.beforeunload@ event fires, the connection details, including the "@recoveryKey@":#recovery-key, are stored in the "browser's sessionStorage":https://www.w3.org/TR/webstorage/. The provided @recover@ callback is then invoked whenever the connection state can be recovered and just before a connection is established, passing in the "@LastConnectionDetails@":#last-connection-details. The callback is then responsible for confirming whether the connection state should be recovered or not. For example, it is common to recover connection state when the page is reloaded but not for different pages the user has navigated to. The callback allows the developer to decide if the connection should be recovered or not at the time the new connection is established by inspecting the "@LastConnectionDetails@":#last-connection-details and evaluating that against any other application state. Below is a straightforward example:
 
   ```[jsall]
     var ably = new Ably.Realtime({
@@ -490,7 +494,7 @@ h6(#on).
   default: on
   csharp: On
 
-There are two overloaded versions of this method:
+There are <span lang="jsall">three</span><span lang="default">two</span> overloaded versions of this method:
 
 bq(definition#on-state-listener).
   default: on(String state, listener("ConnectionStateChange":#connection-state-change stateChange))
@@ -500,6 +504,12 @@ bq(definition#on-state-listener).
   csharp:  void On("ConnectionState":#connection-state event, Action<"ConnectionStateChangeEventArgs":#connection-state-change> action)
 
 Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span><span lang="csharp">action</span> for the specified "ConnectionState":#connection-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span><span lang="java">@state@</span><span lang="csharp">@event@</span> changes on the @Connection@. The listener is passed a "ConnectionStateChange":#connection-state-change object that contains the current state, previous state, and an optional reason for the state change.</span>
+
+<div lang="jsall">
+bq(definition). on(String[] states, listener("ConnectionStateChange":#connection-state-change stateChange))
+
+Same as above, but registers multiple listeners, one for each state in the array.
+</div>
 
 bq(definition#on-listener).
   default: on(listener("ConnectionStateChange":#connection-state-change stateChange))
@@ -512,7 +522,7 @@ Register the given listener <span lang="ruby">block</span><span lang="swift,objc
 
 h4. Parameters
 
-- <div lang="jsall">state</div> := the connection state to subscribe to<br>__Type: @String@__
+- <div lang="jsall">state(s)</div> := the connection state(s) to subscribe to<br>__Type: @String@ or @String[]@__
 - <div lang="java">state</div> := the connection state to subscribe to<br>__Type: "@ConnectionState@":#connection-state__
 - <div lang="csharp">event</div> := the connection state to subscribe to<br>__Type: "@ConnectionState@":#connection-state__
 - <div lang="ruby">state</div> := the connection state as a Symbol such as @:connected@ or @ConnectionState@ object to subscribe to<br>__Type: "@ConnectionState@":#connection-state__
@@ -554,7 +564,7 @@ Register the given listener <span lang="ruby">block</span><span lang="csharp">ac
 
 h4. Parameters
 
-- <div lang="jsall">state</div> := the connection state to subscribe to<br>__Type: @String@__
+- <div lang="jsall">state(s)</div> := the connection state(s) to subscribe to<br>__Type: @String@ or @String[]@__
 - <div lang="java">state</div> := the connection state to subscribe to<br>__Type: "@ConnectionState@":#connection-state__
 - <div lang="csharp">event</div> := the connection state to subscribe to<br>__Type: "@ConnectionState@":#connection-state__
 - <div lang="ruby">state</div> := the connection state as a Symbol such as @:connected@ or @ConnectionState@ object to subscribe to<br>__Type: "@ConnectionState@":#connection-state__
@@ -570,7 +580,7 @@ h6(#off).
   default: off
   csharp: Off
 
-There are two overloaded versions of this method:
+There are <span lang="jsall">six</span><span lang="default">two</span> overloaded versions of this method:
 
 bq(definition#off-state-listener).
   default: off(String state, listener)
@@ -590,9 +600,27 @@ bq(definition#off-listener).
 
 Remove the given listener <span lang="ruby">block</span><span lang="csharp">action</span> for all "ConnectionState":#connection-state states.
 
+<div lang="jsall">
+bq(definition). off(String[] states, listener)
+
+Removes the given listener from all "ConnectionState":#connection-state states in the array.
+
+bq(definition). off(String state)
+
+Removes all listeners for a given "ConnectionState":#connection-state state.
+
+bq(definition). off(String[] states)
+
+Removes all listeners for all "ConnectionState":#connection-state states in the array.
+
+bq(definition). off()
+
+Removes all listeners (including both those registered against specific states and those registered without a state).
+</div>
+
 h4. Parameters
 
-- <div lang="jsall">state</div> := the connection state to unsubscribe from<br>__Type: @String@__
+- <div lang="jsall">state(s)</div> := the connection state(s) to unsubscribe from<br>__Type: @String@ or @String[]@__
 - <div lang="java">state</div> := the connection state to unsubscribe from<br>__Type: "@ConnectionState@":#connection-state__
 - <div lang="csharp">event</div> := the connection state to subscribe to<br>__Type: "@ConnectionState@":#connection-state__
 - <div lang="ruby">state</div> := the connection state as a Symbol such as @:connected@ or @ConnectionState@ object to unsubscribe from<br>__Type: "@ConnectionState@":#connection-state__
@@ -609,13 +637,13 @@ h6(#ping).
   csharp: Ping
 
 bq(definition).
-  default: ping(callback("ErrorInfo":/realtime/types#error-info err))
+  default: ping(callback("ErrorInfo":/realtime/types#error-info err, Number responseInMilliseconds))
   ruby:    "Deferrable":/realtime/types#deferrable ping -> yields @Float seconds@
   java:    void ping("CompletionListener":#completion-listener listener)
   objc,swift: ping(callback: (ARTErrorInfo?) -> Void)
   csharp:  void Ping(Action<TimeSpan?, ErrorInfo> callback)
 
-When connected, sends a heartbeat ping to the Ably server and <span lang="default">executes the callback</span><span lang="java">calls the listener</span><span lang="ruby">yields the elapsed time in seconds</span> when a heartbeat ping request is echoed from the server. This can be useful for measuring true round-trip latency to the connected Ably server.
+When connected, sends a heartbeat ping to the Ably server and <span lang="jsall">executes the callback with any error and the response time in milliseconds</span><span lang="default">executes the callback</span><span lang="java">calls the listener</span><span lang="ruby">yields the elapsed time in seconds</span> when a heartbeat ping request is echoed from the server. This can be useful for measuring true round-trip latency to the connected Ably server.
 
 blang[ruby].
   h4. Returns
