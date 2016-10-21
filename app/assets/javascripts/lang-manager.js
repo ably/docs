@@ -153,9 +153,31 @@ $(function() {
   var redirectingAsLanguageVersionNotSupported;
 
   function ensureVersionSupportedForCurrentLang() {
+    var preferredLangVersion, currentLangConfig;
     if (supportsMultipleLanguages()) {
       if (window.AblyVersionInfo && window.AblyVersionInfo.langVersions) {
-        var currentLangConfig = window.AblyVersionInfo.langVersions[currentLang()]
+        currentLangConfig = window.AblyVersionInfo.langVersions[currentLang()];
+        preferredLangVersion = preferredLangVersions()[currentLang()];
+        if (preferredLangVersion) {
+          if (preferredLangVersion === 'latest') {
+            if (currentLangConfig.versions.indexOf(window.AblyVersionInfo.page) !== 0) {
+              document.location.href = currentLangConfig.most_recent_path;
+              redirectingAsLanguageVersionNotSupported = true;
+              return;
+            }
+          } else {
+            if (preferredLangVersion !== window.AblyVersionInfo.page) {
+              if (currentLangConfig.versions.indexOf(preferredLangVersion) >= 0) {
+                document.location.href = currentLangConfig.most_recent_path.replace(/^\/([\w-]+)\//, "/\$1/versions/v" + preferredLangVersion + "/");
+                redirectingAsLanguageVersionNotSupported = true;
+              } else {
+                resetPreferredLangVersions();
+              }
+              return;
+            }
+          }
+        }
+
         if (currentLangConfig) {
           if (currentLangConfig.versions.indexOf(window.AblyVersionInfo.page) < 0) {
             document.location.href = currentLangConfig.most_recent_path;
@@ -168,6 +190,25 @@ $(function() {
         console.error("window.AblyVersionInfo.langVersions is not available");
       }
     }
+  }
+
+  function preferredLangVersions() {
+    try {
+      if ($.cookie("preferred_lang_version")) {
+        var obj = JSON.parse($.cookie("preferred_lang_version"));
+        if (typeof(obj) === 'object') {
+          return obj
+        }
+      }
+    } catch(e) {
+      resetPreferredLangVersions();
+      console.error("Invalid preferred_lang_version cookie.", e);
+    }
+    return {};
+  }
+
+  function resetPreferredLangVersions() {
+    $.cookie("preferred_lang_version", JSON.stringify({}), { expires : 31, path: '/' });
   }
 
   var $versionWarning = $('#version-not-latest-warning');
@@ -231,6 +272,19 @@ $(function() {
     $versionDropdown.removeClass('disabled');
     $versionDropdownVersions.show();
   }
+
+  $versionDropdownVersions.on('click', function() {
+    var preferredVersion = $(this).data('version').toString();
+    if (preferredVersion) {
+      var langVers = preferredLangVersions();
+      if (preferredVersion === window.AblyVersionInfo.latestForPage.version) {
+        langVers[currentLang()] = 'latest';
+      } else {
+        langVers[currentLang()] = preferredVersion;
+      }
+      $.cookie("preferred_lang_version", JSON.stringify(langVers), { expires : 31, path: '/' });
+    }
+  });
 
   /* Hook up the callback to ensure the current language exists for this version.
      If not, navigate to latest for this language */
