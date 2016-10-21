@@ -16,6 +16,44 @@ Let's get started and show you how a typical client server architecture using to
 
 h2. Step 2 - Install Ably on your server
 
+blang[java].
+  To start using Ably in your JRE application, you need to include the Ably Client library. We recommend that you include the latest client library via Gradle in your project's @gradle.build@ file.
+
+  ```[groovy]
+    repositories {
+      jcenter()
+        maven { url "https://raw.github.com/paddybyers/Java-WebSocket/mvn-repo/" }
+    }
+
+    dependencies {
+        compile 'io.ably:ably-java:0.8.4'
+    }
+  ```
+
+  The server client library must be instanced with the private API key you copied in Step 1. This will ensure that the "basic authentication scheme":/general/authentication#basic-authentication is used, which is almost always the right choice for your own trusted servers where risk of compromise of your API key credentials is low.
+
+  Add the following to a file named @Example.java@ to instance the Ably library inside your Node.js server:
+
+  ```[java]
+    private final static String API_KEY = "INSERT-YOUR-API-KEY-HERE"; 
+
+    private AblyRest ablyRest;
+
+    public Example(){
+        try {
+          initAbly();
+        } catch (AblyException e) {
+          e.printStackTrace();
+        }
+    }
+
+    private void initAbly() throws AblyException{
+        ablyRest = new AblyRest(API_KEY);
+    }
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/2a4119f
+
 blang[nodejs].
   To start using Ably on your Node.js server, you first need to install the NPM module. The NPM module can be installed as follows:
 
@@ -103,6 +141,88 @@ h2. Step 3 - Set up your web server
 Before a client connects to Ably, it will check if it has suitable credentials to authenticate with Ably. As we'll be using the recommended "token authentication scheme":/general/authentication#token-authentication in the client for this demo, when the client starts up and attempt to connect to Ably, it will request a token immediately so that it can then authenticate with Ably.
 
 As tokens are typically issued from your own web servers, we'll set up a simple web server now for this tutorial.
+
+blang[java].
+  "Spring Boot":https://spring.io/guides/gs/spring-boot/ is a very popular and simple web framework for Java. Let's get this setup:
+
+  First we'll add following configuration to @build.gradle@ file:
+
+  ```[groovy]
+    buildscript {
+      repositories {
+          mavenCentral()
+      }
+      dependencies {
+          classpath("org.springframework.boot:spring-boot-gradle-plugin:1.4.1.RELEASE")
+      }
+    }
+
+    apply plugin: 'java'
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+    apply plugin: 'spring-boot'
+
+    jar {
+        baseName = 'gs-spring-boot'
+        version =  '0.1.0'
+    }
+
+    repositories {
+        ...
+        mavenCentral()
+    }
+
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+
+    dependencies {
+        compile("org.springframework.boot:spring-boot-starter-web") {
+            exclude module: "spring-boot-starter-tomcat"
+        }
+        compile("org.springframework.boot:spring-boot-starter-jetty")
+        compile("org.springframework.boot:spring-boot-starter-actuator")
+        ...
+    }
+  ```
+
+  Then we'll add an @Application.java@ class for initializing our web application.
+
+  ```[java]
+    import org.springframework.boot.SpringApplication;
+    import org.springframework.boot.autoconfigure.SpringBootApplication;
+    import org.springframework.context.ApplicationContext;
+
+    @SpringBootApplication
+    public class Application {
+
+        public static void main(String[] args) {
+            ApplicationContext ctx = SpringApplication.run(Application.class, args);
+        }
+    }
+  ```
+
+  Finally we'll add following method to our @Example.java@ class:
+
+  ```[java]
+  @RestController
+  public class Example {
+      ...
+      @RequestMapping(value = "/")
+      public String index() {
+          return "Hello, I am a very simple server";
+      }
+  }
+  ```
+
+  If you would like to try running the server now, you can do so with:
+
+  ```[sh]
+  gradle build && java -jar -Dserver.port=3000 build/libs/gs-spring-boot-0.1.0.jar 
+  ```
+
+  Once running, open your browser to "http://localhost:3000/":http://localhost:3000/ and you should see the text "Hello, I am a very simple server".
+  
+  "See this step in Github":https://github.com/ably/tutorials/commit/b75d500   
 
 blang[nodejs].
   "Express.js":https://expressjs.com/ is a very popular and simple web framework for Node.js. Let's get this setup:
@@ -239,6 +359,41 @@ Therefore, as it is possible to issue token requests without any communication t
 
 In this step we will get the local web server ready to respond to authentication requests by issuing a token request to the requesting client.
 
+blang[java].
+  By adding the following route to @Example.java@ class, it is now ready to service clients wanting to authenticate with Ably.
+
+  ```[java]
+    @RequestMapping("/auth")
+    public String auth(HttpServletRequest request, HttpServletResponse response) throws AblyException {
+
+      Auth.TokenParams tokenParams = new Auth.TokenParams(); /* Use token defaults for now */
+
+      try {
+        Auth.TokenRequest tokenRequest = ablyRest.auth.createTokenRequest(null, tokenParams);
+        response.setHeader("Content-Type", "application/json");
+        return new Gson().toJson(tokenRequest);
+      } catch (AblyException e) {
+        response.setStatus(500);
+        return "Error requesting token: " + e.getMessage();
+      }
+    }
+  ```
+
+  Try resetting your server again with and visiting http://localhost:3000/auth and you should see a JSON token request in the form:
+
+  ```[json]
+  {
+    "keyName": "I2ACJQ.Lv8AUQ",
+    "ttl": 3600000,
+    "timestamp": 1473894038255,
+    "capability": "{\"*\":[\"*\"]}",
+    "nonce": "f6799a8e7fa6f77b8e1dac55314789b1",
+    "mac": "35nifY9SRZ8KRDfKOPIS1qYWGP16r2lD59zJo9TH8pA="
+  }
+  ```
+
+  "See this step in Github":https://github.com/ably/tutorials/commit/2d2f86f
+
 blang[nodejs].
   By adding the following route to your Express.js server, it is now ready to service clients wanting to authenticate with Ably.
 
@@ -365,6 +520,8 @@ h2. Step 5 - Setting up a client to use token authentication
 
 Now that we have a web server running and an authentication endpoint, we are ready to setup the Ably Realtime client that uses token auth.
 
+blang[java].
+  First we need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the @src/main/webapp@ folder:
 blang[nodejs].
   First we need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.js@:
 blang[ruby].
@@ -384,6 +541,26 @@ blang[python].
   </body>
 </html>
 ```
+
+blang[java].
+  Now we need to serve a static home page. Let's delete @index@ method in @Example.java@ class, open @Application.java@ file and add following code:
+
+  ```[java]
+  import org.springframework.context.annotation.Configuration;
+  ...
+  @Configuration
+  @SpringBootApplication
+  public class Application extends WebMvcConfigurerAdapter {
+  ...
+      @Override
+      public void addViewControllers(ViewControllerRegistry registry) {
+          registry.addViewController("/").setViewName("forward:/index.html");
+          super.addViewControllers(registry);
+      }
+  }
+  ```
+
+  Try restarting your server again and visiting "http://localhost:3000/":http://localhost:3000/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
 
 blang[nodejs].
   Now we need to serve a static home page. Let's replace the code that responds to the @/@ route (look for @get '/' do ... end@) with the following:
@@ -421,7 +598,7 @@ blang[php].
   Try running your server again with @php -S 0.0.0.0:8000@ (if it's not up already) and visiting "http://localhost:8000/":http://localhost:8000/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
 
 
-blang[nodejs,ruby,python].
+blang[nodejs,ruby,python,java].
   Add the following above the closing @</html>@ tag in your @index.html@ file:
 
   ```[html]
@@ -450,6 +627,9 @@ blang[php].
 
 So let's see what happens now. Restart the local server and refresh the page. You should receive an alert to confirm that you're connected to Ably which means your server has successfully issued a token request to the client, the client has then obtained a token from Ably with the token request, it has subsequently authenticated and finally connected.
 
+blang[java].
+  "See this step in Github":https://github.com/ably/tutorials/commit/ebcf93e
+
 blang[nodejs].
   "See this step in Github":https://github.com/ably/tutorials/commit/f63b65e
 
@@ -470,7 +650,7 @@ In the previous step we demonstrated how easy it is to issue a token request fro
 
 In this step we'll show you how to issue subscribe only tokens limited to a single channel for anonymous users, and issue publish and subscribe tokens for logged in users. As the purpose of this tutorial is not demonstrate how to build an authentication system for your website, we have implemented a trivial and clearly flawed authentication system so that we can keep superfluous unrelated code to a minimum.
 
-blang[nodejs,ruby,python].
+blang[nodejs,ruby,python,java].
   Let's get started. First we will add two panels, one that contains a simple login form, and the other with log out link to the HTML page. Add the following beneath the @</h1>@ tag in your @index.html@ file:
 
   ```[html]
@@ -502,7 +682,32 @@ blang[php].
     </div>
   ```
 
+blang[java].
+  Now we need to enable the login and logout functionality in the web server. In order to keep this tutorial simple, when a user logs in we'll set a cookie, and when they log out we'll clear the cookie. Add the following routes to your @Example.java@ file.
 
+  ```[java]
+    @RequestMapping(value = "/login", method = RequestMethod.GET)
+    public String login(@RequestParam(name = "username", defaultValue = "anonymous") 
+        String username, HttpServletResponse response) throws IOException {
+        response.addCookie(new Cookie("username", username));
+        response.sendRedirect("/");
+        return "redirect:/";
+    }
+
+    @RequestMapping(value = "/logout", method = RequestMethod.GET)
+    public String logout(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        for(Cookie cookie : request.getCookies()) {
+            if(cookie.getName().equalsIgnoreCase("username")){
+                cookie.setValue(null);
+                cookie.setMaxAge(0);
+                cookie.setPath(request.getContextPath());
+                response.addCookie(cookie);
+            }
+        }
+        response.sendRedirect("/");
+        return "redirect:/";
+    }
+  ```
 
 blang[nodejs].
   Now we need to enable the login and logout functionality in the web server. In order to keep this tutorial simple, when a user logs in we'll set a cookie, and when they log out we'll clear the cookie. Add the following routes to your @server.js@ file.
@@ -621,7 +826,7 @@ blang[php].
   ```
 
 
-blang[nodejs,ruby,python].
+blang[nodejs,ruby,python,java].
   Both the logged in and anonymous HTML panels will currently show on the HTML page, let's add quickly hide or show them based on the cookie set above. Add the following just before the final @</script>@ tag in @index.html@
 blang[php].
   Both the logged in and anonymous HTML panels will currently show on the HTML page, let's add quickly hide or show them based on the cookie set above. Add the following just before the final @</script>@ tag in @index.php@
@@ -634,6 +839,36 @@ blang[php].
   document.getElementById('panel-logged-in').
     setAttribute('style', "display: " + (loggedIn ? 'block' : 'none'));
 ```
+
+blang[java].
+  Now that we have a means to determine if a user is logged in or logged out using the session cookie, we can issue restricted subscribe-only token requests for anonymous users and publish and subscribe token requests for logged in users. Replace the @Example#auth@ method body with the following:
+
+  ```[java]
+  String username = null;
+  Cookie[] cookies = request.getCookies();
+  for (Cookie cookie : cookies) {
+      if (cookie.getName().equalsIgnoreCase("username")) {
+          username = cookie.getValue();
+          break;
+      }
+  }
+  Auth.TokenParams tokenParams = new Auth.TokenParams();
+  if (username == null) {
+      tokenParams.capability = Capability.c14n("{ 'notifications': ['subscribe'] }");
+  } else {
+      tokenParams.capability = Capability.c14n("{ '*': ['publish', 'subscribe'] }");
+      tokenParams.clientId = username;
+  }
+  Auth.TokenRequest tokenRequest = null;
+  try {
+      tokenRequest = ablyRest.auth.createTokenRequest(null, tokenParams);
+      response.setHeader("Content-Type", "application/json");
+      return new Gson().toJson(tokenRequest);
+  } catch (AblyException e) {
+      response.setStatus(500);
+      return "Error requesting token: " + e.getMessage();
+  }
+  ```
 
 blang[nodejs].
   Now that we have a means to determine if a user is logged in or logged out using the session cookie, we can issue restricted subscribe-only token requests for anonymous users and publish and subscribe token requests for logged in users. Replace the @var tokenParams = {};@ code in your @server.js@ with the following:
@@ -774,6 +1009,9 @@ Finally, before we test this new functionality, let's update the alert so that i
   );
 ```
 
+blang[java].
+  Ok, we're ready to see all of this in action. Restart the local server with earlier gradle command and then refresh the page at "http://localhost:3000/":http://localhost:3000/. You should receive an alert to confirm that you're connected as an anonymous with limited capabilities as follows:
+
 blang[nodejs].
   Ok, we're ready to see all of this in action. Restart the local server @node server.js@ and then refresh the page at "http://localhost:3000/":http://localhost:3000/. You should receive an alert to confirm that you're connected as an anonymous with limited capabilities as follows:
 
@@ -796,6 +1034,12 @@ Now enter a username and click "login", and you should receive an alert confirmi
   <img src="/images/tutorials/token-authentication-mike.png" style="width: 429px" alt="Token auth details for logged in user Mike">
 </a>
 
+blang[java].
+  "See this step in Github":https://github.com/ably/tutorials/commit/91449ca
+
+blang[nodejs].
+  "See this step in Github":https://github.com/ably/tutorials/commit/4acb241
+
 blang[nodejs].
   "See this step in Github":https://github.com/ably/tutorials/commit/ad72480
 
@@ -811,6 +1055,23 @@ blang[php].
 We've covered a lot of ground in this tutorial. However authentication is one of the more challenging parts to understand as it requires you to have a good overall understanding of how it all works. We strongly recommend you see below for essential further reading to help you understand authentication in more detail for use in your servers and apps.
 
 h2. Download tutorial source code
+
+blang[java].
+  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/token-authentication-java.
+
+  We recommend that you clone the repo locally:
+
+  bc[sh]. git clone https://github.com/ably/tutorials.git
+
+  Checkout the tutorial branch:
+
+  bc[sh]. git checkout token-authentication-java
+
+  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @Example.java@ and running the demo:
+
+  ```[sh]
+  gradle build && java -jar -Dserver.port=3000 build/libs/gs-spring-boot-0.1.0.jar
+  ```
 
 blang[nodejs].
   The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/token-authentication-nodejs.
