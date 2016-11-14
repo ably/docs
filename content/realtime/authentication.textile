@@ -115,9 +115,9 @@ Below is a rather contrived yet straightforward example that instances a Realtim
 
 h4(#token-upgrading). Upgrading the token on a connection
 
-In version 0.9 of the client libraries, the token that a connection uses can be upgraded on the fly. When a token is nearly expired, Ably will prompt the library to request a new token (using the @authUrl@ or @authCallback@). Once the library has a new token, it will upgrade the connection to use the new token. This all happens automatically and seamlessly.
+The token that a connection uses can be upgraded over the existing connection. When a token is nearly expired, Ably will prompt the library to request a new token (using the <span lang="ruby,python">@auth_url@ or @auth_callback@</span><span lang="default">@authUrl@ or @authCallback@</span>). Once the library has a new token, it will upgrade the connection to use the new token. This all happens automatically and seamlessly.
 
-The on-the-fly token upgrade can also be prompted manually, using "@Auth#authorize@":#authorize. This is particularly useful if you want to upgrade a token for reasons other than the old one expiring; for example, to add capabilities to it. In this way it is possible to incrementally authorize new capabilities, adding them as and then they are needed. See the support article "Recommendations for incrementally authorising new capabilities":https://support.ably.io/solution/articles/3000056545-recommendations-for-incrementally-authorising-new-capabilities for discussions of different strategies for doing this.
+The token upgrade can also be triggered explicitly using "@Auth#authorize@":#authorize. This is particularly useful if you want to upgrade a token for reasons other than the old one expiring; for example, to add or remove capabilities to it. In this way it is possible to incrementally authorize new capabilities, adding them as and when they are needed. See the support article "Recommendations for incrementally authorising new capabilities":https://support.ably.io/solution/articles/3000056545-recommendations-for-incrementally-authorising-new-capabilities for discussions of different strategies for doing this.
 
 h3(#auth-object). Auth object
 
@@ -243,7 +243,7 @@ bq(definition).
   csharp:  "Task<TokenDetails>:#token-details AuthorizeAsync("TokenParams:#token-params?, "AuthOptions":#auth-options?)
   swift,objc: authorize(tokenParams: "ARTTokenParams":#token-params?, authOptions: "ARTAuthOptions":#auth-options?, callback: ("ARTTokenDetails":#token-details?, NSError?) -> Void)
 
-Instructs the library to get a new token immediately. Once fetched, will upgrade the current realtime connection to use the new token, or if not connected, will initiate a connection to Ably once the new token has been obtained. Also stores any <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span> passed in as the new defaults, to be used for all subsequent implicit or explicit token requests.
+Instructs the library to get a new token immediately. Once fetched, it will upgrade the current realtime connection to use the new token, or if not connected, will initiate a connection to Ably once the new token has been obtained. Also stores any <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span> passed in as the new defaults, to be used for all subsequent implicit or explicit token requests.
 
 Any <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span> objects passed in will entirely replace (as opposed to being merged with) the currently client library saved <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span>.
 
@@ -260,45 +260,51 @@ h4. Parameters
 blang[objc,swift].
   h4. Callback result
 
-  On success, @tokenDetails@ contains a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string.
+  On success, the callback will be called with the new "@TokenDetails@":#token-details object only once the realtime connection has been successfully upgraded to use the new token.
 
-  On failure to obtain a token, @err@ contains an @NSError@ object with an error response as defined in the "Ably REST API":/rest-api#common documentation.
+  On failure to obtain a token or upgrade the token, the connection will move to the @SUSPENDED@ or @FAILED@ state, and the callback will be called with  @err@ containing an @NSError@ object with the error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+  The @authorize@ callback can therefore be used to only trigger an event once the new token has taken effect. This can be useful if, for example, you want to do attach to a new channel following a new channel capability being applied to the connection.
 
 blang[jsall].
   h4. Callback result
 
-  If using the REST client, the callback will be called once the call to obtain a new token returns, with either @tokenDetails@ as a "@TokenDetails@":#token-details object if the call succeeded, or @err@ as an "@ErrorInfo@":#error-info (with an error response as defined in the "Ably REST API":/rest-api#common documentation) if it failed.
+  On success, the callback will be called with the new "@TokenDetails@":#token-details only once the realtime connection has been successfully upgraded to use the new token.
 
-  If using the Realtime client, if the call to obtain a new token failed, the callback will be called with @err@ as with the REST client. If it succeeded, the callback will be called (with the new @tokenDetails@) only once the realtime connection has been successfully upgraded to use the new token (or if the upgrade failed, once the connection state has moved to @FAILED@).
+  On failure to obtain a token or upgrade the token, the connection will move to the @SUSPENDED@ or @FAILED@ state, and the callback will be called with @err@ containing an "@ErrorInfo@":/realtime/types#error-info object with the error response as defined in the "Ably REST API":/rest-api#common documentation.
 
-  If the client was not previously connected, the callback will be called with @tokenDetails@ once it has successfully connected with the new token (or closed, failed, or suspended, with an @err@, should that happen first).
-
-  So for Realtime clients, you can use the @authorize@ callback to find out when the new token has taken effect. This can be useful if, for example, you want to do something with some new capability carried by the new token.
+  The @authorize@ callback can be used to trigger an event once the new token has taken effect. This can be useful if, for example, you want to do attach to a new channel following a new channel capability being applied to the connection.
 
 blang[java].
   h4. Returns
 
-  On success, a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string is returned.
+  On success, a new "@TokenDetails@":#token-details is returned only once the realtime connection has been successfully upgraded to use the new token.
 
-  Failure to obtain a token will raise an "@AblyException@":#ably-exception.
+  On failure to obtain a token or upgrade the token, the connection will move to the @SUSPENDED@ or @FAILED@ state and an "@AblyException@":#ably-exception will be raised with the error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+  The synchronous @authorize@ method can therefore be used to run subsequent code only once the new token has taken effect. This can be useful if, for example, you want to do attach to a new channel following a new channel capability being applied to the connection.
 
 blang[csharp].
   h4. Returns
 
   Returns a @Task<TokenDetails>@ which needs to be awaited.
 
-  On success, a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string is returned.
+  On success, a new "@TokenDetails@":#token-details is returned only once the realtime connection has been successfully upgraded to use the new token.
 
-  Failure to obtain a token will raise an "@AblyException@":#ably-exception.
+  On failure to obtain a token or upgrade the token, the connection will move to the @SUSPENDED@ or @FAILED@ state and an "@AblyException@":#ably-exception will be raised with the error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+  By waiting for the @authorize@ method return value, it can be used to run subsequent code only once the new token has taken effect. This can be useful if, for example, you want to do attach to a new channel following a new channel capability being applied to the connection.
 
 blang[ruby].
   h4. Returns
 
   A "@Deferrable@":/realtime/types#deferrable object is returned from this method.
 
-  On success, the registered success callbacks for the "@Deferrable@":/realtime/types#deferrable and any block provided to this method yields a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string.
+  On success, the registered success callbacks for the "@Deferrable@":/realtime/types#deferrable and any block provided to this method yields a "@TokenDetails@":#token-details only once the realtime connection has been successfully upgraded to use the new token.
 
-  Failure to obtain a token will trigger the errback callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object containing an error response as defined in the "Ably REST API":/rest-api#common documentation.
+  On failure to obtain a token or upgrade the token, the connection will move to the @SUSPENDED@ or @FAILED@ state, triggering the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+  The @authorize@ callbacks can therefore be used to trigger an event once the new token has taken effect. This can be useful if, for example, you want to do attach to a new channel following a new channel capability being applied to the connection.
 
 h4. Example
 
