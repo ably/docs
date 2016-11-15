@@ -278,26 +278,47 @@ bc[jsall]. channel.on('attached', function(stateChange) {
 
 bc[ruby]. channel.on(:attached) do |channel_state_change|
   puts "channel #{channel.name} is now attached"
+  puts "Message continuity #{channel_state_change.resumed ? 'was' : 'was not'} preserved"
 end
 
 bc[java]. channel.on(ChannelState.attached, new ChannelStateListener() {
   @Override
-  public void onChannelStateChanged(ChannelState state, ErrorInfo reason) {
+  public void onChannelStateChanged(ChannelStateChange stateChange) {
     System.out.println("channel " + channel.name + " is now attached");
+    if (stateChange.resumed) {
+      System.out.println("Message continuity was preserved");
+    } else {
+      System.out.println("Message continuity was not preserved");
+    }
   }
 });
 
 bc[csharp]. var channel = realtime.Channels.Get("chatroom");
-channel.On(ChannelState.Attached, args => {
-  Console.WriteLine("channel " + channel.Name + " is now attached")
+channel.On(ChannelState.Attached, stateChange => {
+  Console.WriteLine("channel " + channel.Name + " is now attached");
+  if (stateChange.resumed) {
+    Console.WriteLine("Message continuity was preserved");
+  } else {
+    Console.WriteLine("Message continuity was not preserved");
+  }
 });
 
-bc[objc]. [channel on:ARTChannelEventAttached call:^(ARTErrorInfo *error) {
+bc[objc]. [channel on:ARTChannelEventAttached call:^(ARTConnectionStateChange *stateChange) {
   NSLog(@"channel %@ is now attached", channel.name);
+  if (stateChange.resumed) {
+    NSLog(@"Message continuity was preserved");
+  } else {
+    NSLog(@"Message continuity was not preserved");
+  }
 }];
 
-bc[swift]. channel.on(.Attached) { error in
+bc[swift]. channel.on(.Attached) { stateChange in
   print("channel \(channel.name) is now attached")
+  if (stateChange.resumed) {
+    print("Message continuity was preserved")
+  } else {
+    print("Message continuity was not preserved")
+  }
 }
 
 Alternatively a listener may be registered so that it receives all state change events.
@@ -317,19 +338,19 @@ end
 
 bc[java]. channel.on(new ChannelStateListener() {
   @Override
-  public void onChannelStateChanged(ChannelState state, ErrorInfo reason) {
-    System.out.println("channel state is " + ChannelState.values()[state]);
+  public void onChannelStateChanged(ChannelStateChange stateChange, ErrorInfo reason) {
+    System.out.println("channel state is " + ChannelState.values()[stateChange.current]);
   }
 });
 
-bc[csharp]. channel.On(args => Console.WriteLine("channel state is " + channel.State));
+bc[csharp]. channel.On(stateChange => Console.WriteLine("channel state is " + stateChange.Current));
 
-bc[objc]. ARTEventListener *listener = [channel on:^(ARTErrorInfo *error) {
-    NSLog(@"channel state is %@", channel.state);
+bc[objc]. ARTEventListener *listener = [channel on:^(ARTChannelStateChange *stateChange) {
+    NSLog(@"channel state is %@", stateChange.current);
 }];
 
-bc[swift]. let listener = channel.on { error in
-    print("channel state is \(channel.state)")
+bc[swift]. let listener = channel.on { stateChange in
+    print("channel state is \(stateChange.current)")
 }
 
 Previously registered listeners can be removed individually or all together.
@@ -386,7 +407,7 @@ h3(#handling-failures). Handling channel failures
 
 Channel attach and detach operations are synchronous - after initiating an attach request, the client must wait for a response from Ably that confirms that the channel is established on the service.
 
-The client libraries will attempt to automatically recover from non-fatal error conditions. However, you can handle them yourself if you prefer. <span lang="jsall">For explicit attaches with a callback, both fatal and nonfatal errors will result in the callback being called with an @ErrorInfo@ argument</span>
+The client libraries will attempt to automatically recover from non-fatal error conditions. However, you can handle them yourself if you prefer by subscribing to channel state changes, or <span lang="default">using the callbacks available</span><span lang="java">waiting for a result</span> when explicitly calling @attach@.
 
 bc[jsall]. realtime.channels.get('private:chatroom').attach(function(err) {
   if (err) {
@@ -402,14 +423,15 @@ end
 bc[java]. Channel channel = realtime.channels.get("private:chatroom");
 channel.on(new ChannelStateListener() {
   @Override
-  public void onChannelStateChanged(ChannelState state, ErrorInfo reason) {
-    switch (state.current) {
+  public void onChannelStateChanged(ChannelStateChange stateChange, ErrorInfo reason) {
+    switch (stateChange.current) {
       case failed: {
         System.out.println("Attach failed: " + reason.message);
       }
     }
   }
 });
+channel.attach();
 
 bc[csharp]. var privateChannel = realtime.Channels.Get("private:chatroom");
 privateChannel.Attach((_, error) => {
@@ -1114,11 +1136,11 @@ bq(definition#on-state-listener).
   default: on(String state, listener("ChannelStateChange":#channel-state-change stateChange))
   ruby:    on("ChannelState":#channel-state *state) -> yields "ChannelStateChange":#channel-state-change
   java:    void on("ChannelState":#channel-state state, "ChannelStateListener":#channel-state-listener listener)
-  csharp:  void On("ChannelState":#channel-state event, Action<ChannelStateChangedEventArgs> action)
-  objc,swift: on(event: "ARTChannelEvent":#channel-event, call: ("ARTErrorInfo":#error-info?) -> Void) -> ARTEventListener
+  csharp:  void On("ChannelState":#channel-state event, Action<"ChannelStateChange":#channel-state-change> action)
+  objc,swift: on(event: "ARTChannelEvent":#channel-event, call: ("ARTChannelStateChange?":#channel-state-change) -> Void) -> ARTEventListener
 
 Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span> for the specified "ChannelState":#channel-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span> changes on the @Channel@.
-<span lang="default">The listener is passed the current state</span><span lang="jsall">The listener is passed a "ChannelStateChange":#channel-state-change object that contains the current state, previous state, a boolean indicating whether the channel was resumed, and an optional reason for the state change.</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The listener is passed an optional reason for the state change</span>.
+The listener is passed a "<span lang="default">ChannelStateChange</span><span lang="objc,swift">ARTChannelStateChange</span>":#channel-state-change object that contains the current state, previous state, a boolean indicating whether the channel was resumed, and an optional reason for the state change.
 
 <div lang="jsall">
 bq(definition). on(String[] states, listener("ChannelStateChange":#channel-state-change stateChange))
@@ -1129,12 +1151,12 @@ Same as above, but registers multiple listeners, one for each state in the array
 bq(definition#on-listener).
   default: on(listener("ChannelStateChange":#channel-state-change stateChange))
   ruby:    on -> yields "ChannelStateChange":#channel-state-change
-  csharp:  void On(Action<ChannelStateChangedEventArgs> listener)
+  csharp:  void On(Action<"ChannelStateChange":#channel-state-change> listener)
   java:    void on("ChannelStateListener":#channel-state-listener listener)
-  objc,swift: on(call: (ARTErrorInfo?) -> Void) -> ARTEventListener
+  objc,swift: on(call: ("ARTChannelStateChange?":#channel-state-change) -> Void) -> ARTEventListener
 
 Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span><span lang="csharp">lambda expression</span> for all "ChannelState":#channel-state changes on the @Channel@, plus when an error happens when attaching, detaching, or encoding or decoding a message.
-<span lang="default">The listener is passed the current state</span><span lang="jsall">The listener is passed a "ChannelStateChange":#channel-state-change object that contains the current state, previous state, boolean indicating whether the channel was resumed, and an optional reason for the state change</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The callback is passed an optional reason for the state change or error</span>.
+The listener is passed a "<span lang="default">ChannelStateChange</span><span lang="objc,swift">ARTChannelStateChange</span>":#channel-state-change object that contains the current state, previous state, a boolean indicating whether the channel was resumed, and an optional reason for the state change.
 
 h4. Parameters
 
@@ -1146,7 +1168,7 @@ h4. Parameters
 
 - <div lang="jsall">listener</div> := is a function of the form @function(stateChange)@ to be notified for matching state changes.
 - <div lang="java">listener</div> := listener to be notified for matching state changes<br>__Type: "@ChannelStateListener@":#channel-state-listener__
-- <div lang="csharp">action</div> := lambda expression to be notified for matching state changes<br>__Type: "@ChannelStateChangedEventArgs@":#channel-state-listener__
+- <div lang="csharp">action</div> := lambda expression to be notified for matching state changes<br>__Type: "@ChannelStateChange@":#channel-state-listener__
 - <div lang="ruby">&block</div> := listener block that is yielded to for matching state changes
 - <div lang="swift,objc">call</div> := called possibly with an "@ErrorInfo@":#error-info
 
@@ -1164,21 +1186,21 @@ bq(definition#once-state-listener).
   default: once(String state, listener("ChannelStateChange":#channel-state-change stateChange))
   ruby:    once("ChannelState":#channel-state *state) -> yields "ChannelStateChange":#channel-state-change
   java:    void once("ChannelState":#channel-state state, "ChannelStateListener":#channel-state-listener listener)
-  csharp:  void Once("ChannelState":#channel-state event, Action<ChannelStateChangedEventArgs> action)
-  objc,swift: once(event: "ARTChannelEvent":#channel-event, call: ("ARTErrorInfo":#error-info?) -> Void) -> ARTEventListener
+  csharp:  void Once("ChannelState":#channel-state event, Action<"ChannelStateChange":#channel-state-change> action)
+  objc,swift: once(event: "ARTChannelEvent":#channel-event, call: ("ARTChannelStateChange?":#channel-state-change) -> Void) -> ARTEventListener
 
 Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span><span lang="csharp">lambda expression</span> for a single occurrence of the specified "ChannelState":#channel-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span><span lang="java">@state@</span> change on the @Channel@. Once the listener has been called, it is removed as a registered listener and will not be called again.
-<span lang="default">The listener is passed the current state</span><span lang="jsall">The listener is passed a "ChannelStateChange":#channel-state-change object that contains the current state, previous state, boolean indicating whether the channel was resumed, and an optional reason for the state change</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The callback is passed an optional reason for the state change or error</span>.
+The listener is passed a "<span lang="default">ChannelStateChange</span><span lang="objc,swift">ARTChannelStateChange</span>":#channel-state-change object that contains the current state, previous state, a boolean indicating whether the channel was resumed, and an optional reason for the state change.
 
 bq(definition#once-listener).
   default: once(listener("ChannelStateChange":#channel-state-change stateChange))
   ruby:    once -> yields "ChannelStateChange":#channel-state-change
   java:    void once("ChannelStateListener":#channel-state-listener listener)
-  csharp:  void Once(Action<ChannelStateChangedEventArgs> listener)
-  objc,swift: once(call: (ARTErrorInfo?) -> Void) -> ARTEventListener
+  csharp:  void Once(Action<"ChannelStateChange":#channel-state-change> listener)
+  objc,swift: once(call: ("ARTChannelStateChange?":#channel-state-change) -> Void) -> ARTEventListener
 
 Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span><span lang="csharp">lambda expression</span> for a single occurrence of any "ChannelState":#channel-state change on the @Channel@. Once the listener has been called, it is removed as a registered listener and will not be called again.
-<span lang="default">The listener is passed the current state</span><span lang="jsall">The listener is passed a "ChannelStateChange":#channel-state-change object that contains the current state, previous state, boolean indicating whether the channel was resumed, and an optional reason for the state change</span><span lang="ruby">The listener is passed a "ChannelState":#channel-state object that contains the current state, previous state, and an optional reason for the state change</span><span lang="objc,swift">The callback is passed an optional reason for the state change or error</span>.
+The listener is passed a "<span lang="default">ChannelStateChange</span><span lang="objc,swift">ARTChannelStateChange</span>":#channel-state-change object that contains the current state, previous state, a boolean indicating whether the channel was resumed, and an optional reason for the state change.
 
 h4. Parameters
 
@@ -1204,7 +1226,7 @@ bq(definition#off-state-listener).
   default: off(String state, listener)
   ruby:    off("ChannelState":#channel-state *state, &block)
   java:    void off("ChannelState":#channel-state state, "ChannelStateListener":#channel-state-listener listener)
-  csharp:  void Off("ChannelState":#channel-state event, Action<ChannelStateChangedEventArgs> listener)
+  csharp:  void Off("ChannelState":#channel-state event, Action<"ChannelStateChange":#channel-state-change> listener)
   objc,swift: off(event: "ARTChannelEvent":#channel-event, listener: ARTEventListener)
 
 Remove the given listener <span lang="ruby">block</span> for the "ChannelState":#channel-state <span lang="default">@state@</span><span lang="ruby">@state(s)@</span>.
@@ -1213,7 +1235,7 @@ bq(definition#off-listener).
   default: off(listener)
   ruby:    off(&block)
   java:    void off("ChannelStateListener":#channel-state-listener listener)
-  csharp:  void Off(Action<ChannelStateChangedEventArgs> listener)
+  csharp:  void Off(Action<"ChannelStateChange":#channel-state-change> listener)
   objc,swift: off(listener: ARTEventListener)
 
 Remove the given listener <span lang="ruby">block</span> for all "ChannelState":#channel-state states.
