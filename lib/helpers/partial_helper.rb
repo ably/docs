@@ -14,4 +14,4 @@ module PartialHelper
   end
 end
 
-include PartialHelper
+include PartialHelper if defined?(Nanoc)

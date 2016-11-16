@@ -1,0 +1,237 @@
+---
+title: Receiving WebHooks
+section: general
+index: 20
+jump_to:
+  Help with:
+    - Understanding WebHooks#title
+    - Channel lifecycle events#channel-lifecycle
+    - Presence events#presence
+    - Messages#messages
+    - Configuring a WebHook#configure
+    - WebHook transport details#transport
+    - WebHook security#security
+---
+
+WebHooks allow your server to be notified via an HTTP request following channel lifecycle events (such as channel creation), presence events (such as members entering or leaving) or messages being published.
+
+p(tip). WebHooks are "rate limited":#transport and designed for low to medium volumes of updates. If you expect a high volume of events and messages (upwards of 20 per second), then you should consider using our "message queues":#queues instead as they are designed to scale without limits.
+
+Generally, customers who want to receive events as they happen, use our "message queues":/general/queues, or alternatively our "realtime client libraries":/realtime and subscribe to events and messages published. However, some customers prefer to be notified over HTTP when events occur such as a user attaching to a channel, or members entering or leaving the presence set on a channel. For example, a customer may want to start pushing content to a channel only when the channel becomes active and there is someone there to receive the data, or they may want to send a welcome message to someone when they first enter a chat channel. A WebHook is useful feature to achieve this in both these scenarios.
+
+Ably currently supports three types of WebHooks:
+
+* "Channel lifecycle events":#channel-lifecycle - get notified when a channel is created (following the first client attaching to this channel) or discarded (when there are no more clients attached to the channel)
+* "Presence events":#presence - get notified when clients enter, update their data, or leave channels
+* "Messages":#messages - get notified when messages are published on a channel
+
+In order to prevent overloading your servers with requests, Ably batches WebHook data and issues a @POST@ request with @JSON@ data in the body of the request to your servers. WebHook requests are typically published at most once per second per configured WebHook. See "WebHook transport details":#transport below for the specifics on throughput, restrictions and expected behaviour of WebHooks.
+
+You can "configure WebHooks":#configure in your "account dashboard":https://support.ably.io/solution/articles/3000048664-how-do-i-access-my-account-dashboard on a per app basis which will apply to all channels in that app. If you require WebHook filtering, then "get in touch":https://www.ably.io/contact.
+
+You can also optionally "configure your WebHook to sign the requests":#security allowing you to verify the authenticity of each request.
+
+h2(#channel-lifecycle). Channel lifecycle events
+
+If you are unfamiliar with how channels work in Ably, we recommend you first review the "realtime channel lifecycle documentation":/realtime/channels-messages#channels.
+
+When a client attaches to a channel, a channel is implicitly created within the global Ably service triggering a @channel.opened@ WebHook event. The channel will remain open for as long as there are any subscribers attached to the channel.  Once all subscribers have left the channel, as part of our garbage collection process, the channel will typically be closed within 15 seconds triggering a @channel.closed@ event.
+
+Every WebHook request will contain one or more lifecycle events in the root level JSON attribute @items@ which contains an array of events. See "WebHook transport details":#webhook-transport below to find out more about batching and expected throughput.
+
+Each channel lifecycle event in the @items@ array contains a JSON object with the following attributes:
+
+- name := the event type "@channel.opened@" or "@channel.closed@"
+- data := a JSON object containing a single attribute @name@ which is the name of the channel that the lifecycle event applies to
+- webhookId := an internal unique ID for the configured WebHook
+- queueId := This is the WebHook type "@channel.lifecycle@"
+- timestamp := a timestamp represented as millseconds since epoch for the channel event
+
+h4. Example @channel.opened@ JSON payload
+
+```[json]
+{
+   "items":[
+      {
+         "webhookId":"M8T4-Q",
+         "queueId":"channel.lifecycle",
+         "serial":"4ab22b4793288073:1",
+         "timestamp":1467280480250,
+         "name":"channel.opened",
+         "data":{
+            "name":"livechat"
+         }
+      }
+   ]
+}
+```
+
+h4. Example @channel.closed@ JSON payload
+
+```[json]
+{
+   "items":[
+      {
+         "webhookId":"M8T4-Q",
+         "queueId":"channel.lifecycle",
+         "serial":"4ab22b4793288073:5",
+         "timestamp":1467280554968,
+         "name":"channel.closed",
+         "data":{
+            "name":"livechat"
+         }
+      }
+   ]
+}
+```
+
+h2(#presence). Presence events
+
+If you are unfamiliar with how presence works in Ably and what events are supported, we recommend you first review the "realtime presence documentation":/realtime/presence.
+
+When a member enters, updates, or leaves a channel, a presence WebHook event is triggered.
+
+Every WebHook request will contain one or more presence events in the root level JSON attribute @items@ which contains an array of presence event message. See "WebHook transport details":#webhook-transport below to find out more about batching and expected throughput.
+
+Each presence event in the @items@ array contains a JSON object with the following attributes:
+
+- name := the event type "@presence.message@"
+- data := a JSON object containing the attributes defined below in "JSONPath format":http://goessner.net/articles/JsonPath/ @data.*@:
+- data.channelId := name of the channel that the presence event belongs to
+- data.site := an internal site identifier indicating which primary data center the member is present in
+- data.presence := an @Array@ of presence events with fields for each event described below
+- data.presence.clientId := the client identifier for the member. Find out more about "identified clients":https://support.ably.io/solution/articles/3000038608-authenticated-and-identified-clients
+- data.presence.connectionId := the public unique identifier for the connection the member is using. Find out more about @connectionId@":/realtime/connection#id
+- data.presence.action := a string representing the presence event being one of "@enter@", "@update@" or "@leave@"
+- data.presence.data := an optional payload if provided when present. Find out more about "member data":/realtime/presence/#member-data
+- data.presence.encoding := if the data payload is present, this encoding specifies the format of the data. If missing or empty, then the data payload is a string type. For example, if JSON data is added to a presence member's "@data@":/realtime/presence/#member-data, then the @encoding@ would be "@json/utf-8@"
+- webhookId := an internal unique ID for the configured WebHook
+- queueId := This is the WebHook type "@channel.presence@"
+- timestamp := a timestamp represented as millseconds since epoch for the presence event
+
+h4. Example @channel.presence@ @enter@ JSON payload
+
+```[json]
+{
+   "items":[
+      {
+         "webhookId":"N6A8rg",
+         "queueId":"channel.presence",
+         "serial":"4ab22b4737770514:0",
+         "timestamp":1467280498532,
+         "name":"presence.message",
+         "data":{
+            "channelId":"livechat",
+            "site":"eu-west-1-A",
+            "presence":[
+               {
+                  "clientId":"Sam",
+                  "connectionId":"JYNDvRnLPc",
+                  "action":"enter"
+               }
+            ]
+         }
+      }
+   ]
+}
+```
+
+h4. Example @channel.presence@ @update@ and @leave@ JSON payload
+
+```[json]
+{
+   "items":[
+      {
+         "webhookId":"N6A8rg",
+         "queueId":"channel.presence",
+         "serial":"4ab22b4737770514:2",
+         "timestamp":1467280513129,
+         "name":"presence.message",
+         "data":{
+            "channelId":"livechat",
+            "site":"eu-west-1-A",
+            "presence":[
+               {
+                  "clientId":"Mike",
+                  "connectionId":"SDJLqIgGXT",
+                  "action":"update",
+                  "data":"status:typing"
+               }
+            ]
+         }
+      },
+      {
+         "webhookId":"N6A8rg",
+         "queueId":"channel.presence",
+         "serial":"4ab22b4737770514:3",
+         "timestamp":1467280523088,
+         "name":"presence.message",
+         "data":{
+            "channelId":"livechat",
+            "site":"eu-west-1-A",
+            "presence":[
+               {
+                  "clientId":"Mike",
+                  "connectionId":"SDJLqIgGXT",
+                  "action":"leave"
+               },
+               {
+                  "clientId":"Sam",
+                  "connectionId":"Fa9ahWh2HA",
+                  "action":"update",
+                  "data":"status:typing"
+               }
+            ]
+         }
+      }
+   ]
+}
+```
+
+h2(#messages). Messages
+
+Receiving messages via WebHooks is currently in beta. As such, this functionality is currently only available to Enterprise customers. If you are interested in receiving messages via WebHooks, please "get in touch with us":https://www.ably.io/contact.
+
+Please note that if you are planning to receive messages via WebHooks, it is theoretically very easy to exceed the "transport rate limits":#transport we impose on WebHooks to prevent DoS attacks. We recommend you consider "message queues":/general/queues instead as they are far more scalable.
+
+h2. Configuring a WebHook
+
+WebHooks are configured in your "account dashboard":https://support.ably.io/solution/articles/3000048664-how-do-i-access-my-account-dashboard. The following fields are available for each configured WebHook:
+
+- events := Allows you to choose to receive either @Channel Lifecycle@ or @Presence@ events
+- url := The URL of your server where the WebHook JSON data is posted
+- custom headers := Optionally allows you to provide a set of headers that will be included in all HTTP POST requests. You must use the JSON array like format @["XCustom-Header-1:value1","Custom-Header-2:value2"]@
+- sign with key := Ably will optionally sign the data with the private key you choose and include an HTTP header @X-Ably-Signature@ in every HTTP post request issued to your server. See "WebHook security":#security for more details.
+
+h2(#transport). WebHook transport details
+
+WebHook requests are batched for efficiency and rate limited to ensure that we do not overload customer's servers with requests. Each request is sent as an HTTP POST request with a JSON content type in the body of the request.
+
+h3. Rate limits
+
+* For each configured WebHook, up to one request per second will be made to the configured endpoint URL
+* The first event that matches a configured WebHook will trigger a WebHook request immediately. Therefore, if you have a low volume of events you are listening to, in most cases your request should arrive in under a second from the time the event was generated
+* Once a WebHook request is triggered, all other events will be queued so that they can be delivered in a batch in the next request. The next WebHook request will be issued within one second with the following caveats:
+** Only one HTTP request is ever in-flight at one time for each configured WebHook. If for example your server takes 6 seconds to respond to the request, then you can expect no more than 10 requests a minute to your endpoint. Therefore, if you want to be notified quickly, we recommend you accept requests quickly and defer any work to be done asynchronously
+** If there are more than 1,000 events queued for the next WebHook, the oldest 1,000 events will be bundled into the next WebHook and the remaining events will be delivered in the next WebHook. Therefore, if your sustained rate of events is expected to be more than 1,000 per second or your servers are slow to respond, then it is possible a backlog will build up and you will not receive all events. "Get in touch if you need a higher sustained rate":https://www.ably.io/contact
+
+h3. Failures and back off
+
+* If the endpont for any of the WebHook requests respond with an HTTP status code that does not indicate success i.e. @200 - 209@, then Ably will retry that failed request
+* Every retry is performed with an incrementing back off that is calcated as @delay = delay * sqrt(2)@ where delay is initially @1@. For example, if the initial WebHook request fails, and subsequent for retries fail, the back off delays for each request would look as follows: @initial request > wait 1.4s > 1st retry > wait 2s > 2nd retry > wait 2.8s > 3rd retry > wait 4s > 4th retry > wait 5.6s > successful request@
+* The back off for consecutively failing requests will increase until it reaches 60s. All subsequent retries for failed requests will then be made every 60s until a request is successful
+* The queue of events is retained for 5 minutes. If an event cannot be delivered within 5 minutes, then the events are discarded to prevent the queue from growing indefinitely
+
+h2(#security). WebHook security
+
+We encourage customers to use a secure HTTPS URL when configuring their WebHooks. This will ensure that requests cannot be intercepted and all communication with your servers is secured with TLS.
+
+However, in addition, we optionally support a signature included as an HTTP header @X-Ably-Signature@. Customers who receive WebHooks can then use the chosen private API key to verify the authenticity of the WebHook data.
+
+In order to verify the signature, you need to do the following:
+
+* start with the webhook request body. This will be a JSON string encoded with content-encoding @utf-8@;
+* identify the key based on the @keyId@ indicated in the @X-Ably-Key@ header;
+* calculate the HMAC of that request body with algorithm AES256 and the key being the corresponding @keyValue@;
+* encode the resulting HMAC using RFC 3548 base 64;
+* compare that result with the signature value indicated in the @X-Ably-Signature@ header
