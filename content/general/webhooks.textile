@@ -10,6 +10,7 @@ jump_to:
     - Messages#messages
     - Configuring a WebHook#configure
     - WebHook transport details#transport
+    - Binary support#binary
     - WebHook security#security
 ---
 
@@ -25,9 +26,9 @@ Ably currently supports three types of WebHooks:
 * "Presence events":#presence - get notified when clients enter, update their data, or leave channels
 * "Messages":#messages - get notified when messages are published on a channel
 
-In order to prevent overloading your servers with requests, Ably batches WebHook data and issues a @POST@ request with @JSON@ data in the body of the request to your servers. WebHook requests are typically published at most once per second per configured WebHook. See "WebHook transport details":#transport below for the specifics on throughput, restrictions and expected behavior of WebHooks.
+In order to prevent overloading your servers with requests, Ably batches WebHook data and issues a @POST@ request with @JSON@ (by default) data in the body of the request to your servers. See "binary support":#binary below for details on how to use @MsgPack@ for greater efficiency with a binary encoding. WebHook requests are typically published at most once per second per configured WebHook. See "WebHook transport details":#transport below for the specifics on throughput, restrictions and expected behavior of WebHooks.
 
-You can "configure WebHooks":#configure in your "account dashboard":https://support.ably.io/solution/articles/3000048664-how-do-i-access-my-account-dashboard on a per app basis which will apply to all channels in that app. If you require WebHook filtering, then "get in touch":https://www.ably.io/contact.
+You can "configure WebHooks":#configure in your "account dashboard":https://support.ably.io/solution/articles/3000048664-how-do-i-access-my-account-dashboard on a per app basis which can apply to one or more channels in that app. WebHooks can be filtered by channel naming using a regular expression.
 
 You can also optionally "configure your WebHook to sign the requests":#security allowing you to verify the authenticity of each request.
 
@@ -37,12 +38,12 @@ If you are unfamiliar with how channels work in Ably, we recommend you first rev
 
 When a client attaches to a channel, a channel is implicitly created within the global Ably service triggering a @channel.opened@ WebHook event. The channel will remain open for as long as there are any subscribers attached to the channel.  Once all subscribers have left the channel, as part of our garbage collection process, the channel will typically be closed within 15 seconds triggering a @channel.closed@ event.
 
-Every WebHook request will contain one or more lifecycle events in the root level JSON attribute @items@ which contains an array of events. See "WebHook transport details":#webhook-transport below to find out more about batching and expected throughput.
+Every WebHook request will contain one or more lifecycle events in the root level attribute @items@ which contains an array of events. See "WebHook transport details":#webhook-transport below to find out more about batching and expected throughput.
 
-Each channel lifecycle event in the @items@ array contains a JSON object with the following attributes:
+Each channel lifecycle event in the @items@ array contains a JSON-like object with the following attributes:
 
 - name := the event type "@channel.opened@" or "@channel.closed@"
-- data := a JSON object containing a single attribute @name@ which is the name of the channel that the lifecycle event applies to
+- data := a JSON-like object containing a single attribute @name@ which is the name of the channel that the lifecycle event applies to
 - webhookId := an internal unique ID for the configured WebHook
 - queueId := This is the WebHook type "@channel.lifecycle@"
 - timestamp := a timestamp represented as milliseconds since epoch for the channel event
@@ -93,10 +94,10 @@ When a member enters, updates, or leaves a channel, a presence WebHook event is 
 
 Every WebHook request will contain one or more presence event envelopes in the root level attribute @items@ which contains an array of presence event message. See "WebHook transport details":#webhook-transport below to find out more about batching and expected throughput.
 
-Each presence event in the @items@ array contains a JSON object with the following attributes:
+Each presence event envelope in the @items@ array contains a JSON-like object with the following attributes:
 
 - name := the event type "@presence.message@"
-- data := a JSON object containing the attributes defined below in "JSONPath format":http://goessner.net/articles/JsonPath/ @data.*@:
+- data := a JSON-like object containing the attributes defined below in "JSONPath format":http://goessner.net/articles/JsonPath/ @data.*@:
 - data.channelId := name of the channel that the presence event belongs to
 - data.site := an internal site identifier indicating which primary data center the member is present in
 - data.presence := an @Array@ of presence events with fields for each event described below
@@ -268,6 +269,10 @@ h3. Failures and back off
 * Every retry is performed with an incrementing back off that is calculated as @delay = delay * sqrt(2)@ where delay is initially @1@. For example, if the initial WebHook request fails, and subsequent for retries fail, the back off delays for each request would look as follows: @initial request > wait 1.4s > 1st retry > wait 2s > 2nd retry > wait 2.8s > 3rd retry > wait 4s > 4th retry > wait 5.6s > successful request@
 * The back off for consecutively failing requests will increase until it reaches 60s. All subsequent retries for failed requests will then be made every 60s until a request is successful
 * The queue of events is retained for 5 minutes. If an event cannot be delivered within 5 minutes, then the events are discarded to prevent the queue from growing indefinitely
+
+h2(#binary). Binary support
+
+By default WebHooks are delivered using the portable "JSON text encoding":http://www.json.org/. We also support "MsgPack":http://msgpack.org/, a binary encoding that generally provides faster decoding and smaller payloads.  This is configurable in your "WebHooks dashboard":#configure.
 
 h2(#security). WebHook security
 
