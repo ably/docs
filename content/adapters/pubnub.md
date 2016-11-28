@@ -17,7 +17,7 @@ var pubnub = PUBNUB({
 });
 ```
 
-[View a Pubnub adapter example that publishes & receives messages in your browser](<%= JsBins.url_for('adaptors/pubnub-pub-sub') %>)
+[View a Pubnub adapter example that publishes & receives messages in your browser](<%= JsBins.url_for('adapters/pubnub-pub-sub') %>)
 
 Please note:
 
