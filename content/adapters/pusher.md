@@ -1,6 +1,8 @@
 # Ably Pusher protocol adapter
 
-**Our protocol adapters are in public beta. If you wish to use our adapters, please [contact us first](https://www.ably.io/contact) using our live chat or email support@ably.io**
+**For a step-by-step tutorial to using the Pubnub protocol adapter, see https://www.ably.io/tutorials/pubnub-adapter**
+
+Note: You need enable Pusher adapter support in your account dashboard before you can use the Pusher protocol adapter. See step 3 of [the tutorial](https://www.ably.io/tutorials/pubnub-adapter).
 
 To use the Ably Pusher protocol adapter, you must initialize your Pusher client library as follows, assuming an [Ably API key](https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key) of `'appid.keyid:keysecret'`:
 
@@ -39,7 +41,7 @@ Please note:
 ## Supported features
 
 - REST publish
-- REST get occupied channels (*Note: channel enumeration is in early alpha, and is not ready for production use. You may experience timeouts when using this feature; this is a known issue*)
+- REST get occupied channels
 - REST get presence set
 - REST get user count
 - Realtime subscribe
@@ -57,11 +59,10 @@ Please note:
 - While the Pusher adapter is quite a light translation layer (certainly a good deal lighter than the Pubnub adapter), a protocol adapter inevitably adds some latency. Using the adapter will be a little slower than using Ably native client libraries. Typically the impact is in the low milliseconds. By the same token, it will likely also be marginally slower than using Pusher natively -- but only if you are close to whichever Pusher data-center you are using. If not, the extra milliseconds of latency from the adapter should be more than compensated for by being able to use a data-center closer to you (unlike Pusher, Ably has data-centers in [9+ regions worldwide](https://support.ably.io/solution/articles/3000029525-where-are-ably-s-servers-located-around-the-world) and federates messages between them - you automatically connect to the closest one to you, using latency-based routing).
 - Behind the scenes, the adapter just uses the normal Ably service, so there is no problem with using Pusher and Ably client libraries side by side (though bear in mind channel name translation, see below). You can mix and match as you like; for example, using Pusher client libraries normally, but using the Ably REST api to get channel history, which is not available through the Pusher clients.
 - While using the adapter gives you some of the advantages of Ably over Pusher (eg inter-region message federation), many others (e.g. [continuity guarantees](https://support.ably.io/solution/articles/3000044639-connection-state-recovery), [fallback host support](https://support.ably.io/solution/articles/3000044636-routing-around-network-and-dns-issues), [history](https://www.ably.io/documentation/realtime/history), [flexible channel namespaces](https://support.ably.io/solution/articles/3000030058-what-is-a-channel-namespace-and-how-can-i-use-them-), [powerful token authentication](https://www.ably.io/documentation/general/authentication)) require the use of the Ably client libraries. As a result, if a native Ably library is available for your platform, we recommend you consider using the Ably client libraries instead or at least make a plan to eventually transition over to Ably native client libraries.
-- Please note that that channel enumeration (the /channels REST endpoint) is in early alpha, and is not ready for production use. You may experience timeouts when using this feature; this is a known issue.
 
 ### Security
 
-When using Ably normally, you cannot connect to the Ably service at all without a complete API key, or a token derived from one. When using the Pusher adapter, you can connect to public channels (see 'Channels' below) with only the Ably key name (the app id together with the key id). Since the Pusher adapter lets you do something that would not normally be possible with Ably, it needs to be explicitly enabled for each api key you want to use it with. If you would like it enabled, please [contact us through live chat](https://www.ably.io/contact) or by emailing support@ably.io.
+When using Ably normally, you cannot connect to the Ably service at all without a complete API key, or a token derived from one. When using the Pusher adapter, you can connect to public channels (see 'Channels' below) with only the Ably key name (the app id together with the key id). Since the Pusher adapter lets you do something that would not normally be possible with Ably, it needs to be explicitly enabled for each api key you want to use it with. You can do this on your account dashboard, in the settings tab for each app you want to use with the adapter.
 
 ### Channels
 
@@ -70,7 +71,7 @@ When using Ably normally, you cannot connect to the Ably service at all without 
  - Pusher private channels ('private-' prefix) are mapped to the the Ably 'private:' namespace.
  - Pusher presence channels ('presence-' prefix) are mapped to the the Ably 'presence:' namespace.
  - Conversely, Ably channels not in any of the 'public:', 'private:', or 'presence:' namespaces get a 'private-ablyroot-' prefix.
- - Semicolons are banned in Ably channel names; colons are banned in Pusher channel names. So the adapter maps one to the other: semicolons in Pusher channel names become colons in Ably channel names.
+ - Colons are banned in Pusher channel names, but are important in Ably channel names, as they act as the namespace separator. So the adaptor maps semicolons to colons: semicolons in Pusher channel names become colons in Ably channel names, and vice versa. (This means you will not be able to access any Ably channels which have semicolons in their name).
 
 A few examples:
 

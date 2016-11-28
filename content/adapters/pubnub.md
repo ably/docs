@@ -1,11 +1,12 @@
 # Ably Pubnub protocol adapter
 
-**Our protocol adapters are in public beta. If you wish to use our adapters, please [contact us first](https://www.ably.io/contact) using our live chat or email support@ably.io**
+**For a step-by-step tutorial to using the Pubnub protocol adapter, see https://www.ably.io/tutorials/pubnub-adapter**
 
 ## Example
 
 To use the Ably Pubnub protocol adapter, you must initialize your Pubnub client library as follows:
 
+Javascript example:
 ```js
 var apiKey = "<your Ably api key>";
 var pubnub = PUBNUB({
@@ -17,14 +18,28 @@ var pubnub = PUBNUB({
 });
 ```
 
+Ruby example:
+```ruby
+api_key = "<your Ably API key>"
+pubnub = Pubnub.new(
+  :subscribe_key => api_key,
+  :publish_key   => api_key,
+  :origin        => 'pubnub.ably.io',
+  :ssl           => true
+)
+```
+
 [View a Pubnub adapter example that publishes & receives messages in your browser](<%= JsBins.url_for('adapters/pubnub-pub-sub') %>)
 
 Please note:
 
 * For simplicity, the above example uses the Pubnub Javascript library. All other Pubnub client libraries can be instanced in a similar fashion. See the [complete list of Pubnub SDKs and their documentation](https://www.pubnub.com/docs).
 * You can add any other Pubnub options you would normally use in the initializer.
+* Don't try to use different Ably API keys for the `publish_key` and `subscribe_key`. Unlike Pubnub, Ably does not use different keys for publish and subscribe; instead, capabilities are connection-oriented, and the Adaptor will use whatever you pass as the `subscribe_key` to create the Ably connection. If that key does not have publish capabilities, you will not be able to publish, whatever the `publish_key` has.
 * The `ssl` option is not mandatory, but strongly recommended. The Pubnub client includes the raw api key in the path that it connects to, so we strongly advise you to use this option to prevent it being sent in plain text.
-* We do not yet support Pubnub v4 client libraries. Note: some earlier client libraries also use the newer subscribe protocol (which Pubnub confusingly calls the v2 subscribe protocol), but usually have an option to disable it: for example, if using the Pubnub android java library 3.7.8 to 3.7.10, you can call the (undocumented) method "setV2(false)" on the pubnub client immediately after initializing it, or downgrade to 3.7.7.
+* We do not yet support Pubnub v4 client libraries.
+* Some earlier client libraries also use the newer subscribe protocol, but usually have an option to disable it: for example, if using the Pubnub android java library 3.7.8 to 3.7.10, you can call the (undocumented) method "setV2(false)" on the pubnub client immediately after initializing it, or downgrade to 3.7.7.
+* Pubnub client libraries are inconsistent in how they let you set a new origin. Most let you just specify it in the constructor, but some require setting the domain and subdomain separately: for example, the java lib (version 3.7.10) requires you to call `pn.setOrigin('pubnub'); pn.setDomain('ably.io'); pn.setCacheBusting(false)` after initializing it to set the origin. Consult the docs for the library you're using.
 
 ## Supported features
 
@@ -35,7 +50,7 @@ Please note:
 - getstate
 - setstate
 - herenow
-- global herenow (*Note: global herenow uses channel enumeration, which is in early alpha, and is not ready for production use. You may experience timeouts when using this feature; this is a known issue*)
+- global herenow (See usage note in 'REST requests' below)
 
 ## Unsupported features
 
@@ -56,7 +71,7 @@ Please note:
 
 ### Publishing and subscribing
 
-- Pubnub message content is mapped to Ably message data (the payload). A publish using the Pubnub adapter will leave the Ably message name blank, and message name is not visible to Pubnub adapter subscribers.
+- Pubnub does not have a concept of a message name. Pubnub message content is mapped to Ably message data (the payload). A publish using the Pubnub adapter will leave the Ably message name blank, and message name is not visible to Pubnub adapter subscribers.
 - Each separate UUID (for a given api key, in a given region) is treated as a separate subscriber (for presence purposes), and so will count as a separate connection to Ably.
 - In Pubnub's model, message continuity is available for '5-20 minutes' and up to 100 messages. To provide compatibility with this, the Pubnub adapter will stay connected and attached to your channels for 5 minutes after the last subscribe long poll it receives. If the client doesn't connect to the adapter for 5 minutes, the adapter will disconnect from Ably, and any subsequent subscribe poll will be treated as a new connection (and will get messages from the time of that poll onwards).
 - As such, during development, beware that using a lot of different uuids (eg using the `unique_uuid` option of the js lib to generate a new uuid on each page refresh) may result in connections racking up quickly, as each will stay alive a minimum of 5 minutes.
@@ -68,7 +83,6 @@ Please note:
 - Pubnub's `UUID` is mapped to Ably's [`clientId`](https://www.ably.io/documentation/realtime/authentication#identified-clients).
 - Pubnub considers the same `UUID` to be the same member; Ably considers the same `clientid` on different connections to be different members of the presence set. As such, if you have multiple connections with the same `clientId`, the presence set will contain that `clientId` multiple times. Ably does this so that if you have multiple devices connected with the same `clientId` you can check which devices are present. If getting the state for a `clientId`, if there are multiple members in the set with the same `clientId`, the adapter will just pick one and return its state.
 - Pubnub's member state is mapped to Ably's presence data. With presence data, member aren't permitted to change other members' presence data. So each client can only set its own state, not other people's.
-- The global herenow feature should not be considered ready for production use, as it uses channel enumeration, which is in early alpha. You may experience timeouts when using global herenow; this is a known issue.
 
 ### REST requests
 
