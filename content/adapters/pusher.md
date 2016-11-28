@@ -71,7 +71,7 @@ When using Ably normally, you cannot connect to the Ably service at all without 
  - Pusher private channels ('private-' prefix) are mapped to the the Ably 'private:' namespace.
  - Pusher presence channels ('presence-' prefix) are mapped to the the Ably 'presence:' namespace.
  - Conversely, Ably channels not in any of the 'public:', 'private:', or 'presence:' namespaces get a 'private-ablyroot-' prefix.
- - Colons are banned in Pusher channel names, but are important in Ably channel names, as they act as the namespace separator. So the adaptor maps semicolons to colons: semicolons in Pusher channel names become colons in Ably channel names, and vice versa. (This means you will not be able to access any Ably channels which have semicolons in their name).
+ - Colons are banned in Pusher channel names, but are important in Ably channel names, as they act as the namespace separator. So the adapter maps semicolons to colons: semicolons in Pusher channel names become colons in Ably channel names, and vice versa. (This means you will not be able to access any Ably channels which have semicolons in their name).
 
 A few examples:
 

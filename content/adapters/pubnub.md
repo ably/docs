@@ -35,7 +35,7 @@ Please note:
 
 * For simplicity, the above example uses the Pubnub Javascript library. All other Pubnub client libraries can be instanced in a similar fashion. See the [complete list of Pubnub SDKs and their documentation](https://www.pubnub.com/docs).
 * You can add any other Pubnub options you would normally use in the initializer.
-* Don't try to use different Ably API keys for the `publish_key` and `subscribe_key`. Unlike Pubnub, Ably does not use different keys for publish and subscribe; instead, capabilities are connection-oriented, and the Adaptor will use whatever you pass as the `subscribe_key` to create the Ably connection. If that key does not have publish capabilities, you will not be able to publish, whatever the `publish_key` has.
+* Don't try to use different Ably API keys for the `publish_key` and `subscribe_key`. Unlike Pubnub, Ably does not use different keys for publish and subscribe; instead, capabilities are connection-oriented, and the Adapter will use whatever you pass as the `subscribe_key` to create the Ably connection. If that key does not have publish capabilities, you will not be able to publish, whatever the `publish_key` has.
 * The `ssl` option is not mandatory, but strongly recommended. The Pubnub client includes the raw api key in the path that it connects to, so we strongly advise you to use this option to prevent it being sent in plain text.
 * We do not yet support Pubnub v4 client libraries.
 * Some earlier client libraries also use the newer subscribe protocol, but usually have an option to disable it: for example, if using the Pubnub android java library 3.7.8 to 3.7.10, you can call the (undocumented) method "setV2(false)" on the pubnub client immediately after initializing it, or downgrade to 3.7.7.
