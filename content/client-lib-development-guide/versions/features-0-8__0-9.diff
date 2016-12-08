@@ -1,5 +1,5 @@
 diff --git a/content/client-lib-development-guide/features.textile b/content/client-lib-development-guide/features.textile
-index bff9943..f3766be 100644
+index bff9943..88da1c7 100644
 --- a/content/client-lib-development-guide/features.textile
 +++ b/content/client-lib-development-guide/features.textile
 @@ -1,8 +1,10 @@
@@ -98,7 +98,7 @@ index bff9943..f3766be 100644
  ** @(RSA15a)@ Any @clientId@ provided in @ClientOptions@ must match any non wildcard (@'*'@) @clientId@ value in @TokenDetails@ or @connectionDetails@ of the @CONNECTED@ @ProtocolMessage@, where applicable
  ** @(RSA15b)@ If the @clientId@ from @TokenDetails@ or @connectionDetails@ contains only a wildcard string @'*'@, then the client is permitted to be either unidentified (i.e. anonymous without a @clientId@) or identified by providing a @clientId@ when communicating with Ably
 -** @(RSA15c)@ Following an auth request which uses a @TokenDetails@ or @TokenRequest@ object that contains an incompatible @clientId@, the library should in the case of Realtime change the connection state to @FAILED@ and emit an error, and in the case of REST result in an appropriate error response
-+** @(RSA15c)@ Following an auth request which uses a @TokenDetails@ or @TokenRequest@ object that contains an incompatible @clientId@, the library should in the case of Realtime transition the connection state to @FAILED@ and emit an error, and in the case of REST result in an appropriate error response
++** @(RSA15c)@ Following an auth request which uses a @TokenDetails@ or @TokenRequest@ object that contains an incompatible @clientId@, the library should in the case of Realtime transition the connection state to @FAILED@, and in the case of REST result in an appropriate error response
  * @(RSA5)@ TTL for new tokens is specified in milliseconds (REST API default is 1 hour, see "TK2a":#TK2a)
  * @(RSA6)@ The @capability@ for new tokens is JSON stringified (REST API default is allow all @{"*":["*"]}@, see "TK2b":#TK2b)
  * @(RSA7)@ @clientId@ and authenticated clients:
@@ -170,7 +170,7 @@ index bff9943..f3766be 100644
 -* @(RTC8)@ Authentication token changes for the current connection are possible when the client is in the @CONNECTED@, @CONNECTING@ or @DISCONNECTED@ states. If @auth.authorise@ is called with @AuthOptions#force@ set to @true@ and the state is @CONNECTED@, @CONNECTING@, or @DISCONNECTED@, the client will obtain a new token, disconnect the current transport and resume the connection (see "@RTN15c@":#RTN15c for details on resume). A test should exist that performs an upgrade of capabilities without any message loss during the upgrade process. A test should also exist for a token change that fails due to an incompatible token, which should result in the connection entering the @FAILED@ state
 +* @(RTC8)@ For a realtime client, @Auth#authorize@ instructs the library to obtain a token using the provided @tokenParams@ and @authOptions@ and upgrade the current connection to use that token; or if not currently connected, to connect with the token.
 +** @(RTC8a)@ If the connection is in the @CONNECTED@ state and @auth#authorize@ is called or Ably requests a re-authentication (see "RTN22":#RTN22), the client must obtain a new token, then send an @AUTH@ @ProtocolMessage@ to Ably with an @auth@ attribute containing an @AuthDetails@ object with the token string
-+*** @(RTC8a1)@ If the authentication token change is successful, then Ably will send a new @CONNECTED@ @ProtocolMessage@. The @connectionDetails@ provided in the @CONNECTED@ @ProtocolMessage@ must override any existing defaults, see "RTN21":#RTN21. A test should exist that performs an upgrade of capabilities without any loss of continuity or connectivity during the upgrade process. Another test should exist where the capabilities are downgraded resulting in Ably sending an @ERROR@ @ProtocolMessage@ with a @channel@ property, causing the channel to enter the @FAILED@ state. That test must assert that the channel becomes failed soon after the token update and the reason is included in the channel state change event
++*** @(RTC8a1)@ If the authentication token change is successful, then Ably will send a new @CONNECTED@ @ProtocolMessage@. The @connectionDetails@ provided in the @CONNECTED@ @ProtocolMessage@ must override any existing defaults, see "RTN21":#RTN21.  The @Connection@ should emit an @UPDATE@ event per @RTN24@. A test should exist that performs an upgrade of capabilities without any loss of continuity or connectivity during the upgrade process. Another test should exist where the capabilities are downgraded resulting in Ably sending an @ERROR@ @ProtocolMessage@ with a @channel@ property, causing the channel to enter the @FAILED@ state. That test must assert that the channel becomes failed soon after the token update and the reason is included in the channel state change event
 +*** @(RTC8a2)@ If the authentication token change fails, then Ably will send an @ERROR@ @ProtocolMessage@ triggering the connection to transition to the @FAILED@ state. A test should exist for a token change that fails (such as sending a new token with an incompatible @clientId@)
 +*** @(RTC8a3)@ The @authorize@ call should be indicated as completed with the new token or error only once realtime has responded to the @AUTH@ with either a @CONNECTED@ or @ERROR@ respectively.
 +** @(RTC8b)@ If the connection is in the @CONNECTING@ state when @auth#authorize@ is called, all current connection attempts should be halted, and after obtaining a new token the library should immediately initiate a connection attempt using the new token
@@ -181,7 +181,7 @@ index bff9943..f3766be 100644
  
  h3(#realtime-connection). Connection
  
-@@ -274,10 +297,12 @@ h3(#realtime-connection). Connection
+@@ -274,22 +297,26 @@ h3(#realtime-connection). Connection
  ** @(RTN2b)@ @echo@ should be @true@ by default; @false@ will prevent messages published by the client being echoed back
  ** @(RTN2d)@ @clientId@ contains the provided @clientId@ option of @ClientOptions@, unless @clientId@ is @null@
  ** @(RTN2e)@ Depending on the authentication scheme, either @accessToken@ contains the token string, or @key@ contains the API key
@@ -189,14 +189,18 @@ index bff9943..f3766be 100644
 +** @(RTN2f)@ API version param @v@ should be @0.9@
 +** @(RTN2g)@ Library and version param @lib@ should include the header value described in "RSC7b":#RSC7b. For example, the 0.9.0 version of the Javascript library would use the param @lib=js-0.9.0@
  * @(RTN3)@ If connection option @autoConnect@ is true, a connection is initiated immediately; otherwise a connection is only initiated following an explicit call to @connect()@
- * @(RTN4)@ EventEmitter and states:
- ** @(RTN4a)@ Implements @EventEmitter@ and emits events for state changes @INITIALIZED@, @CONNECTING@, @CONNECTED@, @DISCONNECTED@, @SUSPENDED@, @CLOSING@, @CLOSED@, @FAILED@
-+** @(RTN4g)@ Additionally, an @ERROR@ event can be emitted by the @Connection@ that contains details of the error in an @ErrorInfo@ object
+-* @(RTN4)@ EventEmitter and states:
+-** @(RTN4a)@ Implements @EventEmitter@ and emits events for state changes @INITIALIZED@, @CONNECTING@, @CONNECTED@, @DISCONNECTED@, @SUSPENDED@, @CLOSING@, @CLOSED@, @FAILED@
++* @(RTN4)@ The @Connection@ implements @EventEmitter@ and emits @ConnectionEvent@ events
++** @(RTN4a)@ It emits a @ConnectionState@ event (one of @INITIALIZED@, @CONNECTING@, @CONNECTED@, @DISCONNECTED@, @SUSPENDED@, @CLOSING@, @CLOSED@, @FAILED@) for every connection state change
++** @(RTL4h)@ It can emit an @UPDATE@ event (this is the only @ConnectionEvent@ which is not a @ConnectionState@). This is used for changes to connection conditions for which the @ConnectionState@ (e.g. @CONNECTED@) does not change. (The library must never emit a @ConnectionState@ event for a state equal to the previous state).
  ** @(RTN4b)@ A new connection will emit the following events in order when connecting: @CONNECTING@, then @CONNECTED@
  ** @(RTN4c)@ A connection will emit the following events when closing the connection: @CLOSING@, then @CLOSED@
  ** @(RTN4d)@ @Connection#state@ attribute is the current state of the connection
-@@ -285,11 +310,13 @@ h3(#realtime-connection). Connection
- ** @(RTN4f)@ Additionally, a @ConnectionStateChange@ can be emitted that contains a @reason@ which contains an @ErrorInfo@ object with details of the error that has occurred for the @Connection@
+-** @(RTN4e)@ A @ConnectionStateChange@ object is emitted as the first argument for every connection state change
+-** @(RTN4f)@ Additionally, a @ConnectionStateChange@ can be emitted that contains a @reason@ which contains an @ErrorInfo@ object with details of the error that has occurred for the @Connection@
++** @(RTN4e)@ A @ConnectionStateChange@ object is emitted as the first argument for every @ConnectionEvent@ (including both @RTN4a@ connection state changes and @RTL4h@ @UPDATE@ events)
++** @(RTN4f)@ The @ConnectionStateChange@ object may contain a @reason@ consisting of an @ErrorInfo@ object with details of the error that has occurred for the @Connection@. Any state change triggered by a @ProtocolMessage@ that contains an @error@ member should populate the @reason@ with that error in the corresponding state change event
  * @(RTN5)@ A test should exist that instances many (50+) clients simultaneously and performs a few basic operations such as attaching to a channel, publishing a message, and expecting all of those messages to arrive on all clients to ensure that there are no concurrency issues with the client library
  * @(RTN6)@ A @Connection@ is successful and considered @CONNECTED@ once the websocket connection is open and the intial @CONNECTED@ @ProtocolMessage@ has been received
 -* @(RTN19)@ If the @CONNECTED@ @ProtocolMessage@ contains a @connectionDetails@ property, the attributes within @ConnectionDetails@ will be used as the defaults for this client library, overriding any configured options at the time the @CONNECTED@ @ProtocolMessage@ is received
@@ -212,7 +216,7 @@ index bff9943..f3766be 100644
  * @(RTN8)@ @Connection#id@ attribute:
  ** @(RTN8a)@ Is @null@ until connected
  ** @(RTN8b)@ Is a unique string provided by Ably. You should have a test to ensure multiple connected clients have unique connection IDs
-@@ -304,63 +331,65 @@ h3(#realtime-connection). Connection
+@@ -304,63 +331,66 @@ h3(#realtime-connection). Connection
  ** @(RTN11a)@ Explicitly connects to the Ably service if not already connected
  ** @(RTN11b)@ If the state is @CLOSING@, the client should make a new connection with a new transport instance and remove all references to the old one. In particular, it should make sure that, when the @CLOSED@ @ProtocolMessage@ arrives for the old connection, it doesn't affect the new one.
  ** @(RTN11c)@ If the state is @DISCONNECTED@ or @SUSPENDED@, aborts the retry process described in "RTN14d":#RTN14d and "RTN14e":#RTN14e and immediately tries to reconnect.
@@ -240,7 +244,7 @@ index bff9943..f3766be 100644
 -** @(RTN14a)@ If an API key is invalid, then the connection will enter the @FAILED@ state and the @Connection#errorReason@ will be set on the @Connection@ object as well as the emitted @ConnectionStateChange@
 -** @(RTN14b)@ If a connection request fails due to an @ERROR@ ProtocolMessage being sent to the client containing a token error (@statusCode@ value of 401 and error @code@ value in the range @40140 <= @code < 40150@), then if the token is renewable, the error should not emitted, a single attempt to create a new token will be made and a new connection attempt will be initiated using the new token. If the token creation fails, the next connection attempt fails again due to a token error, or the token was not renewable, the connection will transition to the @FAILED@ state and the @Connection#errorReason@ will be set
 +** @(RTN14a)@ If an API key is invalid, then the connection will transition to the @FAILED@ state and the @Connection#errorReason@ will be set on the @Connection@ object as well as the emitted @ConnectionStateChange@
-+** @(RTN14b)@ If a connection request fails due to an @ERROR@ @ProtocolMessage@ being received by the client containing a token error (@statusCode@ value of 401 and error @code@ value in the range @40140 <= code < 40150@) and an empty @channel@ attribute, then if the token is renewable, the error should not be emitted, a single attempt to create a new token will be made and a new connection attempt will be initiated using the newly created token. If the attempt to create a new token fails, or the subsequent connection attempt fails due to another token error, then the connection will transition to the @FAILED@ state and the @Connection#errorReason@ will be set
++** @(RTN14b)@ If a connection request fails due to an @ERROR@ @ProtocolMessage@ being received by the client containing a token error (@statusCode@ value of 401 and error @code@ value in the range @40140 <= code < 40150@) and an empty @channel@ attribute, then if the token is renewable, a single attempt to create a new token should be made and a new connection attempt initiated using the newly created token. If the attempt to create a new token fails, or the subsequent connection attempt fails due to another token error, then the connection will transition to the @FAILED@ state and the @Connection#errorReason@ should be set
 +** @(RTN14g)@ If an @ERROR@ @ProtocolMessage@ with an empty @channel@ attribute is received for any reason other than "RTN14b":RTN14b, then the connection will transition to the @FAILED@ state and the server will terminate the connection. Additionally the @Connection#errorReason@ must be set with the error from the @ERROR@ @ProtocolMessage@
  ** @(RTN14c)@ A new connection attempt will fail if not connected within the "default realtime request timeout":#defaults
 -** @(RTN14d)@ If a connection attempt fails for any recoverable reason (i.e. a network failure or a recoverable authentication failure), the @Connection#state@ will change to @DISCONNECTED@, the @Connection#errorReason@ will be updated, a @ConnectionStateChange@ with the @reason@ will be emitted, and new connection attempts will periodically be made until the maximum time in that state threshold is reached.  The @retryIn@ attribute of the @ConnectionStateChange@ object will contain the time in milliseconds until the next connection attempt. See the @disconnectedRetryTimeout@ of @ClientOptions@ below. Each time a new connection attempt is made the state will change to @CONNECTING@ and then to @CONNECTED@ if successful, or @DISCONNECTED@ if unsuccessful and the "default @connectionStateTtl@":#defaults has not been exceeded
@@ -250,7 +254,7 @@ index bff9943..f3766be 100644
  * @(RTN15)@ @Connection@ failures once @CONNECTED@:
 -** @(RTN15h)@ If a @DISCONNECTED@ message is received from Ably, then that transport will subsequently be closed by Ably. If the @DISCONNECTED@ message contains a token error (@statusCode@ value of 401 and error @code@ value in the range @40140 <= @code < 40150@), if the token is renewable, the error should not emitted, a single attempt to create a new token will be made and a new connection attempt will be initiated using the new token. If the token creation fails, the next connection attempt fails due to a token error, or the token was not renewable, the connection will transition to the @FAILED@ state and the @Connection#errorReason@ will be set
 -** @(RTN15a)@ If a @Connection@ transport is disconnected unexpectedly or if a token expires, then the @Connection@ manager will immediately attempt to reconnect and restore the connection state. Connection state recovery is provided by the Ably service and ensures that whilst the client is disconnected, all events are queued and channel state is retained on the Ably servers. When a new connection is made with the correct connection recovery key, the client is able to catch up by receiving the queued @ProtocolMessages@ from Ably. Connection state is only maintained for a brief period, up to a minute, so if a client is disconnected for a longer period connection state cannot be resumed
-+** @(RTN15h)@ If a @DISCONNECTED@ message is received from Ably, then that transport will subsequently be closed by Ably. If the @DISCONNECTED@ message contains a token error (@statusCode@ value of 401 and error @code@ value in the range @40140 <= code < 40150@), if the token is renewable, the error should not be emitted, a single attempt to create a new token will be made and a new connection attempt will be initiated using the new token. If the token creation fails, the next connection attempt fails due to a token error, or the token was not renewable, the connection will transition to the @FAILED@ state and the @Connection#errorReason@ will be set
++** @(RTN15h)@ If a @DISCONNECTED@ message is received from Ably, then that transport will subsequently be closed by Ably. If the @DISCONNECTED@ message contains a token error (@statusCode@ value of 401 and error @code@ value in the range @40140 <= code < 40150@), if the token is renewable, a single attempt to create a new token should be made and a new connection attempt initiated using the new token. If the token creation fails, the next connection attempt fails due to a token error, or the token was not renewable, the connection will transition to the @FAILED@ state and the @Connection#errorReason@ will be set
 +** @(RTN15i)@ If an @ERROR@ @ProtocolMessage@ is received, this indicates a fatal error in the connection. The server will close the transport immediately after. The client should transition to the @FAILED@ state triggering all attached channels to transition to the @FAILED@ state as well. Additionally the @Connection#errorReason@ should be set with the error received from Ably
 +** @(RTN15a)@ If a @Connection@ transport is disconnected unexpectedly or if a token expires, then the @Connection@ manager will immediately attempt to reconnect and restore the connection state. Connection state recovery is provided by the Ably service and ensures that whilst the client is disconnected, all events are queued and channel state is retained on the Ably servers. When a new connection is made with the correct connection recovery key, the client is able to catch up by receiving the queued @ProtocolMessages@ from Ably. Connection state is only maintained for a brief period, up to two minutes, so if a client is disconnected for a longer period connection state cannot be resumed
  ** @(RTN15b)@ In order for a connection to be resumed and connection state to be recovered, the client library reconnects to the websocket endpoint with two additional querystring params:
@@ -258,11 +262,12 @@ index bff9943..f3766be 100644
  *** @(RTN15b2)@ @connectionSerial@ is the most recent @ProtocolMessage#connectionSerial@ received from Ably or @Connection#serial@ which should be identical
  ** @(RTN15c)@ The system's response to a resume request will be one of the following:
  **** @(RTN15c1)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and no @error@. In this case, the server is indicating that the resume succeeded, all channels are still attached, and all backlog messages are available. The client should not change the state of attached channels, and immediately process any queued messages for that channel
- **** @(RTN15c2)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and an @error@. In this case, the server is indicating that the resume succeeded but with a non-fatal error, all channels are still attached, and some backlog messages may be unavailable. The @ErrorInfo@ received should be emitted on the client @Connection@ and the @Connection#errorReason@ should be set. The client should not change the state of attached channels, and immediately process any queued messages for that channel. Any channels that are not resumed in full may receive an @ATTACHED@ @ProtocolMessage@ with an @error@, see "@RTL12@":#RTL12
+-**** @(RTN15c2)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and an @error@. In this case, the server is indicating that the resume succeeded but with a non-fatal error, all channels are still attached, and some backlog messages may be unavailable. The @ErrorInfo@ received should be emitted on the client @Connection@ and the @Connection#errorReason@ should be set. The client should not change the state of attached channels, and immediately process any queued messages for that channel. Any channels that are not resumed in full may receive an @ATTACHED@ @ProtocolMessage@ with an @error@, see "@RTL12@":#RTL12
 -**** @(RTN15c3)@ @CONNECTED@ @ProtocolMessage@ with a new @connectionId@, and an error in @error@. In this case, a new connection has been established, the resume has failed, the channels are no longer attached, and the error indicates the resume problem which should be emitted. The client library should immediately detach all channels, fail any queued messages on those channels, and set the @Channel#errorReason@ on each detached @Channel@. Additionally, the internal @msgSerial@ counter is reset so that the first message published to Ably will contain a @msgSerial@ value of @0@
 -**** @(RTN15c4)@ @ERROR@ @ProtocolMessage@ indicating a fatal error in the connection. The server will close the transport immediately after. If the @ERROR@ is non-recoverable, the client will move to the @FAILED@ state triggering all attached channels to move to the @FAILED@ state as well
 -** @(RTN15g)@ When the connection resume has failed, all channels should be detached with a suitable error reason
-+**** @(RTN15c3)@ @CONNECTED@ @ProtocolMessage@ with a new @connectionId@, and an error in @error@. In this case, a new connection has been established, the resume was unsuccessful, the channels are no longer attached, and the emitted error indicates the cause of the unsuccessful resume. The client library should initiate an attach for channels that are in the @SUSPENDED@ state. For all channels in the @ATTACHING@ or @ATTACHED@ state, the client library should fail any previously queued messages for that channel and initiate a new attach i.e. a new @ATTACH@ @ProtocolMessage@ must be sent for each channel. An @ERROR@ will most likely be emitted when the channels become attached automatically due to a loss of continuity, see "@RTL12@":#RTL12. Finally, the internal @msgSerial@ counter is reset so that the first message published to Ably will contain a @msgSerial@ value of @0@
++**** @(RTN15c2)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and an @error@. In this case, the server is indicating that the resume succeeded but with a non-fatal error, all channels are still attached, and some backlog messages may be unavailable. The @ErrorInfo@ received should be set as the @reason@ in the @CONNECTED@ event, and the @Connection#errorReason@ should be set. The client should not change the state of attached channels, and immediately process any queued messages for that channel. Any channels that are not resumed in full may receive an @ATTACHED@ @ProtocolMessage@ with an @error@, see "@RTL12@":#RTL12
++**** @(RTN15c3)@ @CONNECTED@ @ProtocolMessage@ with a new @connectionId@, and an error in @error@. In this case, a new connection has been established, the resume was unsuccessful, the channels are no longer attached, and the error indicates the cause of the unsuccessful resume. The @ErrorInfo@ should be set as the @reason@ in the @CONNECTED@ event, and the @Connection#errorReason@ should be set. The client library should initiate an attach for channels that are in the @SUSPENDED@ state. For all channels in the @ATTACHING@ or @ATTACHED@ state, the client library should fail any previously queued messages for that channel and initiate a new attach i.e. a new @ATTACH@ @ProtocolMessage@ must be sent for each channel. Finally, the internal @msgSerial@ counter is reset so that the first message published to Ably will contain a @msgSerial@ value of @0@
 +**** @(RTN15c5)@ @ERROR@ @ProtocolMessage@ indicating a failure to authenticate as a result of a token error (see "RTN15h":RTN15h). The transport will be closed by the server. The spec described in "RTN15h":RTN15h must be followed for a connection being resumed with a token error
 +**** @(RTN15c4)@ Any other @ERROR@ @ProtocolMessage@ indicating a fatal error in the connection. The server will close the transport immediately after. The client should transition to the @FAILED@ state triggering all attached channels to transition to the @FAILED@ state as well. Additionally the @Connection#errorReason@ will be set should be set with the error received from Ably
  ** @(RTN15f)@ @ACK@ and @NACK@ responses for published messages can only ever be received on the transport connection on which those messages were sent. Therefore, once a transport drops, the client library must either fail the publish attempt, or re-attempt by re-sending the messages on a new transport if the resume was successful (i.e. the @CONNECTED@ response includes the expected @connectionId@)
@@ -301,32 +306,34 @@ index bff9943..f3766be 100644
 +* @(RTN23)@ Heartbeats
 +** @(RTN23a)@ If a transport does not receive any indication of activity on a transport for a period greater than the sum of the @maxIdleInterval@ (which will be sent in the @connectionDetails@ of the most recent @CONNECTED@ message received on that transport) and the @realtimeRequestTimeout@, that transport should be disconnected. This requirement is not mandatory; in deciding whether to implement, client library developers should take into account whether the transport in question is susceptible to undetected dropped connections. Any message (or non-message indicator, see @RTN23b@) received counts as an indication of activity and should reset the timer, not merely heartbeat messages. However, it must be received (that is, sent from the server to the client); client-sent data does count.
 +** @(RTN23b)@ When initiating a connection, the client may send a @heartbeats@ param in the querystring, with value @true@ or @false@. If the value is true, the server will use Ably protocol messages (for example, a message with a @HEARTBEAT@ action) to satisfy the @maxIdleInterval@ requirement. If it is false or unspecified, the server is permitted to use any transport-level mechanism (for example, websocket ping frames) to satisfy this. So for example, for websocket transports, if the client is able to observe websocket pings, then it should send @heartbeats=false@. If not, it should send @heartbeats=true@.
++* @(RTN24)@ A connected client may receive a @CONNECTED@ @ProtocolMessage@ from Ably at any point (though is typically triggered by a reauth, see @RTC8a@). The @connectionDetails@ in the @ProtocolMessage@ must override any stored details, see @RTN21@. The @Connection@ should emit an @UPDATE@ event with a @ChannelStateChange@ object, which should have both @previous@ and @current@ attributes set to @CONNECTED@, and the @reason@ attribute set to to the @error@ member of the @CONNECTED@ @ProtocolMessage@ (if any). (Note that @UPDATE@ should be the only event emitted: in particular, the library must not emit an @CONNECTED@ event if the client was already connected, see @RTL4h@).
  
  h3(#realtime-channels). Channels
  
-@@ -375,46 +404,53 @@ h3(#realtime-channels). Channels
+@@ -375,46 +405,53 @@ h3(#realtime-channels). Channels
  
  h3(#realtime-channel). Channel
  
 -* @(RTL1)@ As soon as a @Channel@ becomes attached, all incoming messages and presence messages are processed and emitted where applicable.  @PRESENCE@ and @SYNC@ messages are passed to the @Presence@ object ensuring it maintains a map of current members on a channel in realtime
-+* @(RTL1)@ As soon as a @Channel@ becomes attached, all incoming messages and presence messages are processed and emitted where applicable. @PRESENCE@ and @SYNC@ messages are passed to the @Presence@ object ensuring it maintains a map of current members on a channel in realtime
- * @(RTL2)@ EventEmitter and states:
+-* @(RTL2)@ EventEmitter and states:
 -** @(RTL2a)@ Implements @EventEmitter@ and emits events for state changes @INITIALIZED@, @ATTACHING@, @ATTACHED@, @DETACHING@, @DETACHED@, @FAILED@
-+** @(RTL2a)@ Implements @EventEmitter@ and emits events for state changes @INITIALIZED@, @ATTACHING@, @ATTACHED@, @DETACHING@, @DETACHED@, @SUSPENDED@ and @FAILED@
++* @(RTL1)@ As soon as a @Channel@ becomes attached, all incoming messages and presence messages are processed and emitted where applicable. @PRESENCE@ and @SYNC@ messages are passed to the @Presence@ object ensuring it maintains a map of current members on a channel in realtime
++* @(RTL2)@ The @Channel@ implements @EventEmitter@ and emits @ChannelEvent@ events
++** @(RTL2a)@ It emits a @ChannelState@ event (one of @INITIALIZED@, @ATTACHING@, @ATTACHED@, @DETACHING@, @DETACHED@, @SUSPENDED@ and @FAILED@) for every channel state change
++** @(RTL2g)@ It can emit an @UPDATE@ event (this is the only @ChannelEvent@ which is not a @ChannelState@).  This is used for changes to channel conditions for which the @ChannelState@ (e.g. @ATTACHED@) does not change. (The library must never emit a @ChannelState@ for a state equal to the previous state).
  ** @(RTL2b)@ @Channel#state@ attribute is the current state of the channel
 -** @(RTL2c)@ Additionally, an @ERROR@ event is emitted that contains an @ErrorInfo@ object with details on an error that has occurred for the @Channel@
-+** @(RTL2d)@ A @ChannelStateChange@ object is emitted as the first argument for every channel state change. It may optionally contain a @reason@ with details of the state change error in an @ErrorInfo@ object
-+** @(RTL2f)@ When a channel @ATTACHED@ @ProtocolMessage@ is received, the @ProtocolMessage@ may contain a @RESUMED@ bit flag indicating that the channel has been resumed. The @ChannelStateChange@ will then be emitted for the @ATTACHED@ state and will contain a @resumed@ boolean attribute with value @true@ if the bit flag @RESUMED@ was included. When @resumed@ is @true@, this indicates that the channel attach resumed the channel state from an existing connection and there has been no loss of message continuity. In all other cases, @resumed@ is false. A test should exist to ensure that @resumed@ is always false when a channel first becomes @ATTACHED@, it is @true@ when the channel is @ATTACHED@ following a successful "connection recovery":#RTN16, and is @false@ when the channel is @ATTACHED@ following a failed "connection recovery":#RTN16
-+** @(RTL2c)@ Additionally, an @ERROR@ event can be emitted by the @Channel@ that contains details of the error in an @ErrorInfo@ object
++** @(RTL2d)@ A @ChannelStateChange@ object is emitted as the first argument for every @ChannelEvent@ (including both @RTL2a@ state changes and @RTL2g@ @UPDATE@ events). It may optionally contain a @reason@ consisting of an @ErrorInfo@ object; any state change triggered by a @ProtocolMessage@ that contains an @error@ member should populate the @reason@ with that error in the corresponding state change event
++** @(RTL2f)@ When a channel @ATTACHED@ @ProtocolMessage@ is received, the @ProtocolMessage@ may contain a @RESUMED@ bit flag indicating that the channel has been resumed. The corresponding @ChannelStateChange@ (either @ATTACHED@ per @RTL2a@, or @UPDATE@ per @RTL12@) will contain a @resumed@ boolean attribute with value @true@ if the bit flag @RESUMED@ was included. When @resumed@ is @true@, this indicates that the channel attach resumed the channel state from an existing connection and there has been no loss of message continuity. In all other cases, @resumed@ is false. A test should exist to ensure that @resumed@ is always false when a channel first becomes @ATTACHED@, it is @true@ when the channel is @ATTACHED@ following a successful "connection recovery":#RTN16, and is @false@ when the channel is @ATTACHED@ following a failed "connection recovery":#RTN16
  * @(RTL3)@ Connection state change side effects:
 -** @(RTL3a)@ If the connection state changes to @FAILED@ then an @ATTACHING@ or @ATTACHED@ channel state will transition to @FAILED@, set the @Channel#errorReason@ and emit the error event
 -** @(RTL3b)@ If the connection state changes to @CLOSED@ or @SUSPENDED@ then an @ATTACHING@ or @ATTACHED@ channel state will transition to @DETACHED@
 -* @(RTL11)@ If a channel enters the @DETACHED@ or @FAILED@ state, then all messages that are still queued for send on that channel should be deleted from the queue triggering a failure for the publish or presence methods invoked for those messages
 +** @(RTL3e)@ If the connection state enters the @DISCONNECTED@ state, it will have no effect on the channel states.
-+** @(RTL3a)@ If the connection state enters the @FAILED@ state, then an @ATTACHING@ or @ATTACHED@ channel state will transition to @FAILED@, set the @Channel#errorReason@ and emit the error event
++** @(RTL3a)@ If the connection state enters the @FAILED@ state, then an @ATTACHING@ or @ATTACHED@ channel state will transition to @FAILED@ and set the @Channel#errorReason@
 +** @(RTL3b)@ If the connection state enters the @CLOSED@ state, then an @ATTACHING@ or @ATTACHED@ channel state will transition to @DETACHED@
 +** @(RTL3c)@ If the connection state enters the @SUSPENDED@ state, then an @ATTACHING@ or @ATTACHED@ channel state will transition to @SUSPENDED@
-+** @(RTL3d)@ If the connection state enters the @CONNECTED@ state, then a @SUSPENDED@ channel will initiate an attach operation. If the attach operation for the channel times out and the channel returns to the @SUSPENDED@ state (see "RTL4f":#RTL4f), then an @ERROR@ event on the @Channel@ with Ably error code @91200@ should be emitted
++** @(RTL3d)@ If the connection state enters the @CONNECTED@ state, then a @SUSPENDED@ channel will initiate an attach operation and transition to @ATTACHING@. If the attach operation times out, the channel should return to the @SUSPENDED@ state (see "RTL4f":#RTL4f).
 +* @(RTL11)@ If a channel enters the @DETACHED@, @SUSPENDED@ or @FAILED@ state, then all messages that are still queued for send on that channel should be deleted from the queue triggering a failure for the publish or presence methods invoked for those messages
 +** @(RTL11a)@ For clarity, any messages awaiting an @ACK@ or @NACK@ are unaffected by channel state changes i.e. a channel that becomes detached following an explicit request to detach may still receive an @ACK@ or @NACK@ for messages published on that channel later
  * @(RTL4)@ @Channel#attach@ function:
@@ -341,7 +348,8 @@ index bff9943..f3766be 100644
 +** @(RTL4c)@ Otherwise an @ATTACH@ ProtocolMessage is sent to the server, the state transitions to @ATTACHING@ and the channel becomes @ATTACHED@ when the confirmation @ATTACHED@ ProtocolMessage is received
 +** @(RTL4f)@ Once an @ATTACH@ @ProtocolMessage@ is sent, if an @ATTACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the attach request should be treated as though it has failed and the channel should transition to the @SUSPENDED@ state. The channel will then be subsequently automatically re-attached as described in "RTL13":#RTL13
  ** @(RTL4d)@ If the language permits, a callback can be provided that is called when the channel is attached successfully or the attach fails and the @ErrorInfo@ error is passed as an argument to the callback
- ** @(RTL4e)@ If the user does not have sufficient permissions to attach to the channel, the channel state @FAILED@ is emitted with the error @ErrorInfo@. An error event is also emitted, and the @Channel#errorReason@ attribute of the @Channel@ is set to the error @ErrorInfo@ object
+-** @(RTL4e)@ If the user does not have sufficient permissions to attach to the channel, the channel state @FAILED@ is emitted with the error @ErrorInfo@. An error event is also emitted, and the @Channel#errorReason@ attribute of the @Channel@ is set to the error @ErrorInfo@ object
++** @(RTL4e)@ If the user does not have sufficient permissions to attach to the channel, the channel will transition to @FAILED@ and set the @Channel#errorReason@
  * @(RTL5)@ @Channel#detach@ function:
  ** @(RTL5a)@ If the channel state is @INITIALIZED@ or @DETACHED@ nothing is done
  ** @(RTL5i)@ If the channel is in a pending state @DETACHING@ or @ATTACHING@, do the detach operation after the completion of the pending request
@@ -374,7 +382,7 @@ index bff9943..f3766be 100644
  ** @(RTL6d)@ Messages are delivered using a single @ProtocolMessage@ where possible by bundling in all messages for that channel into the @ProtocolMessage#messages@ array. However, a yet to be implemented feature should limit the total number of messages bundled per @ProtocolMessage@ based on the default max message size, and would reject the publish and indicate an error if any single message exceeds that limit
  ** @(RTL6e)@ Unidentified clients using "Basic Auth":https://en.wikipedia.org/wiki/Basic_access_authentication (i.e. any @clientId@ is permitted as no @clientId@ specified):
  *** @(RTL6e1)@ When a @Message@ with a @clientId@ value is published, Ably will accept and publish that message with the provided @clientId@. A test should assert that the @clientId@ of the published @Message@ is populated
-@@ -425,12 +461,12 @@ h3(#realtime-channel). Channel
+@@ -425,14 +462,14 @@ h3(#realtime-channel). Channel
  *** @(RTL6g2)@ When publishing a @Message@ with the @clientId@ attribute value set to the identified client's @clientId@, Ably will accept the message and publish it. A test should assert that the @clientId@ value is populated for the @Message@ when received
  *** @(RTL6g3)@ When publishing a @Message@ with a different @clientId@ attribute value from the identified client's @clientId@, the client library should reject that publish operation immediately. The message should not be sent to Ably and it should result in an error, typically in the form of an error callback. The connection and channel must remain available for further operations
  *** @(RTL6g4)@ When using Token Auth, unless a @clientId@ has been provided in @ClientOptions@ or inferred following authentication, the client library is unidentified and will not be constrained when publishing messages with any explicit @clientId@. If a @Message@ with a @clientId@ value is published before the @clientId@ is configured or inferred following authentication, the client library should not reject any explicit @clientId@ specified in a message. A test should instance a library without an explicit @clientId@ and an @authCallback@ that returns a @tokenDetails@ object with a @clientId@, then publish a message with the same @clientId@ before authentication, and ensure that the message is published following authentication and received back with the @clientId@ intact. A further test should follow the same sequence of events, but should instead use an incompatible @clientId@ in the message, expecting that the message is rejected by the Ably service and the message error should contain the server error message, and the connection and channel should remain available for further operations
@@ -385,21 +393,25 @@ index bff9943..f3766be 100644
  ** @(RTL7a)@ Subscribe with no arguments subscribes a listener to all messages
  ** @(RTL7b)@ Subscribe with a single name argument subscribes a listener to only messages whose @name@ member matches the string name
 -** @(RTL7c)@ Implicitly attaches the @Channel@ if the channel is in the @INITIALIZED@ state. However, if the channel is in or moves to the @DETACHED@ or @FAILED@ state before the operation succeeds, it will result in the listener not being registered and an error being indicated, typically to the optional callback where the language permits
+-** @(RTL7d)@ Messages delivered are automatically decoded based on the @encoding@ attribute; see REST @Channel@ encoding features. If there is an error decoding a message, the message is still delivered, but in addition to sending an error message to the logger, an @ErrorInfo@ error object is emitted as an error on the @Channel@. Tests should exist to publish and subscribe to encoded messages using the "AES 128":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-128.json and "AES 256":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-256.json fixture test data
+-** @(RTL7e)@ If a message cannot be decoded or decrypted successfully, it should be delivered to the listener with the @encoding@ attribute set indicating the residual encoding state, and an error should be emitted on the channel
 +** @(RTL7c)@ Implicitly attaches the @Channel@ if the channel is in the @INITIALIZED@ state. However, if the channel is in or enters the @DETACHED@ or @FAILED@ state before the operation succeeds, it will result in the listener not being registered and an error being indicated, typically to the optional callback where the language permits
- ** @(RTL7d)@ Messages delivered are automatically decoded based on the @encoding@ attribute; see REST @Channel@ encoding features. If there is an error decoding a message, the message is still delivered, but in addition to sending an error message to the logger, an @ErrorInfo@ error object is emitted as an error on the @Channel@. Tests should exist to publish and subscribe to encoded messages using the "AES 128":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-128.json and "AES 256":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-256.json fixture test data
- ** @(RTL7e)@ If a message cannot be decoded or decrypted successfully, it should be delivered to the listener with the @encoding@ attribute set indicating the residual encoding state, and an error should be emitted on the channel
++** @(RTL7d)@ Messages delivered are automatically decoded based on the @encoding@ attribute; see REST @Channel@ encoding features. Tests should exist to publish and subscribe to encoded messages using the "AES 128":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-128.json and "AES 256":https://github.com/ably/ably-common/blob/master/test-resources/crypto-data-256.json fixture test data
++** @(RTL7e)@ If a message cannot be decoded or decrypted successfully, it should be delivered to the listener with the @encoding@ attribute set indicating the residual encoding state, and an error should be logged
  ** @(RTL7f)@ A test should exist ensuring published messages are not echoed back to the subscriber when @echoMessages@ is set to false in the @Realtime@ library constructor
-@@ -444,17 +480,43 @@ h3(#realtime-channel). Channel
+ * @(RTL8)@ @Channel#unsubscribe@ function:
+ ** @(RTL8a)@ Unsubscribe with no arguments unsubscribes the provided listener to all messages if subscribed
+@@ -444,17 +481,43 @@ h3(#realtime-channel). Channel
  ** @(RTL10b)@ Additionally supports the param @untilAttach@, which if true, will only retrive messages prior to the moment that the channel was attached. This bound is specified by passing the querystring param @fromSerial@ with the serial number assigned to the channel in the @ATTACHED@ @ProtocolMessage@. If the @untilAttach@ param is specified when the channel is not attached, it results in an error
  ** @(RTL10c)@ Returns a @PaginatedResult@ page containing the first page of messages in the @PaginatedResult#items@ attribute returned from the history request
  ** @(RTL10d)@ A test should exist that publishes messages from one client, and upon confirmation of message delivery, a history request should be made on another client to ensure all messages are available
 -* @(RTL12)@ An attached channel may receive an additional @ATTACHED@ @ProtocolMessage@ from Ably at any point, however this is typically triggered following a transport being upgraded or resumed. If the @ATTACHED@ message contains an @error@, the error should be emitted on the channel, the @Channel#errorReason@ should be set, and the channel should remain attached. An @ATTACHED@ state change event should not be emitted by the @Channel@ if the @Channel@ is already @ATTACHED@ (i.e. no state change has occurred)
-+* @(RTL12)@ An attached channel may receive an additional @ATTACHED@ @ProtocolMessage@ from Ably at any point, however this is typically triggered following a transport being upgraded or resumed. If the @ATTACHED@ message contains an @error@, the error should be emitted as a @ERROR@ event on the channel and the channel should remain attached. An @ATTACHED@ state change event should not be emitted by the @Channel@ if the @Channel@ is already @ATTACHED@ as no state change has occurred
++* @(RTL12)@ An attached channel may receive an additional @ATTACHED@ @ProtocolMessage@ from Ably at any point. This is typically triggered following a transport being upgraded or resumed to indicate a partial loss of message continuity on that channel, in which case the @ProtocolMessage@ will have a @resumed@ flag set to false. This should result in the channel emitting an @UPDATE@ event with a @ChannelStateChange@ object. The @ChannelStateChange@ object should have both @previous@ and @current@ attributes set to @attached@, the @reason@ attribute set to to the @error@ member of the @ATTACHED@ @ProtocolMessage@ (if any), and the @resumed@ attribute set per the @RESUMED@ bitflag of the @ATTACHED@ @ProtocolMessage@. (Note that @UPDATE@ should be the only event emitted: in particular, the library must not emit an @ATTACHED@ event if the channel was already attached, see @RTL2g@).
 +* @(RTL13)@ If the channel receives a server initiated @DETACHED@ message when it is in the @ATTACHING@, @ATTACHED@ or @SUSPENDED@ state (i.e. the client has not explicitly requested a detach putting the channel into the @DETACHING@ state), then the following applies:
 +** @(RTL13a)@ If the channel is in the @ATTACHED@ or @SUSPENDED@ states, an attempt to reattach the channel should be made immediately by sending a new @ATTACH@ message and the channel should transition to the @ATTACHING@ state with the error emitted in the @ChannelStateChange@ event.
 +** @(RTL13b)@ If the attempt to re-attach fails, or if the channel was already in the @ATTACHING@ state, the channel will transition to the @SUSPENDED@ state and the error will be emitted in the @ChannelStateChange@ event. An attempt to re-attach the channel automatically will then be made after the period defined in @ClientOptions#channelRetryTimeout@. When re-attaching the channel, the channel will transition to the @ATTACHING@ state. If that request to attach fails i.e. it times out or a @DETACHED@ message is received, then the process described here in @RTL13b@ will be repeated, indefinitely
 +** @(RTL13c)@ If the connection is no longer @CONNECTED@, then the automatic attempts to re-attach the channel described in "RTL13b":#RTL13b must be cancelled as any implicit channel state changes subsequently will be covered by "RTL3":#RTL3
-+* @(RTL14)@ If an @ERROR ProtocolMessage@ is received for this channel (the channel attribute matches this channel's name), then the channel should immediately transition to the FAILED state, the @errorReason@ should be set and an error should be emitted on the channel.
++* @(RTL14)@ If an @ERROR ProtocolMessage@ is received for this channel (the channel attribute matches this channel's name), then the channel should immediately transition to the FAILED state, and the @Channel.errorReason@ should be set
  
  h3(#realtime-presence). Presence
  
@@ -435,11 +447,11 @@ index bff9943..f3766be 100644
 +** @(RTP5c)@ In addition, when a channel becomes @ATTACHED@, the following must happen in regards to @Presence@:
 +*** @(RTP5c1)@ If the "@resumed@ flag":#TH4 is true and no @SYNC@ is initiated as part of the attach, do nothing as there is no loss of continuity on the channel and no change to presence. The @PresenceMap@ is not affected and no members need to be re-entered
 +*** @(RTP5c2)@ If a @SYNC@ is initiated as part of the attach, then once the @SYNC@ is complete, all members not present in the @PresenceMap@ but present in the "internal @PresenceMap@":#RTP17 must be re-entered automatically by the client using the @clientId@ and @data@ attributes from each. The members re-entered automatically must be removed from the "internal @PresenceMap@":#RTP17 ensuring that members present on the channel are constructed from presence events sent from Ably since the channel became @ATTACHED@
-+*** @(RTP5c3)@ If any of the automatic @ENTER@ presence messages published in "RTP5c2":#RTP5c2 or "RTP5c3":#RTP5c3 fail, then the error message received from Ably should be emitted as an @ERROR@ event on the @Channel@ with Ably error code @91201@
++*** @(RTP5c3)@ If any of the automatic @ENTER@ presence messages published in "RTP5c2":#RTP5c2 fail, then an @UPDATE@ event should be emitted on the channel, with a @reason@ set to the @ErrorInfo@ received from realtime
  * @(RTP16)@ Connection state conditions:
  ** @(RTP16a)@ If the connection is @CONNECTED@ and the channel is @ATTACHED@ then all presence messages are published immediately
  ** @(RTP16b)@ If the connection is @INITIALIZED@, @CONNECTING@ or @DISCONNECTED@ or the channel is @ATTACHING@, and @ClientOptions#queueMessages@ has not been explicitly set to false, then all presence messages will be queued and delivered as soon as the connection state returns to @CONNECTED@ and the channel is @ATTACHED@
-@@ -462,7 +524,7 @@ h3(#realtime-presence). Presence
+@@ -462,7 +525,7 @@ h3(#realtime-presence). Presence
  * @(RTP6)@ @Presence#subscribe@ function:
  ** @(RTP6a)@ Subscribe with no arguments subscribes a listener to all presence messages
  ** @(RTP6b)@ Subscribe with a single action argument - such as @ENTER@, @LEAVE@, @UPDATE@ or @PRESENT@ - subscribes a listener to receive only presence messages with that action
@@ -448,7 +460,7 @@ index bff9943..f3766be 100644
  * @(RTP7)@ @Presence#unsubscribe@ function:
  ** @(RTP7a)@ Unsubscribe with no arguments unsubscribes the listener if previously subscribed with an action-specific subscription
  ** @(RTP7b)@ Unsubscribe with a single action argument unsubscribes the provided listener to all presence messages for that action
-@@ -490,7 +552,7 @@ h3(#realtime-presence). Presence
+@@ -490,7 +553,7 @@ h3(#realtime-presence). Presence
  ** @(RTP10e)@ In all other ways, this method is identical to @Presence#enter@ and should have matching tests
  * @(RTP11)@ @Presence#get@ function:
  ** @(RTP11a)@ Returns the list of current members on the channel in a callback. By default, will wait for the @SYNC@ to be completed, see "RTP11c1":#RTP11c1
@@ -457,7 +469,7 @@ index bff9943..f3766be 100644
  ** @(RTP11c)@ An optional set of params can be provided:
  *** @(RTP11c1)@ @waitForSync@ (default @true@). When @true@, method will wait until @SYNC@ is complete before returning a list of members. When @false@, known set of presence members is returned immediately, which may be incomplete if the @SYNC@ is not finished
  *** @(RTP11c2)@ @clientId@ filters members by the provided @clientId@
-@@ -511,7 +573,7 @@ h3(#realtime-presence). Presence
+@@ -511,7 +574,7 @@ h3(#realtime-presence). Presence
  ** @(RTP15b)@ Tests should use @enterClient@, @updateClient@ and @leaveClient@ for many members from one @Realtime@ client and check that the operations are reflected in the presence map and the expected events are emitted on a separate client
  ** @(RTP15c)@ Tests should also ensure that using these methods has no side effects on a client that has entered normally using @Presence#enter@
  ** @(RTP15d)@ A callback can be provided that will be called upon success or failure
@@ -466,7 +478,7 @@ index bff9943..f3766be 100644
  ** @(RTP15f)@ If the client is identified and has a valid @clientId@, and the @clientId@ argument does not match the client's @clientId@, then it should indicate an error. The connection and channel remain available for further operations
  
  h3(#eventemitter). EventEmitter mixin / interface
-@@ -519,7 +581,7 @@ h3(#eventemitter). EventEmitter mixin / interface
+@@ -519,7 +582,7 @@ h3(#eventemitter). EventEmitter mixin / interface
  * @(RTE1)@ @EventEmitter@ is a generic interface for event registration and delivery used in a number of the types in the Realtime client library. For example, the @Connection@ object emits events for connection state using the @EventEmitter@ pattern
  * @(RTE2)@ Where objects provide @subscribe@ or @unsubscribe@ methods, they should follow the specification for the @EventEmitter#on@ and @EventEmitter#off@ methods respectively
  * @(RTE3)@ @EventEmitter#on@ registers the provided listener for either all events when no @event@ argument is provided, or for only a single named event when an @event@ argument is provided. If @on@ is called more than once with the same listener and @event@, the listener is added multiple times to its listener registry. Therefore, as an example, assuming the same listener is registered twice using @on@, and an event is emitted once, the listener would be invoked twice
@@ -475,7 +487,7 @@ index bff9943..f3766be 100644
  * @(RTE5)@ @EventEmitter#off@ deregisters a listener. If called with a specific event and a listener, it removes all registrations that match both the given listener and the given event; if called only with a listener, it removes all registrations matching the given listener, regardless of whether they are associated with an event or not; if called with no arguments, it removes all registrations, for all events and listeners
  * @(RTE6)@ @EventEmitter#emit@ emits an event, calling registered listeners with the given event name and any other given arguments. If an exception is raised in any of the listeners, the exception is caught by the @EventEmitter@ and the exception is logged to the Ably logger. Tests must exist to ensure exceptions raised in client code do not propagate and inhibit other event processing within the client library
  
-@@ -706,6 +768,7 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
+@@ -706,6 +769,7 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
    <th>Initialized</th>
    <th>Attaching</th>
    <th>Attached</th>
@@ -483,7 +495,7 @@ index bff9943..f3766be 100644
    <th>Detaching</th>
    <th>Detached</th>
    <th>Failed</th>
-@@ -720,6 +783,8 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
+@@ -720,6 +784,8 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
    <td>"RTL4h":#RTL4h</td>
    <!-- When ATTACHED -->
    <td>"RTL4a":#RTL4a</td>
@@ -492,7 +504,7 @@ index bff9943..f3766be 100644
    <!-- When DETACHING -->
    <td>"RTL4h":#RTL4h</td>
    <!-- When DETACHED -->
-@@ -738,6 +803,8 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
+@@ -738,6 +804,8 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
    <td>"RTL5i":#RTL5i</td>
    <!-- When ATTACHED -->
    <td>"RTL5d":#RTL5d</td>
@@ -501,7 +513,7 @@ index bff9943..f3766be 100644
    <!-- When DETACHING -->
    <td>"RTL5i":#RTL5i</td>
    <!-- When DETACHED -->
-@@ -756,6 +823,8 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
+@@ -756,6 +824,8 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
    <td>"RTL6c2":#RTL6c2</td>
    <!-- When ATTACHED -->
    <td>"RTL6c1":#RTL6c1</td>
@@ -510,7 +522,7 @@ index bff9943..f3766be 100644
    <!-- When DETACHING -->
    <td>"RTL6c4":#RTL6c4</td>
    <!-- When DETACHED -->
-@@ -774,6 +843,8 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
+@@ -774,6 +844,8 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
    <td>"RTP16b":#RTP16b</td>
    <!-- When ATTACHED -->
    <td>"RTP16a":#RTP16a</td>
@@ -519,7 +531,7 @@ index bff9943..f3766be 100644
    <!-- When DETACHING -->
    <td>"RTP16c":#RTP16c</td>
    <!-- When DETACHED -->
-@@ -793,36 +864,41 @@ h4. Message
+@@ -793,36 +865,41 @@ h4. Message
  
  * @(TM1)@ A @Message@ represents an individual message to be sent or received via the Ably Realtime service.  See the "Ruby Message documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Message, but bear in mind the attributes following underscore naming in Ruby
  * @(TM2)@ Attributes available in a @Message@, see the "Ruby Message documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Message for an explanation of each attribute:
@@ -570,7 +582,7 @@ index bff9943..f3766be 100644
  ** @(TR4b)@ @channel@ string
  ** @(TR4c)@ @channelSerial@ string
  ** @(TR4d)@ @connectionId@ string
-@@ -831,7 +907,7 @@ h4. ProtocolMessage
+@@ -831,7 +908,7 @@ h4. ProtocolMessage
  ** @(TR4o)@ @connectionDetails@ @ConnectionDetails@ object - provides details on the constraints or defaults for the connection such as max message size, client ID or connection state TTL
  ** @(TR4g)@ @count@ integer
  ** @(TR4h)@ @error@ @ErrorInfo@ object
@@ -579,7 +591,7 @@ index bff9943..f3766be 100644
  ** @(TR4j)@ @msgSerial@ long
  ** @(TR4k)@ @messages@ Array of @Message@ objects
  ** @(TR4l)@ @presence@ Array of @PresenceMessage@ objects
-@@ -847,6 +923,17 @@ h4. PaginatedResult
+@@ -847,6 +924,17 @@ h4. PaginatedResult
  * @(TG6)@ @PaginatedResult#hasNext@ function returns @true@ if there are further pages
  * @(TG7)@ @PaginatedResult#isLast@ function returns @true@ if this page is the last page i.e. @!hasNext@
  
@@ -597,7 +609,7 @@ index bff9943..f3766be 100644
  h4. TokenRequest
  
  * @(TE1)@ @TokenRequest@ is a type containing the token request details sent to the "REST requestToken endpoint":/rest-api/#request-token
-@@ -854,6 +941,7 @@ h4. TokenRequest
+@@ -854,6 +942,7 @@ h4. TokenRequest
  * @(TE3)@ @capability@ is a string attribute containing capabilities JSON stringified
  * @(TE5)@ @timestamp@ long - The timestamp (in milliseconds since the epoch) of this request. Timestamps, in conjunction with the @nonce@, are used to prevent requests from being replayed
  * @(TE4)@ @ttl@ attribute represents time to live (expiry) of this token in milliseconds
@@ -605,7 +617,7 @@ index bff9943..f3766be 100644
  
  h4. TokenDetails
  
-@@ -863,11 +951,17 @@ h4. TokenDetails
+@@ -863,11 +952,17 @@ h4. TokenDetails
  * @(TD4)@ @TokenDetails#issued@ attribute contains the time the token was issued in milliseconds.  Where idiomatic in the language, this can be a Date/Time object
  * @(TD5)@ @TokenDetails#capability@ attribute contains the capability JSON stringified
  * @(TD6)@ @TokenDetails#clientId@ attribute contains the @clientId@ assigned to the token. If @clientId@ is @null@ or omitted, then the token is prohibited from assuming a @clientId@ in any operations, however if @clientId@ is a wildcard string @'*'@, then the token is permitted to assume any @clientId@. Any other string value for @clientId@ implies that the @clientId@ is both enforced and assumed for all operations for this token
@@ -624,7 +636,7 @@ index bff9943..f3766be 100644
  * @(TS3)@ See the "Ruby Stats type documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Stats for a list of attributes and their types for the @Stats@ object
  * @(TS4)@ @Stats.ConnectionTypes@ - see the "Ruby ConnectionTypes documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Stats/ConnectionTypes
  * @(TS5)@ @Stats.MessageCount@ - see the "Ruby MessageCount documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Stats/MessageCount
-@@ -889,6 +983,13 @@ h4. ConnectionStateChange
+@@ -889,6 +984,13 @@ h4. ConnectionStateChange
  * @(TA3)@ If the connection state change includes error information, then the @reason@ attribute will contain an @ErrorInfo@ object describing the reason for the error
  * @(TA4)@ See the "Java library implementation":https://github.com/ably/ably-java/blob/245a3f20a6dce0d34413ddfed19c5da8ea647422/src/io/ably/realtime/ConnectionStateListener.java#L15-L20 of this object
  
@@ -638,7 +650,7 @@ index bff9943..f3766be 100644
  h4. Capability - *API not defined yet*
  * @(TC1)@ This type represents a capability for a key or token
  * @(TC2)@ For now a string representation of the JSON will suffice wherever @capability@ is used
-@@ -904,6 +1005,7 @@ h4. ConnectionDetails
+@@ -904,6 +1006,7 @@ h4. ConnectionDetails
  ** @(CD2e)@ @maxInboundRate@ is the maximum allowable number of requests per second from a client or Ably. In the case of a realtime connection, this restriction applies to the number of @ProtocolMessage@ objects sent, whereas in the case of REST, it is the total number of REST requests per second
  ** @(CD2f)@ @connectionStateTtl@ is the duration that Ably will persist the connection state when a Realtime client is abruptly disconnected
  ** @(CD2g)@ @serverId@ string is a unique identifier for the front-end server that the client has connected to. This server ID is only used for the purposes of debugging
@@ -646,16 +658,7 @@ index bff9943..f3766be 100644
  
  h3(#options). Option types
  
-@@ -917,7 +1019,7 @@ h4. ClientOptions
- ** @(TO3d)@ @tls@ boolean - defaults to true. If false, will not use TLS for all connections
- ** @(TO3e)@ @autoConnect@ boolean - defaults to true. If false, suppresses the automatic initiation of a connection when the library is instanced
- ** @(TO3f)@ @useBinaryProtocol@ boolean - defaults to true. If false, forces the library to use the JSON encoding for REST and Realtime operations, instead of the default binary msgpack encoding
--** @(TO3g)@ @queueMessages@ boolean - defaults to true. If false, suppresses the default queueing of messages when connection states that anticipate imminent connection (connecting and disconnected). Instead, publish and presence state changes will fail immediately if not in the connected state
-+** @(TO3g)@ @queueMessages@ boolean - defaults to true. If false, suppresses the default queuing of messages when connection states that anticipate imminent connection (connecting and disconnected). Instead, publish and presence state changes will fail immediately if not in the connected state
- ** @(TO3h)@ @echoMessages@ boolean - defaults to true. If false, suppresses messages originating from this connection being echoed back on the same connection
- ** @(TO3i)@ @recover@ string - A connection recovery string, specified with the intention of inheriting the state of an earlier connection
- ** @(TO3j)@ Auth option attributes:
-@@ -936,26 +1038,29 @@ h4. ClientOptions
+@@ -936,26 +1039,29 @@ h4. ClientOptions
  *** @(TO3k1)@ @environment@ string - for development environments only; allows a non-default Ably environment to be used such as @sandbox@
  *** @(TO3k2)@ @restHost@ string - for development environments only; allows a non-default Ably REST host to be specified. It is never valid to provide both a @restHost@ and @environment@ value
  *** @(TO3k3)@ @realtimeHost@ string - for development environments only; allows a non-default Ably Realtime host to be specified. It is never valid to provide both a @realtimeHost@ and @environment@ value
@@ -692,7 +695,7 @@ index bff9943..f3766be 100644
  * @(AO2)@ The attributes of @AuthOptions@ consist of:
  ** @(AO2a)@ @key@ string - Full Ably key string, as obtained from dashboard, used when signing token requests locally
  ** @(AO2b)@ @authCallback@ - A callback to call to obtain a signed @TokenRequest@, @TokenDetails@ or a token string. This enables a client to obtain token requests or tokens from another entity, so tokens can be renewed without the client requiring a key
-@@ -964,7 +1069,6 @@ h4. AuthOptions
+@@ -964,7 +1070,6 @@ h4. AuthOptions
  ** @(AO2e)@ @authHeaders@ - Headers to be included in any request made by the library to the @authUrl@
  ** @(AO2f)@ @authParams@ - Additional params to be included in any request made by the library to the @authUrl@, either as query params in the case of @GET@, or form-encoded in the body in the case of @POST@
  ** @(AO2g)@ @queryTime@ - If true, the library will query the Ably system for the current time instead of relying on a locally-available time of day
@@ -700,7 +703,7 @@ index bff9943..f3766be 100644
  
  h4. ChannelOptions
  * @(TB1)@ options provided when instancing a channel, see "Java ChannelOptions":https://github.com/ably/ably-java/blob/master/src/io/ably/types/ChannelOptions.java as a reference
-@@ -987,7 +1091,7 @@ h3(#defaults). Client Library defaults
+@@ -987,7 +1092,7 @@ h3(#defaults). Client Library defaults
  The following default values are configured for the client library:
  
  * @(DF1)@ Realtime defaults:
@@ -709,7 +712,7 @@ index bff9943..f3766be 100644
  ** @(DF1b)@ @realtimeRequestTimeout@ - default 10s. When a realtime client library is establishing a connection with Ably, or sending a @HEARTBEAT@, @CONNECT@, @ATTACH@, @DETACH@ or @CLOSE@ @ProtocolMessage@ to Ably, this is the amount of time that the client library will wait before considering that request as failed and triggering a suitable failure condition
  
  h2(#idl). Interface Definition
-@@ -1016,6 +1120,7 @@ class Rest:
+@@ -1016,6 +1121,7 @@ class Rest:
    constructor(ClientOptions) // RSC1
    auth: Auth // RSC5
    channels: Channels<RestChannel> // RSN1
@@ -717,7 +720,7 @@ index bff9943..f3766be 100644
    stats(
      start: Time, // RSC6b1
      end: Time api-default now(), // RSC6b1
-@@ -1033,6 +1138,7 @@ class Realtime:
+@@ -1033,6 +1139,7 @@ class Realtime:
    channels: Channels<RealtimeChannel> // RTC3, RTS1
    clientId: String? // proxy for RSA7
    connection: Connection // RTC2
@@ -725,7 +728,7 @@ index bff9943..f3766be 100644
    stats: // Same as Rest.stats, RTC5a
    close() // proxy for RTN12
    connect() // proxy for RTN11
-@@ -1051,6 +1157,7 @@ class ClientOptions:
+@@ -1051,6 +1158,7 @@ class ClientOptions:
    queueMessages: Bool default true // RTP16b, TO3g
    restHost: String default "rest.ably.io" // RSC12, TO3k2
    realtimeHost: String default "realtime.ably.io" // RTC1d, TO3k3
@@ -733,7 +736,7 @@ index bff9943..f3766be 100644
    recover: String? // RTC1c, TO3i
    tls: Bool default true // RSC18, TO3d
    tlsPort: Int default 443 // TO3k5
-@@ -1064,12 +1171,11 @@ class ClientOptions:
+@@ -1064,12 +1172,11 @@ class ClientOptions:
    httpMaxRetryDuration: Duration default 10s // TO315
  
  class AuthOptions: // RSA8e
@@ -747,7 +750,7 @@ index bff9943..f3766be 100644
    key: String? // RSC14a, RSA14, TO3j1, AO2a
    queryTime: Bool default false // RSA9d, TO3j10, AO2a
    token: String? | TokenDetails? // RSC14c, RSA4, TO3j2
-@@ -1085,11 +1191,12 @@ class TokenParams: // RSAA8e
+@@ -1085,11 +1192,12 @@ class TokenParams: // RSAA8e
  
  class Auth:
    clientId: String? // RSA7, RSC17, RSA12
@@ -761,7 +764,7 @@ index bff9943..f3766be 100644
    capability: String // TD5
    clientId: String? // TD6
    expires: Time // TD3
-@@ -1097,6 +1204,7 @@ class TokenDetails:
+@@ -1097,6 +1205,7 @@ class TokenDetails:
    token: String // TD2
  
  class TokenRequest:
@@ -769,7 +772,7 @@ index bff9943..f3766be 100644
    capability: String // TE3
    clientId: String? // TE2
    keyName: String // TE2
-@@ -1122,11 +1230,10 @@ class RestChannel:
+@@ -1122,11 +1231,10 @@ class RestChannel:
      limit: int api-default 100 // RSL2b3
    ) => io PaginatedResult<Message> // RSL2a
    publish([Message]) => io // RSL1
@@ -783,7 +786,7 @@ index bff9943..f3766be 100644
    errorReason: ErrorInfo? // RTL4e
    state: ChannelState // RTL2b
    presence: RealtimePresence // RTL9
-@@ -1140,8 +1247,7 @@ class RealtimeChannel:
+@@ -1140,8 +1248,7 @@ class RealtimeChannel:
      untilAttach: Bool default false // RTL10b
    ) => io PaginatedResult<Message> // RSL2a
    publish([Message]) => io // RTL6i
@@ -793,7 +796,7 @@ index bff9943..f3766be 100644
    subscribe((Message) ->) => io // RTL7a
    subscribe(String, (Message) ->) => io // RTL7b
    unsubscribe() // RTL8a, RTE5
-@@ -1154,12 +1260,19 @@ enum ChannelState:
+@@ -1154,11 +1261,18 @@ enum ChannelState:
    ATTACHED
    DETACHING
    DETACHED
@@ -802,18 +805,18 @@ index bff9943..f3766be 100644
  
  enum ChannelEvent:
    embeds ChannelState
-   ERROR // RTL2c
- 
+-  ERROR // RTL2c
++  UPDATE // RTL2g
++
 +class ChannelStateChange:
 +  current: ChannelState // RTL2a, RTL2b
 +  previous: ChannelState // RTL2a, RTL2b
 +  reason: ErrorInfo? // RTL2e, TH3
 +  resumed: Boolean // RTL2f, TH4
-+
+ 
  class ChannelOptions:
    +withCipherKey(key: Binary | String)? -> ChannelOptions // TB3
-   cipher: (CipherParams | Params)? // RSL5a, TB2b
-@@ -1229,10 +1342,13 @@ class ConnectionDetails:
+@@ -1229,10 +1343,13 @@ class ConnectionDetails:
    maxInboundRate: Int // CD2e
    maxMessageSize: Int // CD2c
    serverId: String // CD2g
@@ -827,7 +830,7 @@ index bff9943..f3766be 100644
    clientId: String? // RSL1g1, TM2b
    connectionId: String? // TM2c
    data: Data? // TM2d
-@@ -1242,6 +1358,8 @@ class Message:
+@@ -1242,6 +1359,8 @@ class Message:
    timestamp: Time // TM2f
  
  class PresenceMessage
@@ -836,7 +839,7 @@ index bff9943..f3766be 100644
    action: PresenceAction // TP3b
    clientId: String // TP3c
    connectionId: String // TP3d
-@@ -1253,6 +1371,7 @@ class PresenceMessage
+@@ -1253,6 +1372,7 @@ class PresenceMessage
  
  class ProtocolMessage:
    action: ProtocolMessageAction // TR2, TR4a
@@ -844,7 +847,7 @@ index bff9943..f3766be 100644
    channel: String? // TR4b
    channelSerial: String? // TR4c
    connectionDetails: ConnectionDetails? // RSA7b3, RTN19, TR4o
-@@ -1261,7 +1380,7 @@ class ProtocolMessage:
+@@ -1261,7 +1381,7 @@ class ProtocolMessage:
    connectionSerial: Int? // RTN10c, TR4f
    count: Int? // TR4g
    error: ErrorInfo? // RTN15c2, TR4h
@@ -853,7 +856,7 @@ index bff9943..f3766be 100644
    id: String? // TR4b
    messages: [Message]? // TR4k
    msgSerial: Int? // RTN7b, TR4j
-@@ -1286,9 +1405,13 @@ enum ProtocolMessageAction:
+@@ -1286,9 +1406,13 @@ enum ProtocolMessageAction:
    PRESENCE // TR2
    MESSAGE // TR2
    SYNC // TR2
@@ -868,18 +871,18 @@ index bff9943..f3766be 100644
    errorReason: ErrorInfo? // RTN14a
    id: String? // RTN8
    key: String? // RTN9
-@@ -1309,6 +1432,10 @@ enum ConnectionState:
+@@ -1309,6 +1433,10 @@ enum ConnectionState:
    CLOSED
    FAILED
  
 +enum ConnectionEvent:
 +  embeds ConnectionState
-+  ERROR // RTN4g
++  UPDATE // RTL4h
 +
  class ConnectionStateChange:
    current: ConnectionState // TA2
    previous: ConnectionState // TA2
-@@ -1355,4 +1482,17 @@ class PaginatedResult<T>:
+@@ -1355,4 +1483,17 @@ class PaginatedResult<T>:
    hasNext() -> Bool // TG6
    isLast() -> Bool // TG7
    next() => io PaginatedResult<T>? // TG4
