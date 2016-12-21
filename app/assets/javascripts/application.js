@@ -214,6 +214,15 @@ $(function() {
   $(window).on('hashchange load', function() {
     adjustAnchor();
   });
+
+  // Show modal to new users so that they know this is not the canonical documentation
+  if (!$.cookie("acknowledged_bleeding_edge")) {
+    $('.canonical-modal').show();
+    $('.canonical-modal .continue a').on('click', function() {
+      $.cookie("acknowledged_bleeding_edge", 'true', { expires : 180, path: '/' });
+      $('.canonical-modal').hide();
+    })
+  }
 });
 
 (function() {
