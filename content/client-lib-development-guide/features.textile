@@ -300,13 +300,14 @@ h3(#realtime-connection). Connection
 ** @(RTN2g)@ Library and version param @lib@ should include the header value described in "RSC7b":#RSC7b. For example, the 0.9.0 version of the Javascript library would use the param @lib=js-0.9.0@
 * @(RTN3)@ If connection option @autoConnect@ is true, a connection is initiated immediately; otherwise a connection is only initiated following an explicit call to @connect()@
 * @(RTN4)@ EventEmitter and states:
-** @(RTN4a)@ Implements @EventEmitter@ and emits events for state changes @INITIALIZED@, @CONNECTING@, @CONNECTED@, @DISCONNECTED@, @SUSPENDED@, @CLOSING@, @CLOSED@, @FAILED@
+** @(RTN4a)@ Implements @EventEmitter@ and emits @ConnectionEvent@ events for state changes @INITIALIZED@, @CONNECTING@, @CONNECTED@, @DISCONNECTED@, @SUSPENDED@, @CLOSING@, @CLOSED@, @FAILED@
 ** @(RTN4g)@ Additionally, an @ERROR@ event can be emitted by the @Connection@ that contains details of the error in an @ErrorInfo@ object
 ** @(RTN4b)@ A new connection will emit the following events in order when connecting: @CONNECTING@, then @CONNECTED@
 ** @(RTN4c)@ A connection will emit the following events when closing the connection: @CLOSING@, then @CLOSED@
 ** @(RTN4d)@ @Connection#state@ attribute is the current state of the connection
 ** @(RTN4e)@ A @ConnectionStateChange@ object is emitted as the first argument for every connection state change
 ** @(RTN4f)@ Additionally, a @ConnectionStateChange@ can be emitted that contains a @reason@ which contains an @ErrorInfo@ object with details of the error that has occurred for the @Connection@
+** @(RTL4i)@ Optionally, for backwards compatibility with 0.8 libraries, the @Connection@ @EventEmitter@ can provide an overloaded method that supports @on(ConnectionState)@, but must issue a deprecation warning
 * @(RTN5)@ A test should exist that instances many (50+) clients simultaneously and performs a few basic operations such as attaching to a channel, publishing a message, and expecting all of those messages to arrive on all clients to ensure that there are no concurrency issues with the client library
 * @(RTN6)@ A @Connection@ is successful and considered @CONNECTED@ once the websocket connection is open and the intial @CONNECTED@ @ProtocolMessage@ has been received
 * @(RTN21)@ If the @CONNECTED@ @ProtocolMessage@ contains a @connectionDetails@ property, the attributes within @ConnectionDetails@ will be used as the defaults for this client library, overriding any configured options at the time the @CONNECTED@ @ProtocolMessage@ is received
@@ -405,10 +406,11 @@ h3(#realtime-channel). Channel
 
 * @(RTL1)@ As soon as a @Channel@ becomes attached, all incoming messages and presence messages are processed and emitted where applicable. @PRESENCE@ and @SYNC@ messages are passed to the @Presence@ object ensuring it maintains a map of current members on a channel in realtime
 * @(RTL2)@ EventEmitter and states:
-** @(RTL2a)@ Implements @EventEmitter@ and emits events for state changes @INITIALIZED@, @ATTACHING@, @ATTACHED@, @DETACHING@, @DETACHED@, @SUSPENDED@ and @FAILED@
+** @(RTL2a)@ Implements @EventEmitter@ and emits @ChannelEvent@ events for state changes @INITIALIZED@, @ATTACHING@, @ATTACHED@, @DETACHING@, @DETACHED@, @SUSPENDED@ and @FAILED@
 ** @(RTL2b)@ @Channel#state@ attribute is the current state of the channel
 ** @(RTL2d)@ A @ChannelStateChange@ object is emitted as the first argument for every channel state change. It may optionally contain a @reason@ with details of the state change error in an @ErrorInfo@ object
 ** @(RTL2f)@ When a channel @ATTACHED@ @ProtocolMessage@ is received, the @ProtocolMessage@ may contain a @RESUMED@ bit flag indicating that the channel has been resumed. The @ChannelStateChange@ will then be emitted for the @ATTACHED@ state and will contain a @resumed@ boolean attribute with value @true@ if the bit flag @RESUMED@ was included. When @resumed@ is @true@, this indicates that the channel attach resumed the channel state from an existing connection and there has been no loss of message continuity. In all other cases, @resumed@ is false. A test should exist to ensure that @resumed@ is always false when a channel first becomes @ATTACHED@, it is @true@ when the channel is @ATTACHED@ following a successful "connection recovery":#RTN16, and is @false@ when the channel is @ATTACHED@ following a failed "connection recovery":#RTN16
+** @(RTL2h)@ Optionally, for backwards compatibility with 0.8 libraries, the @Channel@ @EventEmitter@ can provide an overloaded method that supports @on(ChannelState)@, but must issue a deprecation warning
 ** @(RTL2c)@ Additionally, an @ERROR@ event can be emitted by the @Channel@ that contains details of the error in an @ErrorInfo@ object
 * @(RTL3)@ Connection state change side effects:
 ** @(RTL3e)@ If the connection state enters the @DISCONNECTED@ state, it will have no effect on the channel states.
@@ -974,6 +976,7 @@ h4. ConnectionStateChange
 
 * @(TA1)@ Whenever the connection state changes, a @ConnectionStateChange@ object is emitted on the @Connection@ object
 * @(TA2)@ The @ConnectionStateChange@ object contains the current state in attribute @current@, the previous state in attribute @previous@, and when the client is not connected and a connection attempt will be made automatically by the library, the amount of time in milliseconds until the next retry in the attribute @retryIn@
+* @(TA5)@ The @ConnectionStateChange@ object contains the @event@ that generated the connection state change
 * @(TA3)@ If the connection state change includes error information, then the @reason@ attribute will contain an @ErrorInfo@ object describing the reason for the error
 * @(TA4)@ See the "Java library implementation":https://github.com/ably/ably-java/blob/245a3f20a6dce0d34413ddfed19c5da8ea647422/src/io/ably/realtime/ConnectionStateListener.java#L15-L20 of this object
 
@@ -981,6 +984,7 @@ h4. ChannelStateChange
 
 * @(TH1)@ Whenever the channel state changes, a @ChannelStateChange@ object is emitted on the @Channel@ object
 * @(TH2)@ The @ChannelStateChange@ object contains the current state in attribute @current@, the previous state in attribute @previous@
+* @(TH5)@ The @ConnectionStateChange@ object contains the @event@ that generated the channel state change
 * @(TH3)@ If the channel state change includes error information, then the @reason@ attribute will contain an @ErrorInfo@ object describing the reason for the error
 * @(TH4)@ The @ChannelStateChange@ object contains an attribute @resumed@ which in combination with an @ATTACHED@ state, indicates whether the channel attach successfully resumed its state following the connection being resumed or recovered. If @resumed@ is true, then the attribute indicates that the attach within Ably successfully recovered the state for the channel, and as such there is no loss of message continuity. In all other cases, @resumed@ is false, and may be accompanied with a "channel state change error reason":#TH3
 
@@ -1263,6 +1267,7 @@ enum ChannelEvent:
 
 class ChannelStateChange:
   current: ChannelState // RTL2a, RTL2b
+  event: ChannelEvent // TH5
   previous: ChannelState // RTL2a, RTL2b
   reason: ErrorInfo? // RTL2e, TH3
   resumed: Boolean // RTL2f, TH4
@@ -1428,6 +1433,7 @@ enum ConnectionEvent:
 
 class ConnectionStateChange:
   current: ConnectionState // TA2
+  event: ConnectionEvent // TA5
   previous: ConnectionState // TA2
   reason: ErrorInfo? // RTN4f, TA3
   retryIn: Duration? // RTN14d, TA2
