@@ -5,7 +5,7 @@ index: 40
 languages:
   - javascript
   - nodejs
-  - ruby,0.8
+  - ruby
   - java,0.8
   - swift,0.8
   - objc,0.8
@@ -15,6 +15,7 @@ jump_to:
     - Understanding Auth
     - Basic Authentication
     - Token Authentication
+    - Upgrading tokens#token-upgrading
     - Auth object
     - Identified clients
   Channel API properties:
@@ -111,6 +112,12 @@ Below is a rather contrived yet straightforward example that instances a Realtim
   options.AuthUrl = new Uri("http://my.website/auth");
   AblyRealtime realtime = new AblyRealtime(options);
 ```
+
+h4(#token-upgrading). Upgrading the token on a connection
+
+The token that a connection uses can be upgraded whilst remaining connected. When a token is nearly expired, Ably will prompt the library to request a new token (using the <span lang="ruby,python">@auth_url@ or @auth_callback@</span><span lang="default">@authUrl@ or @authCallback@</span>). Once the library has obtained a new token, it will upgrade the connection to use the new token. This all happens automatically and seamlessly.
+
+The token upgrade can also be triggered explicitly using "@Auth#authorize@":#authorize. This is particularly useful if you want to upgrade a token for reasons other than the old one expiring; for example, to add or remove capabilities to it. In this way it is possible to incrementally authorize new capabilities, adding them as and when they are needed. See the support article "Recommendations for incrementally authorising new capabilities":https://support.ably.io/solution/articles/3000056545-recommendations-for-incrementally-authorising-new-capabilities for discussions of different strategies for doing this.
 
 h3(#auth-object). Auth object
 
@@ -236,11 +243,9 @@ bq(definition).
   csharp:  "Task<TokenDetails>:#token-details AuthorizeAsync("TokenParams:#token-params?, "AuthOptions":#auth-options?)
   swift,objc: authorize(tokenParams: "ARTTokenParams":#token-params?, authOptions: "ARTAuthOptions":#auth-options?, callback: ("ARTTokenDetails":#token-details?, NSError?) -> Void)
 
-Ensures valid auth credentials are present for the library instance. This may rely on an already-known and valid token, and will obtain a new token if necessary or explicitly requested using <span lang="default">"@requestToken@":#request-token</span><span lang="ruby">"@request_token@":#request-token</span><span lang="csharp">"@RequestToken@":#request-token</span>..
+Instructs the library to get a new token immediately. Once fetched, it will upgrade the current realtime connection to use the new token, or if not connected, will initiate a connection to Ably once the new token has been obtained. Also stores any <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span> passed in as the new defaults, to be used for all subsequent implicit or explicit token requests.
 
-In the event that a new token request is made, the specified <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span> are used.
-
-The <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span> objects will supplement or override the existing client library defaults, and all subsequent explicit or implicit token requests will use these defaults.
+Any <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span> objects passed in will entirely replace (as opposed to being merged with) the currently client library saved <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span>.
 
 h4. Parameters
 
@@ -252,45 +257,63 @@ h4. Parameters
 - <div lang="ruby">&block</div> := yields a "@TokenDetails@":#token-details object
 - <div lang="swift,objc">callback</div> := called with a "@ARTTokenDetails@":#token-details object or an error
 
-blang[jsall,objc,swift].
+blang[objc,swift].
   h4. Callback result
 
-  On success, @tokenDetails@ contains a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string.
+  On success, the callback will be called with the new "@TokenDetails@":#token-details object only once the realtime connection has been successfully upgraded to use the new token.
 
-  On failure to obtain a token, @err@ contains an <span lang="ruby">"@ErrorInfo@":#error-info</span><span lang="objc,swift">@NSError@</span> object with an error response as defined in the "Ably REST API":/rest-api#common documentation.
+  On failure to obtain a token or upgrade the token, the connection will move to the @SUSPENDED@ or @FAILED@ state, and the callback will be called with  @err@ containing an @NSError@ object with the error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+  The @authorize@ callback can therefore be used to only trigger an event once the new token has taken effect. This can be useful if, for example, you want to do attach to a new channel following a new channel capability being applied to the connection.
+
+blang[jsall].
+  h4. Callback result
+
+  On success, the callback will be called with the new "@TokenDetails@":#token-details only once the realtime connection has been successfully upgraded to use the new token.
+
+  On failure to obtain a token or upgrade the token, the connection will move to the @SUSPENDED@ or @FAILED@ state, and the callback will be called with @err@ containing an "@ErrorInfo@":/realtime/types#error-info object with the error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+  The @authorize@ callback can be used to trigger an event once the new token has taken effect. This can be useful if, for example, you want to do attach to a new channel following a new channel capability being applied to the connection.
 
 blang[java].
   h4. Returns
 
-  On success, a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string is returned.
+  On success, a new "@TokenDetails@":#token-details is returned only once the realtime connection has been successfully upgraded to use the new token.
 
-  Failure to obtain a token will raise an "@AblyException@":#ably-exception.
+  On failure to obtain a token or upgrade the token, the connection will move to the @SUSPENDED@ or @FAILED@ state and an "@AblyException@":#ably-exception will be raised with the error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+  The synchronous @authorize@ method can therefore be used to run subsequent code only once the new token has taken effect. This can be useful if, for example, you want to do attach to a new channel following a new channel capability being applied to the connection.
 
 blang[csharp].
   h4. Returns
 
   Returns a @Task<TokenDetails>@ which needs to be awaited.
 
-  On success, a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string is returned.
+  On success, a new "@TokenDetails@":#token-details is returned only once the realtime connection has been successfully upgraded to use the new token.
 
-  Failure to obtain a token will raise an "@AblyException@":#ably-exception.
+  On failure to obtain a token or upgrade the token, the connection will move to the @SUSPENDED@ or @FAILED@ state and an "@AblyException@":#ably-exception will be raised with the error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+  By waiting for the @authorize@ method return value, it can be used to run subsequent code only once the new token has taken effect. This can be useful if, for example, you want to do attach to a new channel following a new channel capability being applied to the connection.
 
 blang[ruby].
   h4. Returns
 
   A "@Deferrable@":/realtime/types#deferrable object is returned from this method.
 
-  On success, the registered success callbacks for the "@Deferrable@":/realtime/types#deferrable and any block provided to this method yields a "@TokenDetails@":#token-details object containing the details of the new or existing token along with the token string.
+  On success, the registered success callbacks for the "@Deferrable@":/realtime/types#deferrable and any block provided to this method yields a "@TokenDetails@":#token-details only once the realtime connection has been successfully upgraded to use the new token.
 
-  Failure to obtain a token will trigger the errback callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object containing an error response as defined in the "Ably REST API":/rest-api#common documentation.
+  On failure to obtain a token or upgrade the token, the connection will move to the @SUSPENDED@ or @FAILED@ state, triggering the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the error response as defined in the "Ably REST API":/rest-api#common documentation.
+
+  The @authorize@ callbacks can therefore be used to trigger an event once the new token has taken effect. This can be useful if, for example, you want to do attach to a new channel following a new channel capability being applied to the connection.
 
 h4. Example
 
 bc[jsall]. client.auth.authorize({ clientId: 'bob' }, function(err, tokenDetails) {
   if(err) {
-    console.log('An error occurred; err = ' + err.message);
+    console.log('An error occurred; err = ' + err.toString());
   } else {
-    console.log('Success; token = ' + tokenDetails.token);
+    console.log('Success! Realtime connection upgraded with new token: ' +
+      tokenDetails.token);
   }
 });
 
@@ -345,7 +368,9 @@ bq(definition).
   csharp:  Task<"TokenRequest":#token-request> CreateTokenRequestAsync("TokenParams":#token-params tokenParams, "AuthOptions":#auth-options authOptions)
   objc,swift: createTokenRequest(tokenParams: "ARTTokenParams":#token-params?, options: "ARTAuthOptions":#auth-options?, callback: ("ARTTokenRequest":#token-request?, NSError?) -> Void)
 
-Creates and signs a token request based on the specified <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span>. Note this can only be used when the "API @key@":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key value is available locally. Otherwise, signed token requests must be obtained from the key owner. Use this to generate signed token requests in order to implement a token request callback for use by other clients.
+Creates and signs a token request based on the specified (or if none specified, the client library stored) <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span>. Note this can only be used when the "API @key@":https://support.ably.io/solution/articles/3000030054-what-is-an-app-api-key value is available locally. Otherwise, signed token requests must be obtained from the key owner. Use this to generate signed token requests in order to implement a token request callback for use by other clients.
+
+Both <span lang="ruby">@auth_options@ and @token_params@</span><span lang="default">@authOptions@ and @tokenParams@</span> are optional. When omitted or @null@, the default token parameters and authentication options for the client library are used, as specified in the @ClientOptions@ when the client library was instanced, or later updated with an explicit "<span lang="default">@authorize@</span><span lang="csharp">@Authorize@</span>":#authorize request.  Values passed in will be used instead of (rather than being merged with) the default values.
 
 To understand why a token request may be issued to clients in favor of a token, see "Token Authentication explained":/general/authentication/#token-authentication.
 
@@ -454,7 +479,7 @@ bq(definition).
 
 Calls the "@requestToken@ REST API endpoint":/rest-api#request-token to obtain a token according to the specified <span lang="ruby">@token_params@ and @auth_options@</span><span lang="default">@tokenParams@ and @authOptions@</span>.
 
-Both <span lang="ruby">@auth_options@ and @token_params@</span><span lang="default">@authOptions@ and @tokenParams@</span> are optional. When they are omitted or @null@, the default token parameters and authentication options for the client library are used, as specified in the @ClientOptions@ when the client library was instanced, or later updated with an explicit  "<span lang="default">@authorize@</span><span lang="csharp">@Authorize@</span>":#authorize request.
+Both <span lang="ruby">@auth_options@ and @token_params@</span><span lang="default">@authOptions@ and @tokenParams@</span> are optional. When omitted or @null@, the default token parameters and authentication options for the client library are used, as specified in the @ClientOptions@ when the client library was instanced, or later updated with an explicit "<span lang="default">@authorize@</span><span lang="csharp">@Authorize@</span>":#authorize request.  Values passed in will be used instead of (rather than being merged with) the default values.
 
 To understand why a token request may be issued to clients in favor of a token, see "Token Authentication explained":/general/authentication/#token-authentication.
 
@@ -473,7 +498,7 @@ blang[jsall,objc,swift].
 
   On success, @tokenDetails@ contains a "@TokenDetails@":#token-details object containing the details of the new token along with the token string.
 
-  On failure to obtain a token, @err@ contains an <span lang="ruby">"@ErrorInfo@":#error-info</span><span lang="objc,swift">@NSError@</span> object with an error response as defined in the "Ably REST API":/rest-api#common documentation.
+  On failure to obtain a token, @err@ contains an <span lang="default">"@ErrorInfo@":#error-info</span><span lang="objc,swift">@NSError@</span> object with an error response as defined in the "Ably REST API":/rest-api#common documentation.
 
 blang[java].
   h4. Returns
