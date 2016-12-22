@@ -1,0 +1,567 @@
+---
+title: REST API Specification
+section: rest-api
+index: 0
+jump_to:
+  Help with:
+    - Overview#title
+    - Common API behaviour#common
+    - Authentication
+    - Basic Authentication
+    - Token Authentication
+  Channel API:
+    - publish
+    - message history#message-history
+    - presence
+    - presence history
+  Authentication API:
+    - requestToken#request-token
+  Application API:
+    - stats
+  Utilities API:
+    - time
+---
+
+<script type="text/javascript">
+
+  function initEnterPresence() {
+    /* Connect to the presence channel to create some presence state & history */
+    var enterPresence = function(apiKey) {
+      $.get('https://freegeoip.net/json/', function(userData) {
+        var ip = userData['ip'],
+            countryName = userData['country_name'],
+            clientData = 'Visitor from ' + countryName + ' using ' + navigator.userAgent;
+            ably = new Ably.Realtime({ key: apiKey, clientId: ip });
+
+        var channel = ably.channels.get('rest-example');
+        channel.attach(function() {
+          channel.presence.enter(clientData, function() {
+            console.log('Entered client ' + ip + ' with data: ' + clientData);
+          });
+        });
+      });
+    };
+
+    /* API_KEY variable is replaced inline on https://www.ably.io so
+      {{API_KEY}} will not equal '{{API_' + 'KEY}}'
+      On docs.ably.io, we rely on application.js to call the onApiKeyRetrieved method */
+    if ('{{API_KEY}}' !== '{{API_' + 'KEY}}') {
+      enterPresence('{{API_KEY}}');
+    } else {
+      window.onApiKeyRetrieved = enterPresence;
+    }
+  }
+
+  function executeAfterJQueryLoaded() {
+    if (window.$ && (typeof Ably != 'undefined')) {
+      initEnterPresence();
+    } else {
+      setTimeout(executeAfterJQueryLoaded, 50);
+    }
+  }
+
+  executeAfterJQueryLoaded();
+</script>
+
+The Ably REST API provides a way for a wide range of server and client devices to communicate with the Ably service over "REST":http://en.wikipedia.org/wiki/Representational_State_Transfer. The REST API does not provide a realtime long-lived connection to Ably, but in all other respects is a simple subset of the full "realtime messaging API":/realtime.
+
+The primary use-case for the REST API is for servers that are part of the back-end of an application such as a web application, that publish messages, issue access tokens (temporary and client-specific) for its various clients, obtain message and presence history and retrieve statistics.
+
+The functional scope of the REST API includes:
+
+* authentication: authentication to the service as a client, plus creation of tokens for use by other clients;
+* publication of messages;
+* retrieval of message history;
+* retrieval of presence state and presence;
+* retrieval of statistics for application usage.
+
+Whilst use of our REST API directly is fully supported, we instead recommend that customers should use our "Ably REST client libraries that support a range of platforms":https://www.ably.io/download/rest-client-libraries including "Javascript":https://www.ably.io/download/rest-client-libraries, "Java":https://www.ably.io/download/rest-client-libraries, "Python":https://www.ably.io/download/rest-client-libraries "Ruby":https://www.ably.io/download/rest-client-libraries, ".NET":https://www.ably.io/download/rest-client-libraries, "Go":https://www.ably.io/download/rest-client-libraries, etc.  The "client libraries are well documented":https://www.ably.io/documentation and provide additional features that improve performance and resilience that the REST API cannot deliver on its own, such as automatic re-routing around network problems by using alternative data centers.
+
+h2(#common). Common API behaviour
+
+h3. General
+
+The REST API defaults to returning results, and expects request bodies, in JSON format. An Accept header is used to specify a specific response format - JSON or an alternative - and the following formats are allowed:
+
+* @applicaton/json@: JSON;
+* @applicaton/javascript@: for JSONP. A @callback@ query parameter is also expected, which defaults simply to "callback";
+* @application/x-msgpack@: for "MessagePack":http://msgpack.org/, the efficient binary serialization format that is similar to JSON, but faster and smaller;
+* @text/html@: HTML
+
+It is also possible to specify the response format with the @format@ query parameter (with supported values being @json@, @jsonp@, @msgpack@, @html@). Any Accept header takes precedence over a @format@ parameter.
+
+Similarly, POST requests may contain a request body in JSON or other formats as indicated by a @Content-Type@ header. The supported content types are:
+
+* @applicaton/json@: JSON;
+* @application/x-msgpack@: "MessagePack":http://msgpack.org/, the efficient binary serialization format that is similar to JSON, but faster and smaller;
+* @application/x-www-form-urlencoded@: Form-encoded.
+
+Specific request and response data types are documented in the context of each API or route.
+
+A response status code of 20X (200, 201 or 204) indicates success. A successful result will typically provide a response body but certain operations (such as DELETE) may respond with a 204 response and no response body.
+
+<a name="error-response">All other "standard HTTP statusCodes":http://en.wikipedia.org/wiki/List_of_HTTP_status_codes signify an error. Errors from all APIs are returned as an object of the form:</a>
+
+bc[json]. {
+  error: {
+    code: <ably error code>,
+    message: <string>,
+    statusCode: <http status code>
+  }
+}
+
+Additionally, when you may not have access to the response body due to limitations of your HTTP client, we include the following custom Ably headers to work around that problem:
+
+bc[text]. X-Ably-ErrorCode: <ably error code, equivalent to error.code>
+X-Ably-ErrorMessage: <string, equivalent to error.message>
+
+The properties of an Ably error are:
+
+- code := A specific reason code as defined in the "public errors definition":https://github.com/ably/ably-common/blob/master/protocol/errors.json, where one is known
+- statusCode := Where a code is not available, the statusCode provides a generic indication of the nature of the failure and maps to "standard HTTP statusCodes":http://en.wikipedia.org/wiki/List_of_HTTP_status_codes
+- message := The message string is an English language string that aims to provide useful information to the developer. It is not necessarily intended to be an informative string for the end user
+
+Wherever possible, success response bodies contain links, in "HATEOS":http://en.wikipedia.org/wiki/HATEOAS style, to other resources relevant to the response; where these are present these are included as @href@ attributes on the applicable part of the response object.
+
+@GET@, @PUT@, @POST@ and @DELETE@ are available in all contexts where they make sense. @GET@ is always idempotent.
+
+h3(#versioning). Versioning
+
+By default, all requests receive the latest version of the API, which is currently @0.8@.
+
+When we make backwards-incompatible API changes to the API, we release new versions. Therefore, we encourage you to explicitly request the version you are interfacing with in all requests using one of the following mechanisms:
+
+1. Include a @X-Ably-Version@ header. Example:
+
+bc[sh]. curl https://rest.ably.io/time \
+ -H "X-Ably-Version: 0.8"
+
+2. Include the version query string param @v@. Example:
+
+bc[sh]. curl https://rest.ably.io/time?v=0.8
+
+h3(#pagination). Pagination
+
+REST APIs whose responses may have unbounded size have paginated responses; that is, if a full response to the query could exceed a limit (a default or a @limit@ given as a parameter to the call) the first response contains a subset of the results, and further "pages" of the result are available on subsequent requests. Each response (the initial response and responses to each subsequent request) is accompanied by one or more relative links relating to the current query.
+
+Responses contain one or more of the following relative links:
+
+- @first@ := a link to the first page of results for this query. This link also makes the query repeatable; any params that are resolved at query time (for example default values for omitted time-related params) have their resolved values included explicitly in the @first@ link.
+
+- @current@ := a stable link to the current page of results.
+
+- @next@ := on each page except the last in a paginated result, the next link is a link to the next page of results.
+
+Relative links are presented by default as an "RFC 5988 Link HTTP response header":http://tools.ietf.org/html/rfc5988; there is a separate @Link@ header for each relative link accompanying the response. The rel types used are @first@, @next@ and @current@ as specified in the RFC.
+
+A @Link@ header has the format:
+
+pre. Link: <{url}>; rel="{rel}"
+
+where @{url}@ is the URL of the link and @{rel}@ is the relation type.
+
+For example:
+
+pre. Link: <./stats?start=1380794880000&end=1380794881058&limit=100&unit=minute&direction=forwards
+&format=json&first_start=1380794880000>; rel="first"
+
+In principle the link URL might be any valid URL but in practice it will always be a relative URL, and it must be interpreted relative to the original query URL. Clients should treat link URLs opaquely; in particular, params (such as @first_start@ in the example above) may be undocumented and unsupported except where a client uses the link URL in its entirety.
+
+Clients that are unable to process response headers may also request an @envelope@ response type.
+
+h3. Control of response content
+
+By default the response body of a query response will contain the requested resource, encoded in the requested format. However, there are also query params that allow the response body to be adjusted to contain only a subset of the representation, or a restructured representation.
+
+The following params are supported:
+
+h4. fields
+
+Specifying @?fields=<field spec>[,<field spec>, ...]@ returns the representation containing only the specified fields. A field spec is a specifier which is either a single field - in which case the representation contains only that fields's value - or a dot-separated sequence of fields, in which case the representation contains only the fields matching those given in the field spec at each level in the hierarchy.
+
+h5. Example
+
+```[sh]
+  curl https://rest.ably.io/stats?fields=channels.peak,intervalId \
+       -u "{{API_KEY}}"
+
+  # Response
+  [{
+      "channels": { "peak": 2 },
+      "intervalId": "2015-11-20:15"
+  }]
+```
+
+h4. flatten
+
+Specifying @?flatten=true@ will result in a flattened representation, with the returned object structure being flattened into one with a single level of long keys instead of a deep structure. When the results contain array elements, the array index of each element is included as the corresponding component of the result key.
+
+h5. Example
+
+```[sh]
+  curl https://rest.ably.io/stats?flatten=true&fields=channels.peak,intervalId \
+       -u "{{API_KEY}}"
+
+  # Response
+  {
+      "0.channels.peak": 2,
+      "0.intervalId": "2015-11-20:15"
+  }
+```
+
+h4. select
+
+Specifying @?select=<path spec>@ returns a representation of the resource containing only the fields that match the given path specification. Like the fields param this permits only specific fields to be obtained, but the path spec may contain wildcard elements, and all matching fields in the representation are returned.
+
+The result is a partially-flattened representation, as a map whose keys are the long keys that match the path spec, and the values are the corresponding values. When the results contain array elements, the array index of each element is included as the corresponding component of the result key.
+
+h5. Example
+
+```[sh]
+  curl https://rest.ably.io/stats?select=*.channels.* \
+       -u "{{API_KEY}}"
+
+  # Response
+  [{
+      "0.channels.peak": 5,
+      "0.channels.min": 1,
+      "0.channels.mean": 3,
+      "0.channels.opened": 2
+  }]
+```
+
+h3. Envelope response format
+
+A client that is unable to access response headers or status code can request an @envelope@ response that contains the usual response, plus @Link@ header information and the response status code wrapped in an object as a single response body. This is useful for JSONP and may be useful in other environments. Envelope responses are only supported for JSON, JSONP and HTML formats.
+
+A client requests an envelope response by including an @envelope=<format>@ param in the request.
+
+A JSON envelope response body response for a request with an @envelope=json@ param has the format:
+
+```[json]
+  {
+      "statusCode": <status code>,
+      "response": <result of API call>,
+      "rel": {
+          "first": <URL>,
+          ...
+      }
+  }
+```
+
+where the @response@ member references the API result in the usual format. The @rel@ member, present only in paginated responses, includes each of the rel links associated with the response.
+
+Envelope responses always are always made with a 200 status code; the status of the API request itself must be obtained from the @statusCode@ member of the response body.
+
+h2(#authentication). Authentication
+
+To understand the REST API it is easiest first to understand the various authentication methods that Ably supports. For a detailed explanation, view the "Authentication documentation":/general/authentication.
+
+Clients can access Ably, whether using REST or the Realtime service, by two methods, explained briefly below:
+
+h3(#basic-authentication). Basic Authentication
+
+Using one of the application keys created via the "application dashboard":http://support.ably.io/solution/articles/3000030053-how-do-i-access-my-app-dashboard, basic authentication provides the simplest method to authenticate with Ably, but has two important limitations:
+
+* the application key is transmitted over the network as part of a request; therefore it may only be used over TLS (HTTPS or "SSL") connections. This can be a performance disadvantage in some network environments where long round-trip times are amplified by the SSL handshake.
+* the client using the API must be in possession of the application key, which potentially exposes the key to compromise. For example, it is not advisable to simply embed the key in a script in a public web page.
+
+h4. Usage in HTTP request header
+
+pre. Authorization: Basic <Base64-encoded key>
+
+where @<Base64-encoded key>@ is the full application key string obtained through the dashboard, encoded with "RFC 4648 Base64":http://www.ietf.org/rfc/rfc4648.txt.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/channels/rest-example/messages \
+ --header "Authorization: Basic {{API_KEY_BASE64}}"
+
+When using a generic HTTP client library that accepts separate username and password arguments for an HTTP request, the application key can be split at the first colon, with the initial segment being used as the username, and the remaining string (without the leading colon) used as the password.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/channels/rest-example/messages \
+ --user "{{API_KEY}}"
+
+h3(#token-authentication). Token Authentication
+
+Using a token obtained via the REST API "@requestToken@":#request-token endpoint, tokens provide a means to authenticate with Ably without sharing a private API key. Tokens have  a short lifetime and therefore they may more readily be distributed to clients where there is a risk of compromise. Tokens may also be issued with a particular scope - such as a limited set of "access rights or capabilities)":#capabilities-explained or being limited to use by a specific "@clientId@ identity":/realtime/authentication#identified-clients - and therefore token-based authentication provides the flexibility to implement trusted identities and access control policies in the application. See "Authentication":/general/authentication for more details.
+
+The "@requestToken@":#request-token endpoint may be used without explicit authentication, relying on the implicit authentication of submitting a validly signed token request.
+
+h4. Usage in HTTP request header
+
+pre. Authorization: Bearer <Base64-encoded token string>
+
+The @<Base64-encoded token string>@ is the @token@ attribute of the token generated by "@requestToken@":#request-token, encoded with "RFC 4648 Base64":http://www.ietf.org/rfc/rfc4648.txt. If using a generic HTTP client library it will probably be necessary to add the @Authorization@ header explicitly.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/channels/rest-example/messages \
+ --header "Authorization: Bearer {{TOKEN_BASE64}}"
+
+h1(#api). API routes
+
+h2(#channel). Channel routes
+
+Routes providing access to the messaging service within a channel scope.
+
+h3(#publish). Publish one or more messages on a channel
+
+h6. POST rest.ably.io/channels/@<channel id>@/messages
+
+Publish a message on a channel. Note that since the REST API is stateless, publication using this API is outside the context of any specific connection.
+
+The request body contains message details and is an object of the form:
+
+bc[json]. {
+  name: <event name>,
+  data: <message payload>,
+  encoding: <optional encoding>,
+  clientId: <optional explicit client identifier>,
+  connectionKey: <optional private connection key>
+}
+
+In JSON format, the accepted types for the @data@ payload are:
+
+* string
+* any JSON-encodable Array or Object.
+
+MessagePack additionally "supports byte arrays":https://github.com/msgpack/msgpack/blob/master/spec.md#formats-bin
+
+A message may be published over REST on behalf of an existing realtime connection when a valid @connectionKey@ is present. For example, if you want to publish a message using the REST API so that it appears to come from an existing connected realtime client, then the connection's "private (secret) connection key":/realtime/connection#key must be included. See a "publish on behalf of a realtime client example":<%= JsBins.url_for('rest/publish-on-behalf-of-client') %>.
+
+Example request:
+
+bc[sh]. curl -X POST https://rest.ably.io/channels/rest-example/messages \
+ -u "{{API_KEY}}" \
+ -H "Content-Type: application/json" \
+ --data '{ "name": "publish", "data": "example" }'
+
+h5. Parameters
+
+None
+
+h5. Options
+
+- Content-Type := @application/json@, @application/x-msgpack@ or @application/x-www-form-urlencoded@
+- Accept := not applicable
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+Nothing when successful, else returns an error.
+
+h3(#message-history). Retrieve message history for a channel
+
+h6. GET rest.ably.io/channels/@<channel id>@/messages
+
+If a channel is "configured to persist messages":http://support.ably.io/support/solutions/articles/3000030057-what-are-channel-rules-and-how-can-i-use-them-in-my-app, then all messages on that channel, within "your account retention period":http://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for, are available via this API endpoint.  If persistence is not configured, then there are no guarantees as to how many historical messages will be available for the chanenl.  "Find out more about message persistence":http://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/channels/rest-example/messages \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- start := _beginning of time_ The start of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if it was received at or after this time.
+- end := _now_ The end of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if it was received at or before this time.
+- limit := _100_ The maximum number of records to return. A limit greater than 1,000 is invalid.
+- direction := _backwards_ The direction of this query. The direction determines the order of the returned result array, but also determines which end of the query interval is the start point for the search.  For example, a forwards query uses @start@ as the start point, whereas a backwards query uses @end@ as the start point.
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+In each case a successful result is a "paginated response":#pagination with an array containing the items that match the query (and it may be empty).
+
+bc[json]. [{
+  id: <unique message id>
+  name: <event name>,
+  data: <message payload>,
+  timestamp: <message timestamp in ms since epoch>
+}]
+
+h3(#presence). Retrieve instantaneous presence status for a channel
+
+h6. GET rest.ably.io/channels/@<channel id>@/presence
+
+Obtain the set of members currently present for a channel.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/channels/rest-example/presence \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- clientId := optional filter to restrict members present with that @clientId@
+- connectionId := optional filter to restrict members present with that @connectionId@
+- limit := _100_ The maximum number of records to return. A limit greater than 1,000 is invalid.
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+A successful request returns a "paginated response":#pagination with an array containing the members that are currently present on the given channel. If there are no members present, an empty collection is returned.
+
+bc[json]. [{
+  id: <a unique member identifer generated by Ably>,
+  clientId: <member client id provided by the client>,
+  connectionId: <a unique connection id generated by Ably>
+  timestamp: <message timestamp in ms since epoch>
+  action: <presence state>,
+  data: <optional clientData provided by the client>
+}]
+
+h3(#presence-history). Retrieve presence state history for a channel
+
+h6. GET rest.ably.io/channels/@<channel id>@/presence/history
+
+Obtain the history of presence messages for a channel.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/channels/rest-example/presence/history \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- start := _beginning of time_ The start of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if it was received at or after this time.
+- end := _now_ The end of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if it was received at or before this time.
+- limit := _100_ The maximum number of records to return. A limit greater than 1,000 is invalid.
+- direction := _backwards_ The direction of this query. The direction determines the order of the returned result array, but also determines which end of the query interval is the start point for the search.  For example, a forwards query uses @start@ as the start point, whereas a backwards query uses @end@ as the start point.
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+A successful request returns a "paginated response":#pagination with an array containing the members that are currently present on the given channel. If there are no members present, an empty collection is returned.
+
+bc[json]. [{
+  id: <a unique member identifer generated by Ably>,
+  clientId: <member client id provided by the client>,
+  connectionId: <a unique connection id generated by Ably>
+  timestamp: <message timestamp in ms since epoch>
+  action: <presence state>,
+  data: <optional clientData provided by the client>
+}]
+
+h2. Authentication
+
+h3(#request-token). Request an access token
+
+<!-- TODO: Review the suitability of the documentation that describes the token request and the token body response and provide suitable links -->
+
+h6. POST rest.ably.io/keys/@key id@/requestToken
+
+This is the means by which clients obtain access tokens to use the service. The construction of a token request is described in the "Authentication token request spec documentation":/general/authentication#token-request-spec. The resulting @token response@ object contains the token properties as defined in "token request spec":/general/authentication#token-request-spec.
+
+Example request:
+
+bc[sh]. curl -X POST "https://rest.ably.io/keys/{{API_KEY_NAME}}/requestToken" \
+ -u "{{API_KEY}}" \
+ -H "Content-Type: application/json" \
+ --data '{ "keyName": "{{API_KEY_NAME}}", "timestamp": {{MS_SINCE_EPOCH}} }'
+
+h5. Parameters
+
+None
+
+h5. Options
+
+- Request body := signed or unsigned token request. All token requests require values for @keyName@ and @timestamp@ attributes. In addition, signed token require values for attributes @nonce@ and @mac@.
+- Content-Type := @text/plain@
+- Accept := @application/json@ by default, or @application/x-msgpack@
+- Auth required := no (for signed token requests), yes (for unsigned token requests, "basic":#basic-authentication or "token":#token-authentication permitted)
+
+h5. Returns
+
+A successful request will return a "token details object":/realtime/types#token-details containing the token string.
+
+bc[json]. {
+  "token": "xVLyHw.CLchevH3hF....MDh9ZC_Q", // token string
+  "keyName": "xVLyHw.mDYnFA",
+  "issued": 1428356667,
+  "expires": 1428360267,
+  "capability": "{\"*\":[\"*\"]}"
+}
+
+h2(#application). Application routes
+
+Routes providing access to the messaging service within an application scope.
+
+h3(#stats). Retrieve usage statistics for an application
+
+h6. GET rest.ably.io/stats
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/stats?unit=hour \
+ -u "{{API_KEY}}"
+
+The Ably system can be queried to obtain usage statistics for a given application, and results are provided aggregated across all channels in use in the application in the specified period. Stats may be used to track usage against account quotas.
+
+Stats queries are made by specifying a query interval and the granularity expected in the results. The query interval is expressed as a start and end time, each being a timestamp in milliseconds since the epoch. Stats are aggregated by the system in 'subminute' intervals of 6s (ie 0.1m), so query interval start and end times are rounded down to the nearest subminute boundary.
+
+h5. Parameters
+
+- start := _beginning of time_ The start of the query interval as a time in milliseconds since the epoch.
+- end := _now_ The end of the query interval as a time in milliseconds since the epoch.
+- limit := _100_ The maximum number of records to return. A limit greater than 1,000 is invalid.
+- direction := _backwards_ The direction of this query. The direction determines the order of the returned result array, but also determines which end of the query interval is the start point for the search.
+- unit := _@minute@_ One of the values @minute@, @hour@, @day@ or @month@, specifying the unit of aggregation in the returned results.
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+In each case a successful result is a "paginated response":#pagination with an array containing the items that match the query (and it may be empty).
+
+Stats records contain a hierarchy of elements relating to messages, connections and other resources consumed in an interval. Any single record may contain a subset of the elements, omitting empty sections.
+
+"See a complete example of a statistics response":/general/statistics.
+
+h2(#utilities). Utilities
+
+h3(#time). Get the service time
+
+h6. GET rest.ably.io/time
+
+This returns the service time in milliseconds since the epoch. This may be used by clients that do not have local access to a sufficiently accurate time source when generating a token request. (Token requests include a timestamp and have a limited validity period to help defend against replay attacks.)
+
+The result is a JSON-encoded array of length 1 containing the time result as a number.
+
+bc[sh]. curl http://rest.ably.io/time
+
+h5. Parameters
+
+None
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := no
+
+h5. Returns
+
+bc[json]. [ {{MS_SINCE_EPOCH}} ]

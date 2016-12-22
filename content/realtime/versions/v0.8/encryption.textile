@@ -1,0 +1,279 @@
+---
+title: Encryption
+section: realtime
+index: 70
+languages:
+  - javascript
+  - nodejs
+  - ruby
+  - java
+  - swift
+  - objc
+  - csharp
+jump_to:
+  Help with:
+    - Getting started#getting-started
+    - Understanding encryption#encryption
+  API Reference:
+    - getDefaultParams#get-default-params
+    - generateRandomKey#generate-random-key
+  Related types:
+    - Channel Options
+    - CipherParams#cipher-params
+---
+
+Ably client libraries support built-in symmetric encryption of message content, making it easier to build apps that encrypt content fully end-to-end. Whilst "TLS is enabled by default":https://support.ably.io/solution/articles/3000045208-are-messages-sent-to-and-received-from-ably-sent-securely-using-tls and ensures that data is securely sent to and received from Ably, messages are not encrypted within the Ably system. Using the encryption feature of our client libraries ensures that message payloads are opaque, can never be decrypted by Ably, and can only be decrypted by other clients that share your secret key.
+
+h2(#getting-started). Getting started
+
+"Channels":/realtime/channels-messages can be easily configured to automatically encrypt and decrypt all message payloads using the secret @key@ provided in the "channel options":/realtime/types#channel-options. Below is a simple example:
+
+```[jsall](code-editor:realtime/channel-encrypted)
+  Ably.Realtime.Crypto.generateRandomKey(function(err, key) {
+    var channelOpts = { cipher: { key: key } };
+    var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', channelOpts);
+    channel.subscribe(function(message) {
+      alert('Decrypted data: ' + message.data);
+    });
+    channel.publish('unencrypted', 'encrypted secret payload');
+  });
+```
+
+```[ruby]
+  key = Ably::Util::Crypto.generateRandomKey()
+  channel_opts = { cipher: { key: key } }
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', channel_opts)
+  channel.subscribe do |message|
+    puts "Decrypted data: #{message.data}"
+  end
+  channel.publish 'unencrypted', 'encrypted secret payload'
+```
+
+```[java]
+  ChannelOptions options = ChannelOptions.withCipherKey(<key>);
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options);
+  channel.subscribe(new MessageListener() {
+    @Override
+    public void onMessage(Message message) {
+      System.out.println("Decrypted data: " + message.data);
+    }
+  });
+  channel.publish('unencrypted', 'encrypted secret payload');
+```
+
+```[csharp]
+  var key = Crypto.GetRandomKey();
+  var options = new ChannelOptions(key);
+  var channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}", options);
+  channel.Subscribe(message => {
+    Console.WriteLine("Decrypted data: " + message.data);
+  });
+  channel.Publish("unencrypted", "encrypted secret payload");
+```
+
+```[objc]
+  ARTChannelOptions *options = [[ARTChannelOptions alloc] initWithCipherKey:<key>];
+  ARTRealtimeChannel *channel = [realtime.channels get:@"{{RANDOM_CHANNEL_NAME}}" options:options];
+  [channel subscribe:^(ARTMessage *message) {
+    NSLog(@"Decrypted data: %@", message.data);
+  }];
+  [channel publish:@"unencrypted" data:@"encrypted secret payload"];
+```
+
+```[swift]
+  let options = ARTChannelOptions(cipherKey: <key>)
+  let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options: options)
+  channel.subscribe { message in
+    print("Decrypted data: \(message.data)")
+  }
+  channel.publish("unencrypted", data: "encrypted secret payload")
+```
+
+Note that the @key@ should not be a passphrase, but a cryptographic key - generated from a secure random source, 128 or 256 bits long, binary or base64-encoded. If you wish to encrypt messages with a passphrase (for example, one entered by a user), you should use a "key derivation function":https://en.wikipedia.org/wiki/Key_derivation_function to transform that into a key. The client libraries are also capable of "generating a random key":#generate-random-key for you.
+
+h2. Understanding encryption
+
+The libraries support encryption purely as a convenience; the libraries ensure interoperability between environments by having compatible implementations of encryption algorithms and by making common choices on format, mode, padding etc. However,  Ably intentionally does not manage the distribution of keys between clients, and end-to-end encryption is enabled without exposing keys to the Ably service at all. This has the advantage that Ably demonstrably has no access to the unencrypted contents of your messages, but also means that each app is responsible for enabling the distribution of keys to clients independently of Ably.
+
+The client library support for encryption supports symmetric encryption only, and requires each participating client to each specify the correct "@CipherParams@":#cipher-params secret @key@ when creating a @Channel@ instance. Clients that do not specify a key will be delivered the still-encrypted message payloads that they may then still wish to decrypt offline.
+
+The client libraries are designed to be extensible, but initially only support the AES algorithm (with a default key length of 256 bits) and CBC mode. These defaults are intended to ensure that encryption support can be provided in all target environments and platforms.
+
+Encryption is supported for the @data@ attribute (payload) of "published messages":/realtime/types#messages and "presence member messages":/realtime/types#presence-message on a channel, over both REST and Realtime publish operations. Decryption is supported in Realtime "message":/realtime/channels-messages and "presence message":/realtime/presence subscriptions and in REST and "Realtime history":/realtime/history operations.
+
+All other attributes of "messages":/realtime/types#messages and "presence messages":/realtime/types#presence-message, such as event @name@ or <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span><span lang="csharp">@ClientId@</span> remain unencrypted. All sensitive data, when using the library's symmetric encryption, must be placed in the @data@ attribute to ensure it is encypted before it is transmitted to Ably.
+
+The key in use at any given time is known by the client library, but the Ably service has no visibility of the key; it knows only that a given message payload was encrypted. When accessing messages via the "history API":/realtime/history, it is the caller's responsibility to ensure that the correct key is configured for the channel before the history request is made.
+
+Encryption options (algorithm, key, etc) are specified on a per-channel basis; it is expected that apps may wish to have both unencrypted and encrypted channels on a single connection.
+
+
+h1. Crypto API Reference
+
+inline-toc.
+  Crypto reference:
+    - Methods:
+      - getDefaultParams#get-default-params
+      - generateRandomKey#generate-random-key
+    - Related types:
+      - Channel Options
+      - CipherParams#cipher-params
+
+The <span lang="default">@Ably.Realtime.@</span><span lang="ruby">@Ably::Util::@</span><span lang="java">@io.ably.lib.util.@</span><span lang="swift,objc">@ART@</span>@Crypto@ object exposes the following public methods:
+
+h2(#methods). Methods
+
+h6(#get-default-params).
+  default:  getDefaultParams
+  ruby:     get_default_params
+  csharp:   GetDefaultParams
+
+bq(definition).
+  jsall:   "CipherParams":#cipher-params Crypto.getDefaultParams(Object params)
+  ruby:    "CipherParams":#cipher-params Crypto.get_default_params(Hash params)
+  java:    "CipherParams":#cipher-params Crypto.getDefaultParams(Param[] params)
+  swift,objc: getDefaultParams(values: [NSObject : AnyObject]) -> "ARTCipherParams":#cipher-params
+  csharp:  static CipherParams GetDefaultParams(byte[] key = null, byte[] iv = null, CipherMode? mode = null)
+
+This call obtains a "@CipherParams@":#cipher-params object using the values passed in (which must be a subset of @CipherParams@ fields that at a minimum includes a @key@), filling in any unspecified fields with default values, and checks that the result is a valid and self-consistent.
+
+You will rarely need to call this yourself, since the client library will handle it for you if you specify @cipher@ params when initializing a channel (as in the example "at the top":#getting-started)<span lang="jsall"> or when setting channel options with @channel.setOptions()@</span>.
+
+h4. Parameters
+
+- <span lang="default">params</span><span lang="csharp">arguments</span> := The cipher <span lang="default">params</span><span lang="csharp">arguments</span> that you want to specify. It must at a minimum include a @key@, which should be either a binary (<span lang="java,csharp">@byte[]@</span><span lang="javascript">@ArrayBuffer@ or @WordArray@</span><span lang="nodejs">@Buffer@</span><span lang="ruby">byte array</span><span lang="objc,swift">@NSData@</span>) or a base64-encoded <span lang="objc">@NS@</span>@String@.
+
+h4. Returns
+
+On success, the method returns a complete "@CipherParams@":#cipher-params object. Failure will raise an <span lang="ruby,java">"@AblyException@":/realtime/types/#ably-exception </span><span lang="default">exception</span>.
+
+h4. Example
+
+```[jsall](code-editor:realtime/channel-encrypted)
+  var cipherParams = Ably.Realtime.Crypto.getDefaultParams({key: <key>});
+  var channelOpts = { cipher: cipherParams };
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', channelOpts);
+```
+
+```[ruby]
+  cipher_params = Ably::Util::Crypto.get_default_params({key: <key>})
+  channel_opts = { cipher: cipher_params }
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', channel_opts)
+```
+
+```[java]
+  CipherParams params = Crypto.getDefaultParams(new Param[]{ new Param("key", <key>) });
+  ChannelOptions options = new ChannelOptions();
+  options.cipher = params;
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options);
+```
+
+```[csharp]
+  var @params = Crypto.GetDefaultParams(<key>);
+  ChannelOptions options = new ChannelOptions(@params);
+  var realtime = new AblyRealtime("{{API_KEY}}");
+  var channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}", options);
+```
+
+```[objc]
+ARTCipherParams *params = [ARTCrypto getDefaultParams:@{@"key": <key>}];
+ARTChannelOptions *options = [[ARTChannelOptions alloc] initWithCipher:params];
+ARTRealtimeChannel *channel = [realtime.channels get:@"{{RANDOM_CHANNEL_NAME}}" options:options];
+```
+
+```[swift]
+let params = ARTCrypto.getDefaultParams(["key": <key>])
+let options = ARTChannelOptions(cipher: params)
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options: options)
+```
+
+h6(#generate-random-key).
+  default:  generateRandomKey
+  ruby:     generate_random_key
+  csharp:   GenerateRandomKey
+
+bq(definition).
+  default: Crypto.generateRandomKey(Int keyLength?, callback("ErrorInfo":/realtime/types#error-info err, @Buffer@ key))
+  ruby:    byte array Crypto.generate_random_key(Int key_length?)
+  java:    @byte[]@ Crypto.generateRandomKey(Int keyLength?)
+  objc,swift: generateRandomKey(length?: UInt) -> NSData
+  csharp:  static byte[] GenerateRandomKey(CipherMode? mode = null, int? keyLength = null)
+
+This call obtains a randomly-generated binary key of the specified key length.
+
+h4. Parameters
+
+- keyLength := Optional @Int@ with the length of key to generate. For AES, this should be either 128 or 256. If unspecified, defaults to 256.
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err, key)@ which is called upon completion
+
+blang[jsall].
+  h4. Callback result
+
+  On successfully generating a key, the callback is called with that key as a <span lang=javascript>@WordArray@</span><span lang=nodejs>@Buffer@</span>, and @err@ is @null@. On failure to create a key, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[java,ruby,objc,swift,csharp].
+  h4. Returns
+
+  On success, the method returns the generated key as a <span lang="java,csharp">@byte[]@ array</span><span lang=ruby>byte array</span><span lang="objc,swift">@NSData@</span>. Failure will raise an "@AblyException@":/realtime/types/#ably-exception .
+
+h4. Example
+
+```[jsall]
+  Ably.Realtime.Crypto.generateRandomKey(128, function(err, key) {
+    if(err) {
+      console.log("Key generation failed: " + err.toString());
+    } else {
+      var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', {cipher: {key: key}});
+    }
+  });
+```
+
+```[ruby]
+  key = Ably::Util::Crypto.generate_random_key(128)
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', {cipher: {key: key}})
+```
+
+```[java]
+  byte[] key = Crypto.generateRandomKey(128);
+  ChannelOptions options = ChannelOptions.withCipher(key);
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options);
+```
+
+```[csharp]
+  byte[] key = Crypto.GenerateRandomKey(keyLength: 128);
+  var options = new ChannelOptions(key);
+  var channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}", options);
+```
+
+```[objc]
+  NSData *key = [ARTCrypto generateRandomKey:128];
+  ARTChannelOptions *options = [[ARTChannelOptions alloc] initWithCipherKey:key];
+  ARTRealtimeChannel *channel = [realtime.channels get:@"{{RANDOM_CHANNEL_NAME}}" options:options];
+```
+
+```[swift]
+let key = ARTCrypto.generateRandomKey(128)
+let options = ARTChannelOptions(cipherWithKey: key)
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}", options: options)
+```
+
+h2(#related-types). Related types
+
+h3(#channel-options).
+  default:   ChannelOptions Object
+  objc,swift:   ARTChannelOptions
+  ruby:      ChannelOptions Hash
+  java:      io.ably.lib.types.ClientOptions
+  csharp:    IO.Ably.ClientOptions
+
+<%= partial 'types/_channel_options' %>
+
+h3(#cipher-params).
+  default: CipherParams
+  objc,swift:   ARTCipherParams
+  ruby:    CipherParams Hash
+  java:    io.ably.lib.util.Crypto.CipherParams
+  csharp:  IO.Ably.CipherParams
+
+<%= partial 'types/_cipher_params' %>
