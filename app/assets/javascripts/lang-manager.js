@@ -225,12 +225,12 @@ $(function() {
   }
 
   function showWarningIfNotLatestVersion() {
-    if (redirectingAsLanguageVersionNotSupported) {
+    if (redirectingAsLanguageVersionNotSupported || !window.AblyVersionInfo) {
       return;
     }
 
     if (supportsMultipleLanguages()) {
-      if (window.AblyVersionInfo && window.AblyVersionInfo.langVersions) {
+      if (window.AblyVersionInfo.langVersions) {
         var currentLangConfig = window.AblyVersionInfo.langVersions[currentLang()]
         if (currentLangConfig) {
           if (currentLangConfig.versions.indexOf(window.AblyVersionInfo.page) !== 0) {
