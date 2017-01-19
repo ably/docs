@@ -5,7 +5,6 @@ ruby File.read(File.expand_path("../.ruby-version", __FILE__)).strip
 gem 'nanoc'
 gem 'RedCloth'
 gem 'kramdown'
-gem 'fog'
 gem 'sass'
 gem 'gist'
 gem 'jsbin-client'
@@ -13,7 +12,7 @@ gem 'jsbin-client'
 # Web server for `nanoc view`
 gem 'adsf'
 
-# Guard for automatica rebuilding of static site
+# Guard for automatic rebuilding of static site
 gem 'guard-nanoc'
 gem 'listen'
 gem 'fssm'
