@@ -14,7 +14,7 @@ The Ably documentation was intentionally created as a public repository using a 
 Viewing the documentation
 ------
 
-The static site generated from this documentation repository is hosted at <http://docs.ably.io>.  We frequently publish updates from this repository so is typically more up to date than the [official Ably API documentation](https://www.ably.io/documentation).
+The static site generated from this documentation repository is hosted at <http://docs.ably.io> and deployed automatically when the `master` branch is updated.  We frequently publish updates from this repository so is typically more up to date than the [official Ably API documentation](https://www.ably.io/documentation).
 
 The official complete Ably documentation that incoporates all the documentation in this repository can be found at <https://www.ably.io/documentation>
 
@@ -43,10 +43,12 @@ If you would prefer to use Docker, then you can set up the env as follows:
 * `./docker-run server` to start up a web server at <http://localhost:4000>
 * `./docker-run guard` to watch for changes and rebuild the site automatically. This is normally run in conjunction with the `./docker-run server` command so that you can see changes immediately
 
-General next steps:
+Pull requests
+----
 
-* Make your changes and they should be visible within seconds in the browser following a refresh (if using the `guard` command, else a manual `compile` is required).  If the changes are not visible, check your console where `guard` is running for errors.
+* Assuming you have followed the steps above, prior to making a PR, make your changes locally and they should be visible within seconds in the browser following a refresh (if using the `guard` command, else a manual `compile` is required).  If the changes are not visible, check your console where `guard` is running for errors.
 * Commit your changes, push your branch and send us a pull request
+* All pull requests will automatically launch a static review site that will be linked to at the bottom of the PR
 
 Help and contact
 ----
