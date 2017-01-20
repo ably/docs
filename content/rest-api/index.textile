@@ -14,6 +14,14 @@ jump_to:
     - message history#message-history
     - presence
     - presence history
+  Push API:
+    - register device#post-device-registration
+    - subscribe to a channel#post-channel-subscription
+    - get registered device#get-device-registration
+    - list registered devices#get-device-registrations
+    - list channel subscriptions#get-channel-subscriptions
+    - unregister device#delete-device-registration
+    - unsubscribe from channel#delete-channel-subscription
   Authentication API:
     - requestToken#request-token
   Application API:
@@ -460,6 +468,251 @@ bc[json]. [{
   action: <presence state>,
   data: <optional clientData provided by the client>
 }]
+
+h2. Push
+
+h3(#post-device-registration). Register a device for receiving push notifications
+
+Register or update a device's details, including the information necessary to deliver push notifications to it.
+
+h6. POST rest.ably.io/push/deviceRegistrations
+
+The request body contains device details and is an object of the form:
+
+bc[json]. {
+  id: <string>,
+  clientId: <optional client identifier to associate with registration>,
+  platform: <ios, android, browser>,
+  formFactor: <mobile, tablet, desktop, other>,
+  metadata: <object with additional data>,
+  push: {
+    transportType: <gcm, fcm, apns, web>,
+    metadata: <object with additional data, like transport-specific recipient address>
+  }
+}
+
+bc[sh]. curl -X POST https://rest.ably.io/push/deviceRegistrations \
+ -u "{{API_KEY}}"
+ -H "Content-Type: application/json" \
+ --data \
+ '
+ {
+  "id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+  "platform": "ios",
+  "formFactor": "mobile",
+  "push": {
+    "transportType": "apns",
+    "metadata": {
+      "deviceToken": "740f4707bebcf74f9b7c25d48e3358945f6aa01da5ddb387462c7eaf61bb78ad"
+    }
+  }
+}
+'
+
+h5. Parameters
+
+None
+
+h5. Options
+
+- Content-Type := @application/json@, @application/x-msgpack@ or @application/x-www-form-urlencoded@
+- Accept := not applicable
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+A successful request returns the just-registered device details. It includes a @updateToken@, which is a token that can be used to "authenticate":#token-authentication afterwards to update an existing device registration (for example, for updating a GCM or FCM registration token).
+
+A unsuccessful request returns an error.
+
+h3(#post-channel-subscription). Subscribe to a channel
+
+Subscribe either a single device or all devices associated with a client ID to receive push notifications from messages sent to a channel.
+
+h6. POST rest.ably.io/push/channelSubscriptions
+
+The request body contains subscription details and is an object of the form:
+
+bc[json]. {
+  deviceId: <optional, string, cannot be set when clientId is set>,
+  clientId: <optional, string, cannot be set when deviceId is set>,
+  channel: <string>
+}
+
+bc[sh]. curl -X POST https://rest.ably.io/push/channelSubscriptions \
+ -u "{{API_KEY}}"
+ -H "Content-Type: application/json" \
+ --data \
+ '
+{
+  "deviceId": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+  "channel": "rest-example"
+}
+'
+
+h3(#get-device-registration). Get details from a registered device
+
+h6. GET rest.ably.io/push/deviceRegistrations/@<device id>@
+
+Obtain the details for a device registered for receiving push registrations.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/push/deviceRegistrations/01ARZ3NDEKTSV4RRFFQ69G5FAV \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+None.
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+A JSON object like:
+
+bc[json]. {
+  id: <string>,
+  clientId: <optional, string>
+  platform: <string>
+  formFactor: <string>,
+  metadata: <object>,
+  updateToken: <string>,
+  push: {
+    transportType: <string>,
+    metadata: <object>,
+    state: <active or failed>
+  }
+}
+
+h3(#get-device-registrations). List registered devices
+
+h6. GET rest.ably.io/push/deviceRegistrations
+
+Obtain the details for devices registered for receiving push registrations.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/push/deviceRegistrations \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- clientId := optional filter to restrict to devices associated with that @clientId@
+- limit := _100_ The maximum number of records to return. A limit greater than 1,000 is invalid.
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+A successful request returns a "paginated response":#pagination of:
+
+bc[json]. [{
+  id: <string>,
+  clientId: <optional, string>
+  platform: <string>
+  formFactor: <string>,
+  metadata: <object>,
+  updateToken: <string>,
+  push: {
+    transportType: <string>,
+    metadata: <object>,
+    state: <active or failed>
+  }
+}]
+
+h3(#get-channel-subscriptions). List channel subscriptions
+
+h6. GET rest.ably.io/push/channelSubscriptions
+
+Obtain push notification subscriptions to channels.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/push/channelSubscriptions \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- clientId := Filter to restrict to subscriptions associated with that @clientId@. Cannot be set when @deviceId@ is set.
+- deviceId := Filter to restrict to subscriptions for that @devideId@. Cannot be set when @clientId@ is set.
+- limit := _100_ The maximum number of records to return. A limit greater than 1,000 is invalid.
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+A successful request returns a "paginated response":#pagination of:
+
+bc[json]. [{
+  deviceId: <string, only present when clientId is not present>
+  clientId: <string, only present when deviceId is not present>
+  channel: <string>
+}]
+
+h3(#delete-device-registration). Unregister device for push notifications
+
+h6. DELETE rest.ably.io/push/deviceRegistrations/@<device id>@
+
+Unregister device. All its subscriptions will be removed.
+
+Example request:
+
+bc[sh]. curl -X DELETE https://rest.ably.io/push/deviceRegistrations/01ARZ3NDEKTSV4RRFFQ69G5FAV \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+None.
+
+h5. Options
+
+- Content-Type := not applicable
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+A successful request returns nothing.
+
+An unsuccessful request returns an error.
+
+h3(#delete-channel-subscription). Unsubscribe from push notifications from channel
+
+h6. DELETE rest.ably.io/push/channelSubscriptions
+
+Stop receiving push notifications when push messages arrive to the specified channel.
+
+Example request:
+
+bc[sh]. curl -X DELETE https://rest.ably.io/push/channelSubscriptions?deviceId=01ARZ3NDEKTSV4RRFFQ69G5FAV \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- channel := string, required when deleting for specific @deviceId@
+- deviceId := Filter to restrict to subscriptions for that @devideId@. Cannot be set when @clientId@ is set.
+- clientId := Filter to restrict to subscriptions associated with that @clientId@. Cannot be set when @deviceId@ is set.
+
+h5. Options
+
+- Content-Type := not applicable
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+A successful request returns nothing.
+
+An unsuccessful request returns an error.
 
 h2. Authentication
 
