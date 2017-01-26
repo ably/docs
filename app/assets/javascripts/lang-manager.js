@@ -217,7 +217,9 @@ $(function() {
     $versionWarning.html(
       'Note: You are viewing v' + currentVersion + ' of this documentation. ' +
       '<a href="' + latestVersionPath + '">A newer version v' + latestVersion + ' exists</a>'
-    ).show();
+    ).show().find('a').on('click', function() {
+      persistPreferredVersionCookie(latestVersion);
+    })
   }
 
   function hideLatestVersionWarning() {
@@ -273,16 +275,20 @@ $(function() {
     $versionDropdownVersions.show();
   }
 
+  function persistPreferredVersionCookie(version) {
+    var langVers = preferredLangVersions();
+    if (version === window.AblyVersionInfo.latestForPage.version) {
+      langVers[currentLang()] = 'latest';
+    } else {
+      langVers[currentLang()] = version;
+    }
+    $.cookie("preferred_lang_version", JSON.stringify(langVers), { expires : 31, path: '/' });
+  }
+
   $versionDropdownVersions.on('click', function() {
     var preferredVersion = $(this).data('version').toString();
     if (preferredVersion) {
-      var langVers = preferredLangVersions();
-      if (preferredVersion === window.AblyVersionInfo.latestForPage.version) {
-        langVers[currentLang()] = 'latest';
-      } else {
-        langVers[currentLang()] = preferredVersion;
-      }
-      $.cookie("preferred_lang_version", JSON.stringify(langVers), { expires : 31, path: '/' });
+      persistPreferredVersionCookie(preferredVersion);
     }
   });
 
