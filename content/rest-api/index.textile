@@ -17,11 +17,13 @@ jump_to:
   Push API:
     - register device#post-device-registration
     - subscribe to a channel#post-channel-subscription
+    - unregister device#delete-device-registration
+    - unsubscribe from channels#delete-channel-subscription
     - get registered device#get-device-registration
     - list registered devices#get-device-registrations
     - list channel subscriptions#get-channel-subscriptions
-    - unregister device#delete-device-registration
-    - unsubscribe from channel#delete-channel-subscription
+    - list channels#get-channels
+    - publish directly to device#push-publish
   Authentication API:
     - requestToken#request-token
   Application API:
@@ -328,7 +330,8 @@ bc[json]. {
   data: <message payload>,
   encoding: <optional encoding>,
   clientId: <optional explicit client identifier>,
-  connectionKey: <optional private connection key>
+  connectionKey: <optional private connection key>,
+  extras: <optional, see below>
 }
 
 In JSON format, the accepted types for the @data@ payload are:
@@ -346,6 +349,66 @@ bc[sh]. curl -X POST https://rest.ably.io/channels/rest-example/messages \
  -u "{{API_KEY}}" \
  -H "Content-Type: application/json" \
  --data '{ "name": "publish", "data": "example" }'
+
+h5(#message-extras). Message extras
+
+Messages can include an optional @extras@ field, used by extensions to Ably's core realtime service.
+
+h6(#message-extras-push). Send push notification
+
+You can send a push notification to devices "subscribed to the channel":#post-channel-subscription the message is sent to by setting the @push@ field in the @extras@ object, like this:
+
+bc[json]. {
+  <... message fields ...>
+  extras: {
+    push: {
+      data: <arbitrary key-value string-to-string payload>,
+      notification: {
+        title: <string, title to display at the notification>,
+        body: <string, text below title on the expanded notification>,
+        icon: <string, platform-specific>,
+        sound: <string, platform-specific>,
+        collapseKey: <string, platform-specific, used to group notifications together>
+       }
+       apns: <optional, extends and overrides generic values when delivering via APNs>,
+       fcm: <optional, extends and overrides generic values when delivering via GCM/FCM>,
+       web: <optional, extends and overrides generic values when delivering via web>
+    }
+  }
+}
+
+For each underlying transport service (like APNs, FCM/GCM, etc.) an object can be provided with the same shape as the parent object, plus any transport-specific field you may want to add (e. g. @content-available@ for APNs).
+
+Full example of a request publishing a message with a push payload:
+
+bc[sh]. curl -X POST https://rest.ably.io/channels/push-enabled:rest-example/messages \
+ -u "{{API_KEY}}" \
+ -H "Content-Type: application/json" \
+ --data \
+ '
+{
+  "name": "some event name for realtime receivers",
+  "data": "example non-push data for realtime receivers",
+  "extras": {
+    "push": {
+      "notification": {
+        "title": "Hello from Ably!",
+        "body": "Example push notification from Ably."
+      },
+      "data": {
+        "foo": "bar",
+        "baz": "qux"
+      },
+      "apns": {
+        "notification": {
+          "content-available": 1
+          "sound": "ably-ios.wav"
+        }
+      }
+    }
+  }
+}
+'
 
 h5. Parameters
 
@@ -491,6 +554,29 @@ bc[json]. {
   }
 }
 
+The recipient address is necessary and varies by underlying transport service.
+
+For APNs:
+
+bc[json]. {
+  deviceToken: <string>
+}
+
+For GCM/FCM:
+
+bc[json]. {
+  registrationToken: <string>
+}
+
+For web:
+
+bc[json]. {
+  targetUrl: <string>
+  encryptionKey: <string>
+}
+
+Example request:
+
 bc[sh]. curl -X POST https://rest.ably.io/push/deviceRegistrations \
  -u "{{API_KEY}}"
  -H "Content-Type: application/json" \
@@ -516,12 +602,12 @@ None
 h5. Options
 
 - Content-Type := @application/json@, @application/x-msgpack@ or @application/x-www-form-urlencoded@
-- Accept := not applicable
-- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication with @push-subscribe@ capability; when registering with a client ID, the token must be associated with it)
 
 A successful request returns the just-registered device details. It includes a @updateToken@, which is a token that can be used to "authenticate":#token-authentication afterwards to update an existing device registration (for example, for updating a GCM or FCM registration token).
 
-A unsuccessful request returns an error.
+An unsuccessful request returns an error.
 
 h3(#post-channel-subscription). Subscribe to a channel
 
@@ -548,6 +634,75 @@ bc[sh]. curl -X POST https://rest.ably.io/push/channelSubscriptions \
 }
 '
 
+h5. Parameters
+
+None
+
+h5. Options
+
+- Content-Type := @application/json@, @application/x-msgpack@ or @application/x-www-form-urlencoded@
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication with @push-subscribe@ capability; when subscribing for a client ID, the token must be associated with it)
+
+A successful request returns the subscription details.
+
+A unsuccessful request returns an error.
+
+h3(#delete-device-registration). Unregister devices for push notifications
+
+h6. DELETE rest.ably.io/push/deviceRegistrations
+
+Unregister devices. All their subscriptions for receiving push notifications through channels will be removed.
+
+Example request:
+
+bc[sh]. curl -X DELETE https://rest.ably.io/push/deviceRegistrations?deviceId=01ARZ3NDEKTSV4RRFFQ69G5FAV \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- deviceId := Filter to restrict to subscriptions for that @devideId@. Cannot be set when @clientId@ is set.
+- clientId := Filter to restrict to subscriptions associated with that @clientId@. Cannot be set when @deviceId@ is set.
+
+h5. Options
+
+- Content-Type := not applicable
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication with @push-subscribe@ capability; when deleting by client ID, the token must be associated with it)
+
+h5. Returns
+
+A successful request returns nothing.
+
+An unsuccessful request returns an error.
+
+h3(#delete-channel-subscription). Unsubscribe from push notifications for channels
+
+h6. DELETE rest.ably.io/push/channelSubscriptions
+
+Stop receiving push notifications when push messages arrive to channels.
+
+Example request:
+
+bc[sh]. curl -X DELETE https://rest.ably.io/push/channelSubscriptions?deviceId=01ARZ3NDEKTSV4RRFFQ69G5FAV \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- channel := string, optional. If not set, all subscriptions for all channels will be deleted.
+- deviceId := Filter to restrict to subscriptions for that @devideId@. Cannot be set when @clientId@ is set.
+- clientId := Filter to restrict to subscriptions associated with that @clientId@. Cannot be set when @deviceId@ is set.
+
+h5. Options
+
+- Content-Type := not applicable
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication with @push-subscribe@ capability; when deleting by client ID, the token must be associated with it)
+
+h5. Returns
+
+A successful request returns nothing.
+
+An unsuccessful request returns an error.
+
 h3(#get-device-registration). Get details from a registered device
 
 h6. GET rest.ably.io/push/deviceRegistrations/@<device id>@
@@ -567,7 +722,7 @@ h5. Options
 
 - Content-Type := not applicable
 - Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
-- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication with @push-admin@ capability)
 
 h5. Returns
 
@@ -607,7 +762,7 @@ h5. Options
 
 - Content-Type := not applicable
 - Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
-- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication with @push-admin@ capability)
 
 h5. Returns
 
@@ -648,7 +803,7 @@ h5. Options
 
 - Content-Type := not applicable
 - Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
-- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication with @push-admin@ capability)
 
 h5. Returns
 
@@ -660,56 +815,115 @@ bc[json]. [{
   channel: <string>
 }]
 
-h3(#delete-device-registration). Unregister device for push notifications
+h3(#get-channels). List all channels with at least one subscribed device
 
-h6. DELETE rest.ably.io/push/deviceRegistrations
-
-Unregister device. All its subscriptions will be removed.
+h6. GET rest.ably.io/push/channels
 
 Example request:
 
-bc[sh]. curl -X DELETE https://rest.ably.io/push/deviceRegistrations?deviceId=01ARZ3NDEKTSV4RRFFQ69G5FAV \
+bc[sh]. curl https://rest.ably.io/push/channelSubscriptions \
  -u "{{API_KEY}}"
 
 h5. Parameters
 
-- deviceId := Filter to restrict to subscriptions for that @devideId@. Cannot be set when @clientId@ is set.
-- clientId := Filter to restrict to subscriptions associated with that @clientId@. Cannot be set when @deviceId@ is set.
+None
 
 h5. Options
 
 - Content-Type := not applicable
-- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication with @push-admin@ capability)
 
 h5. Returns
 
-A successful request returns nothing.
+A successful request returns a "paginated response":#pagination of:
 
-An unsuccessful request returns an error.
+bc[json]. [<string, channel name>]
 
-h3(#delete-channel-subscription). Unsubscribe from push notifications
+h3(#push-publish). Publish a push notification to a single device
 
-h6. DELETE rest.ably.io/push/channelSubscriptions
+Convenience endpoint to deliver a push notification payload to a single device.
 
-Stop receiving push notifications when push messages arrive to channels.
+Note that this bypasses. If you want to send a push notification to multiple devices, or use a more flexible publish-subscribe architecture so that you don't need to know about recipient devices's details, you should look at "registering devices for push":#post-device-registration, then "subscribe them to channels":#post-channel-subscription, and then "send messages to the channels with push payloads":#message-extras-push.
+
+h6. POST rest.ably.io/push/publish
+
+The request body is an object of the form:
+
+bc[json]. {
+  recipient: <object>
+  <... rest of the fields just like a normal push-enabled message ...>
+}
+
+The @recipient@ field supports delivering either to devices "registered to Ably":#post-device-registration by device ID, by their associated client ID, or directly to devices using the underlying notifications service (GCM, APNs, etc.), thus bypassing registrations to Ably altogether.
+
+By device ID:
+
+bc[json]. {
+  deviceId: <string>
+}
+
+By client ID:
+
+bc[json]. {
+  clientId: <string>
+}
+
+For APNs devices:
+
+bc[json]. {
+  transportType: "apns",
+  deviceToken: <string>
+}
+
+For GCM/FCM devices:
+
+bc[json]. {
+  transportType: <fcm, gcm>,
+  registrationToken: <string>
+}
+
+For web:
+
+bc[json]. {
+  transportType: "web",
+  targetUrl: <string>,
+  encryptionKey: <string>
+}
+
+The rest of the fields are as "in a normal push-enabled Ably message":#message-extras-push.
 
 Example request:
 
-bc[sh]. curl -X DELETE https://rest.ably.io/push/channelSubscriptions?deviceId=01ARZ3NDEKTSV4RRFFQ69G5FAV \
- -u "{{API_KEY}}"
+bc[sh]. curl -X POST https://rest.ably.io/push/publish \
+ -u "{{API_KEY}}" \
+ -H "Content-Type: application/json" \
+ --data \
+ '
+ {
+  "recipient": {
+    "clientId": "myClientId"
+  }
+  "notification": {
+    "title": "Hello from Ably!",
+    "body": "Example push notification from Ably."
+  },
+  "data": {
+    "foo": "bar",
+    "baz": "qux"
+  }
+}
+'
 
 h5. Parameters
 
-- channel := string, optional. If not set, all subscriptions for all channels will be deleted.
-- deviceId := Filter to restrict to subscriptions for that @devideId@. Cannot be set when @clientId@ is set.
-- clientId := Filter to restrict to subscriptions associated with that @clientId@. Cannot be set when @deviceId@ is set.
+None
 
 h5. Options
 
-- Content-Type := not applicable
+- Content-Type := @application/json@, @application/x-msgpack@ or @application/x-www-form-urlencoded@
+- Accept := not applicable
 - Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
-
-h5. Returns
 
 A successful request returns nothing.
 
