@@ -50,6 +50,7 @@ The following guidance aims to help you choose which system to use in any given 
 * a secure, unmediated connection exists between the client and the Ably service. Keys should only really be sent over a TLS connection (that's either an HTTPS connection, or an encrypted realtime connection). A key should not be used over a proxied connection unless the proxy is trusted
 * access needs to be granted selectively to groups of clients to specific channels or channel namespaces, but only a small number of such access control groups need to be established
 * clients are trusted to assume any client ID in the operations they are permitted to perform
+* you don't wish to run your own server to control access
 
 **Token authentication** is appropriate when:
 
@@ -149,10 +150,26 @@ API keys and their capabilities are "configured using the dashboard":https://sup
 Capabilities for tokens are determined as follows:
 
 * If no capability is specified in the token request, then the token will be given the full set of capabilities assigned to the issuing key, "see example":#capabilities-explained-all;
-* If a set of capabilities are requested, then the token will be assigned the intersection of the requested capability and the capability of the issuing key, "see example":#capabilities-explained-intersection. Note that wildcards are supported both for the scope and operation parts of a capability.
-* If a set of capabilities are requested, and the requested capabilities are incompatible with the issuing key i.e. none of the capabilities requested can be assigned to the token, then this will result in an error, "see example":#capabilities-explained-error
+* If a set of capabilities are requested, then the token will be assigned the intersection of the requested capability and the capability of the issuing key, "see example":#capabilities-explained-intersection;
+* If a set of capabilities are requested, and the intersection between those and the API key's capabilities is empty (i.e. they are entirely incompatible), then the token request will result in an error, "see example":#capabilities-explained-error.
 
 See "capability operations":#capability-operations below for the complete set of supported operations on a channel.
+
+
+h4(#wildcards). Resource names and wildcards
+
+Capabilities are a map from resources to a list of "operations":#capability-operations. Each resource can match a single channel e.g. @channel@, or multiple channels using wildcards (@*@). You can only use wildcards to replace one or more segments (delimited by @:@) of the resource name. For example:
+
+* A resource of @*@ will match any channel
+* A resource of @namespace:*@ will match any channel in the @namespace@ namespace, including @namespace:channel@, and @namespace:channel:other@
+* A resource of @foo:*:baz@ will match @foo:bar:baz@, @foo:bar:bam:baz@, etc
+* A resource of @foo*@ (without a colon!) will only match the single channel literally called @foo*@, which probably isn't what you want
+
+A resource can also be a queue, in which case it will start with @[queue]@, e.g. @[queue]appid-queuename@. (This is unambiguous as channel names may not begin with a @[@). Similar wildcard rules apply, e.g. @[queue]*@ will match all queues.
+
+You can also have a resource name of @[*]*@, which will match both all queues and all channels.
+
+Wildcards are also supported for "operations":#capability-operations, by requesting an operations list of @['*']@.
 
 h4(#capabilities-example). Capabilities example in code
 
@@ -169,13 +186,13 @@ Given an API key exists with the following capabilities:
 }
 ```
 
-And a token is requested without requiring any capabilities i.e. this implies that all capabilities are requested:
+If token is requested without requiring any capabilities:
 
 ```[javascript]
 auth.requestToken(tokenCallback)
 ```
 
-Then the token request is treated as requesting all capabilities i.e. @{"*":["*"]}@, and all capabilities of the API key are assigned to the token. The capabilities for the issued token would be as follows:
+Then the token request is treated as requesting all capabilities, i.e. @{"[*]*":["*"]}@), and all capabilities of the API key are assigned to the token. The capabilities for the issued token would be as follows:
 
 ```[json]
 {
@@ -201,7 +218,7 @@ And a token is requested with the following explicit capabilities:
 ```[javascript]
 auth.requestToken({ capability: {
   "chat:bob": ["subscribe"], // only "subscribe" intersects
-  "status": ["*"], // "*"" interacts with "subscribe"
+  "status": ["*"], // "*"" intersects with "subscribe"
   "secret": ["publish", "subscribe"] // key does not have access to "secret" channel
 }}, tokenCallback)
 ```
@@ -233,7 +250,7 @@ auth.requestToken({ capability: {
 }}, tokenCallback)
 ```
 
-Then Ably will be unable to issue a token because the requested capabilities do not intersect with the API key's capabilities i.e. they are entirely incompatible. In the example above, @requestToken@ will call the callback with an error.
+Then Ably will be unable to issue a token because the intersection of the requested capabilities and the API key's capabilities is empty – they are entirely incompatible. In the example above, @requestToken@ will call the callback with an error.
 
 h4(#capabilities-explained-wider-scope). Token request with wider channel scope than the key
 
