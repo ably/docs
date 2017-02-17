@@ -15,7 +15,6 @@ jump_to:
     - Channel#rest-channel
     - Presence#rest-presence
     - Encryption#rest-encryption
-    - Push notifications#rest-push
   Realtime client library:
     - RealtimeClient
     - Connection#realtime-connection
@@ -24,6 +23,9 @@ jump_to:
     - Presence#realtime-presence
     - EventEmitter#eventemitter
     - State conditions and operations#state-conditions-and-operations
+  Push notifications:
+    - Push notifications#push-notifications
+    - Activation state machine#activation-state-machine
   Types:
     - Data types#types
     - Options#options
@@ -250,10 +252,6 @@ h3(#rest-encryption). Encryption
 * @(RSE2)@ @Crypto::generateRandomKey@ function
 ** @(RSE2a)@ Takes an optional @keyLength@ parameter, which is the length in bits of the key to be generated. If unspecified, this is equal to the default @keyLength@ of the default algorithm: for @AES@, 256 bits.
 ** @(RSE2b)@ Returns (or calls back with, if the language cryptographic randomness primitives are blocking or async) the key as a binary (e.g. a byte array, depending on the language)
-
-h2(#rest-push). Push notifications
-
-TODO
 
 h2(#realtime). Realtime client library features
 
@@ -865,6 +863,85 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
 </tr>
 
 </table>
+
+h2(#push-notifications). Push notifications
+
+* @(RSH1)@ @Push#publish(recipient, data)@ performs a HTTP request to "/push/publish":/rest-api/#push-publish
+* @(RSH2)@ The following should only apply to platforms that support receiving push notifications:
+** @(RSH2a)@ @Push#activate@ sends a @CalledActivate@ event to "the state machine":#RSH3.
+** @(RSH2b)@ @Push#deactivate@ sends a @CalledDeactivate@ event to "the state machine":#RSH3.
+** @(RSH2c)@ Whenever, from the platform's APIs, details for sending push notifications to the local device (e. g. GCM's registration token) is received, a @GotPushDeviceDetails@ event is sent to "the state machine":#RSH3.
+
+h3(#activation-state-machine). Activation state machine
+
+* @(RSH3)@ In platforms that support receiving push notifications, in order to connect the device's push features with Ably's, the library must perform the process described in the following abstract state machine. While this process should be implemented in whatever way better fits the concrete platform, it should be taken into account that its lifetime is that of the the _app_ that runs it, which outlives that of the @Rest@ instance or (typically) the process running the app. This typically forces some kind of on-disk storage to which the state machine's state must be persisted, so that it can be recovered later by new instances and processes running the app triggered by external events.
+** @(RSH3a)@ State @NotActivated@ (the initial one).
+*** @(RSH3a1)@ On event @CalledDeactivate@:
+**** @(RSH3a1a)@ Makes @Push#deactivate@ return or call its callback with no error.
+**** @(RSH3a1b)@ Transitions to @NotActivated@.
+*** @(RSH3a2)@ On event @CalledActivate@:
+**** @(RSH3a2a)@ If the local device has @id@ and @updateToken@, transitions to @WaitingForNewPushDeviceDetails@.
+**** @(RSH3a2b)@ If the local device has the necessary push details (registration token, etc.), transitions to @GotPushDeviceDetails@.
+**** @(RSH3a2c)@ Otherwise, transitions to @WaitingForPushDeviceDetails@.
+** @(RSH3b)@ State @CalledActivate@:
+*** @(RSH3b1)@ On event @CalledActivate@:
+**** @(RSH3b1a)@ Transitions ot @CalledActivate@.
+*** @(RSH3b2)@ On event @CalledDeactivate@:
+**** @(RSH3b2a)@ Makes @Push#deactivate@ return or call its callback with no error.
+**** @(RSH3b2b)@ Transitions to @NotActivated@.
+*** @(RSH3b3)@ On event @GotPushDeviceDetails@:
+**** @(RSH3b3a)@ If a custom @registerCallback@ was provided to @Push#activate@, pass it the local @DeviceDetails@ updated with the push details.
+**** @(RSH3b3b)@ Otherwise, make an asynchronous HTTP request to "/push/deviceRegistrations":/rest-api/#post-device-registration using the local @DeviceDetails@ updated with the push details as body.
+**** @(RSH3b3c)@ Either way, when the registration is done, a @GotUpdateToken@ or @GettingUpdateTokenFailed@ event should be fired.
+**** @(RSH3b3d)@ Transitions to @WaitingForUpdateToken@.
+** @(RSH3c)@ State @WaitingForUpdateToken@:
+*** @(RSH3c1)@ On event @CalledActivate@:
+**** @(RSH3c1a)@ Transitions to @WaitingForUpdateToken@.
+*** @(RSH3c2)@ On event @GotUpdateToken@:
+**** @(RSH3c2a)@ Updates the local @DeviceDetails@ with it.
+**** @(RSH3c2b)@ Makes @Push#activate@ return or call its callback with no error.
+**** @(RSH3c2c)@ Transitions to @WaitingForNewPushDeviceDetails@.
+*** @(RSH3c3)@ On event @GettingUpdateTokenFailed@:
+**** @(RSH3c3a)@ Makes @Push#activate@ return or call its callback with the error.
+**** @(RSH3c3b)@ Transitions to @NotActivated@.
+** @(RSH3d)@ State @WaitingForNewPushDeviceDetails@:
+*** @(RSH3d1)@ On event @CalledActivate@:
+**** @(RSH3d1a)@ Makes @Push#activate@ return or call its callback with no error.
+**** @(RSH3d1b)@ Transitions to @WaitingForNewPushDeviceDetails@.
+*** @(RSH3d2)@ On event @CalledDeactivate@:
+**** @(RSH3d2a)@ If a custom @deregisterCallback@ was provided to @Push#deactivate@, pass it the local @DeviceDetails@'s id.
+**** @(RSH3d2b)@ Otherwise, make an asynchronous DELETE HTTP request to "/push/deviceRegistrations":/rest-api/#delete-device-registration using the local @DeviceDetails@'s ID.
+**** @(RSH3d2c)@ Either way, when the registration is done, a @Deregistered@ or @DeregistrationFailed@ event should be fired.
+**** @(RSH3d2d)@ Transitions to @WaitingForDeregistration@.
+*** @(RSH3d3)@ On event @GotPushDeviceDetails@ (note that this will only happen on platforms whose push device details, after first set, can change, e. g. GCM's registration token refresh):
+**** @(RSH3d3a)@ If a custom @registerCallback@ was provided to @Push#activate@, pass it the local @DeviceDetails@ updated with the push details.
+**** @(RSH3d3b)@ Otherwise, make an asynchronous PUT HTTP request to "/push/deviceRegistrations/:deviceId":/rest-api/#update-device-registration using the local @DeviceDetails@ 's push details as body.
+**** @(RSH3d3c)@ Either way, when the registration is done, a @RegistrationUpdated@ or @UpdatingRegistrationFailed@ event should be fired.
+**** @(RSH3d3d)@ Transitions to @WaitingForRegistrationUpdate@.
+** @(RSH3e)@ State @WaitingForRegistrationUpdate@:
+*** @(RSH3e1)@ On event @CalledActivate@:
+**** @(RSH3e1a)@ Makes @Push#activate@ return or call its callback with no error.
+**** @(RSH3e1b)@ Transitions to @WaitingForNewPushDeviceDetails@.
+*** @(RSH3e2)@ On event @RegistrationUpdated@:
+**** @(RSH3e2a)@ Transitions to @WaitingForNewPushDeviceDetails@.
+*** @(RSH3e3)@ On event @UpdatingRegistrationFailed@:
+**** @(RSH3e3a)@ Calls the @updateFailedCallback@ provided to @Push#activate@ with the error.
+**** @(RSH3e3b)@ Transitions to @AfterRegistrationUpdateFailed@.
+** @(RSH3f)@ State @AfterRegistrationUpdateFailed@:
+*** @(RSH3f1)@ On events @CalledActivate@ or @GotPushDeviceDetails@:
+**** @(RSH3f1a)@ Does the same as "RSH3d3":#RSH3d3.
+*** @(RSH3f2)@ On events @CalledDeactivate@:
+**** @(RSH3f2a)@ Does the same as "RSH3d2":#RSH3d2.
+** @(RSH3g)@ State @WaitingForDeregistration@:
+*** @(RSH3g1)@ On event @CalledDeactivate@:
+**** @(RSH3g1a)@ Transitions to @WaitingForDeregistration@.
+*** @(RSH3g2)@ On event @Deregistered@:
+**** @(RSH3g2a)@ Removes the @updateToken@ from the local @DeviceDetails@.
+**** @(RSH3g2b)@ Makes @Push#deactivate@ return or call its callback with no error.
+**** @(RSH3g2c)@ Transitions to @NotActivated@.
+*** @(RSH3g3)@ On event @DeregistrationFailed@:
+**** @(RSH3g3a)@ Makes @Push#deactivate@ return or call its callback with the error.
+**** @(RSH3g3b)@ Transitions to the previous state, which is either @WaitingForNewPushDeviceDetails@ or @AfterRegistrationUpdateFailed@ (so, in purity, @WaitingForDeregistration@ are two separate states, one for each previous state).
 
 h2. Types
 
@@ -1531,14 +1608,17 @@ class LocalDevice extends DeviceDetails:
   resetUpdateToken() => io
 
 class Push:
-  publish(params: Dict<String, String>, JsonObject) => io
+  publish(recipient: JsonObject, data: JsonObject) => io
   admin: PushAdmin
 
   // Only on platforms that support receiving notifications:
 
   activate(
-    registerCallback: ((ErrorInfo?, DeviceDetails?) -> io String)?
-  ) => io ErrorInfo? // RSH2c
+    registerCallback: ((ErrorInfo?, DeviceDetails?) -> io String)?,
+    // Only on platforms that, after first set, can update later its push
+    // device details:
+    updateFailedCallback: ((ErrorInfo) ->)
+  ) => io ErrorInfo? // RSH3
   deactivate(
     deregisterCallback: ((ErrorInfo?, deviceId: String?) -> io)?
   ) => io ErrorInfo?
