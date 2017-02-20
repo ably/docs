@@ -43,7 +43,7 @@ When a client attaches to a channel, a channel is implicitly created within the 
 
 Every WebHook request will contain one or more lifecycle events in the root level attribute @items@ which contains an array of events. See "WebHook transport details":#webhook-transport below to find out more about batching and expected throughput.
 
-Each channel lifecycle event in the @items@ array contains a JSON-like object with the following attributes:
+Each channel lifecycle event in the @items@ array consists of a JSON-like object with the following attributes:
 
 - name := the event type "@channel.opened@" or "@channel.closed@"
 - data := a JSON-like object containing a single attribute @name@ which is the name of the channel that the lifecycle event applies to
@@ -95,23 +95,48 @@ If you are unfamiliar with how presence works in Ably and what events are suppor
 
 When a member enters, updates, or leaves a channel, a presence WebHook event is triggered.
 
-Every WebHook request will contain one or more presence event envelopes in the root level attribute @items@ which contains an array of presence event message. See "WebHook transport details":#webhook-transport below to find out more about batching and expected throughput.
+Every WebHook request will contain one or more presence event envelopes in the root level @items@ attribute, each of which in turn contains an array of presence events. See "WebHook transport details":#webhook-transport below to find out more about batching and expected throughput.
 
-Each presence event envelope in the @items@ array contains a JSON-like object with the following attributes:
+Each presence event envelope in the @items@ array consists of a JSON-like object with the following attributes:
 
 - name := the event type "@presence.message@"
+- webhookId := an internal unique ID for the configured WebHook
+- source := the source for the WebHook, namely "@channel.presence@"
+- timestamp := a timestamp represented as milliseconds since the epoch for the presence event
 - data := a JSON-like object containing the attributes defined below in "JSONPath format":http://goessner.net/articles/JsonPath/ @data.*@:
 - data.channelId := name of the channel that the presence event belongs to
 - data.site := an internal site identifier indicating which primary data center the member is present in
-- data.presence := an @Array@ of presence events with fields for each event described below
-- data.presence.clientId := the client identifier for the member. Find out more about "identified clients":https://support.ably.io/solution/articles/3000038608-authenticated-and-identified-clients
-- data.presence.connectionId := the public unique identifier for the connection the member is using. Find out more about "@connectionId@":/realtime/connection#id
-- data.presence.action := a string representing the presence event being one of "@enter@", "@update@" or "@leave@"
-- data.presence.data := an optional payload if provided when present. Find out more about "member data":/realtime/presence/#member-data
-- data.presence.encoding := if the data payload is present, this encoding specifies the format of the data. If missing or empty, then the data payload is a string type. For example, if JSON data is added to a presence member's "@data@":/realtime/presence/#member-data, then the @encoding@ would be "@json/utf-8@". Please note, if you are using an Ably client library with version number 0.9 or greater, you can use the "@Message#fromEncoded@ utility method":https://github.com/ably/docs/pull/182 to simplify decoding message @data@
-- webhookId := an internal unique ID for the configured WebHook
-- source := the source for the WebHook, namely "@channel.presence@"
-- timestamp := a timestamp represented as milliseconds since epoch for the presence event
+- data.presence := an @Array@ of presence events
+
+Each member of @data.presence@ has the following fields:
+
+- clientId := the client identifier for the member. Find out more about "identified clients":https://support.ably.io/solution/articles/3000038608-authenticated-and-identified-clients
+- connectionId := the public unique identifier for the connection the member is using. Find out more about "@connectionId@":/realtime/connection#id
+- action := the presence action, as an integer defined by the "PresenceMessage Action enum":https://www.ably.io/documentation/realtime/types#presence-action . (Note that in old webhooks, identified by an @X-ABLY-VERSION@ header of @"0.8"@, this field was a string; in newly created webhooks it is an integer in order to be decodable by @PresenceMessage#fromEncoded@, see below)
+- data := an optional payload if provided when present. Find out more about "member data":/realtime/presence/#member-data
+- encoding := if the data payload is present, this encoding specifies the format of the data. If missing or empty, then the data payload is a string type. For example, if JSON data is added to a presence member's "@data@":/realtime/presence/#member-data, then the @encoding@ would be "@json/utf-8@"
+- id := unique ID assigned by Ably to this presence event
+- timestamp := the time in milliseconds since the epoch when this presence event was received by Ably
+
+h4. Decoding presence events
+
+Each member of @data.presence@ is a 'raw' presence event. Presence messages sent "over the realtime service":/realtime/channels-messages are automatically decoded into "@PresenceMessages@":/realtime/types#presence-message object by the Ably client library. With webhooks you need to to do this explicitly, using "@PresenceMessage.fromEncodedArray@":/realtime/presence#from-encoded-array on the @data.presence@ array, or "@PresenceMessage.fromEncoded@":/realtime/presence#from-encoded or an individual member of that array. This will transform them into an array of "@PresenceMessages@":/realtime/types#presence-message (or in the case of @fromEncoded@, an individual "@PresenceMessage@":/realtime/types#presence-message). This has several advantages, e.g.:
+
+* It will decode the (numerical) action into a "@Presence action@":/realtime/presence#presence-action string (such as "@enter@", "@update@", or "@leave@")
+* It will fully decode any @data@ (using the @encoding@) back into the same datatype that it was sent in (or an equivalent in each client library's language)
+* If you are using "encryption":/general/encryption, you can pass your encryption key to the method and it will decrypt the @data@ for you
+
+We recommend you do this for all presence messages you receive over webhooks. For example (using ably-js):
+
+```[javascript]
+webhookMessage.items.forEach((item) => {
+  const presMsgs = Ably.Realtime.PresenceMessage.fromEncodedArray(item.data.presence);
+  presMsgs.forEach((presenceMessage) => {
+    console.log(presenceMessage.toString());
+  })
+})
+```
+
 
 h4. Example @channel.presence@ @enter@ JSON payload
 
@@ -131,7 +156,9 @@ h4. Example @channel.presence@ @enter@ JSON payload
                {
                   "clientId":"Sam",
                   "connectionId":"JYNDvRnLPc",
-                  "action":"enter"
+                  "action":2,
+                  "id":"JYNDvRnLPc:0:0",
+                  "timestamp":1487253048676
                }
             ]
          }
@@ -158,8 +185,10 @@ h4. Example @channel.presence@ @update@ and @leave@ JSON payload
                {
                   "clientId":"Mike",
                   "connectionId":"SDJLqIgGXT",
-                  "action":"update",
+                  "action":4,
                   "data":"status:typing"
+                  "id":"SDJLqIgGXT:0:0",
+                  "timestamp":1467280513129,
                }
             ]
          }
@@ -177,13 +206,17 @@ h4. Example @channel.presence@ @update@ and @leave@ JSON payload
                {
                   "clientId":"Mike",
                   "connectionId":"SDJLqIgGXT",
-                  "action":"leave"
+                  "action":3,
+                  "id":"SDJLqIgGXT:1:0",
+                  "timestamp":1467280523088,
                },
                {
                   "clientId":"Sam",
                   "connectionId":"Fa9ahWh2HA",
-                  "action":"update",
+                  "action":4,
                   "data":"status:typing"
+                  "id":"Fa9ahWh2HA:1:0",
+                  "timestamp":1467280523088,
                }
             ]
          }
@@ -196,23 +229,47 @@ h2(#messages). Messages
 
 When a message is published on a channel, a message WebHook event is triggered.
 
-Every WebHook request will contain one or more enveloped messages in the root level attribute @items@ which in turn contains one or messages. See "WebHook transport details":#webhook-transport below to find out more about batching and expected throughput.
+Every WebHook request will contain one or more enveloped messages in the root level attribute @items@, each of which in turn contains one or messages. See "WebHook transport details":#webhook-transport below to find out more about batching and expected throughput.
 
-Each message envelope in the @items@ array contains a JSON-like object with the following attributes:
+Each message envelope in the @items@ array consists of a JSON-like object with the following attributes:
 
 - name := the event type "@channel.message@"
-- data := a JSON-like object containing the attributes defined below in "JSONPath format":http://goessner.net/articles/JsonPath/ @data.*@:
-- data.channelId := name of the channel that the presence event belongs to
-- data.site := an internal site identifier indicating the data center from which the message was published
-- data.message := an @Array@ of messages with fields for each message described below
-- data.message.clientId := optional client identifier for the publisher of the message. Find out more about "identified clients":https://support.ably.io/solution/articles/3000038608-authenticated-and-identified-clients
-- data.message.connectionId := the public unique identifier for the publisher's connection. Find out more about "@connectionId@":/realtime/connection#id
-- data.message.name := a string representing the event name for the published message, see the "publish method":/rest/channels-messages#publish
-- data.message.data := an optional data payload for the published message. Find out more about "message data":/rest/channels-messages#message
-- data.message.encoding := if the data payload is present, this encoding specifies the format of the data. If missing or empty, then the data payload is a string type. For example, if JSON data is set for the published message's "@data@":/rest/channels-messages/#message attribute, then the @encoding@ would be "@json/utf-8@". Please note, if you are using an Ably client library with version number 0.9 or greater, you can use the "@Message#fromEncoded@ utility method":https://github.com/ably/docs/pull/182 to simplify decoding message @data@
 - webhookId := an internal unique ID for the configured WebHook
 - source := the source for the WebHook, namely "@channel.message@"
 - timestamp := a timestamp represented as milliseconds since epoch for the published message
+- data := a JSON-like object containing the attributes defined below in "JSONPath format":http://goessner.net/articles/JsonPath/ @data.*@:
+- data.channelId := name of the channel that the presence event belongs to
+- data.site := an internal site identifier indicating the data center from which the message was published
+- data.messages := an @Array@ of messages with fields for each message described below
+
+Each member of @data.messages@ has the following fields:
+
+- clientId := optional client identifier for the publisher of the message. Find out more about "identified clients":https://support.ably.io/solution/articles/3000038608-authenticated-and-identified-clients
+- connectionId := the public unique identifier for the publisher's connection. Find out more about "@connectionId@":/realtime/connection#id
+- name := a string representing the event name for the published message, see the "publish method":/rest/channels-messages#publish
+- data := an optional data payload for the published message. Find out more about "message data":/rest/channels-messages#message
+- encoding := if the data payload is present, this encoding specifies the format of the data. If missing or empty, then the data payload is a string type. For example, if JSON data is set for the published message's "@data@":/rest/channels-messages/#message attribute, then the @encoding@ would be "@json/utf-8@"
+- id := unique ID assigned by Ably to this message
+- timestamp := the time in milliseconds since the epoch when this message was received by Ably
+
+h4. Decoding messages
+
+Each member of @data.messages@ is a 'raw' message. Messages sent "over the realtime service":/realtime/channels-messages are automatically decoded into "@Messages@":/realtime/types#message object by the Ably client library. With webhooks you need to to do this explicitly, using "@Message.fromEncodedArray@":/realtime/channels-messages#from-encoded-array on the @data.messages@ array, or "@Message.fromEncoded@":/realtime/channels-messages#from-encoded or an individual member of that array. This will transform them into an array of "@Messages@":/realtime/types#message (or in the case of @fromEncoded@, an individual "@Message@":/realtime/types#message). This has several advantages, e.g.:
+
+* It will fully decode any @data@ (using the @encoding@) back into the same datatype that it was sent in (or an equivalent in each client library's language)
+* If you are using "encryption":/general/encryption, you can pass your encryption key to the method and it will decrypt the @data@ for you
+
+We recommend you do this for all messages you receive over webhooks. For example (using ably-js):
+
+```[javascript]
+webhookMessage.items.forEach((item) => {
+  const messages = Ably.Realtime.Message.fromEncodedArray(item.data.messages);
+  messages.forEach((message) => {
+    console.log(message.toString());
+  })
+})
+```
+
 
 h4. Example @channel.message@ JSON payload
 
@@ -249,7 +306,7 @@ h2(#configure). Configuring a WebHook
 
 WebHooks are configured in your "account dashboard":https://support.ably.io/solution/articles/3000048664-how-do-i-access-my-account-dashboard. The following fields are available for each configured WebHook:
 
-- events := Allows you to choose to receive either @Channel Lifecycle@ or @Presence@ events
+- events := Allows you to choose to receive either @Channel Lifecycle@, @Message@, or @Presence@ events
 - url := The URL of your server where the WebHook JSON data is posted
 - custom headers := Optionally allows you to provide a set of headers that will be included in all HTTP POST requests. You must use the JSON array like format @["XCustom-Header-1:value1","Custom-Header-2:value2"]@
 - sign with key := Ably will optionally sign the data with the private key you choose and include an HTTP header @X-Ably-Signature@ in every HTTP post request issued to your server. See "WebHook security":#security for more details.
