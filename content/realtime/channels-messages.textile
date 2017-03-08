@@ -5,10 +5,10 @@ index: 30
 languages:
   - javascript
   - nodejs
-  - ruby,0.8
-  - java,0.8
-  - swift,0.8
-  - objc,0.8
+  - ruby
+  - java
+  - swift
+  - objc
   - csharp,0.8
 jump_to:
   Help with:
@@ -143,10 +143,11 @@ bc[jsall]. Ably.Realtime.Crypto.generateRandomKey(function(err, key) {
 
 bc[java]. CipherParams params = Crypto.getDefaultParams(key);
 ChannelOptions options = new ChannelOptions();
-options.cipher = params;
+options.encrypted = true;
+options.cipherParams = params;
 Channel channel = realtime.channels.get("channelName", options);
 
-bc[csharp]. byte[] key = Crypto.GetRandomKey();
+bc[csharp]. byte[] key = Crypto.GenerateRandomKey();
 var cipherParams = Crypto.GetDefaultParams(key);
 var channelOpts = new ChannelOptions(cipherParams);
 var encryptedChannel = realtime.Channels.Get("channelName", channelOpts);
@@ -407,7 +408,7 @@ Previously registered listeners can be removed individually or all together.
 
 h3(#handling-failures). Handling channel failures
 
-Channel attach and detach operations are synchronous - after initiating an attach request, the client must wait for a response from Ably that confirms that the channel is established on the service.
+Channel attach and detach operations are asynchronous - after initiating an attach request, the client will wait for a response from Ably that confirms that the channel is established on the service and then trigger a state change event.
 
 The client libraries will attempt to automatically recover from non-fatal error conditions. However, you can handle them yourself if you prefer by subscribing to channel state changes, or <span lang="default">using the callbacks available</span><span lang="java">waiting for a result</span> when explicitly calling @attach@.
 
@@ -720,7 +721,7 @@ if(resultPage.hasNext()) {
   System.out.println(nextPage.items().length + " messages received in second page");
 }
 
-bc[csharp]. var history = await channel.HistoryAsync(untilAttached: true);
+bc[csharp]. var history = await channel.HistoryAsync(untilAttach: true);
 Console.WriteLine($"{history.Items.Count} messages received in the first page");
 if (history.HasNext)
 {
@@ -830,7 +831,8 @@ h6(#error-reason).
   ruby:    error_reason
   csharp:  ErrorReason
 
-When a channel failure occurs this <span lang="default,ruby">attribute</span><span lang="java">member</span><span lang="jsall,objc,swift,csharp">property</span> contains the <span lang="java,ruby">"@AblyException@":/realtime/types#ably-exception</span><span lang="default">"@ErrorInfo@":/realtime/types#error-info</span>.
+When a channel failure occurs this <span lang="default,ruby">attribute</span><span lang="java">member</span><span lang="jsall">property</span><span lang="objc,swift,csharp">property</span> is populated.
+The type is <span lang="default">"@ErrorInfo@":/realtime/types#error-info</span><span lang="java,ruby">"@AblyException@":/realtime/types#ably-exception</span>.
 
 h6(#name).
   default: name
@@ -859,7 +861,7 @@ bq(definition#publish-data).
   csharp:   void Publish(string name, object data, Action<bool, ErrorInfo> callback = null, string clientId = null)
   objc,swift: publish(name: String?, data: AnyObject?, callback: (("ARTErrorInfo":/realtime/types#error-info?) -> Void)?)
 
-Publish a single message on this channel based on a given event name and payload. A <span lang="default">callback</span><span lang="java">listener</span> may optionally be passed in to this call to be notified of success <span lang="default">or failure</span><span lang="ruby"></span> of the operation.
+Publish a single message on this channel based on a given event name and payload. A <span lang="default">callback</span><span lang="java">listener</span> may optionally be passed in to this call to be notified of success <span lang="default">or failure</span><span lang="ruby"></span> of the operation. If the channel is @initialized@ (i.e. no attempt to attach has yet been made for this channel), then calling @publish@ will implicitly attach the channel.
 
 bq(definition#publish-msg-array).
   default: publish(Object[] messages, callback("ErrorInfo":/realtime/types#error-info err))
@@ -868,7 +870,7 @@ bq(definition#publish-msg-array).
   csharp:  void Publish(IEnumerable<"Message":#message> messages, Action<bool, "ErrorInfo":/realtime/types#error-info> callback = null)
   objc,swift: publish(messages: [ "ARTMessage":#message ], callback: (("ARTErrorInfo":/realtime/types#error-info?) -> Void)?)
 
-Publish several messages on this channel. A <span lang="default">callback</span><span lang="java">listener</span><span lang="ruby">block</span> may optionally be passed in to this call to be notified of success <span lang="default">or failure</span><span lang="ruby"></span> of the operation.
+Publish several messages on this channel. A <span lang="default">callback</span><span lang="java">listener</span><span lang="ruby">block</span> may optionally be passed in to this call to be notified of success <span lang="default">or failure</span><span lang="ruby"></span> of the operation. If the channel is @initialized@ (i.e. no attempt to attach has yet been made for this channel), then calling @publish@ will implicitly attach the channel.
 
 h4. Parameters
 
@@ -959,6 +961,12 @@ h4. Parameters
 - <div lang="swift,objc">callback</div> := called with each matching "@message@":#message when received on the channel
 - <div lang="csharp">handler</div> := called with each matching "@message@":#message when received on the channel
 
+h4. Considerations
+
+* If the channel is @initialized@ (i.e. no attempt to attach has yet been made for this channel), then calling @subscribe@ will implicitly attach the channel. However, regardless of the implicit attach outcome, the <span lang="default">listener</span><span lang="ruby">block</span><span lang="csharp">handler</span> will still be registered
+* If @subscribe@ is called more than once with the same <span lang="default">listener</span><span lang="ruby">block</span><span lang="csharp">handler</span>, then duplicates will be registered. For example, if you @subscribe@ twice with the same <span lang="default">listener</span><span lang="ruby">block</span><span lang="csharp">handler</span> and a message is later received, the same <span lang="default">listener</span><span lang="ruby">block</span><span lang="csharp">handler</span> will be invoked twice
+* The registered <span lang="default">listener</span><span lang="ruby">block</span><span lang="csharp">handler</span> remains active on the channel regardless of the current channel state. For example, if you call @subscribe@ when a channel is @attached@ and it later becomes @detached@ or even @failed@, when the channel is reattached and a message is received, the <span lang="default">listeners</span><span lang="ruby">blocks</span><span lang="csharp">handlers</span> originally registered will still be invoked. Listeners are only removed when calling "@unsubscribe@":#unsubscribe or when a channel is @released@ using the <span lang="default">@Realtime.channels.release(name)@</span><span lang="csharp">@Realtime.Channels.Release(name)@</span> method
+
 h6(#unsubscribe).
   default: unsubscribe
   csharp: Unsubscribe
@@ -1023,14 +1031,14 @@ bq(definition).
   default: history(Object options, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"Message":#message> resultPage))
   ruby:    "Deferrable":/realtime/types#deferrable history(Hash options) -> yields "PaginatedResult":#paginated-result<"Message":#message>
   java:    "PaginatedResult":#paginated-result<"Message":#message> history("Param []":#param options)
-  csharp:  Task<"PaginatedResult<Message>":#paginated-result> HistoryAsync("DataRequestQuery":#data-request-query dataQuery, bool untilAttached = false)
+  csharp:  Task<"PaginatedResult<Message>":#paginated-result> HistoryAsync("HistoryRequestParams":#history-request-params dataQuery, bool untilAttach = false)
   objc,swift: history(query: ARTRealtimeHistoryQuery?, callback: ("ARTPaginatedResult":#paginated-result<"ARTMessage":#message>?, ARTErrorInfo?) -> Void) throws
 
 Gets a "paginated":#paginated-result set of historical messages for this channel. If the "channel is configured to persist messages to disk":https://support.ably.io/support/solutions/articles/3000030059-how-long-are-messages-stored-for, then message history will "typically be available for 24 - 72 hours":https://support.ably.io/solution/articles/3000030059-how-long-are-messages-stored-for. If not, messages are only retained in memory by the Ably service for two minutes.
 
 h4. Parameters
 
-- <span lang="default">options</span><span lang="objc,swift">query</span><span lang="csharp">dataQuery</span> := <span lang="default">an optional object containing the query parameters</span><span lang="ruby">an optional set of key value pairs containing the query parameters</span>, as specified in the "message history API documentation":/realtime/history#channel-history.<br>__Type: <span lang="default">@Object@</span><span lang="objc,swift">@ARTRealtimeHistoryQuery@</span><span lang="csharp">@DataRequestQuery@</span><span lang="ruby">@Hash@</span><span lang="java">"@Param []@":#param</span>__
+- <span lang="default">options</span><span lang="objc,swift">query</span><span lang="csharp">dataQuery</span> := <span lang="default">an optional object containing the query parameters</span><span lang="ruby">an optional set of key value pairs containing the query parameters</span>, as specified in the "message history API documentation":/realtime/history#channel-history.<br>__Type: <span lang="default">@Object@</span><span lang="objc,swift">@ARTRealtimeHistoryQuery@</span><span lang="csharp">@HistoryRequestParams@</span><span lang="ruby">@Hash@</span><span lang="java">"@Param []@":#param</span>__
 
 - <div lang="jsall">callback</div> := is a function of the form: @function(err, resultPage)@
 - <div lang="ruby">&block</div> := yields a @PaginatedResult<Message>@ array
@@ -1145,7 +1153,8 @@ Register the given listener <span lang="ruby">block</span><span lang="swift,objc
 The listener is passed a "<span lang="default">ChannelStateChange</span><span lang="objc,swift">ARTChannelStateChange</span>":#channel-state-change object that contains the current state, previous state, a boolean indicating whether the channel was resumed, and an optional reason for the state change.
 
 <div lang="jsall">
-bq(definition). on(String[] events, listener("ChannelStateChange":#channel-state-change stateChange))
+bq(definition#on-state-array-listener).
+  jsall: on(String[] events, listener("ChannelStateChange":#channel-state-change stateChange))
 
 Same as above, but registers multiple listeners, one for each event in the array.
 </div>
@@ -1335,11 +1344,11 @@ h3(#completion-listener).
 blang[java].
   <%= partial 'types/_completion_listener', indent: 2, skip_first_indent: true %>
 
-h3(#data-request-query).
-  csharp: DataRequestQuery
+h3(#history-request-params).
+  csharp: HistoryRequestParams
 
 blang[csharp].
-  <%= partial 'types/_data_request_query', indent: 2, skip_first_indent: true %>
+  <%= partial 'types/_history_request_params', indent: 2, skip_first_indent: true %>
 
 h3(#message-listener).
   java:   io.ably.lib.realtime.Channel.MessageListener

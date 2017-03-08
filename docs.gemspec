@@ -1,8 +1,8 @@
 Gem::Specification.new do |spec|
   spec.name          = 'ably-docs'
-  spec.version       = '0.9.0'
+  spec.version       = '1.0.0'
   spec.authors       = ["Matthew O'Riordan"]
-  spec.email         = ['matt@ably.io']
+  spec.email         = ['support@ably.io']
   spec.description   = %q{Documentation repository Gem for Ably}
   spec.summary       = %q{Allows the Ably documentation Textile files to be accessed by other Ruby applications}
   spec.homepage      = 'http://github.com/ably/docs'
