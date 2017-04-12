@@ -1,0 +1,541 @@
+---
+title: Push Notifications
+section: rest
+index: 110
+languages:
+  - fcm
+  - gcm
+  - swift
+  - objc
+  - javascript
+  - nodejs
+---
+
+You can send native push notifications alongside realtime messages, and subscribe devices to receive them.
+
+Ably's core realtime service dispatches messages published to a channel to connections subscribed to it. Those messages may carry an *extra push notification* payload. Devices subscribed to that channel for push will then receive the notification natively, be it through APNs for iOS, GCM/FCM for Android devices, or Web Notifications for browsers.
+
+h2(#getting-started). Getting started
+
+To get push notifications up and running for your app:
+
+1. "Set up your native services credentials in Ably's dashboard.":#set-up-dashboard
+2. "Use our library to activate Ably's push service for a device.":#activate-device
+3. "Subscribe the device to Ably channels for push.":#subscribe-device
+4. "Send messages with an extra push payload.":#send-push-payload
+
+h3(#set-up-dashboard). Set up credentials in your dashboard
+
+Not ready yet. For now, tell us and we'll set up everything for you behind the curtain.
+
+h3(#activate-device). Activate push for a device
+
+blang[default].
+  This section refers to your clients' code. Select a client platform above to see instructions.
+
+  You can also see "how to set up your server to register on the devices' behalf":#activating-from-server.
+
+blang[objc,swift,fcm,gcm].
+  h4. Hook Ably up with the native APIs
+
+  First, you need to hook up the native APIs for subscribing for push notification with Ably's library, so that Ably can handle things for you.
+
+blang[fcm,gcm].
+  If you haven't yet, you should set up <span lang="gcm">"GCM":https://developers.google.com/cloud-messaging/android/client</span><span lang="fcm">"FCM":https://firebase.google.com/docs/cloud-messaging/android/client</span> in your app.
+
+  After doing so, you'll have a class inheriting from <span lang="gcm">@IntentService@, which your implementation of @InstanceIDListenerService@ invokes on its @onTokenRefresh@ method</span><span lang="fcm">@FirebaseInstanceIdService@</span>. We need that class to inherit from <span lang="gcm">@AblyRegistrationIntentService@</span><span lang="fcm">@AblyFirebaseInstanceIdService@</span> and just call its parent's <span lang="gcm">@onHandleIntent@</span><span lang="fcm">@onTokenRefresh@</span> method. This method needs you to pass <span lang="gcm">a sender ID (@getString(R.string.gcm_defaultSenderId)@) and</span> an @AblyRest@ instance, configured with the authentication setup and other options you need. Your class should end up looking more or less like this:
+
+  ```[gcm]
+  public class MyRegistrationIntentService extends AblyRegistrationIntentService {
+      @Override
+      protected void onHandleIntent(Intent intent) {
+          this.onHandleIntent(intent, getString(R.string.gcm_defaultSenderId), getAblyRest());
+      }
+
+      private static AblyRest getAblyRest() {
+          ClientOptions options = new ClientOptions();
+          // Set up options; API key or auth URL, etc.
+          try {
+              return new AblyRest(options);
+          } catch (AblyException e) {
+              throw new RuntimeException(e);
+          }
+      }
+  }
+  ```
+  ```[fcm]
+  public class MyFirebaseInstanceIDService extends AblyFirebaseInstanceIdService {
+      @Override
+      public void onTokenRefresh() {
+          super.onTokenRefresh(getAblyRest());
+      }
+
+      private static AblyRest getAblyRest() {
+          ClientOptions options = new ClientOptions();
+          // Set up options; API key or auth URL, etc.
+          try {
+              return new AblyRest(options);
+          } catch (AblyException e) {
+              throw new RuntimeException(e);
+          }
+      }
+  }
+  ```
+
+blang[objc,swift].
+  If you haven't yet, you should set up "APNs":https://developer.apple.com/library/content/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/APNSOverview.html in your app.
+
+  You should now have a couple of methods: <span lang="swift">"@application(_:didRegisterForRemoteNotificationsWithDeviceToken:)@":https://developer.apple.com/reference/uikit/uiapplicationdelegate/1622958-application</span><span lang="objc">"@application:didRegisterForRemoteNotificationsWithDeviceToken:@":https://developer.apple.com/reference/uikit/uiapplicationdelegate/1622958-application?language=objc</span> and <span lang="swift">"@application(_:didFailToRegisterForRemoteNotificationsWithError:)@":https://developer.apple.com/reference/uikit/uiapplicationdelegate/1622962-application</span><span lang="objc">"@application:​did​Fail​To​Register​For​Remote​Notifications​With​Error:​@":https://developer.apple.com/reference/uikit/uiapplicationdelegate/1622962-application?language=objc</span>. @ARTPush@ has two corresponding methods that you should call from yours, passing to them also an @ARTRest@ instance, configured with the authentication setup and other options you need.
+
+  ```[objc]
+  // In your UIApplicationDelegate class:
+  - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+      [ARTPush didRegisterForRemoteNotificationsWithDeviceToken:deviceToken rest:[self getAblyRest]];
+  }
+
+  - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error;
+      [ARTPush didFailToRegisterForRemoteNotificationsWithError:error rest:[self getAblyRest]];
+  }
+
+  - (ARTRest *)getAblyRest {
+      ARTClientOptions *options = [[ARTClientOptions alloc] init];
+      // Set up options; API key or auth URL, etc.
+      return [[ARTRest alloc] initWithOptions: options];
+  }
+  ```
+  ```[swift]
+  // In your UIApplicationDelegate class:
+  optional func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+      ARTPush.didRegisterForRemoteNotificationsWithDeviceToken(deviceToken, rest: self.getAblyRest())
+  }
+
+  optional func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+      ARTPush.didFailToRegisterForRemoteNotificationsWithError(error, rest: self.getAblyRest())
+  }
+
+  func getAblyRest() -> ARTRest {
+      var options = ARTClientOptions()
+      // Set up options; API key or auth URL, etc.
+      return ARTRest(options: options)
+  }
+  ```
+
+blang[objc,swift,fcm,gcm].
+  (You probably want to share @getAblyRest@ or a similar method with the code that connects to Ably's realtime service, if you do use it.)
+
+  h4. Call @activate@
+
+  Once you've done this, then, whenever you want to start receiving push notifications from Ably (e. g. from <span lang="fcm,gcm">your main activity</span><span lang="objc,swift">your @UIApplicationDelegate@</span>), you call <span lang="fcm,gcm">@AblyRest.push.activate@</span><span lang="objc,swift">@ARTRest.push.activate@</span>:
+
+  ```[gcm,fcm]
+  AblyRest ably = getAblyRest();
+  ably.push.activate(context);
+  ```
+  ```[objc]
+  ARTRest *ably = [self getAblyRest];
+  [ably.push activate];
+  ```
+  ```[swift]
+  let ably = self.getAblyRest()
+  ably.push.activate()
+  ```
+
+  If your client doesn't have "the required capabilities":#required-capabilities, you probably want to register devices from your server, which will have the right capabilities. <span lang="fcm,gcm">Do this instead...</span><span lang="objc,swift">See "how to activate devices from your server":#activating-from-server.</span>
+
+blang[fcm,gcm].
+  ```[gcm,fcm]
+  ably.push.activate(context, true);
+  ```
+
+  ... and see "how to activate devices from your server":#activating-from-server.
+
+blang[objc,swift,fcm,gcm].
+  @activate@ will *register the device* for push: it tells Ably about the current device, and how to reach it to deliver push notifications. Its effects outlive the current process: once called, the device will stay registered even after the application is closed, until @deactivate@ is called.
+  @activate@ is idempotent: calling it again when device is already activated has the sole effect of calling its callback.
+
+  h4. Register for @activate@ 's callback
+
+  You should be notified when push has been activated for the device, so that you can then subscribe to channels. For this, Ably will <span lang="fcm,gcm">send a broadcast through the application's @LocalBroadcastManager@. Listen for a broadcast with action @io.ably.broadcast.PUSH_ACTIVATE@,</span><span lang="objc,swift">call your application's </span><span lang="objc">@(void)didActivateAblyPush:(nullable ARTErrorInfo *)error@</span><span lang="objc">@didActivateAblyPush(error: ARTErrorInfo?)@</span><span lang="objc,swift"> method, so you should handle it</span> like this:
+
+  ```[gcm,fcm]
+  LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(new BroadcastReceiver() {
+      @Override
+      public void onReceive(Context context, Intent intent) {
+          ErrorInfo error = IntentUtils.getErrorInfo(intent);
+          if (error != null) {
+              // Handle error.
+              return;
+          }
+
+          // Subscribe to channels, etc.
+      }
+  }, new IntentFilter("io.ably.broadcast.PUSH_ACTIVATE"));
+
+  ably.push.activate(context);
+  ```
+  ```[objc]
+  // Add a delegate method to your UIApplicationDelegate class:
+  - (void)didActivateAblyPush:(nullable ARTErrorInfo *)error {
+      if (error) {
+          // Handle error.
+          return;
+      }
+
+      // Subscribe to channels, etc.
+  }
+
+  // Call activate, which will call the delegate method when done:
+  [ably.push activate];
+  ```
+  ```[swift]
+  // Add a delegate method to your UIApplicationDelegate class:
+  func didActivateAblyPush(error: ARTErrorInfo?) {
+      if let error = error {
+          // Handle error.
+          return
+      }
+
+      // Subscribe to channels, etc.
+  }
+
+  // Call activate, which will call the delegate method when done:
+  ably.push.activate()
+  ```
+
+h3(#subscribe-device). Subscribe for push notifications
+
+Before you subscribe to a channel for push, make sure its namespace is configured as push-enabled.
+
+TODO: Still not supported in the dashboard. For now, we'll enable them for you.
+
+There are two ways a device can be subscribed to a channel: directly "by its device ID":#subscribing-device-id, or indirectly "by its associated client ID":#subscribing-client-id.
+
+h4(#subscribing-device-id). Subscribing by device ID
+
+A **device ID** uniquely identifies a device within Ably's services.
+
+blang[default].
+  You'll need your client to pass it to your server if you want to subscribe on their behalf; select the appropriate client platform from above to see how to do this.
+
+  Once you have a device's ID, you can subscribe it by using the "admin API":#admin-api.
+
+blang[objc,swift,fcm,gcm].
+  If your client "has the appropriate capabilities":#push-capabilities, you don't need to know your device ID. You can just do:
+
+  ```[objc]
+  [[rest.channels get:@"pushenabled:foo"].push subscribeDevice:^(ARTErrorInfo *_Nullable error) {
+      // Check error.
+  }];
+  ```
+  ```[swift]
+  rest.channels.get("pushenabled:foo").subscribeDevice { error
+      // Check error.
+  }
+  ```
+  ```[gcm,fcm]
+  rest.channels.get("pushenabled:foo").push.subscribeDevice(context);
+
+  // or
+
+  rest.channels.get("pushenabled:foo").push.subscribeDeviceAsync(context, new CompletionListener() {
+      @Override
+      public void onSuccess() {}
+
+      @Override
+      public void onError(ErrorInfo errorInfo) {
+          // Handle error.
+      }
+  });
+  ```
+
+  If your client doesn't have the right permissions, you must communicate the device ID to your server so that it can subscribe on the device's behalf. You can find it at <span lang="objc,swift">@ARTRest.device.id@</span><span lang="fcm,gcm">@AblyRest.device().id@</span>. The server must then "use the admin API":#admin-api to subscribe.
+
+h4(#subscribing-client-id). Subscribing by client ID
+
+When a device is registered, it can be associated with a "client ID":/rest/authentication/#identified-clients. @AblyRest.push.activate@ takes the client ID from the @AblyRest@ or @AblyRealtime@ instance.
+
+You can subscribe to a channel all devices associated with a client ID with a single operation: a subscription by client ID. New device registrations associated to that client ID will also be subscribed to the channel, and if a device registration is no longer associated with it, it will also stop being subscribed to the channel (unless it's also "subscribed directly by device ID":#subscribing-device-id).
+
+To subscribe your @AblyRest@ or @AblyRealtime@ instance's client ID to a channel:
+
+```[objc]
+[[rest.channels get:@"pushenabled:foo"].push subscribeClient:^(ARTErrorInfo *_Nullable error) {
+    // Check error.
+}];
+```
+```[swift]
+rest.channels.get("pushenabled:foo").subscribeClient { error
+    // Check error.
+}
+```
+```[gcm,fcm]
+rest.channels.get("pushenabled:foo").push.subscribeClient();
+
+// or
+
+rest.channels.get("pushenabled:foo").push.subscribeClientAsync(new CompletionListener() {
+    @Override
+    public void onSuccess() {}
+
+    @Override
+    public void onError(ErrorInfo errorInfo) {
+        // Handle error.
+    }
+});
+```
+
+Alternatively, if you want to subscribe a different client ID, you can "use the admin API":#admin-api.
+
+h3(#send-push-payload). Send push notifications
+
+Push notifications are sent as special payloads alongside "a normal Ably message":#/realtime/types/#message. It should go as an object on key @push@ within the @extras@ dictionary, like this:
+
+```[objc]
+ARTMessage *message = [[ARTMessage allocWithName:@"example" data:@"realtime data"]];
+message.extras = @{
+    @"push": @{
+        @"notification": @{
+            @"title": @"Hello from Ably!",
+            @"body": @"Example push notification from Ably."
+        },
+        @"data": @{
+            @"foo": @"bar",
+            @"baz": @"qux"
+        }
+    }
+};
+[[rest.channels get:@"pushenabled:foo"] publish:@[message] ^(ARTErrorInfo *_Nullable error) {
+    // Check error.
+}];
+```
+```[swift]
+var message = ARTMesssage(name: "example", data: "realtime data")
+message.extras = [
+    "push": [
+        "notification": [
+            "title": "Hello from Ably!",
+            "body": "Example push notification from Ably."
+        ],
+        "data": [
+            "foo": "bar",
+            "baz": "qux"
+        ]
+    ]
+]
+rest.channels.get("pushenabled:foo").publish([message]) { error
+    // Check error.
+}
+```
+```[gcm,fcm]
+Message message = new Message("example", "realtime data");
+message.extras = io.ably.lib.util.JsonUtils.object()
+    .add("push", io.ably.lib.util.JsonUtils.object()
+        .add("notification", io.ably.lib.util.JsonUtils.object()
+            .add("title", "Hello from Ably!")
+            .add("body", "Example push notification from Ably."))
+        .add("data", io.ably.lib.util.JsonUtils.object()
+            .add("foo", "bar")
+            .add("baz", "qux")));
+
+rest.channels.get("pushenabled:foo").publish(message, new CompletionListener() {
+    @Override
+    public void onSuccess() {}
+
+    @Override
+    public void onError(ErrorInfo errorInfo) {
+        // Handle error.
+    }
+});
+```
+
+A push payload has a generic structure. Depending on the transport (APNs, F/GCM, etc.), these are the transformations made:
+
+<table>
+
+<tr>
+  <th>Field</th>
+  <th>F/GCM</th>
+  <th>APNs</th>
+  <th>Web</th>
+</tr>
+
+<tr>
+  <td>@notification.title@</td>
+  <td>@notification.title@</td> <!-- F/GCM -->
+  <td>@aps.alert.title@</td> <!-- APNs -->
+  <td>@notification.title@</td> <!-- Web -->
+</tr>
+
+<tr>
+  <td>@notification.body@</td>
+  <td>@notification.body@</td> <!-- F/GCM -->
+  <td>@aps.alert.body@</td> <!-- APNs -->
+  <td>@notification.body@</td> <!-- Web -->
+</tr>
+
+<tr>
+  <td>@notification.icon@</td>
+  <td>@notification.icon@</td> <!-- F/GCM -->
+  <td>Discarded.</td> <!-- APNs -->
+  <td>@notification.icon@</td> <!-- Web -->
+</tr>
+
+<tr>
+  <td>@notification.sound@</td>
+  <td>@notification.sound@</td> <!-- F/GCM -->
+  <td>@aps.alert.sound@</td> <!-- APNs -->
+  <td>@notification.sound@</td> <!-- Web -->
+</tr>
+
+<tr>
+  <td>@notification.collapseKey@</td>
+  <td>@collapse_key@</td> <!-- F/GCM -->
+  <td>@aps.thread-id@</td> <!-- APNs -->
+  <td>@notification.collapseKey@</td> <!-- Web -->
+</tr>
+
+<tr>
+  <td>@data@</td>
+  <td>@data@</td> <!-- F/GCM -->
+  <td>Merged into root object.</td> <!-- APNs -->
+  <td>@data@</td> <!-- Web -->
+</tr>
+
+</table>
+
+Additionally, you can set transport-specific objects, which will get merged into the root object resulting from generic mapping explained above only when pushing to the selected transport. This way, you can:
+
+* Override the generic value for that field.
+* Add specific fields that are not supported in the generic structure.
+
+To do this, alongside @notification@ and @data@, add an object whose field is one of:
+
+* @fcm@, for FCM and GCM.
+* @apns@, for APNs.
+* @web@, for Web Notifications.
+
+Here's an example of push payload that overrides the default title for iOS and sets the Android-specific @color@ field:
+
+```
+{
+  "notification": {
+    "title": "Hello from Ably!",
+    "body": "Example push notification from Ably."
+  },
+  "data": {
+    "foo": "bar",
+    "baz": "qux"
+  },
+  "apns": {
+    "aps": {
+      "alert": {
+        "title": "Hello to iOS from Ably!"
+      }
+    }
+  },
+  "fcm": {
+    "notification": {
+      "color": "#d3d3d3"
+    }
+  }
+}
+```
+
+h2(#push-capabilities). Push capabilities
+
+These are the "capabilities":/general/authentication/#capabilities-explained necessary to perform push operations:
+
+* @push-subscribe@: Register new devices, deregister them, and subscribe and unsubscribe them to channels for push notifications.
+* @push-admin@: Register, update and deregister any device registration, and subscribe and unsubscribe to channels for push notifications. Publish push notification using the @POST /push/publish@ endpoint (@AblyRest.push.publish@ method).
+
+Typically, client devices subscribing for push will either have @push-subscribe@ privileges or "delegate operations to a server":#activating-from-server with @push-admin@ privileges.
+
+h2(#activating-from-server). Activating devices from your server
+
+The default for @AblyRest.push.activate@ is to register the device with Ably directly from the device, but you can instead delegate that to your server.
+
+blang[objc,swift].
+  For this, your @UIApplicationDelegate@ must implement these methods:
+
+  ```[objc]
+  - (void)ablyPushCustomRegister:(nullable ARTErrorInfo *)error deviceDetails:(nullable ARTDeviceDetails *)deviceDetails callback:(void (^ _Nonnull)(ARTUpdateToken * _Nonnull, NSError * _Nullable))callback {
+      if (error) {
+          // Handle error.
+          return;
+      }
+
+      [self registerThroughYourServer:deviceDetails callback:callback];
+  }
+  
+  - (void)ablyPushCustomDeregister:(nullable ARTErrorInfo *)error deviceId:(nullable ARTDeviceId *)deviceId callback:(void (^ _Nullable)(NSError * _Nullable))callback {
+      if (error) {
+          // Handle error.
+          return;
+      }
+
+      [self deregisterThroughYourServer:deviceId callback:callback];
+  }
+  ```
+
+blang[fcm,gcm].
+  For this, you need to communicate back and forth with the Ably library via the application's @LocalBroadcastManager@.
+
+  First, make sure you pass @true@ as @activate@ 's @useCustomRegisterer@ (and @deactivate@ 's @useCustomDeregisterer@) parameter.
+
+  ```[fcm,gcm]
+  ably.push.activate(context, true);
+  ably.push.deactivate(context, true);
+  ```
+
+  The Ably library will then broadcast a @io.ably.broadcast.PUSH_REGISTER_DEVICE@ action when it needs you to register from your server, and @io.ably.broadcast.PUSH_DEREGISTER_DEVICE@ when it needs you to deregister. You must configure a listener to those actions in your application's @AndroidManifest.xml@, and from it answer back with a @PUSH_UPDATE_TOKEN@ or @PUSH_DEVICE_DEREGISTERED@, like this:
+
+  ```[xml]
+  <receiver android:name=".MyAblyBroadcastReceiver" >
+    <intent-filter>
+       <action android:name="io.ably.broadcast.PUSH_REGISTER_DEVICE" />
+       <action android:name="io.ably.broadcast.PUSH_DEREGISTER_DEVICE" />
+    </intent-filter>
+  </receiver>
+  ```
+
+  ```[fcm,gcm]
+  public class MyAblyBroadcastReceiver extends BroadcastReceiver {
+      @Override
+      public void onReceive(Context context, Intent intent) {
+          AblyRest ably = getAblyRest();
+          String action = intent.getAction();
+
+          if (action.equals("io.ably.broadcast.PUSH_REGISTER_DEVICE")) {
+              DeviceDetails device = ably.device(context);
+              boolean isNew = intent.getBooleanExtra("isNew", false);
+
+              Intent response = new Intent();
+
+              try {
+                  String updateToken = registerThroughYourServer(device, isNew);
+                  response.putExtra("updateToken", updateToken);
+              } catch(AblyException e) {
+                  IntentUtils.addErrorInfo(intent, e.errorInfo);
+              }
+
+              LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(intent);
+          } else if (action.equals("io.ably.broadcast.PUSH_REGISTER_DEVICE")) {
+              DeviceDetails device = ably.device(context);
+
+              Intent response = new Intent();
+
+              try {
+                  deregisterThroughYourServer(device.id);
+              } catch(AblyException e) {
+                  IntentUtils.addErrorInfo(intent, e.errorInfo);
+              }
+
+              LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(intent);
+          }
+      }
+  }
+  ```
+
+h2(#admin-api). Admin API
+
+TODO
