@@ -19,6 +19,7 @@ module NavHelper
         end
       end
       items.map.sort { |a,b| (a[:index].to_i || 100) <=> (b[:index].to_i || 100) }.each do |item|
+        next if item[:hide_from_nav]
         if item[:html]
           results << "<li>#{item[:html]}</li>"
         else

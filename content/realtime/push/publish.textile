@@ -1,0 +1,327 @@
+---
+title: Push Notifications - Publishing Notifications
+section: realtime
+hide_from_nav: true
+languages:
+  - javascript
+  - nodejs
+  - android
+  - swift
+  - objc
+  - ruby
+jump_to:
+  Help with:
+    - Channel-based broadcasting#channel-broadcast
+    - Direct publishing#direct-publish
+    - Push payload structure#payload-structure
+---
+
+Ably provides two models for delivering push notifications to devices. Channel-based broadcasting provides automatic fan-out capabilities for push notifications, and direct publishing provides a means to deliver individual notifications to devices.
+
+h3(#channel-broadcast). Channel-based broadcasting
+
+The model for delivering push notifications to devices over channels is intentionally very similar to how "normal" messages are delivered using Ably's "pub/sub channel":/realtime/channels-messages. For example, a "normal" message published on an Ably channel is broadcasted immediately to all subscribers of that channel. When broadcasting push notifications on channels however, the process is the same with the exception that the subscribers (devices receiving push notifications) are registered in advance using our API and the message itself must contain an *extra push notification payload* that specifies the optional visual format and optional data payload of the native push notification.
+
+Therefore, the process for delivering push notifications to devices using channel-based broadcasting is as follows:
+
+# Subscribe one or more devices to one or more channels
+# Publish a message on those channels with a *push notification payload*
+
+Please note that a push notification published on a channel will only be delivered to a device if:
+
+* the *extra push notification* payload is included in the published message;
+* a channel rule is configured explicitly enabling push notifications on that channel;
+* the device is subscribed to the channel;
+* the push notification payload is compatible with the subscribed push notification device
+
+h4(#channel-broadcast-example). Channel-based push notificaton example
+
+Push notifications are sent as special payloads alongside "a normal Ably message":#/realtime/types/#message in the @extras@ field. The @extras@ field is an object and must contain a @push@ attribute object with the push payload details.
+
+```[objc]
+ARTMessage *message = [[ARTMessage allocWithName:@"example" data:@"realtime data"]];
+message.extras = @{
+    @"push": @{
+        @"notification": @{
+            @"title": @"Hello from Ably!",
+            @"body": @"Example push notification from Ably."
+        },
+        @"data": @{
+            @"foo": @"bar",
+            @"baz": @"qux"
+        }
+    }
+};
+[[realtime.channels get:@"pushenabled:foo"] publish:@[message] ^(ARTErrorInfo *_Nullable error) {
+    // Check error.
+}];
+```
+```[swift]
+var message = ARTMesssage(name: "example", data: "realtime data")
+message.extras = [
+    "push": [
+        "notification": [
+            "title": "Hello from Ably!",
+            "body": "Example push notification from Ably."
+        ],
+        "data": [
+            "foo": "bar",
+            "baz": "qux"
+        ]
+    ]
+]
+realtime.channels.get("pushenabled:foo").publish([message]) { error
+    // Check error.
+}
+```
+```[android]
+Message message = new Message("example", "realtime data");
+message.extras = io.ably.lib.util.JsonUtils.object()
+    .add("push", io.ably.lib.util.JsonUtils.object()
+        .add("notification", io.ably.lib.util.JsonUtils.object()
+            .add("title", "Hello from Ably!")
+            .add("body", "Example push notification from Ably."))
+        .add("data", io.ably.lib.util.JsonUtils.object()
+            .add("foo", "bar")
+            .add("baz", "qux")));
+
+realtime.channels.get("pushenabled:foo").publish(message, new CompletionListener() {
+    @Override
+    public void onSuccess() {}
+
+    @Override
+    public void onError(ErrorInfo errorInfo) {
+        // Handle error.
+    }
+});
+```
+```[ruby]
+extras = {
+  push: {
+    notification: {
+      title: 'Hello from Ably!',
+      body: 'Example push notification from Ably.'
+    },
+    data: {
+      foo: 'bar',
+      baz: 'qux'
+    }
+  }
+}
+
+channel = realtime.channels.get('pushenabled:foo')
+channel.publish('example', 'data', extras: extras) do
+  # message published successfully
+end
+```
+
+h3(#direct-publishing). Direct publishing
+
+Ably provides a REST API that allows native push notifications to be delivered directly to:
+
+* Devices identified by their unique device ID
+* Devices identified by their assigned @clientId@
+* Devices identified by their native recipient attributes such as their unique @registrationToken@ in the case of GCM, @deviceToken@ in the case of APNS, or @targetUrl@ and @encryptionKey@ in the case of a Web device. This means is particularly useful when migrating to Ably with existing push notifcation target devices.
+
+See the "raw push publish REST API":/rest-api#push-publish documentation for more information on the underlying direct publishing endpoint used by the client libraries.
+
+h4(#direct-publishing-device-id-example). Publish to a device ID example
+
+```[ruby]
+recipient = {
+  device_id: 'xxxxxxxxxxx'
+}
+notification = {
+  notification: {
+    title: 'Hello from Ably!'
+  }
+}
+
+realtime.push.publish(recipient, data) do
+  # push notification published
+end
+```
+
+h4(#direct-publishing-client-id-example). Publish to a client ID example
+
+```[ruby]
+recipient = {
+  client_id: 'bob'
+}
+notification = {
+  notification: {
+    title: 'Hello from Ably!'
+  }
+}
+
+realtime.push.publish(recipient, data) do
+  # push notification published
+end
+```
+
+h4(#direct-publishing-client-id-example). Publish direct to a native recipient example
+
+```[ruby]
+recipient = {
+  transport_type: 'apns',
+  device_token: 'xxxxxxxxxx'
+}
+notification = {
+  notification: {
+    title: 'Hello from Ably!'
+  }
+}
+
+realtime.push.publish(recipient, data) do
+  # push notification published
+end
+```
+
+h3(#payload-structure). Push payload structure
+
+A push notification payload has a generic structure as follows:
+
+```[json]
+{
+  "notification": {
+    "title": <string, title to display at the notification>,
+    "body": <string, text below title on the expanded notification>,
+    "icon": <string, platform-specific>,
+    "sound": <string, platform-specific>,
+    "collapseKey": <string, platform-specific, used to group notifications together>
+  },
+  "data": {
+    <key string>: <value string>,
+    ...
+  }
+}
+```
+
+Depending on the transport (APNs, F/GCM, etc.), the following transformations are made automatically by Ably to make each field compatible with the target push notification transport:
+
+<table>
+
+<tr>
+  <th>Ably field</th>
+  <th>F/GCM</th>
+  <th>APNs</th>
+  <th>Web</th>
+</tr>
+
+<tr>
+  <td>@notification.title@</td>
+  <td>@notification.title@</td> <!-- F/GCM -->
+  <td>@aps.alert.title@</td> <!-- APNs -->
+  <td>@notification.title@</td> <!-- Web -->
+</tr>
+
+<tr>
+  <td>@notification.body@</td>
+  <td>@notification.body@</td> <!-- F/GCM -->
+  <td>@aps.alert.body@</td> <!-- APNs -->
+  <td>@notification.body@</td> <!-- Web -->
+</tr>
+
+<tr>
+  <td>@notification.icon@</td>
+  <td>@notification.icon@</td> <!-- F/GCM -->
+  <td>Discarded.</td> <!-- APNs -->
+  <td>@notification.icon@</td> <!-- Web -->
+</tr>
+
+<tr>
+  <td>@notification.sound@</td>
+  <td>@notification.sound@</td> <!-- F/GCM -->
+  <td>@aps.alert.sound@</td> <!-- APNs -->
+  <td>@notification.sound@</td> <!-- Web -->
+</tr>
+
+<tr>
+  <td>@notification.collapseKey@</td>
+  <td>@collapse_key@</td> <!-- F/GCM -->
+  <td>@aps.thread-id@</td> <!-- APNs -->
+  <td>@notification.collapseKey@</td> <!-- Web -->
+</tr>
+
+<tr>
+  <td>@data@</td>
+  <td>@data@</td> <!-- F/GCM -->
+  <td>Merged into root object.</td> <!-- APNs -->
+  <td>@data@</td> <!-- Web -->
+</tr>
+
+</table>
+
+So for example, a push payload in a message published to Ably as follows:
+
+```[json]
+{
+  "notification": {
+    "collapseKey": "chat"
+  }
+}
+```
+
+would be delivered in raw format to GCM as:
+
+```[json]
+{
+  "collapse_key": "chat"
+}
+```
+
+and would be delivered in raw format to APNs as:
+
+```[json]
+{
+  "aps.thread-id": "chat"
+}
+```
+
+and would be delivered in raw format to a web push target as:
+
+```[json]
+{
+  "notification": {
+    "collapseKey": "chat"
+  }
+}
+```
+
+Additionally, you can set transport-specific attributes which will get merged into the root object resulting from generic mapping explained above only when pushing to the selected transport. This way, you can:
+
+* Override the generic value for that field.
+* Add specific fields that are not supported in the generic structure.
+
+To do this, alongside @notification@ and @data@, add an object whose field is one of:
+
+* @fcm@, for FCM and GCM.
+* @apns@, for APNs.
+* @web@, for Web Notifications.
+
+Here's an example of push payload that overrides the default title for APNs iOS and sets the FCM Android-specific @color@ field:
+
+```[json]
+{
+  "notification": {
+    "title": "Hello from Ably!",
+    "body": "Example push notification from Ably."
+  },
+  "data": {
+    "foo": "bar",
+    "baz": "qux"
+  },
+  "apns": {
+    "aps": {
+      "alert": {
+        "title": "Hello to iOS from Ably!"
+      }
+    }
+  },
+  "fcm": {
+    "notification": {
+      "color": "#d3d3d3"
+    }
+  }
+}
+```
