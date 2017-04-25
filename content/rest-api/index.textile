@@ -22,10 +22,10 @@ jump_to:
     - reset a device's update token#reset-update-token
     - unregister device#delete-device-registration
     - unregister devices#delete-device-registrations
-    - subscribe to a channel#post-channel-subscription
+    - subscribe to a channel#put-channel-subscription
     - unsubscribe from channels#delete-channel-subscription
-    - list channel subscriptions#get-channel-subscriptions
-    - list channels#get-channels
+    - list channel subscriptions#list-channel-subscriptions
+    - list channels#list-channels
     - publish directly to device#push-publish
   Authentication API:
     - requestToken#request-token
@@ -359,7 +359,7 @@ Messages can include an optional @extras@ field, used by extensions to Ably's co
 
 h6(#message-extras-push). Send push notification
 
-You can send a push notification to devices "subscribed to the channel":#post-channel-subscription the message is sent to by setting the @push@ field in the @extras@ object, like this:
+You can send a push notification to devices "subscribed to the channel":#put-channel-subscription the message is sent to by setting the @push@ field in the @extras@ object, like this:
 
 bc[json]. {
   <... message fields ...>
@@ -586,8 +586,7 @@ bc[sh]. curl -X POST https://rest.ably.io/push/deviceRegistrations \
  -u "{{API_KEY}}"
  -H "Content-Type: application/json" \
  --data \
- '
- {
+'{
   "id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
   "platform": "ios",
   "formFactor": "phone",
@@ -597,8 +596,7 @@ bc[sh]. curl -X POST https://rest.ably.io/push/deviceRegistrations \
       "deviceToken": "740f4707bebcf74f9b7c25d48e3358945f6aa01da5ddb387462c7eaf61bb78ad"
     }
   }
-}
-'
+}'
 
 h5. Parameters
 
@@ -616,11 +614,17 @@ An unsuccessful request returns an error.
 
 h3(#update-device-registration). Update a device registration
 
+Device registrations can be either upserted (the existing registration is replaced entirely) with a @PUT@ operation, or specific attributes of an existing registration can be updated using a @PATCH@ operation:
+
 h6. PUT rest.ably.io/push/deviceRegistrations/@<device id>@
 
-The body must have the same shape as when "registering the device":#post-device-registration, except only fields to be changed should be provided. The @PUT@ operation is in fact a @PATCH@ operation i.e. only fields provided are updated.
+The body must have the same shape as when "registering the device":#post-device-registration. The @PUT@ operation will replace the existing device registration, however please bear in mind that a registered device in Ably is largely immutable. As such, only the following attributes are currently updateable and any attempt to modify other fields will result in the update failing:
 
-Only @metadata@ and @push.recipient@ can be updated. If non-null, the provided new values will be merged with their old values.
+* @clientId@
+* @metadata@
+* @push.recipient@
+
+Additionally, if the @push.state@ or @updateToken@ attributes are provided, they will be accepted if they match the existing value. However if they differ (and are not @null@ or @omitted@), then the update will fail.
 
 If you need to make changes to any other fields, you will have to "deregister the existing device":#delete-device-registration and then "register a new one":#post-device-registration.
 
@@ -630,18 +634,56 @@ bc[sh]. curl -X PUT https://rest.ably.io/push/deviceRegistrations/01ARZ3NDEKTSV4
  -u "{{API_KEY}}"
  -H "Content-Type: application/json" \
  --data \
- '
- {
+'{
+  "id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
+  "platform": "ios",
+  "formFactor": "phone",
   "metadata": {
-    "myKey": "value"
+    "timezone": "PST"
   },
   "push": {
     "recipient": {
+      "transportType": "apns",
       "deviceToken": "740f4707bebcf74f9b7c25d48e3358945f6aa01da5ddb387462c7eaf61bb78ad"
     }
   }
-}
-'
+}'
+
+h5. Parameters
+
+None
+
+h5. Options
+
+- Content-Type := @application/json@, @application/x-msgpack@ or @application/x-www-form-urlencoded@
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication with @push-admin@ capability)
+
+A successful request returns the updated device details.
+
+An unsuccessful request returns an error.
+
+h6. PATCH rest.ably.io/push/deviceRegistrations/@<device id>@
+
+The body must have the same shape as when "registering the device":#post-device-registration, except only fields to be changed should be provided. Any fields provided replace existing values. Please bear in mind that fields that are object (Hash) types will replace existing values as opposed to be merged together. @metadata@ and @push.recipient@ are examples of these types. Currently only the following attributes are currently updateable and any attempt to modify other fields will result in the update failing:
+
+* @clientId@ (this field is only editable with a @push-admin@ capability)
+* @metadata@ (this field is only editable with a @push-admin@ capability)
+* @push.recipient@
+
+If you need to make changes to any other fields, you will have to "deregister the existing device":#delete-device-registration and then "register a new one":#post-device-registration.
+
+Example request:
+
+bc[sh]. curl -X PATCH https://rest.ably.io/push/deviceRegistrations/01ARZ3NDEKTSV4RRFFQ69G5FAV \
+ -u "{{API_KEY}}"
+ -H "Content-Type: application/json" \
+ --data \
+'{
+  "metadata": {
+    "myKey": "value"
+  }
+ }'
 
 h5. Parameters
 
@@ -821,7 +863,7 @@ A successful request returns an empty response.
 
 An unsuccessful request returns an error.
 
-h3(#post-channel-subscription). Subscribe to a channel
+h3(#put-channel-subscription). Subscribe to a channel
 
 Subscribe either a single device or all devices associated with a client ID to receive push notifications from messages sent to a channel.
 
@@ -891,7 +933,7 @@ A successful request returns an empty response.
 
 An unsuccessful request returns an error.
 
-h3(#get-channel-subscriptions). List channel subscriptions
+h3(#list-channel-subscriptions). List channel subscriptions
 
 h6. GET rest.ably.io/push/channelSubscriptions
 
@@ -925,7 +967,7 @@ bc[json]. [{
   deviceId: <string, only present when clientId is not present>,
 }]
 
-h3(#get-channels). List all channels with at least one subscribed device
+h3(#list-channels). List all channels with at least one subscribed device
 
 h6. GET rest.ably.io/push/channels
 
