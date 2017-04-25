@@ -14,6 +14,8 @@ jump_to:
     - Channels#rest-channels
     - Channel#rest-channel
     - Presence#rest-presence
+    - Encryption#rest-encryption
+    - Push notifications#rest-push
   Realtime client library:
     - RealtimeClient
     - Connection#realtime-connection
@@ -25,6 +27,7 @@ jump_to:
   Types:
     - Data types#types
     - Options#options
+    - Push notifications#types-push
   Interface Definition:
     - Complete API IDL#idl
   Previous version:
@@ -247,6 +250,10 @@ h3(#rest-encryption). Encryption
 * @(RSE2)@ @Crypto::generateRandomKey@ function
 ** @(RSE2a)@ Takes an optional @keyLength@ parameter, which is the length in bits of the key to be generated. If unspecified, this is equal to the default @keyLength@ of the default algorithm: for @AES@, 256 bits.
 ** @(RSE2b)@ Returns (or calls back with, if the language cryptographic randomness primitives are blocking or async) the key as a binary (e.g. a byte array, depending on the language)
+
+h2(#rest-push). Push notifications
+
+TODO
 
 h2(#realtime). Realtime client library features
 
@@ -1094,6 +1101,10 @@ h4. CipherParams
 ** @(TZ2d)@ @key@ binary - private key used to encrypt and decrypt payloads
 ** @(TZ2c)@ @mode@ string - Default is @CBC@. Optionally specify cipher mode, currently only @CBC@ is supported
 
+h3(#types-push). Push notifications
+
+TODO
+
 h3(#defaults). Client Library defaults
 
 The following default values are configured for the client library:
@@ -1127,6 +1138,8 @@ class Rest:
   constructor(tokenStr: String) // RSC1
   constructor(ClientOptions) // RSC1
   auth: Auth // RSC5
+  push: Push
+  device: DeviceDetails
   channels: Channels<RestChannel> // RSN1
   request(String method, String path, Hash params?, JsonObject | JsonArray body?, Hash headers?) => io HttpPaginatedResponse // RSC19
   stats(
@@ -1143,6 +1156,7 @@ class Realtime:
   constructor(tokenStr: String) // RSC1
   constructor(ClientOptions) // RSC1
   auth: Auth // RTC4
+  push: Push
   channels: Channels<RealtimeChannel> // RTC3, RTS1
   clientId: String? // proxy for RSA7
   connection: Connection // RTC2
@@ -1230,6 +1244,7 @@ class Channels<ChannelType>:
   release(String) // RSN4, RTS4
 
 class RestChannel:
+  embeds PushChannel
   name: String?
   presence: RestPresence // RSL3
   history(
@@ -1240,6 +1255,7 @@ class RestChannel:
   ) => io PaginatedResult<Message> // RSL2a
   publish([Message]) => io // RSL1
   publish(name: String?, data: Data?, clientId?: String, extras?: JsonObject) => io // RSL1, RSL1h
+  push: PushChannel
 
 class RealtimeChannel:
   embeds EventEmitter<ChannelEvent, ChannelStateChange?> // RTL2a, RTL2d, RTL2e
@@ -1263,6 +1279,12 @@ class RealtimeChannel:
   unsubscribe() // RTL8a, RTE5
   unsubscribe((Message) ->) // RTL8a
   unsubscribe(String, (Message) ->) // RTL8a
+  push: PushChannel
+
+class PushChannel:
+  subscribe(type: .Device | .ClientId) => io
+  unsubscribe(type: .Device | .ClientId) => io
+  getSubscriptions() => io PaginatedResult<PushChannelSubscription>
 
 enum ChannelState:
   INITIALIZED
@@ -1472,6 +1494,82 @@ enum StatsIntervalGranularity:
   HOUR
   DAY
   MONTH
+
+class DeviceDetails:
+  + fromLocalDevice() => io DeviceDetails
+  id: String
+  platform: DevicePlatform
+  formFactor: DeviceFormFactor
+  clientId: String?
+  metadata: Dict<String, String>
+  updateTokenId: String
+  resetId(String)
+  resetUpdateToken() => io
+  push: DevicePushDetails
+
+class DevicePushDetails:
+  transportType: DevicePushTransportType
+  transportId: String
+  transportToken: String?
+  state: .Active | .Failing | .Failed
+  errorReason: ErrorInfo?
+  metadata: Dict<String, String>
+
+class Push:
+  publish(options: Dict<String, String>, JsonObject) => io
+  admin: PushAdmin
+
+  // Only on platforms that support receiving notifications:
+
+  activate(
+    DeviceDetails,
+    registerCallback: ((ErrorInfo?, DeviceDetails?) -> io String)?
+  ) => io ErrorInfo? // RSH2c
+  deactivate(
+    deviceId: String,
+    deregisterCallback: ((ErrorInfo?, deviceId: String?) -> io)?
+  ) => io ErrorInfo?
+
+class PushAdmin:
+  deviceRegistrations: PushDeviceRegistrations
+  channelSubscriptions: PushChannelSubscriptions
+
+class JsonObject:
+  // Platform-dependant, typically a Dict-like object
+
+class PushDeviceRegistrations:
+  save(DeviceDetails) => io
+  get(params: Dict<String, String>?) => io PaginatedResult<DeviceDetails>
+  remove(params: Dict<String, String>?) => io
+
+class PushChannelSubscriptions:
+  save([PushChannelSubscription]) => io
+  save(PushChannelSubscription) => io
+  listChannels() => io PaginatedResult<String>
+  get(params: Dict<String, String>?) => io PaginatedResult<PushChannelSubscription>
+  remove(params: Dict<String, String>?) => io
+
+enum DevicePushTransportType:
+  "fcm" // PTT1
+  "gcm" // PTT1
+  "apns" // PTT1
+  "web" // PTT1
+
+enum DevicePlatform:
+  "android" // PPT1
+  "ios" // PPT1
+  "browser" // PPT1
+
+enum DeviceFormFactor:
+  "mobile" // PDT1
+  "tablet" // PDT1
+  "desktop" // PDT1
+  "embedded" // PDT1
+
+class PushChannelSubscription:
+  deviceId: String? // PCS2, PCS5, PCS6
+  clientId: String? // PCS3, PCS6
+  channelName: String // PCS4
 
 class ErrorInfo:
   code: Int // TI1
