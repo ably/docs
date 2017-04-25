@@ -866,7 +866,20 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
 
 h2(#push-notifications). Push notifications
 
-* @(RSH1)@ @Push#publish(recipient, data)@ performs a HTTP request to "/push/publish":/rest-api/#push-publish
+* @(RSH1)@ @Push#admin@ object provides the following interface:
+** @(RHS1a)@ @#publish(recipient, data)@ performs an HTTP request to "/push/publish":/rest-api#push-publish. Empty values for @recipient@ or @data@ should be immediately rejected. An end-to-end push notification test can be made using the special test-only @ablyChannel@ recipient. Additionally, tests should exist with valid and invalid recipient details
+** @(RHS1b)@ @#deviceRegistrations@ provides access to the admin @PushDeviceRegistrations@ object with the following methods:
+*** @(RHS1b1)@ @#get(deviceId)@ performs a request to "/push/deviceRegistrations/:deviceId":/rest-api#get-device-registration and returns a @DeviceDetails@ object if the @deviceId@ is found or results in a not found error if the device cannot be found
+*** @(RHS1b2)@ @#list(params)@ performs a request to "/push/deviceRegistrations":/rest-api#list-device-registrations and returns a paginated result with @DeviceDetails@ objects filtered by the provided params, as supported by the REST API. A test should exist filtering by @deviceId@ and separately by @clientId@, and then controlling the pagination with the @limit@ attribute
+*** @(RHS1b3)@ @#save(device)@ issues a @PUT@ request to "/push/deviceRegistrations/:deviceId":/rest-api#update-device-registration using the @DeviceDetails@ object (and optionally a JSON-encodable object) argument. A test should exist for a successful save, a successful subsequent save with an update, and a failed save operation
+*** @(RHS1b4)@ @#remove(deviceId)@ issues a @DELETE@ request to "/push/deviceRegistrations/:deviceId":/rest-api#delete-device-registration and deletes the registered device specified  by @deviceId@. A test should exist that deletes a device and succeeds, and then also deletes a device that does not exist but still succeeds
+*** @(RHS1b5)@ @#removeWhere(params)@ issues a @DELETE@ request to "/push/deviceRegistrations":/rest-api#delete-device-registrations and deletes the registered devices matching the provided @params@. A test should exist that deletes devices by @clientId@ and by @deviceId@ separately, then additionally issues a delete for devices with no matching params and checks the operation still succeeds.
+** @(RHS1c)@ @#channelSubscriptions@ provides access to the admin @ChannelSubscriptions@ object with the following methods:
+*** @(RHS1c1)@ @#list(params)@ performs a request to "/push/channelSubscriptions":/rest-api#list-channel-subscriptions and returns a paginated result with @PushChannelSubscription@ objects filtered by the provided params, as supported by the REST API. A test should exist filtering by @channel@ and @deviceId@ and/or @clientId@, and then controlling the pagination with the @limit@ attribute
+*** @(RHS1c2)@ @#listChannels(params)@ performs a request to "/push/channels":/rest-api#list-channels and returns a paginated result with @PushChannelSubscription@ objects filtered by the provided params, as supported by the REST API. A test should exist using the @limit@ attribute and pagination
+*** @(RHS1c3)@ @#save(pushChannelSubscription)@ issues a @POST@ (this will change to @PUT@ soon) request to "/push/channelSubscriptions":/rest-api#put-channel-subscription using the @PushChannelSubscription@ object (and optionally a JSON-encodable object) argument. A test should exist for a successful save, a successful subsequent save with an update, and a failed save operation
+*** @(RHS1c4)@ @#remove(push_channel_subscription)@ issues a @DELETE@ request to "/push/channelSubscriptions":/rest-api#delete-channel-subscription and deletes the channel subscription using the attributes as params to the @DELETE@ request. A test should exist that deletes a @clientId@ and @deviceId@ channel subscription separately and both succeed, and then also deletes a subscription that does not exist but still succeeds
+*** @(RHS1c5)@ @#removeWhere(params)@ issues a @DELETE@ request to "/push/channelSubscriptions":/rest-api#delete-channel-subscription and deletes the matching channel subscriptions provided in @params@. A test should exist that deletes channel subscriptions by @clientId@ and by @deviceId@ separately, then additionally issues a delete for subscriptions with no matching params and checks the operation still succeeds.
 * @(RSH2)@ The following should only apply to platforms that support receiving push notifications:
 ** @(RSH2a)@ @Push#activate@ sends a @CalledActivate@ event to "the state machine":#RSH3.
 ** @(RSH2b)@ @Push#deactivate@ sends a @CalledDeactivate@ event to "the state machine":#RSH3.
@@ -1338,6 +1351,7 @@ class Channels<ChannelType>:
 class RestChannel:
   name: String?
   presence: RestPresence // RSL3
+  push: PushChannel
   history(
     start: Time, // RSL2b1
     end: Time api-default now(), // RSL2b1
@@ -1346,7 +1360,6 @@ class RestChannel:
   ) => io PaginatedResult<Message> // RSL2a
   publish([Message]) => io // RSL1
   publish(name: String?, data: Data?, clientId?: String, extras?: JsonObject) => io // RSL1, RSL1h
-  push: PushChannel
 
 class RealtimeChannel:
   embeds EventEmitter<ChannelEvent, ChannelStateChange?> // RTL2a, RTL2d, RTL2e
@@ -1354,6 +1367,7 @@ class RealtimeChannel:
   state: ChannelState // RTL2b
   presence: RealtimePresence // RTL9
   properties: ChannelProperties // CP1, RTL15
+  push: PushChannel
   attach() => io // RTL4d
   detach() => io // RTL5e
   history(
@@ -1370,14 +1384,13 @@ class RealtimeChannel:
   unsubscribe() // RTL8a, RTE5
   unsubscribe((Message) ->) // RTL8a
   unsubscribe(String, (Message) ->) // RTL8a
-  push: PushChannel
 
 class PushChannel:
   subscribeDevice() => io
   subscribeClientId() => io
   unsubscribeDevice() => io
   unsubscribeClientId() => io
-  getSubscriptions() => io PaginatedResult<PushChannelSubscription>
+  listSubscriptions() => io PaginatedResult<PushChannelSubscription>
 
 enum ChannelState:
   INITIALIZED
@@ -1590,27 +1603,22 @@ enum StatsIntervalGranularity:
 
 class DeviceDetails:
   id: String
-  platform: DevicePlatform
-  formFactor: DeviceFormFactor
   clientId: String?
+  formFactor: DeviceFormFactor
   metadata: JsonObject
-  updateToken: String
+  platform: DevicePlatform
   push: DevicePushDetails
+  updateToken: String
 
 class DevicePushDetails:
-  transportType: DevicePushTransportType
-  transportId: String
-  transportToken: String?
-  state: .Active | .Failing | .Failed
   errorReason: ErrorInfo?
-  metadata: JsonObject
+  recipient: JsonObject
+  state: .Active | .Failing | .Failed
 
 class LocalDevice extends DeviceDetails:
-  resetId()
-  resetUpdateToken() => io
+  resetUpdateToken(token: String?) => io
 
 class Push:
-  publish(recipient: JsonObject, data: JsonObject) => io
   admin: PushAdmin
 
   // Only on platforms that support receiving notifications:
@@ -1628,20 +1636,27 @@ class Push:
 class PushAdmin:
   deviceRegistrations: PushDeviceRegistrations
   channelSubscriptions: PushChannelSubscriptions
+  publish(recipient: JsonObject, data: JsonObject) => io
 
 class JsonObject:
   // Platform-dependant, typically a Dict-like object
 
 class PushDeviceRegistrations:
+  get(device: DeviceDetails) => io DeviceDetails
+  get(deviceId: String?) => io DeviceDetails
+  list(params: Dict<String, String>?) => io PaginatedResult<DeviceDetails>
   save(DeviceDetails) => io
-  get(params: Dict<String, String>?) => io PaginatedResult<DeviceDetails>
-  remove(params: Dict<String, String>?) => io
+  remove(device: DeviceDetails) => io
+  remove(deviceId: String?) => io
+  removeWhere(params: Dict<String, String>?) => io
 
 class PushChannelSubscriptions:
-  save(PushChannelSubscription) => io
-  listChannels() => io PaginatedResult<String>
-  get(params: Dict<String, String>?) => io PaginatedResult<PushChannelSubscription>
-  remove(params: Dict<String, String>?) => io
+  get(pushChannelSubscription: PushChannelSubscription) => io PushChannelSubscription
+  list(params: Dict<String, String>?) => io PaginatedResult<PushChannelSubscription>
+  listChannels(params: Dict<String, String>?) => io PaginatedResult<String>
+  save(PushChannelSubscription) => io PushChannelSubscription
+  remove(pushChannelSubscription: PushChannelSubscription) => io
+  removeWhere(params: Dict<String, String>?) => io
 
 enum DevicePushTransportType:
   "fcm" // PTT1
