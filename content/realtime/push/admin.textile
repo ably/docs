@@ -6,10 +6,552 @@ languages:
   - javascript
   - nodejs
   - ruby
+jump_to:
+  Help with:
+    - Push Admin Overview
+  API reference:
+    - publish#publish
+    - DeviceRegistrations#device-registrations-object
+    - PushChannelSubscriptions#push-channel-subscriptions
+  Types:
+    - Related Types#related-types
 ---
 
-h3(#platform-install). Platform installation
+The client libraries provide a Push Admin API that is intended to be used on a customer's servers to perform all the management tasks relating to registering devices, managing push device subscriptions and delivering push notifications directly to devices or devices associated with a client identifier.
 
-p(tip). Whilst platform installation is platform specific, all subsequent Ably API calls are not. Make sure you select the language above you wish to see all code examples in.
+The push admin API is accessible via the @push@ attribute of the realtime client. For example to publish a push notification directly to a device, you would access the publish method as follows:
 
-*Note: To use push notifications you need to use v1.1+ of our client libraries. As push notifications are still in beta, please "get in touch":https://www.ably.io/contact if you'd like to download one of the unreleased v1.1 client libraries. Currently push notifications are supported in our iOS, Android, Ruby, Node and Javascript libraries*
+```[jsall]
+var realtime = new Ably.Realtime({ key: apiKey });
+realtime.push.admin.publish(recipient, data, function(err) {
+  if (err) {
+    console.log('Unable to publish push notification; err = ' + err.message);
+    return;
+  }
+  console.log('Push notification published');
+});
+```
+```[ruby]
+realtime = Ably::Realtime.new(key: api_key);
+result = realtime.push.admin.publish(recipient, data) do
+  puts 'Push notification published'
+end
+result.errback do |err|
+  puts "Unable to publish push notification; err = #{err}"
+end
+```
+
+p(tip). The push notification service is currently in beta. Before you get started, please take a look at the "push service beta notie":/realtime/push#beta.
+
+The push admin API offers three key features:
+
+* "@publish@":#publish for "direct publishing to devices and groups of identified devices":/realtime/push/publish#direct-publishing
+* "@deviceRegistrations@":#device-registrations for registering, updating, listing and deregistering push devices
+* "@channelSubscriptions@":#channel-subscriptions for subscribing, listing and unsubscribing individual devices or groups of identified devices to push notifications published on channels
+
+h1. API reference
+
+inline-toc.
+  Push Admin API:
+    - Methods:
+      - publish(recipient, data)#publish
+    - Properties:
+      - deviceRegistrations#device-registrations
+      - channelSubscriptions#channel-subscriptions
+    - DeviceRegistrations:
+      - get(deviceId)#device-get-id
+      - get(DeviceDetails)#device-get-device
+      - list(params)#device-list
+      - save(DeviceDetails)#device-save
+      - remove(deviceId)#device-remove-id
+      - remove(DeviceDetails)#device-remove-device
+      - removeWhere(params)#device-remove-where
+    - PushChannelSubscriptions:
+      - get(PushChannelSubscription)#push-channel-sub-get
+      - list(params)#push-channel-sub-list
+      - listChannels(params)#push-channel-sub-list-channels
+      - save(PushChannelSubscription)#push-channel-sub-save
+      - remove(PushChannelSubscription)#push-channel-sub-remove
+      - removeWhere(params)#push-channel-sub-remove-where
+    - Related types:
+      - DeviceDetails#device-details
+      - PushChannelSubscription#push-channel-subscription
+
+h2(#push-admin). Push Admin object
+
+This object is accessible through @client.push.admin@ and provides:
+
+h3. Methods
+
+h6(#publish).
+  default: publish
+
+bq(definition).
+  default: publish(Object recipient, Object data, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable publish(Hash recipient, Hash data) -> yield
+
+Publishes a push notification directly to a device or group of devices sharing a "client identifier":/general/authentication#identified-clients. See the "push notification direct publishing documentation":/realtime/push/publish#direct-publishing for more information.
+
+h4. Parameters
+
+- recipient := <span lang="default">an object</span><span lang="ruby">a Hash</span> containing the push recipient details. See the "push notification publish REST API documentation":/rest-api#push-publish for details on the supported recipient fields
+- data := <span lang="default">an object</span><span lang="ruby">a Hash</span> containing the push notification recipient details. See the "push notification publish REST API documentation":/rest-api#push-publish for details on the supported push recipient payload fields
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err)@
+- <div lang="ruby">&block</div> := yielded upon success
+
+blang[jsall].
+  h4. Callback result
+
+  The callback is called upon success or failure to publish the push notification. When this operation fails, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are yielded to.
+
+  Failure to publish the push notification will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h2(#properties).
+  default: Push Admin Properties
+  ruby: Push::Admin Properties
+
+The push admin object exposes the following public <span lang="default">properties</span><span lang="ruby">attributes</span><span lang="java">members</span>:
+
+h6(#device-registrations).
+  default: deviceRegistrations
+  ruby: device_registrations
+
+The returned "@DeviceRegistrations@":#device-registrations-object object provide functionality for registering, updating, listing and deregistering push devices.
+
+h6(#channel-subscriptions).
+  default: channelSubscriptions
+  ruby: channel_subscriptions
+
+The returned "@PushChannelSubscriptions@":#push-channel-subscriptions object provides functionality for subscribing, listing and unsubscribing individual devices or groups of "identified devices":/general/authentication#identified-clients to push notifications published on channels.
+
+h2(#device-registrations-object). DeviceRegistrations object
+
+This object is accessible through <span lang="default">@client.push.admin.deviceRegistrations@</span><span lang="ruby">@client.push.admin.device_registrations@</span> and provides an API to register new push notification devices, update existing devices, deregister old devices, and retrieve or list devices registered to an app.
+
+h3. Methods
+
+h6(#device-get).
+  default: get
+
+bq(definition#device-get-id).
+  default: get(String deviceId, callback("ErrorInfo":/realtime/types#error-info err, "DeviceDetails":#device-details device))
+  ruby:    "Deferrable":/realtime/types#deferrable get(String deviceId) -> yields "DeviceDetails":#device-details
+
+bq(definition#device-get-device).
+  default: get("DeviceDetails":#device-details device, callback("ErrorInfo":/realtime/types#error-info err, "DeviceDetails":#device-details device))
+  ruby:    "Deferrable":/realtime/types#deferrable get("DeviceDetails":#device-details device) -> yields "DeviceDetails":#device-details
+
+Obtain the @DeviceDetails@ for a device registered for receiving push registrations matching the @deviceId@ argument, or the @id@ attribute of the provided @DeviceDetails@ object.
+
+h4. Parameters
+
+- deviceId := the unique device ID String for the requested device
+- device := a "@DeviceDetails@":#device-details object containing at a minimum the @deviceId@ of the requested device
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, device)@
+- <div lang="ruby">&block</div> := yields a @DeviceDetails@ object upon success
+
+blang[jsall].
+  h4. Callback result
+
+  On success, @device@ contains the device registered for push notifications as a "@DeviceDetails@":#device-details object.
+
+  On failure to retrieve the device, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield the device registered for push notifications as a "@DeviceDetails@":#device-details object.
+
+  Failure to retrieve the device will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#device-list).
+  default: list
+
+bq(definition).
+  default: list(Object params, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"DeviceDetails":#device-details device> resultPage))
+  ruby:    "Deferrable":/realtime/types#deferrable list(Hash params) -> yields "PaginatedResult":#paginated-result<"DeviceDetails":#device-details>
+
+Retrieve all devices matching the params filter as a paginated list of "@DeviceDetails@":#device-details objects.
+
+h4. Parameters
+
+- <span lang="default">params</span><span lang="java">"Param":#param[] params</span> := an object containing the query parameters as key value pairs as specified below.
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, resultPage)@
+- <div lang="ruby">&block</div> := yields a @PaginatedResult<DeviceDetails>@ object
+error
+
+h4. @params@ properties
+
+- <span lang="default">clientId</span><span lang="ruby">:client_id</span> := optional filter to restrict to devices associated with that client identifier<br>__Type: @String@__
+- <span lang="default">deviceId</span><span lang="ruby">:device_id</span> := optional filter to restrict to devices associated with that device identifier<br>__Type: @String@__
+- <span lang="default">limit</span><span lang="ruby">:limit</span> := _100_ maximum number of devices per page to retrieve, up to 1,000<br>__Type: @Integer@__
+
+blang[jsall].
+  h4. Callback result
+
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@DeviceDetails@":#device-details objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  On failure to retrieve the devices, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield a "PaginatedResult":#paginated-result that encapsulates an array of "@DeviceDetails@":#device-details corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  Failure to retrieve the devices will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#device-save).
+  default: save
+
+bq(definition).
+  default: save("DeviceDetails":#device-details device, callback("ErrorInfo":/realtime/types#error-info err, "DeviceDetails":#device-details device))
+  ruby:    "Deferrable":/realtime/types#deferrable save("DeviceDetails":#device-details device) -> yields "DeviceDetails":#device-details
+
+Register a new @DeviceDetails@ object, or update an existing @DeviceDetails@ object with the Ably service.
+
+h4. Parameters
+
+- device := a "@DeviceDetails@":#device-details object
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, device)@
+- <div lang="ruby">&block</div> := yields the new @DeviceDetails@ object upon success
+
+blang[jsall].
+  h4. Callback result
+
+  On success, @device@ contains the newly registered or updated device as a "@DeviceDetails@":#device-details object.
+
+  On failure to create or update the device, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield the newly registered or updated device as a "@DeviceDetails@":#device-details object.
+
+  Failure to create or update the device will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#device-remove).
+  default: remove
+
+bq(definition#device-remove-id).
+  default: remove(String deviceId, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable remove(String deviceId)
+
+bq(definition#device-remove-device).
+  default: remove("DeviceDetails":#device-details device, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable remove("DeviceDetails":#device-details device) -> yield
+
+Remove a device registered for receiving push registrations that matches the @deviceId@ argument, or the @id@ attribute of the provided @DeviceDetails@ object.
+
+h4. Parameters
+
+- deviceId := the unique device ID String for the device
+- device := a "@DeviceDetails@":#device-details object containing at a minimum the @deviceId@ of the device
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err)@
+- <div lang="ruby">&block</div> := yields upon success
+
+blang[jsall].
+  h4. Callback result
+
+  The callback is called upon success or failure to delete the device. Note that a request to delete a device that does not exist will result in a successful operation.
+
+  When this operation fails, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are yielded to. Note that a request to delete a device that does not exist will result in a successful operation.
+
+  Failure to delete the device will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#device-remove-where).
+  default: removeWhere
+  ruby: remove_where
+
+bq(definition).
+  default: removeWhere(Object params, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable remove_where(Hash params) -> yield
+
+Delete all devices matching the params filter.
+
+h4. Parameters
+
+- <span lang="default">params</span><span lang="java">"Param":#param[] params</span> := an object containing the filter parameters as key value pairs as specified below.
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err)@
+- <div lang="ruby">&block</div> := yields upon success
+error
+
+h4. @params@ properties
+
+- <span lang="default">clientId</span><span lang="ruby">:client_id</span> := optional filter to restrict to devices associated with that client identifier<br>__Type: @String@__
+- <span lang="default">deviceId</span><span lang="ruby">:device_id</span> := optional filter to restrict to devices associated with that device identifier<br>__Type: @String@__
+
+blang[jsall].
+  h4. Callback result
+
+  The callback is called upon success or failure to delete the device. Note that a request that does match any existing devices will result in a successful operation.
+
+  When this operation fails, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are yielded to. Note that a request that does match any existing devices will result in a successful operation.
+
+  Failure to delete the device will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h2(#push-channel-subscriptions). PushChannelSubscriptions object
+
+This object is accessible through <span lang="default">@client.push.admin.channelSubscriptions@</span><span lang="ruby">@client.push.admin.channel_subscriptions@</span> and provides an API to subscribe a push notification device to a channel ensuring it receives any push notifications published in future on that channel. Additionally, this object allows these subscriptions to be retrieved, listed, updated or removed.
+
+h3. Methods
+
+h6(#push-channel-sub-get).
+  default: get
+
+bq(definition).
+  default: get("PushChannelSubscription":#push-channel-subscription channelSubscription, callback("ErrorInfo":/realtime/types#error-info err, "PushChannelSubscription":#push-channel-subscription channelSubscription))
+  ruby:    "Deferrable":/realtime/types#deferrable get("PushChannelSubscription":#push-channel-subscription channel_subscription) -> yields "PushChannelSubscription":#push-channel-subscription
+
+Retrieve the push channel subscription that matches the provided "@PushChannelSubscription@":#push-channel-subscription argument. Each "@PushChannelSubscription@":#push-channel-subscription represents a device or set of devices sharing the same "client identifier":/general/authentication#identified-clients registered to a channel to receive push notifications.
+
+h4. Parameters
+
+- <span lang="default">channelSubscription</span><span lang="ruby">channel_subscription</span> := a "@PushChannelSubscription@":#push-channel-subscription object
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, channelSubscription)@
+- <div lang="ruby">&block</div> := yields a @PushChannelSubscription@ object upon success
+
+blang[jsall].
+  h4. Callback result
+
+  On success, @channelSubscription@ contains the push channel subscription as a "@PushChannelSubscription@":#push-channel-subscription object
+
+  On failure to retrieve the push channel subscription, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield the push channel subscription as a "@PushChannelSubscription@":#push-channel-subscription object.
+
+  Failure to retrieve the push channel subscription will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#push-channel-sub-list).
+  default: list
+
+bq(definition).
+  default: list(Object params, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"PushChannelSubscription":#push-channel-subscription> resultPage))
+  ruby:    "Deferrable":/realtime/types#deferrable list(Hash params) -> yields "PaginatedResult":#paginated-result<"PushChannelSubscription":#push-channel-subscription>
+
+Retrieve all push channel subscriptions that match the provided params filter as a paginated list of "@PushChannelSubscription@":#push-channel-subscription objects. Each "@PushChannelSubscription@":#push-channel-subscription represents a device or set of devices sharing the same "client identifier":/general/authentication#identified-clients registered to a channel to receive push notifications.
+
+h4. Parameters
+
+- <span lang="default">params</span><span lang="java">"Param":#param[] params</span> := an object containing the query parameters as key value pairs as specified below.
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, resultPage)@
+- <div lang="ruby">&block</div> := yields a @PaginatedResult<PushChannelSubscription>@ object
+error
+
+h4. @params@ properties
+
+- <span lang="default">channel</span><span lang="ruby">:channel</span> := filter to restrict to subscriptions associated with that @channel@
+- <span lang="default">clientId</span><span lang="ruby">:client_id</span> := optional filter to restrict to devices associated with that client identifier. Cannot be used with <span lang="default">@clientId@</span><span lang="ruby">@:client_id@</span> param<br>__Type: @String@__
+- <span lang="default">deviceId</span><span lang="ruby">:device_id</span> := optional filter to restrict to devices associated with that device identifier. Cannot be used with <span lang="default">@deviceId@</span><span lang="ruby">@:device_id@</span> param<br>__Type: @String@__
+- <span lang="default">limit</span><span lang="ruby">:limit</span> := _100_ maximum number of channel subscriptions per page to retrieve, up to 1,000<br>__Type: @Integer@__
+
+blang[jsall].
+  h4. Callback result
+
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@PushChannelSubscription@":#push-channel-subscription objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  On failure to retrieve the channel subscriptions, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield a "PaginatedResult":#paginated-result that encapsulates an array of "@PushChannelSubscription@":#push-channel-subscription corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  Failure to retrieve the channel subscriptions will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#push-channel-sub-list-channels).
+  default: listChannels
+  ruby: list_channels
+
+bq(definition).
+  default: listChannels(Object params, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<String> resultPage))
+  ruby:    "Deferrable":/realtime/types#deferrable list_channels(Hash params) -> yields "PaginatedResult":#paginated-result<String>
+
+Retrieve a list of channels with at least one subscribed device as a paginated list of channel name @String@ objects.
+
+h4. Parameters
+
+- <span lang="default">params</span><span lang="java">"Param":#param[] params</span> := an object containing the query parameters as key value pairs as specified below.
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, resultPage)@
+- <div lang="ruby">&block</div> := yields a @PaginatedResult<String>@ object
+error
+
+h4. @params@ properties
+
+- <span lang="default">limit</span><span lang="ruby">:limit</span> := _100_ maximum number of channels per page to retrieve, up to 1,000<br>__Type: @Integer@__
+
+blang[jsall].
+  h4. Callback result
+
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of channel name @String@ values corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  On failure to retrieve the channels, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield a "PaginatedResult":#paginated-result that encapsulates an array of channel name @String@ values corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  Failure to retrieve the channels will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#push-channel-sub-save).
+  default: save
+
+bq(definition).
+  default: save("PushChannelSubscription":#push-channel-subscription channelSubscription, callback("ErrorInfo":/realtime/types#error-info err, "PushChannelSubscription":#push-channel-subscription channelSubscription))
+  ruby:    "Deferrable":/realtime/types#deferrable save("PushChannelSubscription":#push-channel-subscription channel_subscription) -> yields "PushChannelSubscription":#push-channel-subscription
+
+Subscribe a device or group of devices sharing a "client identifier":/general/authentication#identified-clients for push notifications published on a channel.
+
+h4. Parameters
+
+- <span lang="default">channelSubscription</span><span lang="ruby">channel_subscription</span> := a "@PushChannelSubscription@":#push-channel-subscription object
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, channelSubscription)@
+- <div lang="ruby">&block</div> := yields the new @PushChannelSubscription@ object upon success
+
+blang[jsall].
+  h4. Callback result
+
+  On success, @channelSubscription@ contains the newly subscribed or updated push channel subscription as a "@PushChannelSubscription@":#push-channel-subscription object.
+
+  On failure to create or update the channel subscription, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield the newly subscribed or updated push channel subscription as a "@PushChannelSubscription@":#push-channel-subscription object.
+
+  Failure to create or update the channel subscription will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#push-channel-sub-remove).
+  default: remove
+
+bq(definition).
+  default: remove("PushChannelSubscription":#push-channel-subscription channelSubscription, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable remove("PushChannelSubscription":#push-channel-subscription channel_subscription) -> yield
+
+Subscribe a device or group of devices sharing a "client identifier":/general/authentication#identified-clients for push notifications on a channel.
+
+h4. Parameters
+
+- <span lang="default">channelSubscription</span><span lang="ruby">channel_subscription</span> := a "@PushChannelSubscription@":#push-channel-subscription object
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err)@
+- <div lang="ruby">&block</div> := yields upon success
+
+blang[jsall].
+  h4. Callback result
+
+  The callback is called upon success or failure to unsubscribe. Note that a request to unsubscribe or remove a subscription that does not exist will result in a successful operation.
+
+  When this operation fails, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are yielded to. Note that a request to unsubscribe or remove a subscription that does not exist will result in a successful operation.
+
+  Failure to unsubscribe will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#push-channel-sub-remove-where).
+  default: removeWhere
+  ruby: remove_where
+
+bq(definition).
+  default: removeWhere(Object params, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable remove_where(Hash params) -> yield
+
+Delete all push channel subscriptions matching the params filter.
+
+h4. Parameters
+
+- <span lang="default">params</span><span lang="java">"Param":#param[] params</span> := an object containing the filter parameters as key value pairs as specified below.
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err)@
+- <div lang="ruby">&block</div> := yields upon success
+error
+
+h4. @params@ properties
+
+- <span lang="default">channel</span><span lang="ruby">:channel</span> := filter to restrict to subscriptions associated with that @channel@
+- <span lang="default">clientId</span><span lang="ruby">:client_id</span> := optional filter to restrict to devices associated with that client identifier. Cannot be used with <span lang="default">@clientId@</span><span lang="ruby">@:client_id@</span> param<br>__Type: @String@__
+- <span lang="default">deviceId</span><span lang="ruby">:device_id</span> := optional filter to restrict to devices associated with that device identifier. Cannot be used with <span lang="default">@deviceId@</span><span lang="ruby">@:device_id@</span> param<br>__Type: @String@__
+
+blang[jsall].
+  h4. Callback result
+
+  The callback is called upon success or failure to unsubscribe. Note that a request to unsubscribe or remove a subscription that does not exist will result in a successful operation.
+
+  When this operation fails, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are yielded to. Note that a request to unsubscribe or remove a subscription that does not exist will result in a successful operation.
+
+  Failure to unsubscribe will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h2(#related-types). Related types
+
+h3(#device-details).
+  default: DeviceDetails
+  ruby:    Ably::Models::DeviceDetails
+
+<%= partial 'types/_device_details' %>
+
+h3(#push-channel-subscription).
+  default: PushChannelSubscription
+  ruby:    Ably::Models::PushChannelSubscription
+
+<%= partial 'types/_push_channel_subscription' %>
