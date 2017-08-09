@@ -10,6 +10,6 @@ module Sass::Script::Functions
 
   def language_ids
     keys = Ably::DOCUMENTATION_LANGUAGES.keys.map { |d| Sass::Script::String.new(d) }
-    Sass::Script::List.new(keys, :comma)
+    Sass::Script::List.new(keys, :separator => :comma)
   end
 end
