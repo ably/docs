@@ -43,6 +43,16 @@ If you would prefer to use Docker, then you can set up the env as follows:
 * `./docker-run server` to start up a web server at <http://localhost:4000>
 * `./docker-run guard` to watch for changes and rebuild the site automatically. This is normally run in conjunction with the `./docker-run server` command so that you can see changes immediately
 
+Running on Heroku
+----
+
+This repo will automatically run on Heroku, but relies on the following buildpacks:
+
+    $ heroku buildpacks
+    === ably-docs Buildpack URLs
+    1. heroku/ruby
+    2. https://github.com/ably-forks/heroku-buildpack-nanoc.git
+
 Pull requests
 ----
 
