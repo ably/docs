@@ -453,10 +453,10 @@ h3(#realtime-channel). Channel
 *** @(RTL6i2)@ When an array of @Message@ objects is provided, a single @ProtocolMessage@ is used to publish all @Message@ objects in the array. However, a yet to be implemented feature should limit the total number of messages bundled in a single ProtocolMessage based on the default max message size
 *** @(RTL6i3)@ Allows @name@ and or @data@ to be @null@.  If any of the values are @null@, then key is not sent to Ably i.e. a payload with a @null@ value for @data@ would be sent as follows @{ "name": "click" }@
 ** @(RTL6c)@ Connection and channel state conditions:
-*** @(RTL6c1)@ If the connection is @CONNECTED@ and the channel is @ATTACHED@ then the messages are published immediately
-*** @(RTL6c2)@ If the connection is @INITIALIZED@, @CONNECTING@ or @DISCONNECTED@ or the channel is @INITIALIZED@, @ATTACHING@ or @ATTACHED@, and @ClientOptions#queueMessages@ has not been explicitly set to false, then the message will be queued and delivered as soon as the connection state enters the @CONNECTED@ state and the channel is @ATTACHED@
-*** @(RTL6c4)@ If the connection is @SUSPENDED@, @CLOSING@, @CLOSED@, or @FAILED@, or the channel is @DETACHING@, @DETACHED@, @SUSPENDED@ or @FAILED@, the operation will result in an error
-*** @(RTL6c3)@ Implicitly attaches the @Channel@ if the channel is in the @INITIALIZED@ state. However, if the channel is in enters to the @DETACHED@ or @FAILED@ state before the operation succeeds, it will result in an error
+*** @(RTL6c1)@ If the connection is @CONNECTED@ and the channel is @INITIALIZED@, @ATTACHED@, or @DETACHED@ then the messages are published immediately
+*** @(RTL6c2)@ If the connection is @INITIALIZED@, @CONNECTING@ or @DISCONNECTED@ or the channel is @ATTACHING@ or @DETACHING@, and @ClientOptions#queueMessages@ has not been explicitly set to false, then the message will be queued and delivered as soon as the connection is @CONNECTED@ and the channel is @INITIALIZED@, @ATTACHED@, or @DETACHED@
+*** @(RTL6c4)@ If the connection is @SUSPENDED@, @CLOSING@, @CLOSED@, or @FAILED@, or the channel is @SUSPENDED@ or @FAILED@, the operation will result in an error
+*** @(RTL6c5)@ A publish should not trigger an implicit attach (in contrast to earlier version of this spec)
 ** @(RTL6d)@ Messages are delivered using a single @ProtocolMessage@ where possible by bundling in all messages for that channel into the @ProtocolMessage#messages@ array. However, a yet to be implemented feature should limit the total number of messages bundled per @ProtocolMessage@ based on the default max message size, and would reject the publish and indicate an error if any single message exceeds that limit
 ** @(RTL6e)@ Unidentified clients using "Basic Auth":https://en.wikipedia.org/wiki/Basic_access_authentication (i.e. any @clientId@ is permitted as no @clientId@ specified):
 *** @(RTL6e1)@ When a @Message@ with a @clientId@ value is published, Ably will accept and publish that message with the provided @clientId@. A test should assert that the @clientId@ of the published @Message@ is populated
@@ -486,6 +486,7 @@ h3(#realtime-channel). Channel
 ** @(RTL10b)@ Additionally supports the param @untilAttach@, which if true, will only retrieve messages prior to the moment that the channel was attached or emitted an @UPDATE@ indicating loss of continuity. This bound is specified by passing the querystring param @fromSerial@ with the @Channel#properties.attachSerial@ assigned to the channel in the @ATTACHED@ @ProtocolMessage@ (see "RTL15a":#RTL15a). If the @untilAttach@ param is specified when the channel is not attached, it results in an error
 ** @(RTL10c)@ Returns a @PaginatedResult@ page containing the first page of messages in the @PaginatedResult#items@ attribute returned from the history request
 ** @(RTL10d)@ A test should exist that publishes messages from one client, and upon confirmation of message delivery, a history request should be made on another client to ensure all messages are available
+* @(RTL16)@ If an @ATTACHED@ @ProtocolMessage@ is received with the @TRANSIENT@ bitflag (see "TR3e":#TR3e) set, the channel should not undergo any state change. (That is, the channel should not transition to the @ATTACHED@ state, as it normally would be for an @ATTACHED@)
 * @(RTL12)@ An attached channel may receive an additional @ATTACHED@ @ProtocolMessage@ from Ably at any point. (This is typically triggered following a transport being upgraded or resumed to indicate a partial loss of message continuity on that channel, in which case the @ProtocolMessage@ will have a @resumed@ flag set to false). If and only if the @resumed@ flag is false, this should result in the channel emitting an @UPDATE@ event with a @ChannelStateChange@ object. The @ChannelStateChange@ object should have both @previous@ and @current@ attributes set to @attached@, the @reason@ attribute set to to the @error@ member of the @ATTACHED@ @ProtocolMessage@ (if any), and the @resumed@ attribute set per the @RESUMED@ bitflag of the @ATTACHED@ @ProtocolMessage@. (Note that @UPDATE@ should be the only event emitted: in particular, the library must not emit an @ATTACHED@ event if the channel was already attached, see @RTL2g@).
 * @(RTL15)@ @Channel#properties@ attribute is a @ChannelProperties@ object representing properties of the channel state. @properties@ is a publicly accessible member of the channel, but it is an experimental and unstable API. It has the following attributes:
 ** @(RTL15a)@ @attachSerial@ is @null@ when the channel is instanced, and is updated with the @channelSerial@ from each @ATTACHED@ @ProtocolMessage@ received from Ably with a matching @channel@ attribute. The @attachSerial@ value is used for @untilAttach@ queries, see "RTL10b":#RTL10b and "RTP12b":#RTP12b.
@@ -493,6 +494,7 @@ h3(#realtime-channel). Channel
 ** @(RTL13a)@ If the channel is in the @ATTACHED@ or @SUSPENDED@ states, an attempt to reattach the channel should be made immediately by sending a new @ATTACH@ message and the channel should transition to the @ATTACHING@ state with the error emitted in the @ChannelStateChange@ event.
 ** @(RTL13b)@ If the attempt to re-attach fails, or if the channel was already in the @ATTACHING@ state, the channel will transition to the @SUSPENDED@ state and the error will be emitted in the @ChannelStateChange@ event. An attempt to re-attach the channel automatically will then be made after the period defined in @ClientOptions#channelRetryTimeout@. When re-attaching the channel, the channel will transition to the @ATTACHING@ state. If that request to attach fails i.e. it times out or a @DETACHED@ message is received, then the process described here in @RTL13b@ will be repeated, indefinitely
 ** @(RTL13c)@ If the connection is no longer @CONNECTED@, then the automatic attempts to re-attach the channel described in "RTL13b":#RTL13b must be cancelled as any implicit channel state changes subsequently will be covered by "RTL3":#RTL3
+* @(RTL17)@ If the channel receives a @DETACHED@ @ProtocolMessage@ while in the @INITIALIZED@ state, it should remain in the @INITIALIZED@ state
 * @(RTL14)@ If an @ERROR ProtocolMessage@ is received for this channel (the channel attribute matches this channel's name), then the channel should immediately transition to the FAILED state, and the @Channel.errorReason@ should be set
 
 h3(#realtime-presence). Presence
@@ -998,7 +1000,16 @@ h4. ProtocolMessage
 
 * @(TR1)@ A @ProtocolMessage@ represents the type used to send and receive messages over the Realtime protocol.  A ProtocolMessage always relates either to the connection or to a single channel only, but can contain multiple individual Messages or PresenceMessages.  See the "Ruby ProtocolMessage documentation":http://www.rubydoc.info/gems/ably/Ably/Models/ProtocolMessage, but bear in mind the attributes following underscore naming in Ruby
 * @(TR2)@ @ProtocolMessage@ @Action@ enum has the following values in order from zero: @HEARTBEAT@, @ACK@, @NACK@, @CONNECT@, @CONNECTED@, @DISCONNECT@, @DISCONNECTED@, @CLOSE@, @CLOSED@, @ERROR@, @ATTACH@, @ATTACHED@, @DETACH@, @DETACHED@, @PRESENCE@, @MESSAGE@, @SYNC@, @AUTH@
-* @(TR3)@ @ProtocolMessage@ @Flag@ enum has the following values in order from zero: @HAS_PRESENCE@, @HAS_BACKLOG@ and @RESUMED@
+* @(TR3)@ @ProtocolMessage@ @Flag@ enum has the following values, where a flag with value @n@ is defined to be set if the bitwise AND of the @flags@ field with @2ⁿ@ is nonzero
+** @(TR3a)@ 0: @HAS_PRESENCE@
+** @(TR3b)@ 1: @HAS_BACKLOG@
+** @(TR3c)@ 2: @RESUMED@
+** @(TR3d)@ 3: @HAS_LOCAL_PRESENCE@
+** @(TR3e)@ 4: @TRANSIENT@
+** @(TR3q)@ 16: @PRESENCE@
+** @(TR3r)@ 17: @PUBLISH@
+** @(TR3s)@ 18: @SUBSCRIBE@
+** @(TR3t)@ 19: @PRESENCE_SUBSCRIBE@
 * @(TR4)@ Attributes available in a @ProtocolMessage@, see the "Ruby ProtocolMessage documentation":http://www.rubydoc.info/gems/ably/Ably/Models/ProtocolMessage for an explanation of each attribute:
 ** @(TR4a)@ @action@ enum
 ** @(TR4n)@ @id@ string, which will generally be of the form @connectionId:msgSerial@
