@@ -3,7 +3,7 @@ Ably Documentation Overview
 
 [Ably](https://www.ably.io) is a hugely scalable, superfast and secure hosted realtime messaging service for web-enabled devices.
 
-This Git repository contains most of the [Ably API documentation](https://www.ably.io/documentation) that resides at <https://www.ably.io/documentation> in [Textile](redcloth.org/textile) format.  [Nanoc](http://nanoc.stoneship.org/) is used to build the static site from the `source` branch.
+This Git repository contains most of the [Ably API documentation](https://www.ably.io/documentation) that resides at <https://www.ably.io/documentation> in [Textile](redcloth.org/textile) format.  [Nanoc](http://nanoc.stoneship.org/) is used to build the static site from the `master` branch.
 
 The Ably documentation was intentionally created as a public repository using a simple text based markup language so that:
 
@@ -23,7 +23,7 @@ Forking and running locally
 
 * Fork the repository at https://github.com/ably/docs
 * Clone a local version of your forked repo `git clone https://github.com/[you]/docs` and `cd` into it
-* Checkout the source branch: `git checkout source`
+* Checkout the master branch: `git checkout master`
 * Create your feature or fix branch and check it out: `git checkout -b [your-branch]`
 * `bundle install` to install the necessary gems
 * Create a jsbin config file: `cp config/jsbin_config.example.yaml config/jsbin_config.yaml`
