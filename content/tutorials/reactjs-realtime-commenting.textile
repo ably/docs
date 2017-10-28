@@ -1,0 +1,344 @@
+---
+title: React Realtime Commenting Tutorial
+section: tutorials
+index: 10
+---
+
+The Ably Realtime service organizes the message traffic within applications into named channels. Channels are the “unit” of message distribution; clients attach to any number of channels to subscribe to messages, and every message published to a channel is broadcasted to all subscribers. This scalable and resilient messaging pattern is commonly called pub/sub.
+
+As you can publish a message to any channel, channels provide a means for you to filter data by topic or enforce access control for your subscribers. Only subscribers for those channesl will receive those messages.
+
+In this tutorial, I will be showing you how to use Ably "Realtime client library":/realtime to build a realtime commenting system with React. This tutorial will not include any server-side implementation. Hence, comments won't be persisted to any storage.
+
+Let's get started.
+
+<%= partial 'tutorials/_step-1-setup-free-account' %>
+
+h2. Step 2 - Create a React App
+
+We'll start by creating a new React app. To do this, we'll be using create-react-app. So you need to install @create-react-app@ locally if you don't have it already:
+
+```[sh]
+npm install -g create-react-app
+```
+
+Once installed, we can use it to create a new React app. We'll call it @reactjs-realtime-commenting@:
+
+```[sh]
+create-react-app reactjs-realtime-commenting
+```
+
+The new React app is ready. We can start it by running:
+
+```[sh]
+cd reactjs-realtime-commenting
+npm start
+```
+
+h2. Step 3 - Delete Unused Files
+
+Before we move on to building upon this app, let’s quickly delete some files we won’t be needing. So delete the following files: @src/App.css@, @src/App.test.js@, @src/index.css@ and @src/logo.svg@.
+
+h2. Step 4 - Create Component Folder
+
+Now, we’ll create a new folder within the @src@  folder called @components@. This folder will contain all our React components.
+
+```[sh]
+cd src
+mkdir components
+```
+
+Once that is created, we need to move @App.js@ into the @components@ folder:
+
+```[sh]
+cd src
+mv App.js components
+```
+
+h2. Step 5 - Update index.js
+
+Then we need to update @src/index.js@ as below:
+
+```[javascript]
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './components/App';
+import registerServiceWorker from './registerServiceWorker';
+
+ReactDOM.render(<App />, document.getElementById('root'));
+registerServiceWorker();
+```
+
+h2. Step 6 - Add Bulma CSS Framework
+
+We’ll be using "Bulma":https://bulma.io Bulma CSS framework so as not to waste time writing CSS. So we’ll reference it from CDN. Add the line below to @public/index.html@:
+
+```[html]
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.0/css/bulma.min.css">
+```
+
+h2. Step 7 - Install Ably
+
+To start using Ably you first need to install the NPM module. The NPM module can be installed as follows:
+
+```[sh]
+npm install ably
+```
+
+The client library must be instanced with the API key you copied in Step 1. We’ll create a dedicated file for this so we can easily use it in multiple places. Within @src@ folder, create a new file named @ably.js@ and add the code below into it:
+
+```[javascript]
+import { Realtime } from 'ably/browser/static/ably-commonjs.js';
+
+export default new Realtime('INSERT-YOUR-API-KEY-HERE');
+```
+
+h2. Step 8 - Create CommentBox Component
+
+Within the @components@ folder, create a new file named @CommentBox.js@ and add the code below into it:
+
+```[javascript]
+import React, { Component } from 'react';
+import Ably from '../ably';
+
+class CommentBox extends Component {
+  render() {
+    return (
+      <div>
+        <h1 className="title">Kindly leave your thoughts below</h1>
+        <form onSubmit={this.addComment}>
+          <div className="field">
+            <div className="control">
+              <input type="text" className="input" name="name" placeholder="Your name"/>
+            </div>
+          </div>
+          <div className="field">
+            <div className="control">
+              <textarea className="textarea" name="comment" placeholder="Add a comment"></textarea>
+            </div>
+          </div>
+          <div className="field">
+            <div className="control">
+              <button className="button is-primary">Submit</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    );
+  }
+}
+
+export default CommentBox;
+```
+
+This simply renders a comment form as the image below. Once the form is submitted, we trigger an @onSubmit@ event which in turn call the @addComment()@ function (which we’ll create shortly).
+
+<a href="/images/tutorials/reactjs-realtime-commenting-comment-form.png" target="_blank">
+  <img src="/images/tutorials/reactjs-realtime-commenting-comment-form.png" style="width: 100%" alt="Comment form screenshot">
+</a>
+
+h2. Step 9 - Adding and Publishing Comment
+
+Next, we create the @addComment()@ function. Still within @components/CommentBox.js@, add the code below just before the @render()@ function:
+
+```[javascript]
+addComment(e) {
+  // Prevent the default behaviour of form submit
+  e.preventDefault();
+
+  // Get the value of the comment box
+  // and make sure it not some empty strings
+  const comment = e.target.elements.comment.value.trim();
+  const name = e.target.elements.name.value.trim();
+
+  // Make sure name and comment boxes are filled
+  if (name && comment) {
+    const commentObject = { name, comment };
+
+    // Publish comment
+    const channel = Ably.channels.get('comments');
+    channel.publish('add_comment', commentObject);
+
+    // Clear input fields
+    e.target.elements.comment.value = '';
+    e.target.elements.name.value = '';
+  }
+}
+```
+
+We first prevent the default form submission behaviour (that is, reloading the page). We then get the form inputs entered (name and comment) and make sure they are not just some empty strings. If the inputs are properly filled, we publish the comment just made to a @comments@  channel with an @add_comment@ event. Lastly, we clear the form fields.
+
+h2. Step 10 - Create Comment Component
+
+Within the @components@ folder, create a new file named @Comment.js@ and add the code below into it:
+
+```[javascript]
+import React, { Component } from 'react';
+
+class Comment extends Component {
+  render() {
+    return (
+      <article className="media">
+        <figure className="media-left">
+          <p className="image is-64x64">
+           <img src="https://bulma.io/images/placeholders/128x128.png" alt="Avatar" />
+          </p>
+        </figure>
+        <div className="media-content">
+          <div className="content">
+            <p>
+              <strong>{this.props.comment.name}</strong>
+              <br />
+              {this.props.comment.comment}
+            </p>
+          </div>
+        </div>
+      </article>
+    );
+  }
+}
+
+export default Comment;
+```
+
+This simply renders a single comment. It accepts the comment as props.
+
+h2. Step 11 - Create Comments Component
+
+Within the @components@ folder, create a new file named @Comments.js@ and add the code below into it:
+
+```[javascript]
+import React, { Component } from 'react';
+import Comment from './Comment';
+
+class Comments extends Component {
+  render() {
+    return (
+      <section className="section">
+        {
+          this.props.comments.map((comment, index) => {
+            return <Comment key={index} comment={comment} />
+          })
+        }
+      </section>
+    );
+  }
+}
+
+export default Comments;
+```
+
+This component accepts a @comments@ props and renders the Comment component for each of the comments available. It passes the actual comment to the Comment component as props.
+
+h2. Step 12 - Create App Component
+
+The App component will server as the parent component. Open @components/App.js@ and replace it with the code below:
+
+```[javascript]
+import React, { Component } from 'react';
+import CommentBox from './CommentBox';
+import Comments from './Comments';
+import Ably from '../ably';
+
+class App extends Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+        comments: []
+    }
+  }
+
+  render() {
+    return (
+      <section className="section">
+        <div className="container">
+          <div className="columns">
+            <div className="column is-half is-offset-one-quarter">
+              <CommentBox />
+              <Comments comments={this.state.comments} />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+}
+
+export default App;
+```
+
+This contains the components we created earlier. We define a @comments@ state which is an array of comments. It defaults to an empty array. This will be updated as we add comment through the comment form. Also, we pass the @comments@ state as props to the Comments component. This is how the Comments component get the comments it renders.
+
+h2. Step 13 - Subscribing to Comments
+
+We have seen how we can publish newly added comments. Now, we need to subscribe to those comments being published. We’ll do this within React lifecycle @componentDidMount()@ hook. Still within @components/App.js@, add the code below just before the @render()@ function:
+
+```[javascript]
+componentDidMount() {
+  // Subscribe to comments
+  const channel = Ably.channels.get('comments');
+
+  channel.subscribe('add_comment', (comment) => {
+    this.setState((prevState) => {
+      return {
+        comments: prevState.comments.concat({
+          name: comment.data.name,
+          comment: comment.data.comment
+        })
+      };
+    });
+  });
+}
+```
+
+The @componentDidMount()@ hook runs after the component output has been rendered to the DOM. It is a good place to subscribe to comments. We subscribe to the @comments@ channel and listen for the @add_comment@ event. We then update the @comments@ state with the comment published from the channel we are subscribed to.
+
+<a href="/images/tutorials/reactjs-realtime-commenting-final-output.png" target="_blank">
+  <img src="/images/tutorials/reactjs-realtime-commenting-final-output.png" style="width: 100%" alt="Final output screenshot">
+</a>
+
+That’s it. We now have a realtime commenting system. To test it out, start the app:
+
+```[sh]
+npm start
+```
+
+Then open "http://localhost:3000":http://localhost:3000 in two different browser tabs. Add a comment in one of the opened tabs and watch the other tab update with the comment in realtime.
+
+h2. Download tutorial source code
+
+The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/reactjs-realtime-commenting.
+
+We recommend that you clone the repo locally:
+
+```[sh]
+git clone https://github.com/ably/tutorials.git
+```
+
+Checkout the tutorial branch:
+
+```[sh]
+git checkout reactjs-realtime-commenting
+```
+
+Install NPM dependencies. Be sure to switch into project's directory and then run this command in your terminal:
+
+```[sh]
+npm install
+```
+
+And then run the app locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @src/ably.js@ and run
+
+```[sh]
+npm start
+```
+
+to start the app.
+
+h2. Next steps
+
+1. If you would like to find out more about how channels, publishing and subscribing works, see the "Realtime channels & messages documentation":https://www.ably.io/documentation/realtime/channels-messages
+2. Learn more about "Ably features":https://www.ably.io/features by stepping through our other "Ably tutorials":https://www.ably.io/tutorials
+3. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
+4. "Get in touch if you need help":https://www.ably.io/contact
