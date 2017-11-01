@@ -1,0 +1,539 @@
+---
+title: Build a realtime chat app with react native and ably
+section: tutorials
+index: 0
+---
+
+
+h2. Introduction
+
+Messaging apps are on the increase recently. The past few years have brought apps like WhatsApp, Telegram, Facebook Messenger, Slack e.t.c.
+People seem to prefer chat-based applications because they allow for real-time interaction. They also add a personal touch to the experience. 
+In this tutorial, you will learn how to build a real-time chat application using React Native and ably.
+
+React Native lets you build mobile apps using only JavaScript. It uses the same design as React, letting you compose a rich mobile UI from declarative components. To learn more about React Native, please visit "here":https://facebook.github.io/react-native/.
+
+Ably is a real-time data delivery platform providing developers everything they need to create, deliver and manage complex projects. Ably solves the hardest parts so they don’t have to. Our 100% data delivery guarantee offers unique peace of mind to stream data between apps, websites and servers anywhere on earth in milliseconds.
+
+
+h2. Setting Up React Native
+
+To get started first, you need to install the @React Native CLI@ if you don’t already have it installed. To install the @CLI@, run:
+
+```[javascript]
+ npm install -g react-native-cli
+```
+
+After installing the @CLI@, it’s time to create your project. Open a terminal, create a new project called @ably-presence-publish-subscribe-react-native@:
+
+```[javascript]
+react-native init ably-presence-publish-subscribe-react-native
+```
+
+Before I continue, let me explain why I named the project that way.
+
+# ably: I will use the @ably@ real-time library for real-time interactions
+# presence: I will cover the concept of ably presence channels
+# publish: I will cover the concept of publishing messages in ably
+# subscribe: I will cover the concept of subscribing to channels and events in ably
+# react-native: I will build the chat application using @React-Native@ 
+
+Note: You can give your project any other name you wish to.
+
+Wait until React Native does all its installations, then you can change directory into the new project and run the application:
+
+```[sh]
+//change directory to ably-presence-publish-subscribe-react-native
+cd ably-presence-publish-subscribe-react-native
+//run the application for android
+react-native run-android
+//run the application for ios
+react-native run-ios
+```
+
+If all goes well, you should see a screen that says “Welcome to React Native” come up on your emulator or device.
+
+
+h2. Setting Up Ably
+
+You need to sign up on "Ably":https://www.ably.io/, create a new app, click on the @manage app@ button at the left-hand side of the app, click on the @Api keys@  tab and copy our Api Key.
+
+<a href="/images/tutorials/copy-api-key.png" target="_blank">
+  <img src="/images/tutorials/copy-api-key.png" style="width: 100%" alt="Copy API Key screenshot">
+</a>
+
+Next, you will install the required libraries for this app. 
+
+```[sh]
+npm install ably ably-react-native express body-parser 
+```
+In the above bash command, you installed 4 packages. I will explain what the four packages are used for:
+
+# express: This is a Node.js web framework which we’ll use to create our API.
+# body-parser: This library is used by Express to parse body requests.
+# ably: This library is the official @Ably@ library for Node js
+# ably-react-native: This library is the official @Ably@ library for React Native
+
+
+h2. Creating Our API
+
+First, Create a new file called @server.js@, which serves as your API in our root folder and paste the following:
+
+```[javascript]
+//require express
+var express = require('express')
+//define app as in instance of express
+var app = express()
+//require bosy-parser
+var bodyParser = require('body-parser')
+
+//use bodyparser as a middle ware
+app.use(bodyParser.json())
+//ably realtime
+const ably = require('ably').Realtime;
+// instantiate an instance of ably passing in our API key
+const myably = new ably('XXX_API_KEY')
+//set the channel you will like to publish to 
+const channel = myably.channels.get('cog-tie');
+//set cors middleware
+app.use(function(req, res, next) {
+res.header("Access-Control-Allow-Origin", "*");
+res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+next();
+});
+//handle route postfunction
+app.post('/', function(req, res) {
+var message = {
+    user: req.body.name,
+    msg: req.body.msg,
+    action: req.body.action
+}
+//Publish your message
+channel.publish('message', message, function(err) {
+    if (err) {
+        console.log('publish failed with error ' + err);
+    } else {
+        console.log('publish succeeded ' + message.msg);
+    }
+})
+res.send({ status: 'okay', message: message })
+
+})
+
+//listen on port and serve the app
+app.listen(3000, function() {
+console.log('Example app listening on port 3000!')
+})
+```
+The code block above is our Express API server setup. 
+
+At the beginning of the file, you had required Express, Body-parser and Ably libraries for Node.js respectively. 
+Next, you initialized a new Pusher object, passing in your Api Key.
+Next, you set the CORS header to your request, using a middleware function.
+Finally, you create a post handler for the @\@ route, and we then make  @Ably@ publish to a channel called @cog-tie@ with an event called @message@.
+Note both the channel name and the event name used in this server. The channel name will be subscribed to while you will listen for the event in your React Native app.
+This is all we need at the server side for your API call to work.
+
+Next, start up your API by running:
+
+```[sh]
+node server.js
+```
+
+h2. Building The React Native Application
+
+To get started, create a new file called @chat.js@ and add paste in the following:
+
+```[javascript]
+/**
+ * Sample React Native App
+ * https://github.com/facebook/react-native
+ * @flow
+ */
+import React, { Component } from 'react';
+import { StyleSheet, View } from 'react-native'
+export default class Chat extends Component<{}> {
+  render() {
+    return (
+      <View style={styles.container}>
+      </View>
+    );
+  }
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5FCFF',
+    paddingTop: 10,
+  },
+});
+```
+In the code above, nothing much is happening. It is a blank page which you will use to hold your chat component later on.
+
+Next, Open @App.js@ and replace content with:
+
+```[javascript]
+/**
+* Sample React Native App
+* https://github.com/facebook/react-native
+* @flow
+*/
+import React, { Component } from 'react';
+import Chat from './Chat'
+import {
+StyleSheet,
+View,
+Text,
+TextInput,
+Button,
+AsyncStorage,
+} from 'react-native';
+
+export default class App extends Component<{}> {
+constructor(props) {
+super(props);
+this.state={txt:'', user: null}
+this.handler = this.handler.bind(this)
+}
+
+componentDidMount = () =>{
+      AsyncStorage.getItem("user").then((value) => {
+        this.setState({"user": value});
+    }).done();
+
+}
+submitName = ()=>{
+AsyncStorage.setItem("user", this.state.txt);
+this.setState({user:this.state.txt})
+
+}
+
+handler=()=>{
+this.setState({
+  user: null
+})
+}
+getRender = ()=>{
+if(this.state.user != null){
+  return <Chat handler = {this.handler} />
+}else{
+  return <View style={styles.container}>
+    <Text style={{ alignItems: 'center'}}>Please Give us a name to join the chat with</Text>
+    <View style={{
+      flexWrap: 'wrap', alignItems: 'center', flexDirection: 'row'
+    }}>
+      <TextInput
+        value={this.state.txt}
+        style={{ width: '80%' }}
+        placeholder="Enter Your message!"
+        onChangeText={(txt) => this.setState({ txt })}
+      />
+
+      <Button
+        style={{ width: '20%' }}
+        onPress={this.submitName}
+        title="Send"
+       
+        color="#841584" />
+    </View>
+  </View>
+}
+
+}
+
+render() {
+return this.getRender()
+}
+}
+
+const styles = StyleSheet.create({
+container: {
+flex: 1,
+justifyContent: 'center',
+alignItems: 'center',
+backgroundColor: '#F5FCFF',
+},
+});
+```
+If you look at the code above, these are the differences between the original @App.js@ file and this new one.
+
+Above, you have imported React Native UI component (View, Text, Button, TextInput, StyleSheet) to help us with our UI styling. Also, you imported @AsyncStorage@, which you will use to store items on the device.
+
+In the constructor, you declared a constructor passing in @props@, called the super constructor of the @props@. You declared two items in your state assignment namely @txt@ and @user@. Finally, you made a new assignment called @handler@ to a function named @handler@ which you will define soon.
+
+Next, you defined the @componentDidMount@ method which @React@ will fire once the component is mounted. In this method, you used the @AsyncStorage@ component to check if a value exists and if it does, set the state of user` to that value.
+
+In the @submitName@ method, you used @AsyncStorage@ to set the value of @user@ which you are checking for in the @componentDidMount@ method to the value of the current @txt@ state.
+
+Just after the @submitName@ method, you defined the @handler@ method assigned in the constructor. In this method, you set the state of @user@ to null. Why have I done this?  Is it needed? You will find out in the next method called @getRender@
+
+In the @getRender@ function, you first check if the @user@ state is not null, then return the @Chat@ component which is still empty for now. If the @user@ state is null, it means the user is yet to select a user name. If the @user@ state is null, it presents them with a form to enter their user name.
+
+Take a look at the form been returned when there is no user name, you will notice:
+
+# The presence of a @TextInput@ whose value is set to the @txt@ state and the @onChangeText@ event alters the @txt@ state
+# The presence of a @Button@ whose @onPress@ event fires the @submitName@ event you had defined earlier.
+
+If you run the app, you will be presented with a screen that shows a text input and button prompting you to set a user name.  
+
+<a href="/images/tutorials/react-native/enter-username-react-native-presence-publish-subscribe.png" target="_blank">
+  <img src="/images/tutorials/react-native/enter-username-react-native-presence-publish-subscribe.png" style="width: 100%" alt="enter username screenshot">
+</a>
+
+Alternatively, on iOS, this is what it looks like:
+
+<a href="/images/tutorials/react-native/enter-username-react-native-presence-publish-subscribe-ios.png" target="_blank">
+  <img src="/images/tutorials/react-native/enter-username-react-native-presence-publish-subscribe-ios.png" style="width: 100%" alt="enter username screenshot">
+</a>
+
+However, if you set a user name now, you will be presented with an empty page, as you have not created the chat component yet. Open @chat.js@ and replace the content with:
+
+```[javascript]
+
+/**
+ * Sample React Native App
+ * https://github.com/facebook/react-native
+ * @flow
+ */
+import React, { Component } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  Button,
+  ScrollView,
+  AsyncStorage
+} from 'react-native';
+
+
+var realtime = require('ably').Realtime;
+var ably, channel;
+
+export default class Chat extends Component<{}> {
+  constructor(props) {
+    super(props);
+    this.state = {
+      user: '',
+      msg: [],
+      txt: ''
+    } 
+  }
+
+  componentDidMount = () => {
+    AsyncStorage.getItem("user").then((value) => {
+            this.setState({"user": value});
+            this.subscribe();
+        }).done();
+  }
+
+  subscribe = () =>{
+    ably = new realtime({ key:'XXX_APP_ID', clientId: this.state.user });
+    channel = ably.channels.get('cog-tie');
+    channel.presence.subscribe('enter', (member)=> {
+      
+     var data =  {
+          msg: 'joined the chat',
+          user: member.clientId,
+          action: 'joined'
+        }
+
+      var newmsg = this.state.msg
+
+      newmsg.push(data)
+
+      this.setState({ msg: newmsg })
+    });
+
+    channel.presence.subscribe('leave', (member)=> {
+      
+     var data =  {
+          msg: 'left the chat',
+          user: member.clientId,
+          action: 'left'
+        }
+
+      var newmsg = this.state.msg
+
+      newmsg.push(data)
+
+      this.setState({ msg: newmsg })
+    }); 
+
+    channel.presence.enter();
+
+    channel.subscribe('message', (msg) => {
+
+      var newmsg = this.state.msg
+
+      newmsg.push(msg.data)
+
+      this.setState({ msg: newmsg, txt: '' })
+
+    });
+
+  }
+
+  load_messages = () => {
+    var chat = []
+    for (var i = 0; i < this.state.msg.length; i++) {
+      if (this.state.msg[i].action == "joined") {
+        chat.push(<Text style={{padding:3}} 
+        key={i}>{this.state.msg[i].user} {this.state.msg[i].msg}</Text>);
+      } else if(this.state.msg[i].action == "left"){
+        chat.push(<Text style={{padding:3}} 
+        key={i}>{this.state.msg[i].user} {this.state.msg[i].msg}</Text>);
+      } 
+      else if (this.state.msg[i].user == this.state.user) {
+        chat.push(
+          <View key={i} style={{ width: 'auto', 
+          backgroundColor: 'rgb(244, 226, 96)', 
+          alignSelf: 'flex-start', 
+          padding: 10, 
+          borderRadius: 25, 
+          marginBottom: 5 }}>
+            <Text> {this.state.msg[i].msg}  </Text>
+          </View>
+        )
+      } else {
+        chat.push(
+          <View key={i}>
+            <View style={{ width: 'auto', 
+            backgroundColor: 'rgb(125, 185, 232)', 
+            alignSelf: 'flex-end', 
+            padding: 10, 
+            borderRadius: 25 }}>
+              <Text> {this.state.msg[i].msg} </Text>
+            </View>
+            <Text style={{ width: 'auto', 
+            alignSelf: 'flex-end', 
+            paddingRight: 10, 
+            marginBottom: 5, 
+            fontSize: 6 }}>{this.state.msg[i].user}</Text>
+          </View>
+        )
+      }
+    }
+    return chat;
+  }
+
+  submitChat = () => {
+    if (this.state.txt != '') {
+
+      fetch('XXX_API_ROUTE', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          msg: this.state.txt,
+          name: this.state.user,
+          action: 'chat'
+        })
+      })
+        .then((response) => response.json())
+        .then((responseJson) => {
+
+        })
+        .catch((error) => { console.error(error); });
+    }
+
+  }
+
+leaveChat = () =>{
+  AsyncStorage.removeItem("user");
+  channel.presence.leave();
+  this.setState({"user": ''});
+  this.props.handler();
+}
+
+  render() {
+    chatMessages = this.load_messages();
+    return (
+      <View style={styles.container}>
+      <View style={{
+           alignItems: 'center', flexDirection: 'row', top: 0,marginBottom:5
+        }}>
+        <Button
+            style={{ width: '40%' }}
+            onPress={this.leaveChat}
+            title="Leave Chat"
+            color="#841584" />
+        </View>
+        <ScrollView >
+
+          {chatMessages}
+
+        </ScrollView>
+        <View style={{
+          flexWrap: 'wrap', alignItems: 'flex-start', flexDirection: 'row',
+          position: 'absolute', bottom: 0}}>
+          <TextInput
+            value={this.state.txt}
+            style={{ width: '80%' }}
+            placeholder="Enter Your message!"
+            disabled={this.state.user==''}
+            onChangeText={(txt) => this.setState({ txt })}
+          />
+
+          <Button
+            style={{ width: '20%' }}
+            onPress={this.submitChat}
+            title="Send"
+            color="#841584" />
+        </View>
+      </View>
+    );
+  }
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5FCFF',
+    paddingTop: 10,
+  },
+});
+```
+If you look at the code above, these are the differences between the former @chat.js@ file and this new one.
+
+Above, you have imported React Native UI component (View, Text, Button, TextInput, StyleSheet, ScrollView) to help us with our UI styling. You imported @AsyncStorage@, which you will use to store and retrieve items on the device. Also, you required the @ably@ real-time library, and declared two new variables namely @ably@ and @channel@.
+
+In the constructor, you declared a constructor passing in @props@, called the super constructor of the @props@. You declared three items in your state assignment namely @msg@ , @txt@ and @user@.
+
+Next, you defined the @componentDidMount@ method which @React@ will fire once the component is mounted. In this method, you used the @AsyncStorage@ component to check if a value exists and if it does, set the state of @user@ to that value. Also, you called the @subscribe@  function which we will treat soon.
+
+The @subscribe@ method is where all real-time subscriptions such as @presence@ and @subscribe@ are made. Let’s look at what goes on in this method.
+
+# First, you set the @ably@ variable to an instance of the real-time library passing in your API Key and the current user. The reason for putting in the current user is because you want to access presence events.
+# You made a subscription to a channel called @cog-tie@.
+# You made a subscription to the presence event of @enter@ which notifies that a new member has joined the chat (by calling @channel.presence.subscribe@). You then created a message object from the response and append to the @msg@ state.
+# You made a subscription to the presence event of @leave@ which notifies that a member has left the chat.
+# You made a call to @channel.presence.enter()@ which triggers the entry into the presence event of the channel been listened to.
+# Next, a normal subscription is made to the @message@ event which emits real-time chat messages, and the message is added to the array of messages available and displayed in real-time.
+
+In the @load_message@ function, a lot of things are going on here, but what the function primarily does is to loop through the messages, check for the action of the messages, and apply either the chat style or notification style to the messages. For example, messages from the presence event @leave@ and @enter@ have the same styling, while messages from the @message@ event have a chat bubble style. Also, the loop checks for the user who sent the message and floats the message to the appropriate position. For example, messages sent from you will be floated to the left, while other users messages would be floated to the right. 
+
+In the @submitChat@ function, you trigger a @POST@ request to our API which in turns publishes the message to the right channel and event. You used the @fetch@ API provided by React Native to send an AJAX request to our server which we created earlier.
+
+p(tip). Note: If you use IP address such as @127.0.0.1@ or @localhost@, the request is most likely going to fail. This is because, in React Native, @localhost@ or @127.0.0.1@ refers to the internal application. Please use the network IP for your system instead.
+
+In the @leaveChat@ function, you used the @AsyncStorage@ @remove@ method to remove the @user@ key from the device, leave the presence event by calling @channel.presence.leave()@. Next, you set the @user@ state to an empty string and also call the @handler@ method which has been passed to the chat component as a prop from the @App@ component.
+
+In our return statement, the @chatMessages@ variable was rendered, so it can display its content. Also, notice there is have a @text input@ and a @button@.
+The text input text is used to set the @txt@ state anytime the text changes using the @onChangeText@ event of the button. Notice that our button also calls the @submitChat@ function anytime it is pressed by binding it to its @onPress@ function.
+
+Now, the application is completed.
+
+<a href="/images/tutorials/react-native/react-native-presence-publish-subscribe.gif" target="_blank">
+  <img src="/images/tutorials/react-native/react-native-presence-publish-subscribe.gif" style="width: 100%" alt="Demo gif">
+</a>
+
+
+
+h2. Conclusion
+
+In this article, I have shown how to make a real-time chat application in Android and Ios using React Native. We have secured the design choices important, to begin with, and the cases above ought to help you fill in the holes and give an outline of a portion of the other design choices accessible to you.
+Hope this tutorial has helped you to get started with Ably and Mobile apps?
