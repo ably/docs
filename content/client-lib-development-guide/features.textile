@@ -82,7 +82,7 @@ h3(#restclient). RestClient
 * @(RSC15)@ Host Fallback
 ** @(RSC15b)@ The fallback behavior described below only applies when the default @rest.ably.io@ endpoint is being used and has not been overriden (see "RSC11":#RSC11), @ClientOptions#fallbackHostsUseDefault@ is @true@, or an array of @ClientOptions#fallbackHosts@ is provided. If host fallback is not supported, failing HTTP requests that would have "qualified for a retry against a fallback host (see RSC15d)":#RSC15d, will instead result in an error immediately
 ** @(RSC15e)@ By default, every new HTTP request is first attempted to the default primary host @rest.ably.io@ (unless overriden in @ClientOptions#restHost@), which, through DNS, is automatically routed to the client's closest data center. The client library must always prefer the default endpoint (closest data center), even if a previous request to that endpoint has failed
-** @(RSC15a)@ In the case of an error necessitating use of an alternative host (see "RSC15d":#RSC15d), try fallback hosts (with a matching Host header as this is necessary when fallbacks are proxied through a CDN) in random order, continuing to try further hosts if "qualifying errors":#RSC15d occur, failing when all have been tried or the configured @httpMaxRetryCount@ has been reached (see "@TO3l5@":#TO3l5). This ensures that a client library is able to work around routing or other problems for the user's closest data center. For example, if a @POST@ request to @rest.ably.io@ fails because the default endpoint is unreachable or unserviceable, then the @POST@ request should be retried again against the fallback hosts in attempt to find an alternate healthy data center to service the request. The five default fallback hosts are @[a-e].ably-realtime.com@. If an array of custom fallback hosts are provided in @ClientOptions#fallbackHosts@, then they will be used instead. If an empty array of fallback hosts is provided, then fallback host functionality is disabled
+** @(RSC15a)@ In the case of an error necessitating use of an alternative host (see "RSC15d":#RSC15d), try fallback hosts (with a matching Host header as this is necessary when fallbacks are proxied through a CDN) in random order, continuing to try further hosts if "qualifying errors":#RSC15d occur, failing when all have been tried or the configured @httpMaxRetryCount@ has been reached (see "TO3l@":#TO3l5). This ensures that a client library is able to work around routing or other problems for the user's closest data center. For example, if a @POST@ request to @rest.ably.io@ fails because the default endpoint is unreachable or unserviceable, then the @POST@ request should be retried again against the fallback hosts in attempt to find an alternate healthy data center to service the request. The five default fallback hosts are @[a-e].ably-realtime.com@. If an array of custom fallback hosts are provided in @ClientOptions#fallbackHosts@, then they will be used instead. If an empty array of fallback hosts is provided, then fallback host functionality is disabled
 ** @(RSC15d)@ Errors that necessitate use of an alternative host include: host unresolvable or unreachable, request timeout, or a response but with an applicable HTTP status code in the range @500 <= code <= 504@. Resending requests that have failed for other failure conditions will not fix the problem and will simply increase the load on other data-centers unnecessarily
 * @(RSC17)@ When instancing the library, if a @clientId@ attribute is set in @ClientOptions@, then the @Auth#clientId@ attribute will contain the provided @clientId@
 * @(RSC19)@ @RestClient#request@ function is provided as a convenience for customers who wish to use bleeding edge REST API functionality that is either not documented or is not included in the API for our client libraries. The REST client library provides a function to issue HTTP requests to the Ably endpoints with all the built in functionality of the library such as authentication, paging, fallback hosts, MsgPack and JSON support etc. The function:
@@ -91,6 +91,15 @@ h3(#restclient). RestClient
 ** @(RSC19c)@ The library will configure the @Accept@ and @Content-Type@ type headers to reflect whether the client is configured to use a binary or JSON based protocol (see "RSC8":#RSC8). All requests are encoded and decoded into Json or MsgPack as appropriate automatically by the library. Binary @body@ payloads are not supported at this time
 ** @(RSC19d)@ @request@ method returns an @HttpPaginatedResponse@ object that inherits from the @PaginatedResult@ object to provide details on the response plus paging support where applicable. See "HP1":#HP1 for more details
 ** @(RSC19e)@ If the HTTP network request fails for reasons such as a timeout (after the underlying fallback host attempts have failed where applicable, see "RSC15":#RSC15), then the @request@ method should indicate an error in an idiomatic way for the platform
+* @(RSC20)@ Unexpected internal library exception handling:
+** @(RSC20a)@ The library must make every attempt to handle unexpected internal exceptions as gracefully as possible, and where appropriate, report these failures to Ably's error tracking service. For the avoidance of doubt, unexpected internal exceptions do not include request timeouts, invalid argument values, invalid responses from third parties or exceptions in code run in callbacks registered by applications. However, any unexpected failures or unhandled exceptions in our own code that typically could trigger a crash or raise an exception in our customer's code, is considered an unexpected internal exception
+** @(RSC20b)@ Exception reporting is enabled by default, but can be disabled using the @logExceptionReportingUrl@ @ClientOption@ documented in "@TO3m@":#TO3m. When enabled, the client library must:
+*** @(RSC20b1)@ At startup log a message with the equivalent of @info@ log level with the message "Ably client library exception reporting enabled. Unhandled failures will be automatically submitted to errors.ably.io to help improve our service. To find out more about this feature, see https://help.ably.io/exceptions". The @info@ log level is preferred as customers can hide this entry by configuring the client library log level to @warning@, yet will, by default, see this notice when using a client library with exception reporting enabled
+*** @(RSC20b2)@ Any unhandled internal exceptions should automatically submit bug reports to the @logExceptionReportingUrl@ using the "@Sentry API@":https://docs.sentry.io/clientdev/ either via a raw HTTP request or by using an embedded "Sentry exception reporting client library":https://docs.sentry.io/clients/. A message at @info@ log level should be logged if the request succeeds or fails i.e. a failure to submit an exception should not be logged as a failure / error. Where possible, the exception GUID returned from the Sentry API should be displayed to the user so that the specific error can be tracked
+** @(RSC20c)@ Exceptions reported must additionally include the following tags: @ably-lib@ with the value defined in "@RSC7b@":RSC7b, @ably-version@ with the value defined in "@RSC7a@":RSC7a, @appId@ if known from either the token or API key currently being used.
+** @(RSC20d)@ All personally identifiable information, as much as is practicable, must be redacted or stripped completely before being submitted to Ably. Our intent is only to capture necessary information to debug issues in our own code
+** @(RSC20e)@ Failures to log exceptions to the @errors.ably.io@ endpoint must be handled gracefully. This includes for example DNS failures, TCP/HTTP requests rejected, slow requests and internal failure errors. Additionally, as specified in @RSC20b2@, a failure to log an exception is logged with log level @info@ i.e. an exception reporting failure is not consider a client library @error@ or @warning@
+** @(RSC20f)@ Any errors emitted by the library as a result of an internal failure must contain a status code @500@, an error code in the range @51000@ to @51999@ and a suitable error message. The error code must match one of "our common error codes":https://github.com/ably/ably-common/blob/master/protocol/errors.json
 
 h3(#rest-auth). Auth
 
@@ -104,11 +113,14 @@ h3(#rest-auth). Auth
 * @(RSA4)@ Token Auth is used if @useTokenAuth@ is set to true, or if @useTokenAuth@ is unspecified and any one of the following conditions are met: a @clientId@ is specified; @authUrl@ or @authCallback@ is provided; an explicit @token@ or @TokenDetails@ is provided
 ** @(RSA4a)@ When a @token@ or @tokenDetails@ is used to instance the library, and no means to renew the token is provided (either an API key, @authCallback@ or @authUrl@), if the server responds with a token error (401 HTTP status code and an Ably error value @40140 <= code < 40150@), then the client library should indicate an error, not retry the request and in the case of the realtime library, transition the connection to the @FAILED@ state
 ** @(RSA4b)@ When the client does have a means to renew the token automatically, and the token has expired or the server has responded with a token error (@statusCode@ value of 401 and error @code@ value in the range @40140 <= code < 40150@), then the client should automatically make a single attempt to reissue the token and resend the request using the new token. If the token creation failed or the subsequent request with the new token failed due to a token error, then the request should result in an error
-** @(RSA4c)@ If an attempt by the realtime client library to authenticate is made using the @authUrl@ or @authCallback@, and the request to @authUrl@ fails (unless @RSA4d@ applies), the callback @authCallback@ results in an error (unless @RSA4d@ applies), an attempt to exchange a @TokenRequest@ for a @TokenDetails@ results in an error (unless @RSA4d@ applies), the provided token is in an invalid format, or the attempt times out after "@realtimeRequestTimeout@":#DF1b, then:
+** @(RSA4c)@ If an attempt by the realtime client library to authenticate is made using the @authUrl@ or @authCallback@, and the request to @authUrl@ fails (unless @RSA4d@ applies), the callback @authCallback@ results in an error (unless "RSA4d":#RSA4 applies), an attempt to exchange a @TokenRequest@ for a @TokenDetails@ results in an error (unless "RSA4d":#RSA4 applies), the provided token is in an invalid format (as defined in "RSA4e":#RSA4e), or the attempt times out after "@realtimeRequestTimeout@":#DF1b, then:
 *** @(RSA4c1)@An @ErrorInfo@ with @code@ @80019@ and description of the underlying failure should be emitted with the state change, in the @errorReason@ and/or in the callback as appropriate
 *** @(RSA4c2)@If the connection is @CONNECTING@, then the connection attempt should be treated as unsuccessful, and as such the connection should transition to the @DISCONNECTED@ or @SUSPENDED@ state as defined in "RTN14":#RTN14 and "RTN15":#RTN15
 *** @(RSA4c3)@If the connection is @CONNECTED@, then the connection should remain @CONNECTED@
 ** @(RSA4d)@ If a request by a realtime client to an @authUrl@ results in an HTTP 403 response, or any of an @authUrl@ request, an @authCallback@, or a request to Ably to exchange a @TokenRequest@ for a @TokenDetails@ result in an @ErrorInfo@ with @statusCode@ 403, then the client library should transition to the @FAILED@ state, with the connection @errorReason@ should be set to the @ErrorInfo@ (or where there is none, as for a 403 @authUrl@ response with no body, an @ErrorInfo@ with @code@ @40300@ and an appropriate message)
+** @(RSA4e)@ If in the course of a REST request (or explicit call to @requestToken@) an attempt to authenticate using @authUrl@ or @authCallback@ fails due to a timeout, network error, a token in an invalid format (per "RSA4e":#RSA4e), or some other auth error condition other than an explicit @ErrorInfo@ from Ably, the request should result in an error with @code@ 40170, @statusCode@ 401, and a suitable error message
+** @(RSA4f)@ The following conditions imply that the token is in an invalid format: the @authUrl@ response content type is neither @text/plain@ nor @application/json@; the object passed by @authCallback@ is neither a @String@, @JsonObject@, @TokenRequest@ object, nor @TokenDetails@ object; the text token string is greater than 384 bytes; the JSON stringified @JsonObject@, @TokenRequest@ or @TokenDetails@ is greater than 128kb.
+** @(RSA4g)@ If multiple @authOptions@ are used to initialize the library, the preference ordering among them is identical to @Auth#authorize@, defined in @RSA10e@
 * @(RSA14)@ If Token Auth is selected, yet a token is not provided and there is no means to generate a token, then this will result in an error. For example, if only the option @useTokenAuth@ is specified, and a @key@ is not provided, then the client library is unable to authenticate or issue a token
 * @(RSA15)@ If Token Auth is selected and @clientId@ has been set in the @ClientOptions@ when the library was instanced:
 ** @(RSA15a)@ Any @clientId@ provided in @ClientOptions@ must match any non wildcard (@'*'@) @clientId@ value in @TokenDetails@ or @connectionDetails@ of the @CONNECTED@ @ProtocolMessage@, where applicable
@@ -162,7 +174,7 @@ h3(#rest-auth). Auth
 ** @(RSA10j)@ Method signature is @authorize(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When the arguments are present, even if empty, the @TokenParams@ and @AuthOptions@ supersede any previously client library configured @TokenParams@ and @AuthOptions@. For example, if a client is initialized with @TokenParams#ttl@ configured with a custom value, and a @TokenParams@ object is passed in as an argument to @#authorize@ with a @null@ or missing value for @ttl@, then the @ttl@ used for every subsequent authorization will be @null@
 ** @(RSA10b)@ Supports all @AuthOptions@ and @TokenParams@ in the function arguments
 ** @(RSA10k)@ If the @AuthOption@ argument's @queryTime@ attribute is true, it will obtain the server time once and persist the offset from the local clock. All future token requests generated directly or indirectly via a call to @authorize@ will not obtain the server time, but instead use the local clock offset to calculate the server time. The client library itself MAY internally discard the cached local clock offset in situations in which it may have been invalidated, such as if there is a local change to the date, time, or timezone, of the client device. For clarity however, there is no requirement for this cache invalidation to be available to consumers of the client library API.
-** @(RSA10e)@ Adheres to the implementation of @requestToken@ when issuing new tokens
+** @(RSA10e)@ If the @authOptions@ contains a way of obtaining a token (an @authCallback@, @authUrl@, or @key@), that should be used to obtain a new token, as per @requestToken@ (@RSA8@). If it contains a token (@token@ or @tokenDetails@), that should be used as-is. If it contains both a token and a way of obtaining a token, the token should be used, with the way of obtaining a token being stored per @RSA10g@ for when the token expires. (Ordering of preference within those groups is not defined and is left up to individual implementations)
 ** @(RSA10f)@ Returns a @TokenDetails@ object that contains the token string + token metadata
 ** @(RSA10g)@ Stores the @AuthOptions@ and @TokenParams@ arguments as defaults for subsequent authorizations with the exception of the attributes @TokenParams#timestamp@ and @AuthOptions#queryTime@
 ** @(RSA10h)@ Will use the value from @Auth#clientId@ by default, if not @null@
@@ -273,10 +285,11 @@ h3(#realtimeclient). RealtimeClient
 ** @(RTC1d)@ @realtimeHost@ string, when set, will modify the realtime endpoint host used by this client library
 ** @(RTC1e)@ @environment@ string, when set, will modify both the REST and realtime endpoint hosts by prefixing the environment to the default endpoint host with a hypen delimiter. For example, a @RealtimeClient@ with an @environment@ of "sandbox", would use "sandbox-rest.ably.io" as the @restHost@ and @sandbox-realtime.ably.io@ as the @realtimeHost@. See "TO3k3":#TO3k3 for constraints.
 ** @(RTC1f)@ @transportParams@ map or equivalent, additional parameters to be sent in the querystring when initiating a realtime connection. Keys are @Strings@, values are @Stringifiable@ (a value that can be coerced to a string in order to be sent as a querystring parameter. Supported values should be at least strings, numbers, and booleans, with booleans stringified as @true@ and @false@. If this is unidiomatic to the language, the implementer may consider this as equivalent to @String@).
+*** @(RTC1f1)@ If a key in @transportParams@ is one the library sends by default (for example, @v@ or @heartbeats@), the value in @transportParams@ takes precedence.
 * @(RTC2)@ @RealtimeClient#connection@ attribute provides access to the underlying @Connection@ object
 * @(RTC3)@ @RealtimeClient#channels@ attribute provides access to the underlying @Channels@ object
 * @(RTC4)@ @RealtimeClient#auth@ attribute provides access to the @Auth@ object that was instanced with the @ClientOptions@ provided in the @RealtimeClient@ constructor
-** @(RTC4a)@ Unlike the stateless REST client library, the @Auth#clientId@ is populated when the connection is established.  The @CONNECTED@ @ProtocolMessage@ contains the confirmed @clientId@ for this connected client i.e. the client is considered identified. See "@RSA7b@":#RSA7b and "@RSA12@":#RSA12 for further info
+** @(RTC4a)@ Unlike the stateless REST client library, the @Auth#clientId@ is populated when the connection is established.  The @CONNECTED@ @ProtocolMessage@ contains the confirmed @clientId@ for this connected client i.e. the client is considered identified. See "@RSA7b@":#RSA7b and "@RSA12@":#RSA12 for futher info
 * @(RTC5)@ @RealtimeClient#stats@ function:
 ** @(RTC5a)@ Proxy to @RestClient#stats@ presented with an async or threaded interface as appropriate
 ** @(RTC5b)@ Accepts all the same params as @RestClient#stats@ and provides all the same functionality
@@ -293,6 +306,7 @@ h3(#realtimeclient). RealtimeClient
 ** @(RTC8c)@ If the connection is in the @DISCONNECTED@, @SUSPENDED@, @FAILED@, or @CLOSED@ state when @auth#authorize@ is called, after obtaining a token the library should move to the @CONNECTING@ state and initiate a connection attempt using the new token, and @RTC8b1@ applies.
 * @(RTC9)@ @RealtimeClient#request@ is a wrapper around @RestClient#request@ (see "RSC19":#RSC19) delivered in an idiomatic way for the realtime library, e.g. in the case of Ruby, with an evented async callback interface
 * @(RTC10)@ The client library should never register any listeners for internal use with the public @EventEmitter@ interfaces (such as @Connection#on@) or message/event subscription interfaces (such as @Channel#subscribe@) in such a way that a user of the library calling @Connection#off()@ or @Channel#unsubscribe()@ to remove all listeners would result in the library not working as expected
+* @(RTC11)@ Unexpected internal exceptions, as defined in "@RSC20@":RSC20, must be handled as gracefully as possible and reported to Ably's error reporting service when enabled. The aim when handling unexpected exceptions should be to ensure that no invalid or inconsistent state can potentially be left after handling the exception; depending on circumstances the remedial action could include failing the transport, failing the connection, rejecting a message, reinitialising the library completely, etc.
 
 h3(#realtime-connection). Connection
 
@@ -371,7 +385,7 @@ h3(#realtime-connection). Connection
 *** @(RTN15b2)@ @connectionSerial@ is the most recent @ProtocolMessage#connectionSerial@ received from Ably or @Connection#serial@ which should be identical
 ** @(RTN15c)@ The system's response to a resume request will be one of the following:
 **** @(RTN15c1)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and no @error@. In this case, the server is indicating that the resume succeeded, all channels are still attached, and all backlog messages are available. The client should not change the state of attached channels, and immediately process any queued messages for that channel
-**** @(RTN15c2)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and an @error@. In this case, the server is indicating that the resume succeeded but with a non-fatal error, all channels are still attached, and some backlog messages may be unavailable. The @ErrorInfo@ received should be set as the @reason@ in the @CONNECTED@ event, and the @Connection#errorReason@ should be set. The client should not change the state of attached channels, and immediately process any queued messages for that channel. Any channels that are not resumed in full may receive an @ATTACHED@ @ProtocolMessage@ with an @error@, see "@RTL12@":#RTL12
+**** @(RTN15c2)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and an @error@. In this case, the server is indicating that the resume succeeded but with a non-fatal error, all channels are still attached, and some backlog messages may be unavailable. The @ErrorInfo@ received should be set as the @reason@ in the @CONNECTED@ event, and the @Connection#errorReason@ should be set. The client should not change the state of attached channels, and immediately process any queued messages for that channel. Any channels that are not resumed in full may receive an @ATTACHED@ @ProtocolMessage@ with an @error@, see "RTL12":#RTL12
 **** @(RTN15c3)@ @CONNECTED@ @ProtocolMessage@ with a new @connectionId@, and an error in @error@. In this case, a new connection has been established, the resume was unsuccessful, the channels are no longer attached, and the error indicates the cause of the unsuccessful resume. The @ErrorInfo@ should be set as the @reason@ in the @CONNECTED@ event, and the @Connection#errorReason@ should be set. The client library should initiate an attach for channels that are in the @SUSPENDED@ state. For all channels in the @ATTACHING@ or @ATTACHED@ state, the client library should fail any previously queued messages for that channel and initiate a new attach i.e. a new @ATTACH@ @ProtocolMessage@ must be sent for each channel. Finally, the internal @msgSerial@ counter is reset so that the first message published to Ably will contain a @msgSerial@ value of @0@
 **** @(RTN15c5)@ @ERROR@ @ProtocolMessage@ indicating a failure to authenticate as a result of a token error (see "RTN15h":#RTN15h). The transport will be closed by the server. The spec described in "RTN15h":#RTN15h must be followed for a connection being resumed with a token error
 **** @(RTN15c4)@ Any other @ERROR@ @ProtocolMessage@ indicating a fatal error in the connection. The server will close the transport immediately after. The client should transition to the @FAILED@ state triggering all attached channels to transition to the @FAILED@ state as well. Additionally the @Connection#errorReason@ will be set should be set with the error received from Ably
@@ -603,6 +617,7 @@ h3(#eventemitter). EventEmitter mixin / interface
 * @(RTE4)@ @EventEmitter#once@ registers the provided listener for either the first event that is emitted when no @event@ argument is provided, or for only the first occurrence of a single named event when an @event@ argument is provided. If @once@ is called more than once with the same listener, the listener is added multiple times to its listener registry. Therefore, as an example, assuming the same listener is registered twice using @once@, and an event is emitted once, the listener would be invoked twice. However, all subsequent events emitted would not invoke the listener as @once@ ensures that each registration is only invoked once
 * @(RTE5)@ @EventEmitter#off@ deregisters a listener. If called with a specific event and a listener, it removes all registrations that match both the given listener and the given event; if called only with a listener, it removes all registrations matching the given listener, regardless of whether they are associated with an event or not; if called with no arguments, it removes all registrations, for all events and listeners
 * @(RTE6)@ @EventEmitter#emit@ emits an event, calling registered listeners with the given event name and any other given arguments. If an exception is raised in any of the listeners, the exception is caught by the @EventEmitter@ and the exception is logged to the Ably logger. Tests must exist to ensure exceptions raised in client code do not propagate and inhibit other event processing within the client library
+** @(RTE6a)@ The set of listeners called by @emit@ must not change over the course of the @emit@. That is: If a listener being called by @emit@ registers another listener, that second listener should not be called by that invocation of @emit@ (even if it would have been called had it already been present); and if a listener being called by @emit@ removes other listeners, but those other listeners would otherwise have been called during that @emit@ invocation, they should still be called. Tests should exist for both adding and removing. See "https://goo.gl/OVTtjO":https://goo.gl/OVTtjO
 
 h2(#state-conditions-and-operations). State conditions and operations
 
@@ -1093,9 +1108,11 @@ h4. Stats
 
 h4. ErrorInfo
 
-* @(TI1)@ Provides a generic Ably @ErrorInfo@ object that contains Ably @code@, @statusCode@ (analogous to HTTP status code) and @message@ attributes
+* @(TI1)@ Provides a generic Ably @ErrorInfo@ object that contains Ably @code@, @statusCode@ (analogous to HTTP status code), @message@ and @cause@ attributes
 * @(TI2)@ Errors returned from the Ably server are compatible with the @ErrorInfo@ structure and should result in errors that inherit from @ErrorInfo@
 * @(TI3)@ "Ably-common":https://github.com/ably/ably-common should be included as a submodule so that "consistent error codes":https://github.com/ably/ably-common/blob/master/protocol/errors.json can be used
+* @(TI4)@ Ably may additionally include a @href@ attribute with a string value. This is included for REST responses to provide a URL for customers to find more help on the error code
+* @(TI5)@ When errors are logged that contain a @code@, the following text should be included in all log entries: "See https://help.ably.io/error/@[CODE]@"
 
 h4. ConnectionStateChange
 
@@ -1143,6 +1160,7 @@ h4. ClientOptions
 ** @(TO3a)@ @clientId@ string - the id of the client represented by this instance
 ** @(TO3b)@ @logLevel@ - controls the level of verbosity of log messages from the library. The implementation of this is likely to vary by platform
 ** @(TO3c)@ @logHandler@ - allows the client to intercept log messages and handle them in a client-specific way. The implementation of this is likely to vary by platform
+** @(TO3m)@ @logExceptionReportingUrl@ - defaults to a string value for an Ably error reporting DSN (Data Source Name), which is typically a URL in the format <code>https://[KEY]:[SECRET]@errors.ably.io/[ID]</code>. When set to @null@, @false@ or an empty string (depending on what is idiomatic for the platform), exception reporting is disabled
 ** @(TO3d)@ @tls@ boolean - defaults to true. If false, will not use TLS for all connections
 ** @(TO3e)@ @autoConnect@ boolean - defaults to true. If false, suppresses the automatic initiation of a connection when the library is instanced
 ** @(TO3f)@ @useBinaryProtocol@ boolean - defaults to true. If false, forces the library to use the JSON encoding for REST and Realtime operations, instead of the default binary msgpack encoding
@@ -1151,10 +1169,10 @@ h4. ClientOptions
 ** @(TO3i)@ @recover@ string - A connection recovery string, specified with the intention of inheriting the state of an earlier connection
 ** @(TO3j)@ Auth option attributes:
 *** @(TO3j1)@ @key@ string - Full Ably key string as obtained from dashboard
-*** @(TO3j2)@ @token@ string - An authentication token string issued for this application
+*** @(TO3j2)@ @token@ string | @TokenDetails@ | @TokenRequest@ - An authentication token issued for this application, either in the form of a token string, a @TokenDetails@ object, or a @TokenRequest@ object
 *** @(TO3j3)@ @tokenDetails@ @TokenDetails@ - An authentication token issued for this application
 *** @(TO3j4)@ @useTokenAuth@ boolean - When true, token authentication will always be used by the client. If @clientId@ is unspecified, then the token issued will inherently be anonymous i.e. it will contain an empty @clientId@
-*** @(TO3j5)@ @authCallback@ - A callback to call to obtain a signed @TokenRequest@, @TokenDetails@ or a token string. This enables a client to obtain token requests or tokens from another entity, so tokens can be renewed without the client requiring a key
+*** @(TO3j5)@ @authCallback@ - A callback to call to obtain a signed @TokenRequest@, @TokenDetails@ or a token string. This enables a client to obtain token requests or tokens from another entity, so tokens can be renewed without the client requiring a key. If a JSON-encodable object is provided in the callback, then the library will determine if it's a @TokenDetails@ (if it contains a @token@ key) or @TokenRequest@ (no @token@ key) and use the @fromJson@ method ("TD7":#TD7, "TE6":#TE6) to construct an object
 *** @(TO3j6)@ @authUrl@ string - A URL to query to obtain a signed @TokenRequest@, @TokenDetails@ or a token string. This enables a client to obtain token request or token from another entity, so tokens can be renewed without the client requiring a key
 *** @(TO3j7)@ @authMethod@ - The HTTP verb to be used when a request is made by the library to the @authUrl@. Defaults to @GET@, supports @GET@ and @POST@
 *** @(TO3j8)@ @authHeaders@ - Headers to be included in any request made by the library to the @authUrl@
@@ -1197,7 +1215,9 @@ h4. AuthOptions
 * @(AO1)@ A class providing configurable authentication options used when authenticating or issuing tokens explicitly. These options are used when invoking @Auth#authorize@, @Auth#requestToken@, @Auth#createTokenRequest@ and @Auth#authorize@
 * @(AO2)@ The attributes of @AuthOptions@ consist of:
 ** @(AO2a)@ @key@ string - Full Ably key string, as obtained from dashboard, used when signing token requests locally
-** @(AO2b)@ @authCallback@ - A callback to call to obtain a signed @TokenRequest@, @TokenDetails@ or a token string. This enables a client to obtain token requests or tokens from another entity, so tokens can be renewed without the client requiring a key
+** @(AO2b)@ @authCallback@ - A callback to call to obtain a signed @TokenRequest@, @TokenDetails@ or a token string. This enables a client to obtain token requests or tokens from another entity, so tokens can be renewed without the client requiring a key. If a JSON-encodable object is provided in the callback, then the library will determine if it's a @TokenDetails@ (if it contains a @token@ key) or @TokenRequest@ (no @token@ key) and use the @fromJson@ method ("TD7":#TD7, "TE6":#TE6) to construct an object
+** @(AO2h)@ @token@ string - An authentication token string issued for this application
+** @(AO2i)@ @tokenDetails@ @TokenDetails@ - An authentication token (token string plus associated details, per @TD1@) issued for this application
 ** @(AO2c)@ @authUrl@ string - A URL to query to obtain a signed @TokenRequest@, @TokenDetails@ or a token string. This enables a client to obtain token request or token from another entity, so tokens can be renewed without the client requiring a key
 ** @(AO2d)@ @authMethod@ - The HTTP verb to be used when a request is made by the library to the @authUrl@. Defaults to @GET@, supports @GET@ and @POST@
 ** @(AO2e)@ @authHeaders@ - Headers to be included in any request made by the library to the @authUrl@
@@ -1309,6 +1329,7 @@ class ClientOptions:
   environment: String? // RSC15b, TO3k1
   logHandler: // platform specific - TO3c
   logLevel: // platform specific - TO3b
+  logExceptionReportingUrl: String default "[library specific]" // TO3c
   port: Int default 80 // TO3k4
   queueMessages: Bool default true // RTP16b, TO3g
   restHost: String default "rest.ably.io" // RSC12, TO3k2
@@ -1331,14 +1352,14 @@ class ClientOptions:
   maxFrameSize: Int default 524288 // TO3l8
 
 class AuthOptions: // RSA8e
-  authCallback: (() -> io (String | TokenDetails | TokenRequest))? // RSA4a, RSA4, TO3j5, AO2b
+  authCallback: (() -> io (String | TokenDetails | TokenRequest | JsonObject))? // RSA4a, RSA4, TO3j5, AO2b
   authHeaders: [String: Stringifiable]? // RSA8c3, TO3j8, AO2e
   authMethod: .GET | .POST default .GET // RSA8c, TO3j7, AO2d
   authParams: [String: Stringifiable]? // RSA8c3, RSA8c1, TO3j9, AO2f
   authUrl: String? // RSA4a, RSA4, RSA8c, TO3j6, AO2c
   key: String? // RSA11, RSA14, TO3j1, AO2a
   queryTime: Bool default false // RSA9d, TO3j10, AO2a
-  token: String? | TokenDetails? // RSA4a, RSA4, TO3j2
+  token: String? | TokenDetails? | TokenRequest? // RSA4a, RSA4, TO3j2
   tokenDetails: TokenDetails? // RSA4a, RSA4, TO3j3
   useTokenAuth: Bool? // RSA4, RSA14, TO3j4
 
@@ -1721,7 +1742,9 @@ class PushChannelSubscription:
 
 class ErrorInfo:
   code: Int // TI1
+  href: String? // TI4
   message: String // TI1
+  cause: ErrorInfo? // TI1
   statusCode: Int // TI1
 
 class EventEmitter<Event, Data>:
