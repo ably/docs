@@ -46,12 +46,13 @@ If you would prefer to use Docker, then you can set up the env as follows:
 Running on Heroku
 ----
 
-This repo will automatically run on Heroku, but relies on the following buildpacks:
+This repo will automatically run on Heroku, but relies on the following buildpacks (see https://github.com/ably-forks/heroku-buildpack-nanoc):
 
     $ heroku buildpacks
     === ably-docs Buildpack URLs
-    1. heroku/ruby
-    2. https://github.com/ably-forks/heroku-buildpack-nanoc.git
+    1. https://github.com/heroku/heroku-buildpack-ruby
+    2. https://github.com/ably-forks/heroku-buildpack-nanoc
+    3. https://github.com/heroku/heroku-buildpack-static
 
 Pull requests
 ----
