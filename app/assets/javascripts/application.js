@@ -39,7 +39,7 @@ $(function() {
     if (!idTag.length) {
       if (console.error) { console.error('Hash tag target #' + aid + ' is missing.  Could not scroll'); }
     } else {
-      $('body').animate({ scrollTop: idTag.offset().top - stickNavHeight }, 'fast', function() {
+      $('html, body').animate({ scrollTop: (Math.round(idTag.offset().top) - stickNavHeight) + "px" }, 'fast', function() {
         setTimeout(function() { navIsScrolling = false; }, 750);
       });
       var newUrl = document.location.href.replace(/#[^#]*$/,'') + '#' + aid;
