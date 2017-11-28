@@ -4,11 +4,13 @@ section: tutorials
 index: 60
 ---
 
-The Ably Realtime service organizes the message traffic within applications into named channels. Channels are the “unit” of message distribution; clients attach to any number of channels to subscribe to messages, and every message published to a channel is broadcasted to all subscribers. This scalable and resilient messaging pattern is commonly called pub/sub.
+In this tutorial, we will see how to use Ably "Realtime client library":/realtime to build a realtime commenting system with React. We'll be making use Ably's public channel. Once a comment is made, we'll publish it to the public channel. Then on the other hand, we'll subscribe to the channel, that way we can see comments as they are added in realtime.
 
-As you can publish a message to any channel, channels provide a means for you to filter data by topic or enforce access control for your subscribers. Only subscribers for those channesl will receive those messages.
+This tutorial will not include any server-side implementation. Hence, comments won't be persisted to any storage.
 
-In this tutorial, I will be showing you how to use Ably "Realtime client library":/realtime to build a realtime commenting system with React. This tutorial will not include any server-side implementation. Hence, comments won't be persisted to any storage.
+React is a JavaScript library for building user interfaces. It is component-based and declarative which makes it easy to build complex UI with it. For more info on React, please refer to their official website "https://reactjs.org":https://reactjs.org.
+
+<img src="/images/tutorials/react_logo.png" style="width: 50%" alt="React logo">
 
 Let's get started.
 
@@ -16,7 +18,7 @@ Let's get started.
 
 h2. Step 2 - Create a React App
 
-We'll start by creating a new React app. To do this, we'll be using create-react-app. So you need to install @create-react-app@ locally if you don't have it already:
+We'll start by creating a new React app. To do this, we'll be using "create-react-app":https://github.com/facebookincubator/create-react-app. create-react-app allows to create a React apps with having to worry about build configuration. So you need to install @create-react-app@ locally if you don't have it already:
 
 ```[sh]
 npm install -g create-react-app
@@ -35,29 +37,39 @@ cd reactjs-realtime-commenting
 npm start
 ```
 
+This builds the static site, runs a web server and opens a browser. If your browser does not open, navigate to "http://localhost:3000":http://localhost:3000.
+
+"See this step in Github":https://github.com/ably/tutorials/commit/9a5ba8d
+
 h2. Step 3 - Delete Unused Files
 
-Before we move on to building upon this app, let’s quickly delete some files we won’t be needing. So delete the following files: @src/App.css@, @src/App.test.js@, @src/index.css@ and @src/logo.svg@.
+Before we move on to building upon this app, let’s quickly delete some files we won’t be needing. Run the command below to do so:
+
+```[sh]
+rm src/App.css src/App.test.js src/index.css src/logo.svg
+```
+
+"See this step in Github":https://github.com/ably/tutorials/commit/c0ce154
 
 h2. Step 4 - Create Component Folder
 
 Now, we’ll create a new folder within the @src@  folder called @components@. This folder will contain all our React components.
 
 ```[sh]
-cd src
-mkdir components
+mkdir src/components
 ```
 
 Once that is created, we need to move @App.js@ into the @components@ folder:
 
 ```[sh]
-cd src
-mv App.js components
+mv src/App.js src/components
 ```
 
-h2. Step 5 - Update index.js
+"See this step in Github":https://github.com/ably/tutorials/commit/c29b93a
 
-Then we need to update @src/index.js@ as below:
+h2. Step 5 - Remove References To Unused Files
+
+Since we have deleted and moved some files which are still being referenced in @src/index.js@ and @src/App.js@, we need to update these files to not reference the deleted and moved files. Firstly, update @src/index.js@ as below:
 
 ```[javascript]
 import React from 'react';
@@ -69,29 +81,59 @@ ReactDOM.render(<App />, document.getElementById('root'));
 registerServiceWorker();
 ```
 
+Next, update @src/Components/App.js@ as below:
+
+```[javascript]
+import React, { Component } from 'react';
+
+class App extends Component {
+  render() {
+    return (
+      <div className="App">
+
+      </div>
+    );
+  }
+}
+
+export default App;
+```
+
+"See this step in Github":https://github.com/ably/tutorials/commit/83d8a5a
+
 h2. Step 6 - Add Bulma CSS Framework
 
-We’ll be using "Bulma":https://bulma.io Bulma CSS framework so as not to waste time writing CSS. So we’ll reference it from CDN. Add the line below to @public/index.html@:
+We’ll be using "Bulma":https://bulma.io Bulma CSS framework so as not to waste time writing CSS. So we’ll reference it from CDN. Add the line below to the @<head>@ section of @public/index.html@:
 
 ```[html]
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.0/css/bulma.min.css">
 ```
+
+"See this step in Github":https://github.com/ably/tutorials/commit/e896e83
 
 h2. Step 7 - Install Ably
 
 To start using Ably you first need to install the NPM module. The NPM module can be installed as follows:
 
 ```[sh]
-npm install ably
+npm install ably --save
 ```
 
-The client library must be instanced with the API key you copied in Step 1. We’ll create a dedicated file for this so we can easily use it in multiple places. Within @src@ folder, create a new file named @ably.js@ and add the code below into it:
+The client library must be instanced with the API key you copied in Step 1. Note in production we recommend you always use the "token authentication scheme":https://www.ably.io/documentation/general/authentication#token-authentication for browser clients, however in this example we use an API key for simplicity. We’ll create a dedicated file for this and instantiate a global @Ably@ instance so we can easily use it in multiple places. Within @src@ folder, create a new file named @ably.js@ and add the code below into it:
 
 ```[javascript]
 import { Realtime } from 'ably/browser/static/ably-commonjs.js';
 
-export default new Realtime('INSERT-YOUR-API-KEY-HERE');
+window.Ably = new Realtime('INSERT-YOUR-API-KEY-HERE');
 ```
+
+Next, let's reference the file created above in @index.js@:
+
+```[javascript]
+require('./ably');
+```
+
+"See this step in Github":https://github.com/ably/tutorials/commit/f48f3ed
 
 h2. Step 8 - Create CommentBox Component
 
@@ -99,9 +141,12 @@ Within the @components@ folder, create a new file named @CommentBox.js@ and add 
 
 ```[javascript]
 import React, { Component } from 'react';
-import Ably from '../ably';
 
 class CommentBox extends Component {
+  constructor(props) {
+    super(props);
+  }
+
   render() {
     return (
       <div>
@@ -131,15 +176,13 @@ class CommentBox extends Component {
 export default CommentBox;
 ```
 
-This simply renders a comment form as the image below. Once the form is submitted, we trigger an @onSubmit@ event which in turn call the @addComment()@ function (which we’ll create shortly).
+This component renders a comment form as the image below. Once the form is submitted, we trigger an @onSubmit@ event which in turn calls @addComment()@. The form won't do anything for now as we are yet to create @addComment()@.
 
-<a href="/images/tutorials/reactjs-realtime-commenting-comment-form.png" target="_blank">
-  <img src="/images/tutorials/reactjs-realtime-commenting-comment-form.png" style="width: 100%" alt="Comment form screenshot">
-</a>
+"See this step in Github":https://github.com/ably/tutorials/commit/bf5c815
 
 h2. Step 9 - Adding and Publishing Comment
 
-Next, we create the @addComment()@ function. Still within @components/CommentBox.js@, add the code below just before the @render()@ function:
+Next, we'll create @addComment()@. Still within @components/CommentBox.js@, add the code below just before @render()@:
 
 ```[javascript]
 addComment(e) {
@@ -155,9 +198,16 @@ addComment(e) {
   if (name && comment) {
     const commentObject = { name, comment };
 
+    this.props.handleAddComment(commentObject);
+
     // Publish comment
+    /*global Ably*/
     const channel = Ably.channels.get('comments');
-    channel.publish('add_comment', commentObject);
+    channel.publish('add_comment', commentObject, err => {
+      if (err) {
+        console.log('Unable to publish message; err = ' + err.message);
+      }
+    });
 
     // Clear input fields
     e.target.elements.comment.value = '';
@@ -166,7 +216,15 @@ addComment(e) {
 }
 ```
 
-We first prevent the default form submission behaviour (that is, reloading the page). We then get the form inputs entered (name and comment) and make sure they are not just some empty strings. If the inputs are properly filled, we publish the comment just made to a @comments@  channel with an @add_comment@ event. Lastly, we clear the form fields.
+We first prevent the default form submission behaviour (that is, reloading the page). We then get the form inputs entered (name and comment) and make sure they are not just some empty strings. If the inputs are properly filled, we add the comment just made to the array of comments. Then we publish the comment just made to a @comments@ channel with an @add_comment@ event. Adding @/*global Ably*/@ tells ESlint that we are using the global variable (@Ably@) we defined earlier. With this, we won't get the Eslint error: @'Ably' is not defined  no-undef@. Lastly, we clear the form fields.
+
+Next, let's bind @addComment()@ to the @this@ keyword by adding this line to the @constructor()@ just after @super()@:
+
+```[javascript]
+this.addComment = this.addComment.bind(this);
+```
+
+"See this step in Github":https://github.com/ably/tutorials/commit/2a5659f
 
 h2. Step 10 - Create Comment Component
 
@@ -201,7 +259,9 @@ class Comment extends Component {
 export default Comment;
 ```
 
-This simply renders a single comment. It accepts the comment as props.
+This component renders a single comment. It accepts the comment as props. Props are custom attributes that are used to pass input data to components.
+
+"See this step in Github":https://github.com/ably/tutorials/commit/cd2b21e
 
 h2. Step 11 - Create Comments Component
 
@@ -230,22 +290,23 @@ export default Comments;
 
 This component accepts a @comments@ props and renders the Comment component for each of the comments available. It passes the actual comment to the Comment component as props.
 
+"See this step in Github":https://github.com/ably/tutorials/commit/c52bf6b
+
 h2. Step 12 - Create App Component
 
-The App component will server as the parent component. Open @components/App.js@ and replace it with the code below:
+The App component will serve as the parent component. This means the App component will contain other components which will be nested within it. Open @components/App.js@ and replace it content with the code below:
 
 ```[javascript]
 import React, { Component } from 'react';
 import CommentBox from './CommentBox';
 import Comments from './Comments';
-import Ably from '../ably';
 
 class App extends Component {
   constructor(props) {
     super(props);
 
     this.state = {
-        comments: []
+      comments: []
     }
   }
 
@@ -256,7 +317,7 @@ class App extends Component {
           <div className="columns">
             <div className="column is-half is-offset-one-quarter">
               <CommentBox />
-              <Comments comments={this.state.comments} />
+              <Comments comments={this.state.comments.reverse()} />
             </div>
           </div>
         </div>
@@ -268,31 +329,85 @@ class App extends Component {
 export default App;
 ```
 
-This contains the components we created earlier. We define a @comments@ state which is an array of comments. It defaults to an empty array. This will be updated as we add comment through the comment form. Also, we pass the @comments@ state as props to the Comments component. This is how the Comments component get the comments it renders.
+This contains the components we created earlier. We define a @comments@ state which is an array of comments. It defaults to an empty array. This will be updated as we add comment through the comment form. Also, we pass the @comments@ state as props to the Comments component. This is how the Comments component get the comments it renders. Calling @reverse()@ on @comments@ allows us to display the comments in reverse order i.e. newest at the top.
 
-h2. Step 13 - Subscribing to Comments
+"See this step in Github":https://github.com/ably/tutorials/commit/4af2580
 
-We have seen how we can publish newly added comments. Now, we need to subscribe to those comments being published. We’ll do this within React lifecycle @componentDidMount()@ hook. Still within @components/App.js@, add the code below just before the @render()@ function:
+h2. Step 13 - Updating State With Newly Added Comment
+
+Recall from step 9 above, we called @handleAddComment()@ which is responsible for adding a new comment to @state@. But we are yet to create this function, let's do that now. Within @components/App.js@, add the code below just before @render()@:
 
 ```[javascript]
-componentDidMount() {
-  // Subscribe to comments
-  const channel = Ably.channels.get('comments');
-
-  channel.subscribe('add_comment', (comment) => {
-    this.setState((prevState) => {
-      return {
-        comments: prevState.comments.concat({
-          name: comment.data.name,
-          comment: comment.data.comment
-        })
-      };
-    });
+handleAddComment(comment) {
+  this.setState(prevState => {
+    return {
+      comments: prevState.comments.concat(comment)
+    };
   });
 }
 ```
 
-The @componentDidMount()@ hook runs after the component output has been rendered to the DOM. It is a good place to subscribe to comments. We subscribe to the @comments@ channel and listen for the @add_comment@ event. We then update the @comments@ state with the comment published from the channel we are subscribed to.
+The code above adds the comment that was made to @state@. This way, the comments list is updated with new comments in realtime.
+
+Next, still within @components/App.js@, let’s bind @handleAddComment()@ to the this keyword by adding this line to the @constructor()@ just after @super()@:
+
+```[javascript]
+this.handleAddComment = this.handleAddComment.bind(this);
+```
+
+Also, still within @components/App.js@, pass @handleAddComment@ as props to @CommentBox@ component as below:
+
+```[javascript]
+<CommentBox handleAddComment={this.handleAddComment} />
+```
+
+"See this step in Github":https://github.com/ably/tutorials/commit/59daf0c
+
+h2. Step 14 - Configure all channels within a namespace to persist messages to disk
+
+We’ll be using Ably's "history feature":/realtime/history to dispaly our comments in realtime. Before we can make use of the history feature, we need to first configure our channel to persist messages to disk. Channels can be named using any unicode string characters with the only restriction that they cannot start with a @[@ or @:@ character as these are used as "special" characters. A colon @:@ is used to delimit channel namespaces in a format such as @namespace:channel@. Namespaces provide a flexible means to group channels together. Channel grouping can be useful when, for example, "configuring permissions (capabilities) for a set of channels within a client token":/general/authentication#capabilities-explained or setting up rules to apply to one or more channels.
+
+We will be using channel rules in this tutorial to ensure all channels in the @persisted@ namespace are configured to persist messages to disk i.e. we will explicitly enable the history feature. Follow these steps:
+
+# Visit your "account dashboard":https://support.ably.io/solution/articles/3000048664-how-do-i-access-my-account-dashboard, navigate to the same app you chose in Step 1 when obtaining your API key earlier
+# Click on the Settings tab and scroll down to the "Channel rules" section
+# Click the "Add new rule" button (see below)
+<a href="/images/tutorials/channel-rules-add-new-rule.png" target="_blank">
+  <img src="/images/tutorials/channel-rules-add-new-rule.png" style="width: 100%" alt="Add new channel rule screenshot">
+</a>
+# Once the modal has opened, enter "persisted" for the namespace, check the Persisted check box to enable history, and click the "Create channel rule" button (see below)
+<a href="/images/tutorials/channel-rules-create-modal.png" target="_blank">
+  <img src="/images/tutorials/channel-rules-create-modal.png" style="width: 100%" alt="Create channel rule screenshot">
+</a>
+
+You have now enabled history for all channels in the @persisted@ namespace i.e. any channel with a name matching the pattern @persisted:*@ will store published messages to disk.
+
+h2. Step 15 - Displaying Comments
+
+We have seen how we can publish newly added comments. Now, we need to display those comments being published in realtime. We’ll do this within React lifecycle @componentDidMount()@ hook. Still within @components/App.js@, add the code below just before @handleAddComment()@:
+
+```[javascript]
+componentDidMount() {
+  /*global Ably*/
+  const channel = Ably.channels.get('comments');
+
+  channel.attach();
+    channel.once('attached', () => {
+      channel.history((err, page) => {
+        // create a new array with comments only in an reversed order (i.e old to new)
+        const comments = Array.from(page.items.reverse(), item => item.data)
+
+        this.setState({ comments });
+      });
+    });
+}
+```
+
+The @componentDidMount()@ hook runs after the component output has been rendered to the DOM. It is a good place to fetch our comments from the @comments@ history. We connect to the @comments@ channel and listen for the @attached@ event. Then we update the @comments@ state with the comment pulled from history.
+
+Notice we reverse the comments coming from history, this will allow us to reverse all the comments (from history and newly added) to the appropriate order (that is, newest at the top) at the point of rendering (that's why we reversed @comments@ state in step 12).
+
+"See this step in Github":https://github.com/ably/tutorials/commit/b496f7e
 
 <a href="/images/tutorials/reactjs-realtime-commenting-final-output.png" target="_blank">
   <img src="/images/tutorials/reactjs-realtime-commenting-final-output.png" style="width: 100%" alt="Final output screenshot">
@@ -334,11 +449,12 @@ And then run the app locally by adding your "Ably API key":https://support.ably.
 npm start
 ```
 
-to start the app.
+to start the web server and open the browser.
 
 h2. Next steps
 
 1. If you would like to find out more about how channels, publishing and subscribing works, see the "Realtime channels & messages documentation":https://www.ably.io/documentation/realtime/channels-messages
 2. Learn more about "Ably features":https://www.ably.io/features by stepping through our other "Ably tutorials":https://www.ably.io/tutorials
-3. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
-4. "Get in touch if you need help":https://www.ably.io/contact
+3. Learn more about Ably's "history feature":https://www.ably.io/tutorials/history#lang-javascript
+4. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
+5. "Get in touch if you need help":https://www.ably.io/contact
