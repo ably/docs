@@ -1,5 +1,5 @@
 ---
-title: Reactor Events Tutorial: AWS Lambda Function
+title: "Reactor Events Tutorial: AWS Lambda Function"
 section: tutorials
 index: 100
 languages:
@@ -7,17 +7,15 @@ languages:
   - nodejs
 ---
 
-h1. Reactor Events Tutorial: AWS Lambda Function
-
-The "Ably Realtime":https://www.ably.io/ service provides a "pub/sub" (publish/subscribe) messaging system with which you can build sophisticated workflows and dataflow pipelines to meet the needs of your application. This can be as simple as publishing messages to named channels of your choice, and having users and server processes subscribe to those channels and respond with further messages as needed. But what if you don't have a server to coordinate all of this, or simply don't want to manage that side of things?
+The Ably Realtime service provides a "pub/sub" (publish/subscribe) messaging system with which you can build sophisticated workflows and dataflow pipelines to meet the needs of your application. This can be as simple as publishing messages to named channels of your choice, and having users and server processes subscribe to those channels and respond with further messages as needed. But what if you don't have a server to coordinate all of this, or simply don't want to manage that side of things?
 
 Even though Ably provides a full suite of "authentication and authorization features":https://www.ably.io/documentation/general/authentication to make sure users can only do what they're permitted to do, we still need a way to connect your messaging workflow to your business logic - something that would normally happen on your application's server. Doing so from a client-side browser application is risky, as it means exposing your business logic and other potentially sensitive data and services to the user. With the rise of serverless solutions such as "AWS Lambda":https://aws.amazon.com/lambda/, the problem goes away. Create server functions that contain your business logic, credentials and other sensitive data, hook them up to your application, and all of the sensitive work is hidden away from the user, not to mention being managed by world-class infrastructure providers such as Amazon, Google or Microsoft. Ably's *"Reactor Events":https://www.ably.io/reactor* feature provides a way to define custom criteria that will automatically trigger different kinds of actions in response to channel messages, channel lifecycle events (such as a channel being created) and presence events (such as users entering or leaving a channel), and is how we'll integrate with your server functions without exposing them to your users.
 
 h2. What we'll be building
 
-For this tutorial, we'll be using *"Reactor Events":https://www.ably.io/reactor* in response to incoming messages in order to *automatically invoke your own AWS Lambda functions*. We're going to build a simple pizza ordering system with a virtual pizza assistant chat bot. When a new customer hits your website, they'll be assigned a random ID, their messages will be published to a private channel created just for that customer, and a Reactor Event will call your AWS Lambda functions to invoke the pizza chat bot, who will take their order and then, via an HTTPS request to the Ably REST API, post a response back to a similar channel that the web application will use to listen for responses from the chat bot.
+For this tutorial, we'll be using *"Reactor Function":https://www.ably.io/documentation/general/functions* events in response to incoming messages in order to *automatically invoke your own AWS Lambda functions*. We're going to build a simple pizza ordering system with a virtual pizza assistant chat bot. When a new customer hits your website, they'll be assigned a random ID, and their messages will be published to a private channel created just for that customer. A Reactor Event triggered by those messages will call your AWS Lambda functions to invoke the pizza chat bot to take their order. Using the Ably REST API, it will post its responses back on another channel that the web application subscribes to.
 
-The chat bot will be built using the "AWS Lex":https://aws.amazon.com/lex/ service, which provides specialized functionality for managing natural language conversations between users and software. Though there are a number of different chat bot services we could integrate with, by using the AWS Lex service, you'll be able to use the same account and credential management area for managing access to both the Lambda and Lex services, and potentially take advantage of any other integrations between Lex and Lambda, seeing as they both belong to the same service provider.
+The chat bot will be built using the "AWS Lex":https://aws.amazon.com/lex/ service, which provides specialized functionality for managing natural language conversations between users and software. There are a number of different chat bot services we could integrate with, but we'll use the AWS Lex service. By doing this, you'll be able to use the same account and credential management area for managing access to both the Lambda and Lex services. You'll potentially also be able to take advantage of any other integrations between Lex and Lambda, seeing as they both belong to the same service provider. This may become more important if you expand on the basic Lex scripts we provide in this tutorial as a starting point.
 
 <a href="/images/tutorials/reactor-event-aws-dataflow-diagram.png" target="_blank">
   <img src="/images/tutorials/reactor-event-aws-dataflow-diagram.png" style="width: 100%" alt="Diagram of the tutorial project's architecture">
@@ -61,8 +59,6 @@ Copy and paste your key ID and secret key to a text file for later use:
   <img src="/images/tutorials/reactor-event-aws-credentials-4.png" style="width: 100%" alt="Copy the access key ID and secret key">
 </a>
 
---------------------------------------------------------------------------------
-
 h3. (b) IAM role for use by your Lambda function
 
 You will need to configure an IAM role for use by your Lambda function, even if you're bypassing the chat bot parts of this tutorial. Enter your AWS dashboard and click the services link at the top of the page, then, the IAM link from the menu:
@@ -71,15 +67,11 @@ You will need to configure an IAM role for use by your Lambda function, even if 
   <img src="/images/tutorials/reactor-event-aws-iam-1.png" style="width: 100%" alt="Select the IAM service">
 </a>
 
---------------------------------------------------------------------------------
-
 From the side menu, select the roles link, followed by the "Create role" button:
 
 <a href="/images/tutorials/reactor-event-aws-iam-2.png" target="_blank">
   <img src="/images/tutorials/reactor-event-aws-iam-2.png" style="width: 100%" alt="Create a new role">
 </a>
-
---------------------------------------------------------------------------------
 
 Click the "AWS service" panel button, then the "Lambda" link, and finally the "Next: Permissions" button:
 
@@ -87,15 +79,11 @@ Click the "AWS service" panel button, then the "Lambda" link, and finally the "N
   <img src="/images/tutorials/reactor-event-aws-iam-3.png" style="width: 100%" alt="Choose the Lambda service">
 </a>
 
---------------------------------------------------------------------------------
-
 Type "Lex" into the search box, check the "AmazonLexRunBotsOnly" option, then click the "Next: Review" button. If you're skipping the chat bot part of this tutorial, search for and select the "AWSLambdaRole" option instead:
 
 <a href="/images/tutorials/reactor-event-aws-iam-4.png" target="_blank">
   <img src="/images/tutorials/reactor-event-aws-iam-4.png" style="width: 100%" alt="Select a policy">
 </a>
-
---------------------------------------------------------------------------------
 
 Enter a name such as "Lambda-Lex-Role", followed by a description of the role's purpose, and then click the "Create Role" button:
 
@@ -103,21 +91,19 @@ Enter a name such as "Lambda-Lex-Role", followed by a description of the role's 
   <img src="/images/tutorials/reactor-event-aws-iam-5.png" style="width: 100%" alt="Fill out the role details">
 </a>
 
---------------------------------------------------------------------------------
-
-h3. (c) IAM user for use by your Ably Reactor event
+h3. <notextile>(c)</notextile> IAM user for use by your Ably Reactor event
 
 In order for Ably to invoke your Lambda function, you'll need to supply credentials when setting up your Reactor event (covered later in this tutorial). The process is similar to the IAM role setup process above:
 
 # Select "Users" from the left menu
 # Click the blue "Add user" button
 # For the "Add User" form that is displayed:
-   # For the username, enter `Ably-Invoke-PizzaAssistant`
+   # For the username, enter @Ably-Invoke-PizzaAssistant@
    # Check the "Programmatic access" checkbox
    # Click the blue "Next: permissions" button in the bottom right corner of the page
 # For the "Set permissions for Ably-Invoke-PizzaAssistant" page:
    # Click the large square panel "Attach existing policies directly"
-   # Type `AWSLambdaRole` into the filter/search box
+   # Type @AWSLambdaRole@ into the filter/search box
    # Check the "AWSLambdaRole" checkbox
    # Click the blue "Next: Review" in the bottom right corner of the page
 # Click the blue "Create user" button in the bottom right corner of the page
@@ -126,19 +112,13 @@ In order for Ably to invoke your Lambda function, you'll need to supply credenti
    # Click the "Show" link in the last column, which will reveal the secret key
    # Copy and paste the secret key into your text file
 
---------------------------------------------------------------------------------
-
 h2. Step 2: AWS Lex
 
 bq. _Note: You can skip this step if you're not going to use AWS Lex for your chat bot._
 
-h3. (a) Python and the AWS CLI
+h3. (a) The AWS CLI
 
-Make sure you have Python installed. A Python 3.6.x installation is used in this tutorial. You can "get Python here":https://www.python.org/downloads/, and this will also give you the *pip* installer, which you'll need to install the AWS CLI. If you're familiar with Node.js, pip is a package manager like npm, but for Python.
-
-Open your command line shell of choice. This would likely be Power Shell or Bash (WSL) on Windows, or a Bash terminal on Mac and Linux. Check that Python and pip are available by typing `python -V` to print out the installed version of Python, and `pip -V` to check that pip is also installed.
-
-As per the instructions on "this page":http://docs.aws.amazon.com/cli/latest/userguide/installing.html, install the AWS CLI by typing `pip install awscli`. This will download and install the AWS CLI as a global Python package that you can access from the command line. Once you've done this, type `aws configure`. You'll be prompted to add the credentials you retrieved earlier. You should also choose *us-east-1* for the region (AWS Lex isn't available in all regions), and *json* for the output format.
+Make sure you have the AWS CLI installed, by following the instructions at "https://docs.aws.amazon.com/cli/latest/userguide/installing.html":"https://docs.aws.amazon.com/cli/latest/userguide/installing.html". When configuring the CLI, use the credentials you configured in part 1-a of this tutorial. You should also choose *us-east-1* for the region (AWS Lex isn't available in all regions), and *json* for the output format, which will ensure that the Lex setup scripts (below) install correctly.
 
 ```[sh]
 aws configure
@@ -160,18 +140,16 @@ The JSON configurations for a simple pizza assistant chat bot are included in "t
 From your console or terminal, change to the directory where you've put the JSON files, and run the following:
 
 ```[sh]
-aws lex-models put-slot-type ---cli-input-json file://slottype-crust.json
-aws lex-models put-slot-type ---cli-input-json file://slottype-sauce.json
-aws lex-models put-slot-type ---cli-input-json file://slottype-size.json
-aws lex-models put-slot-type ---cli-input-json file://slottype-topping.json
-aws lex-models put-intent ---cli-input-json file://intent.json
-aws lex-models put-bot ---cli-input-json file://bot.json
-aws lex-models put-bot-alias ---cli-input-json file://alias.json
+aws lex-models put-slot-type --cli-input-json file://slottype-crust.json
+aws lex-models put-slot-type --cli-input-json file://slottype-sauce.json
+aws lex-models put-slot-type --cli-input-json file://slottype-size.json
+aws lex-models put-slot-type --cli-input-json file://slottype-topping.json
+aws lex-models put-intent --cli-input-json file://intent.json
+aws lex-models put-bot --cli-input-json file://bot.json
+aws lex-models put-bot-alias --cli-input-json file://alias.json
 ```
 
-This will create and configure your chat bot so that it can take a simple pizza order via a text-based conversation with a user. You'll use your Lambda function to route user messages from your Ably channel to Lex, and to post the bot's response back to the user on the same channel.
-
---------------------------------------------------------------------------------
+This will create and configure your chat bot so that it can take a simple pizza order via a text-based conversation with a user. You'll use your Lambda function to route user messages from your Ably channel to Lex, and to post the bot's response back to the user on the reply channel.
 
 h2. Step 3: AWS Lambda
 
@@ -183,25 +161,19 @@ Next, select the "Functions" option in the left menu, then click the orange "Cre
   <img src="/images/tutorials/reactor-event-aws-lambda-1.png" style="width: 100%" alt="Create a new function">
 </a>
 
---------------------------------------------------------------------------------
-
 Click the "Author from scratch" button:
 
 <a href="/images/tutorials/reactor-event-aws-lambda-2.png" target="_blank">
   <img src="/images/tutorials/reactor-event-aws-lambda-2.png" style="width: 100%" alt="Author from scratch">
 </a>
 
---------------------------------------------------------------------------------
-
-# Enter `Invoke-PizzaAssistant` in the "Name" field
+# Enter @Invoke-PizzaAssistant@ in the "Name" field
 # Ensure "Choose an existing role" is selected
-# Select `Lambda-Lex-Role`, or if skipping the Lex portion of this tutorial, the role you created instead
+# Select @Lambda-Lex-Role@, or if skipping the Lex portion of this tutorial, the role you created instead
 
 <a href="/images/tutorials/reactor-event-aws-lambda-3.png" target="_blank">
   <img src="/images/tutorials/reactor-event-aws-lambda-3.png" style="width: 100%" alt="Fill out the basic function setup">
 </a>
-
---------------------------------------------------------------------------------
 
 bq. _Note: If you're skipping the Lex portion of this tutorial, make any changes below as needed. The code below is where you'll need to provide your alternative implementation for processing user messages._
 
@@ -230,12 +202,10 @@ exports.handler = (event, context, callback) => {
   <img src="/images/tutorials/reactor-event-aws-lambda-4.png" style="width: 100%" alt="Enter some code and test">
 </a>
 
---------------------------------------------------------------------------------
-
 Test events let you feed sample data to your Lambda function to see if it generates the kind of response you're expecting. Your Lambda test function, which you've already configured above, will use this sample data to invoke the Lex bot, and you'll be able to view the result to see if it generated the kind of response you expect.
 
 # Make sure the "Hello World" event template is selected
-# Enter `testNewCustomer` into the "Event name" field
+# Enter @testNewCustomer@ into the "Event name" field
 # Enter the following JSON code into the editor:
 
 ```[json]
@@ -251,15 +221,11 @@ Test events let you feed sample data to your Lambda function to see if it genera
   <img src="/images/tutorials/reactor-event-aws-lambda-5.png" style="width: 100%" alt="Configure a test event">
 </a>
 
---------------------------------------------------------------------------------
-
 Now that your test event is configured, make sure it is selected from the dropdown box, then click the "Save and test" button:
 
 <a href="/images/tutorials/reactor-event-aws-lambda-6.png" target="_blank">
   <img src="/images/tutorials/reactor-event-aws-lambda-6.png" style="width: 100%" alt="Run the test event">
 </a>
-
---------------------------------------------------------------------------------
 
 If you've followed the above steps correctly, you should see a successful execution result displayed. The JSON output will have been generated by your Lex bot:
 
@@ -267,13 +233,11 @@ If you've followed the above steps correctly, you should see a successful execut
   <img src="/images/tutorials/reactor-event-aws-lambda-7.png" style="width: 100%" alt="Verify the test result">
 </a>
 
---------------------------------------------------------------------------------
-
 h2. Step 4: Ably Setup
 
 h3. (a) Create an Ably API key
 
-We're going to need an API key for use by your browser application, and for the AWS Lambda function to allow it to post a response back to Ably. For our purposes, only one API key is required, but you may wish to create a separate API key for the Lambda function if you need it to have a different set of permissions than those assigned for use by the browser app.
+We're going to need an API key for use by your browser application, and for the AWS Lambda function to allow it to post a response back to Ably. For our purposes, only one API key is required. If you extend the tutorial with your own functionality, you may wish to create a separate API key for the Lambda function if you need it to have a different set of permissions than those assigned for use by the browser app.
 
 First, log into your Ably dashboard, find the app you're going to be using for this tutorial (the "Sandbox" app is probably fine), then click "Manage App".
 
@@ -281,26 +245,20 @@ First, log into your Ably dashboard, find the app you're going to be using for t
   <img src="/images/tutorials/reactor-event-ably-1.png" style="width: 100%" alt="Manage your Ably app">
 </a>
 
---------------------------------------------------------------------------------
-
 Select the "API Keys" tab, and click "Create a new API key":
 
 <a href="/images/tutorials/reactor-event-ably-2.png" target="_blank">
   <img src="/images/tutorials/reactor-event-ably-2.png" style="width: 100%" alt="Create a new API key">
 </a>
 
---------------------------------------------------------------------------------
-
 # Enter a name for your API key
 # Select only the "publish" and "subscribe" options
-# Select "Selected channels and queues", and enter a channel prefix to ensure that the API key can only access channels that start with `pizza:`
+# Select "Selected channels and queues", and enter a channel prefix to ensure that the API key can only access channels that start with @pizza:@
 # Click the "Create key" button
 
 <a href="/images/tutorials/reactor-event-ably-3.png" target="_blank">
   <img src="/images/tutorials/reactor-event-ably-3.png" style="width: 100%" alt="Fill out the API key form">
 </a>
-
---------------------------------------------------------------------------------
 
 Scroll down if necessary, and copy and paste your new API key to a text file for later use in your application.
 
@@ -308,11 +266,9 @@ Scroll down if necessary, and copy and paste your new API key to a text file for
   <img src="/images/tutorials/reactor-event-ably-4.png" style="width: 100%" alt="Copy the API key">
 </a>
 
---------------------------------------------------------------------------------
-
 h3. (b) Configure a Reactor event
 
-The next thing is to set up a Reactor event, which we need in order to relay channel messages from the customer to our AWS Lambda function for processing. We'll actually be using two channels - one outbound, and one inbound. We'll do this to ensure that only the customer's communications are sent to AWS, and so that the browser app need only process messages from the chat bot. Channels are lightweight constructs that are created on demand and discarded when no longer in use, so using two channels in this way is not a problem.
+The next thing is to set up a Reactor event, which we need in order to relay channel messages from the customer to our AWS Lambda function for processing. We'll actually be using two channels - one outbound, and one inbound. We'll do this to ensure that only the customer's communications are sent to AWS, and so that the browser app need only process messages from the chat bot. Channels only consume resources while in use, so using two channels in this way is not a problem.
 
 Just as in the previous step, go to the dashboard for the Ably app you're using, choose the "Reactor" tab, then click "New Reactor Rule":
 
@@ -320,15 +276,11 @@ Just as in the previous step, go to the dashboard for the Ably app you're using,
   <img src="/images/tutorials/reactor-event-rule-1.png" style="width: 100%" alt="Create a new Reactor rule">
 </a>
 
---------------------------------------------------------------------------------
-
 Choose the "Reactor Event" option:
 
 <a href="/images/tutorials/reactor-event-rule-2.png" target="_blank">
   <img src="/images/tutorials/reactor-event-rule-2.png" style="width: 100%" alt="Select the Reactor Event option">
 </a>
-
---------------------------------------------------------------------------------
 
 Choose the "AWS Lambda" option:
 
@@ -336,16 +288,14 @@ Choose the "AWS Lambda" option:
   <img src="/images/tutorials/reactor-event-rule-3.png" style="width: 100%" alt="Select the AWS Lambda option">
 </a>
 
---------------------------------------------------------------------------------
-
 Fill out the form to provide Ably with the details it needs to invoke your Lambda function.
 
-# Select `us-east-1` for the region.
-# Enter `Invoke-PizzaAssistant` - the name of your Lambda function.
+# Select @us-east-1@ for the region.
+# Enter @Invoke-PizzaAssistant@ - the name of your Lambda function.
 # Select the "AWS Credentials" option.
-# The key ID and secret key you'll be using are for the IAM user you created in step 1-c of this tutorial. The key ID and secret key should be pasted one after the other with a colon in-between. For example if your key ID is `foo` and your secret key is `bar`, you'd enter `foo:bar` into the credentials field.
+# The key ID and secret key you'll be using are for the IAM user you created in step 1-c of this tutorial. The key ID and secret key should be pasted one after the other with a colon in-between. For example if your key ID is @foo@ and your secret key is @bar@, you'd enter @foo:bar@ into the credentials field.
 # Make sure "Message" is set as the source.
-# Enter a regular expression that the Reactor event will use to whitelist the Ably channels for which the event should be triggered. `^pizza:customer:` means that the channel name must begin with the string `pizza:customer:`, with no restrictions on the characters that follow.
+# Enter a regular expression that the Reactor event will use to whitelist the Ably channels for which the event should be triggered. @^pizza:customer:@ means that the channel name must begin with the string @pizza:customer:@, with no restrictions on the characters that follow.
 # The JSON option means that your channel uses standard JSON packets for messaging, rather than custom-formatted data, as might be the case if your channel were being used for voice or other binary data.
 # Check that the "Enveloped" checkbox is checked, then click the blue "Create" button.
 
@@ -354,8 +304,6 @@ Fill out the form to provide Ably with the details it needs to invoke your Lambd
 </a>
 
 Your Reactor event will now be created, and you'll be able to continue developing your app.
-
---------------------------------------------------------------------------------
 
 h2. Step 5: Developing the browser app
 
@@ -368,9 +316,9 @@ bq. _Note that all of the code below can be found in "this tutorial's repository
 h3. (a) Getting the application skeleton in place
 
 # Create a new project directory on your hard drive
-# Create a blank file named `app.js` in your project directory. We'll edit it later.
-# Either create a blank file named `app.css` in your project directory, or "copy the pre-made file of the same name from the repository":http://todo-repository-link/index.html.
-# Create an HTML file named `index.html` for the user interface. Start with the code below:
+# Create a blank file named @app.js@ in your project directory. We'll edit it later.
+# Either create a blank file named @app.css@ in your project directory, or "copy the pre-made file of the same name from the repository":http://todo-repository-link/index.html.
+# Create an HTML file named @index.html@ for the user interface. Start with the code below:
 
 ```[html]
 <!DOCTYPE html>
@@ -417,7 +365,7 @@ h3. (b) Getting a basic application script working
 
 The application script has a few parts to it, but isn't too complex. The script will need to update the user interface at various points, and because the layout is fairly simple, we're just going to use vanilla JavaScript code to accomplish this, rather than overcomplicating things with frameworks such as Angular or React. For anything more ambitious, you'll likely want to upgrade the code in this tutorial to use a framework of your choosing.
 
-The first thing to do is to instantiate the "Ably client library":https://www.ably.io/download (already linked for you in the above HTML) and verify that we can send and receive messages successfully. The following code will define a channel, subscribe to it, and use it to publish customer messages. If everything is working, the fact that we're subscribed to the same channel that we're publishing to means that our messages will simply be echoed back to us via the `receiveMessage` handler function, which will then append them to the chat log in the HTML.
+The first thing to do is to instantiate the "Ably client library":https://www.ably.io/download (already linked for you in the above HTML) and verify that we can send and receive messages successfully. The following code will define a channel, subscribe to it, and use it to publish customer messages. If everything is working, the fact that we're subscribed to the same channel that we're publishing to means that our messages will simply be echoed back to us via the @receiveMessage@ handler function, which will then append them to the chat log in the HTML.
 
 ```[js]
 // This Ably client library is available due to the script in the HTML header:
@@ -426,8 +374,7 @@ const ably = Ably.Realtime('YOUR_API_KEY_GOES_HERE');
 // Remember when creating your API key that you specified that it would only
 // work for channels starting with the string "pizza:". When testing the script,
 // try changing the channel name to something else and see how Ably emits an
-// error to your browser developer console, thus demonstrating the safety of
-// having the API key in a client-side browser script.
+// error to your browser developer console.
 const channel = ably.channels.get('pizza:messages');
 channel.subscribe(receiveMessage);
 
@@ -489,7 +436,7 @@ Now that you've verified that you're able to connect to Ably and send and receiv
 
 First, we'll need two channels rather than one. The first channel is the outbound channel, and is where the Reactor event will be listening for messages to forward on to your AWS Lambda function. The second channel is the inbound channel where the bot's response messages will be posted, and is the channel to which your script will attach a listener.
 
-Also, because channels are lightweight, it's ok to make as many channels as you need. If two different customers are trying to order a pizza at the same time, we don't want their messages getting mixed in together, so we'll be appending a random customer identification value to the inbound and outbound channel names, with the effect being that every customer is allocated their own unique pair of inbound and outbound channels. The customer ID will also need to be included in outbound messages so that your AWS Lambda function can figure out where to send responses.
+If two different customers are trying to order a pizza at the same time, we don't want their messages getting mixed in together. To address this, we'll be appending a random customer identification value to the inbound and outbound channel names, with the effect being that every customer is allocated their own unique pair of inbound and outbound channels. The customer ID will also need to be included in outbound messages so that your AWS Lambda function can figure out where to send responses. The channels will only be used for the duration of the chat session, which means the maximum number of active channels at any one time will be equal to twice the number of customers currently placing pizza orders. See the "pricing page":https://www.ably.io/pricing/self-service for details about the peak connection limit available for your Ably account.
 
 Here's some code to generate a random customer ID. This will be run when the page first loads, and you'll be able to then use the customerID in your channel names:
 
@@ -532,7 +479,7 @@ const inboundChannel = ably.channels.get('pizza:bot:' + customerId);
 inboundChannel.subscribe(receiveMessage);
 ```
 
-Let's refactor the message publishing code into its own function. We'll also need to modify what we're sending so that it includes the customer ID so that the Lambda function can reply on the correct channel:
+Let's refactor the message publishing code into its own function. We'll also modify what we're sending so that it includes the customer ID in the message data. This will make it easy for the Lambda function to reply on the correct channel without having to extract the customer ID from the name of the inbound channel:
 
 ```[js]
 function postMessage(message) {
@@ -551,7 +498,7 @@ function postMessage(message) {
 }
 ```
 
-Don't forget to also update your `processInput` function to use `postMessage` rather than publishing directly:
+Don't forget to also update your @processInput@ function to use @postMessage@ rather than publishing directly:
 
 ```[js]
 function processInput(e) {
@@ -664,7 +611,9 @@ function postMessage (apiKey, channel, message, callback) {
 }
 ```
 
-One last step before leaving the AWS control panel - it'd be good if we could quickly test the updated Lambda function to make sure it's working before proceeding. Update the test configuration you originally created, replacing the short JSON configuration you had earlier with the JSON in the code block below ("also in the tutorial repository":http://todo-repository-link/lambda-test.json). This JSON data reflects the fact that Ably delivers the customer's message wrapped in some additional metadata, which is why we need to unwrap the payload (note the `JSON.parse` line in the script block above) to get access to the data we want.
+One last step before leaving the AWS control panel - it'd be good if we could quickly test the updated Lambda function to make sure it's working before proceeding. Update the test configuration you originally created, replacing the short JSON configuration you had earlier with the JSON in the code block below ("also in the tutorial repository":http://todo-repository-link/lambda-test.json). This JSON data reflects the fact that Ably delivers the customer's message wrapped in some additional metadata, which is why we need to unwrap the payload (note the @JSON.parse@ line in the script block above) to get access to the data we want.
+
+bq. _Note: The metadata exists due to the "Enveloped" option that was checked during the Reactor rule setup process. If you'd like to simplify things and omit all of Ably's metadata, update the reactor rule settings so that the "Enveloped" checkbox is unchecked. You can then modify the code to use @JSON.parse(event)@ instead of @JSON.parse(event.messages[0].data))@._
 
 ```[json]
 {
@@ -696,7 +645,7 @@ You may have noticed a short delay between your message submission and the bot's
 
 Also, the UI is not very useful unless the text input box is focused at all times, so we'll add some additional event listeners to make sure that no matter where the user clicks on the page, or whether they leave or return to the browser window, the input box always automatically refocuses itself.
 
-Modify the `appendMessage` function to return a reference to the HTML element it has just appended to the DOM:
+Modify the @appendMessage@ function to return a reference to the HTML element it has just appended to the DOM:
 
 ```[js]
 function appendMessageElement(type, message) {
@@ -780,6 +729,9 @@ Congratulations, you're done!
 
 h2. Next Steps
 
-The Lex bot we built isn't exactly robust (or even complete, for that matter). If you'd like to improve it, spend some time investigating "the Lex documentation and API":https://aws.amazon.com/documentation/lex/ to come up with some creative approaches of your own.
-
-Ably Reactor events are just one of the features that the Reactor engine offers. Why not "investigate some of the others":https://www.ably.io/reactor and see what else is possible?
+1. The Lex bot we built isn't exactly robust (or even complete, for that matter). If you'd like to improve it, spend some time investigating "the Lex documentation and API":https://aws.amazon.com/documentation/lex/ to come up with some creative approaches of your own.
+2. Take a look at the "Reactor Functions documentation":https://www.ably.io/documentation/general/functions for further details about what was described in this tutorial.
+3. If you would like to find out more about Ably Reactor features and capabilities, see the "Reactor documentation":https://www.ably.io/reactor.
+4. Learn more about "Ably features":https://www.ably.io/features by stepping through our other "Ably tutorials":https://www.ably.io/tutorials
+5. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
+6. "Get in touch if you need help":https://www.ably.io/contact
