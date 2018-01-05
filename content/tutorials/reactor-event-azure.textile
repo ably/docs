@@ -91,7 +91,7 @@ module.exports = function (context, req) {
     const channel = ably.channels.get('pizza:bot:' + customerId);
 
     // Publish the response, and handle any unexpected errors
-    channel.publish('bot', { message, context: order }, err => {
+    channel.publish('bot', response, err => {
       if (err) {
         console.log(err); // Use the Azure logging console to see this output
         context.res = {
@@ -377,6 +377,17 @@ const inboundChannel = ably.channels.get('pizza:bot:' + customerId);
 inboundChannel.subscribe(receiveMessage);
 ```
 
+We're not using any special server-side persistence features, so we'll need to keep track of the conversation context and order details ourselves, and pass them to the chat bot as the conversation progresses. Only the bot will be updating the context; we'll just keep track of it on the bot's behalf, so that it isn't lost from one message to the next.
+
+```[js]
+let context = null; // We start with an uninitialized conversation context
+
+function receiveMessage(message) {
+  context = message.context; // The bot returns an updated context
+  appendMessageElement('bot', message.data);
+}
+```
+
 Let's refactor the message publishing code into its own function. We'll also modify what we're sending so that it includes the customer ID in the message data. This will make it easy for the Azure function to reply on the correct channel without having to extract the customer ID from the name of the inbound channel:
 
 ```[js]
@@ -470,6 +481,7 @@ Update the code to call the above function when sending and receiving messages:
 ```[js]
 function receiveMessage(message) {
   setWaiting(false); // The bot has replied, so remove the waiting message
+  context = message.context;
   appendMessageElement('bot', message.data);
 }
 
