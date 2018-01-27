@@ -9,7 +9,7 @@ The Ably documentation was intentionally created as a public repository using a 
 
 * It can be maintained by Ably staff and developers.
 * 3rd parties can fork the repository, and submit pull requests to improve the documentation.  We welcome the community's suggestions and input.
-* This documentation is later merged upstream to the [Ably primary website documentation](https://www.ably.io/documentation) with each website releas.
+* This documentation is later merged upstream to the [Ably primary website documentation](https://www.ably.io/documentation) with each website release.
 
 Viewing the documentation
 ------
