@@ -16,25 +16,12 @@ Reactor Functions are designed to trigger server-less functions on common cloud 
   <img src="/images/diagrams/reactor-functions-intro.png" style="width: 100%" alt="Ably Reactor Functions diagram">
 </a>
 
-h2. Payload Encoding
-
-The encoding of payloads sent is defined when setting up a Reactor Rule in the "Reactor tab of your app":https://support.ably.io/solution/articles/3000074406-how-to-reach-the-reactor-page. You can have the message sent in JSON format, or as a "MessagePack":https://msgpack.org payload.
-
-* "JSON":https://www.json.org (JavaScript Object Notation): An efficient data-interchange format which is fairly standard and provides simple text based encoding.
-* "MessagePack":https://msgpack.org: An efficient binary serialization format that is similar to JSON, but faster and smaller.
-
-h2. Envelopes
-
-Messages sent by Reactor Functions can be contained within an envelope. This can be useful for clients which are unable to access response headers or status codes, or wish to receive more metadata about the payload.
-
-h2. Payload types
-
-Ably currently supports two types of data that can be delivered via our Functions:
+Ably currently supports two types of Functions:
 
 * "Messages":#messages - messages trigger function calls as soon as they are published on a channel
 * "Presence events":#presence - presence events trigger function calls when clients enter, update their data, or leave channels
 
-You can "configure functions":#configure from the "Reactor tab in your app":https://support.ably.io/solution/articles/3000074406-how-to-reach-the-reactor-page on a per app basis which can apply to one or more channels in that app. Reactor Functions can be filtered by channel naming using a regular expression, for example @^click_.*_mouse$@. This would match the string 'click_' followed by a string followed by '_mouse', for example, 'click_left_mouse'.
+You can "configure functions":https://support.ably.io/support/solutions/articles/3000074406-how-to-set-up-a-reactor-rule from the "Reactor tab in your app":https://support.ably.io/solution/articles/3000074406-how-to-reach-the-reactor-page on a per app basis which can apply to one or more channels in that app. Reactor Functions can be filtered by channel naming using a regular expression, for example @^click_.*_mouse$@. This would match the string 'click_' followed by a string followed by '_mouse', for example, 'click_left_mouse'.
 
 h2(#messages). Messages
 
@@ -44,14 +31,20 @@ When a "@Message@":/rest/channels-messages#message is published on a channel, a 
 
 Every request will contain your message within the "HTTP message body":https://en.wikipedia.org/wiki/HTTP_message_body part of the request. The contents of the @HTTP message body@ depends on whether you've used an envelope or not. If you don't use an envelope, the @HTTP message body@ will only contain the "@Message@":/rest/channels-messages#message payload from your message event.
 
-@Enveloped@ - when the Reactor rule is configured to use an enveloper, the @HTTP message body@ will contain a bunch of extra attributes, which are the following:
+@Enveloped@ - when the Reactor rule is configured to use an "enveloper":#enveloped, the @HTTP message body@ will contain a bunch of extra attributes, which are the following:
 
-- source := the source of the request, namely "@channel.message@"
-- appId := the "ID of your application":https://support.ably.io/support/solutions/articles/3000063083-how-do-i-find-my-app-id on Ably
-- channel := name of the channel on which the "@Message@":/rest/channels-messages#message was published
-- site := an internal site identifier indicating the data center from which the message was published
-- ruleId := an ID for the rule which has created this request
-- messages := an @Array@ containing your "@Message@":/rest/channels-messages#message contents
+**Headers**: @none@
+
+**Data**:
+
+* source := the source of the request, namely "@channel.message@"
+* appId := the "ID of your application":https://support.ably.io/support/solutions/articles/3000063083-how-do-i-find-my-app-id on Ably
+* channel := name of the channel on which the "@Message@":/rest/channels-messages#message was published
+* site := an internal site identifier indicating the data center from which the message was published
+* ruleId := an ID for the rule which has created this request
+* messages := an @Array@ containing your "@Message@":/rest/channels-messages#message contents
+
+_Please note that the @messages@ attribute is an @Array@ so that future envelope options may allow messages to be bundled into a single envelope ("WebHooks":/general/webhooks currently bundle messages). However, with the current queue rule design, an envelope will only ever contain one message._
 
 h4. Decoding messages
 
@@ -67,31 +60,6 @@ We recommend you do this for all messages you receive through Reactor Functions.
   context.log(messages.toString());
 ```
 
-h4. Example @channel.message@ JSON payload
-
-```[json]
-{
-   "items":[
-      {
-         "source":"channel.message",
-         "appId":"ABCDef"
-         "channel":"your_channel",
-         "site":"eu-west-2-A",
-         "ruleId":"rUlEID",
-         "messages":[
-            {
-               "id":"9qaOH1C4tO:2:0",
-               "name":"foo",
-               "connectionId":"9qaOH1C4tO",
-               "timestamp":1479301189856,
-               "data":"bar"
-            }
-         ]
-      }
-   ]
-}
-```
-
 Please note that if you are planning to receive messages via Ably Functions, it is theoretically very easy to exceed the "transport rate limits":https://support.ably.io/support/solutions/articles/3000053845-do-you-have-any-connection-message-rate-or-other-limits-on-accounts we impose on Reactor Functions to prevent DoS attacks against your endpoints. We recommend you consider "message queues":/general/queues instead for a more scalable solution, or "firehose":/general/firehose.
 
 h2(#presence). Presence events
@@ -102,14 +70,16 @@ When a member enters, updates, or leaves a channel, a presence event is triggere
 
 Every request will contain your message within the "HTTP message body":https://en.wikipedia.org/wiki/HTTP_message_body part of the request. The contents of the @HTTP message body@ depends on whether you've used an envelope or not. If you don't use an envelope, the @HTTP message body@ will only contain the @PresenceMessage@ payload from the presence event.
 
-@Enveloped@ - when the Reactor rule is configured to use an enveloper, the @HTTP message body@ will contain a bunch of extra attributes, which are the following:
+@Enveloped@ - when the Reactor rule is configured to use an "enveloper":#enveloped, the @HTTP message body@ will contain a bunch of extra attributes, which are the following:
 
-- source := the source of the request, namely "@channel.presence@"
-- appId := the ID of your application with Ably
-- channel := name of the channel the "Ably message":/rest/channels-messages#message was published on
-- site := an internal site identifier indicating the data center from which the message was published
-- ruleId := an ID for the rule which has created this request
-- presence := an @Array@ containing your "@PresenceMessage@":/realtime/types#presence-message contents
+* source := the source of the request, namely "@channel.presence@"
+* appId := the ID of your application with Ably
+* channel := name of the channel the "Ably message":/rest/channels-messages#message was published on
+* site := an internal site identifier indicating the data center from which the message was published
+* ruleId := an ID for the rule which has created this request
+* presence := an @Array@ containing your "@PresenceMessage@":/realtime/types#presence-message contents
+
+_Please note that the @presence@ attribute is an @Array@ so that future envelope options may allow presence messages to be bundled into a single envelope ("WebHooks":/general/webhooks currently bundle messages). However, with the current queue rule design, an envelope will only ever contain one presence message._
 
 h4. Decoding presence events
 
@@ -126,29 +96,126 @@ We recommend you do this for all presence messages you receive through Reactor F
       console.log(presMsgs.toString());
 ```
 
-h4. Example @channel.presence@ @enter@ JSON payload
+h2. Payload Encoding
+
+The encoding of payloads sent is defined when setting up a Reactor Rule in the "Reactor tab of your app":https://support.ably.io/solution/articles/3000074406-how-to-reach-the-reactor-page. You can have the message sent in JSON format, or as a "MessagePack":https://msgpack.org payload.
+
+* "JSON":https://www.json.org (JavaScript Object Notation): An efficient data-interchange format which is fairly standard and provides simple text based encoding.
+* "MessagePack":https://msgpack.org: An efficient binary serialization format that is similar to JSON, but faster and smaller.
+
+h2(#enveloped). Envelopes
+
+When you configure a Function rule, you are given the option to envelope messages, which is enabled by default. In most cases, we believe an enveloped message provides more flexibility as it contains additional metadata in a portable format that can be useful such as the @clientId@ of the publisher, or the @channel@ name the message originated from.
+
+However, where performance is a primary concern, you may choose not to envelope messages and instead have only the message payload (@data@ element) published. This has the advantage of requiring one less parsing step, however decoding of the raw payload in the published message will be your responsibility.
+
+Note that messages published to queues are by default encoded as JSON (a text format), however you can choose to have messages encoded with "MsgPack":msgpack.org (a binary format) in your queue rules.
+
+h4. Enveloped and non-enveloped message examples
+
+When you configure a Function rule, you are given the option to envelope messages, which is enabled by default. In most cases, we believe an enveloped message provides more flexibility as it contains additional metadata in a portable format that can be useful such as the @clientId@ of the publisher, or the @channel@ name the message originated from.
+
+However, where performance is a primary concern, you may choose not to envelope messages and instead have only the message payload (@data@ element) published. This has the advantage of requiring one less parsing step, however decoding of the raw payload in the published message will be your responsibility.
+
+Note that messages published to queues are by default encoded as JSON (a text format), however you can choose to have messages encoded with "MsgPack":msgpack.org (a binary format) in your queue rules.
+
+h5. Enveloped message example
+
+**Headers**: @none@
+
+**Data**:
 
 ```[json]
 {
-   "items":[
-      {
-         "source":"channel.presence",
-         "appId":"ABCDef"
-         "channel":"your_channel",
-         "site":"eu-west-2-A",
-         "ruleId":"rUlEID",
-         "presence":[
-            {
-               "id":"9qaOH1C4tO:2:0",
-               "clientId":"foo",
-               "connectionId":"9qaOH1C4tO",
-               "timestamp":1479301189856,
-               "action":"2"
-            }
-         ]
-      }
-   ]
+  "id": "cOOo9g|108YY6nPAA3SrE56067277:10",
+  "source": "channel.message",
+  "channel": "foo",
+  "site": "eu-west-1-A",
+  "ruleId": "cOOo9g",
+  "timestamp": 1485914937984,
+  "messageId": "vjzxPR-XK3:3",
+  "messages": [
+    {
+      "id": "vjzxPR-XK3:3:0",
+      "name": "",
+      "connectionId": "vjzxPR-XK3",
+      "timestamp": 1485914937909,
+      "data": "textPayload"
+    }
+  ]
 }
+```
+
+_Please note that the @messages@ attribute is an @Array@ so that future envelope options may allow messages to be bundled into a single envelope ("WebHooks":/general/webhooks currently bundle messages). However, with the current queue rule design, an envelope will only ever contain one message._
+
+h5. Non-enveloped message example
+
+**Headers**:
+* @X-ABLY-ENVELOPE-ID@: @wYge7g|108YY6nPAA3SrE56067277:10@
+* @X-ABLY-ENVELOPE-SOURCE@: @channel.message@
+* @X-ABLY-ENVELOPE-CHANNEL@: @foo@
+* @X-ABLY-ENVELOPE-SITE@: @eu-west-1-A@
+* @X-ABLY-ENVELOPE-RULE-ID@: @wYge7g@
+* @X-ABLY-ENVELOPE-TIMESTAMP@: @1485914937984@
+* @X-ABLY-MESSAGE-ID@: @vjzxPR-XK3:3@
+* @X-ABLY-MESSAGE-TIMESTAMP@: @1485914937909@
+* @X-ABLY-MESSAGE-CONNECTION-ID@: @vjzxPR-XK3@
+
+**Data**:
+
+```[json]
+textPayload
+```
+
+h5. Enveloped presence message example
+
+**Headers**: @none@
+
+**Data**:
+
+```[json]
+{
+  "id": "z8R85g|108YY6nPAA3SrE56067277:12",
+  "source": "channel.presence",
+  "channel": "foo",
+  "site": "eu-west-1-A",
+  "ruleId": "z8R85g",
+  "timestamp": 1485916832965,
+  "messageId": "vjzxPR-XK3:5",
+  "presence": [
+    {
+      "id": "vjzxPR-XK3:5:0",
+      "clientId": "bob",
+      "connectionId": "vjzxPR-XK3",
+      "timestamp": 1485916832961,
+      "action": "enter",
+      "data": "clientData"
+    }
+  ]
+}
+```
+
+_Please note that the @presence@ attribute is an @Array@ so that future envelope options may allow presence messages to be bundled into a single envelope ("WebHooks":/general/webhooks currently bundle messages). However, with the current queue rule design, an envelope will only ever contain one presence message._
+
+h5. Non-enveloped presence message example
+
+**Headers**:
+* @X-ABLY-ENVELOPE-ID@: @wYge7g|108YY6nPAA3SrE56067277:12@
+* @X-ABLY-ENVELOPE-SOURCE@: @channel.presence@
+* @X-ABLY-ENVELOPE-CHANNEL@: @foo@
+* @X-ABLY-ENVELOPE-SITE@: @eu-west-1-A@
+* @X-ABLY-ENVELOPE-RULE-ID@: @wYge7g@
+* @X-ABLY-ENVELOPE-TIMESTAMP@: @1485914937984@
+* @X-ABLY-MESSAGE-ID@: @vjzxPR-XK3:5@
+* @X-ABLY-MESSAGE-TIMESTAMP@: @1485914937909@
+* @X-ABLY-MESSAGE-CONNECTION-ID@: @vjzxPR-XK3@
+* @X-ABLY-MESSAGE-CLIENT-ID@: @bob@
+* @X-ABLY-MESSAGE-ACTION@: @enter@
+
+**Data**:
+
+```[json]
+clientData
 ```
 
 h2. Server-less platform support
@@ -167,4 +234,4 @@ If you are finding it hard to debug a problem with Reactor Functions, we recomme
 
 h2. Next steps
 
-* "Follow one of our Reactor Function step-by-step tutorials":/tutorials
+* "Follow one of our Reactor Function step-by-step tutorials":/tutorials#functions
