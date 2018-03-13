@@ -1,0 +1,255 @@
+---
+title: "MQTT Tutorial: Snake with Javascript"
+section: tutorials
+index: 104
+languages:
+  - javascript
+  - nodejs
+---
+
+Ably Realtime provides support for a number of protocols with its pub/sub system, one of which is MQTT. MQTT is an open ISO standard providing a lightweight messaging protocol for small sensors and mobile devices, optimized for high-latency or unreliable networks. Whilst we reccomend use of the Ably realtime protocol where you can, MQTT can be great for use with languages we don't currently support, and when you have stringent bandwidth restrictions.
+
+h2. What you'll be building
+
+In this tutorial, you'll be using the MQTT protocol with Ably to connect a controller made in Node.js with a game of Snake in a browser. This tutorial will be doing this with the assumption that your input will be from a keyboard and will be using JavaScript to make this tutorial as simple as possible. Other than reading the inputs to your controller however it doesn't matter what the controller is or what it is programmed in, so long as MQTT is supported.
+
+<%= partial 'tutorials/_step-1-setup-free-account' %>
+
+h2. Step 2 - Set up your device
+
+Now that you have an Ably account and have your API Key, you can work on setting up your controller. Firstly, you'll need to create a folder and enter it. To do this type the following into your command line:
+
+```[sh]
+  mkdir mqtt-snake
+  cd mqtt-snake
+```
+
+You'll also need the MQTT.js and keypress NPM modules for the controller, so type the following into your command line to get them:
+
+```[sh]
+  npm install mqtt --save
+  npm install keypress —-save
+```
+
+You'll now see all the required files inside the @node_modules@ folder that has been created within the @mqtt-snake@ folder.
+
+"MQTT.js":https://www.npmjs.com/package/mqtt is required for you to use MQTT in Javascript, and "keypress":https://www.npmjs.com/package/keypress allows for you to easily detect keys being pressed on the keyboard.
+
+"See this step in Github":https://github.com/ably/tutorials/TODO
+
+h2. Step 3 - Add your libraries
+
+With your NPM modules ready, it's time to create a file to contain your controller code. Create a file called @controller.js@ inside your @mqtt-snake@ folder. Inside this file, instance the MQTT.js and keypress libraries:
+
+```[javascript]
+  const mqtt = require('mqtt');
+  const keypress = require('keypress');
+```
+
+"See this step in Github":https://github.com/ably/tutorials/TODO
+
+h2. Step 4 - Detect key presses
+
+Now it's time for you to detect key presses on the keyboard. In this tutorial, you'll be needing to know when the arrow keys or return key is pressed, and then through MQTT communicate which key was pressed. You'll be detecting the key presses with the keypress NPM module. Add the below code after the library instancing in the @controller.js@ file:
+
+```[javascript]
+  keypress(process.stdin);
+
+  process.stdin.setRawMode(true);
+
+  process.stdin.on('keypress', function (ch, key) {
+    if (key) {
+      console.log('Key clicked: ' +  key.name);
+    }
+  });
+```
+
+There are three main things occuring in this code. The first is @keypress(process.stdin)@, which will simply cause our @process.stdin@ to emit @keypress@ events.
+
+Secondly is @process.stdin.setRawMode(true)@, which ensures your keyboard input is available character-by-character with no modifiers. For example, when typing ctrl-c, @process.stdin@ will output the following as a @keypress@ event: 
+
+```
+  { name: 'c',
+    ctrl: true,
+    meta: false,
+    shift: false,
+    sequence: '\u0003' 
+  }
+```
+
+Finlly, @process.stdin.on()@ is simply a listener for the @keypress@ event. You use it in this case to print to the console whenever a key is pressed. You can try this out for yourself by running the following line of code in the terminal:
+
+```[sh]
+  node controller.js
+```
+
+If all is well, you should see a message saying the key you pressed whenever you click a key.
+
+"See this step in Github":https://github.com/ably/tutorials/TODO
+
+h2. Step 5 - Connect to Ably through MQTT
+
+Now that you're able to detect key presses, it's time to start transmitting these presses through MQTT to Ably. When using MQTT with Ably, there are a few requirements with regards to your setup. You'll need to connect to 'mqtt.ably.io' on port 8883, which requires the use of SSL/TLS in your connection. If you have a device which cannot support SSL, you'll need to connect via port 1883 instead, but this will come with a number of "restrictions":https://support.ably.io/solution/articles/3000074906-using-the-mqtt-protocol-adapter. 
+
+You will need to set the keep alive time to a value between 15 and 60 seconds, where 60 seconds maximises the battery life, and 15 seconds will maximise responsiveness to network issues. In this tutorial you'll be setting it to 15.
+
+For authentication, you'll need to either use an API Key, or token. For simplicity in this tutorial you'll be using the API Key you got in step 1. To provide the API Key, you need to provide the first half of the API Key (before the colon) as the username, and the second half of the API Key (after the colon) as the password. For example, if your API key is @A12B3C.4D:5E6F7G8H@, your username will be @A12B3C.4D@ and your password will be @5E6F7G8H@.
+
+Add the following code below your current code in @controller.js@, replacing 'FIRST_HALF_OF_API_KEY' and 'SECOND_HALF_OF_API_KEY' with the appropiate parts of your own API Key:
+
+```[javascript]
+  var options = { keepAlive: 15,
+    username: 'FIRST_HALF_OF_API_KEY',
+    password: 'SECOND_HALF_OF_API_KEY',
+    port: 8883
+  };
+
+  var client = mqtt.connect('mqtts:mqtt.ably.io', options);
+
+  client.on('connect', function () {
+    console.log('connected!');
+  });
+
+  client.on('error', function(err){
+    console.log(err);
+    client.end();
+  });
+```
+
+With the above code, you set @options@ as described above, and then attempt to connect to Ably's MQTT endpoint. You specify @mqtts@ as part of the host address to specify that the connect attempt should be made with MQTT using SSL/TLS.
+
+Try out the code now using @node controller.js@ in the commmand line and you should see in the console that the client sucessfully connects through MQTT.
+
+TODO: IMAGE OF "connected!"
+
+If you have any issues with this, please check out our "usage notes":https://support.ably.io/solution/articles/3000074906-using-the-mqtt-protocol-adapter.
+
+"See this step in Github":https://github.com/ably/tutorials/TODO
+
+h2. Step 6 - Send key presses through MQTT
+
+Now that you have established a connection through MQTT to Ably, you can send some data through it. You need to firstly create a function to easily publish messages for the key presses you're interested in. Add the following function to the bottom of @controller.js@:
+
+```[javascript]
+  function publishMessage(channel, message) {
+    client.publish(channel, message, { qos: 1 }, function(err) {
+      if(err) {
+        console.log(err);
+      }
+    }); 
+  }
+``` 
+
+This function simply takes the message you wish to publish, and publishes it through MQTT using @client.publish@ into the channel specified. The setting 'qos' (Quality of Service) represents whether messages are guaranteed to be delivered 'at most once' (0), 'at least once' (1), or 'exactly once' (2). Here you'll use 'at least once', as you want to ensure our inputs are delivered, but also have as little back and forth communication between this device and the server as possible.
+
+Now that you have a method to publish through MQTT, you need to use it to send our key presses. Inside of the function assosciated with the @process.stdin.on('keypress')@, add the following:
+
+```[javascript]
+  if (key && key.ctrl && (key.name == 'c')) {
+    process.stdin.pause();
+    client.end();
+  } else if(key && (key.name == 'left')) {
+  	publishMessage('input', 'left');
+  } else if(key && (key.name == 'right')) {
+  	publishMessage('input', 'right');
+  } else if(key && (key.name == 'up')) {
+  	publishMessage('input', 'up');
+  } else if(key && (key.name == 'down')) {
+  	publishMessage('input', 'down');
+  } else if(key && (key.name == 'return')) {
+  	publishMessage('input', 'return');
+  }
+```
+
+All this will do is use the @publishMessage@ function you created to send the key presses you're interested in. In the case that the user types ctrl-c, the stream will be paused and the client closed so that the program can stop. Otherwise, you're sending the key pressed to the channel @input@.
+
+"See this step in Github":https://github.com/ably/tutorials/TODO
+
+h2. Step 7 - Recieving inputs from Ably
+
+Now that you've set up your controller, it's time to create something to run the game of Snake, and receive the data from Ably that you sent from the controller. You'll be using the normal Ably Realtime protocol for this part. This is possible due to the fact Ably is "Protocol Agnostic":https://support.ably.io/solution/articles/3000054126-do-you-support-mqtt-are-you-protocol-agnostic-, allowing for protocols to be used interchangebly.
+
+Firstly create a file called @snake.html@, and place the following code inside:
+
+```[html]
+  <!doctype html>
+  <html>
+    <head>
+      <title>Ably Realtime Snake</title>
+      <meta name="description" content="Fun Snake Game by Ably">
+      <meta name="keywords" content="ably realtime snake">
+      <link rel="stylesheet" href="game.css">
+      <script src="http://cdn.ably.io/lib/ably.min-1.js"></script>
+    </head>
+    <body>
+      <script src="snake.js"></script>
+      <h1 id="heading">Ably Realtime Snake</h1>
+      <canvas id="gc" height="400" width="400"></canvas>
+      </table>
+    </body>
+  </html>
+```
+
+Next, create another file called @snake.css@ containing the following:
+
+```[css]
+#heading {
+	color: #FFA500;
+	text-align: center;
+}
+
+#gc {
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+    width: "400";
+    height: "400";
+}
+```
+
+Now, create a file called @snake.js@, and put in the following code, replacing REPLACE_WITH_YOUR_API_KEY with your API Key:
+
+```[javascript]
+  var ably = new Ably.Realtime('REPLACE_WITH_YOUR_API_KEY');
+  var enc = new TextDecoder();
+  var channel = ably.channels.get('input');
+  channel.subscribe(function(message) {
+    var command = enc.decode(message.data);
+    console.log(command);
+  });
+```
+
+This will simply subscribe to the @input@ channel you're publishing to from the controller, and print it into the console. Open up @snake.html@ in a browser, open up the browser's "console":http://wickedlysmart.com/hfjsconsole/, and run your controller by typing @node controller.js@ into your command line. Now when you press the arrow keys from your controller, you should see messages being received by the browser in the console.
+
+TODO: Add image of controller input + console output
+
+"See this step in Github":https://github.com/ably/tutorials/TODO
+
+h2. Step 8 - Play Snake!
+
+With the setup complete, you can now add in the code for the actual snake game. Replace the contents of @snake.js@ with "this":https://github.com/ably/tutorials/TODO code, replacing REPLACE_WITH_YOUR_API_KEY with your API Key, and when you reload the @snake.html@ page you should see your basic Snake game. Run the controller as before, and you can now play! Press enter to start, arrow keys to move, and try to grow as large as you can.
+
+TODO: GIF of Snake being played
+
+The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/TODO.
+
+We recommend that you clone the repo locally:
+
+bc[sh]. git clone https://github.com/ably/tutorials.git
+
+Checkout the tutorial branch:
+
+bc[sh]. git checkout mqtt-snake-tutorial
+
+And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @snake.js@ and @controller.js@
+
+
+h2. Next steps
+
+1. Learn more about our "support of other protocols":https://www.ably.io/adapters
+2. Learn more about "Ably features":https://www.ably.io/features by stepping through our other "Ably tutorials":https://www.ably.io/tutorials
+3. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
+4. "Get in touch if you need help":https://www.ably.io/contact
+5. Created something cool based on this tutorial? "Tweet it to us":https://twitter.com/ablyrealtime!
