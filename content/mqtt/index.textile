@@ -23,12 +23,12 @@ h2(#use). How to use MQTT with our adapter
 
 To use the Ably MQTT protocol adapter, you'll need to ensure you correctly configure your MQTT client as follows:
 * Set the host to "mqtt.ably.io"
-* Set ssl / tls to true and the port to 8883. (If your mqtt client does not support ssl, you should instead use port 1883, but in this case we disallow api-key auth—see "SSL usage note":#ssl below)
+* Set SSL / TLS to true and the port to 8883. (If your mqtt client does not support SSL, you should instead use port 1883, but in this case we disallow api-key auth—see "SSL usage note":#ssl below)
 * Set the keep alive time to somewhere between 15 and 60 seconds. (60s will maximise battery life, 15s will maximise reponsiveness to network issues. It must not be any higher than 60s to avoid our load balancer terminating the TCP socket for inactivity)
-* If using an api key, set the username to the part of the api key before the colon, and the password to the part after the colon
+* If using an API key, set the username to the part of the API key before the colon, and the password to the part after the colon
 * If using a token, set the username to the token, and leave the password blank
 
-For example, in NodeJS "mqtt package":https://www.npmjs.com/package/mqtt, you'd need to specify the following:
+For example, in the NodeJS "mqtt package":https://www.npmjs.com/package/mqtt, you'd need to specify the following:
 
 bc[nodejs]. {
   var options = { keepAlive: 30,
@@ -43,11 +43,15 @@ This will connect using TLS through MQTT to Ably.
 
 h2(#decoding). Decoding MQTT communication
 
-Any data published through or received by the MQTT adapter will be binary encoded, due to MQTT being a binary protocol. This means that you'll need to interpret the message to get the original contents out. For example, if you tried to send a string with MQTT, with JavaScript you'd need to do the following:
+Any data published through or received by the MQTT adapter will be binary encoded, due to MQTT being a binary protocol. This means that you'll need to interpret the message to get the original contents out. For example, to interpret a message using "Ably Realtime":https://www.ably.io/documentation/realtime with JavaScript you'd need to do the following, using the "text-encoding NPM module's TextDecoder":https://www.npmjs.com/package/text-encoding to decode from binary to text:
 
-bc[nodejs]. {
+bc[javascript]. {
+  var ably = new Ably.Realtime('REPLACE_WITH_YOUR_API_KEY');
   var decoder = new TextDecoder();
-  var command = decoder.decode(message.data);
+  var channel = ably.channels.get('input');
+  channel.subscribe(function(message) {
+    var command = decoder.decode(message.data);
+  });
 }
 
 In the above example, @command@ will now contain the message in its original string form.
@@ -55,6 +59,7 @@ In the above example, @command@ will now contain the message in its original str
 h2(#use-cases). Recommended usage
 
 We recommend you use MQTT to interact with Ably when:
+
 * Using devices which do not have a native Ably client library, such as Arduino platforms, C/C++ applications, and so on
 * If bandwidth is limited and you want to keep network traffic to a minimum
 
@@ -70,19 +75,32 @@ Our MQTT adapter only supports features supported by both the MQTT protocol and 
 
 h2(#security). Security
 
-We recommend that you always make use of "token authentication":https://www.ably.io/documentation/general/authentication#token-authentication over "basic authentication":https://www.ably.io/documentation/general/authentication#basic-authentication when trying to connect from devices you may not trust. In addition, if you're using basic authentication you'll be required to use SSL to connect to our adapter to ensure the API key cannot be accessed by someone listening in.
+We recommend that you always make use of "token authentication over basic authentication":https://support.ably.io/support/solutions/articles/3000038607-token-and-basic-authentication when trying to connect from devices you may not trust. In addition, if you're using basic authentication you'll be required to use SSL to connect to our adapter to ensure the API key cannot be accessed by someone listening in.
 
 h3(#token-auth). Token authentication
 
-For token authentication you'll be required to "create a token from your own servers":https://www.ably.io/documentation/general/authentication#token-authentication. Once you have the token, you can simply pass it through when trying to connect to Ably as the connection's @username@ and leaving the @password@ empty. In the future we will be adding "JWT":https://jwt.io/ (JSON Web Tokens) as a form of authentication.
+For token authentication you'll be required to "create a token from your own servers":https://www.ably.io/documentation/general/authentication#token-authentication. Once you have the token, you can simply pass it through when trying to connect to Ably as the connection's @username@, leaving the @password@ empty. In the future we will be adding "JWT":https://jwt.io/ (JSON Web Tokens) as a form of authentication.
 
-If using token authentication, you can subscribe to a special topic, @[mqtt]tokenevents@, to get a warning when the current connection's token is about to expire. This will be a single message, sent 30 seconds before the token expires, with the 13 byte payload @expirywarning@.
+If using token authentication, you can subscribe to a special topic, @[mqtt]tokenevents@, to get a warning when the current connection's token is about to expire. This will be a single message, sent 30 seconds before the token expires, with the 13 byte payload @expirywarning@. 
 
 On receiving this, the client is recommended to get a new token, then disconnect and reconnect with the new token themselves. If this is not done, once the token expires, the server will abruptly disconnect the connection.
 
+An example of this with the NodeJS "mqtt package":https://www.npmjs.com/package/mqtt would be:
+
+bc[nodejs]. {
+  var client = mqtt.connect('mqtts:mqtt.ably.io', options);
+  client.subscribe("[mqtt]tokenevents", {
+    /* Create a new token called 'NEW_TOKEN' */
+
+    client.end();
+    options.username = NEW_TOKEN;
+    client = mqtt.connect('mqtts:mqtt.ably.io', options);
+  });
+}
+
 h3(#ssl). SSL
 
-We support both ssl and non-ssl connections (which use a different port, see above), but strongly recommend using ssl wherever possible. If you are not using ssl, note that the same restrictions apply as if you were using an Ably client without ssl. That is, "connection attempts using basic authentication (i.e. an api key) are disallowed":https://support.ably.io/solution/articles/3000065731-error-code-40103-invalid-use-of-basic-auth-over-non-tls-transport, and any "namespaces which you've enabled 'require TLS' on":https://support.ably.io/solution/articles/3000030058-what-is-a-channel-namespace-and-how-can-i-use-them will be inaccessible. If this is a problem for you, please do let us know at support@ably.io and we'll see what we can do.
+We support both SSL and non-SSL connections (which use a different port, see above), but strongly recommend using SSL wherever possible. If you are not using SSL, note that the same restrictions apply as if you were using an Ably client without SSL. That is, "connection attempts using basic authentication (i.e. an API key) are disallowed":https://support.ably.io/solution/articles/3000065731-error-code-40103-invalid-use-of-basic-auth-over-non-tls-transport, and any "namespaces which you've enabled 'require TLS' on":https://support.ably.io/solution/articles/3000030058-what-is-a-channel-namespace-and-how-can-i-use-them will be inaccessible. If this is a problem for you, please do let us know at support@ably.io and we'll see what we can do.
 
 h2(#adapter-info). Adapter information
 
@@ -92,4 +110,4 @@ h2(#adapter-info). Adapter information
 
 h2(#tutorials). Tutorials
 
-If you would like to see an example of using the MQTT tutorial, we recommend you take a look at our "MQTT snake tutorial":/tutorials/mqtt-snake.
+If you would like to see an example of using the MQTT tutorial, we recommend you take a look at our "MQTT snake tutorial":https://www.ably.io/tutorials/mqtt-snake.
