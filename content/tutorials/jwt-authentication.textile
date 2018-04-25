@@ -1,0 +1,202 @@
+---
+title: Client & Server JWT Authentication Tutorial
+section: tutorials
+index: 55
+---
+
+Ably supports two types of authentication schemes. "Basic authentication":/general/authentication#basic-authentication uses one of your private API keys and is the simplest scheme designed for use by your servers. "Token authentication":/general/authentication#token-authentication is mostly used by your device and browser clients whereby a short-lived secure token is issued to them by your auth servers. "JSON Web Token authentication":/TODO-LINK is an extension of the token based authentication scheme in Ably.
+
+It is important to bear in mind that when using token authentication (which JWT is a subset of), unlike with basic authentication, the client should not be given a token at the time of instantiation. This is because the token will expire. Instead, the client should be configured with a means to obtain a token whenever it needs to authenticate with Ably. As tokens typically expire every hour, which minimises the impact of compromise on a client device or browser, it is necessary that the client can obtain a new token to authenticate whenever the token expires or needs refreshing.
+
+By definition, "JSON Web Tokens":https://jwt.io/ are an open, industry standard RFC 7519 method for representing claims securely between two parties. JWT auth is especially helpful in scenarios where users want to use a single authentication scheme for all of their users’ devices/browsers as well as other vendors and third party platforms such as Ably. JWT auth is also a convenient way to authenticate your IoT devices or servers which are built using the platforms that Ably doesn't yet support. This is possible because you don't have to instantiate an Ably client when using JWT auth scheme.
+
+In this tutorial, we will build a simple login form which would authenticate a client with Ably, using JWT. We'll make use of the "jsonwebtoken":https://www.npmjs.com/package/jsonwebtoken npm library which is an implmentation of JWT. This library allows our auth server to conveniently create a JSON Web Token by specifying only certain service specific data in the payload and headers while allowing us to skip the default data. So, let's get started and see a typical client server architecture using JWT authentication.
+
+h2. Skip to demo
+
+If you wish to directly check out a demo of this tutorial, we recommend you clone the tutorial repo and run it locally by following the steps below:
+
+<a href="/images/tutorials/jwt-auth-output.png" target="_blank">
+    <img src="/images/tutorials/jwt-auth-output.png" style="width: 100%" alt="JWT Demo">
+</a>
+
+bc[sh]. git clone https://github.com/ably/tutorials.git
+
+bc[sh]. git checkout jwt-authentication-node
+
+bc[sh]. cd jwt-authentication-node
+
+bc[sh]. node server.js
+
+Visit @localhost:3000@ in your browser
+
+<%= partial 'tutorials/_step-1-setup-free-account' %>
+
+h2. Step 2 - Setting up the server
+
+Let's start by creating a node.js file and call it server.js. Now, let's require the "jsonwebtoken":https://www.npmjs.com/package/jsonwebtoken npm library. Before doing this, make sure that you have node and npm installed on your system.
+
+```[sh]
+npm install jsonwebtoken
+```
+In order to use JWT auth, we'll need to break down the Ably API key into three separate parts as shown below:
+
+<a href="/images/tutorials/api-key-parts.jpg" target="_blank">
+    <img src="/images/tutorials/api-key-parts.jpg" style="width: 100%" alt="API key parts">
+</a>
+
+As you see, the first part before the dot forms the @appId@, the second part before the colon forms the @keyId@ and the remaining part after the colon forms the @keySecret@. We'll make use of these parts for our JWT token request as you'll see further. Let's go ahead and add it in our file:
+
+```[javascript]
+//You must use your own API key
+//For a dummy API key I2E_JQ.79AfrA:sw2y9zarxwl0Lw5a
+var appId = 'I2E_JQ'
+var keyId = '79AfrA'
+var keySecret = 'sw2y9zarxwl0Lw5a'
+var ttlSeconds = 60
+```
+
+Note the additional @ttlSeconds@ variable that has not been explained yet. This is the duration in seconds for which the JSON Web Token will be alive, after that it needs to be refreshed, or in other words, replaced with a new one.
+
+A JWT is typically made up of three different entities of data: a header, a payload and a signature. However, since we are using the "jsonwebtoken":https://www.npmjs.com/package/jsonwebtoken npm library, these details are abstracted away and we only need a key secret and any application specific payload data as well as other options such as when you need to use a non-default hashing algorithm, etc.
+
+With Ably, you must send the time-to-live as well as the key id (which is a concatenation the appId and the keyId parts of the API key with a dot) as part of the jwt options parameter. You can optionally send capabilities for the client using this token or even a client ID, these will be part of the payload. Let's set up these two objects as shown:
+
+```[javascript]
+var jwtPayload =
+    {
+        'x-ably-capability': JSON.stringify({ '*': ['publish', 'subscribe'] })
+    }
+var jwtOptions =
+    {
+        expiresIn: ttlSeconds,
+        keyid: `${appId}.${keyId}`
+    }
+```
+Next, it's time to set up the server. We'll use "express":https://www.npmjs.com/package/express to build a simple server to serve files on our localhost:
+
+```[javascript]
+var express = require('express'),
+    app = express();
+app.use('/', express.static(__dirname))
+``` 
+The Express server uses a Middleware to serve the content and using @express.static(__dirname)@ we are letting the server know that we want any HTML files in the root folder to be served up.
+
+Let's now set up the '/auth' route in this server that will infact be responsible to create a JSON Web Token and send this token back to the client, confirming it's authentication.
+
+```[javascript]
+app.get('/auth', function (req, res) {
+    console.log('Sucessfully connected to the server auth endpoint')
+    jwt.sign(jwtPayload, keySecret, jwtOptions, function (err, tokenId) {
+        console.log('JSON Web Token signed by auth server')
+        if (err) {
+            console.trace()
+            return
+        }
+        res.setHeader('Content-Type', 'application/json');
+        console.log('Sending signed JWT token back to client')
+        res.send(JSON.stringify(tokenId));
+    })
+})
+```
+The above code is invoked when a client application hits the '/auth' route on your auth server. If you observe, we have just used the "jsonwebtoken":https://www.npmjs.com/package/jsonwebtoken npm library to sign a JSON Web Token using the Ably API key which we obtained from our dashboard. The callback function returns an error parameter and the @tokenId@. We then simply check for the error if any, otherwise simply send the JWT back to the client in order to confirm it's authentication with Ably.
+
+h2. Step 3 - Setting up the client
+
+Let's now build a very basic client with a simple login form. For the simplicity of this tutorial, we'll authenticate all the users, irrespective of the data they enter in the username and the password fields. However, in reality, you auth server would verify this data according to profile information on your server and generate and return a JWT back to the client only if the verification was successful.
+
+We'll use a simple styling template which is usually readily available to be used on the internet. So, go ahead and paste the "CSS code":https://github.com/ably/tutorials/blob/jwt-authentication-node/css/style.css which is hosted on GitHub in css/style.css.
+
+Now let's build the HTML file for our front-end client. We'll embed our JavaScript logic directly into this file for simplicity. Add the following to your index.html file:
+
+```[html]
+<html>
+<head>
+  <script src="https://cdn.ably.io/lib/ably.min-1.js" type="text/javascript"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <section class="container">
+    <div class="login">
+      <h1>Ably JWT auth example</h1>
+      <form>
+        <input type="text" placeholder="Enter Username" name="username">
+        <br/>
+        <input type="password" placeholder="Password" name="password">
+        <br/>
+        <p class="submit">
+          <button type="submit" onclick="login(event)">Login</button>
+        </p>
+      </form>
+    </div>
+  </section>
+</body>
+</html>
+```
+As you can see, it's a simple HTML skeleton with a form containing two input fields, one for each username and password as well as a button for logging in. We've also linked Ably via CDN and our external stylesheet that we just included above. When the button is clicked, it should invoke the login function that we'll add now within the JavaScript.
+
+The last part is to add the logic into this form, we'll do so by instantiating Ably's Realtime client library and requesting a JSON Web Token. Please note that for simplicity, we are ignoring the username and password credentials which otherwise must be verified by your auth server before signing a JWT and sending it back to the client. 
+
+Go ahead and add the following within the head tag of your HTML file, right below the link to your CSS file:
+
+```[html]
+<script type="text/javascript">
+console.log('On login page now')
+function login(e) {
+    e.preventDefault();
+    console.log('Fetching JWT token from auth server')
+    var realtime = new Ably.Realtime({ authUrl: '/auth' });
+    realtime.connection.once('connected', function () {
+    console.log('Client connected to Ably using JWT')
+    alert("Client successfully connected Ably using JWT auth")
+    })
+}
+</script>
+```
+As you can observe, we begin by instantiating Ably's Realtime client library, then we pass the '/auth' path of our auth server within the @authUrl@ parameter. If you remember from above, the '/auth' path of our auth server is responsible to sign a JWT using the private API key and return back the TokenID, in other words, the JSON Web Token itself.
+
+When this is successful, we send an alert to let the client know that the connection was successful. One last caveat is that because browsers often cache the token which in our tutorial is not automatically renewed, we might end up trying to use an expired (but cached) token. In order to prevent this, add a manifest file called 'manifest.appcache' in the root folder
+
+```[sh]
+CACHE MANIFEST
+
+# Cache manifest version 1.0
+
+# no cache
+
+NETWORK:
+*
+```
+then add the manifest attribute to your html tag:
+
+```[html]
+<html manifest="manifest.appcache">
+```
+This will prevent your HTML file from being cached by the browsers. Both the server and client-side code contains helpful log messages so you can understand easily the step-by-step execution of the complete tutorial.
+
+That's it, simple as that!
+
+h2. Step 4 - Checking the output
+
+Now that we're all set with all of our files in place,let's go ahead and test it out. Fire up your command line/terminal. Most of the code editors come with a handy integrated terminal. After making sure you are in the right folder, start your server by running:
+
+```[sh]
+node server.js
+```
+
+Now open up a browser and visit 'localhost:3000' since our express server is listening on this port. You should see the login form. Keep the browser console open if you wish to see the logged messages. Enter some dummy data into the username and password fields and hit login button.
+
+If all went well, you should see an alert with the message 'Client successfully connected Ably using JWT auth'.
+
+h2. Next steps
+
+TODO-ADD-JWT-AUTH-LINK
+
+1. Find out how "Basic Auth and Token Auth differ and how to choose the right authentication scheme":/general/authentication#selecting-auth
+2. Read up on "Basic Auth":/general/authentication#basic-authentication and "how to use Basic Auth on your server using the REST library":/rest/authentication#basic-authentication
+3. Read up on "Token Auth":/general/authentication#basic-authentication and "how to use Token Auth on a client using the Realtime library":/realtime/authentication#token-authentication
+4. "Understand and see some examples of how to define capabilities (permissions)":/general/authentication#capabilities-explained for tokens and token requests
+5. Discover how "identities in tokens allow clients and servers to trust other clients' identities":/general/authentication#identified-clients validated and provided by your servers
+6. Learn more about other "Ably features":https://www.ably.io/features by stepping through our other "Ably tutorials":https://www.ably.io/tutorials
+7. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
+8. "Get in touch if you need help":https://www.ably.io/contact
