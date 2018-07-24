@@ -12,6 +12,7 @@ module NavHelper
         if index_item
           nav_selected = non_versioned_path(index_item.path) == non_versioned_path(@item.path)
           path = ensure_relative_url_matches_current_version(@item.path, index_item.path)
+          puts path
           results.unshift "<h2#{' class="selected"' if nav_selected}><a href=\"#{html_escape(path)}\">#{html_escape(options[:title])}</a></h2>"
           items.delete index_item
         else
