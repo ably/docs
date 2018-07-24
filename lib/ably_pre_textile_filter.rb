@@ -2,13 +2,13 @@ require_relative './helpers/nav_helper'
 
 class AblyPreTextileFilter
   remove_const :BLANG_REGEX if defined?(BLANG_REGEX)
-  remove_const :MINIMISE_REGEX if defined?(MINIMISE_REGEX)
+  remove_const :MINIMIZE_REGEX if defined?(MINIMIZE_REGEX)
   remove_const :MULTI_LANG_BLOCK_REGEX if defined?(MULTI_LANG_BLOCK_REGEX)
   remove_const :JSALL_REGEX if defined?(JSALL_REGEX)
 
   BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/
 
-  MINIMISE_REGEX = /^minimise\.(?:\w*?)(.*?)$/
+  MINIMIZE_REGEX = /^minimize\.(?:\w*?)(.*?)$/
 
   MULTI_LANG_BLOCK_REGEX = /
     (bc|p|h[1-6])           # code or language tag - capture [0] = tag
@@ -40,8 +40,8 @@ class AblyPreTextileFilter
   class << self
     def run(content, path, attributes)
       content = strip_comments(content)
-      content = add_minimise_for_headings(content)
-      content = add_minimised_indent(content)
+      content = add_minimize_for_headings(content)
+      content = add_minimized_indent(content)
       content = convert_jsall_lang_to_node_and_javascript(content)
       content = convert_blang_blocks_to_html(content)
       content = add_language_support_for_github_style_code(content)
@@ -173,13 +173,13 @@ class AblyPreTextileFilter
 
     # h[1-6] for method definitions use format
     # 
-    # h6(#optional-anchor)(minimise). method
+    # h6(#optional-anchor)(minimize). method
     #
     # transform to
     # h6(#optional-anchor). method <div class='collapsible-wrapper'>...{content}...</div>
-    def add_minimise_for_headings(content)
+    def add_minimize_for_headings(content)
       expand_num = 0
-        content.gsub(%r{^(h[1-6])(\(#[^\)]+\))?\(minimise(?:=([^\)]*))?\)\.(.*?)\n\n(.+?)(?=(?:\n\nh[1-6])|(?:\Z))}m) do |match|
+        content.gsub(%r{^(h[1-6])(\(#[^\)]+\))?\(minimize(?:=([^\)]*))?\)\.(.*?)\n\n(.+?)(?=(?:\n\nh[1-6])|(?:\Z))}m) do |match|
           h_tag, anchor, expand_title, title, content = $1, $2, $3, $4, $5, $6
             expand_num = expand_num + 1
             if expand_title.nil? || expand_title.empty? 
@@ -200,27 +200,27 @@ class AblyPreTextileFilter
         end
     end
 
-    # Converts minimise indicator and following indented text to minimisable
-    # minimise. method
-    def add_minimised_indent(content)
+    # Converts minimize indicator and following indented text to minimizable
+    # minimize. method
+    def add_minimized_indent(content)
       expand_num=0
-      while position = content.index(MINIMISE_REGEX)
+      while position = content.index(MINIMIZE_REGEX)
         subsequent_lines = content[position..-1].split(/\n\r|\n/)
-        expand_title = subsequent_lines[0][MINIMISE_REGEX, 1]
+        expand_title = subsequent_lines[0][MINIMIZE_REGEX, 1]
         if expand_title.nil? || expand_title.empty? 
           expand_title = "+ View More"
         else 
           expand_title = "+ #{expand_title}"
         end
-        minimise_block = subsequent_lines.shift
+        minimize_block = subsequent_lines.shift
         break if subsequent_lines.empty?
 
         indentation = subsequent_lines[0][/^\s+/, 0]
-        raise "minimise. blocks must be followed by indentation. Offending block: '#{minimise_block}'\n
+        raise "minimize. blocks must be followed by indentation. Offending block: '#{minimize_block}'\n
         #{subsequent_lines[0..2].join("\n")}" unless indentation
 
         line_index = 1
-        while valid_minimise_line?(subsequent_lines[line_index], indentation)
+        while valid_minimize_line?(subsequent_lines[line_index], indentation)
           line_index += 1
           if last_line?(subsequent_lines, line_index)
             # If last line, increase index by one i.e. beyond this line
@@ -327,7 +327,7 @@ class AblyPreTextileFilter
     end
 
     private
-    def valid_minimise_line?(line, indentation)
+    def valid_minimize_line?(line, indentation)
       line.start_with?(indentation) || line.match(/^\s*$/)
     end
 
