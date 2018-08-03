@@ -189,7 +189,7 @@ class AblyPreTextileFilter
             end
             "#{h_tag}#{anchor}.#{title}\n\n
             <div class='collapsible-wrapper'>
-            <input id='collapsible-heading#{expand_num}' class='toggle' type='checkbox'>
+            <input id='collapsible-heading#{expand_num}' class='minimize-checkbox toggle' type='checkbox'>
             <label for='collapsible-heading#{expand_num}' class='label-collapsible'>#{expand_title}</label>
             <div class='collapsible-content'>
             <div class='collapsible-inner'>\n\n#{content}\n\n
@@ -233,7 +233,7 @@ class AblyPreTextileFilter
         content = [
           content[0...position],
           "<div class='collapsible-wrapper'>
-          <input id='collapsible-indent#{expand_num}' class='toggle' type='checkbox'>
+          <input id='collapsible-indent#{expand_num}' class='minimize-checkbox toggle' type='checkbox'>
           <label for='collapsible-indent#{expand_num}' class='label-collapsible'>#{expand_title}</label>
           <div class='collapsible-content'>
           <div class='collapsible-inner'>\n",
