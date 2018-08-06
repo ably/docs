@@ -220,7 +220,7 @@ class AblyPreTextileFilter
         #{subsequent_lines[0..2].join("\n")}" unless indentation
 
         line_index = 1
-        while valid_minimize_line?(subsequent_lines[line_index], indentation)
+        while valid_line?(subsequent_lines[line_index], indentation)
           line_index += 1
           if last_line?(subsequent_lines, line_index)
             # If last line, increase index by one i.e. beyond this line
@@ -289,7 +289,7 @@ class AblyPreTextileFilter
         raise "blang[langauge]. blocks must be followed by indentation. Offending block: '#{blang_block}'\n#{subsequent_lines[0..2].join("\n")}" unless indentation
 
         line_index = 1
-        while valid_blang_line?(subsequent_lines[line_index], indentation)
+        while valid_line?(subsequent_lines[line_index], indentation)
           line_index += 1
           if last_line?(subsequent_lines, line_index)
             # If last line, increase index by one i.e. beyond this line
@@ -322,12 +322,7 @@ class AblyPreTextileFilter
     end
 
     private
-    def valid_blang_line?(line, indentation)
-      line.start_with?(indentation) || line.match(/^\s*$/)
-    end
-
-    private
-    def valid_minimize_line?(line, indentation)
+    def valid_line?(line, indentation)
       line.start_with?(indentation) || line.match(/^\s*$/)
     end
 
