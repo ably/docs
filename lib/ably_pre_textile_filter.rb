@@ -2,10 +2,13 @@ require_relative './helpers/nav_helper'
 
 class AblyPreTextileFilter
   remove_const :BLANG_REGEX if defined?(BLANG_REGEX)
+  remove_const :MINIMIZE_REGEX if defined?(MINIMIZE_REGEX)
   remove_const :MULTI_LANG_BLOCK_REGEX if defined?(MULTI_LANG_BLOCK_REGEX)
   remove_const :JSALL_REGEX if defined?(JSALL_REGEX)
 
   BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/
+
+  MINIMIZE_REGEX = /^minimize\.(?:\w*?)(.*?)$/
 
   MULTI_LANG_BLOCK_REGEX = /
     (bc|p|h[1-6])           # code or language tag - capture [0] = tag
@@ -37,6 +40,8 @@ class AblyPreTextileFilter
   class << self
     def run(content, path, attributes)
       content = strip_comments(content)
+      content = add_minimize_for_headings(content)
+      content = add_minimized_indent(content)
       content = convert_jsall_lang_to_node_and_javascript(content)
       content = convert_blang_blocks_to_html(content)
       content = add_language_support_for_github_style_code(content)
@@ -73,6 +78,7 @@ class AblyPreTextileFilter
     # bc[javascript]. { "a": true }
     def duplicate_language_blocks(textile)
       textile.gsub(MULTI_LANG_BLOCK_REGEX) do |match|
+
         block, languages, classes, content = $~.captures
         languages.split(/\s*,/).map do |lang|
           "#{block}[#{lang}]#{"(#{classes})" if classes}.#{content}"
@@ -156,12 +162,90 @@ class AblyPreTextileFilter
     # transform to
     # h6(#optional-anchor). <span lang="default">method</span><span lang="lang">method</span>
     def add_language_support_for_headings(content)
-      content.gsub(%r{^(h[1-6])(\(#[^\)]+\))?\.\s*\n.+?\n\s*\n}m) do |match|
-        h_tag, anchor = $1, $2
+      content.gsub(%r{^(h[1-6])(\(#[^\)]+\))?(\([^(\)|#)]+\))?\.\s*\n.+?\n\s*\n}m) do |match|
+        h_tag, anchor, option = $1, $2, $3
         lang_definitions = match.scan(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/)
         lang_spans = lang_definitions.map { |lang, definition| "<span lang='#{lang}'>#{definition}</span>" }.join('')
         "#{h_tag}#{anchor}. #{lang_spans}\n\n"
       end
+    end
+
+
+    # h[1-6] for method definitions use format
+    # 
+    # h6(#optional-anchor)(minimize). method
+    #
+    # transform to
+    # h6(#optional-anchor). method <div class='collapsible-wrapper'>...{content}...</div>
+    def add_minimize_for_headings(content)
+      expand_num = 0
+        content.gsub(%r{^(h[1-6])(\(#[^\)]+\))?\(minimize(?:=([^\)]*))?\)\.(.*?)\n\n(.+?)(?=(?:\n\nh[1-6])|(?:\Z))}m) do |match|
+          h_tag, anchor, expand_title, title, content = $1, $2, $3, $4, $5, $6
+            expand_num = expand_num + 1
+            if expand_title.nil? || expand_title.empty? 
+              expand_title = "+ View More"
+            else 
+              expand_title = "+ #{expand_title}"
+            end
+            "#{h_tag}#{anchor}.#{title}\n\n
+            <div class='collapsible-wrapper'>
+            <input id='collapsible-heading#{expand_num}' class='minimize-checkbox toggle' type='checkbox'>
+            <label for='collapsible-heading#{expand_num}' class='label-collapsible'>#{expand_title}</label>
+            <div class='collapsible-content'>
+            <div class='collapsible-inner'>\n\n#{content}\n\n
+            </div>
+            <label for='collapsible-heading#{expand_num}' class='label-collapsible-close'>- View Less</label>
+            </div>
+            </div>\n\n"
+        end
+    end
+
+    # Converts minimize indicator and following indented text to minimizable
+    # minimize. method
+    def add_minimized_indent(content)
+      expand_num=0
+      while position = content.index(MINIMIZE_REGEX)
+        subsequent_lines = content[position..-1].split(/\n\r|\n/)
+        expand_title = subsequent_lines[0][MINIMIZE_REGEX, 1]
+        if expand_title.nil? || expand_title.empty? 
+          expand_title = "+ View More"
+        else 
+          expand_title = "+ #{expand_title}"
+        end
+        minimize_block = subsequent_lines.shift
+        break if subsequent_lines.empty?
+
+        indentation = subsequent_lines[0][/^\s+/, 0]
+        raise "minimize. blocks must be followed by indentation. Offending block: '#{minimize_block}'\n
+        #{subsequent_lines[0..2].join("\n")}" unless indentation
+
+        line_index = 1
+        while valid_line?(subsequent_lines[line_index], indentation)
+          line_index += 1
+          if last_line?(subsequent_lines, line_index)
+            # If last line, increase index by one i.e. beyond this line
+            #  so that the last line is included in the blang block
+            line_index += 1
+            break
+          end
+        end
+        expand_num = expand_num+1
+        content = [
+          content[0...position],
+          "<div class='collapsible-wrapper'>
+          <input id='collapsible-indent#{expand_num}' class='minimize-checkbox toggle' type='checkbox'>
+          <label for='collapsible-indent#{expand_num}' class='label-collapsible'>#{expand_title}</label>
+          <div class='collapsible-content'>
+          <div class='collapsible-inner'>\n",
+          subsequent_lines[0...line_index].map { |d| d.gsub(/^#{indentation}/, '') },
+          "\n\n</div>
+          <label for='collapsible-indent#{expand_num}' class='label-collapsible-close'>- View Less</label>
+          </div>
+          </div>\n\n",
+          subsequent_lines[line_index..-1]
+        ].flatten.compact.join("\n")
+      end
+      content
     end
 
     # Convert code editor class tags into a format that can be decoded on the front end
@@ -205,7 +289,7 @@ class AblyPreTextileFilter
         raise "blang[langauge]. blocks must be followed by indentation. Offending block: '#{blang_block}'\n#{subsequent_lines[0..2].join("\n")}" unless indentation
 
         line_index = 1
-        while valid_blang_line?(subsequent_lines[line_index], indentation)
+        while valid_line?(subsequent_lines[line_index], indentation)
           line_index += 1
           if last_line?(subsequent_lines, line_index)
             # If last line, increase index by one i.e. beyond this line
@@ -238,7 +322,7 @@ class AblyPreTextileFilter
     end
 
     private
-    def valid_blang_line?(line, indentation)
+    def valid_line?(line, indentation)
       line.start_with?(indentation) || line.match(/^\s*$/)
     end
 

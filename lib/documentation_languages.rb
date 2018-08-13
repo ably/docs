@@ -9,7 +9,7 @@ module Ably
     'nodejs' => { name: 'Node.js', extension: 'js' },
     'objc' => { name: 'Obj-C', extension: 'm' },
     'swift' => { name: 'Swift', extension: 'swift' },
-    'go' => { name: 'Swift', extension: 'go' },
+    'go' => { name: 'Go', extension: 'go' },
     'csharp' => { name: 'C# .Net', extension: 'cs' },
     'cplusplus' => { name: 'C++', extension: 'cpp' },
     'c' => { name: 'C', extension: 'c' },
