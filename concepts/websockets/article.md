@@ -27,6 +27,7 @@ This article is all about building a deeper understanding for what WebSockets ar
     - [Masked frames](#masked-frames)
     - [Constructing a frame buffer for the response message](#constructing-a-frame-buffer-for-the-response-message)
     - [Dispatching the response back to the client](#dispatching-the-response-back-to-the-client)
+  - [Moving forward - other things you might consider](#moving-forward---other-things-you-might-consider)
 - [WebSocket libraries you can use right now](#websocket-libraries-you-can-use-right-now)
   - [ws](#ws)
     - [Minimal code samples](#minimal-code-samples)
@@ -767,7 +768,27 @@ socket.on('data', buffer => {
 
 At this point you can run your server from the command line, then open your browser to `localhost` on port `3210`, and, making sure you have the developer tools open, you'll see the browser send a message and the server respond accordingly.
 
-Remember - my implementation is not even remotely complete, nor is it particularly efficient. There are many existing WebSocket server implementations out there already, and we'll take a look at some of them next.
+Remember - my implementation is not even remotely complete, nor is it particularly efficient. There are many existing WebSocket server implementations out there already, and we'll take a look at some of them later in the article.
+
+### Moving forward - other things you might consider
+
+The raw implementation of a WebSocket server is really just the first stage of the process. Here are just few of the things you'll want to think about if you taking things to the next level:
+
+- What framing extensions will you support, such as per-message deflation?
+- What degree of client interoperability are you aiming for?
+- Are messages being received in the same order they were sent, and if not, how can you prevent this from putting your application into an invalid state?
+- Do you need guarantees on message delivery, and if so, what strategies can you implement to this end?
+- How many connections are active on your server?
+- Are any connections hogging all of the server's resources?
+- Are any connections idle and should ideally be dropped?
+- What is the duration of the average connection lifespan?
+- Are connections being dropped prematurely/unexpectedly, and if so, how can you retain diagnostic data to explain why?
+- Are you experiencing brief connection spikes ever, and if so, what is the performance impact on your server?
+- How much bandwidth is being used overall, and how is it impacting your budget?
+- Is your server's capacity near its limit, and if not, how soon will that threshold be reached?
+- How will you automatically add additional server capacity if and when it is needed?
+
+Think about the messaging protocols available, such as MQTT, WAMP, etc., and whether they can provide a solution to some of these questions. Consider existing libraries and frameworks, and the additional features they offer beyond  simple, bare-bones management of WebSocket connections. If you have a particular need to scale, and limited manpower or expertise to do so effectively, consider leveraging [cloud-based realtime messaging solutions](#ably) that have already solved these problems for you.
 
 ## WebSocket libraries you can use right now
 
