@@ -221,7 +221,7 @@ h3(#rest-channel). Channel
 *** @(RSL1g3)@ When publishing a @Message@ with a different @clientId@ attribute value to the identified client's @clientId@, the client library should reject the message, and indicate an error. The connection and channel remain available for further operations
 *** @(RSL1g4)@ When publishing a message with an explicit @clientId@ that is incompatible with the identified client's @clientId@ (either inferred or explicitly configured in the token or @ClientOptions@), the library will reject the message immediately and indicate an error
 ** @(RSL1h)@ Where the library language permits, the @Channel#publish(name, data)@ method should provide an optional argument that allows the @clientId@ value to be specified such as @Channel#publish('event', 'data', { clientId: 'John' })@, and/or the @extras@ field to be specified such as @Channel#publish('event', 'data', { extras: { push: { 'key': 'value' } })@
-** @(RSL1i)@ If the total size of the message or (if publishing an array) messages, calculated per "TO3l8":#TO3l8, exceeds the @maxMessageSize@, then the client library should reject the publish and indicate an error
+** @(RSL1i)@ If the total size of the message or (if publishing an array) messages, calculated per "TO3l8":#TO3l8, exceeds the @maxMessageSize@, then the client library should reject the publish and indicate an error with code 40009
 ** @(RSL1j)@ When @Message@ objects are provided, any valid @Message@ attribute (that is, an attribute specified in "TM2":#TM2) that is supplied by the caller must be included in the encoded message. (This does not mean it must be included _unaltered_; for example the @data@ and @encoding@ will be subject to processing per "RSL4":#RSL4)
 ** @(RSL1k)@ Idempotent publishing via REST is supported by populating the @id@ attribute of @Message@ instances passed to @publish()@:
 *** @(RSL1k1)@ Idempotent publishing via library-generated @Message@ @id@s is supported if @idempotentRestPublishing@ (see "TO3n":#TO3n) is enabled and one or more @Message@ instances are passed to @publish()@ and all @Message@s have an empty @id@ attribute. The library generates a base @id@ string by base64-encoding  a sequence of at least 9 bytes obtained from a source of randomness. Each individual @Message@ in the set of messages to be published is assigned a unique @id@ of the form &lt;base id&gt;:&lt;serial&gt; (where @serial@ is the zero-based index into the set).
@@ -1167,6 +1167,24 @@ h4. Stats
 * @(TS7)@ @Stats.MessageTraffic@ - see the "Ruby MessageTraffic documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Stats/MessageTraffic
 * @(TS8)@ @Stats.RequestCount@ - see the "Ruby RequestCount documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Stats/RequestCount
 * @(TS9)@ @Stats.ResourceCount@ - see the "Ruby ResourceCount documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Stats/ResourceCount
+* @(TS10)@ @Stats.PushStats@ - see the "Ruby PushStats documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Stats/PushStats
+* @(TS11)@ @Stats.XchgMessages@ - see the "Ruby XchgMessages documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Stats/PushStats
+* @(TS12)@ The attributes of a @Stats@ object consist of:
+** @(TS12a)@ @intervalId@ (property present in the JSON) - a @String@
+** @(TS12b)@ @intervalTime@ (optional) - a language-idiomatic @Time@ object, parsed from the @intervalId@
+** @(TS12c)@ @unit@ (property present in the JSON) - a @String@ or (if idiomatic) an enumerable supporting the types @minute@, @hour@, @day@, and @month@. This must be from the @unit@ property of the JSON, not calculated from the @intervalId@
+** @(TS12d)@ @intervalGranularity@ (deprecated) - an alias for @unit@, only for 1.x versions of client libraries that had such a property in a previous 1.x version, to avoid breaking compatibility. As above, this must be from the @unit@ property of the JSON, not calculated from the @intervalId@
+** @(TS12e)@ @all@ (property present in the JSON) - a @MessageTypes@ object
+** @(TS12f)@ @inbound@ (property present in the JSON) - a @MessageTraffic@ object
+** @(TS12g)@ @outbound@ (property present in the JSON) - a @MessageTraffic@ object
+** @(TS12h)@ @persisted@ (property present in the JSON) - a @MessageTypes@ object
+** @(TS12i)@ @connections@ (property present in the JSON) - a @ConnectionTypes@ object
+** @(TS12j)@ @channels@ (property present in the JSON) - a @ResourceCount@ object
+** @(TS12k)@ @apiRequests@ (property present in the JSON) - a @RequestCount@ object
+** @(TS12l)@ @tokenRequests@ (property present in the JSON) - a @RequestCount@ object
+** @(TS12m)@ @push@ (property present in the JSON) - a @PushStats@ object
+** @(TS12n)@ @xchgProducer@ (property present in the JSON) - an @XchgMessages@ object
+** @(TS12o)@ @xchgConsumer@ (property present in the JSON) - an @XchgMessages@ object
 
 h4. ErrorInfo
 
@@ -1416,7 +1434,7 @@ class ClientOptions:
   maxFrameSize: Int default 524288 // TO3l8
 
 class AuthOptions: // RSA8e
-  authCallback: (() -> io (String | TokenDetails | TokenRequest | JsonObject))? // RSA4a, RSA4, TO3j5, AO2b
+  authCallback: ((TokenParams) -> io (String | TokenDetails | TokenRequest | JsonObject))? // RSA4a, RSA4, TO3j5, AO2b
   authHeaders: [String: Stringifiable]? // RSA8c3, TO3j8, AO2e
   authMethod: .GET | .POST default .GET // RSA8c, TO3j7, AO2d
   authParams: [String: Stringifiable]? // RSA8c3, RSA8c1, TO3j9, AO2f
@@ -1703,17 +1721,21 @@ class ConnectionStateChange:
   retryIn: Duration? // RTN14d, TA2
 
 class Stats:
-  all: StatsMessageTypes // http://goo.gl/TpIh5I
-  apiRequests: StatsRequestCount // http://goo.gl/lFhZLC
-  channels: StatsResourceCount // http://goo.gl/jfu0q1
-  connections: StatsConnectionTypes // http://goo.gl/72fQ7Z
-  inbound: StatsMessageTraffic // http://goo.gl/8SjQAJ
-  intervalGranularity: StatsIntervalGranularity
-  intervalId: String
-  intervalTime: Time
-  outbound: StatsMessageTraffic // http://goo.gl/8SjQAJ
-  persisted: StatsMessageTypes // http://goo.gl/TpIh5I
-  tokenRequests: StatsRequestCount // http://goo.gl/lFhZLC
+  intervalId: String // TS12a
+  intervalTime: Time // TS12b (calculated clientside)
+  unit: Stats.IntervalGranularity // TS12c
+  intervalGranularity: Stats.IntervalGranularity? // TS12d (deprecated)
+  all: Stats.MessageTypes // TS12e
+  inbound: Stats.MessageTraffic // TS12f
+  outbound: Stats.MessageTraffic // TS12g
+  persisted: Stats.MessageTypes // TS12h
+  connections: Stats.ConnectionTypes // TS12i
+  channels: Stats.ResourceCount // TS12j
+  apiRequests: Stats.RequestCount // TS12k
+  tokenRequests: Stats.RequestCount // TS12l
+  push: Stats.PushStats // TS12m
+  xchgProducer: Stats.XchgMessages // TS12n
+  xchgConsumer: Stats.XchgMessages // TS12o
 
 enum StatsIntervalGranularity:
   MINUTE
