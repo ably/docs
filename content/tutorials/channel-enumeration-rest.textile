@@ -23,41 +23,164 @@ In order to be able to use the enumeration feature, you'll need to ensure that t
 
 From the list of priveleges, enable the `list-channels` privilege and you are good to go.
 
-h2(#performing-the-rest-request). Using Ably's REST library to perform a REST API request
+h2(#front-end). Step 3 - Creating a basic HTML page to display results
 
-As mentioned before, channel enumeration can currently be implemented only via our REST API. However, our REST library offers a "request() method":https://www.ably.io/documentation/rest/usage#request to perform REST requests directly from the raw REST API.
+Since we'll be using JavaScript in this tutorial, the best way to display results is in a browser. So, go ahead and paste the following simple HTML in a file and name it @index.html@
+
+```[html]
+<html>
+
+<head>
+    <title>Channel Enumeration</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        window._XMLHttpRequest = window.XMLHttpRequest;
+        window.XMLHttpRequest = null;
+        window._WebSocket = window.WebSocket;
+        window.WebSocket = null;
+    </script>
+    <script lang="text/javascript" src="https://cdn.ably.io/lib/ably-1.js"></script>
+    <script type="text/javascript">
+        window.XMLHttpRequest = window._XMLHttpRequest;
+        window.WebSocket = window._WebSocket;
+    </script>
+    <!--Remove workaround after JSONP issue is fixed in realtime-->
+</head>
+
+<body style="padding: 60px; font-family:Arial, Helvetica, sans-serif">
+    Ably Channel Enumeration using REST API - Demo
+    <br/>
+    <div>
+        <button id='enumerate' onclick="enumerateChannels()">Enumerate channels</button>
+        <br>
+        <textarea id="result" rows="30" style="width: 30%; margin-top: 14px; font-family: courier, courier new; background-color: #333; color: orange;  overflow-y: scroll;"
+            disabled>
+        </textarea>
+    </div>
+    <script src="main.js"></script>
+</body>
+
+</html>
+
+```
+
+The key thing to note in the HTML above, is the inclusion of two JS files, ones is the Ably Library, referenced via the CDN, while the other is the @main.js@ file which will include our logic. We'll work on this next.
+
+
+h2(#performing-the-rest-request). Step 4 - Using Ably's REST library to perform a REST API request
+
+As mentioned before, channel enumeration can currently be implemented only via Ably' REST API. However, the REST library offers a "request() method":https://www.ably.io/documentation/rest/usage#request to perform REST requests directly from the raw REST API.
 
 For the simplicity of this tutorial, we'll use "Basic authentication":/core-features/authentication#basic-authentication to perform the request. However, it is highly recommended to use "Token auth":/core-features/authentication#token-authentication on client side applications for better security and protection of your API key.
 
 Ably REST API's endpoint for enumerating active channels is @/channels@. We'll perform a @GET@ request using the REST library. The result of this request will be an "HTTPPaginatedResponse":https://www.ably.io/documentation/rest/usage#http-paginated-response object. This allows the results to be returned back in a paginated fashion, that it returns a page of results and allows you to automatically request for more result pages until all of the available results are returned.
 
-Let's begin with instantiating the Ably REST library using the API key.
+Let's begin with instantiating the Ably REST library using the API key. Create a new file called @main.js@ and add the following to it.
 
 ```[javascript]
 var ably = new Ably.Rest('<YOUR-API-KEY>')
 ```
 
-Next, let's go ahead and perform the actual REST request using the @request()@ method:
+Next, let's go ahead and perform the actual REST request using the @request()@ method as follows:
 
 ```[javascript]
-var URL = '/channels'
+var URL = '/channels';
+var resultArea = document.getElementById('result');
+var channelCount = 0;
+//request a list of channels on button click
 function enumerateChannels() {
     ably.request('get', URL, { limit: 100, direction: 'forwards' }, null, null, (err, results) => {
         if (err) {
-            console.log('An error occurred; err = ' + err.toString());
+            resultArea.value += 'An error occurred; err = ' + err.toString();
         } else {
-            console.log('Success! status code was ' + results.statusCode);
-            console.log(results.items.length + ' items returned');
-            console.log('Here' + results.items[0].data)
-            results.first((err, resultPage) => {
-                console.log(resultPage.items)
-            })
-            if (results.hasNext()) {
+            displayResults(results)
+            while (results.hasNext()) {
                 results.next(function (err, nextPage) {
-                    console.log(nextPage.items.length + ' more items returned');
+                    displayResults(nextPage)
                 });
             }
         }
     })
 }
+//display results in the text area
+function displayResults(results) {
+    resultArea.value += "Your API key has the following active channels:\n";
+    results.first((err, resultPage) => {
+        for (var i = 0; i < resultPage.items.length; i++) {
+            var resultObj = JSON.parse(JSON.stringify(resultPage.items[i]));
+            channelCount++;
+            resultArea.value += channelCount + ". " + resultObj.name + "\n";
+
+        }
+    })
+}
 ```
+
+In the code above, we first set the REST endpoint to be @/channels@. The @enumerateChannels()@ function is invoked on button click, as we saw in the HTML above. Inside the function, we make a simple request to Ably's REST API, using Ably's JavaScript REST library client. The request method needs to be @GET@ and we can optionally specify a limit to the results returned. As mentioned before, the results are returned in the form of a @HTTPPaginatedResponse@, hence we'll need to process them page by page. Each page contains one @Channel@ object, per active channel that exists for an API key. Here, we are simply displaying the name of each of these channels in the text area. 
+
+h2(#live-demo). Step - 5 Live Demo
+
+    Ably Channel Enumeration using REST API - Demo
+    <br/>
+    <div>
+        <button id='enumerate' onclick="enumerateChannels()">Enumerate channels</button>
+        <br>
+        <textarea id="result" rows="30" style="width: 30%; margin-top: 14px; font-family: courier, courier new; background-color: #333; color: orange;  overflow-y: scroll;"
+            disabled>
+        </textarea>
+    </div>
+
+h2(#next-steps). Next Steps
+
+1. If you would like to find out more about how channels, publishing and subscribing works, see the "Realtime channels & messages documentation":https://www.ably.io/documentation/realtime/channels-messages
+2. If you would like to check out the other two related tutorials to work with channel metadata, see TODO and TODO .
+3. Learn more about "Ably features":https://www.ably.io/features by stepping through our other "Ably tutorials":https://www.ably.io/tutorials
+4. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
+5. "Get in touch if you need help":https://www.ably.io/contact
+
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        window._XMLHttpRequest = window.XMLHttpRequest;
+        window.XMLHttpRequest = null;
+        window._WebSocket = window.WebSocket;
+        window.WebSocket = null;
+</script>
+    <script lang="text/javascript" src="https://cdn.ably.io/lib/ably-1.js"></script>
+    <script type="text/javascript">
+        window.XMLHttpRequest = window._XMLHttpRequest;
+        window.WebSocket = window._WebSocket;
+</script>
+    <script type="text/javascript">
+        var ably = new Ably.Rest('W-X4kg.BewSYw:kSvkaf9XAMnT_5sy')
+        var URL = '/channels';
+        var resultArea = document.getElementById('result');
+        var channelCount = 0;
+        //request a list of channels on button click
+        function enumerateChannels() {
+            ably.request('get', URL, { limit: 100, direction: 'forwards' }, null, null, (err, results) => {
+                if (err) {
+                    resultArea.value += 'An error occurred; err = ' + err.toString();
+                } else {
+                    displayResults(results)
+                    while (results.hasNext()) {
+                        results.next(function (err, nextPage) {
+                            displayResults(nextPage)
+                        });
+                    }
+                }
+            })
+        }
+        //display results in the text area
+        function displayResults(results) {
+            resultArea.value += "Your API key has the following active channels:\n";
+            results.first((err, resultPage) => {
+                for (var i = 0; i < resultPage.items.length; i++) {
+                    var resultObj = JSON.parse(JSON.stringify(resultPage.items[i]));
+                    channelCount++;
+                    resultArea.value += channelCount + ". " + resultObj.name + "\n";
+                }
+            })
+        }
+</script>
