@@ -1,0 +1,653 @@
+h1(#implementing-a-websocket-server-with-nodejs). Implementing a WebSocket Server with Node.js
+
+* "Set up your project environment":#set-up-your-project-environment
+* "Getting the ball rolling with HTTP":#getting-the-ball-rolling-with-http
+* "Avoiding funny business":#avoiding-funny-business
+* "Subprotocols; agreeing upon a shared dialect":#subprotocols-agreeing-upon-a-shared-dialect
+* "WebSocket Extensions":#websocket-extensions
+* "The client side: using WebSockets in the browser":#the-client-side-using-websockets-in-the-browser
+* "Give it a go yourself":#give-it-a-go-yourself
+* "Generating and parsing WebSocket message frames":#generating-and-parsing-websocket-message-frames
+* "Alignment of Node.js socket buffers with WebSocket message frames":#alignment-of-nodejs-socket-buffers-with-websocket-message-frames
+* "Implementing the parser":#implementing-the-parser
+* "Opcodes: message frames vs control frames":#opcodes-message-frames-vs-control-frames
+* "Masked frames":#masked-frames
+* "Constructing a frame buffer for the response message":#constructing-a-frame-buffer-for-the-response-message
+* "Dispatching the response back to the client":#dispatching-the-response-back-to-the-client
+* "Moving forward - other things you might consider":#moving-forward---other-things-you-might-consider
+
+In this tutorial I'll take you step-by-step through the process of implementing a basic, no-frills WebSocket server. I'll be using Node.js for this (version 10.7 is installed on my machine at the time of this article). Your server may be running Go, .NET, Java, or something else, and the implementation in each of those environments will vary depending upon the HTTP server libraries available in each environment. The actual concepts will be fairly consistent though, as they all follow the same standard specifications for interpreting and constructing HTTP requests and responses, and for parsing and generating data that uses the WebSocket framing protocol. For now though, I'll assume you have at least some familiarity with Node.js.
+
+bq. _Note: If you've never touched Node.js in your life, perhaps take a break before continuing with the article and find a couple of basic Node.js tutorials to get a feel for running a simple Node.js server on your machine, and to see how to use NPM to install packages, as I'll be assuming at least a little familiarity with these as we continue._
+
+
+
+There are a lot of things to consider when writing a WebSocket server, and the intent here is just to demonstrate a starting point. Scalability, performance, connection recovery, robust handling of different edge cases, handling of large messages (e.g. 10kb+), etc. are beyond what I'll cover in this implementation, but are just a few of the things you'll want to think about if you take things further.
+
+On the client side of things, unless you're implementing something custom outside of a browser environment, such as on some kind of custom mobile hardware, you don't really need to do anything special other than use the @WebSocket@ class that is built into modern browsers by default. On the server, however, unless you're using a WebSocket server library you've installed, you'll need to handle the HTTP connection WebSocket upgrade handshake yourself. You'll then need read the raw binary data received via your HTTP socket connection and translate it according to the WebSocket framing protocol specification. This is outlined in "Section 5 of RFC 6455":https://tools.ietf.org/html/rfc6455#section-5. Finally, the server will need to construct its own messages according to the same specification, and dispatch them back to the client via the open socket connection.
+
+h2(#set-up-your-project-environment). Set up your project environment
+
+In a new folder, make sure you've got a @package.json@ file ready, then @npm install node-static@, which help us fast-track serving up your client-side files.
+
+Create the following files:
+
+*server.js:*
+
+```[js]
+const http = require('http');
+const static = require('node-static');
+
+const file = new static.Server('./');
+
+const server = http.createServer((req, res) => {
+  req.addListener('end', () => file.serve(req, res)).resume();
+});
+
+const port = 3210;
+server.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+```
+
+The @node-static@ library is a convenience that takes care of the fiddly process of responding to requests for the static HTML and JavaScript files that will run on the client side in the browser.
+
+*client.js:*
+
+```[js]
+console.log('WebSocket client script will run here.');
+```
+
+The above is just a stub so you know your client script has actually loaded correctly; we'll fill it out as we continue with the implementation further below.
+
+*index.html:*
+
+```[html]
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>WebSocket Example</title>
+    <script src="client.js"></script>
+  </head>
+  <body>
+    <h1>WebSocket Example</h1>
+    <p>Open your browser's developer tools to see client/server activity.</p>
+  </body>
+</html>
+```
+
+Then, from your terminal/console, run:
+
+```[sh]
+node server.js
+```
+
+You should see:
+
+```[plain]
+Server running at http://localhost:3210
+```
+
+Open up your browser. You should see the contents of @index.html@. Open the browser's developer tools and you should see the console output of your @client.js@ script:
+
+```[plain]
+WebSocket client script will run here.
+```
+
+h2(#getting-the-ball-rolling-with-http). Getting the ball rolling with HTTP
+
+One of the early considerations when defining the WebSocket standard was to ensure that it "play nicely" with the web. This meant recognising that the web is generally addressed using URLs, not IP addresses and port numbers, and that a WebSocket connection should be able to take place with the same initial HTTP-based handshake used for any other type of web request.
+
+Here's what happens in a simple HTTP GET request.
+
+Let's say there's an HTML page hosted at "http://www.example.com/index.html":http://www.example.com/index.html. Without getting too deep into "the HTTP protocol":https://tools.ietf.org/html/rfc2616 itself, it is enough to know that a request must start with what is referred to as "_Request-Line_":https://tools.ietf.org/html/rfc2616#section-5.1, followed by a sequence of key-value pair header lines, each telling the server something about what to expect in the subsequent request payload that that will follow the header data, and what it can expect from the client regarding the kinds of responses it will be able to understand.
+
+The very first token in the request is the HTTP _method_, which tells the server the type of operation that the client is attempting with respect to the referenced URL. The @GET@ method is used when the client is simply requesting that the server deliver it a copy of the resource that is referenced by the specified URL.
+
+A barebones example of a request header, formatted according to the HTTP RFC, looks like this:
+
+```[plain]
+GET /index.html HTTP/1.1
+Host: www.example.com
+```
+
+Having received the request header, the server then formats a response header starting with a "_Status-Line_":https://tools.ietf.org/html/rfc2616#section-6.1, followed by a set of key-value header pairs that provide the client with reciprocal information from the server, with respect to the request that the server is responding to. The _Status-Line_ tells the client the HTTP status code (usually @200@ if there were no problems) and provides a brief "reason" text description explaining the status code. Key-value header pairs appear next, followed by the actual data that was requested (unless the status code indicated that the request was unable to be fulfilled for some reason).
+
+```[plain]
+HTTP/1.1 200 OK
+Date: Wed, 1 Aug 2018 16:03:29 GMT
+Content-Length: 291
+Content-Type: text/html
+(additional headers...)
+
+(response payload continues here...)
+```
+
+So what's this got to do with WebSockets, you might ask?
+
+When making an HTTP request and receiving a response, the actual two-way network communication involved takes place over an active TCP/IP socket. The web URL that was requested in the browser is mapped via the global DNS system to an IP address, and the default port for HTTP requests is 80. This means that though a web URL was entered into the browser, the actual communication occurs via TCP/IP, using an IP address and port combination that looks something like, for example, @123.11.85.9:80@.
+
+WebSockets are built on top of the TCP stack as well, which means all we need is a way for the client and the server to jointly agree to hold the socket connection open and repurpose it for ongoing communication. If they do this, then there is no technical reason why they can't continue to use the socket to transmit any kind of arbitrary data, as long as they have both agreed as to how the binary data being sent and received should be interpreted.
+
+To begin the process of repurposing the HTTP TCP socket for WebSocket communication, the client can include a standard request header that was invented specifically for this kind of use case:
+
+```[plain]
+GET /index.html HTTP/1.1
+Host: www.example.com
+Connection: Upgrade
+Upgrade: websocket
+```
+
+The @Connection@ header tells the server that the client would like to negotiate a change in the way the socket is being used. The accompanying value _@Upgrade@_ indicates that the transport protocol currently in use via TCP should change. Now that the server knows that the client wants to upgrade the protocol currently in use over the active TCP socket, the server knows to look for the corresponding @Upgrade@ header, which will tell it which transport protocol the client wants to use for the remaining lifetime of the connection. As soon as the server sees @websocket@ as the value of the @Upgrade@ header, it knows that a WebSocket handshake process has begun.
+
+_Note that the handshake process (along with everything else) is outlined in detail in "RFC 6455":https://tools.ietf.org/html/rfc6455, if you'd like to go into more detail than is covered in this article._
+
+*Update your server.js code so that it can respond to an HTTP upgrade request:*
+
+```[js]
+server.on('upgrade', (req, socket) => {
+  // Make sure that we only handle WebSocket upgrade requests
+  if (req.headers['upgrade'] !== 'websocket') {
+    socket.end('HTTP/1.1 400 Bad Request');
+    return;
+  }
+  
+  // More to come...
+});
+```
+
+Node.js does most of the heavy lifting with respect to parsing HTTP requests received from the client, as you can see in the code above.All we need to do is listen for the @upgrade@ event, then check that the @Upgrade@ header is trying to switch to a WebSocket connection, and not something else unexpected. Once we've done that, we can complete the handshake and then move on to the business of sending and receiving WebSocket frame data.
+
+_The fine-grained details of the handshake are outlined in "section 4 of the RFC":https://tools.ietf.org/html/rfc6455#section-4_.
+
+h2(#avoiding-funny-business). Avoiding funny business
+
+The first part of the WebSocket handshake, other than what is described above, involves proving that this is actually a proper WebSocket upgrade handshake, and that the process is not being circumvented or emulated via some kind of intermediate trickery either by the client or perhaps by a proxy server that sits in the middle.
+
+When initiating an upgrade to a WebSocket connection, the client must include a @Sec-WebSocket-Key@ header with a value unique to that client. Here's an example:
+
+```[plain]
+Sec-WebSocket-Key: BOq0IliaPZlnbMHEBYtdjmKIL38=
+```
+
+The above is automatic and handled for you if using the @WebSocket@ class provided in modern browsers. You need only look for it on the server side and produce a response.
+
+When responding, the server must append the special GUID value @258EAFA5-E914-47DA-95CA-C5AB0DC85B11@ to the key, generate a SHA-1 hash of the resultant string, then include it as the base-64-encoded value of a @Sec-WebSocket-Accept@ header that it includes in the response:
+
+```[plain]
+Sec-WebSocket-Accept: 5fXT1W3UfPusBQv/h6c4hnwTJzk=
+```
+
+In a Node.js WebSocket server, we could write a function to generate this value like so:
+
+```[js]
+const crypto = require('crypto');
+
+function generateAcceptValue (acceptKey) {
+  return crypto
+    .createHash('sha1')
+    .update(acceptKey + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11', 'binary')
+    .digest('base64');
+}
+```
+
+We'd then need only call this function, passing the value of the @Sec-WebSocket-Key@ header as the argument, and set the function return value as the value of the @Sec-WebSocket-Accept@ header when sending the response.
+
+To complete the handshake, write the appropriate HTTP response headers to the client socket. A bare-bones response would look something like this:
+
+```[plain]
+HTTP/1.1 101 Web Socket Protocol Handshake
+Upgrade: WebSocket
+Connection: Upgrade
+Sec-WebSocket-Accept: m9raz0Lr21hfqAitCxWigVwhppA=
+```
+
+Update your @server.js@ script like so:
+
+```[js]
+const http = require('http');
+const crypto = require('crypto');
+const static = require('node-static');
+
+const file = new static.Server('./');
+
+const server = http.createServer((req, res) => {
+  req.addListener('end', () => file.serve(req, res)).resume();
+});
+
+server.on('upgrade', function (req, socket) {
+  if (req.headers['upgrade'] !== 'websocket') {
+    socket.end('HTTP/1.1 400 Bad Request');
+    return;
+  }
+
+  // Read the websocket key provided by the client:
+  const acceptKey = req.headers['sec-websocket-key'];
+
+  // Generate the response value to use in the response:
+  const hash = generateAcceptValue(acceptKey);
+
+  // Write the HTTP response into an array of response lines:
+  const responseHeaders = [
+    'HTTP/1.1 101 Web Socket Protocol Handshake',
+    'Upgrade: WebSocket',
+    'Connection: Upgrade',
+    `Sec-WebSocket-Accept: ${hash}`
+  ];
+
+  // Write the response back to the client socket, being sure to append two
+  // additional newlines so that the browser recognises the end of the response
+  // header and doesn't continue to wait for more header data:
+  socket.write(responseHeaders.join('\r\n') + '\r\n\r\n');
+});
+
+// Don't forget the hashing function described earlier:
+function generateAcceptValue (acceptKey) {
+  return crypto
+    .createHash('sha1')
+    .update(acceptKey + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11', 'binary')
+    .digest('base64');
+}
+```
+
+We're not actually quite finished with the handshake at this point - there are a couple more things to think about.
+
+h2(#subprotocols-agreeing-upon-a-shared-dialect). Subprotocols; agreeing upon a shared dialect
+
+The client and server generally need to agree on a compatible strategy with respect to how they format, interpret and organise the data itself, both within a given message, and over time from one message to the next. This is where subprotocols (mentioned earlier) come in. If the client knows that it can deal with one or more specific application-level protocols (such as WAMP, MQTT, etc.), it can include a list of the protocols it understands when making the initial HTTP request. If it does so, the server is then required to either select one of those protocols and include it in a response header, or to otherwise fail the handshake and terminate the connection.
+
+Example subprotocol request header:
+
+```[plain]
+Sec-WebSocket-Protocol: mqtt, wamp
+```
+
+Example reciprocal header issued by the server in the response:
+
+```[plain]
+Sec-WebSocket-Protocol: wamp
+```
+
+Note that the server must select _exactly one protocol_ from the list provided by the client. Selecting more than one would mean that the data in subsequent WebSocket messages cannot be reliably or consistently interpreted by the server. An example of this would be if both @json-ld@ and @json-schema@ were selected by the server. Both are data formats built on the JSON standard, and there would be numerous edge cases where one could be interpreted as the other, leading to unexpected errors when processing the data. _While admittedly not messaging protocols per se, the example is still applicable._
+
+When both the client and server are implemented to use a common messaging protocol from the outset, the @Sec-WebSocket-Protocol@ header can be omitted in the initial request, in which case the server can ignore this step. Subprotocol negotiation is most useful when implementing general-purpose services, infrastructure and tools where there can be no forward guarantee that both the client and server will understand each other once the WebSocket connection has been established.
+
+Standardised names for common protocols "should be registered":https://tools.ietf.org/html/rfc6455#section-11.5 with the "IANA registry for Websocket Subprotocol Names":https://www.iana.org/assignments/websocket/websocket.xml, which, at the time of this article, has 36 names already registered, including @soap@, @xmpp@, @wamp@, @mqtt@, et al. Though the registry is the canonical source for mapping a subprotocol name to its interpretation, the only strict requirement is that the client and server agree upon what their mutually-selected subprotocol actually means, irrespective of whether not it appears in the IANA registry.
+
+As a purely illustrative demonstration of the use of subprotocols in the handshake, let's have the client and server both agree to use JSON-formatted data when communicating. As I mentioned above, nobody's going to be standing around with a gun, forcing the client and server to _only_ use an official subprotocol, or for the subprotocol to be an actual end-to-end messaging protocol. If we just want to agree on @json@ as a subprotocol for the purposes of formatting client and server messages in a consistent way, this is a perfectly valid thing to do, and is what we'll be doing here. We'll add this to the server code as a starting point:
+
+Directly after the @const responseHeaders = [ ... ];@ statement:
+
+```[js]
+// Read the subprotocol from the client request headers:
+const protocol = req.headers['sec-websocket-protocol'];
+
+// If provided, they'll be formatted as a comma-delimited string of protocol
+// names that the client supports; we'll need to parse the header value, if
+// provided, and see what options the client is offering:
+const protocols = !protocol ? [] : protocol.split(',').map(s => s.trim());
+
+// To keep it simple, we'll just see if JSON was an option, and if so, include
+// it in the HTTP response:
+if (protocols.includes('json')) {
+  // Tell the client that we agree to communicate with JSON data
+  responseHeaders.push(`Sec-WebSocket-Protocol: json`);
+}
+```
+
+Note that if the client has requested use of a subprotocol but hasn't provided any that the server is able to support, the server must send a failure response and close the connection. Though we won't bother with that in this implementation, you would need to do so if taking things further yourself.
+
+h2(#websocket-extensions). WebSocket Extensions
+
+There is also a header for defining extensions to the way the data payload is encoded and framed, but at the time of this article, only one standardised extension type exists, and it provides a kind of WebSocket-equivalent to gzip compression in messages. Another example of where extensions might come into play is multiplexing - the use of a single socket to interleave multiple concurrent streams of communication.
+
+WebSocket extensions are a somewhat advanced topic, and are really beyond the scope of this article. For now it is enough to know what they are, and how they fit into the picture.
+
+h2(#the-client-side-using-websockets-in-the-browser). The client side: using WebSockets in the browser
+
+Before continuing with the server implementation, let's first take a look at the client side of the equation, as it's kind of hard to test the server code without a client to kick things off.
+
+The WebSocket API is defined in the the "WHATWG HTML Living Standard":https://html.spec.whatwg.org/multipage/web-sockets.html#network and actually pretty trivial to use. To begin, construct a @WebSocket@ object:
+
+```[js]
+const ws = new WebSocket('ws://example.org');
+```
+
+Note the use of @ws@ where you'd normally have the @http@ scheme. There's also the option to use @wss@ where you'd normally use @https@. These protocols were introduced in tandem with the @WebSocket@ specification, and are designed to represent an HTTP connection that includes a request to upgrade the connection to use WebSockets.
+
+Creating the @WebSocket@ object isn't going to do a lot by itself. The connection is established asynchronously, so you'll need to listen for the completion of the handshake before sending any messages:
+
+```[js]
+ws.addEventListener('open', () => {
+  // Send a message to the WebSocket server
+  ws.send('Hello!');
+});
+```
+
+Another event listener is required in order to receive messages from the server:
+
+```[js]
+ws.addEventListener('message', event => {
+  // The `event` object is a typical DOM event object, and the message data sent
+  // by the server is stored in the `data` property
+  console.log('Received:', event.data);
+});
+```
+
+There are also @error@ and @close@ events. WebSockets don't automatically recover when connections are terminated - this is something you need to implement yourself, and is part of the reason why there are many client-side libraries in existence. While the @WebSocket@ class is straightforward and easy to use, it really is just a basic building block. Support for different subprotocols or additional features such as messaging channels must be implemented separately.
+
+h2(#give-it-a-go-yourself). Give it a go yourself
+
+As a convenience, a public echo server for testing WebSockets is hosted by websocket.org. Try the following code in your browser. The echo server receives whatever message you send it and echoes the message data back to the WebSocket from which the message originated.
+
+Enter the following into your @client.js@ script and run it, paying attention to the developer console:
+
+```[js]
+// Establish a WebSocket connection to the echo server
+const ws = new WebSocket('wss://echo.websocket.org');
+
+// Add a listener that will be triggered when the WebSocket is ready to use
+ws.addEventListener('open', () => {
+  const message = 'Hello!';
+  console.log('Sending:', message);
+  // Send the message to the WebSocket server
+  ws.send(message);
+});
+
+// Add a listener in order to process WebSocket messages received from the server
+ws.addEventListener('message', event => {
+  // The `event` object is a typical DOM event object, and the message data sent
+  // by the server is stored in the `data` property
+  console.log('Received:', event.data);
+});
+```
+
+You should see the "Hello!" message sent to the echo server and then received back in the @message@ handler:
+
+```[plain]
+Sending: Hello!
+Received: Hello!
+```
+
+Once you've done that, modify the code in preparation for communication with your own WebSocket server:
+
+```[js]
+const ws = new WebSocket('ws://localhost:3210', ['json', 'xml']);
+
+ws.addEventListener('open', () => {
+  const data = { message: 'Hello from the client!' }
+  const json = JSON.stringify(data);
+  ws.send(json);
+});
+
+ws.addEventListener('message', event => {
+  const data = JSON.parse(event.data);
+  console.log(data);
+});
+```
+
+Notice that I've added an additional parameter during @WebSocket@ construction - an array of subprotocols that will be sent via the @Sec-WebSocket-Protocol@ request header. As per the server code provided earlier, the server will select @json@ from the list and include it in the initial handshake response. The WebSocket API implemented by the browser will automatically fail the connection if the server does not select one of the specified subprotocols. During implementation, try having the server select a subprotocol that is inconsistent with what was received from the client during the initial request. The client should throw an error and terminate the connection immediately.
+
+The above code is the entire client-side script we'll be using! Anything else you want to add is up to you, but the remainder of this implementation will take place on the server side.
+
+h2(#generating-and-parsing-websocket-message-frames). Generating and parsing WebSocket message frames
+
+Once the handshake response has been sent to the client, we can begin sending and receiving messages between the client and server. Take a quick look at "section 5 of the RFC":https://tools.ietf.org/html/rfc6455#section-5 to get a sense of what's involved.
+
+WebSocket messages are delivered in packages called "frames", which begin with a message header, and conclude with the "payload" - the message data for this frame. Large messages may split the data over several frames, in which case you'll need to keep track of what you've received so far, and piece the data together once it has all arrived.
+
+h2(#alignment-of-nodejs-socket-buffers-with-websocket-message-frames). Alignment of Node.js socket buffers with WebSocket message frames
+
+Node.js socket data ("I'm talking about @net.Socket@":https://nodejs.org/api/net.html#net_class_net_socket in this case, not WebSockets) is received in buffered chunks that are split apart with no regard for where your WebSocket frames begin or end! What this means for you is that if your server is receiving large messages fragmented into multiple WebSocket frames, and/or receiving large numbers of messages in rapid succession, _there's no guarantee that each data buffer received by the Node.js socket will align with the start and end of the byte data that makes up a given frame_. As such, as you're parsing each buffer received by the socket, you'll need to keep track of where one frame ends and where the next begins, and you'll need to be sure that you've received all of the bytes of data for a frame _before you can safely consume that frame's data_. It may be that one frame ends partway through the same buffer in which the next frame begins. It also may be that a frame is split across several buffers that will be received in succession.
+
+The following diagram is an exaggerated illustration of the issue. In most cases frames tend to fit inside a buffer, and due to the nature of the way data arrives, you'll often find that a frame will start and end in line with the start and end of the socket buffer, but this can't be relied upon in all cases and must be considered during implementation.
+
+!websockets-frames-vs-nodejs-socket-buffer.png(Diagram of Node.js socket buffers vs websocket frames)!
+
+This can take some work to get right. For the basic implementation that follows below, in addition to neglecting performance, scalability and just about everything else, I also have skipped any code for handling large messages or messages split across multiple frames. Doing so requires coordination of multiple data buffers across multiple frames, and would overcomplicate the exercise with logic that is more about Node.js sockets than it is about WebSockets. My purpose here is to demonstrate some of the low-level work required to parse WebSocket frames in pursuit of working two-way communication between a client and a server.
+
+h2(#implementing-the-parser). Implementing the parser
+
+To get started, update @server.js@ code with the following:
+
+```[js]
+socket.on('data', buffer => {
+  const message = parseMessage(buffer);
+  if (message) {
+    // For our convenience, so we can see what the client sent
+    console.log(message);
+    
+    // We'll just send a hardcoded message in this example
+    socket.write(constructReply({ message: 'Hello from the server!' }));
+  }
+  else if (message === null) {
+    console.log('WebSocket connection closed by the client.');
+  }
+});
+
+function constructReply(data) {
+  // TODO: Construct a WebSocket frame Node.js socket buffer
+}
+
+function parseMessage(buffer) {
+  // TODO: Parse the WebSocket frame from the Node.js socket buffer
+}
+```
+
+We'll start by implementing the @parseMessage@ function.
+
+The RFC is actually reasonably easy to follow. The sequence of bytes in a frame is "laid out in the RFC":https://tools.ietf.org/html/rfc6455#section-5.2 using to the following diagram:
+
+"!websocket-framing-protocol.png(Diagram of the WebSocket framing protocol according to RFC 6455)!":https://tools.ietf.org/html/rfc6455#section-5.2
+
+Let's break it down. There are two primary types of frames: message frames and control frames. Message frames carry message data (the "payload"), and control frames are used for other purposes, such as sending a ping or pong, indicating that the connection is about to close, and so forth.
+
+WebSocket frames consists of a header, followed by the message payload, if applicable. The header always starts with two bytes (or 16 bits). The first bit tells us, for message frames, whether this is the last frame of the current message. This will always have the value @1@ if your message frames are small (&lt; 126 bytes). Three reserved bits follow (we can generally ignore them), and them four bits for an "opcode", which tells us what sort of frame this is. After that, there is a single bit telling us whether the message payload is "masked" (more on this later), and then seven bits for the number of bytes in the payload. Seven bits isn't a lot though, so if the length is @126@, then we can expect an extra two bytes (16 bits) with the _actual_ payload length. Alternatively, if the length is 127, instead of two bytes, there will be an additional eight bytes to store the length as a 64-bit integer.
+
+!websocket-framing-protocol-first-two-bytes.png(Diagram of the first two bytes of the WebSocket framing protocol)!
+
+h2(#opcodes-message-frames-vs-control-frames). Opcodes: message frames vs control frames
+
+According to the RFC:
+
+```[plain]
+Opcode:  4 bits
+
+Defines the interpretation of the "Payload data".  If an unknown
+opcode is received, the receiving endpoint MUST _Fail the
+WebSocket Connection_.  The following values are defined.
+
+*  %x0 denotes a continuation frame
+*  %x1 denotes a text frame
+*  %x2 denotes a binary frame
+*  %x3-7 are reserved for further non-control frames
+*  %x8 denotes a connection close
+*  %x9 denotes a ping
+*  %xA denotes a pong
+*  %xB-F are reserved for further control frames
+```
+
+Important points:
+
+* A continuation frame is used when a message is split into multiple frames. Our implementation is only dealing with small messages, so we won't handle this case for now, but if you decide to do this yourself, keep in mind that when you encounter a continuation frame, it means that the opcode is the same as for the initial message frame in the sequence, up until the end of the final frame, which you'll identify via the first bit in the message header.
+* We generally only care about text frames and binary frames for messages, and in our case, we'll only be supporting text frames. You might use binary frames for images, audio, and so forth.
+* You do need to support the @0x8@ - the "close" opcode - otherwise you won't know that the client has disconnected.
+
+Let's implement this:
+
+```[js]
+function parseMessage (buffer) {
+  const firstByte = buffer.readUInt8(0);
+
+  const isFinalFrame = Boolean((firstByte >>> 7) & 0x1);
+  const [reserved1, reserved2, reserved3] = [
+    Boolean((firstByte >>> 6) & 0x1),
+    Boolean((firstByte >>> 5) & 0x1),
+    Boolean((firstByte >>> 4) & 0x1)
+  ];
+  const opCode = firstByte & 0xF;
+
+  // We can return null to signify that this is a connection termination frame
+  if (opCode === 0x8) return null;
+
+  // We only care about text frames from this point onward
+  if (opCode !== 0x1) return;
+
+  const secondByte = buffer.readUInt8(1);
+  const isMasked = Boolean((secondByte >>> 7) & 0x1);
+  
+  // Keep track of our current position as we advance through the buffer
+  let currentOffset = 2;
+  let payloadLength = secondByte & 0x7F;
+
+  if (payloadLength > 125) {
+    if (payloadLength === 126) {
+      payloadLength = buffer.readUInt16BE(currentOffset);
+      currentOffset += 2;
+    }
+    else { // 127
+      // If this has a value, the frame size is ridiculously huge!
+      const leftPart = buffer.readUInt32BE(currentOffset);
+      const rightPart = buffer.readUInt32BE(currentOffset += 4);
+
+      // Honestly, if the frame length requires 64 bits, you're probably doing it wrong.
+      // In Node.js you'll require the BigInt type, or a special library to handle this.
+      throw new Error('Large payloads not currently implemented');
+    }
+  }
+}
+```
+
+h2(#masked-frames). Masked frames
+
+Frames sent by the client may be "masked" (and when the client is a browser, this will always be the case). What this means is that the browser will include a special four-byte "masking key" which must be XOR'd against each consecutive four-byte sequence in the message payload, with the result being the actual data. Masking is a mechanism that ensures that message frames retain their integrity, and are not interfered with by third parties, such as intermediate proxy servers.
+
+If the second byte of the initial header starts with the first bit set to @1@, then the masking key will occupy the four bytes that follow the payload length (including the extended payload length, if present).
+
+Start by reading the masking key from the buffer:
+
+```[js]
+let maskingKey;
+if (isMasked) {
+  maskingKey = buffer.readUInt32BE(currentOffset);
+  currentOffset += 4;
+}
+```
+
+Next, read the data from the buffer:
+
+```[js]
+// Allocate somewhere to store the final message data
+const data = Buffer.alloc(payloadLength);
+
+// Only unmask the data if the masking bit was set to 1
+if (isMasked) {
+  // Loop through the source buffer one byte at a time, keeping track of which
+  // byte in the masking key to use in the next XOR calculation
+  for (let i = 0, j = 0; i < payloadLength; ++i, j = i % 4) {
+    // Extract the correct byte mask from the masking key
+    const shift = j === 3 ? 0 : (3 - j) << 3;
+    const mask = (shift === 0 ? maskingKey : (maskingKey >>> shift)) & 0xFF;
+
+    // Read a byte from the source buffer
+    const source = buffer.readUInt8(currentOffset++);
+
+    // XOR the source byte and write the result to the data buffer
+    data.writeUInt8(mask ^ source, i);
+  }
+}
+else {
+  // Not masked - we can just read the data as-is
+  buffer.copy(data, 0, currentOffset++);
+}
+```
+
+The @data@ buffer should now hold the data sent by the client, which means all we have to do is decode the buffer to a string:
+
+```[js]
+function parseMessage (buffer) {
+  // ...all of the above, then:
+
+  const json = data.toString('utf8');
+  return JSON.parse(json);
+}
+```
+
+h2(#constructing-a-frame-buffer-for-the-response-message). Constructing a frame buffer for the response message
+
+If you were able to successfully get all of the above working, then the response should be fairly trivial, especially because messages sent by the server _should not be masked_, according to the RFC.
+
+To save time, here's the implementation:
+
+```[js]
+function constructReply (data) {
+  // Convert the data to JSON and copy it into a buffer
+  const json = JSON.stringify(data)
+  const jsonByteLength = Buffer.byteLength(json);
+  
+  // Note: we're not supporting > 65535 byte payloads at this stage
+  const lengthByteCount = jsonByteLength < 126 ? 0 : 2;
+  const payloadLength = lengthByteCount === 0 ? jsonByteLength : 126;
+  const buffer = Buffer.alloc(2 + lengthByteCount + jsonByteLength);
+
+  // Write out the first byte, using opcode `1` to indicate that the message
+  // payload contains text data
+  buffer.writeUInt8(0b10000001, 0);
+  buffer.writeUInt8(payloadLength, 1);
+
+  // Write the length of the JSON payload to the second byte
+  let payloadOffset = 2;
+  if (lengthByteCount > 0) {
+    buffer.writeUInt16BE(jsonByteLength, 2);
+    payloadOffset += lengthByteCount;
+  }
+
+  // Write the JSON data to the data buffer
+  buffer.write(json, payloadOffset);
+  
+  return buffer;
+}
+```
+
+h2(#dispatching-the-response-back-to-the-client). Dispatching the response back to the client
+
+You should already have the following code from earlier in the article, but I'll repeat it here in order to wrap things up:
+
+```[js]
+socket.on('data', buffer => {
+  const message = parseMessage(buffer);
+  if (message) {
+    // For our convenience, so we can see what the client sent
+    console.log(message);
+    
+    // We'll just send a hardcoded message in this example
+    socket.write(constructReply({ message: 'Hello from the server!' }));
+  }
+  else if (message === null) {
+    console.log('WebSocket connection closed by the client.');
+  }
+});
+```
+
+At this point you can run your server from the command line, then open your browser to @localhost@ on port @3210@, and, making sure you have the developer tools open, you'll see the browser send a message and the server respond accordingly.
+
+Remember - my implementation is not even remotely complete, nor is it particularly efficient. There are many existing WebSocket server implementations out there already, and we'll take a look at some of them later in the article.
+
+h2(#moving-forward---other-things-you-might-consider). Moving forward - other things you might consider
+
+The raw implementation of a WebSocket server is really just the first stage of the process. Here are just few of the things you'll want to think about if you taking things to the next level:
+
+* What framing extensions will you support, such as per-message deflation?
+* What degree of client interoperability are you aiming for?
+* Are messages being received in the same order they were sent, and if not, how can you prevent this from putting your application into an invalid state?
+* Do you need guarantees on message delivery, and if so, what strategies can you implement to this end?
+* How many connections are active on your server?
+* Are any connections hogging all of the server's resources?
+* Are any connections idle and should ideally be dropped?
+* What is the duration of the average connection lifespan?
+* Are connections being dropped prematurely/unexpectedly, and if so, how can you retain diagnostic data to explain why?
+* Are you experiencing brief connection spikes ever, and if so, what is the performance impact on your server?
+* How much bandwidth is being used overall, and how is it impacting your budget?
+* Is your server's capacity near its limit, and if not, how soon will that threshold be reached?
+* How will you automatically add additional server capacity if and when it is needed?
+
+Think about the messaging protocols available, such as MQTT, WAMP, etc., and whether they can provide a solution to some of these questions. Consider existing libraries and frameworks, and the additional features they offer beyond simple, bare-bones management of WebSocket connections. If you have a particular need to scale, and limited manpower or expertise to do so effectively, consider leveraging "cloud-based realtime messaging solutions":#ably-realtime-messaging-as-a-service that have already solved these problems for you.
+
