@@ -20,17 +20,17 @@ jump_to:
 
 h2(#overview). Overview
 
-Using the "REST API":/rest-api, you can "enumerate all active channels":#enumeration-rest, or obtain the status of an "individual channel":#metadata-rest. Using our "Realtime libraries":/realtime, you can subscribe to "channel lifecycle events":#lifecycle-events (such as being created or closed), or subscribe to periodic "occupancy":#occupancy updates for all active channels (such as how many people are subscribed to a channel).
+The realtime "channel lifecycle":#lifecycle-events and "occupancy":#occupancy events are published onto "metachannels":#metachannels that can be subscribed to using our existing "realtime libraries":/realtime. This is often used in conjunction with the "Ably Reactor":/reactor, which allows you to send this data to your "serverless endpoints":/general/functions, "queues":general/queues, and "streams":general/firehose.
 
-The realtime "channel lifecycle":#lifecycle-events and "occupancy":#occupancy events are published onto "metachannels":#metachannels that can be subscribed to using our existing "realtime libraries":/realtime. This is often used in conjunction with the "Ably Reactor":/reactor, which allows you to send this data to your "serverless endpoints":/general/functions, "queues":general/queues, "streams":general/firehose, and more.
+Using the "REST API":/rest-api, you can "enumerate all active channels":#enumeration-rest, or obtain the status of an "individual channel":#metadata-rest. Using our "Realtime libraries":/realtime, you can subscribe to "channel lifecycle events":#lifecycle-events (such as being created or closed), or subscribe to periodic "occupancy":#occupancy updates for all active channels (such as how many people are subscribed to a channel).
 
 At present, REST "requests":/rest/usage#request for lifecycle events will not count towards your message limit. If you are making use of "Reactor":/reactor however, then each message sent over Reactor *will* count towards your message limits.
 
 h2(#use-cases). Use cases
 
-Having access to channel metadata can provide numerous benefits. If you need to know the number of people subscribed to a channel during a live event, and the number of subscribers goes well beyond a hundred, usage of other options such as "presence":/core-features/presence become less effective. You could instead make use of our "occupancy events":#occupancy and "channel metadata":#metachannels to check the number of active subscribers, getting accurate values easily.
+Having access to channel metadata can provide numerous benefits. In a scenario where the number of subscribers to a channel goes well beyond a hundred, usage of other options such as "presence":/core-features/presence become less effective. You could instead make use of our "occupancy events":#occupancy and "channel metadata":#metachannels to check the number of active subscribers, getting accurate values easily.
 
-Equally, you may want to only publish data when you know someone is subscribed for your data. Therefore, "channel lifecycle events":#lifecycle-events can notify you when a channel becomes active, and can notify you when there are no more subscribers on the channel.
+Equally, you may want to only publish data when you know someone is subscribed for your data. Therefore, "channel lifecycle events":#lifecycle-events can notify you when a channel becomes active, and can notify you when the last subscriber leaves the channel.
 
 If you need to be able to query channel metadata at any point, you can make use of the "channel metadata REST APIs":#metadata-rest to inspect the state of individual channels, or "enumerate":#enumeration-rest all active channels in the system.
 
@@ -38,15 +38,53 @@ h2(#tutorials). Tutorials
 
 Check out some of our "tutorials":/tutorials to see examples of using metachannels and channel lifecycles.
 
-h2(#metachannels). Metachannels
+h2(#realtime). Channel metadata with realtime
 
-Metachannels are a space of channels which all start with the @[meta]@ qualifier, uniquely identifying them from normal channels. An example of a metachannel would be @[meta]channel.lifecycle@.
+Through a realtime connection you can subscribe to both "channel lifecycle":#lifecycle-events and "occupancy":#occupancy events. This is done through a channel's "metachannel":#metachannels.
+
+h3(#metachannels). Metachannels
+
+Metachannels are a namespace of channels which all start with the @[meta]@ qualifier, uniquely identifying them from regular channels. An example of a metachannel would be @[meta]channel.lifecycle@.
 
 There are a number of metachannels available, which are:
 
 - log := This metachannel is used to broadcast log messages (usually error messages) for events that occur within the application's context
 - channel.lifecycle := This metachannel carries messages about channel lifecycle and metadata
 - connection.lifecycle := This metachannel carries messages about the lifecycle of realtime connections
+
+h3(#lifecycle-events). Lifecycle events
+
+The following events arise as messages on the channel lifecycle metachannel. In all cases, the @data@ member of the message is a "ChannelDetails":#channel-details instance.
+
+- channel.opened := indicates that the channel has been activated globally; that is, it has become active in at least one region, having previously been inactive. The included ChannelDetails.status includes "occupancy":#occupancy globally
+- channel.closed := indicates that the channel has been deactivated globally
+- channel.region.active := indicates that the channel has been activated in a specific region
+- channel.region.inactive := indicates that the channel has been deactivated in a specific region. The included @ChannelDetails.status@ includes "occupancy":#occupancy in that region
+- channel.occupancy := indicates a change in global "occupancy":#occupancy. Not all "occupancy":#occupancy changes are sent; there is a minimum interval on a per-channel basis, so if the "occupancy":#occupancy is changing continuously, then only periodic snapshots of occupancy are sent. Further roll-up of events may occur depending on the capacity of the lifecycle channel. Any "occupancy":#occupancy changes in which any of the "occupancy":#occupancy categories changes from 0 to a non-zero count, or vice versa, are always included
+
+It is worth noting that "occupancy":#occupancy is presently only available to "enterprise":https://www.ably.io/pricing/enterprise accounts and for testing. "Contact us":https://www.ably.io/contact to discuss your requirements if this is relevant to you.
+
+h4(#occupancy-realtime). Occupancy with realtime
+
+You can subscribe to channel "occupancy":#occupancy events by attaching to a meta channel using a realtime connection. However, realtime connections and channels have rate limits, typically "15 for free accounts":#https://support.ably.io/solution/articles/3000053845-do-you-have-any-connection-message-rate-or-other-limits-on-accounts. If the rate of channel lifecycle events exceeds this, a realtime connection is not going to be a reliable way to consume these events as you may get disconnected or lifecycle events may be discarded.
+
+If you wish to stream this data beyond the rate limit, you can make use of "Ably Reactor":/reactor with a "Reactor Rule":https://support.ably.io/solution/articles/3000074406-how-to-set-up-a-reactor-rule. This allows you to send data to your "serverless endpoints":/general/functions, "queues":general/queues, or "streams":general/firehose for processing.
+
+h3(#reactor). Reactor rules
+
+You can associate "Reactor rules":https://www.ably.io/reactor with metachannels in the same way as for regular channels; configure these using the "Message":/realtime/messages source and use a @channelFilter@ that matches the metachannel's name. Please note: the *Channel Lifecycle* events are *not* supported with Reactor Webhooks.
+
+h2(#rest). Channel metadata with REST
+
+Through REST, it is possible to not only check a channel's "lifecycle events":#metadata-rest and "occupancy":#occupancy, it is also possible to "enumerate":#enumeration-rest through all active channels.
+
+h3(#metadata-rest). Channel lifecycle events REST API
+
+<%= partial 'shared/_channel_metadata' %>
+
+h3(#enumeration-rest). Channel enumeration REST API
+
+<%= partial 'shared/_channel_enumeration' %>
 
 h2(#permissions). Permissions
 
@@ -61,7 +99,7 @@ minimize. See an example of a capability allowing subscription to all metachanne
 
   The above will allow for the key to @subscribe@ to any @meta@ channel. The wildcard @*@ indicates anything can follow the @[meta]@ claim, so an example of a valid channel would be @[meta]log@. However, this capability will not allow for any other actions to be performed on the metachannels, nor will it allow the key to do anything with any non-metachannels.
 
-minimize. See an example of a capability allowing all permissible actions on all metachannels and all normal channels
+minimize. See an example of a capability allowing all permissible actions on all metachannels and all regular channels
   ```[json]
   {
     "[meta]*":["*"], 
@@ -80,39 +118,7 @@ minimize. See an example of a capability which is unable to use metachannels
   }
   ```
 
-  Although the above provide all capabilities in all normal channel, without a @[meta]@ permission being explicitely specified, you will be unable to peform any actions on a @[meta]@ channel.
-
-h2(#lifecycle-events). Lifecycle events
-
-The following events arise as messages on the channel lifecycle metachannel. In all cases, the @data@ member of the message is a "ChannelDetails":#channel-details instance.
-
-- channel.opened := indicates that the channel has been activated globally; that is, it has become active in at least one region, having previously been inactive. The included ChannelDetails.status includes "occupancy":#occupancy globally
-- channel.closed := indicates that the channel has been deactivated globally
-- channel.region.active := indicates that the channel has been activated in a specific region
-- channel.region.inactive := indicates that the channel has been deactivated in a specific region. The included @ChannelDetails.status@ includes "occupancy":#occupancy in that region
-- channel.occupancy := indicates a change in global "occupancy":#occupancy. Not all "occupancy":#occupancy changes are sent; there is a minimum interval on a per-channel basis, so if the "occupancy":#occupancy is changing continuously, then only periodic snapshots of occupancy are sent. Further roll-up of events may occur depending on the capacity of the lifecycle channel. Any "occupancy":#occupancy changes in which any of the "occupancy":#occupancy categories changes from 0 to a non-zero count, or vice versa, are always included
-
-It is worth noting that "occupancy":#occupancy is presently only available to "enterprise":https://www.ably.io/pricing/enterprise accounts. "Contact us":https://www.ably.io/contact to discuss your requirements if this is relevant to you.
-
-h2(#realtime). Subscribing via a realtime connection
-
-You can subscribe to channel "occupancy":#occupancy events by attaching to a meta channel using a realtime connection. However, realtime connections and channels have rate limits, typically "15 for free accounts":#https://support.ably.io/solution/articles/3000053845-do-you-have-any-connection-message-rate-or-other-limits-on-accounts. If the rate of channel lifecycle events exceeds this, a realtime connection is not going to be a reliable way to consume these events as you may get disconnected or lifecycle events may be discarded.
-
-If you wish to stream this data beyond the rate limit, you can make use of "Ably Reactor":/reactor with a "Reactor Rule":https://support.ably.io/solution/articles/3000074406-how-to-set-up-a-reactor-rule. This allows you to send data to your "serverless endpoints":/general/functions, "queues":general/queues, or "streams":general/firehose for processing.
-
-h3(#reactor). Reactor rules
-
-You can associate "Reactor rules":https://www.ably.io/reactor with metachannels in the same way as for regular channels; configure these using the "Message":/realtime/messages source and use a @channelFilter@ that matches the metachannel's name. Please note: the *Channel Lifecycle* events are *not* supported with Reactor Webhooks.
-
-h2(#rest). Channel metadata with REST
-
-h3(#metadata-rest). Channel metadata REST API
-
-<%= partial 'shared/_channel_metadata' %>
-
-h3(#enumeration-rest). Channel enumeration REST API
-
-<%= partial 'shared/_channel_enumeration' %>
+  Although the above provide all capabilities in all regular channel, without a @[meta]@ permission being explicitily specified, you will be unable to peform any actions on a @[meta]@ channel.
 
 h1. Channel Lifecycle API Reference
 
