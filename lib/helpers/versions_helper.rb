@@ -9,7 +9,6 @@ module VersionsHelper
     rest-api
     shared
     types
-    core-features
   ) unless defined?(VERSIONED_FOLDERS)
 
   def relative_url_versioned?(url)
