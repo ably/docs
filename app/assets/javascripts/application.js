@@ -262,7 +262,7 @@ function insertKeyUsageWarning(code) {
     message = `// ${message}`;
   }
   return code.replace(/(<ol class="linenums">)(.*?)({{API_KEY}})/g, 
-            `$1<li class="L-1"><code class="code-editor open-jsbin open-jsbin-ajuwaz" 
+            `$1<li class="L-1"><code class="code-editor open-jsbin" 
             lang="${currentLang}"><span class="com">${message}</span></code></li>$2$3`);
 }
 
