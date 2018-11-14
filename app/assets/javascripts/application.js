@@ -154,7 +154,6 @@ $(function() {
           preLangBlocks.each(function() {
             this.innerHTML = insertKeyUsageWarning(this.innerHTML);
             this.innerHTML = this.innerHTML.
-              replace(/(\<span class="str"\>'{{API_KEY}}'\<\/span\>)/g, "$1").
               replace(/{{API_KEY_NAME}}/g, keyName).
               replace(/{{API_KEY}}/g, apiKey).
               replace(/{{API_KEY_BASE64}}/g, Base64.encode(apiKey)).
