@@ -9,6 +9,15 @@ jump_to:
     - Introduction
 ---
 
+h2. Coindesk bitcoin pricing
+
+Coindesk provides the BPI, which we publish through DSX.
+<div class="container">
+    <div id="flash-box"><p id="result-coindesk"></p></div>
+</div>
+
+Powered by "CoinDesk":https://www.coindesk.com/price/bitcoin.
+
 h2. Transport for London
 
 TFL publishes information such as arrivals at stations and existing disruptions into the Ably Hub. Using the Ably DSX, you can trivially subscribe to this data for free. See the example below:
@@ -18,12 +27,12 @@ TFL publishes information such as arrivals at stations and existing disruptions 
     Station:
     <select id="naptan-code">
       <option value="940GZZLUEUS">Euston Underground Station</option>
-      <option value="9100CATEZKX">Kings Cross Underground Station</option>
-      <option value="9400ZZLUWSM">Westminster Underground Station</option>
-      <option value="9400ZZLUWLO">Waterloo Underground Station</option>
+      <option value="940GZZLUKSX">Kings Cross Underground Station</option>
+      <option value="940GZZLUWSM">Westminster Underground Station</option>
+      <option value="940GZZLUWLO">Waterloo Underground Station</option>
     </select>
   </div>
-  <textarea id="result" rows="20" style="width: 80%; margin-top: 10px; font-family: courier, courier new; background-color: #333; color: orange" disabled></textarea>
+  <textarea id="result-tfl" rows="20" style="width: 80%; margin-top: 10px; font-family: courier, courier new; background-color: #333; color: orange" disabled></textarea>
 </div>
 
 h2. Code example
@@ -48,45 +57,93 @@ channel.subscribe((msg) => {
 <script type="text/javascript">
   window.addEventListener("load", function() {
     var ably = new Ably.Realtime({ authUrl: 'https://www.ably.io/ably-auth/token/dsx' }),
-        $result = $('#result'),
-        channel;
+        $resultTfl = $('#result-tfl'),
+        $resultCoindesk = $('#result-coindesk'),
+        $flashBox = $('#flash-box'),
+        oldPrice = 0.0,
+        channelTfl,
+        channelCoindesk;
 
     ably.connection.on('connecting', function() {
-      log("[Connecting to Ably]");
+      log("[Connecting to Ably]", $resultTfl);
     });
 
     ably.connection.on('connected', function() {
-      log("[Connected to Ably]");
+      log("[Connected to Ably]", $resultTfl);
     });
 
-    function subscribeToChannel(name) {
-      var channelName = '[product:TFL/Tube]tube:940GZZLUEUS:arrivals';
-
+    function subscribeToChannel(name, channel, subscribe) {
       if (channel) {
-        channel.detach();
-      }
+        channel.detach(function(err) {
+          if(err) {
+            console.log("Error detaching: " + err);
+          } else {
+            subscribe(name);
+          }
+        });
+      } else {
+        subscribe(name);
+      } 
+    }
 
-      channel = ably.channels.get('[product:TFL/Tube]tube:' + name + ':arrivals');
+    function subscribeTfl(name) {
+      channelTfl = ably.channels.get('[product:TFL/Tube]tube:' + name + ':arrivals');
 
-      log("[Subscribing to station NAPTAN code: " + name + "]");
-      channel.subscribe(function(msg) {
+      log("[Subscribing to station NAPTAN code: " + name + "]", $resultTfl);
+      channelTfl.subscribe(function(msg) {
         for(var key in msg.data) {
           var message = 'Station: ' + msg.data[key].stationName + '. Next arrival on ' +
                         msg.data[key].lineName + ' line on platform: ' + msg.data[key].platformName +
                         ' towards ' + msg.data[key].towards + ' arrives at ' + msg.data[key].expectedArrival;
-          log(message);
+          log(message, $resultTfl);
         }
       });
     }
 
-    function log(msg) {
-      $result.text(msg + "\n" + $result.text());
+    function subscribeCoindesk(name) {
+      channelCoindesk = ably.channels.get('[product:Coindesk/Bitcoin]bitcoin:' + name);
+      historyCoindesk();
+      channelCoindesk.subscribe(function(msg) {
+        let newPrice = parseFloat(msg.data.replace(',', ''));
+        if(oldPrice > newPrice) {
+          $resultCoindesk.removeClass("lower-dsx");
+          $resultCoindesk.removeClass("higher-dsx");
+          setTimeout(function() {
+            $resultCoindesk.addClass("lower-dsx");
+          }, 6);
+        } else if(oldPrice < newPrice) {
+          $resultCoindesk.removeClass("lower-dsx");
+          $resultCoindesk.removeClass("higher-dsx");
+          setTimeout(function() {
+            $resultCoindesk.addClass("higher-dsx");
+          }, 6);
+        }
+        oldPrice = newPrice;
+        $resultCoindesk.text('Current price: $' + msg.data);
+      });      
+    }
+
+    function historyCoindesk() {
+      channelCoindesk.attach(function(err) {
+        channelCoindesk.history({ untilAttach: true, limit: 1 }, function(err, resultPage) {
+          if(err) return
+          let recentMessage = resultPage.items[0];
+          if(recentMessage) {
+            $resultCoindesk.text('Current price: $' + recentMessage.data);
+          }
+        });
+      });
+    }
+
+    function log(msg, output) {
+      output.text(msg + "\n" + output.text());
     }
 
     $('select#naptan-code').on('change', function() {
-      subscribeToChannel($('select#naptan-code').val());
+      subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
     });
 
-    subscribeToChannel($('select#naptan-code').val());
+    subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
+    subscribeToChannel('usd', channelCoindesk, subscribeCoindesk);
   });
 </script>
