@@ -9,12 +9,57 @@ jump_to:
     - Introduction
 ---
 
+h2. Transport for London
+
+TFL publishes information such as arrivals at stations and existing disruptions into the Ably Hub. Using the Ably DSX, you can trivially subscribe to this data for free. See the example below:
+
+<div>
+  <div>
+    Station:
+    <select id="naptan-code">
+      <option value="940GZZLUEUS">Euston Underground Station</option>
+      <option value="940GZZLUKSX">Kings Cross Underground Station</option>
+      <option value="940GZZLUWSM">Westminster Underground Station</option>
+      <option value="940GZZLUWLO">Waterloo Underground Station</option>
+    </select>
+  </div>
+</div>
+<table id="table-tfl" style="margin-top: 20px;">
+  <thead>
+    <tr>
+      <th>Due</th>
+      <th>Destination</th>
+      <th>Platform</th>
+      <th>Line</th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+
+h3. Code example
+
+Subscribing to a data stream product requires the producer and product identifier, and then the channel name.  In the example below:
+
+* The producer is @TFL@
+* The product is @Tube@
+* The channel is @tube:940GZZLUEUS:arrivals@ which corresponds to Euston Underground station NAPTAN code. "Find more station NAPTAN codes":https://data.gov.uk/dataset/ff93ffc1-6656-47d8-9155-85ea0b8f2251/national-public-transport-access-nodes-naptan.
+
+```[javascript]
+let ably = new Ably.Realtime('YOUR_API_KEY');
+let channelName = '[product:TFL/Tube]tube:940GZZLUEUS:arrivals';
+let channel = ably.channels.get(channelName);
+channel.subscribe((msg) => {
+  /* station update in msg */
+});
+```
+
 h2. Coindesk
 
 "CoinDesk":https://www.coindesk.com/price/bitcoin provides current pricing for Bitcoin into the Ably Hub. Using DSX, it's easy to access this data for free. See below:
 
 <div class="container">
-    <div id="flash-box"><p id="result-coindesk"></p></div>
+    <div id="flash-box"><h4 id="result-coindesk"></h4></div>
 </div>
 
 h3. Code example
@@ -34,40 +79,6 @@ channel.subscribe((msg) => {
 });
 ```
 
-h2. Transport for London
-
-TFL publishes information such as arrivals at stations and existing disruptions into the Ably Hub. Using the Ably DSX, you can trivially subscribe to this data for free. See the example below:
-
-<div>
-  <div>
-    Station:
-    <select id="naptan-code">
-      <option value="940GZZLUEUS">Euston Underground Station</option>
-      <option value="940GZZLUKSX">Kings Cross Underground Station</option>
-      <option value="940GZZLUWSM">Westminster Underground Station</option>
-      <option value="940GZZLUWLO">Waterloo Underground Station</option>
-    </select>
-  </div>
-  <textarea id="result-tfl" rows="20" style="width: 80%; margin-top: 10px; font-family: courier, courier new; background-color: #333; color: orange" disabled></textarea>
-</div>
-
-h3. Code example
-
-Subscribing to a data stream product requires the producer and product identifier, and then the channel name.  In the example below:
-
-* The producer is @TFL@
-* The product is @Tube@
-* The channel is @tube:940GZZLUEUS:arrivals@ which corresponds to Euston Underground station NAPTAN code. "Find more station NAPTAN codes":https://data.gov.uk/dataset/ff93ffc1-6656-47d8-9155-85ea0b8f2251/national-public-transport-access-nodes-naptan.
-
-```[javascript]
-let ably = new Ably.Realtime('YOUR_API_KEY');
-let channelName = '[product:TFL/Tube]tube:940GZZLUEUS:arrivals';
-let channel = ably.channels.get(channelName);
-channel.subscribe((msg) => {
-  /* station update in msg */
-});
-```
-
 <script src="//cdn.ably.io/lib/ably.min-1.js" crossorigin="anonymous"></script>
 <script src="https://apis.google.com/js/api.js"></script>
 <script type="text/javascript">
@@ -76,16 +87,21 @@ channel.subscribe((msg) => {
         $resultTfl = $('#result-tfl'),
         $resultCoindesk = $('#result-coindesk'),
         $flashBox = $('#flash-box'),
+        $tableTfl = $('#table-tfl'),
+        tableBodyTfl = document.getElementById('table-tfl').getElementsByTagName('tbody')[0],
+        tableTflData = {},
+        tableTfl = {},
         oldPrice = 0.0,
         channelTfl,
         channelCoindesk;
 
+
     ably.connection.on('connecting', function() {
-      log("[Connecting to Ably]", $resultTfl);
+      console.log("[Connecting to Ably]");
     });
 
     ably.connection.on('connected', function() {
-      log("[Connected to Ably]", $resultTfl);
+      console.log("[Connected to Ably]");
     });
 
     function subscribeToChannel(name, channel, subscribe) {
@@ -103,17 +119,47 @@ channel.subscribe((msg) => {
     }
 
     function subscribeTfl(name) {
+      let newBodyTfl = document.createElement('tbody');
+      tableBodyTfl.parentNode.replaceChild(newBodyTfl, tableBodyTfl);
+      tableBodyTfl = newBodyTfl;
       channelTfl = ably.channels.get('[product:TFL/Tube]tube:' + name + ':arrivals');
-
-      log("[Subscribing to station NAPTAN code: " + name + "]", $resultTfl);
+      historyTfl();
       channelTfl.subscribe(function(msg) {
-        for(var key in msg.data) {
-          var message = 'Station: ' + msg.data[key].stationName + '. Next arrival on ' +
-                        msg.data[key].lineName + ' line on platform: ' + msg.data[key].platformName +
-                        ' towards ' + msg.data[key].towards + ' arrives at ' + msg.data[key].expectedArrival;
-          log(message, $resultTfl);
-        }
+        updateTfl(msg.data);
       });
+    }
+
+    function updateTfl(data) {
+      let arrivals = [];
+      for(var key in data) {
+        if(data[key].towards != undefined) {
+          arrivals.push(data[key]);
+        }
+      }
+      arrivals.sort(function(a,b) {
+        return new Date(b.expectedArrival) - new Date(a.expectedArrival);
+      });
+
+      let newBodyTfl = document.createElement('tbody');
+      arrivals.forEach((arrival) => {
+        let arrivalTime = new Date(arrival.expectedArrival).toLocaleTimeString();
+        let tmpTableRow = newBodyTfl.insertRow(0);
+        tmpTableRow.insertCell(0).innerHTML = arrivalTime;
+        tmpTableRow.insertCell(1).innerHTML = arrival.towards;
+        tmpTableRow.insertCell(2).innerHTML = arrival.platformName;
+        tmpTableRow.insertCell(3).innerHTML = arrival.lineName;
+      });
+      for(let i=0; i < arrivals.length; i++) {
+        let arrivalTime = new Date(arrivals[arrivals.length - i - 1].expectedArrival).toLocaleTimeString();
+        if(tableBodyTfl.rows[i] != undefined && newBodyTfl.rows[i] != undefined){
+          if(tableBodyTfl.rows[i].cells[0].innerHTML != arrivalTime) {
+            newBodyTfl.rows[i].classList.add("higher-dsx");
+          }
+        }
+      }
+
+      tableBodyTfl.parentNode.replaceChild(newBodyTfl, tableBodyTfl);
+      tableBodyTfl = newBodyTfl;
     }
 
     function subscribeCoindesk(name) {
@@ -151,8 +197,16 @@ channel.subscribe((msg) => {
       });
     }
 
-    function log(msg, output) {
-      output.text(msg + "\n" + output.text());
+    function historyTfl() {
+      channelTfl.attach(function(err) {
+        channelTfl.history({ untilAttach: true, limit: 1 }, function(err, resultPage) {
+          if(err) return;
+          let recentMessage = resultPage.items[0];
+          if(recentMessage) {
+            updateTfl(recentMessage.data);
+          }
+        });
+      });
     }
 
     $('select#naptan-code').on('change', function() {
