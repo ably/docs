@@ -1,5 +1,5 @@
 module VersionsHelper
-  CURRENT_VERSION = '1.0' unless defined?(CURRENT_VERSION)
+  CURRENT_VERSION = '1.1' unless defined?(CURRENT_VERSION)
 
   VERSIONED_FOLDERS = %w(
     client-lib-development-guide
