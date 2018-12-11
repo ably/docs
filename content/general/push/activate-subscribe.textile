@@ -27,62 +27,34 @@ p(tip). The push notification service is currently in beta. Before you get start
 
 Before you can configure your devices to receive push notifications, you must first enable push in your Ably app by adding the third party push service credentials and/or certificates to your app push dashboard. These credentials are then used by Ably to authenticate with the respective third party push service (such as APNs) and delivery all queued notifications.
 
-If you have not already done sone, you can sign up for a free account with "Apple's Push Notification service":https://developer.apple.com/library/content/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/APNSOverview.html and "Google's Cloud Messaging service":https://developers.google.com/cloud-messaging/android/client.
+If you have not already done sone, you can sign up for a free account with "Apple's Push Notification service":https://developer.apple.com/library/content/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/APNSOverview.html and Google's "Firebase Cloud Messaging service":https://firebase.google.com/docs/cloud-messaging/.
 
 h2(#platform-install). Platform installation
 
-p(tip). Whilst platform installation is platform specific, all subsequent Ably API calls are not. Be sure to choose a language above that you wish to see the documentation and code examples in.
+p(tip). Whilst platform installation is platform-specific, all subsequent Ably API calls are generally portable. Be sure to choose a language above that you wish to see the documentation and code examples in.
 
 *Note: To use push notifications you need to use our push-enabled client libraries. "Download a push-enabled client library":/general/push/download*
 
-Before you can activate your push device or receive push notifications, you must first plug in Ably to the underlying OS or platform. Once Ably is plugged in, all subsequent API interactions you have will be with the Ably Realtime library API which is as consistent as possible across all platforms. By providing a consistent API interface across all platforms, we can ensure implementation is simpler and more predictable regardless of the platform you are integrating Ably with.
+Before you can activate your push device or receive push notifications, you must first plug in Ably to the underlying OS or platform. Once Ably is plugged in, all subsequent API interactions you have will be with the Ably Realtime library API which is as consistent as possible across all platforms. By providing a consistent API interface across all platforms, we aim to ensure implementation is simpler and more predictable regardless of the platform you are integrating Ably with.
 
-Installation however is platform specific and as such, instructions for each platform and service is provided below:
+Installation, however, is platform-specific and as such, instructions for each platform and service is provided below:
 
-h3. Install Ably for Google Cloud Messaging on Android
+h3. Install Ably for Google Firebase Cloud Messaging on Android
 
-Within your Android application, you will need to have a class inheriting from @IntentService@, which your implementation of @InstanceIDListenerService@ invokes on its @onTokenRefresh@ method. We need that class to inherit from @AblyRegistrationIntentService@ and just call its parent's @onHandleIntent@ method. This method needs you to pass a sender ID (@getString(R.string.gcm_defaultSenderId)@) and an @AblyRealtime@ instance, configured with the authentication setup and other options you need. Your class should end up looking more or less like this:
+As with any Firebase-enabled app, you need to include one or more services without your app to handle interactions with Firebase. You need to have a service that extends @FirebaseMessagingService@ (and override @onMessageReceived()@) in order to handle incoming push messages; the code that handles incoming push messages does not need to interact with Ably in any way.
 
-```[android]
-public class MyRegistrationIntentService extends AblyRegistrationIntentService {
-    @Override
-    protected void onHandleIntent(Intent intent) {
-        this.onHandleIntent(intent, getString(R.string.gcm_defaultSenderId), getAblyRealtime());
-    }
+The second requirement is that your app integrates with Firebase to handle registration token notifications, and these notifications do need to be passed to Ably; the registration token is used by Ably's servers to be able to push messages to each specific device. You can be notified of token updates either be by overriding @onNewToken()@ in your derived @FirebaseMessagingService@, or by overriding @onTokenRefresh()@ in a service that derives from @FirebaseInstanceIdService@. A convenient way to do the latter is to extend @AblyFirebaseInstanceIdService@; in this case your service's parent class handles the token update, so you do not need to do anything other than ensure the service is activated.
 
-    private static AblyRealtime getAblyRealtime() {
-        ClientOptions options = new ClientOptions();
-        // Set up options; API key or authCallback, etc.
-        // This is most likely shared with other logic in your app to connect to Ably
-        try {
-            return new AblyRealtime(options);
-        } catch (AblyException e) {
-            throw new RuntimeException(e);
-        }
-    }
-}
-```
-
-h3. Install Ably for Google Firebase Messaging on Android
-
-Within your Android application, you will need to have a class inheriting from @FirebaseInstanceIdService@. We need that class to inherit from @AblyFirebaseInstanceIdService@ and just call its parent's @onTokenRefresh@ method. This method needs you to pass an @AblyRealtime@ instance, configured with the authentication setup and other options you need. Your class should end up looking more or less like this:
+If you are handling token indications in your own code, registration tokens must be notified to the Ably library by calling @AblyFirebaseInstanceIdService.onNewRegistrationToken()@. If deriving from directly from @FirebaseInstanceIdService@, for example, your class should end up looking more or less like this:
 
 ```[android]
-public class MyFirebaseInstanceIDService extends AblyFirebaseInstanceIdService {
+public class MyRegistrationTokenService extends FirebaseInstanceIdService {
     @Override
     public void onTokenRefresh() {
-        super.onTokenRefresh(getAblyRealtime());
-    }
-
-    private static AblyRealtime getAblyRealtime() {
-        ClientOptions options = new ClientOptions();
-        // Set up options; API key or authCallback, etc.
-        // This is most likely shared with other logic in your app to connect to Ably
-        try {
-            return new AblyRealtime(options);
-        } catch (AblyException e) {
-            throw new RuntimeException(e);
-        }
+        // Get updated InstanceID token.
+        String token = FirebaseInstanceId.getInstance().getToken();
+        // Notify Ably
+        AblyFirebaseInstanceIdService.onNewRegistrationToken(this, token);
     }
 }
 ```
@@ -136,15 +108,16 @@ If you want to to start receiving push notifications from Ably (e. g. from <span
 
 * Ensure the Ably client is authenticated
 * Generate a unique identifier for this device and store this in local storage
-* Activate the device for push notifications with the underlying OS or platform and obtain a unique identifier for the device as a push recipient. For example, in GCM this is described as a "@registration token@":https://developers.google.com/cloud-messaging/android/client#sample-register, and in APNs this is described as a "@device token@":https://developer.apple.com/library/content/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/CommunicatingwithAPNs.html
-* Register the local device with Ably using the device's unique identifier, platform specific details such as form factor and OS, and the push recipient details to receive push notifications. This in turns ensure Ably can reach this device and deliver push notifications
-* Store the @updateToken@ provided in the response from Ably in local storage so that subsequent requests to Ably to update push recipient details are secure
+* Activate the device for push notifications with the underlying OS or platform and obtain a unique identifier for the device as a push recipient. For example, in FCM this is described as a "@registration token@":https://firebase.google.com/docs/cloud-messaging/android/client#sample-register, and in APNs this is described as a "@device token@":https://developer.apple.com/library/content/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/CommunicatingwithAPNs.html
+* Register the local device with Ably using the device's unique identifier, platform-specific details such as form factor and OS, and the push recipient details to receive push notifications. This in turns ensure Ably can reach this device and deliver push notifications
+* Store a @deviceIdentityToken@ provided in the response from Ably in local storage so that subsequent requests to Ably to update push recipient details are authenticated as being from the device in question.
 
 Please note that the effects of calling @activate@ outlive the current process. Once called, the device will stay registered even after the application is closed, and up until @deactivate@ is called. @activate@ is idempotent: calling it again when device is already activated has the sole effect of calling its callback.
 
 ```[android]
 AblyRealtime ably = getAblyRealtime();
-ably.push.activate(context);
+ably.setAndroidContext(context)
+ably.push.activate();
 ```
 ```[objc]
 ARTRealtime *ably = [self getAblyRealtime];
@@ -207,7 +180,7 @@ ably.push.activate()
 
 h2(#subscribing). Subscribe for push notifications
 
-Before you subscribe to a channel for push, make sure its "a channel rules is configured to explicitly enable push notifications":https://support.ably.io/solution/articles/3000030057-what-are-channel-rules-and-how-can-i-use-them-in-my-app. By default, push notifications on channels are disabled.
+Before you subscribe to a channel for push, make sure its "channel namespace is configured to explicitly enable push notifications":https://support.ably.io/solution/articles/3000030057-what-are-channel-rules-and-how-can-i-use-them-in-my-app. By default, push notifications on channels are disabled.
 
 There are two ways a device can be subscribed to a channel: directly "by its device ID":#subscribing-device-id, or indirectly "by its associated client ID":#subscribing-client-id.
 
@@ -249,7 +222,7 @@ h3(#subscribing-client-id). Subscribing by client ID
 
 When a device is registered, it can be associated with a "client ID":/realtime/authentication/#identified-clients. @AblyRealtime.push.activate@ takes the client ID from the @AblyRealtime@ instance.
 
-You can subscribe all devices associated with a client ID to a channel in a single operation i.e. a subscription by client ID. New device registrations associated to that client ID will also be subscribed to the channel, and if a device registration is no longer associated with that client ID, it will also stop being subscribed to the channel (unless it's also "subscribed directly by device ID":#subscribing-device-id).
+You can subscribe all devices associated with a client ID to a channel in a single operation;that is, create a subscription by client ID. New device registrations associated to that client ID will also be subscribed to the channel, and if a device registration is no longer associated with that client ID, it will also stop being subscribed to the channel (unless it's also "subscribed directly by device ID":#subscribing-device-id).
 
 To subscribe your @AblyRealtime@ instance's client ID to a channel:
 
@@ -285,7 +258,7 @@ h2(#push-capabilities). Push capabilities
 
 These are the "capabilities":/core-features/authentication/#capabilities-explained necessary to perform push operations:
 
-* @push-subscribe@: Register new devices, deregister them, and subscribe and unsubscribe them to channels for push notifications.
+* @push-subscribe@: Register and deregister the local device, and subscribe and unsubscribe the local device to channels for push notifications.
 * @push-admin@: Register, update and deregister any device registration, and subscribe and unsubscribe to channels for push notifications. Publish push notification using the @POST /push/publish@ endpoint (@AblyRealtime.push.admin.publish@ method).
 
 Typically, client devices subscribing for push will either have @push-subscribe@ privileges or "delegate operations to a server":#activation-from-server with @push-admin@ privileges.
@@ -329,7 +302,7 @@ blang[android].
   ably.push.deactivate(context, true);
   ```
 
-  The Ably library will then broadcast a @io.ably.broadcast.PUSH_REGISTER_DEVICE@ action when it needs you to register from your server, and @io.ably.broadcast.PUSH_DEREGISTER_DEVICE@ when it needs you to deregister. You must configure a listener to those actions in your application's @AndroidManifest.xml@, and from it answer back with a @PUSH_UPDATE_TOKEN@ or @PUSH_DEVICE_DEREGISTERED@, like this:
+  The Ably library will then broadcast a @io.ably.broadcast.PUSH_REGISTER_DEVICE@ action when it needs you to register from your server, and @io.ably.broadcast.PUSH_DEREGISTER_DEVICE@ when it needs you to deregister. You must configure a listener to those actions in your application's @AndroidManifest.xml@, and from it answer back with a @PUSH_DEVICE_REGISTERED@ or @PUSH_DEVICE_DEREGISTERED@, like this:
 
   ```[xml]
   <receiver android:name=".MyAblyBroadcastReceiver" >
@@ -351,20 +324,20 @@ blang[android].
               DeviceDetails device = ably.device(context);
               boolean isNew = intent.getBooleanExtra("isNew", false);
 
-              Intent response = new Intent();
+              Intent response = new Intent("io.ably.broadcast.PUSH_DEVICE_REGISTERED");
 
               try {
-                  String updateToken = registerThroughYourServer(device, isNew);
-                  response.putExtra("updateToken", updateToken);
+                  String deviceIdentityToken = registerThroughYourServer(device, isNew);
+                  response.putExtra("deviceIdentityToken", deviceIdentityToken);
               } catch(AblyException e) {
                   IntentUtils.addErrorInfo(intent, e.errorInfo);
               }
 
               LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(intent);
-          } else if (action.equals("io.ably.broadcast.PUSH_REGISTER_DEVICE")) {
+          } else if (action.equals("io.ably.broadcast.PUSH_DEREGISTER_DEVICE")) {
               DeviceDetails device = ably.device(context);
 
-              Intent response = new Intent();
+              Intent response = new Intent("io.ably.broadcast.PUSH_DEVICE_DEREGISTERED");
 
               try {
                   deregisterThroughYourServer(device.id);
