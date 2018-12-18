@@ -68,7 +68,7 @@ The key thing to note in the HTML above is the inclusion of two JS files, one is
 
 h2(#performing-the-rest-request). Step 4 - Using Ably's REST library to perform a REST API request
 
-As mentioned before, channel enumeration can currently be implemented only via our "REST API":/rest-api. However, the "REST library":/rest offers a "request() method":https://www.ably.io/documentation/rest/usage#request to perform REST requests directly with our raw REST API.
+Channel enumeration is not currently integrated into our REST client libraries as a dedicated method. However, you can still use our "REST client libraries":/rest to query it, using the "request() method":https://www.ably.io/documentation/rest/usage#request , which can perform arbitrary REST requests to our API. We highly recommend you do this rather than querying the REST api directly yourself; see "Should I use the REST API directly?":https://ably.freshdesk.com/support/solutions/articles/3000061848-should-i-use-the-rest-api-directly- for why.
 
 For the simplicity of this tutorial, we'll use "Basic authentication":/core-features/authentication#basic-authentication to perform the request. However, it is highly recommended to use "Token auth":/core-features/authentication#token-authentication on client-side applications for "better security and protection of your API key":/root/best-practice-guide#using-api-key-client-side.
 
@@ -85,35 +85,35 @@ var ably = new Ably.Rest('<YOUR-API-KEY>');
 Next, let's go ahead and perform the actual REST request using the @request()@ method as follows:
 
 ```[javascript]
-var URL = '/channels';
+var url = '/channels';
 var resultArea = document.getElementById('result');
-var channelCount = 0;
+
 //request a list of channels on button click
 function enumerateChannels() {
-    ably.request('get', URL, { limit: 100, direction: 'forwards' }, null, null, (err, results) => {
-        if (err) {
-            resultArea.value += 'An error occurred; err = ' + err.toString();
-        } else {
-            displayResults(results)
-            while (results.hasNext()) {
-                results.next(function (err, nextPage) {
-                    displayResults(nextPage);
-                });
-            }
-        }
-    })
+  ably.request('get', url, { limit: 100, by: 'id' }, null, null, handleResultPage);
 }
-//display results in the text area
-function displayResults(results) {
-    resultArea.value += "Your API key has the following active channels:\n";
-    results.first((err, resultPage) => {
-        for (var i = 0; i < resultPage.items.length; i++) {
-            var resultObj = JSON.parse(JSON.stringify(resultPage.items[i]));
-            channelCount++;
-            resultArea.value += channelCount + ". " + resultObj.name + "\n";
 
-        }
-    })
+var channelCount = 0;
+function handleResultPage(err, resultPage) {
+  if(err || !resultPage.success) {
+    resultArea.value += 'An error occurred; err = ' + (err || resultPage.errorMessage);
+    return;
+  }
+  if(channelCount === 0) {
+    if(resultPage.items.length == 0){
+      resultArea.value += "Your app does not have any active channels\n";
+      return;
+    }
+    resultArea.value += "Your app has the following active channels:\n";
+  }
+
+  resultPage.items.forEach(function(channel) {
+    resultArea.value += (++channelCount) + ". " + channel + "\n";
+  })
+
+  if(resultPage.hasNext()) {
+    resultPage.next(handleResultPage);
+  };
 }
 ```
 
@@ -121,7 +121,7 @@ function displayResults(results) {
 
 Remember to replace <YOUR-API-KEY> with an actual Ably API key.
 
-In the code above, we have set the REST endpoint to be @/channels@. The @enumerateChannels()@ function is invoked on a button click from the front end. Inside this function, we have made a simple request to Ably's REST API, using Ably's JavaScript REST client library. We can optionally specify a limit to the results returned; you can have a look at the "API reference":/general/channel-lifecycle.textile in the docs to learn more. As mentioned before, the results are returned in the form of an @HTTPPaginatedResponse@; hence we are required to process them page by page. Each page contains one @Channel@ object per active channel that exists within an app. Here, we are merely displaying the name of each of these channels in the text area we created in HTML. 
+In the code above, we have set the REST endpoint to be @/channels@. The @enumerateChannels()@ function is invoked on a button click from the front end. Inside this function, we have made a simple request to Ably's REST API, using Ably's JavaScript REST client library. We can optionally specify a limit to the results returned; you can have a look at the "API reference":/general/channel-lifecycle.textile in the docs to learn more. As mentioned before, the results are returned in the form of an @HTTPPaginatedResponse@; hence we are required to process them page by page. Each page contains one @Channel@ per active channel that exists within an app. Here, all we are interested in is the name of the channel, so we used @by: 'id'@ parameter to request only a list of names. If you want more detailed information about each channel (such as occupancy data), you can remove this parameter. See "our REST API docs":/rest-api#enumeration-rest for documentation on all supported parameters.
 
 h2(#live-demo). Step - 5 Live Demo
 
@@ -154,40 +154,36 @@ h2(#next-steps). Next Steps
 <script lang="text/javascript" src="https://cdn.ably.io/lib/ably-1.js"></script>
 
 <script type="text/javascript">
-        var URL = '/channels';
-        var resultArea = document.getElementById('result');
-        var channelCount = 0;
-        //request a list of channels on button click
-        function enumerateChannels() {
-            var userApiKey = document.getElementById('user-api-key').value;
-            var ably = new Ably.Rest(userApiKey)
-            ably.request('get', URL, { limit: 100, direction: 'forwards' }, null, null, (err, results) => {
-                if (err) {
-                    resultArea.value += 'An error occurred; err = ' + err.toString();
-                    return;
-                } else {
-                    displayResults(results)
-                    while (results.hasNext()) {
-                        results.next(function (err, nextPage) {
-                            displayResults(nextPage)
-                        });
-                    }
-                }
-            })
-        }
-        //display results in the text area
-    function displayResults(results) {
-            if(results.items.length == 0){
-                resultArea.value += "Your API key does not have any active channels\n";
-                return;
-            }
-            resultArea.value += "Your API key has the following active channels:\n";
-            results.first((err, resultPage) => {
-                for (var i = 0; i < resultPage.items.length; i++) {
-                    var resultObj = JSON.parse(JSON.stringify(resultPage.items[i]));
-                    channelCount++;
-                    resultArea.value += channelCount + ". " + resultObj.name + "\n";
-                }
-            })
-        }
+  var url = '/channels';
+  var resultArea = document.getElementById('result');
+
+  //request a list of channels on button click
+  function enumerateChannels() {
+    var userApiKey = document.getElementById('user-api-key').value;
+    var ably = new Ably.Rest(userApiKey);
+    ably.request('get', url, { limit: 100, by: 'id' }, null, null, handleResultPage);
+  }
+
+  var channelCount = 0;
+  function handleResultPage(err, resultPage) {
+    if(err || !resultPage.success) {
+      resultArea.value += 'An error occurred; err = ' + (err || resultPage.errorMessage);
+      return;
+    }
+    if(channelCount === 0) {
+      if(resultPage.items.length == 0){
+        resultArea.value += "Your app does not have any active channels\n";
+        return;
+      }
+      resultArea.value += "Your app has the following active channels:\n";
+    }
+
+    resultPage.items.forEach(function(channel) {
+      resultArea.value += (++channelCount) + ". " + channel + "\n";
+    })
+
+    if(resultPage.hasNext()) {
+      resultPage.next(handleResultPage);
+    };
+  }
 </script>
