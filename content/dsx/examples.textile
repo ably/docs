@@ -11,7 +11,7 @@ jump_to:
 
 h2(#coindesk-bitcoin). Coindesk - bitcoin prices live stream
 
-"CoinDesk":https://www.coindesk.com/price/bitcoin provides current pricing for Bitcoin. This data is available for free on their website. Using DSX, it's easy to access this data as a realtime stream for free. "View the documentation for this product on Ably Hub":https://www.ably.io/dsx/hub/products/20 to learn how to implement this yourself.
+"CoinDesk":https://www.coindesk.com/price/bitcoin provides current pricing for Bitcoin. This data is available for free on their website. Using DSX, it's easy to access this data as a realtime stream. "View the documentation for this product on Ably Hub":https://www.ably.io/dsx/hub/products/20 to learn how to implement this yourself.
 
 h3. Live Demo:
 
@@ -25,6 +25,40 @@ h3. Live Demo:
     </td>
   </tr>
 </table>
+
+h2(#open-weather). Open Weather News - a live stream of weather related data
+
+"OpenWeatherMap":https://openweathermap.org/ provides live weather data for almost any location over the world. This data is available for free on their website. Using DSX, it's easy to access this data as a realtime stream. "View the documentation for this product on Ably Hub":todo-link to learn how to implement this yourself.
+
+h3. Live Demo:
+
+<div>
+    City:
+    <select id="city-id">
+      <option value="2643741">London, UK</option>
+      <option value="1850147">Tokyo, Japan</option>
+      <option value="1273294">Delhi, India</option>
+      <option value="1796236">Shanghai, China</option>
+      <option value="3448439">Sao Paulo, Brazil</option>
+      <option value="5128581">New York, US</option>
+      <option value="360630">Cairo, Egypt</option>
+      <option value="2988507">Paris, France</option>
+      <option value="2950158">Berlin, Germany</option>
+      <option value="756135">Warsaw, Poland</option>
+      <option value="2147714">Sydney, Australia</option>
+    </select>
+  </div>
+  <br/>
+  <table style="width:100%; padding: 20px; height: 50px;" border="1">
+  <tr>
+    <td style="text-align: center;">
+      <div class="container">
+      <div class="c-flashbox"><h4 id="result-open-weather"></h4></div>
+      </div>
+    </td>
+  </tr>
+  </table>
+
 
 h2. Transport for London
 
@@ -85,7 +119,10 @@ channel.subscribe((msg) => {
         tableTfl = {},
         oldPrice = 0.0,
         channelTfl,
-        channelCoindesk;
+        channelCoindesk,
+        $resultWeather = $('#result-open-weather'),
+        oldTemperature = -50,
+        channelWeather;
 
 
     ably.connection.on('connecting', function() {
@@ -110,6 +147,7 @@ channel.subscribe((msg) => {
       } 
     }
 
+    //==============tfl-start
     function subscribeTfl(name) {
       let newBodyTfl = document.createElement('tbody');
       tableBodyTfl.parentNode.replaceChild(newBodyTfl, tableBodyTfl);
@@ -145,7 +183,25 @@ channel.subscribe((msg) => {
       tableBodyTfl.parentNode.replaceChild(newBodyTfl, tableBodyTfl);
       tableBodyTfl = newBodyTfl;
     }
+    function historyTfl() {
+      channelTfl.attach(function(err) {
+        channelTfl.history({ untilAttach: true, limit: 1 }, function(err, resultPage) {
+          if(err) return;
+          let recentMessage = resultPage.items[0];
+          if(recentMessage) {
+            updateTfl(recentMessage.data);
+          }
+        });
+      });
+    }
+     $('select#naptan-code').on('change', function() {
+      subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
+    });
 
+    subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
+    //==============tfl-end
+
+    //==============coindesk-bitcoin-start
     function subscribeCoindesk(name) {
       channelCoindesk = ably.channels.get('[product:Coindesk/Bitcoin]bitcoin:' + name);
       historyCoindesk();
@@ -180,24 +236,61 @@ channel.subscribe((msg) => {
         });
       });
     }
+    subscribeToChannel('usd', channelCoindesk, subscribeCoindesk);
+    //==============coindesk-bitcoin-end
 
-    function historyTfl() {
-      channelTfl.attach(function(err) {
-        channelTfl.history({ untilAttach: true, limit: 1 }, function(err, resultPage) {
-          if(err) return;
-          let recentMessage = resultPage.items[0];
-          if(recentMessage) {
-            updateTfl(recentMessage.data);
-          }
-        });
-      });
+    //==============openweather-start
+    function subscribeOpenWeather(id) {
+      channelWeather = ably.channels.get('[product:openweathermap/weather]weather:' + id);
+      const Http = new XMLHttpRequest();
+      const weatherUrl='https://api.openweathermap.org/data/2.5/weather?id='+id+'&appid=cab5f366525596f0ce02dcf5a4d14355';
+      let newTemperature;
+      Http.open("GET", weatherUrl);
+      Http.send();
+      Http.onreadystatechange=(e)=>{
+        if (Http.readyState == 4 && Http.status == 200) {
+          newTemperature = JSON.parse(Http.responseText).main.temp - 273.15;
+          $resultWeather.text(Math.floor(newTemperature)+ '°C with ' + JSON.parse(Http.responseText).weather[0].description);
+        }
+      }
+      historyOpenWeather();
+      channelWeather.subscribe((msg) => {
+        if($('select#city-id').val() == msg.data.id){
+          console.log('if passed')
+          if(oldTemperature > newTemperature) {
+          $resultWeather.removeClass("c-flashbox__negative-flash");
+          $resultWeather.removeClass("c-flashbox__positive-flash");
+          setTimeout(function() {
+            $resultWeather.addClass("c-flashbox__negative-flash");
+          }, 6);
+        } else if(oldTemperature < newTemperature) {
+          $resultWeather.removeClass("c-flashbox__negative-flash");
+          $resultWeather.removeClass("c-flashbox__positive-flash");
+          setTimeout(function() {
+            $resultWeather.addClass("c-flashbox__positive-flash");
+          }, 6);
+        }
+        oldTemperature = newTemperature;
+        $resultWeather.text(Math.floor((msg.data.main.temp)- 273.15 )+ '°C with ' + msg.data.weather[0].description);
+        }
+      });      
     }
 
-    $('select#naptan-code').on('change', function() {
-      subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
+    function historyOpenWeather() {
+      channelWeather.history({ untilAttach: true, limit: 1 }, function(err, resultPage) {
+        if(err) return
+        let recentMessage = resultPage.items[0];
+        if(recentMessage) {
+          $resultWeather.text(Math.floor((recentMessage.data.main.temp)- 273.15 )+ '°C with ' + recentMessage.data.weather[0].description);
+        }
+      });
+    }
+    $('select#city-id').on('change', function() {
+      subscribeToChannel($('select#city-id').val(), channelWeather, subscribeOpenWeather);
     });
-
-    subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
-    subscribeToChannel('usd', channelCoindesk, subscribeCoindesk);
+    subscribeToChannel($('select#city-id').val(), channelWeather, subscribeOpenWeather);
+    //==============openweather-end
+   
+   
   });
 </script>
