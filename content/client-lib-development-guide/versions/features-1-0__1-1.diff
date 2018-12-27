@@ -34,11 +34,11 @@ index 3c72399..6e2ddda 100644
  * @(G3)@ Testing statistics can be tricky due to timing issues and slow test suites as a result of sending requests to generate statistics.  As such, we provide a special stats endpoint in our sandbox environment that allows stats to be injected into our metrics system so that stats tests can make predictable assertions.  To create stats you must send an authenticated @POST@ request to the stats JSON to @https://sandbox-rest.ably.io/stats@ with the stats data you wish to create. See the "Javascript stats fixture":https://github.com/ably/ably-js/blob/4e65d4e13eb8750a375b9511e4dd059092c0e481/spec/rest/stats.test.js#L8-L51 and "setup helper":https://github.com/ably/ably-js/blob/4e65d4e13eb8750a375b9511e4dd059092c0e481/spec/common/modules/testapp_manager.js#L158-L182 as an example
 -* @(G4)@ All REST requests and WebSocket connections to Ably must include the current API version @1.0@. Should any new API version with breaking changes be released, the client library will continue to use the API version explicitly requested
 +* @(G4)@ All REST requests and "WebSocket":/concepts/websockets connections to Ably must include the current API version @1.0@. Should any new API version with breaking changes be released, the client library will continue to use the API version explicitly requested
- 
+
  h2(#rest). REST client library
- 
+
  h3(#restclient). RestClient
- 
+
 -* @(RSC1)@ The constructor accepts either an API key, a token string, or a set of "@ClientOptions@":#options.  If invalid arguments are provided such as a no API key, no token and no means to create a token, then this will result in an error
 +* @(RSC1)@ The constructor accepts a set of "@ClientOptions@":#options or, in languages that support overloaded constructors, a string which may be a token string or an API key.
 +** @(RSC1a)@ If a single string argument is supplied when constructing the library then the library must determine whether this is a key or a token by checking for the presence of the ':' (colon) delimiter present in an API key. Any other string must be treated as a token string.
@@ -63,7 +63,7 @@ index 3c72399..6e2ddda 100644
 +** @(RSC15e)@ The primary host is by default @rest.ably.io@ (unless overriden in @ClientOptions#environment@ or @ClientOptions#restHost@), which, through DNS, is automatically routed to the client's closest data center. New HTTP requests (except where @RSC15f@ applies and a cached fallback host is in effect) are first attempted against the primary host.
 +** @(RSC15a)@ In the case of an error necessitating use of an alternative host (see "RSC15d":#RSC15d), try fallback hosts (with a matching Host header as this is necessary when fallbacks are proxied through a CDN) in random order, continuing to try further hosts if "qualifying errors":#RSC15d occur, failing when all have been tried or the configured @httpMaxRetryCount@ has been reached (see "TO3l@":#TO3l5). This ensures that a client library is able to work around routing or other problems for the user's closest data center. For example, if a @POST@ request to @rest.ably.io@ fails because the default endpoint is unreachable or unserviceable, then the @POST@ request should be retried again against the fallback hosts in attempt to find an alternate healthy data center to service the request. The five default fallback hosts are @[a-e].ably-realtime.com@. If an array of custom fallback hosts are provided in @ClientOptions#fallbackHosts@, then they will be used instead. If an empty array of fallback hosts is provided, then fallback host functionality is disabled
  ** @(RSC15d)@ Errors that necessitate use of an alternative host include: host unresolvable or unreachable, request timeout, or a response but with an applicable HTTP status code in the range @500 <= code <= 504@. Resending requests that have failed for other failure conditions will not fix the problem and will simply increase the load on other data-centers unnecessarily
-+** @(RSC15f)@ Once/if a given fallback host succeeds, the client should store that successful fallback host for @ClientOptions.fallbackRetryTimeout@. Future HTTP requests during that period should use that host. If during this period a "qualifying errors":#RSC15d occurs on that host, or after @fallbackRetryTimeout@ has expired, it should be unstored, and the fallback sequence begun again from scratch, starting with the default primary host (@rest.ably.io@ or @ClientOptions#restHost@)
++** @(RSC15f)@ Once/if a given fallback host succeeds, the client should store that successful fallback host for @ClientOptions.fallbackRetryTimeout@. Future HTTP requests during that period should use that host. If during this period a "qualifying errors":#RSC15d occurs on that host, or after @fallbackRetryTimeout@ has expired, it should be un-stored, and the fallback sequence begun again from scratch, starting with the default primary host (@rest.ably.io@ or @ClientOptions#restHost@)
  * @(RSC17)@ When instancing the library, if a @clientId@ attribute is set in @ClientOptions@, then the @Auth#clientId@ attribute will contain the provided @clientId@
  * @(RSC19)@ @RestClient#request@ function is provided as a convenience for customers who wish to use bleeding edge REST API functionality that is either not documented or is not included in the API for our client libraries. The REST client library provides a function to issue HTTP requests to the Ably endpoints with all the built in functionality of the library such as authentication, paging, fallback hosts, MsgPack and JSON support etc. The function:
 -** @(RSC19a)@ Method signature is @request(string method, string path, Hash params?, JsonObject | JsonArray body?, Hash headers?) -> HttpPaginatedResponse@ with arguments: @method@ is a valid "HTTP verb":https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html (must support @"GET"@, @"POST"@, and @"PUT"@, should support @"PATCH"@, may support others); @path@ is the path component of the URL such as @"/channels"@; @params@ and @headers@ are optional arguments containing pairs of key value strings (multi-valued headers are not supported) that will result in query params and HTTP headers being added respectively in the request (the argument types can be idiomatic for the language such as @Object@ in the case of Javascript); @body@ is an optional @JsonObject@ or @JsonArray@ like object argument that can be easily serialized to MsgPack or JSON
@@ -81,9 +81,9 @@ index 3c72399..6e2ddda 100644
 +** @(RSC20d)@ All personally identifiable information, as much as is practicable, must be redacted or stripped completely before being submitted to Ably. Our intent is only to capture necessary information to debug issues in our own code
 +** @(RSC20e)@ Failures to log exceptions to the @errors.ably.io@ endpoint must be handled gracefully. This includes for example DNS failures, TCP/HTTP requests rejected, slow requests and internal failure errors. Additionally, as specified in @RSC20b2@, a failure to log an exception is logged with log level @info@ i.e. an exception reporting failure is not consider a client library @error@ or @warning@
 +** @(RSC20f)@ Any errors emitted by the library as a result of an internal failure must contain a status code @500@, an error code in the range @51000@ to @51999@ and a suitable error message. The error code must match one of "our common error codes":https://github.com/ably/ably-common/blob/master/protocol/errors.json
- 
+
  h3(#rest-auth). Auth
- 
+
 @@ -94,15 +115,22 @@ h3(#rest-auth). Auth
  * @(RSA2)@ "Basic Auth":https://en.wikipedia.org/wiki/Basic_access_authentication is the default authentication scheme if an API key exists
  * @(RSA3)@ Token Auth:
@@ -194,7 +194,7 @@ index 3c72399..6e2ddda 100644
 +** @(RSL1j)@ When @Message@ objects are provided, any valid @Message@ attribute (that is, an attribute specified in "TM2":#TM2) that is supplied by the caller must be included in the encoded message. (This does not mean it must be included _unaltered_; for example the @data@ and @encoding@ will be subject to processing per "RSL4":#RSL4)
 +** @(RSL1k)@ Idempotent publishing via REST is supported by populating the @id@ attribute of @Message@ instances passed to @publish()@:
 +*** @(RSL1k1)@ Idempotent publishing via library-generated @Message@ @id@s is supported if @idempotentRestPublishing@ (see "TO3n":#TO3n) is enabled and one or more @Message@ instances are passed to @publish()@ and all @Message@s have an empty @id@ attribute. The library generates a base @id@ string by base64-encoding  a sequence of at least 9 bytes obtained from a source of randomness. Each individual @Message@ in the set of messages to be published is assigned a unique @id@ of the form &lt;base id&gt;:&lt;serial&gt; (where @serial@ is the zero-based index into the set).
-+*** @(RSL1k2)@ Idempotent publishing via client-supplied @Message@ @id@s is supported where a single @Message@ is passed to @publish()@ and it contains a non-empty @id@. The @id@ is perserved on sending the message.
++*** @(RSL1k2)@ Idempotent publishing via client-supplied @Message@ @id@s is supported where a single @Message@ is passed to @publish()@ and it contains a non-empty @id@. The @id@ is preserved on sending the message.
 +*** @(RSL1k3)@ If more than one @Message@ is passed to @publish()@ and one or more of those messages contains a non-empty @id@ attribute, then all message ids (present or absent) are preserved on sending the batch of messages.
 +*** @(RSL1k4)@ An explicit test for idempotency of publishes with library-generated ids shall exist that simulates an error response to a successful publish of a batch of messages, expects an automatic retry by the library, and verifies that the net outcome is that the batch is published only once.
 +*** @(RSL1k5)@ An explicit test for idempotency of publishes with client-supplied ids shall exist that involves multiple explicit publish requests for a given message and verifies that the net outcome is that the message is published only once.
@@ -208,17 +208,17 @@ index 3c72399..6e2ddda 100644
 -*** @(RSL6a2)@ A set of tests must exist to ensure that the client library provides interoperability for the @extras@ field which is a JSON-encodable object. The test, at a minimum, should publish a message with an @extras@ object such as @{"push":[{"title":"Testing"}]}@ and ensure it is received with an equivalent JSON-encodable object
 +*** @(RSL6a2)@ A set of tests must exist to ensure that the client library provides interoperability for the @extras@ field which is a JSON-encodable object (ie a value that represents a JSON @object@ value and supports serialization to and from JSON text). The test, at a minimum, should publish a message with an @extras@ object such as @{"push":[{"title":"Testing"}]}@ and ensure it is received with an equivalent JSON-encodable object
  ** @(RSL6b)@ If, for example, incompatible encryption details are provided or invalid Base64 is detected in the message payload, an error message will be sent to the logger, but the message will still be delivered with last successful decoding and the @encoding@ field. For example, if a message had a decoding of "utf-8/cipher+aes-128-cbc/base64", and the payload was successfully Base64 decoded but the payload could not be encrypted because the @CipherParam@ details were not configured, the message would be delivered with a binary payload and an @encoding@ with the value "utf-8/cipher+aes-128-cbc"
- 
+
  h3(#rest-presence). Presence
 @@ -248,6 +288,9 @@ h3(#rest-encryption). Encryption
  ** @(RSE2a)@ Takes an optional @keyLength@ parameter, which is the length in bits of the key to be generated. If unspecified, this is equal to the default @keyLength@ of the default algorithm: for @AES@, 256 bits.
  ** @(RSE2b)@ Returns (or calls back with, if the language cryptographic randomness primitives are blocking or async) the key as a binary (e.g. a byte array, depending on the language)
- 
+
 +h3(#rest-compatibility). Forwards compatibility
 +* @(RSF1)@ The library must apply the "robustness principle":https://en.wikipedia.org/wiki/Robustness_principle in its processing of requests and responses with the Ably system. In particular, deserialization of Messages and related types, and associated enums, must be tolerant to unrecognised attributes or enum values. Such unrecognised values must be ignored.
 +
  h2(#realtime). Realtime client library features
- 
+
  The Ably Realtime client libraries establish and maintain a persistent connection to Ably and provide methods to publish and subscribe to messages over a low latency realtime connection.
 @@ -263,7 +306,9 @@ h3(#realtimeclient). RealtimeClient
  ** @(RTC1b)@ @autoConnect@ boolean is true by default. If true, as soon as the client library is instanced, it will connect to Ably. If false, the client library will wait for an explicit @Connection#connect@ to be called before connecting
@@ -242,9 +242,9 @@ index 3c72399..6e2ddda 100644
  * @(RTC9)@ @RealtimeClient#request@ is a wrapper around @RestClient#request@ (see "RSC19":#RSC19) delivered in an idiomatic way for the realtime library, e.g. in the case of Ruby, with an evented async callback interface
  * @(RTC10)@ The client library should never register any listeners for internal use with the public @EventEmitter@ interfaces (such as @Connection#on@) or message/event subscription interfaces (such as @Channel#subscribe@) in such a way that a user of the library calling @Connection#off()@ or @Channel#unsubscribe()@ to remove all listeners would result in the library not working as expected
 +* @(RTC11)@ Unexpected internal exceptions, as defined in "@RSC20@":RSC20, must be handled as gracefully as possible and reported to Ably's error reporting service when enabled. The aim when handling unexpected exceptions should be to ensure that no invalid or inconsistent state can potentially be left after handling the exception; depending on circumstances the remedial action could include failing the transport, failing the connection, rejecting a message, reinitialising the library completely, etc.
- 
+
  h3(#realtime-connection). Connection
- 
+
 -* @(RTN1)@ @Connection@ connects to the Ably service using a websocket connection. The "ably-js library":https://github.ably.io/ably/ably-js supports additional transports such as Comet and XHR streaming; however non-browser client libraries typically use only a websocket transport
 -* @(RTN2)@ The default host used for realtime websocket connections is @realtime.ably.io@, and the following query string params should be used when opening a new connection:
 +* @(RTN1)@ @Connection@ connects to the Ably service using a "websocket":/concepts/websockets connection. The "ably-js library":https://github.ably.io/ably/ably-js supports additional transports such as Comet and XHR streaming; however non-browser client libraries typically use only a websocket transport
@@ -338,12 +338,12 @@ index 3c72399..6e2ddda 100644
 +** @(RTN23a)@ If a transport does not receive any indication of activity on a transport for a period greater than the sum of the @maxIdleInterval@ (which will be sent in the @connectionDetails@ of the most recent @CONNECTED@ message received on that transport) and the @realtimeRequestTimeout@, that transport should be disconnected. This requirement is not mandatory; in deciding whether to implement, client library developers should take into account whether the transport in question is susceptible to undetected dropped connections. Any message (or non-message indicator, see @RTN23b@) received counts as an indication of activity and should reset the timer, not merely heartbeat messages. However, it must be received (that is, sent from the server to the client); client-sent data does not count.
 +** @(RTN23b)@ When initiating a connection, the client may send a @heartbeats@ param in the querystring, with value @true@ or @false@. If the value is true, the server will use Ably protocol messages (for example, a message with a @HEARTBEAT@ action) to satisfy the @maxIdleInterval@ requirement. If it is false or unspecified, the server is permitted to use any transport-level mechanism (for example, "websocket":/concepts/websockets ping frames) to satisfy this. So for example, for "websocket transports":/concepts/websockets, if the client is able to observe websocket pings, then it should send @heartbeats=false@. If not, it should send @heartbeats=true@.
 +* @(RTN24)@ A connected client may receive a @CONNECTED@ @ProtocolMessage@ from Ably at any point (though is typically triggered by a reauth, see @RTC8a@). The @connectionDetails@ in the @ProtocolMessage@ must override any stored details, see @RTN21@. The @Connection@ should emit an @UPDATE@ event with a @ConnectionStateChange@ object, which should have both @previous@ and @current@ attributes set to @CONNECTED@, and the @reason@ attribute set to to the @error@ member of the @CONNECTED@ @ProtocolMessage@ (if any). (Note that @UPDATE@ should be the only event emitted: in particular, the library must not emit an @CONNECTED@ event if the client was already connected, see @RTN4h@).
- 
+
  h3(#realtime-channels). Channels
- 
+
 @@ -403,9 +457,9 @@ h3(#realtime-channels). Channels
  h3(#realtime-channel). Channel
- 
+
  * @(RTL1)@ As soon as a @Channel@ becomes attached, all incoming messages and presence messages are processed and emitted where applicable. @PRESENCE@ and @SYNC@ messages are passed to the @Presence@ object ensuring it maintains a map of current members on a channel in realtime
 -* @(RTL2)@ The @Channel@ implements @EventEmitter@ and emits @ChannelEvent@ events
 -** @(RTL2a)@ It emits a @ChannelState@ event (one of @INITIALIZED@, @ATTACHING@, @ATTACHED@, @DETACHING@, @DETACHED@, @SUSPENDED@ and @FAILED@) for every channel state change
@@ -474,13 +474,13 @@ index 3c72399..6e2ddda 100644
 +
 +h3(#realtime-compatibility). Forwards compatibility
 +* @(RTF1)@ The library must apply the "robustness principle":https://en.wikipedia.org/wiki/Robustness_principle in its processing of requests and responses with the Ably system. In particular, deserialization of ProtocolMessages and related types, and associated enums, must be tolerant to unrecognised attributes or enum values. Such unrecognised values must be ignored.
- 
+
  h2(#state-conditions-and-operations). State conditions and operations
- 
+
 @@ -859,6 +925,128 @@ h3(#channel-states-operations). @RealtimeChannel.state@ effects on channel opera
- 
+
  </table>
- 
+
 +h2(#push-notifications). Push notifications
 +
 +* @(RSH1)@ @Push#admin@ object provides the following interface:
@@ -604,10 +604,10 @@ index 3c72399..6e2ddda 100644
 +** @(RSH7e)@ @#listSubscriptions(params)@ performs a GET request to "/push/channelSubscriptions":/rest-api#list-channel-subscriptions and returns a paginated result with @PushChannelSubscription@ objects filtered by the provided params, the channel name, the device ID, and the client ID if it exists, as supported by the REST API. A @concatFilters@ param needs to be set to @true@ as well.
 +
  h2. Types
- 
+
  h3(#types). Data types
 @@ -867,14 +1055,14 @@ h4. Message
- 
+
  * @(TM1)@ A @Message@ represents an individual message to be sent or received via the Ably Realtime service.  See the "Ruby Message documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Message, but bear in mind the attributes following underscore naming in Ruby
  * @(TM2)@ Attributes available in a @Message@, see the "Ruby Message documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Message for an explanation of each attribute:
 -** @(TM2a)@ @id@ string - unique ID for this message. If a message received from Ably does not contain an @id@, it should be set to @protocolMsgId:index@, where @protocolMsgId@ is the id of the @ProtocolMessage@ encapsulating it, and @index@ is the index of the message inside the @messages@ array of the @ProtocolMessage@
@@ -623,7 +623,7 @@ index 3c72399..6e2ddda 100644
 +** @(TM2i)@ @extras@ JSON-encodable object, used to contain any arbitrary key value pairs which may also contain other primitive JSON types, JSON-encodable objects or JSON-encodable arrays. The extras field is provided to contain message metadata and/or ancillary payloads in support of specific functionality, e.g. push. Each of these supported extensions is documented separately; for 1.1 the only supported extension is @push@, via the @extras.push@ member. The processing of any other members is undefined
  ** @(TM2f)@ @timestamp@ time in milliseconds since epoch. If a message received from Ably does not contain a @timestamp@, it should be set to the @timestamp@ of the encapsulating @ProtocolMessage@
  * @(TM3)@ @fromEncoded@ and @fromEncodedArray@ are alternative constructors that take an (already deserialized) @Message@-like object (or array of such objects), and optionally a @channelOptions@, and return a @Message@ (or array of such @Messages@) that's decoded and decrypted as specified in @RSL6@, using the cipher in the @channelOptions@ if the message is encrypted, with any residual transforms (ones that the library cannot decode or decrypt) left in the @encoding@ property per @RSL6b@. This is intended for users receiving messages other than from a REST or Realtime channel (for example, from a queue), to avoid them having to parse the @encoding@ string themselves.
- 
+
 @@ -883,12 +1071,13 @@ h4. PresenceMessage
  * @(TP1)@ A @PresenceMessage@ represents an individual presence message to be sent or received via the Ably Realtime service.  See the "Ruby PresenceMessage documentation":http://www.rubydoc.info/gems/ably/Ably/Models/PresenceMessage, but bear in mind the attributes following underscore naming in Ruby
  * @(TP2)@ @PresenceMessage@ @Action@ enum has the following values in order from zero: @ABSENT@, @PRESENT@, @ENTER@, @LEAVE@, @UPDATE@
@@ -640,7 +640,7 @@ index 3c72399..6e2ddda 100644
  ** @(TP3h)@ @memberKey@ string function that combines the @connectionId@ and @clientId@ ensuring multiple connected clients with the same clientId are uniquely identifiable
  * @(TP4)@ @fromEncoded@ and @fromEncodedArray@ are alternative constructors that take an (already deserialized) @PresenceMessage@-like object (or array of such objects), and optionally a @channelOptions@, and return a @PresenceMessage@ (or array of such @PresenceMessages@) that's decoded and decrypted as specified in @RSL6@, using the cipher in the @channelOptions@ if the message is encrypted, with any residual transforms (ones that the library cannot decode or decrypt) left in the @encoding@ property per @RSL6b@. This is intended for users receiving messages other than from a REST or Realtime channel (for example, from a queue), to avoid them having to parse the @encoding@ string themselves.
 @@ -897,7 +1086,16 @@ h4. ProtocolMessage
- 
+
  * @(TR1)@ A @ProtocolMessage@ represents the type used to send and receive messages over the Realtime protocol.  A ProtocolMessage always relates either to the connection or to a single channel only, but can contain multiple individual Messages or PresenceMessages.  See the "Ruby ProtocolMessage documentation":http://www.rubydoc.info/gems/ably/Ably/Models/ProtocolMessage, but bear in mind the attributes following underscore naming in Ruby
  * @(TR2)@ @ProtocolMessage@ @Action@ enum has the following values in order from zero: @HEARTBEAT@, @ACK@, @NACK@, @CONNECT@, @CONNECTED@, @DISCONNECT@, @DISCONNECTED@, @CLOSE@, @CLOSED@, @ERROR@, @ATTACH@, @ATTACHED@, @DETACH@, @DETACHED@, @PRESENCE@, @MESSAGE@, @SYNC@, @AUTH@
 -* @(TR3)@ @ProtocolMessage@ @Flag@ enum has the following values in order from zero: @HAS_PRESENCE@, @HAS_BACKLOG@ and @RESUMED@
@@ -660,7 +660,7 @@ index 3c72399..6e2ddda 100644
 @@ -955,9 +1153,15 @@ h4. TokenDetails
  * @(TD6)@ @TokenDetails#clientId@ attribute contains the @clientId@ assigned to the token. If @clientId@ is @null@ or omitted, then the token is prohibited from assuming a @clientId@ in any operations, however if @clientId@ is a wildcard string @'*'@, then the token is permitted to assume any @clientId@. Any other string value for @clientId@ implies that the @clientId@ is both enforced and assumed for all operations for this token
  * @(TD7)@ @TokenDetails::fromJson@ static factory method that accepts either a @JsonObject@ or a string (which should be parsed as a JSON string), and returns a new @TokenDetails@. Statically typed languages (that expect the @authCallback@ to result in a typed @TokenDetails@ object, rather than, say, a hashmap) must implement this; others may at their discretion.
- 
+
 +h4. Token string
 +
 +* @(TN1)@ There is no @TokenString@ type but in this specification "token string" refers to a string containing a token for authentication with Ably. With the exception of "RSC1a":#RSC1a and "RSA4f":#RSA4f, token strings are handled opaquely by the library, and any use of token strings in the API and library must support any type of token string.
@@ -668,11 +668,11 @@ index 3c72399..6e2ddda 100644
 +* @(TN3)@ A token string (referred to in this specification as a "JWT token string") may be a "JSON Web Token":https://tools.ietf.org/html/rfc7519 satisfying "the Ably requirements for JWTs":https://www.ably.io/documentation/core-features/authentication#ably-jwt.
 +
  h4. AuthDetails
- 
+
 -* @(AD1)@ @AuthDetails@ is a type used with an @AUTH@ protocol messages to send authentication details
 +* @(AD1)@ @AuthDetails@ is a type used with an @AUTH@ protocol message to send authentication details
  * @(AD2)@ @AuthDetails#accessToken@ attribute contains the token string
- 
+
  h4. Stats
 @@ -971,12 +1175,32 @@ h4. Stats
  * @(TS7)@ @Stats.MessageTraffic@ - see the "Ruby MessageTraffic documentation":http://www.rubydoc.info/gems/ably/Ably/Models/Stats/MessageTraffic
@@ -696,9 +696,9 @@ index 3c72399..6e2ddda 100644
 +** @(TS12m)@ @push@ (property present in the JSON) - a @PushStats@ object
 +** @(TS12n)@ @xchgProducer@ (property present in the JSON) - an @XchgMessages@ object
 +** @(TS12o)@ @xchgConsumer@ (property present in the JSON) - an @XchgMessages@ object
- 
+
  h4. ErrorInfo
- 
+
 -* @(TI1)@ Provides a generic Ably @ErrorInfo@ object that contains Ably @code@, @statusCode@ (analogous to HTTP status code) and @message@ attributes
 +* @(TI1)@ Provides a generic Ably @ErrorInfo@ object that contains Ably @code@, @statusCode@ (analogous to HTTP status code), @message@ and @cause@ attributes
  * @(TI2)@ Errors returned from the Ably server are compatible with the @ErrorInfo@ structure and should result in errors that inherit from @ErrorInfo@
@@ -706,9 +706,9 @@ index 3c72399..6e2ddda 100644
 +* @(TI3)@ "Ably-common":https://github.com/ably/ably-common should be included as a submodule so that "consistent error codes":https://github.com/ably/ably-common/blob/master/protocol/errors.json can be used
 +* @(TI4)@ Ably may additionally include a @href@ attribute with a string value. This is included for REST responses to provide a URL for customers to find more help on the error code
 +* @(TI5)@ Log entries generated from errors, where possible, should include a URL to help developers understand the error and resolve the issue. If the URL is not already present within the contents of the @message@ attribute, then it should be included in the log entry as follows: "See @[URL]@". If the @href@ attribute is present, it should be used as the URL. If the @href@ attribute is not present, and the @code@ attribute is present, then the URL should be constructed as follows "https://help.ably.io/error/@[CODE]@". If neither the @href@ or @code@ attributes are present, then an additional URL should not be included in the log entry.
- 
+
  h4. ConnectionStateChange
- 
+
 @@ -1003,8 +1227,8 @@ h4. ConnectionDetails
  * @(CD2)@ Attributes available in @ConnectionDetails@:
  ** @(CD2a)@ @clientId@ contains the client ID assigned to the token. If @clientId@ is @null@ or omitted, then the client is prohibited from assuming a @clientId@ in any operations, however if @clientId@ is a wildcard string @'*'@, then the client is permitted to assume any @clientId@. Any other string value for @clientId@ implies that the @clientId@ is both enforced and assumed for all operations from this client
@@ -760,7 +760,7 @@ index 3c72399..6e2ddda 100644
 +**** @(TO3l8e)@ The size of a @null@ or omitted property is zero
 +*** @(TO3l9)@ @maxFrameSize@ integer - default 524288 (512KiB). The maximum size of a single POST body or "WebSocket":/concepts/websockets frame. This is mostly only relevant for `Rest#request` (e.g. for batch publishes), since publishes will hit the @maxMessageSize@ limit before this
 +*** @(TO3l10)@ @fallbackRetryTimeout@ integer - default 600000 (10 minutes). (After a failed request to the default endpoint, followed by a successful request to a fallback endpoint), the period in milliseconds before HTTP requests are retried  against the default endpoint
- 
+
  h4(#token-params). TokenParams
  * @(TK1)@ A class providing parameters of a token request. These params are used when invoking @Auth#authorize@, @Auth#requestToken@ and @Auth#createTokenRequest@
 @@ -1071,7 +1305,9 @@ h4. AuthOptions
@@ -781,25 +781,25 @@ index 3c72399..6e2ddda 100644
 -*** @(TB2b2)@ an options hash (or language equivalent) consisting of any subset of @CipherParams@ fields that includes a @key@. In this case, the client library should call `getDefaultParams`, passing it the options hash, to obtain a @CipherParams@ instance
 +*** @(TB2b2)@ an options hash (or language equivalent) consisting of any subset of @CipherParams@ fields that includes a @key@. In this case, the client library should call @getDefaultParams@, passing it the options hash, to obtain a @CipherParams@ instance
  * @(TB3)@ The client lib may optionally provide an alternative constructor @withCipherKey@ for ChannelOptions that takes a @key@ only. (This must be differentiated from the normal constructor such that it is clear that the value being passed in is a key). (This is intended for languages where requiring a hash map is unidiomatic)
- 
+
  h4. CipherParams
 @@ -1094,12 +1330,16 @@ h4. CipherParams
  ** @(TZ2d)@ @key@ binary - private key used to encrypt and decrypt payloads
  ** @(TZ2c)@ @mode@ string - Default is @CBC@. Optionally specify cipher mode, currently only @CBC@ is supported
- 
+
 +h3(#types-push). Push notifications
 +
 +TODO
 +
  h3(#defaults). Client Library defaults
- 
+
  The following default values are configured for the client library:
- 
+
  * @(DF1)@ Realtime defaults:
 -** @(DF1a)@ @connectionStateTtl@ integer - default 60s. The duration that Ably will persist the connection state when a Realtime client is abruptly disconnected. When the client is in the @DISCONNECTED@ state, once this TTL has passed, the client should transition the state to the @SUSPENDED@ state signifying that the state is now lost i.e. channels need to be re-attached manually. Note that this default is overriden by @connectionStateTtl@, if specified in the @ConnectionDetails@ of the @CONNECTED@ @ProtocolMessage@
 +** @(DF1a)@ @connectionStateTtl@ integer - default 120s. The duration that Ably will persist the connection state when a Realtime client is abruptly disconnected. When the client is in the @DISCONNECTED@ state, once this TTL has passed, the client should transition the state to the @SUSPENDED@ state signifying that the state is now lost i.e. channels need to be re-attached manually. Note that this default is overriden by @connectionStateTtl@, if specified in the @ConnectionDetails@ of the @CONNECTED@ @ProtocolMessage@
  ** @(DF1b)@ @realtimeRequestTimeout@ - default 10s. When a realtime client library is establishing a connection with Ably, or sending a @HEARTBEAT@, @CONNECT@, @ATTACH@, @DETACH@ or @CLOSE@ @ProtocolMessage@ to Ably, this is the amount of time that the client library will wait before considering that request as failed and triggering a suitable failure condition
- 
+
  h2(#idl). Interface Definition
 @@ -1116,10 +1356,13 @@ Please note the following conventions:
  * Values produced by I/O (e.g. a request) are prefixed with @=> io@. In some platforms (JS) those values are passed as arguments to a callback argument, instead of being returned. I/O always can fail, but how do they fail is undefined in the spec, so it's also undefined here
@@ -812,7 +812,7 @@ index 3c72399..6e2ddda 100644
  * @Data@ is a message payload type, see "RSL4a":#RSL4a for a list of supported payload types
 +* @Stringifiable@ is a type used for unknown configuration parameters that need to be coerced to strings when used, see "RTC1f":#RTC1f for definition
 +* @JSONObject@ and @JSONArray@ denote any type or interface in the target language that represents an "RFC4627":https://www.ietf.org/rfc/rfc4627.txt @object@ or @array@ value respectively. Such types serialize to, and may be deserialized from, the corresponding JSON text. In the specification text above, values of these types are collectively referred to as "JSON-encodable".
- 
+
  ```[python]
  class Rest:
 @@ -1127,8 +1370,16 @@ class Rest:
@@ -882,7 +882,7 @@ index 3c72399..6e2ddda 100644
 +  httpMaxRetryDuration: Duration default 15s // TO3l6
 +  maxMessageSize: Int default 65536 // TO3l8
 +  maxFrameSize: Int default 524288 // TO3l8
- 
+
  class AuthOptions: // RSA8e
 -  authCallback: (() -> io (String | TokenDetails | TokenRequest))? // RSC14c, RSA4, TO3j5, AO2b
 -  authHeaders: [(String, String)]? // RSA8c3, TO3j8, AO2e
@@ -901,12 +901,12 @@ index 3c72399..6e2ddda 100644
 +  token: String? | TokenDetails? | TokenRequest? // RSA4a, RSA4, TO3j2
 +  tokenDetails: TokenDetails? // RSA4a, RSA4, TO3j3
    useTokenAuth: Bool? // RSA4, RSA14, TO3j4
- 
+
  class TokenParams: // RSAA8e
 @@ -1241,12 +1504,16 @@ class RestChannel:
    publish([Message]) => io // RSL1
    publish(name: String?, data: Data?, clientId?: String, extras?: JsonObject) => io // RSL1, RSL1h
- 
+
 +  // Only on platforms that support receiving notifications:
 +  push: PushChannel // RSH4
 +
@@ -923,7 +923,7 @@ index 3c72399..6e2ddda 100644
 @@ -1264,6 +1531,13 @@ class RealtimeChannel:
    unsubscribe((Message) ->) // RTL8a
    unsubscribe(String, (Message) ->) // RTL8a
- 
+
 +class PushChannel:
 +  subscribeDevice() => io // RSH4a
 +  subscribeClientId() => io // RSH4b
@@ -950,7 +950,7 @@ index 3c72399..6e2ddda 100644
 +  enterClient(clientId: String, Data?, extras?: JsonObject) => io // RTP4, RTP14, RTP15
 +  updateClient(clientId: String, Data?, extras?: JsonObject) => io // RTP15
 +  leaveClient(clientId: String, Data?, extras?: JsonObject) => io // RTP15
- 
+
  enum PresenceAction:
    ABSENT // TP2
 @@ -1377,6 +1651,7 @@ class PresenceMessage
@@ -963,7 +963,7 @@ index 3c72399..6e2ddda 100644
    memberKey() -> String // TP3h
 @@ -1455,17 +1730,21 @@ class ConnectionStateChange:
    retryIn: Duration? // RTN14d, TA2
- 
+
  class Stats:
 -  all: StatsMessageTypes // http://goo.gl/TpIh5I
 -  apiRequests: StatsRequestCount // http://goo.gl/lFhZLC
@@ -991,13 +991,13 @@ index 3c72399..6e2ddda 100644
 +  push: Stats.PushStats // TS12m
 +  xchgProducer: Stats.XchgMessages // TS12n
 +  xchgConsumer: Stats.XchgMessages // TS12o
- 
+
  enum StatsIntervalGranularity:
    MINUTE
 @@ -1473,9 +1752,95 @@ enum StatsIntervalGranularity:
    DAY
    MONTH
- 
+
 +class DeviceDetails:
 +  id: String
 +  clientId: String?
@@ -1088,7 +1088,7 @@ index 3c72399..6e2ddda 100644
    message: String // TI1
 +  cause: ErrorInfo? // TI1
    statusCode: Int // TI1
- 
+
  class EventEmitter<Event, Data>:
 @@ -1502,11 +1867,11 @@ class HttpPaginatedResponse // RSC19b
    success: Bool // HP5
@@ -1097,10 +1097,10 @@ index 3c72399..6e2ddda 100644
 -  headers: Hash // HP8
 +  headers: Dict<String, String> // HP8
  ```
- 
+
  h2(#old-specs). Old specs
- 
+
  Use the version navigation to view older versions.  References to diffs for each version are maintained below:
- 
+
 -* v0.8 deprecated in Jan 2017. "View 0.8 → 1.0 changes":https://github.com/ably/docs/blob/source/content/client-lib-development-guide/versions/features-0-8__1-0.diff
 +* v0.8 deprecated in Jan 2017. "View 0.8 → 1.0 changes":https://github.com/ably/docs/blob/master/content/client-lib-development-guide/versions/features-0-8__1-0.diff
