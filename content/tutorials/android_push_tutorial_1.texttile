@@ -15,7 +15,7 @@ The objective of this tutorial is as follows:
 
    
 h2(#step-1). Step 1 - Setup a free account with Ably
-In order to run these tutorials locally, you will need an "Ably API key":/support/solutions/articles/3000030502-setting-up-and-managing-api-keys. If you are not already signed up, you should "sign up now for a free Ably account":/signup. Once you have an Ably account:
+In order to run this tutorial locally, you will need an "Ably API key":/support/solutions/articles/3000030502-setting-up-and-managing-api-keys. If you are not already signed up, you should "sign up now for a free Ably account":/signup. Once you have an Ably account:
 
 1."Log into your app account":/support/solutions/articles/3000030053-how-do-i-access-my-app-dashboard
 2.Under “Your apps”, click on “Manage app” for any app you wish to use for this tutorial, or create a new one with the “Create New App” button
@@ -26,11 +26,13 @@ In order to run these tutorials locally, you will need an "Ably API key":/suppor
     <img src="/assets/tutorials/copy-api-key-db6e1ace44f58ce5cb83b3678191b268dffd62e7b2f673726a7a8e5d40187bcb.png" style="width: 100%" alt="Android Push Demo">
 </a>
 
-5. In order to enable push messaging support in your Android application, you will have to enable 'Push notification' in your Ably environment(production or sandbox) settings.
+5. In order to enable push messaging support in your Android application, you will have to enable 'Push notification' in your Ably dashboard. Go to your ably dashboard and select your environment(production or sandbox) and clicks on 'settings' .
    Remember, by default 'Push Notification' feature is disabled. So you will have to enable it.
    
-6. Under Channel rules, click on Edit button for Channel namespace called 'private'. Change this namespace to whatever name you want. But keep it in mind that you will have to use this name space in
-   your Android application else you will run into trouble. One such common error is "push is not enabled for this channel". In this tutorial, the namespace is used as 'push'.   
+6. Then, 'Under Channel rules', click on Edit button for Channel namespace called 'private'. Change this namespace to whatever name you want. But keep it in mind that you will have to use this name space in
+   your Android application else you will get an error saying 'push support is not enabled'. In this tutorial, the namespace is used as 'push' and in the code you can define a channel name with this namespace.
+   For example, a channel name in this case can be "push:my_channel_name".
+   
    Then tick the checkboxes called 'Persisted' and 'Push notification enabled' and click on Save button.
    
    <a href="/assets/tutorials/push_enabled_1.png" target="_blank">
@@ -72,14 +74,14 @@ bc[sh]. implementation 'io.ably:ably-android:1.1.0-RC1'
 ```[sh]
 LoginActivity.kt    
 ```
-5. Now we need to intialize 'Ably' system. In order to initialize it, we need to set the environment and add an authentication callback. This callback will be fired when 'authenticate()' method is called.
-   In the callback, this clien ID will be persisted for further use. Also, this cliendID will be sent to local server to validate that will return a JSON response. You can take a look at the structure of 
-   this JSON file.
+5. Now we need to intialize 'Ably' system. The initialization process involves couple of steps. The first thing is to add a callback support for 'token authentication'. This callback will be fired when 'authenticate()' method is called.
+   In the callback, you will get a client ID and this cliendID will be sent to local server which will return a JSON response. The objective of sending this client ID to local server is to make a 'Token Request'. In addition to this, this client ID
+   will be used to validate and based on its value, priviliges will be assigned to this client ID. If client ID is empty, the device cannot make a push message.You can take a look at the below JSON response for more information.
 
 ```[sh]
 {"keyName":"yL8SIw.DC-eZw","capability":"{\"*\":[\"publish\",\"subscribe\"]}","clientId":"test","timestamp":1546876908357,"nonce":"4358804395382545","mac":"5ZCclVmitrvBN5rUMZDTMaXSJzDruv1vnBHoO9pwcBo="}
 ```
-   You can take a look at the following code for more details.
+   You can take a look at the following code for more details about the steps mentioned above.
 ```[sh]
    private fun initAbly() {
         val clientOptions = ClientOptions(apiKey)
@@ -123,7 +125,7 @@ LoginActivity.kt
         }
     }
 ```   
-6. Go ahead and add a method for authentication in the above activity. The authenticate method will be fired when a user clicks on 'Login' button.
+6. Go ahead and add a method for authentication in the above activity. The 'authenticate()' method will be fired when the user clicks on 'Login' button.
 ```[sh]
     private fun authenticate(clientId: String?) {
         val params = Auth.TokenParams()
@@ -134,9 +136,29 @@ LoginActivity.kt
             e.printStackTrace()
         }
     }
-
 ```
-7.  Next, we need to subscribe push channel. For that, we need to add a method called 'pushSubscribe()' in Login activity. The following method will subscribe a device to push channel.
+You can refer 'Ably token authentication tutorial':/tutorials/token-authentication for more information.
+
+7.  Now we need to activate push. The objective of this step is to activate the 'push system' in Ably back end and it may take some time as it is a blocking operation.
+```[sh]
+fun activatePush(wait:Boolean = false):Boolean {
+
+        /* activate Firebase */
+        logger.i("activatePush()", "initialising Firebase")
+        FirebaseInstanceId.getInstance().getToken()
+        //AblyPushRegistrationService.onNewRegistrationToken(this, FirebaseInstanceId.getInstance().getToken())
+        /* ensure the Ably library registers any new token with the server */
+        logger.i("activatePush()", "activating push system .. waiting")
+        ablyRealtime.push.activate()
+        if(wait) {
+            /* FIXME: wait for actual state change */
+            Thread.sleep(4000)
+        }
+        logger.i("activatePush()", ".. activated push system")
+        return true
+    }
+```
+8.  Next, we need to subscribe to push channel. For that, we need to add a method called 'pushSubscribe()' in Login activity. The following method will subscribe a device to push channel.
 ```[sh]
  fun pushSubscribe(testChannelName:String = channelName, wait:Boolean = true):Boolean {
         logger.i("pushSubscribe()", "push subscribing to channel")
@@ -167,14 +189,11 @@ LoginActivity.kt
     }
 ```
 
-You can refer 'Ably token authentication tutorial':/tutorials/token-authentication for more information.
-
 h2(#step-4). Step 4 - Setup Node.js server for authentication
 
-1. In this step, we are going to authenticate and get a token from a local node.js server.  This step is for authenticating a user based on a 'token'.
-
+1. In this step, we are going to authenticate and get a token from a local node.js server.  This step is for authenticating a user based on its client ID.
 2. Install node.js server if you do not have it.
-3. Next, create a folder called 'pushdemo' and install Node.js server components using 'Node Package Manager' a.k.a npm
+3. Next, create a folder called 'pushdemo' and install Node.js server components using 'Node Package Manager' a.k.a 'npm'
 
 4. Create a file called 'app.js' and add the following code for authentication.
 
@@ -200,15 +219,14 @@ h2(#step-4). Step 4 - Setup Node.js server for authentication
   }
 ```
 The objective of the above step is to provide privilege to the device based on authentication. If the username is empty, then the device can only subscribed to a push. It will not be able
-to push a message.
+to make a push from device.
 
 h2. Tokens
 All clients authenticating with Ably must use either an API key or a token. Tokens are obtained by sending a 'TokenRequest' containing the required token spec to the Ably service. The token may include a set of capabilities (permissions such as subscribe access to a specific channel), an identity (such as the logged-in user’s unique ID) or a TTL (the time before the token expires).
 
 h2. Token Requests
 Token requests, unlike tokens, are created and signed by your server without having to communicate with Ably. A token request is simply a JSON object that contains a pre-authorization from your server for a client, effectively stating “Ably, with this signed token, I authorize you to issue a token according to the permissions, ID and TTL specified, to whoever hands this to you”. Ably is then able to inspect the signature to ensure that the token request is indeed from your server and signed with your private API key. Ably will then issue a token to the client requesting the token. Ably ensures that token requests can only be used soon after creation and can only be used once.
-
-   In order to issue a token, we need to make a token request.
+In order to issue a token, we need to make a token request as follows.
 ```[sh]
    rest.auth.createTokenRequest(tokenParams, function(err, tokenRequest) {
     if (err) {
