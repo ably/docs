@@ -1,0 +1,348 @@
+---
+title: Android Push Tutorial
+section: tutorials
+index: 56
+---
+
+Ably supports two types of push mechanism: Push admin and Push subscribe.  The push admin is used to publish a message to a device directly using 'device ID' whereas
+push subscibe is to pusblish a message to a device using its 'client ID'.
+
+The objective of this tutorial is as follows:
+
+   1. Authenticating and registering device automatically
+   2. Subscribe to Push channel automatically
+   3. Publish a message to the subscribed device using its device ID and client ID
+   
+<%= partial 'tutorials/_step-1-setup-free-account' %>
+
+In order to enable push messaging support in your Android application, you will have to enable 'Push notification' in your Ably dashboard. Go to your ably dashboard and select your environment(production or sandbox) and clicks on 'settings' .
+Remember, by default 'Push Notification' feature is disabled. So you will have to enable it.
+   
+Then, 'Under Channel rules', click on 'Edit' button for Channel namespace called 'private'. Change this namespace to whatever name you want. But keep it in mind that you will have to use this namespace in
+your Android application else you will get an error saying 'push support is not enabled'. In this tutorial, the namespace is used as 'push' and in the code, you can define a channel name with this namespace.
+For example, a channel name, in this case, can be "push:my_channel_name".
+   
+Then tick the checkboxes called 'Persisted' and 'Push notification enabled' and click on Save button.
+   
+   <a href="/assets/tutorials/push_enabled_1.png" target="_blank">
+    <img src="/assets/tutorials/push_enabled_1.png" style="width: 100%" alt="Android Push Demo">
+   </a>
+
+h2(#step-2). Step 2 - Setup a free account with Firebase
+In order to make a push notification successfully, you will need a 'Firebase' API Key and  will get it once you register your application with Firebase.
+
+<a href="/assets/tutorials/firebase_setup_1.png" target="_blank">
+    <img src="/assets/tutorials/firebase_setup_1.png" style="width: 100%" alt="Android Push Demo">
+</a>
+
+Enter a package name as below and click on Register button:
+
+`com.android.ably.pushdemo`
+
+Next, you will have to download 'google-services.json' file which will contain your app key. Copy this file under 'app' module of your android application.
+
+<a href="/assets/tutorials/andoid_app_module.png" target="_blank">
+    <img src="/assets/tutorials/andoid_app_module.png" style="width: 100%" alt="Android Push Demo">
+</a>
+
+Also, you need to get the 'server key' from 'Firebase Cloud Messaging' tab and update this key in 'Notifications tab of your Ably Dashboard'. This step is MANDATORY. Otherwise, you will not get any push message in the app.
+
+<a href="/assets/tutorials/andoid_app_module.png" target="_blank">
+    <img src="/assets/tutorials/andoid_app_module.png" style="width: 100%" alt="Android Push Demo">
+</a>
+
+h2(#step-3). Step 3 - Create an Android Project
+
+Create an Android project with package id as 'com.android.ably.pushdemo'
+Open you 'build.gradle' under 'app' module and add firebase related dependencies:
+
+```[gradle]  
+        implementation 'com.google.firebase:firebase-messaging:17.3.4'
+        implementation 'com.google.firebase:firebase-core:16.0.6'
+        implementation 'com.google.code.gson:gson:2.8.4'
+```
+Next, add dependencies for 'Ably' 
+
+```[gradle] 
+implementation 'io.ably:ably-android:1.1.0-RC1' 
+```
+Next, create an 'Activity' like this below:
+
+```[android]
+AblyLoginActivity.java    
+```
+Client ID: When a client is authenticated and connected to Ably, they are considered to be an authenticated client. However, whilst an authenticated client has a verifiable means to authenticate with Ably, they do not necessarily have an identity. When a client is assigned a trusted identity, it will be given a client ID. You can inspect a sample JSON response having a client ID.
+Now we need to initialize 'Ably' system. The initialization process involves a couple of steps. The first thing is to add callback support for 'token authentication'. This callback will be fired when 'authenticate()' method is called.
+In the callback, you will get a client ID and this clientID will be sent to local server which will return a JSON response. The objective of sending this client ID to local server is to make a 'Token Request'. In addition to this, this client ID
+will be used to validate and based on its value, privileges will be assigned to this client ID. If the client ID is empty, the device cannot make a push message. You can take a look at the below JSON response for more information.
+   
+```[json]
+{"keyName":"yL8SIw.DC-eZw","capability":"{\"*\":[\"publish\",\"subscribe\", \"push-admin\", \"push-subscribe\"]}","clientId":"test","timestamp":1546876908357,"nonce":"4358804395382545","mac":"5ZCclVmitrvBN5rUMZDTMaXSJzDruv1vnBHoO9pwcBo="}
+```
+You can take a look at the following code for more details about the steps mentioned above.
+
+```[android]
+   private void initAbly() throws AblyException {
+        ClientOptions clientOptions = new ClientOptions(apiKey);
+        clientOptions.environment = "production";
+        clientOptions.logLevel = io.ably.lib.util.Log.VERBOSE;
+        clientOptions.authCallback = new Auth.TokenCallback() {
+            @Override
+            public Object getTokenRequest(Auth.TokenParams tokenParams) throws AblyException {
+                if (firstStart) {
+                    firstStart = false;
+                    String clientId = preferences.getString("clientId", null);
+                    if (clientId != null) {
+                        tokenParams.clientId = tokenRequest.clientId;
+                    }
+                }
+                String httpAuthResponse = sendRequestToServer(tokenParams.clientId);
+                tokenRequest = new Gson().fromJson(httpAuthResponse, Auth.TokenRequest.class);
+                preferences.edit().putString("clientId", httpAuthResponse).commit();
+                setButtonsState();
+                return tokenRequest;
+            }
+        };
+        ablyRealtime = new AblyRealtime(clientOptions);
+        ablyRealtime.setAndroidContext(this);
+        ablyRealtime.connection.once(ConnectionState.connected, new ConnectionStateListener() {
+            @Override
+            public void onConnectionStateChanged(ConnectionStateListener.ConnectionStateChange state) {
+                /* Always do UI updates on UI thread */
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        String user = ablyRealtime.auth.clientId;
+                        String capability = ablyRealtime.auth.getTokenDetails().capability;
+                        Toast.makeText(getBaseContext(), "You are now connected to Ably \n" +
+                                "User: " + user + " \n" +
+                                "Capabilities: " + capability, Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        });
+    }
+```   
+Note: If client_id is null or empty, then the user cannot push a message because the user will be having only 'subscribe' capability. In that case, the application will throw an error.
+
+Go ahead and add a method for authentication in the above activity. The 'authenticate()' method will be fired when the user clicks on the 'Login' button.
+
+```[android]
+private void authenticate(String clientId) {
+        final Auth.TokenParams params = new Auth.TokenParams();
+        params.clientId = clientId;
+        try {
+            ablyRealtime.auth.requestToken(params, null);
+        } catch (AblyException e) {
+            e.printStackTrace();
+        }
+    }
+```
+You can refer 'Ably token authentication tutorial':/tutorials/token-authentication for more information.
+
+Now we need to activate push. The objective of this step is to activate the 'push system' in Ably back end. This activation process may take some time as it is a blocking operation.
+
+```[android]
+private boolean activatePush(boolean wait) throws AblyException {
+        logger.i("activatePush()", "initialising Firebase");
+        String token = FirebaseInstanceId.getInstance().getToken();
+        logger.i("activatePush()", "activating push system .. waiting");
+        ablyRealtime.push.activate();
+
+        if(wait) {
+            /* FIXME: wait for actual state change */
+            try {
+                Thread.sleep(4000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        logger.i("activatePush()", ".. activated push system");
+        return true;
+    }
+```
+Next, we need to subscribe to push channel. For that, we need to add a method called 'pushSubscribe()' in 'AblyLoginActivity.java'. The following method will subscribe a device to push channel.
+
+```[android]
+ private boolean pushSubscribe(String channelName, boolean wait) {
+        logger.i("pushSubscribe()", "push subscribing to channel");
+        Channel pushChannel = ablyRealtime.channels.get(channelName);
+        final Object waiter = new Object();
+        synchronized (waiter) {
+            pushChannel.push.subscribeDeviceAsync(new CompletionListener() {
+                @Override
+                public void onSuccess() {
+                    logger.i("pushSubscribe()", "subscribe success");
+                    synchronized(waiter) {
+                        waiter.notify();
+                    }
+                }
+
+                @Override
+                public void onError(ErrorInfo reason) {
+                    logger.e("pushSubscribe()", "failed: err: " + reason.message);
+                    synchronized(waiter) {
+                        error = reason;
+                        waiter.notify();
+                    }
+                }
+            });
+
+            if(wait) {
+                logger.i("pushSubscribe()", "waiting for push subscription to channel ..");
+                try {
+                    waiter.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                logger.i("pushSubscribe()", ".. push subscription complete");
+            }
+        }
+
+        return true;
+    }
+```
+
+h2(#step-4). Step 4 - Setup Node.js server for authentication
+
+In this step, we are going to authenticate and get a token from a local node.js server.  This step is for authenticating a user based on its client ID.
+Install node.js server if you do not have it.
+Next, create a folder called 'pushdemo' and install Node.js server components using 'Node Package Manager' a.k.a 'npm'
+
+Create a file called 'app.js' and add the following code for authentication.
+
+In app.js, we need to check the capability of a user. If the username is empty, which means that the user is not authenticated and the method will
+   construct only 'subscibe' capabilities. The below code handles both the scenarios:
+   
+```[javascript] 
+   /* Check if the user wants to log in */
+    if (username !== undefined) {
+    /* Issue a token request with pub & sub permissions on all channels +
+       configure the token with an identity */
+       console.log(req.cookies.username);
+    tokenParams = {
+      'capability': { '*': ['publish', 'subscribe',  'push-admin', 'push-subscribe'] },
+      'clientId': username
+    };
+  } else {
+    /* Issue a token with subscribe privileges restricted to one channel
+       and configure the token without an identity (anonymous) */
+    tokenParams = {
+      'capability': { 'notifications': ['subscribe'] }
+    };
+  }
+```
+The objective of the above step is to provide privilege to the device based on authentication. If the username is empty, then the device can only be subscribed to a push notification. It will not be able to send a push message from the device.
+
+h2. Tokens
+All clients authenticating with Ably must use either an API key or a token. Tokens are obtained by sending a 'TokenRequest' containing the required token spec to the Ably service. The token may include a set of capabilities (permissions such as subscriber access to a specific channel), an identity (such as the logged-in user’s unique ID) or a TTL (the time before the token expires).
+
+h2. Token Requests
+Token requests, unlike tokens, are created and signed by your server without having to communicate with Ably. A token request is simply a JSON object that contains a pre-authorization from your server for a client, effectively stating “Ably, with this signed token, I authorize you to issue a token according to the permissions, ID, and TTL specified, to whoever hands this to you”. Ably is then able to inspect the signature to ensure that the token request is indeed from your server and signed with your private API key. Ably will then issue a token to the client requesting the token. Ably ensures that token requests can only be used soon after creation and can only be used once.
+In order to issue a token, we need to make a token request as follows.
+
+```[javascript]
+   rest.auth.createTokenRequest(tokenParams, function(err, tokenRequest) {
+    if (err) {
+      res.status(500).send('Error requesting token: ' + JSON.stringify(err));
+    } else {
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.stringify(tokenRequest));
+    }
+   });
+```
+
+h2(#step-5). Step 5 - Testing
+
+In order to test how a direct 'push' messaging works, you need to make a json data like this:
+
+```[json]
+   {
+ "recipient": {
+   "deviceId": "01D0BY616FCSGB14N5ZPYG0ZVY"
+ },
+
+  "notification": {
+    "title": "Hello from Ably!",
+    "body": "Example push notification from Ably."
+  },
+  
+  "data": {
+    "foo": "bar",
+    "baz": "qux"
+  }
+}
+```   
+Next we will develop a html interface to push a message directly to the device having a 'deviceId' with the help of JavaScript code. Please find the JavaScript code below:
+
+```[javascript]
+    var push_data = '{'
+ + '"recipient": {'
+ +  '"deviceId": "01D0BY616FCSGB14N5ZPYG0ZVY"'
+ +'},'
+ + '"notification": {'
+ + '"title": "Hello from Ably!",'
+ + '"body": "Example push notification from Ably JavaScript client."'
+ + '},'
+ + '"data": {'
+ + '"foo": "bar",'
+ + '"baz": "qux"'
+ + '}'
++'}'; 
+  
+  var API_KEY = "FJWZrQ.swLeTg:_R4gkfPIxXcj3tRy";
+
+  $.ajax({
+    type: 'POST',
+    url: 'https://rest.ably.io/push/publish',
+     headers: {
+    "Authorization": "Basic " + btoa(API_KEY)
+    },
+    data: push_data,
+    success: function(data) { alert('success '); },
+    contentType: "application/json",
+    dataType: 'json'
+});
+```
+Visit @localhost:3000@ in your browser
+
+Upon clicking on 'Push' button, it will publish a push message to the device. You can see this push message in logcat of your emulator.
+
+```[android]
+8435-18435/com.android.ably.pushdemo I/System.out:  push message received....{baz=qux, body=Example push notification from Ably JavaScript client., foo=bar, title=Hello from Ably!}
+```
+
+Similarly, you can use 'clientId' for pushing message to the device using its 'clientId'. Please check the below 'JavaScript' code.
+
+```[javascript]
+    var push_data = '{'
+ + '"recipient": {'
+ +  '"clientId": "01D0BY616FCSGB14N5ZPYG0ZVY"'
+ +'},'
+ + '"notification": {'
+ + '"title": "Hello from Ably!",'
+ + '"body": "Example push notification from Ably JavaScript client."'
+ + '},'
+ + '"data": {'
+ + '"foo": "bar",'
+ + '"baz": "qux"'
+ + '}'
++'}'; 
+  
+  var API_KEY = "FJWZrQ.swLeTg:_R4gkfPIxXcj3tRy";
+
+  $.ajax({
+    type: 'POST',
+    url: 'https://rest.ably.io/push/publish',
+     headers: {
+    "Authorization": "Basic " + btoa(API_KEY)
+    },
+    data: push_data,
+    success: function(data) { alert('success '); },
+    contentType: "application/json",
+    dataType: 'json'
+});
+```
+Now you saw how we can push a message to the device and what are the steps involved in it. You can download the source code for this tutorial from git.
+
