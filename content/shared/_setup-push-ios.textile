@@ -1,0 +1,146 @@
+If you have to create a new application make sure the bundle ID matches what we created in our previous steps. We will also be using cocoapods, you can follow the installation instructions <a href="https://cocoapods.org">here.</a>
+
+Open your Podfile and add the following as a dependency:
+
+```
+use_frameworks!
+pod 'Ably'
+```
+
+In your terminal run the following to install the pod:
+
+```
+$ pod install
+```
+
+From this point on make sure you are using the xcode workspace. Open your target settings and go to the capabilities tab. Scroll down and turn on the Push Notifications capability.
+
+<a href="/images/tutorials/ios-capabilities-push.png" target="_blank">
+  <img src="/images/tutorials/ios-capabilities-push.png" style="width: 100%" alt="iOS Push Capabilities">
+</a>
+
+Now open your AppDelegate.swift file and replace the contents with the following. Replace the contents of "YOUR_API_KEY" with your Ably api key that can be found on your dashboard.
+
+```[swift]
+import UIKit
+import Ably
+import UserNotifications
+
+@UIApplicationMain
+class AppDelegate: UIResponder, UIApplicationDelegate, ARTPushRegistererDelegate {
+    var window: UIWindow?
+    var realtime: ARTRealtime!
+    var channel: ARTRealtimeChannel!
+    var subscribed = false
+
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        DispatchQueue.main.async() {
+            print("** didRegisterForRemoteNotificationsWithDeviceToken")
+            ARTPush.didRegisterForRemoteNotifications(withDeviceToken: deviceToken, realtime: self.getAblyRealtime())
+        }
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        DispatchQueue.main.async() {
+            print("** didFailToRegisterForRemoteNotificationsWithError")
+            ARTPush.didFailToRegisterForRemoteNotificationsWithError(error, realtime: self.getAblyRealtime())
+        }
+    }
+
+    func getOptions() -> ARTClientOptions {
+        let options = ARTClientOptions()
+        options.clientId = "push-demo"
+        options.key = "YOU_API_KEY"
+        options.logLevel = .info
+        options.useTokenAuth = true
+        return options
+    }
+
+    // Builds/memoizes a realtime client.
+    // Probably needs a mutex of some sort? Something like DispatchQueue.main.sync{} ?
+    func getAblyRealtime() -> ARTRealtime {
+        if let realtime = self.realtime {
+            return realtime
+        }
+        self.realtime = ARTRealtime(options: getOptions())
+        return self.realtime
+    }
+
+
+    // Callback for realtime.activate
+    func didActivateAblyPush(_ error: ARTErrorInfo?) {
+        if let error = error {
+            // Handle error
+            print("** push activation failed, err=\(String(describing: error))")
+            return
+        }
+        print("** push activated")
+
+        self.channel = self.realtime.channels.get("push:test")
+
+        // Attach to channel, then subscribe device, then broadcast a push which we expect to eventually receive baclk.
+        self.channel.attach() { (err) in
+            print("** channel attached, err=\(String(describing: err))")
+
+            self.channel.push.subscribeDevice { (err) in
+                print("** channel.push.subscribeDevice: err=\(String(describing: err))")
+                self.subscribed = true
+            }
+        }
+    }
+
+    // Callback for realtime.deactivate
+    func didDeactivateAblyPush(_ error: ARTErrorInfo?) {
+        if let error = error {
+            // Handle error
+            print("** push de-activation failed", error)
+            return
+        }
+        print("** push de-activated, re-activating")
+        self.realtime.push.activate()
+    }
+
+    // No idea when this is called :|
+    func ablyPushCustomRegister(_ deviceDetails: ARTDeviceDetails?, callback: @escaping ((String?, ARTErrorInfo?) -> Void)) {
+        print("** custom register")
+        callback("update token", nil)
+    }
+
+    // iOS Push notification handler
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any]) {
+        print("** received notification: \(userInfo)")
+    }
+
+
+
+    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Override point for customization after application launch.
+        print("** hello")
+
+        UNUserNotificationCenter.current().requestAuthorization() { (ok, err) in
+            DispatchQueue.main.async() {
+                UIApplication.shared.registerForRemoteNotifications()
+                print("** after registerForRemoteNotifications")
+            }
+        }
+
+        self.realtime = self.getAblyRealtime()
+
+        // Deactivating may be necessary as the deployed app might have state inconsistent with the Ably app
+        // print("** De-activating Ably push")
+        // self.realtime.push.deactivate()
+
+        self.realtime.connection.on { (stateChange) in
+            print("** connection state change: \(String(describing: stateChange))")
+        }
+
+        self.realtime.connection.on(ARTRealtimeConnectionEvent.connected) { (stateChange) in
+            print("** connected, resetting Ably push")
+            self.realtime.push.deactivate()
+        }
+
+        return true
+    }
+}
+```
