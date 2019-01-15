@@ -10,21 +10,70 @@ In this tutorial we will establish a DSX subscriber account and connect to a rea
 
 <%= partial 'tutorials/_step-1-setup-free-account' %>
 
-h2. Step 2 - Locating the product on the Ably Hub
+h2. Step 2 - Setting up your subscription via the DSX dashboard
 
-Most companies make their open as well as commercial streams publicly available through the "Ably Hub":/hub, which is a catalogue of data streams. For this tutorial, we'll be making use of the *London tube schedule updates* data stream containing the data provided by "Transport For London (TFL)":https://tfl.gov.uk/. As the names suggests, TFL is a local government body responsible for the transport system in Greater London, England. All transport related data can be obtained for free from their official website. Ideally, a producer of data would push/publish their data directly into Ably DSX, for others to subscribe, however, Ably pulls TFL's data from public various sources and makes it available as a realtime stream that anyone can subscribe to, for the purpose of demonstrating the functionality of DSX.
+For this tutorial, we'll be making use of the *London tube schedule updates* data stream containing the data provided by "Transport For London (TFL)":https://tfl.gov.uk/. As the names suggests, TFL is a local government body responsible for the transport system in Greater London, England. All transport related data can be obtained for free from their official website. 
 
-The data stream we'll be using is listed as "London tube schedule updates":https://www.ably.io/hub/products/10 on the "Ably Hub":https://www.ably.io/hub/.
+p(did-you-know). Most companies make their commercial and open data streams publicly available through the "Ably Hub":/hub, which is a hosted catalogue of data streams. The data stream we'll be using in this tutorial is listed as "London tube schedule updates":https://www.ably.io/hub/products/10 on the "Ably Hub":https://www.ably.io/hub/. These products require the owner to confirm access, and others may charge for usage of their product.
 
-<a href="/images/tutorials/tfl-tubes-screenshot.png" target="_blank">
-    <img src="/images/tutorials/tfl-tubes-screenshot.png" style="width: 100%" alt="London tube schedule updates product on Ably Hub">
+Ideally, a producer of data would push/publish their data directly into Ably DSX, for others to subscribe, however, for the purpose of demonstrating the functionality of DSX, Ably pulls TFL's data from various public sources and makes it available as a realtime stream that anyone can subscribe to.
+
+The full documentation for the TFL data stream can be found on the "TFL DSX Source":https://dsx-sources.herokuapp.com/source/tfl page.
+
+After you've been added as a subscriber by the data stream provider, you should see the data stream listed on your DSX consumer dashboard. To reach that page, log into your DSX account and select the consumer dashboard as shown below:
+
+<a href="/images/tutorials/dsx-dashboard.png" target="_blank">
+  <img src="/images/tutorials/dsx-dashboard.png" style="width: 100%" alt="DSX Dashboard">
 </a>
 
-The full documentation for this product can be found on the "TFL DSX Source":https://dsx-sources.herokuapp.com/source/tfl page.
+To confirm the subscription to the said data stream, switch to the 'Subscriptions' tab and you should see the data stream listed there. You are also shown the message quota, license type and other information related to your subscription to the said data steram.
 
-Some products require the owner to confirm access, and others may charge for usage of their product. For this product however, assuming that DSX is enabled on your account, your application should be automatically accepted, and you should now be able to use the product straight away.
+<a href="/images/tutorials/subscriptions-tab-dsx.png" target="_blank">
+  <img src="/images/tutorials/subscriptions-tab-dsx.png" style="width: 100%" alt="DSX Dashboard">
+</a>
 
-h2. Step 3 - Determining the channel names
+Now that we have a confirmed subscription with the product, let's go ahead and write some actual code to start receiving updates.
+
+h2. Step 3 - Buiding the HTML to display results
+
+For the purpose of this tutorial, we'll be subscribing to arrival updates for London tube lines at certain stations, that you can select from a drop down menu. Go ahead and paste the following basic HTML in a file and name it @index.html@. Note that each of the options in the drop down menu, corresponds to the respective Naptan Code as illustrated in the "Ably-TFL product documentation":https://dsx-sources.herokuapp.com/source/tfl. The Naptan Code is a combination of @line@ and @Station ID@. Note that we've also added a reference to Ably's javascript library, and a @main.js@ file where we'll include the app logic.
+
+```[html]
+<html>
+<head>
+  <title>DSX subscriber tutorial</title>
+  <script src="https://cdn.ably.io/lib/ably.min-1.js" crossorigin="anonymous"></script>
+  <script src="main.js"></script>
+</head>
+<body>
+  <div>
+    <div>
+      Station:
+      <select id="naptan-code">
+        <option value="northern:940GZZLUEUS">Euston Underground Station</option>
+        <option value="northern:940GZZLUKSX">Kings Cross Underground Station</option>
+        <option value="jubilee:940GZZLUWSM">Westminster Underground Station</option>
+        <option value="northern:940GZZLUWLO">Waterloo Underground Station</option>
+      </select>
+    </div>
+  </div>
+  <table id="table-tfl" class="c-flashbox" style="margin-top: 20px;">
+    <thead>
+      <tr>
+        <th>Due</th>
+        <th>Destination</th>
+        <th>Platform</th>
+        <th>Line</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+</body>
+</html>
+```
+
+h2. Step 4 - Determining the channel names
 
 In DSX, the channels available in any product are be determined by following the name convention described below:
 
@@ -34,11 +83,59 @@ For the current product, we have three categories of channels, each containing d
 
 1. Arrivals at a station, with namespace @tube:{{line}}:{{station}}:arrivals@
 2. Disruptions on a line, with namespace @tube:{{line}}:disruptions@
-3. Disruptions on all lines, with namespace @tube:disruptins@
+3. Disruptions on all lines, with namespace @tube:disruptions@
 
-h2. Step 4 - Attaching and subscribing to a channel
+h2. Step 5 - Attaching and subscribing to a channel
 
-For the purpose of this tutorial, we'll be subscribing to arrival updates of certain tubes
+Let's go ahead and attach our client to the arrivals channel, i.e, the first one from the list above. If you are already a user of "Ably's DSN platform":/realtime/channels, you'll observe that the subscription is established in exactly the same way in DSX, as in DSN.
+
+First, instance the Ably client as shown below. Make sure to replace the placeholder with your actual API key.
+
+```[javascript]
+var apiKey = 'YOUR-API-KEY';
+var ably = new Ably.Realtime(key: apiKey);
+```
+
+Note that for the purpose of this tutorial we've used the API key directly to authenticate with Ably. This is generally "not a recommended authentication strategy":/best-practice-guide#using-api-key-client-side as the API key is prone to compromise while travelling on the internet. Ably offers "Token Authentication":/core-features/authentication#token-authentication which is more secure and is generally used in production environments. 
+
+Next, we need to add a subscription to the channel @[product:TFL/Tube]tube:' + name + ':arrivals@ where 'name' is the name of the station chosen by the user from drop down menu in our HTML above.
+
+```[javascript]
+  var $resultTfl = $('#result-tfl')
+  var $tableTfl = $('#table-tfl'),
+  var tableBodyTfl = document.getElementById('table-tfl').getElementsByTagName('tbody')[0],
+  var tableTflData = {},
+  var tableTfl = {}
+  function subscribeTfl(name) {
+      let newBodyTfl = document.createElement('tbody');
+      tableBodyTfl.parentNode.replaceChild(newBodyTfl, tableBodyTfl);
+      tableBodyTfl = newBodyTfl;
+      channelTfl = ably.channels.get('[product:TFL/Tube]tube:' + name + ':arrivals');
+      historyTfl();
+      channelTfl.subscribe(function(msg) {
+        updateTfl(msg.data);
+      });
+    }
+
+    function historyTfl() {
+      channelTfl.attach(function(err) {
+        channelTfl.history({ untilAttach: true, limit: 1 }, function(err, resultPage) {
+          if(err) return;
+          let recentMessage = resultPage.items[0];
+          if(recentMessage) {
+            updateTfl(recentMessage.data);
+          }
+        });
+      });
+    }
+    
+    $('select#naptan-code').on('change', function() {
+      subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
+    });
+
+    subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
+```
+
 
 h2. Next steps
 
