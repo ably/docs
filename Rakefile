@@ -3,7 +3,7 @@
 require 'rubygems'
 require 'bundler/setup'
 
-require 'nanoc3/tasks'
+require 'nanoc/tasks'
 require File.join(__FILE__, '../config/config')
 
 def ok_failed(condition)
