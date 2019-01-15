@@ -137,7 +137,7 @@ $(function() {
   }
   if (langList.find('li').length) {
     $('body').append(globalLangContainer);
-    $('#documentation').addClass('with-langauage-selector');
+    $('#documentation-container').addClass('with-langauage-selector');
   }
 
   function currentLang() {
