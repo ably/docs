@@ -1,5 +1,5 @@
 module PartialHelper
-  def partial(path, indent: 0, skip_first_indent: true, vars: Nanoc::Context.new({}))
+  def partial(path, indent: 0, skip_first_indent: true, vars: Nanoc::Int::Context.new({}))
     content_path = File.expand_path('../../../content', __FILE__)
     path = File.join(content_path, "#{path}#{File.extname(item.raw_filename)}")
     raise "Partial #{path} was not found" unless File.exists?(path)
@@ -14,7 +14,7 @@ module PartialHelper
   end
 
   def vars(hash)
-    {vars: Nanoc::Context.new(hash)}
+    {vars: Nanoc::Int::Context.new(hash)}
   end
 end
 
