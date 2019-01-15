@@ -36,14 +36,17 @@ Now that we have a confirmed subscription with the product, let's go ahead and w
 
 h2. Step 3 - Buiding the HTML to display results
 
-For the purpose of this tutorial, we'll be subscribing to arrival updates for London tube lines at certain stations, that you can select from a drop down menu. Go ahead and paste the following basic HTML in a file and name it @index.html@. Note that each of the options in the drop down menu, corresponds to the respective Naptan Code as illustrated in the "Ably-TFL product documentation":https://dsx-sources.herokuapp.com/source/tfl. The Naptan Code is a combination of @line@ and @Station ID@. Note that we've also added a reference to Ably's javascript library, and a @main.js@ file where we'll include the app logic.
+For the purpose of this tutorial, we'll be subscribing to arrival updates for London tube lines at certain stations, that you can select from a drop down menu. Go ahead and paste the following basic HTML in a file and name it @index.html@. Note that each of the options in the drop down menu, corresponds to the respective Naptan Code as illustrated in the "Ably-TFL product documentation":https://dsx-sources.herokuapp.com/source/tfl. The Naptan Code is a combination of @line@ and @Station ID@. Note that we've also added a reference to Ably's javascript library, jQuery library and a @main.js@ file where we'll include our app logic.
 
 ```[html]
 <html>
 <head>
   <title>DSX subscriber tutorial</title>
   <script src="https://cdn.ably.io/lib/ably.min-1.js" crossorigin="anonymous"></script>
-  <script src="main.js"></script>
+  <script
+  src="https://code.jquery.com/jquery-3.3.1.min.js"
+  integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+  crossorigin="anonymous"></script>
 </head>
 <body>
   <div>
@@ -69,6 +72,7 @@ For the purpose of this tutorial, we'll be subscribing to arrival updates for Lo
     <tbody>
     </tbody>
   </table>
+<script src="main.js"></script>
 </body>
 </html>
 ```
@@ -98,44 +102,143 @@ var ably = new Ably.Realtime(key: apiKey);
 
 Note that for the purpose of this tutorial we've used the API key directly to authenticate with Ably. This is generally "not a recommended authentication strategy":/best-practice-guide#using-api-key-client-side as the API key is prone to compromise while travelling on the internet. Ably offers "Token Authentication":/core-features/authentication#token-authentication which is more secure and is generally used in production environments. 
 
-Next, we need to add a subscription to the channel @[product:TFL/Tube]tube:' + name + ':arrivals@ where 'name' is the name of the station chosen by the user from drop down menu in our HTML above.
+Next, we need to add a subscription to the channel @[product:TFL/Tube]tube:' + name + ':arrivals@ where 'name' will be the name of the station chosen by the user from drop down menu in our HTML above.
+
+In the new @main.js@ file, after declaring the required variables, let's go ahead and add a generic subscription function that'll check if the client is already attached to a channel related to one of the stations, detach if so and freshly attach to the correct channel corresponding to the currently selected station.
 
 ```[javascript]
-  var $resultTfl = $('#result-tfl')
-  var $tableTfl = $('#table-tfl'),
-  var tableBodyTfl = document.getElementById('table-tfl').getElementsByTagName('tbody')[0],
-  var tableTflData = {},
-  var tableTfl = {}
-  function subscribeTfl(name) {
-      let newBodyTfl = document.createElement('tbody');
-      tableBodyTfl.parentNode.replaceChild(newBodyTfl, tableBodyTfl);
-      tableBodyTfl = newBodyTfl;
-      channelTfl = ably.channels.get('[product:TFL/Tube]tube:' + name + ':arrivals');
-      historyTfl();
-      channelTfl.subscribe(function(msg) {
-        updateTfl(msg.data);
-      });
-    }
+var tableBodyTfl = document.getElementById('table-tfl').getElementsByTagName('tbody')[0];
+var channelTfl;
 
-    function historyTfl() {
-      channelTfl.attach(function(err) {
-        channelTfl.history({ untilAttach: true, limit: 1 }, function(err, resultPage) {
-          if(err) return;
-          let recentMessage = resultPage.items[0];
-          if(recentMessage) {
-            updateTfl(recentMessage.data);
-          }
-        });
-      });
-    }
-    
-    $('select#naptan-code').on('change', function() {
-      subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
+function subscribeToChannel(name, channel, subscribeFunction) {
+  if (channel) {
+    channel.detach(function(err) {
+      if(err) {
+        console.log("Error detaching: " + err);
+      } else {
+        subscribeFunction(name);
+      }
     });
+  } else {
+      subscribeFunction(name);
+    } 
+}
+```
+Next, let's define how we call the function above. The subscription can be set up for the default selected station initially but we'd like our client to subscribe to a new channel whenever the user selects a new station from the drop-down menu. Add the following to your @main.js@ file below the previously added code snippet.
 
+```[javascript]
+$('select#naptan-code').on('change', function() {
     subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
+});
+
+subscribeToChannel($('select#naptan-code').val(), channelTfl, subscribeTfl);
+```
+Now let's define the actual subscription function i.e @subscribeTfl@ as follows:
+
+```[javascript]
+ function subscribeTfl(name) {
+    channelTfl = ably.channels.get('[product:TFL/Tube]tube:' + name + ':arrivals');
+    channelTfl.subscribe(function(msg) {
+      //update the table with the data returned
+      //console.log(msg.data)
+    });
+  }
 ```
 
+At this point, we've attached our client to the required channel and it should be successfully receiving updates in realtime. In order to make sure that everything is working as expected up until now, you can log the results in your console.
+
+Getting all the updates? Yay! Let's now display them in the table that we created. Go ahead and add the following update function and invoke it from the @subscribeTfl@ function that we defined above. The function is repeated for convenience:
+
+```[javascript]
+ function subscribeTfl(name) {
+    channelTfl = ably.channels.get('[product:TFL/Tube]tube:' + name + ':arrivals');
+    channelTfl.subscribe(function(msg) {
+     updateTfl(msg.data);
+    });
+  }
+
+ function updateTfl(arrivals) {
+    arrivals = arrivals.reverse();
+    let newBodyTfl = document.createElement('tbody');
+    arrivals.forEach((arrival) => {
+      let arrivalTime = new Date(arrival.ExpectedArrival).toLocaleTimeString();
+      let tmpTableRow = newBodyTfl.insertRow(0);
+      tmpTableRow.insertCell(0).innerHTML = arrivalTime;
+      tmpTableRow.insertCell(1).innerHTML = arrival.Towards;
+      tmpTableRow.insertCell(2).innerHTML = arrival.PlatformName;
+      tmpTableRow.insertCell(3).innerHTML = arrival.LineName;
+    });
+    tableBodyTfl.parentNode.replaceChild(newBodyTfl, tableBodyTfl);
+    tableBodyTfl = newBodyTfl;
+  }
+```
+
+The @updateTfl()@f function simply updates the table for whenever a new update is received on the channel. We are all set. But do you see the data changing? It's hard to observe, right? Let's add a minor style detail that flashes a colour over the table when the data is updated, giving us a better visual way to see realtime data in action. 
+
+Go ahead and add the following code in a new CSS file and name it @flashbox.css@
+
+```[css]
+.c-flashbox {
+    display: inline-block;
+    overflow: auto;
+}
+
+.c-flashbox__positive-flash {
+    -webkit-animation-name: positive-flash;
+    -webkit-animation-duration: 3000ms;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-timing-function: ease-in-out;
+}
+
+@-webkit-keyframes positive-flash {
+    0% {
+        background-color: White;
+    }
+    22% {
+        background-color: Green;
+    }
+    77% {
+        background-color: Green;
+    }
+    100% {
+        background-color: White;
+    }
+}
+```
+
+The two final steps would be to reference this CSS from our HTML file and add a bit of logic in the JavaScript to highlight new bits of data with a flash.
+
+```[html]
+<link rel="stylesheet" type="text/css" href="flashbox.css">
+```
+
+```[javascript]
+  function updateTfl(arrivals) {
+    arrivals = arrivals.reverse();
+    let newBodyTfl = document.createElement('tbody');
+    arrivals.forEach((arrival) => {
+      let arrivalTime = new Date(arrival.ExpectedArrival).toLocaleTimeString();
+      let tmpTableRow = newBodyTfl.insertRow(0);
+      tmpTableRow.insertCell(0).innerHTML = arrivalTime;
+      tmpTableRow.insertCell(1).innerHTML = arrival.Towards;
+      tmpTableRow.insertCell(2).innerHTML = arrival.PlatformName;
+      tmpTableRow.insertCell(3).innerHTML = arrival.LineName;
+    });
+
+    //new flashbox added here
+    for(let i=0; i < arrivals.length; i++) {
+        let arrivalTime = new Date(arrivals[arrivals.length - i - 1].ExpectedArrival).toLocaleTimeString();
+        if(tableBodyTfl.rows[i] != undefined && newBodyTfl.rows[i] != undefined){
+          if(tableBodyTfl.rows[i].cells[0].innerHTML != arrivalTime) {
+            newBodyTfl.rows[i].classList.add("c-flashbox__positive-flash");
+          }
+        }
+      }
+
+    tableBodyTfl.parentNode.replaceChild(newBodyTfl, tableBodyTfl);
+    tableBodyTfl = newBodyTfl;
+  }
+```
 
 h2. Next steps
 
