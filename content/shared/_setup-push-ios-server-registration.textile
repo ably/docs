@@ -29,6 +29,7 @@ import Ably
 import UserNotifications
 
 let authURL = "YOUR_NGROK_HTTPS/auth"
+let subscribeURL = "YOUR_NGROK_HTTPS/subscribe"
 ```
 Here we have our endpoint for our authorisation server. You will replace this with your ngrok provided URL once you have your server up and running. We also import our required modules.
 Now lets handle our registration with Ably add the following to your AppDelegate.swift:
@@ -37,10 +38,11 @@ Now lets handle our registration with Ably add the following to your AppDelegate
 var realtime: ARTRealtime!
 var channel: ARTRealtimeChannel!
 var subscribed = false
-
+var deviceTokenString: String?
 func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     DispatchQueue.main.async() {
         print("** didRegisterForRemoteNotificationsWithDeviceToken")
+        self.deviceTokenString = deviceToken.reduce("", {$0 + String(format: "%02X", $1)})
         ARTPush.didRegisterForRemoteNotifications(withDeviceToken: deviceToken, realtime: self.getAblyRealtime())
     }
 }
@@ -52,7 +54,7 @@ func application(_ application: UIApplication, didFailToRegisterForRemoteNotific
     }
 }
 ```
-These are our standard application handlers for registering for notifications. We also tell Ably if it has been successful or not so that it can handle registration for us.
+These are our standard application handlers for registering for notifications. We also tell Ably if it has been successful or not so that it can handle registration for us. We also convert the device token to a string and assign it to a variable that is shared in the AppDelegate.
 
 We need to authenticate with our server next, this will allow us to register as a push-admin. In the same file add the following code:
 
@@ -139,28 +141,27 @@ This function is a delegate method, it tells us we have activated push and gives
 
 ```[swift]
 func ablyPushCustomRegister(_ error: ARTErrorInfo?, deviceDetails: ARTDeviceDetails?, callback: @escaping (ARTDeviceIdentityTokenDetails?, ARTErrorInfo?) -> Void) {
-    if error != nil {
-        // Handle error
-        print ("** failed to custom register: \(String(describing: error))")
+  if error != nil {
+    // Handle error
+    print ("** failed to custom register: \(String(describing: error))")
+  }
+
+  let request = NSMutableURLRequest(url: NSURL(string: "\(subscribeURL)?deviceId=\(deviceDetails?.id ?? "")&deviceToken=\(deviceTokenString ?? "")")! as URL,
+                                cachePolicy: .useProtocolCachePolicy,
+                                timeoutInterval: 10.0)
+  request.httpMethod = "GET"
+
+  let session = URLSession.shared
+  let dataTask = session.dataTask(with: request as URLRequest, completionHandler: { (data, response, error) -> Void in
+    if (error != nil) {
+        print(error)
+    } else {
+        let httpResponse = response as? HTTPURLResponse
+        print(httpResponse)
     }
-    let params = ["deviceId": deviceDetails?.id ?? ""]
-    let url = URL.init(string: subscribeURL)
-    var request = URLRequest(url: url!)
-    request.httpMethod = "POST"
-    do {
-        let jsonData = try JSONSerialization.data(withJSONObject: params)
-        request.httpBody = jsonData
-        let task = URLSession.shared.dataTask(with: request, completionHandler: { (responseData: Data?, response: URLResponse?, error: Error?) in
-            NSLog("\(String(describing: response))")
-            if let error = error {
-              callback(nil, ARTErrorInfo.create(from: error))
-            }
-              callback(nil, nil)
-        })
-        task.resume()
-    } catch {
-        callback(nil, ARTErrorInfo.create(from: error))
-    }
+  })
+
+  dataTask.resume()
 }
 ```
 
@@ -214,5 +215,3 @@ Finally make the app delegate conform to ARTPushRegistererDelegate so that we ca
 ```[swift]
 class AppDelegate: UIResponder, UIApplicationDelegate, ARTPushRegistererDelegate {
 ```
-
-<a href="">See this step in Github</a>
