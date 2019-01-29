@@ -122,7 +122,7 @@ func didDeactivateAblyPush(_ error: ARTErrorInfo?) {
 }
 ```
 
-This call back tells us we have deactivated push, there is no reason for us to do that at the moment so we reactivate push. Now we need to handle what happens when we have registered by adding the following:
+This call back tells us we have deactivated push, there is no reason for us to do that at the moment so we reactivate push. We now need to add the following method:
 
 ```[swift]
 func didActivateAblyPush(_ error: ARTErrorInfo?) {
@@ -132,24 +132,39 @@ func didActivateAblyPush(_ error: ARTErrorInfo?) {
         return
     }
     print("** push activated")
+}
+```
 
-    self.channel = self.realtime.channels.get("push")
-    // Attach to channel, then subscribe device, then broadcast a push which we expect to eventually receive back.
-    self.channel.attach() { (err) in
-        print("** channel attached, err=\(String(describing: err))")
+This function is a delegate method, it tells us we have activated push and gives us an opportunity to subscribe to channels. We will not be doing this here as our server will be responsible for this. Let's add the optional delegate method that allow us to do this.
 
-        self.channel.push.subscribeDevice { (err) in
-            DispatchQueue.main.async {
-                print("** device ID \(self.realtime.device.id)")
+```[swift]
+func ablyPushCustomRegister(_ error: ARTErrorInfo?, deviceDetails: ARTDeviceDetails?, callback: @escaping (ARTDeviceIdentityTokenDetails?, ARTErrorInfo?) -> Void) {
+    if error != nil {
+        // Handle error
+        print ("** failed to custom register: \(String(describing: error))")
+    }
+    let params = ["deviceId": deviceDetails?.id ?? ""]
+    let url = URL.init(string: subscribeURL)
+    var request = URLRequest(url: url!)
+    request.httpMethod = "POST"
+    do {
+        let jsonData = try JSONSerialization.data(withJSONObject: params)
+        request.httpBody = jsonData
+        let task = URLSession.shared.dataTask(with: request, completionHandler: { (responseData: Data?, response: URLResponse?, error: Error?) in
+            NSLog("\(String(describing: response))")
+            if let error = error {
+              callback(nil, ARTErrorInfo.create(from: error))
             }
-            print("** channel.push.subscribeDevice: err=\(String(describing: err))")
-            self.subscribed = true
-        }
+              callback(nil, nil)
+        })
+        task.resume()
+    } catch {
+        callback(nil, ARTErrorInfo.create(from: error))
     }
 }
 ```
 
-This function is a delegate method, it tells us we have activated push and gives us an opportunity to subscribe to channels. We also print the device Id for debugging purposes. We can use this later when testing notifications.
+This function provides us the device details that we can pass to our server in order to register the device with Ably and subscribe to channels. We encode and pass the deviceId in this example however you can pass entire objects if you wish.
 
 Next we will add our callback for handling a notification. We're not going to do anything special other than print it to the console.
 
