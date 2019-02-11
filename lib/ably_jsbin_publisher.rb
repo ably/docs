@@ -19,6 +19,7 @@ class AblyJsBinPublisherFilter < Nanoc::Filter
 
   def copy_to_clipboard(url)
     Clipboard.copy url
+    url
     puts "Copied #{url} to clipboard"
   rescue StandardError => e
     puts "Skipped copy to clipboard: #{e.message}"
