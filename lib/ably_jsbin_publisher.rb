@@ -11,6 +11,9 @@ class AblyJsBinPublisherFilter < Nanoc::Filter
       new_bin = JsBins::publish_jsbin(path, content)
       puts "Published new JsBin for #{path} at #{new_bin[:url]}?javascript,live"
       copy_to_clipboard "#{new_bin[:url]}?javascript,live"
+    else
+      # Required to return a string when using a filter
+      content
     end
   end
 

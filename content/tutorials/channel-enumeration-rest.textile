@@ -18,11 +18,12 @@ In order to be able to use the enumeration feature, you'll need to ensure that t
 
 A regular Ably API key has a @capability@ which lists resources (glob expressions that match channel names) and, for any given resource, a set of permitted operations. The wildcard resource @'*'@ will match any regular channel name.
 
-In order to grant permission in a key to a metachannel, however, the resource name(s) in the @capability@ must include the @[meta]@ qualifier explicitly; so the following are examples of capabilities that will validly permit access to a metachannel:
+In order to enumerate channels, your key or token must permit the @channel-metadata@ capability on the wildcard resource. The following are examples of capabilities that will allow access to channel enumeration:
 
 ```[json]
-    {"[meta]*":["subscribe"]}
-    {"[meta]*":["*"], "*":["*"]}
+    {"*":["channel-metadata"]}
+    {"*":["*"]}
+    {"[*]*":["*"]}
 ```
 
 <a href="/images/tutorials/channel-metadata-permissions.png" target="_blank">
@@ -37,7 +38,6 @@ Since we'll be using JavaScript in this tutorial, the best way to display the re
 
 ```[html]
 <html>
-
 <head>
     <title>Channel Enumeration</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
@@ -50,8 +50,7 @@ Since we'll be using JavaScript in this tutorial, the best way to display the re
     <div>
         <button id='enumerate' onclick="enumerateChannels()">Enumerate channels</button>
         <br>
-        <textarea id="result" rows="30" style="width: 30%; margin-top: 14px; font-family: courier, courier new; background-color: #333; color: orange;  overflow-y: scroll;"
-            disabled>
+        <textarea id="result" rows="30" style="width: 30%; margin-top: 14px; font-family: courier, courier new; background-color: #333; color: orange;  overflow-y: scroll;" disabled autocomplete="off">
         </textarea>
     </div>
     <script src="main.js"></script>
@@ -63,12 +62,10 @@ Since we'll be using JavaScript in this tutorial, the best way to display the re
 
 The key thing to note in the HTML above is the inclusion of two JS files, one is the Ably Library, referenced via the CDN, while the other is the @main.js@ file which will include our logic. We'll work on this next.
 
-"See this step in Github":https://github.com/ably/tutorials/commit/1360e82
-
 
 h2(#performing-the-rest-request). Step 4 - Using Ably's REST library to perform a REST API request
 
-As mentioned before, channel enumeration can currently be implemented only via our "REST API":/rest-api. However, the "REST library":/rest offers a "request() method":https://www.ably.io/documentation/rest/usage#request to perform REST requests directly with our raw REST API.
+Channel enumeration is not currently integrated into our REST client libraries as a dedicated method. However, you can still use our "REST client libraries":/rest to query it, using the "request() method":https://www.ably.io/documentation/rest/usage#request , which can perform arbitrary REST requests to our API. We highly recommend you do this rather than querying the REST api directly yourself; see "Should I use the REST API directly?":https://ably.freshdesk.com/support/solutions/articles/3000061848-should-i-use-the-rest-api-directly- for why.
 
 For the simplicity of this tutorial, we'll use "Basic authentication":/core-features/authentication#basic-authentication to perform the request. However, it is highly recommended to use "Token auth":/core-features/authentication#token-authentication on client-side applications for "better security and protection of your API key":/root/best-practice-guide#using-api-key-client-side.
 
@@ -80,60 +77,57 @@ Let's begin with instantiating the Ably REST library using the API key. Create a
 var ably = new Ably.Rest('<YOUR-API-KEY>');
 ```
 
-"See this step in Github":https://github.com/ably/tutorials/commit/49cb7e3
-
 Next, let's go ahead and perform the actual REST request using the @request()@ method as follows:
 
 ```[javascript]
-var URL = '/channels';
+var url = '/channels';
 var resultArea = document.getElementById('result');
-var channelCount = 0;
+
 //request a list of channels on button click
 function enumerateChannels() {
-    ably.request('get', URL, { limit: 100, direction: 'forwards' }, null, null, (err, results) => {
-        if (err) {
-            resultArea.value += 'An error occurred; err = ' + err.toString();
-        } else {
-            displayResults(results)
-            while (results.hasNext()) {
-                results.next(function (err, nextPage) {
-                    displayResults(nextPage);
-                });
-            }
-        }
-    })
+  ably.request('get', url, { limit: 100, by: 'id' }, null, null, handleResultPage);
 }
-//display results in the text area
-function displayResults(results) {
-    resultArea.value += "Your API key has the following active channels:\n";
-    results.first((err, resultPage) => {
-        for (var i = 0; i < resultPage.items.length; i++) {
-            var resultObj = JSON.parse(JSON.stringify(resultPage.items[i]));
-            channelCount++;
-            resultArea.value += channelCount + ". " + resultObj.name + "\n";
 
-        }
-    })
+var channelCount = 0;
+function handleResultPage(err, resultPage) {
+  if(err || !resultPage.success) {
+    resultArea.value += 'An error occurred; err = ' + (err || resultPage.errorMessage);
+    return;
+  }
+  if(channelCount === 0) {
+    if(resultPage.items.length == 0){
+      resultArea.value += "Your app does not have any active channels\n";
+      return;
+    }
+    resultArea.value += "Your app has the following active channels:\n";
+  }
+
+  resultPage.items.forEach(function(channel) {
+    resultArea.value += (++channelCount) + ". " + channel + "\n";
+  })
+
+  if(resultPage.hasNext()) {
+    resultPage.next(handleResultPage);
+  };
 }
 ```
 
-"See this step in Github":https://github.com/ably/tutorials/commit/62c8ec5
-
 Remember to replace <YOUR-API-KEY> with an actual Ably API key.
 
-In the code above, we have set the REST endpoint to be @/channels@. The @enumerateChannels()@ function is invoked on a button click from the front end. Inside this function, we have made a simple request to Ably's REST API, using Ably's JavaScript REST client library. We can optionally specify a limit to the results returned; you can have a look at the "API reference":/general/channel-lifecycle.textile in the docs to learn more. As mentioned before, the results are returned in the form of an @HTTPPaginatedResponse@; hence we are required to process them page by page. Each page contains one @Channel@ object per active channel that exists within an app. Here, we are merely displaying the name of each of these channels in the text area we created in HTML. 
+In the code above, we have set the REST endpoint to be @/channels@. The @enumerateChannels()@ function is invoked on a button click from the front end. Inside this function, we have made a simple request to Ably's REST API, using Ably's JavaScript REST client library. We can optionally specify a limit to the results returned; you can have a look at the "API reference":/general/channel-lifecycle.textile in the docs to learn more. As mentioned before, the results are returned in the form of an @HTTPPaginatedResponse@; hence we are required to process them page by page. Each page contains one @Channel@ per active channel that exists within an app. Here, all we are interested in is the name of the channel, so we used @by: 'id'@ parameter to request only a list of names. If you want more detailed information about each channel (such as occupancy data), you can remove this parameter. See "our REST API docs":/rest-api#enumeration-rest for documentation on all supported parameters.
 
 h2(#live-demo). Step - 5 Live Demo
 
     Ably Channel Enumeration using REST API - Demo
+    <br/><br/>
+    Make sure that you've enabled the channel metadata permission on your API key.
     <br/>
     <div>
-        <input type="text" id="user-api-key" placeholder="Paste your Ably API key"></input>
+        <input type="text" style="width: 30%" id="user-api-key" placeholder="Paste your Ably API key"></input>
         <br/>
         <button id='enumerate' onclick="enumerateChannels()">Enumerate channels</button>
         <br>
-        <textarea id="result" rows="30" style="width: 100%; margin-top: 14px; font-family: courier, courier new; background-color: #333; color: orange;  overflow-y: scroll;"
-            disabled>
+        <textarea id="result" rows="30" style="width: 100%; margin-top: 14px; font-family: courier, courier new; background-color: #333; color: orange;  overflow-y: scroll;" autocomplete="off" disabled>
         </textarea>
     </div>
 
@@ -153,39 +147,36 @@ h2(#next-steps). Next Steps
 <script lang="text/javascript" src="https://cdn.ably.io/lib/ably-1.js"></script>
 
 <script type="text/javascript">
-        var URL = '/channels';
-        var resultArea = document.getElementById('result');
-        var channelCount = 0;
-        //request a list of channels on button click
-        function enumerateChannels() {
-            var userApiKey = document.getElementById('user-api-key').value;
-            var ably = new Ably.Rest(userApiKey)
-            ably.request('get', URL, { limit: 100, direction: 'forwards' }, null, null, (err, results) => {
-                if (err) {
-                    resultArea.value += 'An error occurred; err = ' + err.toString();
-                } else {
-                    displayResults(results)
-                    while (results.hasNext()) {
-                        results.next(function (err, nextPage) {
-                            displayResults(nextPage)
-                        });
-                    }
-                }
-            })
-        }
-        //display results in the text area
-    function displayResults(results) {
-            if(results.items.length == 0){
-                resultArea.value += "Your API key does not have any active channels\n";
-                return;
-            }
-            resultArea.value += "Your API key has the following active channels:\n";
-            results.first((err, resultPage) => {
-                for (var i = 0; i < resultPage.items.length; i++) {
-                    var resultObj = JSON.parse(JSON.stringify(resultPage.items[i]));
-                    channelCount++;
-                    resultArea.value += channelCount + ". " + resultObj.name + "\n";
-                }
-            })
-        }
+  var url = '/channels';
+  var resultArea = document.getElementById('result');
+
+  //request a list of channels on button click
+  function enumerateChannels() {
+    var userApiKey = document.getElementById('user-api-key').value;
+    var ably = new Ably.Rest(userApiKey);
+    ably.request('get', url, { limit: 100, by: 'id' }, null, null, handleResultPage);
+  }
+
+  var channelCount = 0;
+  function handleResultPage(err, resultPage) {
+    if(err || !resultPage.success) {
+      resultArea.value += 'An error occurred; err = ' + (err || resultPage.errorMessage);
+      return;
+    }
+    if(channelCount === 0) {
+      if(resultPage.items.length == 0){
+        resultArea.value += "Your app does not have any active channels\n";
+        return;
+      }
+      resultArea.value += "Your app has the following active channels:\n";
+    }
+
+    resultPage.items.forEach(function(channel) {
+      resultArea.value += (++channelCount) + ". " + channel + "\n";
+    })
+
+    if(resultPage.hasNext()) {
+      resultPage.next(handleResultPage);
+    };
+  }
 </script>

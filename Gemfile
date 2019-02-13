@@ -2,7 +2,7 @@ source 'http://rubygems.org/'
 
 ruby File.read(File.expand_path("../.ruby-version", __FILE__)).strip
 
-gem 'nanoc', '~>3.7.5'
+gem 'nanoc', '~>4.3'
 gem 'RedCloth'
 gem 'kramdown'
 gem 'sass'
