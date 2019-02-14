@@ -1,5 +1,5 @@
 module VersionsHelper
-  CURRENT_VERSION = '1.0' unless defined?(CURRENT_VERSION)
+  CURRENT_VERSION = '1.1' unless defined?(CURRENT_VERSION)
 
   VERSIONED_FOLDERS = %w(
     client-lib-development-guide
@@ -57,6 +57,23 @@ module VersionsHelper
     list_versions_for(latest_version_of(@item.path))
   end
 
+  # Returns versioned version of a partial link where applicable
+  def partial_version(partial)
+    if !partial.start_with? '/'
+      partial = partial.prepend('/')
+    end
+    page_version = version_from_relative_url(@item.path, current_default: true)
+    if partial_page_versions(partial).include? page_version
+      return path_for_version(page_version, partial)
+    end
+    return partial
+  end
+
+  # Returns an array of version strings in order of highest to lowest
+  def partial_page_versions(partial)
+    list_versions_for(latest_version_of(partial))
+  end
+
   # Returns an array of arrays of version strings & paths to
   # this file for each version in order of highest to lowest
   def page_versions_with_paths
@@ -106,7 +123,7 @@ module VersionsHelper
     @path_for_version_cache["#{version}:#{path}"] ||= begin
       _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
       if root_folder
-        if version == list_versions_for(path).first
+        if version == CURRENT_VERSION
           "/#{root_folder}#{relative_path}"
         else
           "/#{root_folder}/versions/v#{version}#{relative_path}"
