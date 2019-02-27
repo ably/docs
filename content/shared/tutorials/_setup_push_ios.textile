@@ -11,8 +11,8 @@ pod 'Ably', '~> 1.1.3'
 
 In your terminal run the following command to install the pod:
 
-```[bash]
-$ pod install
+```[sh]
+pod install
 ```
 
 From this point on, we'll be using the Xcode workspace. Open your target settings and go to the capabilities tab. Scroll down and turn on the Push Notifications capability as shown below.
@@ -29,9 +29,7 @@ import Ably
 import UserNotifications
 
 let authURL = "YOUR_NGROK_HTTPS/auth"
-let subscribeURL = "YOUR_NGROK_HTTPS/subscribe"
 ```
-
 Here we have set up an endpoint to the authorization server. You'll need to replace this with your own ngrok provided URL after you have your server up and running. We have also imported the required modules.
 
 Next, we'll register with Ably as follows:
@@ -40,11 +38,10 @@ Next, we'll register with Ably as follows:
 var realtime: ARTRealtime!
 var channel: ARTRealtimeChannel!
 var subscribed = false
-var deviceTokenString: String?
+
 func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     DispatchQueue.main.async() {
         print("** didRegisterForRemoteNotificationsWithDeviceToken")
-        self.deviceTokenString = deviceToken.reduce("", {$0 + String(format: "%02X", $1)})
         ARTPush.didRegisterForRemoteNotifications(withDeviceToken: deviceToken, realtime: self.getAblyRealtime())
     }
 }
@@ -56,7 +53,7 @@ func application(_ application: UIApplication, didFailToRegisterForRemoteNotific
     }
 }
 ```
-The code above contains the standard application handlers that allow you to register for Push Notifications. As you can see, we also notify the Ably platform if the registration was successful or not, so that it can handle registration for us. Further, we have also converted the device token to a string and assigned it to a variable that is shared in the AppDelegate.
+The code above contains the standard application handlers that allow you to register for Push Notifications. As you can see, we also notify the Ably platform if the registration was successful or not, so that it can handle registration for us.
 
 Now, we need to authenticate the app with our auth server next, this will allow us to register as a push-admin. In the same file add the following code:
 
@@ -128,7 +125,7 @@ func didDeactivateAblyPush(_ error: ARTErrorInfo?) {
 
 The callback in the above function tells us if we have deactivated push. As there is no reason for us to do that at the moment, we simply reactivate it in such a scenario.
 
-Next, we'll add a delegate method that tells us if push is activated giving us an opportunity to subscribe to the channels. We will not be handling the subscription here as our server will be responsible for this.
+Next, we'll add a delegate method that tells us if push is activated giving us an opportunity to subscribe to the channels. We will also handle the subscription here.
 
 ```[swift]
 func didActivateAblyPush(_ error: ARTErrorInfo?) {
@@ -138,48 +135,24 @@ func didActivateAblyPush(_ error: ARTErrorInfo?) {
         return
     }
     print("** push activated")
+
+    self.channel = self.realtime.channels.get("push")
+    // Attach to channel, then subscribe device, then broadcast a push which we expect to eventually receive back.
+    self.channel.attach() { (err) in
+        print("** channel attached, err=\(String(describing: err))")
+
+        self.channel.push.subscribeDevice { (err) in
+            DispatchQueue.main.async {
+                print("** device ID \(self.realtime.device.id)")
+            }
+            print("** channel.push.subscribeDevice: err=\(String(describing: err))")
+            self.subscribed = true
+        }
+    }
 }
 ```
 
-A device ID uniquely identifies a device within Ably’s services and is assigned automatically at the time the device is activated. If you launch your application with it attached to the debugger you should be able to find the device ID in the xcode console. The @ablyPushCustomRegister()@ method provides us with the device details that we can pass on to our server in order to register the device with Ably and subscribe to channels. We encode and pass the @deviceId@ in this example, however you can pass entire objects if you wish. We receive a JSON object back from the server and decode this into a dictionary. We then create a new @ARTDeviceIdentityTokenDetails@ object with this information and call our completion block. This informs the Ably SDK everything was successful.
-
-```[swift]
-func ablyPushCustomRegister(_ error: ARTErrorInfo?, deviceDetails: ARTDeviceDetails?, callback: @escaping (ARTDeviceIdentityTokenDetails?, ARTErrorInfo?) -> Void) {
-  if error != nil {
-      // Handle error
-      print ("** failed to custom register: \(String(describing: error))")
-  }
-  let request = NSMutableURLRequest(url: NSURL(string: "\(subscribeURL)?deviceId=\(deviceDetails?.id ?? "")&deviceToken=\(deviceTokenString ?? "")")! as URL,
-                                    cachePolicy: .useProtocolCachePolicy,
-                                    timeoutInterval: 10.0)
-  request.httpMethod = "GET"
-  let session = URLSession.shared
-  let dataTask = session.dataTask(with: request as URLRequest, completionHandler: { (data, response, error) -> Void in
-      if (error != nil) {
-          print(error)
-      } else {
-          do{
-              let json = try JSONSerialization
-                  .jsonObject(with: data!, options:.allowFragments) as! NSDictionary
-              print("JSON")
-              let tokenDetails = json["deviceIdentityToken"] as! [String: Any]
-              let issued = Date.init(timeIntervalSince1970: tokenDetails["issued"] as! TimeInterval)
-              let expires = Date.init(timeIntervalSince1970: tokenDetails["expires"] as! TimeInterval)
-              let deviceDetails = ARTDeviceIdentityTokenDetails.init(token: tokenDetails["token"] as! String,
-                                                                     issued: issued,
-                                                 expires: expires,
-                                                 capability: tokenDetails["capability"] as! String,
-                                                 deviceId: tokenDetails["deviceId"] as! String)
-              callback(deviceDetails, nil)
-          } catch {
-              print("There was an error while obtaining JSON")
-              callback(nil, ARTErrorInfo.create(from: error))
-          }
-      }
-  })
-  dataTask.resume()
-}
-```
+This function is a delegate method, it tells us we have activated push and gives us an opportunity to subscribe to channels. We also print the device Id for debugging purposes. We can use this later when testing notifications.
 
 Let us now add the callback for handling a notification. We're not going to do anything special other than print it to the console.
 
@@ -207,6 +180,9 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
 
     self.realtime = self.getAblyRealtime()
 
+    // Deactivating may be necessary as the deployed app might have state inconsistent with the Ably app
+    // print("** De-activating Ably push")
+    // self.realtime.push.deactivate()
 
     self.realtime.connection.on { (stateChange) in
         print("** connection state change: \(String(describing: stateChange))")
@@ -224,5 +200,5 @@ func application(_ application: UIApplication, didFinishLaunchingWithOptions lau
 Finally, make the app delegate conform to @ARTPushRegistererDelegate@ so that we can receive our callbacks.
 
 ```[swift]
-class AppDelegate: UIResponder, UIApplicationDelegate, ARTPushRegistererDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, ARTPushRegistererDelegate {...}
 ```
