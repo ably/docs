@@ -35,6 +35,10 @@ class AblyPreTextileFilter
       (,[^"']+)? # additional optional languages
       \3          # language closure lang=""
     )
+    |
+    (?:
+      (  jsall\: ) # Indicates this applies to node.js and javascript
+    )
   /mx
 
   class << self
@@ -65,8 +69,10 @@ class AblyPreTextileFilter
         langs = [lang_before || lang_before_2, lang_after || lang_after_2].compact
         if quote
           %(lang="javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}")
-        else
+        elsif lang_after
           "[javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}]"
+        else
+          "  javascript,nodejs: "
         end
       end
     end
