@@ -49,9 +49,133 @@ h2(#step8). Step 8 - Adding device registration capability to the Node.js server
 
 h2(#step9). Step 9 - Sending device details to the server for registration
 
-In the @MainActivity@ class, add the following below the @initAblyRuntime()@ function. In this function we send various device identifiers like @deviceId@, @clientId@ and @registrationToken@ to the server, so the device registration can be performed there.
+Next, you'll need to use @FirebaseInstanceIdService@ to generate the @registrationToken@ for the device, then send this token along with other identifiers like @deviceId@, @clientId@ etc to the server, in order for it to be able to register the device with FCM and subscribe it to the push channel using this info.
+
+Go ahead and add two new folders in the same directory as your @MainActivity.java@ file, namely 'receivers' and 'server'. In the 'receivers' folder, add a new file and name it @AblyPushMessagingService.java@. In this file, we'll add code to show a Push Notification on the device when it receives one. Paste the following into this file:
 
 ```[java]
+package YOUR-PACKAGE-NAME;
+
+import android.content.Intent;
+import android.support.v4.content.LocalBroadcastManager;
+
+import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.firebase.messaging.RemoteMessage;
+
+public class AblyPushMessagingService extends FirebaseMessagingService {
+    public static final String PUSH_NOTIFICATION_ACTION = AblyPushMessagingService.class.getName() + ".PUSH_NOTIFICATION_MESSAGE";
+
+    @Override
+    public void onMessageReceived(RemoteMessage message) {
+        //FCM data is received here.
+
+        Intent intent = new Intent(PUSH_NOTIFICATION_ACTION);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    }
+
+
+}
+```
+
+Next, go ahead and add this class as a service in your manifest fie. Open the @AndroidManifest.xml@ and paste the following after @<activity></activity>@ within the @<application></application@ tags.
+
+```[xml]
+<service android:name=".receivers.AblyPushMessagingService">
+    <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+    </intent-filter>
+</service>
+```
+
+Next, in the 'server' folder that you created before, add a new file and name it @ServerAPI.java@. Here, we'll define the ServerAPI class that'll send a request to the server with the device registration info. Paste the following in the this file:
+
+```[java]
+package YOUR-PACKAGE-NAME;
+
+import io.ably.tutorial.push_tutorial_two.BuildConfig;
+import retrofit2.Call;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.http.GET;
+import retrofit2.http.Query;
+
+public class ServerAPI {
+    public interface API {
+        @GET("/register")
+        Call<NetResponse> register(@Query("deviceId") String deviceId, @Query("registrationToken") String registrationToken, @Query("clientId") String clientId);
+    }
+
+
+    private static ServerAPI instance;
+
+    public static ServerAPI getInstance() {
+        if (instance == null) {
+            instance = new ServerAPI();
+        }
+        return instance;
+    }
+
+    private final API api;
+
+    private ServerAPI() {
+        Retrofit.Builder builder = new Retrofit.Builder();
+        builder.baseUrl(BuildConfig.ABLY_URL);
+        builder.addConverterFactory(GsonConverterFactory.create());
+
+        Retrofit retrofit = builder.build();
+        api = retrofit.create(API.class);
+    }
+
+    public API api() {
+        return api;
+    }
+}
+
+```
+
+If you observe, we have made us of the @NetResponse@ class. Let's go ahead and define this next, in the same file, i.e, 'server'. Create a new file named @NetResponse.java@ and paste the following into it:
+
+```[java]
+package YOUR-PACKAGE-NAME;
+
+import io.ably.lib.rest.DeviceDetails;
+
+public class NetResponse {
+    public String id;
+    public String platform;
+    public String formFactor;
+    public String clientId;
+    DeviceDetails.Push push;
+}
+
+```
+
+This essentially defines the data objects required to be sent to the server.
+
+Now, in your @MainActivity@ class, add the following below the @initAblyRuntime()@ function. In this function we send various device identifiers like @deviceId@, @clientId@ and @registrationToken@ to the server, so the device registration can be performed there.
+
+```[java]
+private BroadcastReceiver pushReceiver = new BroadcastReceiver() {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        if (ABLY_PUSH_ACTIVATE_ACTION.equalsIgnoreCase(intent.getAction())) {
+            ErrorInfo error = IntentUtils.getErrorInfo(intent);
+            if (error != null) {
+                logMessage("Error activating push service: " + error);
+                handler.sendMessage(handler.obtainMessage(FAILURE));
+                return;
+            }
+            logMessage("Device is now registered for push");
+            handler.sendMessage(handler.obtainMessage(SUCCESS, STEP_3));
+            return;
+        }
+
+        if (AblyPushMessagingService.PUSH_NOTIFICATION_ACTION.equalsIgnoreCase(intent.getAction())) {
+            logMessage("Received Push message");
+        }
+    }
+};
+
 private void initAblyPush() throws AblyException {
     LocalDevice device = ablyRealtime.push.getActivationContext().getLocalDevice();
     if (device.push.recipient == null) {
