@@ -70,7 +70,7 @@ class AblyPreTextileFilter
         if quote
           %(lang="javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}")
         elsif match === "jsall:"
-          "  javascript,nodejs: "
+          "javascript,nodejs:"
         else
           "[javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}]"
         end
