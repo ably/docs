@@ -69,10 +69,10 @@ class AblyPreTextileFilter
         langs = [lang_before || lang_before_2, lang_after || lang_after_2].compact
         if quote
           %(lang="javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}")
-        elsif match === '[jsall]'
-          "[javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}]"
-        else
+        elsif match === "jsall:"
           "  javascript,nodejs: "
+        else
+          "[javascript,nodejs#{",#{langs.join(',')}" unless langs.empty?}]"
         end
       end
     end
