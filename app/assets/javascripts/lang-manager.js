@@ -85,7 +85,7 @@ $(function() {
 
     // if element has class indicating it's a language resource, then this element has already been converted by this script when operating on one of it's siblings
     if (!$first.hasClass(languageClass)) {
-      if ($siblings.length || !hasLanguageNav) {
+      if (($siblings.length || !hasLanguageNav) && !window.NoLangs) {
         var langs = splitLangs($first.attr('lang')),
             langSelector = $('<ul class="lang-selector"></ul>'),
             uniqueLangs = [];
