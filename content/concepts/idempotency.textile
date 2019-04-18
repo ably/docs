@@ -1,7 +1,8 @@
 ---
-title: Implementing Idempotency over HTTP
+title: Idempotency - concepts for its implementation
 section: concepts
 index: 33
+header: idempotency_cover.jpg
 jump_to:
   Section:
     - Idempotency and HTTP#idempotency-and-http
@@ -17,30 +18,30 @@ __An idempotent operation is one that has the same effect whether it is performe
 
 h2(#idempotency-and-http). Idempotency and HTTP
 
-HTTP is a widely adopted, straightforward protocol that allows clients to send requests to a server and receive a response. A lot of these operations are implicitly idempotent, i.e. by performing the same request multiple times, you are guaranteed to get the same result. The +HTTP1.1 RFC Spec 2616 9.1.2+ states:
+HTTP is a widely adopted, straightforward protocol that allows clients to send requests to a server and receive a response. A lot of these operations are implicitly idempotent, i.e. by performing the same request multiple times, you are guaranteed to get the same result. The "HTTP1.1 RFC Spec 2616":https://www.ietf.org/rfc/rfc2616.txt 9.1.2 states:
 
-__Methods can also have the property of "idempotence" in that (aside from error or expiration issues) the side-effects of N > 0 identical requests is the same as for a single request. The methods GET, HEAD, PUT and DELETE share this property. Also, the methods OPTIONS and TRACE should not have side effects, and so are inherently idempotent.__
+bq. Methods can also have the property of "idempotence" in that (aside from error or expiration issues) the side-effects of N > 0 identical requests is the same as for a single request. The methods @GET@, @HEAD@, @PUT@ and @DELETE@ share this property. Also, the methods @OPTIONS@ and @TRACE@ should not have side effects, and so are inherently idempotent.
 
-GET and HEAD operations, are additionally defined as ‘safe’ (9.1.1) which means they should have no side effects and thus should not have the significance of taking an action other than retrieval.
+@GET@ and @HEAD@ operations, are additionally defined as ‘safe’ (9.1.1) which means they should have no side effects and thus should not have the significance of taking an action other than retrieval.
 
-For developers, this is good news. We know that in a “correctly” behaving system, GET and HEAD operations never have side effects, and OPTIONS, PUT and DELETE operations are idempotent.
+For developers, this is good news. We know that in a “correctly” behaving system, @GET@ and @HEAD@ operations never have side effects, and @OPTIONS@, @PUT@ and @DELETE@ operations are idempotent.
 
 The table below summarises which HTTP methods are defined to be safe and idempotent according to the HTTP RFC Spec 2616, and, as developers, we expect we can trust HTTP servers to honor this:
 
 |_. HTTP Method |_. Idempotent |_. Safe |
-| GET | Yes | Yes |
-| HEAD | Yes | Yes |
-| OPTIONS | Yes | No |
-| PUT | Yes | No |
-| DELETE | Yes | No |
-| POST | No | No |
-| PATCH | No | No |
+| @GET@ | <font color="green">Yes</font> | <font color="green">Yes</font> |
+| @HEAD@ | <font color="green">Yes</font> |<font color="green">Yes</font> |
+| @OPTIONS@ | <font color="green">Yes</font> | <font color="red">No</font> |
+| @PUT@ | <font color="green">Yes</font> | <font color="red">No</font> |
+| @DELETE@ | <font color="green">Yes</font> | <font color="red">No</font> |
+| @POST@ | <font color="red">No</font> | <font color="red">No</font> |
+| @PATCH@ | <font color="red">No</font> | <font color="red">No</font> |
 
 h2(#problem-with-post). The problem with POST
 
-There are many operations that do have side effects - such as creating or uploading resources - which don’t fit the defined semantics of PUT, PATCH or DELETE. These operations, in the HTTP model, require the use of POST. The problem is that POST is not guaranteed to be idempotent. This means HTTP clients that send a POST request to a server multiple times should expect there to be corresponding multiple effects.
+There are many operations that do have side effects - such as creating or uploading resources - which don’t fit the defined semantics of @PUT@, @PATCH@ or @DELETE@. These operations, in the HTTP model, require the use of @POST@. The problem is that @POST@ is not guaranteed to be idempotent. This means HTTP clients that send a @POST@ request to a server multiple times should expect there to be corresponding multiple effects.
 
-In the world of distributed systems and services that provide contracts in terms of what onward processing happens for POST requests, this can be a considerable problem. Consider, for example, a scenario where a client is using HTTP to publish a message containing transaction details into a pub/sub system which in turn broadcasts that message to subscribers. In this case, publishing the message multiple times will incorrectly result in the transaction being processed multiple times.
+In the world of distributed systems and services that provide contracts in terms of what onward processing happens for @POST@ requests, this can be a considerable problem. Consider, for example, a scenario where a client is using HTTP to publish a message containing transaction details into a pub/sub system which in turn broadcasts that message to subscribers. In this case, publishing the message multiple times will incorrectly result in the transaction being processed multiple times.
 
 Avoiding repeated POSTs is not always simple. Issues arise for a publisher if, for some reason, it never receives the response to a publish request. This could happen if there was an interruption in the network that caused the response to be lost, or if the publishing process itself crashed before receiving and processing the response. In these situations, the publisher doesn’t know whether or not the publish request has succeeded (typically with a 20x status code response), if it was rejected for some reason, or if it was lost before reaching the server. A typical reaction by a publisher to a publish request that fails without a definite response would be to retry the request. However, it can then happen that both the initial attempt and the retry go on to succeed, in which case the message could have been published more than once.
 
@@ -73,19 +74,15 @@ Ensuring Ably’s REST publishes are idempotent - that is, ensuring that the mes
 
 There is always the possibility that a second attempt to publish a message is made against an Ably endpoint in a different region from the first attempt. In fact, in the case of Ably, this will be relatively common - because when a client library experiences a failed API request "it will direct subsequent attempts to a fallback endpoint in a different region":https://support.ably.io/a/solutions/articles/3000044636. If a first attempt in one region A happens to succeed but the client nonetheless reattempts in a different region B, the message is also capable of acceptance there (since the scope of the persistent index is regional).
 
-Now, however, other processes come into play. If the successful publish in A resulted in propagation of the message to region B, then it will belong to region B’s index before the reattempted publish there. In this case, the reattempt will recognize the message as already being present, and so that publish attempt in B will not generate a new message.   
-
-<a href="/images/concepts/idempotency/idempotency-sync.png" target="_blank">
-  <img src="/images/concepts/idempotency/idempotency-sync.png" style="width: 100%" alt="Example of duplicate message being discarded even when received by two seperate servers">
-</a>
+Now, however, other processes come into play. If the successful publish in A resulted in propagation of the message to region B, then it will belong to region B’s index before the reattempted publish there. In this case, the reattempt will recognize the message as already being present, and so that publish attempt in B will not generate a new message.
 
 A further possibility is that the B publish reattempt happens so quickly that it reaches the B index before the message propagated from A. In this case, the handling of the propagated message will be the operation that recognises the message as a duplicate, and does not result in further onward processing. The successful acceptance of the B publish of course will also trigger propagation to region A but the propagated message, on arrival at A, is found to be present in the index and does not trigger further processing there. 
 
-<a href="/images/concepts/idempotency/idempotency-sync2.png" target="_blank">
-  <img src="/images/concepts/idempotency/idempotency-sync2.png" style="width: 100%" alt="Example of duplicate message being discarded even when received by two seperate servers">
+<a href="/images/concepts/idempotency/idempotency-sync.jpg" target="_blank">
+  <img src="/images/concepts/idempotency/idempotency-sync.jpg" style="width: 100%" alt="Example of duplicate message being discarded even when received by two seperate servers">
 </a>
 
-As an aside, now that we have made the identifier part of "our public publish API":/rest-api#publish, we could have exposed a REST API that makes it explicit that this is an idempotent operation with PUT instead of POST. For example, instead of our current REST publish as follows:
+As an aside, now that we have made the identifier part of "our public publish API":/rest-api#publish, we could have exposed a REST API that makes it explicit that this is an idempotent operation with @PUT@ instead of @POST@. For example, instead of our current REST publish as follows:
 
 ```[sh]
 POST rest.ably.io/channels/<<CHANNEL ID>>/messages
@@ -95,7 +92,7 @@ POST rest.ably.io/channels/<<CHANNEL ID>>/messages
 }
 ```
 
-We could offer this API using PUT as follows:
+We could offer this API using @PUT@ as follows:
 
 ```[sh]
 PUT rest.ably.io/channels/<<CHANNEL ID>>/messages/<<MESSAGE ID>>
@@ -104,7 +101,7 @@ PUT rest.ably.io/channels/<<CHANNEL ID>>/messages/<<MESSAGE ID>>
 }
 ```
 
-However, we decided against this initially for two reasons: we still primarily expose the POST API for consistency with other publish operations and our existing SDKs; publishing batches of messages would not be possible with this URL structure given the messages will have multiple IDs in the case of idempotent publishing.
+However, we decided against this initially for two reasons: we still primarily expose the @POST@ API for consistency with other publish operations and our existing SDKs; publishing batches of messages would not be possible with this URL structure given the messages will have multiple IDs in the case of idempotent publishing.
 
 h2(#implementing-idempotency). Implementing idempotency - a user’s guide
 
@@ -141,7 +138,6 @@ POST https://rest.ably.io/channels/example/publish
 => {"data":"payload","id":"FBE7nsDHP/oe:0"}
 <= Status: 201
 <= Body: {"channel"=>"example", "messageId"=>"FBE7nsDHP/oe:0"}
-
 ```
 
 h3(#explicit-idempotency). Explicit client supplied IDs for idempotency 
@@ -169,9 +165,12 @@ In conclusion, idempotency is one of several features whose absence is felt more
 
 We’d welcome feedback both on our approach to solving the problem, other approaches and how the feature works for you. To discuss, "get in touch":https://www.ably.io/contact.
 
+h2(#ably-and-idempotency). Ably and long polling
+
+"Ably":https://www.ably.io provides a globally distributed, high-performance data stream network _with baked-in idempotent publishing_. It allows users to stream data anywhere, between any device, with mission-critical reliability. Ably’s infrastructure forms the basis for building live, next-generation digital services, making it possible for users to deploy, manage, and distribute streaming APIs outside their organization.
+
 h2(#further-reading). Further reading
 
-* "Ably Idempotency Documentation":/rest/messages#idempotent
-* "Quickbit Tutorial":https://www.youtube.com/watch?v=Nd4MbPmBox4&feature=youtu.be
-
-__"Ably Realtime":https://www.ably.io provides a globally distributed, high-performance data stream network. It allows users to stream data anywhere, between any device, with mission-critical reliability. Ably’s infrastructure forms the basis for building live, next-generation digital services, making it possible for users to deploy, manage, and distribute streaming APIs outside their organization.__
+* "Read Ably Idempotency Documentation":/rest/messages#idempotent
+* "Watch a 5-minute video explaining how to implement idempotency with Ably":https://www.youtube.com/watch?v=Nd4MbPmBox4&feature=youtu.be
+* "General information about realtime data distribution on the Ably Engineering Blog":https://blog.ably.io/tagged/realtime-tech
