@@ -1,0 +1,223 @@
+---
+title: Super-lightweight realtime subscriptions with SSE and Ably
+section: tutorials
+index: 109
+languages:
+  - javascript
+---
+
+h2(#what-is-sse). What is SSE?
+
+Server-sent events is a standard describing how servers can initiate data transmission towards clients once an initial client connection has been established. They are commonly used to send message updates or continuous data streams to a browser client and designed to enhance native, cross&#45;browser streaming through a JavaScript API called EventSource, through which a client requests a particular URL in order to receive an event stream. Basically, a server&#45;sent event is when a web page automatically gets updates from a server.
+
+h2(#setting-up-the-ui-and-publisher). Setting up the UI and publisher
+
+*Setting up the UI*
+
+Let us create a simple HTML file that implements SSE using Ably. Create a file called @example.html@ and add:
+
+```[html]
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+        <style>
+          ul {
+              width: 60%;
+              margin-top: 10px;
+              margin: 0 auto;
+              font-family: courier, courier new;
+              background-color: #333;
+              height: 300px;
+              overflow: scroll;
+              color: orange;
+          }
+          h1{
+            text-align: center;
+          }
+          h3{
+            text-align: center;
+          }
+    </style>
+  </head>
+  <body>
+    <h1>SSE example</h1>
+
+    <h3>Events:</h3>
+    <ul id="events"></ul>
+  </body>
+</html
+```
+
+What's happening in the code above? We create a basic HTML structure which consists of an @ul@ element. The children of this element will be dynamically populated.
+
+*Setting up the Publisher* The Publisher refers to the server&#45;side aspect, where the messages are being sent. For the purpose of this tutorial, we will use a simple example that sends the current date and time as Ably events every two seconds. Here is what our code looks like in different languages.
+
+Node.js:
+
+```[javascript]
+const ably = require('ably').Realtime;
+const ablyRealtime = new ably('INSERT-YOUR-API-KEY-HERE')
+const channel = ablyRealtime.channels.get('example-channel');
+const newChannel = ablyRealtime.channels.get('new-channel');
+setInterval(()=> {
+  let d = Date(Date.now());  
+  d = d.toString();
+  channel.publish('event', `Hello, current time is ${d}`)
+  newChannel.publish('event', `Hello, current time is ${d}`)     
+}, 2000); 
+```
+
+Python:
+
+```[py]
+from ably import AblyRest
+from threading import Timer
+import datetime
+client = AblyRest('INSERT-YOUR-API-KEY-HERE')
+channel = client.channels.get('example-channel')
+newChannel = client.channels.get('new-channel')
+def sendEvent():
+    currentDT = datetime.datetime.now()
+    channel.publish('event', "Current date is %s" % (currentDT))
+    newChannel.publish('event', "Current date is %s" % (currentDT))
+    Timer(2.0, sendEvent).start()
+Timer(2.0, sendEvent).start()
+```
+
+Php:
+
+```[php]
+$client = new Ably\AblyRest('INSERT-YOUR-API-KEY-HERE');
+$channel = $client->channel('example-channel');
+$newChannel = $client->channel('new-channel');
+
+function setInterval($func = null, $interval = 0){
+  if( ($func == null) || (!function_exists($func)) ){
+    throw new Exception('We need a valid function.');
+  }
+  $seconds = $interval * 1000;
+    while(true){
+        call_user_func($func); // Call the function you've defined.
+        usleep( $seconds );
+    }
+}
+
+function sendEvent(){
+  $date = new \DateTime('now');
+  $channel->publish('myEvent', "Current date is $date->format('D M d, Y G:i')" );
+  $newChannel->publish('myEvent', "Current date is $date->format('D M d, Y G:i')" );
+}
+setInterval('sendEvent', 2000);
+```
+
+h2(#setting-up-the-subscriber-with-http-event-streaming). Setting up the subscriber with HTTP Event Streaming
+
+Let us add the code below to our HTML file:
+
+```[html]
+<script type="text/javascript">
+
+const apiKey = "INSERT-YOUR-API-KEY-HERE";
+
+// can have multiple channels, comma-separated.
+// If a channel name is not url-safe, URL-encode it first
+const channels = "example-channel,new-channel";
+
+if(apiKey.indexOf("INSERT") === 0) {
+  alert("Add your API key to example.html");
+  throw 'Cannot proceed without api key';
+}
+
+const url = `https://realtime.ably.io/event-stream?v=1.1&key=${apiKey}&channels=${channels}`
+const eventSource = new EventSource(url);
+eventSource.onopen = function() {
+  addEvent(`Connected and subscribed to channels: ${channels.split(',').join(', ')}`);
+}
+
+eventSource.onmessage = function(event) {
+  const message = JSON.parse(event.data);
+  addEvent(`Channel: ${message.channel} - Message: ${message.name} - ${message.data}`);
+}
+
+eventSource.onerror = function(error) {
+  if(error.data) {
+    addEvent(`Error: ${error.data}`);
+  } else {
+    addEvent('Error connecting to Ably');
+  }
+}
+
+const eventList = document.querySelector('ul#events');
+
+function addEvent(text) {
+  const newElement = document.createElement("li");
+  newElement.textContent = text;
+  eventList.appendChild(newElement);
+}
+</script>
+```
+
+Here, we defined the script section, where we defined the @apiKey@ variable, which should be replaced with your Ably API key. We forge ahead to define our Ably channel with a variable named channels. We've added a simple check to see if the API key was in fact replaced. Next, we defined a variable called @url@, which is a template string, feeding in our @apiKey@ and @channels@. Notice that the route of this URL is @/event-stream@, which means we want to listen to the HTTP event streams from the server.
+
+We then feed this URL to our @EventSource@, listening for the @onopen@, @onmessage@ and @onerror@ events. Once we get any of these events, we trigger the @addEvent@ function, which appends a new @li@ element to the initial @ul@ element in the HTML markup.
+
+h2(#setting-up-the-subscriber-with-sse). Setting up the subscriber with SSE
+
+For SSE, let us replace our script tag with the following:
+
+
+```[html]
+<script type="text/javascript">
+
+const apiKey = "INSERT-YOUR-API-KEY-HERE";
+
+// can have multiple channels, comma-separated.
+// If a channel name is not url-safe, URL-encode it first
+const channels = "example-channel";
+
+if(apiKey.indexOf("INSERT") === 0) {
+  alert("Add your API key to example.html");
+  throw 'Cannot proceed without api key';
+}
+
+const url = `https://realtime.ably.io/sse?v=1.1&key=${apiKey}&channels=${channels}`
+const eventSource = new EventSource(url);
+eventSource.onopen = function() {
+  addEvent(`Connected and subscribed to channels: ${channels.split(',').join(', ')}`);
+}
+
+eventSource.onmessage = function(event) {
+  const message = JSON.parse(event.data);
+  addEvent(`Channel: ${message.channel} - Message: ${message.name} - ${message.data}`);
+}
+
+eventSource.onerror = function(error) {
+  if(error.data) {
+    addEvent(`Error: ${error.data}`);
+  } else {
+    addEvent('Error connecting to Ably');
+  }
+}
+
+const eventList = document.querySelector('ul#events');
+
+function addEvent(text) {
+  const newElement = document.createElement("li");
+  newElement.textContent = text;
+  eventList.appendChild(newElement);
+}
+</script>
+```
+
+The code above is pretty similar to that of the event stream. The only difference here is the URL supplied to the @EventSource@. Here, the @EventSource@ connects to the @/sse@ endpoint, as opposed to the @event-stream@ endpoint.
+
+bq. The @/event-stream@ endpoint will give an SSE response if the @Accept@ header is set to @text/event-stream@. The @/sse@ endpoint is also provided as an easier way of forcing an SSE response. 
+
+
+
+h2(#conclusion). Conclusion
+
+
+In this article, we have seen how to subscribe and publish SSE events using Ably. We have seen how to publish SSE events to Ably in three different languages as well as seen the two different types of streams Ably provides. Hope this tutorial has helped you to get started with Ably and HTTP events / SSE?
