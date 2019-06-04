@@ -152,6 +152,7 @@ $(function() {
       new Ably.Rest({ key: apiKey }).auth.createTokenRequest({ "ttl": tokenValidity, "capability": JSON.stringify({ "*":["*"] }) }, null,
         function(err, token) {
           preLangBlocks.each(function() {
+            this.innerHTML = insertKeyUsageWarning(this.innerHTML);
             this.innerHTML = this.innerHTML.
               replace(/{{API_KEY_NAME}}/g, keyName).
               replace(/{{API_KEY}}/g, apiKey).
@@ -248,6 +249,20 @@ function getQueryParam(name, url) {
   if (!results) return null;
   if (!results[2]) return '';
   return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
+function insertKeyUsageWarning(code) {
+  let message = "API Keys should not be shared. The key here is intended solely for this example.";
+  let currentLang = code.match(/(?<=(lang=")).*?(?=")/g);
+  if (currentLang != null) currentLang = currentLang[0];
+  if(["php", "ruby", "python"].indexOf(currentLang) > -1) {
+    message = `# ${message}`;
+  } else {
+    message = `// ${message}`;
+  }
+  return code.replace(/(<ol class="linenums">)(.*?)({{API_KEY}})/g, 
+            `$1<li class="L-1"><code class="code-editor open-jsbin" 
+            lang="${currentLang}"><span class="com">${message}</span></code></li>$2$3`);
 }
 
 function getRandomChannelName() {

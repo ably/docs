@@ -2,93 +2,96 @@
 
 # A few helpful tips about the Rules file:
 #
-# * The string given to #compile and #route are matching patterns for
-#   identifiers--not for paths. Therefore, you can’t match on extension.
+# * As of nanoc 4.0, you are able to match on extension type for strings given 
+#   to #compile and #route. 
 #
 # * The order of rules is important: for each item, only the first matching
 #   rule is applied.
 #
 # * Item identifiers start and end with a slash (e.g. “/about/” for the file
 #   “content/about.html”). To select all children, grandchildren, … of an
-#   item, use the pattern “/about/*/”; “/about/*” will also select the parent,
-#   because “*” matches zero or more characters.
+#   item, use the pattern “/about/**/*/”.
 
-compile '/stylesheets/stylesheet/' do
+compile '/stylesheets/stylesheet.*' do
   filter :erb
   filter :sass, :syntax => :scss
 end
-route '/stylesheets/stylesheet/' do
+route '/stylesheets/stylesheet.*' do
   '/stylesheet.css'
 end
 # ignore all other style sheet files as they are included in /style.css
-route '/stylesheets/*/' do
+route '/stylesheets/**/*' do
   nil
 end
 
-compile '/vendor/*' do
+compile '/vendor/**/*' do
 end
-route '/vendor/*/*/' do
-  item.identifier.chop + '.' + item[:extension]
+route '/vendor/**/*' do
+  item.identifier.to_s
 end
 
-compile '/javascripts/*' do
+compile '/javascripts/**/*' do
   filter :erb
 end
-route '/javascripts/*/' do
-  item.identifier.gsub(/\/$/, '') + ".js"
+route '/javascripts/**/*' do
+  item.identifier.to_s
 end
 
 # code must be loaded first so that the dictionary is built up
-compile "/code/*" do
+compile "/code/**/*" do
   filter :erb if item[:extension] == 'erb'
   filter :ably_jsbin_publisher
 end
 
-%w(realtime rest rest-api general root client-lib-development-guide tutorials).each do |path|
-  compile "/#{path}/*" do
+%w(root realtime rest rest-api general compare concepts core-features design-patterns api-streamer client-lib-development-guide tutorials).each do |path|
+  compile "/#{path}/**/*" do
     next if item[:extension] == 'diff'
     filter :erb
     filter :ably_nanoc_pre_textile
     filter :redcloth, :no_span_caps => true
     filter :ably_nanoc_post_textile
-    layout 'documentation'
+    layout '/documentation.*'
   end
 end
 
-compile '/adapters/*' do
+compile '/adapters/**/*' do
   filter :erb
   filter :ably_markdown_code_for_freshdesk
   filter :kramdown
   filter :ably_freshdesk_post_compile
 end
 
-route '/root/*/' do
-  item.identifier.gsub(%r{/root}, "") + 'index.html'
+route '/root/**/*' do
+  item.identifier.without_ext.gsub(%r{/root}, "") + '/index.html'
 end
 
-compile 'robots' do
+compile '/robots.*' do
   # don't process this file
 end
-route 'robots' do
-  item.identifier.chop + '.txt'
+route '/robots.*' do
+  item.identifier.to_s
 end
 
-compile '*' do
+route '/**/index.*' do
+  # /content/index.textile gets written to /content/index.html
+  item.identifier.without_ext + '.html'
+end
+
+compile '/**/*' do
   if !item.binary? && %w(erb html textile).include?(item[:extension])
     filter :erb
     filter :redcloth, :no_span_caps => true
-    layout 'default'
+    layout '/default.*'
   end
 end
 
-route '*' do
+route '/**/*' do
   if item.binary?
-    # Write item with identifier /foo/ to /foo.ext
-    item.identifier.chop + '.' + item[:extension]
+    item.identifier.to_s
   else
-    # Write item with identifier /foo/ to /foo/index.html
-    item.identifier + 'index.html'
+    # Write item with identifier /foo/bar.textile to /foo/bar/index.html
+    item.identifier.without_ext + '/index.html'
   end
 end
 
-layout '*', :erb
+layout '/**/*', :erb

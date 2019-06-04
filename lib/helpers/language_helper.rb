@@ -9,6 +9,9 @@ module LanguageHelper
         js = "window.NavLangs=[#{@item[:languages].map { |lang| %{"#{lang.split(',')[0]}"} }.join(',')}];"
         %{<script type="text/javascript">#{js}</script>}
       end
+    elsif @item[:no_languages]
+      js = "window.NoLangs=true;"
+        %{<script type="text/javascript">#{js}</script>}
     end
   end
 end

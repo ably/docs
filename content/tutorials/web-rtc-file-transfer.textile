@@ -1,70 +1,76 @@
 ---
-title: WebRTC file transfers with Ably
+title: "WebRTC 4. File transfers with Ably"
 section: tutorials
 index: 106
 jump_to:
- Lesson:
-   - 0. Introduction:/tutorials/web-rtc-introduction
-   - 1. Data Channels:/tutorials/web-rtc-data-channels
-   - 2. Video Calling:/tutorials/web-rtc-video-calling
-   - 3. File Transfer:/tutorials/web-rtc-file-transfer
-   - 4. Screen Sharing:/tutorials/web-rtc-screen-sharing
+ Section:
+   - 1. Introduction#intro
+   - 2. Choosing a WebRTC library#choosing-webrtc-library
+   - 3. Designing a simple HTML layout#design-html-layout
+   - 4. Defining the connection helper class#defining-connection-helper-class
+   - 5. Displaying online users#displaying-online-users
+   - 6. Sending files#sending-files
+   - 7. Receiving files#receiving-files
+   - 8. Adding audio notifications#adding-audio-notifications
+   - 9. Testing our app#testing-our-app
+   - 10. Live Demo#live-demo
+   - 11. Conclusion#conclusion
 ---
 
-h2. Introduction
+h2(#intro). Introduction
 
-WebRTC Datachannels API allows developers to transmit arbitrary data directly between two users. 
+WebRTC Datachannels API allows developers to transmit arbitrary data directly between two users.
 The idea behind file transfers using WebRTC is to convert files into buffers or DataUrl, transmit them in chunks, then compile them back to the file it originally was, on the receiving end.
 
 In this tutorial, we will implement file transfer with data channels using WebRTC and Ably, that will allow us to share files with multiple people in separate chats.
 
 This is very similar to our initial lesson on data channels.
 
-<a href="/images/tutorials/file-transfer.gif" target="_blank">
-  <img src="/images/tutorials/file-transfer.gif" style="width: 100%" alt="Demo image">
+<a href="/images/tutorials/webrtc/file-transfer.gif" target="_blank">
+  <img src="/images/tutorials/webrtc/file-transfer.gif" style="width: 100%" alt="Demo image">
 </a>
 
 <%= partial 'tutorials/_step-1-setup-free-account' %>
 
-h2.
+h2(#choosing-webrtc-library).
   default: Step 2 - Choosing a WebRTC library
- 
+
 Dealing with WebRTC directly might be a bit tedious as it generally involves a lot of lines of code. However, there are many WebRTC libraries available that provide high-level abstractions and expose only a few methods to users, while handling major uplifting themselves. WebRTC has been an emerging standard and is still somewhat in flux, so it’s crucial to make sure that whichever library you choose is up to date and well maintained.
 
 In all the chapters of this tutorial, we will be using "simple-peer":https://github.com/feross/simple-peer - a simple WebRTC library for video/voice and data channels.
 
-h2.
+h2(#design-html-layout).
   default: Step 3 - Designing a simple HTML layout
 
 Create a new file called @index.html@ and add the following code:
 
 ```[html]
     <!-- index.html -->
-    
+
     <!DOCTYPE html>
     <html>
-    
+
     <head>
         <title>Ably WebRTC DataChannel Demo</title>
         <!-- Bootstrap for general layout and styling -->
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
     </head>
-    
+
     <body>
         <!-- Axios for requests -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
-    
+
         <!-- Ably for WebRTC signalling -->
         <script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
-    
+
         <!-- simplepeer.js for WebRTC functionality -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.1.2/simplepeer.min.js"></script>
-    
+
         <!-- Our Javascript logic for handling users, displaying messages and notification -->
         <script src="ably-datachannel.js"></script>
         <!-- An helper connection class, for managing multiple users -->
         <script src="connection-helper.js"></script>
-    
+
         <div class="container-fluid" style="margin-top: 5em;">
             <div class="container" id="join">
                 <h4 id="online">Users online (0) </h4>
@@ -78,17 +84,17 @@ Create a new file called @index.html@ and add the following code:
             </div>
         </div>
     </body>
-    
+
     <style>
         small {
             border-bottom: 2px solid black;
         }
-        
+
         li {
             list-style: none;
         }
     </style>
-    
+
     </html>
 ```
 "See this step in Github":https://github.com/samuelayo/tutorials/commit/8de51d8f041af988750f65c909a68f0e7ba0c2cb
@@ -106,9 +112,9 @@ The code snippet above is a basic HTML declaration in which we did the following
 # Declared a @div@ with the id of @chat@ which holds the input file to select files as well as the send file @button@.
 
 
-h2.
+h2(#defining-connection-helper-class).
   default: Step 4 - Defining the connection helper class
-  
+
 In Step 3 above, we Referenced a library called @connection-helper.js@. This library helps to manage the simple-peer connections, so as to keep our code organized, as we will be having multiple instances of the connection.
 
 Create a new file called @connection-helper.js@ and paste the following code:
@@ -129,40 +135,40 @@ Create a new file called @connection-helper.js@ and paste the following code:
             this._p2pConnection.on('close', this._onClose.bind(this));
             this._p2pConnection.on('data', this._onData.bind(this));
         }
-    
+
         handleSignal(signal) {
             this._p2pConnection.signal(signal);
         }
-    
+
         send(msg) {
             this._p2pConnection.send(msg);
         }
-    
-    
+
+
         _onSignal(signal) {
             AblyRealtime.publish(`ablyWebRTC-signal/${this._remoteClient}`, {
                 user: clientId,
                 signal: signal,
             });
         }
-    
+
         _onConnect() {
             this.isConnected = true;
             console.log('connected to ' + this._remoteClient);
         }
-    
+
         _onClose() {
             console.log(`connection to ${this._remoteClient} closed`);
             delete connections[this._remoteClient];
         }
-    
-    
+
+
         _onData(data) {
             receiveMessage(this._remoteClient, data)
         }
-    
+
         _onError(error) {
-            console.log(`an error occured ${error.toString()}`);
+            console.log(`an error occurred ${error.toString()}`);
         }
     }
 ```
@@ -175,7 +181,7 @@ In the code block above, we have defined a @connection@ class which makes use of
 
 In our constructor, we accept 3 parameters:
 
-# @remoteClient@: this refers to the other party we want to connect to. 
+# @remoteClient@: this refers to the other party we want to connect to.
 # @AblyRealtime@: this refers to an instance of an Ably channel
 # @initiator@: this is a Boolean parameter that states whether this peer is the one initiating the connection or not.
 
@@ -192,7 +198,7 @@ Let us now understand the methods defined in the class:
 # @_onData@: this method is called when a new message has been sent to the other peer. Here, it calls another method called @receiveMessage@, which we will later define in the @ably-datachannel.js@ file.
 # @_onError@: should an error occur in our connection, this method will be called. Currently, we just log out the details of the error.
 
-h2.
+h2(#displaying-online-users).
   default: Step 5 – Displaying online users
 
 Before we can send messages via WebRTC, we need to verify that the other peer we want to connect to is online, as WebRTC would not connect with offline peers.
@@ -208,14 +214,14 @@ Create a file called @ably-datachannel.js@ and add the following code:
     var clientId = 'client-' + Math.random().toString(36).substr(2, 16)
     var realtime = new Ably.Realtime({ key: apiKey, clientId: clientId })
     var AblyRealtime = realtime.channels.get('ChatChannel')
-    
+
     AblyRealtime.presence.subscribe('enter', function(member) {
         AblyRealtime.presence.get((err, members) => {
             membersList = members
             renderMembers()
         })
     })
-    
+
     AblyRealtime.presence.subscribe('leave', member => {
         delete(connections[member.client_id])
         if (member.client_id === currentChat) {
@@ -227,9 +233,9 @@ Create a file called @ably-datachannel.js@ and add the following code:
             renderMembers()
         })
     })
-    
+
     AblyRealtime.presence.enter()
-    
+
     function renderMembers() {
         var list = document.getElementById('memberList')
         var online = document.getElementById('online')
@@ -255,7 +261,7 @@ Create a file called @ably-datachannel.js@ and add the following code:
 Before we move forward, please ensure that you have set the value of @apikey@ to your private Ably API key. The other variables are explained below:
 
 
-# @messageLis@: this is an object which will contain keys of each client you are currently chatting with, or that has sent a message, with an array of what the messages are.
+# @messageList@: this is an object which will contain keys of each client you are currently chatting with, or that has sent a message, with an array of what the messages are.
 # @membersList@: this is an array of all currently online members you can chat with.
 # @connections@: this is an object which will contain keys of each client you have a current chat with, or that has sent you a message, with their current connection object.
 # @apiKey@: this is your API key for Ably as generated in step 1
@@ -273,15 +279,15 @@ Lastly, we have our @renderMembers@ method, which loops through the @membersList
 
 
 
-<a href="/images/tutorials/users-online.png" target="_blank">
-  <img src="/images/tutorials/users-online.png" style="width: 50%" alt="Demo image">
+<a href="/images/tutorials/webrtc/users-online.png" target="_blank">
+  <img src="/images/tutorials/webrtc/users-online.png" style="width: 50%" alt="Demo image">
 </a>
 
-<a href="/images/tutorials/users-offline.png" target="_blank">
-  <img src="/images/tutorials/users-offline.png" style="width: 50%" alt="Demo image">
+<a href="/images/tutorials/webrtc/users-offline.png" target="_blank">
+  <img src="/images/tutorials/webrtc/users-offline.png" style="width: 50%" alt="Demo image">
 </a>
 
-h2.
+h2(#sending-files).
   default: Step 6 – Sending files
 
 We have been able to identify who is online and ready to receive instant files using WebRTC data channels, now we move to the part where we send files. Add the following to the end of your @ably-datachannel.js@ file.
@@ -297,15 +303,15 @@ We have been able to identify who is online and ready to receive instant files u
         document.getElementById('chat').style.display = 'block'
         render()
     }
-    
-    
+
+
     AblyRealtime.subscribe(`rtc-signal/${clientId}`, msg => {
         if (!connections[msg.data.user]) {
             connections[msg.data.user] = new Connection(msg.data.user, AblyRealtime, false)
         }
         connections[msg.data.user].handleSignal(msg.data.signal)
     })
-    
+
     function sendMessage() {
         if (!messageList[currentChat]) {
             messageList[currentChat] = {}
@@ -338,13 +344,10 @@ For the two pairs to connect, the other peer has to be signaled of the incoming 
 
 **Now, we can go ahead to send files.**
 
-In our @sendMessage@ method, we use the @currentChat@ variable to figure out who it is that we are trying to send the file to. 
 
-p(tip). Note: Files can be read as @ArrayBuffers@, @DataUrls@, @BinaryStrings@, and @Text@. The same concept of sending the file in chunks follows for the other read types. In this lesson, we are using the DataUrl type. 
+In our @sendMessage@ method, we use the @currentChat@ variable to figure out who it is that we are trying to send the file to. We also check that the file about to be sent is not larger than our file limit. Here, it is set as 2mb, feel free to increase yours. We then initiate a new @fileReader@ instance. Because the @fileReader@ is an asynchronous API, we have to wait till it’s loaded before we can do anything with it. Here, we defined a new function for it to fire when it’s @onload@ event is ready. We passed the event, a null and the file we want to send to a function called @onReadAsDataURL@. We then ask the @fileReader@ to read the file as a DataUrl.
 
-We also check that the file about to be sent is not larger than our file limit. Here, it is set as 2mb, feel free to increase yours. We then initiate a new @fileReader@ instance. 
-
-Because the @fileReader@ is an asynchronous API, we have to wait till it’s loaded before we can do anything with it. Here, we defined a new function for it to fire when it’s @onload@ event is ready. We passed the event, a null and the file we want to send to a function called @onReadAsDataURL@. We then ask the @fileReader@ to read the file as a DataUrl.
+p(tip). Note: Files can be read as @ArrayBuffers@, @DataUrls@, @BinaryStrings@, and @Text@. The same concept of sending the file in chunks follows for the other read types. In this lesson, we are using the DataUrl type.
 
 **What happens in the onReadAsDataURL method?**
 
@@ -355,7 +358,7 @@ Because the @fileReader@ is an asynchronous API, we have to wait till it’s loa
         data.name = file.name
         data.size = file.size
         if (event) {
-            text = event.target.result; // on first invocationgettrue;we 
+            text = event.target.result; // on first invocationgettrue;we
             data.stringSize = text.length
             messageList[currentChat][file.name] = {
                 completed: true,
@@ -396,7 +399,7 @@ The @if(event)@ block caters for instances when it is initiated by the @fileRead
 
 Next, we check if the length of the DataUrl is greater than the defined chunk size. If true, we slice the text, else, we send the text, with an extra property telling the other peer this is the last part of the data. This is useful to know when all parts of the file have been received.
 
-h2.
+h2(#receiving-files).
   default: Step 7 – Receiving files
 
 Receiving the files involves storing the chunks in an array, then joining the chunks together when all parts have been received. Let’s take a look at the @receiveMessage@ function below:
@@ -425,7 +428,7 @@ Receiving the files involves storing the chunks in an array, then joining the ch
         renderMembers()
         render()
     }
-    
+
     function render() {
         if (!messageList[currentChat]) {
             return
@@ -440,7 +443,7 @@ Receiving the files involves storing the chunks in an array, then joining the ch
         Object.keys(messageList[currentChat]).forEach((key) => {
             var element = messageList[currentChat][key]
             var downloadPercent = (element.chunks.join('').length / element.stringSize) * 100
-            var downloadLink = element.completed ? '<a target =_blank download=' + key + ' href=' + element.downloadLink + ' > download now </a>' : 'recieving ' + downloadPercent + '%'
+            var downloadLink = element.completed ? '<a target =_blank download=' + key + ' href=' + element.downloadLink + ' > download now </a>' : 'receiving ' + downloadPercent + '%'
             html += '<li><small> ' + element.sender + ' : ' + key + '</small> ' + downloadLink + ' </li>'
         });
         list.innerHTML = html
@@ -451,9 +454,9 @@ Receiving the files involves storing the chunks in an array, then joining the ch
 
 **What is going on in the code block above?**
 
-In the @receiveMessage@ method, we receive the file here with the id of the user who sent it, then create a new key with the name of the file we want to receive in the object that belongs to the sender. Next, we set the properties of @completed@ to false, the @downloadLink@ to empty. The size of the string we are expecting in total is received as @stringSize@, then we defined a chunks array where the chunks would be stored. 
+In the @receiveMessage@ method, we receive the file here with the id of the user who sent it, then create a new key with the name of the file we want to receive in the object that belongs to the sender. Next, we set the properties of @completed@ to false, the @downloadLink@ to empty. The size of the string we are expecting in total is received as @stringSize@, then we defined a chunks array where the chunks would be stored.
 
-When we receive the property called @last@, we join the array as one, and then set it as the @downloadLink@, while setting the completed property to false. 
+When we receive the property called @last@, we join the array as one, and then set it as the @downloadLink@, while setting the completed property to false.
 
 
 p(tip). The @downloadLink@ property herein would be a valid DataUrl
@@ -463,15 +466,15 @@ Finally, we defined the much loved @render@` method, which loops through all our
 
 At this point, if we open the @index.html@ file in two separate browser windows we should be able to send and receive messages as seen below:
 
-<a href="/images/tutorials/file-transfer.gif" target="_blank">
-  <img src="/images/tutorials/file-transfer.gif" style="width: 100%" alt="Demo image">
+<a href="/images/tutorials/webrtc/file-transfer.gif" target="_blank">
+  <img src="/images/tutorials/webrtc/file-transfer.gif" style="width: 100%" alt="Demo image">
 </a>
 
 
-h2.
+h2(#adding-audio-notifications).
   default: Step 8 – Adding audio notifications
 
-In our current app, we have a new badge on the edge of the client’s id, which shows that someone has sent us a new message, however, that requires that the user must be on the page and be actively looking for the new status before he notices that a new message has been sent to him by someone who is not his current chat. We can improve this by adding audio notifications. 
+In our current app, we have a new badge on the edge of the client’s id, which shows that someone has sent us a new message, however, that requires that the user must be on the page and be actively looking for the new status before he notices that a new message has been sent to him by someone who is not his current chat. We can improve this by adding audio notifications.
 
 Let’s add the following at the beginning of our @ably-datachannel.js@ file:
 
@@ -512,9 +515,9 @@ Next, let us update the @receiveMessage@ method to be able to play the notificat
 ```
 "See this step in Github":https://github.com/samuelayo/tutorials/commit/252bc9dde179f15a0f2d5d1bb9631fb21fc38a9f
 
-h2. Testing our app
+h2(#testing-our-app). Testing our app
 
-To test the messaging system we have just built, serve your @index.html@ file as a static file via any server of your choice. 
+To test the messaging system we have just built, serve your @index.html@ file as a static file via any server of your choice.
 
 Using Node.js, install the @http-server@ package:
 
@@ -531,13 +534,61 @@ Navigate to @http://127.0.0.1:8081@ to view the demo.
 
 h2(#live-demo). Live demo
 
-<iframe src="https://ablyfiletransfer.herokuapp.com/" height="400px" width="100%" ></iframe>
+<div id="qr-code" style="float: right; margin: 0 0 15px 15px; width: 200px; display: none; text-align: center">
+  <div style="margin-top: 5px">Scan this on your mobile</div>
+</div>
+<div id="lvideo">
+</div>
 To try this example yourself, <a href="https://ablyfiletransfer.herokuapp.com/" id="new-browser" target="_blank">Open this demo in a new browser window</a> to see WebRTC file transfer in action.
-Please note that for the demo to work, the browser instances must be on the same IP address.
 
-h2.
+
+h2(#conclusion).
   default: Step 9 – Conclusion
 
-In this tutorial, we have seen how to use WebRTC data channels in conjunction with Ably to create realtime file share. Do you have any thoughts on making this lesson better? "Let us know.":https://www.ably.io/contact
+In this tutorial, we have seen how to use WebRTC data channels in conjunction with Ably to create realtime file share. Do you have any thoughts on making this lesson better? "Let us know":mailto:devrel@ably.io
 
+<img src="/images/ably-logo-white-outline.png" id="ably-qr-logo" style="visibility: hidden; width: 1px; height: 1px" crossOrigin="anonymous">
+
+<script src="https://apis.google.com/js/api.js"></script>
+<script type="text/javascript">
+  window.addEventListener("load", function() {
+    var urlParams = new URLSearchParams(location.search);
+    var channelName = urlParams.has('channel') ? urlParams.get('channel') : 'fileChannel-' + Math.random().toString(36).substr(2, 16)
+    /* Set up the link to open a new window with this random channel name */
+    var base = 'https://ablyfiletransfer.herokuapp.com/'
+    var urlWithChannel = document.location.href.replace(/#.*$/, '');
+    if (urlWithChannel.indexOf('channel=') < 0) {
+      base += (urlWithChannel.indexOf('?') < 0 ? '?' : '&') + "channel=" + escape(channelName);
+    }
+    $('a#new-browser').attr('href', base);
+    var iframe = document.createElement('iframe');
+    iframe.setAttribute('src', base);
+    iframe.setAttribute('width', '100%');
+    iframe.setAttribute('height', '400px');
+    iframe.setAttribute('allow', "geolocation; microphone; camera");
+    document.getElementById('lvideo').appendChild(iframe);
+    function setupQrCode() {
+      var request = gapi.client.urlshortener.url.insert({
+        'longUrl': base
+      });
+      request.then(function(response) {
+        console.log(response.result.id);
+        var qr = kjua({ text: response.result.id, size: 200, ecLevel: 'H', mode: 'image', image: $('img#ably-qr-logo')[0] });
+        $('#qr-code').show().prepend(qr);
+      }, function(reason) {
+        console.error('Error: ' + reason.result.error.message);
+      });
+    }
+
+    /* Set up QR code with a short URL from goo.gl */
+    function init() {
+      gapi.client.setApiKey('AIzaSyDXq2c1JjZTSUrzPZESxf4XP_tRu-N8r3A');
+      gapi.client.load('urlshortener', 'v1').then(setupQrCode);
+    }
+
+    var started = new Date().getTime();
+
+    gapi.load('client', init);
+  });
+</script>
 Next: Chapter 4 - "Less code, more efficient screen sharing with Ably":/tutorials/web-rtc-screen-sharing

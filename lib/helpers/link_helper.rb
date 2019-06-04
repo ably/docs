@@ -7,10 +7,11 @@ module LinkHelper
   end
 
   def canonical_link
-    if item.identifier == '/'
+    clean_item = item.identifier.without_exts.gsub(%r{index$}, '')
+    if clean_item == '/'
       CANONICAL_ROOT
     else
-      "#{CANONICAL_ROOT}documentation#{item.identifier.gsub("/root", "")}".gsub(%r{/$}, '')
+      "#{CANONICAL_ROOT}documentation#{clean_item.gsub("/root", "")}".gsub(%r{/$}, '')
     end
   end
 end

@@ -1,0 +1,146 @@
+---
+title: Android Push Notifications tutorial - Direct device registration
+section: tutorials
+index: 23
+---
+
+Ably can deliver native Push Notifications to Android devices using "Firebase Cloud Messaging":https://firebase.google.com/docs/cloud-messaging/. Native Push Notifications, unlike our "channel-based Pub/Sub messaging":/realtime/channels/, do not require the device to maintain a connection to Ably, as the underlying platform or OS is responsible for maintaining its own battery efficient transport to receive Push Notifications. Therefore, native Push Notifications are commonly used to display visual notifications to users or launch a background process for an app in a battery efficient manner.
+
+In this tutorial, we'll see how to set up and send Push Notifications to your Android app using "Ably's Push Notification service":/general/push. 
+
+Ably supports two types of client permissions for access to the Push Notification service:
+
+* "@push-subscribe@":/general/push/activate-subscribe: A client with this permission is a push target device, and it can manage the registration and subscription for itself. However, it won't be able to manage push registrations or channel subscriptions for any other device.
+* "@push-admin@":/general/push/admin: A client with this permission has full access to the "Push Admin API":https://www.ably.io/documentation/general/push/admin and can manage registrations and subscriptions for all devices.
+
+Read more about permissions (also called capabilities) in our "API documentation":/core-features/authentication#capabilities-explained.
+
+To enable Push Notifications on your device, it must be registered with FCM first. This can be done in two ways; you can either have the device register itself directly with Ably or delegate the registration work to your app server, which would then register the device with Ably on its behalf. In this tutorial we'll implement direct device registration. You can jump to "another tutorial":/tutorials/android-push-server-registration if you'd rather have your server register the device with FCM.
+
+<%= partial 'tutorials/_step-1-setup-free-account' %>
+
+h2(#step2). Step 2 - Enabling Push in your Ably app
+
+<%= partial 'shared/tutorials/_android_push_enable_permissions' %>
+
+h2(#step3). Step 3 - Registering your app with FCM
+
+<%= partial 'shared/tutorials/_android_push_fcm_register' %>
+
+h2(#step4). Step 4 - Adding the Ably client library to your Android project
+
+<%= partial 'shared/tutorials/_android_push_library_setup' %>
+
+h2(#step5). Step 5 - Adding the Google Services Gradle plugin
+
+<%= partial 'shared/tutorials/_android_push_google_services' %>
+
+h2(#step6). Step 6 - Integrating FCM into the Ably app
+
+In this step, we'll integrate FCM into our Ably app. Go ahead and add a new folder in the same directory as your @MainActivity.java@ file, and name it 'receivers'. In this new folder, add a new file and name it @AblyPushMessagingService.java@. In this file, we'll add code to show a Push Notification on the device when it receives one. Paste the following into this file:
+
+```[java]
+package YOUR-PACKAGE-NAME;
+
+import android.content.Intent;
+import android.support.v4.content.LocalBroadcastManager;
+
+import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.firebase.messaging.RemoteMessage;
+
+public class AblyPushMessagingService extends FirebaseMessagingService {
+    public static final String PUSH_NOTIFICATION_ACTION = AblyPushMessagingService.class.getName() + ".PUSH_NOTIFICATION_MESSAGE";
+
+    @Override
+    public void onMessageReceived(RemoteMessage message) {
+        //FCM data is received here.
+
+        Intent intent = new Intent(PUSH_NOTIFICATION_ACTION);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+    }
+
+
+}
+```
+
+Next, go ahead and add this class as a service in your manifest fie. Open the @AndroidManifest.xml@ and paste the following after @<activity></activity>@ within the @<application></application@ tags.
+
+```[xml]
+<service android:name=".receivers.AblyPushMessagingService">
+    <intent-filter>
+        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+    </intent-filter>
+</service>
+```
+
+Next, in the same folder that you created before, add a new file and name it @AblyPushMessagingService.java@ and paste the following into it.
+
+```[java]
+package YOUR-PACKAGE-NAME;
+
+import io.ably.lib.push.AblyFirebaseInstanceIdService;
+
+/**
+ * Leave this empty as the base class AblyFirebaseInstanceIdService does the FCM token registration.
+ * In case your app requires access to FCM token as well, then override io.ably.lib.push.AblyFirebaseInstanceIdService#onTokenRefresh()
+ */
+public class AblyPushRegistrationService extends AblyFirebaseInstanceIdService {
+    @Override
+    public void onTokenRefresh() {
+        //Make sure to call super.onTokenRefresh to initialize Ably push environment.
+        super.onTokenRefresh();
+    }
+}
+```
+
+h2(#step7). Step 7 - Setting up a Node.js server for authentication
+
+<%= partial 'shared/tutorials/_setup_node_push_auth' %>
+
+h2(#step8). Step 8 - Directly registering the devices with FCM
+
+In this step, we'll activate (or register) the device with Firebase Cloud Messaging server, for the device to be able to receive the Push Notifications sent to it.
+
+In your @MainActivity.java@ file, define a new function called @initAblyPush()@, as follows:
+
+```[java]
+private void initAblyPush() throws AblyException {
+    ablyRealtime.push.activate();
+}
+```
+
+In the above function, we've used the "@activate@":/general/push/activate-subscribe#activate method to register the device directly with FCM.
+
+Next, we'll need to have the device subscribe to the channel on which the notifications will be sent. Add another function definition as shown below:
+
+```[java]
+private void subscribeChannels() {
+    ablyRealtime.channels.get(TEST_PUSH_CHANNEL_NAME).push.subscribeClientAsync(new CompletionListener() {
+        @Override
+        public void onSuccess() {
+            logMessage("Subscribed to push for the channel " + TEST_PUSH_CHANNEL_NAME);
+            handler.sendMessage(handler.obtainMessage(SUCCESS, STEP_4));
+        }
+
+        @Override
+        public void onError(ErrorInfo reason) {
+            logMessage("Error subscribing to push channel " + reason.message);
+            logMessage("Visit link for more details: " + reason.href);
+            handler.sendMessage(handler.obtainMessage(FAILURE));
+        }
+    });
+
+}
+```
+
+h2(#step9). Step 9 - Testing the app
+
+<%= partial 'shared/tutorials/_testing_push_android' %>
+
+h2(#further-reading). Further Reading
+
+* Ably's "Push Notifications documentation":/general/push and info on "channels":/core-features/channels may be useful.
+
+* "FCM documentation":https://firebase.google.com/docs/cloud-messaging/ is a good place to find more information on the use of Push Notifications in Android.
+
+* You may also wish to deregister devices or get all of the stats related to your application implementing Push Notifications, such as the number and type of device registrations, etc. More information on how to do this can be found in the "Push Admin API docs":/general/push/admin.

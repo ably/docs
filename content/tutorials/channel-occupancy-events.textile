@@ -1,0 +1,236 @@
+---
+title: Channel Occupancy Events
+section: tutorials
+index: 17
+---
+
+Ably Realtime's Data Stream Network organizes all of the message traffic within its applications into named "channels":https://www.ably.io/channels. Channels are the “unit” of message distribution; clients attach to any number of channels to publish or subscribe to messages. Every message published to a channel is broadcasted to all subscribers. 
+
+Many times, developers find it helpful to be aware of specific metadata related to their channels. This metadata can be accessed using our "Channel Metadata API":/realtime/channel-metadata. This API allows you to subscribe to the "channel lifecycle events":/realtime/channel-metadata#lifecycle-events and "channel occupancy events":/realtime/channel-metadata#occupancy-realtime or send one off REST requests to the "Channel Status API":/rest/channel-status to query "channel enumeration":/rest/channel-metadata/enumeration-rest, i.e., listing all the active channels associated with a particular API key in an app or to query the status and occupancy data associated with the channel. In this tutorial, we'll see how to subscribe to the channel occupancy events.
+
+Channel occupancy reveals the number and type of occupants of a particular channel. This includes the number of connections, publishers, subscribers, presence members, and presence subscribers. When you subscribe to the occupancy events via the realtime library, you'll receive updates whenever the occupancy changes, in other words, the count of one of these parameters changes. However, you can still send out a one-off REST request via our REST library, to get the then occupancy data for the channel in question. This is part of the "Channel Status API":/rest/channel-status
+
+Channel occupancy is currently available only to our Enterprise customers via both our "Realtime":/realtime, and "REST":/rest libraries. "Get in touch":https://www.ably.io/pricing/enterprise with our sales team to get set up with an enterprise account. However, you can still try this feature out using your free account, but the existing limits pertaining to a free account's usage will remain so.
+
+<%= partial 'tutorials/_step-1-setup-free-account' %>
+
+h2(#permissions). Step 2 - Setting the right permissions on your API key
+
+In order to be able to use the occupancy data that is offered as part of the Channel Lifecycle API, you'll need to attach to a special channel called '[meta]channel.lifecycle'. This channel, in essence, is similar to any other channel that you would use to share data within Ably's Data Stream Network; however, it's kept on a different namespace to easily separate concerns. All of the metadata, including channel lifecycle events and occupancy events, will be sent on this channel.
+
+You'll need to ensure that the @Channel Metadata@ permission is enabled on your API key. "Permissions":/core-features/authentication/#capabilities-explained (or privileges or capabilities, used interchangeably) restrict your API key from being used to performing specific actions only, such as publish-and-subscribe or publish-only, etc. These privileges can be set on your API key via your account dashboard. Navigate to the 'API Keys' tab of your dashboard as shown in the image below and click on the 'settings' button against an existing API key that you'd like to use or create a new one.
+
+A regular Ably API key has a @capability@ which lists resources (glob expressions that match channel names) and, for any given resource, a set of permitted operations. The wildcard resource @'*'@ will match any regular channel name.
+
+In order to grant permission in a key to a channel, however, the resource name(s) in the @capability@ must include the @[meta]@ qualifier explicitly; so the following are examples of capabilities that will validly permit access to a metachannel:
+
+```[json]
+    {"[meta]*":["subscribe"]}
+    {"[meta]*":["*"], "*":["*"]}
+```
+
+<a href="/images/tutorials/metadata/channel-metadata-permissions.png" target="_blank">
+    <img src="/images/tutorials/metadata/channel-metadata-permissions.png" style="width: 100%" alt="Channel metadata permissions">
+</a>
+
+Under normal circumstances you won't be granted permission to publish to, or be present in metachannels.
+
+h2(#front-end). Step 3 - Creating a basic HTML page to display the results
+
+Since we'll be using JavaScript in this tutorial, the best way to display the results, is in a browser. So, go ahead and paste the following simple HTML in a file and name it @index.html@
+
+```[html]
+<html>
+
+<head>
+    <title>Channel Occupancy Events</title>
+    <script src="https://cdn.ably.io/lib/ably.min-1.js" crossorigin="anonymous"></script>
+</head>
+
+<body style="padding: 60px; font-family:Arial, Helvetica, sans-serif; text-align: center;">
+    Ably Channel Occupancy Events - Demo
+    <br/>
+    <br/>
+    <div>
+        <br>
+        <textarea id="result" rows="30" style="width: 100%; margin-top: 10px; font-family: courier, courier new; background-color: #333; color: orange;  overflow-y: scroll;"
+            disabled>
+        </textarea>
+    </div>
+    <script src="main.js"></script>
+</body>
+
+</html>
+```
+
+The key thing to note in the HTML above is the inclusion of two JS files, one is the Ably Library, referenced via the CDN, while the other is the @main.js@ file which will include our logic, we'll work on this next. We have also added a text area to display our results in.
+
+h2(#subscribing-to-occupancy-events). Step 4 - Subscribing to Occupancy events using Ably's Realtime Library
+
+For the simplicity of this tutorial, we'll use "Basic authentication":/core-features/authentication#basic-authentication in our realtime client. However, it is highly recommended to use "Token auth":/core-features/authentication#token-authentication on client-side applications for "better security and protection of your API key":/root/best-practice-guide#using-api-key-client-side.
+
+Let's begin with instantiating the Ably Realtime client library using the API key. Create a new file called @main.js@ and add the following to it.
+
+```[javascript]
+var apiKey = '<YOUR-API-KEY>';
+var ably = new Ably.Realtime({
+    key: apiKey
+});
+```
+
+Next, let's instance the metachannel using the realtime client that we instanced above and also reference the text area we added in the HTML, to display results in.
+
+```[javascript]
+var metaChannel = ably.channels.get("[meta]channel.lifecycle");
+var resultArea = document.getElementById("result");
+resultArea.scrollTop = resultArea.scrollHeight;
+```
+
+The next step would be to subscribe to the channel occupancy events. This event is triggered on the @[meta]channel.lifecycle@ that we instanced above and bears the name 'channel.occupancy'. We can display the results returned in the callback in the text area in our HTML.
+
+```[javascript]
+metaChannel.subscribe('channel.occupancy', (msg) => {
+    var msgJSONobj = JSON.parse(JSON.stringify(msg.data));
+    //extract occupancy data from the message returned in the callback
+    var occupancyMetrics = msgJSONobj.status.occupancy.metrics
+    if (occupancyMetrics && !msgJSONobj.name.includes('[meta]')) {
+        resultArea.value += ('\n\n[METADATA - ' + (new Date().toLocaleTimeString()) + ' ]: Occupancy on channel "' + msgJSONobj.name + '" has been updated. New data is as follows:\n')
+        resultArea.value += ('Connections: ' + occupancyMetrics.connections + ' \n')
+        resultArea.value += ('Publishers: ' + occupancyMetrics.publishers + ' \n')
+        resultArea.value += ('Subscribers: ' + occupancyMetrics.subscribers + ' \n')
+        resultArea.value += ('Presence Connections: ' + occupancyMetrics.presenceConnections + ' \n')
+        resultArea.value += ('Presence Members: ' + occupancyMetrics.presenceMembers + ' \n')
+        resultArea.value += ('Presence Subscribers: ' + occupancyMetrics.presenceSubscribers + ' \n')
+        resultArea.scrollTop = resultArea.scrollHeight;
+    }
+})
+```
+
+
+Remember to replace the text '<YOUR-API-KEY>' with an actual Ably API key.
+
+In the above code, we have subscribed to the 'channel.occupancy' events on the metachannel containing the channel lifecycle information. Then, we have displayed the data returned in the text area. Simple as that! 
+
+h2(#live-demo). Step - 5 Live Demo
+
+For the live demo, we'll manually add new occupants through button clicks, so that we can see the 'channel.occupancy' events live in action.
+
+    Ably Channel Occupancy Events - Demo
+    <br/>
+    <br/>
+    <div style="text-align: center; padding: 10px;">
+        <button style="padding: 5px; width: 150px" id="add-publisher-instance" onclick="addPublisherInstance()">Add publisher instance</button>
+        <button style="padding: 5px; width: 150px" id="add-subscriber-instance" onclick="addSubscriberInstance()">Add subscriber instance</button>
+    </div>
+    <div style="text-align: center; padding: 10px;">
+        <button style="padding: 5px; width: 150px" id="add-publisher-instance-presence" onclick="addPublisherInstanceWithPresence()">Add publisher instance and enter presence</button>
+        <button style="padding: 5px; width: 150px" id="add-subscriber-instance-presence" onclick="addSubscriberInstanceWithPresence()">Add subscriber instance and enter presence</button>
+    </div>
+    <div>
+        <br>
+        <textarea id="result" rows="30" style="width: 100%; margin-top: 10px; font-family: courier, courier new; background-color: #333; color: orange;  overflow-y: scroll;"
+            disabled>
+        </textarea>
+    </div>
+
+"See the full code in GitHub":https://github.com/ably/tutorials/tree/channel-occupancy-events
+
+h2(#next-steps). Next Steps
+
+1. If you would like to find out more about how channels and publishing or subscribing to messages work, see the realtime "channels":https://www.ably.io/documentation/realtime/channels & "messages":https://www.ably.io/documentation/realtime/messages documentation.
+2. If you would like to check out the other related tutorials to work with channel metadata, see the "Channel Lifecycle Events":/tutorials/channel-lifecycle-events and "Channel Enumeration":/tutorials/channel-enumeration-rest tutorials.
+3. Learn more about "Ably features":https://www.ably.io/features by stepping through our other "Ably tutorials":https://www.ably.io/tutorials
+4. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
+5. "Get in touch if you need help":https://www.ably.io/contact
+
+
+
+<script src="https://cdn.ably.io/lib/ably.min-1.js" crossorigin="anonymous"></script>
+<script type="text/javascript">
+var ably = new Ably.Realtime({
+    authUrl: 'https://www.ably.io/ably-auth/token/demos'
+});
+var regularChannelName = "channel-" + Math.random().toString(36).substr(2, 16)
+var metaChannel = ably.channels.get("[meta]channel.lifecycle");
+var resultArea = document.getElementById("result");
+resultArea.scrollTop = resultArea.scrollHeight;
+
+metaChannel.subscribe('channel.occupancy', (msg) => {
+    var msgJSONobj = JSON.parse(JSON.stringify(msg.data));
+    console.log('JSON DATA IS ' + JSON.stringify(msg.data))
+    var occupancyMetrics = msgJSONobj.status.occupancy.metrics
+    if (occupancyMetrics && !msgJSONobj.name.includes('[meta]')&& msgJSONobj.name == regularChannelName) {
+        resultArea.value += ('\n\n[METADATA - ' + (new Date().toLocaleTimeString()) + ' ]: Occupancy on channel "' + msgJSONobj.name + '" has been updated. New data is as follows:\n')
+        resultArea.value += ('Connections: ' + occupancyMetrics.connections + ' \n')
+        resultArea.value += ('Publishers: ' + occupancyMetrics.publishers + ' \n')
+        resultArea.value += ('Subscribers: ' + occupancyMetrics.subscribers + ' \n')
+        resultArea.value += ('Presence Connections: ' + occupancyMetrics.presenceConnections + ' \n')
+        resultArea.value += ('Presence Members: ' + occupancyMetrics.presenceMembers + ' \n')
+        resultArea.value += ('Presence Subscribers: ' + occupancyMetrics.presenceSubscribers + ' \n')
+        resultArea.scrollTop = resultArea.scrollHeight;
+    }
+})
+
+function addPublisherInstance() {
+    resultArea.value += ('\n[LOCAL LOG - ' + (new Date().toLocaleTimeString()) + ' ]: Adding new publisher instance\n')
+    var myId = "clientId-" + Math.random().toString(36).substr(2, 16)
+    var ably = new Ably.Realtime({
+        key: 'I2E_JQ.pyH2aw:VecizCxwYfYnQTFV',
+        clientId: myId
+    });
+    var regularChannel = ably.channels.get(regularChannelName)
+    console.log('adding publisher instance')
+    regularChannel.publish('test-data', {
+        data: "Dummy Data",
+        time: Date.now()
+    })
+}
+
+function addSubscriberInstance() {
+    resultArea.value += ('\n[LOCAL LOG - ' + (new Date().toLocaleTimeString()) + ' ]: Adding new subscriber instance\n')
+    var myId = "clientId-" + Math.random().toString(36).substr(2, 16)
+    var ably = new Ably.Realtime({
+        key: 'I2E_JQ.r5i8rA:I0qknwh90lqfm4Rm',
+        clientId: myId
+    });
+    var regularChannel = ably.channels.get(regularChannelName)
+    console.log('adding subscriber instance')
+    regularChannel.subscribe('test-data', (data) => {
+        //do whatever
+        console.log('Subscription working')
+    })
+}
+
+function addPublisherInstanceWithPresence() {
+    resultArea.value += ('\n[LOCAL LOG - ' + (new Date().toLocaleTimeString()) + ' ]: Adding new publisher instance\n')
+    var myId = "clientId-" + Math.random().toString(36).substr(2, 16)
+    var ably = new Ably.Realtime({
+        key: 'I2E_JQ.pyH2aw:VecizCxwYfYnQTFV',
+        clientId: myId
+    });
+    var regularChannel = ably.channels.get(regularChannelName)
+    console.log('adding publisher instance')
+    regularChannel.publish('test-data', {
+        data: "Dummy Data",
+        time: Date.now()
+    })
+    regularChannel.presence.enter();
+}
+
+function addSubscriberInstanceWithPresence() {
+    resultArea.value += ('\n[LOCAL LOG - ' + (new Date().toLocaleTimeString()) + ' ]: Adding new subscriber instance\n')
+    var myId = "clientId-" + Math.random().toString(36).substr(2, 16)
+    var ably = new Ably.Realtime({
+        key: 'I2E_JQ.r5i8rA:I0qknwh90lqfm4Rm',
+        clientId: myId
+    });
+    var regularChannel = ably.channels.get(regularChannelName)
+    console.log('adding subscriber instance')
+    regularChannel.subscribe('test-data', (data) => {
+        //do whatever
+        console.log('Subscription working')
+    })
+    regularChannel.presence.enter();
+}
+
+</script>
