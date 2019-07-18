@@ -948,7 +948,8 @@ h2(#push-notifications). Push notifications
 ** @(RSH2a)@ @Push#activate@ sends a @CalledActivate@ event to "the state machine":#RSH3.
 ** @(RSH2b)@ @Push#deactivate@ sends a @CalledDeactivate@ event to "the state machine":#RSH3.
 ** @(RSH2c)@ Whenever any change arises of the push transport details for local device (eg an FCM registration token update triggered by the platform), a @GotPushDeviceDetails@ event is sent to "the state machine":#RSH3.
-** @(RSH2d)@ Whenever the local device @clientId@ changes after the local device is registered, a @GotPushDeviceDetails@ event is sent to "the state machine":#RSH3. A test must exist that verifies the corresponding local device registration update is made if the local @clientId@ is initialised late via the authentication or connection sequence.
+** @(RSH2d)@ If an attempt to obtain the push transport details for local device (eg an FCM registration token) fails, a @GettingPushDeviceDetailsFailed@ event containing the indicated error is sent to "the state machine":#RSH3.
+** @(RSH2e)@ Each time the library is instanced, if the LocalDevice has push device details (eg an APNS deviceToken), it must verify the validity of those details (eg by requesting a token from the platform and comparing that with the already-known token). If as a result there are updated details, then an update to the Ably server is triggered by sending a @GotPushDeviceDetails@ event to "the state machine":#RSH3.
 
 h3(#activation-state-machine). Activation state machine
 
@@ -961,7 +962,8 @@ h3(#activation-state-machine). Activation state machine
 **** @(RSH3a2a)@ If the local device has @deviceIdentityToken@, enqueues a @CalledActivate@ event and transitions to @WaitingForNewPushDeviceDetails@ and #RSH3a2b onwards don't apply.
 **** @(RSH3a2b)@ If the local device does not have @id@ and @deviceSecret@, both are generated locally. The @id@ must be a "ulid":https://github.com/ulid/spec or similar globally-unique identifier. The @deviceSecret@ must be created using secure random data with sufficient entropy to generate a digest of at least 32 bytes (eg using sha256) and encoding that digest with base64. The local @DeviceDetails@ is updated with the resulting @deviceId@ and @deviceSecret@.
 **** @(RSH3a2c)@ If the local device has the necessary push details (registration token, etc.), sends a @GotPushDeviceDetails@ event.
-**** @(RSH3a2d)@ Transitions to @WaitingForPushDeviceDetails@.
+**** @(RSH3a2d)@ If the local device does not have the necessary push details, it initiates a request to the underlying platform (or otherwise generates them)
+**** @(RSH3a2e)@ Transitions to @WaitingForPushDeviceDetails@.
 *** @(RSH3a3)@ On event @GotPushDeviceDetails@:
 **** @(RSH3a3a)@ Transitions to @NotActivated@. (This consumes the event; #RSH3a2 produces it again once @Push#activate@ is called.)
 ** @(RSH3b)@ State @WaitingForPushDeviceDetails@:
@@ -975,6 +977,9 @@ h3(#activation-state-machine). Activation state machine
 **** @(RSH3b3b)@ Otherwise, make an asynchronous HTTP @POST@ request to "/push/deviceRegistrations":/rest-api/#post-device-registration using the local @DeviceDetails@ updated with the push details as body.
 **** @(RSH3b3c)@ Either way, when the registration is done, a @GotDeviceRegistration@ or @GettingDeviceRegistrationFailed@ event should be fired.
 **** @(RSH3b3d)@ Transitions to @WaitingForDeviceRegistration@.
+*** @(RSH3b4)@ On event @GettingPushDeviceDetailsFailed@:
+**** @(RSH3b4a)@ Makes @Push#activate@ return or call its callback with the error.
+**** @(RSH3b4)@ Transitions to @NotActivated@.
 ** @(RSH3c)@ State @WaitingForDeviceRegistration@:
 *** @(RSH3c1)@ On event @CalledActivate@:
 **** @(RSH3c1a)@ Transitions to @WaitingForDeviceRegistration@.
@@ -1017,7 +1022,7 @@ h3(#activation-state-machine). Activation state machine
 *** @(RSH3g1)@ On event @CalledDeactivate@:
 **** @(RSH3g1a)@ Transitions to @WaitingForDeregistration@.
 *** @(RSH3g2)@ On event @Deregistered@:
-**** @(RSH3g2a)@ Removes the @deviceIdentityToken@ from the local @DeviceDetails@.
+**** @(RSH3g2a)@ Clears all local @DeviceDetails@.
 **** @(RSH3g2b)@ Makes @Push#deactivate@ return or call its callback with no error.
 **** @(RSH3g2c)@ Transitions to @NotActivated@.
 *** @(RSH3g3)@ On event @DeregistrationFailed@:
