@@ -354,13 +354,19 @@ bc[sh]. curl -X POST https://rest.ably.io/channels/rest-example/messages \
  -H "Content-Type: application/json" \
  --data '{ "name": "publish", "data": "example" }'
 
+If you wish to publish a message to multiple channels at once, you should consider using our "batch publish functionality":/rest-api/beta#batch.
+
+h5(#idempotent-publish). Idempotent publishing
+
+It is possible for a client publishing through REST to not receive an acknowledgement of receipt from Ably for numerous reasons such as network failures outside of our control. In this scenario, you will likely wish to re-publish the message, but not risk duplicating it within the network. This is possible through the addition of an @id@ in the body of your POST, where the @id@ should uniquely identify the message.
+
 h5(#message-extras). Message extras
 
 Messages can include an optional @extras@ field, used by extensions to Ably's core realtime service.
 
-h6(#message-extras-push). Send push notification
+h5(#message-extras-push). Send push notification
 
-You can send a push notification to devices "subscribed to the channel":#post-channel-subscription the message is sent to by setting the @push@ field in the @extras@ object, like this:
+You can send a push notification to devices "subscribed to a channel":#post-channel-subscription by setting the @push@ field in the @extras@ object, like this:
 
 bc[json]. {
   <... message fields ...>
@@ -416,17 +422,51 @@ bc[sh]. curl -X POST https://rest.ably.io/channels/push-enabled:rest-example/mes
 
 h5. Parameters
 
-None
+- enveloped := if present and equal to @false@, does an "unenveloped publish":#unenveloped
 
 h5. Options
 
 - Content-Type := @application/json@, @application/x-msgpack@ or @application/x-www-form-urlencoded@
-- Accept := not applicable
+- Accept := @application/json@ (the default), @application/x-msgpack@
 - Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
 
 h5. Returns
 
-Nothing when successful, else returns an error.
+When successful, returns an object with @channel@ and @messageId@ properties, in case you want to know the message ID assigned to correlate with messages received by realtime subscribers or Reactor recipients. When unsuccessful, returns an error as an "ErrorInfo":/rest/types#error-info object.
+
+h3(#unenveloped). Unenveloped publish
+
+If the @enveloped@ parameter is present and set to @false@, the request body is interpreted as the data payload for a message to be published, rather than (as it would normally be) as a @Message@ object or array of @Message@ objects. This can be useful if, for example, you want an Ably publish to be triggered by a webhook from some third-party service where you cannot control the format of the request body.
+
+Example json request:
+
+bc[sh]. curl -X POST https://rest.ably.io/channels/rest-example/messages?enveloped=false \
+-H 'content-type: application/json' --data '{"some":"json"}' \
+-u "{{API_KEY}}"
+
+Example plain text request:
+
+bc[sh]. curl -X POST https://rest.ably.io/channels/rest-example/messages?enveloped=false \
+-H 'content-type: text/plain' --data 'some plain text' \
+-u "{{API_KEY}}"
+
+h5. Headers and parameters
+
+- @X-Ably-MessageId@ := Optional message ID, used for "idempotent publishing":#idempotent-publish. Can also be specified as a @messageId@ querystring parameter. Equivalent to @Message.id@
+- @X-Ably-Name@ := Optional message name. Can also be specified as a @name@ querystring parameter. Equivalent to @Message.name@
+- @X-Ably-ConnectionKey@ := Optional connection key, used to publish on behalf of a realtime connection, see "documentation above":#publish. Can also be specified as a @connectionKey@ querystring parameter. Equivalent to @Message.connectionKey@
+- @X-Ably-Encoding@ := Optional message encoding. Allows you to specify the encoding of the message to allow recipient client libraries to decode it. For example, an encoding of @json@ will instruct client libraries to automatically JSON-parse the message on receipt. Also useful if sending an encrypted message, to allow client libraries to decrypt it (assuming they have the correct key). Must be in the correct format per our "client lib development guide":/client-lib-development-guide/features/#RSL4 ; if unsure, leave this unspecified. Can also be specified as an @encoding@ querystring parameter. Equivalent to @Message.encoding@
+- @X-Ably-ClientId@ := Optional client ID, base64-encoded (to allow arbitrary unicode). Can also be specified as a @clientId@ querystring parameter (_not_ base64-encoded). Equivalent to @Message.clientId@
+
+h5. Options
+
+- Content-Type := @text/plain@ (for @utf-8@ text request bodies) or @application/octet-stream@ (for binary request bodies). @application/json@ will also work, and is equivalent to specifying a content-type of @text/plain@ together with @X-Ably-Encoding@ of @json@.
+- Accept := @application/json@ (the default), @application/x-msgpack@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+When successful, returns an object with @channel@ and @messageId@ properties, in case you want to know the message ID assigned to correlate with messages received by realtime subscribers or Reactor recipients. When unsuccessful, returns an error as an "ErrorInfo":/rest/types#error-info object.
 
 h3(#message-history). Retrieve message history for a channel
 
