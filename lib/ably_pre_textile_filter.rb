@@ -55,6 +55,7 @@ class AblyPreTextileFilter
       content = add_language_support_for_block_quotes(content)
       content = add_language_support_for_headings(content)
       content = add_spec_anchor_links(content, attributes)
+      content = add_compare_table(content)
       add_support_for_inline_code_editor(content, path)
     end
 
@@ -178,7 +179,7 @@ class AblyPreTextileFilter
 
 
     # h[1-6] for method definitions use format
-    # 
+    #
     # h6(#optional-anchor)(minimize). method
     #
     # transform to
@@ -188,9 +189,9 @@ class AblyPreTextileFilter
         content.gsub(%r{^(h[1-6])(\(#[^\)]+\))?\(minimize(?:=([^\)]*))?\)\.(.*?)\n\n(.+?)(?=(?:\n\nh[1-6])|(?:\Z))}m) do |match|
           h_tag, anchor, expand_title, title, content = $1, $2, $3, $4, $5, $6
             expand_num = expand_num + 1
-            if expand_title.nil? || expand_title.empty? 
+            if expand_title.nil? || expand_title.empty?
               expand_title = "+ View More"
-            else 
+            else
               expand_title = "+ #{expand_title}"
             end
             "#{h_tag}#{anchor}.#{title}\n\n
@@ -213,9 +214,9 @@ class AblyPreTextileFilter
       while position = content.index(MINIMIZE_REGEX)
         subsequent_lines = content[position..-1].split(/\n\r|\n/)
         expand_title = subsequent_lines[0][MINIMIZE_REGEX, 1]
-        if expand_title.nil? || expand_title.empty? 
+        if expand_title.nil? || expand_title.empty?
           expand_title = "+ View More"
-        else 
+        else
           expand_title = "+ #{expand_title}"
         end
         minimize_block = subsequent_lines.shift
@@ -264,6 +265,12 @@ class AblyPreTextileFilter
           puts "Warning: Code-editor for JSBin '#{Regexp.last_match[1]}' not found, skipping"
           Regexp.last_match[0]
         end
+      end
+    end
+
+    def add_compare_table(content)
+      content.gsub(/compare_table\(([^\,]+),\s?([^\,]+),\s?([^\),]+)(?:(?:\))|(?:,\s?([^\)]+)\)))\./i) do
+        CompareTables.create_compare_table(Regexp.last_match[1], Regexp.last_match[2], Regexp.last_match[3], Regexp.last_match[4])
       end
     end
 
