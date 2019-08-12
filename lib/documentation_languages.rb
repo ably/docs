@@ -15,6 +15,7 @@ module Ably
     'c' => { name: 'C', extension: 'c' },
     'appcelerator' => { name: 'Appcelerator', extension: 'js' },
     'phonegap' => { name: 'PhoneGap', extension: 'js' },
+    'curl' => { name: 'curl', extension: 'sh' },
     'html' => { name: 'HTML', extension: 'html', ignore_from_language_selector: true },
     'json' => { name: 'JSON', extension: 'json', ignore_from_language_selector: true },
     'sh' => { name: 'Shell script', extension: 'sh', ignore_from_language_selector: true },
