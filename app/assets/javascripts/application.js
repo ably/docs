@@ -253,10 +253,8 @@ function getQueryParam(name, url) {
 
 function insertKeyUsageWarning(code) {
   let message = "API Keys should not be shared. The key here is intended solely for this example.";
-  let currentLangRegexp = /lang="(.*?)"/g;
-  let currentLang = currentLangRegexp.exec(code);
-  if (currentLang != null) currentLang = currentLang[1];
-
+  let currentLang = code.match(/(?<=(lang=")).*?(?=")/g);
+  if (currentLang != null) currentLang = currentLang[0];
   if(["php", "ruby", "python"].indexOf(currentLang) > -1) {
     message = `# ${message}`;
   } else {
