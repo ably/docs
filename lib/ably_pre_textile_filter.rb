@@ -55,7 +55,10 @@ class AblyPreTextileFilter
       content = add_language_support_for_block_quotes(content)
       content = add_language_support_for_headings(content)
       content = add_spec_anchor_links(content, attributes)
-      content = add_compare_table(content)
+      content = add_compare_table(content, attributes)
+      content = add_compare_names(content, attributes)
+      content = add_compare_urls(content, attributes)
+      content = add_published_date(content, attributes)
       add_support_for_inline_code_editor(content, path)
     end
 
@@ -177,7 +180,6 @@ class AblyPreTextileFilter
       end
     end
 
-
     # h[1-6] for method definitions use format
     #
     # h6(#optional-anchor)(minimize). method
@@ -268,9 +270,35 @@ class AblyPreTextileFilter
       end
     end
 
-    def add_compare_table(content)
-      content.gsub(/compare_table\(([^\,]+),\s?([^\,]+),\s?([^\),]+)(?:(?:\))|(?:,\s?([^\)]+)\)))\./i) do
-        CompareTables.create_compare_table(Regexp.last_match[1], Regexp.last_match[2], Regexp.last_match[3], Regexp.last_match[4])
+    def add_compare_table(content, attributes)
+      content.gsub(/compare_table\(([^\,\)]+)(?:(?:\))|(?:,\s?([^\)]+)\)))\./i) do
+        unless attributes[:competitors].nil?
+          CompareTables.create_compare_table(Regexp.last_match[1],  Regexp.last_match[2], attributes[:competitors])
+        end
+      end
+    end
+
+    def add_compare_names(content, attributes)
+      content.gsub(/\{\{company([0-9])\}\}/i) do
+        unless attributes[:competitors].nil?
+          CompareTables.company_name(attributes[:competitors][Regexp.last_match[1].to_i])
+        end
+      end
+    end
+
+    def add_compare_urls(content, attributes)
+      content.gsub(/\{\{companyurls([0-9])\}\}/i) do
+        unless attributes[:competitors].nil?
+          CompareTables.company_url(attributes[:competitors][Regexp.last_match[1].to_i])
+        end
+      end
+    end
+
+    def add_published_date(content, attributes)
+      content.gsub(/\{\{published_date\}\}/i) do
+        unless attributes[:published_date].nil?
+          attributes[:published_date]
+        end
       end
     end
 

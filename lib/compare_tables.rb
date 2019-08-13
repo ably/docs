@@ -4,26 +4,56 @@ class CompareTables
   class << self
     attr_accessor :compare_data
 
-    def create_compare_table(category, compare1, compare2, extra)
+    def create_compare_table(category, extra, competitors)
+      number_of_competitors = competitors.length
       unless compare_data[category].nil?
-        compare_table = "|_. #{category} |_. #{compare1} |_. #{compare2} |"
-        unless extra.nil?
-          compare_table.concat("_. #{extra} |")
-        end
-        compare_table.concat("\n")
-        compare_data[category].each do |name, value|
-          compared_text1 = value['compare'][compare1]
-          compared_text2 = value['compare'][compare2]
-          unless compared_text1.nil? || compared_text2.nil?
-            compare_table = compare_table.concat("| *#{value['description']}* | #{compared_text1} | #{compared_text2} |")
-            unless extra.nil?
-              compare_table = compare_table.concat(" #{value['extra']} |")
-            end
-            compare_table = compare_table.concat("\n")
-          end
-        end
-        compare_table
+        compare_table = create_compare_headers(category, extra, competitors)
+        compare_table = compare_table.concat(create_compare_body(category, extra, competitors))
       end
+    end
+
+    def create_compare_headers(category, extra, competitors)
+      compare_header = "|_. #{category} |"
+      competitors.each do |competitor|
+        compare_header.concat("_. #{company_name(competitor)} |")
+      end
+      unless extra.nil?
+        compare_header.concat("_. #{extra} |")
+      end
+      compare_header.concat("\n")
+    end
+
+    def create_compare_body(category, extra, competitors)
+      compare_body = ""
+      compare_data[category].each do |name, line|
+        if has_values?(line['compare'], competitors)
+          compare_body = compare_body.concat("| *#{line['description']}* |")
+          competitors.each do |competitor|
+            compare_body = compare_body.concat(" #{line['compare'][competitor]} |")
+          end
+          unless extra.nil?
+            compare_body = compare_body.concat(" #{line['extra']} |")
+          end
+          compare_body.concat("\n")
+        end
+      end
+      compare_body.concat("<br/>\n")
+    end
+
+    def has_values?(comparisons, competitors)
+      competitors.each do |competitor|
+        if comparisons[competitor].nil?
+          return false
+        end
+      end
+    end
+
+    def company_name(ref)
+      compare_data['Companies'][ref]['name']
+    end
+
+    def company_url(ref)
+      compare_data['Companies'][ref]['url']
     end
   end
 
