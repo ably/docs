@@ -58,6 +58,7 @@ class AblyPreTextileFilter
       content = add_compare_table(content, attributes)
       content = add_compare_names(content, attributes)
       content = add_compare_urls(content, attributes)
+      content = add_compare_id(content, attributes)
       content = add_published_date(content, attributes)
       add_support_for_inline_code_editor(content, path)
     end
@@ -282,6 +283,14 @@ class AblyPreTextileFilter
       content.gsub(/\{\{company([0-9])\}\}/i) do
         unless attributes[:competitors].nil?
           CompareTables.company_name(attributes[:competitors][Regexp.last_match[1].to_i])
+        end
+      end
+    end
+
+    def add_compare_id(content, attributes)
+      content.gsub(/\{\{companyid([0-9])\}\}/i) do
+        unless attributes[:competitors].nil?
+          attributes[:competitors][Regexp.last_match[1].to_i]
         end
       end
     end
