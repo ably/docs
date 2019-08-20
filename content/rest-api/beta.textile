@@ -12,13 +12,11 @@ h2(#overview). REST API Beta Features
 
 The contents of this section are beta features of our REST API. Although many of these features are fully functional, until the feature is released as generally available, the APIs may change. We recommend customers "get in touch":https://www.ably.io/contact if they want to use these features in production.
 
-h2(#features). Features
-
-h3(#batch). Batch publish
+h2(#batch). Batch requests
 
 Batch mode is a way of querying an API multiple times with a single HTTP request. The simplest example to consider is publishing a single message to multiple channels; a single request is made, indicating the channels and the contents of the message, and the system attempts to publish on all channels in parallel. Each of those attempts may succeed or fail independently. The batch mode API provides a way for the results of that request to be indicated back to the caller.
 
-h4(#batch-operation). Generic operation
+h3(#batch-operation). Generic operation
 
 A batch mode request translates a single set of request details (ie the request body, params and headers) in to an array of requests for the underlying API. Each of those requests is then performed in parallel.
 
@@ -29,7 +27,7 @@ Once each request has completed, the batch-mode response is formulated to be ret
 * one or more constituent API calls failed. In this case the response contains a generic @400@ status code and the response body contains an error object with a specific error code @40020@ signifying an error in a batch operation. The error body also then contains a @batchResponse@ property which in an array, in request order, containing the outcome of each of the constituent API calls.
 This means that caller can usually make the call and have access to the success result or an error in the case of failure. In the case of a partial failure, many callers may just wish to know whether or not the call succeeded fully, in which case they do not need to look at the @batchResponse@ detail. However, callers that wish to know the detail of the outcome of each call can discover this from the @batchResponse@.
 
-h4(#bulk-publish). Bulk publish
+h3(#batch-publish). Bulk publish
 
 The REST API has been extended to include batch-mode publish operations. The API concerned is:
 
@@ -106,7 +104,7 @@ h5. Using multiple BatchSpec objects in an array
 
 There is an obvious mapping from the request body to the array of individual publish requests.
 
-h4(#batch-response). Batch reponses
+h4(#batch-publish-response). Batch reponses
 
 The request
 
@@ -153,7 +151,6 @@ response body:
     "code":40140
   }
 }
-
 ```
 
 Partial success:
@@ -169,18 +166,133 @@ response body
   }
   "batchResponse": [
     {
-      "data": {
-        "channel":"channel0",
-        "messageId":"w234r5t-fr5"
-      }
+      "channel":"channel0",
+      "messageId":"w234r5t-fr5"
     },
     {
-      "data": {
-        "channel":"channel1",
-        "messageId":"vde4sfc0p"
-      }
+      "channel":"channel1",
+      "messageId":"vde4sfc0p"
     },
     {
+      "channel":"channel2",
+      "error": {
+        "message": "Given credentials do not have the required capability",
+        "statusCode": 401,
+        "code": 40160
+      }
+    }
+  ]
+}
+```
+
+h3(#batch-presence). Batch presence
+
+The REST API has been extended to include batch-mode presence operations. The API concerned is:
+
+h6. GET /presence
+
+This is the new bulk publish API which is implicitly a batch-mode API. This performs a publish in parallel of messages to channels specified in the @request@ body. Check out the code example below on how to do this with the "@request@":/rest/usage#request method in the REST client library.
+
+```[javascript](code-editor:rest/batch-presence)
+var ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
+var content = { "channel": <channel names> }
+ablyRest.request('GET', '/presence', content, null, {}, (err, res) => {
+function(err, response) {
+  if(err) {
+    alert('An error occurred; err = ' + err.toString());
+  } else {
+    alert('Success! status code was ' + response.statusCode);
+  }
+});
+```
+
+You can also use the REST API directly with the following:
+
+```[json](code-editor:rest/batch-presence)
+curl -X GET https://rest.ably.io/presence?channel=<channel names> \
+    -u "{{API_KEY}}"
+```
+
+where:
+* @<channel names>@ is a @String@ of channel names seperated by commas, or a @String@ of channel names seperated by your specified @channelSeparator@.
+
+Below is an example of a curl request which uses a @channelSeperator@:
+
+```[json](code-editor:rest/batch-presence)
+curl -X GET https://rest.ably.io/presence?channel,1!channel,2=&channelSeperator=! \
+    -u "{{API_KEY}}"
+```
+
+h4(#batch-presence-response). Batch reponses
+
+The request
+
+```[sh]
+GET /presence
+{
+  channel: 'channel0,channel1,channel2'
+}
+```
+
+would have the following possible outcomes:
+
+Success:
+
+```[sh]
+status code: 201
+response body:
+[
+  {
+    "channel":"channel0",
+    "presence":["user1", "user2"]
+  },
+  {
+    "channel":"channel1",
+    "presence":[]
+  },
+  {
+    "channel":"channel2",
+    "presence":["user2", "user3"]
+  }
+]
+```
+
+Common-cause failure:
+
+```[sh]
+status code: 401
+response body:
+{
+  "error": {
+    "message":"Token expired",
+    "statusCode":401,
+    "code":40140
+  }
+}
+```
+
+Partial success:
+
+```[sh]
+status code: 400
+response body
+{
+  "error": {
+    "message": "Batched response includes errors",
+    "statusCode":400,
+    "code":40020
+  }
+  "batchResponse": [
+    {
+    "channel":"channel0",
+    "presence":["user1", "user2"]
+    },
+    {
+      "channel":"channel1",
+      "presence":[]
+    },
+    {
+      "channel":"channel2",
       "error": {
         "message": "Given credentials do not have the required capability",
         "statusCode": 401,
