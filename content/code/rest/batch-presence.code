@@ -1,23 +1,65 @@
 [--- Javascript ---]
-var ablyRest = new Ably.Rest({ key: '{{API_KEY}}' }),
-    $receivedLog = $('#received'),
-    ablyRealtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'bob' }),
-    channel1 = ablyRealtime.channels.get('test1'),
-    channel2 = ablyRealtime.channels.get('test2');
+var ablyRealtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'bob' });
+
+var ablyRestSuccess = new Ably.Rest({ key: '{{API_KEY}}' });
+var ablyRestPartial;
+var ablyRestFailure = new Ably.Rest({ key: 'incorrect:Key'});
+var combinedChannels = 'presencebatch1,presencebatch2';
+ablyRealtime.auth.requestToken({
+  capability: {
+    "presencebatch1": ["subscribe"]
+  }
+}, function(err, tokenDetails){
+  if(err) {
+    console.log('An error occurred; err = ' + err.message);
+  } else {
+    ablyRestPartial = new Ably.Rest({ token: tokenDetails });
+    console.log('Success; token request = ' + tokenRequest);
+  }
+});
+
+var $receivedLog = $('#received'),
+    channel1 = ablyRealtime.channels.get('presencebatch1'),
+    channel2 = ablyRealtime.channels.get('presencebatch2');
 
 channel1.presence.enter();
 channel2.presence.enter();
 
 $('input#get').on('click', function() {
-  ablyRest.request('GET', '/presence', null, { "channel": "test1,test2" },
-  function(err, response) {
-    if(err) {
-      $('p#received').text('An error occurred; err = ' + err.toString());
-    } else {
-      $('p#received').text('Success! response is: ' + response);
-    }
-  });
+  ablyRestSuccess.request('GET', '/presence', { channel: combinedChannels }, null, {}, printResponse);
 });
+
+$('input#get-partial').on('click', function() {
+  ablyRestPartial.request('GET', '/presence', { channel: combinedChannels }, null, {}, printResponse);
+});
+
+$('input#get-failure').on('click', function() {
+  ablyRestFailure.request('GET', '/presence', { channel: combinedChannels }, null, {}, printResponse);
+});
+
+
+function printResponse(err, response) {
+  if(err) {
+    $('p#received').text('An error occurred; err = ' + err.toString());
+  } else {
+    if(response.success) {
+      $('p#received').text('Success! response is: \n');
+      for(i = 0; i < response.items.length; i++) {
+        $('p#received').append("<br/><br/>Item " + i + ": " + JSON.stringify(response.items[i]));
+      }
+    } else {
+      if(response.items[0].batchResponse) {
+        $('p#received').text('Partial success! response is: ');
+        for(i = 0; i < response.items[0].batchResponse.length; i++) {
+          $('p#received').append("<br/><br/>Item " + i + ": " + JSON.stringify(response.items[0].batchResponse[i]));
+        }
+      } else {
+        $('p#received').text('Expected error occured. Error was: \n');
+        $('p#received').append(response.errorCode + ', ' + response.errorMessage);
+      }
+    }
+  }
+}
 [--- /Javascript ---]
 
 [--- HTML ---]
@@ -29,7 +71,9 @@ $('input#get').on('click', function() {
 <body>
   <h1><a href="https://www.ably.io" target="_blank"><img src="/images/favicon.png">Ably</a> batch presence by example</h1>
   <p>Get the presence of multiple channels using the <a href="https://www.ably.io/documentation/rest/usage#request">request</a> functionality in the REST client library.</p>
-  <input type="button" value="Get the presence of multiple channels" id="get">
+  <input type="button" value="Get the presence of multiple channels successfully" id="get">
+  <input type="button" value="Get the presence of multiple channels partially successfully" id="get-partial">
+  <input type="button" value="Get the presence of multiple channels with a failure" id="get-failure">
   <br><br>
   or get it using the <a href="https://www.ably.io/documentation/rest-api" target="_blank">REST API</a> in your console:
   <pre id="curl">curl -X GET https://rest.ably.io/presence?channel=test1,test2 \

@@ -196,8 +196,7 @@ This an API to retrieve the presence state of multiple channels and is a batch-m
 ```[javascript](code-editor:rest/batch-presence)
 var ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
 var content = { "channel": <channel names> }
-ablyRest.request('GET', '/presence', content, null, {}, (err, res) => {
-function(err, response) {
+ablyRest.request('GET', '/presence', content, null, {}, function(err, response) {
   if(err) {
     alert('An error occurred; err = ' + err.toString());
   } else {
@@ -225,7 +224,7 @@ curl -X GET https://rest.ably.io/presence?channel,1!channel,2=&separator=! \
 
 h4(#batch-presence-response). Batch responses
 
-The request
+The request:
 
 ```[sh]
 GET /presence
@@ -245,8 +244,8 @@ response body:
   {
     "channel":"channel0",
     "presence":[
-      {"clientId": "user1", "data": "I'm here"},
-      {"clientId": "user2", "data": "I'm also here"}
+      {"clientId": "user1", "action": "1"},
+      {"clientId": "user2", "action": "1"}
     ]
   },
   {
@@ -256,8 +255,8 @@ response body:
   {
     "channel":"channel2",
     "presence":[
-      {"clientId": "user2", "data": "I'm also here"},
-      {"clientId": "user3", "data": "Me too"}
+      {"clientId": "user2", "action": "1"},
+      {"clientId": "user3", "action": "1"}
     ]
   }
 ]
@@ -290,11 +289,11 @@ response body
   }
   "batchResponse": [
     {
-    "channel":"channel0",
-    "presence":[
-      {"clientId": "user1", "data": "I'm here"},
-      {"clientId": "user2", "data": "I'm also here"}
-    ]
+      "channel":"channel0",
+      "presence":[
+        {"clientId": "user1", "action": "1"},
+        {"clientId": "user2", "action": "1"}
+      ]
     },
     {
       "channel":"channel1",
@@ -310,4 +309,62 @@ response body
     }
   ]
 }
+```
+
+h4(#batch-presence-response). Batch responses with the request method
+
+When using the request method in a library, you'll need to handle the potential responses for success, partial success, and failure.
+
+For a response object @response@, @response.success@ will be true if the batch presence was successful, or @false@ if at least one presence request failed. @response.statusCode@ will be 200 for complete success, 400 for partial success, and 401 for an expected failure. @response.errorCode@ will contain the Ably error code, and @response.errorMessage@ will contain details of the error.
+
+For successful requests, @response.items@ will contain a list of the responses for each individual channel from which presence has been requested.
+
+For partially successful requests, @response.items.batchResponse@ will contain a list of the individual channel's results, be it an error or a success.
+
+Below would be an example of how to deal with these:
+
+```[javascript]
+var ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
+var content = { "channel": "channel1,channel2" }
+ablyRest.request('GET', '/presence', content, null, {}, function(err, response) {
+  if(err) {
+    // Throw error
+  } else {
+    if(response.success) {
+      // If complete success
+      for(i = 0; i < response.items.length; i++) {
+        // Each response item will be roughly of the style:
+        /*
+          {
+            "channel": "channel1",
+            "presence": [
+              { "action": 1, "clientId": "CLIENT1" },
+              { "action": 1, "clientId": "CLIENT2" }
+            ]
+          }
+        */
+      }
+    } else {
+      if(response.items[0].batchResponse) {
+        // If partial success
+        for(i = 0; i < response.items[0].batchResponse.length; i++) {
+          // Each batchResponse item will either be the same as success if it succeeded, or:
+          /*
+            {
+              "channel": "channel1",
+              "error": {
+                "code": 40160,
+                "message": "ERROR_MESSAGE",
+                "statusCode": 401
+              }
+            }
+          */
+        }
+      } else {
+        // If failed, check why
+        console.log(response.errorCode + ', ' + response.errorMessage);
+      }
+    }
+  }
+});
 ```
