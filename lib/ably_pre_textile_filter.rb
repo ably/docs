@@ -272,42 +272,52 @@ class AblyPreTextileFilter
     end
 
     def add_compare_table(content, attributes)
-      content.gsub(/compare_table\(([^\,\)]+)(?:(?:\))|(?:,\s?([^\)]+)\)))\./i) do
-        unless attributes[:competitors].nil?
+      unless attributes[:competitors].nil?
+        content.gsub(/compare_table\(([^\,\)]+)(?:(?:\))|(?:,\s?([^\)]+)\)))\./i) do
           CompareTables.create_compare_table(Regexp.last_match[1],  Regexp.last_match[2], attributes[:competitors])
         end
+      else
+        content
       end
     end
 
     def add_compare_names(content, attributes)
-      content.gsub(/\{\{COMPANY_([0-9])\}\}/i) do
-        unless attributes[:competitors].nil?
+      unless attributes[:competitors].nil?
+        content.gsub(/\{\{COMPANY_([0-9])\}\}/i) do
           CompareTables.company_name(attributes[:competitors][Regexp.last_match[1].to_i])
         end
+      else
+        content
       end
     end
 
     def add_compare_id(content, attributes)
-      content.gsub(/\{\{COMPANY_ID_([0-9])\}\}/i) do
-        unless attributes[:competitors].nil?
+      unless attributes[:competitors].nil?
+        content.gsub(/\{\{COMPANY_ID_([0-9])\}\}/i) do
           attributes[:competitors][Regexp.last_match[1].to_i]
         end
+      else
+        content
       end
     end
 
     def add_compare_urls(content, attributes)
-      content.gsub(/\{\{COMPANY_URL_([0-9])\}\}/i) do
-        unless attributes[:competitors].nil?
+      unless attributes[:competitors].nil?
+        content.gsub(/\{\{COMPANY_URL_([0-9])\}\}/i) do
           CompareTables.company_url(attributes[:competitors][Regexp.last_match[1].to_i])
         end
+      else
+        content
       end
     end
 
     def add_published_date(content, attributes)
-      content.gsub(/\{\{PUBLISHED_DATE\}\}/i) do
-        unless attributes[:published_date].nil?
+      unless attributes[:published_date].nil?
+        content.gsub(/\{\{PUBLISHED_DATE\}\}/i) do
           attributes[:published_date]
         end
+      else
+        content
       end
     end
 
