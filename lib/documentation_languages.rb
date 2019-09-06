@@ -7,6 +7,7 @@ module Ably
     'php' => { name: 'PHP', extension: 'php' },
     'ruby' => { name: 'Ruby', extension: 'ruby' },
     'nodejs' => { name: 'Node.js', extension: 'js' },
+    'typescript' => { name: 'TypeScript', extension: 'ts' },
     'objc' => { name: 'Obj-C', extension: 'm' },
     'swift' => { name: 'Swift', extension: 'swift' },
     'go' => { name: 'Go', extension: 'go' },
