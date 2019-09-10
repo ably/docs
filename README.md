@@ -64,4 +64,4 @@ Pull requests
 Help and contact
 ----
 
-If you have any questions or suggestions, please [get in touch with us at Ably](https://www.ably.io/contact)
+If you have any questions or suggestions, please [get in touch with us at Ably](https://www.ably.io/contact).
