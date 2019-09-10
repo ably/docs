@@ -4,36 +4,34 @@ section: tutorials
 index: 90
 ---
 
-In this tutorial, we will see how to use Ably "Realtime client library":/realtime to build a realtime NewsFeed with React. We'll be making use Ably's public channel. Once a update is posted, we'll publish it to the public channel. We will also be subscribed to the channel so we can see updates as they are added in realtime.
+In this tutorial, we will see how to use Ably "Realtime client library":/realtime to build a realtime NewsFeed with React. Ably allows realtime data sharing using the Pub/Sub mechanism via a concept called "channels":https://www.ably.io/channels.
 
-This tutorial will not include any server-side implementation. Hence, updates won't be persisted to any storage.
+For the purpose of this tutorial, we'll not involve any storage of messages or other server-side mechanisms.
 
 React is a JavaScript library for building user interfaces. It is component-based and declarative which makes it easy to build complex UI with it. For more information on React, please refer to their official website "https://reactjs.org":https://reactjs.org.
 
-<img src="/images/tutorials/react-commenting/react_logo.png" style="width: 50%" alt="React logo">
-
 <%= partial 'tutorials/_step-1-setup-free-account' %>
 
-h2. Step 2 - Create a React App
+h2(#create-react-app). Step 2 - Create a React App
 
-We'll start by creating a new React app. To do this, we'll be using "create-react-app":https://github.com/facebook/create-react-app. create-react-app allows you to create a React app without having to worry about build configurations.
+We'll start by creating a new React app. To do this, we'll be using "create-react-app":https://github.com/facebook/create-react-app. @create-react-app@ command allows you to create a React app without having to worry about build configurations.
 
-We'll call the app @newsfeed-app@:
+We'll call the app @newsfeed-app@. Now, let's create the app from the terminal by running:
 
 ```[sh]
 npx create-react-app newsfeed-app
 ```
 
-The new React app is ready. We can start it by running:
+The new React app is ready. We can start it from the terminal by running:
 
 ```[sh]
 cd newsfeed-app
 npm start
 ```
 
-This builds the static site, runs a web server and opens a browser. If your browser does not open, navigate to "http://localhost:3000":http://localhost:3000.
+This builds the static site, runs a web server and opens a browser. If your browser does not open automatically, navigate automatically to "http://localhost:3000":http://localhost:3000.
 
-Let's now install packages we will need in this tutorial that is ably and semantic-ui:
+Let's now install the packages from the terminal that we will need in this tutorial, i.e. 'ably' and 'semantic-ui' by running:
 
 ```[sh]
 npm install --save ably semantic-ui-react semantic-ui-css
@@ -41,18 +39,19 @@ npm install --save ably semantic-ui-react semantic-ui-css
 
 "See this step in Github":https://github.com/ably/tutorials
 
-h2. Step 3 - Add Ably publish and subscribe
+h2(#app-css). Step 3 - Update CSS for the tutorial
+
 Firstly, add this import statement to @index.js@ file to enable use of @semantic-ui-css@ :
 
 ```[javascript]
 import 'semantic-ui-css/semantic.min.css'
 ```
 
-Now, open empty the file @App.css@ and add the following:
+Now, replace the contents of @App.css@ with the following:
 
 ```[stylesheet]
 .App-header {
-  margin-top: 10px
+  margin-top: 10px;
 }
 
 .App-button {
@@ -62,55 +61,75 @@ Now, open empty the file @App.css@ and add the following:
 
 .App-users {
   margin-top: 10px;
-  text-align: left
+  text-align: left;
 }
 
 .App-update {
   margin-bottom: 10px;
   cursor: pointer;
-  text-align: center
+  text-align: center;
 }
 
 .App-cards {
   overflow-y: scroll;
-  max-height: 500px
+  max-height: 500px;
 }
 ```
 
-Now, empty the file @App.js@ then add the following imports:
+
+h2(#pub-sub-ably). Step 4 -  Add publish/subscribe mechanism using Ably
+
+Now, replace the contents of @App.js@ with the following imports to begin with:
 
 ```[javascript]
 import React, { useState, useEffect } from "react";
 import * as Ably from 'ably';
 import './App.css';
 ```
-Now, let's add arrays for avatars and names. A random function also to choose from the arrays:  
+
+Now, let's add two arrays, one each for avatars(hosted images urls) and names to be assigned randomly to the users who log in. We'll also add a random function to pick from these arrays:  
 
 ```[javascript]
+// User avatars
 const avatarsInAssets = [
-    'https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_8.png?1536042504672',
-    'https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_3.png?1536042507202',
-    'https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_6.png?1536042508902',
-    'https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_10.png?1536042509036',
-    'https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_7.png?1536042509659',
-    'https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_9.png?1536042513205',
-    'https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_2.png?1536042514285',
-    'https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_1.png?1536042516362',
-    'https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_4.png?1536042516573',
-    'https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_5.png?1536042517889'
-]
+ "https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_8.png?1536042504672",
+ "https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_3.png?1536042507202",
+ "https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_6.png?1536042508902",
+ "https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_10.png?1536042509036",
+ "https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_7.png?1536042509659",
+ "https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_9.png?1536042513205",
+ "https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_2.png?1536042514285",
+ "https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_1.png?1536042516362",
+ "https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_4.png?1536042516573",
+ "https://cdn.glitch.com/0bff6817-d500-425d-953c-6424d752d171%2Favatar_5.png?1536042517889"
+];
 
-const names = ["Ross", "Monica", "Rachel", "Joey", "Chandler", "Steve", "Bill", "Elon", "Tom", "Shaun" ]
+// User names
+const names = [
+  "Ross",
+  "Monica",
+  "Rachel",
+  "Joey",
+  "Chandler",
+  "Steve",
+  "Bill",
+  "Elon",
+  "Tom",
+  "Shaun"
+];
+
+// Get random
 function getRandomArbitrary(min, max) {
     return Math.floor(Math.random() * (max - min) + min);
 }
 ```
 
-Now, let's create the Ably instance and channels. Replace '<YOUR-API-KEY>' with your own API key value. Assign the current user its name and avatar as well:
+Now, let's instantiate the Ably library and the channels that we'll use to share realtime data.. Replace '<YOUR-API-KEY>' with your own API key value. Then we assign current user its name and avatar as well:
 
 ```[javascript]
     const myId = "id-" + Math.random().toString(36).substr(2, 16);
     const apiKey = '<YOUR-API-KEY>';
+    // Ably Instance
     const ably = new Ably.Realtime({
         key: apiKey,
         clientId: myId,
@@ -123,25 +142,35 @@ Now, let's create the Ably instance and channels. Replace '<YOUR-API-KEY>' with 
     my.name = names[getRandomArbitrary(0, 9)]
 ```
 
+The @ClientOptions@ passed to Ably here are: 
+  @key@ which is the API key 
+  @clientId@ used for identifying this client when publishing messages or for presence purposes
+  @echoMessages@ if false, prevents messages originating from this connection being echoed back on the same connection 
+
+@Channels@ are the medium through which messages are distributed; clients attach to channels to subscribe to messages, and every message published to a unique channel is broadcast by Ably to all subscribers.
+@Presence@ enables clients to be aware of other clients that are currently “present” on a channel.
+
 Now, let’s make the functional @App@ component and states within it to hold the user input as well as the updates coming in:
 
 ```[javascript]
 const App = () => {
-    const [todoInput, setTodoInput] = useState("");
-    const [state, setState] = useState({
-        msgs: [],
-        newMsgs: []
-    })
+  const [todoInput, setTodoInput] = useState(""); // User Input/Message
+  const [state, setState] = useState({
+    msgs: [],
+    newMsgs: []
+  }); // to hold all messages and incoming new messages
     
-    let you = {};
+  let you = {};
 }
 ```
+
+Subscribing to a channel would let the client automatically receive all updates published on that channel by other clients, in realtime.
 
 Now, let’s subscribe to the channels in the @useEffect hook@ on mount of the @App@ component:
 
 ```[javascript]
 useEffect(() => {
-        
+        // Subscribing for userInfo details to assign name and avatar
         chatChannel.subscribe("userInfo", (data) => {
             var dataObj = JSON.parse(JSON.stringify(data));
             if (dataObj.clientId !== myId) {
@@ -150,6 +179,7 @@ useEffect(() => {
             }
         });
         
+        // When a new member joins publish it's userInfo details
         presenceChannel.presence.subscribe('enter', function (member) {
             if (member.clientId !== myId) {
                 chatChannel.publish("userInfo", {
@@ -158,7 +188,10 @@ useEffect(() => {
                 });
             }
         });
+
         presenceChannel.presence.enter();
+        
+        // Get all members and publish userInfo details
         presenceChannel.presence.get(function (err, members) {
             for (var i in members) {
                 if (members[i].clientId !== myId) {
@@ -170,16 +203,22 @@ useEffect(() => {
             }
         });
 
+        // Subscribing for chatMessage
         chatChannel.subscribe("chatMessage", (data) => {
             var dataObj = JSON.parse(JSON.stringify(data));
             var message = dataObj.data.message;
             var date = new Date(dataObj.data.date);
+
+            // Updating the state newMsgs with new incoming message
             setState(prevState => {
-                return {
-                  ...prevState,
-                  newMsgs: [...prevState.newMsgs, {"summary": message, "image": you.avatar, "date": date, "name": you.name}]
-                    };
-                });
+              return {
+                ...prevState,
+                newMsgs: [
+                  ...prevState.newMsgs,
+                  { summary: message, image: you.avatar, date: date, name: you.name }
+                ]
+              };
+            });
         })
 
       }, []);
@@ -190,10 +229,17 @@ Using the @presenceChannel@ we mark the presence of the user and also subscribe 
 Then using the @chatChannel@ we subscribe to the @userInfo@ and get user data.
 Lastly using the @chatChannel@ we subscribe to the @chatMessage@ to get the updates coming in to the newsfeed. We then update the state variables with the new update.
 
-Now, add the following imports statements on top of the file after the @Ably@ import statement to enable use of semantic-ui:
+Now, add the following imports statements on top of the file(@App.js@) after the @Ably@ import statement to enable use of semantic-ui:
 
 ```[javascript]
-import { Container, Header, Divider, Button, Form, TextArea } from 'semantic-ui-react'
+import {
+  Container,
+  Header,
+  Divider,
+  Button,
+  Form,
+  TextArea
+} from "semantic-ui-react";
 ```
 
 Now, finally let’s add the @sendMyMessage@ function to the @App@ component and the HTML to post an update:
@@ -203,17 +249,28 @@ function sendMyMessage() {
         const newMsgId = "msg-id-" + Math.random().toString(36).substr(2, 6);
         setTodoInput("");
         if (todoInput !== "") {
+            // Publishing the message
             chatChannel.publish("chatMessage", {
                 message: todoInput,
                 localMsgId: newMsgId,
                 date: new Date()
             });
+
+            // Updating the state msgs with the message of the current user and sorting
             setState(prevState => {
-                return {
-                  ...prevState,
-                  msgs: [...prevState.msgs, {"summary": todoInput, "image": my.avatar, "date": new Date(), "name": my.name}].sort((a,b)=>b.date-a.date)
-                };
-            });
+              return {
+                ...prevState,
+                msgs: [
+                  ...prevState.msgs,
+                  {
+                    summary: todoInput,
+                    image: my.avatar,
+                    date: new Date(),
+                    name: my.name
+                  }
+                ].sort((a, b) => b.date - a.date)
+              };
+           });
         }
     }
 
@@ -226,7 +283,9 @@ function sendMyMessage() {
                 placeholder="Post an update"
                 onChange={e => setTodoInput(e.target.value)}
              />
-             <div className="App-button"><Button content='Send' primary onClick={sendMyMessage} /></div>
+             <div className="App-button">
+               <Button content="Send" primary onClick={sendMyMessage} />
+             </div>
          </Form>
              
          <Divider />
@@ -239,26 +298,36 @@ As you can see in the @sendMyMessage@ function we publish the message to @chatMe
 
 "See this step in Github":https://github.com/ably/tutorials
 
-h2. Step 4 - Displaying the updates in the newsfeed
-Firstly, update the following imports statements in @App.js@ file:
+h2(#disp-updates-newsfeed). Step 5 - Displaying the updates in the newsfeed
+
+Now let's, update the following imports statements in @App.js@ file:
 
 ```[javascript]
 import React, { useState, useEffect, useRef } from "react";
-import {Container, Header, Divider, Label, Button, Form, TextArea } from "semantic-ui-react";
+import {
+  Container,
+  Header,
+  Divider,
+  Button,
+  Form,
+  TextArea,
+  Label
+} from "semantic-ui-react";
 import UICard from "./UICard";
 ```
 
 Now, add the following @scrollRef@ to the reset the scroll, on the top of the @App@ component above the @todoInput@ state:
 
 ```[javascript]
-const scrollRef = useRef(null);
-const [todoInput, setTodoInput] = useState("");
+const scrollRef = useRef(null); // for getting scroll ref
+const [todoInput, setTodoInput] = useState(""); // User Input/Message
 ```
 
 Add the function @getMessages@ below the @sendMyMessage@ function to update the newsfeed with the new updates:
 
 ```[javascript]
 function getMessages() {
+    // Updating the state with latest messages and sorting
     setState(prevState => {
       return {
         ...prevState,
@@ -268,6 +337,8 @@ function getMessages() {
         newMsgs: []
       };
     });
+
+    // Scrolling to top for viewing new messages
     scrollRef.current.scrollTop = 0;
 }
 ```
@@ -277,6 +348,7 @@ Now create a new file @UICard.js@ and add the following code:
 import React from 'react'
 import { Card, Image, Segment } from 'semantic-ui-react'
 
+// Formatting date
 function formatAMPM(date) {
   var hours = date.getHours();
   var minutes = date.getMinutes();
@@ -355,7 +427,7 @@ return (
 
 "See this step in Github":https://github.com/ably/tutorials
 
-h2. Step 5 - Getting online users using Ably Channel Occupancy API
+h2(#online-users-channel-occupancy). Step 6 - Getting online users using Ably Channel Occupancy API
 
 Add a new @metaChannel@ variable to get meta information. Add it below the @presenceChannel@ variable:
 
@@ -364,18 +436,24 @@ const presenceChannel = ably.channels.get("presence");
 const metaChannel = ably.channels.get("[meta]channel.lifecycle");
 ```
 
+Metachannels are a namespace of channels which all start with the @[meta]@ qualifier, uniquely identifying them from regular channels.
+Both the channel lifecycle and the occupancy events are published onto a special channel referred to as a metachannel bearing the name [meta]channel.lifecycle. 
+We will use the channel occupancy here to get active connections.
+
 Now, add a state variable to hold the onlineUsers count. Add it in the @App@ component:
 
 ```[javascript]
-const [onlineUsers, setOnlineUsers] = useState(0);
+const [onlineUsers, setOnlineUsers] = useState(0); // for online users
 ```
 
 Now add the @metaChannel@ subscribe to the @useEffect hook@:
 
 ```[javascript]
+// Using Channel Occupancy to get online users
 metaChannel.subscribe("channel.occupancy", msg => {
       var msgJSONobj = JSON.parse(JSON.stringify(msg.data));
       if (msgJSONobj.name === "chat") {
+        // Update the state OnlineUsers
         setOnlineUsers(msgJSONobj.status.occupancy.metrics.connections);
       }
 });
@@ -402,17 +480,17 @@ Now, update the @return@ of the @App@ component to show the online users count:
 Channel occupancy is currently available only to our Enterprise customers via both our Realtime, and REST libraries. Get in touch with our sales team to get set up with an enterprise account. 
 However, you can still try this feature out using your free account, but the existing limits pertaining to a free account's usage will remain so.
 
-That’s it. We now have a realtime newsfeed. To test it out, start the app:
+That’s it. We now have a realtime newsfeed. To test it out, from the terminal start the app:
 
 ```[sh]
 npm start
 ```
 
-Then open "http://localhost:3000":http://localhost:3000 in two different browser tabs. Post aa update in one of the opened tabs and watch the other tab update in realtime.
+Then open "http://localhost:3000":http://localhost:3000 in two different browser tabs. Post an update in one of the opened tabs and watch the other tab update in realtime.
 
 h2. Download tutorial source code
 
-The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/newsfeed-app-react. 
+The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/react-newsfeed-app. 
 
 We recommend that you clone the repo locally:
 
@@ -423,7 +501,7 @@ git clone https://github.com/ably/tutorials.git
 Checkout the tutorial branch:
 
 ```[sh]
-git checkout newsfeed-app-react
+git checkout react-newsfeed-app
 ```
 
 Install NPM dependencies. Be sure to switch into project's directory and then run this command in your terminal:
@@ -445,6 +523,7 @@ h2. Next steps
 1. If you would like to find out more about how channels, publishing and subscribing works, see the Realtime "channels":/realtime/channels & "messages":/realtime/messages documentation
 2. Learn more about "Channel Occupancy Events":https://www.ably.io/tutorials/channel-occupancy-events 
 3. Learn more about "Ably features":https://www.ably.io/features by stepping through our other "Ably tutorials":https://www.ably.io/tutorials
-4. Learn more about Ably's "history feature":https://www.ably.io/tutorials/history#lang-javascript
-5. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
-6. "Get in touch if you need help":https://www.ably.io/contact
+4. Learn more about "React":https://reactjs.org/docs/getting-started.html
+5. Learn more about Ably's "history feature":https://www.ably.io/tutorials/history#lang-javascript
+6. Gain a good technical "overview of how the Ably realtime platform works":https://www.ably.io/documentation/how-ably-works
+7. "Get in touch if you need help":https://www.ably.io/contact
