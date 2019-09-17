@@ -14,6 +14,7 @@ module Ably
     'csharp' => { name: 'C# .Net', extension: 'cs' },
     'cplusplus' => { name: 'C++', extension: 'cpp' },
     'c' => { name: 'C', extension: 'c' },
+    'css' => { name: 'CSS', extension: 'css'},
     'appcelerator' => { name: 'Appcelerator', extension: 'js' },
     'phonegap' => { name: 'PhoneGap', extension: 'js' },
     'curl' => { name: 'curl', extension: 'sh' },
