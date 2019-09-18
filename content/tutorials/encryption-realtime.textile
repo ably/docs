@@ -41,13 +41,14 @@ blang[java].
 
   In the above example a specific version of the library is referenced, however we recommend you check which is the latest stable version and always use that. Follow link to get the latest stable release for "Java":https://bintray.com/ably-io/ably/ably-java.
 
-  Now that you have your API key, let's define a constant @API_KEY@ as belows:
+  Now that you have your API key, let's define a constant @API_KEY@ in @Constants.java@.
+  Remember to replace @'INSERT-YOUR-API-KEY-HERE'@ with your Ably API key from Step #1.
 
   ```[java]
   class Constants {
     static final String API_KEY = "INSERT-YOUR-API-KEY-HERE"; /* Sign up at ably.io to get your API key */
 
-    /* RuntimeException will be thrown if API_KEY will not be set to a proper one */
+    /* RuntimeException will be thrown if API_KEY is not set to a proper one */
     static {
       if (Constants.API_KEY.contains("INSERT")) {
           throw new RuntimeException("API key is not set, sign up on ably.io to get yours");
@@ -56,17 +57,19 @@ blang[java].
   }
   ```
 
-  After you add necessary dependencies, you can import AblyRealtime class into your code and initialize it.
+  Create another class @Publisher@ and initialize @AblyRealtime@ with your @API_KEY@ as follows:
 
   ```[java]
-  import io.ably.lib.realtime.AblyRealtime;
+    import static io.ably.tutorial.Constants.API_KEY;
+    import io.ably.lib.realtime.AblyRealtime;
+    import io.ably.lib.types.AblyException;
 
-  public class Publisher {
-    public static void main(String[] args) throws AblyException {
-        AblyRealtime ablyRealtime = new AblyRealtime(API_KEY);
+    public class Publisher {
+        public static void main(String[] args) throws AblyException {
+            AblyRealtime ablyRealtime = new AblyRealtime(API_KEY);
 
+        }
     }
-  }
   ```
 
   "See this step in Github":https://github.com/ably/tutorials/commit/encryption-java-step2
@@ -170,11 +173,11 @@ blang[nodejs].
 
 h2(#publish-messages). Step 3 - Publish encrypted messages to a channel
 
-We will use the encryption API to publish encrypted messages as well as receive and decrypt the encrypted messages.
+Let's see how to leverage the encryption API to publish encrypted messages to a channel.
 
 blang[java].
 
-  First, let's define a few constants in @Constants.java@ class:
+  For that purpose, let's define a few constants in @Constants.java@ class:
     1) @CIPHER_KEY_BASE64@: the base 64 key we'll use to encrypt the messages with
     2) @CHANNEL_NAME@: name of the channel we'll publish the messages to
 
@@ -186,7 +189,7 @@ blang[java].
   Note: A sample cipher key is provided here for simplicity.
   Alternatively, one could use the io.ably.lib.util.Crypto.generateRandomKey() utility method to generate a valid key.
 
-  Now, let's have a look at how we would publish encrypted messages to a channel in the @Publisher.java@ class
+  Now, let's have a look at how to publish encrypted messages to a channel in the @Publisher.java@ class
 
   ```[java]
   public class Publisher {
@@ -205,7 +208,18 @@ blang[java].
   # We create a @ChannelOptions@ object that specifies the cipher key that we intend to use for the encryption. Note that the @cipher key@ should not be a pass-phrase, but a cryptographic key - generated from a secure random source, 128 or 256 bits long, binary or base64-encoded. If you wish to encrypt messages with a pass-phrase (for example, one entered by a user), you should use a "key derivation function":https://en.wikipedia.org/wiki/Key_derivation_function to transform that into a key. Here we could also use an Ably utility (@Crypto.generateRandomKey()@) to generate a random key.
   # We then obtain a @Channel@ instance for publishing messages. Notice how we pass the @ChannelOptions@ object. This helps us configure the @Channel@ instance further to encrypt the messages before they are published.
   # And lastly, we publish a message to the @CHANNEL_NAME@ channel by simply calling the @publish()@ method.
-  # In the next step we'll see how easy it is to retrieve and decrypt this encrypted message
+  # In the next step we'll see how easy it is to retrieve and decrypt this encrypted message.
+
+  Let's update our @build.gradle@ file to apply @java@ plugin and add a gradle task @publish@ so that we can execute @Publisher@ from commandline:
+
+  ```[groovy]
+    apply plugin: 'java'
+    ...
+    task(publish, dependsOn: 'classes', type: JavaExec) {
+        main = 'io.ably.tutorial.Publisher'
+        classpath = sourceSets.main.runtimeClasspath
+    }
+  ```
 
   "See this step in Github":https://github.com/ably/tutorials/commit/encryption-java-step3
 
@@ -290,7 +304,7 @@ h2(#subscribe-messages). Step 4 - Subscribe and decrypt messages
 
 blang[java].
 
-  Now that we have published an encrypted message on a channel, we can retrieve it using a similar @ChannelOptions@ object in @Subscriber.java@ class.
+  Now that we've seen how to publish an encrypted message on a channel, let's see to retrieve it in @Subscriber.java@ class.
 
   ```[java]
   public class Subscriber {
@@ -306,10 +320,9 @@ blang[java].
 
   **What is going on in the code block above?**
 
-  We simply subscribe to the @CHANNEL_NAME@ channel, and print the (decrypted) message to the the console.
-
-  Although, here we're using the same @Channel@ object to publish and subscribe encrypted messages, in a real world application, your publisher and subscriber will most likely reside in different components or modules or even applications.
-  But the important point to note here is that in either case we obtain the @Channel@ instance the same way i.e. by passing the @ChannelOptions@ object.
+  # We then obtain a @Channel@ instance for subscribing to messages. Notice how we pass the @ChannelOptions@ object the same way we did in the previous step.
+  # By calling @subscribe()@ on the @channel@, we are all set to receive messages published to the @encrypted:messages" channel. Note since we specified the cipher key in @ChannelOptions@, that the decryption simply works without any additional setup.
+  # The lambda passed to @subscribe@ accepts a @message@ object. The @data@ field on @message@ holds the decrypted content, which we're printing out on the standard output.
 
   "See this step in Github":https://github.com/ably/tutorials/commit/encryption-java-step4
 
@@ -364,11 +377,6 @@ blang[javascript].
   # All we're doing here is calling the @channelSub.subscribe()@ and passing it a callback function that appends each received message to the textbox's value. We also append a human readable timestamp to each message to tell similar message received at different instants apart.
   # Notice, how easily we enabled the decryption mechanism simply by using a @channelOpts@ containing our cipher key.
 
-  To see all this in action:
-
-  # Open both @publisher.html@ and @subscriber.html@ files in separate tabs/windows in your favorite browser.
-  # Enter a message in the input box in the @publisher.html@ window and click on @Publish@ button, and voila! You should see this message appear on the @subscriber.html@ window with a timestamp.
-
   "See this step in Github":https://github.com/ably/tutorials/commit/encryption-javascript-step4
 
 blang[nodejs].
@@ -408,26 +416,6 @@ blang[nodejs].
     },
   ```
 
-  To see all this in action:
-
-  Open 2 terminal windows and cd into the root of your project, e.g. if your project is in /usr/dev/encryption-tutorial
-  ```[sh]
-    cd /usr/dev/encryption-tutorial
-  ```
-
-  Execute the following to start the subscription
-  ```[sh]
-    npm run app:subscribe
-  ```
-
-  Execute the following to publish a message
-  ```[sh]
-    npm run app:publish
-  ```
-
-  Go back to your first terminal window and you should see the message in your terminal.
-  And there you have it, a fully functional publish-subscribe demo with encryption enabled.
-
   "See this step in Github":https://github.com/ably/tutorials/commit/encryption-nodejs-step4
 
 We're done, it's that simple. We have now shown you how to install Ably, then we published an encrypted message on a channel, and later retrieved it using the encryption API.
@@ -464,12 +452,19 @@ blang[java].
 
   bc[sh]. git checkout encryption-java
 
-  Then you can run project inside your console. Be sure to switch into project's directory and then use these commands in your terminal:
+  To run the demo locally, Make sure to add your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @Constants.java@, if you haven't already done so.
+  Open 2 terminal windows and cd into the root of your project, e.g. if your project is in /usr/dev/encryption-tutorial
 
-  bc[sh]. ./gradlew assemble
-  ./gradlew run
+  Execute the following to start the subscription in first window
 
-  Don't forget to replace your @Constants#API_KEY@ field with "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys.
+  bc[sh]. ./gradlew task subscribe
+
+  Execute the following to publish a message in the second window
+
+  bc[sh]. ./gradlew task publish
+
+  Go back to your first terminal window and you should see the message in your terminal.
+  And there you have it, a fully functional publish-subscribe demo with encryption enabled.
 
 blang[javascript].
   The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/encryption-javascript.
@@ -482,7 +477,10 @@ blang[javascript].
 
   bc[sh]. git checkout encryption-javascript
 
-  And then run the demo locally by adding your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @example.html@ and opening the page in your browser.
+  To run the demo locally:
+  # Make sure to add your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @publisher.html@ and @subscriber.html@ files, if you haven't already done so.
+  # Open both @publisher.html@ and @subscriber.html@ files in separate tabs/windows in your favorite browser.
+  # Enter a message in the input box in the @publisher.html@ window and click on @Publish@ button, and voila! You should see this message appear on the @subscriber.html@ window with a timestamp.
 
 blang[nodejs].
   The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/encryption-nodejs.
@@ -495,10 +493,24 @@ blang[nodejs].
 
   bc[sh]. git checkout encryption-nodejs
 
-  Add your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @example.js@. To run the demo locally, switch to project's root directory and use this command in your terminal:
+  To run the demo locally:
 
-  bc[sh]. npm run start
+  Make sure to add your "Ably API key":https://support.ably.io/support/solutions/articles/3000030502-setting-up-and-managing-api-keys to @constants.js@, if you haven't already done so.
 
+  Open 2 terminal windows and cd into the root of your project, e.g. if your project is in /usr/dev/encryption-tutorial
+
+  bc[sh]. cd /usr/dev/encryption-tutorial
+
+  Execute the following to start the subscription in first window
+
+  bc[sh]. npm run app:subscribe
+
+  Execute the following to publish a message in the second window
+
+  bc[sh]. npm run app:publish
+
+  Go back to your first terminal window and you should see the message in your terminal.
+  And there you have it, a fully functional publish-subscribe demo with encryption enabled.
 
 h2(#next-steps). Next steps
 
