@@ -111,7 +111,8 @@ blang[javascript].
   "See this step in Github":https://github.com/ably/tutorials/commit/encryption-javascript-step2
 
 blang[nodejs].
-  The Ably Realtime and REST library is available as an "NPM module":https://www.npmjs.com/package/ably. Simply add it to your @package.json@ file
+  The Ably Realtime and REST library is available as an "NPM module":https://www.npmjs.com/package/ably.
+  Simply add it to the @package.json@ file of your NodeJs project.
 
   ```[json]
   {
@@ -123,7 +124,13 @@ blang[nodejs].
   }
   ```
 
-  or install manually:
+  and run:
+
+  ```[sh]
+  npm install
+  ```
+
+  or install it using @npm install@:
 
   ```[sh]
   npm install ably
@@ -131,27 +138,33 @@ blang[nodejs].
 
   The client library must be instanced with the API key you copied in Step 1. API keys used with "basic authentication":/core-features/authentication#basic-authentication for your own servers is generally preferred, however clients running on insecure devices should always use the "token authentication scheme":/core-features/authentication#token-authentication instead. In this example, we use an API key for simplicity.
 
-  Add the following to a file named @example.js@ to instance the Ably library inside your Node.js server:
+  Add the following to @constants.js@ to define constants we'll use throughout our project:
 
   ```[nodejs]
-  const Ably = require('ably');
+    const API_KEY = 'INSERT-YOUR-API-KEY-HERE'; /* Add your API key here */
+    if (API_KEY.indexOf('INSERT') === 0) {
+        throw('Cannot run without an API key. Add your key to this file.');
+    }
 
-  const ApiKey = 'INSERT-YOUR-API-KEY-HERE'; /* Add your API key here */
-  if (ApiKey.indexOf('INSERT') === 0) {
-      throw('Cannot run without an API key. Add your key to example.js');
-  }
-
-  /* Instance the Ably library */
-  var realtime = new Ably.Realtime({key: ApiKey});
+    module.exports = {
+        API_KEY: API_KEY
+    };
   ```
 
-  **What is going on in the code block above?**
+  Here we defined just one constant @API_KEY@. Remember to replace @'INSERT-YOUR-API-KEY-HERE'@ with your Ably API key from Step #1
 
-  We define a few constants:
-  # @Ably@: instance of Ably
-  # @ApiKey@: your Ably API key from Step #1
+  Now, let's create a @publisher.js@ with following content:
 
-  Then we define a @Realtime@ instance, which we'll use to obtain a publisher and a subscriber, in the next step.
+  ```[nodejs]
+    const Ably = require('ably');
+    const constants = require('./constants');
+
+    /* Instance the Ably library */
+    const realtime = new Ably.Realtime({key: constants.API_KEY});
+  ```
+
+  Here, we're simply importing @Ably@ and @constants.js@.
+  Then we define a @Realtime@ instance, which we'll use to obtain a channel in the next steps.
 
   "See this step in Github":https://github.com/ably/tutorials/commit/encryption-nodejs-step2
 
@@ -230,22 +243,46 @@ blang[javascript].
 
 blang[nodejs].
 
-  Let's first have a look at how we would publish encrypted messages to a channel.
+  In order to encrypt our messages we'll need a cipher key (@SECRET@). Let's add one to our @constants.js@:
 
   ```[nodejs]
-  Ably.Realtime.Crypto.generateRandomKey(function(err, key) {
-      var channelOpts = { cipher: { key: key } };
-      var channel = realtime.channels.get('encrypted:messages', channelOpts);
-      /* Publish encrypted messages */
-      channel.publish('unencrypted', 'encrypted secret payload');
-  });
+    const SECRET = "AAECAwQFBgcICQoLDA0ODw==";
+
+    module.exports = {
+        API_KEY: API_KEY,
+        SECRET: SECRET
+    };
+  ```
+  Note that the @cipher key@ should not be a pass-phrase, but a cryptographic key - generated from a secure random source, 128 or 256 bits long, binary or base64-encoded. If you wish to encrypt messages with a pass-phrase (for example, one entered by a user), you should use a "key derivation function":https://en.wikipedia.org/wiki/Key_derivation_function to transform that into a key.
+  A sample cipher key is provided here for simplicity. Alternatively, you may use an Ably utility (@Ably.Realtime.Crypto.generateRandomKey()@) to generate a random key.
+
+  Let's now see how we would actually encrypt and publish messages to a channel.
+
+  ```[nodejs]
+    const channelOpts = {cipher: {key: constants.SECRET}};
+    const pubChannel = realtime.channels.get('encrypted:messages', channelOpts);
+
+    console.log('Publishing encrypted message');
+
+    /* Publish encrypted messages */
+    pubChannel.publish('unencrypted', 'an encrypted message');
   ```
 
   **What is going on in the code block above?**
 
-  # We create @channelOpts@ variable that holds the cipher key that we intend to use for the encryption. Note that the @cipher key@ should not be a pass-phrase, but a cryptographic key - generated from a secure random source, 128 or 256 bits long, binary or base64-encoded. If you wish to encrypt messages with a pass-phrase (for example, one entered by a user), you should use a "key derivation function":https://en.wikipedia.org/wiki/Key_derivation_function to transform that into a key. Here we are using an Ably utility (@Ably.Realtime.Crypto.generateRandomKey()@) to generate a random key.
-  # We then define a variable (@channel@) for publishing messages. Notice how we pass the @channelOpts@ variable to @realtime.channels.get()@. This configures @channel@ to encrypt the messages with the cipher key, before they are published.
-  # In the next step we'll see how easy it is to retrieve and decrypt this encrypted message
+  # We create @channelOpts@ constant that holds the cipher key that we intend to use for the encryption.
+  # We then define (@pubChannel@) for publishing messages. Notice how we pass the @channelOpts@ variable to @realtime.channels.get()@. This configures @pubChannel@ to encrypt each message with the cipher key, before it is published.
+  # In the next step we'll see how easy it is to retrieve and decrypt encrypted messages.
+
+  Let's add an npm script to our @package.json@ to be able to run our publisher code from the terminal:
+
+  ```[json]
+    ...
+    "scripts": {
+        "app:publish": "node ./publisher.js"
+    },
+    ...
+  ```
 
   "See this step in Github":https://github.com/ably/tutorials/commit/commit/encryption-nodejs-step3
 
@@ -336,20 +373,61 @@ blang[javascript].
 
 blang[nodejs].
 
-  Now that we have published an encrypted message on a channel, we can retrieve it using a similar @ChannelOptions@ object.
+  Now that we have seen how to publish an encrypted message to a channel, let's see how we can retrieve it.
+  For this purpose, let's create a @subscriber.js@, with following :
 
   ```[nodejs]
-  /* Subscribe to messages */
-  channel.subscribe(function(message) {
-      console.log('Decrypted data: ' + message.data);
-  });
+    const Ably = require('ably');
+    const constants = require('./constants');
+
+    /* Instance the Ably library */
+    const realtime = new Ably.Realtime({key: constants.API_KEY});
+    const channelOpts = {cipher: {key: constants.SECRET}};
+    const subChannel = realtime.channels.get('encrypted:messages', channelOpts);
+
+    console.log('Retrieving encrypted message');
+
+    /* Subscribe to messages */
+    subChannel.subscribe(console.log);
   ```
 
   **What is going on in the code block above?**
 
-  We simply subscribe to the @channel@, and log the (decrypted) message to the the console.
+  We obtain a @subChannel@ instance very similar to how we did for @pubChannel@.
+  The only difference being, in this instance we'll subscribe to the channel instead of publishing to it, using the @Channel.subscribe()@
+  For simplicity we're passing a @console.log@ to the subscribe() to log each received message.
+  In a real world project you would do more than just log the incoming message, and can define a more appropriate callback per your requirements.
+  But notice how easily we enabled the decryption mechanism, merely by specifying a @channelOpts@ containing our cipher key, during our channel instantiation.
 
-  Note: For brevity we're using the same channel instance to publish and subscribe here, but in real life you may have the publisher and subscriber channels initiated in different modules or even applications.
+  Let's add one more npm script to our @package.json@ to be able to run our subscriber code from the terminal:
+
+  ```[json]
+    "scripts": {
+        "app:publish": "node ./publisher.js",
+        "app:subscribe": "node ./subscriber.js"
+    },
+  ```
+
+  To see all this in action:
+
+  Open 2 terminal windows and cd into the root of your project, e.g. if your project is in /usr/dev/encryption-tutorial
+  ```[sh]
+    cd /usr/dev/encryption-tutorial
+  ```
+
+  Execute the following to start the subscription
+  ```[sh]
+    npm run app:subscribe
+  ```
+
+  Execute the following to publish a message
+  ```[sh]
+    npm run app:publish
+  ```
+
+  Go back to your first terminal window and you should see the message in your terminal.
+  And there you have it, a fully functional publish-subscribe demo with encryption enabled.
+
   "See this step in Github":https://github.com/ably/tutorials/commit/encryption-nodejs-step4
 
 We're done, it's that simple. We have now shown you how to install Ably, then we published an encrypted message on a channel, and later retrieved it using the encryption API.
