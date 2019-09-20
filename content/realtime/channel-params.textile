@@ -1,0 +1,91 @@
+---
+title: Channel Parameters
+section: realtime
+index: 32
+jump_to:
+  Help with:
+    - Overview#overview
+    - Using params with the Ably library#using-params-with-library
+    - Using params with non-Ably transports#using-params-with-other-transports
+  rewind parameter#rewind
+    - Examples#examples
+---
+
+h2(#overview). Overview
+
+Channel parameters are a general mechanism by which a client can express properties of a channel, or of its attachment to a channel. A set of channel parameters is simply a set of key/value pairs; the keys correspond to specific features that Ably defines. Having a general mechanism for specifying such parameters allows the feature set to be expanded over time without requiring any API change and, in most cases, without requiring any additional library functionality.
+
+The methods provided for specifying channel parameters, and the currently available features, are outlined below.
+
+h2(#using-params-with-library). Using params with the Ably library
+
+The current Ably libraries, at version 1.1, do not expose an API for expressing channel parameters. This means that it is necessary to specify parameters in a way that is opaque to the library. Library version 1.2, to be released shortly, will provide direct API support for expressing channel parameters.
+
+A set of params is expressed by including a query string, using standard URL query syntax and encoding, within the qualifier part of a channel name. The qualifier part is in square brackets at the start of the channel name.
+
+For example, to specify the parameter @foo@ with value @bar@ on channel @baz@, the qualified channel name would be @[?foo=bar]baz@. If the channel name already has a qualifier, such as @[meta]log@, then the query string follows the existing qualifier, as in @[meta?foor=bar]log@.
+
+Using this syntax with the Ably library means that channel parameters are specified for the lifetime of the @Channel@ instance; in order to reference the same channel, but with different channel parameters, it is necessary to get a new @Channel@ instance, using a qualified name that includes the new channel parameters.
+
+Details of the explicit channel parameters API for use with later library versions, will be made available in due course.
+
+h2(#using-params-with-other-transports). Using params with non-Ably transports
+
+It is possible to interact with Ably channels using transports that do not involve using an Ably library; for example using SSE without any library, or using a supported non-Ably protocol such as MQTT. In these cases, it is also necessary to use a qualified channel name.
+
+A set of params is expressed by including a query string, using standard URL query syntax and encoding, within the qualifier part of a channel name. The qualifier part is in square brackets at the start of the channel name.
+
+For example, to specify the parameter @foo@ with value @bar@ on channel @baz@, the qualified channel name would be @[?foo=bar]baz@. If the channel name already has a qualifier, such as @[meta]log@, then the query string follows the existing qualifier, as in @[meta?foo=bar]log@.
+
+In an SSE connection, it is also possible to specify channel parameters as a query string in the connection URL, instead of as a qualifier on an individual channel name. In this case, the given channel parameters apply to all channel attachments associated with that connection.
+
+h2(#rewind). rewind parameter
+
+The @rewind@ channel parameter relates to the initial attachment of a connection to a channel, and expresses the intent to attach to the channel at a position, or a point in time, in the past (that is, effectively "rewinding" the channel for the purposes of the present attachment).
+
+A @rewind@ parameter can express a channel position in terms of a number of messages, or a time interval.
+
+A @rewind@ value that is simply a number @n@ (eg @rewind=1@) is a request to attach to the channel at a position @n@ messages before the present position. If that attachment is successful, and one or more messages exist on the channel prior to the present position, then those messages will be delivered to the subscriber immediately after the attachment has completed, and before any subsequent messages that arise in real time.
+
+If fewer than the requested number of messages exists on the channel (including the case that there are no prior messages), then the available messages are sent; this does not constitute an error.
+
+A @rewind@ value can also be a string that is a time interval specifier. Supported specifier values express an integral number of seconds (eg @15s@), minutes (eg @5m@) or hours (eg @4h@). If that attachment is successful, and one or more messages exist on the channel in the given time interval prior to the present time, then those messages will be delivered to the subscriber immediately after the attachment has completed, and before any subsequent messages that arise in real time.
+
+If fewer than the requested number of messages exists on the channel in that interval (including the case that there are no messages), then the available messages are sent; this does not constitute an error.
+
+If the number of messages within the specified interval is greater than the attachment @limit@ (which defaults to 100), then only the most recent messages up to that limit are sent. The attachment succeeds, but truncation of the message backlog is indicated as a non-fatal error in the attachment response.
+
+It is also possible to specify a different limit via a @limit@ channel parameter. So, for example, to request up to 10 messages, in a window 5m before the present time, specify a channel parameter string of @[?rewind=5m&limit=10]@.
+
+By default, a maximum of two minutes of channel history is available when attaching. This means that a rewind time specifier of greater than two minutes will only be able to rewind by two minutes. If a channel has persistence enabled, then it is possible to rewind back in time by up to the persistence TTL on the channel. 
+
+The channel position expressed by a @rewind@ parameter has an effect only on an initial channel attachment. Any subsequent reattachment of the same channel on the same connection, in order to resume the connection, will attempt to resume with continuity from the point at which the connection dropped.
+
+Any @rewind@ parameter value that cannot be parsed either as a number or a time specifier represents an error, and any attachment request will fail with an error.
+
+h2(#examples). Examples
+
+h3(#examples-ably). Using channel parameters with the Ably library
+
+To subscribe to a channel, getting the most recent message if available:
+
+```
+  const subscriber = new Realtime(API_KEY);
+  subscriber.channels.get('[?rewind=1]example-channel').subscribe((msg) => {
+    console.log('Received message: ', msg);
+  });
+```
+
+To subscribe to a channel, getting up to 10 messages in the last 5 minutes:
+
+```
+  const subscriber = new Realtime(API_KEY);
+  subscriber.channels.get('[?rewind=5m&limit=10]example-channel').subscribe((msg) => {
+    console.log('Received message: ', msg);
+  });
+```
+
+h3(#examples-sse). Using channel parameters with SSE
+
+h3(#examples-mqtt). Using channel parameters with MQTT
+
