@@ -61,6 +61,37 @@ Pull requests
 * Commit your changes, push your branch and send us a pull request
 * All pull requests will automatically launch a static review site that will be linked to at the bottom of the PR
 
+Branch and tag scheme for features spec
+----
+The `master` branch contains the most recent version of the spec, as
+amended by any subsequent fixes and non-breaking improvements. This is
+the version that a client library developer who is implementing a
+feature now should use as a reference. It is also the version that is
+deployed to docs.ably.io.
+
+When proposing a spec change, changes that you would be happy to have
+incorporated into the current version of client libraries should be made
+against `master`. Changes that should not be incorporated until the next
+minor or major version should be made against the corresponding
+`master-<major>-<minor>` branch, e.g. `master-2-0` (which ideally should
+be regularly rebased on top of `master`).
+
+When a new minor or major version of the spec is released, it is tagged
+with a tag such as `v1.1`. Conformance to the spec at that tag is what
+defines whether a library can be released with the a library version
+with that major/minor version.
+
+Client library developers are not expected to monitor the docs repo for
+spec fixes that occur after the release tag. If a given spec fix needs
+to be made to client libraries at that time, on merging the pr to
+`master` you should open a github issue in each individual client lib
+repo to request that. If this is not done, it is not mandatory for the
+fix to be incorporated until the next spec release.
+
+When updating a client lib to a spec version, client lib devs should
+work from a diff from the tag of the previous release, so as to
+incorporate all changes since that tag.
+
 Help and contact
 ----
 
