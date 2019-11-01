@@ -6,26 +6,37 @@ class CompareTables
 
     def create_compare_table(category, extra, competitors)
       number_of_competitors = competitors.length
+      compare_table = ''
+      current_category = 0
       unless compare_data[category].nil?
-        compare_table = create_compare_headers(category, extra, competitors)
-        compare_table = compare_table.concat(create_compare_body(category, extra, competitors))
+        compare_data[category].each do |name, section|
+          compare_table = compare_table.concat(create_compare_headers(category, extra, section, competitors, current_category))
+          compare_table = compare_table.concat(create_compare_body(category, extra, section, competitors))
+          current_category = current_category + 1
+        end
+        compare_table.concat("<br/>\n")
       end
     end
 
-    def create_compare_headers(category, extra, competitors)
-      compare_header = "|_. #{category} |"
-      competitors.each do |competitor|
-        compare_header.concat("_. #{company_name(competitor)} |")
-      end
-      unless extra.nil?
-        compare_header.concat("_. #{extra} |")
+    def create_compare_headers(category, extra, section, competitors, current_category)
+      compare_header = ""
+      if current_category == 0
+        compare_header = "|_. #{section['description']} |"
+        competitors.each do |competitor|
+          compare_header.concat("_. #{company_name(competitor)} |")
+        end
+        unless extra.nil?
+          compare_header.concat("_. #{extra} |")
+        end
+      else
+       compare_header = "|_. #{section['description']} |"
       end
       compare_header.concat("\n")
     end
 
-    def create_compare_body(category, extra, competitors)
+    def create_compare_body(category, extra, section, competitors)
       compare_body = ""
-      compare_data[category].each do |name, line|
+      section['sections'].each do |name, line|
         if has_values?(line['compare'], competitors)
           compare_body = compare_body.concat("| *#{line['description']}* |")
           competitors.each do |competitor|
@@ -37,7 +48,7 @@ class CompareTables
           compare_body.concat("\n")
         end
       end
-      compare_body.concat("<br/>\n")
+      compare_body
     end
 
     def has_values?(comparisons, competitors)
