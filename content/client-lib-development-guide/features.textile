@@ -207,9 +207,9 @@ h3(#rest-channels). Channels
 * @(RSN1)@ @Channels@ is a collection of @Channel@ objects accessible through @Rest#channels@
 * @(RSN2)@ Methods should exist to check if a channel exists or iterate through the existing channels
 * @(RSN3)@ @Channels#get@ function:
-** @(RSN3a)@ Creates a new @Channel@ object for the specified channel if none exists, or returns the existing channel. @ChannelOptions@ can be specified when instancing a new @Channel@
+** @(RSN3a)@ Creates a new @Channel@ object for the specified channel if none exists, or returns the existing channel. @ChannelOptions@ can be provided in an optional second argument
 ** @(RSN3b)@ If options are provided, the options are set on the @Channel@
-** @(RSN3c)@ Accessing an existing @Channel@ with options in the form @Channels#get(channel, options)@ will update the options on the channel and then return the existing @Channel@ object
+** @(RSN3c)@ Accessing an existing @Channel@ with options in the form @Channels#get(channel, options)@ will update the options on the channel and then return the existing @Channel@ object. (Note that this is soft-deprecated and may be removed in a future release, so should not be implemented in new client libraries. The supported way to update a set of @ChannelOptions@ is @Channel#setOptions@)
 * @(RSN4)@ @Channels#release@ function:
 ** @(RSN4a)@ Releases the channel resource i.e. it's deleted and can then be garbage collected
 
@@ -270,6 +270,7 @@ h3(#rest-channel). Channel
 *** @(RSL6a1)@ A set of tests must exist to ensure that the client library provides data encoding & decoding interoperability with other client libraries. The tests must use the "set of predefined interoperability message fixtures":https://github.com/ably/ably-common/blob/master/test-resources/messages-encoding.json to 1) publish a raw message to the REST API using the JSON transport and subscribe to the message using Realtime to ensure the @data@ attribute matches the fixture; 2) publish a message using the REST client library and retrieve the raw message using the history REST API using the JSON transport ensuring the @data@ matches the fixture; 3) perform the client library operation using both @JSON@ and @MsgPack@ transports. For reference, see the "Ruby":https://github.com/ably/ably-ruby/pull/94 and "iOS":https://github.com/ably/ably-cocoa/pull/459 implementations
 *** @(RSL6a2)@ A set of tests must exist to ensure that the client library provides interoperability for the @extras@ field which is a JSON-encodable object (ie a value that represents a JSON @object@ value and supports serialization to and from JSON text). The test, at a minimum, should publish a message with an @extras@ object such as @{"push":[{"title":"Testing"}]}@ and ensure it is received with an equivalent JSON-encodable object
 ** @(RSL6b)@ If, for example, incompatible encryption details are provided or invalid Base64 is detected in the message payload, an error message will be sent to the logger, but the message will still be delivered with last successful decoding and the @encoding@ field. For example, if a message had a decoding of "utf-8/cipher+aes-128-cbc/base64", and the payload was successfully Base64 decoded but the payload could not be encrypted because the @CipherParam@ details were not configured, the message would be delivered with a binary payload and an @encoding@ with the value "utf-8/cipher+aes-128-cbc"
+* @(RSL7)@ @Channel#setOptions@ takes a @ChannelOptions@ object and sets or updates the stored channel options, then indicates success. (For libraries that are not REST-only, completion indication should be done in the same way as @RealtimeChannel#setOptions@, for uniformity; for example, if @RealtimeChannel#setOptions@ takes a callback, @Channel#setOptions@ should as well)
 
 h3(#rest-presence). Presence
 * @(RSP1)@ Presence object is associated with a single channel and is accessible through @Channel#presence@
@@ -456,9 +457,10 @@ h3(#realtime-channels). Channels
 * @(RTS1)@ @Channels@ is a collection of @Channel@ objects accessible through @Realtime#channels@
 * @(RTS2)@ Methods should exist to check if a channel exists or iterate through the existing channels
 * @(RTS3)@ @Channels#get@ function:
-** @(RTS3a)@ Creates a new @Channel@ object for the specified channel if none exists, or returns the existing channel. @ChannelOptions@ can be specified when instancing a new @Channel@
+** @(RTS3a)@ Creates a new @Channel@ object for the specified channel if none exists, or returns the existing channel. @ChannelOptions@ can be provided in an optional second argument
 ** @(RTS3b)@ If options are provided, the options are set on the @Channel@ when creating a new @Channel@
-** @(RTS3c)@ Accessing an existing @Channel@ with options in the form @Channels#get(channel, options)@ will update the options on the channel and then return the existing @Channel@ object
+** @(RTS3c)@ Accessing an existing @Channel@ with options in the form @Channels#get(channel, options)@ will update the options on the channel and then return the existing @Channel@ object. (Note that this is soft-deprecated and may be removed in a future release, so should not be implemented in new client libraries. The supported way to update a set of @ChannelOptions@ is @Channel#setOptions@)
+*** @(RTS3c1)@ If a new set of @ChannelOptions@ is supplied to @Channels#get@ that would trigger a reattachment of the channel if supplied to @Channel#setOptions@ per "@RTL16a@":#RTL16a, it must raise an error, informing the user that they must use @Channel#setOptions@ instead
 * @(RTS4)@ @Channels#release@ function:
 ** @(RTS4a)@ Detaches the channel and then releases the channel resource i.e. it's deleted and can then be garbage collected
 
@@ -490,6 +492,11 @@ h3(#realtime-channel). Channel
 ** @(RTL4f)@ Once an @ATTACH@ @ProtocolMessage@ is sent, if an @ATTACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the attach request should be treated as though it has failed and the channel should transition to the @SUSPENDED@ state. The channel will then be subsequently automatically re-attached as described in "RTL13":#RTL13
 ** @(RTL4d)@ If the language permits, a callback can be provided that is called when the channel is attached successfully or the attach fails and the @ErrorInfo@ error is passed as an argument to the callback
 ** @(RTL4e)@ If the user does not have sufficient permissions to attach to the channel, the channel will transition to @FAILED@ and set the @Channel#errorReason@
+** @(RTL4j)@ If the attach is not a clean attach (where a 'clean attach' is an attach attempt where the channel has either not previously been attached or has been explicitly detached since the last time it was attached); for example an automatic reattach triggered by "@RTN15c3@":#RTN15c3 or "@RTL13a@":#RTL13a (non-exhaustive); the library should set the "@ATTACH_RESUME@":#TR3f flag in the @ATTACH@ message
+** @(RTL4k)@ If the user has specified a non-empty @params@ object in the @ChannelOptions@ ("@TB2c@":#TB2c), it must be included in a @params@ field of the @ATTACH@ @ProtocolMessage@
+*** @(RTL4k1)@ If @params@ are sent in the @ATTACH@ message, the corresponding @ATTACHED@ (and any subsequent @ATTACHED@s) will contain the subset of those params that the server recognises and validates. This should be exposed in a read-only @params@ field of the @Channel@ (or a @getParams()@ method where that is more idiomatic)
+** @(RTL4l)@ If the user has specified a @modes@ array in the @ChannelOptions@ ("@TB2d@":#TB2d), it must be encoded as a bitfield per "@TR3@":#TR3 and set as the @flags@ field of the @ATTACH@ @ProtocolMessage@. (For the avoidance of doubt, when multiple different spec items require flags to be set in the @ATTACH@, the final @flags@ field should be the bitwise OR of them all)
+** @(RTL4m)@ On receipt of an @ATTACHED@, the client library should decode the @flags@ into an array of @ChannelMode@s (that is, the same format as @ChannelOptions.modes@) and expose it as a read-only @modes@ field of the @Channel@ (or a @getModes()@ method where that is more idiomatic). This should only contain @ChannelMode@s: it should not contain flags which are not modes (see "@TB2d@":#TB2d)
 * @(RTL5)@ @Channel#detach@ function:
 ** @(RTL5a)@ If the channel state is @INITIALIZED@ or @DETACHED@ nothing is done
 ** @(RTL5i)@ If the channel is in a pending state @DETACHING@ or @ATTACHING@, do the detach operation after the completion of the pending request
@@ -557,6 +564,8 @@ h3(#realtime-channel). Channel
 ** @(RTL13b)@ If the attempt to re-attach fails, or if the channel was already in the @ATTACHING@ state, the channel will transition to the @SUSPENDED@ state and the error will be emitted in the @ChannelStateChange@ event. An attempt to re-attach the channel automatically will then be made after the period defined in @ClientOptions#channelRetryTimeout@. When re-attaching the channel, the channel will transition to the @ATTACHING@ state. If that request to attach fails i.e. it times out or a @DETACHED@ message is received, then the process described here in @RTL13b@ will be repeated, indefinitely
 ** @(RTL13c)@ If the connection is no longer @CONNECTED@, then the automatic attempts to re-attach the channel described in "RTL13b":#RTL13b must be cancelled as any implicit channel state changes subsequently will be covered by "RTL3":#RTL3
 * @(RTL14)@ If an @ERROR ProtocolMessage@ is received for this channel (the channel attribute matches this channel's name), then the channel should immediately transition to the FAILED state, and the @Channel.errorReason@ should be set
+* @(RTL16)@ @Channel#setOptions@ takes a @ChannelOptions@ object and sets or updates the stored channel options.
+** @(RTL16a)@ If the user has provided either @ChannelOptions.params@ or @ChannelOptions.modes@ and the channel is in either the @attached@ or @attaching@ state, @Channel#setOptions@ sends an @ATTACH@ message to the server with the params & modes encoded per "@RTL4@":#RTL4, and indicates success once the server has replied with an @ATTACHED@ (or indicates failure if the channel becomes detached or failed before that happens, as with @Channel#attach@); else it indicates success immediately
 
 h3(#realtime-presence). Presence
 
@@ -1126,6 +1135,7 @@ h4. ProtocolMessage
 ** @(TR3c)@ 2: @RESUMED@
 ** @(TR3d)@ 3: @HAS_LOCAL_PRESENCE@
 ** @(TR3e)@ 4: @TRANSIENT@
+** @(TR3f)@ 5: @ATTACH_RESUME@
 ** @(TR3q)@ 16: @PRESENCE@
 ** @(TR3r)@ 17: @PUBLISH@
 ** @(TR3s)@ 18: @SUBSCRIBE@
@@ -1141,11 +1151,12 @@ h4. ProtocolMessage
 ** @(TR4o)@ @connectionDetails@ @ConnectionDetails@ object - provides details on the constraints or defaults for the connection such as max message size, client ID or connection state TTL
 ** @(TR4g)@ @count@ integer
 ** @(TR4h)@ @error@ @ErrorInfo@ object
-** @(TR4i)@ @flags@ integer. Contains one or more of the following bit flags: @HAS_PRESENCE: 1@, @HAS_BACKLOG: 2@, @RESUMED: 4@
+** @(TR4i)@ @flags@ integer. Contains one or more of the bit flags specified in @TR3@
 ** @(TR4j)@ @msgSerial@ long
 ** @(TR4k)@ @messages@ Array of @Message@ objects
 ** @(TR4l)@ @presence@ Array of @PresenceMessage@ objects
 ** @(TR4m)@ @timestamp@ time in milliseconds since epoch
+** @(TR4n)@ @params@ @Dict<String, String>@ key-value pairs
 
 h4. PaginatedResult
 
@@ -1354,6 +1365,8 @@ h4. ChannelOptions
 ** @(TB2b)@ @cipher@, which is either:
 *** @(TB2b1)@ A @CipherParams@ instance, or
 *** @(TB2b2)@ an options hash (or language equivalent) consisting of any subset of @CipherParams@ fields that includes a @key@. In this case, the client library should call @getDefaultParams@, passing it the options hash, to obtain a @CipherParams@ instance
+** @(TB2c)@ @params@ (for realtime client libraries only) a @Dict<string,string>@ of key/value pairs
+** @(TB2d)@ @modes@ (for realtime client libraries only) a typed array of modes, which are the subset of flags defined in "@TR3@":#TR3 whose value is ≥16
 * @(TB3)@ The client lib may optionally provide an alternative constructor @withCipherKey@ for ChannelOptions that takes a @key@ only. (This must be differentiated from the normal constructor such that it is clear that the value being passed in is a key). (This is intended for languages where requiring a hash map is unidiomatic)
 
 h4. CipherParams
@@ -1557,6 +1570,8 @@ class RestChannel:
   publish(Message, params?: Dict<String, Stringifiable>) => io // RSL1
   publish([Message], params?: Dict<String, Stringifiable>) => io // RSL1
   publish(name: String?, data: Data?) => io // RSL1
+  setOptions(options: ChannelOptions) => io // RSL7 - note asynchronous return value for
+    // compatibility with RealtimeChannel#setOptions; not required for REST-only libraries
 
   // Only on platforms that support receiving notifications:
   push: PushChannel // RSH4
@@ -1568,6 +1583,8 @@ class RealtimeChannel:
   presence: RealtimePresence // RTL9
   properties: ChannelProperties // CP1, RTL15
   push: PushChannel
+  modes: readonly [ChannelMode] // RTL4m
+  params: readonly Dict<String, String> // RTL4k1
   attach() => io // RTL4d
   detach() => io // RTL5e
   history(
@@ -1585,6 +1602,7 @@ class RealtimeChannel:
   unsubscribe() // RTL8a, RTE5
   unsubscribe((Message) ->) // RTL8a
   unsubscribe(String, (Message) ->) // RTL8a
+  setOptions(options: ChannelOptions) => io // RTL16
 
 class PushChannel:
   subscribeDevice() => io // RSH7a
@@ -1606,6 +1624,12 @@ enum ChannelEvent:
   embeds ChannelState
   UPDATE // RTL2g
 
+enum ChannelMode: // TB2d
+  PRESENCE
+  PUBLISH
+  SUBSCRIBE
+  PRESENCE_SUBSCRIBE
+
 class ChannelStateChange:
   current: ChannelState // RTL2a, RTL2b
   event: ChannelEvent // TH5
@@ -1616,6 +1640,8 @@ class ChannelStateChange:
 class ChannelOptions:
   +withCipherKey(key: Binary | String)? -> ChannelOptions // TB3
   cipher: (CipherParams | Params)? // RSL5a, TB2b
+  params?: Dict<String, String> // TB2c
+  modes?: [ChannelMode] // TB2d
 
 class CipherParams:
   algorithm: String default "AES" // TZ2a
@@ -1721,12 +1747,13 @@ class ProtocolMessage:
   connectionSerial: Int? // RTN10c, TR4f
   count: Int? // TR4g
   error: ErrorInfo? // RTN15c2, TR4h
-  flags: .HAS_PRESENCE & .HAS_BACKLOG & .RESUMED ? // RTP1, TR3, TR4i, RTL2f
+  flags: Int? // TR4i; bitfield containing zero or more boolean flags specified in TR3
   id: String? // TR4b
   messages: [Message]? // TR4k
   msgSerial: Int? // RTN7b, TR4j
   presence: [PresenceMessage]? // TR4l
   timestamp: Time? // TR4m
+  params: Dict<String, String>? // TR4n, RTL4k
 
 enum ProtocolMessageAction:
   HEARTBEAT // TR2
