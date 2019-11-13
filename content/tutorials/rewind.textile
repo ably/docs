@@ -1,0 +1,253 @@
+---
+title: Getting historical data from streams with rewind channel parameter
+section: tutorials
+index: 31
+---
+
+The Ably Realtime service organizes the message traffic within applications into named channels. Channels are the “unit” of message distribution; clients attach to any number of channels to subscribe to messages, and every message published to a channel is broadcasted to all its subscribers. 
+
+If a subscriber was ever to go offline, Ably, by default, will retain all messages published and intended for that subscriber, for a maximum of two min. During these two minutes, Ably will continously try to re-establish connection with that subscriber client, and if successful it'll relay all the retained messages to the subscriber in the order of their arrival. However, some clients may expect longer disconnections and hence may need message retention for more than the default two minute duration. For such scenarios Ably provides a feature called "History":/core-features/history using which one can retrieve missed historical messages that are a maximum of 72 hours old.
+
+History works perfectly well in scenarios where messages are being shared in realtime between various clients and some sort of message delivery guarantees are required by the application. However, in a data streaming scenario where a data provider continously streams data in realtime as it is generated, a new consumer just tuning in to get that data may have to sit idle until the next available update arrives. If they are interested in previously published messages in the recent past, they have to do a separate history request as soon as they join. To deal with such scenarios more efficiently, we recently launched a new feature called "Rewind":/realtime/channels.
+
+One of the main motivating factors for building the rewind functionality within Ably was the recent launch of our new product called the "API Streamer":/api-streamer that lets producers of data stream it to any number of consumers. As part of the API Streamer, we also launched the "Ably Hub":/api-streamer/hub that serves as a marketplace for open, free or commercial data streams most of which come with a self-service option to start receiving the data updates. One such data source is the "weather data":https://www.ably.io/hub/products/19 obtained from the "Open Weather Map":https://openweathermap.org/
+
+Rewind is simply a parameter you add when attaching to channels on Ably. If you are on a version less than v1.2, you can add the rewind parameter as part of the channel scope. Also, rewind being just another parameter on Ably's existing channels offering, this new feature can be seamlessly used with any of "the protocols that Ably currently supports":https://www.ably.io/adapters.
+
+In this tutorial we'll look at implementing the rewind feature for a weather monitoring app and see examples using Ably's Native protocols, SSE and MQTT.
+
+<%= partial 'tutorials/_step-1-setup-free-account' %>
+
+h2(#subscribe-to-weather-data-stream). Step 2 - Subscribe to weather data stream on the Ably Hub
+
+As mentioned before, the "Ably Hub":https://www.ably.io/hub is a marketplace for free, open or commercial data streams. The "Weather Data":https://www.ably.io/hub/products/19 stream is one of the ones which is open and free to consume. It's also self-subscribe, meaning if you are interested to use it, as we are for this tutorial, you can simply navigate to this product and click on the subscribe button and you'll instantly have access to this data stream.
+
+<a href="/images/tutorials/rewind/hub-self-subscribe.png" target="_blank">
+    <img src="/images/tutorials/rewind/hub-self-subscribe.png" style="width: 60%" alt="Self subscribe option on Ably Hub">
+  </a>
+
+h2(#display-data-received). Step 3 - Display the data received from the product on a web page
+
+The "Weather Data":https://www.ably.io/hub/products/19 product on the Ably Hub offers weather information for 11 global cities. We'll simply add a drop down menu to let the user choose a city, on selection of which show the corresponding live weather information.
+
+The information on which channels you can subscribe to for various data streams available in this product can be found in the "documentation of the product":https://www.ably.io/hub/products/19#documentation.
+
+Let us display the data coming through on a web page. We'll see how to do this using Ably's native client SDKs, SSE and MQTT:
+
+h3(#using-ably-sdks). Option 1: Consume and rewind the data using Ably's native SDKs
+
+Create a new HTML file and add the following:
+
+```[html]
+<html>
+<head>
+    <title>Ably's rewind channel param tutorial</title>
+    <!-- CDN for JQuery -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <!-- CDN for Ably JS library -->
+    <script src="https://cdn.ably.io/lib/ably.min-1.js" crossorigin="anonymous"></script>
+    <!-- Link to stylesheet which we'll add later -->
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+</head>
+<body>
+    <div>
+    City:
+    <!-- Drop down to select from the available cities -->
+    <select id="city-id">
+        <option value="2643741">London, UK</option>
+        <option value="1850147">Tokyo, Japan</option>
+        <option value="1273294">Delhi, India</option>
+        <option value="1796236">Shanghai, China</option>
+        <option value="3448439">Sao Paulo, Brazil</option>
+        <option value="5128581">New York, US</option>
+        <option value="360630">Cairo, Egypt</option>
+        <option value="2988507">Paris, France</option>
+        <option value="2950158">Berlin, Germany</option>
+        <option value="756135">Warsaw, Poland</option>
+        <option value="2147714">Sydney, Australia</option>
+    </select>
+    </div>
+    <br/>
+    <table style="width:100%; padding: 20px; height: 50px;" border="1">
+    <tr>
+    <!-- Text Field to show the temperature info for the selected city -->
+    <td style="text-align: center;">
+        <div class="container">
+        <div class="c-flashbox"><h4 id="result-open-weather"></h4></div>
+        </div>
+    </td>
+    </tr>
+    </table>
+</body>
+</html>
+```
+
+As you notice, we've linked to an external CSS file. This is to add a quick colour flash to the box containing the weather data so the change is more noticeable. 
+
+Create a file called @styles.css@ and paste the following in it:
+
+```[css]
+.c-flashbox {
+    display: inline-block;
+    overflow: auto;
+}
+
+.c-flashbox__negative-flash {
+    -webkit-animation-name: negative-flash;
+    -webkit-animation-duration: 3000ms;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-timing-function: ease-in-out;
+}
+
+.c-flashbox__neutral-flash {
+    -webkit-animation-name: neutral-flash;
+    -webkit-animation-duration: 3000ms;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-timing-function: ease-in-out;
+}
+
+.c-flashbox__positive-flash {
+    -webkit-animation-name: positive-flash;
+    -webkit-animation-duration: 3000ms;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-timing-function: ease-in-out;
+}
+
+@-webkit-keyframes negative-flash {
+    0% {
+        background-color: White;
+    }
+    22% {
+        background-color: Red;
+    }
+    77% {
+        background-color: Red;
+    }
+    100% {
+        background-color: White;
+    }
+}
+
+@-webkit-keyframes neutral-flash {
+    0% {
+        background-color: White;
+    }
+    22% {
+        background-color: Orange;
+    }
+    77% {
+        background-color: Orange;
+    }
+    100% {
+        background-color: White;
+    }
+}
+
+@-webkit-keyframes positive-flash {
+    0% {
+        background-color: White;
+    }
+    22% {
+        background-color: Green;
+    }
+    77% {
+        background-color: Green;
+    }
+    100% {
+        background-color: White;
+    }
+}
+```
+
+Next, we'll instantiate the Ably library and attach to the channels with the rewind param enabled. Add the following after the ending @<body>@ tag of the HTML file above:
+
+```[javascript]
+<script type="text/javascript">
+  window.addEventListener("load", function() {
+    var ably = new Ably.Realtime("<YOUR-API-KEY>"),
+        $resultWeather = $('#result-open-weather'),
+        oldTemperature = -50,
+        channelWeather;
+
+
+    ably.connection.on('connecting', function() {
+      console.log("[Connecting to Ably]");
+    });
+
+    ably.connection.on('connected', function() {
+      console.log("[Connected to Ably]");
+    });
+
+    function subscribeToChannel(name, channel, subscribe) {
+      if (channel) {
+        channel.detach(function(err) {
+          if(err) {
+            console.log("Error detaching: " + err);
+          } else {
+            subscribe(name);
+          }
+        });
+      } else {
+        subscribe(name);
+      } 
+    }
+
+    function subscribeOpenWeather(id) {
+      //OpenWeatherMap/Weather
+      channelWeather = ably.channels.get('[product:ably-openweathermap/weather]weather:' + id);
+      let newTemperature, weatherDesc;
+      historyOpenWeather();
+      //subscribing to updates in the weather data
+      channelWeather.subscribe((msg) => {
+        if($('select#city-id').val() == msg.data.id){
+          if(oldTemperature > newTemperature) {
+          $resultWeather.removeClass("c-flashbox__negative-flash");
+          $resultWeather.removeClass("c-flashbox__neutral-flash");
+          $resultWeather.removeClass("c-flashbox__positive-flash");
+          setTimeout(function() {
+            $resultWeather.addClass("c-flashbox__negative-flash");
+          }, 6);
+        } else if(oldTemperature < newTemperature) {
+          $resultWeather.removeClass("c-flashbox__negative-flash");
+          $resultWeather.removeClass("c-flashbox__positive-flash");
+          setTimeout(function() {
+            $resultWeather.addClass("c-flashbox__positive-flash");
+          }, 6);
+        } else if(weatherDesc == msg.data.weather[0].description){
+          $resultWeather.removeClass("c-flashbox__negative-flash");
+          $resultWeather.removeClass("c-flashbox__neutral-flash");
+          $resultWeather.removeClass("c-flashbox__positive-flash");
+          setTimeout(function() {
+            $resultWeather.addClass("c-flashbox__neutral-flash");
+          }, 6);
+        }
+        oldTemperature = newTemperature;
+        weatherDesc = msg.data.weather[0].description
+        $resultWeather.text((msg.data.main.temp - 273.15 ).toFixed(2)+ '°C with ' + msg.data.weather[0].description);
+        }
+      });      
+    }
+
+    function historyOpenWeather() {
+      channelWeather.history({ untilAttach: true, limit: 1 }, function(err, resultPage) {
+        if(err) return
+        let recentMessage = resultPage.items[0];
+        if(recentMessage) {
+          $resultWeather.text((recentMessage.data.main.temp - 273.15 ).toFixed(2)+ '°C with ' + recentMessage.data.weather[0].description);
+        }
+      });
+    }
+    $('select#city-id').on('change', function() {
+      subscribeToChannel($('select#city-id').val(), channelWeather, subscribeOpenWeather);
+    });
+    subscribeToChannel($('select#city-id').val(), channelWeather, subscribeOpenWeather);
+  });
+</script>
+```
+
+
+
+h3(#using-sse). Option 2: Consume and rewind the data using Ably's SSE protocol adapter
+
+h3(#using-mqtt). Option 3: Consume and rewind the data using Ably's MQTT protocol adapter
