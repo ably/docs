@@ -34,7 +34,7 @@ The information on which channels you can subscribe to for various data streams 
 
 Let us display the data coming through on a web page. We'll see how to do this using Ably's native client SDKs, SSE and MQTT:
 
-h3(#using-ably-sdks). Option 1: Consume and rewind the data using Ably's native SDKs
+h3(#using-ably-sdks). Option 1: Consume rewound and new data using Ably's native SDKs
 
 Create a new HTML file and add the following:
 
@@ -47,8 +47,6 @@ Create a new HTML file and add the following:
         integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
     <!-- CDN for Ably JS library -->
     <script src="https://cdn.ably.io/lib/ably.min-1.js" crossorigin="anonymous"></script>
-    <!-- Link to stylesheet which we'll add later -->
-    <link rel="stylesheet" type="text/css" href="styles.css" />
 </head>
 <body>
     <div>
@@ -74,90 +72,13 @@ Create a new HTML file and add the following:
     <!-- Text Field to show the temperature info for the selected city -->
     <td style="text-align: center;">
         <div class="container">
-        <div class="c-flashbox"><h4 id="result-open-weather"></h4></div>
+        <h4 id="result-open-weather"></h4>
         </div>
     </td>
     </tr>
     </table>
 </body>
 </html>
-```
-
-As you notice, we've linked to an external CSS file. This is to add a quick colour flash to the box containing the weather data so the change is more noticeable. 
-
-Create a file called @styles.css@ and paste the following in it:
-
-```[css]
-.c-flashbox {
-    display: inline-block;
-    overflow: auto;
-}
-
-.c-flashbox__negative-flash {
-    -webkit-animation-name: negative-flash;
-    -webkit-animation-duration: 3000ms;
-    -webkit-animation-iteration-count: 1;
-    -webkit-animation-timing-function: ease-in-out;
-}
-
-.c-flashbox__neutral-flash {
-    -webkit-animation-name: neutral-flash;
-    -webkit-animation-duration: 3000ms;
-    -webkit-animation-iteration-count: 1;
-    -webkit-animation-timing-function: ease-in-out;
-}
-
-.c-flashbox__positive-flash {
-    -webkit-animation-name: positive-flash;
-    -webkit-animation-duration: 3000ms;
-    -webkit-animation-iteration-count: 1;
-    -webkit-animation-timing-function: ease-in-out;
-}
-
-@-webkit-keyframes negative-flash {
-    0% {
-        background-color: White;
-    }
-    22% {
-        background-color: Red;
-    }
-    77% {
-        background-color: Red;
-    }
-    100% {
-        background-color: White;
-    }
-}
-
-@-webkit-keyframes neutral-flash {
-    0% {
-        background-color: White;
-    }
-    22% {
-        background-color: Orange;
-    }
-    77% {
-        background-color: Orange;
-    }
-    100% {
-        background-color: White;
-    }
-}
-
-@-webkit-keyframes positive-flash {
-    0% {
-        background-color: White;
-    }
-    22% {
-        background-color: Green;
-    }
-    77% {
-        background-color: Green;
-    }
-    100% {
-        background-color: White;
-    }
-}
 ```
 
 Next, we'll instantiate the Ably library and attach to the channels with the rewind param enabled. With Ably version lower than 1.2, the rewind param needs to be added as part of the channel qualifier within the square brackets. If the channel already has a qualifier like @[meta]*@ or like in our case @[product:ably-openweathermap/weather]*@, we can simply append the existing qualifier name with @?rewind=<position>@ or @?rewind=<time>@ 
@@ -203,45 +124,87 @@ function subscribeOpenWeather(id) {
 
 If you run this file in your browser now, you should see the realtime data coming through from the weather data stream. Well, even if a new update wasn't published just when you run this app, you can still see the most recent update previously sent on this channel, thanks to the channel's rewind param.
 
-One last thing we can do to make this app more usabe is to add the flashbox styling to our HTML that we previously included. Replace your @subscribeOpenWeather()@ method definition with the following:
+h3(#using-sse). Option 2: Consume rewound and new data using Ably's SSE protocol adapter
+
+Let us now look at consuming the same data stream with the rewind parameter, but only this time using Server-Sent Events (SSE) instead of Ably's native client SDKs.
+
+Here's a repition of the HTML code for convenience:
 
 ```[html]
-function subscribeOpenWeather(id) {
-    // get the channel object with the rewind parameter set to 1
-    channelWeather = ably.channels.get('[product:ably-openweathermap/weather?rewind=1]weather:' + id);
-    let weatherDesc, newTemperature;
-    // subscribe to this channel and update the text box when new updates arrive
-    channelWeather.subscribe((msg) => {
-        if ($('select#city-id').val() == msg.data.id) {
-            if (oldTemperature > newTemperature) {
-                $resultWeather.removeClass("c-flashbox__negative-flash");
-                $resultWeather.removeClass("c-flashbox__neutral-flash");
-                $resultWeather.removeClass("c-flashbox__positive-flash");
-                setTimeout(function () {
-                    $resultWeather.addClass("c-flashbox__negative-flash");
-                }, 6);
-            } else if (oldTemperature < newTemperature) {
-                $resultWeather.removeClass("c-flashbox__negative-flash");
-                $resultWeather.removeClass("c-flashbox__positive-flash");
-                setTimeout(function () {
-                    $resultWeather.addClass("c-flashbox__positive-flash");
-                }, 6);
-            } else {
-                $resultWeather.removeClass("c-flashbox__negative-flash");
-                $resultWeather.removeClass("c-flashbox__neutral-flash");
-                $resultWeather.removeClass("c-flashbox__positive-flash");
-                setTimeout(function () {
-                    $resultWeather.addClass("c-flashbox__neutral-flash");
-                }, 6);
-            }
-            oldTemperature = newTemperature;
-            weatherDesc = msg.data.weather[0].description
-            $resultWeather.text((msg.data.main.temp - 273.15).toFixed(2) + '°C with ' + msg.data.weather[0].description);
-        }
-    });
-}
+<html>
+<head>
+    <title>Ably's rewind channel param tutorial</title>
+    <!-- CDN for JQuery -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+        integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <!-- CDN for Ably JS library -->
+    <script src="https://cdn.ably.io/lib/ably.min-1.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div>
+    City:
+    <!-- Drop down to select from the available cities -->
+    <select id="city-id">
+        <option value="2643741">London, UK</option>
+        <option value="1850147">Tokyo, Japan</option>
+        <option value="1273294">Delhi, India</option>
+        <option value="1796236">Shanghai, China</option>
+        <option value="3448439">Sao Paulo, Brazil</option>
+        <option value="5128581">New York, US</option>
+        <option value="360630">Cairo, Egypt</option>
+        <option value="2988507">Paris, France</option>
+        <option value="2950158">Berlin, Germany</option>
+        <option value="756135">Warsaw, Poland</option>
+        <option value="2147714">Sydney, Australia</option>
+    </select>
+    </div>
+    <br/>
+    <table style="width:100%; padding: 20px; height: 50px;" border="1">
+    <tr>
+    <!-- Text Field to show the temperature info for the selected city -->
+    <td style="text-align: center;">
+        <div class="container">
+        <h4 id="result-open-weather"></h4>
+        </div>
+    </td>
+    </tr>
+    </table>
+</body>
+</html>
 ```
 
-h3(#using-sse). Option 2: Consume and rewind the data using Ably's SSE protocol adapter
+Let us now add in the script to consume the data stream. Note that since we'll use the SSE protocol, we don't need to use any client SDK at all. We'll make use of the @EvenSource()@ API that comes with all major browsers by default. Paste the following after the closing @<body> tag of your HTML file above:
 
-h3(#using-mqtt). Option 3: Consume and rewind the data using Ably's MQTT protocol adapter
+```[html]
+<script>
+    var $resultWeather = $('#result-open-weather'),
+            oldTemperature = -50,
+            channelWeather,
+            eventSource;
+    var apiKey = "<YOUR-API-KEY>"
+    $('select#city-id').on('change', function () {
+            eventSource.close();
+            subscribeOpenWeather($('select#city-id').val());
+        });
+    subscribeOpenWeather($('select#city-id').val());
+    function subscribeOpenWeather(id){
+      var channelWeather = "[product:ably-openweathermap/weather?rewind=1]weather:" + id
+      var URL = `https://realtime.ably.io/sse?v=1.1&key=${apiKey}&channels=${channelWeather}`
+      eventSource = new EventSource(URL);
+      eventSource.onmessage = function(msg) {
+          var message = JSON.parse(msg.data);
+          var weatherData = JSON.parse(message.data);
+          $resultWeather.text((weatherData.main.temp - 273.15).toFixed(2) + '°C with ' + weatherData.weather[0].description);
+      }
+      eventSource.onerror = function(error) {
+          if(error.data) {
+              $resultWeather.text(`Error: ${error.data}`);
+          }
+      }
+    }
+</script>
+```
+
+If you run this file in your browser now, you should see the realtime data coming through from the weather data stream via SSE. Notice that we haven't used any client SDKs here. Also, we get the latest message that was previously published on that channel, even if a new update isn't available at the time.
+
+h3(#using-mqtt). Option 3: Consume rewound and new data using Ably's MQTT protocol adapter
