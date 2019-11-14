@@ -160,93 +160,87 @@ Create a file called @styles.css@ and paste the following in it:
 }
 ```
 
-Next, we'll instantiate the Ably library and attach to the channels with the rewind param enabled. Add the following after the ending @<body>@ tag of the HTML file above:
+Next, we'll instantiate the Ably library and attach to the channels with the rewind param enabled. With Ably version lower than 1.2, the rewind param needs to be added as part of the channel qualifier within the square brackets. If the channel already has a qualifier like @[meta]*@ or like in our case @[product:ably-openweathermap/weather]*@, we can simply append the existing qualifier name with @?rewind=<position>@ or @?rewind=<time>@ 
 
-```[javascript]
+Add the following after the closing @<body>@ tag of the HTML file above to instantiate the Ably library and declare some variables which we'll use later:
+
+```[html]
 <script type="text/javascript">
-  window.addEventListener("load", function() {
-    var ably = new Ably.Realtime("<YOUR-API-KEY>"),
-        $resultWeather = $('#result-open-weather'),
-        oldTemperature = -50,
-        channelWeather;
-
-
-    ably.connection.on('connecting', function() {
-      console.log("[Connecting to Ably]");
-    });
-
-    ably.connection.on('connected', function() {
-      console.log("[Connected to Ably]");
-    });
-
-    function subscribeToChannel(name, channel, subscribe) {
-      if (channel) {
-        channel.detach(function(err) {
-          if(err) {
-            console.log("Error detaching: " + err);
-          } else {
-            subscribe(name);
-          }
-        });
-      } else {
-        subscribe(name);
-      } 
-    }
-
-    function subscribeOpenWeather(id) {
-      //OpenWeatherMap/Weather
-      channelWeather = ably.channels.get('[product:ably-openweathermap/weather]weather:' + id);
-      let newTemperature, weatherDesc;
-      historyOpenWeather();
-      //subscribing to updates in the weather data
-      channelWeather.subscribe((msg) => {
-        if($('select#city-id').val() == msg.data.id){
-          if(oldTemperature > newTemperature) {
-          $resultWeather.removeClass("c-flashbox__negative-flash");
-          $resultWeather.removeClass("c-flashbox__neutral-flash");
-          $resultWeather.removeClass("c-flashbox__positive-flash");
-          setTimeout(function() {
-            $resultWeather.addClass("c-flashbox__negative-flash");
-          }, 6);
-        } else if(oldTemperature < newTemperature) {
-          $resultWeather.removeClass("c-flashbox__negative-flash");
-          $resultWeather.removeClass("c-flashbox__positive-flash");
-          setTimeout(function() {
-            $resultWeather.addClass("c-flashbox__positive-flash");
-          }, 6);
-        } else if(weatherDesc == msg.data.weather[0].description){
-          $resultWeather.removeClass("c-flashbox__negative-flash");
-          $resultWeather.removeClass("c-flashbox__neutral-flash");
-          $resultWeather.removeClass("c-flashbox__positive-flash");
-          setTimeout(function() {
-            $resultWeather.addClass("c-flashbox__neutral-flash");
-          }, 6);
-        }
-        oldTemperature = newTemperature;
-        weatherDesc = msg.data.weather[0].description
-        $resultWeather.text((msg.data.main.temp - 273.15 ).toFixed(2)+ '°C with ' + msg.data.weather[0].description);
-        }
-      });      
-    }
-
-    function historyOpenWeather() {
-      channelWeather.history({ untilAttach: true, limit: 1 }, function(err, resultPage) {
-        if(err) return
-        let recentMessage = resultPage.items[0];
-        if(recentMessage) {
-          $resultWeather.text((recentMessage.data.main.temp - 273.15 ).toFixed(2)+ '°C with ' + recentMessage.data.weather[0].description);
-        }
-      });
-    }
-    $('select#city-id').on('change', function() {
-      subscribeToChannel($('select#city-id').val(), channelWeather, subscribeOpenWeather);
-    });
-    subscribeToChannel($('select#city-id').val(), channelWeather, subscribeOpenWeather);
-  });
+  window.addEventListener("load", function () {
+      var ably = new Ably.Realtime("<YOUR-API-KEY>"),
+          $resultWeather = $('#result-open-weather'),
+          oldTemperature = -50,
+          channelWeather;
+  )};
 </script>
 ```
 
+Make sure to add in your own Ably API Key in the above code snippet.
 
+What we need  now to get the data from the relevant channels is to retrieve the user selection from the drop down menu and use the correlated code to subscribe to that particular channel. We'll add the rewind functionality here and set value to 1, signifying the number of previously published messages we'd like to retrieve from this data stream, on attaching to a channel.
+
+Add the following within your script tag:
+
+```[html]
+subscribeOpenWeather($('select#city-id').val());
+$('select#city-id').on('change', function () {
+    subscribeOpenWeather($('select#city-id').val());
+});
+
+function subscribeOpenWeather(id) {
+    // get the channel object with the rewind parameter set to 1
+    channelWeather = ably.channels.get('[product:ably-openweathermap/weather?rewind=1]weather:' + id);
+    let weatherDesc;
+    // subscribe to this channel and update the text box when new updates arrive
+    channelWeather.subscribe((msg) => {
+        if ($('select#city-id').val() == msg.data.id) {
+            weatherDesc = msg.data.weather[0].description
+            $resultWeather.text((msg.data.main.temp - 273.15).toFixed(2) + '°C with ' + msg.data.weather[0].description);
+        }
+    });
+}
+```
+
+If you run this file in your browser now, you should see the realtime data coming through from the weather data stream. Well, even if a new update wasn't published just when you run this app, you can still see the most recent update previously sent on this channel, thanks to the channel's rewind param.
+
+One last thing we can do to make this app more usabe is to add the flashbox styling to our HTML that we previously included. Replace your @subscribeOpenWeather()@ method definition with the following:
+
+```[html]
+function subscribeOpenWeather(id) {
+    // get the channel object with the rewind parameter set to 1
+    channelWeather = ably.channels.get('[product:ably-openweathermap/weather?rewind=1]weather:' + id);
+    let weatherDesc, newTemperature;
+    // subscribe to this channel and update the text box when new updates arrive
+    channelWeather.subscribe((msg) => {
+        if ($('select#city-id').val() == msg.data.id) {
+            if (oldTemperature > newTemperature) {
+                $resultWeather.removeClass("c-flashbox__negative-flash");
+                $resultWeather.removeClass("c-flashbox__neutral-flash");
+                $resultWeather.removeClass("c-flashbox__positive-flash");
+                setTimeout(function () {
+                    $resultWeather.addClass("c-flashbox__negative-flash");
+                }, 6);
+            } else if (oldTemperature < newTemperature) {
+                $resultWeather.removeClass("c-flashbox__negative-flash");
+                $resultWeather.removeClass("c-flashbox__positive-flash");
+                setTimeout(function () {
+                    $resultWeather.addClass("c-flashbox__positive-flash");
+                }, 6);
+            } else {
+                $resultWeather.removeClass("c-flashbox__negative-flash");
+                $resultWeather.removeClass("c-flashbox__neutral-flash");
+                $resultWeather.removeClass("c-flashbox__positive-flash");
+                setTimeout(function () {
+                    $resultWeather.addClass("c-flashbox__neutral-flash");
+                }, 6);
+            }
+            oldTemperature = newTemperature;
+            weatherDesc = msg.data.weather[0].description
+            $resultWeather.text((msg.data.main.temp - 273.15).toFixed(2) + '°C with ' + msg.data.weather[0].description);
+        }
+    });
+}
+```
 
 h3(#using-sse). Option 2: Consume and rewind the data using Ably's SSE protocol adapter
 
