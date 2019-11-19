@@ -1,26 +1,28 @@
 ---
-title: Getting historical data from streams with rewind channel parameter
+title: Historical data with Channel Rewind
 section: tutorials
-index: 31
+index: 32
 ---
 
 The Ably Realtime service organizes the message traffic within applications into named channels. Channels are the “unit” of message distribution; clients attach to any number of channels to subscribe to messages, and every message published to a channel is broadcasted to all its subscribers. 
 
-If a subscriber was ever to go offline, Ably, by default, will retain all messages published and intended for that subscriber, for a maximum of two min. During these two minutes, Ably will continously try to re-establish connection with that subscriber client, and if successful it'll relay all the retained messages to the subscriber in the order of their arrival. However, some clients may expect longer disconnections and hence may need message retention for more than the default two minute duration. For such scenarios Ably provides a feature called "History":/core-features/history using which one can retrieve missed historical messages that are a maximum of 72 hours old.
+h2(#context). Context
 
-History works perfectly well in scenarios where messages are being shared in realtime between various clients and some sort of message delivery guarantees are required by the application. However, in a data streaming scenario where a data provider continously streams data in realtime as it is generated, a new consumer just tuning in to get that data may have to sit idle until the next available update arrives. If they are interested in previously published messages in the recent past, they have to do a separate history request as soon as they join. To deal with such scenarios more efficiently, we recently launched a new feature called "Rewind":/realtime/channels.
+If a subscriber was to ever go offline, Ably by default, will retain all messages published and intended for that subscriber for a maximum of two min. During these two minutes, Ably will continously try to re-establish connection with that subscriber client, and if successful it'll relay all the retained messages to the subscriber in the order of their arrival. However, some clients may expect longer disconnections and hence may need message retention for more than the default two minute duration. For such scenarios Ably provides a feature called "History":/core-features/history using which one can retrieve missed historical messages that are a maximum of 72 hours old.
 
-One of the main motivating factors for building the rewind functionality within Ably was the recent launch of our new product called the "API Streamer":/api-streamer that lets producers of data stream it to any number of consumers. As part of the API Streamer, we also launched the "Ably Hub":/api-streamer/hub that serves as a marketplace for open, free or commercial data streams most of which come with a self-service option to start receiving the data updates. One such data source is the "weather data":https://www.ably.io/hub/products/19 obtained from the "Open Weather Map":https://openweathermap.org/
+History works perfectly well in scenarios where messages are being shared in realtime between various clients and some sort of message delivery guarantees are required by the application. However, in a data streaming scenario where a data provider continously streams data in realtime as it is generated, a new consumer just tuning in to get that data may have to sit idle until the next available update arrives. If they are interested in previously published messages in the recent past, they have to do a separate history request as soon as they join. To deal with such scenarios more efficiently, we recently launched a new feature called "Channel Rewind":/realtime/channels.
+
+One of the main motivating factors for building the rewind functionality within Ably was the recent launch of our new product called the "API Streamer":/api-streamer that lets data producers stream it to any number of consumers. As part of the API Streamer, we also launched the "Ably Hub":/api-streamer/hub that serves as a marketplace for open, free or commercial data streams most of which come with a self-service option to start receiving the data updates. 
 
 Rewind is simply a parameter you add when attaching to channels on Ably. If you are on a version less than v1.2, you can add the rewind parameter as part of the channel scope. Also, rewind being just another parameter on Ably's existing channels offering, this new feature can be seamlessly used with any of "the protocols that Ably currently supports":https://www.ably.io/adapters.
 
-In this tutorial we'll look at implementing the rewind feature for a weather monitoring app and see examples using Ably's Native protocols, SSE and MQTT.
+In this tutorial we'll look at implementing the rewind feature for a weather monitoring app and see examples using Ably's native protocol, SSE and MQTT.
 
 <%= partial 'tutorials/_step-1-setup-free-account' %>
 
 h2(#subscribe-to-weather-data-stream). Step 2 - Subscribe to weather data stream on the Ably Hub
 
-As mentioned before, the "Ably Hub":https://www.ably.io/hub is a marketplace for free, open or commercial data streams. The "Weather Data":https://www.ably.io/hub/products/19 stream is one of the ones which is open and free to consume. It's also self-subscribe, meaning if you are interested to use it, as we are for this tutorial, you can simply navigate to this product and click on the subscribe button and you'll instantly have access to this data stream.
+As mentioned before, the "Ably Hub":https://www.ably.io/hub is a marketplace for free, open or commercial data streams. The "Weather Data":https://www.ably.io/hub/products/19 product on it is open and free to consume. It's also self-subscribe, meaning if you are interested to use it you can simply navigate to this product and click on the subscribe button and you'll instantly have access to this data stream. We'll make use of this data stream to see how channel rewind works.
 
 <a href="/images/tutorials/rewind/hub-self-subscribe.png" target="_blank">
     <img src="/images/tutorials/rewind/hub-self-subscribe.png" style="width: 60%" alt="Self subscribe option on Ably Hub">
@@ -28,15 +30,14 @@ As mentioned before, the "Ably Hub":https://www.ably.io/hub is a marketplace for
 
 h2(#display-data-received). Step 3 - Display the data received from the product on a web page
 
-The "Weather Data":https://www.ably.io/hub/products/19 product on the Ably Hub offers weather information for 11 global cities. We'll simply add a drop down menu to let the user choose a city, on selection of which show the corresponding live weather information.
+The "Weather Data":https://www.ably.io/hub/products/19 product offers weather information for 11 global cities. We'll add a drop down menu to let the user choose a city, on selection of which we'll show the corresponding live weather information.
 
-The information on which channels you can subscribe to for various data streams available in this product can be found in the "documentation of the product":https://www.ably.io/hub/products/19#documentation.
+The information about the channels available within this product can be found in the "documentation of the product":https://www.ably.io/hub/products/19#documentation.
 
-Let us display the data coming through on a web page. We'll see how to do this using Ably's native client SDKs, SSE and MQTT:
 
 h3(#using-ably-sdks). Option 1: Consume rewound and new data using Ably's native SDKs
 
-Create a new HTML file and add the following:
+Create a new HTML file and add the following to include the drop down for various city options and a box to display the information:
 
 ```[html]
 <html>
@@ -89,8 +90,7 @@ Add the following after the closing @<body>@ tag of the HTML file above to insta
 <script type="text/javascript">
   window.addEventListener("load", function () {
       var ably = new Ably.Realtime("<YOUR-API-KEY>"),
-          $resultWeather = $('#result-open-weather'),
-          oldTemperature = -50,
+          $resultWeather = $('#result-open-weather')
           channelWeather;
   )};
 </script>
@@ -98,7 +98,7 @@ Add the following after the closing @<body>@ tag of the HTML file above to insta
 
 Make sure to add in your own Ably API Key in the above code snippet.
 
-What we need  now to get the data from the relevant channels is to retrieve the user selection from the drop down menu and use the correlated code to subscribe to that particular channel. We'll add the rewind functionality here and set value to 1, signifying the number of previously published messages we'd like to retrieve from this data stream, on attaching to a channel.
+What we need now to get the data from the relevant channels is to retrieve the user selection from the drop down menu and use the correlated code to subscribe to that particular channel. We'll add the rewind functionality here and set value to 1, signifying the number of previously published messages we'd like to retrieve from this data stream, on attaching to a channel.
 
 Add the following within your script tag:
 
@@ -162,9 +162,9 @@ If you run this file in your browser now, you should see the realtime data comin
 
 h3(#using-mqtt). Option 3: Consume rewound and new data using Ably's MQTT protocol adapter
 
-You can use any MQTT library to publish and receive messages to and from Ably respectively. For this tutorial, we'll make use of the @mqtt@ npm library.
+You can use any MQTT library to publish and receive messages to and from Ably. For this tutorial, we'll make use of the "MQTT NPM library":https://www.npmjs.com/package/mqtt, but feel free to use any that you like.
 
-Create a new javascript file, say @main.js@. We'll begin by requiring the mqtt library and setting the correct options for our client to use Ably:
+Create a new javascript file, say @main.js@. We'll begin by requiring the MQTT library and setting the correct options for our client to use Ably:
 
 ```[javascript]
 var mqtt = require('mqtt');
@@ -176,7 +176,9 @@ var options = {
 };
 ```
 
-Next, we need to connect to Ably's MQTT endpoint and subscribe to the channel we are interested in, with the rewind parameter enabled of course:
+Don't forget to replace the placeholders in the above snippet with your own API key. 
+
+Next, we need to connect to Ably's MQTT endpoint and subscribe to the channel that we are interested in, with the rewind parameter enabled of course:
 
 ```[javascript]
 var client = mqtt.connect('mqtts:mqtt.ably.io', options);
@@ -199,6 +201,10 @@ client.on('error', (topic, message) => {
 });
 ```
 
+h2(#live-demo). Live demo
+
+<iframe src="https://fourth-estimate.glitch.me/" height="200px" width="100%" frameBorder="0" ></iframe>
+
 h2(#conclusion). Conclusion
 
 In this tutorial, we saw the usage of rewind channel parameter in a real-world data streaming application. We saw three different ways of its usage, i.e., using Ably's native client SDKs, Ably's SSE endpoint and Ably's MQTT endpoint. 
@@ -206,7 +212,6 @@ In this tutorial, we saw the usage of rewind channel parameter in a real-world d
 h2(#further-reading). Further reading
 
 - "Channels documentation":/realtime/channels
-- "Explanatory video on rewind"
 - "Ably Realtime SDK documentation":/realtime
 - "Ably SSE documentation":/sse
 - "Ably MQTT documentation":/mqtt
