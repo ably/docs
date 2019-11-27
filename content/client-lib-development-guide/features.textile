@@ -13,6 +13,7 @@ jump_to:
     - Auth#rest-auth
     - Channels#rest-channels
     - Channel#rest-channel
+    - Plugins#plugins
     - Presence#rest-presence
     - Encryption#rest-encryption
     - Forwards compatibility#rest-compatibility
@@ -269,8 +270,24 @@ h3(#rest-channel). Channel
 ** @(RSL6a)@ All messages received will be decoded automatically based on the @encoding@ field and the payloads will be converted into the format they were originally sent using i.e. binary, string, or JSON
 *** @(RSL6a1)@ A set of tests must exist to ensure that the client library provides data encoding & decoding interoperability with other client libraries. The tests must use the "set of predefined interoperability message fixtures":https://github.com/ably/ably-common/blob/master/test-resources/messages-encoding.json to 1) publish a raw message to the REST API using the JSON transport and subscribe to the message using Realtime to ensure the @data@ attribute matches the fixture; 2) publish a message using the REST client library and retrieve the raw message using the history REST API using the JSON transport ensuring the @data@ matches the fixture; 3) perform the client library operation using both @JSON@ and @MsgPack@ transports. For reference, see the "Ruby":https://github.com/ably/ably-ruby/pull/94 and "iOS":https://github.com/ably/ably-cocoa/pull/459 implementations
 *** @(RSL6a2)@ A set of tests must exist to ensure that the client library provides interoperability for the @extras@ field which is a JSON-encodable object (ie a value that represents a JSON @object@ value and supports serialization to and from JSON text). The test, at a minimum, should publish a message with an @extras@ object such as @{"push":[{"title":"Testing"}]}@ and ensure it is received with an equivalent JSON-encodable object
-** @(RSL6b)@ If, for example, incompatible encryption details are provided or invalid Base64 is detected in the message payload, an error message will be sent to the logger, but the message will still be delivered with last successful decoding and the @encoding@ field. For example, if a message had a decoding of "utf-8/cipher+aes-128-cbc/base64", and the payload was successfully Base64 decoded but the payload could not be encrypted because the @CipherParam@ details were not configured, the message would be delivered with a binary payload and an @encoding@ with the value "utf-8/cipher+aes-128-cbc"
+** @(RSL6b)@ If, for example, incompatible encryption details are provided or invalid Base64 is detected in the message payload, an error message will be sent to the logger, but the message will still be delivered with last successful decoding and the @encoding@ field. For example, if a message had a decoding of "utf-8/cipher+aes-128-cbc/base64", and the payload was successfully Base64 decoded but the payload could not be decrypted because the @CipherParam@ details were not configured, the message would be delivered with a binary payload and an @encoding@ with the value "utf-8/cipher+aes-128-cbc". Additional steps need to be taken if decoding failed on "vcdiff" encoding; see @(RSL6c)@ 
+** @(RSL6c)@ Given "vcdiff"-encoded deltas are applied to the previous message published on a channel, when a "vcdiff" encoding fails to be decoded, it makes it impossible for a client to apply subsequent deltas received from that point of failure forward. As such, the client must automatically execute the following recovery procedure in lieu of "RTL7e":#"RTL7e":
+*** @(RSL6c1)@ Log error with code 40018
+*** @(RSL6c2)@ Discard the message
+*** @(RSL6c3)@ Send an @ATTACH@ @ProtocolMessage@ with the channel serial set to the previous message to the message for which "vcdiff" decoding failed to the server, transitioning the channel state to @ATTACHING@, and waiting for a confirmation @ATTACHED@, as per @RTL4c@ and @RTL4f@. @ChannelStateChange.reason@ should be set to @ErrorInfo@ object with with code 40018.
+** @(RSL6d)@ The data payload of the last message on each channel must be stored at all times since it will be needed to decode any subsequent message that has a "vcdiff" encoding step. The stored value is the "base payload" of the most recent message; this is the @data@ member of the message, in string or binary form, once all application-level encoding steps have been applied. The base payload is derived initially by processing a non-delta message; the processing and bookkeeping rules are as follows:
+*** @(RSL6d1)@ When processing any message (whether a delta or a full message), if the message @encoding@ string ends in @base64@, the message @data@ should be base64-decoded (and the encoding string modified accordingly per "RSL6":#RSL6).
+*** @(RSL6d2)@ In the case of a non-delta message, the resulting @data@ value is stored as the base payload.
+*** @(RSL6d3)@ In the case of a delta message with a @vcdiff@ @encoding@ step, the @vcdiff@ decoder must be used to decode the base payload of the of delta message, applying that delta to the stored base payload. The direct result of that vcdiff delta application, before performing any further decoding steps, is stored as the updated base payload.
+** @(RSL6e)@ The @id@ of the last received message on each channel must be stored along with the base payload. When processing a delta message (i.e. one whose @encoding@ contains @vcdiff@ step) the stored last message @id@ must be compared against the delta reference @id@, indicated in the @Message.extras.delta.from@ field of the delta message. If the delta reference @id@ of the received delta message does not equal the stored @id@ corresponding to the base payload, the message decoding must fail. The recovery procedure from "RSL6c":#RSL6c must be executed. 
+** @(RSL6f)@ The messages in the @messages@ array of a @ProtocolMessage@ should each be decoded in ascending order of their index in the array.
 * @(RSL7)@ @Channel#setOptions@ takes a @ChannelOptions@ object and sets or updates the stored channel options, then indicates success
+
+h3(#plugins). Plugins
+* @(PC1)@ Specific client library features that are not commonly used may be supplied as independent libraries, as plugins, in order to avoid excessively bloating the client library. Although such plugins are packaged as independent libraries, they are still considered logically to be part of the client library code and, as such, may be tightly coupled with the client library implementation. The client library can be assumed to be aware of the plugin specific type and capabilities, and such plugins may by design be coupled to a specific version of the client library.
+* @(PC2)@ No generic plugin interface is specified, and therefore there is no common API exposed by all plugins. However, for type-safety, the opaque interface @Plugin@ should be used in strongly-typed languages as the type of the @ClientOptions.plugins@ collection as per "TO3o":#TO3o.
+* @(PC3)@ A plugin provided with the @PluginType@ enum key value of @vcdiff@ should be capable of decoding "vcdiff"-encoded messages. It must implement the the @VCDiffDecoder@ interface and the client library must be able to use it by casting it to this interface.
+** @(PC3a)@ The base argument of the @VCDiffDecoder.decode@ method should receive the stored base payload of the last message on a channel as specified by "RSL6d":#RSL6d. If the base payload is a string it should be encoded to binary using UTF-8 before being passed as base argument of the @VCDiffDecoder.decode@ method.
 
 h3(#rest-presence). Presence
 * @(RSP1)@ Presence object is associated with a single channel and is accessible through @Channel#presence@
@@ -568,6 +585,7 @@ h3(#realtime-channel). Channel
 * @(RTL14)@ If an @ERROR ProtocolMessage@ is received for this channel (the channel attribute matches this channel's name), then the channel should immediately transition to the FAILED state, and the @Channel.errorReason@ should be set
 * @(RTL16)@ @Channel#setOptions@ takes a @ChannelOptions@ object and sets or updates the stored channel options.
 ** @(RTL16a)@ If the user has provided either @ChannelOptions.params@ or @ChannelOptions.modes@ and the channel is in either the @attached@ or @attaching@ state, @Channel#setOptions@ sends an @ATTACH@ message to the server with the params & modes encoded per "@RTL4@":#RTL4, and indicates success once the server has replied with an @ATTACHED@ (or indicates failure if the channel becomes detached or failed before that happens, as with @Channel#attach@); else it indicates success immediately
+* @(RTL17)@ From the time that the channel enters @ATTACHING@ state, no further received messages are passed to subscribers until after the channel next enters the @ATTACHED@ state. Any messages received after the event that triggered the transition to @ATTACHING@, and prior to the transition to @ATTACHED@, must be discarded.
 
 h3(#realtime-presence). Presence
 
@@ -1107,7 +1125,7 @@ h4. Message
 ** @(TM2g)@ @name@ string
 ** @(TM2d)@ @data@ string, buffer or JSON-encodable object or array
 ** @(TM2e)@ @encoding@ string
-** @(TM2i)@ @extras@ JSON-encodable object, used to contain any arbitrary key value pairs which may also contain other primitive JSON types, JSON-encodable objects or JSON-encodable arrays. The extras field is provided to contain message metadata and/or ancillary payloads in support of specific functionality, e.g. push. Each of these supported extensions is documented separately; for 1.1 the only supported extension is @push@, via the @extras.push@ member. The processing of any other members is undefined
+** @(TM2i)@ @extras@ JSON-encodable object, used to contain any arbitrary key value pairs which may also contain other primitive JSON types, JSON-encodable objects or JSON-encodable arrays. The extras field is provided to contain message metadata and/or ancillary payloads in support of specific functionality, e.g. push. Each of these supported extensions is documented separately; for 1.1 the only supported extension is @push@, via the @extras.push@ member; 1.2 adds the @delta@ extension which is of type @DeltaExtras@. The processing of any other members is undefined
 ** @(TM2f)@ @timestamp@ time in milliseconds since epoch. If a message received from Ably does not contain a @timestamp@, it should be set to the @timestamp@ of the encapsulating @ProtocolMessage@
 * @(TM3)@ @fromEncoded@ and @fromEncodedArray@ are alternative constructors that take an (already deserialized) @Message@-like object (or array of such objects), and optionally a @channelOptions@, and return a @Message@ (or array of such @Messages@) that's decoded and decrypted as specified in @RSL6@, using the cipher in the @channelOptions@ if the message is encrypted, with any residual transforms (ones that the library cannot decode or decrypt) left in the @encoding@ property per @RSL6b@. This is intended for users receiving messages other than from a REST or Realtime channel (for example, from a queue), to avoid them having to parse the @encoding@ string themselves.
 
@@ -1339,6 +1357,7 @@ h4. ClientOptions
 **** @(TO3l8e)@ The size of a @null@ or omitted property is zero
 *** @(TO3l9)@ @maxFrameSize@ integer - default 524288 (512KiB). The maximum size of a single POST body or "WebSocket":/concepts/websockets frame. This is mostly only relevant for `Rest#request` (e.g. for batch publishes), since publishes will hit the @maxMessageSize@ limit before this
 *** @(TO3l10)@ @fallbackRetryTimeout@ integer - default 600000 (10 minutes). (After a failed request to the default endpoint, followed by a successful request to a fallback endpoint), the period in milliseconds before HTTP requests are retried  against the default endpoint
+** @(TO3o)@ @plugins@ @Dict<PluginType:Plugin>@ A map between a @PluginType@ and a @Plugin@ object. The client library might downcast a @Plugin@ to particular plugin type. 
 
 h4(#token-params). TokenParams
 * @(TK1)@ A class providing parameters of a token request. These params are used when invoking @Auth#authorize@, @Auth#requestToken@ and @Auth#createTokenRequest@
@@ -1509,6 +1528,7 @@ class ClientOptions:
   httpMaxRetryDuration: Duration default 15s // TO3l6
   maxMessageSize: Int default 65536 // TO3l8
   maxFrameSize: Int default 524288 // TO3l8
+  plugins: Dict<PluginType, Plugin> // TO3o
 
 class AuthOptions: // RSA8e
   authCallback: ((TokenParams) -> io (String | TokenDetails | TokenRequest | JsonObject))? // RSA4a, RSA4, TO3j5, AO2b
@@ -1952,6 +1972,20 @@ class HttpPaginatedResponse // RSC19b
   errorCode: Int // HP6
   errorMessage: String // HP7
   headers: Dict<String, String> // HP8
+  
+class Plugin // PC2
+  // Empty class/interface. Plugins are not expected to share any common interface.
+  // An opaque base interface type for plugins is defined for type-safety in statically-typed languages.
+  
+enum PluginType
+  "vcdiff"
+
+class VCDiffDecoder
+  decode([byte] delta, [byte] base) -> [byte]
+  
+class DeltaExtras
+  from: String // the id of the message the delta was generated from
+  format: String //the delta format. Only vcdiff is supported as at API version 1.2
 ```
 
 h2(#old-specs). Old specs
