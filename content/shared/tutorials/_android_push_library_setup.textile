@@ -1,49 +1,71 @@
-To start using Ably in your Android app, you need to include the Ably Client library. We recommend that you include the latest client library via Gradle in your module-level @gradle.build@ file.
+With the groundwork done for setting up FCM, it's time to integrate Ably into our Android app. To start using Ably, you will need to include the Ably Client library via Gradle in your app-level @gradle.build@ file.
 
 ```[groovy]
 apply plugin: 'com.android.application'
 ...
 dependencies {
     ...
-    compile 'io.ably:ably-android:1.1.0'
+    implementation 'io.ably:ably-android:1.1.0'
 }
 ```
 
 In the above example a specific version of the library is referenced, you can always "check which is the latest stable version":https://bintray.com/ably-io/ably/ably-android and always use that.
 
-After you add the necessary dependencies, you can import the @AblyRealtime@ class into your code and initialize it as shown below:
+With Ably added as a dependency, you can import the @AblyRealtime@ class into your code and initialize it as shown below:
 
 ```[java]
+package YOUR_PACKAGE_ID;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.provider.Settings;
+import android.util.Log;
+import android.view.View;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.CompletionListener;
+import io.ably.lib.realtime.ConnectionStateListener;
+import io.ably.lib.types.AblyException;
+import io.ably.lib.types.ClientOptions;
+import io.ably.lib.types.ErrorInfo;
+import io.ably.lib.types.Param;
+import io.ably.lib.util.IntentUtils;
 
 public class MainActivity extends AppCompatActivity {
-
-    public static final int SUCCESS = 0;
-    public static final int FAILURE = 1;
-    public static final int UPDATE_LOGS = 2;
-
-    public static final String STEP_1 = "Initialize Ably";
-    public static final String STEP_2 = "Activate Push";
-    public static final String STEP_3 = "Subscribe Channels";
-    public static final String STEP_4 = "Send Test Push";
-
-    public static final String TEST_PUSH_CHANNEL_NAME = "test_push_channel";
-    //Ensure that ngrok is setup, or modify xml/network_security_config.xml accordingly.
-    private static final String PRIVATE_SERVER_AUTH_URL = 'YOUR SERVER URL' + "/auth";
     private AblyRealtime ablyRealtime;
 
-    private String getClientId() {
-        String clientId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-        return clientId;
+    private TextView rollingLogs;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        rollingLogs = findViewById(R.id.rolling_logs);
+        try {
+            initAblyRuntime();
+        } catch (AblyException e) {
+            logMessage("AblyException " + e.getMessage());
+        }
     }
 
+    /**
+     * Step 1: Initialize Ably Runtime
+     *
+     * @throws AblyException
+     */
     private void initAblyRuntime() throws AblyException {
         ClientOptions options = new ClientOptions();
-        options.environment = BuildConfig.ABLY_ENV;
-        options.key = BuildConfig.ABLY_KEY;
-        //Token auth via server
-        options.authUrl = PRIVATE_SERVER_AUTH_URL;
-        options.authParams = new Param[]{new Param("clientId", getClientId())};
+        options.key = "REPLACE_WITH_YOUR_API_KEY";
+        options.clientId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
 
         ablyRealtime = new AblyRealtime(options);
         ablyRealtime.setAndroidContext(getApplicationContext());
@@ -54,21 +76,89 @@ public class MainActivity extends AppCompatActivity {
                 logMessage("Connection state changed to : " + state.current.name());
                 switch (state.current) {
                     case connected:
-                        /* Perform device registration and subscription, this is described later in the tutorial */
-                        break;
-                    case disconnected:
-                    case failed:
-                        //handle failure
+                        logMessage("Connected to Ably with clientId " + ablyRealtime.auth.clientId);
                         break;
                 }
             }
         });
     }
+
+    private void logMessage(String message) {
+        Log.i(MainActivity.class.getSimpleName(), message);
+        rollingLogs.append(message);
+        rollingLogs.append("\n");
+    }
+
+    public void activatePush(View view) {
+        // We will fill this in the next step
+    }
+
+    public void deactivatePush(View view) {
+        // We will fill this in the next step
+    }
 }
 ```
 
-Alternatively, you can add your API key in the @local.properties@ file in order to prevent the secret keys from being accidentally committed to the version control system that you use. Further, assign the @ably.env@ variable to either 'sandbox' or 'production' accordingly. However, storing API keys on the client side makes it prone to compromise and hence is "not recommended":/best-practice-guide#using-api-key-client-side.
+*Note*: Make sure to change @YOUR_PACKAGE_ID@ to your package ID, and @REPLACE_WITH_YOUR_API_KEY@ to your actual API key. Generally on untrusted devices such as this you would use "Token authentication":/core-features/authentication#token-auth, which allows for the underlying credentials to never be revealed. However, for the simplicity of this tutorial we will use our API key directly.
 
-<a href="/images/tutorials/android-push/android-code-2.png" target="_blank">
-    <img src="/images/tutorials/android-push/android-code-2.png" style="width: 100%" alt="Setting local properties in the android app">
+Next, add the following code to the layout file @activity_main.xml@. Layout files should go in the @src/main/res/layout@ folder within your app.
+
+```
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/steps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="activatePush"
+            android:text="Activate device" />
+        <Button
+            android:id="@+id/deactivate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="deactivatePush"
+            android:text="Deactivate device" />
+
+        <TextView
+            android:id="@+id/rolling_logs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoLink="all" />
+    </LinearLayout>
+</ScrollView>
+```
+
+Currently the two buttons won't do anything, however we will in the next step make them activate and deactivate the device for Push Notifications.
+
+Finally, add the following @activity@ inside your @application@ section within your @AndroidManifest.xml@ file:
+
+```
+<application
+    ...
+    >
+    <activity android:name=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+    </activity>
+</application>
+```
+
+If you now run this app on your emulator or device, you should be able to connect to Ably with a clientId.
+
+<a href="/images/tutorials/push-android/android-connected.png" target="_blank">
+    <img src="/images/tutorials/push-android/android-connected.png" style="width: 100%" alt="Android app is able to connect to Ably">
 </a>
