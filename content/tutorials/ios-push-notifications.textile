@@ -10,16 +10,25 @@ Ably can deliver native Push Notifications to iOS devices using "Apple’s Push 
 
 Therefore, native Push Notifications are commonly used to display visual notifications to users or launch a background process for an app in a battery efficient manner.
 
-In this tutorial, we'll see how to set up and send Push Notifications to your iOS app using the "Ably's Push Notification service":/general/push. In some simple steps, we'll see:
+In this tutorial, we'll see how to set up and send Push Notifications to your iOS devices using the "Ably's Push Notification service":/general/push. 
 
-Before get to writing any code, there are some setup steps involved. To enable and publish Push Notifications on iOS devices via Ably, one would need the following:
-* An Ably account (could be free)
+Before getting to writing any code, there are some setup steps involved. To enable and publish Push Notifications on iOS devices via Ably, you would need the following:
+
+* An Ably account (could be a free one)
 * P12 certificates from Apple's Push Notification Service (APNs)
 * Correct client permissions in your Ably app
 
-After we get set up, we'll look at the API methods to implement Push Notifications in an iOS app. 
+After we get set up with the above, we'll look at the API methods to implement Push Notifications in your iOS app. 
 
 <%= partial 'tutorials/_step-1-setup-free-account' %>
+
+The Push Notifications feature in Ably comes in two different levels of "client permissions or capabilities":core-features/authentication#capabilities-explained:
+
+* "@push-subscribe@":/general/push/activate-subscribe: A client with this permission is a push target device, and it can manage the registration and subscription for itself. However, it won't be able to manage push registrations or channel subscriptions for any other device.
+
+* "@push-admin@":/general/push/admin: A client with this contain permission has full "admin capabilities":/general/push/admin and can manage registrations and subscriptions for all devices.
+
+Under your API Key settings on your Ably app dashboard, you can enabled or disable these permissions as needed.
 
 h2(#step2). Step 2 - Generating P12 certifications from APNs
 
@@ -141,7 +150,7 @@ You should now see that certain credentials are automatically added into the fie
 
 Please note that, if you are using the certificates from a Sandbox environment on your APNS, make sure to check the "Use APNS sandbox environment" checkbox.
 
-h2(#step2-6). Step 2.6 - Enabling the Push Notifications rule for your channels
+h2(#step2-6). Step 3 - Enabling the Push Notifications rule for your channels
 
 The last thing to do in the setup stage is to enable the Push Notifications option for the Ably channels in your app. In you app's dashboard, head to the "Settings" tab and add a new channel rule or edit an existing one as shown below. You can "learn more about channel namespaces from our support articles":https://support.ably.io/support/solutions/articles/3000030058-what-is-a-channel-namespace-and-how-can-i-use-them.
 
@@ -155,7 +164,7 @@ The last thing to do in the setup stage is to enable the Push Notifications opti
 
 We are finally set up with the pre-requisites for implementing Push Notifications for your iOS devices. Let's now get to the fun part of writing some code.
 
-h2(#step3). Step 3 - Installing Cocoapods and adding Push Notifications capability to your Swift project
+h2(#step3). Step 4 - Installing Cocoapods and adding Push Notifications capability to your Swift project
 
 For this application, we'll use add the Ably Realtime SDK via Cocoapods, which is a dependency manager for Swift and Obj-C projects. You can learn more about it and install it from "its official website":https://cocoapods.org/ using the following command from the project folder in your terminal:
 
@@ -200,7 +209,7 @@ Time to write code now!
 
 h2(#register-device-for-push). Initializing the Ably Realtime library
 
-Now that we are all set up with our local workspace as well, let's jump into coding. In your Xcode project, open up the @AppDelegate.swift@ file which is the starting point of all Swift applications. Let's begin by declaring a few imports that we'll use in our application. So at the top of this file, add the following statements:
+Now that we are all set up with the local workspace, let's jump into coding. In your Xcode project, open up the @AppDelegate.swift@ file which is the starting point of all Swift applications. Let's begin by declaring a few imports that we'll use in our application. So at the top of this file, add the following statements:
 
 ```[swift]
 import UIKit
@@ -212,7 +221,9 @@ let myClientId = "<YOUR-CLIENT-ID>"
 let ablyClientOptions = ARTClientOptions()
 ```
 
-Now inside the @AppDelegate@ class that you see in the same file, let's declare a few other variables as shown below which we'll use later:
+As you might have guessed, you'll need to replace the placeholders above for API Key and client Id with your own credentials. The API Key is from the apps dashboard and client Id can be anything of your choosing.
+
+Now inside the @AppDelegate@ class that you see in the same file, declare a few other variables as shown below which we'll use later:
 
 ```[swift]
 @UIApplicationMain
@@ -224,64 +235,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 ```
 
-Next, let's add a function to initialize Ably's Realtime library. We'll use token authentication for this example and have an auth server verify and authenticate our clients. We'll set this server up in the next step.
+Next, add a function to initialize Ably's Realtime library. We'll use "basic authentication":/core-features/authentication#basic-authentication for this example to keep things simple but it is almost never a recommended strategy to be used in production level applications. Generally, you'd ensure better security by implementing the "token auth strategy":/core-features/authentication#token-authentication and in fact have the server assign clientId and other credentials to the clients rather than doing this on the client-side like in this tutorial. But as mentioned, we are doing this to keep things simple and get the Push Notifications feature working in as few steps as possible.
 
-Just below the variables we declared above, inside the @AppDelegate@ class, go ahead and add the following two functions:
+Now, below the variables we declared above, inside the @AppDelegate@ class, go ahead and add the following two function to initialize the Ably Realtime library:
 
 ```[swift]
 private func getAblyRealtime() -> ARTRealtime {
-    let options = ARTClientOptions()
-    options.authCallback = { params, callback in
-        self.getTokenRequest() { json, error in
-            do {
-                callback(try ARTTokenRequest.fromJson(json!), nil)
-            } catch let error as NSError {
-                callback(nil, error)
-            }
-        }
-    }
-    realtime = ARTRealtime(options: options)
-    realtime.connection.on { state in
-        if let state = state {
-            switch state.current {
-            case .connected:
-                print("connected")
-            case .failed:
-                print("failed")
-            default:
-                break
-            }
-        }
-    }
+    ablyClientOptions.clientId = myClientId
+    ablyClientOptions.key = API_KEY
+    realtime = ARTRealtime(options: ablyClientOptions)
     return realtime
-}
-
-func getTokenRequest(completion: @escaping (NSDictionary?, Error?) -> ())  {
-    let requestURL = URL(string: authURL)!
-    let urlRequest = URLRequest(url: requestURL as URL)
-    let session = URLSession.shared
-    let task = session.dataTask(with: urlRequest) {
-        (data, response, error) -> Void in
-        let httpResponse = response as! HTTPURLResponse
-        let statusCode = httpResponse.statusCode
-        if (statusCode == 200) {
-            do{
-                let json = try JSONSerialization
-                    .jsonObject(with: data!, options:.allowFragments) as! NSDictionary
-                completion(json, nil)
-            } catch {
-                print("There was an error while obtaining JSON")
-            }
-        }
-    }
-    task.resume()
 }
 ```
 
-In the first function, we have setup our connection to Ably. We've used the "Token Authentication":/core-features/authentication#token-authentication strategy here to authenticate with Ably as it's more secure. For this, we've to request a token from the auth endpoint of our server as mentioned before. The second function is where the bulk of the token request to our server happens. It's a simple GET request and JSONSerialization. You can learn more about the working of Token Auth in Ably from the "documentation":/core-features/authentication#token-authentication
-
-Please note that the @getTokenRequest()@ mentions the variable named @authUrl@. We have not defined this URL yet as we did not set our server yet. We'll do that after we finish defining some other functions in this class.
-
+In the above function we've added the clientID and API Key as client options and initialized the Ably Realtime library with those.
 
 
 
