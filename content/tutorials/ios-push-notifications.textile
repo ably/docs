@@ -6,37 +6,26 @@ index: 61
 
 h2(#overview). Overview
 
-Ably can deliver native Push Notifications to iOS devices using "Apple’s Push Notification service":https://developer.apple.com/notifications/. Native Push Notifications, unlike our "channel-based Pub/Sub messaging":/realtime/channels/, do not require the device to maintain a consistent connection to Ably because the underlying platform or OS is responsible for maintaining its own battery efficient transport to receive Push Notifications. 
+Ably can deliver native Push Notifications to iOS devices using "Apple’s Push Notification service":https://developer.apple.com/notifications/. Native Push Notifications, unlike our "channel-based Pub/Sub messaging":/realtime/channels/, do not require the device to maintain a consistent connection to Ably because the underlying platform or OS is responsible for maintaining its own battery efficient transport to receive Push Notifications. Therefore, native Push Notifications are commonly used to display visual notifications to users or launch a background process for an app in a battery efficient manner.
 
-Therefore, native Push Notifications are commonly used to display visual notifications to users or launch a background process for an app in a battery efficient manner.
+In this tutorial, we'll see how to set up and send Push Notifications to your iOS devices using "Ably's Push Notification service":/general/push. 
 
-In this tutorial, we'll see how to set up and send Push Notifications to your iOS devices using the "Ably's Push Notification service":/general/push. 
+Before getting on with writing any code, there are some setup steps involved. To enable and publish Push Notifications on iOS devices via Ably, you would need the following:
 
-Before getting to writing any code, there are some setup steps involved. To enable and publish Push Notifications on iOS devices via Ably, you would need the following:
-
-* An Ably account (could be a free one)
 * P12 certificates from Apple's Push Notification Service (APNs)
+* An Ably account (could be a free one)
 * Correct client permissions in your Ably app
+* Correct channel rule for enabling push on certain namespaces/ channels
 
 After we get set up with the above, we'll look at the API methods to implement Push Notifications in your iOS app. 
 
-<%= partial 'tutorials/_step-1-setup-free-account' %>
+h2(#generate-p12-apns). Step 1 - Generating P12 certifications from APNs
 
-The Push Notifications feature in Ably comes in two different levels of "client permissions or capabilities":core-features/authentication#capabilities-explained:
+P12 certificates are used by Ably to authenticate with the Apple Push Notification Service (APNs) on your behalf to be able to deliver push notifications to your iOS devices. In this step, we'll see how you can generate a new certificate in the required format and add it to your Ably application.
 
-* "@push-subscribe@":/general/push/activate-subscribe: A client with this permission is a push target device, and it can manage the registration and subscription for itself. However, it won't be able to manage push registrations or channel subscriptions for any other device.
+To generate a P12 certificate, you'd need an AppID from your paid "Apple developer account":https://developer.apple.com. You can use one of your existing AppIDs, if any, otherwise just follow along as we'll see how to create one from scratch.
 
-* "@push-admin@":/general/push/admin: A client with this contain permission has full "admin capabilities":/general/push/admin and can manage registrations and subscriptions for all devices.
-
-Under your API Key settings on your Ably app dashboard, you can enabled or disable these permissions as needed.
-
-h2(#step2). Step 2 - Generating P12 certifications from APNs
-
-P12 certificates are used by Ably to authenticate with the Apple Push Notification Service (APNs) to be able to deliver all push notifications to your iOS devices. In this step, we'll see how you can generate a new certificate and add it to your Ably application.
-
-To generate a P12 certificate, you'd need an AppID from your paid Apple Developer account. You can use one of your existing AppIDs, if any, otherwise just follow along as we'll see how to create one from scratch.
-
-h2(#step2-1). Step 2.1 - Creating an AppID
+h2(#create-app-id). Step 1.1 - Creating an AppID
 
 Login to your "Apple developer account":https://developer.apple.com and click on "Certificates, IDs and Profiles" as shown below:
 
@@ -50,13 +39,13 @@ In the 'Identifiers tab on the left, click on the plus button to create a new id
   <img src="/images/tutorials/ios-push/apple-identifiers.png" style="width: 100%" alt="Create new ID">
 </a>
 
-Next, select "App IDs" as that is the identifier we are wanting to create and click on "Continue", as shown below:
+Next, select "App IDs" as that is the identifier we are wanting to create. Click on "Continue", as shown below:
 
 <a href="/images/tutorials/ios-push/choose-app-id-option.png" target="_blank">
   <img src="/images/tutorials/ios-push/choose-app-id-option.png" style="width: 100%" alt="Choose App ID option">
 </a>
 
-Now, add in the description for this app as you like, as well as a BundleID. On the same page, you'll also see a list of capabilities that this app is supposed to have. Since we need Push Notifications, scroll down to that option, enable it and click on "Continue" on the top right, then "Register". Please note that even if you are using an existing AppID, you need to make sure that the Push Notifications capability is enabled for that.
+Now, add some description for this app as you like, as well as a BundleID. On the same page, you'll also see a list of capabilities that this app is supposed to have. Since we need Push Notifications, scroll down to that option, enable it and click on "Continue" on the top right, then "Register". Please note that even if you are using an existing AppID, you need to make sure that the Push Notifications capability is enabled for that.
 
 <a href="/images/tutorials/ios-push/register-app-id.png" target="_blank">
   <img src="/images/tutorials/ios-push/register-app-id.png" style="width: 100%" alt="Register App ID">
@@ -66,15 +55,15 @@ Now, add in the description for this app as you like, as well as a BundleID. On 
   <img src="/images/tutorials/ios-push/push-capability-appid.png" style="width: 100%" alt="Enable push capability in App ID">
 </a>
 
-Your AppID should now show up in the list of identifiers. If you click on that AppId now, you would see a 'Configure' option next to the Push Notifications capability that we previously enabled. This is because enabling Push Notifications requires you to set up a certificate so that APNs can establish the legitimacy. All MacBooks have a default application called 'Keychain Access' that allows you to generate signed certificates for such development purposes. We'll do that next.
+Your AppID should now show up in the list of identifiers. If you click on that AppID now, you would see a 'Configure' option next to the Push Notifications capability that we previously enabled. This is because enabling Push Notifications requires you to set up a certificate so that APNs can establish the legitimacy. All MacOS computers come with a default application called 'Keychain Access' that allows you to generate signed certificates for such development purposes. We'll do that next.
 
-h2(#step2-2). Step 2.2 - Generating a certificate using Keychain access
+h2(#generate-cert-keychain). Step 1.2 - Generating a certificate using Keychain access
 
-On your iOS computer, look for an app called 'Keychain access'. Once it's launched, from it's menu bar select:
+On your iOS computer, look for an app called 'Keychain access'. Once it's launched, from its menu bar select:
 
 Keychain Access -> Certificate Assistant -> Request a Certificate From a Certificate Authority
 
-This is shown in the image below:
+This is also shown in the image below:
 
 <a href="/images/tutorials/ios-push/keychain-access.png" target="_blank">
   <img src="/images/tutorials/ios-push/keychain-access.png" style="width: 100%" alt="Using Keychain to request a certificate">
@@ -86,9 +75,9 @@ Next, add in the details, select "Saved to disk" and hit "Continue".
   <img src="/images/tutorials/ios-push/certificate-info.png" style="width: 100%" alt="Saving the certificate to disk">
 </a>
 
-This is the certificate we need to configure Push Notifications in our AppID we previously set up in the Apple Developer account. So let's go back there and finish the configuration.
+This is the certificate we need to configure Push Notifications in the AppID we previously set up in the Apple Developer account. So let's go back there and finish the configuration.
 
-h2(#step2-3). Step 2.3 - Configuring Push Notifications for your Apple AppID
+h2(#config-push-appid). Step 1.3 - Configuring Push Notifications for your Apple AppID
 
 In your Apple developer account and within the AppID that you are wanting to use, click on "Configure" next to the Push Notifications capability as shown below:
 
@@ -97,6 +86,10 @@ In your Apple developer account and within the AppID that you are wanting to use
 </a>
 
 Next, choose the certificate option that suits your application. For this tutorial I'll use the "Development SSL Certificate" option. Click on "Create Certificate" then choose the certificate file you saved to disk in the previous step. 
+
+<a href="/images/tutorials/ios-push/certificate-type-apns.png" target="_blank">
+  <img src="/images/tutorials/ios-push/certificate-type-apns.png" style="width: 100%" alt="Choose certificate type">
+</a>
 
 <a href="/images/tutorials/ios-push/choose-certificate-file.png" target="_blank">
   <img src="/images/tutorials/ios-push/choose-certificate-file.png" style="width: 100%" alt="Uploading certificate to AppID">
@@ -108,7 +101,7 @@ After you've uploaded the certificate file, click on "Continue" on the top right
   <img src="/images/tutorials/ios-push/downloading-certificate-appid.png" style="width: 100%" alt="Downloading a certificate using the AppID">
 </a>
 
-h2(#step2-4). Step 2.4 - Exporting your certificate in the P12 format
+h2(#export-cert-as-p12). Step 1.4 - Exporting your certificate in the P12 format
 
 In this step, we'll use the previously downloaded certificate and export it in the P12 format, as that's the format expected by Ably. After you've opened the certificate in the Keychain Access application, right-click on it and choose "Export.." as shown below:
 
@@ -122,21 +115,43 @@ Make sure to choose "Personal Information Exchange (.p12)" as the file format an
   <img src="/images/tutorials/ios-push/choose-p12-format.png" style="width: 100%" alt="Exporting certificates in .p12 format">
 </a>
 
-h2(#step2-5). Step 2.5 - Adding the P12 file to your Ably app
+h2(#setup-ably-account). Step 2 - Set up a free account with Ably
 
-After successfully exporting the certificate in the P12 file format, we need to add it to our Ably app. So, log into your Ably account, go to your Dashboard and choose an existing app or create a new one as shown below.
+Now that we have the P12 certificate ready to be used, let's get set up with an Ably account. If you are not already signed up, you should "sign up now for a free Ably account":https://www.ably.io/signup.  Once you have an Ably account, log into your Ably account, go to your "Apps Dashboard":https://support.ably.io/support/solutions/articles/3000030053-how-do-i-access-my-app-dashboard and choose an existing app or create a new one as shown below:
 
 <a href="/images/tutorials/ios-push/create-ably-app.png" target="_blank">
   <img src="/images/tutorials/ios-push/create-ably-app.png" style="width: 100%" alt="Creating Ably app">
 </a>
 
-Next, in your Apps dashboard, within your app, go to the "Notifications" tab and scroll down to "Setting Apple Push Notifications Service" section, as shown below:
+Click on the "API Keys" tab and copy the secret "API Key" value from your Root key and store it so that you can use it later in this tutorial
+
+<a href="/images/tutorials/ios-push/ably-api-key.png" target="_blank">
+  <img src="/images/tutorials/ios-push/ably-api-key.png" style="width: 100%" alt="Copy API Key screenshot">
+</a>
+
+The Push Notifications feature in Ably comes with two different levels of "client permissions or capabilities":core-features/authentication#capabilities-explained:
+
+* "@push-subscribe@":/general/push/activate-subscribe: A client with this permission is a push target device, and it can manage the registration and subscription for itself. However, it won't be able to manage push registrations or channel subscriptions for any other device.
+
+* "@push-admin@":/general/push/admin: A client with this contain permission has full "admin capabilities":/general/push/admin and can manage registrations and subscriptions for all devices.
+
+Under your API Key settings on your Ably app dashboard, you can enable or disable these permissions as needed.
+
+<a href="/images/tutorials/ios-push/client-permissions.png" target="_blank">
+  <img src="/images/tutorials/ios-push/client-permissions.png" style="width: 100%" alt="Adding correct client permissions for push">
+</a>
+
+h2(#add-p12-cert-to-ably). Step 3 - Adding the P12 file to your Ably app
+
+In this step, we'll add the certificate we previously exported in the P12 format, to our Ably app. 
+
+In the Apps dashboard of your Ably app, go to the "Notifications" tab and scroll down to "Setting Apple Push Notifications Service" section, as shown below:
 
 <a href="/images/tutorials/ios-push/setting-up-apns.png" target="_blank">
   <img src="/images/tutorials/ios-push/setting-up-apns.png" style="width: 100%" alt="Setting up APNS in Ably">
 </a>
 
-Next, choose the "P12 file" option and click on "Upload file", choose the file from your local system and click "Open". Also, add in the password that you created in the previous step in the "P12 password" field and hit the "Save APNs settings" button. 
+Next, choose the "P12 file" option and click on "Upload file", choose the file from your local system and click "Open". Also, add in the password that you created previously in the "P12 password" field and hit the "Save APNs settings" button. 
 
 <a href="/images/tutorials/ios-push/uploading-p12-ably.png" target="_blank">
   <img src="/images/tutorials/ios-push/uploading-p12-ably.png" style="width: 100%" alt="Uploading P12 certificate to Ably">
@@ -148,15 +163,17 @@ You should now see that certain credentials are automatically added into the fie
   <img src="/images/tutorials/ios-push/push-setup-complete-ably.png" style="width: 100%" alt="Push setup completed">
 </a>
 
-Please note that, if you are using the certificates from a Sandbox environment on your APNS, make sure to check the "Use APNS sandbox environment" checkbox.
+Please note that, if you are using the certificates in a Sandbox environment on your APNS account, make sure to check the "Use APNS sandbox environment" option.
 
-h2(#step2-6). Step 3 - Enabling the Push Notifications rule for your channels
+h2(#enable-push-channel-rule). Step 4 - Enabling the Push Notifications rule for your channels
 
-The last thing to do in the setup stage is to enable the Push Notifications option for the Ably channels in your app. In you app's dashboard, head to the "Settings" tab and add a new channel rule or edit an existing one as shown below. You can "learn more about channel namespaces from our support articles":https://support.ably.io/support/solutions/articles/3000030058-what-is-a-channel-namespace-and-how-can-i-use-them.
+The last thing to do in the setup stage is to enable the Push Notifications option for an Ably channel or namespace that you'll use in your app. In you app's dashboard, head to the "Settings" tab and add a new channel rule or edit an existing one as shown below. You can "learn more about channel namespaces from our support articles":https://support.ably.io/support/solutions/articles/3000030058-what-is-a-channel-namespace-and-how-can-i-use-them.
 
 <a href="/images/tutorials/ios-push/add-push-channel-rule.png" target="_blank">
   <img src="/images/tutorials/ios-push/add-push-channel-rule.png" style="width: 100%" alt="Add Push channel rule">
 </a>
+
+Add the channel or namespace that you want this rule to apply to, check the "Push notifications enabled" option and click on "Create channel rule" as shown below:
 
 <a href="/images/tutorials/ios-push/push-channel-rule.png" target="_blank">
   <img src="/images/tutorials/ios-push/push-channel-rule.png" style="width: 100%" alt="Push channel rule">
@@ -164,21 +181,21 @@ The last thing to do in the setup stage is to enable the Push Notifications opti
 
 We are finally set up with the pre-requisites for implementing Push Notifications for your iOS devices. Let's now get to the fun part of writing some code.
 
-h2(#step3). Step 4 - Installing Cocoapods and adding Push Notifications capability to your Swift project
+h2(#add-ably-to-ios-app). Step 5 - Installing Cocoapods and adding Push Notifications capability to your Swift project
 
-For this application, we'll use add the Ably Realtime SDK via Cocoapods, which is a dependency manager for Swift and Obj-C projects. You can learn more about it and install it from "its official website":https://cocoapods.org/ using the following command from the project folder in your terminal:
+For this application, we'll add the Ably Realtime SDK via Cocoapods, which is a dependency manager for Swift and Obj-C projects. You can learn more about it from "its official website":https://cocoapods.org/ or simply run the following command from the project folder in your terminal to install it:
 
 ```[sh]
 sudo gem install cocoapods
 ```
 
-After that's done, fire up the Xcode application and create a new project or open an existing one. Make sure that the product name matches the Bundle ID that you added while setting up the AppId in your Apple Developer account.
+After that's done, fire up the Xcode application and create a new project or open an existing one. Make sure that the product name matches the BundleID that you added while setting up the AppID in your Apple Developer account.
 
 <a href="/images/tutorials/ios-push/xcode-project.png" target="_blank">
   <img src="/images/tutorials/ios-push/xcode-project.png" style="width: 100%" alt="New Xcode project">
 </a>
 
-Make sure you've opened the @.xcworkspace@ file so you can see the Pods folder. In the "Podfile" within that folder, add in the reference to the Ably SDK just below the @use_frameworks!@ statement, as shown below:
+Also, make sure you've opened the @.xcworkspace@ file so you can see the Pods folder. In the "Podfile" within that folder, add in the reference to the Ably SDK just below the @use_frameworks!@ statement, as shown below:
 
 ```
 # Comment the next line if you don't want to use dynamic frameworks
@@ -207,9 +224,9 @@ From this point on, we'll be using the Xcode workspace. Go back to Xcode and ope
 
 Time to write code now!
 
-h2(#register-device-for-push). Initializing the Ably Realtime library
+h2(#register-device-for-push). Step 6 - Initializing the Ably Realtime library
 
-Now that we are all set up with the local workspace, let's jump into coding. In your Xcode project, open up the @AppDelegate.swift@ file which is the starting point of all Swift applications. Let's begin by declaring a few imports that we'll use in our application. So at the top of this file, add the following statements:
+Now that we are all set up with the local workspace, let's jump into coding. In your Xcode project, open up the @AppDelegate.swift@ file which is the starting point of all Swift applications. We'll begin by declaring a few imports that we'll use in our application. So at the top of this file, add the following statements:
 
 ```[swift]
 import UIKit
@@ -221,7 +238,7 @@ let myClientId = "<YOUR-CLIENT-ID>"
 let ablyClientOptions = ARTClientOptions()
 ```
 
-As you might have guessed, you'll need to replace the placeholders above for API Key and client Id with your own credentials. The API Key is from the apps dashboard and client Id can be anything of your choosing.
+As you might have guessed, you'll need to replace the placeholders above for API Key and client Id with your own credentials. The API Key is from the apps dashboard and client Id can be anything of your choosing. We'll use "basic authentication":/core-features/authentication#basic-authentication for this example to keep things simple but it is almost never a recommended strategy to be used in production level applications. Generally, you'd ensure better security by implementing the "token auth strategy":/core-features/authentication#token-authentication and in fact have the server assign clientId and other credentials to the clients rather than doing this on the client-side like in this tutorial. But as mentioned, we are doing this to keep things simple and get the Push Notifications feature working in as few steps as possible.
 
 Now inside the @AppDelegate@ class that you see in the same file, declare a few other variables as shown below which we'll use later:
 
@@ -235,9 +252,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 ```
 
-Next, add a function to initialize Ably's Realtime library. We'll use "basic authentication":/core-features/authentication#basic-authentication for this example to keep things simple but it is almost never a recommended strategy to be used in production level applications. Generally, you'd ensure better security by implementing the "token auth strategy":/core-features/authentication#token-authentication and in fact have the server assign clientId and other credentials to the clients rather than doing this on the client-side like in this tutorial. But as mentioned, we are doing this to keep things simple and get the Push Notifications feature working in as few steps as possible.
-
-Now, below the variables we declared above, inside the @AppDelegate@ class, go ahead and add the following two function to initialize the Ably Realtime library:
+Next, we'll add a function to initialize Ably's Realtime library via Basic auth strategy. Below the variables we just declared inside the @AppDelegate@ class, go ahead and add the following function to initialize the Ably Realtime library:
 
 ```[swift]
 private func getAblyRealtime() -> ARTRealtime {
@@ -248,7 +263,5 @@ private func getAblyRealtime() -> ARTRealtime {
 }
 ```
 
-In the above function we've added the clientID and API Key as client options and initialized the Ably Realtime library with those.
-
-
+In the above function we added the clientID and API Key as client options and initialized the Ably Realtime library with those. You can "learn more about client options from the documentation":/realtime/usage#client-options.
 
