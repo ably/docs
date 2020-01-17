@@ -155,6 +155,7 @@ $(function() {
             this.innerHTML = insertKeyUsageWarning(this.innerHTML);
             this.innerHTML = this.innerHTML.
               replace(/{{API_KEY_NAME}}/g, keyName).
+              replace(/{{API_KEY_SECRET}}/g, keySecret).
               replace(/{{API_KEY}}/g, apiKey).
               replace(/{{API_KEY_BASE64}}/g, Base64.encode(apiKey)).
               replace(/{{APP_ID}}/g, keyName.split('.')[0]).
@@ -262,8 +263,8 @@ function insertKeyUsageWarning(code) {
   } else {
     message = `// ${message}`;
   }
-  return code.replace(/(<ol class="linenums">)(.*?)({{API_KEY}})/g, 
-            `$1<li class="L-1"><code class="code-editor open-jsbin" 
+  return code.replace(/(<ol class="linenums">)(.*?)({{API_KEY}})/g,
+            `$1<li class="L-1"><code class="code-editor open-jsbin"
             lang="${currentLang}"><span class="com">${message}</span></code></li>$2$3`);
 }
 
