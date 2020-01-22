@@ -44,10 +44,10 @@ class AblyPreTextileFilter
   class << self
     def run(content, path, attributes)
       content = strip_comments(content)
-      content = add_minimize_for_headings(content)
-      content = add_minimized_indent(content)
-      content = convert_jsall_lang_to_node_and_javascript(content)
       content = convert_blang_blocks_to_html(content)
+      content = add_minimize_for_headings(content)
+      content = add_minimize_indent(content)
+      content = convert_jsall_lang_to_node_and_javascript(content)
       content = add_language_support_for_github_style_code(content)
       content = duplicate_language_blocks(content)
       content = trim_white_space_between_language_elements(content)
@@ -212,7 +212,7 @@ class AblyPreTextileFilter
 
     # Converts minimize indicator and following indented text to minimizable
     # minimize. method
-    def add_minimized_indent(content)
+    def add_minimize_indent(content)
       expand_num=0
       while position = content.index(MINIMIZE_REGEX)
         subsequent_lines = content[position..-1].split(/\n\r|\n/)
@@ -239,6 +239,7 @@ class AblyPreTextileFilter
             break
           end
         end
+
         expand_num = expand_num+1
         content = [
           content[0...position],
