@@ -74,7 +74,7 @@ class JsBins
 
       def jsbin_client
         @jsbin_client ||= begin
-          config = Ably::Config.new
+          config = Ably::Docs::Config.new
           JsBinClient.new(host: config.jsbin_host, port: config.jsbin_port, ssl: config.jsbin_ssl, api_key: config.jsbin_api_key)
         end
       end
