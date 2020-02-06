@@ -35,15 +35,218 @@ To enable Push Notifications on your device, it must be registered with FCM firs
 
 h2(#step2). Step 2 - Enabling Push in your Ably app
 
-<%= partial 'shared/tutorials/_android_push_enable_permissions' %>
+Next, you'll need to ensure your Ably app is correctly set up to use Push Notifications. Firstly, make sure the API key you're using has both the @Push Admin@ and @Push Subscribe@ permissions, as seen below. If not, select the *Settings* option on the API key interface and tick the permissions so that they're available.
+
+<a href="/images/tutorials/push-android/adding-capabilities.png" target="_blank">
+  <img src="/images/tutorials/push-android/adding-capabilities.png" style="width: 100%" alt="Adding Push capabilities">
+</a>
+
+These permissions correspond to the following:
+
+* "@push-subscribe@":/general/push/activate-subscribe: A client with this permission is a push target device, and it can manage registration and subscription to Push Notifications for itself. However, it won't be able to manage push registrations or channel subscriptions for any other device.
+* "@push-admin@":/general/push/admin: A client with this permission has full access to the "Push Admin API":https://www.ably.io/documentation/general/push/admin and can manage registrations and subscriptions for all devices.
+
+The @push-subscribe@ permission will allow the Android app to subscribe to Push Notifications. @push-admin@ is what will allow us to publish Push Notifications, and would be useful if we wanted to create a server which controlled our push devices.
+
+Read more about permissions (also called capabilities) in our "API documentation":/core-features/authentication#capabilities-explained.
+
+Next, navigate to the Ably app's *Settings* tab, go down to the *Channel rules* section and add a new channel rule for a namespace by checking the *Push notifications enabled* option. In this tutorial, we'll be eventually publishing some Push Notifications via the @push:test_push_channel@ channel, so we'll use the "channel namespace":https://support.ably.io/support/solutions/articles/3000030058 @push@, as seen below.
+
+<a href="/images/tutorials/push-android/editing-channel-rules.png" target="_blank">
+  <img src="/images/tutorials/push-android/editing-channel-rules.png" style="width: 100%" alt="Adding channel rules">
+</a>
+
+With this done, your app now has a key with push permissions, along with a channel on which push notifications can be sent.
 
 h2(#step3). Step 3 - Create an Android app registered with FCM
 
-<%= partial 'shared/tutorials/_android_push_fcm_register' %>
+Now that we've set up our permissions with Ably, it's time to work on our new Android app. In order for the app to be able to use the Firebase Cloud Messaging service, you'll need to "create an app with FCM":https://firebase.google.com/docs/android/setup. To do this, follow the following steps:
+
+Firstly make sure you have installed "the latest version of Android Studio":https://developer.android.com/studio, and create a new empty project in it. In Android Studio, you should then "set up a device":https://developer.android.com/studio/run/device or an "emulator":https://developer.android.com/studio/run/managing-avds for testing purposes.
+
+"See this step in Github":https://github.com/ably/tutorials/commit/android-push-step3a
+
+With your empty project ready, you should log in to the "Firebase developer console":https://console.firebase.google.com and create a new project by selecting _Add project_ and following the steps provided.
+
+Once this is done, register your app to this project as shown below, making sure to download the @google-services.json@ and add the appropriate dependencies as described in the process.
+
+<a href="/images/tutorials/push-android/adding-firebase-to-app.png" target="_blank">
+  <img src="/images/tutorials/push-android/adding-firebase-to-app.png" style="width: 100%" alt="Adding Firebase to your app">
+</a>
+
+Next, go to your project's *Settings* and click on the *Cloud Messaging* tab. You should be able to see your FCM server key as shown below.
+
+<a href="/images/tutorials/push-android/fcm-server-key.png" target="_blank">
+  <img src="/images/tutorials/push-android/fcm-server-key.png" style="width: 100%" alt="FCM server key">
+</a>
+
+Copy this key and paste it in the 'Setting up Google/Firebase Cloud Messaging' section under the *Notifications* tab of your Ably app dashboard and click save.
+
+<a href="/images/tutorials/push-android/setting-up-fcm-on-dashboard.png" target="_blank">
+  <img src="/images/tutorials/push-android/setting-up-fcm-on-dashboard.png" style="width: 100%" alt="Setting up FCM on Ably dashboard">
+</a>
+
+"See this step in Github":https://github.com/ably/tutorials/commit/android-push-step3b
 
 h2(#step4). Step 4 - Adding the Ably client library to your Android app
 
-<%= partial 'shared/tutorials/_android_push_library_setup' %>
+With the groundwork done for setting up FCM, it's time to integrate Ably into your Android app. To start using Ably, you will need to include the Ably Client library via Gradle in your app-level @gradle.build@ file.
+
+```[groovy]
+apply plugin: 'com.android.application'
+...
+dependencies {
+    ...
+    implementation 'io.ably:ably-android:1.1.0'
+}
+```
+
+In the above example, a specific version of the library is referenced. You can "check which is the latest stable version":https://bintray.com/ably-io/ably/ably-android and should use that.
+
+With Ably added as a dependency, you can import the @AblyRealtime@ class into your code and initialize it as shown below:
+
+```[java]
+package YOUR_PACKAGE_ID;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
+import android.provider.Settings;
+import android.util.Log;
+import android.view.View;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+
+import io.ably.lib.realtime.AblyRealtime;
+import io.ably.lib.realtime.CompletionListener;
+import io.ably.lib.realtime.ConnectionStateListener;
+import io.ably.lib.types.AblyException;
+import io.ably.lib.types.ClientOptions;
+import io.ably.lib.types.ErrorInfo;
+import io.ably.lib.util.IntentUtils;
+
+public class MainActivity extends AppCompatActivity {
+    private AblyRealtime ablyRealtime;
+
+    private TextView rollingLogs;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        rollingLogs = findViewById(R.id.rolling_logs);
+        try {
+            initAblyRuntime();
+        } catch (AblyException e) {
+            logMessage("AblyException " + e.getMessage());
+        }
+    }
+
+    /**
+     * Step 1: Initialize Ably Runtime
+     *
+     * @throws AblyException
+     */
+    private void initAblyRuntime() throws AblyException {
+        ClientOptions options = new ClientOptions();
+        options.key = "REPLACE_WITH_YOUR_API_KEY";
+        options.clientId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+
+        ablyRealtime = new AblyRealtime(options);
+        ablyRealtime.setAndroidContext(getApplicationContext());
+        ablyRealtime.connect();
+        ablyRealtime.connection.on(new ConnectionStateListener() {
+            @Override
+            public void onConnectionStateChanged(ConnectionStateChange state) {
+                logMessage("Connection state changed to : " + state.current.name());
+                switch (state.current) {
+                    case connected:
+                        logMessage("Connected to Ably with clientId " + ablyRealtime.auth.clientId);
+                        break;
+                }
+            }
+        });
+    }
+
+    private void logMessage(String message) {
+        Log.i(MainActivity.class.getSimpleName(), message);
+        rollingLogs.append(message);
+        rollingLogs.append("\n");
+    }
+
+    public void activatePush(View view) {
+        // We will fill this in the next step
+    }
+
+    public void deactivatePush(View view) {
+        // We will fill this in the next step
+    }
+}
+```
+
+*Note*: Make sure to change @YOUR_PACKAGE_ID@ to your package ID, and @REPLACE_WITH_YOUR_API_KEY@ to your actual API key. Generally on untrusted devices such as this you would use "Token authentication":/core-features/authentication#token-auth, which allows for the underlying credentials to never be revealed. However, for the simplicity of this tutorial we will use our API key directly.
+
+Next, add the following code to the layout file @activity_main.xml@. Layout files should go in the @src/main/res/layout@ folder within your app.
+
+```
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/steps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="activatePush"
+            android:text="Activate device" />
+        <Button
+            android:id="@+id/deactivate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="deactivatePush"
+            android:text="Deactivate device" />
+
+        <TextView
+            android:id="@+id/rolling_logs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoLink="all" />
+    </LinearLayout>
+</ScrollView>
+```
+
+Currently the two buttons won't do anything, however we will in the next step make them activate and deactivate the device for Push Notifications.
+
+Finally, add the following @activity@ inside your @application@ section within your @AndroidManifest.xml@ file:
+
+```
+<application
+    ...
+    >
+    <activity android:name=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+    </activity>
+</application>
+```
+
+If you now run this app on your emulator or device, you should be able to connect to Ably with a clientId.
+
+"See this step in Github":https://github.com/ably/tutorials/commit/android-push-step4
 
 h2(#step5). Step 5 - Integrating FCM into your Android app
 
@@ -197,7 +400,83 @@ Finally, register these receivers in your @onCreate@ function:
 
 h2(#step7). Step 7 - Testing the app
 
-<%= partial 'shared/tutorials/_testing_push_android' %>
+Now that our app is ready, let's test it out. Before using any of these methods make sure you have built and run the app, and have successfully activated it for Push Notifications. We'll be using curl commands to publish messages for simplicity, however our libraries have all the "functionality for publishing":/general/push/publish used here as well.
+
+h3. a. Testing using Device ID
+
+Using the Device ID logged when activating the device, run the following curl:
+
+```[sh]
+curl -X POST https://rest.ably.io/push/publish \
+ -u "YOUR_API_KEY" \
+ -H "Content-Type: application/json" \
+ --data \
+ '
+{
+  "recipient": {
+    "deviceId": "YOUR_DEVICE_ID"
+  },
+  "notification": {
+    "title": "Ably Push Tutorial",
+    "body": "Push notification from Ably"
+  }
+}'
+```
+
+Make sure to replace @YOUR_API_KEY@ with your API Key, and @YOUR_DEVICE_ID@ with your Device ID.
+
+If you had the app open, you should see a new line in the log letting you know a message was received. If you had closed the app, you should see a Push Notification like below:
+
+<a href="/images/tutorials/push-android/push-android-screenshot.jpg" target="_blank">
+     <img src="/images/tutorials/push-android/push-android-screenshot.jpg" style="width: 50%; height: 50%" alt="Android Push Notification Screenshot">
+</a>
+
+h3. b. Testing using Client ID
+
+Using the Client ID logged when connecting to Ably, run the following curl:
+
+```[sh]
+curl -X POST https://rest.ably.io/push/publish \
+ -u "YOUR_API_KEY" \
+ -H "Content-Type: application/json" \
+ --data \
+ '
+{
+  "recipient": {
+    "clientId": "YOUR_CLIENT_ID"
+  },
+  "notification": {
+    "title": "Hello from Ably via Client ID!",
+    "body": "Example push notification from Ably."
+  }
+}'
+```
+
+Make sure to replace @YOUR_API_KEY@ with your API Key, and @YOUR_CLIENT_ID@ with your Client ID.
+
+h3. c. Testing using Channels
+
+You can also publish messages using Ably "channels":/realtime/channels, by adding a @push@ object to a "message":/realtime/messages sent on it. Publishing via a channel is the easiest way to publish a Push Notification to a collection of devices with different client and device IDs.
+
+```[sh]
+curl -X POST https://rest.ably.io/channels/MY_PUSH_CHANNEL/messages \
+ -u "YOUR_API_KEY" \
+ -H "Content-Type: application/json" \
+ --data \
+ '
+{ "name": "myMessage",
+  "extras": {
+    "push": {
+      "notification": {
+        "title": "Hello from Ably!",
+        "body": "Example push notification from Ably."
+      }
+    }
+  }
+}'
+```
+
+Make sure to replace @YOUR_API_KEY@ with your API key, and @MY_PUSH_CHANNEL@ with the Ably channel your app is subscribed to, in this tutorial being @push:test_push_channel@.
 
 h2(#step8). Step 8 - Start using your new app
 
