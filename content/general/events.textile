@@ -6,7 +6,14 @@ languages:
   - none
 jump_to:
   Help with:
-    - Understanding Reactor Events#title
+    - Available integrations#integrations
+    - Configuring a Webhook#configure
+    - Sources#sources
+    - Single vs Batched requests#batching
+    - Envelopes#envelope
+    - Payload encoding#encoding
+    - Webhook Security#security
+    - Examples#examples
 ---
 
 Reactor Events allow you to configure rules that react to "messages being published":/realtime/messages or "presence events emitted":/realtime/presence (such as members entering or leaving) on "channels":/realtime/channels. These rules can notify HTTP endpoints, serverless functions or other services for each event as they arise, or in batches.
@@ -43,17 +50,21 @@ Webhooks are configured from the Reactor tab in your "app dashboard":https://sup
 - URL := The URL of the endpoint where messages will be sent
 - Custom headers := Optionally allows you to provide a set of headers that will be included in all HTTP POST requests. You must use format @name:value@ for each header you add, for example, @X-Custom-Header:foo@
 - "Source":#sources := Choose which of @Message@, @Presence@, or @Channel Lifecycle@ events on channels should activate this Reactor Event Rule. @Channel Lifecycle@ events are only available in "Batch Request":#batching mode
-- "Request Mode":#batching := This will either be in @Single Request@ mode or @Batch Request@ mode. "Single Request":#batching will send each event as seperately to the endpoint specified by the Rule. "Batch Request":#batching will send events triggered concurrently in the same request
+- "Request Mode":#batching := This will either be in @Single Request@ mode or @Batch Request@ mode. "Single Request":#batching will send each event as seperately to the endpoint specified by the Rule. "Batch Request":#batching will roll up multiple events in the same request
 - Channel filter := An optional filter, which allows the Rule to be applied to a restricted set of channels. This can be specified as a regular expression, allowing for swathes of channels to be used
-- "Encoding":#encoding := The encoding to be used by this Rule. This can be either JSON or "MsgPack":http://msgpack.org
+- "Encoding":#encoding := The encoding to be used by this Rule. This can be either JSON or "MsgPack":http://msgpack.org. Encoding only applies to "enveloped":#envelope and "batched":#batching messages
+
+<br/>
 
 If the Rule is in the *Single Request* mode, it will also have the following options:
 
 - "Enveloped":#envelope := If the rule has the Enveloped option set, then data delivered by this Rule will be wrapped in an "Ably envelope":#envelope. Otherwise, the Rule will send the "raw payload":#no-envelope-examples
 
+<br/>
+
 If the Rule is in the *Batch Request* mode, it will have the following additional options:
 
-- Sign with key := Ably will optionally sign the data with the specified private key. This will be included as an HTTP header @X-Ably-Signature@ in every HTTP post request issued to your server. See "WebHook security":#security for more details.
+- Sign with key := Ably will optionally sign the data with the specified private key. This will be included as an HTTP header @X-Ably-Signature@ in every HTTP post request issued to your server. See "webhook security":#security for more details.
 
 *Note* that various integrations have restrictions on them which will mean some of these base options are either changed or absent. You can check specific details in each "integration's page":#integrations.
 
@@ -74,28 +85,36 @@ h4(#single-request). Single request details
 Single request is best suited for scenarios where you're wanting a 1-to-1 relationship between sent messages and events being called. If you are making use of a serverless system which is expecting a single piece of data each time, and then intends to perform some transformation/event following that, then Single request will likely work well for you. If you're using a single server, which has the potential to be overloaded by requests, and can process multiple events per payload sent, Batch request will be a better choice.
 
 minimize. View single request transport details
-  It just works
+  h5(#single-rate-limits). Rate limits
+
+  * Free accounts are limited to 15 Reactor invocations per second on single requests, whilst paid are limited to 30.
+  * Webhook requests are made with a default timeout of 15s. If the request fails or times out, Ably retries the request with exponential backoff (base delay 1s, backoff factor sqrt(2), up to a max of 60s)
+  * Multiple requests can be in-flight at once, up to the "max concurrency limit":https://support.ably.io/a/solutions/articles/3000053845#reactor-limits. If the number of in-flight requests exceeds the max concurrency limit, new messages coming in are placed in a short queue (length 10); if that queue length is exceeded, further messages are rejected
+
+  h5(#single-failures). Failures and back off
+
+  * If a request is rejected with @5xx@ or times out, it will be retried twice more, once after 4s, then if that fails, again after 20s
 
 h4(#batch-request). Batch request details
 
 Batch requests are useful for endpoints which have the potential to be overloaded by requests, or simply have no preference requirement for processing messages sent one-by-one. If you are using an endpoint which has either of these requirements (for example "IFTTT":/general/events/ifttt requires one event per request), you should use Single request.
 
 minimize. View batch request transport details
-  WebHook batched requests are typically published at most once per second per configured WebHook.
+  Webhook batched requests are typically published at most once per second per configured webhook.
 
-  h5(#rate-limits). Rate limits
+  h5(#batch-rate-limits). Rate limits
 
-  * For each configured WebHook, up to one request per second will be made to the configured endpoint URL
-  * The first event that matches a configured WebHook will trigger a WebHook request immediately. Therefore, if you have a low volume of events you are listening to, in most cases your request should arrive in under a second from the time the event was generated
-  * Webhook requests are made with a default timeout of 15s. If the request fails or times out, Ably retries the request with exponential backoff (base delay 1s, backoff factor sqrt(2), up to a max of 60s)
-  * Once a WebHook request is triggered, all other events will be queued so that they can be delivered in a batch in the next request. The next WebHook request will be issued within one second with the following caveats:
-  ** Only one HTTP request is ever in-flight at one time for each configured WebHook. If for example your server takes 6 seconds to respond to the request, then you can expect no more than 10 requests a minute to your endpoint. Therefore, if you want to be notified quickly, we recommend you accept requests quickly and defer any work to be done asynchronously
-  ** If there are more than 1,000 events queued for the next WebHook, the oldest 1,000 events will be bundled into the next WebHook and the remaining events will be delivered in the next WebHook. Therefore, if your sustained rate of events is expected to be more than 1,000 per second or your servers are slow to respond, then it is possible a backlog will build up and you will not receive all events. "Get in touch if you need a higher sustained rate":https://www.ably.io/contact.
+  * For each configured webhook, up to one request per second will be made to the configured endpoint URL
+  * The first event that matches a configured webhook will trigger a webhook request immediately. Therefore, if you have a low volume of events you are listening to, in most cases your request should arrive in under a second from the time the event was generated
+  * webhook requests are made with a default timeout of 15s. If the request fails or times out, Ably retries the request with exponential backoff (base delay 1s, backoff factor sqrt(2), up to a max of 60s)
+  * Once a webhook request is triggered, all other events will be queued so that they can be delivered in a batch in the next request. The next webhook request will be issued within one second with the following caveats:
+  ** Only a limited number of http requests are in-flight at one time for each configured webhook. Therefore, if you want to be notified quickly, we recommend you accept requests quickly and defer any work to be done asynchronously
+  ** If there are more than 1,000 events queued for the next webhook, the oldest 1,000 events will be bundled into the next webhook and the remaining events will be delivered in the next webhook. Therefore, if your sustained rate of events is expected to be more than 1,000 per second or your servers are slow to respond, then it is possible a backlog will build up and you will not receive all events. "Get in touch if you need a higher sustained rate":https://www.ably.io/contact.
 
-  h5(#failures). Failures and back off
+  h5(#batch-failures). Failures and back off
 
-  * If the endpoint for any of the WebHook requests respond with an HTTP status code that does not indicate success i.e. @200 - 209@, then Ably will retry that failed request
-  * Every retry is performed with an incrementing back off that is calculated as @delay = delay * sqrt(2)@ where delay is initially @1@. For example, if the initial WebHook request fails, and subsequent for retries fail, the back off delays for each request would look as follows: @initial request > wait 1.4s > 1st retry > wait 2s > 2nd retry > wait 2.8s > 3rd retry > wait 4s > 4th retry > wait 5.6s > successful request@
+  * If the endpoint for any of the webhook requests respond with an HTTP status code that does not indicate success i.e. @200 - 209@, then Ably will retry that failed request
+  * Every retry is performed with an incrementing back off that is calculated as @delay = delay * sqrt(2)@ where delay is initially @1@. For example, if the initial webhook request fails, and subsequent for retries fail, the back off delays for each request would look as follows: @initial request > wait 1.4s > 1st retry > wait 2s > 2nd retry > wait 2.8s > 3rd retry > wait 4s > 4th retry > wait 5.6s > successful request@
   * The back off for consecutively failing requests will increase until it reaches 60s. All subsequent retries for failed requests will then be made every 60s until a request is successful
   * The queue of events is retained for 5 minutes. If an event cannot be delivered within 5 minutes, then the events are discarded to prevent the queue from growing indefinitely
 
@@ -103,41 +122,39 @@ h3(#envelope). Envelopes
 
 When you configure a Reactor Event rule using "single requests":#batching, you are given the option to envelope messages, which is enabled by default. In most cases, we believe an enveloped message provides more flexibility as it contains additional metadata in a portable format that can be useful such as the @clientId@ of the publisher, or the @channel@ name the message originated from.
 
-However, where performance is a primary concern, you may choose not to envelope messages and instead have only the message payload (@data@ element) published. This has the advantage of requiring one less parsing step, however decoding of the raw payload in the published message will be your responsibility.
-
-Note that messages published to queues are by default encoded as JSON (a text format), however you can choose to have messages encoded with "MsgPack":msgpack.org (a binary format) in your Reactor rules.
+However, if you don't need anything besides the payload of each message, or the endpoint expects a very restricted data structure, you may choose not to envelope messages and instead have only the message payload (@data@ element) published. This has the advantage of requiring one less parsing step, however decoding of the raw payload in the published message will be your responsibility.
 
 Check out examples of "enveloped":#envelope-examples and "non-enveloped":#no-envelope-examples examples down below.
 
 h3(#encoding). Payload Encoding
 
-The encoding of payloads sent is defined when setting up a Reactor Rule in the "Reactor tab of your app":https://support.ably.io/solution/articles/3000074406. You can have the message sent in JSON format, or as a "MessagePack":https://msgpack.org payload.
+The encoding of payloads sent is defined when setting up a Reactor Rule in the "Reactor tab of your app":https://support.ably.io/solution/articles/3000074406. This only applies to "enveloped":#envelope messages and their structure, non-enveloped messages will remain their original format. You can have the message sent in JSON format, or as a "MessagePack":https://msgpack.org payload.
 
 * "JSON":https://www.json.org (JavaScript Object Notation): An efficient data-interchange format which is fairly standard and provides simple text based encoding.
-* "MessagePack":https://msgpack.org: An efficient binary serialization format that is similar to JSON, but faster and smaller.
+* "MessagePack":https://msgpack.org: An efficient binary serialization format that is similar to JSON, but smaller. This is notably useful for binary payloads, as a JSON envelope with a binary payload would need to have the payload base64-encoded
 
-h2(#security). WebHook security
+h2(#security). Webhook security
 
 We encourage customers to use a secure HTTPS URL when configuring their Reactor Events. This will ensure that requests cannot be intercepted and all communication with your servers is secured with TLS.
 
-However, in addition, we optionally support a signature included as an HTTP header @X-Ably-Signature@ in "batched":#batching requests. The endpoint can use the chosen private API key to verify the authenticity of the WebHook data.
+However, in addition, we optionally support a signature included as an HTTP header @X-Ably-Signature@ in "batched":#batching requests. The endpoint can use the chosen private API key to verify the authenticity of the webhook data.
 
 In order to verify the signature, you need to do the following:
 
-* start with the WebHook request body. This will be a JSON string encoded with content-encoding @utf-8@;
+* start with the webhook request body. This will be a JSON string encoded with content-encoding @utf-8@;
 * identify the key based on the @keyId@ indicated in the @X-Ably-Key@ header;
 * calculate the HMAC of that request body with algorithm SHA-256 and the key being the corresponding @keyValue@ (the secret part of the key after the "@:@");
 * encode the resulting HMAC using RFC 3548 base 64;
 * compare that result with the signature value indicated in the @X-Ably-Signature@ header
 
-h3(#example-signature). WebHook HMAC SHA-256 signature verification example
+h3(#example-signature). Webhook HMAC SHA-256 signature verification example
 
-If you choose to sign your WebHook requests, we recommend you try the following first:
+If you choose to sign your webhook requests, we recommend you try the following first:
 
 # "Set up a free RequestBin HTTP endpoint test URL":https://requestbin.com/
-# "Configure a WebHook":#configure with the URL set to the RequestBin endpoint, and ensure you have chosen to "batch":#batching messages and are using a key to sign each WebHook request
-# Trigger an event using the "Dev Console":https://support.ably.io/support/solutions/articles/3000062195 in your app dashboard which will generate a WebHook. You should then confirm that the WebHook has been received in your RequestBin
-# Check that the @X-Ably-Signature@ header in your WebHook request matches the HMAC SHA-256 you create using our "Javascript HMAC SHA-256 demo":<%= JsBins.url_for('reactor/webhook-hmac-sha-256') %>
+# "Configure a webhook":#configure with the URL set to the RequestBin endpoint, and ensure you have chosen to "batch":#batching messages and are using a key to sign each webhook request
+# Trigger an event using the "Dev Console":https://support.ably.io/support/solutions/articles/3000062195 in your app dashboard which will generate a webhook. You should then confirm that the webhook has been received in your RequestBin
+# Check that the @X-Ably-Signature@ header in your webhook request matches the HMAC SHA-256 you create using our "Javascript HMAC SHA-256 demo":<%= JsBins.url_for('reactor/webhook-hmac-sha-256') %>
 
 h2(#examples). Examples
 
@@ -145,8 +162,7 @@ Given the various potential combinations of @enveloped@, @batched@ and message s
 
 All messages sent from a Reactor Event will contain the following headers:
 
-- host := the URL of the endpoint this message has been sent to
-- content-type := the type of the payload. This will be @text/json@ or @application/x-msgpack@, depending on what Encoding you chose in your Reactor Rule
+- content-type := the type of the payload. This will be @application/json@ or @application/x-msgpack@ for "enveloped":#envelope messages. "Non-enveloped":#envelope messages can be either @application/json@, @text/plain@, or @application/octet-stream@, depending on if it's @JSON@, @text@, or @binary@ respectively
 - x-ably-version := the version of Reactor Event. At present this should be @1.0@, though older Events will be @0.8@
 
 h3(#batch-examples). Batched event payloads
@@ -156,8 +172,8 @@ Batched messages do not contain any additional headers beyond the above "shared 
 Each batched message will have the following fields:
 
 - name := the event type, aka "@presence.message@", "@channel.message@", "@channel.closed@", etc
-- webhookId := an internal unique ID for the configured WebHook
-- source := the source for the WebHook, namely "@channel.message@", "@channel.presence@", "@channel.lifecycle@"
+- webhookId := an internal unique ID for the configured webhook
+- source := the source for the webhook, namely "@channel.message@", "@channel.presence@", "@channel.lifecycle@"
 - timestamp := a timestamp represented as milliseconds since the epoch for the presence event
 - data := an object containing the data of the event defined below in "JSONPath format":http://goessner.net/articles/JsonPath
 
@@ -169,7 +185,7 @@ For @message@ events, @data@ will contain:
 - data.site := an internal site identifier indicating which primary datacenter the member is present in
 - data.messages := an @Array@ of "@Message@":/rest/messages#properties
 
-minimize. View batched @message@ payload example:
+minimize. View batched @message@ payload example
   ```[json]
   {
     "items": [{
@@ -201,7 +217,7 @@ For @presence@ events, @data@ will contain:
 - data.site := an internal site identifier indicating which primary datacenter the member is present in
 - data.presence := an @Array@ of "@Presence@":/realtime/presence#presence-message events
 
-minimize. View batched @presence@ payload example:
+minimize. View batched @presence@ payload example
   ```[json]
   {
     "items": [{
@@ -233,7 +249,7 @@ For @channel lifecycle@ events, @data@ will contain:
 - data.channelId := name of the channel that the presence event belongs to
 - data.status := a "@ChannelStatus@":/realtime/channel-metadata#channel-details object
 
-minimize. View batched @channel lifecycle@ payload example:
+minimize. View batched @channel lifecycle@ payload example
   ```[json]
   {
     "items": [{
@@ -269,7 +285,7 @@ Enveloped messages do not contain any additional headers beyond the above "share
 
 Each enveloped message will have the following fields:
 
-- source := the source for the WebHook, namely "@channel.message@" or "@channel.presence@"
+- source := the source for the webhook, namely "@channel.message@" or "@channel.presence@"
 - appId := the Ably app this message came from
 - channel := the Ably channel where the event occured
 - site := the Ably datacenter which sent the message
@@ -281,7 +297,7 @@ h4(#envelope-example-message). Enveloped message events
 
 For @message@ events, there will be a @messages@ field, which will contain the "@Message@":/rest/messages#properties event.
 
-minimize. View enveloped @message@ payload example:
+minimize. View enveloped @message@ payload example
   ```[json]
   {
     "source": "channel.message",
@@ -303,7 +319,7 @@ h4(#envelope-example-presence). Enveloped presence events
 
 For @presence@ events, there will be a @presence@ field, which will contain the "@Presence@":/realtime/presence#presence-message event.
 
-minimize. View enveloped @message@ payload example:
+minimize. View enveloped @message@ payload example
   ```[json]
   {
     "source": "channel.message",
@@ -330,7 +346,8 @@ Non-enveloped messages contain a few additional headers beyond the above "shared
 - x-ably-envelope-channel := the Ably channel which the message came from
 - x-ably-envelope-rule-id := the Ably Reactor Rule ID which was activated to send this message
 - x-ably-envelope-site := the Ably datacenter which sent the message
-- x-ably-envelope-source := the "source":#sources for the WebHook, namely "@channel.message@" or "@channel.presence@"
+- x-ably-envelope-source := the "source":#sources for the webhook, namely "@channel.message@" or "@channel.presence@"
+- x-ably-message-client-id := the client ID of the connection which sent the event
 - x-ably-message-connection-id := the connection ID responsible for the initial event
 - x-ably-message-id := the message's unique ID
 - x-ably-message-timestamp := the time the message was originally sent
@@ -358,15 +375,14 @@ h4(#no-envelope-example-presence). Non-enveloped presence events
 
 For @Presence@ events, there will be the additional headers:
 
-- x-ably-message-action := the action performed by the event (@update@, @enter@, @leave)
-- x-ably-message-client-id := the client ID of the connection which sent the presence event
+- x-ably-message-action := the action performed by the event (@update@, @enter@, @leave@)
 
 The payload will contain the "data":/rest/presence#data of the @Presence@ message.
 
-For example, if a client enters:/realtime/presence#enter a channel's presence with the following code:
+For example, if a "client enters":/realtime/presence#enter a channel's presence with the following code:
 
 ```[jsall]
-realtime = new Ably.Realtime({ key: {{API_KEY}}, clientId: 'bob' });
+realtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'bob' });
 channel = realtime.channels.get('some_channel');
 channel.presence.enter('some data');
 ```
