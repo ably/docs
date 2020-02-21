@@ -1,0 +1,165 @@
+---
+title: AWS Lambda Functions
+section: general
+index: 22
+jump_to:
+  Help with:
+    - Fields#fields
+    - Restrictions#restrictions
+    - Example#example
+---
+
+As part of "Reactor Events":/general/events, it is possible to integrate with various systems.
+
+"AWS Lambda Functions":https://aws.amazon.com/lambda provide event-driven serverless compute functions which allow users to easily run code whenever events are sent to it. These can be very useful for integrating into various other AWS systems.
+
+h3(#tutorials). Tutorials & Examples
+
+If you would like to just dive in and see an example of this being implemented, then take a look at our "AWS Lambda tutorial":/tutorials/reactor-event-aws.
+
+For more details on the specifics of how Reactor Events and our integrations work, check out our "Reactor Events documentation":/general/events.
+
+h2(#fields). Rule fields
+
+- AWS Region := The region you chose for your "AWS Lambda function":https://docs.aws.amazon.com/general/latest/gr/rande.html#lambda_region
+- Function Name := The name you gave your "AWS Lambda function":https://docs.aws.amazon.com/lambda/latest/dg/getting-started.html
+- AWS Authentication Scheme := the "authentication scheme":https://support.ably.io/support/solutions/articles/3000071908 you wish to use for your function. Either @AWS Credentials@ or @ARN of an assumable role@
+- Qualifier := _optional_ qualifier for your AWS Lambda function
+- "Source":/general/events#sources := Choose which of @Message@ or @Presence@ events on channels should activate this Reactor Event Rule.
+- Channel filter := An optional filter, which allows the Rule to be applied to a restricted set of channels. This can be specified as a regular expression, allowing for swathes of channels to be used
+- Encoding := The encoding to be used by this Rule. This can only be JSON for AWS Lambda Functions
+
+If the Rule is using *AWS Credentials* to authenticate, it will also have the following options:
+
+- AWS Credentials := a key:value pair which match your "AWS credentials":https://support.ably.io/support/solutions/articles/3000071908
+
+If the Rule is using *ARN of an assumable role* to authenticate, it will also have the following options:
+
+- Assume Role ARN := your "ARN":https://support.ably.io/support/solutions/articles/3000071908 which will work for this AWS Lambda function
+
+h2(#restrictions). Restrictions
+
+At present, it is not possible to "batch":/general/event#batching messages to AWS Lambda Functions, nor can messages be "encoded":/general/events#encoding in anything besides JSON.
+
+h2(#example). Examples
+
+h3(#envelope-examples). Enveloped event payloads
+
+Enveloped messages do not contain any additional headers beyond the "shared headers":/general/events#examples.
+
+Each enveloped message will have the following fields:
+
+- source := the source for the event, namely "@channel.message@" or "@channel.presence@"
+- appId := the Ably app this message came from
+- channel := the Ably channel where the event occured
+- site := the Ably datacenter which sent the message
+- timestamp := a timestamp represented as milliseconds since the epoch for the presence event
+
+In addition, it will contain another field which will contain the actual message, which is named according to the message type.
+
+h4(#envelope-example-message). Enveloped message events
+
+For @message@ events, there will be a @messages@ field, which will contain the "@Message@":/rest/messages#properties event.
+
+minimize. batched @message@ payload example:
+  ```[json]
+  {
+    "source": "channel.message",
+    "appId": "aBCdEf",
+    "channel": "channel-name",
+    "site": "eu-central-1-A",
+    "ruleId": "1-a2Bc",
+    "messages": [{
+      "id": "ABcDefgHIj:1:0",
+      "connectionId": "ABcDefgHIj",
+      "timestamp": 1123145678900,
+      "data": "some message data",
+      "name": "my message name"
+    }]
+  }
+  ```
+
+h4(#envelope-example-presence). Enveloped presence events
+
+For @presence@ events, there will be a @presence@ field, which will contain the "@Presence@":/realtime/presence#presence-message event.
+
+minimize. batched @message@ payload example:
+  ```[json]
+  {
+    "source": "channel.message",
+    "appId": "aBCdEf",
+    "channel": "channel-name",
+    "site": "eu-central-1-A",
+    "ruleId": "1-a2Bc",
+    "presence": [{
+      "id": "abCdEFgHIJ:1:0",
+      "clientId": "bob",
+      "connectionId": "Ab1CDE2FGh",
+      "timestamp": 1582270137276,
+      "data": "some data in the presence object",
+      "action": 4
+    }]
+  }
+  ```
+
+h3(#no-envelope-examples). Non-enveloped event payloads
+
+Non-enveloped messages contain a few additional headers beyond the "shared headers":/general/events#examples. These are:
+
+- x-ably-envelope-appid := the "app ID":https://support.ably.io/support/solutions/articles/3000063083 which the message came from
+- x-ably-envelope-channel := the Ably channel which the message came from
+- x-ably-envelope-rule-id := the Ably Reactor Rule ID which was activated to send this message
+- x-ably-envelope-site := the Ably datacenter which sent the message
+- x-ably-envelope-source := the "source":/general/events#sources for the WebHook, namely "@channel.message@" or "@channel.presence@"
+- x-ably-message-connection-id := the connection ID responsible for the initial event
+- x-ably-message-id: qfPeURsWJN:2:0
+- x-ably-message-timestamp: 1582270371499
+
+Each enveloped message will have the following fields:
+
+- source := the source for the WebHook, namely "@channel.presence@" or "@channel.message@"
+- appId := the Ably app this message came from
+- channel := the Ably channel where the event occured
+- site :=
+- timestamp := a timestamp represented as milliseconds since the epoch for the presence event
+
+In addition, it will contain another field which will contain the actual message, which is named according to the message type.
+
+h4(#no-envelope-example-message). Non-enveloped message events
+
+For @Message@ events, there will be the additional headers:
+
+- x-ably-message-name := The "name":/realtime/messages#name of the @Message@
+
+The payload will contain the "data":/rest/messages#data of the @Message@.
+
+For example, if you sent the following curl message, which sends a JSON message to the channel @my_channel@:
+
+```[curl]
+curl -X POST https://rest.ably.io/channels/my_channel/messages \
+          -u "{{API_KEY}}" \
+          -H "Content-Type: application/json" \
+          --data '{ "name": "publish", "data": "example" }'
+
+```
+
+The @x-ably-message-name@ header would be @publish@, and the payload would be @example@.
+
+h4(#no-envelope-example-presence). Non-enveloped presence events
+
+For @Presence@ events, there will be the additional headers:
+
+- x-ably-message-action := the action performed by the event (@update@, @enter@, @leave)
+- x-ably-message-client-id := the client ID of the connection which sent the presence event
+
+The payload will contain the "data":/rest/presence#data of the @Presence@ message.
+
+For example, if a client enters:/realtime/presence#enter a channel's presence with the following code:
+
+```[jsall]
+realtime = new Ably.Realtime({ key: {{API_KEY}}, clientId: 'bob' });
+channel = realtime.channels.get('some_channel');
+channel.presence.enter('some data');
+```
+
+Then the @x-ably-message-action@ would be @enter@, the @x-ably-message-client-id@ would be "bob", and the payload would be "some data".

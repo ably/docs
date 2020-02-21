@@ -205,9 +205,8 @@ module VersionsHelper
         if has_current_version_for?(path)
           non_versioned_path(path)
         else
-          _, root, relative_path = split_relative_url(path)
           latest_version = list_versions_for(path).first
-          "/#{root}/versions/v#{latest_version}#{relative_path}"
+          path_for_version(latest_version, path)
         end
       else
         path
