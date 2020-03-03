@@ -59,13 +59,10 @@ module VersionsHelper
 
   # Returns versioned version of a partial link where applicable
   def partial_version(partial)
-    if !partial.start_with? '/'
-      partial = partial.prepend('/')
+    if match = @item.path.match(%r{/versions/(v[\d\.]+)/})
+      partial = "/versions/#{match[1]}/#{partial}"
     end
-    page_version = version_from_relative_url(@item.path, current_default: true)
-    if partial_page_versions(partial).include? page_version
-      return path_for_version(page_version, partial)
-    end
+
     return partial
   end
 
