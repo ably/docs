@@ -25,7 +25,7 @@ Forking and running locally
 * Clone a local version of your forked repo `git clone https://github.com/[you]/docs` and `cd` into it
 * Checkout the master branch: `git checkout master`
 * Create your feature or fix branch and check it out: `git checkout -b [your-branch]`
-* `bundle install` to install the necessary gems
+* `bundle install` to install the necessary gems, including `nanoc`
 * Create a jsbin config file: `cp config/jsbin_config.example.yaml config/jsbin_config.yaml`
 
 At this point you can either run the repo directly on your machine or via Docker.
