@@ -43,6 +43,12 @@ If you would prefer to use Docker, then you can set up the env as follows:
 * `./docker-run server` to start up a web server at <http://localhost:4000>
 * `./docker-run guard` to watch for changes and rebuild the site automatically. This is normally run in conjunction with the `./docker-run server` command so that you can see changes immediately
 
+For those who use
+[ASDF](https://github.com/asdf-vm/asdf)
+or compatible tooling to manage their Ruby runtime versions, we have included a
+[`.tool-versions`](.tool-versions)
+file.
+
 Running on Heroku
 ----
 
