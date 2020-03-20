@@ -32,9 +32,9 @@ At this point you can either run the repo directly on your machine or via Docker
 
 If you have Ruby and are comfortable working in a Ruby environment as follows:
 
-* `nanoc compile` to generate the site for the first time
-* `nanoc view -p 4000` to start up a web server at <http://localhost:4000>
-* `bundle exec guard` to watch for changes and rebuild the site automatically. This is normally run in conjunction with the `.nanoc view -p 4000` command so that you can see changes immediately
+* `bundle exec nanoc compile` to generate the site for the first time
+* `bundle exec nanoc view -p 4000` to start up a web server at <http://localhost:4000>
+* `bundle exec guard` to watch for changes and rebuild the site automatically. This is normally run in conjunction with the `nanoc view -p 4000` command so that you can see changes immediately
 
 If you would prefer to use Docker, then you can set up the env as follows:
 
