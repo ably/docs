@@ -1,5 +1,4 @@
-Ably Documentation Overview
-===========================
+# Ably Documentation Overview
 
 [Ably](https://www.ably.io) is a hugely scalable, superfast and secure hosted realtime messaging service for web-enabled devices.
 
@@ -11,15 +10,13 @@ The Ably documentation was intentionally created as a public repository using a 
 * 3rd parties can fork the repository, and submit pull requests to improve the documentation.  We welcome the community's suggestions and input.
 * This documentation is later merged upstream to the [Ably primary website documentation](https://www.ably.io/documentation) with each website release.
 
-Viewing the documentation
-------
+## Viewing the documentation
 
 The static site generated from this documentation repository is hosted at <http://docs.ably.io> and deployed automatically when the `master` branch is updated.  We frequently publish updates from this repository so is typically more up to date than the [official Ably API documentation](https://www.ably.io/documentation).
 
 The official complete Ably documentation that incoporates all the documentation in this repository can be found at <https://www.ably.io/documentation>
 
-Forking and running locally
-------
+## Forking and running locally
 
 * Fork the repository at https://github.com/ably/docs
 * Clone a local version of your forked repo `git clone https://github.com/[you]/docs` and `cd` into it
@@ -49,8 +46,7 @@ or compatible tooling to manage their Ruby runtime versions, we have included a
 [`.tool-versions`](.tool-versions)
 file.
 
-Running on Heroku
-----
+## Running on Heroku
 
 This repo will automatically run on Heroku, but relies on the following buildpacks (see https://github.com/ably-forks/heroku-buildpack-nanoc):
 
@@ -60,15 +56,14 @@ This repo will automatically run on Heroku, but relies on the following buildpac
     2. https://github.com/ably-forks/heroku-buildpack-nanoc
     3. https://github.com/heroku/heroku-buildpack-static
 
-Pull requests
-----
+## Pull requests
 
 * Assuming you have followed the steps above, prior to making a PR, make your changes locally and they should be visible within seconds in the browser following a refresh (if using the `guard` command, else a manual `compile` is required).  If the changes are not visible, check your console where `guard` is running for errors.
 * Commit your changes, push your branch and send us a pull request
 * All pull requests will automatically launch a static review site that will be linked to at the bottom of the PR
 
-Branch and tag scheme for features spec
-----
+## Branch and tag scheme for features spec
+
 The `master` branch contains the most recent version of the spec, as
 amended by any subsequent fixes and non-breaking improvements. This is
 the version that a client library developer who is implementing a
@@ -98,7 +93,6 @@ When updating a client lib to a spec version, client lib devs should
 work from a diff from the tag of the previous release, so as to
 incorporate all changes since that tag.
 
-Help and contact
-----
+## Help and contact
 
-If you have any questions or suggestions, please [get in touch with us at Ably](https://www.ably.io/contact)
+If you have any questions or suggestions, please [get in touch with us at Ably](https://www.ably.io/contact).
