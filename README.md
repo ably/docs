@@ -16,6 +16,27 @@ The static site generated from this documentation repository is hosted at <http:
 
 The official complete Ably documentation that incoporates all the documentation in this repository can be found at <https://www.ably.io/documentation>
 
+## Publishing to JSBin
+
+This configuration is not required for basic documentation creation and modification, so most
+editors can simply skip to
+[Forking and running locally](#forking-and-running-locally).
+
+If you will be creating or modifying code within this repository that is to be uploaded automatically
+to [JSBin](https://jsbin.ably.io/), for our "Try it now code editor",
+then you will need to create yourself a JSBin config file:
+
+    cp config/jsbin_config.example.yaml config/jsbin_config.yaml
+
+And then you will need to populate the `api_key` property in that file with a JSBin API key.
+
+The creation of code content for JSBin is further documented in our
+[document formatting guide](content/client-lib-development-guide/documentation-formatting-guide.textile)
+which gets published
+[here](https://docs.ably.io/client-lib-development-guide/documentation-formatting-guide/#code-blocks).
+The code that is published to JSBin can be found in
+[content/code/](content/code/).
+
 ## Forking and running locally
 
 * Fork the repository at https://github.com/ably/docs
@@ -23,7 +44,6 @@ The official complete Ably documentation that incoporates all the documentation 
 * Checkout the master branch: `git checkout master`
 * Create your feature or fix branch and check it out: `git checkout -b [your-branch]`
 * `bundle install` to install the necessary gems, including `nanoc`
-* Create a jsbin config file: `cp config/jsbin_config.example.yaml config/jsbin_config.yaml`
 
 At this point you can either run the repo directly on your machine or via Docker.
 
