@@ -132,6 +132,23 @@ module VersionsHelper
     end
   end
 
+  def path_for_partial(version, path)
+    @path_for_partial_cache ||= {}
+    @path_for_partial_cache["#{version}:#{path}"] ||= begin
+      _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
+      if root_folder
+        if version == CURRENT_VERSION
+          "/#{root_folder}#{relative_path}"
+        else
+          "/versions/v#{version}/#{root_folder}/#{relative_path}"
+        end
+      else
+        puts "Warning: Link '#{path}' does not break into parts so cannot version"
+        path
+      end
+    end
+  end
+
   # Get a list of all versions for this path by inspecting the /versions folder
   def list_versions_for(path)
     @list_versions_for_cache ||= {}
