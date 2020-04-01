@@ -22,6 +22,10 @@ class AblyDocs
     def data_path
       File.expand_path("../data", File.dirname(__FILE__))
     end
+
+    def config_path
+      File.expand_path("../config", File.dirname(__FILE__))
+    end
   end
 end
 
