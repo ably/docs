@@ -16,6 +16,18 @@ The static site generated from this documentation repository is hosted at <http:
 
 The official complete Ably documentation that incoporates all the documentation in this repository can be found at <https://www.ably.io/documentation>
 
+## Deploying to website (www.ably.io/documentation)
+
+The website consumes this repo through a ruby gem. The gem points at the `master` branch and saves the revision as a version. To release to `/documentation`, follow these steps:
+
+1. Check if the changes that are already on `master` in this repository are ok to be released
+1. Merge your PR
+1. Clone the [website repo](https://github.com/ably/website)
+1. Run `bundle update ably-docs` in the website repo
+1. Check in `Gemfile.lock` that the SHA saved by the above command is the SHA of the commit you expected (in most cases this should be the merge/top commit of your PR)
+1. Open PR & ask the website team to review
+1. Follow the deployment process for website (if in doubt, ask the website team for help)
+
 ## Publishing to JSBin
 
 This configuration is not required for basic documentation creation and modification, so most
