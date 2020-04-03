@@ -94,7 +94,7 @@ When proposing a spec change, changes that you would be happy to have
 incorporated into the current version of client libraries should be made
 against `master`. Changes that should not be incorporated until the next
 minor or major version should be made against the corresponding
-`master-<major>-<minor>` branch, e.g. `master-2-0` (which ideally should
+`integration/<major>.<minor>` branch, e.g. `integration/1.2` (which ideally should
 be regularly rebased on top of `master`).
 
 When a new minor or major version of the spec is released, it is tagged
