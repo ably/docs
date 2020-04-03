@@ -98,7 +98,7 @@ minor or major version should be made against the corresponding
 be regularly rebased on top of `master`).
 
 When a new minor or major version of the spec is released, it is tagged
-with a tag such as `v1.1`. Conformance to the spec at that tag is what
+with a tag such as `v1.2`. Conformance to the spec at that tag is what
 defines whether a library can be released with the a library version
 with that major/minor version.
 
