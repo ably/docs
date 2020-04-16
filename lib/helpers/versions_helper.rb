@@ -1,6 +1,8 @@
 module VersionsHelper
   CURRENT_VERSION = '1.1' unless defined?(CURRENT_VERSION)
 
+  CURRENT_SPEC_VERSION = '1.2' unless defined?(CURRENT_SPEC_VERSION)
+
   VERSIONED_FOLDERS = %w(
     client-lib-development-guide
     general
@@ -25,7 +27,8 @@ module VersionsHelper
         end
       end
 
-      CURRENT_VERSION if current_default
+      _, root_folder, _ = split_relative_url(non_versioned_path(url))
+      current_version_for_folder(root_folder) if current_default
     end
   end
 
@@ -120,7 +123,7 @@ module VersionsHelper
     @path_for_version_cache["#{version}:#{path}"] ||= begin
       _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
       if root_folder
-        if version == CURRENT_VERSION
+        if version == current_version_for_folder(root_folder)
           "/#{root_folder}#{relative_path}"
         else
           "/#{root_folder}/versions/v#{version}#{relative_path}"
@@ -132,12 +135,20 @@ module VersionsHelper
     end
   end
 
+  def current_version_for_folder(folder)
+    if folder == 'client-lib-development-guide'
+      CURRENT_SPEC_VERSION
+    else
+      CURRENT_VERSION
+    end
+  end
+
   def path_for_partial(version, path)
     @path_for_partial_cache ||= {}
     @path_for_partial_cache["#{version}:#{path}"] ||= begin
       _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
       if root_folder
-        if version == CURRENT_VERSION
+        if version == current_version_for_folder(root_folder)
           "/#{root_folder}#{relative_path}"
         else
           "/versions/v#{version}/#{root_folder}/#{relative_path}"
@@ -154,7 +165,7 @@ module VersionsHelper
     @list_versions_for_cache ||= {}
     @list_versions_for_cache[path] ||= begin
       _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
-      possible_versions = [CURRENT_VERSION] + Dir.glob("#{content_path}/#{root_folder}/versions/v*").map do |path|
+      possible_versions = [current_version_for_folder(root_folder)] + Dir.glob("#{content_path}/#{root_folder}/versions/v*").map do |path|
         version_from_relative_url(path[content_path.length..-1])
       end
 
@@ -184,8 +195,10 @@ module VersionsHelper
         end
       end || language # if no explicit language specified, then no version constraints exist
 
+      _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
+
       max_supported_version = configuration_for_language.split(',')[1]
-      max_supported_version = CURRENT_VERSION if max_supported_version.nil? || max_supported_version.empty?
+      max_supported_version = current_version_for_folder(root_folder) if max_supported_version.nil? || max_supported_version.empty?
 
       min_supported_version = configuration_for_language.split(',')[2]
 
@@ -241,7 +254,7 @@ module VersionsHelper
   def version_exists_for_path?(version, path)
     _, root_folder, relative_path = split_relative_url(non_versioned_path(path))
 
-    base_path = if version == CURRENT_VERSION
+    base_path = if version == current_version_for_folder(root_folder)
       "/#{root_folder}"
     else
       "/#{root_folder}/versions/v#{version}"
