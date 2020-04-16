@@ -1,6 +1,6 @@
 Gem::Specification.new do |spec|
   spec.name          = 'ably-docs'
-  spec.version       = '1.0.0'
+  spec.version       = '1.2.0'
   spec.authors       = ["Matthew O'Riordan"]
   spec.email         = ['support@ably.io']
   spec.description   = %q{Documentation repository Gem for Ably}
