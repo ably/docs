@@ -57,7 +57,7 @@ h3. SSE example
 For example, to specify the @rewind@ channel param with the value @"1"@ using a querystring parameter, where it will apply to all channels:
 
 ```[javascript]
-var querystring = 'v=1.1&channels={{RANDOM_CHANNEL_NAME}}&rewind=1&key={{API_KEY}}';
+var querystring = 'v=1.2&channels={{RANDOM_CHANNEL_NAME}}&rewind=1&key={{API_KEY}}';
 var eventSource = new EventSource('https://realtime.ably.io/event-stream?' + querystring);
 ```
 
@@ -67,7 +67,7 @@ Or to specify the same parameter but only applying to one channel of two, using 
   var channelOne = encodeURIComponent('[?rewind=1]channel1');
   var channelTwo = 'channel2';
   var channels = channelOne + ',' + channelTwo;
-  var querystring = 'v=1.1&key={{API_KEY}}&channels=' + channels';
+  var querystring = 'v=1.2&key={{API_KEY}}&channels=' + channels';
   var eventSource = new EventSource('https://realtime.ably.io/event-stream?' + querystring);
 ```
 
@@ -98,7 +98,7 @@ h3(#rewind-example-ably). Rewind example with an Ably client library
 To subscribe to a channel, getting the most recent message if available:
 
 ```[jsall]
-  // only with ably-js v1.2 or later; currently in beta
+  // only with ably-js v1.2 or later
   const realtime = new Ably.Realtime('{{API_KEY}}');
   realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', {
     rewind: '1'
@@ -117,7 +117,7 @@ h3(#rewind-example-sse). Rewind example with SSE
 To subscribe to a channel, getting the most recent message if available:
 
 ```[javascript]
-  var querystring = 'v=1.1&channels={{RANDOM_CHANNEL_NAME}}&rewind=1&key={{API_KEY}}';
+  var querystring = 'v=1.2&channels={{RANDOM_CHANNEL_NAME}}&rewind=1&key={{API_KEY}}';
   var eventSource = new EventSource('https://realtime.ably.io/event-stream?' + querystring);
 ```
 
@@ -138,4 +138,110 @@ h3(#rewind-examples-mqtt). Rewind example with MQTT
   client.on('message', (topic, message) => {
     ...
   });
+```
+
+h2(#delta). Delta parameter
+
+The @delta@ channel parameter allows subscribers to expresse their desire to receive deltas (diffs) between the previous and current message instead of the current message in full on a given channel. The effects of this parameter are invisible to message senders and only affect subscribers that specify it - i.e. the sender sends messages in full and Ably computes and sends the message deltas to any subscriber which subscribed using this parameter.
+
+Note that requesting deltas does not guarantee that every message received will be a delta, as the server may chose to send some messages in full depending on system load and other factors. Therefore a subscriber using the @delta@ parameter should be prepared to handle a random mix of delta and full messages.
+
+The @delta@ parameter can take only the value @vcdiff@. VCDIFF is the format of the deltas. It is an open format specified in "RFC 3284":https://tools.ietf.org/html/rfc3284.
+
+Ably provides a JavaScript "delta codec library":https://github.com/ably/delta-codec-js to help you avoid writing boilerplate VCDIFF handling code. Some examples follow.
+
+h3(#delta-example-sse). Delta example with enveloped SSE
+
+```[jsall]
+const key = '{{API_KEY}}';
+const channel = 'sample-app-sse';
+const url = `https://realtime.ably.io/event-stream?channels=${channel}&v=1.2&key=${key}&delta=vcdiff`;
+const eventSource = new EventSource(url);
+const channelDecoder = new DeltaCodec.CheckedVcdiffDecoder();
+
+eventSource.onmessage = (event) => {
+  /* event.data is JSON-encoded Ably Message (see https://www.ably.io/documentation/realtime/types#message) */
+  const message = JSON.parse(event.data);
+  const { id, extras } = message;
+  let { data } = message;
+
+  try {
+    if (extras && extras.delta) {
+      data = channelDecoder.applyBase64Delta(data, id, extras.delta.from).asUtf8String();
+    } else {
+      channelDecoder.setBase(data, id);
+    }
+  } catch(e) {
+    /* Delta decoder error */
+    console.log(e);
+  }
+
+  /* Process decoded data */
+  console.log(data);
+};
+```
+
+h3(#delta-example-unenv-sse). Delta example with unenveloped SSE
+
+```[jsall]
+const key = '{{API_KEY}}';
+const channel = 'sample-app-sse';
+const url = `https://realtime.ably.io/event-stream?channels=${channel}&v=1.2&key=${key}&delta=vcdiff&enveloped=false`;
+const eventSource = new EventSource(url);
+const channelDecoder = new DeltaCodec.VcdiffDecoder();
+
+eventSource.onmessage = (event) => {
+  let data = event.data;
+
+  try {
+    if (DeltaCodec.VcdiffDecoder.isBase64Delta(data)) {
+      data = channelDecoder.applyBase64Delta(data).asUtf8String();
+    } else {
+      channelDecoder.setBase(data);
+    }
+  } catch(e) {
+    /* Delta decoder error */
+    console.log(e);
+  }
+
+  /* Process decoded data */
+  console.log(data);
+};
+```
+
+h3(#delta-example-mqtt). Delta example with MQTT
+
+```[jsall]
+const mqtt = require('mqtt');
+const { VcdiffDecoder } = require('./lib');
+
+const options = {
+  keepalive: 30,
+  username: 'FIRST_HALF_OF_API_KEY',
+  password: 'SECOND_HALF_OF_API_KEY',
+  port: 8883
+};
+const client = mqtt.connect('mqtts:mqtt.ably.io', options);
+const channelName = 'sample-app-mqtt';
+const channelDecoder = new VcdiffDecoder();
+
+client.on('message', (_, payload) => {
+  let data = payload;
+
+  try {
+    if (VcdiffDecoder.isDelta(data)) {
+      data = channelDecoder.applyDelta(data).asUint8Array();
+    } else {
+      channelDecoder.setBase(data);
+    }
+  } catch(e) {
+    /* Delta decoder error */
+    console.log(e);
+  }
+
+  /* Process decoded data */
+  console.log(data);
+});
+
+client.subscribe(`[?delta=vcdiff]${channelName}`);
 ```
