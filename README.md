@@ -71,7 +71,7 @@ _For those who use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling
 
 If you would prefer to use Docker, then you can run the web server as follows:
 
-* `docker compose up`
+* `docker-compose up`
 
 _This has been tested with Docker version 2.3.0.3. See [Docker installation instructions](https://docs.docker.com/get-docker/)._
 
