@@ -59,24 +59,21 @@ The code that is published to JSBin can be found in
 
 At this point you can either run the repo directly on your machine or via Docker.
 
+### Running directly with Ruby
+
 If you have Ruby and are comfortable working in a Ruby environment as follows:
 
-* `bundle exec nanoc compile` to generate the site for the first time
-* `bundle exec nanoc view -p 4000` to start up a web server at <http://localhost:4000>
-* `bundle exec guard` to watch for changes and rebuild the site automatically. This is normally run in conjunction with the `nanoc view -p 4000` command so that you can see changes immediately
+* `bundle exec nanoc live -p 4000` to start up a web server at <http://localhost:4000>, build the static site and view changes live (well near-live as Nanoc is slow, so monitor the output as you make changes)
 
-If you would prefer to use Docker, then you can set up the env as follows:
+_For those who use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to manage their Ruby runtime versions, we have included a [`.tool-versions`](.tool-versions) file._
 
-* `./docker-run build` to build the initial Docker image
-* `./docker-run compile` to compile the HTML for the static site (this is a once off command)
-* `./docker-run server` to start up a web server at <http://localhost:4000>
-* `./docker-run guard` to watch for changes and rebuild the site automatically. This is normally run in conjunction with the `./docker-run server` command so that you can see changes immediately
+### Running with Docker and Docker compose
 
-For those who use
-[ASDF](https://github.com/asdf-vm/asdf)
-or compatible tooling to manage their Ruby runtime versions, we have included a
-[`.tool-versions`](.tool-versions)
-file.
+If you would prefer to use Docker, then you can run the web server as follows:
+
+* `docker compose up`
+
+_This has been tested with Docker version 2.3.0.3. See [Docker installation instructions](https://docs.docker.com/get-docker/)._
 
 ## Running on Heroku
 
