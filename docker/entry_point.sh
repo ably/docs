@@ -3,7 +3,7 @@
 set -e
 
 if [ ! -f /docs/app/Rules ]; then
-  echo "Error: This docker container does not have the app mounted in /docs/app. Please use the ./docker-run commands"
+  echo "Error: This docker container does not have the app mounted in /docs/app. Please use the `docker-compose` commands"
   exit 1
 fi
 
