@@ -2,7 +2,7 @@
 
 [Ably](https://www.ably.io) is a scalable, fast, and secure hosted realtime messaging service for web-enabled devices.
 
-The static site generated from this repository is hosted at <http://docs.ably.io> and deployed automatically when the `master` branch is updated.  
+The static site generated from this repository is hosted at <http://docs.ably.io> and deployed automatically when the `master` branch is updated.
 
 We frequently publish updates from this repository so is typically more up to date than the official Ably documentation which can be found at <https://www.ably.io/documentation>
 
