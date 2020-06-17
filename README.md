@@ -11,8 +11,8 @@ This Git repository uses the [Textile](https://redcloth.org/textile) format with
 ## Running locally
 
 1. Clone a local version of the repo, or a local version of your forked repo.
-3. Checkout the master branch.
-4. Create and checkout your feature or fix branch.
+2. Checkout the master branch.
+3. Create and checkout your feature or fix branch.
 
 At this point you can either run the repo using Docker or directly with Ruby.
 
