@@ -6,7 +6,7 @@ The static site generated from this repository is hosted at <http://docs.ably.io
 
 We frequently publish updates from this repository so is typically more up to date than the official Ably documentation which can be found at <https://www.ably.io/documentation>.
 
-This Git repository uses the [Textile](redcloth.org/textile) format with [Nanoc](http://nanoc.stoneship.org/) used to build the static site from the `master` branch.
+This Git repository uses the [Textile](https://redcloth.org/textile) format with [Nanoc](http://nanoc.stoneship.org/) used to build the static site from the `master` branch.
 
 ## Running locally
 
