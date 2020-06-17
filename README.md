@@ -50,10 +50,6 @@ _For those who use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling
 
 ## Publishing to JSBin
 
-This configuration is not required for basic documentation creation and modification, so most
-editors can simply skip to
-[Forking and running locally](#forking-and-running-locally).
-
 If you will be creating or modifying code within this repository that is to be uploaded automatically
 to [JSBin](https://jsbin.ably.io/), for our "Try it now code editor",
 then you will need to create yourself a JSBin config file:
