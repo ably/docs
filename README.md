@@ -22,7 +22,7 @@ At this point you can either run the repo using Docker or directly with Ruby.
 
 Using Docker, run the following command:
 
-* `docker-compose up`
+- `docker-compose up`
 
 This starts up a web server at <http://localhost:4000>, builds the static site and allows you to view changes live.
 
@@ -30,15 +30,113 @@ _This has been tested with Docker version 2.3.0.3. See [Docker installation inst
 
 _Note: On Windows you will need to re-run the `docker-compose up` command to see changes, unless you are using [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10)._
 
+## Publishing to JSBin
+
+This configuration is not required for basic documentation creation and modification, so most
+editors can simply skip to [Forking and running locally](#forking-and-running-locally).
+
+If you will be creating or modifying code within this repository that is to be uploaded automatically
+to [JSBin](https://jsbin.ably.io/), for our "Try it now code editor", then you will need to create yourself a JSBin config file:
+
+### Ably staff members
+
+To obtain the API key you need to run this command in the terminal, you must ensure you have installed the hero-cli tools (Instructions on [installing the Heroku toolbelt](https://devcenter.heroku.com/articles/heroku-cli) )
+
+```bash
+$ heroku pg:psql -a ably-jsbin -c "select name, api_key from ownership"
+```
+
+When you execute this command a browser window will open and you will need to login using your **Ably email address**, only Ably staff members will be granted permission to access this resource.
+
+If you are a staff member and you are receiving this message
+
+```bash
+$ heroku pg:psql -a ably-jsbin -c "select name, api_key from ownership"
+ ▸    You do not have permission to view addon resources on ably-jsbin. You need to
+ ▸    have the deploy or operate permission on this app.
+```
+
+then ask your admin to check you have permission on Heroku, then re-authenticate with.
+
+```bash
+$ heroku login
+```
+
+If everything goes smoothly you will be given the API key.
+
+```
+ name |      api_key
+------+-------------------
+ ably | 12345678901234567
+(1 row)
+```
+
 ### Running with Ruby
 
 Using Ruby, run the following command:
 
-* `bundle install` 
+```bash
+$ cp config/jsbin_config.example.yaml config/jsbin_config.yaml
+```
+
+### Compile the JSBin code snippets
+
+Once you have finished creating your code snippet you will need to add the new assets to the existing ones. This is essentially a table of hashed documents and corresponding file names, [./jsbins.yaml](./jsbins.yaml) if you are interested in the entire list.
+
+```bash
+$ bundle exec nanoc compile
+```
+
+This will output a huge list that looks similar to this, as each file is checked
+
+```bash
+Published new JsBin for hub-product/http-javascript at https://jsbin.ably.io:443/ujehow/1/edit?javascript,live
+Copied https://jsbin.ably.io:443/ujehow/1/edit?javascript,live to clipboard
+	create  [0.49s]  output/code/realtime/channel-deltas-sse/index.html
+    update  [1.10s]  output/sse/index.html
+    update  [1.02s]  output/concepts/socketio/index.html
+```
+
+This process has added a record to `jsbin.yaml` Please notice the `ID` string in the Published URL (above) which is`ujehow` By hashing the contents, we don't need to contact the JSBin API on every static build. We only do this if a hash does not exist, and thus we need to notify JSBin to create a JSBin which contains the HTML, CSS & JS.
+
+```yaml
+---
+jsbin_hash:
+	Rh81oraUHHJ3PrrvwdJAOrVBqA8=: ujehow <-- hash: ID
+  	eBxLJU1YqdX+JW9JQY70S4iQfmU=: omedab
+  	pzHKfCW4/o2wDnCfbg1m0Pkl7v8=: ovucin
+jsbin_id:
+	adapters/pusher-pub-sub: eBxLJU1YqdX+JW9JQY70S4iQfmU=
+	adapters/pubnub-pub-sub: pzHKfCW4/o2wDnCfbg1m0Pkl7v8=
+	hub-product/http-javascript: Rh81oraUHHJ3PrrvwdJAOrVBqA8= <-- file: hash
+---
+```
+
+**NOTE**: if you take that `ID` and use the format http://jsbin.ably.io/ID/edit, you will get the JSBin matching that code sample, [http:\/\/jsbin.ably.io/ujehow/edit](http://jsbin.ably.io/ujehow/edit)
+
+One of the nifty things it does is replace API keys with live API keys dynamically. So for example, https://jsbin.ably.io/enagak/1/edit currently has API key `xVLyHw.mDQnPQ:IXCte59B2XjpNRV4`. Now change the extension to `.textile` i.e. https://jsbin.ably.io/enagak/2.textile, and voilà - you now have a file you can copy & paste back into the docs repo, but **importantly**, it is intelligent enough to detect a docs or demo **API key**, and replace it with a variable **{{API_KEY}}**.
+
+This ensures our JSBin demo's are always rendered with working API keys.
+
+### Adding a link to the JSBin resource
+
+To make retrieving the URL easy we created a Ruby helper which does all the work
+
+```ruby
+<%= JsBins.url_for("hub-product/native-sdks-javascript") %>
+```
+
+The creation of code content for JSBin is further documented in our [document formatting guide](content/client-lib-development-guide/documentation-formatting-guide.textile) which gets published [here](https://docs.ably.io/client-lib-development-guide/documentation-formatting-guide/#code-blocks). The code that is published to JSBin can be found in [content/code/](content/code/).
+
+**IMPORTANT**: You must `git commit` the updated `jsbin.yaml` with your new assets.
+
+## Forking and running locally
+
+- `bundle install`
 
 This installs the necessary gems, including `nanoc`. You can then run the web server by running the following command:
 
-* `bundle exec nanoc live -p 4000` 
+- `bundle exec nanoc live -p 4000`
 
 This starts up a web server at <http://localhost:4000>, builds the static site and allows you to view changes live.
 
@@ -71,34 +169,13 @@ The code that is published to JSBin can be found in
 
 ## Branch and tag scheme for features spec
 
-The `master` branch contains the most recent version of the spec, as
-amended by any subsequent fixes and non-breaking improvements. This is
-the version that a client library developer who is implementing a
-feature now should use as a reference. It is also the version that is
-deployed to docs.ably.io.
+The `master` branch contains the most recent version of the spec, as amended by any subsequent fixes and non-breaking improvements. This is the version that a client library developer who is implementing a feature now should use as a reference. It is also the version that is deployed to docs.ably.io.
 
-When proposing a spec change, changes that you would be happy to have
-incorporated into the current version of client libraries should be made
-against `master`. Changes that should not be incorporated until the next
-minor or major version should be made against the corresponding
-`integration/<major>.<minor>` branch, e.g. `integration/1.2` (which ideally should
-be regularly rebased on top of `master`).
+When proposing a spec change, changes that you would be happy to have incorporated into the current version of client libraries should be made against `master`. Changes that should not be incorporated until the next minor or major version should be made against the corresponding`integration/<major>.<minor>` branch, e.g. `integration/1.2` (which ideally should be regularly rebased on top of `master`).
 
-When a new minor or major version of the spec is released, it is tagged
-with a tag such as `v1.2`. Conformance to the spec at that tag is what
-defines whether a library can be released with the a library version
-with that major/minor version.
+When a new minor or major version of the spec is released, it is tagged with a tag such as `v1.2`. Conformance to the spec at that tag is what defines whether a library can be released with the library version with that major/minor version.
 
-Client library developers are not expected to monitor the docs repo for
-spec fixes that occur after the release tag. If a given spec fix needs
-to be made to client libraries at that time, on merging the PR to
-`master` you should open a GitHub issue in each individual client lib
-repo to request that. If this is not done, it is not mandatory for the
-fix to be incorporated until the next spec release.
-
-When updating a client lib to a spec version, client lib developers should
-work from a diff from the tag of the previous release, so as to
-incorporate all changes since that tag.
+Client library developers are not expected to monitor the docs repo for spec fixes that occur after the release tag. If a given spec fix needs to be made to client libraries at that time, on merging the PR to`master` you should open a GitHub issue in each individual client lib repo to request that. If this is not done, it is not mandatory for the fix to be incorporated until the next spec release.When updating a client lib to a spec version, client lib developers should work from a diff from the tag of the previous release, so as to incorporate all changes since that tag.
 
 ## Deploying to website (www.ably.io/documentation)
 
