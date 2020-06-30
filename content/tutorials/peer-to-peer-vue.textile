@@ -25,15 +25,13 @@ tags:
     - vue.js
 ---
 
-h1. Peer to Peer Static Web App built with Vue.js
-
-h2. Explanation:
+h2. Build a Peer to Peer Static Web App with Vue.js
 
 "Ably Channels":https://www.ably.io/channels are multicast (many publishers can publish to many subscribers) and we can use them to build peer-to-peer apps.
 
 **"Peer to peer"** (p2p) is a term from distributed computing that describes any system where many participants, often referred to as "nodes", can participate in some form of collective communication. The idea of peer to peer was popularised in early filesharing networks, where users could connect to each other to exchange files, and search operated across all of the connected users, there is a long history of apps built using p2p. In this demo, we're going to build a simple app that will allow one of the peers to elect themselves the **"leader"**, and co-ordinate communication between each instance of our app.
 
-h2. What's a leader?
+h3. What's a leader?
 
 Horizontally scaled systems, like p2p, often incorporate some form of "leader election" - where all of the nodes in the system attempt to become the "leader". This "leader" will co-ordinate the work distributed amongst the peers. For the sake of this demo, we will not implement leader election, instead, one of the users is going to click a button that makes them the leader. We'll refer to them as the @host@ throughout this tutorial, although really they are just another peer.
 
@@ -92,7 +90,7 @@ You can also see Vue's binding syntax, where we use @{{ greeting }}@ to bind dat
 **Vue is simple to get started with, especially with a small app like this, with easy to understand data-binding syntax.
 Vue works well for our example here, because it doesn't require much additional code.**
 
-<%= partial partial_version('tutorials/_step-1-setup-free-account') %>
+<%= partial partial_version('tutorials/_setup-free-account') %>
 
 This app will use "Ably Channels":https://www.ably.io/channels and "Token Authentication":https://www.ably.io/documentation/rest/authentication/#token-authentication.
 
@@ -422,7 +420,7 @@ Firstly, we're creating a form, to allow users to @host@ or @join@ a session.
 Most of this is normal HTML, but there are a couple of small details worth paying attention to.
 The @v-if@ directive, on the first line can be read as "only display this element, if the following condition is met`.
 
-`joinedOrHosting@ is a property defined in our @Vue@ app that looks like this
+@joinedOrHosting@ is a property defined in our @Vue@ app that looks like this
 
 ```[javascript]
   computed: {
@@ -432,9 +430,9 @@ The @v-if@ directive, on the first line can be read as "only display this elemen
 
 This @computed@ property can be bound to, and is used to toggle the UI if our user hasn't @joined@ or @hosted@ yet - we've achieved this with a **null check** - because we know that our @this.p2pClient@ and @this.p2pServer@ instances are only created when our @host@ or @join@ functions are called.
 
-Our buttons also have @v-on:click="host"@ attributes in them - this is Vue's onclick handler binding syntax, which wires up our buttons to our Vue app functions. We only have two functions to call, so each of those @v-on:click@ handlers only differ by the word @host@ or @join`.
+Our buttons also have @v-on:click="host"@ attributes in them - this is Vue's onclick handler binding syntax, which wires up our buttons to our Vue app functions. We only have two functions to call, so each of those @v-on:click@ handlers only differ by the word @host@ or @join@.
 
-We then have some markup to render the @game-info`:
+We then have some markup to render the @game-info@:
 
 ```[html]
       <section v-else class="game-info">
@@ -480,57 +478,205 @@ var app = new Vue({
 ```
 
 Referencing both the @data@ object properties, and our extra @computed@ object properties.
-
 h2. You now have a working peer to peer demo, but wait there's more!
 
 This is a self contained demo of building peer to peer apps, hosting in browser tabs and using Ably Channels as the communication medium.
 
 We'd love to see what exciting apps or games you could build on top of this sort of pattern - and to that end, we made one ourselves!
 
-We made a distributed bingo game called @Ablingo@ on top of this code sample - by adding additional messages, logic, and state to our server. You can read a detailed readme of how we extended this sample at the "repository here":https://github.com/thisisjofrank/Ablingo/blob/master/readme.md.
+h2. Resilience - what happens if we disconnect?
+
+The `Ably JavaScript SDK` is pretty smart - it'll buffer **outbound** messages when it finds itself in a disconnected state. We're going to illustrate this with a word streaming example.
+
+Let's add a couple of bits of code - firstly to the `P2PServer`
+
+```[javascript]
+    async sendWordsAcrossMultipleMessages() {
+      const phrase = "Long before his nine o'clock headache appears".split(" ");
+      const sleep = (ms) => (new Promise(resolve => setTimeout(resolve, ms)));
+
+      for (let word of phrase) {
+        this.ably.sendMessage({ kind: "word", word: word, serverState: this.state });
+        await sleep(500);
+      }
+    }
+```
+
+(The full code sample has a much longer phrase embedded in it)
+
+Here, we're taking a phrase, and sending it as a series of messages word-by-word, with a 500ms pause in between each word. We're using `async / await` to pause our code, just be *resolving a promise* every 500ms.
+
+Now we should update our client to listen for this message, we'll add a `case` statement for our `word` message to it's `onReceiveMessage` handler.
+
+```[javascript]
+    onReceiveMessage(message) {
+      if (message.serverState) {
+        this.serverState = message.serverState; 
+      }
+
+      switch(message.kind) {
+        case "connection-acknowledged": 
+          this.state.status = "acknowledged"; 
+          break;
+        case "word":
+          this.state.receivedWords += " " + message.word;
+          break;
+        default: () => { };
+      }
+    }
+```
+
+When we see a `word` message, we add it to a string in our state object. Because of this, we also need to update the `this.state` object in the `P2PClient` constructor to start us off with an empty `receivedWords` property.
+
+```[javascript]
+this.state = {
+  status: "disconnected",
+  receivedWords: ""
+  };
+```
+
+Next, we're going to make sure we display this in everyones `UI` by binding the state property into our markup in `index.html`
+
+```html
+  <section v-else class="game-info">
+    <h2>UniqueId: {{ uniqueId }}</h2>    
+    <button v-if="iAmHost" v-on:click="sendWordsAsHost" class="form-button">Stream words to client</button>     
+
+    <h3>Active players: {{ transmittedServerState?.players?.length }}</h3>
+    <ul class="players">
+      <li class="player" v-for="user in transmittedServerState?.players">                
+        <span>{{ user.friendlyName }}</span>
+      </li>
+    </ul>
+
+    <div>
+      {{ this.p2pClient.state.receivedWords }}
+    </div>
+  </section>
+</div>
+```
+
+We're doing two things here:
+
+1. Adding a `sendWordsAsHost` onclick to a new `html button`
+2. Binding `{{ this.p2pClient.state.receivedWords }}` - the string of words our client has seen.
+
+We need to create a function to handle our `Stream words to client` click, so we'll add a new method to our `Vue methods` property in `index.js`
+
+```[javascript]
+sendWordsAsHost: async function(evt) {
+  await this.p2pServer.sendWordsAcrossMultipleMessages();
+}
+```
+
+This calls the function we added to our `P2PServer` and the button only displays to the host because of the `v-if` directive bound a a new `computed property` `iAmHost` that verifies a `p2pserver` is active.
+
+We'll add `iAmHost` to our `computed` property in `index.js`.
+
+```[javascript]
+computed: {
+  state: function() { ... },
+  transmittedServerState: function() { ... },
+  joinedOrHosting: function () { ... },
+  iAmHost: function() { return this.p2pServer != null; },
+}
+```
+
+So now, if you start a hosting a session, and click `Stream words to client` you'll see a stream of words appear one by one in your UI.
+
+If your internet connection is disrupted, the Ably client, used by `P2PServer`, will buffer it's outbound messages until a connection can be re-established. Ably handles buffered connnections in a few different ways (documented here https://www.ably.io/documentation/realtime/connection)
+
+The disconnected state is entered if an established connection is dropped, or if a connection attempt was unsuccessful. In the disconnected state the library will periodically attempt to open a new connection (approximately every 15 seconds), anticipating that the connection will be re-established soon and thus connection and channel continuity will be possible.
+
+In this state, developers can continue to publish messages as they are automatically placed in a local queue, to be sent as soon as a connection is reestablished. Messages published by other clients whilst this client is disconnected will be delivered to it upon reconnection, so long as the connection was resumed within 2 minutes.
+
+After 2 minutes have elapsed, recovery is no longer possible and the connection will move to the suspended state.
+
+The suspended state is entered after a failed connection attempt if there has then been no connection for a period of two minutes. In the suspended state, the library will periodically attempt to open a new connection every 30 seconds. Developers are unable to publish messages in this state. A new connection attempt can also be triggered by an explicit call to connect on the Connection object.
+
+Once the connection has been re-established, channels will be automatically re-attached. The client has been disconnected for too long for them to resume from where they left off, so if it wants to catch up on messages published by other clients while it was disconnected, it needs to use the history API.
+
+So much like our `P2PServer` will buffer outbound messages, any disconnected clients will receive all the messages sent in a window of up to **two minutes of disconnection**
+
+h3. Using the History API to catch up
+
+Ably offers a `History API` and a `Rewind` setting. The History API allows you to query the history of a channel for by default, the last *two minutes* of data. If you enable `persisted history` on your channel, that window is extended for 24-72 hours. This has a cost - it counts against message quotas (see docs for more: https://support.ably.com/support/solutions/articles/3000030059), but we can use this extended window to allow clients to join "mid-stream" and catch up when they connect.
+
+The `Rewind` setting can be enabled when you subscribe to a channel, which will immediate then receive up to the last 100 messages in the time window you specify.
+
+The caveat is, the client will be processing historical messages - so be sure you understand what that means for your specific application. In some scenarios, it may be more effective for another `peer` or the `server` to just send new clients whatever state they need rather than the client reconstructing it.
+
+If you use the History API you probably don't want your clients re-processing thousands and thousands of messages.
+
+We need to add an additional parameter to our `channels.get` call, to add the parameter ` { params: { rewind: '1m' } }`. This tells our client to return up to the last 100 messages, from the minute. You can provide different time periods in here in either minutes ('2m') or seconds ('15s').
+
+```[javascript]
+async connect(identity, uniqueId) {
+  ...
+  const ably = new Ably.Realtime.Promise({ authUrl: '/api/createTokenRequest' });
+  this.channel = await ably.channels.get(`p2p-sample-${uniqueId}`, { params: { rewind: '1m' } });  
+  ...
+}
+```
+
+Some notes on the limits of the history API from the `Ably docs`
+
+    By default, persisted history on channels is disabled and messages are only stored by the Ably service for two minutes in memory. If persisted history is enabled for the channel, then messages will typically be stored for 24 – 72 hours on disk.
+
+    Every message that is persisted to or retrieved from disk counts as an extra message towards your monthly quote. For example, for a channel that has persistence enabled, if a message is published, two messages will be deducted from your monthly quota. If the message is later retrieved from history, another message will be deducted from your monthly quota.
+
+If you use the History API to collect history, there's a chance that while you're processing historical messages, new messages could be handled by the SDK - you'd have to write code to buffer and make sure you process these messages in order.
+
+h2. Yay, the end, but there's more
+
+This is a self contained demo of building peer to peer apps, hosting in browser tabs, using `Ably Channels` as their communication medium.
+
+We'd love to see what exciting apps or games you could build on top of this sort of pattern - and to that end, we made our ourselves!
+
+We made a distributed bingo game called `Ablingo` on top of this code sample - by adding additional messages, logic, and state to our server. You can read a detailed readme of how we extended this sample at the [repository here](https://github.com/thisisjofrank/Ablingo/blob/master/readme.md).
 
 h2. Running the demo on your machine
 
-While this whole application runs inside a browser, to host it anywhere people can use, we need a backend to keep our @Ably API key@ safe. The running version of this app is hosted on "Azure Static Web Apps":https://azure.microsoft.com/en-gb/services/app-service/static/ and provides us a serverless function that we can use to implement "Ably Token Authentication":https://www.ably.io/documentation/realtime/authentication#token-authentication.
+While this whole application runs inside a browser, to host it anywhere people can use, we need a backend to keep our `Ably API key` safe. The running version of this app is hosted on [Azure Static Web Apps](https://azure.microsoft.com/en-gb/services/app-service/static/) and provides us a serverless function that we can use to implement [Ably Token Authentication](https://www.ably.io/documentation/realtime/authentication#token-authentication).
 
-We need to keep the @Ably API key@ on the server side, so people can't grab it and use up your personal quota. The client side SDK can request a temporary key from an API call, we just need somewhere to host it. In the @api@ directory, there's code for an @Azure Functions@ API that implements this @Token Authentication@ behaviour.
+We need to keep the `Ably API key` on the server side, so people can't grab it and use up your personal quota. The client side SDK can request a temporary key from an API call, we just need somewhere to host it. In the `api` directory, there's code for an `Azure Functions` API that implements this `Token Authentication` behaviour.
 
-Azure Static Web Apps automatically hosts this API for us. To have this same experience locally, we'll need to use the "Azure Functions Core Tools":https://docs.microsoft.com/en-us/learn/modules/develop-test-deploy-azure-functions-with-core-tools/.
+Azure Static Web Apps automatically hosts this API for us. To have this same experience locally, we'll need to use the [Azure Functions Core Tools](https://docs.microsoft.com/en-us/learn/modules/develop-test-deploy-azure-functions-with-core-tools/).
 
 h3. Local dev pre-requirements
 
-We'll use "live-server":https://www.npmjs.com/package/live-server to serve the static files and "Azure functions core tools":https://www.npmjs.com/package/azure-functions-core-tools for interactivity. In your project folder run:
+We'll use [live-server](https://www.npmjs.com/package/live-server) to serve the static files and [Azure functions core tools](https://www.npmjs.com/package/azure-functions-core-tools) for interactivity. In your project folder run:
 
-```[bash]
+```bash
 $ npm install -g live-server
 $ npm install -g azure-functions-core-tools
 ```
 
 Than set your API key for local dev:
 
-```[bash]
+```bash
 $ cd api
 $ func settings add ABLY_API_KEY Your-Ably-Api-Key
 ```
 
-Running this command will encrypt your API key into the file @/api/local.settings.json`.
+Running this command will encrypt your API key into the file `/api/local.settings.json`.
 You don't need to check it in to source control, and even if you do, it won't be usable on another machine.
 
 h3. How to run for local dev
 
 To run the app:
 
-```[bash]
+```bash
 $ npx live-server --proxy=/api:http://127.0.0.1:7071/api
 ```
 
 And run the APIs
 
-```[bash]
+```bash
 $ cd api
 $ npm run start
 ```
 
 h2. Hosting on Azure
 
-We're hosting this as a Azure Static Web Apps - and the deployment information is in "hosting.md":https://github.com/thisisjofrank/Ablingo/blob/master/readme.md#hosting-on-azure.
+We're hosting this as a Azure Static Web Apps - and the deployment information is in [hosting.md](https://github.com/thisisjofrank/Ablingo/blob/master/readme.md#hosting-on-azure).
