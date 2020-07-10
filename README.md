@@ -98,7 +98,7 @@ incorporate all changes since that tag.
 
 ## Deploying to website (www.ably.io/documentation)
 
-The website consumes this repo through a ruby gem. The gem points at the `master` branch and saves the revision as a version. To release to `/documentation`, follow these steps:
+The website consumes this repo through a Ruby gem. The gem points at the `master` branch and saves the revision as a version. To release to `/documentation`, follow these steps:
 
 1. Check if the changes that are already on `master` in this repository are ok to be released
 2. Merge your PR
