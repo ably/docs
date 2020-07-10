@@ -8,6 +8,8 @@ We frequently publish updates from this repository so is typically more up to da
 
 This Git repository uses the [Textile](https://redcloth.org/textile) format with [Nanoc](http://nanoc.stoneship.org/) used to build the static site from the `master` branch.
 
+For more information on writing documentation for Ably, please see the [Documentation Formatting Guide](/content/client-lib-development-guide/documentation-formatting-guide.textile).
+
 ## Running locally
 
 1. Clone a local version of the repo, or a local version of your forked repo.
