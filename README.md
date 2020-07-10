@@ -30,7 +30,7 @@ _Note: On Windows you will need to re-run the `docker-compose up` command to see
 
 ### Running with Ruby
 
-Using Ruby directly (2.7.0) you must first run the following command:
+Using Ruby, run the following command:
 
 * `bundle install` 
 
@@ -39,6 +39,8 @@ This installs the necessary gems, including `nanoc`. You can then run the web se
 * `bundle exec nanoc live -p 4000` 
 
 This starts up a web server at <http://localhost:4000>, builds the static site and allows you to view changes live.
+
+_The Ruby version required is outlined in the [.ruby-version file](.ruby-version)._
 
 _For those who use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to manage their Ruby runtime versions, we have included a [`.tool-versions`](.tool-versions) file._
 
