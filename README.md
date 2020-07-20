@@ -89,7 +89,9 @@ $ bundle exec nanoc compile
 
 #### Using Docker
 
-`docker-compose up`
+```shell
+docker-compose up
+```
 
 This will output a huge list that looks similar to this, as each file is checked
 
