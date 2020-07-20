@@ -25,6 +25,7 @@ pubnub = Pubnub.new(
   :subscribe_key => api_key,
   :publish_key   => api_key,
   :origin        => 'pubnub.ably.io',
+  :origins_pool  => ['pubnub.ably.io'],
   :ssl           => true
 )
 ```
@@ -37,7 +38,7 @@ Please note:
 * You can add any other Pubnub options you would normally use in the initializer.
 * Don't try to use different Ably API keys for the `publish_key` and `subscribe_key`. Unlike Pubnub, Ably does not use different keys for publish and subscribe; instead, capabilities are connection-oriented, and the Adapter will use whatever you pass as the `subscribe_key` to create the Ably connection. If that key does not have publish capabilities, you will not be able to publish, whatever the `publish_key` has.
 * The `ssl` option is not mandatory, but strongly recommended. The Pubnub client includes the raw api key in the path that it connects to, so we strongly advise you to use this option to prevent it being sent in plain text.
-* Pubnub client libraries are inconsistent in how they let you set a new origin. Most let you just specify it in the constructor, but some require setting the domain and subdomain separately: for example, the java lib (version 3.7.10) requires you to call `pn.setOrigin('pubnub'); pn.setDomain('ably.io'); pn.setCacheBusting(false)` after initializing it to set the origin. Consult the docs for the library you're using.
+* Pubnub client libraries are inconsistent in how they let you set a new origin. Most let you just specify it in the constructor, but some require setting the domain and subdomain separately: for example, the java lib (version 3.7.10) requires you to call `pn.setOrigin('pubnub'); pn.setDomain('ably.io'); pn.setCacheBusting(false)` after initializing it to set the origin. Some require setting an additional `origins_pool` client option as well as `origin`. Consult the docs for the library you're using.
 
 ## Supported features
 
