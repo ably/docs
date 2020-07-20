@@ -38,9 +38,7 @@ editors can simply skip to [Forking and running locally](#forking-and-running-lo
 If you will be creating or modifying code within this repository that is to be uploaded automatically
 to [JSBin](https://jsbin.ably.io/), for our "Try it now code editor", then you will need to create yourself a JSBin config file:
 
-### Ably staff members
-
-To obtain the API key you need to run this command in the terminal, you must ensure you have installed the hero-cli tools (Instructions on [installing the Heroku toolbelt](https://devcenter.heroku.com/articles/heroku-cli) )
+To obtain the API key you need to run this command in the terminal, you must ensure you have installed the `heroku-cli`  tools (Instructions on [installing the Heroku toolbelt](https://devcenter.heroku.com/articles/heroku-cli) ) and postgresl ([PostgreSQL Downloads](https://www.postgresql.org/download/))
 
 ```bash
 $ heroku pg:psql -a ably-jsbin -c "select name, api_key from ownership"
@@ -92,7 +90,7 @@ This will output a huge list that looks similar to this, as each file is checked
 ```bash
 Published new JsBin for hub-product/http-javascript at https://jsbin.ably.io:443/ujehow/1/edit?javascript,live
 Copied https://jsbin.ably.io:443/ujehow/1/edit?javascript,live to clipboard
-	create  [0.49s]  output/code/realtime/channel-deltas-sse/index.html
+    create  [0.49s]  output/code/realtime/channel-deltas-sse/index.html
     update  [1.10s]  output/sse/index.html
     update  [1.02s]  output/concepts/socketio/index.html
 ```
@@ -102,13 +100,13 @@ This process has added a record to `jsbin.yaml` Please notice the `ID` string in
 ```yaml
 ---
 jsbin_hash:
-	Rh81oraUHHJ3PrrvwdJAOrVBqA8=: ujehow <-- hash: ID
-  	eBxLJU1YqdX+JW9JQY70S4iQfmU=: omedab
-  	pzHKfCW4/o2wDnCfbg1m0Pkl7v8=: ovucin
+    Rh81oraUHHJ3PrrvwdJAOrVBqA8=: ujehow <-- hash: ID
+    eBxLJU1YqdX+JW9JQY70S4iQfmU=: omedab
+    pzHKfCW4/o2wDnCfbg1m0Pkl7v8=: ovucin
 jsbin_id:
-	adapters/pusher-pub-sub: eBxLJU1YqdX+JW9JQY70S4iQfmU=
-	adapters/pubnub-pub-sub: pzHKfCW4/o2wDnCfbg1m0Pkl7v8=
-	hub-product/http-javascript: Rh81oraUHHJ3PrrvwdJAOrVBqA8= <-- file: hash
+    adapters/pusher-pub-sub: eBxLJU1YqdX+JW9JQY70S4iQfmU=
+    adapters/pubnub-pub-sub: pzHKfCW4/o2wDnCfbg1m0Pkl7v8=
+    hub-product/http-javascript: Rh81oraUHHJ3PrrvwdJAOrVBqA8= <-- file: hash
 ---
 ```
 
