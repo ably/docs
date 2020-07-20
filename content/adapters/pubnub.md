@@ -25,7 +25,7 @@ pubnub = Pubnub.new(
   :subscribe_key => api_key,
   :publish_key   => api_key,
   :origin        => 'pubnub.ably.io',
-  :origins_pool  => ["pubnub.ably.io"],
+  :origins_pool  => ['pubnub.ably.io'],
   :ssl           => true
 )
 ```
