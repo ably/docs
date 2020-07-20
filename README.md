@@ -32,11 +32,11 @@ _Note: On Windows you will need to re-run the `docker-compose up` command to see
 
 ## Publishing to JSBin
 
-This configuration is not required for basic documentation creation and modification, so most
-editors can simply skip to [Forking and running locally](#forking-and-running-locally).
+_This section is only applicable to Ably staff._
 
-If you will be creating or modifying code within this repository that is to be uploaded automatically
-to [JSBin](https://jsbin.ably.io/), for our "Try it now code editor", then you will need to create yourself a JSBin config file:
+This configuration is not required for basic documentation creation and modification, so most editors can simply skip to [Forking and running locally](#forking-and-running-locally).
+
+If you will be creating or modifying code within this repository that is to be uploaded automatically to [JSBin](https://jsbin.ably.io/), for our "Try it now code editor", then you will need to create yourself a JSBin config file:
 
 To obtain the API key you need to run this command in the terminal, you must ensure you have installed the `heroku-cli`  tools (Instructions on [installing the Heroku toolbelt](https://devcenter.heroku.com/articles/heroku-cli) ) and postgresl ([PostgreSQL Downloads](https://www.postgresql.org/download/))
 
@@ -69,9 +69,9 @@ If everything goes smoothly you will be given the API key.
 (1 row)
 ```
 
-### Running with Ruby
+### Create the jsbin_config file
 
-Using Ruby, run the following command:
+To create the jsbin_config file from the example file, run the following command:
 
 ```bash
 $ cp config/jsbin_config.example.yaml config/jsbin_config.yaml
@@ -81,9 +81,15 @@ $ cp config/jsbin_config.example.yaml config/jsbin_config.yaml
 
 Once you have finished creating your code snippet you will need to add the new assets to the existing ones. This is essentially a table of hashed documents and corresponding file names, [./jsbins.yaml](./jsbins.yaml) if you are interested in the entire list.
 
+#### Using Ruby
+
 ```bash
 $ bundle exec nanoc compile
 ```
+
+#### Using Docker
+
+`docker-compose up`
 
 This will output a huge list that looks similar to this, as each file is checked
 
