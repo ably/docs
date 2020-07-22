@@ -1,7 +1,7 @@
 module Ably
   module Docs
     class Config
-      JSBIN_HOST    = "jsbin.ably.io"
+      JSBIN_HOST    = "jsbin.ably.com"
       JSBIN_SSL     = true
       JSBIN_PORT    = 443
       JSBIN_API_KEY = "readonly"

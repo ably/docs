@@ -144,7 +144,7 @@ $(function () {
             .attr("class")
             .match(/open-jsbin-(\w+)/i)[1],
           btn = $(
-            '<a href="//jsbin.ably.io/' +
+            '<a href="//jsbin.ably.com/' +
               binId +
               '/1/edit?javascript,live" target="_blank" class="try-it-button">Try it</a>'
           );
