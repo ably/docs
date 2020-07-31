@@ -136,6 +136,29 @@ The creation of code content for JSBin is further documented in our [document fo
 
 **IMPORTANT**: You must `git commit` the updated `jsbin.yaml` with your new assets.
 
+## Redirects
+
+Redirects are implemented using the [nanoc-redirector](https://github.com/gjtorikian/nanoc-redirector) gem.
+
+To setup a redirect, add the following to the frontmatter of the template to where the redirect should be done:
+
+```ruby
+redirect_from:
+  - /redirect-from-this-path/
+```
+
+Then, when accessing `/redirect-from-this-path/`, you'll be redirected to the affected template.
+
+### Updating the redirects YAML file
+
+The website uses the [redirects YAML file](https://github.com/ably/docs/blob/master/data/redirects.yaml) to handle redirects in the documentation. After setting up a redirect just run
+
+```bash
+$ bundle exec nanoc compile
+```
+
+and the redirects YAML file will be automatically updated.
+
 ## Forking and running locally
 
 - `bundle install`

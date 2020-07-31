@@ -3,7 +3,7 @@ require 'digest/sha1'
 require 'jsbin-client'
 
 class JsBins
-  YAML_PATH = 'data/jsbins.yaml' unless defined?(YAML_PATH)
+  JSBINS_YAML_PATH = 'data/jsbins.yaml' unless defined?(JSBINS_YAML_PATH)
 
   class << self
     attr_accessor :data
@@ -53,7 +53,7 @@ class JsBins
       data['jsbin_hash'].delete_if { |hash, id| !hashes_in_use.has_key?(hash) }
 
       yaml_content = YAML::dump(data)
-      File.open(YAML_PATH, 'w') do |f|
+      File.open(JSBINS_YAML_PATH, 'w') do |f|
         f.write(yaml_content)
       end
 
@@ -89,5 +89,5 @@ class JsBins
       end
   end
 
-  @data = YAML::load(File.read(YAML_PATH))
+  @data = YAML::load(File.read(JSBINS_YAML_PATH))
 end
