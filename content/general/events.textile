@@ -18,7 +18,7 @@ jump_to:
 
 Reactor Events allow you to configure rules that react to "messages being published":/realtime/messages or "presence events emitted":/realtime/presence (such as members entering or leaving) on "channels":/realtime/channels. These rules can notify HTTP endpoints, serverless functions or other services for each event as they arise, or in batches.
 
-p(tip). Reactor Events are "rate limited":#transport and are suitable for low to medium volumes of updates. If you expect a high volume of events and messages (averaging more than 25 per second), then you should consider using our "message queues":/general/queues or "firehose":/general/firehose as they are more suitable for higher volumes.
+p(tip). Reactor Events are rate limited and are suitable for low to medium volumes of updates. If you expect a high volume of events and messages (averaging more than 25 per second), then you should consider using our "message queues":/general/queues or "firehose":/general/firehose as they are more suitable for higher volumes.
 
 Subscribing to events and messages on-demand is often best done using our "realtime client libraries":/realtime or by subscribing to Ably using any of the "realtime protocols we support":https://www.ably.io/adapters. However, when a persistent subscription is required to push data into third party systems, the Reactor is designed for this use case and is available as *Reactor Events* (for HTTP requests, serverless functions, etc), "Reactor Queues":/general/queues (data is pushed into our own hosted message queues that you can subscribe to), or "Reactor Firehose":/general/firehose (stream events into third party systems like Kafka and AWS Kinesis).
 
@@ -72,9 +72,276 @@ h3(#sources). Sources
 
 Ably currently supports three types of Events:
 
-* "Messages":/realtime/messages - messages trigger function calls as soon as they are published on a channel
-* "Presence events":/realtime/presence#presence-states - presence events trigger function calls when clients enter, update their data, or leave channels
-* "Channel lifecycle events":/realtime/channel-metadata#lifecycle-events – get notified when a channel is created (following the first client attaching to this channel) or discarded (when there are no more clients attached to the channel). Currently this is *only* available for "batched":#batching messages
+* "Messages":#messages - messages trigger function calls as soon as they are published on a channel. 
+* "Presence events":#presence - presence events trigger function calls when clients enter, update their data, or leave channels
+* "Channel lifecycle events":#lifecycle-events – get notified when a channel is created (following the first client attaching to this channel) or discarded (when there are no more clients attached to the channel). Currently this is *only* available for "batched":#batching messages
+
+h4(#messages). Messages
+
+If you are unfamiliar with how messages work in Ably, we recommend you first review the "realtime messages documentation":/realtime/messages.
+
+When a message is published on a channel, a message WebHook event is triggered.
+
+Every WebHook request will contain one or more enveloped messages in the root level attribute @items@, each of which in turn contains one or messages.
+
+Each message envelope in the @items@ array consists of an object with the following attributes:
+
+- name := the event type "@channel.message@"
+- webhookId := an internal unique ID for the configured WebHook
+- source := the source for the WebHook, namely "@channel.message@"
+- timestamp := a timestamp represented as milliseconds since epoch for the published message
+- data := an object containing the attributes defined below in "JSONPath format":http://goessner.net/articles/JsonPath/ @data.*@:
+- data.channelId := name of the channel that the presence event belongs to
+- data.site := an internal site identifier indicating the datacenter from which the message was published
+- data.messages := an @Array@ of messages with fields for each message described below
+
+Each member of @data.messages@ has the following fields:
+
+- clientId := optional client identifier for the publisher of the message. Find out more about "identified clients":https://support.ably.com/solution/articles/3000038608-authenticated-and-identified-clients
+- connectionId := the public unique identifier for the publisher's connection. Find out more about "@connectionId@":/realtime/connection#id
+- name := a string representing the event name for the published message, see the "publish method":/rest/channels#publish
+- data := an optional data payload for the published message. Find out more about "message data":/rest/messages#data
+- encoding := if the data payload is present, this encoding specifies the format of the data. If missing or empty, then the data payload is a string type. For example, if JSON data is set for the published message's "@data@":/rest/messages#data attribute, then the @encoding@ would be "@json/utf-8@"
+- id := unique ID assigned by Ably to this message
+- timestamp := the time in milliseconds since the epoch when this message was received by Ably
+
+h5(#decoding-messages). Decoding messages
+
+Each member of @data.messages@ is a 'raw' message. Messages sent "over the realtime service":/realtime/channels are automatically decoded into "@Messages@":/realtime/types#message object by the Ably client library. With webhooks you need to to do this explicitly, using "@Message.fromEncodedArray@":/realtime/messages#message-from-encoded-array on the @data.messages@ array, or "@Message.fromEncoded@":/realtime/messages#message-from-encoded or an individual member of that array. This will transform them into an array of "@Messages@":/realtime/types#message (or in the case of @fromEncoded@, an individual "@Message@":/realtime/types#message). This has several advantages, e.g.:
+
+* It will fully decode any @data@ (using the @encoding@) back into the same datatype that it was sent in (or an equivalent in each client library's language)
+* If you are using "encryption":/realtime/encryption, you can pass your encryption key to the method and it will decrypt the @data@ for you
+
+We recommend you do this for all messages you receive over webhooks. For example (using ably-js):
+
+```[javascript]
+webhookMessage.items.forEach((item) => {
+  const messages = Ably.Realtime.Message.fromEncodedArray(item.data.messages);
+  messages.forEach((message) => {
+    console.log(message.toString());
+  })
+})
+```
+
+h6(#example-channel-message). Example @channel.message@ JSON payload
+
+```[json]
+{
+   "items":[
+      {
+         "webhookId":"d28HJw",
+         "source":"channel.message",
+         "serial":"e91URQe6QA0gwm05496618:2",
+         "timestamp":1479301189860,
+         "name":"channel.message",
+         "data":{
+            "channelId":"foob",
+            "site":"eu-central-1-A",
+            "messages":[
+               {
+                  "id":"9qaOH1C4tO:2:0",
+                  "name":"foo",
+                  "connectionId":"9qaOH1C4tO",
+                  "timestamp":1479301189856,
+                  "data":"bar"
+               }
+            ]
+         }
+      }
+   ]
+}
+```
+
+Please note that if you are planning to receive messages via WebHooks, it is theoretically very easy to exceed the transport rate limits we impose on WebHooks to prevent DoS attacks against your own servers. We recommend you consider "message queues":/general/queues instead as they are far more scalable.
+
+h4(#presence). Presence events
+
+If you are unfamiliar with how presence works in Ably and what events are supported, we recommend you first review the "realtime presence documentation":/realtime/presence.
+
+When a member enters, updates, or leaves a channel, a presence WebHook event is triggered.
+
+Every WebHook request will contain one or more presence event envelopes in the root level @items@ attribute, each of which in turn contains an array of presence events.
+
+Each presence event envelope in the @items@ array consists of an object with the following attributes:
+
+- name := the event type "@presence.message@"
+- webhookId := an internal unique ID for the configured WebHook
+- source := the source for the WebHook, namely "@channel.presence@"
+- timestamp := a timestamp represented as milliseconds since the epoch for the presence event
+- data := an object containing the attributes defined below in "JSONPath format":http://goessner.net/articles/JsonPath/ @data.*@:
+- data.channelId := name of the channel that the presence event belongs to
+- data.site := an internal site identifier indicating which primary datacenter the member is present in
+- data.presence := an @Array@ of presence events
+
+Each member of @data.presence@ has the following fields:
+
+- clientId := the client identifier for the member. Find out more about "identified clients":https://support.ably.com/solution/articles/3000038608-authenticated-and-identified-clients
+- connectionId := the public unique identifier for the connection the member is using. Find out more about "@connectionId@":/realtime/connection#id
+- action := the presence action, as an integer defined by the "PresenceMessage Action enum":https://www.ably.io/documentation/realtime/types#presence-action . (Note that in old webhooks, identified by an @X-ABLY-VERSION@ header of @"0.8"@, this field was a string; in newly created webhooks it is an integer in order to be decodable by @PresenceMessage#fromEncoded@, see below)
+- data := an optional payload if provided when present. Find out more about "member data":/realtime/presence/#member-data
+- encoding := if the data payload is present, this encoding specifies the format of the data. If missing or empty, then the data payload is a string type. For example, if JSON data is added to a presence member's "@data@":/realtime/presence/#member-data, then the @encoding@ would be "@json/utf-8@"
+- id := unique ID assigned by Ably to this presence event
+- timestamp := the time in milliseconds since the epoch when this presence event was received by Ably
+
+h5(#decoding-presence). Decoding presence events
+
+Each member of @data.presence@ is a 'raw' presence event. Presence messages sent "over the realtime service":/realtime/channels are automatically decoded into "@PresenceMessages@":/realtime/types#presence-message object by the Ably client library. With webhooks you need to to do this explicitly, using "@PresenceMessage.fromEncodedArray@":/realtime/presence#presence-from-encoded-array on the @data.presence@ array, or "@PresenceMessage.fromEncoded@":/realtime/presence#presence-from-encoded or an individual member of that array. This will transform them into an array of "@PresenceMessages@":/realtime/types#presence-message (or in the case of @fromEncoded@, an individual "@PresenceMessage@":/realtime/types#presence-message). This has several advantages, e.g.:
+
+* It will decode the (numerical) action into a "@Presence action@":/realtime/presence#presence-action string (such as "@enter@", "@update@", or "@leave@")
+* It will fully decode any @data@ (using the @encoding@) back into the same datatype that it was sent in (or an equivalent in each client library's language)
+* If you are using "encryption":/realtime/encryption, you can pass your encryption key to the method and it will decrypt the @data@ for you
+
+We recommend you do this for all presence messages you receive over webhooks. For example (using ably-js):
+
+```[javascript]
+webhookMessage.items.forEach((item) => {
+  const presMsgs = Ably.Realtime.PresenceMessage.fromEncodedArray(item.data.presence);
+  presMsgs.forEach((presenceMessage) => {
+    console.log(presenceMessage.toString());
+  })
+})
+```
+
+h6(#example-presence-enter). Example @channel.presence@ @enter@ JSON payload
+
+```[json]
+{
+   "items":[
+      {
+         "webhookId":"N6A8rg",
+         "source":"channel.presence",
+         "serial":"4ab22b4737770514:0",
+         "timestamp":1467280498532,
+         "name":"presence.message",
+         "data":{
+            "channelId":"livechat",
+            "site":"eu-west-1-A",
+            "presence":[
+               {
+                  "clientId":"Sam",
+                  "connectionId":"JYNDvRnLPc",
+                  "action":2,
+                  "id":"JYNDvRnLPc:0:0",
+                  "timestamp":1487253048676
+               }
+            ]
+         }
+      }
+   ]
+}
+```
+
+h6(#example-presence-update). Example @channel.presence@ @update@ and @leave@ JSON payload
+
+```[json]
+{
+   "items":[
+      {
+         "webhookId":"N6A8rg",
+         "source":"channel.presence",
+         "serial":"4ab22b4737770514:2",
+         "timestamp":1467280513129,
+         "name":"presence.message",
+         "data":{
+            "channelId":"livechat",
+            "site":"eu-west-1-A",
+            "presence":[
+               {
+                  "clientId":"Mike",
+                  "connectionId":"SDJLqIgGXT",
+                  "action":4,
+                  "data":"status:typing"
+                  "id":"SDJLqIgGXT:0:0",
+                  "timestamp":1467280513129,
+               }
+            ]
+         }
+      },
+      {
+         "webhookId":"N6A8rg",
+         "source":"channel.presence",
+         "serial":"4ab22b4737770514:3",
+         "timestamp":1467280523088,
+         "name":"presence.message",
+         "data":{
+            "channelId":"livechat",
+            "site":"eu-west-1-A",
+            "presence":[
+               {
+                  "clientId":"Mike",
+                  "connectionId":"SDJLqIgGXT",
+                  "action":3,
+                  "id":"SDJLqIgGXT:1:0",
+                  "timestamp":1467280523088,
+               },
+               {
+                  "clientId":"Sam",
+                  "connectionId":"Fa9ahWh2HA",
+                  "action":4,
+                  "data":"status:typing"
+                  "id":"Fa9ahWh2HA:1:0",
+                  "timestamp":1467280523088,
+               }
+            ]
+         }
+      }
+   ]
+}
+```
+
+h4(#channel-lifecycle). Channel lifecycle events
+
+If you are unfamiliar with how channels work in Ably, we recommend you first review the "realtime channel lifecycle documentation":/realtime/channel-metadata#lifecycle-events.
+
+When a client attaches to a channel, a channel is implicitly created within the global Ably service triggering a @channel.opened@ WebHook event. The channel will remain open for as long as there are any subscribers attached to the channel.  Once all subscribers have left the channel, as part of our garbage collection process, the channel will typically be closed within 15 seconds triggering a @channel.closed@ event.
+
+Every WebHook request will contain one or more lifecycle events in the root level attribute @items@ which contains an array of events.
+
+Each channel lifecycle event in the @items@ array consists of an object with the following attributes:
+
+- name := the event type "@channel.opened@" or "@channel.closed@"
+- data := an object containing a single attribute @name@ which is the name of the channel that the lifecycle event applies to
+- webhookId := an internal unique ID for the configured WebHook
+- source := the source for the WebHook, namely "@channel.lifecycle@"
+- timestamp := a timestamp represented as milliseconds since epoch for the channel event
+
+h5(#example-opened). Example @channel.opened@ JSON payload
+
+```[json]
+{
+   "items":[
+      {
+         "webhookId":"M8T4-Q",
+         "source":"channel.lifecycle",
+         "serial":"4ab22b4793288073:1",
+         "timestamp":1467280480250,
+         "name":"channel.opened",
+         "data":{
+            "name":"livechat"
+         }
+      }
+   ]
+}
+```
+
+h5(#example-closed). Example @channel.closed@ JSON payload
+
+```[json]
+{
+   "items":[
+      {
+         "webhookId":"M8T4-Q",
+         "source":"channel.lifecycle",
+         "serial":"4ab22b4793288073:5",
+         "timestamp":1467280554968,
+         "name":"channel.closed",
+         "data":{
+            "name":"livechat"
+         }
+      }
+   ]
+}
+```
 
 h3(#batching). Single vs Batched requests
 
