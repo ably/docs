@@ -30,6 +30,18 @@ _This has been tested with Docker version 2.3.0.3. See [Docker installation inst
 
 _Note: On Windows you will need to re-run the `docker-compose up` command to see changes, unless you are using [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10)._
 
+### Updated gems
+
+From time to time the `Gemfile` or `Gemfile.lock` might change and this will cause docker-compose to fail with something similar to this:
+
+```
+webserver_1  | The Gemfile built for this container does not match the current Gemfile i.e. they have changed
+webserver_1  | You must rebuild the container with: $ ./docker-run build
+docs_webserver_1 exited with code 2
+```
+
+When this happens, you need to tell docker-compose to rebuild the containers by running `docker-compose up --build`.
+
 ## Publishing to JSBin
 
 _This section is only applicable to Ably staff._
@@ -64,7 +76,7 @@ If everything goes smoothly you will be given the API key.
 
 ```
  name |      api_key
-------+-------------------
+------|-------------------
  ably | 12345678901234567
 (1 row)
 ```
@@ -135,6 +147,29 @@ To make retrieving the URL easy we created a Ruby helper which does all the work
 The creation of code content for JSBin is further documented in our [document formatting guide](content/client-lib-development-guide/documentation-formatting-guide.textile) which gets published [here](https://docs.ably.io/client-lib-development-guide/documentation-formatting-guide/#code-blocks). The code that is published to JSBin can be found in [content/code/](content/code/).
 
 **IMPORTANT**: You must `git commit` the updated `jsbin.yaml` with your new assets.
+
+## Redirects
+
+Redirects are implemented using the [nanoc-redirector](https://github.com/gjtorikian/nanoc-redirector) gem.
+
+To setup a redirect, add the following to the frontmatter of the template to where the redirect should be done:
+
+```ruby
+redirect_from:
+  - /redirect-from-this-path/
+```
+
+Then, when accessing `/redirect-from-this-path/`, you'll be redirected to the affected template.
+
+### Updating the redirects YAML file
+
+The website uses the [redirects YAML file](https://github.com/ably/docs/blob/master/data/redirects.yaml) to handle redirects in the documentation. After setting up a redirect just run
+
+```bash
+$ bundle exec nanoc compile
+```
+
+and the redirects YAML file will be automatically updated.
 
 ## Forking and running locally
 
