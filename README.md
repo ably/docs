@@ -30,6 +30,18 @@ _This has been tested with Docker version 2.3.0.3. See [Docker installation inst
 
 _Note: On Windows you will need to re-run the `docker-compose up` command to see changes, unless you are using [WSL](https://docs.microsoft.com/en-us/windows/wsl/install-win10)._
 
+### Updated gems
+
+From time to time the `Gemfile` or `Gemfile.lock` might change and this will cause docker-compose to fail with something similar to this:
+
+```
+webserver_1  | The Gemfile built for this container does not match the current Gemfile i.e. they have changed
+webserver_1  | You must rebuild the container with: $ ./docker-run build
+docs_webserver_1 exited with code 2
+```
+
+When this happens, you need to tell docker-compose to rebuild the containers by running `docker-compose up --build`.
+
 ## Publishing to JSBin
 
 _This section is only applicable to Ably staff._
@@ -64,7 +76,7 @@ If everything goes smoothly you will be given the API key.
 
 ```
  name |      api_key
-------+-------------------
+------|-------------------
  ably | 12345678901234567
 (1 row)
 ```
