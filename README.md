@@ -2,18 +2,18 @@
 
 [Ably](https://www.ably.io) is a scalable, fast, and secure hosted realtime messaging service for web-enabled devices.
 
-The static site generated from this repository is hosted at <http://docs.ably.io> and deployed automatically when the `master` branch is updated.
+The static site generated from this repository is hosted at <http://docs.ably.io> and deployed automatically when the `main` branch is updated.
 
 We frequently publish updates from this repository so is typically more up to date than the official Ably documentation which can be found at <https://www.ably.io/documentation>.
 
-This Git repository uses the [Textile](https://redcloth.org/textile) format with [Nanoc](http://nanoc.stoneship.org/) used to build the static site from the `master` branch.
+This Git repository uses the [Textile](https://redcloth.org/textile) format with [Nanoc](http://nanoc.stoneship.org/) used to build the static site from the `main` branch.
 
 For more information on writing documentation for Ably, please see the [Documentation Formatting Guide](/content/client-lib-development-guide/documentation-formatting-guide.textile).
 
 ## Running locally
 
 1. Clone a local version of the repo, or a local version of your forked repo.
-2. Checkout the master branch.
+2. Checkout the `main` branch.
 3. Create and checkout your feature or fix branch.
 
 At this point you can either run the repo using Docker or directly with Ruby.
@@ -165,7 +165,7 @@ Then, when accessing `/redirect-from-this-path/`, you'll be redirected to the af
 
 ### Updating the redirects YAML file
 
-The website uses the [redirects YAML file](https://github.com/ably/docs/blob/master/data/redirects.yaml) to handle redirects in the documentation. After setting up a redirect just run the following commands, depending on how you are running the docs, and the redirects YAML file will be automatically updated.
+The website uses the [redirects YAML file](data/redirects.yaml) to handle redirects in the documentation. After setting up a redirect just run the following commands, depending on how you are running the docs, and the redirects YAML file will be automatically updated.
 
 #### Ruby
 
@@ -218,19 +218,19 @@ The code that is published to JSBin can be found in
 
 ## Branch and tag scheme for features spec
 
-The `master` branch contains the most recent version of the spec, as amended by any subsequent fixes and non-breaking improvements. This is the version that a client library developer who is implementing a feature now should use as a reference. It is also the version that is deployed to docs.ably.io.
+The `main` branch contains the most recent version of the spec, as amended by any subsequent fixes and non-breaking improvements. This is the version that a client library developer who is implementing a feature now should use as a reference. It is also the version that is deployed to docs.ably.io.
 
-When proposing a spec change, changes that you would be happy to have incorporated into the current version of client libraries should be made against `master`. Changes that should not be incorporated until the next minor or major version should be made against the corresponding`integration/<major>.<minor>` branch, e.g. `integration/1.2` (which ideally should be regularly rebased on top of `master`).
+When proposing a spec change, changes that you would be happy to have incorporated into the current version of client libraries should be made against `main`. Changes that should not be incorporated until the next minor or major version should be made against the corresponding`integration/<major>.<minor>` branch, e.g. `integration/1.2` (which ideally should be regularly rebased on top of `main`).
 
 When a new minor or major version of the spec is released, it is tagged with a tag such as `v1.2`. Conformance to the spec at that tag is what defines whether a library can be released with the library version with that major/minor version.
 
-Client library developers are not expected to monitor the docs repo for spec fixes that occur after the release tag. If a given spec fix needs to be made to client libraries at that time, on merging the PR to`master` you should open a GitHub issue in each individual client lib repo to request that. If this is not done, it is not mandatory for the fix to be incorporated until the next spec release.When updating a client lib to a spec version, client lib developers should work from a diff from the tag of the previous release, so as to incorporate all changes since that tag.
+Client library developers are not expected to monitor the docs repo for spec fixes that occur after the release tag. If a given spec fix needs to be made to client libraries at that time, on merging the PR to `main` you should open a GitHub issue in each individual client lib repo to request that. If this is not done, it is not mandatory for the fix to be incorporated until the next spec release.When updating a client lib to a spec version, client lib developers should work from a diff from the tag of the previous release, so as to incorporate all changes since that tag.
 
 ## Deploying to website (www.ably.io/documentation)
 
-The website consumes this repo through a Ruby gem. The gem points at the `master` branch and saves the revision as a version. To release to `/documentation`, follow these steps:
+The website consumes this repo through a Ruby gem. The gem points at the `main` branch and saves the revision as a version. To release to `/documentation`, follow these steps:
 
-1. Check if the changes that are already on `master` in this repository are ok to be released
+1. Check if the changes that are already on `main` in this repository are ok to be released
 2. Merge your PR
 3. Clone the [website repo](https://github.com/ably/website)
 4. Run `bundle update ably-docs` in the website repo
