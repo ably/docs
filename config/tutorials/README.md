@@ -149,7 +149,7 @@ libraries:
 
 ## Authors (collection)
 
-The tutorial card can accommodate up to four author profiles, and require at least one. Images can be a path or absolute  URL. (The example below demonstrates both use cases) Please remember to save NEW profile pictures in the Ably/Website repository in: `/master/app/assets/images/tutorials`  
+The tutorial card can accommodate up to four author profiles, and require at least one. Images can be a path or absolute  URL. (The example below demonstrates both use cases) Please remember to save NEW profile pictures in the Ably/Website repository in: `/app/assets/images/tutorials`  
 
 Ideally please use JPG images no larger that 200x200 pixels.
 
