@@ -163,13 +163,19 @@ Then, when accessing `/redirect-from-this-path/`, you'll be redirected to the af
 
 ### Updating the redirects YAML file
 
-The website uses the [redirects YAML file](https://github.com/ably/docs/blob/master/data/redirects.yaml) to handle redirects in the documentation. After setting up a redirect just run
+The website uses the [redirects YAML file](https://github.com/ably/docs/blob/master/data/redirects.yaml) to handle redirects in the documentation. After setting up a redirect just run the following commands, depending on how you are running the docs, and the redirects YAML file will be automatically updated.
+
+#### Ruby
 
 ```bash
 $ bundle exec nanoc compile
 ```
 
-and the redirects YAML file will be automatically updated.
+#### Docker
+
+```shell
+docker-compose up
+```
 
 ## Forking and running locally
 
