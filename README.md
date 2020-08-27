@@ -161,7 +161,7 @@ redirect_from:
 
 Then, when accessing `/redirect-from-this-path/`, you'll be redirected to the affected template.
 
-**IMPORTANT:** The values used in the `redirect_from` list should be the original URL's, not the name of the file that the URL was generated from.
+**IMPORTANT:** The values used in the `redirect_from` list should be the URL without the file extension. E.g. `general/versions/v0.8/webhooks` not `general/versions/v0.8/webhooks.textile`. 
 
 ### Updating the redirects YAML file
 
