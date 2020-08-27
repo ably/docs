@@ -161,6 +161,8 @@ redirect_from:
 
 Then, when accessing `/redirect-from-this-path/`, you'll be redirected to the affected template.
 
+**IMPORTANT:** The values used in the `redirect_from` list should be the URL without the file extension. E.g. `general/versions/v0.8/webhooks` not `general/versions/v0.8/webhooks.textile`. 
+
 ### Updating the redirects YAML file
 
 The website uses the [redirects YAML file](https://github.com/ably/docs/blob/master/data/redirects.yaml) to handle redirects in the documentation. After setting up a redirect just run the following commands, depending on how you are running the docs, and the redirects YAML file will be automatically updated.
