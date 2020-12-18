@@ -25,6 +25,7 @@ pubnub = Pubnub.new(
   :subscribe_key => api_key,
   :publish_key   => api_key,
   :origin        => 'pubnub.ably.io',
+  :origins_pool  => ['pubnub.ably.io'],
   :ssl           => true
 )
 ```
@@ -37,7 +38,7 @@ Please note:
 * You can add any other Pubnub options you would normally use in the initializer.
 * Don't try to use different Ably API keys for the `publish_key` and `subscribe_key`. Unlike Pubnub, Ably does not use different keys for publish and subscribe; instead, capabilities are connection-oriented, and the Adapter will use whatever you pass as the `subscribe_key` to create the Ably connection. If that key does not have publish capabilities, you will not be able to publish, whatever the `publish_key` has.
 * The `ssl` option is not mandatory, but strongly recommended. The Pubnub client includes the raw api key in the path that it connects to, so we strongly advise you to use this option to prevent it being sent in plain text.
-* Pubnub client libraries are inconsistent in how they let you set a new origin. Most let you just specify it in the constructor, but some require setting the domain and subdomain separately: for example, the java lib (version 3.7.10) requires you to call `pn.setOrigin('pubnub'); pn.setDomain('ably.io'); pn.setCacheBusting(false)` after initializing it to set the origin. Consult the docs for the library you're using.
+* Pubnub client libraries are inconsistent in how they let you set a new origin. Most let you just specify it in the constructor, but some require setting the domain and subdomain separately: for example, the java lib (version 3.7.10) requires you to call `pn.setOrigin('pubnub'); pn.setDomain('ably.io'); pn.setCacheBusting(false)` after initializing it to set the origin. Some require setting an additional `origins_pool` client option as well as `origin`. Consult the docs for the library you're using.
 
 ## Supported features
 
@@ -65,7 +66,7 @@ Please note:
 - Using the Pubnub adapter will likely be slightly slower than using a native Ably library due to the overhead of protocol translation. Typically the impact is in the low milliseconds
 - Some things which are quick with Pubnub are slow or impossible with Ably, and vice versa. Some things which in Pubnub are single operations (e.g. global herenow) are translated to many different operations, and will be correspondingly slower. Some operations (e.g. wherenow) are unlikely to ever be supported in the adapter, as they have no Ably equivalent.
 - Behind the scenes, the adapter just uses the normal Ably service, so there is no problem with using Pubnub and Ably client libraries side by side: they are completely interoperable, subject to a few caveats below.
-- Finally, many of the advantages of Ably over Pubnub (using [websockets rather than long polling](https://support.ably.io/solution/articles/3000044831-which-transports-are-supported-), [continuity guarantees](https://support.ably.io/solution/articles/3000044639-connection-state-recovery), [fallback host support](https://support.ably.io/solution/articles/3000044636-routing-around-network-and-dns-issues) etc.) are unavailable when using Pubnub client libraries. If a native Ably library is available for your platform, we recommend you consider using the Ably client libraries instead or at least make a plan to eventually transition over to Ably native client libraries.
+- Finally, many of the advantages of Ably over Pubnub (using [websockets rather than long polling](https://support.ably.com/solution/articles/3000044831-which-transports-are-supported-), [continuity guarantees](https://support.ably.com/solution/articles/3000044639-connection-state-recovery), [fallback host support](https://support.ably.com/solution/articles/3000044636-routing-around-network-and-dns-issues) etc.) are unavailable when using Pubnub client libraries. If a native Ably library is available for your platform, we recommend you consider using the Ably client libraries instead or at least make a plan to eventually transition over to Ably native client libraries.
 
 ### Publishing and subscribing
 

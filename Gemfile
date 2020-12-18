@@ -2,7 +2,8 @@ source 'http://rubygems.org/'
 
 ruby File.read(File.expand_path("../.ruby-version", __FILE__)).strip
 
-gem 'nanoc', '~>4.3'
+gem 'nanoc', '~>4.11'
+gem 'nanoc-redirector'
 gem 'RedCloth'
 gem 'kramdown'
 gem 'sass'
@@ -13,9 +14,9 @@ gem 'jsbin-client'
 gem 'adsf'
 
 # Guard for automatic rebuilding of static site
-gem 'guard-nanoc'
-gem 'listen'
-gem 'fssm'
+group :nanoc do
+  gem 'guard-nanoc'
+end
 
 # Deploy tasks
 gem 'rake'
@@ -23,6 +24,9 @@ gem 'git'
 
 # Allow URLs to be copied to the clipboard
 gem 'clipboard'
+
+# Need under Alpine Docker
+gem 'json'
 
 # Debugging
 gem 'pry'

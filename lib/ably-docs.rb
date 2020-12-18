@@ -22,9 +22,14 @@ class AblyDocs
     def data_path
       File.expand_path("../data", File.dirname(__FILE__))
     end
+
+    def config_path
+      File.expand_path("../config", File.dirname(__FILE__))
+    end
   end
 end
 
 # Full path is required to YAML files when loaded as Gem
-YAML_PATH = File.join(AblyDocs.data_path, 'jsbins.yaml') unless defined?(YAML_PATH)
+JSBINS_YAML_PATH = File.join(AblyDocs.data_path, 'jsbins.yaml') unless defined?(JSBINS_YAML_PATH)
+REDIRECTS_YAML_PATH = File.join(AblyDocs.data_path, 'redirects.yaml') unless defined?(REDIRECTS_YAML_PATH)
 COMPARE_PATH = File.join(AblyDocs.data_path, 'compare.yaml') unless defined?(COMPARE_PATH)

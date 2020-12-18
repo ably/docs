@@ -1,10 +1,13 @@
 ---
-title: "Reactor Events Tutorial: Google Cloud Function"
-alt_title: "Pizza ordering with Google Cloud Function"
-excerpt: "Learn how to use our Reactor Functions to consume realtime data with Google Cloud, and have your serverless function automatically respond to requests for pizza."
+title: Pizza ordering app with Google Cloud Functions
+alt_title: Pizza ordering app with Google Cloud Functions
+excerpt: Learn how to use the Google Cloud Function - Reactor Integration to consume realtime data and automatically respond to requests for pizza from your serverless function
 section: tutorials
-category: external-services
-index: 102
+category:
+    - channels
+    - reactor-integrations
+group: sdk
+index: 100
 platform: browser
 authors:
 - author_name: Nathan Ridley
@@ -18,12 +21,17 @@ languages:
   - nodejs
 ably_product: reactor
 tags:
-  - ably-features
+    - Reactor Integration
+    - Google Cloud Function
 ---
 
 The Ably Realtime service provides a "pub/sub" (publish/subscribe) messaging system with which you can build sophisticated workflows and dataflow pipelines to meet the needs of your application. This can be as simple as publishing messages to named channels of your choice, and having users and server processes subscribe to those channels and respond with further messages as needed. But what if you don't have a server to coordinate all of this, or simply don't want to manage that side of things?
 
-Even though Ably provides a full suite of "authentication and authorization features":https://www.ably.io/documentation/core-features/authentication to make sure users can only do what they're permitted to do, we still need a way to connect your messaging workflow to your business logic - something that would normally happen on your application's server. Doing so from a client-side browser application is risky, as it means exposing your business logic and other potentially sensitive data and services to the user. With the rise of serverless solutions such as "Google Cloud Functions":https://cloud.google.com/functions/, the problem goes away. Create server functions that contain your business logic, credentials and other sensitive data, hook them up to your application, and all of the sensitive work is hidden away from the user, not to mention being managed by world-class infrastructure providers such as Amazon, Google or Microsoft. Ably's *"Reactor Events":https://www.ably.io/reactor* feature provides a way to define custom criteria that will automatically trigger different kinds of actions in response to channel messages, "channel lifecycle events":/realtime/channel-metadata#lifecycle-events (such as a channel being created) and presence events (such as users entering or leaving a channel), and is how we'll integrate with your server functions without exposing them to your users.
+Even though Ably provides a full suite of "authentication and authorization features":https://www.ably.io/documentation/core-features/authentication to make sure users can only do what they're permitted to do, we still need a way to connect your messaging workflow to your business logic - something that would normally happen on your application's server. Doing so from a client-side browser application is risky, as it means exposing your business logic and other potentially sensitive data and services to the user. 
+
+With the rise of serverless solutions such as "Google Cloud Functions":https://cloud.google.com/functions/, the problem goes away. Create server functions that contain your business logic, credentials and other sensitive data, hook them up to your application, and all of the sensitive work is hidden away from the user, not to mention being managed by world-class infrastructure providers such as Amazon, Google or Microsoft. 
+
+Ably's *"Reactor Events":https://www.ably.io/reactor* feature provides a way to define custom criteria that will automatically trigger different kinds of actions in response to channel messages, "channel lifecycle events":/realtime/channel-metadata#lifecycle-events (such as a channel being created) and presence events (such as users entering or leaving a channel), and is how we'll integrate with your server functions without exposing them to your users.
 
 h2. What we'll be building
 
@@ -82,7 +90,7 @@ Create a folder on your local machine, then navigate to that folder from your co
   "version": "1.1.0",
   "description": "Ably Reactor Function Tutorial",
   "dependencies": {
-    "ably": "^1.1.24",
+    "ably": ">=1.2",
     "compromise": "^11.2.1",
     "fuzzyset": "0.0.4"
   }
@@ -95,7 +103,7 @@ From the "tutorial repository":https://github.com/ably/tutorials/tree/reactor-ev
 
 Create a new file in your project folder, and name it @index.js@. Copy the following script into the file, **making sure to update the line containing "YOUR_API_KEY_HERE" with your actual API key:**
 
-```[js]
+```[javascript]
 const Ably = require('ably');
 const processMessage = require('./pizza');
 
@@ -180,7 +188,7 @@ When your function has been deployed successfully, it's time to test it and make
 
 Back in the Google Cloud interface for your deployed function, you'll see a set of tabs, one of which is labelled "Testing". Enter the following JSON code into the field labelled "Triggering event", then click the blue "Test the function" button:
 
-```[js]
+```[javascript]
 {
   "customerId": "test",
   "message": "I'd like a pepperoni pizza, please"
@@ -300,7 +308,7 @@ The code below should go in your @app.js@ file.
 
 *Don't forget to replace @YOUR_API_KEY_GOES_HERE@ with your actual API key!*
 
-```[js]
+```[javascript]
 // This Ably client library is available due to the script in the HTML header:
 const ably = Ably.Realtime('YOUR_API_KEY_GOES_HERE');
 
@@ -373,7 +381,7 @@ If two different customers are trying to order a pizza at the same time, we don'
 
 Here's some code to generate a random customer ID. This will be run when the page first loads, and you'll be able to then use the customerID in your channel names:
 
-```[js]
+```[javascript]
 // Generate a customer id, being sure to sandbox the setup code inside a closure
 const customerId = (function () {
 
@@ -401,7 +409,7 @@ const customerId = (function () {
 
 Split your channel initialization code to generate two channels instead of one:
 
-```[js]
+```[javascript]
 // The customer's messages will be posted here
 const outboundChannel = ably.channels.get('pizza:customer:' + customerId);
 
@@ -414,7 +422,7 @@ inboundChannel.subscribe(receiveMessage);
 
 We're not using any special server-side persistence features, so we'll need to keep track of the conversation context and order details ourselves, and pass them to the chat bot as the conversation progresses. Only the bot will be updating the context; we'll just keep track of it on the bot's behalf, so that it isn't lost from one message to the next.
 
-```[js]
+```[javascript]
 let context = null; // We start with an uninitialized conversation context
 
 function receiveMessage(message) {
@@ -425,7 +433,7 @@ function receiveMessage(message) {
 
 Let's refactor the message publishing code into its own function. We'll also modify what we're sending so that it includes the customer ID in the message data. This will make it easy for the Google function to reply on the correct channel without having to extract the customer ID from the name of the inbound channel:
 
-```[js]
+```[javascript]
 function postMessage(message) {
   // Note the additional call to appendMessageElement, which previously was only
   // being used by the receiveMessage handler. Because we want to visually
@@ -444,7 +452,7 @@ function postMessage(message) {
 
 Don't forget to also update your @processInput@ function to use @postMessage@ rather than publishing directly:
 
-```[js]
+```[javascript]
 function processInput(e) {
   if (e.which !== 13) { // Character code 13 is the ENTER key
     return;
@@ -469,7 +477,7 @@ Also, the UI is not very useful unless the text input box is focused at all time
 
 Modify the @appendMessage@ function to return a reference to the HTML element it has just appended to the DOM:
 
-```[js]
+```[javascript]
 function appendMessageElement(type, message) {
   const div = document.createElement('div');
   div.classList.add(type, 'message');
@@ -485,7 +493,7 @@ function appendMessageElement(type, message) {
 
 Next, we'll define a special "waiting" message that we add when the user types a message, and remove when a reply is received:
 
-```[js]
+```[javascript]
 let waitingElement; // persist a reference to the HTML element
 
 function setWaiting(isWaiting) { // isWaiting should be true or false
@@ -513,7 +521,7 @@ function setWaiting(isWaiting) { // isWaiting should be true or false
 
 Update the code to call the above function when sending and receiving messages:
 
-```[js]
+```[javascript]
 function receiveMessage(message) {
   setWaiting(false); // The bot has replied, so remove the waiting message
   context = message.data.context;
@@ -529,7 +537,7 @@ function postMessage(message) {
 
 Finally, at the end of the script where your text box event listener is defined, hook up a couple of extra event listeners to keep the user focused on the input text box:
 
-```[js]
+```[javascript]
 function focusInputField() {
   inputField.focus();
 }
