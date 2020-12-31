@@ -1,6 +1,6 @@
 module Ably
   DOCUMENTATION_LANGUAGES = {
-    'javascript' => { name: 'Javascript', extension: 'js' },
+    'javascript' => { name: 'JavaScript', extension: 'js' },
     'java' => { name: 'Java', extension: 'java' },
     'android' => { name: 'Android', extension: 'java' },
     'python' => { name: 'Python', extension: 'py' },
