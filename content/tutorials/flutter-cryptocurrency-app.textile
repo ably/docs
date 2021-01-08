@@ -10,11 +10,11 @@ platform: browser
 authors:
 - author_name: Mais Alheraki
   author_bio: ""
-  author_profile_url: ""
+  author_profile_url: "https://github.com/pr-Mais"
   author_image: ""
 - author_name: Thomas Burkhart
   author_bio: ""
-  author_profile_url: ""
+  author_profile_url: "https://github.com/escamoteur"
   author_image: ""
 languages:
   - dart
@@ -462,5 +462,258 @@ SfCartesianChart(
 
 With that we finished building the first page, fully functional with realtime updates from Ably Cryptocurrency Hub.
 
+h2(#chat-room). Building the Flutter Chat Room
 
+In the previous section, we subscribed to a channel as consumers, so we don’t own the other side of the channel and we can’t add data to it. In this section, we will take a look at how we create channels programmatically, subscribe to them and publish messages. 
+
+Building the chat room is fairly simple, and with Ably realtime capability, it works like a charm with little code.
+
+Back to @AblySevice@, we will add two methods, one to listen to the latest messages as long as a user is inside the chat room, and the other is to send new messages.
+
+```[flutter]
+ChatUpdates getChatUpdates() {
+  ChatUpdates _chatUpdates = ChatUpdates();
+
+  _chatChannel = _realtime.channels.get('public-chat');
+
+  var messageStream = _chatChannel.subscribe();
+
+  messageStream.listen((message) {
+    _chatUpdates.updateChat(
+      ChatMessage(
+        content: message.data,
+        dateTime: message.timestamp,
+        isWriter: message.name == "${_realtime.clientId}",
+      ),
+    );
+  });
+
+  return _chatUpdates;
+}
+```
+
+Channel names can be chosen almost freely. All names are always only valid for one specific app, so channels of different apps can have the same name (if you want to send messages from one app to the other you can do this by using an API Streamer). For the chat we will use @public-chat@. The name of the channel has to be the same when sending and receiving messages. If that’s not the case this would mean we are listening to a different channel than the one we publish to, so no messages will be received.
+
+If the channel doesn’t exist at the time this function is called, it will be created as a new one automatically.
+
+Just like we did previously with prices, we will create @ChatUpdates@ as a @ChangeNotifier@ holding the most recently published message and push it to a queue in the UI. By calling @getChatUpdates()@ on the same instance of @AblyService@ registered previously with get_it, listening on the chat channel will be started and each new message arrives will be delivered to the listeners.
+
+For sending messages we will add @sendMessage()@ to the service.
+
+```[flutter]
+Future sendMessage(String content) async {
+  _realtime.channels.get('public-chat');
+
+  await _chatChannel.publish(data: content, name: "${_realtime.clientId}");
+}
+```
+
+To publish messages, we will call @publish@ with the name of the channel, and it will send the messages to it. The @name@ parameter is optional, it can be used to differentiate different types of messages that are sent over the same channel. We defined it to be the current client ID of the connected device, so we can differentiate the messages sent by the current user from other messages of other users on the chat channel.
+
+To not add unnecessary code for this demo app we don’t store the client ID which means it will change every time you start the app.
+
+With this our chat infrastructure in the service is done. So lets move to the chat view. Once we open it, we need it to initialize a listener, just like we did on the main page @DashboardView@.
+
+In @chat.dart@ we will initialize the channel and set up our listener:
+
+```[flutter]
+Queue<ChatMessage> messages = Queue();
+ChatUpdates chatUpdates;
+VoidCallback _listener;
+
+@override
+void initState() {
+  super.initState();
+  
+  chatUpdates = getIt<AblyService>().getChatUpdates();
+
+  chatUpdates.addListener(
+    _listener = () {
+      if (chatUpdates.message != null)
+        setState(() {
+          messages.addFirst(chatUpdates.message);
+        });
+      if (messages.length > 100) {
+        messages.removeFirst();
+      }
+    },
+  );
+}
+```
+
+As we have the client ID sent with each message, we know if a message is coming from the current user or from other users on the same channel so we can change the look of the message bubble accordingly.
+
+To display the chat bubbles we will use a @ListView.builder()@ widget. As messages should appear in the reverse order, in the messages queue, the first item is always the most recent message, so we will display the item in reverse order such that the first message appears at the bottom always.
+
+```[flutter]
+Flexible(
+  child: ListView.builder(
+    reverse: true,
+    itemCount: messages.length,
+    itemBuilder: (context, index) {
+      return ChatMessageBubble(
+        message: messages.toList()[index],
+        isWriter: messages.toList()[index].isWriter,
+      );
+    },
+  ),
+),
+```
+
+Each list item is a message, so we will create a custom widget to render a message bubble, and it will have 2 different looks, one when the message is from the current user, and another for messages from other users.
+
+```[flutter]
+class ChatMessageBubble extends StatelessWidget {
+  const ChatMessageBubble({
+    Key key,
+    this.message,
+    this.isWriter = false,
+  }) : super(key: key);
+  final ChatMessage message;
+  final bool isWriter;
+
+  final double radius = 15;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.all(15),
+      child: Column(
+        crossAxisAlignment:
+            isWriter ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              color: isWriter
+                  ? Theme.of(context).primaryColor.withOpacity(0.5)
+                  : Colors.white12,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(isWriter ? radius : 0),
+                bottomRight: Radius.circular(isWriter ? 0 : radius),
+                topLeft: Radius.circular(radius),
+                topRight: Radius.circular(radius),
+              ),
+            ),
+            width: MediaQuery.of(context).size.width * 0.6,
+            constraints: BoxConstraints(minHeight: 50),
+            child: Text(message.content),
+          ),
+          SizedBox(height: 5),
+          Align(
+            alignment: isWriter ? Alignment.bottomRight : Alignment.bottomLeft,
+            child: Text(
+              intl.DateFormat.Hm().format(message.dateTime),
+              style: TextStyle(color: Colors.white24),
+              textAlign: TextAlign.left,
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+```
+
+h2(#coin-twitter). Viewing Recent Tweets for Each Coin
+
+To display Tweets that have a hashtag of the coin name, we will create a second service to connect to the Twitter API.T It’s a good practice to separate different data sources into separate service classes. 
+
+Before starting, it's worth noting that this tutorial is using **Twitter API 1.0**.
+
+If you want to try this part in your own app you have to register for a twitter developer account to get your own private API keys, because Twitter doesn't allow us to share ours with you. When you get your Twitter development account, generate your keys in the Twitter developer console and add them to @config.dart@.
+
+To query the Twitter API manually with a HTTP request is a bit complex because it requires a lot of calculations to get the signature for each request. To make our life a bit easier we will use the "twitter_api":https://pub.dev/packages/twitter_api package, and "tweet_ui":https://pub.dev/packages/tweet_ui package to display tweets.
+
+The @twitter_api@ package that deals with all the signature and authorization details only works for 1.0 API of Twitter. Note that you still can implement the API access using Dart only, but the focus of this tutorial isn’t Twitter’s API, so we went with this package.
+
+Before we can use the @twitterApi@ we will have to initialize it with all the required keys:
+
+```[flutter]
+TwitterAPIService({this.queryTag}) {
+  _twitterApi = twitterApi(
+    consumerKey: OAuthConsumerKey,
+    consumerSecret: OAuthConsumerSecret,
+    token: OAuthToken,
+    tokenSecret: OAuthTokenSecret,
+  );
+}
+```
+
+To get recent tweets we will use the standard Twitter search endpoint:
+
+```[flutter]
+static const String path = "search/tweets.json";
+```
+
+Everything ready now, a twitterApi instance is initialized with the keys, it’s time to request tweets based on the hashtag passed through the constructor:
+
+```[flutter]
+Future<List> getTweetsQuery() async {
+  try {
+    // Make the request to twitter
+    Response response = await _twitterApi.getTwitterRequest(
+      // Http Method
+      "GET",
+      // Endpoint you are trying to reach
+      path,
+      // The options for the request
+      options: {
+        "q": queryTag,
+        "count": "50",
+      },
+    );
+
+    final decodedResponse = json.decode(response.body);
+
+    return decodedResponse['statuses'] as List;
+  } catch (error) {
+    rethrow;
+  }
+}
+```
+
+This time it won’t be a Stream, but a Future. The package uses @http@ under the hood, so the returned type from the request is an http @Response@, and it needs to be decoded. Here is why we explicitly imported http, to give a type to the response, we could proceed without it with just @final response@, but it’s a good and really necessary practice in Flutter and Dart to always be explicit with types.
+
+final decodedResponse = json.decode(response.body);
+
+The response body is a Map, all the tweets data are inside a list, and this list has a key `statuses`, that’s why the returned value is decodedResponse['statuses'].
+
+On the UI side we will use the @tweet_ui@ package to display the Tweets in their familiar design.
+
+You don’t have to use this package and you can always implement your own widget for the tweets if you like.
+
+We could have registered the Twitter service in get_it too but as we always create the Tweets page freshly and there is no data that has to be persisted we decided to always create a new instance when the @TwitterfeedView@ is pushed as a new page.
+
+So when the Tweet page is pushed, we will first initialize a service instance in @getTweets()@ using the hashtag that was passed from the dashboard. Then, we will call @getTweetsQuery@. As it returns a Future, we need to @await@ the result. Once the result is ready, we update the local state of the widget using @setState@ which will call the build method to switch from displaying a loading indication to the actual list of tweets.
+
+We can’t do this directly inside @initState@ because this API is asynchronous, and @initState@ can’t be defined as an async function. So we will use a separate async method @getTweets()@ that we call from @initState@ without awaiting it. We can do this safely as we already have ensured that the page will render correctly without any received data.
+
+```[flutter]
+Future getTweets() async {
+  final twitterService = TwitterAPIService(queryTag: widget.hashtag);
+
+  try {
+    final List response = await twitterService.getTweetsQuery();
+
+    setState(() {
+      tweetsJson = response;
+    });
+  } catch (error) {
+    setState(() {
+      errorMessage = 'Error retrieving tweets, please try again later.';
+    });
+  }
+}
+```
+
+If any exception is rethrown by the service, which could happen if you don’t use valid keys or if there is a network problem, it will display a nice error message without the app pausing on the exception.
+
+h2(#conclusion). Conclusion
+If you would like to read more on Ably’s realtime services, "click to find the official documentation":https://www.ably.io/documentation/realtime/channels/ which has example code on each point for Flutter.
+
+The full source code is "available here on GitHub":https://github.com/ably-labs/live-cryptocurrency-streaming-flutter.
+
+h2(#resources). Resources
 
