@@ -43,7 +43,9 @@ h3(#what-will-we-build). What will we build?
 We’ll build a realtime cryptocurrency app with 3 screens as described below:
 
 1. **Dashboard screen:** This will be the default home screen where we will display realtime data for cryptocurrency prices from "Ably’s Coindesk":https://www.ably.io/hub/ably-coindesk/crypto-pricing data stream on the "Ably Hub":https://www.ably.io/hub/ (more on the Hub later). Each currency will have its own line graph that shows the changes of the price over time, along with the actual updated price.
+
 2. **Chat room screen:** This will be the chat screen which you’ll see when the chat icon is clicked. We will create a public chat room where all users who have the app can chat with others who are currently in the room.
+
 3. **Twitter feed screen:** Clicking on the name of any given cryptocurrency on the dashboard will bring up another screen containing the twitter feed containing the latest tweets with that cryptocurrency mentioned.
 
 h3(#pre-requisites). Pre-requisites
@@ -111,9 +113,9 @@ As we have a part where we will connect to Twitter’s API, this package is the 
 A ready made widget to display different types of tweets by only passing it the tweet json data.
 
 
-h2. Building the Realtime Cryptocurrency Charts
+h2(#realtime-charts). Building the Realtime Cryptocurrency Charts
 
-Back to the Cryptocurrency prices hub you subscribed to in a previous step, each cryptocurrency will have a display name and a code, the code is used to connect to the specific channel of this currency on the Aply Hub, and display name is what the user will see.
+Back to the "Cryptocurrency prices hub":https://www.ably.io/hub/ably-coindesk/crypto-pricing you subscribed to in a previous step, each cryptocurrency will have a _display name_ and a _code_, the code is used to connect to the specific channel of this currency on the Aply Hub, and display name is what the user will see.
 
 We will make a const List that will have the currently available currencies on the hub, and if any new currency is added to the hub, we can add it by appending it to this list and the whole app will be updated.
 
@@ -133,3 +135,332 @@ const List<Map> _coinTypes = [
   },
 ];
 ```
+
+h3(#cryptocurrency-data-model). Cryptocurrency Data Model
+
+First, we need a model to hold the coin information and deliver it to the UI code, instead of sending the raw data received from Ably immediately, as this will improve readability of the code and split the service layer completely, we will use this model to map the received data.
+
+```[flutter]
+class Coin {
+  final String code;
+  final double price;
+  final DateTime dateTime;
+
+  Coin({
+    this.code,
+    this.price,
+    this.dateTime,
+  });
+}
+```
+
+h3(#realtime-service-class). Realtime Service Class
+
+Let’s create the main service class @AblyService@, which will have a private constructor to initialize it.
+
+```[flutter]
+Class AblyService {
+  AblyService._(this._realtime);
+}
+```
+
+The reason for that is we want this service to be a _Singleton_ and initialized only **once** at the app launch from a special initialization method with all the necessary connection instances.
+It’s a bad idea to initialize a new instance of this service each time we need to access any method inside it, as we need every method to use the same connection information. 
+
+To initialize our service, we will make a special @static@ method, we need it to create and return the private instance of this class for use everywhere in the app. In this method, we will also do the main configuration to establish a realtime connection to Apply.
+
+```[flutter]
+static Future<AblyService> init() async {
+    /// initialize client options for your Ably account using your private API
+    /// key
+    final ably.ClientOptions _clientOptions =
+        ably.ClientOptions.fromKey(APIKey);
+
+    /// initialize real-time object with the client options
+    final _realtime = ably.Realtime(options: _clientOptions);
+
+    /// connect the app to Ably's Realtime services supported by this SDK
+    await _realtime.connect();
+
+    /// return the single instance of AblyService with the local _realtime
+    /// instance to
+    /// be set as the value of the service's _realtime property, so it can be 
+    /// used in all methods.
+    return AblyService._(_realtime);
+}
+```
+
+Let’s take a moment to explain what we did. You can see that we are passing the local @_realtime@ instance to the constructor of the @AblyService@ class which will set the class-level @_realTime@ property, so that other methods will be able to use it. We will shortly see how it will be used to create and subscribe to channels.
+
+Let’s now connect to the Cryptocurrency channel and read coin prices. For this we will add a function @getCointUpdates@ that will make the connection, listen to the stream of messages coming from Ably, and map each message to a Coin.
+
+```[flutter]
+List<CoinUpdates> _coinUpdates = [];
+
+List<CoinUpdates> getCoinUpdates() {
+    if (_coinUpdates.isEmpty) {
+      for (int i = 0; i < _coinTypes.length; i++) {
+        String coinName = _coinTypes[i]['name'];
+        String coinCode = _coinTypes[i]['code'];
+
+        _coinUpdates.add(CoinUpdates(name: coinName));
+
+        //launch a channel for each coin type
+        ably.RealtimeChannel channel = _realtime.channels
+            .get('[product:ably-coindesk/crypto-pricing]$coinCode:usd');
+
+        //subscribe to receive a Dart Stream that emits the channel messages
+        final Stream<ably.Message> messageStream = channel.subscribe();
+
+        //map each stream event to a Coin and listen to updates
+        messageStream.where((event) => event.data != null).listen((message) {
+          _coinUpdates[i].updateCoin(
+            Coin(
+              code: coinCode,
+              price: double.parse('${message.data}'),
+              dateTime: message.timestamp,
+            ),
+          );
+        });
+      }
+    }
+    return _coinUpdates;
+}
+```
+The first thing is to iterate over the constant @_coinTypes@ list created before, and for each coin type there, we will request a channel from the Ably server which contains a Dart @Stream@. This stream will start emitting new events once we subscribe to it. We will subscribe and start listening in the UI.
+
+h3(#notify-ui). Notifying the UI of New Data
+
+To make it easier to consume the data we get from these Streams in the UI, we will create a new class that extends ChangeNotifier. In Flutter, the simplest way to get notified when anything changes is by using ChangeNotifier.
+
+```[flutter]
+class CoinUpdates extends ChangeNotifier {
+  CoinUpdates({this.name});
+  final String name;
+
+  Coin _coin;
+
+  Coin get coin => _coin;
+  updateCoin(value) {
+    this._coin = value;
+    notifyListeners();
+  }
+}
+```
+
+Any UI widget that registers a listener for this object will get a notification whenever it has to rebuild with new data.
+
+The update will happen when calling the @updateCoin()@ method, which will assign the new coin data to @_coin@, then call @notifyListeners()@.
+
+We chose to transform Stream events into **ChangeNotifier** updates because they are much easier to use in the UI as they always have a valid value and don’t care if they are listened to multiple times.
+
+h3. Subscribe to Ably Channels
+
+Let’s break down the previous function and explain more how we are subscribing to the cryptocurrency channel in 4 steps:
+
+1. Get the list of realtime channels for your account, then get a specific one by its name
+
+```[flutter]
+ably.RealtimeChannel channel = _realtime.channels.get('[product:ably-coindesk/crypto-pricing]$coinCode:usd');
+```
+
+In a real App it’s probably a good idea to check if we got the channel that we requested.
+
+2. Subscribe to the chosen channel
+
+```[flutter]
+final Stream<ably.Message> messageStream = channel.subscribe();
+```
+
+3. The returned type from @subscribe()@ is a @Stream<Message>@, which feels a bit odd because we just subscribed to something. In reality the @subscribe@ tells Ably to start transmitting data.
+
+4. So we register a listener for this message Stream, and use `where` to filter null values.
+
+```[flutter]
+messageStream.where((event) => event.data != null).listen((message) {});
+```
+
+As we never stop listening to the channels in this app we can ignore the @StreamSubscription@ that is returned from @listen()@.
+
+Inside the listener, whenever a new message arrives, we call `updateCoin()` and pass it a new Coin mapped from the Message data.
+
+The return type of this function is a @List<CoinUpdates>@ which has the same length as @_coinTypes@ and with a @CoinUpdates@ object for every currency defined in @coinTypes@. 
+
+To be safe in case that this function is called more than once we wrap the @for@ loop in an @if@ that checks if we already have made our channel subscription.
+
+Now we have finished setting up all we need for the service, it’s time to see how we will use it to show the prices graphs. 
+
+To be able to access our services easily we use the service locator package @get_it@. You could also use @package/provider@ or any other solution that you are comfortable with.
+
+The following diagram visualizes how the data will flow from Ably to our App’s UI.
+
+h3(#register-get-it). Registering Services with get_it
+
+First step is to register the service using get_it:
+
+```[flutter]
+GetIt getIt = GetIt.instance;
+
+void main() {
+  getIt.registerSingletonAsync<AblyService>(() => AblyService.init());
+  runApp(MyApp());
+}
+```
+
+We will do that asynchronously in the main method, as we want this service to be available as soon as the app is launched.
+
+For more information on how asynchronous registration with @get_it@ works see https://github.com/fluttercommunity/get_it#asynchronous-singletons.
+
+As this is an asynchronous registration, it won’t be available to our UI immediately, so we will wait for it at some place before using it. For this we will use a @FutureBuilder@ which will show a loading spinner until get_it reports that all services are ready.
+
+```[flutter]
+FutureBuilder(
+     future: getIt.allReady(),
+     builder: (context, snapshot) {
+       if (!snapshot.hasData)
+         return Center(child: CircularProgressIndicator());
+       else
+         return GraphsList();
+     },
+   ),
+```
+
+h3(#listening-to-prices). Listening to Cryptocurrency Prices
+
+Now that we are sure the service is definitely going to be ready at the time we use it, we will make a new Stateful Widget so that we can register a listener to listen to cryptocurrency prices in its @initState()@.
+
+```[flutter]
+List<CoinUpdates> prices = [];
+
+@override
+void initState() {
+    prices = getIt<AblyService>().getCoinUpdates();
+    super.initState();
+}
+```
+
+At first, the prices will not be ready yet because the app is still connecting to Ably, so now we need to have the service telling us what the connection status is. 
+
+For this we will make a new property in the AblyService called @connection@ of type Stream that will report all connection status changes.
+
+```[flutter]
+Stream<ably.ConnectionStateChange> get connection =>  _realtime.connection.on();
+```
+
+Since it’s a Stream, we will use a @StreamBuilder@ to read the connection status, and then decide what to display in different cases.
+
+```[flutter]
+StreamBuilder<ably.ConnectionStateChange>(
+    // as we are behind the FutureBuilder we can safely access AblyService 
+    stream: getIt<AblyService>().connection,
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) {
+        return CircularProgressIndicator();
+      } else if (snapshot.data.event == ably.ConnectionEvent.connected) {
+       // return the list of graphs, 
+         SingleChildScrollView(
+            //see below
+         );
+      } else if (snapshot.data.event == ably.ConnectionEvent.failed) {
+        return Center(child: Text("No connection."));
+      } else {
+    // in a real app we would also add handling of possible errors
+        return CircularProgressIndicator();
+      }
+    },
+),
+```
+
+Now that all cases are handled, let’s display the list of charts if the connection was successful.
+
+h3(#display-charts). Displaying Charts with Real Data
+
+```[flutter]
+SingleChildScrollView(
+	child: Column(
+		children: [
+			for (CoinUpdates update in prices)
+   CoinGraphItem(coinUpdates: update),
+		 ],
+	),
+),
+```
+Instead of using a @ListView.builder@, it’s just a @Column@, with a @for-collection@, we found this to be more convenient in this case, since the @ListView@ by default will dispose the states of any child that isn’t visible anymore. That's good behaviour in case a list is very long, but since we know already the number of graphs is limited, and we don’t want them to dispose and rebuild each time the user scrolls up or down, a @Column@ is totally fine.
+
+Each @CoinGraphItem@ widget will require @CoinUpdates@, and since it’s extending ChangeNotifier, it will register a listener for prices updates, and push each new price coming into a @Queue@ because if we would use a List, after some time the size of the list will get  huge, and require too much resources, and we don’t really have to show all the history of prices, just the latest 100 would be enough. With a Queue it’s easy to remove the first item if the length exceeds a certain length.
+
+```[flutter]
+Queue<Coin> queue = Queue();
+String coinName = '';
+
+VoidCallback _listener;
+
+@override
+void initState() {
+    widget.coinUpdates.addListener(
+      _listener = () {
+        setState(() {
+          queue.add(widget.coinUpdates.coin);
+        });
+
+        if (queue.length > 100) {
+          queue.removeFirst();
+        }
+      },
+    );
+
+    if (coinName.isEmpty) coinName = widget.coinUpdates.name;
+
+    super.initState();
+}
+```
+
+To be safe, it’s always a good practice to cancel any listeners at disposal.
+
+```[flutter]
+@override
+void dispose() {
+    widget.coinUpdates.removeListener(_listener);
+    super.dispose();
+}
+```
+
+All set up and ready! We just need the queue to be turned into a list for the graph to start rendering the data with the price as Y axis, and time as X axis.
+
+Here we will use the Syncfusion charts package to render the charts, but any other charts library should work well.
+
+```[flutter]
+SfCartesianChart(
+  enableAxisAnimation: true,
+  primaryXAxis: DateTimeAxis(
+    dateFormat: intl.DateFormat.Hms(),
+    intervalType: DateTimeIntervalType.minutes,
+    desiredIntervals: 10,
+    axisLine: AxisLine(width: 2, color: Colors.white),
+    majorTickLines: MajorTickLines(color: Colors.transparent),
+  ),
+  primaryYAxis: NumericAxis(
+    desiredIntervals: 6,
+    decimalPlaces: 4,
+    axisLine: AxisLine(width: 2, color: Colors.white),
+    majorTickLines: MajorTickLines(color: Colors.transparent),
+  ),
+  plotAreaBorderColor: Colors.white.withOpacity(0.2),
+  plotAreaBorderWidth: 0.2,
+  series: <LineSeries<Coin, DateTime>>[
+    LineSeries<Coin, DateTime>(
+      animationDuration: 0.0,
+      width: 2,
+      color: Theme.of(context).primaryColor,
+      dataSource: queue.toList(),
+      xValueMapper: (Coin coin, _) => coin.dateTime,
+      yValueMapper: (Coin coin, _) => coin.price,
+    )
+  ],
+)
+```
+
+With that we finished building the first page, fully functional with realtime updates from Ably Cryptocurrency Hub.
+
+
+
