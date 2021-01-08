@@ -17,7 +17,7 @@ Paramount is technical accuracy, which overrides all else. In writing developer 
 * Simplicity
 * Consistency
 
-Sometimes these objectives can conflict with eachother, in which case the technical writer must use their experience and judgement to decide the best approach.
+Sometimes these objectives can conflict with each other, in which case the technical writer must use their experience and judgement to decide on the best approach.
 
 > **NOTE:** As with most guidelines these are suggestions. Technical writers and contributors should always use their best judgement given the specific circumstances.
 
