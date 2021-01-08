@@ -1,8 +1,8 @@
 # Writing Style Guide
 
-> **DRAFT**
-
 These are technical writing guidelines that should be used for Ably's developer documentation.
+
+This guide does not cover the details of marking up content source. See the [documentation formatting guide](https://github.com/ably/docs/blob/main/content/client-lib-development-guide/documentation-formatting-guide.textile) for the latest details on how to markup source content.
 
 Some of the benefits of using this style guide are:
 
@@ -10,9 +10,20 @@ Some of the benefits of using this style guide are:
 * More professional feel to documentation.
 * Documentation is easier to translate to multiple languages.
 
-As with most guidelines these are suggestions. Technical writers and contributors should always use their best judgement given the specific circumstances.
+Paramount is technical accuracy, which overrides all else. In writing developer documentation technical writers and contributors should strive for:
 
-This guide does not cover the details of marking up content source. See the [documentation formatting guide](https://github.com/ably/docs/blob/main/content/client-lib-development-guide/documentation-formatting-guide.textile) for the latest details on how to markup source content.
+* Technical accuracy
+* Clarity
+* Simplicity
+* Consistency
+
+Sometimes these objectives can conflict with eachother, in which case the technical writer must use their experience and judgement to decide the best approach.
+
+> **NOTE:** As with most guidelines these are suggestions. Technical writers and contributors should always use their best judgement given the specific circumstances.
+
+## Technical terms
+
+It is important to be consistent with the use of technical terms. In order to provide consistency with technical terms, acronyms, and product names you should always refer to the Ably Glossary.
 
 ## Use International English
 
@@ -22,7 +33,7 @@ The industry standard dictionary is [Merriam Webster](https://www.merriam-webste
 
 ## Use inclusive language
 
-Use inclusive language. Google has written extensively and thoughtfully on this subject, so there is no point in duplicating that here. See the [Google guide](https://developers.google.com/style/inclusive-documentation) for details on writing inclusive language
+Use inclusive language. Google has written extensively and thoughtfully on this subject, so there is no point in duplicating that here. See the [Google guide](https://developers.google.com/style/inclusive-documentation) for details on writing inclusive language.
 
 ## Empathy
 
@@ -39,14 +50,17 @@ Examples:
 
 ## Use simple language
 
-For technical writing the best approach is to be simple and direct. To achieve this objective use clear, simple, and directive language. 
+For technical writing the best approach is to be simple, direct and technically accurate. To achieve this objective use clear, simple, accurate, and directive language.
 
-Avoid being overly casual in developer documentation as this can lead to a sense of lack of professionalism. However, a more casual writing style may be suitable for more relaxed pieces such as specific blog posts.
+Avoid being overly casual in developer documentation as this can lead to a sense of lack of professionalism. However, a more casual writing style may be suitable for more relaxed pieces such as specific blog posts, but in developer documentation this is best avoided, as technical accuracy and clarity are paramount.
 
 Other things to avoid:
 
-* Avoid verbose writing styles. 
+* Avoid verbose writing styles.
 * Avoid using attempts at humour in technical writing.
+* Avoid being casual, especially at the cost of technical accuracy and precision.
+
+Technical writing needs to be unapologetically accurate and precise, and use specific terminology wherever necessary to ensure that the correct and unambiguous meaning is conveyed.
 
 ## Avoid fillers
 
@@ -89,7 +103,7 @@ Examples:
 * *Active voice:* Ably provides an Asset Tracking SDK.
 * *Passive voice:* An Asset Tracking SDK is provided by Ably.
 
-Active voice is simpler, more direct, and easier to translate. 
+Active voice is simpler, more direct, and easier to translate.
 
 The principle here is you want to guide the developer succinctly and accurately, in the most direct way possible. If you drop into passive voice because it feels correct for the situation that's fine, but generally you want to keep things simple and use active voice.
 
@@ -151,9 +165,9 @@ Examples:
 * Use 'that is' rather than 'i.e.'
 * Use 'and so on' instead of 'etc.'.
 
-Sometimes writers create variations of Latin abbreviations, such as 'eg', 'e.g', 'eg.' and so on. It's best, for various reasons, to avoid this. When automated spell checkers are run, these variations can stop the doc build.
+Sometimes writers create variations of Latin abbreviations, such as 'eg', 'e.g', 'eg.' and so on. It's best, for various reasons, to avoid this. When automated spell checkers are run, these variations can stop the doc build. As stated previously, to avoid this possible inconsistency creeping in, avoid using Latin abbreviations altogether.
 
-Avoid Latin phrases such as "quid pro quo", "ad nauseum", "vis-a-vis". They can also be less convenient to translate.
+Avoid Latin phrases such as "quid pro quo", "ad nauseum", "vis-a-vis". They can also be less convenient to translate, and not everyone is familiar with their meaning.
 
 ## Avoid slang
 
@@ -169,7 +183,7 @@ For example:
 
 ## Avoid words that are rarely used
 
-Avoid unusual words that have a more commonly used equivalent.
+Avoid unusual words that have a more commonly used equivalent, unless doing so would compromise clarity and accuracy.
 
 Some words are less frequently used, but have a more commonly used alternative word or phrase.
 
@@ -180,7 +194,7 @@ Some example suggested replacements:
 * Use 'compatible' rather than 'concordant'.
 * Use 'with regard to' rather than 'apropos' (if 'apropos' is being used as a preposition).
 
-The aim is to keep things simple, avoid possible confusion, and aid translation.
+The aim is to keep things simple, avoid possible confusion, and aid translation, while retaining accuracy of meaning.
 
 ## Capitalization
 
@@ -188,7 +202,7 @@ Try to be consistent with capitalization of headings.
 
 The guidance here is to use sentence case for most things, as per the [Microsoft Style Guide](https://docs.microsoft.com/en-us/style-guide).
 
-There are some exceptions: for example, the names of products, the titles of stand-alone manuals or guides, whitepaper or article titles, and the titles of people would use word case.
+There are some exceptions: for example, the names of products, the titles of stand-alone manuals or guides, whitepaper or article titles, and the titles of people, should use title case. If you do need to use title case, you can use one of the widely available [tools](https://titlecaseconverter.com/).
 
 So, unless there is a good reason not to, use sentence case (first letter is capitalized).
 
