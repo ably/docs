@@ -78,15 +78,15 @@ Rather than say how simple it is to do something, show the developer through spe
 
 It's generally fine to use common contractions, as long as the intent is clear. Where there may be the possibility for confusion, be explicit, for example, use "it is" or "it has" if using "it's" could lead to confusion. One common error is to use "it's" in the belief that the apostophe is required if used in a possessive manner. This is never the case. For example:
 
-* Incorrect: "Ably persists it's data in memory for two minutes."
-* Correct: "Ably persists its data in memory for two minutes."
+* *Incorrect:* "Ably persists it's data in memory for two minutes."
+* *Correct:* "Ably persists its data in memory for two minutes."
 
 ## Number words
 
 For small numbers generally you write the number as a word:
 
-* Avoid: "Ably persists messages in memory for 2 minutes."
-* Better: "Ably persists messages in memory for two minutes."
+* *Avoid:* "Ably persists messages in memory for 2 minutes."
+* *Better:* "Ably persists messages in memory for two minutes."
 
 Larger numbers can stay as numerals, or where precision is required.
 
@@ -121,10 +121,10 @@ Avoid words such as would, should, might, and maybe, as it does not inspire conf
 
 Example:
 
-* Avoid: When an inbound message arrives, you might receive it, or you might get an error, or something!
-* Better: When an inbound message arrives, the message callback handler is invoked.
-* Avoid: If you click the button, the alert box will probably be displayed.
-* Better: When you click the `Submit` button, the alert box is displayed.
+* *Avoid:* When an inbound message arrives, you might receive it, or you might get an error, or something!
+* *Better:* When an inbound message arrives, the message callback handler is invoked.
+* *Avoid:* If you click the button, the alert box will probably be displayed.
+* *Better:* When you click the `Submit` button, the alert box is displayed.
 
 ## Use second person
 
@@ -134,7 +134,7 @@ The reason for generally avoiding 'we' is that it can potentially create confusi
 
 Consider the following, for example:
 
-* Avoid: We now configure the Time To Live (TTL).
+* *Avoid:* We now configure the Time To Live (TTL).
 
 Is that something Ably configures on the developer's behalf, or does the developer have to do it, and if so how?
 
@@ -248,8 +248,8 @@ Sometimes there are exceptions to this. For example in cryptography, it is an es
 
 Avoid using 'he or she' constructs. For example:
 
-* Avoid: The developer can invoke the method, and then he or she can check the return code.
-* Better: You can invoke the `connection_state()` method and then check the status code returned.
+* *Avoid:* The developer can invoke the method, and then he or she can check the return code.
+* *Better:* You can invoke the `connection_state()` method and then check the status code returned.
 
 ## Use correct case
 
