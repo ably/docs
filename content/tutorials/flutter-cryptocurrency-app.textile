@@ -357,14 +357,16 @@ StreamBuilder<ably.ConnectionStateChange>(
       if (!snapshot.hasData) {
         return CircularProgressIndicator();
       } else if (snapshot.data.event == ably.ConnectionEvent.connected) {
-       // return the list of graphs, 
+
+         //TODO return the list of graphs
          SingleChildScrollView(
             //see below
          );
+
       } else if (snapshot.data.event == ably.ConnectionEvent.failed) {
         return Center(child: Text("No connection."));
       } else {
-    // in a real app we would also add handling of possible errors
+        // in a real app we would also add some handling of possible errors
         return CircularProgressIndicator();
       }
     },
@@ -374,6 +376,8 @@ StreamBuilder<ably.ConnectionStateChange>(
 Now that all cases are handled, let’s display the list of charts if the connection was successful.
 
 h3(#display-charts). 3.7. Displaying Charts with Real Data
+
+Now it's time to make the actual content of the dashboard, the charts. We will loop over @prices@ and return a @CoinGraphItem@ for each coin.
 
 ```[flutter]
 SingleChildScrollView(
@@ -387,7 +391,7 @@ SingleChildScrollView(
 ```
 Instead of using a @ListView.builder@, it’s just a @Column@, with a @for-collection@, we found this to be more convenient in this case, since the @ListView@ by default will dispose the states of any child that isn’t visible anymore. That's good behaviour in case a list is very long, but since we know already the number of graphs is limited, and we don’t want them to dispose and rebuild each time the user scrolls up or down, a @Column@ is totally fine.
 
-Each @CoinGraphItem@ widget will require @CoinUpdates@, and since it’s extending ChangeNotifier, it will register a listener for prices updates, and push each new price coming into a @Queue@ because if we would use a List, after some time the size of the list will get  huge, and require too much resources, and we don’t really have to show all the history of prices, just the latest 100 would be enough. With a Queue it’s easy to remove the first item if the length exceeds a certain length.
+Make a StatefulWidget and give it a name @CoinGraphItem@. Each @CoinGraphItem@ widget will require @CoinUpdates@, and since it’s extending ChangeNotifier, it will register a listener for prices updates, and push each new price coming into a @Queue@ because if we would use a List, after some time the size of the list will get  huge, and require too much resources, and we don’t really have to show all the history of prices, just the latest 100 would be enough. With a Queue it’s easy to remove the first item if the length exceeds a certain length.
 
 ```[flutter]
 Queue<Coin> queue = Queue();
@@ -430,34 +434,104 @@ All set up and ready! We just need the queue to be turned into a list for the gr
 Here we will use the Syncfusion charts package to render the charts, but any other charts library should work well.
 
 ```[flutter]
-SfCartesianChart(
-  enableAxisAnimation: true,
-  primaryXAxis: DateTimeAxis(
-    dateFormat: intl.DateFormat.Hms(),
-    intervalType: DateTimeIntervalType.minutes,
-    desiredIntervals: 10,
-    axisLine: AxisLine(width: 2, color: Colors.white),
-    majorTickLines: MajorTickLines(color: Colors.transparent),
-  ),
-  primaryYAxis: NumericAxis(
-    desiredIntervals: 6,
-    decimalPlaces: 4,
-    axisLine: AxisLine(width: 2, color: Colors.white),
-    majorTickLines: MajorTickLines(color: Colors.transparent),
-  ),
-  plotAreaBorderColor: Colors.white.withOpacity(0.2),
-  plotAreaBorderWidth: 0.2,
-  series: <LineSeries<Coin, DateTime>>[
-    LineSeries<Coin, DateTime>(
-      animationDuration: 0.0,
-      width: 2,
-      color: Theme.of(context).primaryColor,
-      dataSource: queue.toList(),
-      xValueMapper: (Coin coin, _) => coin.dateTime,
-      yValueMapper: (Coin coin, _) => coin.price,
-    )
-  ],
-)
+@override
+Widget build(BuildContext context) {
+  return Container(
+    margin: EdgeInsets.all(15),
+    padding: EdgeInsets.all(15),
+    height: 410,
+    decoration: BoxDecoration(
+        color: Color(0xffEDEDED).withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8.0)),
+    child: AnimatedSwitcher(
+      duration: Duration(milliseconds: 500),
+      child: queue.isEmpty
+          ? Center(
+              key: UniqueKey(),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(
+                    height: 24,
+                  ),
+                  Text('Waiting for coin data...')
+                ],
+              ),
+            )
+          : Column(
+              key: ValueKey(coinName),
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    FlatButton(
+                      onPressed: () => _navigateToTwitterFeed(coinName),
+                      textColor: Colors.white,
+                      child: Row(
+                        children: [
+                          Image.asset(
+                            'assets/icon_awesome_twitter.png',
+                            height: 20,
+                          ),
+                          SizedBox(width: 10),
+                          Text(
+                            "#$coinName",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    AnimatedSwitcher(
+                      duration: Duration(milliseconds: 200),
+                      child: Text(
+                        "\$${widget.coinUpdates.coin.price.toStringAsFixed(2)}",
+                        key: ValueKey(widget.coinUpdates.coin.price),
+                        style: TextStyle(
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 25),
+                SfCartesianChart(
+                  enableAxisAnimation: true,
+                  primaryXAxis: DateTimeAxis(
+                    dateFormat: intl.DateFormat.Hms(),
+                    intervalType: DateTimeIntervalType.minutes,
+                    desiredIntervals: 10,
+                    axisLine: AxisLine(width: 2, color: Colors.white),
+                    majorTickLines: MajorTickLines(color: Colors.transparent),
+                  ),
+                  primaryYAxis: NumericAxis(
+                    numberFormat: intl.NumberFormat('##,###.00'),
+                    desiredIntervals: 5,
+                    decimalPlaces: 2,
+                    axisLine: AxisLine(width: 2, color: Colors.white),
+                    majorTickLines: MajorTickLines(color: Colors.transparent),
+                  ),
+                  plotAreaBorderColor: Colors.white.withOpacity(0.2),
+                  plotAreaBorderWidth: 0.2,
+                  series: <LineSeries<Coin, DateTime>>[
+                    LineSeries<Coin, DateTime>(
+                      animationDuration: 0.0,
+                      width: 2,
+                      color: Theme.of(context).primaryColor,
+                      dataSource: queue.toList(),
+                      xValueMapper: (Coin coin, _) => coin.dateTime,
+                      yValueMapper: (Coin coin, _) => coin.price,
+                    )
+                  ],
+                )
+              ],
+            ),
+    ),
+  );
+}
 ```
 
 With that we finished building the first page, fully functional with realtime updates from Ably Cryptocurrency Hub.
