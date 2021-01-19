@@ -1,5 +1,6 @@
 module LinkHelper
   CANONICAL_ROOT = 'https://www.ably.io/' unless defined?(CANONICAL_ROOT)
+  DOCS_ROOT = 'https://docs.ably.io/' unless defined?(DOCS_ROOT)
 
   def link(text, target, attributes = {})
     target = "/#{target}" unless target.match(/^(\w+:\/\/|\/)/)
@@ -13,6 +14,11 @@ module LinkHelper
     else
       "#{CANONICAL_ROOT}documentation#{clean_item.gsub("/root", "")}".gsub(%r{/$}, '')
     end
+  end
+
+  def image_url(image_path)
+    return image_path if image_path.match(/^http/)
+    "#{DOCS_ROOT}#{image_path.gsub(%r{^/}, '')}"
   end
 end
 
