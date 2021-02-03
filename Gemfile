@@ -31,3 +31,6 @@ gem 'json'
 # Debugging
 gem 'pry'
 gem 'pry-byebug'
+
+# Content checking
+gem 'nokogiri'
