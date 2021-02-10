@@ -1,1 +1,1 @@
-This repository is owned by the Ably Product team.
+This repository is owned by the Ably Documentation team.
