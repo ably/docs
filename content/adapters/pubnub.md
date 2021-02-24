@@ -1,6 +1,6 @@
 # Ably Pubnub protocol adapter
 
-**For a step-by-step tutorial to using the Pubnub protocol adapter, see https://www.ably.io/tutorials/pubnub-adapter**
+**For a step-by-step tutorial to using the Pubnub protocol adapter, see https://ably.com/tutorials/pubnub-adapter**
 
 ## Example
 
@@ -81,7 +81,7 @@ Please note:
 
 ### Presence and state
 
-- Pubnub's `UUID` is mapped to Ably's [`clientId`](https://www.ably.io/documentation/realtime/authentication#identified-clients).
+- Pubnub's `UUID` is mapped to Ably's [`clientId`](https://ably.com/documentation/realtime/authentication#identified-clients).
 - Pubnub considers the same `UUID` to be the same member; Ably considers the same `clientid` on different connections to be different members of the presence set. As such, if you have multiple connections with the same `clientId`, the presence set will contain that `clientId` multiple times. Ably does this so that if you have multiple devices connected with the same `clientId` you can check which devices are present. If getting the state for a `clientId`, if there are multiple members in the set with the same `clientId`, the adapter will just pick one and return its state.
 - Pubnub's member state is mapped to Ably's presence data. With presence data, member aren't permitted to change other members' presence data. So each client can only set its own state, not other people's.
 
