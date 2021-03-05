@@ -1,0 +1,327 @@
+---
+title: Control API Reference type 2
+section: control-api
+index: 10
+jump_to:
+  Applications API:
+    - list
+    - create
+    - update
+    - delete
+---
+
+Overview blurb if required.
+
+h1(#api). API routes
+
+h2(#channel). Application routes
+
+Routes providing to list, create, delete and update applications within an account.
+
+h3(#list). List the applications in an account
+
+h6. GET https://control.ably.net/v1/accounts/@accountId@/apps
+
+Lists the applications for the specified @accountId@.
+
+Example request:
+
+bc[sh]. curl "https://control.ably.net/v1/accounts/<YOUR_ACCOUNT_ID>/apps" \
+     -H 'Authorization: Bearer <YOUR_ACCESS_TOKEN>' \
+     -H 'Accept: application/json'
+
+h5. Path parameters
+
+- account_id := required string
+
+
+h5. Parameters
+
+- enveloped := if present and equal to @false@, does an "unenveloped publish":#unenveloped
+
+h5. Options
+
+- Content-Type := @application/json@, @application/x-msgpack@ or @application/x-www-form-urlencoded@
+- Accept := @application/json@ (the default), @application/x-msgpack@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+Example response:
+
+```[json]
+[
+  {
+    "id": "28AB6w",
+    "name": "Default",
+    "status": "enabled",
+    "tlsOnly": true,
+    "enablePusherCompatibility": false,
+    "fcmKey": null,
+    "apnsCertificate": null,
+    "apnsUseSandboxEndpoint": false
+  },
+  {
+    "id": "dcABrA",
+    "name": "TestApp",
+    "status": "deleted",
+    "tlsOnly": true,
+    "enablePusherCompatibility": false,
+    "fcmKey": null,
+    "apnsCertificate": null,
+    "apnsUseSandboxEndpoint": false
+  }
+]
+```
+
+h3(#create). Create an application
+
+h6. POST https://control.ably.net/v1/accounts/@accountId@/apps
+
+Create an application.
+
+h5. Parameters
+
+- enveloped := if present and equal to @false@, does an "unenveloped publish":#unenveloped
+
+h5. Options
+
+- Content-Type := @application/json@, @application/x-msgpack@ or @application/x-www-form-urlencoded@
+- Accept := @application/json@ (the default), @application/x-msgpack@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+When successful, returns an object with @channel@ and @messageId@ properties, in case you want to know the message ID assigned to correlate with messages received by realtime subscribers or Reactor recipients. When unsuccessful, returns an error as an "ErrorInfo":/rest/types#error-info object.
+
+
+<hr/>
+<hr/>
+
+h5(#idempotent-publish). Idempotent publishing
+
+It is possible for a client publishing through REST to not receive an acknowledgement of receipt from Ably for numerous reasons such as network failures outside of our control. In this scenario, you will likely wish to re-publish the message, but not risk duplicating it within the network. This is possible through the addition of an @id@ in the body of your POST, where the @id@ should uniquely identify the message.
+
+h5(#message-extras). Message extras
+
+Messages can include an optional @extras@ field, used by extensions to Ably's core realtime service.
+
+h5(#message-extras-push). Send push notification
+
+You can send a push notification to devices "subscribed to a channel":#post-channel-subscription by setting the @push@ field in the @extras@ object, like this:
+
+bc[json]. {
+  <... message fields ...>
+  extras: {
+    push: {
+      data: <arbitrary key-value string-to-string payload>,
+      notification: {
+        title: <string, title to display at the notification>,
+        body: <string, text below title on the expanded notification>,
+        icon: <string, platform-specific>,
+        sound: <string, platform-specific>,
+        collapseKey: <string, platform-specific, used to group notifications together>
+      }
+      apns: <optional, extends and overrides generic values when delivering via APNs>,
+      fcm: <optional, extends and overrides generic values when delivering via GCM/FCM>,
+      web: <optional, extends and overrides generic values when delivering via web>
+    }
+  }
+}
+
+For each underlying transport service (like APNs, FCM/GCM, etc.) an object can be provided with the same shape as the parent object, plus any transport-specific field you may want to add (e. g. @content-available@ for APNs).
+
+Full example of a request publishing a message with a push payload:
+
+bc[sh]. curl -X POST https://rest.ably.io/channels/push-enabled:rest-example/messages \
+ -u "{{API_KEY}}" \
+ -H "Content-Type: application/json" \
+ --data \
+ '
+{
+  "name": "some event name for realtime receivers",
+  "data": "example non-push data for realtime receivers",
+  "extras": {
+    "push": {
+      "notification": {
+        "title": "Hello from Ably!",
+        "body": "Example push notification from Ably."
+      },
+      "data": {
+        "foo": "bar",
+        "baz": "qux"
+      },
+      "apns": {
+        "notification": {
+          "content-available": 1,
+          "sound": "ably-ios.wav"
+        }
+      }
+    }
+  }
+}
+'
+
+h5. Parameters
+
+- enveloped := if present and equal to @false@, does an "unenveloped publish":#unenveloped
+
+h5. Options
+
+- Content-Type := @application/json@, @application/x-msgpack@ or @application/x-www-form-urlencoded@
+- Accept := @application/json@ (the default), @application/x-msgpack@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+When successful, returns an object with @channel@ and @messageId@ properties, in case you want to know the message ID assigned to correlate with messages received by realtime subscribers or Reactor recipients. When unsuccessful, returns an error as an "ErrorInfo":/rest/types#error-info object.
+
+h3(#unenveloped). Unenveloped publish
+
+If the @enveloped@ parameter is present and set to @false@, the request body is interpreted as the data payload for a message to be published, rather than (as it would normally be) as a @Message@ object or array of @Message@ objects. This can be useful if, for example, you want an Ably publish to be triggered by a webhook from some third-party service where you cannot control the format of the request body.
+
+Example json request:
+
+bc[sh]. curl -X POST https://rest.ably.io/channels/rest-example/messages?enveloped=false \
+-H 'content-type: application/json' --data '{"some":"json"}' \
+-u "{{API_KEY}}"
+
+Example plain text request:
+
+bc[sh]. curl -X POST https://rest.ably.io/channels/rest-example/messages?enveloped=false \
+-H 'content-type: text/plain' --data 'some plain text' \
+-u "{{API_KEY}}"
+
+h5. Headers and parameters
+
+- @X-Ably-MessageId@ := Optional message ID, used for "idempotent publishing":#idempotent-publish. Can also be specified as a @messageId@ querystring parameter. Equivalent to @Message.id@
+- @X-Ably-Name@ := Optional message name. Can also be specified as a @name@ querystring parameter. Equivalent to @Message.name@
+- @X-Ably-ConnectionKey@ := Optional connection key, used to publish on behalf of a realtime connection, see "documentation above":#publish. Can also be specified as a @connectionKey@ querystring parameter. Equivalent to @Message.connectionKey@
+- @X-Ably-Encoding@ := Optional message encoding. Allows you to specify the encoding of the message to allow recipient client libraries to decode it. For example, an encoding of @json@ will instruct client libraries to automatically JSON-parse the message on receipt. Also useful if sending an encrypted message, to allow client libraries to decrypt it (assuming they have the correct key). Must be in the correct format per our "client lib development guide":/client-lib-development-guide/features/#RSL4 ; if unsure, leave this unspecified. Can also be specified as an @encoding@ querystring parameter. Equivalent to @Message.encoding@
+- @X-Ably-ClientId@ := Optional client ID, base64-encoded (to allow arbitrary unicode). Can also be specified as a @clientId@ querystring parameter (_not_ base64-encoded). Equivalent to @Message.clientId@
+
+h5. Options
+
+- Content-Type := @text/plain@ (for @utf-8@ text request bodies) or @application/octet-stream@ (for binary request bodies). @application/json@ will also work, and is equivalent to specifying a content-type of @text/plain@ together with @X-Ably-Encoding@ of @json@.
+- Accept := @application/json@ (the default), @application/x-msgpack@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+When successful, returns an object with @channel@ and @messageId@ properties, in case you want to know the message ID assigned to correlate with messages received by realtime subscribers or Reactor recipients. When unsuccessful, returns an error as an "ErrorInfo":/rest/types#error-info object.
+
+h3(#message-history). Retrieve message history for a channel
+
+h6. GET rest.ably.io/channels/@<channelId>@/messages
+
+If a channel is "configured to persist messages":https://knowledge.ably.com/what-are-channel-rules-and-how-can-i-use-them-in-my-app, then all messages on that channel, within "your account retention period":https://knowledge.ably.com/how-long-are-messages-stored-for, are available via this API endpoint.  If persistence is not configured, then there are no guarantees as to how many historical messages will be available for the channel.  "Find out more about message persistence":https://knowledge.ably.com/how-long-are-messages-stored-for.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/channels/rest-example/messages \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- start := _beginning of time_ The start of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if it was received at or after this time.
+- end := _now_ The end of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if it was received at or before this time.
+- limit := _100_ The maximum number of records to return. A limit greater than 1,000 is invalid.
+- direction := _backwards_ The direction of this query. The direction determines the order of the returned result array, but also determines which end of the query interval is the start point for the search.  For example, a forwards query uses @start@ as the start point, whereas a backwards query uses @end@ as the start point.
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+In each case a successful result is a "paginated response":#pagination with an array containing the items that match the query (and it may be empty).
+
+bc[json]. [{
+  id: <unique message id>
+  name: <event name>,
+  data: <message payload>,
+  timestamp: <message timestamp in ms since epoch>
+}]
+
+h3(#presence). Retrieve instantaneous presence status for a channel
+
+h6. GET rest.ably.io/channels/@<channelId>@/presence
+
+Obtain the set of members currently present for a channel.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/channels/rest-example/presence \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- clientId := optional filter to restrict members present with that @clientId@
+- connectionId := optional filter to restrict members present with that @connectionId@
+- limit := _100_ The maximum number of records to return. A limit greater than 1,000 is invalid.
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+A successful request returns a "paginated response":#pagination with an array containing the members that are currently present on the given channel. If there are no members present, an empty collection is returned.
+
+bc[json]. [{
+  id: <a unique member identifer generated by Ably>,
+  clientId: <member client id provided by the client>,
+  connectionId: <a unique connection id generated by Ably>
+  timestamp: <message timestamp in ms since epoch>
+  action: <presence state>,
+  data: <optional clientData provided by the client>
+}]
+
+h3(#presence-history). Retrieve presence state history for a channel
+
+h6. GET rest.ably.io/channels/@<channelId>@/presence/history
+
+Obtain the history of presence messages for a channel.
+
+Example request:
+
+bc[sh]. curl https://rest.ably.io/channels/rest-example/presence/history \
+ -u "{{API_KEY}}"
+
+h5. Parameters
+
+- start := _beginning of time_ The start of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if it was received at or after this time.
+- end := _now_ The end of the query interval as a time in milliseconds since the epoch. A message qualifies as a member of the result set if it was received at or before this time.
+- limit := _100_ The maximum number of records to return. A limit greater than 1,000 is invalid.
+- direction := _backwards_ The direction of this query. The direction determines the order of the returned result array, but also determines which end of the query interval is the start point for the search.  For example, a forwards query uses @start@ as the start point, whereas a backwards query uses @end@ as the start point.
+
+h5. Options
+
+- Content-Type := not applicable
+- Accept := @application/json@ by default, or @application/x-msgpack@, @text/html@
+- Auth required := yes ("basic":#basic-authentication or "token":#token-authentication)
+
+h5. Returns
+
+A successful request returns a "paginated response":#pagination with an array containing the members that are currently present on the given channel. If there are no members present, an empty collection is returned.
+
+bc[json]. [{
+  id: <a unique member identifer generated by Ably>,
+  clientId: <member client id provided by the client>,
+  connectionId: <a unique connection id generated by Ably>
+  timestamp: <message timestamp in ms since epoch>
+  action: <presence state>,
+  data: <optional clientData provided by the client>
+}]
+
+h3(#metadata-rest). Retrieve metadata for a channel
+
+<%= partial partial_version('shared/_channel_metadata') %>
+
+h3(#enumeration-rest). Enumerate all active channels
+
+<%= partial partial_version('shared/_channel_enumeration') %>
