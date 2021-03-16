@@ -6,19 +6,19 @@ languages:
   - none
 ---
 
+bq. Last updated in March 2021
+
 Multiplayer quizzes are a great way to engage your audience, be it as part of an event or in an e-learning environment. The year 2020 has seen a huge rise in the number of multiplayer quiz applications, allowing people to remotely participate in a live quiz with a host serving them questions and revealing scores as they go.
 
-Be it a standalone quiz like Kahoot, or one that is integrated into your slide deck, like Mentimeter, the semantics of realtime messaging and general architecture for such apps are similar. You can see a few popular products which offer multiplayer quizzes in the image below:
+Be it a standalone quiz like Kahoot, or one that is integrated into your slide deck, like Mentimeter, the semantics of realtime messaging and general architecture for such apps are similar. Some of the popular products which offer multiplayer quizzes are listed below:
 
-<a href="/images/design-patterns/multiplayer-quiz-apps.png" target="_blank">
-  <img src="/images/design-patterns/multiplayer-quiz-apps.png" style="width: 100%" alt="Multiplayer quiz apps">
-</a>
+* "Mentimeter":https://www.mentimeter.com/
+* "Wooclap":https://ably.com/case-studies/wooclap
+* "Kahoot":https://kahoot.com/
+* "Slido":https://www.sli.do/
+* "HQ Trivia":https://en.wikipedia.org/wiki/HQ_(video_game)
 
-In this article, we'll look at the high-level architecture required to build such multiplayer quiz apps and specifically explore the realtime message flow and implementation with Ably.
-
-h3(#ably-in-a-nutshell). Ably in a nutshell
-
-Ably provides APIs to implement pub/sub messaging for the realtime features in your apps. You also get a scalable infrastructure out-of-the-box, along with a suite of services like "presence":/realtime/presence - which shows the online/offline status of various participants, "automatic reconnection and resumption of messages":https://knowledge.ably.com/connection-state-recovery in case of intermittent network issues, "message ordering and guaranteed delivery":https://ably.com/four-pillars-of-dependability#integrity and easy ways to "integrate with third-party APIs":https://ably.com/integrations, etc. "Learn more about the platform":https://www.ably.com/pub-sub-messaging.
+In this article, we'll look at the high-level architecture required to build such multiplayer quiz apps and specifically explore the realtime message flow and implementation.
 
 h2(#basic-features). Basic features in a multiplayer quiz app
 
@@ -30,7 +30,7 @@ The host is generally the curator of the quiz questions and runs the live quiz f
 
 h5. 2. Live scores and leaderboards
 
-As participants answer the questions, they get scored based on accuracy and any other factors like time-to-answer, etc. Based on when and what the answer is, the host and the other participants can see the leaderboard updating with live scores.
+As participants answer the questions, they get scored based on accuracy and any other factors like time-to-answer, etc. Based on the answers registered by a player, the host and the other participants can see the leaderboard updating with live scores.
 
 h5. 3. Synchronized timer
 
@@ -38,31 +38,91 @@ Each question has a limited amount of time within which the participants are req
 
 h5. 4. Being aware of peers
 
-As these are mostly invite-only quizzes, participants like to know how many people are playing alongside them, and who they are.
+As these are mostly invite-only quizzes, participants like to know how many people are playing alongside them, and who they are. So, it is necessary to know the online status changes of all the participants.
 
 h2(#architecture). Architecture
 
-In this section, we'll see an architechtural pattern to build a live multiplayer quiz app.
+In this section, we'll see some architectural patterns to build a live multiplayer quiz app. We'll first understand it from the perspective of a popular infrastructure provider, Amazon Web Services (AWS). We'll see an example multiplayer quiz architecture implemented entirely over AWS then replace some parts with Ably's realtime messaging infrastructure.
 
-A broad-view of the system that runs a multiplayer quiz for three participants would like so:
+A simplified view of the system that runs a multiplayer quiz for three participants would look like so:
 
 <a href="/images/design-patterns/high-level-architecture.png" target="_blank">
   <img src="/images/design-patterns/high-level-architecture.png" style="width: 100%" alt="High level architecture">
 </a>
 
-You would have your server publishing the questions, receiving the answers, checking them and computing the scores, etc. Among the front-end clients, you would have a host controlling the flow of the quiz and participants engaging accordingly.
+You would have your server publishing the questions, receiving the answers, checking them and computing the scores. Among the front-end clients, you would have a host controlling the flow of the quiz and participants engaging accordingly.
 
-The most important aspect in this system is how various messages flow between these components. As shown by the two-sided arrows, we need a way for these components to communicate bi-directionally, in a stateful manner, possibly at high frequency.
+The most important aspect of this system is how various messages flow between these components. As shown by the two-sided arrows, we need a way for these components to communicate bi-directionally, in a stateful manner, possibly at high frequency.
 
-Enter, Ably...
+h4(#ably-in-a-nutshell). Ably in a nutshell
 
-<a href="/images/design-patterns/architecture-with-ably.png" target="_blank">
-  <img src="/images/design-patterns/architecture-with-ably.png" style="width: 100%" alt="Architecture with Ably">
+Ably provides APIs to implement pub/sub messaging for the realtime features in your apps. You also get a globally distributed scalable infrastructure out-of-the-box, along with a suite of services like "presence":/realtime/presence - which shows the online/offline status of various participants, "automatic reconnection and resumption of messages":https://knowledge.ably.com/connection-state-recovery in case of intermittent network issues, "message ordering and guaranteed delivery":https://ably.com/four-pillars-of-dependability#integrity and easy ways to "integrate with third-party APIs":https://ably.com/integrations, etc. 
+
+"Learn more about the platform":https://www.ably.com/pub-sub-messaging.
+
+Ably enables pub/sub messaging, primarily over "WebSockets":https://ably.com/topic/websockets. The concept of "channels":/realtime/channels allows you to categorize the data and decide which components have access to which channels. You can also specify "capabilities":/core-features/authentication#capabilities-explained for various participants on these channels like publish-only, subscribe-only, message history, etc. 
+
+Before we get into some architecture diagrams, let's understand it from the perspective of a major infrastructure provider - Amazon Web Services (AWS). We'll see an example multiplayer quiz architecture implemented entirely on AWS then replace some parts with Ably's realtime messaging infrastructure.
+
+h3(#aws-architecture-single-region). Multiplayer quiz architecture with AWS (single region)
+
+Among the plethora of web services offered by Amazon, we'd need roughly the following components to run a live quiz globally, at scale.
+
+<a href="/images/design-patterns/Diagram1.png" target="_blank">
+  <img src="/images/design-patterns/Diagram1.png" style="width: 100%" alt="Channels in Ably">
 </a>
 
-Ably enables pub/sub messaging, primarily over WebSockets. The concept of "channels":/realtime/channels allows you to categorize the data and decide which components have access to which channel. You can also specify "capabilities":/core-features/authentication#capabilities-explained for various participants on these channels like publish-only, subscribe-only, message history, or both, etc. 
+Let's break it down. 
 
-An example of using the Ably Realtime API to publish and subscribe messages over channels is shown below:
+We already saw the front-end clients for this example - a quiz host with three participants. They need to communicate with the backend server. In this case, we can assume the server-side logic to be hosted on autoscaling EC2 instances behind a load balancer.
+
+Our front-end clients can access the quiz app via Route53 and Cloudfront, before reaching the Elastic load balancer that decides which out of the available EC2 instances would serve this request. 
+
+The backend VPC also communicates with the storage i.e. S3 buckets and DynamoDB to store and retrieve various pieces of information and assets.
+
+We also have some Lambda Functions that will be triggered at different points in the server-side logic of the quiz. If our front-end clients also need to access the Lambda functions, they can do so via the API gateway. 
+
+This is all good for REST-based communication, which works based on stateless request/ response cycles. As we discussed before, what we need in addition to this is Pub/Sub based realtime communication capabilities. To enable this with Amazon Web Services, we'll need an Elastic Cache for Redis to serve as a global datastore with Pub/Sub messaging capabilities. Our backend servers hosted as EC2 instances will stay in-sync with various updates within sub-millisecond latencies via this Redis cache.
+
+This is all in the backend though. To enable scalable Pub/Sub for our front-end clients, AWS recommends using the IoT core service which enables WebSockets over the MQTT protocol. You also need an authentication mechanism for the front-end clients to securely reach the IoT core. The Cognito service helps with this aspect.
+
+While this enables app-based pub/sub messaging with the backend services, we'd still need something like SNS (Simple Notification Service) to push updates even when the app is not in use. This could be a Mobile push notification to let our players know that a new quiz is starting, an email alert, etc. If we'd like to know the online status of the front-end clients, we'd need to implement that logic ourselves and publish messages when different events such as internet failures or app closures occur.
+
+Let's now see how we can minimize efforts by replacing the realtime messaging with Ably.
+
+h3(#ably-architecture-single-region). Multiplayer quiz architecture with Ably
+
+With Ably, you immediately get a bunch of features right out-of-the-box.
+
+
+<a href="/images/design-patterns/Diagram2.png" target="_blank">
+  <img src="/images/design-patterns/Diagram2.png" style="width: 100%" alt="Channels in Ably">
+</a>
+
+
+Ably automatically runs in multiple regions globally and internally does all the smart routing without any configuration required by the developer. Ably can also communicate directly (via Pub/Sub and REST) with both backend and front-end services. This does away with the extra work of keeping the scalable backend in-sync within itself, then additionally keeping the front-end clients in sync with all of that.
+
+Hence, we can get rid of the Redis cache as well as the IoT core and the API gateway. We can also get rid of the SNS topics because Ably also provides push notifications and direct integrations with third-party services via WebHooks.
+
+h3(#architecture-mulitple-regions). Adding multi-region support for reduced latencies
+
+Let's go back to the AWS architecture for a second. What we saw earlier was the implementation of these services for a single region. For a live quiz to be hosted globally, you want all the participants to not only be in-sync but also maintain sub-millisecond latencies. This is only possible by ensuring that all clients are routed to a node nearest to them based on their geographic location.
+
+To enable this, we'd need to replicate almost all of the services in multiple regions across the globe. 
+
+<a href="/images/design-patterns/Diagram3.png" target="_blank">
+  <img src="/images/design-patterns/Diagram3.png" style="width: 100%" alt="Channels in Ably">
+</a>
+
+This will not only need extra maintenance effort but also more configuration and development to ensure these multiple regions are also in sync with each other at all times. This can be done using a service like SNS, SQS, etc, while still maintaining sub-millisecond latencies at all times. That is a lot of work! 
+
+On the contrary, we can easily use Ably to provide high-speed realtime messaging at scale. We can keep using AWS services to run the backend logic for the quiz but we no longer need to deal with syncing various components in realtime as we'll using Ably to do that. Ably itself masks all of the infrastructure and allows us to write just a few lines of code irrespective of the scale, smart routing and other distributed systems woes.
+
+<a href="/images/design-patterns/Diagram4.png" target="_blank">
+  <img src="/images/design-patterns/Diagram4.png" style="width: 100%" alt="Channels in Ably">
+</a>
+
+An example of using the Ably Realtime API to publish and subscribe to messages over channels is shown below:
 
 ```[javascript](code-editor:realtime/channel-publish)
   const realtime = new Ably.Realtime('{{API_KEY}}');
@@ -73,21 +133,24 @@ An example of using the Ably Realtime API to publish and subscribe messages over
   channel.publish('example', 'message data');
 ```
 
-For a multiplayer quiz app, the specific channels could be the following:
+h2(#channels-in-quiz-app). A close look at channels for multiplayer quiz
+
+If we go back to the first diagram we saw, we can consider any service, AWS or not, to implement our backend. We can enable realtime messaging between any of these components via the Ably platform and also connect any other third-party services or applications via WebHooks, queues or Firehose.
+
+For a multiplayer quiz app, the specific channels with Ably could be visualized as the following:
 
 <a href="/images/design-patterns/quiz-channels-architecture.png" target="_blank">
   <img src="/images/design-patterns/quiz-channels-architecture.png" style="width: 100%" alt="Channels in Ably">
 </a>
 
-
-Let's understand the above diagram in a bit more depth based on the categories of messages we'd like to stream between various compoenents.
+Let's understand the above diagram in a bit more depth based on the categories of messages we'd like to stream between various components.
 
 h3(#channels). Channels usage
 
 
 1. The @host-admin-ch@ channel
 
-This channel is specifically meant for the host to trigger various events on the server like starting the quiz, showing the next question, etc. As you can see, none of the participants are part of this channel. We would want only the host to have admin rights to trigger such events.
+This channel is specifically meant for the host to trigger various events on the server like starting the quiz, showing the next question, etc. As you can see, none of the participants is part of this channel. We would want only the host to have admin rights to trigger such events.
 
 2. The @quiz-ch@ channel
 
@@ -95,18 +158,18 @@ This channel is the main quiz channel transporting most of the quiz related data
 
 3. The @player-bob-ch@ channel
 
-A dedicated channel for Player Bob to publish their answers for the questions in the quiz.
+A dedicated channel for Player Bob to publish their answers to the questions in the quiz.
 
 4. The @player-lisa-ch@ channel
 
-A dedicated channel for Player Lisa to publish their answers for the questions in the quiz.
+A dedicated channel for Player Lisa to publish their answers to the questions in the quiz.
 
 5. The @player-kai-ch@ channel
 
-A dedicated channel for Player Lisa to publish their answers for the questions in the quiz.
+A dedicated channel for Player Lisa to publish their answers to the questions in the quiz.
 
 
-Please note that this is only an example architecture. It is of course possible to have lesser or more number of channels as per your use-case. 
+Please note that this is only an architectural pattern. It is of course possible to have a lesser or more number of channels as per your use-case. 
 
 You can also use a single channel for all the players to publish their answers and use "event names":/realtime/messages#name to let the server know which data belongs to which player, etc. 
 
@@ -117,9 +180,9 @@ You can start with this and update the architecture to whatever suits your app t
 
 h3(#presence). Understanding who is online
 
-The "presence":/core-features/presence feature allows participants to register their 'online/offline' status with Ably. We can use the @quiz-ch@ channel to manage the presence set as well. All we need to do is have our host and participants enter the presence set as soon as they connect. They'll automatically disappear from the presence set if they get disconnected for a long period due to internet issues or quit the app. 
+The "presence":/core-features/presence feature allows us to see the 'online/offline' status of participants. We can use the @quiz-ch@ channel to manage the presence set as well. All we need to do is have our host and participants enter the presence set as soon as they connect. They'll automatically disappear from the presence set if they get disconnected for a long period due to internet issues or quit the app. There's no need to separately handle this logic yourself.
 
-Here's a quick snippet showing how presence works:
+Here's a quick snippet to show how presence works:
 
 ```[javascript](code-editor:realtime/presence-simple)
   const realtime = new Ably.Realtime({
@@ -133,32 +196,32 @@ Here's a quick snippet showing how presence works:
   channel.presence.enter();
 ```
 
-You'll see in the demo application that only the quiz server has subscribed to presence entries and leaves to accordingly manage the participants, live stats, scores and leaderboard, etc. It is possible to have all the components subscribe to presence events as well but "that will lead to an n-squared complexity, making it difficult to scale":https://knowledge.ably.com/why-do-you-have-a-limit-on-the-number-of-members-present-on-a-channel.
+You'll see in the demo quiz app (linked in the next section) that only the quiz server has subscribed to presence entries and leaves to accordingly manage the participants, live stats, scores and leaderboard, etc. It is possible to have all the components subscribe to presence events as well but "that will lead to an n-squared complexity, making it difficult to scale":https://knowledge.ably.com/why-do-you-have-a-limit-on-the-number-of-members-present-on-a-channel.
 
 h2(#starter-kit-demo). Starter kit and demo
 
-We have built a starter kit in NodeJS and VueJS by following the architecture explained in this article. You can use it as a starting point and customize it as per your needs or take a look at the open-source project and build your own from scratch.
+To summarise everything discussed so far, we have built a starter kit in NodeJS and VueJS by following the architecture explained in this article. You can use it as a starting point and customize it as per your needs or take a look at the open-source project to understand it further and build your own from scratch.
 
 <a href="/images/design-patterns/host-and-players.png" target="_blank">
   <img src="/images/design-patterns/host-and-players.png" style="width: 100%" alt="Host and Players">
 </a>
 
-The demo additionally implements the "worker threads feature in NodeJS":https://nodejs.org/api/worker_threads.html to enable multiple quiz rooms, allowing various hosts to simultaneously host their quizzes to groups of participants. Check out the "GitHub repo":https://github.com/ably-labs/realtime-quiz-framework to learn more.
+This demo implements the "worker threads feature in NodeJS":https://nodejs.org/api/worker_threads.html to enable multiple quiz rooms, allowing various hosts to simultaneously host their quizzes to groups of participants. Check out the "GitHub repo":https://github.com/ably-labs/realtime-quiz-framework to learn more.
 
 You can also "try out the live demo":https://quiz.ably.dev yourself.
 
 h2(#extensions). Extensions and integrations
 
-You saw a very basic architecture enough to build a multiplayer quiz app easily. However, in the real world you may need to add some more components in your system design. 
+You saw a very basic architecture enough to build a multiplayer quiz app easily. However, in the real world, you may need to add some more components to your system design. 
 
 In terms of the realtime messaging architecture, Ably owns, manages and maintains a powerful distributed systems architecture that can scale flexibly as needed by various clients. The implementation remains the same irrespective of the scale.
 
-In terms of your product specific custom architecture, you may want to add other components such as a database, maybe trigger a cloud function to perform some computation, or even stream messages to a third-party service. Ably provides "easy ways to integrate with external APIs and services":https://ably.com/integrations via WebHooks, Message Queues or Firehose. You just need to set up an end-point on your dashboard, specify the channel names along with a few other details, Ably will automatically publish messages in realtime to these external components.
+In terms of your product-specific custom architecture, you may want to add other components such as a database, maybe trigger a cloud function to perform some computation, or even stream messages to a third-party service. Ably provides "easy ways to integrate with external APIs and services":https://ably.com/integrations via WebHooks, Message Queues or Firehose. You just need to set up an end-point on your dashboard, specify the channel names along with a few other details and Ably will automatically publish messages in realtime to these external components whenever there's a new message on the relevant channels.
 
-You can also make use of incoming WebHooks to trigger a message on an Ably channel from an external service. (Think allowing participants to answer your quiz via SMS messages!)
+You can also make use of incoming WebHooks to trigger a message on an Ably channel from an external service. (Think of a scenario where you allow participants to answer your quiz via SMS messages!)
 
 ---
 
-We are very excited to see your multiplayer quiz app built with Ably! Tweet your products at us "@ablyrealtime":https://twitter.com/ablyrealtime.
+Hope this article gives you a headstart into building live audience engagement features at scale. We are excited to see your multiplayer quiz app built with Ably! Tweet your products at us "@ablyrealtime":https://twitter.com/ablyrealtime.
 
 Got questions or concerns? "Talk to us":https://ably.com/contact, we are happy to help.
