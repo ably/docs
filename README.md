@@ -2,11 +2,11 @@
 
 [Ably](https://ably.com) is a scalable, fast, and secure hosted realtime messaging service for web-enabled devices.
 
-The static site generated from this repository is hosted at <http://docs.ably.com> and deployed automatically when the `main` branch is updated.
+The static site generated from this repository is hosted at <https://docs.ably.com> and deployed automatically when the `main` branch is updated.
 
 We frequently publish updates from this repository so is typically more up to date than the official Ably documentation which can be found at <https://ably.com/documentation>.
 
-This Git repository uses the [Textile](https://redcloth.org/textile) format with [Nanoc](http://nanoc.stoneship.org/) used to build the static site from the `main` branch.
+This Git repository uses the [Textile](https://textile-lang.com/) format with [Nanoc](https://nanoc.ws/) used to build the static site from the `main` branch.
 
 For more information on writing documentation for Ably, please see the following resources:
 
