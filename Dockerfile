@@ -1,7 +1,7 @@
 ARG RUBY_VERSION
 
 FROM ruby:${RUBY_VERSION}-alpine
-MAINTAINER Ably <support@ably.io>
+MAINTAINER Ably <support@ably.com>
 
 ENV BUILD_PACKAGES bash curl-dev build-base make gcc libc-dev ncurses-dev
 

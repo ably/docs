@@ -1,6 +1,6 @@
 # Ably Pubnub protocol adapter
 
-**For a step-by-step tutorial to using the Pubnub protocol adapter, see https://www.ably.io/tutorials/pubnub-adapter**
+**For a step-by-step tutorial to using the Pubnub protocol adapter, see https://ably.com/tutorials/pubnub-adapter**
 
 ## Example
 
@@ -36,7 +36,7 @@ pubnub = Pubnub.new(
 
 Please note:
 
-* For simplicity, the above example uses the Pubnub JavaScript library. All other Pubnub client libraries can be instanced in a similar fashion. See the [complete list of Pubnub SDKs and their documentation](https://www.pubnub.com/docs).
+* For simplicity, the above example uses the Pubnub JavaScript library. All other Pubnub client libraries can be instanced in a similar fashion. See the [complete list of Pubnub SDKs and their documentation](https://www.pubnub.com/docs/).
 * You can add any other Pubnub options you would normally use in the initializer.
 * Don't try to use different Ably API keys for the `publish_key` and `subscribe_key`. Unlike Pubnub, Ably does not use different keys for publish and subscribe; instead, capabilities are connection-oriented, and the Adapter will use whatever you pass as the `subscribe_key` to create the Ably connection. If that key does not have publish capabilities, you will not be able to publish, whatever the `publish_key` has.
 * The `ssl` option is not mandatory, but strongly recommended. The Pubnub client includes the raw api key in the path that it connects to, so we strongly advise you to use this option to prevent it being sent in plain text.
@@ -68,7 +68,7 @@ Please note:
 - Using the Pubnub adapter will likely be slightly slower than using a native Ably library due to the overhead of protocol translation. Typically the impact is in the low milliseconds
 - Some things which are quick with Pubnub are slow or impossible with Ably, and vice versa. Some things which in Pubnub are single operations (e.g. global herenow) are translated to many different operations, and will be correspondingly slower. Some operations (e.g. wherenow) are unlikely to ever be supported in the adapter, as they have no Ably equivalent.
 - Behind the scenes, the adapter just uses the normal Ably service, so there is no problem with using Pubnub and Ably client libraries side by side: they are completely interoperable, subject to a few caveats below.
-- Finally, many of the advantages of Ably over Pubnub (using [websockets rather than long polling](https://support.ably.com/solution/articles/3000044831-which-transports-are-supported-), [continuity guarantees](https://support.ably.com/solution/articles/3000044639-connection-state-recovery), [fallback host support](https://support.ably.com/solution/articles/3000044636-routing-around-network-and-dns-issues) etc.) are unavailable when using Pubnub client libraries. If a native Ably library is available for your platform, we recommend you consider using the Ably client libraries instead or at least make a plan to eventually transition over to Ably native client libraries.
+- Finally, many of the advantages of Ably over Pubnub (using [websockets rather than long polling](https://knowledge.ably.com/which-transports-are-supported), [continuity guarantees](https://knowledge.ably.com/connection-state-recovery), [fallback host support](https://knowledge.ably.com/routing-around-network-and-dns-issues) etc.) are unavailable when using Pubnub client libraries. If a native Ably library is available for your platform, we recommend you consider using the Ably client libraries instead or at least make a plan to eventually transition over to Ably native client libraries.
 
 ### Publishing and subscribing
 
@@ -81,7 +81,7 @@ Please note:
 
 ### Presence and state
 
-- Pubnub's `UUID` is mapped to Ably's [`clientId`](https://www.ably.io/documentation/realtime/authentication#identified-clients).
+- Pubnub's `UUID` is mapped to Ably's [`clientId`](https://ably.com/documentation/realtime/authentication#identified-clients).
 - Pubnub considers the same `UUID` to be the same member; Ably considers the same `clientid` on different connections to be different members of the presence set. As such, if you have multiple connections with the same `clientId`, the presence set will contain that `clientId` multiple times. Ably does this so that if you have multiple devices connected with the same `clientId` you can check which devices are present. If getting the state for a `clientId`, if there are multiple members in the set with the same `clientId`, the adapter will just pick one and return its state.
 - Pubnub's member state is mapped to Ably's presence data. With presence data, member aren't permitted to change other members' presence data. So each client can only set its own state, not other people's.
 
