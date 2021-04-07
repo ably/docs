@@ -11,6 +11,8 @@ gem 'gist'
 gem 'jsbin-client'
 
 # Web server for `nanoc view`
+gem 'webrick'
+
 gem 'adsf'
 
 # Guard for automatic rebuilding of static site
