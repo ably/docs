@@ -4,7 +4,7 @@ Each batched message will have the following fields:
 - webhookId := an internal unique ID for the configured webhook
 - source := the source for the webhook, namely "@channel.message@", "@channel.presence@", "@channel.lifecycle@"
 - timestamp := a timestamp represented as milliseconds since the epoch for the presence event
-- data := an object containing the data of the event defined below in "JSONPath format":http://goessner.net/articles/JsonPath
+- data := an object containing the data of the event defined below in "JSONPath format":https://goessner.net/articles/JsonPath/
 
 h4(#batch-example-message). Batched message events
 
@@ -12,31 +12,50 @@ For @message@ events, @data@ will contain:
 
 - data.channelId := name of the channel that the presence event belongs to
 - data.site := an internal site identifier indicating which primary datacenter the member is present in
-- data.messages := an @Array@ of "@Message@":/rest/messages#properties
+- data.messages := an @Array@ of raw messages
 
-minimize. View batched @message@ payload example
-  ```[json]
-  {
-    "items": [{
-      "webhookId": "ABcDEf",
-      "source": "channel.lifecycle",
-      "timestamp": 1562124922426,
-      "serial": "a7bcdEFghIjklm123456789:4",
-      "name": "channel.message",
-      "data": {
-        "channelId": "channelName",
-        "site": "eu-west-1-A",
-        "messages": [{
-          "id": "ABcDefgHIj:1:0",
-          "connectionId": "ABcDefgHIj",
-          "timestamp": 1123145678900,
-          "data": "some message data",
-          "name": "my message name"
-        }]
-      }
-    }]
-  }
-  ```
+The following is an example of a batched @message@ payload:
+
+```[json]
+{
+  "items": [{
+    "webhookId": "ABcDEf",
+    "source": "channel.lifecycle",
+    "timestamp": 1562124922426,
+    "serial": "a7bcdEFghIjklm123456789:4",
+    "name": "channel.message",
+    "data": {
+      "channelId": "channelName",
+      "site": "eu-west-1-A",
+      "messages": [{
+        "id": "ABcDefgHIj:1:0",
+        "connectionId": "ABcDefgHIj",
+        "timestamp": 1123145678900,
+        "data": "some message data",
+        "name": "my message name"
+      }]
+    }
+  }]
+}
+```
+
+h5(#batch-example-message-decoding). Decoding batched messages
+
+Messages sent "over the realtime service":/realtime/channels are automatically decoded into "@Message@":/realtime/types#message objects by the Ably client library. With webhooks you need to to do this explicitly, using "@Message.fromEncodedArray@":/realtime/messages#message-from-encoded-array on the @data.messages@ array, or "@Message.fromEncoded@":/realtime/messages#message-from-encoded on an individual member of that array. This will transform them into an array of "@Message@":/realtime/types#message objects (or in the case of @fromEncoded@, an individual "@Message@":/realtime/types#message). This has several advantages, e.g.:
+
+* It will fully decode any @data@ (using the @encoding@) back into the same datatype that it was sent in (or an equivalent in each client library's language)
+* If you are using "encryption":/realtime/encryption, you can pass your encryption key to the method and it will decrypt the @data@ for you
+
+We recommend you do this for all messages you receive over webhooks. For example (using ably-js):
+
+```[javascript]
+webhookMessage.items.forEach((item) => {
+  const messages = Ably.Realtime.Message.fromEncodedArray(item.data.messages);
+  messages.forEach((message) => {
+    console.log(message.toString());
+  })
+})
+```
 
 h4(#batch-example-presence). Batched presence events
 
@@ -44,32 +63,52 @@ For @presence@ events, @data@ will contain:
 
 - data.channelId := name of the channel that the presence event belongs to
 - data.site := an internal site identifier indicating which primary datacenter the member is present in
-- data.presence := an @Array@ of "@Presence@":/realtime/presence#presence-message events
+- data.presence := an @Array@ of raw presence messages
 
-minimize. View batched @presence@ payload example
-  ```[json]
-  {
-    "items": [{
-      "webhookId": "ABcDEf",
-      "source": "channel.lifecycle",
-      "timestamp": 1562124922426,
-      "serial": "a7bcdEFghIjklm123456789:4",
-      "name": "presence.message",
-      "data": {
-        "channelId": "education",
-        "site": "eu-west-1-A",
-        "presence": [{
-          "id": "ABcDefgHIj:1:0",
-          "connectionId": "ABcDefgHIj",
-          "timestamp": 1123145678900,
-          "clientId": "bob",
-          "data": "some message data",
-          "action": 4
-        }]
-      }
-    }]
-  }
-  ```
+The following is an example of a batched @presence@ payload:
+
+```[json]
+{
+  "items": [{
+    "webhookId": "ABcDEf",
+    "source": "channel.lifecycle",
+    "timestamp": 1562124922426,
+    "serial": "a7bcdEFghIjklm123456789:4",
+    "name": "presence.message",
+    "data": {
+      "channelId": "education",
+      "site": "eu-west-1-A",
+      "presence": [{
+        "id": "ABcDefgHIj:1:0",
+        "connectionId": "ABcDefgHIj",
+        "timestamp": 1123145678900,
+        "clientId": "bob",
+        "data": "some message data",
+        "action": 4
+      }]
+    }
+  }]
+}
+```
+
+h5(#batch-example-presence-decoding). Decoding batched presence messages
+
+Presence messages sent "over the realtime service":/realtime/channels are automatically decoded into "@PresenceMessage@":/realtime/types#presence-message objects by the Ably client library. With webhooks you need to to do this explicitly, using "@PresenceMessage.fromEncodedArray@":/realtime/presence#presence-from-encoded-array on the @data.presence@ array, or "@PresenceMessage.fromEncoded@":/realtime/presence#presence-from-encoded on an individual member of that array. This will transform them into an array of "@PresenceMessage@":/realtime/types#presence-message objects (or in the case of @fromEncoded@, an individual "@PresenceMessage@":/realtime/types#presence-message). This has several advantages, e.g.:
+
+* It will decode the (numerical) action into a "@Presence action@":/realtime/presence#presence-action string (such as "@enter@", "@update@", or "@leave@")
+* It will fully decode any @data@ (using the @encoding@) back into the same datatype that it was sent in (or an equivalent in each client library's language)
+* If you are using "encryption":/realtime/encryption, you can pass your encryption key to the method and it will decrypt the @data@ for you
+
+We recommend you do this for all presence messages you receive over webhooks. For example (using ably-js):
+
+```[javascript]
+webhookMessage.items.forEach((item) => {
+  const messages = Ably.Realtime.PresenceMessage.fromEncodedArray(item.data.messages);
+  messages.forEach((message) => {
+    console.log(message.toString());
+  })
+})
+```
 
 h4(#batch-example-lifecycle). Batched channel lifecycle events
 
@@ -78,32 +117,33 @@ For @channel lifecycle@ events, @data@ will contain:
 - data.channelId := name of the channel that the presence event belongs to
 - data.status := a "@ChannelStatus@":/realtime/channel-metadata#channel-details object
 
-minimize. View batched @channel lifecycle@ payload example
-  ```[json]
-  {
-    "items": [{
-      "webhookId": "ABcDEf",
-      "source": "channel.lifecycle",
-      "timestamp": 1562124922426,
-      "serial": "a7bcdEFghIjklm123456789:4",
-      "name": "channel.opened",
-      "data": {
-        "channelId": "channelName",
-        "name": "channelName",
-        "status": {
-          "isActive": true,
-          "occupancy": {
-            "metrics": {
-              "connections": 1,
-              "publishers": 1,
-              "subscribers": 1,
-              "presenceConnections": 1,
-              "presenceMembers": 0,
-              "presenceSubscribers": 1
-            }
+The following is an example of a batched @channel lifecycle@ payload:
+
+```[json]
+{
+  "items": [{
+    "webhookId": "ABcDEf",
+    "source": "channel.lifecycle",
+    "timestamp": 1562124922426,
+    "serial": "a7bcdEFghIjklm123456789:4",
+    "name": "channel.opened",
+    "data": {
+      "channelId": "channelName",
+      "name": "channelName",
+      "status": {
+        "isActive": true,
+        "occupancy": {
+          "metrics": {
+            "connections": 1,
+            "publishers": 1,
+            "subscribers": 1,
+            "presenceConnections": 1,
+            "presenceMembers": 0,
+            "presenceSubscribers": 1
           }
         }
       }
-    }]
-  }
-  ```
+    }
+  }]
+}
+```
