@@ -15,8 +15,8 @@ jump_to:
     - Supported platforms#supported-platforms
     - Prerequisites#prerequisites
     - Key participants#key-participants
-    - Installing the SDK#installing-sdk
     - Resolution policy#resolution-policy
+    - Installing the SDK#installing-sdk
     - Initializing the SDK#initializing-sdk
     - See also#see-also
 ---
@@ -34,6 +34,23 @@ As Ably is used as the underlying transport, you have direct access to your data
 * Persistence of data to a database for later retrieval.
 
 As the asset being tracked moves, it publishes its position through the app to an Ably channel. Any subscribers to the channel can then receive positional information, which can be dislpayed on a detailed map.
+
+The following diagram provides an overview of an asset trtacking use case:
+
+<a href="/images/screenshots/asset-tracking/overview.png" target="_blank">
+  <img src="/images/screenshots/asset-tracking/overview.png" style="width: 100%" alt="Overview">
+</a>
+
+The Asset Tracking SDK allows for various battery optimization and update rate change scenarios, for example: 
+
+* Updates should be sent to user more often when driver is closer to destination.
+* Updates don't need to happen as often when user is not looking at the location of the asset, for example, the user is not checking the app for driver's location.
+* When the driver's battery is running low, location updates can happen with lower frequency.
+* Still location information should be sampled and later sent to external storage at a frequency set by configuration.
+* Customer wants to control how often the location information should be sampled.
+* Customer wants to control maximum and minimum rate of updates, with maximum being the one with full battery and when driver is close to destination, and minimum being when user is not checking the location.
+* Customer wants to control what battery level is considered low, so that frequency of updates is lowered.
+* Customer wants to control what is "close to destination" to increase the frequency of updates accordingly. 
 
 h2(#supported-platforms). Supported platforms
 
@@ -69,30 +86,33 @@ In an asset tracking the key participants are:
 
 Each asset being tracked must have a @trackableId@, this should be globally unique within an Ably asset tracking account.
 
-h2(#installing-sdk). Installing the SDK
-
-You can find information on installing the SDKs in the following resources:
-
-* "Instructions for Android":https://github.com/ably/ably-asset-tracking-android
-* "Instructions for iOS":https://github.com/ably/ably-asset-tracking-cocoa
-* Instructions for JavaScript
-
 h2(#battery-optimization). Battery optimization scenarios
 
-The Asset Tracking SDK allows for various battery optimization and update rate change scenarios, for example: 
+One of the biggest challenges in asset tracking is combining high resolution (both temporal and spatial) of updates with low battery consumption on the asset tracking device. For example, in a delivery tracking use case you may want your users to have a smooth and realtime visualization of where their delivery is on the map, but at the same time sending realtime locations from the driver's device all the time will rapidly drain its battery.
 
-* Updates should be sent to user more often when driver is closer to destination.
-* Updates don't need to happen as often when user is not looking at the location of the asset, for example, the user is not checking the app for driver's location.
+There are two key factors that impact asset tracking device battery usage:
+
+1. GPS sensor - obtaining location of the asset
+2. Networking - sending location updates over network
+
+It is hard to reduce the battery consumption of the GPS sensor in some situations, such as when the device is being used for navigation at the same time as tracking an asset. However, it is possible to adjust the networking aspect of resolution.
+
+The following scenarios are examples of how update resolution can be changed depending on the state of the asset and subscribers:
+
+* Updates can be sent to the subscriber more often when asset is closer to destination.
+* Updates don't need to happen as often when the user of the subscribing SDK is not observing the location of the asset, for example, the user of delivery app is not checking the app for the driver's location.
+* Different subscribers may have different preferences regarding the resolution of location updates.
 * When the driver's battery is running low, location updates can happen with lower frequency.
-* Still location information should be sampled and later sent to external storage at a frequency set by configuration.
-* Customer wants to control how often the location information should be sampled.
-* Customer wants to control max and min rate of updates (with max being the one with full battery and when driver is close to destination, and min being when user is not checking the location).
-* Customer wants to control what battery level is considered low (so that frequency of updates is lowered).
-* Customer wants to control what is "close to destination" to increase the frequency of updates accordingly. 
+
+Using the approaches similar to these, an optimal resolution of updates can be identified, which provides a good user experience when it is needed, such as when the driver is close to the destination, and the user is observing the location of the driver in the app. This approach also reduces battery usage when possible, for example when the driver is far from the destination and the user is not observing location updates.
+
+As different use cases have different requirements for this logic, Ably Asset Tracking SDKs provide a flexible @ResolutionPolicy@ interface, that allows SDK users to provide their own implementation of resolution optimization logic.
+
+Ably Asset Tracking also comes with a @DefaultResolutionPolicy@ implementation provided out of the box, which is suitable for common use cases.
 
 h2(#resolution-policy). Resolution policy
 
-Resolution and Resolution policy are important aspects of the Ably Asset Tracking 
+@Resolution@ and @ResolutionPolicy@ are important aspects of the Ably Asset Tracking SDKs: 
 
 - Resolution := governs how often to sample locations, at what level of positional accuracy, and how often to send them to subscribers.
 - ResolutionPolicy := defines the strategy by which the various @ResolutionRequests@ and preferences are translated by @Publisher@ instances into a target @Resolution@.
@@ -102,6 +122,8 @@ Resolution policy relates to the frequency of positional updates, based on:
 * Battery
 * Distance to target (proximity)
 * Availability of subscribers
+
+h3(#resolution-policy-parameters). Resolution policy parameters
 
 @ResolutionPolicy@ is passed to the SDK when an asset is added and contains the following: 
 
@@ -164,6 +186,28 @@ The publisher obtains location updates from the local platform, and publishes th
 The aim in most practical situations is for @targetResolution@ to vary dynamically based on circumstances; this might be based on parameters known by the publisher (such as proximity to destination, or the current power state of the device) but may also be based on the existence, or preferences, of the subscribers to the channel. 
 
 The asset tracking SDKs also have @requestedResolution@ - this captures the preference of a subscriber for update resolution. A subscriber's preference might be a consequence of the subscriber simply existing, but might also depend on the subscriber's circumstances, for example, the zoom level of the map that the subscriber is using to display updates.
+
+h3(#default-resolution-policy). Default resolution policy
+
+Each Trackable added to the Publisher has a destination and set of @ResolutionConstraints@. Ably provides a default set of resolution constraints, @DefaultResolutionContraints@.
+
+@DefaultResolutionConstraints@ provides the following set of thresholds:
+
+* Proximity threshold - at what distance to destination is the asset deemed to be "near" it.
+* Battery level threshold @batteryLevelThreshold@ - below which battery level is the device deemed to be with "low" battery.
+
+@DefaultResolutionConstraints@ also provides:
+
+* @lowBatteryMultiplier@ - a multiplier that is applied to resolution when the battery is low. This would, in effect, reduce the period of updates.
+* @DefaultResolutionSet@ - a set of resolutions to be applied, depending on the state of the device relating to the thresholds.
+
+h2(#installing-sdk). Installing the SDK
+
+You can find information on installing the SDKs in the following resources:
+
+* "Instructions for Android":https://github.com/ably/ably-asset-tracking-android
+* "Instructions for iOS":https://github.com/ably/ably-asset-tracking-cocoa
+* Instructions for JavaScript
 
 h2(#initializing-sdk). Initializing the SDK
 
