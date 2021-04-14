@@ -16,7 +16,8 @@ jump_to:
     - Repositories#repositories
     - Prerequisites#prerequisites
     - Installing the SDK#installing-sdk
-    - Initializing the SDK#initializing-sdk
+    - Using the Publisher SDK#publisher-sdk
+    - Using the Subscriber SDK#subscriber-sdk
     - See also#see-also
 ---
 
@@ -63,75 +64,161 @@ You can find information on installing the SDKs in the following resources:
 * "Instructions for iOS":https://github.com/ably/ably-asset-tracking-cocoa
 * "Instructions for JavaScript":https://github.com/ably/ably-asset-tracking-js
 
-h2(#initializing-sdk). Initializing the SDK
+h2(#publisher-sdk). Using the publisher SDK
 
-This section introduces you to some commonly used parameters. 
+Common operations you will need to carry out on the publisher include:
 
-During initialization the SDK accepts:
+* Initialization of the publisher.
+* Start tracking an asset.
+* Stop tracking an asset.
+* Set the resolution constraints on an asset.
 
-Required:
+h3(#publisher-initializing). Initializing the Publisher
 
-- connection :=  Ably connection information. API keys, any other configuration parameters as needed. 
-- map := Mapbox configuration, such as API keys, any other configuration parameters as needed. 
-- resolutionPolicy := sets the policy factory to be used to define the target resolution for publishers created from this builder.
+During initialization of the publisher various methods can be called to configure the @Publisher@.
 
-Optional:
+The required methods are:
 
-- locationSource := sets the location source to be used instead of the GPS. The location source will be providing location updates for the Publisher. 
-- log := logging configuration.
-- debug := debug configuration.
-- profile := set the means of transport being used for the initial state of publishers created from this builder. If not set then the default value is @RoutingProfile.DRIVING@.
-- locationHistory := the shared flow emitting trip location history when it becomes available.
-- locationUpdatedListener := local handler for location updates.
-- context := Android context (on Android only).
+- connection := Called to provide Ably connection information, such as API keys, and any other configuration parameters as needed. 
+- map := Called to provide Mapbox configuration, such as API keys, any other configuration parameters as needed. 
+- resolutionPolicy := Sets the policy factory to be used to define the target resolution for publishers created from this builder.
 
-The following example demonstrates this:
+The optional methods are:
+
+- profile := Called to set the means of transport being used for the initial state of publishers created from this builder. If not set then the default value is @RoutingProfile.DRIVING@.
+- context := Called to provide the Android runtime context (on Android only).
+
+The following code example demonstrates this:
 
 ```[android] 
-fun startPublisher(
-        defaultResolution: Resolution = DEFAULT_RESOLUTION,
-        locationSource: LocationSource? = null
-    ) {
-        publisher = Publisher.publishers()
-            .connection(ConnectionConfiguration(ABLY_API_KEY, CLIENT_ID))
-            .map(MapConfiguration(MAPBOX_ACCESS_TOKEN))
-            .locationSource(locationSource)
-            .resolutionPolicy(DefaultResolutionPolicyFactory(defaultResolution, this))
-            .androidContext(this)
-            .profile(RoutingProfile.DRIVING)
-            .start().apply {
-                locationHistory
-                    .onEach { uploadLocationHistoryData(it) }
-                    .launchIn(scope)
-            }
-    }
+// Prepare Resolution Constraints for an asset that will be used in the Resolution Policy
+val exampleConstraints = DefaultResolutionConstraints(
+    DefaultResolutionSet( // this constructor provides one Resolution for all states
+        Resolution(
+            accuracy = Accuracy.BALANCED,
+            desiredInterval = 1000L,
+            minimumDisplacement = 1.0
+        )
+    ),
+    proximityThreshold = DefaultProximity(spatial = 1.0),
+    batteryLevelThreshold = 10.0f,
+    lowBatteryMultiplier = 2.0f
+)
+
+// Prepare the default resolution for the Resolution Policy
+val defaultResolution = Resolution(Accuracy.BALANCED, desiredInterval = 1000L, minimumDisplacement = 1.0)
+
+// Initialise and Start the Publisher
+val publisher = Publisher.publishers() // get the Publisher builder in default state
+    .connection(ConnectionConfiguration(ABLY_API_KEY, CLIENT_ID)) // provide Ably configuration with credentials
+    .map(MapConfiguration(MAPBOX_ACCESS_TOKEN)) // provide Mapbox configuration with credentials
+    .androidContext(this) // provide Android runtime context
+    .resolutionPolicy(DefaultResolutionPolicyFactory(defaultResolution, this)) // provide either the default resolution policy factory or your custom implementation
+    .profile(RoutingProfile.DRIVING) // provide mode of transportation for better location enhancements
+    .start()
 ```
 
-h2(#main-tasks). Main tasks
+h3(#publisher-start-tracking). Start tracking
 
-- Main classes and methods
-- Start/stop tracking
-- update resolution (both publisher and subscriber?)
+You can start tracking an asset by calling the @track@ method of the publisher. You need to supply the tracking identifier of the asset to be tracked, and any resolution constraints that need to be applied.
 
-Subscribing - tracking ID is required:
+The following code example demonstrates how to start tracking an asset:
 
 ```[android]
-private fun createAndStartAssetSubscriber(trackingId: String) {
-        scope.launch {
-            subscriber = Subscriber.subscribers()
-                .connection(ConnectionConfiguration(ABLY_API_KEY, CLIENT_ID))
-                .trackingId(trackingId)
-                .resolution(resolution)
-                .start()
-                .apply {
-                    locations
-                        .onEach { showMarkerOnMap(it.location) }
-                        .launchIn(scope)
-                    trackableStates
-                        .onEach { updateAssetState(it) }
-                        .launchIn(scope)
-                }
-        }
+// Start tracking an asset
+try {
+    publisher.track(
+        Trackable(
+            trackingId, // provide a tracking identifier for the asset
+            constraints = exampleConstraints // provide a set of Resolution Constraints
+        )
+    )
+    // TODO handle asset tracking started successfully
+} catch (exception: Exception) {
+    // TODO handle asset tracking could not be started
 }
 ```
 
+h3(#publisher-stop-tracking). Stop tracking
+
+You can stop tracking a trackable (asset) that is registered with the publisher using the @remove@ method, as shown in the following code:
+
+```[android]
+publisher.remove(trackable)
+```
+
+h2(#subscriber-sdk). Using the Subscriber SDK
+
+Common operations you will need to carry out on the subscriber include:
+
+* Initialization of the subscriber.
+* Listen for updates sent from from the publisher.
+* Listen for asset status updates sent from the publisher.
+* Request a different resolution to be sent from the publisher.
+
+h3(#subscriber-initializing-sdk). Initializing the Subscriber
+
+During initialization of the subscriber various methods can be called to configure the @Subscriber@.
+
+The required methods are:
+
+- connection := Called to provide Ably connection information, such as API keys, and any other configuration parameters as needed. 
+- trackingId := Sets the asset to be tracked, using the unique tracking identifier of the asset.
+
+The optional methods are:
+
+- resolution := Request a specific resolution of updates to be requested from the remote publisher.
+
+The following code example demonstrates initializing and starting the subscriber:
+
+```[android]
+// Initialise and Start the Subscriber
+val subscriber = Subscriber.subscribers() // Get an AssetSubscriber
+    .connection(ConnectionConfiguration(ABLY_API_KEY, CLIENT_ID)) // provide Ably configuration with credentials
+    .resolution( // request a specific resolution to be considered by the publisher
+        Resolution(Accuracy.MAXIMUM, desiredInterval = 1000L, minimumDisplacement = 1.0)
+    )
+    .trackingId(trackingId) // provide the tracking identifier for the asset that needs to be tracked
+    .start() // start listening for updates
+```
+
+h3(#subscriber-subscribe). Subscribe to updates
+
+You can subscribe to updates from the publisher, specifying a function that is called when each update is received. This is shown in the following example:
+
+```[android]
+// Listen for location updates
+locations
+    .onEach { } // provide a function to be called when enhanced location updates are received
+    .launchIn(scope) // coroutines scope on which the locations are received
+```
+
+h3(#subscriber-subscribe-asset-state-changes). Subscribe to asset state changes
+
+You can subscribe to asset state changes from the publisher, specifying a function that is called when each state change is received. This is shown in the following example:
+
+```[android]
+// Listen for asset state changes
+trackableStates
+    .onEach { } // provide a function to be called when the asset changes its state
+    .launchIn(scope) // coroutines scope on which the statuses are received
+```
+
+h3(#subscriber-subscribe-asset-state-changes). Request a different resolution
+
+The subscriber can always request a different resolution preference by calling the @resolutionPreference@ method, passing in the required @Resolution@. This is shown in the following example:
+
+```[android]
+// Request a different resolution when needed.
+try {
+    subscriber.resolutionPreference(Resolution(Accuracy.MAXIMUM, desiredInterval = 100L, minimumDisplacement = 2.0))
+    // TODO change request submitted successfully
+} catch (exception: Exception) {
+    // TODO change request could not be submitted
+}
+```
+
+h2(#see-also). See also
+
+* "Overview":/asset-tracking
+* "Using the examples apps":/asset-tracking/example-apps
