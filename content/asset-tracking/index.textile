@@ -1,0 +1,163 @@
+---
+title: Asset Tracking
+section: asset-tracking
+index: 0
+meta_description: "The Ably Asset Tracking solution provides a way to track multiple assets in realtime."
+meta_keywords: "Ably, Asset Tracking SDK, Mapbox, Mapbox Navigation SDK, Mapbox location enhancement, Ably realtime, map matching, location tracking, Publishing SDK, Subscribing SDK"
+languages:
+  - javascript
+  - android
+  - objc
+  - java
+  - swift
+jump_to:
+  Help with:
+    - Dynamic resolution#dynamic-resolution
+    - Resolution#resolution
+    - Resolution set#resolution-set
+    - Resolution constraints#resolution-constraints
+    - Resolution policy#resolution-policy
+    - See also#see-also
+---
+
+The Ably Asset Tracking solution provides a way to track the location of multiple assets in realtime. An asset is any object that moves geographically, and whose position needs to be monitored. The Ably Asset Tracking solution is powered by the Ably realtime network, the Ably Asset Tracking SDKs, and the Mapbox Navigation SDK with location enhancement.
+
+The Ably Asset Tracking solution provides two SDKs:
+
+* Publishing SDK - for embedding in apps on the asset to be tracked.
+* Subscribing SDK - for embedding in apps that want to observe the asset being tracked using a realtime subscription.
+
+As Ably is used as the underlying transport, you have direct access to your data and can use "Ably Integrations":https://ably.com/integrations for a wide range of applications, in addition to direct realtime subscriptions. Examples include: 
+
+* Passing data to another service for realtime processing or tracking.
+* Persistence of data to a database for later retrieval.
+* Monitoring.
+
+As the asset being tracked moves, it publishes its position through the app to an Ably channel. Any subscribers to the channel can then receive positional information, which can be displayed on a detailed map.
+
+The following diagram provides an overview of an asset tracking use case:
+
+<a href="/images/screenshots/asset-tracking/overview.png" target="_blank">
+  <img src="/images/screenshots/asset-tracking/overview.png" style="width: 100%" alt="Overview">
+</a>
+
+In a typical asset tracking scenario key components are:
+
+- asset (trackable) := Item that the customer wants to track such as driver, vehicle, container, and so on. This also known as a @Trackable@ in the SDKs.
+- carrier := The entity that physically transports the asset. This could be a driver delivering a package. It could also be a machine moving the asset under software direction, such as in the case of a delivery drone.
+- customer := Company that uses the Ably Asset Tracking SDKs to build their product to solve the asset tracking problem for their users.
+- end user := Entity that uses the product built by the customer and uses the asset tracking capabilities.
+
+Each asset being tracked must have a @trackableId@, and this must be globally unique within an Ably asset tracking account. The @trackableId@ corresponds directly to the Ably channel used to carry updates.
+
+h2(#dynamic-resolution). Dynamic resolution
+
+The Asset Tracking SDKs allow the frequency of publication of location updates to be controlled based on a range of parameters, both by the publisher and the subscriber. Having this control, to vary the frequency of updates, and sensor(s) used to obtain location information, is important to be able to control the resource usage of the application. In many mobile applications, for example, conservation of the battery life of the courier's device is paramount; high frequency and high resolution location updates that are broadcast unconditionally are not compatible with the battery constraints for mobile delivery riders, for example. The Asset Tracking SDKs aim to provide a sufficient level of control to be able to optimize the multiple parameters that influence bandwidth and energy usage.
+
+There are two key factors that impact asset tracking resource usage:
+
+1. The sensor used to obtain the location of the asset, such as GPS.
+2. The frequency with which location updates are sent over the network.
+
+The actual resource usage, in practice, also depends on certain factors that can be beyond the control of the Asset Tracking application; for example, a delivery rider might be using an app to navigate, which causes the GPS to be used continuously. This means that not all aspects of the resource usage are always controllable by the Asset Tracking application. However, even in this situation it is important that the application is able to control the frequency of updates being sent over the network.
+
+The following scenarios are examples of how update resolution can be changed depending on the state of the asset and subscribers:
+
+* Updates can be sent to the subscriber more often when asset is closer to the destination.
+* Updates don't need to occur as frequently when the user of the subscribing SDK is not observing the location of the asset. The frequency of updates can be reduced, for example, if the user of delivery app is not checking the app for the driver's location.
+* Different subscribers may have different preferences regarding the resolution of location updates.
+* When the driver's battery is running low, location updates can be transmitted at lower frequency.
+
+Using approaches similar to these, an optimal resolution of updates can be identified, which provides a good user experience when it is needed, such as when the driver is close to the destination, and the user is observing the location of the driver in the app. This approach also reduces battery usage when possible, for example when the driver is far from the destination and the user is not observing location updates.
+
+The SDK provides a set of extensible interfaces for implementing custom logic for battery optimization. The SDK also provides a set of default constraints and policies, which developers can use to handle common use cases.
+
+h2(#resolution). Resolution
+
+Resolution governs how often to sample locations, at what level of positional accuracy, and how often to send updates to subscribers.
+
+@Resolution@ is made up of:
+
+- @Accuracy@ := The general priority for accuracy of location updates, used to govern any trade-off between power usage and positional accuracy. The highest positional accuracy will be achieved by specifying @Accuracy.MAXIMUM@, but at the expense of significantly increased power usage. Conversely, the lowest power usage will be achieved by specifying @Accuracy.MINIMUM@ but at the expense of significantly decreased positional accuracy.
+- @desiredInterval@ := Desired time between updates, in milliseconds. Lowering this value increases the temporal resolution. Location updates whose timestamp differs from the last captured update timestamp by less that this value are to be filtered out. Used to govern the frequency of updates requested from the underlying location provider, as well as the frequency of messages broadcast to subscribers.
+- @minimumDisplacement@ := Minimum positional granularity required, in metres. Lowering this value increases the spatial resolution. Location updates whose position differs from the last known position by a distance smaller than this value are to be filtered out. Used to configure the underlying location provider, as well as to filter the broadcast of updates to subscribers.
+
+h3(#request-different-resolution). Request a different Resolution 
+
+The subscriber may require different resolutions of updates depending on state. For example, whether the map is currently displayed to the user or not, what zoom level the map is set to, and so on. This feature allows the subscriber to specify different preferences depending on any factors of interest to the client.
+
+h2(#resolution-set). Resolution set
+
+A resolution set, is a set of resolutions that must be provided by the app in order to inform the resolution policy. While developers can define their own resolution sets, Ably also provides a default resolution set that can be used with the default resolution policy.
+
+h3(#default-resolution-set). Default resolution set
+
+The @DefaultResolutionSet@ is the set of resolutions which must be defined in order to satisfy the "default resolution constraints":#default-resolution-constraints. These are required in order to inform the "default resolution policy":#default-resolution-policy.
+
+For the @DefaultResolutionSet@ the following resolutions are expected to be included:
+
+- @farWithoutSubscriber@ := The resolution to select if above the "@proximityThreshold@":#default-resolution-constraints, with no subscribers.
+- @farWithSubscriber@ := The resolution to select if above the "@proximityThreshold@":#default-resolution-constraints, with one or more subscribers.
+- @nearWithoutSubscriber@ := The resolution to select if below the "@proximityThreshold@":#default-resolution-constraints, with no subscribers.
+- @nearWithSubscriber@ := The resolution to select if below the "@proximityThreshold@":#default-resolution-constraints, with one or more subscribers.
+
+h2(#resolution-constraints). Resolution constraints
+
+Resolution constraint objects, @ResolutionConstraints@, are defined on a per-@Trackable@ basis, and are then used to calculate an appropriate @Resolution@ by the @ResolutionPolicy@.
+
+h3(#default-resolution-constraints). Default resolution constraints
+
+The SDK provides default resolution constraints consisting of:
+
+- @DefaultResolutionSet@ := The set of resolutions which must be defined in order to populate the @DefaultResolutionConstraints@.
+- @DefaultProximity@ := This is the proximity to the destination at which resolution of updates is increased to improve user experience. Proximity can be spatial, temporal, or both. 
+- @batteryLevelThreshold@ := This is a battery level for the publisher's device that is considered to be low. When the battery level falls below this, the resolution of updates is reduced.
+- @lowBatteryMultiplier@ := The multiplier to be applied to the interval when the battery level is below @batteryLevelThreshold@.
+
+The following example shows how the default resolution constraints are populated:
+
+```[android]
+// Prepare Resolution Constraints for an asset that will be used in the Resolution Policy
+val exampleConstraints = DefaultResolutionConstraints(
+    DefaultResolutionSet( // this constructor provides one Resolution for all states
+        Resolution(
+            accuracy = Accuracy.BALANCED,
+            desiredInterval = 1000L,
+            minimumDisplacement = 1.0
+        )
+    ),
+    proximityThreshold = DefaultProximity(spatial = 1.0),
+    batteryLevelThreshold = 10.0f,
+    lowBatteryMultiplier = 2.0f
+)
+```
+
+h2(#resolution-policy). Resolution policy
+
+Resolution policy defines the strategy by which the various @ResolutionRequests@ and preferences are translated by @Publisher@ instances into a target @Resolution@.
+
+As different use cases have different requirements for battery optimization, Ably Asset Tracking SDKs provide a flexible @ResolutionPolicy@ interface, that allows SDK users to provide their own implementation of resolution optimization logic. Ably also provides a "default resolution policy":#default-resolution-policy, which is suitable for common use cases.
+
+h3(#default-resolution-policy). Default resolution policy
+
+Ably Asset Tracking SDKs come with a @DefaultResolutionPolicy@ implementation provided out of the box, which is suitable for common use cases.
+
+Each @Trackable@ added to the @Publisher@ has a destination and set of @ResolutionConstraints@. Both @destination@ and @resolutionConstraints@ are optional for @Trackable@, but having them enables the resolution policy to reflect those constraints. The SDK provides an optional set of "default resolution constraints":#default-resolution-constraints, @DefaultResolutionContraints@.
+
+When the SDK is running, on each change of the device or trackable status, the @ResolutionPolicy@ recalculates the resolution to be applied. Example changes include: 
+
+* Subscribers added or removed from the list of subscribers.
+* Battery or proximity threshold hit.
+* Subscriber closes app.
+
+The following logic is used:
+
+1. When comparing resolutions, the more precise resolution is always selected. Each field of the resolution (@accuracy@, @desiredInterval@, @minimumDisplacement@) is compared and the most precise value for each of those fields are chosen, so that the final resolution could be a hybrid of all of the provided resolutions. For example, the final resolution could have the @accuracy@ of resolution A, the @desiredInterval@ of resolution B and the @minimumDisplacement@ of resolution C.
+2. The most precise resolution is selected from the resolutions requested by subscribers.
+3. Then, based on the @ResolutionSet@ provided, and also the state of the thresholds, the correct @Resolution@ is identified from the set. This resolution is then compared with the one from previous step, and the more precise one is selected.
+4. The low battery multiplier is applied if needed.
+
+h2(#see-also). See also
+
+* "Using the example apps":/asset-tracking/example-apps
+* "Using the SDKs":/asset-tracking/using-the-SDKs
