@@ -17,5 +17,5 @@ class AblyDocs::Redirects
     end
   end
 
-  @data = YAML::load(File.read(REDIRECTS_YAML_PATH))
+  @data = YAML.safe_load(File.read(REDIRECTS_YAML_PATH))
 end
