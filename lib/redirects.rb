@@ -10,10 +10,11 @@ class AblyDocs::Redirects
       end
     end
 
-    def redirect_for(template)
-      search = %r{\A\/?#{template}\/?\z}
-      key = data.keys.detect { |key| key =~ search }
-      data[key]
+    def redirect_for(path)
+      path = Regexp.escape(path)
+      search = %r{\A\/?#{path}\/?\z}
+      match = data.find { |from, _to| from =~ search }
+      Array(match).last
     end
   end
 
