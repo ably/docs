@@ -36,3 +36,7 @@ gem 'pry-byebug'
 
 # Content checking
 gem 'nokogiri'
+
+group :development, :test do
+  gem 'rspec', '~> 3.10'
+end
