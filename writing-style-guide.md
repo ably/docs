@@ -64,7 +64,7 @@ Technical writing needs to be unapologetically accurate and precise, and use spe
 
 ## Avoid fillers
 
-It's sometimes easy to get overly enthusiatic in technical documentation, and this shows itself by liberal use of superlatives. It's best to avoid this in material targeted at developers.
+It's sometimes easy to get overly enthusiastic in technical documentation, and this shows itself by liberal use of superlatives. It's best to avoid this in material targeted at developers.
 
 Avoid filler words and superfluous adjectives such as 'really nice feature', 'it may be that', 'and that's it'.
 
@@ -76,7 +76,7 @@ Rather than say how simple it is to do something, show the developer through spe
 
 ## Contractions
 
-It's generally fine to use common contractions, as long as the intent is clear. Where there may be the possibility for confusion, be explicit, for example, use "it is" or "it has" if using "it's" could lead to confusion. One common error is to use "it's" in the belief that the apostophe is required if used in a possessive manner. This is never the case. For example:
+It's generally fine to use common contractions, as long as the intent is clear. Where there may be the possibility for confusion, be explicit, for example, use "it is" or "it has" if using "it's" could lead to confusion. One common error is to use "it's" in the belief that the apostrophe is required if used in a possessive manner. This is never the case. For example:
 
 * *Incorrect:* "Ably persists it's data in memory for two minutes."
 * *Correct:* "Ably persists its data in memory for two minutes."
