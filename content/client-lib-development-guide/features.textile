@@ -77,9 +77,13 @@ h3(#restclient). RestClient
 * @(RSC16)@ @RestClient#time@ function sends a get request to @rest.ably.io/time@ and returns the server time in milliseconds since epoch or as a Date/Time object where suitable
 * @(RSC7)@ Sends REST requests over HTTP and HTTPS to the REST endpoint @rest.ably.io@
 ** @(RSC7a)@ The header @X-Ably-Version: 1.2@ must be included in all REST requests to the Ably endpoint
-** @(RSC7b)@ The header @X-Ably-Lib: [lib][.optional variant]?-[version]@ should be included in all REST requests to the Ably endpoint where @[lib]@ is the name of the library such as @js@ for @ably-js@, @[.optional variant]@ is an optional library variant, such as @laravel@ for the @php@ library, which is always delimited with a period such as @php.laravel@, and where @[version]@ is the full client library version using "Semver":https://semver.org/ such as @1.0.2@. For example, the 1.0.0 version of the JavaScript library would use the header @X-Ably-Lib: js-1.0.0@
+** @(RSC7b)@ (Please note this clause and the associated header have now been superseded by "RCS7d":#RSC7d) The header @X-Ably-Lib: [lib][.optional variant]?-[version]@ should be included in all REST requests to the Ably endpoint where @[lib]@ is the name of the library such as @js@ for @ably-js@, @[.optional variant]@ is an optional library variant, such as @laravel@ for the @php@ library, which is always delimited with a period such as @php.laravel@, and where @[version]@ is the full client library version using "Semver":http://semver.org/ such as @1.0.2@. For example, the 1.0.0 version of the JavaScript library would use the header @X-Ably-Lib: js-1.0.0@.
 *** @(RSC7b1)@ When it is not possible to send the @X-Ably-Lib@ header, such as for @JSONP@ requests, the library version should be sent as a query param such as @lib=js-1.0.0@
 ** @(RSC7c)@ If the @addRequestIds@ client option is enabled, every REST request to Ably should include in a @request_id@ query string parameter a random string obtained by url-safe base64-encoding a sequence of at least 9 bytes obtained from a source of randomness. This request ID must remain the same if a request is retried to a fallback host per @RSC15@. Any log messages associated with the request should include the request ID. If the request fails, the request ID must be included in the @ErrorInfo@ returned to the user.
+** @(RSC7d)@ An @Agent@ library identifier is used to identify the library type and version, as well as relevant information describing any underlying layers and the client platform.
+*** @(RSC7d1)@ The @Agent@ library identifier is composed of a series of @key[/value]@ entries joined by spaces where @key@ is the name of a product and @value@ is an optional version of the associated product which must be a valid "semantic version":https://semver.org/. This must include at least the @<library name>/<library version>@ entry followed optionally, in dependency order, the @name[/version]@ entry for underlying library layer or platform layers. An example would be @ably-flutter/1.2.0 ably-java/1.2.1 android/24@. The documentation for each library must define the content and meaning of the @Agent@ identifiers advertised by that library.
+*** @(RSC7d2)@ Where possible, the @Agent@ library identifier should be included in all HTTP and WebSocket requests to the Ably endpoint via an @Ably-Agent@ HTTP header.
+*** @(RSC7d3)@ Where the library is unable to specify a header when making a request (such as for @JSONP@ requests), the @Agent@ library identifier should be sent via an @agent@ query param whose value is the URI-encoded @Agent@ library identifier.
 * @(RSC18)@ If @ClientOptions#tls@ is true, then all communication is over HTTPS. If false, all communication is over HTTP however "Basic Auth":https://en.wikipedia.org/wiki/Basic_access_authentication over HTTP will result in an error as private keys cannot be submitted over an insecure connection. See @Auth@ below
 * @(RSC8)@ Supports two protocols:
 ** @(RSC8a)@ "MessagePack":https://msgpack.org/ binary protocol (this is the default for environments having a suitable level or support for binary data)
@@ -410,7 +414,7 @@ h3(#realtime-connection). Connection
 * @(RTN11)@ @Connection#connect@ function:
 ** @(RTN11a)@ Explicitly connects to the Ably service if not already connected
 ** @(RTN11b)@ If the state is @CLOSING@, the client should make a new connection with a new transport instance and remove all references to the old one. In particular, it should make sure that, when the @CLOSED@ @ProtocolMessage@ arrives for the old connection, it doesn't affect the new one.
-** @(RTN11c)@ If the state is @DISCONNECTED@ or @SUSPENDED@, aborts the retry process described in "RTN14d":#RTN14d and "RTN14e":#RTN14e and immediately tries to reconnect.
+** @(RTN11c)@ If the state is @DISCONNECTED@ or @SUSPENDED@, skips the ongoing wait in the retry process described in "RTN14d":#RTN14d and "RTN14e":#RTN14e, so that the next reconnection attempt happens immediately.
 ** @(RTN11d)@ If the state is @CLOSED@ or @FAILED@, transitions all the channels to @INITIALIZED@ and unsets their @Channel.errorReason@, unsets the @Connection.errorReason@, clears all connection state (including in particular @Connection.recoveryKey@), and resets the @msgSerial@ to @0@
 * @(RTN12)@ @Connection#close@ function:
 ** @(RTN12f)@ If the connection state is @CONNECTING@, moves immediately to @CLOSING@. If the connection attempt succeeds, ie. a @CONNECTED@ @ProtocolMessage@ arrives from Ably, then do as specified in "RTN12a":#RTN12a. If it doesn't succeed, move to @CLOSED@.
@@ -538,6 +542,7 @@ h3(#realtime-channel). Channel
 ** @(RTL5h)@ If the connection state is @INITIALIZED@, @CONNECTING@ or @DISCONNECTED@, do the detach operation once the connection state is @CONNECTED@
 ** @(RTL5d)@ Otherwise a @DETACH@ ProtocolMessage is sent to the server, the state transitions to @DETACHING@ and the channel becomes @DETACHED@ when the confirmation @DETACHED@ ProtocolMessage is received
 ** @(RTL5f)@ Once a @DETACH@ @ProtocolMessage@ is sent, if a @DETACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the detach request should be treated as though it has failed and the channel will return to its previous state
+** @(RTL5k)@ If the channel receives an @ATTACHED@ message while in the @DETACHING@ state, it should send a new @DETACH@ message and remain in the @DETACHING@ state
 ** @(RTL5e)@ If the language permits, a callback can be provided that is called when the channel is detached successfully or the detach fails and the @ErrorInfo@ error is passed as an argument to the callback
 * @(RTL6)@ @Channel#publish@ function:
 ** @(RTL6a)@ Messages are encoded in the same way as the REST @Channel#publish@ method, and "RSL1g":#RSL1g (size limit) applies similarly
@@ -1021,7 +1026,7 @@ h3(#activation-state-machine). Activation State Machine
 ***** @(RSH3a2a2)@ If a custom @registerCallback@ was provided to @Push#activate@, pass it the local @DeviceDetails@.
 ***** @(RSH3a2a3)@ Otherwise, makes an asynchronous HTTP PUT request to @/push/deviceRegistrations/:deviceId@ using the local @DeviceDetails@ with the push details as body. When the registration validation request is complete, a @RegistrationSynced@ or @SyncRegistrationFailed@ event should be fired.
 ***** @(RSH3a2a4)@ Transitions to @WaitingForRegistrationSync@.
-**** @(RSH3a2b)@ If the local device does not have @id@ and @deviceSecret@, both are generated locally. The @id@ must be a "ulid":https://github.com/ulid/spec or similar globally-unique identifier. The @deviceSecret@ must be created using secure random data with sufficient entropy to generate a digest of at least 32 bytes (eg using sha256) and encoding that digest with base64. The local @DeviceDetails@ is updated with the resulting @deviceId@ and @deviceSecret@.
+**** @(RSH3a2b)@ If the local device does not have @id@ or @deviceSecret@, both are generated locally. The @id@ must be a "ulid":https://github.com/ulid/spec or similar globally-unique identifier. The @deviceSecret@ must be created using secure random data with sufficient entropy to generate a digest of at least 32 bytes (eg using sha256) and encoding that digest with base64. The local @DeviceDetails@ is updated with the resulting @deviceId@ and @deviceSecret@. If either the @id@ or the @deviceSecret@ is lost then a new pair must be created.
 **** @(RSH3a2c)@ If the local device has the necessary push details (registration token, etc.), sends a @GotPushDeviceDetails@ event.
 **** @(RSH3a2d)@ If the local device does not have the necessary push details, it initiates a request to the underlying platform (or otherwise generates them)
 **** @(RSH3a2e)@ Transitions to @WaitingForPushDeviceDetails@.
@@ -1131,6 +1136,7 @@ h3(#local-device). LocalDevice
 ** @(RSH8g)@ Whenever any change arises of the push transport details for local device (eg an FCM registration token update triggered by the platform), a @GotPushDeviceDetails@ event is sent to "the state machine":#RSH3.
 ** @(RSH8h)@ If an attempt to obtain the push transport details for local device (eg an FCM registration token) fails, a @GettingPushDeviceDetailsFailed@ event containing the indicated error is sent to "the state machine":#RSH3.
 ** @(RSH8i)@ Each time the library is instanced, if the LocalDevice has push device details (eg an APNS deviceToken), and if the platform supports it, it must verify the validity of those details (eg by requesting a token from the platform and comparing that with the already-known token). If as a result there are updated details, then an update to the Ably server is triggered by sending a @GotPushDeviceDetails@ event to "the state machine":#RSH3.
+** @(RSH8j)@ If during library initialisation the @LocalDevice@ @id@ or @deviceSecret@ attributes are not able to be loaded then those LocalDevice details must be discarded and the ActivationStateMachine machine should transition to the @NotActivated@ state. New @LocalDevice@ @id@ and @deviceSecret@ attributes should be generated on the next activation event.
 
 h2. Types
 
@@ -1439,7 +1445,7 @@ h4. DeviceDetails
 
 h4. DevicePushDetails
 * @(PCP1)@ details of the push registration for a given device, consisting of the following attributes:
-* @(PCP2)@ errorReason ErrorInfo - (optional) any error information associated with the registratration
+* @(PCP2)@ errorReason ErrorInfo - (optional) any error information associated with the registration
 * @(PCP3)@ recipient - a map of string key/value pairs containing details of the push transport and address
 * @(PCP4)@ state - the state of the push registration, one of  @Active@, @Failing@, @Failed@
 
@@ -1829,7 +1835,7 @@ class Connection:
   id: String? // RTN8
   key: String? // RTN9
   recoveryKey: String? // RTN16b, RTN16c
-  serial: Int // RTN10
+  serial: Int? // RTN10
   state: ConnectionState // RTN4d
   close() // RTN12
   connect() // RTC1b, RTN3, RTN11
