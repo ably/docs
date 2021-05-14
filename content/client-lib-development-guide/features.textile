@@ -414,7 +414,7 @@ h3(#realtime-connection). Connection
 * @(RTN11)@ @Connection#connect@ function:
 ** @(RTN11a)@ Explicitly connects to the Ably service if not already connected
 ** @(RTN11b)@ If the state is @CLOSING@, the client should make a new connection with a new transport instance and remove all references to the old one. In particular, it should make sure that, when the @CLOSED@ @ProtocolMessage@ arrives for the old connection, it doesn't affect the new one.
-** @(RTN11c)@ If the state is @DISCONNECTED@ or @SUSPENDED@, aborts the retry process described in "RTN14d":#RTN14d and "RTN14e":#RTN14e and immediately tries to reconnect.
+** @(RTN11c)@ If the state is @DISCONNECTED@ or @SUSPENDED@, skips the ongoing wait in the retry process described in "RTN14d":#RTN14d and "RTN14e":#RTN14e, so that the next reconnection attempt happens immediately.
 ** @(RTN11d)@ If the state is @CLOSED@ or @FAILED@, transitions all the channels to @INITIALIZED@ and unsets their @Channel.errorReason@, unsets the @Connection.errorReason@, clears all connection state (including in particular @Connection.recoveryKey@), and resets the @msgSerial@ to @0@
 * @(RTN12)@ @Connection#close@ function:
 ** @(RTN12f)@ If the connection state is @CONNECTING@, moves immediately to @CLOSING@. If the connection attempt succeeds, ie. a @CONNECTED@ @ProtocolMessage@ arrives from Ably, then do as specified in "RTN12a":#RTN12a. If it doesn't succeed, move to @CLOSED@.
@@ -455,7 +455,7 @@ h3(#realtime-connection). Connection
 **** @(RTN15c3)@ @CONNECTED@ @ProtocolMessage@ with a new @connectionId@ (and usually an @ErrorInfo@ in the @error@ field). In this case, a new connection has been established, the resume was unsuccessful, the channels are no longer attached, and the error indicates the cause of the unsuccessful resume. The @error@ if present should be set as the @reason@ in the @CONNECTED@ event, and as the @Connection#errorReason@. The client library should initiate an attach for channels that are in the @SUSPENDED@ state. For all channels in the @ATTACHING@ or @ATTACHED@ state, the client library should initiate a new attach (i.e. a new @ATTACH@ @ProtocolMessage@ sent for each channel). Finally, the internal @msgSerial@ counter is reset so that the first message published to Ably will contain a @msgSerial@ value of @0@
 **** @(RTN15c5)@ @ERROR@ @ProtocolMessage@ indicating a failure to authenticate as a result of a token error (see "RTN15h":#RTN15h). The transport will be closed by the server. The spec described in "RTN15h":#RTN15h must be followed for a connection being resumed with a token error
 **** @(RTN15c4)@ Any other @ERROR@ @ProtocolMessage@ indicating a fatal error in the connection. The server will close the transport immediately after. The client should transition to the @FAILED@ state triggering all attached channels to transition to the @FAILED@ state as well. Additionally the @Connection#errorReason@ will be set should be set with the error received from Ably
-** @(RTN15f)@ @ACK@ and @NACK@ responses for published messages can only ever be received on the transport connection on which those messages were sent. Therefore, once a transport drops, the client library must either fail the publish attempt, or re-attempt by re-sending the messages on a new transport if the resume was successful (i.e. the @CONNECTED@ response includes the expected @connectionId@)
+** @(RTN15f)@ @ACK@ and @NACK@ responses for published messages can only ever be received on the transport connection on which those messages were sent. Therefore, once a transport drops, the client library must re-attempt by re-sending the messages on a new transport if the resume was successful (i.e. the @CONNECTED@ response includes the expected @connectionId@) as mandated by "RTN19":#RTN19.
 ** @(RTN15d)@ Client libraries should have test coverage to ensure connection state recovery is working as expected by forcibly disconnecting a client and checking that messages published on channels are delivered once the connection is resumed
 ** @(RTN15e)@ When a connection is resumed, the @Connection#key@ may change and will be provided in the first @CONNECTED@ @ProtocolMessage#connectionDetails@ when the connection is established. The client library must update the @Connection#key@ value with the new @connectionKey@ value every time
 * @(RTN20)@ When the client library can subscribe to the Operating System events for network/internet connectivity changes:
@@ -502,7 +502,7 @@ h3(#realtime-channel). Channel
 * @(RTL1)@ As soon as a @Channel@ becomes attached, all incoming messages and presence messages (where 'incoming' is defined as 'received from Ably over the realtime transport') are processed and emitted where applicable. @PRESENCE@ and @SYNC@ messages are passed to the @Presence@ object ensuring it maintains a map of current members on a channel in realtime
 * @(RTL2)@ The @Channel@ implements @EventEmitter@ and emits @ChannelEvent@ events, where a @ChannelEvent@ is either a @ChannelState@ or @UPDATE@, and a @ChannelState@ is either @INITIALIZED@, @ATTACHING@, @ATTACHED@, @DETACHING@, @DETACHED@, @SUSPENDED@ and @FAILED@
 ** @(RTL2a)@ It emits a @ChannelState@ @ChannelEvent@ for every channel state change
-** @(RTL2g)@ It emits an @UPDATE@ @ChannelEvent@ for changes to channel conditions for which the @ChannelState@ (e.g. @ATTACHED@) does not change. (The library must never emit a @ChannelState@ @ChannelEvent@ for a state equal to the previous state)
+** @(RTL2g)@ It emits an @UPDATE@ @ChannelEvent@ for changes to channel conditions for which the @ChannelState@ (e.g. @ATTACHED@) does not change, unless explicitly prevented by a more specific condition (see "RTL12":#RTL12). (The library must never emit a @ChannelState@ @ChannelEvent@ for a state equal to the previous state)
 ** @(RTL2b)@ @Channel#state@ attribute is the current state of the channel
 ** @(RTL2d)@ A @ChannelStateChange@ object is emitted as the first argument for every @ChannelEvent@ (including both @RTL2a@ state changes and @RTL2g@ @UPDATE@ events). It may optionally contain a @reason@ consisting of an @ErrorInfo@ object; any state change triggered by a @ProtocolMessage@ that contains an @error@ member should populate the @reason@ with that error in the corresponding state change event
 ** @(RTL2f)@ When a channel @ATTACHED@ @ProtocolMessage@ is received, the @ProtocolMessage@ may contain a @RESUMED@ bit flag indicating that the channel has been resumed. The corresponding @ChannelStateChange@ (either @ATTACHED@ per @RTL2a@, or @UPDATE@ per @RTL12@) will contain a @resumed@ boolean attribute with value @true@ if the bit flag @RESUMED@ was included. When @resumed@ is @true@, this indicates that the channel attach resumed the channel state from an existing connection and there has been no loss of message continuity. In all other cases, @resumed@ is false. A test should exist to ensure that @resumed@ is always false when a channel first becomes @ATTACHED@, it is @true@ when the channel is @ATTACHED@ following a successful "connection recovery":#RTN16, and is @false@ when the channel is @ATTACHED@ following a failed "connection recovery":#RTN16
@@ -539,7 +539,7 @@ h3(#realtime-channel). Channel
 ** @(RTL5b)@ If the channel state is @FAILED@, the @detach@ request results in an error
 ** @(RTL5j)@ If the channel state is @SUSPENDED@, the @detach@ request transitions the channel immediately to the @DETACHED@ state
 ** @(RTL5g)@ If the connection state is @CLOSING@ or @FAILED@, the @detach@ request results in an error
-** @(RTL5h)@ If the connection state is @INITIALIZED@, @CONNECTING@ or @DISCONNECTED@, do the detach operation once the connection state is @CONNECTED@
+** @(RTL5h)@ If the connection state is @CONNECTING@ or @DISCONNECTED@, do the detach operation once the connection state is @CONNECTED@
 ** @(RTL5d)@ Otherwise a @DETACH@ ProtocolMessage is sent to the server, the state transitions to @DETACHING@ and the channel becomes @DETACHED@ when the confirmation @DETACHED@ ProtocolMessage is received
 ** @(RTL5f)@ Once a @DETACH@ @ProtocolMessage@ is sent, if a @DETACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the detach request should be treated as though it has failed and the channel will return to its previous state
 ** @(RTL5k)@ If the channel receives an @ATTACHED@ message while in the @DETACHING@ state, it should send a new @DETACH@ message and remain in the @DETACHING@ state
@@ -1835,7 +1835,7 @@ class Connection:
   id: String? // RTN8
   key: String? // RTN9
   recoveryKey: String? // RTN16b, RTN16c
-  serial: Int // RTN10
+  serial: Int? // RTN10
   state: ConnectionState // RTN4d
   close() // RTN12
   connect() // RTC1b, RTN3, RTN11
