@@ -1,6 +1,6 @@
 module Ably
   DOCUMENTATION_LANGUAGES = {
-    'javascript' => { name: 'Javascript', extension: 'js' },
+    'javascript' => { name: 'JavaScript', extension: 'js' },
     'java' => { name: 'Java', extension: 'java' },
     'android' => { name: 'Android', extension: 'java' },
     'python' => { name: 'Python', extension: 'py' },
@@ -13,6 +13,7 @@ module Ably
     'go' => { name: 'Go', extension: 'go' },
     'csharp' => { name: 'C# .Net', extension: 'cs' },
     'cplusplus' => { name: 'C++', extension: 'cpp' },
+    'flutter' => { name: 'Flutter', extension: 'dart' },
     'c' => { name: 'C', extension: 'c' },
     'css' => { name: 'CSS', extension: 'css'},
     'appcelerator' => { name: 'Appcelerator', extension: 'js' },

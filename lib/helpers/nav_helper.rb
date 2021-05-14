@@ -2,22 +2,30 @@ module NavHelper
   def nav_items(section, options = {})
     items = @items.select { |d| d[:section] == section && !relative_url_versioned?(d.path) }
     items += [options[:append]].flatten.map { |item| { index: 1_000, html: item }} if options.has_key?(:append)
+
+    wrapper = options.has_key?(:title) ? "nav-has-children" : ""
+    results = []
+
     if items.empty?
       ""
     else
-      results = ['<ul>']
       last_group = nil
+      results << "<div class=\"nav-parent\ #{wrapper}\" data-id=\"#{section}\">"
+
       if options.has_key?(:title)
         index_item = items.find { |d| d[:index].to_i == 0 }
         if index_item
           nav_selected = non_versioned_path(index_item.path) == non_versioned_path(@item.path)
           path = ensure_relative_url_matches_current_version(@item.path, index_item.path)
-          results.unshift "<h2#{' class="selected"' if nav_selected}><a href=\"#{html_escape(path)}\">#{html_escape(options[:title])}</a></h2>"
+          selected = "selected" if nav_selected
+          results << "<a href=\"#{html_escape(path)}\" class=\"nav-trigger nav-linked #{selected}\" >#{html_escape(options[:title])}</a>"
           items.delete index_item
         else
-          results.unshift "<h2>#{html_escape(options[:title])}</h2>"
+          results << "<a href=\"#\" class=\"nav-trigger nav-expander\" data-id=\"#{section}\">#{html_escape(options[:title])}</a>"
         end
       end
+
+      results << '<ul class="nav-list">'
       items.map.sort { |a,b| (a[:index].to_i || 100) <=> (b[:index].to_i || 100) }.each do |item|
         next if item[:hide_from_nav]
         if item[:html]
@@ -33,8 +41,10 @@ module NavHelper
         end
       end
       results << '</ul>'
-      results.join("\n")
+      results << '</div>'
     end
+
+    results.join("\n")
   end
 
   # returns an inline TOC

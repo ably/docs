@@ -1,0 +1,131 @@
+---
+title: Metachannels
+meta_description: "Metachannels are channels that publish metadata messages, such as for channel and connection lifecycle events."
+meta_keywords: "Ably, metachannels, metadata, channel metadata, lifecycle events, connection lifecycle, channel lifecycle."
+section: realtime
+index: 5
+jump_to:
+  Help with:
+    - Overview#overview
+    - Permissions#permissions
+    - Subscribing to metachannel events#subscribing-to-metadata-events
+---
+
+h2(#overview). Overview
+
+Metachannels are a namespace of channels which all start with the @[meta]@ qualifier, differentiating them from regular channels. An example of a metachannel is @[meta]channel.lifecycle@.
+
+There are a number of metachannels available:
+
+- [meta]log := This metachannel broadcasts error messages that you would not otherwise have any way of receiving (with the exception of errors delivering push notifications, see below). For example, if Ably receives an error response when delivering a reactor webhook to your endpoint, Ably sends a message on the log metachannel with information about the error. Errors where the client can be directly notified are not sent on the log metachannel. For example, if a client attempts to publish a message but exceeds a channel rate limit, the client can be notified by an error callback "passed to publish":/realtime/channels#publish.
+- [meta]log:push := This metachannel is similar to @[meta]log@, but only for errors that happen during delivery of push notifications.
+- [meta]channel.lifecycle := This metachannel publishes messages about channel lifecycle.
+- [meta]connection.lifecycle := This metachannel publishes messages about the lifecycle of realtime connections.
+
+h2(#permissions). Permissions
+
+To subscribe to a metachannel you require an Ably key or token that has suitable "capabilities":/core-features/authentication#capabilities-explained. The resource name or names in the @capability@ must include the @[meta]@ qualifier explicitly.
+
+If you are using an API key, you can set the key's capabilities in the "Ably dashboard":https://www.ably.com/dashboard. If you are using "tokens":/core-features/authentication#token-authentication, you specify capabilities within the token.
+
+The following shows an example of a capability allowing subscription to all metachannels:
+
+```[json]
+{"[meta]*":["subscribe"]}
+```
+
+The above capability allows for the token to @subscribe@ to any @meta@ channel. The wildcard @*@ indicates anything can follow the @[meta]@ claim, so an example of a valid channel would be @[meta]log@. However, this capability does not allow for any other actions to be performed on the metachannels, nor does it allow the token to do anything with any non-metachannels.
+
+The following shows an example of a capability allowing all permissible actions on all metachannels and all regular channels:
+
+```[json]
+{
+  "[meta]*":["*"],
+  "*":["*"]
+}
+```
+
+The above permission provides two capabilities; the ability to perform any action on any metachannel, such as @[meta]log@) with @"[meta]*":["*"]@, and the ability to perform any action on any channel such as @another:channel@ with @"*":["*"]@. 
+
+However, you are *never* able to publish or be present in a metachannel, so this permission results in an effective permission that excludes publish and presence capabilities in @[meta]@ channels. This is due to the "intersecting capabilities":/core-features/authentication#capabilities-explained-intersection.
+
+If @[meta]@ is not specified in the permissions, you will be unable to access the metachannels. An example of this is the following:
+
+```[json]
+{
+  "*":["*"]
+}
+```
+
+Although the above provides all capabilities in all regular channels, without a @[meta]@ permission being explicitly specified, you will be unable to perform any actions on a metachannel.
+
+To provide all capabilities on all metachannel and channels you can use the following:
+
+```[json]
+{
+  "[*]*":["*"]
+}
+```
+
+These wildcard rules are summarized here:
+
+* @*@ as a resource name matches all regular channels, but not metachannels.
+* To match both regular channels and metachannels you can use @[*]*@.
+* To match all metachannels and no regular channels you can use @[meta]*@.
+* To match just a single metachannel you can use, for example, @[meta]channel.lifecycle@.
+
+For further information on capabilities, please refer to the following resources:
+
+* "Wildcards in capabilities":/core-features/authentication#wildcards
+* "Capabilities explained":/core-features/authentication#capabilities-explained
+
+h2(#subscribing-to-metadata-events). Subscribing to metachannel events
+
+Both the "channel lifecycle":#lifecycle-events and the "occupancy":#occupancy events are published onto a special channel named @[meta]channel.lifecycle@, that can be subscribed to with the "realtime libraries":/realtime. This is often used in conjunction with the "Ably Reactor":https://ably.com/integrations, which allows you to send this data to your "serverless endpoints":/general/events, "queues":/general/queues, and "streams":/general/firehose.
+
+h3(#lifecycle-events). Lifecycle Events
+
+The following events are published as messages on the @[meta]channel.lifecycle@ channel. In all cases, the @data@ member of the message is a "ChannelDetails":#channel-details instance.
+
+- channel.opened := indicates that the channel has been activated globally; that is, it has become active in at least one region, having previously been inactive. The embedded @ChannelDetails.status@ includes "occupancy":#occupancy globally.
+- channel.closed := indicates that the channel has been deactivated globally.
+- channel.region.active := indicates that the channel has been activated in a specific region. The included @ChannelDetails.status@ includes "occupancy":#occupancy in that region.
+- channel.region.inactive := indicates that the channel has been deactivated in a specific region. The included @ChannelDetails.status@ includes "occupancy":#occupancy in that region.
+- channel.occupancy := indicates a change in global "occupancy":#occupancy on the channel. Not all "occupancy":#occupancy changes are sent; there is a minimum interval on a per-channel basis, so if the "occupancy":#occupancy is changing continuously, then only periodic snapshots of occupancy are sent. Further roll-up of events may occur depending on the capacity of the lifecycle channel. Any "occupancy":#occupancy changes in which any of the "occupancy":#occupancy categories changes from 0 to a non-zero count, or vice versa, are always included. This feature is only available on a per-app basis to Ably's "enterprise customers":https://www.ably.com/pricing#enterprise. It is recommended that you use "inband channel occupancy":/realtime/inband-occupancy events instead.
+
+The following code snippet shows how to subscribe to channel lifecycle events:
+
+```[javascript]
+const metaChannel = ably.channels.get('[meta]channel.lifecycle');
+
+metaChannel.subscribe('channel.opened', (msg) => {
+    console.log('lifecycle meta channel (opened): ', msg.data);
+})
+
+metaChannel.subscribe('channel.closed', (msg) => {
+    console.log('lifecycle meta channel (closed): ', msg.data);
+})
+
+metaChannel.subscribe('channel.region.active', (msg) => {
+    console.log('lifecycle meta channel (region active): ', msg.data);
+})
+
+metaChannel.subscribe('channel.region.inactive', (msg) => {
+    console.log('lifecycle meta channel (region inactive): ', msg.data);
+})
+```
+
+h3(#occupancy-events). channel.occupancy lifecycle events
+
+When @channel.occupancy@ "events are enabled":https://knowledge.ably.com/how-can-i-enable-channel-lifecycles for your app, you can subscribe to channel "occupancy":#occupancy events by attaching to the channel @[meta]channel.lifecycle@ using a realtime connection. However, please bear in mind that "realtime connections and channels have rate limits":https://knowledge.ably.com/do-you-have-any-connection-message-rate-or-other-limits-on-accounts based on your package size. If the rate of channel lifecycle events exceeds this, a realtime connection is not going to be a reliable way to consume these events as you may get disconnected or lifecycle events may be discarded.
+
+While the channel lifecycle metachannel can provide occupancy metrics, there may be a performance impact, since this involves funnelling occupancy updates for every channel in the app to a single metachannel. This approach does not scale well as the number of channels grows, and so has limited use cases. There are two recommended alternatives:
+
+* "Inband channel occupancy events":/realtime/inband-occupancy - for use cases where the entity that needs to determine occupancy is attached to the channel. 
+* Occupancy rules - for use cases where the entity needing to determine channel occupancy is not connected to the channel. A channel occupancy reactor rule allows you to obtain occupancy updates from a set of channels in a centralized way, that doesn't involve attaching to all of them. Please "get in touch":mailto:enterprise-sales@ably.io for further information.
+
+h3(#reactor). Reactor rules
+
+You can associate "Reactor rules":https://www.ably.com/integrations with metachannels in the same way as for regular channels; configure these using the "Message":/realtime/messages source and use a @channelFilter@ of, for example, @^\[meta\]log@. Normally the @channelFilter@ regex will only match normal, non-meta channels; however, a regex of the form @^\[qualifier\]pattern@ is special-cased to match channels with that qualifier. The @pattern@ is a regex as normal.
+
+If you want webhooks for channel lifecycle events, creating a "channel lifecycle webhook":/general/events#sources is an easy alternative to creating a message rule for the @[meta]channel.lifecycle@ metachannel; such webhooks will have simpler POST bodies as the lifecycle events won't be wrapped in "@Message@":/realtime/types#message objects.
