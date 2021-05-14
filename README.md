@@ -1,14 +1,17 @@
 # Ably Documentation Overview
 
-[Ably](https://www.ably.io) is a scalable, fast, and secure hosted realtime messaging service for web-enabled devices.
+[Ably](https://ably.com) is a scalable, fast, and secure hosted realtime messaging service for web-enabled devices.
 
-The static site generated from this repository is hosted at <http://docs.ably.io> and deployed automatically when the `main` branch is updated.
+The static site generated from this repository is hosted at <https://docs.ably.com> and deployed automatically when the `main` branch is updated.
 
-We frequently publish updates from this repository so is typically more up to date than the official Ably documentation which can be found at <https://www.ably.io/documentation>.
+We frequently publish updates from this repository so is typically more up to date than the official Ably documentation which can be found at <https://ably.com/documentation>.
 
-This Git repository uses the [Textile](https://redcloth.org/textile) format with [Nanoc](http://nanoc.stoneship.org/) used to build the static site from the `main` branch.
+This Git repository uses the [Textile](https://textile-lang.com/) format with [Nanoc](https://nanoc.ws/) used to build the static site from the `main` branch.
 
-For more information on writing documentation for Ably, please see the [Documentation Formatting Guide](/content/client-lib-development-guide/documentation-formatting-guide.textile).
+For more information on writing documentation for Ably, please see the following resources:
+
+* [Writing Style Guide](writing-style-guide.md)
+* [Documentation Formatting Guide](/content/client-lib-development-guide/documentation-formatting-guide.textile).
 
 ## Running locally
 
@@ -144,7 +147,7 @@ To make retrieving the URL easy we created a Ruby helper which does all the work
 <%= JsBins.url_for("hub-product/native-sdks-javascript") %>
 ```
 
-The creation of code content for JSBin is further documented in our [document formatting guide](content/client-lib-development-guide/documentation-formatting-guide.textile) which gets published [here](https://docs.ably.io/client-lib-development-guide/documentation-formatting-guide/#code-blocks). The code that is published to JSBin can be found in [content/code/](content/code/).
+The creation of code content for JSBin is further documented in our [document formatting guide](content/client-lib-development-guide/documentation-formatting-guide.textile) which gets published [here](https://docs.ably.com/client-lib-development-guide/documentation-formatting-guide/#code-blocks). The code that is published to JSBin can be found in [content/code/](content/code/).
 
 **IMPORTANT**: You must `git commit` the updated `jsbin.yaml` with your new assets.
 
@@ -161,7 +164,7 @@ redirect_from:
 
 Then, when accessing `/redirect-from-this-path/`, you'll be redirected to the affected template.
 
-**IMPORTANT:** The values used in the `redirect_from` list should be the URL without the file extension. E.g. `general/versions/v0.8/webhooks` not `general/versions/v0.8/webhooks.textile`. 
+**IMPORTANT:** The values used in the `redirect_from` list should be the URL without the file extension. E.g. `general/versions/v0.8/webhooks` not `general/versions/v0.8/webhooks.textile`.
 
 ### Updating the redirects YAML file
 
@@ -212,13 +215,13 @@ And then you will need to populate the `api_key` property in that file with a JS
 The creation of code content for JSBin is further documented in our
 [document formatting guide](content/client-lib-development-guide/documentation-formatting-guide.textile)
 which gets published
-[here](https://docs.ably.io/client-lib-development-guide/documentation-formatting-guide/#code-blocks).
+[here](https://docs.ably.com/client-lib-development-guide/documentation-formatting-guide/#code-blocks).
 The code that is published to JSBin can be found in
 [content/code/](content/code/).
 
 ## Branch and tag scheme for features spec
 
-The `main` branch contains the most recent version of the spec, as amended by any subsequent fixes and non-breaking improvements. This is the version that a client library developer who is implementing a feature now should use as a reference. It is also the version that is deployed to docs.ably.io.
+The `main` branch contains the most recent version of the spec, as amended by any subsequent fixes and non-breaking improvements. This is the version that a client library developer who is implementing a feature now should use as a reference. It is also the version that is deployed to docs.ably.com.
 
 When proposing a spec change, changes that you would be happy to have incorporated into the current version of client libraries should be made against `main`. Changes that should not be incorporated until the next minor or major version should be made against the corresponding`integration/<major>.<minor>` branch, e.g. `integration/1.2` (which ideally should be regularly rebased on top of `main`).
 
@@ -226,17 +229,15 @@ When a new minor or major version of the spec is released, it is tagged with a t
 
 Client library developers are not expected to monitor the docs repo for spec fixes that occur after the release tag. If a given spec fix needs to be made to client libraries at that time, on merging the PR to `main` you should open a GitHub issue in each individual client lib repo to request that. If this is not done, it is not mandatory for the fix to be incorporated until the next spec release.When updating a client lib to a spec version, client lib developers should work from a diff from the tag of the previous release, so as to incorporate all changes since that tag.
 
-## Deploying to website (www.ably.io/documentation)
+## Deploying to website (ably.com/documentation)
 
 The website consumes this repo through a Ruby gem. The gem points at the `main` branch and saves the revision as a version. To release to `/documentation`, follow these steps:
 
-1. Check if the changes that are already on `main` in this repository are ok to be released
-2. Merge your PR
-3. Clone the [website repo](https://github.com/ably/website)
-4. Run `bundle update ably-docs` in the website repo
-5. Check in `Gemfile.lock` that the SHA saved by the above command is the SHA of the commit you expected (in most cases this should be the merge/top commit of your PR)
-6. Open PR & ask the website team to review
-7. Follow the deployment process for website (if in doubt, ask the website team for help)
+1. Make sure `main` of this repository is ready to be published.
+2. Clone the [website repo](https://github.com/ably/website) and create a new branch.
+3. Run `./script/bump_docs.sh` from the root to create a commit for publishing the documentation.
+4. Push your branch to the website repo and create a pull request.
+5. Edit any unnecessary information out of the description and add the website team as reviewers.
 
 ## Running on Heroku
 
@@ -250,4 +251,4 @@ This repo will automatically run on Heroku, but relies on the following buildpac
 
 ## Help and contact
 
-If you have any questions or suggestions, please [get in touch with us at Ably](https://www.ably.io/contact).
+If you have any questions or suggestions, please [get in touch with us at Ably](https://ably.com/contact).

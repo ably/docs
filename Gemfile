@@ -11,6 +11,8 @@ gem 'gist'
 gem 'jsbin-client'
 
 # Web server for `nanoc view`
+gem 'webrick'
+
 gem 'adsf'
 
 # Guard for automatic rebuilding of static site
@@ -31,3 +33,10 @@ gem 'json'
 # Debugging
 gem 'pry'
 gem 'pry-byebug'
+
+# Content checking
+gem 'nokogiri'
+
+group :development, :test do
+  gem 'rspec', '~> 3.10'
+end
