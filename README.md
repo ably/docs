@@ -233,13 +233,11 @@ Client library developers are not expected to monitor the docs repo for spec fix
 
 The website consumes this repo through a Ruby gem. The gem points at the `main` branch and saves the revision as a version. To release to `/documentation`, follow these steps:
 
-1. Check if the changes that are already on `main` in this repository are ok to be released
-2. Merge your PR
-3. Clone the [website repo](https://github.com/ably/website)
-4. Run `bundle update ably-docs` in the website repo
-5. Check in `Gemfile.lock` that the SHA saved by the above command is the SHA of the commit you expected (in most cases this should be the merge/top commit of your PR)
-6. Open PR & ask the website team to review
-7. Follow the deployment process for website (if in doubt, ask the website team for help)
+1. Make sure `main` of this repository is ready to be published.
+2. Clone the [website repo](https://github.com/ably/website) and create a new branch.
+3. Run `./script/bump_docs.sh` from the root to create a commit for publishing the documentation.
+4. Push your branch to the website repo and create a pull request.
+5. Edit any unnecessary information out of the description and add the website team as reviewers.
 
 ## Running on Heroku
 
