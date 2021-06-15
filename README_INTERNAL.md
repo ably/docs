@@ -6,12 +6,12 @@ The instructions on this page are intended for Ably staff. Please see the [main 
 
 The following steps apply if you will be creating or modifying code within this repository for our "Try it now" code editor in [JSBin](https://jsbin.ably.io/).
 
-The creation of code content for JSBin is further documented in our
-[document formatting guide](content/client-lib-development-guide/documentation-formatting-guide.textile)
-which gets published
-[here](https://docs.ably.com/client-lib-development-guide/documentation-formatting-guide/#code-blocks).
-The code that is published to JSBin can be found in
-[content/code/](content/code/).
+> **Note**: The creation of code content for JSBin is further documented in our
+> [document formatting guide](content/client-lib-development-guide/documentation-formatting-guide.textile)
+> which gets published
+> [here](https://docs.ably.com/client-lib-development-guide/documentation-formatting-guide/#code-blocks).
+> The code that is published to JSBin can be found in the
+> [content/code/](content/code/) folder.
 
 ### Obtaining the API key
 
@@ -26,7 +26,7 @@ Execute the following SQL statement to retrieve the API key:
 $ heroku pg:psql -a ably-jsbin -c "select name, api_key from ownership"
 ```
 
-When you execute this command you will be prompted to open a browser window and log in to Heroku. Make sure that you log in using your Ably email address, as only Ably staff members are permitted to access this resource.
+When you execute this command you will be prompted to open a browser window and log in to Heroku. Ensure that you log in **using your Ably email address**, as only Ably staff members are permitted to access this resource.
 
 If you are an Ably staff member and receive this message:
 
@@ -42,7 +42,7 @@ $ heroku pg:psql -a ably-jsbin -c "select name, api_key from ownership"
 $ heroku login
 ```
 
-When the SQL statement has executed successfully, you will be shown the API key that you need for the next step, which is creating a JSBin config file:
+When the SQL statement has executed successfully, you will be shown the API key that you need for the next step, which is to create a JSBin config file:
 
 ```
  name |      api_key
@@ -59,35 +59,37 @@ Copy the example config file (`config/jsbin_config.example.yaml`) to `config/jsb
 $ cp config/jsbin_config.example.yaml config/jsbin_config.yaml
 ```
 
-Then, populate it with the API key that you retrieved in the preceding step.
+Then, populate `jsbin_config.yaml` with the API key that you retrieved in the preceding step.
 
 ### Compile the JSBin code snippets
 
 This step adds your new code snippet to the list of existing snippets in `/data/jsbins.yaml`. This file is essentially a table of hashed documents and corresponding file names. Choose the appropriate command for your installation type:
 
-#### Using Ruby (local install)
+#### Ruby
 
 ```bash
 $ bundle exec nanoc compile
 ```
 
-#### Using Docker
+#### Docker
 
 ```shell
 docker-compose up
 ```
 
-Executing one of the above commands displays a huge list as each file is checked, that looks similar to the following:
+Executing one of the above commands checks each file and produces a long lists that looks similar to the following:
 
 ```bash
-Published new JsBin for hub-product/http-javascript at https://jsbin.ably.io:443/ujehow/1/edit?javascript,live
+...
+Published new JSBin for hub-product/http-javascript at https://jsbin.ably.io:443/ujehow/1/edit?javascript,live
 Copied https://jsbin.ably.io:443/ujehow/1/edit?javascript,live to clipboard
     create  [0.49s]  output/code/realtime/channel-deltas-sse/index.html
     update  [1.10s]  output/sse/index.html
     update  [1.02s]  output/concepts/socketio/index.html
+...
 ```
 
-The output above shows that a new record was added to `jsbins.yaml` with the ID of `ujehow` in the JsBin URL. By hashing the contents, we don't need to call the JSBin API on every static build, but only if a hash does not exist, in which case we call the API to create a new JSBin that contains the required HTML, CSS, and JavaScript for our code snippet.
+The output above shows that a new record was added to `jsbins.yaml` with the ID of `ujehow` in the JSBin URL. By hashing the contents, we don't need to call the JSBin API on every static build, but only if a hash does not exist, in which case we call the API to create a new JSBin that contains the required HTML, CSS, and JavaScript for our code snippet.
 
 ```yaml
 ---
@@ -127,7 +129,7 @@ When proposing a spec change, changes that you want to incorporate into the curr
 
 When a new minor or major version of the spec is released, it is tagged with a version number such as `v1.2`. Conformance to the spec at that tag is what defines whether a library can be released with that major/minor version.
 
-Client library developers are not expected to monitor the docs repo for spec fixes that occur after the release tag. If a given spec fix needs to be made to client libraries at that time, then when merging the PR to `main` you should open a GitHub issue in each individual client lib repo to request that the fix is made. If you don't do this then you cannot expect the fix to be incorporated until the next spec release.When updating a client lib to a spec version, client lib developers should work from a diff from the tag of the previous release, so as to incorporate all changes since that tag.
+Client library developers are not expected to monitor the docs repo for spec fixes that occur after the release tag. If a given spec fix needs to be made to client libraries at that time, then when merging the PR to `main` you should open a GitHub issue in each individual client library repo to request that the fix is made. If you don't do this then you cannot expect the fix to be incorporated until the next spec release. When updating a client library to a spec version, client library developers should work from a diff from the tag of the previous release, so as to incorporate all changes since that tag.
 
 ## Deploying documentation changes to `ably.com/documentation`)
 
