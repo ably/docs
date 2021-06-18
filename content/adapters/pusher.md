@@ -7,12 +7,12 @@ Note: You need enable Pusher adapter support in your account dashboard before yo
 To use the Ably Pusher protocol adapter, you must initialize your Pusher client library as follows, assuming an [Ably API key](https://knowledge.ably.com/what-is-an-app-api-key) of `'appid.keyid:keysecret'`:
 
 ```js
-var pusher = new Pusher('appid.keyid', {
-  wsHost       : 'realtime-pusher.ably.io',
-  httpHost     : 'realtime-pusher.ably.io',
-  disableStats : true,
-  encrypted    : true
-});
+var pusher = new Pusher("appid.keyid", {
+  wsHost: "realtime-pusher.ably.io",
+  httpHost: "realtime-pusher.ably.io",
+  disableStats: true,
+  encrypted: true,
+})
 ```
 
 And your Pusher REST libraries as (using ruby as an example):
@@ -31,12 +31,12 @@ Pusher::Client.new(
 
 Please note:
 
-* For simplicity, the above example uses the Pusher JavaScript and Ruby libraries. All other Pusher client libraries can be instanced in a similar fashion. See the [complete list of Pusher client libraries and their documentation](https://pusher.com/docs/channels/channels_libraries/libraries).
-* For the Pusher key, use the part of the [Ably API key](https://knowledge.ably.com/what-is-an-app-api-key) before the colon; for the secret, use the part after the colon.
-* You can add any other Pusher options you would normally use in the initializer.
-* In the Pusher client library terminology, the 'encrypted' option controls whether the the lib uses TLS, not end-to-end encryption. Setting the `encrypted` option to true is not mandatory, but strongly recommended to avoid sending private keys over plain text connections.
-* Pusher adapter clients are not "identified" in the Ably sense. Make sure you do not have 'require identification' channel rule on for any channels/namespaces you will be accessing with the adapter. See [this article](https://knowledge.ably.com/what-are-channel-rules-and-how-can-i-use-them-in-my-app) on how to change channel rules. If you get an "Ably error 40160", this is the reason why.
-* *The Pusher channel will have a different name from the corresponding Ably channel*. See the 'Channels' section below.
+- For simplicity, the above example uses the Pusher JavaScript and Ruby libraries. All other Pusher client libraries can be instantiated in a similar fashion. See the [complete list of Pusher client libraries and their documentation](https://pusher.com/docs/channels/channels_libraries/libraries).
+- For the Pusher key, use the part of the [Ably API key](https://knowledge.ably.com/what-is-an-app-api-key) before the colon; for the secret, use the part after the colon.
+- You can add any other Pusher options you would normally use in the initializer.
+- In the Pusher client library terminology, the 'encrypted' option controls whether the the lib uses TLS, not end-to-end encryption. Setting the `encrypted` option to true is not mandatory, but strongly recommended to avoid sending private keys over plain text connections.
+- Pusher adapter clients are not "identified" in the Ably sense. Make sure you do not have 'require identification' channel rule on for any channels/namespaces you will be accessing with the adapter. See [this article](https://knowledge.ably.com/what-are-channel-rules-and-how-can-i-use-them-in-my-app) on how to change channel rules. If you get an "Ably error 40160", this is the reason why.
+- _The Pusher channel will have a different name from the corresponding Ably channel_. See the 'Channels' section below.
 
 ## Supported features
 
@@ -67,22 +67,22 @@ When using Ably normally, you cannot connect to the Ably service at all without 
 ### Channels
 
 - Ably and Pusher both have various (incompatible) restrictions on channel names, and use namespaces very differently. So when using the adapter, channel names are mapped. That is, if you connect to the channel "foo" using the Pusher adapter, it will actually use the Ably channel "public:foo". The channel name translation rules are as follows:
- - Pusher public channels (no prefix) are mapped to the the Ably 'public:' namespace.
- - Pusher private channels ('private-' prefix) are mapped to the the Ably 'private:' namespace.
- - Pusher presence channels ('presence-' prefix) are mapped to the the Ably 'presence:' namespace.
- - Conversely, Ably channels not in any of the 'public:', 'private:', or 'presence:' namespaces get a 'private-ablyroot-' prefix.
- - Colons are banned in Pusher channel names, but are important in Ably channel names, as they act as the namespace separator. So the adapter maps semicolons to colons: semicolons in Pusher channel names become colons in Ably channel names, and vice versa. (This means you will not be able to access any Ably channels which have semicolons in their name).
+- Pusher public channels (no prefix) are mapped to the the Ably 'public:' namespace.
+- Pusher private channels ('private-' prefix) are mapped to the the Ably 'private:' namespace.
+- Pusher presence channels ('presence-' prefix) are mapped to the the Ably 'presence:' namespace.
+- Conversely, Ably channels not in any of the 'public:', 'private:', or 'presence:' namespaces get a 'private-ablyroot-' prefix.
+- Colons are banned in Pusher channel names, but are important in Ably channel names, as they act as the namespace separator. So the adapter maps semicolons to colons: semicolons in Pusher channel names become colons in Ably channel names, and vice versa. (This means you will not be able to access any Ably channels which have semicolons in their name).
 
 A few examples:
 
-Pusher adapter channel    | Actual Ably channel
---------------------------|-------------
-presence-foo              |  presence:foo
-private-foo               |  private:foo
-foo                       |  public:foo
-foo;bar                   |  public:foo:bar
-private-ablyroot-foo      |  foo
-private-ablyroot-foo;bar  |  foo:bar
+| Pusher adapter channel   | Actual Ably channel |
+| ------------------------ | ------------------- |
+| presence-foo             | presence:foo        |
+| private-foo              | private:foo         |
+| foo                      | public:foo          |
+| foo;bar                  | public:foo:bar      |
+| private-ablyroot-foo     | foo                 |
+| private-ablyroot-foo;bar | foo:bar             |
 
 ### User and subscriber count
 
