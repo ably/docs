@@ -36,7 +36,7 @@ pubnub = Pubnub.new(
 
 Please note:
 
-* For simplicity, the above example uses the Pubnub JavaScript library. All other Pubnub client libraries can be instanced in a similar fashion. See the [complete list of Pubnub SDKs and their documentation](https://www.pubnub.com/docs/).
+* For simplicity, the above example uses the Pubnub JavaScript library. All other Pubnub client libraries can be instantiated in a similar fashion. See the [complete list of Pubnub SDKs and their documentation](https://www.pubnub.com/docs/).
 * You can add any other Pubnub options you would normally use in the initializer.
 * Don't try to use different Ably API keys for the `publish_key` and `subscribe_key`. Unlike Pubnub, Ably does not use different keys for publish and subscribe; instead, capabilities are connection-oriented, and the Adapter will use whatever you pass as the `subscribe_key` to create the Ably connection. If that key does not have publish capabilities, you will not be able to publish, whatever the `publish_key` has.
 * The `ssl` option is not mandatory, but strongly recommended. The Pubnub client includes the raw api key in the path that it connects to, so we strongly advise you to use this option to prevent it being sent in plain text.
