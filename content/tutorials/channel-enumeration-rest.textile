@@ -16,33 +16,49 @@ authors:
   author_bio: ""
   author_profile_url: "https://github.com/SimonWoolf"
   author_image: "https://avatars1.githubusercontent.com/u/5908687?s=460&v=4"
+- author_name: Mark Lewin
+  author_bio: ""
+  author_profile_url: "https://github.com/marklewin"
+  author_image: "https://avatars.githubusercontent.com/u/18176755?s=460&v=4"
 languages:
   - javascript
 level: easy
 reading_time: 5
 tags:
-    - Channel metadata
+  - Channel metadata
 ---
 
-"Ably's global platform":https://ably.com/platform organizes all of the message traffic within its applications into named "channels":/core-features/channels. Channels are the “unit” of message distribution; clients attach to any number of channels to publish or subscribe to messages. Every message published to a channel is broadcasted to all subscribers.
+"Ably's global platform":https://ably.com/platform organizes all message traffic within an application into named "channels":/core-features/channels. Clients attach to the channels they are interested in. They can then publish messages to those channels or subscribe to receive messages from them.
 
-Many times, developers find it helpful to be aware of specific metadata related to their channels. This metadata can be accessed using our "Channel Metadata API":/realtime/channel-metadata. This API allows you to subscribe to the "channel lifecycle events":/realtime/channel-metadata#lifecycle-events and "channel occupancy events":/realtime/channel-metadata#occupancy-realtime or send one off REST requests to the "Channel Status API":/rest/channel-status to query "channel enumeration":/rest/channel-metadata/enumeration-rest, i.e., listing all the active channels associated with a particular API key in an app or to query the status and occupancy data associated with the channel. In this tutorial, we'll see how to implement the channel enumeration functionality.
+Often, its useful for developers to be able to access channel metadata. Ably provides two APIs for this:
 
-Channel enumeration, as decribed above, is part of the Channel Status API, and can be currently implemented via our "REST API":/rest-api only; however, you can still use our "REST client library":/rest to send requests to the REST API as you'll see further down this tutorial.
+* The "Channel Metadata API":/realtime/channel-metadata enables you to subscribe to "channel lifecycle events":/realtime/channel-metadata#lifecycle-events or to "channel occupancy events":/realtime/channel-metadata#occupancy-realtime.
+
+* The "Channel Status API":/rest/channel-status enables you to query the status of a specific channel or perform "channel enumeration":/rest/channel-metadata/enumeration-rest: that is, to list __all__ active channels within an application that are associated with a particular API key and optionally retrieve the status of each channel at the same time.
+
+In this tutorial, you will learn how to implement channel enumeration.
+
+Channel enumeration is part of the Channel Status API, and is currently only available via the "REST API":/rest-api. Ably provides a "REST client library":/rest to make it straightforward to access the REST API and you will be using the client library in this tutorial.
 
 <%= partial partial_version('tutorials/_step-1-create-app-and-api-key') %>
 
-h2(#permissions). Step 2 - Setting the right permissions on your API key
+h2(#permissions). Step 2 - Configuring the required capabilities on your API key
 
-In order to be able to enumerate channels, you'll need to ensure that the @Channel Metadata@ permission is enabled on your API key. "Privileges":/core-features/authentication/#capabilities-explained (sometimes referred to as capabilities or permissions) restrict your API key to specific operations such as @Publish@ and @Subscribe@ or @Publish@ only. These privileges can be set on your API key via your account dashboard. Navigate to the 'API Keys' tab of your dashboard as shown in the image below and click on the 'settings' button on your existing API key that you'd like to use, or create a new one.
+To be able to enumerate channels, your API key must have the @Channel Metadata@ capability. "Capabilities":/core-features/authentication/#capabilities-explained specify which operations your API key is allowed to perform. For example: @Publish@ and @Subscribe@ or @Publish@ only. You configure these capabilities in the account dashboard:
 
-<a href="/images/tutorials/metadata/channel-metadata-permissions.png" target="_blank">
-  <img src="/images/tutorials/metadata/channel-metadata-permissions.png" style="width: 100%" alt="Channel metadata permissions">
+# Navigate to the API Keys tab within your chosen application.
+# Click the Settings button
+# Ensure that Channel Metadata is selected in the list of capabilities
+# Ensure that Resource restrictions (channels & queues) is set to None
+# Click the Save button
+
+<a href="/images/tutorials/metadata/channel-metadata-capabilities.png" target="_blank">
+  <img src="/images/tutorials/metadata/channel-metadata-capabilities.png" style="width: 100%" alt="Channel metadata capabilities">
 </a>
 
-A regular Ably API key has a @capability@ which lists resources (glob expressions that match channel names) and, for any given resource, a set of permitted operations. The wildcard resource @'*'@ will match any regular channel name. To enable access to channel metadata, ensure the @Channel Metadata@ privilege is enabled in your API key.
+For simplicity, this tutorial will use "basic authentication":/core-features/authentication#basic-authentication. In production, "Ably advises that you use token authentication":/core-features/authentication#token-authentications in client-side applications to "protect your API key":/root/best-practice-guide#using-api-key-client-side.
 
-If you are using token authentication, in order to enumerate channels, your token capabilities must permit the @channel-metadata@ a wildcard @'*'@ resource. If you are not clear on when to use token vs basic (API key) authentication, read "selecting an authentication mechanism":/core-features/authentication/#selecting-auth. The following is an example of a capability for a token that would allow access to channel enumeration and subscribe operations:
+To enumerate channels in an application that uses token authentication, your token capabilities must include @channel-metadata@ for all channels and queues by using the @'*'@ wildcard. For example, the following token capabilities permit channel enumeration and subscribe operations on all channels:
 
 ```[json]
   {
@@ -52,18 +68,17 @@ If you are using token authentication, in order to enumerate channels, your toke
 
 h2(#front-end). Step 3 - Creating a basic HTML page to display the results
 
-Since we'll be using JavaScript in this tutorial, the best way to display the results is in a browser. So, go ahead and paste the following simple HTML in a file and name it @index.html@
+Your JavaScript code will display your enumerated channels in a web page. Create a file called @index.html@ and paste in the following HTML markup:
 
 ```[html]
 <html>
 <head>
     <title>Channel Enumeration</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script lang="text/javascript" src="https://cdn.ably.io/lib/ably-1.js"></script>
+    <script src="https://cdn.ably.io/lib/ably-1.js"></script>
 </head>
 
 <body style="padding: 60px; font-family:Arial, Helvetica, sans-serif">
-    Ably Channel Enumeration using REST API - Demo
+    Ably Channel Enumeration Demo
     <br/>
     <div>
         <button id='enumerate' onclick="enumerateChannels()">Enumerate channels</button>
@@ -77,25 +92,24 @@ Since we'll be using JavaScript in this tutorial, the best way to display the re
 </html>
 ```
 
-
-The key thing to note in the HTML above is the inclusion of two JS files, one is the Ably Library, referenced via the CDN, while the other is the @main.js@ file which will include our logic. We'll work on this next.
+The key thing to note in the HTML above is the inclusion of two JavaScript files, one is the Ably Library, referenced via the CDN, while the other is the @main.js@ file that will include the application logic which you will work on next.
 
 
 h2(#performing-the-rest-request). Step 4 - Using Ably's REST library to perform a REST API request
 
-Channel enumeration is not currently integrated into our REST client libraries as a dedicated method. However, you can still use our "REST client libraries":/rest to query it, using the "request() method":https://ably.com/documentation/rest/usage#request , which can perform arbitrary REST requests to our API. We highly recommend you do this rather than querying the REST api directly yourself; see "Should I use the REST API directly?":https://ably.freshdesk.com/support/solutions/articles/3000061848-should-i-use-the-rest-api-directly- for why.
+Channel enumeration is not currently integrated into Ably's REST client libraries as a dedicated method. However, you can still use the "REST client libraries":/rest to access the REST API it via the "request() method":/rest/usage#request, which can perform arbitrary requests to Ably's REST API endpoints.
 
-For the simplicity of this tutorial, we'll use "Basic authentication":/core-features/authentication#basic-authentication to perform the request. However, it is highly recommended to use "Token auth":/core-features/authentication#token-authentication on client-side applications for "better security and protection of your API key":/root/best-practice-guide#using-api-key-client-side.
+**Note**: Ably recommends that you use this approach rather than querying the REST API directly yourself: see "Should I use the REST API directly?":https://ably.freshdesk.com/support/solutions/articles/3000061848-should-i-use-the-rest-api-directly for an explanation.
 
-In order to receive channel enumeration information, we'll have to make use of the @/channels@ endpoint of "Ably's REST API":rest-api. We'll perform a @GET@ request using the REST library, and the result of this request will be an "HTTPPaginatedResponse":https://ably.com/documentation/rest/usage#http-paginated-response object. This allows the results to be returned in a paginated fashion, i.e, it returns a page of results and allows you to automatically request for more pages until all of the available results are returned.
+In order to receive channel enumeration information, you need to query the "@/channels@ endpoint":/rest-api#enumeration-rest. You will use the client library's @request()@ method to perform a @GET@ request and the result of this request will be an "HTTPPaginatedResponse":/rest/usage#http-paginated-response object. This enables the results to be returned in pages, instead of all at once.
 
-Let's begin with instantiating the Ably REST library using the API key. Create a new file called @main.js@ and add the following to it.
+Begin by instantiating the Ably REST client library. Create a new file called @main.js@ and add the following code to it, replacing @<YOUR-API-KEY>@ with your own API key:
 
 ```[javascript]
 const ably = new Ably.Rest('<YOUR-API-KEY>');
 ```
 
-Next, let's go ahead and perform the actual REST request using the @request()@ method as follows:
+Then, code the REST API request using the library's @request()@ method as follows:
 
 ```[javascript]
 const resultArea = document.getElementById('result');
@@ -130,18 +144,15 @@ function handleResultPage(err, resultPage) {
 }
 ```
 
-Remember to replace <YOUR-API-KEY> with an actual Ably API key.
+The @enumerateChannels()@ function is invoked when the user clicks the Enumerate Channels button in the web page. Inside this function, you make a @GET@ request to the REST API @/channels@ endpoint, using the REST client library's @request()@ method. You can optionally limit the number of results returned using the @limit@ parameter: see the "API reference":/rest-api#pagination to learn more.
 
-In the code above, we have set the REST endpoint to be @/channels@. The @enumerateChannels()@ function is invoked on a button click from the front end. Inside this function, we have made a simple request to Ably's REST API, using Ably's JavaScript REST client library. We can optionally specify a limit to the results returned; you can have a look at the "API reference":/general/channel-lifecycle.textile in the docs to learn more. As mentioned before, the results are returned in the form of an @HTTPPaginatedResponse@; hence we are required to process them page by page. Each page contains one @Channel@ per active channel that exists within an app. Here, all we are interested in is the name of the channel, so we used @by: 'id'@ parameter to request only a list of names. If you want more detailed information about each channel (such as occupancy data), you can remove this parameter. See "our REST API docs":/rest-api#enumeration-rest for documentation on all supported parameters.
+Because the results are returned as an @HTTPPaginatedResponse@ object, you must process them page by page. Each page has an @items@ array that lists active channels within an Ably application. The @by: 'id'@ parameter tells the API to return only a list of names. If you want more detailed information about each channel (such as occupancy data), you can remove this parameter. See "the documentation":/rest-api#enumeration-rest for all supported parameters.
 
-h2(#live-demo). Step - 5 Live Demo
+h2(#live-demo). Step 5 - Live Demo
 
-Ably Channel Enumeration using REST API - Demo
-Make sure that you've enabled the channel metadata permission on your API key.
+Click the button below to see a list of active channels within a sample application.
 
 <div>
-  <input type="text" style="width: 30%" id="user-api-key" placeholder="Paste your Ably API key">
-  <br/>
   <button id='enumerate' onclick="enumerateChannels()">Enumerate channels</button>
   <br/>
   <textarea id="result" rows="30" style="width: 100%; margin-top: 14px; font-family: courier, courier new; background-color: #333; color: orange;  overflow-y: scroll;" autocomplete="off" disabled>
@@ -152,26 +163,25 @@ Make sure that you've enabled the channel metadata permission on your API key.
 
 h2(#next-steps). Next Steps
 
-1. If you would like to find out more about how channels and publishing or subscribing to messages work, see the realtime "channels":https://ably.com/documentation/realtime/channels & "messages":https://ably.com/documentation/realtime/messages documentation.
-2. If you would like to check out the other related tutorials to work with channel metadata, see the "Channel Lifecycle Events":/tutorials/channel-lifecycle-events and "Channel Occupancy Events":/tutorials/channel-occupancy-events tutorials.
-3. Learn more about "Ably features":https://ably.com/features by going through our other "Ably tutorials":https://ably.com/tutorials
-4. Gain a good technical "overview of how the Ably realtime platform works":https://ably.com/documentation/how-ably-works
+1. Find out more about "channels":/realtime/channels and how to publish or subscribe to "messages":/realtime/messages.
+2. Discover other tutorials about working with channel metadata: "Subscribing to Channel Lifecycle Events":/tutorials/channel-lifecycle-events and "Subscribing to Inband Channel Occupancy Events":/tutorials/channel-occupancy-events.
+3. See "other tutorials":/tutorials to learn more about "Ably's features":/features.
+4. Gain a good technical overview of "how the Ably realtime platform works":/how-ably-works
 5. "Get in touch if you need help":https://ably.com/contact
 
+<!-- Code for live demo -->
 
+<script src="https://cdn.ably.io/lib/ably-1.js"></script>
 
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-<script lang="text/javascript" src="https://cdn.ably.io/lib/ably-1.js"></script>
-
-<script type="text/javascript">
-  
+<script>
+  const authUrl = 'https://ably.com/ably-auth/token/docs'
 
   const resultArea = document.getElementById('result');
   //request a list of channels on button click
   function enumerateChannels() {
     const endpoint = '/channels';
-    const userApiKey = document.getElementById('user-api-key').value;
-    const ably = new Ably.Rest(userApiKey);
+    resultArea.value += "Enumerating channels ...\n"
+    const ably = new Ably.Rest({authUrl: authUrl});
     ably.request('get', endpoint, { limit: 100, by: 'id' }, null, null, handleResultPage);
   }
 
