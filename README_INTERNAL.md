@@ -4,7 +4,7 @@ The instructions on this page are intended for Ably staff. Please see the [main 
 
 ## Publishing to JSBin
 
-The following steps apply if you will be creating or modifying code within this repository for our "Try it now" code editor in [JSBin](https://jsbin.ably.io/).
+The following steps apply if you will be creating or modifying code within this repository for our "Try it now" code editor in [JSBin](https://jsbin.ably.com/).
 
 > **Note**: The creation of code content for JSBin is further documented in our
 > [document formatting guide](content/client-lib-development-guide/documentation-formatting-guide.textile)
@@ -81,8 +81,8 @@ Executing one of the above commands checks each file and produces a long lists t
 
 ```bash
 ...
-Published new JSBin for hub-product/http-javascript at https://jsbin.ably.io:443/ujehow/1/edit?javascript,live
-Copied https://jsbin.ably.io:443/ujehow/1/edit?javascript,live to clipboard
+Published new JSBin for hub-product/http-javascript at https://jsbin.ably.com:443/ujehow/1/edit?javascript,live
+Copied https://jsbin.ably.com:443/ujehow/1/edit?javascript,live to clipboard
     create  [0.49s]  output/code/realtime/channel-deltas-sse/index.html
     update  [1.10s]  output/sse/index.html
     update  [1.02s]  output/concepts/socketio/index.html
@@ -107,9 +107,9 @@ jsbin_id:
 ---
 ```
 
-> **NOTE**: You can use this `ID` to view the JSBin for the associated code sample, by visiting `http://jsbin.ably.io/<ID>/edit`. For example, to view the JSBin with ID `ujehow`: [http:\/\/jsbin.ably.io/ujehow/edit](http://jsbin.ably.io/ujehow/edit)
+> **NOTE**: You can use this `ID` to view the JSBin for the associated code sample, by visiting `http://jsbin.ably.com/<ID>/edit`. For example, to view the JSBin with ID `ujehow`: [http:\/\/jsbin.ably.com/ujehow/edit](http://jsbin.ably.com/ujehow/edit)
 
-This process populates the code samples with working API keys dynamically. So for example, https://jsbin.ably.io/enagak/1/edit currently has an API key defined in the `apiKey` JavaScript variable. If you change the extension to `.textile` (`https://jsbin.ably.io/enagak/1.textile`), you now have a file you can copy and paste back into the docs repo, but **importantly**, it detects the presence of a real API key and replaces it with the placeholder `{{API_KEY}}`.
+This process populates the code samples with working API keys dynamically. So for example, https://jsbin.ably.com/enagak/1/edit currently has an API key defined in the `apiKey` JavaScript variable. If you change the extension to `.textile` (`https://jsbin.ably.com/enagak/1.textile`), you now have a file you can copy and paste back into the docs repo, but **importantly**, it detects the presence of a real API key and replaces it with the placeholder `{{API_KEY}}`.
 
 > **IMPORTANT**: You must commit the updated `jsbin.yaml` with your new assets when you push your changes to GitHub.
 
