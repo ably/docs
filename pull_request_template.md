@@ -1,4 +1,4 @@
-> NOTE: To reviewers - please do not review PRs in the DRAFT state, as the PR may change substantially before ready to review. Thanks.
+> _NOTE TO REVIEWERS_ - please **do not review PRs in the `DRAFT` state**, as the PR may change substantially before it is ready to review. Thanks.
 
 ## Description
 
