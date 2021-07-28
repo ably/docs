@@ -21,15 +21,19 @@ redirect_from:
   - /general/_authentication_capabilities
 ---
 
-Both the "REST client library":/rest/authentication and the "Realtime client library":/realtime/authentication use common authentication mechanisms. The two schemes supported by Ably are "Basic Authentication":#basic-authentication, which uses your private "API key":https://knowledge.ably.com/what-is-an-app-api-key, and "Token Authentication":#token-authentication, which uses short-lived tokens for access which are periodically renewed.
+Both the "REST client library":/rest/authentication and the "Realtime client library":/realtime/authentication use common authentication mechanisms. The two schemes supported by Ably are "basic authentication":#basic-authentication, which uses your Ably "API key":https://knowledge.ably.com/what-is-an-app-api-key, and "token authentication":#token-authentication, which uses short-lived tokens for access. These tokens are periodically renewed.
 
-Token Authentication, in most cases, is the recommended strategy on the client-side as it provides more fine-grained access control and limits the risk of exposed or compromised credentials.
+**Important:** Token authentication is the recommended authentication mechanism on the client-side, as it provides more fine-grained access control and limits the risk of exposing your Ably API key. In production systems you should never use basic authentication on the client-side as it exposes your Ably API key. API keys don't have an expiry, so once compromised, they could be used indefinitely by an attacker. Tokens have an expiry, and so there is only a small period of time during which the compromised token can be used.
+
+**Important:** You should never use token authentication server-side as this results in unnecessary overhead - the server would periodically require token requests to authenticate. For server-side, basic authentication is the recommended approach.
+
+In summary, on the client-side use token authentication. On the server-side use basic authentication.
 
 h3(#tutorials). Tutorials &amp; Examples
 
 If you would like to just dive in and see an example of Ably authentication in code, then take a look at our "client-server authentication tutorials":/tutorials.
 
-h2(#basic-authentication). Basic Authentication
+h2(#basic-authentication). Basic authentication
 
 Every application has one or more private API keys that you set up and "configure via the dashboard":https://knowledge.ably.com/setting-up-and-managing-api-keys. These keys can be used to authenticate with Ably. It is recommended that private API keys are never shared with untrusted parties, and as such, should only be used by your trusted secure servers when authenticating with Ably.
 
@@ -43,19 +47,19 @@ h3. Process used by client libraries connecting with basic auth:
   <img src="/images/diagrams/Ably-API-Auth1.gif" style="width: 100%" alt="Basic authentication process diagram">
 </a>
 
-Whilst Basic Authentication is simple, we recommend it to be only used on the server-side as it suffers from a number of problems:
+While basic authentication is simple, Ably recommends that it is only used server-side because of the following potential issues:
 
-* the secret is passed directly by the client to Ably, so it is not permitted for connections that are not over TLS (HTTPS or non-encrypted realtime connections) to prevent the key secret being intercepted
-* all of the configured capabilities of the key are implicitly possible in any request, and clients that legitimately obtain this key may then abuse the rights for that key
-* clients are permitted to use any client ID in all operations with Ably. As such, a client ID in messages and presence cannot be trusted as any client using Basic Authentication can masquerade with any client ID
+* The secret is passed directly by the client to Ably, so it is not permitted for connections that are not over TLS (HTTPS or non-encrypted realtime connections) to prevent the key secret being intercepted.
+* All of the configured capabilities of the key are implicitly possible in any request, and clients that legitimately obtain this key may then abuse the rights for that key.
+* A client that authenticates using an API key can claim any client ID it chooses. Therefore this client ID cannot be trusted to represent the genuine identity of the client.
 
-h2(#token-authentication). Token Authentication
+h2(#token-authentication). Token authentication
 
 Client-side devices should generally be considered untrusted, and as such, it is important that you minimize the impact of any credentials being compromised on those devices. Token authentication achieves this by having a trusted device, such as one of your own servers, possessing an API key "configured via the dashboard":https://knowledge.ably.com/setting-up-and-managing-api-keys. It can then use the API key to distribute time-limited "tokens":#tokens with limited sets of "access rights or capabilities":#capabilities-explained, or with "specific identities (<span lang="default">@clientId@</span><span lang="csharp">@ClientId@</span>)":#identified-clients to untrusted clients.
 
-Different token-issuing mechanisms can be used with Ably; the default is to use "Ably Tokens":#tokens which you request from Ably based on an Ably "TokenRequest":/realtime/authentication#token-request that you sign and issue from your servers to clients; or a "JSON Web Token":https://jwt.io (JWT) which you generate on your servers and sign using your private API key. Token Authentication, in most cases, is the recommended strategy on the client-side as it provides more fine-grained access control and limits the risk of exposed or compromised credentials.
+Different token-issuing mechanisms can be used with Ably; the default is to use "Ably Tokens":#tokens which you request from Ably based on an Ably "TokenRequest":/realtime/authentication#token-request that you sign and issue from your servers to clients; or a "JSON Web Token":https://jwt.io (JWT) which you generate on your servers and sign using your private API key. Token authentication, in most cases, is the recommended strategy on the client-side as it provides more fine-grained access control and limits the risk of exposed credentials being compromised.
 
-Any of the following will lead to the library to use token authentication:
+Any of the following will cause the library to use token authentication:
 
 * an "<span lang="default">@authUrl@</span><span lang="csharp">@AuthUrl@</span>":/realtime/types#client-options or "<span lang="default">@authCallback@</span><span lang="csharp">@AuthCallback@</span>":/realtime/types#client-options is provided that returns an Ably-compatible token or an Ably "@TokenRequest@;":/realtime/types#token-request
 * "<span lang="default">@useTokenAuth@</span><span lang="csharp">@UseTokenAuth@</span>":/realtime/types#client-options is true;
@@ -70,9 +74,9 @@ Token authentication is typically done in one of four ways:
 
 h3(#token-request-process). Ably TokenRequest is created by your servers and passed to clients
 
-p(tip#timetip). Token requests include a timestamp. So you should ensure that the machine on which you are running your auth server has an accurate clock, e.g. by using an "NTP daemon":https://en.wikipedia.org/wiki/Ntpd . If you are not able to control your machine's clock, you may wish to use the "@queryTime@ auth option":/rest/types#auth-options to avoid "'Timestamp not current' errors":https://knowledge.ably.com/40104-timestamp-not-current .
+p(tip#timetip). Token requests include a timestamp. So you should ensure that the machine on which you are running your auth server has an accurate clock, for example, by using an "NTP daemon":https://en.wikipedia.org/wiki/Ntpd. If you are not able to control your machine's clock, you may wish to use the "@queryTime@ auth option":/rest/types#auth-options to avoid "'Timestamp not current' errors":https://knowledge.ably.com/40104-timestamp-not-current.
 
-Using our REST or Realtime client libraries, an Ably "@TokenRequest@ is generated from your servers":/realtime/authentication#create-token-request and handed to the client-side client library. The client-side client library then uses that "Ably @TokenRequest@":/realtime/types#token-request to "request an Ably Token":/realtime/authentication#request-token from Ably and subsequently authenticate using that "Ably Token":#ably-tokens. This is the recommended approach for authentication as: an Ably "@TokenRequest@":/realtime/types#token-request can be generated securely by your servers without communicating with Ably; your secret API key is never shared with Ably or your clients. Ably "@TokenRequests@":/realtime/types#token-request cannot be tampered with due to being signed, must be used soon after creation and can only be used once.
+Using an Ably Client Library SDK, a @TokenRequest@ is "generated from your server":/realtime/authentication#create-token-request and returned to the client-side SDK instance. The client-side SDK instance then uses the "@TokenRequest@":/realtime/types#token-request to request an "Ably Token":/realtime/authentication#request-token from Ably, and subsequently authenticates using that "Ably Token":#ably-tokens. This is the recommended approach for authentication as: an Ably "@TokenRequest@":/realtime/types#token-request can be generated securely by your servers without communicating with Ably; your secret API key is never shared with Ably or your clients; Ably "TokenRequests":/realtime/types#token-request cannot be tampered with due to being signed, must be used soon after creation and can only be used once.
 
 <a href="/images/diagrams/Ably-token-auth-1.gif" target="_blank">
   <img src="/images/diagrams/Ably-token-auth-1.gif" style="width: 100%" alt="Ably TokenRequest auth process diagram">
@@ -111,10 +115,10 @@ The @tokenParams@ argument in @authCallback@ is available for convenience, allow
 
 h3(#token-process). Ably Token is issued by your servers and passed to clients.
 
-Using our REST or Realtime client libraries, an "Ably Token is requested by your servers":/realtime/authentication#request-token from Ably and then handed to the client-side client library. The client-side client library then uses that "Ably Token":#tokens to authenticate with Ably. This is an alternative approach for authentication that allows you to issue "Ably Tokens":#tokens directly as opposed to providing Ably "@TokenRequests@":/realtime/types#token-request from your servers. The advantage for clients is it saves one round trip request as they do not need to request an "Ably Token":#tokens themselves. The disadvantage is that your servers must communicate with Ably each time an "Ably Token":#tokens is required.
+Using an Ably Client Library SDK, an "Ably Token is requested by your servers":/realtime/authentication#request-token from Ably and then passed to the client-side SDK instance. The client-side SDK instance then uses that "Ably Token":#tokens to authenticate with Ably. This is an alternative approach for authentication that enables you to issue "Ably Tokens":#tokens directly as opposed to providing Ably "TokenRequests":/realtime/types#token-request from your servers. The advantage for clients is it saves one round trip request as they do not need to request an "Ably Token":#tokens themselves. The disadvantage is that your servers must communicate with Ably each time an "Ably Token":#tokens is required.
 
 <a href="/images/diagrams/Ably-Auth-Overview1.gif" target="_blank">
-  <img src="/images/diagrams/Ably-Auth-Overview1.gif" style="width: 100%" alt="Ably Token auth process diagram">
+  <img src="/images/diagrams/Ably-Auth-Overview1.gif" style="width: 100%" alt="Ably token auth process diagram">
 </a>
 
 The following is an example of issuing an Ably Token:
