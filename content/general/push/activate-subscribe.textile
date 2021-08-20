@@ -150,11 +150,16 @@ ably.push.activate()
 
 Please bear in mind that in order for the client to register itself automatically with Ably, it needs to be authenticated and have "the required @push-subscribe@ capability":#required-capabilities. If you would prefer to delegate registration of the push device to your own servers and not allow devices to register themselves directly with Ably, then see the section "how to register devices from your server":#activation-from-server. You can also check "our recommendations":#server-vs-direct-registration for choosing either registration strategy.
 
-h3. Register for callback from @activate@
+h3. Handle push notification lifecycle
 
-Once "@activate@":#activate is called, the aforementioned activation and registration process kicks off in the background. Once completed, a callback will be invoked if registered. We recommend you set up this callback so that you will be notified when push activation has succeeded or failed. Once the device has successfully been activated, you can then start subscribing for push notifications on channels and receiving push notifications via Ably.
+When "@activate@":#activate and "@deactivate@":#deactivate are called, the device registers with FCM/ APNs, and activation with Ably begins. Additionally, when a push token (APNs device token or FCM registration token) is updated on the device, the Ably SDK attempts to update this with Ably servers. The activation, deactivation and update process may fail, and you should handle the result of these methods in the push notification lifecycle methods. 
 
-When the activation process is completed, Ably will <span lang="android">send a broadcast through the application's "@LocalBroadcastManager@":https://developer.android.com/reference/android/support/v4/content/LocalBroadcastManager. You should listen for a broadcast with action @io.ably.broadcast.PUSH_ACTIVATE@</span><span lang="objc,swift">call your </span><span lang="objc">@(void)didActivateAblyPush:(nullable ARTErrorInfo *)error@</span><span lang="swift">@didActivateAblyPush(error: ARTErrorInfo?)@</span><span lang="objc,swift"> method from your @ARTPushRegistererDelegate@ implementation </span> as follows:
+There are three events which correspond to the three <span lang="android">intent broadcasts you should listen to.</span><span lang="objc,swift">delegate methods you should implement.</span>:
+ - Push activation completion (succeeds/ fails): <span lang="android">Listen for the @io.ably.broadcast.PUSH_ACTIVATE@ action in a broadcast intent</span><span lang="objc">Implement @- (void)didActivateAblyPush:(nullable ARTErrorInfo *)error;@</span><span lang="swift">@func didActivateAblyPush(_ error: ARTErrorInfo?)@</span>. Once the device has successfully been activated, you can then start subscribing for push notifications on channels and receiving push notifications via Ably.
+ - Push deactivation completion (suceeds/ fails): <span lang="android">Listen for the @io.ably.broadcast.PUSH_DEACTIVATE@ action in a broadcast intent</span><span lang="objc">Implement @- (void)didDeactivateAblyPush:(nullable ARTErrorInfo *)error@</span><span lang="swift">@func didDeactivateAblyPush(_ error: ARTErrorInfo?)@</span>
+ - Push update completion (fails only): <span lang="android">Listen for the @io.ably.broadcast.PUSH_UPDATE_FAILED@ action in a broadcast intent</span><span lang="objc">Implement @- (void)didAblyPushRegistrationFail:(nullable ARTErrorInfo *)error;@</span><span lang="swift">@func didAblyPushRegistrationFail(_ error: ARTErrorInfo?)@</span>
+
+An example to listen to the push activation event is as follows:
 
 ```[android]
 LocalBroadcastManager.getInstance(context.getApplicationContext()).registerReceiver(new BroadcastReceiver() {
@@ -181,6 +186,10 @@ ably.push.activate(context);
     // Subscribe to channels / listen for push etc.
 }
 
+// Inside your AppDelegate, set the delegate on ARTClientOptions
+ARTClientOptions *const options = [[ARTClientOptions alloc] init];
+options.pushRegistererDelegate = self; // Or another dedicated delegate class
+
 // Call activate, which will call the delegate method when done:
 [ably.push activate];
 ```
@@ -194,9 +203,15 @@ func didActivateAblyPush(_ error: ARTErrorInfo?) {
     // Subscribe to channels / listen for push etc.
 }
 
+// Inside your AppDelegate, set the delegate on ARTClientOptions
+let options = ARTClientOptions()
+options.pushRegistererDelegate = self // Or another dedicated delegate class
+
 // Call activate, which will call the delegate method when done:
 ably.push.activate()
 ```
+
+<span lang="objc,swift">Note: if the clientOptions was not provided with a @ARTPushRegistererDelegate@ via its @pushRegistererDelegate@ property, the @UIApplicationDelegate@ is automatically used if it implements @ARTPushRegistererDelegate@. This automatic behaviour is the older, deprecated approach.</span><span lang="objc">
 
 h2(#subscribing). Subscribe for push notifications
 
