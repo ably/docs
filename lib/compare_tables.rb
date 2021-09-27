@@ -28,6 +28,14 @@ class CompareTables
         end
       end
 
+      if info_references?(competitors)
+        competitors.filter { |competitor| info_reference(competitor) }.each do |competitor|
+          compare_table.concat("<div class='c-table--compare__disclaimer-references' id='references'>\n")
+          compare_table.concat("p. #{company_name(competitor)} references:\n\n")
+          compare_table.concat("p. #{info_reference(competitor)}\n\n")
+          compare_table.concat("</div>\n\n")
+        end
+      end
 
       compare_table
     end
@@ -79,6 +87,14 @@ class CompareTables
 
     def company_url(ref)
       compare_data['Companies'][ref]['url']
+    end
+
+    def info_references?(refs)
+      refs.any? { |ref| compare_data['Companies'][ref]['references'] }
+    end
+
+    def info_reference(ref)
+      compare_data['Companies'][ref]['references']
     end
 
     def disclaimers?(refs)
