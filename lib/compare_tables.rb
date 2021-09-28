@@ -8,14 +8,36 @@ class CompareTables
       number_of_competitors = competitors.length
       compare_table = ''
       current_category = 0
+
+      if disclaimers?(competitors)
+        compare_table.concat(compare_data['Generic']['disclaimer']['top'])
+      end
+
       unless compare_data[category].nil?
         compare_data[category].each do |name, section|
           compare_table = compare_table.concat(create_compare_headers(category, extra, section, competitors, current_category))
           compare_table = compare_table.concat(create_compare_body(category, extra, section, competitors))
           current_category = current_category + 1
         end
-        compare_table.concat("<br/>\n")
+        compare_table.concat("<br/>\n\n")
       end
+
+      if disclaimers?(competitors)
+        competitors.filter { |competitor| disclaimer(competitor) }.each do |competitor|
+          compare_table.concat(compare_data['Generic']['disclaimer']['bottom'])
+        end
+      end
+
+      if info_references?(competitors)
+        competitors.filter { |competitor| info_reference(competitor) }.each do |competitor|
+          compare_table.concat("<div class='c-table--compare__disclaimer-references' id='references'>\n")
+          compare_table.concat("p. #{company_name(competitor)} references:\n\n")
+          compare_table.concat("p. #{info_reference(competitor)}\n\n")
+          compare_table.concat("</div>\n\n")
+        end
+      end
+
+      compare_table
     end
 
     def create_compare_headers(category, extra, section, competitors, current_category)
@@ -65,6 +87,22 @@ class CompareTables
 
     def company_url(ref)
       compare_data['Companies'][ref]['url']
+    end
+
+    def info_references?(refs)
+      refs.any? { |ref| compare_data['Companies'][ref]['references'] }
+    end
+
+    def info_reference(ref)
+      compare_data['Companies'][ref]['references']
+    end
+
+    def disclaimers?(refs)
+      refs.any? { |ref| disclaimer(ref) }
+    end
+
+    def disclaimer(ref)
+      compare_data['Companies'][ref]['disclaimer']
     end
   end
 
