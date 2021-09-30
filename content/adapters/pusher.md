@@ -4,7 +4,7 @@
 
 Note: You need enable Pusher adapter support in your account dashboard before you can use the Pusher protocol adapter. See step 3 of [the tutorial](https://ably.com/tutorials/pubnub-adapter).
 
-To use the Ably Pusher protocol adapter, you must initialize your Pusher client library as follows, assuming an [Ably API key](https://knowledge.ably.com/what-is-an-app-api-key) of `'appid.keyid:keysecret'`:
+To use the Ably Pusher protocol adapter, you must initialize your Pusher client library as follows, assuming an [Ably API key](https://faqs.ably.com/what-is-an-app-api-key) of `'appid.keyid:keysecret'`:
 
 ```js
 var pusher = new Pusher('appid.keyid', {
@@ -32,10 +32,10 @@ Pusher::Client.new(
 Please note:
 
 * For simplicity, the above example uses the Pusher JavaScript and Ruby libraries. All other Pusher client libraries can be instantiated in a similar fashion. See the [complete list of Pusher client libraries and their documentation](https://pusher.com/docs/channels/channels_libraries/libraries).
-* For the Pusher key, use the part of the [Ably API key](https://knowledge.ably.com/what-is-an-app-api-key) before the colon; for the secret, use the part after the colon.
+* For the Pusher key, use the part of the [Ably API key](https://faqs.ably.com/what-is-an-app-api-key) before the colon; for the secret, use the part after the colon.
 * You can add any other Pusher options you would normally use in the initializer.
 * In the Pusher client library terminology, the 'encrypted' option controls whether the the lib uses TLS, not end-to-end encryption. Setting the `encrypted` option to true is not mandatory, but strongly recommended to avoid sending private keys over plain text connections.
-* Pusher adapter clients are not "identified" in the Ably sense. Make sure you do not have 'require identification' channel rule on for any channels/namespaces you will be accessing with the adapter. See [this article](https://knowledge.ably.com/what-are-channel-rules-and-how-can-i-use-them-in-my-app) on how to change channel rules. If you get an "Ably error 40160", this is the reason why.
+* Pusher adapter clients are not "identified" in the Ably sense. Make sure you do not have 'require identification' channel rule on for any channels/namespaces you will be accessing with the adapter. See [this article](https://faqs.ably.com/what-are-channel-rules-and-how-can-i-use-them-in-my-app) on how to change channel rules. If you get an "Ably error 40160", this is the reason why.
 * *The Pusher channel will have a different name from the corresponding Ably channel*. See the 'Channels' section below.
 
 ## Supported features
@@ -58,7 +58,7 @@ Please note:
 
 - While the Pusher adapter is quite a light translation layer (certainly a good deal lighter than the Pubnub adapter), a protocol adapter inevitably adds some latency. Using the adapter will be a little slower than using Ably native client libraries. Typically the impact is in the low milliseconds. By the same token, it will likely also be marginally slower than using Pusher natively -- but only if you are close to whichever Pusher datacenter you are using. If not, the extra milliseconds of latency from the adapter should be more than compensated for by being able to use a datacenter closer to you (unlike Pusher, Ably has [16+ datacenters globally and 175+ edge acceleration points-of-presence](https://ably.com/network) and federates messages between them - you automatically connect to the closest one to you, using latency-based routing).
 - Behind the scenes, the adapter just uses the normal Ably service, so there is no problem with using Pusher and Ably client libraries side by side (though bear in mind channel name translation, see below). You can mix and match as you like; for example, using Pusher client libraries normally, but using the Ably REST api to get channel history, which is not available through the Pusher clients.
-- While using the adapter gives you some of the advantages of Ably over Pusher (eg inter-region message federation), many others (e.g. [continuity guarantees](https://knowledge.ably.com/connection-state-recovery), [fallback host support](https://knowledge.ably.com/routing-around-network-and-dns-issues), [history](https://ably.com/documentation/realtime/history), [flexible channel namespaces](https://knowledge.ably.com/what-is-a-channel-namespace-and-how-can-i-use-them), [powerful token authentication](https://ably.com/documentation/core-features/authentication)) require the use of the Ably client libraries. As a result, if a native Ably library is available for your platform, we recommend you consider using the Ably client libraries instead or at least make a plan to eventually transition over to Ably native client libraries.
+- While using the adapter gives you some of the advantages of Ably over Pusher (eg inter-region message federation), many others (e.g. [continuity guarantees](https://faqs.ably.com/connection-state-recovery), [fallback host support](https://faqs.ably.com/routing-around-network-and-dns-issues), [history](https://ably.com/documentation/realtime/history), [flexible channel namespaces](https://faqs.ably.com/what-is-a-channel-namespace-and-how-can-i-use-them), [powerful token authentication](https://ably.com/documentation/core-features/authentication)) require the use of the Ably client libraries. As a result, if a native Ably library is available for your platform, we recommend you consider using the Ably client libraries instead or at least make a plan to eventually transition over to Ably native client libraries.
 
 ### Security
 
