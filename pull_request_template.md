@@ -4,7 +4,8 @@
 
 A PR description indicating the purpose of the PR.
 
-* [JIRA ticket](link).
+* [Jira epic ticket](link) - if applicable.
+* [Jira ticket](link).
 
 ## Review
 

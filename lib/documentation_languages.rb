@@ -3,6 +3,7 @@ module Ably
     'javascript' => { name: 'JavaScript', extension: 'js' },
     'java' => { name: 'Java', extension: 'java' },
     'android' => { name: 'Android', extension: 'java' },
+    'kotlin' => { name: 'Kotlin', extension: 'kt' },
     'python' => { name: 'Python', extension: 'py' },
     'php' => { name: 'PHP', extension: 'php' },
     'ruby' => { name: 'Ruby', extension: 'ruby' },
