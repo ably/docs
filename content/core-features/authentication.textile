@@ -384,13 +384,15 @@ Without token revocation, in order to restrict potential rogue access, you would
 
 Token revocation has to be enabled for you by Ably. There is a performance cost to enabling this feature. "Contact Ably":https://ably.com/contact if you'd like to enable this feature for a specific application.
 
+h3(#development-status). Development status
+
+The revocable tokens feature is currently in Beta.
+
 h3. Revocable tokens
 
-Tokens are revocable if they are created from an API key that has a @revocable@ attribute set to @true@. 
+Tokens are revocable if they are created from an API key that has a @revocableTokens@ attribute set to @true@. 
 
-Tokens created from a key with the @revocable@ attribute set to @true@ are restricted to a TTL of 1 hour; an attempt to create, or present, a token that is revocable, but has an TTL of longer than 1 hr, is rejected with an error.
-
-This functionality applies to client-signed JWTs and Ably-issued tokens, the latter being tokens obtained using the "@requestToken()@ API":/realtime/authentication#request-token).
+Tokens created from a key with the @revocableTokens@ attribute set to @true@ are restricted to a TTL of 1 hour; an attempt to create, or present, a token that is revocable, but has an TTL of longer than 1 hr, is rejected with an error.
 
 A JWT may include the following additional claim:
 
@@ -441,7 +443,7 @@ The request body has the following properties:
 - issuedBefore := If @issuedBefore@ is not specified, it is set to the current time. A request with an @issuedBefore@ in the future or more than an hour in the past will be rejected.
 - allowReauthMargin := The @allowReauthMargin@ bool permits a token renewal cycle to take place without needing established connections to be dropped, by postponing enforcement to 30 seconds in the future, and sending any existing connections a hint to obtain (and upgrade the connection to use) a new token. It defaults to @false@, meaning that the effect is near-immediate.
 
-When invoking the revocation API, a client must prove possession of the API key in question. This can be done by using basic authentication, using the API key itself.
+When invoking the revocation API, a client must prove possession of the key used to issue the tokens to be revoked. You can't use a key to revoke a token issued from a different key. This can be done by using basic authentication, using the API key itself.
 
 There can be a maximum of 100 target specifiers in a single request.
 
@@ -449,45 +451,45 @@ The token revocation API is rate-limited, so there is a maximum global aggregate
 
 Note that revocation is not a permanent prohibition of any client, connection, @clientId@ or channel. It invalidates token credentials issued before a certain point in time. Ultimately, the app that issues tokens is the arbiter of whether or not a client is able to continue to interact with the Ably service.
 
-It may be that if you enable token revocation, and attempt to revoke a token already created earlier, then that token cannot be guaranteed to be revoked if it has already been cached.
+Do not expect to be able to enable token revocation on an app, or the @revocableTokens@ attribute of a key, and then revoke a token that's been used since before you made that change. If you want to be able to revoke a token, revocation should have been enabled at the time that the token was issued and first used.
 
-h4. Curl examples
+h4. Examples
 
-A sample request to revoke an Ably token based on @clientId@:
+A sample request to revoke an Ably token based on @clientId@, using the REST client library SDK:
 
-```[sh]
-curl -u "${ABLY_KEY}:${ABLY_SECRET}" -X POST https://rest.ably.io/keys/${ABLY_KEY}/revokeTokens -d @data1.json \
-     --header "Accept: application/json" \
-     --header "Content-Type: application/json"
+```[javascript]
+const ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
+const requestBody = {"targets": [ "clientId:client1@example.com" ]}                                                                                                                                                                                       
+                                                                                                                                                                                                                                                               
+ablyRest.request('post', '/keys/{{API_KEY_NAME}}/revokeTokens', null, requestBody, null,
+function(err, response) {                                                                                                        
+  if(err) {                                                                                                                                                                                                                                      
+    console.log('An error occurred; err = ' + err.toString());
+  } else {                                                                                                                                                                                                 
+    console.log('Success! status code was ' + response.statusCode);
+  }                                                                                                                                                                                            
+});                                                                                                                                                                                                                                                            
 ```
 
-Where @data.json@ is as follows:
+A sample request to revoke a JWT based on @revocationKey@, using the REST client library SDK:
 
-```[json]
-{
-    "targets": [ "clientId:client1@example.com" ]
-}
-```
-
-A sample request to revoke a JWT based on @revocationKey@:
-
-```[sh]
-curl -u "${ABLY_KEY}:${ABLY_SECRET}" -X POST https://rest.ably.io/keys/${ABLY_KEY}/revokeTokens -d @data1.json \
-     --header "Accept: application/json" \
-     --header "Content-Type: application/json"
-```
-
-Where @data.json@ is as follows:
-
-```[json]
-{
-    "targets": [ "revocationKey:client1@example.com" ]
-}
+```[javascript]
+const ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
+const requestBody = {"targets": [ "revocationKey:client1@example.com" ]}                                                                                                                                                                                       
+                                                                                                                                                                                                                                                               
+ablyRest.request('post', '/keys/{{API_KEY_NAME}}/revokeTokens', null, requestBody, null,
+function(err, response) {                                                                                                        
+  if(err) {                                                                                                                                                                                                                                      
+    console.log('An error occurred; err = ' + err.toString());
+  } else {                                                                                                                                                                                                 
+    console.log('Success! status code was ' + response.statusCode);
+  }                                                                                                                                                                                            
+});                                                                                                                                                                                                                                                            
 ```
 
 h3. Revocation errors
 
-System error responses arising from the use of an invalidated token will include an Ably @ErrorInfo@ with a @code@ of 40146 and an informative error message. This includes REST API error responses, and Ably connection @disconnected@ state changes. Such a token error is non-fatal, which means that client libraries can react to that error by triggering a token renewal where the given library options allow (that is, if an @authCallback@ or @authURL@ is specified).
+System error responses arising from the use of an invalidated token will include an Ably @ErrorInfo@ with a @code@ of 40141 and an informative error message. This includes REST API error responses, and Ably connection @disconnected@ state changes. Such a token error is non-fatal, which means that client libraries can react to that error by triggering a token renewal where the given library options allow (that is, if an @authCallback@ or @authURL@ is specified).
 
 h3. See also
 
