@@ -31,7 +31,7 @@ Pusher::Client.new(
 
 Please note:
 
-* For simplicity, the above example uses the Pusher JavaScript and Ruby libraries. All other Pusher client libraries can be instantiated in a similar fashion. See the [complete list of Pusher client libraries and their documentation](https://pusher.com/docs/channels/channels_libraries/libraries).
+* For simplicity, the above example uses the Pusher JavaScript and Ruby libraries. All other Pusher client libraries can be instantiated in a similar fashion. See the [complete list of Pusher client libraries and their documentation](https://pusher.com/docs/channels/channels_libraries/libraries/).
 * For the Pusher key, use the part of the [Ably API key](https://faqs.ably.com/what-is-an-app-api-key) before the colon; for the secret, use the part after the colon.
 * You can add any other Pusher options you would normally use in the initializer.
 * In the Pusher client library terminology, the 'encrypted' option controls whether the the lib uses TLS, not end-to-end encryption. Setting the `encrypted` option to true is not mandatory, but strongly recommended to avoid sending private keys over plain text connections.
