@@ -120,17 +120,6 @@ sportsChannel.subscribe("add", () => {
 });
 ```
 
-h3(#being-present-without-subscribing-to-presence). Being present without subscribing to presence events
-
-If you want lots of people to be present, but without necessarily listening for "presence change events":/realtime/presence#presence-states, tokens can be used to prevent all users from receiving presence notifications while still allowing them to enter the presence set. This is a common scenario when you just want to know how many people are present on a channel at any point in time. An example of such a differential token capability is shown below:
-
-```[json]
-{
-  "presenceChannel": ["publish", "presence"],
-  "chat": ["presence", "history", "subscribe"],
-}
-```
-
 h3(#handling-connection-channel-state-change-events). Handling connection and channel state-change events
 
 Ably's Realtime SDKs automatically handle disruptions such as network disconnections, so you don't need to manually handle reconnection. The library emits:
@@ -195,9 +184,48 @@ h3(#embedding-client-id-in-token). Embedding client ID in the token to ensure tr
 
 A client ID serves as an identification for your clients when they are present on a channel. Your clients can set their own ID using the @clientId@ attribute, but in that case, there's a possibility that some of your clients can pretend to be someone else. To prevent this, you can embed a @clientId@ in the token issued to your clients from your auth server. Doing so ensures that the @clientId@ is set by your auth server, thus eliminating the chance of the end clients emulating as others.
 
+h3(#presence-volume). Understanding the number of presence messages that can be produced
+
+It is important when using the "presence":/realtime/presence feature to understand the amount of messages it can produce. If you have subscribers and presence members present on a channel then the number of messages used can increase rapidly. As an example, consider 200 clients subscribed to presence events on a channel and all of them join and leave the presence set within a few minutes. This would result in the following messages:
+
+* 200 presence messages published for the enter event.
+* 200 x 200 (40,000) messages subscribed to for the enter events.
+* 200 presence messages published for the leave event.
+* 200 x 200 (40,000) presence messages subscribed to for the leave event.
+
+This highlights the potential for 80,400 messages to be sent in a very short space of time on a single channel. As additional clients subscribe and enter the presence set, the number of messages quickly scales.
+
+In some instances this is the behavior required of your application. In other scenarios you may prefer to "only have a server subscribed to presence events":#being-present-without-subscribing-to-presence and the clients are only present on the channel.
+
+h3(#being-present-without-subscribing-to-presence). Being present without subscribing to presence events
+
+It is possible to have clients be present on a channel without them receiving "presence change events":/realtime/presence#presence-states. Efficient use of "capabilities":/core-features/authentication#capabilities-explained can prevent all clients from receiving presence notifications while still allowing them to enter the presence set. This is a common scenario when you just want to know how many people are present on a channel at any point in time, for example by only having a server subscribed to the presence events. 
+
+An example of achieving this would be to use one channel for generic communications and another for the presence set. The following capabilities demonstrate this for clients and for servers:
+
+For clients:
+
+```[json]
+{
+  "chatPresence": ["presence"],
+  "chat": ["publish", "history", "subscribe"],
+}
+```
+
+For servers:
+
+```[json]
+{
+  "chatPresence": ["presence", "subscribe"],
+  "chat": ["publish", "history", "subscribe"],
+}
+```
+
+You could then write a mechanism within your application to periodically relay the "presence set":#use-existing-presence-set from the server to clients.
+
 h3(#use-existing-presence-set). Using the synced presence set provided by the realtime library
 
-Monitoring presence events can be quite complex. For this reason, the @Presence@ object in the realtime library exposes a @get@ "method":https://ably.com/documentation/realtime/presence#get allowing a client to retrieve an array of all members present on the channel. The Ably client is responsible for keeping track of the presence set from the time that the channel is attached. An up-to-date presence set is pushed to the client following attach and this set is updated on each subsequent presence event. Thus @get@ returns the already-known presence set retained in memory and does not trigger a new request to the Ably service. You can simply use this method as shown below, instead of venturing into the complexity of building one of your own.
+Monitoring presence events can be quite complex. For this reason, the @Presence@ object in the realtime library exposes a @get@ "method":/realtime/presence#get allowing a client to retrieve an array of all members present on the channel. The Ably client is responsible for keeping track of the presence set from the time that the channel is attached. An up-to-date presence set is pushed to the client following attach and this set is updated on each subsequent presence event. Thus @get@ returns the already-known presence set retained in memory and does not trigger a new request to the Ably service. You can simply use this method as shown below, instead of venturing into the complexity of building one of your own.
 
 ```[javascript]
 channel.presence.get((err, members) => {
@@ -209,3 +237,4 @@ channel.presence.get((err, members) => {
 h3(#using-presence-set-as-single-source-of-truth). Using the presence set as a single source of truth to see which clients are present
 
 A single @clientId@ may be present multiple times on the same channel via different client connections. As far as Ably is concerned, these are different members of the presence set for the channel, however they will be differentiated by their unique @connectionId@. For example, if a client with ID “Sarah” is connected to a chat channel on both a desktop and a mobile device simultaneously, or maybe via multiple tabs in a browser, “Sarah” will be present twice in the presence member set with the same @clientID@, yet will have two unique connection IDs. This means that if "Sarah" leaves the channel on her mobile, it doesn't necessarily mean she's gone as she might still be connected via desktop. For this reason, you should always use the presence set, which you can retrieve using the @get@ "method":/realtime/presence#get, as the single source of truth to see which clients are connected.
+
