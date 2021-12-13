@@ -1,0 +1,1653 @@
+---
+title: Channels
+section: realtime
+index: 2
+languages:
+  - javascript
+  - nodejs
+  - ruby
+  - java
+  - swift
+  - objc
+  - csharp
+  - flutter
+api_separator:
+jump_to:
+  Help with:
+    - Getting started#getting-started
+    - Channels#channels
+    - Subscribing to a channel#subscribing
+    - Publishing to a channel#publishing
+    - Channel lifecycle#channel-lifecycle
+    - Channel metadata#channel-metadata
+    - Implicit attach#implicit-attach
+    - Attach versus subscribe#attach-vs-subscribe
+    - Publishing to multiple channels#multi-publish
+    - Transient Publishing#transient-publish
+    - Channel states#channel-states
+    - Detaching from a channel#channel-detach
+    - Handling failures#handling-failures
+    - Channel namespaces#channel-namespaces
+    - Presence#presence-api
+  Channel API properties:
+    - state
+    - errorReason#error-reason
+    - name
+    - presence
+  Channel API methods:
+    - publish
+    - subscribe
+    - unsubscribe
+    - history
+    - attach
+    - detach
+    - on#on
+    - once
+    - off#off
+  Types:
+    - Related Types#related-types
+redirect_from:
+  - /realtime/channels-messages
+---
+
+Ably Platform service organizes the message traffic within applications into named channels. Channels are the medium through which "messages":/realtime/messages  are distributed; clients attach to channels to subscribe to "messages":/realtime/messages, and every "message":/realtime/messages published to a unique channel is broadcast by Ably to all subscribers. This scalable and resilient messaging pattern is commonly called "pub/sub":https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern.
+
+h2(#getting-started). Getting started
+
+The Ably Realtime client library provides a straightforward API for "publishing":/realtime/messages#message-publish and "subscribing":/realtime/messages#message-subscription to messages on a channel. If the channel does not exist at the time the client is attached, a channel will be created in the Ably system immediately.
+
+```[javascript](code-editor:realtime/channel-publish)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    alert('Received: ' + message.data);
+  });
+  channel.publish('example', 'message data');
+```
+
+```[nodejs](code-editor:realtime/channel-publish)
+  var Ably = require('ably');
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    console.log("Received: " + message.data);
+  });
+  channel.publish("example", "message data");
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.subscribe do |message|
+    puts "Received: #{message.data}"
+  end
+  channel.publish 'example', 'message data'
+```
+
+```[java]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.subscribe(new MessageListener() {
+    @Override
+    public void onMessage(Message message) {
+      System.out.println("New messages arrived. " + message.name);
+    }
+  });
+  channel.publish("example", "message data");
+```
+
+```[csharp]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  IRealtimeChannel channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
+  channel.Subscribe(message => {
+    Console.WriteLine($"Message: {message.Name}:{message.Data} received");
+  });
+  channel.Publish("example", "message data");
+```
+
+```[objc]
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+ARTRealtimeChannel *channel = [realtime.channels get:@"{{RANDOM_CHANNEL_NAME}}"];
+[channel subscribe:^(ARTMessage *message) {
+    NSLog(@"Received: %@", message.data);
+}];
+[channel publish:@"example" data:@"message data"];
+```
+
+```[swift]
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+channel.subscribe { message in
+    print("Received: \(message.data)")
+}
+channel.publish("example", data: "message data")
+```
+
+```[flutter]
+  final realtime = ably.Realtime(key: '{{API_KEY}}');
+  final channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  final channelMessageSubscription = channel
+    .subscribe()
+    .listen((ably.Message message) {
+      print('Received: ${message.data}');
+    }
+  );
+  await channel.publish(name: 'example', data: 'message data');
+```
+
+If you would prefer to just dive into code and see some examples of how to use channels, then we recommend you take a look at our "Realtime tutorials":/tutorials.
+
+h2(#channels). Channels
+
+In order to "publish":/realtime/messages#message-publish, "subscribe":/realtime/messages#message-subscription to, or be "present":/realtime/presence on a channel, you must first obtain a channel instance and then attach to that channel. In most instances, as a convenience, it is unnecessary to explicitly attach a channel as it will implicitly attached when performing any operation on the channel such as publishing or subscribing.
+
+h3(#obtaining-channel). Obtaining a channel instance
+
+A @Channel@ object is a reference to a single channel. A channel instance is obtained from the "@channels@ collection":/realtime/usage/#channels of the <span lang="ruby">@Realtime::Client@</span><span lang="default">@Realtime@</span><span lang="objc,swift">@ARTRealtime@</span><span lang="csharp">@AblyRealtime@</span> instance, and is uniquely identified by its unicode string name. Find out more about "channel naming":https://faqs.ably.com/what-restrictions-are-there-on-channel-names
+
+bc[jsall](code-editor:realtime/channel). var channel = realtime.channels.get('channelName');
+
+bc[java]. Channel channel = realtime.channels.get("channelName");
+
+bc[csharp]. IRealtimeChannel channel = realtime.Channels.Get("channelName");
+
+bc[ruby]. channel = realtime.channels.get('channelName')
+
+bc[objc]. ARTRealtimeChannel *channel = [realtime.channels get:@"channelName"];
+
+bc[swift]. let channel = realtime.channels.get("channelName")
+
+bc[flutter]. final channel = realtime.channels.get('channelName');
+
+h4(#setting-channel-options). Setting channel options
+
+You can set "channel options":#channel-options in one of two ways:
+
+* Initially, when you first obtain a channel using "channels.get":#obtaining-channel.
+* After creation, when you update a channel using "channels.setOptions":#modifying-options.
+
+h5(#setting-channel-parameters). Setting channel parameters
+
+Channel parameters allow a client to set the properties of a channel. The are two parameters that can be specified:
+
+- rewind := Used to request that an attachment start from a given number of messages or point in time in the past. See "rewind":/realtime/channels/channel-parameters/rewind for more information.
+- delta := Used to request that data payloads should be sent as deltas to the previous payload. See "deltas":/realtime/channels/channel-parameters/deltas for more information.
+
+bc[jsall]. const realtime = new Ably.Realtime('{{API_KEY}}');
+const channelOptions = {
+  params: {
+    delta: 'vcdiff',
+    rewind: '1'
+  }
+};
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', channelOptions);
+
+h5(#setting-encryption-options). Setting channel encryption options
+
+You can enable encryption on a channel using the "channel options":#channel-options.
+
+Find out more about "symmetric message encryption":/realtime/encryption.
+
+bc[jsall]. Ably.Realtime.Crypto.generateRandomKey(function(err, key) {
+  var options = { cipher: { key: key } };
+  var channel = realtime.channels.get('channelName', options);
+});
+
+bc[java]. CipherParams params = Crypto.getDefaultParams(key);
+ChannelOptions options = new ChannelOptions();
+options.encrypted = true;
+options.cipherParams = params;
+Channel channel = realtime.channels.get("channelName", options);
+
+bc[csharp]. byte[] key = Crypto.GenerateRandomKey();
+CipherParams cipherParams = Crypto.GetDefaultParams(key);
+ChannelOptions channelOpts = new ChannelOptions(cipherParams);
+IRealtimeChannel encryptedChannel = realtime.Channels.Get("channelName", channelOpts);
+
+bc[ruby]. key = Ably::Util::Crypto.generate_random_key
+options = { cipher: { key: key } }
+channel = realtime.channels.get('channelName', options)
+
+bc[objc]. NSData *key = [ARTCrypto generateRandomKey];
+ARTChannelOptions *options = [[ARTChannelOptions alloc] initWithCipherKey:key];
+ARTRealtimeChannel *channel = [realtime.channels get:@"channelName" options:options];
+
+bc[swift]. let key = ARTCrypto.generateRandomKey()
+let options = ARTChannelOptions(cipherKey: key)
+let channel = realtime.channels.get("channelName", options: options)
+
+h3(#subscribing). Subscribing to a channel
+
+To subscribe to a channel, use the "subscribe":#subscribe method of a channel:
+
+```[javascript](code-editor:realtime/channel-publish)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    alert('Received: ' + message.data);
+  });
+```
+
+```[nodejs](code-editor:realtime/channel-publish)
+  var Ably = require('ably');
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    console.log("Received: " + message.data);
+  });
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.subscribe do |message|
+    puts "Received: #{message.data}"
+  end
+```
+
+```[java]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.subscribe(new MessageListener() {
+    @Override
+    public void onMessage(Message message) {
+      System.out.println("New messages arrived. " + message.name);
+    }
+  });
+```
+
+```[csharp]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  IRealtimeChannel channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
+  channel.Subscribe(message => {
+    Console.WriteLine($"Message: {message.Name}:{message.Data} received");
+  });
+```
+
+```[objc]
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+ARTRealtimeChannel *channel = [realtime.channels get:@"{{RANDOM_CHANNEL_NAME}}"];
+[channel subscribe:^(ARTMessage *message) {
+    NSLog(@"Received: %@", message.data);
+}];
+```
+
+```[swift]
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+channel.subscribe { message in
+    print("Received: \(message.data)")
+}
+```
+
+```[flutter]
+  final realtime = ably.Realtime(key: '{{API_KEY}}');
+  final channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  final channelMessageSubscription = channel
+    .subscribe()
+    .listen((ably.Message message) {
+      print('Received: ${message.data}');
+    }
+  );
+```
+
+h4(#rewind). Subscribing to a channel with the rewind option enabled
+
+It is possible to subscribe to a channel and obtain messages from that channel's "history":/realtime/history with a single API request. To do so you would use the "rewind":/realtime/channels/channel-parameters/rewind feature. This will result in the specified number of messages from "history":/realtime/history being returned as part of the subscription process.
+
+"Rewind":/realtime/channels/channel-parameters/rewind has two methods of obtaining messages from history. You can retrieve a specified number of messages from history or messages from a set period of time into the past.
+
+In current Ably libraries, or when using the "service without a library":https://ably.com/protocols, this is done by qualifying the channel name. It is possible to specify channel params directly via the API. As an example, if you have no metadata and wish to subscribe to channel @my_channel@ and fetch the most recent message from "history":/realtime/history, you would specify the channel as @[?rewind=1]my_channel@. If the channel had some metadata, @[some_metadata]my_channel@, you would apply "rewind":/realtime/channels/channel-parameters/rewind with @[some_metadata?rewind=1]my_channel@. For more details, look at our "channel parameter":/realtime/channels/channel-parameters/overview documentation.
+
+*Note* that "rewind":/realtime/channels/channel-parameters/rewind is limited to a maximum of @100 messages@, and can only get messages no older than 2 minutes by default. If a channel has persistence enabled, then it is possible to rewind back in time by up to the persistence TTL on the channel.
+
+In addition, rewind will only apply upon *attaching* to a channel, so any subsequent subscriptions post-attach will not fetch old messages.
+
+h5. Rewind by number of messages
+
+To rewind by a set number of messages, add @?rewind=NUM_MSG@ to your metadata, where @NUM_MSG@ is the number of messages you wish to get at most. For example, to obtain 1 message from history as you subscribe, you would do the following:
+
+```[javascript](code-editor:realtime/rewind)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('[?rewind=1]{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    alert('Received: ' + message.data);
+  });
+```
+
+```[nodejs](code-editor:realtime/rewind)
+  var Ably = require('ably');
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('[?rewind=1]{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    console.log("Received: " + message.data);
+  });
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('[?rewind=1]{{RANDOM_CHANNEL_NAME}}')
+  channel.subscribe do |message|
+    puts "Received: #{message.data}"
+  end
+```
+
+```[java]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("[?rewind=1]{{RANDOM_CHANNEL_NAME}}");
+  channel.subscribe(new MessageListener() {
+    @Override
+    public void onMessage(Message message) {
+      System.out.println("New messages arrived. " + message.name);
+    }
+  });
+```
+
+```[csharp]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  IRealtimeChannel channel = realtime.Channels.Get("[?rewind=1]{{RANDOM_CHANNEL_NAME}}");
+  channel.Subscribe(message => {
+    Console.WriteLine($"Message: {message.Name}:{message.Data} received");
+  });
+```
+
+```[objc]
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+ARTRealtimeChannel *channel = [realtime.channels get:@"[?rewind=1]{{RANDOM_CHANNEL_NAME}}"];
+[channel subscribe:^(ARTMessage *message) {
+    NSLog(@"Received: %@", message.data);
+}];
+```
+
+```[swift]
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+let channel = realtime.channels.get("[?rewind=1]{{RANDOM_CHANNEL_NAME}}")
+channel.subscribe { message in
+    print("Received: \(message.data)")
+}
+```
+
+h5. Rewind by period of time
+
+To rewind by a time interval, add @?rewind=TIME@ to your metadata, where @TIME@ is the time specifier. For example, to obtain 10 seconds of messages from history as you subscribe, you would do the following:
+
+```[javascript](code-editor:realtime/rewind)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('[?rewind=10s]{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    alert('Received: ' + message.data);
+  });
+```
+
+```[nodejs](code-editor:realtime/rewind)
+  var Ably = require('ably');
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('[?rewind=10s]{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    console.log("Received: " + message.data);
+  });
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('[?rewind=10s]{{RANDOM_CHANNEL_NAME}}')
+  channel.subscribe do |message|
+    puts "Received: #{message.data}"
+  end
+```
+
+```[java]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("[?rewind=10s]{{RANDOM_CHANNEL_NAME}}");
+  channel.subscribe(new MessageListener() {
+    @Override
+    public void onMessage(Message message) {
+      System.out.println("New messages arrived. " + message.name);
+    }
+  });
+```
+
+```[csharp]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  IRealtimeChannel channel = realtime.Channels.Get("[?rewind=10s]{{RANDOM_CHANNEL_NAME}}");
+  channel.Subscribe(message => {
+    Console.WriteLine($"Message: {message.Name}:{message.Data} received");
+  });
+```
+
+```[objc]
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+ARTRealtimeChannel *channel = [realtime.channels get:@"[?rewind=1]{{RANDOM_CHANNEL_NAME}}"];
+[channel subscribe:^(ARTMessage *message) {
+    NSLog(@"Received: %@", message.data);
+}];
+```
+
+```[swift]
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+let channel = realtime.channels.get("[?rewind=10s]{{RANDOM_CHANNEL_NAME}}")
+channel.subscribe { message in
+    print("Received: \(message.data)")
+}
+```
+
+*Note* that currently only seconds (@10s@) and minutes (@2m@) are supported as time periods.
+
+h3(#publishing). Publishing on a channel
+
+In order to publish on a channel, you simply need to make use of the "publish":#publish method:
+
+```[javascript](code-editor:realtime/channel-publish)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish('example', 'message data');
+```
+
+```[nodejs](code-editor:realtime/channel-publish)
+  var Ably = require('ably');
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish("example", "message data");
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.publish 'example', 'message data'
+```
+
+```[java]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.publish("example", "message data");
+```
+
+```[csharp]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  IRealtimeChannel channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
+  channel.Publish("example", "message data");
+```
+
+```[objc]
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+ARTRealtimeChannel *channel = [realtime.channels get:@"{{RANDOM_CHANNEL_NAME}}"];
+[channel publish:@"example" data:@"message data"];
+```
+
+```[swift]
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+channel.publish("example", data: "message data")
+```
+
+```[flutter]
+  final realtime = ably.Realtime(key: '{{API_KEY}}');
+  final channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  await channel.publish(name: 'example', data: 'message data');
+```
+
+h3(#channel-lifecycle). Channel lifecycle
+
+Channels are not pre-configured or provisioned by Ably in advance; they are created on demand when clients attach, and remain active until such time that there are no remaining attached clients. Within the "dashboard for your app":https://faqs.ably.com/how-do-i-access-my-app-dashboard however, you can pre-configure one or more "channel namespaces":#channel-namespaces (i.e. name prefixes), and associate different attributes and access rights with those namespaces. Find out more about "channel namespaces":#channel-namespaces.
+
+The following example explicitly attaches to a channel, which results in the channel being provisioned in Ably's global realtime cluster. This channel will remain available globally until there are no more clients attached to the channel:
+
+bc[jsall]. realtime.channels.get('chatroom').attach(function(err) {
+  console.log('"chatroom" exists and is now available globally in every datacenter');
+});
+
+bc[ruby]. realtime.channels.get('chatroom').attach do |channel|
+  puts "'chatroom' exists and is now available globally in every datacenter"
+end
+
+bc[java]. Channel channel = realtime.channels.get("chatroom");
+channel.on(new ChannelStateListener() {
+  @Override
+  public void onChannelStateChanged(ChannelStateChange state) {
+    switch (state.current) {
+      case attached: {
+        System.out.println("'chatroom' exists and is now available globally");
+      }
+    }
+  }
+});
+
+bc[csharp]. IRealtimeChannel channel = realtime.Channels.Get("chatroom");
+channel.Attach((success, error) => {
+  Console.WriteLine("'chatroom' exists and is now available globally");
+});
+
+bc[objc]. [[realtime.channels get:@"chatroom" options:options] attach:^(ARTErrorInfo *error) {
+  NSLog(@"'chatroom' exists and is now available globally in every datacenter");
+}];
+
+bc[swift]. realtime.channels.get("chatroom").attach { error in
+  print("'chatroom' exists and is now available globally in every datacenter")
+}
+
+bc[flutter]. final channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+final channelMessageSubscription = channel
+  .on()
+  .listen((ably.ChannelStateChange state) {
+    switch (state.current) {
+      case ably.ChannelStateChange.attached: {
+        print("'chatroom' exists and is now available globally");
+      }
+    }
+  }
+);
+
+Clients attach to a channel in order to participate on that channel in any way (either to publish, subscribe, or be present on the channel). It is worth noting that some libraries allow for "publishing to a channel without attaching to it":#transient-publish. "See if your chosen SDK supports this":https://ably.com/download.
+
+h3(#channel-metadata). Channel metadata
+
+Ably provides a "REST API":/realtime/channel-metadata to query your app for metadata about channels, as well as a "realtime API":/realtime/channel-metadata to subscribe to channel lifecycle events. Using the "REST API":/rest-api, you can enumerate all active channels, or obtain the status of an individual channel. Using our Realtime API, you can subscribe to "channel lifecycle events":/realtime/channel-metadata#lifecycle-events (such as being created or closed etc), or subscribe to periodic "occupancy":/realtime/channel-metadata#occupancy-rest updates for all active channels (such as how many people are subscribed to a channel).
+
+h3(#implicit-attach). Implicit attach
+
+Although the attach operation can be initiated explicitly by a client, it is more common for the client to subscribe, which will initiate the attach if the channel is not already attached. This client library allows clients to begin publishing "messages":/realtime/messages without attaching to the channel with "transient publishing":#transient-publish.
+
+bc[jsall](code-editor:realtime/channel-implicit). var channel = realtime.channels.get('chatroom');
+channel.subscribe('action', function(message) { // implicit attach
+  console.log('Message received '' + message.data);
+});
+channel.publish('action', 'boom!');
+
+bc[ruby]. channel = realtime.channels.get('chatroom')
+channel.subscribe('action') do |message| # implicit attach
+  puts "Message received: #{message}";
+end
+channel.publish 'action', 'boom!'
+
+bc[java]. Channel channel = realtime.channels.get("chatroom");
+/* Implicit attach when subscribing */
+channel.subscribe(new MessageListener() {
+  @Override
+  public void onMessage(Message message) {
+    System.out.println("Message received: " + message.data);
+  }
+});
+channel.publish("action", "boom!");
+
+bc[csharp]. IRealtimeChannel channel = realtime.Channels.Get("chatroom");
+channel.Subscribe(message => Console.WriteLine("Message received: " + message.Data));
+channel.Publish("action", "boom");
+
+bc[objc]. ARTRealtimeChannel *channel = [realtime.channels get:@"chatroom" options:options];
+[channel subscribe:@"action" callback:^(ARTMessage *message) {
+    NSLog(@"Message received: %@", message.data);
+}]
+[channel publish:@"action" data:@"boom!"];
+
+bc[swift]. let channel = realtime.channels.get("chatroom")
+channel.subscribe("action") { message in
+    print("Message received: \(message.data)")
+}
+channel.publish("action", data: "boom!")
+
+bc[flutter]. final channel = realtime.channels.get('chatroom');
+/* Implicit attach when subscribing */
+channel.subscribe(name: 'action').listen((ably.Message message) {
+  print('Received: ${message.data}');
+});
+channel.publish(name: 'action', data: 'boom!');
+
+Normally, errors in attaching to a channel are communicated through the attach callback. For implicit attaches (and other cases where a channel is attached or reattached automatically, e.g. following the library reconnecting after a period in the @suspended@ state), there is no callback, so if you want to know what happens, you'll need to listen for channel state changes.
+
+h3(#attach-vs-subscribe). Difference between attaching and subscribing
+
+It is important to understand the difference between attaching and subscribing to a channel, and that messages are sent to clients as soon as they attach to a channel.
+
+Published messages are immediately sent to clients on "attaching":#attach to a channel as long as they have subscribe "capabilities":/core-features/authentication#capabilities-explained for that channel. Messages are sent regardless of whether or not the client has subscribed to the channel.
+
+"Subscribing":#subscribe to a channel registers a subscribe listener for messages received on the channel and is a client-side operation, meaning that Ably is unaware of whether or not a client is subscribed to a channel.
+
+As subscribing to a channel "implicitly attaches":#implicit-attach a client, it is important to note that if a client subscribes to and then "unsubscribes":#unsubscribe from a channel, the client remains attached. The client will continue to be sent published messages until they "detach":#detach from the channel.
+
+h3(#modifying-options). Modifying channel options
+
+You can modify the @ChannelOptions@ associated with a given channel instance by calling @setOptions@ and passing a new @ChannelOptions@. The modified options will either take effect at the time of attachment (if an attach for that channel has not yet been initiated), or the @setOptions@ call will trigger an immediate attach operation to apply the modified options. Success or failure of any triggered attach operation triggered is indicated in the result of the @setOptions@ call.
+
+h3(#multi-publish). Publishing to multiple channels
+
+Often it is necessary to publish a single message in multiple channels at the same time. In the realtime API, this is achieved simply by making multiple separate "publish":#publish requests. If a separate publish is made in each of the channels in question, the realtime protocol will allow for those concurrent requests to be in-flight simultaneously. This ensures that a publish on a channel is not delayed waiting for completion of operations in other channels.
+
+It is also possible to publish one or more messages into multiple channels in a single operation using the "REST batch API":/rest/batch.
+
+h3(#transient-publish). Transient publishing
+
+When attempting to only publish to a client, it is possible to publish without attaching to the channel. This can be beneficial if you intend to publish into many channels, removing the need to attach to a channel each time you wish to publish. Additionally, it avoids the client subscribing to messages, avoiding messages being sent to it redundantly.
+
+*Note* that transient publishing is only available for "certain libraries":https://ably.com/download/sdk-feature-support-matrix, otherwise publishing will also attach you to the channel.
+
+bc[jsall]. var channel = realtime.channels.get('chatroom');
+// The publish below will not attach you to the channel
+channel.publish('action', 'boom!');
+
+bc[ruby]. channel = realtime.channels.get('chatroom')
+# The publish below will not attach you to the channel
+channel.publish 'action', 'boom!'
+
+bc[swift]. let channel = realtime.channels.get("chatroom")
+// The publish below will not attach you to the channel
+channel.publish("action", data: "boom!")
+
+bc[flutter]. final channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+// The publish below will not attach you to the channel
+await channel.publish(name: 'example', data: 'message data');
+
+h3(#channel-states). Channel states
+
+A channel can exist in any of the following states:
+
+- <span lang="default">initialized</span><span lang="csharp">Initialized</span> := A @Channel@ object having this state has been initialized but no attach has yet been attempted
+
+- <span lang="default">attaching</span><span lang="csharp">Attaching</span> := An attach has been initiated by sending a request to Ably. This is a transient state; it will be followed either by a transition to attached, suspended, or failed
+
+- <span lang="default">attached</span><span lang="csharp">Attached</span> := Attach has succeeded. In the attached state a client may publish and subscribe to messages, or be present
+
+- <span lang="default">detaching</span><span lang="csharp">Detaching</span> := A detach has been initiated on the attached @Channel@ by sending a request to Ably. This is a transient state; it will be followed either by a transition to detached or failed
+
+- <span lang="default">detached</span><span lang="csharp">Detached</span> := The @Channel@, having previously been attached, has been detached by the user
+
+- <span lang="default">suspended</span><span lang="csharp">Suspended</span> := The @Channel@, having previously been attached, has lost continuity, usually due to the client being disconnected from Ably for more than two minutes. It will automatically attempt to reattach as soon as connectivity is restored
+
+- <span lang="default">failed</span><span lang="csharp">Failed</span> := An indefinite failure condition. This state is entered if a @Channel@ error has been received from the Ably service (such as an attempt to attach without the necessary access rights)
+
+h3(#listening-state). Listening for state changes
+
+The @Channel@ object is an @EventEmitter@ and emits an event whose name is the new state whenever there is a channel state change. Register a channel state change listener with the <span lang="default">"@on@":#on</span><span lang="csharp">"@On@":#on</span> or <span lang="default">"@once@":#once</span><span lang="csharp">"@Once@":#once</span> methods, depending on whether you want to monitor all state changes, or only the first occurrence of one. Remove channel state listeners with the <span lang="default">"@off@":#off</span><span lang="csharp">"@Off@":#off</span> method.
+
+Listeners are passed a "ChannelStateChange":#channel-state-change object in the first argument. This object has the following properties:
+
+* @current@ / @previous@: the present and last state of the channel.
+* @resumed@: a flag indicating whether message continuity on the channel is preserved since the last time the channel was attached.
+* @reason@: the reason for the state change, if available.
+
+As with all events from an @EventEmitter@ in the Ably library, @this@ within the listener function is a reference to an event object whose @event@ property is the name of the event that fired. This allows a listener to listen for all events with a single registration and still know which type of event is fired.
+
+The @Channel@ object can also emit one event that is not a state change: an @update@ event. This happens when there's a change to channel conditions for which the channel state doesn't change. For example, a partial loss of message continuity on a channel (typically after a resume) for which the channel state remains @attached@ would lead to an @update@ event being emitted, with both @current@ and @previous@ set to "@attached@", and the @resumed@ flag set to @false@. So if you get such an event, you'll know there may be messages you've missed on the channel, and if necessary you can use the "History":#history api to retrieve them.
+
+bc[jsall]. channel.on('attached', function(stateChange) {
+  console.log('channel ' + channel.name + ' is now attached');
+  console.log('Message continuity on this channel ' + \
+    (stateChange.resumed ? 'was' : 'was not') + ' preserved');
+});
+
+bc[ruby]. channel.on(:attached) do |channel_state_change|
+  puts "channel #{channel.name} is now attached"
+  puts "Message continuity #{channel_state_change.resumed ? 'was' : 'was not'} preserved"
+end
+
+bc[java]. channel.on(ChannelEvent.attached, new ChannelStateListener() {
+  @Override
+  public void onChannelStateChanged(ChannelStateChange stateChange) {
+    System.out.println("channel " + channel.name + " is now attached");
+    if (stateChange.resumed) {
+      System.out.println("Message continuity was preserved");
+    } else {
+      System.out.println("Message continuity was not preserved");
+    }
+  }
+});
+
+bc[csharp]. IRealtimeChannel channel = realtime.Channels.Get("chatroom");
+channel.On(ChannelEvent.Attached, stateChange => {
+  Console.WriteLine("channel " + channel.Name + " is now attached");
+  if (stateChange.resumed) {
+    Console.WriteLine("Message continuity was preserved");
+  } else {
+    Console.WriteLine("Message continuity was not preserved");
+  }
+});
+
+bc[objc]. [channel on:ARTChannelEventAttached callback:^(ARTChannelStateChange *stateChange) {
+  NSLog(@"channel %@ is now attached", channel.name);
+  if (stateChange.resumed) {
+    NSLog(@"Message continuity was preserved");
+  } else {
+    NSLog(@"Message continuity was not preserved");
+  }
+}];
+
+bc[swift]. channel.on(.attached) { stateChange in
+  print("channel \(channel.name) is now attached")
+  if (stateChange.resumed) {
+    print("Message continuity was preserved")
+  } else {
+    print("Message continuity was not preserved")
+  }
+}
+
+bc[flutter]. final stateChangeListener = channel
+  .on(ably.ChannelEvent.attached)
+  .listen((ably.ChannelStateChange state) {
+    print('channel ${channel.name} is now attached');
+    if (stateChange.resumed) {
+      print('Message continuity was preserved');
+    } else {
+      print('Message continuity was not preserved');
+    }
+  }
+);
+
+Alternatively a listener may be registered so that it receives all state change events.
+
+bc[jsall](code-editor:realtime/channel-states). var myListener = function(stateChange) {
+  console.log('channel state is ' + stateChange.current);
+  console.log('previous state was ' + stateChange.previous);
+  if(stateChange.reason) {
+    console.log('the reason for the state change was: ' + stateChange.reason.toString());
+  }
+});
+channel.on(myListener);
+
+bc[ruby]. channel.on do |channel_state_change|
+  puts "channel state is #{channel_state_change.current}"
+end
+
+bc[java]. channel.on(new ChannelStateListener() {
+  @Override
+  public void onChannelStateChanged(ChannelStateChange stateChange, ErrorInfo reason) {
+    System.out.println("channel state is " + ChannelState.values()[stateChange.current]);
+  }
+});
+
+bc[csharp]. channel.On(stateChange => Console.WriteLine("channel state is " + stateChange.Current));
+
+bc[objc]. ARTEventListener *listener = [channel on:^(ARTChannelStateChange *stateChange) {
+    NSLog(@"channel state is %@", stateChange.current);
+}];
+
+bc[swift]. let listener = channel.on { stateChange in
+    print("channel state is \(stateChange.current)")
+}
+
+bc[flutter]. final stateChangeListener = channel
+  .on()
+  .subscribe((ably.ChannelStateChange stateChange) {
+    print('channel state is ${stateChange.current.toString().split('.').last}');
+  }
+);
+
+Previously registered listeners can be removed individually or all together.
+
+```[jsall]
+  /* remove the listener registered for a single event */
+  channel.off('attached', myListener);
+
+  /* remove the listener registered for all events */
+  channel.off(myListener);
+```
+
+```[ruby]
+  # remove the listener proc registered for a single event
+  channel.off(:attached, &my_proc)
+
+  # remove the listener proc registered for all events
+  channel.off(&my_proc)
+```
+
+```[java]
+  /* remove the listener registered for a single event */
+  channel.off(ChannelEvent.attached, channelStateListener);
+
+  /* remove the listener registered for all events */
+  channel.off(channelStateListener);
+```
+
+```[csharp]
+  // remove the listener registered for a single event
+  channel.Off(ChannelEvent.Attached, channelStateListener);
+
+  // remove the listener registered for all events
+  channel.Off(channelStateListener);
+```
+
+```[objc]
+  // remove the listener registered for a single event
+  [channel off:ARTChannelEventAttached listener:listener];
+
+  // remove the listener registered for all events
+  [channel off:listener];
+```
+
+```[swift]
+  // remove the listener registered for a single event
+  channel.off(.attached, listener: listener)
+
+  // remove the listener registered for all events
+  channel.off(listener)
+```
+
+```[flutter]
+    // cancel stream subscription on the listener to stop receiving the events
+    stateChangeListener.cancel();
+```
+
+
+h3(#channel-detach). Detaching from a channel
+
+A client can detach from a channel so that it no longer receives any messages published to that channel. Detaching is different to unsubscribing from a channel because "@unsubscribe()@":#unsubscribe is a client-side operation. The Ably platform does not know that a client has unsubscribed and will continue to stream messages to that client until "@Detach()@":#detach is called.
+
+bc[jsall]. channel.detach();
+channel.on('detached', function(stateChange) {
+  console.log('detached from the channel ' + channel.name);
+};
+
+bc[ruby]. channel.detach
+channel.on(:detached) do |channel_state_change|
+  puts "detached from the channel #{channel.name}"
+end
+
+bc[java]. channel.detach();
+channel.on(ChannelEvent.detached, new ChannelStateListener() {
+  @Override
+  public void onChannelStateChanged(ChannelState state, ErrorInfo reason) {
+    System.out.println("detached from the channel " + channel.name);
+    if (reason != null) System.out.println(reason.toString());
+  }
+});
+
+bc[csharp]. Channel.Detach();
+channel.On(ChannelEvent.Detached, stateChange => {
+  Console.WriteLine("detached from the channel " + channel.Name)
+});
+
+bc[objc]. [channel detach]
+[channel on:ARTChannelEventDetached callback:^(ARTChannelStateChange *stateChange) {
+  NSLog(@"detached from the channel ", channel.name);
+}];
+
+bc[swift]. channel.detach()
+channel.on(.detached) { stateChange in
+  print("detached from the channel \(channel.name)")
+}
+
+bc[flutter]. channel.detach();
+final stateChangeListener = channel
+  .on(ably.ChannelEvent.detached)
+  .listen((ably.ChannelStateChange state) {
+    print('detached from the channel ${channel.name}');
+  }
+);
+
+A channel will automatically close when there are no more realtime clients attached to it and approximately one minute has passed since the last client detached and since the last message was published to the channel.
+
+h3(#handling-failures). Handling channel failures
+
+Channel attach and detach operations are asynchronous - after initiating an attach request, the client will wait for a response from Ably that confirms that the channel is established on the service and then trigger a state change event.
+
+The client libraries will attempt to automatically recover from non-fatal error conditions. However, you can handle them yourself if you prefer by subscribing to channel state changes, or <span lang="default">using the callbacks available</span><span lang="java">waiting for a result</span> when explicitly calling @attach@.
+
+bc[jsall]. realtime.channels.get('private:chatroom').attach(function(err) {
+  if (err) {
+    console.error('Attach failed: ' + err);
+  }
+});
+
+bc[ruby]. deferrable = realtime.channels.get('private:chatroom').attach
+deferrable.errback do |error|
+  puts "Attach failed: #{error}"
+end
+
+bc[java]. Channel channel = realtime.channels.get("private:chatroom");
+channel.on(new ChannelStateListener() {
+  @Override
+  public void onChannelStateChanged(ChannelStateChange stateChange, ErrorInfo reason) {
+    switch (stateChange.current) {
+      case failed: {
+        System.out.println("Attach failed: " + reason.message);
+      }
+    }
+  }
+});
+channel.attach();
+
+bc[csharp]. IRealtimeChannel privateChannel = realtime.Channels.Get("private:chatroom");
+privateChannel.Attach((_, error) => {
+    if (error != null)
+    {
+        Console.WriteLine("Attach failed: " + error.Message);
+    }
+});
+
+bc[objc]. [[realtime.channels get:@"private:chatroom"] attach:^(ARTErrorInfo *error) {
+    if (error) {
+        NSLog(@"Attach failed: %@", error);
+    }
+}];
+
+bc[swift]. realtime.channels.get("private:chatroom").attach { error in
+    if let error = error {
+        print("Attach failed: \(error)")
+    }
+}
+
+bc[flutter]. Channel channel = realtime.channels.get('private:chatroom');
+channel.on().listen((ably.ChannelStateChange stateChange) {
+  switch (stateChange.current) {
+    case ably.ChannelStateChange.failed: {
+      System.out.println('Attach failed: ${stateChange.reason.message}');
+    }
+  }
+});
+channel.attach();
+
+h4(#fatal-errors). Fatal channel errors
+
+Some classes of errors are fatal. These cause the channel to move to the @FAILED@ state. The client library will not attempt any automatic recovery actions. For example: attempting to attach to a channel that the token you're using does not have the @subscribe@ capability for will cause that channel to enter the @FAILED@ state.
+
+Note that while fatal errors won't get better on their own, they can be fixable. For example, if a channel goes into the @FAILED@ state due to the client not having the right capabilities to attach to it, that client could use "@Auth#authorize()@":/realtime/authentication#authorize to obtain a new token which does have the right capabilities, then call "@attach()@":#attach on the channel. While the library will not automatically reattach in the @FAILED@ state, explicit calls to "@attach()@":#attach will make the client try again.
+
+h4(#nonfatal-errors). Nonfatal errors
+
+Other types of errors are nonfatal. For example, a client may have network connectivity issues, or a channel may experience a loss of strict message continuity. The library will automatically attempt to recover from these events. If channel continuity is lost in the process, the library will notify you though a @resumed@ flag in the @ATTACHED@ or @UPDATE@ event, so you can decide how to handle that failure.
+
+For every channel @ATTACHED@ and @UPDATE@ event, the "@ChannelStateChange@ object":/realtime/types/#channel-state-change contains a @resumed@ attribute. When true, there has been no loss of continuity from the last time the channel was attached. When false, there has been a loss of continuity. So for example:
+
+* The first time you attach to a channel on a fresh connection, @resumed@ will be false, as there was nothing to continue from.
+* If you successfully "recover":/realtime/connection#connection-state-recovery a connection and reattach to your channels, the @resumed@ flag on the @ATTACHED@ events will tell you whether messages continuity was preserved. Any channel for which it's @true@ is guaranteed to receive every message it missed while the client was disconnected.
+* If you "resume or recover":/realtime/connection#connection-state-recovery a connection unsuccessfully (so you get a fresh connection) — generally because you were disconnected for more than two minutes, which is how long Ably holds connection state for — continuity is lost. If you were resuming, all your channels (which will have gone into the @SUSPENDED@ state after two minutes) will still reattach automatically, and you will get @ATTACHED@ events with @resumed@ false.
+* If Ably needs to signal a loss of message continuity on an attached channel (for example, during a partially successful resume where the client was disconnected for less than two minutes), you will get an @UPDATE@ event with @resumed@ false.
+
+h4(#connection-state-change). Connection state change side effects on channels
+
+* If the connection state becomes @CLOSED@, all channels will become @DETACHED@
+* If the connection state becomes @FAILED@, all channels will become @FAILED@
+* If the connection state becomes @SUSPENDED@, all previously-@ATTACHED@ or @ATTACHING@ channels will become @SUSPENDED@
+* If the connection state becomes @CONNECTED@, any channels that were @SUSPENDED@ will be automatically reattached
+
+h3(#channel-namespaces). Channel namespaces
+
+<%= partial partial_version('shared/_channel_namespaces') %>
+
+h2(#presence-api). Presence
+
+Channels expose a <span lang="default">@presence@</span><span lang="csharp">@Presence@</span> member which a client can use to obtain channel presence information and to enter and leave the presence channel itself. See the "presence documentation":/realtime/presence for details.
+
+h1. API Reference
+
+inline-toc.
+  Channels Methods:
+    - get#get
+  Channel Properties:
+    - state#state
+    - errorReason#error-reason
+    - name#name
+    - presence#presence
+    - push#push
+  Channel Methods:
+    - publish#publish
+    - subscribe#subscribe
+    - unsubscribe#unsubscribe
+    - history(options)#history
+    - attach()#attach
+    - detach()#detach
+    - on#on-state-listener
+    - once#once-state-listener
+    - off#off-state-listener
+  Related types:
+    - ChannelState#channel-state
+    - ChannelEvent#channel-event
+    - ChannelStateChange#channel-state-change
+    - Message#message
+    - ChannelOptions#channel-options
+    - ChannelStateListener#channel-state-listener
+    - CompletionListener#completion-listener
+    - MessageListener#message-listener
+    - PaginatedResult#paginated-result
+    - Param
+
+h2(#channels-object).
+  default: Channels
+
+The @Channels@ object, accessed from the "realtime library client constructor":/realtime/usage#channels, is used to create and destroy @Channel@ objects. It exposes the following public methods:
+
+h3(#channels-methods). Channels Methods
+
+h6(#get).
+  default: get
+  csharp: Get
+
+bq(definition).
+  default:  "Channel":#properties get(String channelName, "ChannelOptions":#channel-options channelOptions)
+  csharp:   "Channel":#properties Get(String channelName, "ChannelOptions":#channel-options channelOptions)
+  objc,swift: "ARTRealtimeChannel":#properties get(String channelName, "ARTChannelOptions":#channel-options channelOptions);
+
+Creates a new "Channel":#properties object if none for the channel exists, or returns the existing channel object.
+
+h2(#channel-object). Channel
+
+The Channel object, created via the "Channels":#channels-object object, is used to interact with a specific channel.
+
+h3(#properties).
+  default: Channel Properties
+  objc,swift: ARTRealtimeChannel Properties
+  ruby: Ably::Realtime::Channel Attributes
+  java: io.ably.lib.realtime.Channel Members
+  csharp: IO.Ably.Realtime.RealtimeChannel Properties
+
+The @Channel@ object exposes the following public <span lang="default">properties</span><span lang="ruby">attributes</span><span lang="java">members</span>:
+
+h6(#state).
+  default: state
+  csharp: State
+
+The current <span lang="java">"@io.ably.lib.realtime.ChannelState@":#channel-state @state@</span><span lang="csharp">"@IO.Ably.Realtime.ChannelState@":#channel-state @state@</span><span lang="ruby">"@Ably::Realtime::Channel::STATE@":#channel-state @state@</span><span lang="objc,swift">"@ARTRealtimeChannelState@":#channel-state</span><span lang="default">"@ChannelState@":#channel-state</span> of this @Channel@. See the supported "channel states":#channel-states for more information.
+
+h6(#error-reason).
+  default: errorReason
+  java:    reason
+  ruby:    error_reason
+  csharp:  ErrorReason
+
+When a channel failure occurs this <span lang="default,ruby">attribute</span><span lang="java">member</span><span lang="jsall">property</span><span lang="objc,swift,csharp">property</span> is populated.
+The type is <span lang="default">"@ErrorInfo@":/realtime/types#error-info</span><span lang="java,ruby">"@AblyException@":/realtime/types#ably-exception</span>.
+
+h6(#name).
+  default: name
+  csharp: Name
+
+The name @String@ unique to this channel.
+
+h6(#presence).
+  default: presence
+  csharp: Presence
+
+Provides access to the "Presence":/realtime/presence object for this channel which can be used to access members present on the channel, or participate in presence.
+
+h6(#push).
+  default: push
+
+Provides access to the "PushChannel":/general/push/activate-subscribe#push-channel object for this channel which can be used to access members present on the channel, or participate in presence.
+
+h3. Methods
+
+h6(#publish).
+  default: publish
+  csharp: Publish
+
+There are two overloaded versions of this method:
+
+bq(definition#publish-data).
+  default:  publish(String name, Object data, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:     "Deferrable":/realtime/types#deferrable publish(String name, Object data) -> yields
+  java:     void publish(String name, Object data, "CompletionListener":#completion-listener listener)
+  csharp:   void Publish(string name, object data, Action<bool, ErrorInfo> callback = null, string clientId = null)
+  objc,swift: publish(name: String?, data: AnyObject?, callback: (("ARTErrorInfo":/realtime/types#error-info?) -> Void)?)
+  flutter:  Future<void> publish(name: String name, data: Object data, message: "Message":#message message)
+
+Publish a single message on this channel based on a given event name and payload. A <span lang="default">callback</span><span lang="java">listener</span> may optionally be passed in to this call to be notified of success <span lang="default">or failure</span><span lang="ruby"></span> of the operation. When publish is called with this client library, it "won't attempt to implicitly attach to the channel":#transient-publish, so long as "transient publishing":#transient-publish is available in the library. Otherwise, the client will implicitly attach.
+
+bq(definition#publish-msg-array).
+  default: publish(Object[] messages, callback("ErrorInfo":/realtime/types#error-info err))
+  ruby:    "Deferrable":/realtime/types#deferrable publish(Message[] messages) -> yields
+  java:    void publish(Message[] messages, "CompletionListener":#completion-listener listener)
+  csharp:  void Publish(IEnumerable<"Message":#message> messages, Action<bool, "ErrorInfo":/realtime/types#error-info> callback = null)
+  objc,swift: publish(messages: [ "ARTMessage":#message ], callback: (("ARTErrorInfo":/realtime/types#error-info?) -> Void)?)
+  flutter:  Future<void> publish(messages: List<"Message":#message> messages)
+
+Publish several messages on this channel. A <span><span lang="default">callback</span><span lang="java">listener</span><span lang="ruby">block</span> may optionally be passed in to this call to be notified of success <span lang="default">or failure</span><span lang="ruby"></span> of the operation.</span><span lang="default"> If the channel is @initialized@ (i.e. no attempt to attach has yet been made for this channel), then calling @publish@ will implicitly attach the channel.</span><span lang="jsall,ruby,swift"> When publish is called with this client library, it "won't attempt to implicitly attach to the channel":#transient-publish.</span>
+
+h4. Parameters
+
+- <div lang="default">name</div> := event name for the published message<br>__Type: @String@__
+
+- <div lang="jsall">data</div> := data payload for the message. The supported payload types are Strings, objects or arrays capable of JSON representation, buffers containing arbitrary binary data, and null. (Note that if sending a binary, that binary should be the entire payload; an object with a binary field within it may not be correctly encoded)<br>__Type: @Object@__
+- <div lang="java">data</div> := data payload for the message. The supported payload types are Strings, JsonObject, binary data as byte arrays, and null.<br>__Type: @Object@__
+- <div lang="csharp">data</div> := data payload for the message. The supported payload types are Strings, binary data as byte arrays, any plain c# class that can be serialized to Json, and null.<br>__Type: @Object@__
+- <div lang="ruby">data</div> := data payload for the message. The supported payload types are Strings, Hash or Array objects that can be serialized to JSON using @to_json@, binary data as @ASCII-8BIT@ byte arrays, and null. (Note that if sending a byte array, it should be the entire payload; a hash or array with a bytearray field within it may not be correctly encoded)<br>__Type: @Object@__
+- <div lang="objc,swift">data</div> := data payload for the message. The supported payload types are <span lang="objc">@NS@</span>@String@, <span lang="objc">@NS@</span>@Dictionary@ or <span lang="objc">@NS@</span>@Array@ objects that can be serialized to JSON, binary data as @NSData@, and @nil@.<br>__Type: @Object@__
+- <div lang="flutter">data</div> := data payload for the message. The supported payload types are String, Map, List, and null.<br>__Type: @Object@__
+
+- <span lang="flutter">message</span> := A message object to publish<br>__Type: "@Message@":#message__
+
+- <span lang="default">messages</span> := An array of message objects to publish<br>__Type: "@Message []@":#message__
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
+- <div lang="java">listener</div> := Listener to be notified on completion<br>__Type: "@CompletionListener@":#completion-listener__
+- <div lang="csharp">callback</div> := is an action of the form @Action<bool, ErrorInfo>@ which is called upon completion
+- <div lang="ruby">&block</div> := yields upon successfully publishing the message
+- <div lang="objc,swift">callback</div> := called upon publishing the message, or with an error
+
+blang[jsall,swift,objc].
+  h4. Callback result
+
+  On successful publish of the message, @err@ is null. On failure to publish the message, @err@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[csharp].
+  h4. Callback result
+
+  On successful publish of the message, @error@ is null. On failure to publish the message, @error@ contains an "@ErrorInfo@":#error-info object describing the failure reason.
+
+blang[java].
+  h4. Listener result
+
+  On successful publish of the message, the @onSuccess@ method of the "CompletionListener":#completion-listener is called. On failure to publish the message, the @onError@ method is called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On successful publish of the message, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are executed. On failure to publish the message, the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable are called with an "@ErrorInfo@":#error-info argument describing the failure reason.
+
+blang[flutter].
+  h4. Returns
+
+  @Future<void>@
+
+  On successful publish of the message, no exception will be thrown. On failure to publish the message, an @AblyException@ will be thrown with an `"@errorInfo@":#error-info` property describing the failure reason.
+
+h6(#subscribe).
+  default: subscribe
+  csharp: Subscribe
+
+There are overloaded versions of this method:
+
+bq(definition#subscribe-listener).
+  default:  subscribe(listener("Message":#message))
+  java:     void subscribe("MessageListener":#message-listener listener)
+  csharp:   void Subscribe(Action<"Message":#message> handler)
+  ruby:     subscribe → yields "Message":#message
+  objc,swift: subscribe(callback: ("ARTMessage":#message) -> Void) -> ARTEventListener?
+  flutter:  StreamSubscription<"ably.Message":#message> subscribe().listen(("ably.Message":#message) -> void)
+
+Subscribe to messages on this channel. The caller supplies <span lang="default">a listener function</span><span lang="csharp">a lambda expression</span><span lang="java">an implementation of the "MessageListener":#message-listener interface</span><span lang="ruby">a block</span>, which is called each time one or more messages arrives on the channel.
+
+bq(definition#subscribe-event).
+  default: subscribe(String name, listener("Message":#message))
+  java:    void subscribe(String name, "MessageListener":#message-listener listener)
+  csharp:  void Subscribe(string name, Action<"Message":#message> handler)
+  ruby:    subscribe(String name) → yields "Message":#message
+  objc,swift: subscribe(name: String, callback: ("ARTMessage":#message) -> Void) -> ARTEventListener?
+  flutter:  StreamSubscription<"ably.Message":#message> subscribe(name: String).listen(("ably.Message":#message) -> void)
+
+Subscribe to messages with a given event @name@ on this channel. The caller supplies <span lang="default">a listener function</span><span lang="csharp">a lambda expression</span><span lang="java">an implementation of the "MessageListener":#message-listener interface</span><span lang="ruby">a block</span>, which is called each time one or more matching messages arrives on the channel.
+
+<div lang="objc,swift,csharp"></div>
+<div lang="default">
+bq(definition#subscribe-event-array).
+  default: subscribe(String[] names, listener("Message":#message))
+  java:    void subscribe(String[] names, "MessageListener":#message-listener listener)
+  ruby:    subscribe(String *names) → yields "Message":#message
+  flutter:  StreamSubscription<"ably.Message":#message> subscribe(names: List<String>).listen(("ably.Message":#message) -> void)
+
+Subscribe a single listener to messages on this channel for multiple event @name@ values.
+</div>
+
+h4. Parameters
+
+- name := The event name to subscribe to<br>__Type: @String@__
+
+<div lang="objc,swift,csharp"></div>
+<div lang="default">
+- names := An <span lang="ruby">argument</span> array of event names to subscribe to<br>__Type: <span lang="default">@String[]@ </span><span lang="ruby">@*argument@</span>__
+</div>
+
+- <div lang="jsall">listener</div> := is a function of the form @function(message)@ to be called for each message
+- <div lang="java">"MessageListener":#message-listener listener</div> := Message listener to be notified for matching messages
+- <div lang="ruby">&block</div> := yields each matching message when received on the channel
+- <div lang="swift,objc">callback</div> := called with each matching "@message@":#message when received on the channel
+- <div lang="csharp">handler</div> := called with each matching "@message@":#message when received on the channel
+
+h4. Considerations
+
+* If the channel is @initialized@ (i.e. no attempt to attach has yet been made for this channel), then calling @subscribe@ will implicitly attach the channel. However, regardless of the implicit attach outcome, the <span lang="default">listener</span><span lang="ruby">block</span><span lang="csharp">handler</span> will still be registered
+* Calling subscribe with an event name is a convenient way to subscribe only to messages matching that event name. But this is purely a clientside filter, for convenience. It has no effect on what messages are actually sent by the server to the client. All clients attached to a given channel receive every message sent on that channel (that their capabilities allow them to receive); the channel is the unit of distribution.
+* If @subscribe@ is called more than once with the same <span lang="default">listener</span><span lang="ruby">block</span><span lang="csharp">handler</span>, then duplicates will be registered. For example, if you @subscribe@ twice with the same <span lang="default">listener</span><span lang="ruby">block</span><span lang="csharp">handler</span> and a message is later received, the same <span lang="default">listener</span><span lang="ruby">block</span><span lang="csharp">handler</span> will be invoked twice
+* The registered <span lang="default">listener</span><span lang="ruby">block</span><span lang="csharp">handler</span> remains active on the channel regardless of the current channel state. For example, if you call @subscribe@ when a channel is @attached@ and it later becomes @detached@ or even @failed@, when the channel is reattached and a message is received, the <span lang="default">listeners</span><span lang="ruby">blocks</span><span lang="csharp">handlers</span> originally registered will still be invoked. Listeners are only removed when calling <span lang="default">"@unsubscribe@":#unsubscribe</span><span lang="flutter">@streamSubscription.close@</span> or when a channel is @released@ using the <span lang="default">@Realtime.channels.release(name)@</span><span lang="csharp">@Realtime.Channels.Release(name)@</span> method
+* If an exception is thrown in the subscribe listener and bubbles up to the event emitter, it will be caught and logged at @error@ level, so as not to affect other listeners for the same event
+
+h6(#unsubscribe).
+  default: unsubscribe
+  csharp: Unsubscribe
+
+<div lang="default">
+There are <span lang="jsall">six</span><span lang="default">three</span> overloaded versions of this method:
+
+bq(definition#unsubscribe-event).
+  default: unsubscribe(String name, listener)
+  java:    void unsubscribe(String name, "MessageListener":#message-listener listener)
+  csharp:  bool Unsubscribe(string eventName, Action<"Message":#message> handler)
+  ruby:    unsubscribe(String name, &listener_proc)
+  objc,swift: unsubscribe(name: String, listener: ARTEventListener)
+
+Unsubscribe the given listener for the specified event name. This removes an earlier event-specific subscription.
+
+bq(definition#unsubscribe-listener).
+  default: unsubscribe(listener)
+  java:    void unsubscribe("MessageListener":#message-listener listener)
+  csharp:  bool Unsubscribe(Action<"Message":#message> handler)
+  ruby:    unsubscribe(&listener_proc)
+  objc,swift: unsubscribe(listener: ARTEventListener)
+
+Unsubscribe the given listener (for any/all event names). This removes an earlier subscription.
+
+<div lang="jsall">
+bq(definition). unsubscribe(String[] names, listener)
+
+Unsubscribe the given listener from all event names in the array.
+
+bq(definition). unsubscribe(String name)
+
+Unsubscribe all listeners for a given event name.
+
+bq(definition). unsubscribe(String[] names)
+
+Unsubscribe all listeners for all event names in the array.
+</div>
+
+bq(definition#unsubscribe-all).
+  default: unsubscribe()
+  java:    void unsubscribe()
+  csharp:  void Unsubscribe()
+  objc,swift: unsubscribe()
+
+Unsubscribes all listeners to messages on this channel. This removes all earlier subscriptions.
+
+h4. Parameters
+
+- name := The event name to unsubscribe from<br>__Type: @String@__
+- <div lang="jsall">names</div> := An array of event names to unsubscribe from<br>__Type: @String[]@__
+- <div lang="jsall">listener</div> := is the callback listener function that was previously subscribed
+- <div lang="java">listener</div> := previously registered listener<br>__Type: "@MessageListener@":#message-listener__
+- <div lang="ruby">&listener_block</div> := previously registered listener block
+- <div lang="swift,objc">listener</div> := previous return value from a @subscribe@ call
+- <div lang="csharp">handler</div> := is the lambda expression that was previously subscribed
+</div><div lang="flutter">
+@streamSubscription@ obtained from a subscription can be used to cancel a listener by calling @streamSubscription.cancel@.
+
+</div>
+
+h6(#history).
+  default: history
+  csharp: History
+
+bq(definition).
+  default: history(Object options, callback("ErrorInfo":/realtime/types#error-info err, "PaginatedResult":#paginated-result<"Message":#message> resultPage))
+  ruby:    "Deferrable":/realtime/types#deferrable history(Hash options) -> yields "PaginatedResult":#paginated-result<"Message":#message>
+  java:    "PaginatedResult":#paginated-result<"Message":#message> history("Param []":#param options)
+  csharp:  Task<"PaginatedResult<Message>":#paginated-result> HistoryAsync("PaginatedRequestParams":#paginated-request-params dataQuery, bool untilAttach = false)
+  objc,swift: history(query: ARTRealtimeHistoryQuery?, callback: ("ARTPaginatedResult":#paginated-result<"ARTMessage":#message>?, ARTErrorInfo?) -> Void) throws
+
+Gets a "paginated":#paginated-result set of historical messages for this channel. If the "channel is configured to persist messages to disk":https://faqs.ably.com/how-long-are-messages-stored-for, then message history will "typically be available for 24 - 72 hours":https://faqs.ably.com/how-long-are-messages-stored-for. If not, messages are only retained in memory by the Ably service for two minutes.
+
+h4. Parameters
+
+- <span lang="default">options</span><span lang="objc,swift">query</span><span lang="csharp">dataQuery</span> := <span lang="default">an optional object containing the query parameters</span><span lang="ruby">an optional set of key value pairs containing the query parameters</span>, as specified in the "message history API documentation":/realtime/history#channel-history.<br>__Type: <span lang="default">@Object@</span><span lang="objc,swift">@ARTRealtimeHistoryQuery@</span><span lang="csharp">@PaginatedRequestParams@</span><span lang="ruby">@Hash@</span><span lang="java">"@Param []@":#param</span>__
+
+- <div lang="jsall">callback</div> := is a function of the form: @function(err, resultPage)@
+- <div lang="ruby">&block</div> := yields a @PaginatedResult<Message>@ object
+- <div lang="swift,objc">callback</div> := called with a "ARTPaginatedResult":#paginated-result<"ARTMessage":#message> object or an error
+
+Further details of the supported @options@ params, see "message history API documentation":/realtime/history#channel-history.
+
+blang[jsall,objc,swift].
+  h4. Callback result
+
+  On success, @resultPage@ contains a "@PaginatedResult@":#paginated-result encapsulating an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  On failure to retrieve message history, @err@ contains an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[java].
+  h4. Returns
+
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next@":#paginated-result and "@first@":#paginated-result methods.
+
+  Failure to retrieve the message history will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[csharp].
+  h4. Returns
+
+  The return value is @Task<PaginatedResult<Message>>@ which needs to be awaited.
+
+  On success, the returned "@PaginatedResult@":#paginated-result encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@NextAsync@":#paginated-result and "@FirstAsync@":#paginated-result methods.
+
+  Failure to retrieve the message history will raise an "@AblyException@":/realtime/types/#ably-exception
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the method.
+
+  On success, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method yield a "PaginatedResult":#paginated-result that encapsulates an array of "@Message@":#message objects corresponding to the current page of results. "@PaginatedResult@":#paginated-result supports pagination using "@next()@":#paginated-result and "@first()@":#paginated-result methods.
+
+  Failure to retrieve the message history will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+h6(#attach).
+  default: attach
+  csharp: Attach
+
+bq(definition).
+  default:  attach(callback("ErrorInfo":/realtime/types#error-info err))
+  java:     void attach()
+  csharp:   void Attach(Action<TimeSpan, "ErrorInfo":/realtime/types#error-info?> callback = null)
+  ruby:     "Deferrable":/realtime/types#deferrable attach -> yields
+  objc,swift: attach(callback: (("ARTErrorInfo":/realtime/types#error-info?) -> Void)?)
+  flutter:  Future<void> attach()
+
+Attach to this channel ensuring the channel is created in the Ably system and all messages published on the channel will be received by any channel listeners registered using <span lang="default">@subscribe()@</span><span lang="csharp">@Subscribe()@</span><span lang="ruby">@subscribe@</span>. Any resulting channel state change will be emitted to any listeners registered using the "<span lang="default">@on@</span><span lang="csharp">@On@</span>":#on or "<span lang="default">@once@</span><span lang="csharp">@Once@</span>":#once methods.
+
+As a convenience, <span lang="default">@attach()@</span><span lang="csharp">@Attach()@</span><span lang="ruby">@attach@</span> will be called implicitly if "<span lang="default">@subscribe()@</span><span lang="csharp">@Subscribe()@</span><span lang="ruby">@subscribe@</span>":#subscribe for the @Channel@ is called, or "<span lang="default">@enter()@</span><span lang="csharp">@Enter()@</span><span lang="ruby">@enter@</span>":/realtime/presence#enter or "<span lang="default">@subscribe()@</span><span lang="csharp">@Subscribe()@</span><span lang="ruby">@subscribe@</span>":/realtime/presence#subscribe is called on the "@Presence@":/realtime/presence for this @Channel@.
+
+<div lang="default">
+h4. Parameters
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ and is called once the channel attach succeeds or fails
+- <div lang="ruby">&block</div> := yields once the channel becomes attached
+- <div lang="csharp">callback</div> := is a lambda expression of the form @Action<TimeSpan, ErrorInfo>@ and is called once the channel attach succeeds or fails
+- <div lang="swift,objc">callback</div> := called once the channel becomes attached or if an error occurs
+</div><div lang="flutter"></div>
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the attach method.
+
+  On successful attachment, the success callbacks for the "@Deferrable@":/realtime/types#deferrable are called and any block provided to the method is yielded. Failure to attach will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[flutter].
+  h4. Returns
+
+  @Future<void>@
+
+  Failure to attach will throw an @AblyException@ with an "errorInfo":/realtime/types#error-info property with the failure reason.
+
+h6(#detach).
+  default: detach
+  csharp: Detach
+
+bq(definition).
+  default: detach(callback("ErrorInfo":/realtime/types#error-info err))
+  java:    void detach()
+  csharp:  void Detach(Action<TimeSpan, ErrorInfo> callback = null)
+  ruby:     "Deferrable":/realtime/types#deferrable detach -> yields
+  objc,swift: detach(callback: (("ARTErrorInfo":/realtime/types#error-info?) -> Void)?)
+  flutter:  Future<void> detach()
+
+Detach from this channel. Any resulting channel state change will be emitted to any listeners registered using the "<span lang="default">@on@</span><span lang="csharp">@On@</span>":#on or "<span lang="default">@once@</span><span lang="csharp">@Once@</span>":#once methods.
+
+Please note: Once all clients globally have detached from the channel, the channel will be released in the Ably service within two minutes.
+
+<div lang="default">
+h4. Parameters
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ and is called once the channel detach succeeds or fails
+- <div lang="csharp">callback</div> := is a lambda expression in the form @Action<TimeSpan, ErrorInfo>@ and is called once the channel detach succeeds or fails
+- <div lang="ruby">&block</div> := yields once the channel becomes detached
+- <div lang="swift,objc">callback</div> := called once the channel becomes detached or if an error occurs
+</div><div lang="flutter"></div>
+
+blang[ruby].
+  h4. Returns
+
+  A "@Deferrable@":/realtime/types#deferrable object is returned from the detach method.
+
+  On successful detachment, the registered success blocks for the "@Deferrable@":/realtime/types#deferrable and any block provided to the method are executed. Failure to detach will trigger the @errback@ callbacks of the "@Deferrable@":/realtime/types#deferrable with an "@ErrorInfo@":#error-info object with the failure reason.
+
+blang[flutter].
+  h4. Returns
+
+  @Future<void>@
+
+  Failure to detach will throw an @AblyException@ with an "errorInfo":/realtime/types#error-info property with the failure reason.
+
+h6(#on).
+  default: on
+  csharp: On
+
+There are <span lang="jsall">three</span><span lang="default">two</span> overloaded versions of this method:
+
+bq(definition#on-state-listener).
+  default: on(String event, listener("ChannelStateChange":#channel-state-change stateChange))
+  ruby:    on("ChannelEvent":#channel-event *event) -> yields "ChannelStateChange":#channel-state-change
+  java:    void on("ChannelEvent":#channel-event event, "ChannelStateListener":#channel-state-listener listener)
+  csharp:  void On("ChannelEvent":#channel-event event, Action<"ChannelStateChange":#channel-state-change> action)
+  objc,swift: on(event: "ARTChannelEvent":#channel-event, call: ("ARTChannelStateChange?":#channel-state-change) -> Void) -> ARTEventListener
+  flutter: Stream<"ChannelEvent":#channel-event> on("ChannelEvent":#channel-event channelEvent)
+
+<div lang="flutter">
+The Stream returned can be subscribed for with a listener.
+
+bq(definition). final streamSubscription = stream.listen(listener)
+
+</div>
+Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span> for the specified "ChannelEvent":#channel-event on the @Channel@.
+The listener is passed a "<span lang="default">ChannelStateChange</span><span lang="objc,swift">ARTChannelStateChange</span>":#channel-state-change object that contains the current state, previous state, a boolean indicating whether the channel was resumed, and an optional reason for the state change.
+
+<div lang="jsall">
+bq(definition#on-state-array-listener).
+  jsall: on(String[] events, listener("ChannelStateChange":#channel-state-change stateChange))
+
+Same as above, but registers multiple listeners, one for each event in the array.
+</div>
+
+bq(definition#on-listener).
+  default: on(listener("ChannelStateChange":#channel-state-change stateChange))
+  ruby:    on -> yields "ChannelStateChange":#channel-state-change
+  csharp:  void On(Action<"ChannelStateChange":#channel-state-change> listener)
+  java:    void on("ChannelStateListener":#channel-state-listener listener)
+  objc,swift: on(call: ("ARTChannelStateChange?":#channel-state-change) -> Void) -> ARTEventListener
+  flutter: Stream<"ChannelEvent":#channel-event> on()
+
+<div lang="flutter">
+The Stream returned can be subscribed for with a listener.
+
+bq(definition). final streamSubscription = stream.listen(listener)
+
+</div>
+Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span><span lang="csharp">lambda expression</span> for all "ChannelEvents":#channel-event on the @Channel@.
+The listener is passed a "<span lang="default">ChannelStateChange</span><span lang="objc,swift">ARTChannelStateChange</span>":#channel-state-change object that contains the current state, previous state, the event, a boolean indicating whether the channel was resumed, and an optional reason for the state change.
+
+If an exception is thrown in the listener and bubbles up to the event emitter, it will be caught and logged at @error@ level, so as not to affect other listeners for the same event
+
+h4. Parameters
+
+- <div lang="jsall">event(s)</div> := the channel event(s) to subscribe to, see "ChannelEvent":#channel-event for supported channel events<br>__Type: @String@ or @String[]@__
+- <div lang="java">event</div> := the channel event to subscribe to<br>__Type: "@ChannelEvent@":#channel-event__
+- <div lang="csharp">event</div> := the channel event to subscribe to<br>__Type: "@ChannelEvent@":#channel-event__
+- <div lang="ruby">event</div> := the channel event as a Symbol such as @:attached@ or a @ChannelEvent@ object to subscribe to<br>__Type: "@ChannelEvent@":#channel-event__
+- <div lang="swift,objc">event</div> := the @ARTChannelEvent@ to subscribe to<br>__Type: "@ARTChannelEvent@":#channel-event__
+- <div lang="flutter">event</div> := the channel event to subscribe to<br>__Type: "@ChannelEvent@":#channel-event__
+
+- <div lang="jsall">listener</div> := is a function of the form @function(stateChange)@ to be notified for matching event changes.
+- <div lang="java">listener</div> := listener to be notified for matching event changes<br>__Type: "@ChannelStateListener@":#channel-state-listener__
+- <div lang="csharp">action</div> := lambda expression to be notified for matching event changes<br>__Type: "@ChannelStateChange@":#channel-state-listener__
+- <div lang="ruby">&block</div> := listener block that is yielded to for matching event changes
+- <div lang="swift,objc">call</div> := called possibly with an "@ErrorInfo@":#error-info
+
+h4. Example
+
+"(external) Browser @ChannelState@ change example":<%= JsBins.url_for('realtime/channel-states') %>
+
+h6(#once).
+  default: once
+  csharp: Once
+
+There are two overloaded versions of this method:
+
+bq(definition#once-state-listener).
+  default: once(String event, listener("ChannelStateChange":#channel-state-change stateChange))
+  ruby:    once("ChannelEvent":#channel-event *event) -> yields "ChannelStateChange":#channel-state-change
+  java:    void once("ChannelEvent":#channel-event event, "ChannelStateListener":#channel-state-listener listener)
+  csharp:  void Once("ChannelEvent":#channel-event event, Action<"ChannelStateChange":#channel-state-change> action)
+  objc,swift: once(event: "ARTChannelEvent":#channel-event, call: ("ARTChannelStateChange?":#channel-state-change) -> Void) -> ARTEventListener
+
+Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span><span lang="csharp">lambda expression</span> for a single occurrence of the specified "ChannelEvent":#channel-event on the @Channel@. Once the listener has been called, it is removed as a registered listener and will not be called again.
+The listener is passed a "<span lang="default">ChannelStateChange</span><span lang="objc,swift">ARTChannelStateChange</span>":#channel-state-change object that contains the current state, previous state, the event, a boolean indicating whether the channel was resumed, and an optional reason for the event change.
+
+bq(definition#once-listener).
+  default: once(listener("ChannelStateChange":#channel-state-change stateChange))
+  ruby:    once -> yields "ChannelStateChange":#channel-state-change
+  java:    void once("ChannelStateListener":#channel-state-listener listener)
+  csharp:  void Once(Action<"ChannelStateChange":#channel-state-change> listener)
+  objc,swift: once(call: ("ARTChannelStateChange?":#channel-state-change) -> Void) -> ARTEventListener
+
+Register the given listener <span lang="ruby">block</span><span lang="swift,objc">function</span><span lang="csharp">lambda expression</span> for a single occurrence of any "ChannelEvent":#channel-event on the @Channel@. Once the listener has been called, it is removed as a registered listener and will not be called again.
+The listener is passed a "<span lang="default">ChannelStateChange</span><span lang="objc,swift">ARTChannelStateChange</span>":#channel-state-change object that contains the current state, previous state, the event, a boolean indicating whether the channel was resumed, and an optional reason for the event change.
+
+If an exception is thrown in the listener and bubbles up to the event emitter, it will be caught and logged at @error@ level, so as not to affect other listeners for the same event
+
+h4. Parameters
+
+- <div lang="jsall">event</div> := the channel event to subscribe to, see "ChannelEvent":#channel-event for supported channel events<br>__Type: @String@__
+- <div lang="java">event</div> := the channel event to subscribe to<br>__Type: "@ChannelEvent@":#channel-event__
+- <div lang="csharp">event</div> := the channel event to subscribe to<br>__Type: "@ChannelEvent@":#channel-event__
+- <div lang="ruby">event</div> := the channel event as a Symbol such as @:attached@ or a @ChannelEvent@ object to subscribe to<br>__Type: "@ChannelEvent@":#channel-event__
+- <div lang="swift,objc">event</div> := the @ARTChannelEvent@ to subscribe to<br>__Type: "@ARTChannelEvent@":#channel-event__
+
+- <div lang="jsall">listener</div> := is a function of the form @function()@ to be notified for a single occurrence of a matching event change. The current event is available as @this.event@
+- <div lang="java">listener</div> := listener to be notified for a single occurrence of a matching event change<br>__Type: "@ChannelStateListener@":#channel-state-listener__
+- <div lang="ruby">&block</div> := listener block that is yielded to for a single occurrence of a matching event change
+- <div lang="csharp">listener</div> := listener lambda expression that is notified only once for a matching event change
+- <div lang="swift,objc">call</div> := called possibly with an "@ErrorInfo@":#error-info
+
+h6(#off).
+  default: off
+  csharp: Off
+
+There are <span lang="jsall">six</span><span lang="default">two</span> overloaded versions of this method:
+
+bq(definition#off-state-listener).
+  default: off(String event, listener)
+  ruby:    off("ChannelEvent":#channel-event *event, &block)
+  java:    void off("ChannelEvent":#channel-event event, "ChannelStateListener":#channel-state-listener listener)
+  csharp:  void Off("ChannelEvent":#channel-event event, Action<"ChannelStateChange":#channel-state-change> listener)
+  objc,swift: off(event: "ARTChannelEvent":#channel-event, listener: ARTEventListener)
+
+Remove the given listener <span lang="ruby">block</span> for the "ChannelEvent":#channel-event.
+
+bq(definition#off-listener).
+  default: off(listener)
+  ruby:    off(&block)
+  java:    void off("ChannelStateListener":#channel-state-listener listener)
+  csharp:  void Off(Action<"ChannelStateChange":#channel-state-change> listener)
+  objc,swift: off(listener: ARTEventListener)
+
+Remove the given listener <span lang="ruby">block</span> for all "ChannelEvents":#channel-event.
+
+<div lang="jsall">
+bq(definition). off(String[] events, listener)
+
+Removes the given listener from all "ChannelEvents":#channel-event in the array.
+
+bq(definition). off(String event)
+
+Removes all listeners for a given "@ChannelEvent@":#channel-event .
+
+bq(definition). off(String[] events)
+
+Removes all listeners for all "ChannelEvents":#channel-event in the array.
+
+bq(definition). off()
+
+Removes all listeners (including both those registered against specific events and those registered without an event).
+</div>
+
+h4. Parameters
+
+- <div lang="jsall">event(s)</div> := the channel event(s) to unsubscribe from<br>__Type: @String@ or @String[]@__
+- <div lang="java">event</div> := the channel event to unsubscribe from<br>__Type: "@ChannelEvent@":#channelevent-
+- <div lang="csharp">event</div> := the channel event to unsubscribe from<br>__Type: "@ChannelEvent@":#channel-event__
+- <div lang="ruby">event</div> := the channel event as a Symbol such as @:detached@ or a @ChannelEvent@ object to unsubscribe from<br>__Type: "@ChannelEvent@":#channel-event__
+- <div lang="swift,objc">event</div> := the @ARTChannelEvent@ to unsubscribe from<br>__Type: "@ARTChannelEvent@":#channel-event__
+
+- <div lang="jsall">listener</div> := is the listener function to be removed
+- <div lang="java">listener</div> := is the listener to be removed<br>__Type: "@ChannelStateListener":#channel-state-listener__
+- <div lang="csharp">listener</div> := is the listener function to be removed
+- <div lang="ruby">&block</div> := is the listener block to be removed
+- <div lang="swift,objc">listener</div> := previous return value from a @on@ or @once@ call
+- <div lang="flutter">streamSubscription</div> := obtained from calling @on@ can be used to cancel a listener by calling @streamSubscription.cancel@
+
+h2(#related-types). Related types
+
+h3(#channel-state).
+  default: ChannelState
+  objc,swift: ARTRealtimeChannelState
+  ruby:    Channel::STATE Enum
+  java:    io.ably.lib.realtime.ChannelState Enum
+  csharp:    IO.Ably.Realtime.ChannelState Enum
+  flutter: ably.ChannelState Enum
+
+<%= partial partial_version('types/_channel_state') %>
+
+h3(#channel-event).
+  default: ChannelEvent
+  swift,objc: ARTChannelEvent
+  ruby:    Channel::EVENT Enum
+  java:    io.ably.lib.realtime.ChannelEvent Enum
+  csharp:  IO.Ably.Realtime.ChannelEvent Enum
+  flutter: ably.ChannelEvent Enum
+
+<%= partial partial_version('types/_channel_event') %>
+
+h3(#channel-state-change).
+  default: ChannelStateChange
+  objc,swift: ARTRealtimeChannelStateChange
+  java:    io.ably.lib.realtime.ChannelStateListener.ChannelStateChange
+  ruby:    ChannelStateChange
+  csharp:  IO.Ably.Realtime.ChannelStateChanged
+  flutter: ably.ChannelStateChange
+
+<%= partial partial_version('types/_channel_state_change') %>
+
+h3(#message).
+  default: Message
+  objc,swift: ARTMessage
+  ruby:    Ably::Models::Message
+  java:    io.ably.lib.types.Message
+  csharp:  IO.Ably.Message
+  flutter: ably.Message
+
+<%= partial partial_version('types/_message') %>
+
+h3(#channel-options).
+  default: ChannelOptions Object
+  objc,swift: ARTChannelOptions
+  ruby:    ChannelOptions Hash
+  java:    io.ably.lib.types.ChannelOptions
+  csharp:  IO.Ably.Rest.ChannelOptions
+  flutter:  ably.ChannelOptions
+
+<%= partial partial_version('types/_channel_options') %>
+
+h3(#channel-state-listener).
+  java: io.ably.lib.realtime.ChannelStateListener
+
+blang[java].
+  <%= partial partial_version('types/_channel_state_listener'), indent: 2, skip_first_indent: true %>
+
+h3(#completion-listener).
+  java:   io.ably.lib.realtime.CompletionListener
+
+blang[java].
+  <%= partial partial_version('types/_completion_listener'), indent: 2, skip_first_indent: true %>
+
+h3(#paginated-request-params).
+  csharp: PaginatedRequestParams
+
+blang[csharp].
+  <%= partial partial_version('types/_history_request_params'), indent: 2, skip_first_indent: true %>
+
+h3(#message-listener).
+  java:   io.ably.lib.realtime.Channel.MessageListener
+
+blang[java].
+  <%= partial partial_version('types/_message_listener'), indent: 2, skip_first_indent: true %>
+
+h3(#paginated-result).
+  default: PaginatedResult
+  objc,swift: ARTPaginatedResult
+  ruby:    Ably::Models::PaginatedResult
+  java:    io.ably.lib.types.PaginatedResult
+  csharp:  IO.Ably.PaginatedResult
+
+<%= partial partial_version('types/_paginated_result') %>
+
+h3(#param).
+  java:    io.ably.lib.types.Param
+
+blang[java].
+  <%= partial partial_version('types/_param'), indent: 2, skip_first_indent: true %>
