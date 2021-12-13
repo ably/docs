@@ -1,6 +1,6 @@
 module.exports = {
   siteMetadata: {
-    siteUrl: "https://www.yourdomain.tld",
+    siteUrl: "https://www.ably.com/documentation",
     title: "Documentation | Ably Realtime",
   },
   plugins: [
@@ -16,6 +16,22 @@ module.exports = {
         path: "./src/images/",
       },
       __key: "images",
+    },
+    {
+      resolve: "gatsby-source-filesystem",
+      options: {
+        name: "textile-partials",
+        path: "./src/textile/partials"
+      },
+      __key: "textile-partials",
+    },
+    {
+      resolve: "gatsby-source-filesystem",
+      options: {
+        name: "textile-nanoc-compatible",
+        path: "./src/textile/nanoc-compatible"
+      },
+      __key: "textile-nanoc-compatible",
     },
   ],
 };
