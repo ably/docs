@@ -1,5 +1,5 @@
-const { transformNanocTextiles, makeHtmlTypeFromParentType } = require('./data/transform-utils');
-const path = require("path")
+const { transformNanocTextiles, makeHtmlTypeFromParentType, maybeRetrievePartial, flattenContentOrderedList } = require('./data/transform-utils');
+const path = require("path");
 
 const onCreateNode = async ({
     node,
@@ -15,7 +15,6 @@ const onCreateNode = async ({
       createNode(child);
       createParentChildLink({ parent, child });
     }
-    console.log(node.id);
     transformNanocTextiles(
       node,
       content,
@@ -44,17 +43,19 @@ const createPages = async ({ graphql, actions }) => {
       }
     }
   `);
-  result.data.allFileHtml.edges.forEach(edge => {
-    // TODO: process contentOrderedList
+  const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
+  await Promise.all(result.data.allFileHtml.edges.map(async edge => {
+    const contentOrderedList = flattenContentOrderedList(await Promise.all(edge.node.contentOrderedList.map(retrievePartialFromGraphQL)));
+
     createPage({
       path: `/${edge.node.slug}`,
       component: documentTemplate,
       context: {
         slug: edge.node.slug,
-        content: edge.node.contentOrderedList,
+        contentOrderedList
       },
-    })
-  });
+    });
+  }));
 }
 exports.onCreateNode = onCreateNode;
 exports.createPages = createPages;
