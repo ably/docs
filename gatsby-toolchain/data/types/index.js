@@ -10,10 +10,12 @@
  * - Not maximally performant
  * (cf. https://stackoverflow.com/questions/287903/how-can-i-guarantee-that-my-enums-definition-doesnt-change-in-javascript/50355530#50355530,
  *  but this is extremely marginal & suggested solution in comment is not workable)
+ * These are acceptable trade-offs for quick development but a good focus point for reconsideration & improvements later.
  */
 const DataTypes = Object.freeze({
     Partial: "Partial",
-    String: "String"
+    String: "String",
+    Html: "Html"
 });
 
 module.exports = DataTypes;
