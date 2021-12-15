@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { graphql } from 'gatsby';
 
-const HtmlElement = ({ html }) => <section dangerouslySetInnerHTML={{__html: html }}></section>;
+const Html = ({ html }) => <section dangerouslySetInnerHTML={{__html: html }}></section>;
 
 const Document = ({ pageContext: { contentOrderedList } }) => {
     const elements = useMemo(() => contentOrderedList.filter(
@@ -9,7 +9,7 @@ const Document = ({ pageContext: { contentOrderedList } }) => {
     ).map(
         // It is currently safe to use an index as a key.
         // We will need a unique key to alter any of these.
-        ({ data }, i) => <HtmlElement html={data} key={i}/>
+        ({ data }, i) => <Html html={data} key={i}/>
     ), [contentOrderedList]);
     return <main>{ elements }</main>;
 };
