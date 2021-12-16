@@ -1,5 +1,5 @@
-import * as React from "react"
-import Meganav from "@ably/ui/core/Meganav";
+import * as React from "react";
+import Header from "../components/Header";
 
 // markup
 const IndexPage = () => {
@@ -7,7 +7,7 @@ const IndexPage = () => {
     <main>
       <title>Home Page</title>
       <header>
-        <Meganav paths={{}}/>
+        <Header />
         <h1 className="text-3xl font-bold underline">Home Page</h1>
       </header>
     </main>
