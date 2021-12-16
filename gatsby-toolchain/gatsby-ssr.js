@@ -1,3 +1,5 @@
+import './src/styles/global.css';
+
 import { reducerFlashes } from "@ably/ui/core/Flash";
 
 import {
