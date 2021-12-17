@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { graphql } from 'gatsby';
+import Layout from '../components/layout';
 
+// Extract & sanitize with dompurify
 const Html = ({ html }) => <section dangerouslySetInnerHTML={{__html: html }}></section>;
 
 const Document = ({ pageContext: { contentOrderedList } }) => {
@@ -11,7 +13,7 @@ const Document = ({ pageContext: { contentOrderedList } }) => {
         // We will need a unique key to alter any of these.
         ({ data }, i) => <Html html={data} key={i}/>
     ), [contentOrderedList]);
-    return <main>{ elements }</main>;
+    return <Layout>{ elements }</Layout>;
 };
 
 export default Document;
