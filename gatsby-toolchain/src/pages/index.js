@@ -1,16 +1,17 @@
 import * as React from "react";
-import Header from "../components/Header";
+import Layout from "../components/layout";
+import SidebarRoot from "../components/Sidebar";
 
-// markup
 const IndexPage = () => {
   return (
-    <main>
-      <title>Home Page</title>
-      <header>
-        <Header />
-        <h1 className="text-3xl font-bold underline">Home Page</h1>
-      </header>
-    </main>
+    <Layout>
+      <h1>Home Page</h1>
+      <SidebarRoot data={[{label: 'heading', link: 'href', level: 1, content: 'none' },
+        { label: 'heading-two', link: 'href-2', level: 3, content: [
+          {label: 'heading', link: 'href', level: 1, content: 'none' },
+        { label: 'heading-two', link: 'href-2', level: 3, content: 'hello' }
+          ]}]} />
+    </Layout>
   )
 }
 
