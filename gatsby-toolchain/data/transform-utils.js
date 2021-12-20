@@ -1,9 +1,47 @@
 const textile = require("textile-js");
 const _ = require('lodash');
 const DataTypes = require("./types");
+const { upperFirst } = require("lodash");
+const NO_PARENT = 'NO_PARENT';
 
 const parseNanocPartials = contentString => contentString.split(/<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/);
 const removeFalsy = dataArray => dataArray.filter(_.identity);
+
+const createNodesFromPath = (type, { createNode, createNodeId, createContentDigest }) => path => {
+  const pieces = path.split('/');
+  const values = {
+    link: '',
+    label: '',
+    level: 3
+  };
+  const breadcrumbs = pieces.map((piece, i) => {
+    values.level = values.level + i > 6 ? 6 : values.level + i;
+    values.link = `${values.link}/${piece}`;
+    values.label = upperFirst(piece);
+    values.id = createNodeId(`${values.link} >>> Path`)
+
+    return { ...values };
+  });
+  breadcrumbs.forEach((breadcrumb, i) => {
+    const newNodeData = {
+      ...breadcrumb,
+      children: [],
+    };
+    if(breadcrumbs[i-1]) {
+      newNodeData.parent = breadcrumbs[i-1].id;
+    }
+    const newNodeInternals = {
+      contentDigest: createContentDigest(breadcrumb.link),
+      type,
+      mediaType: 'text/plain'
+    };
+    const pathNode = {
+      ...newNodeData,
+      internal: newNodeInternals,
+    }
+    createNode(pathNode);
+  });
+}
 
 const constructDataObjectsFromStrings = contentStrings => contentStrings.map(
   (data, i) => i % 2 === 0 ?
@@ -19,7 +57,7 @@ const flattenContentOrderedList = contentOrderedList => contentOrderedList.reduc
 }, []);
 
 // Source: https://www.gatsbyjs.com/docs/how-to/plugins-and-themes/creating-a-transformer-plugin/
-const transformNanocTextiles = (node, content, createContentDigest, id, type) => updateWithTransform => {
+const transformNanocTextiles = (node, content, createContentDigest, id, type, createNodesFromPath) => updateWithTransform => {
     // if we need it, use DOMParser not Cheerio!
     const withPartials = parseNanocPartials(content);
     const withoutFalsyValues = removeFalsy(withPartials);
@@ -39,6 +77,7 @@ const transformNanocTextiles = (node, content, createContentDigest, id, type) =>
       newNodeInternals.type = `${type}Partial`;
       newNodeData.relativePath = node.relativePath;
     } else {
+      createNodesFromPath(node.relativePath.replace(/\.[^/.]+$/, ""));
       // Partials should never have a slug, every other page type needs one.
       newNodeData.slug = node.name;
     }
@@ -82,4 +121,10 @@ const maybeRetrievePartial = graphql => async ({ data, type }) => {
   };
 }
 
-module.exports = { transformNanocTextiles, makeHtmlTypeFromParentType, maybeRetrievePartial, flattenContentOrderedList };
+module.exports = {
+  createNodesFromPath,
+  transformNanocTextiles,
+  makeHtmlTypeFromParentType,
+  maybeRetrievePartial,
+  flattenContentOrderedList
+};

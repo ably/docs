@@ -9,6 +9,7 @@ module.exports = {
     "gatsby-plugin-image",
     "gatsby-plugin-sitemap",
     "gatsby-plugin-sharp",
+    "gatsby-transformer-yaml",
     "gatsby-transformer-sharp",
     {
       resolve: "gatsby-source-filesystem",
@@ -34,5 +35,13 @@ module.exports = {
       },
       __key: "textile-nanoc-compatible",
     },
+    {
+      resolve: "gatsby-source-filesystem",
+      options: {
+        name: "yaml-page-furniture",
+        path: "./src/page-furniture"
+     },
+     __key: "yaml-page-furniture"
+    }
   ],
 };
