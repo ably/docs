@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { graphql } from 'gatsby';
 import Layout from '../components/layout';
 import Html from '../components/blocks/Html';
+import Sidebar from '../components/Sidebar';
 
 const Document = ({ pageContext: { contentOrderedList } }) => {
     const elements = useMemo(() => contentOrderedList.filter(
@@ -11,7 +12,7 @@ const Document = ({ pageContext: { contentOrderedList } }) => {
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html html={data} key={i}/>
     ), [contentOrderedList]);
-    return <Layout>{ elements }</Layout>;
+    return <Layout><Sidebar data={[]} />{ elements }</Layout>;
 };
 
 export default Document;
