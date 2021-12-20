@@ -1,4 +1,4 @@
-const { transformNanocTextiles, makeHtmlTypeFromParentType } = require('../transform-utils');
+const { transformNanocTextiles, makeHtmlTypeFromParentType, createNodesFromPath } = require('../transform-utils');
 
 const onCreateNode = async ({
     node,
@@ -7,19 +7,21 @@ const onCreateNode = async ({
     createNodeId,
     createContentDigest
 }) => {
+  const createChildNode = ({ parent, child }) => {
+    createNode(child);
+    createParentChildLink({ parent, child });
+  };
+
   if (node.extension === 'textile') {
     const content = await loadNodeContent(node);
 
-    const createChildNode = ({ parent, child }) => {
-      createNode(child);
-      createParentChildLink({ parent, child });
-    }
     transformNanocTextiles(
       node,
       content,
       createContentDigest,
       createNodeId(`${node.id} >>> HTML`),
-      makeHtmlTypeFromParentType(node)
+      makeHtmlTypeFromParentType(node),
+      createNodesFromPath('DocumentPath', { createNode, createNodeId, createContentDigest })
     )(createChildNode);
   }
 }
