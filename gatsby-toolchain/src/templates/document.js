@@ -10,7 +10,7 @@ const Document = ({ pageContext: { contentOrderedList } }) => {
         ({ type }) => type === 'Html'
     ).map(
         // It is currently safe to use an index as a key.
-        // We will need a unique key to alter any of these.
+        // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html html={data} key={i}/>
     ), [contentOrderedList]);
     return <Layout>{ elements }</Layout>;
