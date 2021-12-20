@@ -1,9 +1,7 @@
 import React, { useMemo } from 'react';
 import { graphql } from 'gatsby';
 import Layout from '../components/layout';
-
-// Extract & sanitize with dompurify
-const Html = ({ html }) => <section dangerouslySetInnerHTML={{__html: html }}></section>;
+import Html from '../components/blocks/Html';
 
 const Document = ({ pageContext: { contentOrderedList } }) => {
     const elements = useMemo(() => contentOrderedList.filter(
