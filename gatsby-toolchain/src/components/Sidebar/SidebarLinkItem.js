@@ -6,7 +6,7 @@ import SidebarLinkMenu from './SidebarLinkMenu';
 const SidebarLinkItem = ({ label, link, content, level }) => {
     const linkContent = useMemo(() => Array.isArray(content) ?
         <SidebarLinkMenu key={ label } data={ content } /> :
-        <Link to={ link }>content</Link>, [content, label]);
+        <Link to={ link }>{ content }</Link>, [content, label]);
     return <SidebarItem
         label={ label }
         content={ linkContent }

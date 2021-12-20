@@ -1,10 +1,10 @@
 import React from 'react';
 import SidebarLinkMenu from './SidebarLinkMenu';
 
-const SidebarRoot = ({data}) => {
+const Sidebar = ({data, Type = SidebarLinkMenu}) => {
     return <aside>
-        <SidebarLinkMenu data={ data } />
+        <Type data={ data } />
     </aside>;
 }
 
-export default SidebarRoot;
+export default Sidebar;
