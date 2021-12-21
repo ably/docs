@@ -1,11 +1,13 @@
 const textile = require("textile-js");
-const _ = require('lodash');
-const DataTypes = require("./types");
-const { upperFirst } = require("lodash");
-const { ROOT_LEVEL, MAX_LEVEL } = require("../src/components/Sidebar/consts");
+const { upperFirst, camelCase, identity } = require('lodash');
+const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require("./front-matter");
+const DataTypes = require("../types");
+const { ROOT_LEVEL, MAX_LEVEL } = require("../../src/components/Sidebar/consts");
 
+// TODO: split this into more focused files.
 const parseNanocPartials = contentString => contentString.split(/<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/);
-const removeFalsy = dataArray => dataArray.filter(_.identity);
+const removeFalsy = dataArray => dataArray.filter(identity);
+const makeHtmlTypeFromParentType = node => upperFirst(camelCase(`${node.internal.type}Html`));
 
 const createNodesFromPath = (type, { createNode, createNodeId, createContentDigest }) => path => {
   const pieces = path.split('/');
@@ -61,6 +63,12 @@ const transformNanocTextiles = (node, content, createContentDigest, id, type, cr
     // if we need it, use DOMParser not Cheerio!
     const withPartials = parseNanocPartials(content);
     const withoutFalsyValues = removeFalsy(withPartials);
+
+    const frontmatterMeta = tryRetrieveMetaData(withoutFalsyValues[0]);
+    if(frontmatterMeta !== NO_MATCH) {
+      withoutFalsyValues[0] = frontmatterMeta.body;
+    }
+
     const asDataObjects = constructDataObjectsFromStrings(withoutFalsyValues);
     const newNodeData = {
       contentOrderedList: asDataObjects,
@@ -68,6 +76,11 @@ const transformNanocTextiles = (node, content, createContentDigest, id, type, cr
       children: [],
       parent: node.id,
     };
+
+    if(frontmatterMeta !== NO_MATCH) {
+      newNodeData.meta = filterAllowedMetaFields(frontmatterMeta.attributes);
+    }
+
     const newNodeInternals = {
       contentDigest: createContentDigest(asDataObjects),
       type,
@@ -91,8 +104,6 @@ const transformNanocTextiles = (node, content, createContentDigest, id, type, cr
     updateWithTransform({ parent: node, child: htmlNode })
 }
 
-const makeHtmlTypeFromParentType = node => _.upperFirst(_.camelCase(`${node.internal.type}Html`));
-
 const maybeRetrievePartial = graphql => async ({ data, type }) => {
   if(type !== DataTypes.Partial) {
     return { data, type };
@@ -108,7 +119,6 @@ const maybeRetrievePartial = graphql => async ({ data, type }) => {
       }
     `)
   const partial = result.data.fileHtmlPartial;
-  // Recursively fill in any partials within partials
   const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
   let contentOrderedList = partial && partial.contentOrderedList;
   if(partial) {
