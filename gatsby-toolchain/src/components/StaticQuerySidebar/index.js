@@ -1,16 +1,8 @@
 import { graphql, useStaticQuery } from 'gatsby';
 import React from 'react';
 import Sidebar from '../Sidebar';
+import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
 
-const sidebarDataFromData = data => data.map(({ label, link, level = 3, contentString = false, contentArray = false }) => {
-    const result = {
-        label,
-        link,
-        level,
-        content: contentArray ? sidebarDataFromData(contentArray) : contentString
-    }
-    return result;
-})
 
 const LeftSideBar = () => {
     const data = useStaticQuery(graphql`
@@ -32,13 +24,26 @@ const LeftSideBar = () => {
                     }
                 }
             }
+            allDocumentPath {
+                edges {
+                    node {
+                        id
+                        label
+                        level
+                        link
+                        parent {
+                            id
+                        }
+                    }
+                }
+            }
         }
     `);
     let sidebarData;
     if(data.pageFurnitureYaml.contentArray) {
-        sidebarData = sidebarDataFromData(data.pageFurnitureYaml.contentArray);
+        sidebarData = sidebarDataFromPageFurniture(data.pageFurnitureYaml.contentArray);
     } else {
-        sidebarData = [{link: 'href', label: 'label'}];
+        sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
     }
     return <Sidebar data={ sidebarData } />;
 }
