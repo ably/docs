@@ -11,12 +11,13 @@ const sidebarDataFromPageFurniture = data => data.map(({ label, link, level = RO
     return result;
 })
 
+const range = (start, end) => Array(end - start).fill().map((d, i) => i + start);
+
 const sidebarDataFromDocumentPaths = data => {
     const objects = data.map(({ node: { id, label, level, link, parent = { id: false } }}) => ({ id, label, level, link, parent }));
     const objectsByLevel = groupBy(objects, object => object.level);
-    let currentLevel = ROOT_LEVEL;
-    // There is likely a way to do this in a more functional style, but I'm concerned that it may be less readable.
-    while(currentLevel < MAX_LEVEL) {
+    // Avoids possible GC issues caused by setting a variable with let. Premature optimization but a simple one.
+    range(ROOT_LEVEL, MAX_LEVEL).forEach(currentLevel => {
         objectsByLevel[currentLevel] && objectsByLevel[currentLevel].map(object => {
             object.content = objectsByLevel[currentLevel+1] ?
                 [{...object, label: 'Overview' }].concat(
@@ -26,8 +27,7 @@ const sidebarDataFromDocumentPaths = data => {
                 null;
             return object;
         });
-        ++currentLevel;
-    }
+    })
     return objectsByLevel[ROOT_LEVEL];
 }
 
