@@ -2,7 +2,7 @@ const textile = require("textile-js");
 const _ = require('lodash');
 const DataTypes = require("./types");
 const { upperFirst } = require("lodash");
-const NO_PARENT = 'NO_PARENT';
+const { ROOT_LEVEL, MAX_LEVEL } = require("../src/components/Sidebar/consts");
 
 const parseNanocPartials = contentString => contentString.split(/<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/);
 const removeFalsy = dataArray => dataArray.filter(_.identity);
@@ -12,10 +12,10 @@ const createNodesFromPath = (type, { createNode, createNodeId, createContentDige
   const values = {
     link: '',
     label: '',
-    level: 3
+    level: ROOT_LEVEL
   };
   const breadcrumbs = pieces.map((piece, i) => {
-    values.level = values.level + i > 6 ? 6 : values.level + i;
+    values.level = values.level + i > MAX_LEVEL ? MAX_LEVEL : values.level + i;
     values.link = `${values.link}/${piece}`;
     values.label = upperFirst(piece);
     values.id = createNodeId(`${values.link} >>> Path`)
