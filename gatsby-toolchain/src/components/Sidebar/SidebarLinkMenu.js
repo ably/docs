@@ -4,12 +4,15 @@ import { Accordion } from 'react-accessible-accordion';
 import SidebarLinkItem from './SidebarLinkItem';
 
 const SidebarLinkMenu = ({ data }) => {
-    const linkMenu = useMemo(() => data.map(({ label, link, level, content }) => 
+    console.log(data);
+    const linkMenu = useMemo(() => data.map(({ label, link, level = 3, content = false }) => 
         content ?
-        <SidebarLinkItem key={ label } label={ label } link={ link } level={ level } content={ content } /> :
-        <Link to={ link } >{ label }</Link>), [data]);
+        <li key={ label }><SidebarLinkItem label={ label } link={ link } level={ level } content={ content } /></li> :
+        <li key={ label }><Link to={ link } >{ label }</Link></li>), [data]);
     return <Accordion>
-        { linkMenu }
+        <ul>
+            { linkMenu }
+        </ul>
     </Accordion>;
 }
 
