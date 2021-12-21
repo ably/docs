@@ -1,10 +1,11 @@
 import React from 'react';
 import SidebarLinkMenu from './SidebarLinkMenu';
+import StickySidebar from './StickySidebar';
 
-const Sidebar = ({data, Type = SidebarLinkMenu}) => {
-    return <aside>
-        <Type data={ data } />
-    </aside>;
+const Sidebar = ({data, MenuType = SidebarLinkMenu, Type = StickySidebar}) => {
+    return <Type>
+        <MenuType data={ data } />
+    </Type>;
 }
 
 export default Sidebar;
