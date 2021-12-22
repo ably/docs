@@ -1,13 +1,42 @@
 const textile = require("textile-js");
-const { upperFirst, camelCase, identity } = require('lodash');
+const yaml = require('js-yaml');
+const { upperFirst, camelCase, identity, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
 const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require("./front-matter");
 const DataTypes = require("../types");
 const { ROOT_LEVEL, MAX_LEVEL } = require("../../src/components/Sidebar/consts");
 
+const INLINE_TOC_REGEX = /^inline\-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
+
 // TODO: split this into more focused files.
 const parseNanocPartials = contentString => contentString.split(/<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/);
+const tryRetrieveInlineTOC = contentString => contentString.match(INLINE_TOC_REGEX);
+const removeInlineTOC = contentString => contentString.replace(INLINE_TOC_REGEX, '');
+const processTOCItems = tocItem => {
+  if(isEmpty(tocItem)) {
+    return tocItem;
+  }
+  if(Array.isArray(tocItem)) {
+    return tocItem.map(processTOCItems);
+  }
+  if(isPlainObject(tocItem)) {
+    return {
+      content: Object.entries(tocItem).map(([ key, values ]) => ({ key, values: processTOCItems(values) })),
+    };
+  }
+  const linkParts = tocItem.match(/(.+)#(.+)/);
+  const linkTitle = (linkParts && linkParts[1]) || tocItem;
+  const link = (linkParts && linkParts[2]) || lowerFirst(tocItem);
+  return {
+    linkTitle,
+    link: link.replace(/\s/g, '-')
+  }
+}
+const retrieveAndReplaceInlineTOC = contentString => ({
+  noInlineTOC: removeInlineTOC(contentString),
+  inlineTOCOnly: (tryRetrieveInlineTOC(contentString) ?? [,null])[1]
+});
 const removeFalsy = dataArray => dataArray.filter(identity);
-const makeHtmlTypeFromParentType = node => upperFirst(camelCase(`${node.internal.type}Html`));
+const makeTypeFromParentType = type => node => upperFirst(camelCase(`${node.internal.type}${type}`));
 
 const createNodesFromPath = (type, { createNode, createNodeId, createContentDigest }) => path => {
   const pieces = path.split('/');
@@ -49,7 +78,7 @@ const constructDataObjectsFromStrings = contentStrings => contentStrings.map(
   (data, i) => i % 2 === 0 ?
     { data: textile(data), type: DataTypes.Html } :
     { data, type: DataTypes.Partial }
-  );
+);
 
 const flattenContentOrderedList = contentOrderedList => contentOrderedList.reduce((acc, {data, type}) => {
   if(Array.isArray(data)) {
@@ -59,9 +88,28 @@ const flattenContentOrderedList = contentOrderedList => contentOrderedList.reduc
 }, []);
 
 // Source: https://www.gatsbyjs.com/docs/how-to/plugins-and-themes/creating-a-transformer-plugin/
-const transformNanocTextiles = (node, content, createContentDigest, id, type, createNodesFromPath) => updateWithTransform => {
-    // if we need it, use DOMParser not Cheerio!
-    const withPartials = parseNanocPartials(content);
+const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, createContentDigest, createNodeId }) => updateWithTransform => {
+    // We could re-arrange & limit this to the last array item if we are confident that no partials will appear in the API reference.
+    const {
+      noInlineTOC,
+      inlineTOCOnly
+    }= retrieveAndReplaceInlineTOC(content);
+    const loadedInlineTOC = yaml.load(inlineTOCOnly,'utf-8');
+    const inlineTOCLinks = processTOCItems(loadedInlineTOC);
+    const inlineTOCNode = merge(inlineTOCLinks, {
+      id: createNodeId(`${id} >>> InlineTOC`),
+      children: [],
+      parent: node.id,
+      internal: {
+        contentDigest: createContentDigest(inlineTOCLinks),
+        type: makeTypeFromParentType('InlineTOC')(node),
+      }
+    });
+    updateWithTransform({ parent: node, child: inlineTOCNode });
+    console.log(JSON.stringify(inlineTOCNode));
+    // if we need it, remember to use DOMParser not Cheerio!
+    const withPartials = parseNanocPartials(noInlineTOC);
+
     const withoutFalsyValues = removeFalsy(withPartials);
 
     const frontmatterMeta = tryRetrieveMetaData(withoutFalsyValues[0]);
@@ -134,7 +182,7 @@ const maybeRetrievePartial = graphql => async ({ data, type }) => {
 module.exports = {
   createNodesFromPath,
   transformNanocTextiles,
-  makeHtmlTypeFromParentType,
+  makeTypeFromParentType,
   maybeRetrievePartial,
   flattenContentOrderedList
 };
