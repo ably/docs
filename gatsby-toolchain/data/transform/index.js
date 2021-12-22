@@ -95,11 +95,14 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
       inlineTOCOnly
     }= retrieveAndReplaceInlineTOC(content);
     const loadedInlineTOC = yaml.load(inlineTOCOnly,'utf-8');
-    const inlineTOCLinks = processTOCItems(loadedInlineTOC);
+    const inlineTOCLinks = {
+      tableOfContents: processTOCItems(loadedInlineTOC)
+    };
     const inlineTOCNode = merge(inlineTOCLinks, {
       id: createNodeId(`${id} >>> InlineTOC`),
       children: [],
       parent: node.id,
+      slug: node.name,
       internal: {
         contentDigest: createContentDigest(inlineTOCLinks),
         type: makeTypeFromParentType('InlineTOC')(node),
