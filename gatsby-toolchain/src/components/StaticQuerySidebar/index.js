@@ -4,7 +4,7 @@ import Sidebar from '../Sidebar';
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
 
 
-const LeftSideBar = () => {
+const LeftSideBar = ({ className }) => {
     const data = useStaticQuery(graphql`
         fragment SubMenuFields on PageFurnitureYaml {
             label
@@ -45,7 +45,7 @@ const LeftSideBar = () => {
     } else {
         sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
     }
-    return <Sidebar data={ sidebarData } />;
+    return <Sidebar className={ className } data={ sidebarData } />;
 }
 
 export { LeftSideBar };
