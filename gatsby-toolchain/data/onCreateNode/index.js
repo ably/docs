@@ -1,4 +1,4 @@
-const { transformNanocTextiles, makeHtmlTypeFromParentType, createNodesFromPath } = require('../transform-utils');
+const { transformNanocTextiles, makeTypeFromParentType, createNodesFromPath } = require('../transform');
 
 const onCreateNode = async ({
     node,
@@ -18,10 +18,13 @@ const onCreateNode = async ({
     transformNanocTextiles(
       node,
       content,
-      createContentDigest,
       createNodeId(`${node.id} >>> HTML`),
-      makeHtmlTypeFromParentType(node),
-      createNodesFromPath('DocumentPath', { createNode, createNodeId, createContentDigest })
+      makeTypeFromParentType('Html')(node),
+      {
+        createContentDigest,
+        createNodesFromPath: createNodesFromPath('DocumentPath', { createNode, createNodeId, createContentDigest }),
+        createNodeId
+      }
     )(createChildNode);
   }
 }
