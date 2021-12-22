@@ -4,7 +4,7 @@ import Layout from '../components/layout';
 import Html from '../components/blocks/Html';
 import { LeftSideBar } from '../components/StaticQuerySidebar';
 
-const Document = ({ pageContext: { contentOrderedList } }) => {
+const Document = ({ pageContext: { contentOrderedList }, data: { inlineTOC: { tableOfContents }} }) => {
     const elements = useMemo(() => contentOrderedList.filter(
         ({ type }) => type === 'Html'
     ).map(
@@ -20,10 +20,20 @@ export default Document;
 export const query = graphql`
     query($slug: String!) {
         document: fileHtml(slug: { eq: $slug }) {
-            slug
             contentOrderedList {
                 data
                 type
+            }
+        }
+        inlineTOC: fileInlineToc(slug: { eq: $slug }) {
+            tableOfContents {
+                content {
+                    values {
+                        linkTitle
+                        link
+                    }
+                    key
+                }
             }
         }
     }
