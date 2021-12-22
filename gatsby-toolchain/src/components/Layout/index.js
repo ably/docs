@@ -6,7 +6,7 @@ const Layout = ({children}) => (<>
     <header>
         <Header />
     </header>
-    <main className={`pt-64 grid grid-cols-2`}>
+    <main className={`pt-64 grid grid-cols-5`}>
         {children}
     </main>
 </>);
