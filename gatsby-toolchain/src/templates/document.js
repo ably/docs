@@ -12,7 +12,7 @@ const Document = ({ pageContext: { contentOrderedList } }) => {
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html html={data} key={i}/>
     ), [contentOrderedList]);
-    return <Layout><LeftSideBar />{ elements }</Layout>;
+    return <Layout><LeftSideBar className="col-span-1" /><article className="col-span-4">{ elements }</article></Layout>;
 };
 
 export default Document;

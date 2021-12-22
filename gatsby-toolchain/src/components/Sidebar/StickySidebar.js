@@ -17,7 +17,7 @@ const StickySidebar = styled.aside`
     top: ${NAV_HEIGHT_DESKTOP + DISTANCE_FROM_TOP_DESKTOP}px;
 
     ${mq.minWidth.medium} {
-    display: block;
+        display: block;
     }
 `;
 
