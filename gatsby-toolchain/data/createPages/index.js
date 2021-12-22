@@ -1,4 +1,4 @@
-const { flattenContentOrderedList, maybeRetrievePartial } = require("../transform-utils");
+const { flattenContentOrderedList, maybeRetrievePartial } = require("../transform");
 const path = require("path");
 
 const createPages = async ({ graphql, actions: { createPage } }) => {
