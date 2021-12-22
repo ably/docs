@@ -89,6 +89,7 @@ const flattenContentOrderedList = contentOrderedList => contentOrderedList.reduc
 
 // Source: https://www.gatsbyjs.com/docs/how-to/plugins-and-themes/creating-a-transformer-plugin/
 const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, createContentDigest, createNodeId }) => updateWithTransform => {
+    const slug = node.relativePath.replace(/(.*)\.[^.]+$/, "$1");
     // We could re-arrange & limit this to the last array item if we are confident that no partials will appear in the API reference.
     const {
       noInlineTOC,
@@ -102,14 +103,13 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
       id: createNodeId(`${id} >>> InlineTOC`),
       children: [],
       parent: node.id,
-      slug: node.name,
+      slug,
       internal: {
         contentDigest: createContentDigest(inlineTOCLinks),
         type: makeTypeFromParentType('InlineTOC')(node),
       }
     });
     updateWithTransform({ parent: node, child: inlineTOCNode });
-    console.log(JSON.stringify(inlineTOCNode));
     // if we need it, remember to use DOMParser not Cheerio!
     const withPartials = parseNanocPartials(noInlineTOC);
 
@@ -143,7 +143,7 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
     } else {
       createNodesFromPath(node.relativePath.replace(/\.[^/.]+$/, ""));
       // Partials should never have a slug, every other page type needs one.
-      newNodeData.slug = node.name;
+      newNodeData.slug = slug;
     }
     const htmlNode = {
       ...newNodeData,
