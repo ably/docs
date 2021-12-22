@@ -23,7 +23,7 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
       const contentOrderedList = flattenContentOrderedList(await Promise.all(edge.node.contentOrderedList.map(retrievePartialFromGraphQL)));
   
       createPage({
-        path: `/${edge.node.slug}`,
+        path: `/documentation/${edge.node.slug}`,
         component: documentTemplate,
         context: {
           slug: edge.node.slug,
