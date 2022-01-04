@@ -4,6 +4,7 @@ const { upperFirst, camelCase, identity, isPlainObject, lowerFirst, isEmpty, mer
 const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require("./front-matter");
 const DataTypes = require("../types");
 const { ROOT_LEVEL, MAX_LEVEL } = require("../../src/components/Sidebar/consts");
+const { preParser } = require("./pre-parser");
 
 const INLINE_TOC_REGEX = /^inline\-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
 
@@ -90,11 +91,12 @@ const flattenContentOrderedList = contentOrderedList => contentOrderedList.reduc
 // Source: https://www.gatsbyjs.com/docs/how-to/plugins-and-themes/creating-a-transformer-plugin/
 const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, createContentDigest, createNodeId }) => updateWithTransform => {
     const slug = node.relativePath.replace(/(.*)\.[^.]+$/, "$1");
+    const preTextileTransform = preParser(content);
     // We could re-arrange & limit this to the last array item if we are confident that no partials will appear in the API reference.
     const {
       noInlineTOC,
       inlineTOCOnly
-    }= retrieveAndReplaceInlineTOC(content);
+    } = retrieveAndReplaceInlineTOC(preTextileTransform);
     const loadedInlineTOC = yaml.load(inlineTOCOnly,'utf-8');
     const inlineTOCLinks = {
       tableOfContents: processTOCItems(loadedInlineTOC)
