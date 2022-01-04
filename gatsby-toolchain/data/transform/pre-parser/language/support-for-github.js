@@ -1,3 +1,19 @@
+const minIndent = string => {
+	const indents = string.match(/^[ \t]*(?=\S)/gm);
+	if (!indents) {
+		return 0;
+	}
+	return indents.reduce((acc, curr) => Math.min(acc, curr.length), Infinity);
+};
+
+const stripHeredoc = string => {
+    const min = minIndent(string);
+    const regexString = `^[ \\t]{${min}}`;
+    const regex = new RegExp(regexString, 'gm');
+    return string.replace(regex, '');
+}
+
+
 const addLanguageSupportForGithubStyleCode = content => {
     /**
      * Full Regex for rapid testing on regex101.com etc.:
@@ -11,10 +27,9 @@ const addLanguageSupportForGithubStyleCode = content => {
     const replaceLineBreaks = input => input.replace(/^\s*$/gm, '{{{github_br}}}')
     const replacer = (_match, languages, codeEditor, content) => {
         if(languages) {
-            // TODO: strip_heredoc
-            return replaceLineBreaks(`bc[${languages}]${codeEditor ? `(${codeEditor})` : ''}. ${content}`);
+            return replaceLineBreaks(`bc[${languages}]${codeEditor ? `(${codeEditor})` : ''}. ${stripHeredoc(content)}`);
         }
-        return replaceLineBreaks(`bc. ${content}`);
+        return replaceLineBreaks(`bc. ${stripHeredoc(content)}`);
     }
     const textileLanguageFromGithubStyleLanguage = content.replace(fullGithubLanguageRegex, replacer);
     return textileLanguageFromGithubStyleLanguage;
