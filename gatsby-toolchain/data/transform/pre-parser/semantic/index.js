@@ -1,11 +1,5 @@
-const { identity } = require("lodash");
-
-const stripComments = identity;
-const addMinimizeForHeadings = identity;
-const addMinimizedIndent = identity;
+const stripComments = content => content.replace(/<!--[\s\S]*?-->\s*/g, '');
 
 module.exports = {
-    stripComments,
-    addMinimizeForHeadings,
-    addMinimizedIndent
+    stripComments
 }
