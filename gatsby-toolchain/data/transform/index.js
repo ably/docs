@@ -75,11 +75,24 @@ const createNodesFromPath = (type, { createNode, createNodeId, createContentDige
   });
 }
 
-const constructDataObjectsFromStrings = contentStrings => contentStrings.map(
-  (data, i) => i % 2 === 0 ?
-    { data: textile(data), type: DataTypes.Html } :
-    { data, type: DataTypes.Partial }
-);
+const constructDataObjectsFromStrings = (contentStrings, frontmatterMeta) => {
+  const partialData = contentStrings.map(
+    (data, i) => i % 2 === 0 ?
+      { data: textile(data), type: DataTypes.Html } :
+      { data, type: DataTypes.Partial }
+  );
+  let withDates = partialData;
+  if(frontmatterMeta !== NO_MATCH
+      && frontmatterMeta.attributes
+      && frontmatterMeta.attributes.published_date) {
+    withDates = partialData.map(({ data, type }) =>
+        ({
+          data: data.replace(/(\{\{PUBLISHED_DATE\}\})/gi,frontmatterMeta.attributes.published_date),
+          type
+        }));
+  }
+  return withDates;
+}
 
 const flattenContentOrderedList = contentOrderedList => contentOrderedList.reduce((acc, {data, type}) => {
   if(Array.isArray(data)) {
@@ -122,7 +135,7 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
       withoutFalsyValues[0] = frontmatterMeta.body;
     }
 
-    const asDataObjects = constructDataObjectsFromStrings(withoutFalsyValues);
+    const asDataObjects = constructDataObjectsFromStrings(withoutFalsyValues, frontmatterMeta);
     const newNodeData = {
       contentOrderedList: asDataObjects,
       id,
