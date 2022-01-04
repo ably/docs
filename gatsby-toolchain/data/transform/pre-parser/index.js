@@ -8,9 +8,7 @@ const {
     addLanguageSupportForHeadings
 } = require('./language');
 const {
-    stripComments,
-    addMinimizeForHeadings,
-    addMinimizedIndent
+    stripComments
 } = require('./semantic');
 const {
     addSpecAnchorLinks
@@ -27,31 +25,41 @@ const {
 const {
     addSupportForInlineCodeEditor
 } = require('./inline-code');
-
-const preParser = (content, path, attributes) => {
+//TODO: Everything related to creating its own blocks/datatypes should be put into the parsing stage, which should include parseNanocPartials
+// & reduce over the array created by that function.
+const preParser = (content, attributes) => {
     // Readability/Semantic operations
     let result = stripComments(content);
-    result = addMinimizeForHeadings(result);
-    result = addMinimizedIndent(result);
+    // TODO: These should be part of React rendering/components
+    // result = addMinimizeForHeadings(result);
+    // result = addMinimizedIndent(result);
     // Language Operations
-    result = convertJSAllToNodeAndJavaScript(result);
-    result = convertBlangBlocksToHtml(result);
+    //TODO: This should be part of React rendering/components
+    // result = convertJSAllToNodeAndJavaScript(result);
+    //TODO: This should not be converted to HTML, but translated to its own block/datatype.
+    // result = convertBlangBlocksToHtml(result);
     result = addLanguageSupportForGithubStyleCode(result);
     result = duplicateLanguageBlocks(result);
     result = trimWhiteSpaceBetweenLanguageElements(result);
-    result = addLanguageSupportForBlockQuotes(result);
-    result = addLanguageSupportForHeadings(result);
+    //TODO: These (inc. Spec & Comparison operations) should not be converted into HTML, but translated to their own block/datatypes in the contentOrderedList.
+    // result = addLanguageSupportForBlockQuotes(result);
+    // result = addLanguageSupportForHeadings(result);
     // Spec operations
-    result = addSpecAnchorLinks(result, attributes);
+    // TODO: add anchor_specs to variables that must be included from frontmatter
+    // result = addSpecAnchorLinks(result, attributes);
     // Comparison operations
-    result = addCompareTable(result, attributes);
-    result = addCompareNames(result, attributes);
-    result = addCompareUrls(result, attributes);
-    result = addCompareId(result, attributes);
+    // TODO: load compare.yaml into GraphQL
+    // result = addCompareTable(result, attributes);
+    // result = addCompareNames(result, attributes);
+    // result = addCompareUrls(result, attributes);
+    // result = addCompareId(result, attributes);
     // Date operations
+    //TODO: load published date from file system
     result = addPublishedDate(result, attributes);
     // Inline code editor operations
-    result = addSupportForInlineCodeEditor(result, path);
+    //TODO: This should not be converted to HTML, but translated to its own block/datatype.
+    // result = addSupportForInlineCodeEditor(result, path);
+    // TODO: Extract all links so that any external can be processed in React to have target="_blank" and rel="noopener (noreferer?)"
     return result;
 }
 
