@@ -1,7 +1,7 @@
 const addLanguageSupportForGithubStyleCode = content => {
     /**
      * Full Regex for rapid testing on regex101.com etc.:
-     * /^\`\`\`(?:\[([^\]]+)\])?(?:\(([^\)]+)\))?([\s\S]*)^\`\`\`/gm
+     * /^\`\`\`(?:\[([^\]]+)\])?(?:\(([^\)]+)\))?(.*?)^\`\`\`/gms
      * Please update this with any changes if and when they arise!
      */
     const langRegex = '\\[([^\\]]+)\\]';
