@@ -20,14 +20,11 @@ const {
     addCompareId
 } = require('./comparison');
 const {
-    addPublishedDate
-} = require('./date');
-const {
     addSupportForInlineCodeEditor
 } = require('./inline-code');
 //TODO: Everything related to creating its own blocks/datatypes should be put into the parsing stage, which should include parseNanocPartials
 // & reduce over the array created by that function.
-const preParser = (content, attributes) => {
+const preParser = (content) => {
     // Readability/Semantic operations
     let result = stripComments(content);
     // TODO: These should be part of React rendering/components
@@ -53,9 +50,6 @@ const preParser = (content, attributes) => {
     // result = addCompareNames(result, attributes);
     // result = addCompareUrls(result, attributes);
     // result = addCompareId(result, attributes);
-    // Date operations
-    //TODO: load published date from file system
-    result = addPublishedDate(result, attributes);
     // Inline code editor operations
     //TODO: This should not be converted to HTML, but translated to its own block/datatype.
     // result = addSupportForInlineCodeEditor(result, path);

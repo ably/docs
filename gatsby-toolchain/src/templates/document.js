@@ -3,10 +3,11 @@ import { graphql } from 'gatsby';
 import Layout from '../components/layout';
 import Html from '../components/blocks/Html';
 import { LeftSideBar } from '../components/StaticQuerySidebar';
+import DataTypes from '../../data/types';
 
 const Document = ({ pageContext: { contentOrderedList }, data: { inlineTOC: { tableOfContents }} }) => {
     const elements = useMemo(() => contentOrderedList.filter(
-        ({ type }) => type === 'Html'
+        ({ type }) =>  Object.values(DataTypes).includes(type)
     ).map(
         // It is currently safe to use an index as a key.
         // We will need a unique key if we want to alter any of these by position.
