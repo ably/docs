@@ -15,7 +15,8 @@
 const DataTypes = Object.freeze({
     Partial: "Partial",
     String: "String",
-    Html: "Html"
+    Html: "Html",
+    DateString: "DateString",
 });
 
 module.exports = DataTypes;
