@@ -14,16 +14,16 @@ const {
 } = require('./semantic');
 const {
     addSpecAnchorLinks
-} = require('./spec');
+} = require('../parser-enhancements/spec');
 const {
     addCompareTable,
     addCompareNames,
     addCompareUrls,
     addCompareId
-} = require('./comparison');
+} = require('../parser-enhancements/comparison');
 const {
     addSupportForInlineCodeEditor
-} = require('./inline-code');
+} = require('../parser-enhancements/inline-code');
 //TODO: Everything related to creating its own blocks/datatypes should be put into the parsing stage, which should include parseNanocPartials
 // & reduce over the array created by that function.
 const preParser = (content) => {
