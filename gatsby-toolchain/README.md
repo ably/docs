@@ -23,3 +23,7 @@ Visit `localhost:8000/documentation/${relativePath}` for documentation pages, e.
 5. Testing &amp; CI pipeline work
 6. More complex frontend functionality
 7. Alpha complete, enter Beta phase.
+
+## Gotchas
+
+- Textile-js does not support nested divs properly (there are no other viable textile libraries we can use). Nested divs must be represented by tokens that we rehydrate later.
