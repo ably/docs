@@ -8,7 +8,9 @@ const {
     addLanguageSupportForHeadings
 } = require('./language');
 const {
-    stripComments
+    stripComments,
+    addMinimizeForHeadings,
+    addMinimizedIndent
 } = require('./semantic');
 const {
     addSpecAnchorLinks
@@ -27,21 +29,18 @@ const {
 const preParser = (content) => {
     // Readability/Semantic operations
     let result = stripComments(content);
-    // TODO: These should be part of React rendering/components
-    // result = addMinimizeForHeadings(result);
-    // result = addMinimizedIndent(result);
+    result = addMinimizeForHeadings(result);
+    result = addMinimizedIndent(result);
     // Language Operations
-    //TODO: This should be part of React rendering/components
-    // result = convertJSAllToNodeAndJavaScript(result);
-    //TODO: This should not be converted to HTML, but translated to its own block/datatype.
-    // result = convertBlangBlocksToHtml(result);
+    result = convertJSAllToNodeAndJavaScript(result);
+    result = convertBlangBlocksToHtml(result);
     result = addLanguageSupportForGithubStyleCode(result);
     result = duplicateLanguageBlocks(result);
     result = trimWhiteSpaceBetweenLanguageElements(result);
-    //TODO: These (inc. Spec & Comparison operations) should not be converted into HTML, but translated to their own block/datatypes in the contentOrderedList.
-    // result = addLanguageSupportForBlockQuotes(result);
-    // result = addLanguageSupportForHeadings(result);
+    result = addLanguageSupportForBlockQuotes(result);
+    result = addLanguageSupportForHeadings(result);
     // Spec operations
+    // TODO: Move commented out functions to place where they have access to metadata/attributes/frontmatter
     // TODO: add anchor_specs to variables that must be included from frontmatter
     // result = addSpecAnchorLinks(result, attributes);
     // Comparison operations
@@ -51,9 +50,8 @@ const preParser = (content) => {
     // result = addCompareUrls(result, attributes);
     // result = addCompareId(result, attributes);
     // Inline code editor operations
-    //TODO: This should not be converted to HTML, but translated to its own block/datatype.
     // result = addSupportForInlineCodeEditor(result, path);
-    // TODO: Extract all links so that any external can be processed in React to have target="_blank" and rel="noopener (noreferer?)"
+    // TODO: Ensure all external links have target="_blank" and rel="noopener (noreferer?)"
     return result;
 }
 
