@@ -2,10 +2,7 @@ const { identity } = require("lodash");
 const { addLanguageSupportForGithubStyleCode } = require('./support-for-github');
 const { duplicateLanguageBlocks } = require('./duplicate-blocks');
 const { trimWhiteSpaceBetweenLanguageElements } = require('./white-space');
-
-const convertJSAllToNodeAndJavaScript = identity;
-const convertBlangBlocksToHtml = identity;
-
+const { convertJSAllToNodeAndJavaScript, convertBlangBlocksToHtml } = require('./conversions');
 
 const addLanguageSupportForBlockQuotes = identity;
 const addLanguageSupportForHeadings = identity;
