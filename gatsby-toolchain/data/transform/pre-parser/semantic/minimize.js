@@ -1,5 +1,6 @@
+const { extractIndented } = require("../shared-utilities/extract-indented");
+
 const MINIMIZE_REGEX = /^minimize\.\s*(.*)$/m;
-const INDENTATION_REGEX = /^(\s+).*$/m;
 
 const MINIMIZED_HEADINGS_REGEX = /^(h[1-6])(\(#[^\)]+\))?\(minimize(?:=([^\)]*))?\)\.(.*?)\n\n(.+?)(?=(?:\n\nh[1-6])|(?:\Z))/mg;
 
@@ -41,38 +42,29 @@ const addMinimizedIndent = content => {
         const next = position + 1;
         const matchTitle = `+ ${ (content.match(MINIMIZE_REGEX)[1] ?? 'View More') }`;
         const nextContent = content
-            .slice(position)
+            .slice(position);
+        const contentToParse = nextContent
             .replace(MINIMIZE_REGEX, '')
             .slice(1); // & remove newline
-
-        const nextIndentationResult = nextContent.match(INDENTATION_REGEX);
-        if(!nextIndentationResult || !nextIndentationResult[1]) {
-            throw `minimize. blocks must be followed by indentation. Offending block: '${nextContent.slice(0,127)}'\n`;
-        }
+        // Save so that we accurately know our position in the document
+        const minimizeMarkupLength = nextContent.length - contentToParse.length;
         
-        const nextIndentation = nextIndentationResult[1];
-        const indentationRegexString = `^${nextIndentation}(.*)$`
-        const indentationRegex = new RegExp(indentationRegexString, 'gm');
-        const negativeIndentationRegexString = `^(?!${nextIndentation}).*$`;
-        const negativeIndentationRegex = new RegExp(negativeIndentationRegexString, 'gm');
-        
-        const nextNonIndentedLineLocation = nextContent.search(negativeIndentationRegex);
+        const { onlyIndentedLines, nonIndentedLineLocation } = extractIndented(contentToParse, 'minimize.');
 
-        const nextContentWithOnlyIndentedLines = nextContent.slice(0,nextNonIndentedLineLocation);
         content = content.substring(0, position) +
             collapsibleWrapper +
                 `<input id='collapsible-indent${expandNum}' class='minimize-checkbox toggle' type='checkbox'>` +
                 `<label for='collapsible-indent${expandNum}' class='label-collapsible'>${matchTitle}</label>` +
                 collapsibleContent +
                     collapsibleInner +
-                        `${ nextContentWithOnlyIndentedLines.replace(indentationRegex, '$1') }` +
+                        `${ onlyIndentedLines }` +
                     collapsibleInnerEnd +
                     `<label for='collapsible-indent#{expand_num}' class='label-collapsible-close'>- View Less</label>` +
                 collapsibleContentEnd +
             collapsibleWrapperEnd +
-            content.substring(position + nextNonIndentedLineLocation);
-        const nextPosition = nextContent.search(MINIMIZE_REGEX);
-        position = nextPosition === -1 ? -1 : nextPosition + next;
+            content.substring(position + minimizeMarkupLength + nonIndentedLineLocation);
+        
+        position = content.search(MINIMIZE_REGEX);
         ++expandNum;
     }
 
