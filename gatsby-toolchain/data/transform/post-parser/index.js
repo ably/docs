@@ -18,6 +18,8 @@ const BLANG_REGEX_STRING = `${
 
 const BLANG_REGEX = new RegExp(BLANG_REGEX_STRING, 'gs');
 
+const LINK_EXTERNAL_REGEX = /(<a[^>]*)class="external"([^>]*>)/m
+
 const convertBlangBlocksToHtml = content => content.replace(
     BLANG_REGEX,
     '\n\n<div lang="$1"> <!-- start $1 language block -->\n$2\n</div> <!-- /end $1 language block -->\n\n'
@@ -27,8 +29,8 @@ const convertExternalLinksToBlankTarget = content => content.replace(LINK_EXTERN
 
 const postParser = content => {
     let result = addGithubLineBreaks(content);
-    result = convertBlangBlocksToHtml(content);
-    result = convertExternalLinksToBlankTarget(content);
+    result = convertBlangBlocksToHtml(result);
+    result = convertExternalLinksToBlankTarget(result);
     return result;
 }
 

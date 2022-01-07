@@ -1,10 +1,12 @@
 const textile = require("textile-js");
 const yaml = require('js-yaml');
 const { upperFirst, camelCase, identity, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
+const { compose } = require('lodash/fp');
 const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require("./front-matter");
 const DataTypes = require("../types");
 const { ROOT_LEVEL, MAX_LEVEL } = require("../../src/components/Sidebar/consts");
 const { preParser } = require("./pre-parser");
+const { postParser } = require("./post-parser");
 
 const INLINE_TOC_REGEX = /^inline\-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
 
@@ -36,6 +38,7 @@ const retrieveAndReplaceInlineTOC = contentString => ({
   noInlineTOC: removeInlineTOC(contentString),
   inlineTOCOnly: (tryRetrieveInlineTOC(contentString) ?? [,null])[1]
 });
+
 const removeFalsy = dataArray => dataArray.filter(identity);
 const makeTypeFromParentType = type => node => upperFirst(camelCase(`${node.internal.type}${type}`));
 
@@ -78,9 +81,10 @@ const createNodesFromPath = (type, { createNode, createNodeId, createContentDige
 const constructDataObjectsFromStrings = (contentStrings, frontmatterMeta) => {
   const partialData = contentStrings.map(
     (data, i) => i % 2 === 0 ?
-      { data: textile(data), type: DataTypes.Html } :
-      { data, type: DataTypes.Partial }
+      { data: postParser(textile(data)), type: DataTypes.Html } :
+      { data: postParser(data), type: DataTypes.Partial }
   );
+  // TODO: move this into postParser
   let withDates = partialData;
   if(frontmatterMeta !== NO_MATCH
       && frontmatterMeta.attributes
