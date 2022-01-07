@@ -51,7 +51,6 @@ const preParser = (content) => {
     // result = addCompareId(result, attributes);
     // Inline code editor operations
     // result = addSupportForInlineCodeEditor(result, path);
-    // TODO: Ensure all external links have target="_blank" and rel="noopener (noreferer?)"
     return result;
 }
 
