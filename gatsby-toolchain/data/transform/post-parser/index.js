@@ -2,7 +2,7 @@ const addGithubLineBreaks = content => content.replaceAll('{{{github_br}}}', '\n
 
 const TAG_REGEX_STRING = '(?:<[\\w /]+>)*\\s*';
 
-const LANG_BLOCK_POST_TEXTILE_REGEX_STRING = `LANG_(<span class="caps">)?BLOCK(<\\/span>)?`;
+const LANG_BLOCK_POST_TEXTILE_REGEX_STRING = `LANG_(?:<span class="caps">)?BLOCK(?:<\\/span>)?`;
 /**
  * TODO: this will not work for complex HTML
  * The correct, but relatively involved, solution will be to use a DOMParser to extract the inner HTML from
