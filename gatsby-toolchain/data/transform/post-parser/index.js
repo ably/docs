@@ -1,6 +1,8 @@
 const addGithubLineBreaks = content => content.replaceAll('{{{github_br}}}', '\n');
 
-const TAG_REGEX_STRING = '(?:<[\\w /]+>)*\s*';
+const TAG_REGEX_STRING = '(?:<[\\w /]+>)*\\s*';
+
+const LANG_BLOCK_POST_TEXTILE_REGEX_STRING = `LANG_(<span class="caps">)?BLOCK(<\\/span>)?`;
 /**
  * TODO: this will not work for complex HTML
  * The correct, but relatively involved, solution will be to use a DOMParser to extract the inner HTML from
@@ -8,15 +10,15 @@ const TAG_REGEX_STRING = '(?:<[\\w /]+>)*\s*';
  * */ 
 const BLANG_REGEX_STRING = `${
     TAG_REGEX_STRING
-}{{LANG_BLOCK\\[([\\w,]+)\\]}}${
+}{{${LANG_BLOCK_POST_TEXTILE_REGEX_STRING}\\[([\\w,]+)\\]}}${
         TAG_REGEX_STRING
     }(.*?)${
         TAG_REGEX_STRING 
-    }{{/LANG_BLOCK}}${
+    }{{\\/${LANG_BLOCK_POST_TEXTILE_REGEX_STRING}}}${
     TAG_REGEX_STRING
 }`;
 
-const BLANG_REGEX = new RegExp(BLANG_REGEX_STRING, 'gs');
+const BLANG_REGEX = new RegExp(BLANG_REGEX_STRING, 'gms');
 
 const LINK_EXTERNAL_REGEX = /(<a[^>]*)class="external"([^>]*>)/m
 
