@@ -20,9 +20,17 @@ const addLanguageSupportForGithubStyleCode = content => {
      * /^\`\`\`(?:\[([^\]]+)\])?(?:\(([^\)]+)\))?(.*?)^\`\`\`/gms
      * Please update this with any changes if and when they arise!
      */
-    const langRegex = '\\[([^\\]]+)\\]';
-    const codeEditorRegex = '\\(([^\\)]+)\\)';
+    const langRegex = '\\[([^\\]]+)\\]'; // e.g. [javascript], [    ], [jsall, ruby]
+    const codeEditorRegex = '\\(([^\\)]+)\\)'; // e.g. (code-editor), (    ), (!@£$)
+    // optinally match anything like [javascript](code-editor:realtime/channel-publish)
     const langAndEditorRegex = `(?:${langRegex})?(?:${codeEditorRegex})?`;
+    /**
+     * Wrap the regex strings so they'll match
+     * ```
+     *  {optional regex}
+     *  (any content)
+     * ```
+     */
     const fullGithubLanguageRegex = new RegExp(`^\\\`\\\`\\\`${langAndEditorRegex}(.*?)^\\\`\\\`\\\``, 'gms');
     const replaceLineBreaks = input => input.replace(/^\s*$/gm, '{{{github_br}}}');
     const replacer = (_match, languages, codeEditor, content) => {
