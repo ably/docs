@@ -23,7 +23,7 @@ const { extractIndented } = require("../shared-utilities/extract-indented");
 (?:
     (  jsall\: ) # Indicates this applies to node.js and javascript
 )
-/mx
+/gm
  */
 const JSALL_REGEX = /(?:\[([^\]]+,)?jsall(,[^\]]+)?\])|(?:lang=(["'])([^"']+,)?jsall(,[^"']+)?\3)|(?:(  jsall\: ))/gm;
 

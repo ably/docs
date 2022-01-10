@@ -6,10 +6,28 @@ const CAPTURE_CODE_OR_LANGUAGE_TAG = '(bc|p|h[1-6])';
 const LANGUAGE_SELECTOR = '\\[([^\\]]+)\\]';
 const CAPTURE_OPTIONAL_CLASSES = '(?:\\(([^\\)]+)\\))?';
 const ENDS_WITH_PERIOD = '\\.\\s';
-const CAPTURE_BODY = '([\\s\\S]*?\\S+?[\\s\\S]*?$)'; // Compare with Ruby/Perl regex; without an 'x' flag JS must specify spaces.
+const CAPTURE_BODY = '([\\s\\S]*?\\S+?[\\s\\S]*?$)';
 const EMPTY_LINE_BREAK_OR_EOF = '(?:[\\n\\r]\\s*[\\n\\r]|\\Z)';
 
-const MULTI_LANG_BLOCK_REGEX_STRING = `${CAPTURE_CODE_OR_LANGUAGE_TAG}${LANGUAGE_SELECTOR}${CAPTURE_OPTIONAL_CLASSES}${ENDS_WITH_PERIOD}${CAPTURE_BODY}${EMPTY_LINE_BREAK_OR_EOF}`;
+const MULTI_LANG_BLOCK_REGEX_STRING = `${
+    // capture/match[0] is the tag
+    CAPTURE_CODE_OR_LANGUAGE_TAG
+}${
+    // Language selector in format [javascript, ruby] - capture [1] = langs
+    LANGUAGE_SELECTOR
+}${
+    // optional class(es) in format (class) - capture [2] = class(es)
+    CAPTURE_OPTIONAL_CLASSES
+}${
+    // ends with . such as p[ruby].
+    ENDS_WITH_PERIOD
+}${
+    // body - capture [3] = body
+    CAPTURE_BODY
+}${
+    // non-capturing empty line break or EOF
+    EMPTY_LINE_BREAK_OR_EOF
+}`;
 
 const MULTI_LANG_BLOCK_REGEX = new RegExp(MULTI_LANG_BLOCK_REGEX_STRING, 'gm');
 
