@@ -8,7 +8,7 @@ const MINIMIZED_HEADINGS_REGEX = /^(h[1-6])(\(#[^\)]+\))?\(minimize(?:=([^\)]*))
 // while rehydrating in React
 const collapsibleWrapper = '{{DIV_collapsible-wrapper}}\n';
 const collapsibleContent = '{{DIV_collapsible-content}}\n';
-const collapsibleInner = '{{DIV_collapsible-inner}\n\n';
+const collapsibleInner = '{{DIV_collapsible-inner}}\n\n';
 const collapsibleInnerEnd = '\n\n{{DIV_collapsible-inner_END}}\n';
 const collapsibleContentEnd = '{{DIV_collapsible-content_END}}';
 const collapsibleWrapperEnd = '{{DIV_collapsible-wrapper_END}}\n\n';
@@ -59,7 +59,7 @@ const addMinimizedIndent = content => {
                     collapsibleInner +
                         `${ onlyIndentedLines }` +
                     collapsibleInnerEnd +
-                    `<label for='collapsible-indent#{expand_num}' class='label-collapsible-close'>- View Less</label>` +
+                    `<label for='collapsible-indent${expandNum}' class='label-collapsible-close'>- View Less</label>` +
                 collapsibleContentEnd +
             collapsibleWrapperEnd +
             content.substring(position + minimizeMarkupLength + nonIndentedLineLocation);
