@@ -58,7 +58,7 @@ const convertBlangBlocksToHtml = content => {
         const next = position + 1;
         const blangMarkupLength = nextContent.length - contentToParse.length;
         const { onlyIndentedLines, nonIndentedLineLocation } = extractIndented(contentToParse, 'blang[language].');
-        // console.log('indented:', onlyIndentedLines, nonIndentedLineLocation);
+        console.log('indented:', onlyIndentedLines, nonIndentedLineLocation);
         
         const replacement = langBlockWrapper(languages) +
             onlyIndentedLines +
