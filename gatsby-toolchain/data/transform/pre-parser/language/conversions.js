@@ -63,8 +63,6 @@ const convertBlangBlocksToHtml = content => {
             onlyIndentedLines +
         langBlockEnd;
 
-        console.log('replacement', replacement);
-
         content = content.substring(0, position) +
             replacement +
         content.substring(position + blangMarkupLength + nonIndentedLineLocation);
