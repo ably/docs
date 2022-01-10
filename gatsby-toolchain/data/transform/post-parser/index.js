@@ -1,6 +1,9 @@
 const { convertBlangBlocksToHtml } = require('./blang');
 const { convertCollapsibleMarkupToHtml } = require('./collapsible');
 
+/**
+ * Added by the pre-parser in order to survive textile parsing
+ */
 const addGithubLineBreaks = content => content.replaceAll('{{{github_br}}}', '\n');
 
 const LINK_EXTERNAL_REGEX = /(<a[^>]*)class="external"([^>]*>)/m
