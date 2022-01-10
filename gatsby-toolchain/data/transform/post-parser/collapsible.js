@@ -1,16 +1,20 @@
 const { TAG_REGEX_STRING } = require('./constants');
 
+/**
+ * These strings are added in the pre-parser stage to avoid being misread by textile-js
+ * as textile-js does not correctly parse nested HTML tags of the same type.
+ */
 const DIV_COLLAPSIBLE_WRAPPER = `DIV_collapsible-wrapper`;
 const DIV_COLLAPSIBLE_CONTENT = `DIV_collapsible-content`;
 const DIV_COLLAPSIBLE_INNER = `DIV_collapsible-inner`;
 
-const getRegexStringForToken = token =>  `${
+const getRegexStringForToken = token =>  `${ // Replace the outer tag
     TAG_REGEX_STRING
-}{{${token}}}${
+}{{${token}}}${ // And the inner tag
         TAG_REGEX_STRING
-    }(.*?)${
+    }(.*?)${ // This should be $1/p1, the first capturing group.
         TAG_REGEX_STRING 
-    }{{${token}_(?:<span class="caps">)?END(?:<\\/span>)?}}${
+    }{{${token}_(?:<span class="caps">)?END(?:<\\/span>)?}}${ // textile-js adds <span class="caps"></span> to capital letters.
     TAG_REGEX_STRING
 }`;
 
@@ -33,11 +37,9 @@ const convertCollapsibleContentToHtml = content => content.replace(
     (_match, p1) => `\n\n<div class="collapsible-content">\n${convertCollapsibleInnerToHtml(p1)}\n</div>\n\n`
 );
 
-console.log(COLLAPSIBLE_WRAPPER_REGEX.source);
-
 const convertCollapsibleMarkupToHtml = content => content.replace(
     COLLAPSIBLE_WRAPPER_REGEX,
-    (_match, p1) => { console.log(_match); return`\n\n<div class="collapsible-content">\n${convertCollapsibleContentToHtml(p1)}\n</div>\n\n`; }
+    (_match, p1) => `\n\n<div class="collapsible-content">\n${convertCollapsibleContentToHtml(p1)}\n</div>\n\n`
 );
 
 module.exports = {
