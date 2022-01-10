@@ -45,7 +45,7 @@ const convertJSAllToNodeAndJavaScript = content =>  {
 const BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/m;
 
 const langBlockWrapper = languages => `{{LANG_BLOCK[${languages}]}}\n`;
-const langBlockEnd = '\n{{/LANG_BLOCK}}\n';
+const langBlockEnd = '{{/LANG_BLOCK}}\n';
 
 const convertBlangBlocksToHtml = content => {
     let position = content.search(BLANG_REGEX);
@@ -57,12 +57,13 @@ const convertBlangBlocksToHtml = content => {
             .slice(1); // & remove newline
         const next = position + 1;
         const blangMarkupLength = nextContent.length - contentToParse.length;
-        const { onlyIndentedLines, nonIndentedLineLocation } = extractIndented(contentToParse, 'blang[language].');
-        console.log('indented:', onlyIndentedLines, nonIndentedLineLocation);
+        const { onlyIndentedLines, nonIndentedLineLocation } = extractIndented(contentToParse, 'blang[language].', true);
         
         const replacement = langBlockWrapper(languages) +
             onlyIndentedLines +
         langBlockEnd;
+
+        console.log('replacement', replacement);
 
         content = content.substring(0, position) +
             replacement +
