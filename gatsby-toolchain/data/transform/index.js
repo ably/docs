@@ -7,6 +7,7 @@ const DataTypes = require("../types");
 const { ROOT_LEVEL, MAX_LEVEL } = require("../../src/components/Sidebar/consts");
 const { preParser } = require("./pre-parser");
 const { postParser } = require("./post-parser");
+const { enhancedParse } = require("./parser-enhancements");
 
 const INLINE_TOC_REGEX = /^inline\-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
 
@@ -79,23 +80,15 @@ const createNodesFromPath = (type, { createNode, createNodeId, createContentDige
 }
 
 const constructDataObjectsFromStrings = (contentStrings, frontmatterMeta) => {
-  const partialData = contentStrings.map(
+  contentStrings = frontmatterMeta !== NO_MATCH && frontmatterMeta.attributes ?
+    contentStrings.map(content => enhancedParse(content, frontmatterMeta.attributes)) :
+    contentStrings;
+  const dataObjects = contentStrings.map(
     (data, i) => i % 2 === 0 ?
       { data: postParser(textile(data)), type: DataTypes.Html } :
       { data: postParser(data), type: DataTypes.Partial }
   );
-  // TODO: move this into postParser
-  let withDates = partialData;
-  if(frontmatterMeta !== NO_MATCH
-      && frontmatterMeta.attributes
-      && frontmatterMeta.attributes.published_date) {
-    withDates = partialData.map(({ data, type }) =>
-        ({
-          data: data.replace(/(\{\{PUBLISHED_DATE\}\})/gi,frontmatterMeta.attributes.published_date),
-          type
-        }));
-  }
-  return withDates;
+  return dataObjects;
 }
 
 const flattenContentOrderedList = contentOrderedList => contentOrderedList.reduce((acc, {data, type}) => {
