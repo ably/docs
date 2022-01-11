@@ -8,7 +8,7 @@ const MINIMIZED_HEADINGS_REGEX = /^(h[1-6])(\(#[^\)]+\))?\(minimize(?:=([^\)]*))
 // while rehydrating in React
 const collapsibleWrapper = '{{DIV_collapsible-wrapper}}\n';
 const collapsibleContent = '{{DIV_collapsible-content}}\n';
-const collapsibleInner = '{{DIV_collapsible-inner}}\n\n';
+const collapsibleInner = '{{DIV_collapsible-inner}}\n';
 const collapsibleInnerEnd = '\n\n{{DIV_collapsible-inner_END}}\n';
 const collapsibleContentEnd = '{{DIV_collapsible-content_END}}';
 const collapsibleWrapperEnd = '{{DIV_collapsible-wrapper_END}}\n\n';
