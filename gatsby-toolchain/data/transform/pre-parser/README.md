@@ -6,9 +6,10 @@ It is the first stage of the transformation from a _document type_ (e.g. Textile
 
 ## Compare
 
-1. Parser enhancements - transforms an ordered array of `{ data, type }` objects in some way, commonly extracting and flattening data.
-2. Component mapping - maps `{ data, type }` objects to React components based on `type`.
-3. React components - standardise the behaviour, presentation, layout and markup semantics of `data` from `{ data, type }` objects.
+1. Parser enhancements - transforms data with enhancements from `attributes` and document `path`
+2. Post-parser - transforms data after it has been parsed by a dedicated parser such as `textile-js`
+3. Component mapping - maps `{ data, type }` objects to React components based on `type`.
+4. React components - standardise the behaviour, presentation, layout and markup semantics of `data` from `{ data, type }` objects.
 
 ## Usage
 
