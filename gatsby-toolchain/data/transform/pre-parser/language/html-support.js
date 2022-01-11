@@ -61,7 +61,7 @@ const addLanguageSupportForBlockQuotes = content => content.replace(BLOCKQUOTE_R
  * h2(#channels-object).
  *  default: Channels
  */
-const HEADING_REGEX = /^(h[1-6])(\(#[^\)]+\))?(\([^(\)|#)]+\))?\.\s*\n.+?\n\s*\n/mg
+const HEADING_REGEX = /^[^\S\r\n](h[1-6])(\(#[^\)]+\))?(\([^(\)|#)]+\))?\.\s*\n.+?\n\s*\n/mg
 const headingReplacer = (matchText, hTag, anchor, _option) => {
     const langDefinitions = matchText.match(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/);
     const langs = langDefinitions.filter((_v, i) => i % 2 === 0);
@@ -71,7 +71,7 @@ const headingReplacer = (matchText, hTag, anchor, _option) => {
             `<span lang='javascript,nodejs'>${definitions[i]}</span>` :
             `<span lang='${lang}'>${definitions[i]}</span>`
     ).join('');
-    // TODO: Replace this with another token, to be parsed in post-parser
+    // TODO: Investigate reeplacing this with another token, to be parsed in post-parser
     return `${hTag}${anchor}. ${langSpans}`
 }
 const addLanguageSupportForHeadings = content => content.replace(HEADING_REGEX, headingReplacer);
