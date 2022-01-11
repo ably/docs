@@ -1,12 +1,9 @@
-const textile = require("textile-js");
 const yaml = require('js-yaml');
 const { upperFirst, camelCase, identity, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
-const { compose } = require('lodash/fp');
 const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require("./front-matter");
 const DataTypes = require("../types");
 const { ROOT_LEVEL, MAX_LEVEL } = require("../../src/components/Sidebar/consts");
 const { preParser } = require("./pre-parser");
-const { postParser } = require("./post-parser");
 const { enhancedParse } = require("./parser-enhancements");
 
 const INLINE_TOC_REGEX = /^inline\-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
@@ -85,8 +82,8 @@ const constructDataObjectsFromStrings = (contentStrings, frontmatterMeta) => {
     contentStrings;
   const dataObjects = contentStrings.map(
     (data, i) => i % 2 === 0 ?
-      { data: postParser(textile(data)), type: DataTypes.Html } :
-      { data: postParser(data), type: DataTypes.Partial }
+      { data: data, type: DataTypes.Html } :
+      { data: data, type: DataTypes.Partial }
   );
   return dataObjects;
 }
