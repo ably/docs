@@ -48,8 +48,10 @@ const blockQuoteReplacer = (matchText, anchor) => {
 const addLanguageSupportForBlockQuotes = content => content.replace(BLOCKQUOTE_REGEX, blockQuoteReplacer);
 
 /**
+ * After any number of non-newline whitespaces
+ * ^[^\S\r\n]
  * First capture: Starts with h1,h2,h3,h4,h5,h6
- * ^(h[1-6])
+ * (h[1-6])
  * Second capture: optionally match (#someText), e.g. h1(#someText)
  * (\(#[^\)]+\))?
  * Third capture: optionally match (moreText), e.g. h1(#someText)(moreText) explicitly without a hash
