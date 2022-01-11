@@ -47,7 +47,7 @@ const BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/m;
 const langBlockWrapper = languages => `{{LANG_BLOCK[${languages}]}}\n`;
 const langBlockEnd = '{{/LANG_BLOCK}}\n';
 
-const convertBlangBlocksToHtml = content => {
+const convertBlangBlocksToTokens = content => {
     let position = content.search(BLANG_REGEX);
     while(position && position > -1) {
         const languages = content.match(BLANG_REGEX)[1] ?? '';
@@ -75,5 +75,5 @@ const convertBlangBlocksToHtml = content => {
 
 module.exports = {
     convertJSAllToNodeAndJavaScript,
-    convertBlangBlocksToHtml
+    convertBlangBlocksToTokens
 }
