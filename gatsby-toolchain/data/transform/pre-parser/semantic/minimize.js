@@ -6,6 +6,7 @@ const MINIMIZED_HEADINGS_REGEX = /^(h[1-6])(\(#[^\)]+\))?\(minimize(?:=([^\)]*))
 
 // borgar-textile does not handle nested divs; we replace these strings with divs with appropriate classes
 // while rehydrating in React
+// TODO: Replace these with <details> <summary> elements: possibly with a fallback, extract these to shared constants at the same time
 const collapsibleWrapper = '{{DIV_collapsible-wrapper}}\n';
 const collapsibleContent = '{{DIV_collapsible-content}}\n';
 const collapsibleInner = '{{DIV_collapsible-inner}}\n';
@@ -39,7 +40,6 @@ const addMinimizedIndent = content => {
     let expandNum = 0;
     let position = content.search(MINIMIZE_REGEX);
     while(position && position > -1) {
-        const next = position + 1;
         const matchTitle = `+ ${ (content.match(MINIMIZE_REGEX)[1] ?? 'View More') }`;
         const nextContent = content
             .slice(position);
