@@ -36,6 +36,5 @@ const htmlParser = content => {
 
 module.exports = {
     cheerioNodeParser,
-    cheerioParser,
     htmlParser
 }
