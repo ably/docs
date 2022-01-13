@@ -12,7 +12,6 @@ const cheerioNodeParser = (_i, { type = null, name = '', data = '', attribs = {}
         }
     }
     const nextItems = children.map((data, i) => cheerioNodeParser(i, data));
-    // console.log(nextItems);
     return {
         data: nextItems,
         type: HtmlDataTypes.tag,
@@ -29,13 +28,14 @@ const cheerioParser = cheerioNodes => {
 const htmlParser = content => {
     const loadedDom = cheerio.load(content, null);
     const parsedNodes = cheerioParser(loadedDom('body').children('*'));
-    // console.log(parsedNodes);
     return [{
-        data: content,
+        data: parsedNodes,
         type: DataTypes.Html
     }];
 }
 
 module.exports = {
+    cheerioNodeParser,
+    cheerioParser,
     htmlParser
 }
