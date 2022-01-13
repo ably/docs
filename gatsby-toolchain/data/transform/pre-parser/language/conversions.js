@@ -55,10 +55,9 @@ const convertBlangBlocksToTokens = content => {
         const contentToParse = nextContent
             .replace(BLANG_REGEX, '')
             .slice(1); // & remove newline
-        const next = position + 1;
         const blangMarkupLength = nextContent.length - contentToParse.length;
         const { onlyIndentedLines, nonIndentedLineLocation } = extractIndented(contentToParse, 'blang[language].', true);
-        
+
         const replacement = langBlockWrapper(languages) +
             onlyIndentedLines +
         langBlockEnd;
