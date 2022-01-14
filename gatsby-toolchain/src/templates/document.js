@@ -11,8 +11,9 @@ const Document = ({ pageContext: { contentOrderedList }, data: { inlineTOC: { ta
     ).map(
         // It is currently safe to use an index as a key.
         // We will need a unique key if we want to alter any of these by position.
-        ({ data }, i) => <Html html={data} key={i}/>
+        ({ data }, i) => <Html data={data} key={i}/>
     ), [contentOrderedList]);
+    console.log(contentOrderedList);
     return <Layout><LeftSideBar className="col-span-1" /><article className="col-span-4">{ elements }</article></Layout>;
 };
 
