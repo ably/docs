@@ -40,7 +40,7 @@ const LeftSideBar = ({ className }) => {
         }
     `);
     let sidebarData;
-    if(data.pageFurnitureYaml.contentArray) {
+    if(data.pageFurnitureYaml && data.pageFurnitureYaml.contentArray) {
         sidebarData = sidebarDataFromPageFurniture(data.pageFurnitureYaml.contentArray);
     } else {
         sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
