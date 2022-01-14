@@ -39,7 +39,7 @@ module.exports = {
       resolve: "gatsby-source-filesystem",
       options: {
         name: "yaml-page-furniture",
-        path: "./src/page-furniture"
+        path: "./data/yaml/page-furniture"
      },
      __key: "yaml-page-furniture"
     }
