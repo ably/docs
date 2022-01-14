@@ -1,6 +1,5 @@
 import React from 'react';
-import Html from '../Html';
 
-const Input = ({ data, attribs }) => <input {...attribs}><Html data={ data } /></input>;
+const Input = ({ data, attribs }) => <input {...attribs}/>;
 
 export default Input;
