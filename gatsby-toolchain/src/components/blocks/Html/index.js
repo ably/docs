@@ -11,7 +11,7 @@ const DangerousHtml = ({ data }) => <div dangerouslySetInnerHTML={{__html: DOMPu
     FORBID_TAGS: ['svg', 'math']
 }) }}></div>;
 
-const Html = ({ data, attribs }) => isArray(data) ? <>{blocksFromData(data)}</> : <>{data}</>;
+const Html = ({ data }) => isArray(data) ? <>{blocksFromData(data)}</> : <>{data}</>;
 
 export {
     DangerousHtml
