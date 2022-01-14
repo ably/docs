@@ -1,3 +1,0 @@
-const HtmlTypeComponentMap = Object.freeze({
-
-});
