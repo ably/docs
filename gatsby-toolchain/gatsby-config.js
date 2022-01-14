@@ -23,7 +23,7 @@ module.exports = {
       resolve: "gatsby-source-filesystem",
       options: {
         name: "textile-partials",
-        path: "./src/textile/partials"
+        path: "./data/textile/partials"
       },
       __key: "textile-partials",
     },
@@ -31,7 +31,7 @@ module.exports = {
       resolve: "gatsby-source-filesystem",
       options: {
         name: "textile-nanoc-compatible",
-        path: "./src/textile/nanoc-compatible"
+        path: "./data/textile/nanoc-compatible"
       },
       __key: "textile-nanoc-compatible",
     },
