@@ -1,0 +1,10 @@
+export { default as Caption } from './Caption';
+export { default as Col } from './Col';
+export { default as Colgroup } from './Colgroup';
+export { default as Table } from './Table';
+export { default as Tbody } from './Tbody';
+export { default as Td } from './Td';
+export { default as Tfoot } from './Tfoot';
+export { default as Th } from './Th';
+export { default as Thead } from './Thead';
+export { default as Tr } from './Tr';
