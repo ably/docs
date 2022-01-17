@@ -43,6 +43,7 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
         component: documentTemplate,
         context: {
           slug: edge.node.slug,
+          language: 'default',
           contentOrderedList: contentOrderedListWithoutLanguageVariants
         },
       });
