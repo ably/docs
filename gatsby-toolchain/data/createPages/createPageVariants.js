@@ -1,5 +1,4 @@
-const { graphql } = require("gatsby");
-const { isArray, identity, set } = require("lodash");
+const { isArray } = require("lodash");
 
 const DEFAULT_LANGUAGE = 'javascript';
 
@@ -41,7 +40,7 @@ const createLanguagePageVariantsAndModifyContent = (createPage, documentTemplate
             context: {
                 // The slug is the canonical slug, not the variant path
                 slug,
-                contentOrderedList: contentOrderedList.map(filterContent)
+                contentOrderedList: contentOrderedList.map(filterContent).filter(x => !!x)
             },
         });
     })
