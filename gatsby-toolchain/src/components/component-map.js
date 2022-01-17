@@ -2,24 +2,22 @@ import { curry, propOr } from 'lodash/fp';
 import HtmlDataTypes from '../../data/types/html';
 import { Button, Input, Meter, Noscript, Progress, Select, Textarea } from './blocks/complex-functionality';
 import { Article, Aside, Div, Main, Section, Span } from './blocks/dividers';
-import { A, Address, Audio, Blockquote, Iframe, Img, Video } from './blocks/external-references';
-import Quote from './blocks/external-references/Quote';
+import { A, Address, Audio, Blockquote, Iframe, Img, Quote, Video } from './blocks/external-references';
 import { H1, H2, H3, H4, H5, H6, Header } from './blocks/headings';
-import { Dd, Dl, Li, Ol, Ul } from './blocks/list';
-import Dt from './blocks/list/Dt';
+import { Dd, Dt, Dl, Li, Ol, Ul } from './blocks/list';
 import Br from './blocks/non-semantic/Br';
 import Wbr from './blocks/non-semantic/Wbr';
-import P from './blocks/paragraphs/P';
 import { Abbr, Details, Dfn, Summary, Time } from './blocks/semantic-enhancements';
 import { Code, Kbd, Output, Pre, Samp, Var } from './blocks/software';
 import { Em, Small, Strong, Sub, Sup } from './blocks/styles';
 import { Caption, Col, Colgroup, Table, Tbody, Td, Tfoot, Th, Thead, Tr } from './blocks/table';
+import Paragraph from './blocks/paragraphs';
 
 const IS_TEXT = null;
 
 const HtmlTypeComponentMap = Object.freeze({
     // text
-    [HtmlDataTypes.p]: P,
+    [HtmlDataTypes.p]: Paragraph,
     // semantic styles
     [HtmlDataTypes.strong]: Strong,
     [HtmlDataTypes.em]: Em,
