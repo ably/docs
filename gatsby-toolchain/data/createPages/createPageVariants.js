@@ -1,6 +1,6 @@
 const { isArray } = require("lodash");
 
-const DEFAULT_LANGUAGE = 'javascript';
+const DEFAULT_LANGUAGE = 'default';
 
 // Mutation (modifying the languageSet provided) is much easier here
 // Should also be safer given the guarantees of a Set()
@@ -40,6 +40,7 @@ const createLanguagePageVariantsAndModifyContent = (createPage, documentTemplate
             context: {
                 // The slug is the canonical slug, not the variant path
                 slug,
+                language: lang,
                 contentOrderedList: contentOrderedList.map(filterContent).filter(x => !!x)
             },
         });
@@ -48,5 +49,7 @@ const createLanguagePageVariantsAndModifyContent = (createPage, documentTemplate
 }
 
 module.exports = {
+    DEFAULT_LANGUAGE,
+    filterHtmlLanguageContent,
     createLanguagePageVariantsAndModifyContent
 }
