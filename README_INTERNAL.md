@@ -131,7 +131,21 @@ When a new minor or major version of the spec is released, it is tagged with a v
 
 Client library developers are not expected to monitor the docs repo for spec fixes that occur after the release tag. If a given spec fix needs to be made to client libraries at that time, then when merging the PR to `main` you should open a GitHub issue in each individual client library repo to request that the fix is made. If you don't do this then you cannot expect the fix to be incorporated until the next spec release. When updating a client library to a spec version, client library developers should work from a diff from the tag of the previous release, so as to incorporate all changes since that tag.
 
-## Deploying documentation changes to `ably.com/documentation`)
+## Checking for broken links using Nanoc
+
+There are two checks that can be run using [Nanoc](https://nanoc.app/doc/testing/) to check for broken links:
+
+* For internal links run `nanoc check ilinks`.
+* For external links run `nanoc check elinks`.
+
+A list of any broken links will be generated and output to the command line in the following format, where the first line is the file containing the link and the second line is the broken link itself:
+
+```
+output/general/events/aws-lambda/index.html:
+  [ ERROR ] internal_links - broken reference to file:///general/event
+```
+
+## Deploying documentation changes to `ably.com/documentation`
 
 Changes to the docs repo are always visible at https://docs.ably.com, but the official documentation at https://ably.com/documentation consumes the docs repo via a Ruby gem which points at the `main` branch and saves the revision as a version. To include your doc changes in the website, you need to update the version of the docs repo that the gem references:
 

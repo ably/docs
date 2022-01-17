@@ -21,9 +21,11 @@ jump_to:
     - Channel lifecycle#channel-lifecycle
     - Channel metadata#channel-metadata
     - Implicit attach#implicit-attach
+    - Attach versus subscribe#attach-vs-subscribe
     - Publishing to multiple channels#multi-publish
     - Transient Publishing#transient-publish
     - Channel states#channel-states
+    - Detaching from a channel#channel-detach
     - Handling failures#handling-failures
     - Channel namespaces#channel-namespaces
     - Presence#presence-api
@@ -592,6 +594,16 @@ channel.publish(name: 'action', data: 'boom!');
 
 Normally, errors in attaching to a channel are communicated through the attach callback. For implicit attaches (and other cases where a channel is attached or reattached automatically, e.g. following the library reconnecting after a period in the @suspended@ state), there is no callback, so if you want to know what happens, you'll need to listen for channel state changes.
 
+h3(#attach-vs-subscribe). Difference between attaching and subscribing
+
+It is important to understand the difference between attaching and subscribing to a channel, and that messages are sent to clients as soon as they attach to a channel.
+
+Published messages are immediately sent to clients on "attaching":#attach to a channel as long as they have subscribe "capabilities":/core-features/authentication#capabilities-explained for that channel. Messages are sent regardless of whether or not the client has subscribed to the channel.
+
+"Subscribing":#subscribe to a channel registers a subscribe listener for messages received on the channel and is a client-side operation, meaning that Ably is unaware of whether or not a client is subscribed to a channel.
+
+As subscribing to a channel "implicitly attaches":#implicit-attach a client, it is important to note that if a client subscribes to and then "unsubscribes":#unsubscribe from a channel, the client remains attached. The client will continue to be sent published messages until they "detach":#detach from the channel.
+
 h3(#modifying-options). Modifying channel options
 
 You can modify the @ChannelOptions@ associated with a given channel instance by calling @setOptions@ and passing a new @ChannelOptions@. The modified options will either take effect at the time of attachment (if an attach for that channel has not yet been initiated), or the @setOptions@ call will trigger an immediate attach operation to apply the modified options. Success or failure of any triggered attach operation triggered is indicated in the result of the @setOptions@ call.
@@ -812,6 +824,55 @@ Previously registered listeners can be removed individually or all together.
     // cancel stream subscription on the listener to stop receiving the events
     stateChangeListener.cancel();
 ```
+
+
+h3(#channel-detach). Detaching from a channel
+
+A client can detach from a channel so that it no longer receives any messages published to that channel. Detaching is different to unsubscribing from a channel because "@unsubscribe()@":#unsubscribe is a client-side operation. The Ably platform does not know that a client has unsubscribed and will continue to stream messages to that client until "@Detach()@":#detach is called.
+
+bc[jsall]. channel.detach();
+channel.on('detached', function(stateChange) {
+  console.log('detached from the channel ' + channel.name);
+};
+
+bc[ruby]. channel.detach
+channel.on(:detached) do |channel_state_change|
+  puts "detached from the channel #{channel.name}"
+end
+
+bc[java]. channel.detach();
+channel.on(ChannelEvent.detached, new ChannelStateListener() {
+  @Override
+  public void onChannelStateChanged(ChannelState state, ErrorInfo reason) {
+    System.out.println("detached from the channel " + channel.name);
+    if (reason != null) System.out.println(reason.toString());
+  }
+});
+
+bc[csharp]. Channel.Detach();
+channel.On(ChannelEvent.Detached, stateChange => {
+  Console.WriteLine("detached from the channel " + channel.Name)
+});
+
+bc[objc]. [channel detach]
+[channel on:ARTChannelEventDetached callback:^(ARTChannelStateChange *stateChange) {
+  NSLog(@"detached from the channel ", channel.name);
+}];
+
+bc[swift]. channel.detach()
+channel.on(.detached) { stateChange in
+  print("detached from the channel \(channel.name)")
+}
+
+bc[flutter]. channel.detach();
+final stateChangeListener = channel
+  .on(ably.ChannelEvent.detached)
+  .listen((ably.ChannelStateChange state) {
+    print('detached from the channel ${channel.name}');
+  }
+);
+
+A channel will automatically close when there are no more realtime clients attached to it and approximately one minute has passed since the last client detached and since the last message was published to the channel.
 
 h3(#handling-failures). Handling channel failures
 
