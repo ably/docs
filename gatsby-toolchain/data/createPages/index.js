@@ -3,6 +3,7 @@ const path = require("path");
 const { postParser } = require("../transform/post-parser");
 const textile = require("textile-js");
 const { htmlParser } = require("../html-parser");
+const { createLanguagePageVariantsAndModifyContent } = require("./createPageVariants");
 
 const createPages = async ({ graphql, actions: { createPage } }) => {
     const documentTemplate = path.resolve(`src/templates/document.js`)
@@ -28,13 +29,21 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
         .join('');
       const postParsedContent = postParser(textile(content));
       const contentOrderedList = htmlParser(postParsedContent);
+
+      const contentOrderedListWithoutLanguageVariants = createLanguagePageVariantsAndModifyContent(
+        createPage,
+        documentTemplate
+      )(
+        contentOrderedList,
+        edge.node.slug
+      );
   
       createPage({
         path: `/documentation/${edge.node.slug}`,
         component: documentTemplate,
         context: {
           slug: edge.node.slug,
-          contentOrderedList
+          contentOrderedList: contentOrderedListWithoutLanguageVariants
         },
       });
     }));
