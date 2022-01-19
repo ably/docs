@@ -1,4 +1,4 @@
-const { TAG_REGEX_STRING } = require('./constants');
+const { TAG_OPEN_REGEX_STRING, TAG_CLOSE_REGEX_STRING } = require('./constants');
 
 /**
  * These strings are added in the pre-parser stage to avoid being misread by textile-js
@@ -9,13 +9,13 @@ const DIV_COLLAPSIBLE_CONTENT = `DIV_collapsible-content`;
 const DIV_COLLAPSIBLE_INNER = `DIV_collapsible-inner`;
 
 const getRegexStringForToken = token =>  `${ // Replace the outer tag
-    TAG_REGEX_STRING
+    TAG_OPEN_REGEX_STRING
 }{{${token}}}${ // And the inner tag
-        TAG_REGEX_STRING
+        TAG_OPEN_REGEX_STRING
     }(.*?)${ // This should be $1/p1, the first capturing group.
-        TAG_REGEX_STRING 
+        TAG_CLOSE_REGEX_STRING 
     }{{${token}_(?:<span class="caps">)?END(?:<\\/span>)?}}${ // textile-js adds <span class="caps"></span> to capital letters.
-    TAG_REGEX_STRING
+        TAG_CLOSE_REGEX_STRING
 }`;
 
 const COLLAPSIBLE_WRAPPER_REGEX_STRING = getRegexStringForToken(DIV_COLLAPSIBLE_WRAPPER);
@@ -25,7 +25,6 @@ const COLLAPSIBLE_INNER_REGEX_STRING = getRegexStringForToken(DIV_COLLAPSIBLE_IN
 const COLLAPSIBLE_WRAPPER_REGEX = new RegExp(COLLAPSIBLE_WRAPPER_REGEX_STRING, 'gms');
 const COLLAPSIBLE_CONTENT_REGEX = new RegExp(COLLAPSIBLE_CONTENT_REGEX_STRING, 'gms');
 const COLLAPSIBLE_INNER_REGEX = new RegExp(COLLAPSIBLE_INNER_REGEX_STRING, 'gms');
-
 
 const convertCollapsibleInnerToHtml = content => content.replace(
     COLLAPSIBLE_INNER_REGEX,

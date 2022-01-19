@@ -56,24 +56,24 @@ const addLanguageSupportForBlockQuotes = content => content.replace(BLOCKQUOTE_R
  * (\(#[^\)]+\))?
  * Third capture: optionally match (moreText), e.g. h1(#someText)(moreText) explicitly without a hash
  * (\([^(\)|#)]+\))?
- * A line of content that eventually terminates
- * \.\s*\n.+?\n\s*\n
+ * New line (using multiline regex):
+ * \.\s*\n
+ * Any number of lines of content that eventually terminate
+ * (?:.+?\n)*
  * Example:
  * 
  * h2(#channels-object).
  *  default: Channels
  */
-const HEADING_REGEX = /^[^\S\r\n](h[1-6])(\(#[^\)]+\))?(\([^(\)|#)]+\))?\.\s*\n.+?\n\s*\n/mg
+const HEADING_REGEX = /^[^\S\r\n]*(h[1-6])(\(#[^\)]+\))?(\([^(\)|#)]+\))?\.\s*\n(?:.+?\n)*/mg
+
 const headingReplacer = (matchText, hTag, anchor, _option) => {
-    const langDefinitions = matchText.match(/\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/);
-    const langs = langDefinitions.filter((_v, i) => i % 2 === 0);
-    const definitions = langDefinitions.filter((_v, i) => i % 2 !== 0);
-    const langSpans = langs.map((lang, i) =>
-        lang === 'jsall' ?
-            `<span lang='javascript,nodejs'>${definitions[i]}</span>` :
-            `<span lang='${lang}'>${definitions[i]}</span>`
+    const langDefinitions = Array.from(matchText.matchAll(/^\s*(.+?)\s*:\s*(.+?)\s*$/mg));
+    const langSpans = langDefinitions.map(langDefinition =>
+        langDefinition[1] === 'jsall' ?
+            `<span lang='javascript,nodejs'>${langDefinition[2]}</span>` :
+            `<span lang='${langDefinition[1]}'>${langDefinition[2]}</span>`
     ).join('');
-    // TODO: Investigate reeplacing this with another token, to be parsed in post-parser
     return `${hTag}${anchor}. ${langSpans}`
 }
 const addLanguageSupportForHeadings = content => content.replace(HEADING_REGEX, headingReplacer);
