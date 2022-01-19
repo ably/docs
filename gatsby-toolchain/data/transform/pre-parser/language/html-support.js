@@ -45,8 +45,8 @@ const headingReplacer = (matchText, hTag, anchor, _option) => {
     const langDefinitions = Array.from(matchText.matchAll(/^\s*(.+?)\s*:\s*(.+?)\s*$/mg));
     const langSpans = langDefinitions.map(langDefinition =>
         langDefinition[1] === 'jsall' ?
-            `<span lang='javascript,nodejs'>${langDefinition[2]}</span>` :
-            `<span lang='${langDefinition[1]}'>${langDefinition[2]}</span>`
+            `<span lang='javascript,nodejs'>${langDefinition[2].trim()}</span>` :
+            `<span lang='${langDefinition[1]}'>${langDefinition[2].trim()}</span>`
     ).join('');
     return `${hTag}${anchor}. ${langSpans}`
 }
