@@ -36,15 +36,7 @@ describe('Converts Blang strings to HTML', () => {
             innerTag: true
         });
         const result = convertBlangBlocksToHtml(blangBlock);
-        expect(result).toEqual(`
-
-<div lang="javascript"><!-- start javascript language block -->
-
-            <div>Lorem ipsum adipiscitor</div>
-        
-</div><!-- /end javascript language block -->
-
-`);
+        expect(result).toEqual(`<div lang="javascript"><!-- start javascript language block --><div>Lorem ipsum adipiscitor</div></div><!-- /end javascript language block -->`);
     });
 
     // Fastcheck property testing
@@ -74,15 +66,7 @@ describe('Converts Blang strings to HTML', () => {
                     language
                 });
                 const result = convertBlangBlocksToHtml(blangBlock);
-                expect(result).toEqual(`
-
-<div lang="${language}"><!-- start ${language} language block -->
-
-            ${content}
-        
-</div><!-- /end ${language} language block -->
-
-`)
+                expect(result).toEqual(`<div lang="${language}"><!-- start ${language} language block -->${content.trim()}</div><!-- /end ${language} language block -->`);
             }
         ))
     })
