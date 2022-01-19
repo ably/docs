@@ -23,13 +23,13 @@ const BLANG_REGEX = new RegExp(BLANG_REGEX_STRING, 'gms');
 const convertBlangBlocksToHtml = content => content.replace(
     BLANG_REGEX,
     (_match, p1, p2) => {
-        return `\n\n<div lang="${
+        return `<div lang="${
             p1
         }"><!-- start ${
             p1
-        } language block -->\n${p2}\n</div><!-- /end ${
+        } language block -->${p2.trim()}</div><!-- /end ${
             p1
-        } language block -->\n\n`
+        } language block -->`
     }
 )
 
