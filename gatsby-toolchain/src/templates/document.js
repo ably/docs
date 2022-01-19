@@ -13,7 +13,6 @@ const Document = ({ pageContext: { contentOrderedList }, data: { inlineTOC: { ta
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html data={data} key={i}/>
     ), [contentOrderedList]);
-    console.log(contentOrderedList);
     return <Layout><LeftSideBar className="col-span-1" /><article className="col-span-4">{ elements }</article></Layout>;
 };
 
