@@ -25,7 +25,7 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
     const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
     await Promise.all(result.data.allFileHtml.edges.map(async edge => {
       const content = flattenContentOrderedList(await Promise.all(edge.node.contentOrderedList.map(retrievePartialFromGraphQL)))
-        .map(content => content.data)
+        .map(content => content.data ? content.data : '')
         .join('');
       const postParsedContent = postParser(textile(content));
       const contentOrderedList = htmlParser(postParsedContent);
