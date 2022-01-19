@@ -1,5 +1,3 @@
-const { identity } = require("lodash");
-
 /**
  * Begins with bq(definition...)
  * bq\(definition
@@ -7,41 +5,17 @@ const { identity } = require("lodash");
  * (?<anchor>\#[^\)]+)?
  * Followed by a mandatory period, then any number of spaces, then a newline.
  * \.\s*\n
- * Then lazily match any number of any character...
- * .*?
- * ...until we find a newline that is empty
- * \n\s*\n
+ * Any number of lines of content that eventually terminate
+ * (?:.+?\n)*
  */
-const BLOCKQUOTE_REGEX = /^bq\(definition(?<anchor>\#[^\)]+)?\)\.\s*\n.*?\n\s*\n/mg;
-
-/**
- * Any number of spaces
- * \s*
- * First capture group: at least one of any character, matched lazily
- * (.+?)
- * Any number of spaces, followed by a colon, followed by any number of spaces
- * \s*:\s*
- * Second capture group: same as the first
- * (.+?)
- * Any number of spaces, followed by a newline, circumflex/hat, or pipe symbol
- * \s*[\n|^]
- * Examples:
- * "   (one) :  (two)|"
- * "(first):(second)
- * "
- * " (primary) : (secondary) ^"
- */
-const LANGUAGE_DEFINITIONS_REGEX = /\s*(.+?)\s*:\s*(.+?)\s*[\n|^]/;
+const BLOCKQUOTE_REGEX = /^bq\(definition(?<anchor>\#[^\)]+)?\)\.\s*\n(?:.+?\n)*/mg;
 
 const blockQuoteReplacer = (matchText, anchor) => {
-    const langDefinitions = matchText.match(LANGUAGE_DEFINITIONS_REGEX).slice(1);
-    const langs = langDefinitions.filter((_v, i) => i % 2 === 0);
-    const definitions = langDefinitions.filter((_v, i) => i % 2 !== 0);
-
-    const langSpans = langs.map((lang, i) =>
-        lang === 'jsall' ?
-            `<span lang='javascript,nodejs'>${definitions[i]}</span>` :
-            `<span lang='${lang}'>${definitions[i]}</span>`
+    const langDefinitions = Array.from(matchText.matchAll(/^\s*(.+?)\s*:\s*(.+?)\s*$/mg));
+    const langSpans = langDefinitions.map(langDefinition =>
+        langDefinition[1] === 'jsall' ?
+            `<span lang='javascript,nodejs'>${langDefinition[2]}</span>` :
+            `<span lang='${langDefinition[1]}'>${langDefinition[2]}</span>`
     ).join('');
     return `bq(definition${anchor ?? ''}). ${langSpans}\n\n`;
 }
