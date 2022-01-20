@@ -1,15 +1,17 @@
 const yaml = require('js-yaml');
-const { upperFirst, camelCase, identity, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
+const { upperFirst, camelCase, identity, isPlainObject, lowerFirst, isEmpty, merge, isNumber } = require('lodash');
 const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require("./front-matter");
 const DataTypes = require("../types");
 const { ROOT_LEVEL, MAX_LEVEL } = require("../../src/components/Sidebar/consts");
 const { preParser } = require("./pre-parser");
 const { enhancedParse } = require("./parser-enhancements");
+const { indent } = require('./shared-utilities');
 
 const INLINE_TOC_REGEX = /^inline\-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
 
 // TODO: split this into more focused files.
-const parseNanocPartials = contentString => contentString.split(/<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/);
+// Just the partial name: /<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/
+const parseNanocPartials = contentString => contentString.split(/(<%=\s+partial\s+partial_version\('[^')]*'\)[^%>]*%>)/);
 const tryRetrieveInlineTOC = contentString => contentString.match(INLINE_TOC_REGEX);
 const removeInlineTOC = contentString => contentString.replace(INLINE_TOC_REGEX, '');
 const processTOCItems = tocItem => {
@@ -82,6 +84,7 @@ const constructDataObjectsFromStrings = (contentStrings, frontmatterMeta) => {
     contentStrings;
   const dataObjects = contentStrings.map(
     (data, i) => i % 2 === 0 ?
+      // TODO: record partial indent level and skip_first_indent here
       { data: data, type: DataTypes.Html } :
       { data: data, type: DataTypes.Partial }
   );
@@ -118,10 +121,9 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
         type: makeTypeFromParentType('InlineTOC')(node),
       }
     });
-    updateWithTransform({ parent: node, child: inlineTOCNode });
-    // if we need it, remember to use DOMParser not Cheerio!
-    const withPartials = parseNanocPartials(noInlineTOC);
 
+    updateWithTransform({ parent: node, child: inlineTOCNode });
+    const withPartials = parseNanocPartials(noInlineTOC);
     const withoutFalsyValues = removeFalsy(withPartials);
 
     const frontmatterMeta = tryRetrieveMetaData(withoutFalsyValues[0]);
@@ -168,9 +170,24 @@ const maybeRetrievePartial = graphql => async ({ data, type }) => {
   if(type !== DataTypes.Partial) {
     return { data, type };
   }
+  const fileName = (data.match(/<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/) ?? [,''])[1];
+
+  const attributes = data.split(',');
+
+  let attributeObject = {};
+  if(attributes.length > 1) {
+    const attributePairs = attributes.slice(1)
+      .map(attr => {
+        const pairs = attr.match(/\s+(\w+):\s+(\w+)/);
+        return pairs.length === 3 ? [pairs[1],pairs[2]] : null;
+      })
+      .filter(x => !!x);
+    attributeObject = Object.fromEntries(attributePairs);
+  }
+
   const result = await graphql(`
       query {
-        fileHtmlPartial(relativePath: { eq:"${data}.textile"}) {
+        fileHtmlPartial(relativePath: { eq:"${fileName}.textile"}) {
           contentOrderedList {
             data
             type
@@ -183,6 +200,33 @@ const maybeRetrievePartial = graphql => async ({ data, type }) => {
   let contentOrderedList = partial && partial.contentOrderedList;
   if(partial) {
     contentOrderedList = await Promise.all(contentOrderedList.map(retrievePartialFromGraphQL));
+    contentOrderedList = flattenContentOrderedList(contentOrderedList);
+
+    if(attributeObject['indent']) {
+      if(attributeObject['skip_first_indent']) {
+        contentOrderedList = contentOrderedList.map((content, i) => {
+          if(i === 0) {
+            return {
+              ...content,
+              data: indent(
+                content.data.substring(content.data.indexOf("\n") + 1),
+                parseInt(attributeObject['indent'])
+              )
+            };
+          }
+
+          return {
+            ...content,
+            data: indent(content.data, parseInt(attributeObject['indent']))
+          }
+        });
+      } else {
+        contentOrderedList = contentOrderedList.map(content => ({
+          ...content,
+          data: indent(content.data, parseInt(attributeObject['indent']))
+        }));
+      }
+    }
   }
 
   return {
