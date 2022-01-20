@@ -44,7 +44,7 @@ const createLanguagePageVariantsAndModifyContent = (createPage, documentTemplate
                 contentOrderedList: contentOrderedList.map(filterContent).filter(x => !!x)
             },
         });
-    })
+    });
     return modifiedContent;
 }
 
