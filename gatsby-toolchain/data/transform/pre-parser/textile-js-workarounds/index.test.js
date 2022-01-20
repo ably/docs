@@ -1,5 +1,5 @@
 const textile = require("textile-js");
-const { compressMultipleNewlines } = require(".");
+const { compressMultipleNewlinesInLists } = require(".");
 
 const definitionList = `h3(#connection-states). Available connection states
 
