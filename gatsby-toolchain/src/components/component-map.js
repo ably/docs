@@ -88,7 +88,7 @@ const HtmlTypeComponentMap = Object.freeze({
     [HtmlDataTypes.select]: Select,
     [HtmlDataTypes.textarea]: Textarea,
     // other/utility
-    [HtmlDataTypes.br]: Br,
+    [HtmlDataTypes.br]: null,
     [HtmlDataTypes.wbr]: Wbr
 });
 
