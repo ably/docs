@@ -29,7 +29,6 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
         .join('\n');
       const postParsedContent = postParser(textile(content));
       const contentOrderedList = htmlParser(postParsedContent);
-
       const contentOrderedListWithoutLanguageVariants = createLanguagePageVariantsAndModifyContent(
         createPage,
         documentTemplate
@@ -37,7 +36,7 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
         contentOrderedList,
         edge.node.slug
       );
-  
+
       createPage({
         path: `/documentation/${edge.node.slug}`,
         component: documentTemplate,
