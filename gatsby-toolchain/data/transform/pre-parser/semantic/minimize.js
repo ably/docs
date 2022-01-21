@@ -39,7 +39,7 @@ const addMinimizeForHeadings = content => {
 const addMinimizedIndent = content => {
     let expandNum = 0;
     let position = content.search(MINIMIZE_REGEX);
-    while(position && position > -1) {
+    while(position > -1) {
         const matchTitle = `+ ${ (content.match(MINIMIZE_REGEX)[1] ?? 'View More') }`;
         const nextContent = content
             .slice(position);
