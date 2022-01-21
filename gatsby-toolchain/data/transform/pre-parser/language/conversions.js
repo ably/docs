@@ -49,7 +49,6 @@ const langBlockEnd = '{{/LANG_BLOCK}}\n';
 
 const convertBlangBlocksToTokens = content => {
     let position = content.search(BLANG_REGEX);
-    let count = 0;
     while(position > -1) {
         const languages = content.match(BLANG_REGEX)[1] ?? '';
         const nextContent = content.slice(position);
