@@ -11,7 +11,7 @@ const sidebarDataFromPageFurniture = data => data.map(({ label, link, level = RO
     return result;
 })
 
-const range = (start, end) => Array(end - start).fill().map((d, i) => i + start);
+const range = (start, end) => Array(end - start).fill().map((_, i) => i + start);
 
 const sidebarDataFromDocumentPaths = data => {
     const objects = data.map(({ node: { id, label, level, link, parent = { id: false } }}) => ({ id, label, level, link, parent }));
