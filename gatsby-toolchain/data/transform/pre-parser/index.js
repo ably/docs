@@ -12,7 +12,7 @@ const {
     addMinimizeForHeadings,
     addMinimizedIndent
 } = require('./semantic');
-const { compressMultipleNewlinesInLists } = require('./textile-js-workarounds');
+const { compressMultipleNewlinesInLists, manuallyReplaceHTags } = require('./textile-js-workarounds');
 
 // Newlines before closing tags inhibit textile-js' ability to correctly parse HTML
 const removeNewlinesBeforeClosingTags = content => content.replace(/\n+(<\/\w+>)/g,'$1');
@@ -33,9 +33,7 @@ const preParser = (content) => {
     result = addLanguageSupportForHeadings(result);
     // Textile compatibility operations
     result = compressMultipleNewlinesInLists(result)
-    // TODO: Move commented out functions to place where they have access to metadata/attributes/frontmatter
-    // Inline code editor operations
-    // result = addSupportForInlineCodeEditor(result, path);
+    result = manuallyReplaceHTags(result);
     return result;
 }
 
