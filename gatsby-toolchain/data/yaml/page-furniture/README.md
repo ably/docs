@@ -29,3 +29,12 @@ contentArray:
   * An array entry should not have both a ```contentString``` and ```contentArray``` element. In the event that both exist, the ```contentArray``` will be used and ```contentString``` ignored
 * An array entry _may_ have a ```level``` element that will be used to determine ```aria-level```
   *  In the event that it does not, a value of ```3``` will be used
+
+```yaml
+- label: 'Example label'
+- link: 'Example link'
+- contentString: 'Content string'
+- contentArray:
+    - ...
+- level: 3
+```
