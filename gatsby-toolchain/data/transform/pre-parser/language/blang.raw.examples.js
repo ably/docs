@@ -1,0 +1,324 @@
+const riskyBlangExample = `blang[jsall].
+  @ConnectionState@ is a String with a value matching any of the "@Realtime Connection@ states":/realtime/connection#connection-states.
+
+  \`\`\`[javascript]
+    var ConnectionStates = [
+      'initialized',
+      'connecting',
+      'connected',
+      'disconnected',
+      'suspended',
+      'closing',
+      'closed',
+      'failed'
+    ]
+  \`\`\`
+
+blang[java].
+  @io.ably.lib.realtime.ConnectionState@ is an enum representing all the "@Realtime Connection@ states":/realtime/connection#connection-states.
+
+  \`\`\`[java]
+    public enum ConnectionState {
+      initialized,   // 0
+      connecting,    // 1
+      connected,     // 2
+      disconnected,  // 3
+      suspended,     // 4
+      closing,       // 5
+      closed,        // 6
+      failed         // 7
+    }
+  \`\`\`
+
+blang[csharp].
+  @IO.Ably.Realtime.ConnectionState@ is an enum representing all the "@Realtime Connection@ states":/realtime/connection#connection-states.
+
+  \`\`\`[csharp]
+    public enum ConnectionState
+    {
+        Initialized,    //0
+        Connecting,     //1
+        Connected,      //2
+        Disconnected,   //3
+        Suspended,      //4
+        Closing,        //5
+        Closed,         //6
+        Failed          //7
+    };
+  \`\`\`
+
+blang[ruby].
+  @Ably::Realtime::Connection::STATE@ is an enum-like value representing all the "@Realtime Connection@ states":/realtime/connection#connection-states. @STATE@ can be represented interchangeably as either symbols or constants.
+
+  h4. Symbol states
+
+  \`\`\`[ruby]
+    :initialized # =>  0
+    :connecting # =>   1
+    :connected # =>    2
+    :disconnected # => 3
+    :suspended # =>    4
+    :closing # =>      5
+    :closed # =>       6
+    :failed # =>       7
+  \`\`\`
+
+  h4. Constant states
+
+  \`\`\`[ruby]
+    Connection::STATE.Initialized # =>  0
+    Connection::STATE.Connecting # =>   1
+    Connection::STATE.Connected # =>    2
+    Connection::STATE.Disconnected # => 3
+    Connection::STATE.Suspended # =>    4
+    Connection::STATE.Closing # =>      5
+    Connection::STATE.Closed # =>       6
+    Connection::STATE.Failed # =>       7
+  \`\`\`
+
+  h4. Example usage
+
+  \`\`\`[ruby]
+    # Example with symbols
+    client.connection.on(:connected) { ... }
+
+    # Example with constants
+    client.connection.on(Ably::Realtime::Connection::STATE.Connected) { ... }
+
+    # Interchangeable
+    Ably::Realtime::Connection::STATE.Connected == :connected # => true
+  \`\`\`
+
+blang[objc,swift].
+  @ARTRealtimeConnectionState@ is an enum representing all the "@Realtime Connection@ states":/realtime/connection#connection-states.
+
+  \`\`\`[objc]
+    typedef NS_ENUM(NSUInteger, ARTRealtimeConnectionState) {
+        ARTRealtimeInitialized,
+        ARTRealtimeConnecting,
+        ARTRealtimeConnected,
+        ARTRealtimeDisconnected,
+        ARTRealtimeSuspended,
+        ARTRealtimeClosing,
+        ARTRealtimeClosed,
+        ARTRealtimeFailed
+    };
+  \`\`\`
+
+  \`\`\`[swift]
+    public enum ARTRealtimeConnectionState : UInt {
+        case Initialized
+        case Connecting
+        case Connected
+        case Disconnected
+        case Suspended
+        case Closing
+        case Closed
+        case Failed
+    }
+  \`\`\`
+
+blang[go].
+  @ConnectionState@ is an enum representing all the "@Realtime Connection@ states":/realtime/connection#connection-states.
+
+  \`\`\`[go]
+    const (
+      StateConnInitialized = 1
+      StateConnConnecting = 2
+      StateConnConnected = 4
+      StateConnDisconnected = 8
+      StateConnSuspended = 16
+      StateConnClosing = 32
+      StateConnClosed = 64
+      StateConnFailed = 128
+    )
+  \`\`\`
+
+blang[flutter].
+  @ably.ConnectionState@ is an enum representing all the "@Realtime Connection@ states":/realtime/connection#connection-states.
+
+  \`\`\`[flutter]
+    enum ConnectionState {
+      initialized,
+      connecting,
+      connected,
+      disconnected,
+      suspended,
+      closing,
+      closed,
+      failed
+    }
+  \`\`\`
+`;
+
+const riskyBlangExpectedResult = `
+{{LANG_BLOCK[jsall]}}
+@ConnectionState@ is a String with a value matching any of the \"@Realtime Connection@ states\":/realtime/connection#connection-states.
+
+\`\`\`[javascript]
+  var ConnectionStates = [
+    'initialized',
+    'connecting',
+    'connected',
+    'disconnected',
+    'suspended',
+    'closing',
+    'closed',
+    'failed'
+  ]
+\`\`\`
+
+{{/LANG_BLOCK}}
+
+{{LANG_BLOCK[java]}}
+@io.ably.lib.realtime.ConnectionState@ is an enum representing all the \"@Realtime Connection@ states\":/realtime/connection#connection-states.
+
+\`\`\`[java]
+  public enum ConnectionState {
+    initialized,   // 0
+    connecting,    // 1
+    connected,     // 2
+    disconnected,  // 3
+    suspended,     // 4
+    closing,       // 5
+    closed,        // 6
+    failed         // 7
+  }
+\`\`\`
+
+{{/LANG_BLOCK}}
+
+{{LANG_BLOCK[csharp]}}
+@IO.Ably.Realtime.ConnectionState@ is an enum representing all the \"@Realtime Connection@ states\":/realtime/connection#connection-states.
+
+\`\`\`[csharp]
+  public enum ConnectionState
+  {
+      Initialized,    //0
+      Connecting,     //1
+      Connected,      //2
+      Disconnected,   //3
+      Suspended,      //4
+      Closing,        //5
+      Closed,         //6
+      Failed          //7
+  };
+\`\`\`
+
+{{/LANG_BLOCK}}
+
+{{LANG_BLOCK[ruby]}}
+@Ably::Realtime::Connection::STATE@ is an enum-like value representing all the \"@Realtime Connection@ states\":/realtime/connection#connection-states. @STATE@ can be represented interchangeably as either symbols or constants.
+
+h4. Symbol states
+
+\`\`\`[ruby]
+  :initialized # =>  0
+  :connecting # =>   1
+  :connected # =>    2
+  :disconnected # => 3
+  :suspended # =>    4
+  :closing # =>      5
+  :closed # =>       6
+  :failed # =>       7
+\`\`\`
+
+h4. Constant states
+
+\`\`\`[ruby]
+  Connection::STATE.Initialized # =>  0
+  Connection::STATE.Connecting # =>   1
+  Connection::STATE.Connected # =>    2
+  Connection::STATE.Disconnected # => 3
+  Connection::STATE.Suspended # =>    4
+  Connection::STATE.Closing # =>      5
+  Connection::STATE.Closed # =>       6
+  Connection::STATE.Failed # =>       7
+\`\`\`
+
+h4. Example usage
+
+\`\`\`[ruby]
+  # Example with symbols
+  client.connection.on(:connected) { ... }
+
+  # Example with constants
+  client.connection.on(Ably::Realtime::Connection::STATE.Connected) { ... }
+
+  # Interchangeable
+  Ably::Realtime::Connection::STATE.Connected == :connected # => true
+\`\`\`
+
+{{/LANG_BLOCK}}
+
+{{LANG_BLOCK[objc,swift]}}
+@ARTRealtimeConnectionState@ is an enum representing all the \"@Realtime Connection@ states\":/realtime/connection#connection-states.
+
+\`\`\`[objc]
+  typedef NS_ENUM(NSUInteger, ARTRealtimeConnectionState) {
+      ARTRealtimeInitialized,
+      ARTRealtimeConnecting,
+      ARTRealtimeConnected,
+      ARTRealtimeDisconnected,
+      ARTRealtimeSuspended,
+      ARTRealtimeClosing,
+      ARTRealtimeClosed,
+      ARTRealtimeFailed
+  };
+\`\`\`
+
+\`\`\`[swift]
+  public enum ARTRealtimeConnectionState : UInt {
+      case Initialized
+      case Connecting
+      case Connected
+      case Disconnected
+      case Suspended
+      case Closing
+      case Closed
+      case Failed
+  }
+\`\`\`
+
+{{/LANG_BLOCK}}
+
+{{LANG_BLOCK[go]}}
+@ConnectionState@ is an enum representing all the \"@Realtime Connection@ states\":/realtime/connection#connection-states.
+
+\`\`\`[go]
+  const (
+    StateConnInitialized = 1
+    StateConnConnecting = 2
+    StateConnConnected = 4
+    StateConnDisconnected = 8
+    StateConnSuspended = 16
+    StateConnClosing = 32
+    StateConnClosed = 64
+    StateConnFailed = 128
+  )
+\`\`\`
+
+{{/LANG_BLOCK}}
+
+{{LANG_BLOCK[flutter]}}
+@ably.ConnectionState@ is an enum representing all the \"@Realtime Connection@ states\":/realtime/connection#connection-states.
+
+\`\`\`[flutter]
+  enum ConnectionState {
+    initialized,
+    connecting,
+    connected,
+    disconnected,
+    suspended,
+    closing,
+    closed,
+    failed
+  }
+\`\`\`
+{{/LANG_BLOCK}}
+`;
+
+module.exports = {
+    riskyBlangExample,
+    riskyBlangExpectedResult
+}
