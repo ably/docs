@@ -44,12 +44,13 @@ const convertJSAllToNodeAndJavaScript = content =>  {
 
 const BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/m;
 
-const langBlockWrapper = languages => `{{LANG_BLOCK[${languages}]}}\n`;
+const langBlockWrapper = languages => `\n{{LANG_BLOCK[${languages}]}}\n`;
 const langBlockEnd = '{{/LANG_BLOCK}}\n';
 
 const convertBlangBlocksToTokens = content => {
     let position = content.search(BLANG_REGEX);
-    while(position && position > -1) {
+    let count = 0;
+    while(position > -1) {
         const languages = content.match(BLANG_REGEX)[1] ?? '';
         const nextContent = content.slice(position);
         const contentToParse = nextContent
