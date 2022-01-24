@@ -51,10 +51,76 @@ vos populi vos dei
 calamitus calamitabandum
 </div>`;
 
+const nestedDiv = `h6(#unsubscribe).
+    default: unsubscribe
+    csharp: Unsubscribe
+
+<div lang="default">
+There are <span lang="jsall">six</span><span lang="default">three</span> overloaded versions of this method:
+</div>
+
+bq(definition#unsubscribe-event).
+default: unsubscribe(String name, listener)
+java:    void unsubscribe(String name, "MessageListener":#message-listener listener)
+csharp:  bool Unsubscribe(string eventName, Action<"Message":#message> handler)
+ruby:    unsubscribe(String name, &listener_proc)
+objc,swift: unsubscribe(name: String, listener: ARTEventListener)
+
+Unsubscribe the given listener for the specified event name. This removes an earlier event-specific subscription.
+
+bq(definition#unsubscribe-listener).
+default: unsubscribe(listener)
+java:    void unsubscribe("MessageListener":#message-listener listener)
+csharp:  bool Unsubscribe(Action<"Message":#message> handler)
+ruby:    unsubscribe(&listener_proc)
+objc,swift: unsubscribe(listener: ARTEventListener)
+
+Unsubscribe the given listener (for any/all event names). This removes an earlier subscription.
+
+<div lang="jsall">
+bq(definition). unsubscribe(String[] names, listener)
+
+Unsubscribe the given listener from all event names in the array.
+
+bq(definition). unsubscribe(String name)
+
+Unsubscribe all listeners for a given event name.
+
+bq(definition). unsubscribe(String[] names)
+
+Unsubscribe all listeners for all event names in the array.
+</div>
+
+bq(definition#unsubscribe-all).
+default: unsubscribe()
+java:    void unsubscribe()
+csharp:  void Unsubscribe()
+objc,swift: unsubscribe()
+
+Unsubscribes all listeners to messages on this channel. This removes all earlier subscriptions.
+
+h4. Parameters
+
+- name := The event name to unsubscribe from<br>__Type: @String@__
+- <div lang="jsall">names</div> := An array of event names to unsubscribe from<br>__Type: @String[]@__
+- <div lang="jsall">listener</div> := is the callback listener function that was previously subscribed
+- <div lang="java">listener</div> := previously registered listener<br>__Type: "@MessageListener@":#message-listener__
+- <div lang="ruby">&listener_block</div> := previously registered listener block
+- <div lang="swift,objc">listener</div> := previous return value from a @subscribe@ call
+- <div lang="csharp">handler</div> := is the lambda expression that was previously subscribed
+<div lang="flutter">
+@streamSubscription@ obtained from a subscription can be used to cancel a listener by calling @streamSubscription.cancel@.
+</div>
+
+h6(#history).
+default: history
+csharp: History`;
+
 
 module.exports = {
     definitionList,
     expectedDefinitionList,
     nestedH1_6String,
-    nestedH1_6Html
+    nestedH1_6Html,
+    nestedDiv
 };
