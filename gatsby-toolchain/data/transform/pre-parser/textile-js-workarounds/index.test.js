@@ -5,7 +5,11 @@ const {
     expectedDefinitionList,
     nestedH1_6String,
     nestedH1_6Html,
-    nestedDiv
+    nestedDiv,
+    spanWithHashExample,
+    spanWithHashResult,
+    listDivExample,
+    listDivParsedExample
 } = require('./workarounds.raw.examples');
 const { preParser } = require('../');
 
@@ -27,5 +31,20 @@ describe('Reads nested divs correctly', () => {
         const processedDivs = textile(preParser(nestedDiv));
         const firstDiv = processedDivs.split('\n')[1];
         expect(firstDiv).toEqual(`<div lang=\"default\">`);
+    });
+});
+
+describe('Reads spans with hashes correctly', () => {
+    test('A span with a hash/pound/octothorpe value gets read correctly', () => {
+        const processedSpan = textile(preParser(spanWithHashExample));
+        expect(processedSpan).toEqual(spanWithHashResult);
+    });
+});
+
+describe('Reads divs closing over a definition list correctly', () => {
+    test('A series of one or more divs followed by another div gets parsed correctly', () => {
+        const preParsedDivs = preParser(listDivExample);
+        const processedDivs = textile(preParsedDivs);
+        expect(processedDivs.replace(/\s/g, '')).toEqual(listDivParsedExample.replace(/\s/g, ''));
     });
 })
