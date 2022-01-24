@@ -116,11 +116,47 @@ h6(#history).
 default: history
 csharp: History`;
 
+const spanWithHashExample = `h6(#state).
+default: state
+csharp: State
+
+The current <span lang="java">"@io.ably.lib.realtime.ChannelState@":#channel-state @state@</span><span lang="csharp">"@IO.Ably.Realtime.ChannelState@":#channel-state @state@</span><span lang="ruby">"@Ably::Realtime::Channel::STATE@":#channel-state @state@</span><span lang="objc,swift">"@ARTRealtimeChannelState@":#channel-state</span><span lang="default">"@ChannelState@":#channel-state</span> of this @Channel@. See the supported "channel states":#channel-states for more information.`;
+
+const spanWithHashResult = `<h6 id=\"state\"><span lang=\"default\">state</span><span lang=\"csharp\">State</span></h6>
+<p>The current <span lang=\"java\"><a href=\"#channel-state\"><code>io.ably.lib.realtime.ChannelState</code></a> <code>state</code></span><span lang=\"csharp\"><a href=\"#channel-state\"><code>IO.Ably.Realtime.ChannelState</code></a> <code>state</code></span><span lang=\"ruby\"><a href=\"#channel-state\"><code>Ably::Realtime::Channel::STATE</code></a> <code>state</code></span><span lang=\"objc,swift\"><a href=\"#channel-state\"><code>ARTRealtimeChannelState</code></a></span><span lang=\"default\"><a href=\"#channel-state\"><code>ChannelState</code></a></span> of this <code>Channel</code>. See the supported <a href=\"#channel-states\">channel states</a> for more information.</p>`;
+
+const listDivExample = `<div lang="default">
+h4. Parameters
+
+- <div lang="jsall">callback</div> := is a function of the form @function(err)@ and is called once the channel attach succeeds or fails
+- <div lang="ruby">&block</div> := yields once the channel becomes attached
+- <div lang="csharp">callback</div> := is a lambda expression of the form @Action<TimeSpan, ErrorInfo>@ and is called once the channel attach succeeds or fails
+- <div lang="swift,objc">callback</div> := called once the channel becomes attached or if an error occurs
+</div><div lang="flutter"></div>`;
+
+const listDivParsedExample = `<div lang=\"default\">
+<p><h4>Parameters</h4></p>
+<dl>
+  <dt><div lang=\"&quot;javascript,nodejs)\">callback</div></dt>
+  <dd>is a function of the form <code>function(err)</code> and is called once the channel attach succeeds or fails</dd>
+  <dt><div lang=\"ruby\">&amp;block</div></dt>
+  <dd>yields once the channel becomes attached</dd>
+  <dt><div lang=\"csharp\">callback</div></dt>
+  <dd>is a lambda expression of the form <code>Action&lt;TimeSpan, ErrorInfo&gt;</code> and is called once the channel attach succeeds or fails</dd>
+  <dt><div lang=\"swift,objc\">callback</div></dt>
+  <dd>called once the channel becomes attached or if an error occurs</dd>
+</dl>
+</div>
+<div lang=\"flutter\"></div>`;
 
 module.exports = {
     definitionList,
     expectedDefinitionList,
     nestedH1_6String,
     nestedH1_6Html,
-    nestedDiv
+    nestedDiv,
+    spanWithHashExample,
+    spanWithHashResult,
+    listDivExample,
+    listDivParsedExample
 };

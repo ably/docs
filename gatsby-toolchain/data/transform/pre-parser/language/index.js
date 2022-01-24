@@ -1,6 +1,6 @@
 const { addLanguageSupportForGithubStyleCode } = require('./support-for-github');
 const { duplicateLanguageBlocks } = require('./duplicate-blocks');
-const { trimWhiteSpaceBetweenLanguageElements } = require('./white-space');
+const { enforceWhiteSpaceLevelsBetweenLanguageElements } = require('./white-space');
 const { convertJSAllToNodeAndJavaScript, convertBlangBlocksToTokens } = require('./conversions');
 const { addLanguageSupportForBlockQuotes, addLanguageSupportForHeadings } = require('./html-support');
 
@@ -10,7 +10,7 @@ module.exports = {
     convertBlangBlocksToTokens,
     addLanguageSupportForGithubStyleCode,
     duplicateLanguageBlocks,
-    trimWhiteSpaceBetweenLanguageElements,
+    enforceWhiteSpaceLevelsBetweenLanguageElements,
     addLanguageSupportForBlockQuotes,
     addLanguageSupportForHeadings
 }
