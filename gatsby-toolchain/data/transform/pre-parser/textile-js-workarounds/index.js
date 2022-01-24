@@ -5,10 +5,6 @@ const compressMultipleNewlinesInLists = content => content.replace(/^(-.*)\n{2,}
 // textile-js cannot parse h[1-6]. lines that are located inside another HTML tag, with leading spaces
 const manuallyReplaceHTags = content => content.replace(/^\s*h([1-6]).\s+(.*)$/gm, '<h$1>$2</h$1>');
 
-/**
- * TODO: Of interest are:
- * l.1207 in channels.textile
-*/
 
 module.exports = {
     compressMultipleNewlinesInLists,
