@@ -31,7 +31,7 @@ const jsAllReplacer = (match, langBefore, langAfter, quote, langBefore2, langAft
     const langs = [langBefore || langBefore2, langAfter || langAfter2].filter(identity);
     const languageExpandedString = langs.length > 0 ? `,${langs.join(',')}` : '';
     if(quote) {
-        return `%(lang="javascript,nodejs${languageExpandedString})`;
+        return `lang="javascript,nodejs${languageExpandedString})`;
     } else if(match === 'jsall:') {
         return 'javascript, nodejs:';
     } else {
