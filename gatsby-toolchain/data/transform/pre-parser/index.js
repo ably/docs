@@ -3,7 +3,7 @@ const {
     convertBlangBlocksToTokens,
     addLanguageSupportForGithubStyleCode,
     duplicateLanguageBlocks,
-    trimWhiteSpaceBetweenLanguageElements,
+    enforceWhiteSpaceLevelsBetweenLanguageElements,
     addLanguageSupportForBlockQuotes,
     addLanguageSupportForHeadings
 } = require('./language');
@@ -28,7 +28,7 @@ const preParser = (content) => {
     result = convertBlangBlocksToTokens(result);
     result = addLanguageSupportForGithubStyleCode(result);
     result = duplicateLanguageBlocks(result);
-    result = trimWhiteSpaceBetweenLanguageElements(result);
+    result = enforceWhiteSpaceLevelsBetweenLanguageElements(result);
     result = addLanguageSupportForBlockQuotes(result);
     result = addLanguageSupportForHeadings(result);
     // Textile compatibility operations
