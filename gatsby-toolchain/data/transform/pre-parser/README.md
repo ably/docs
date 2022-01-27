@@ -19,7 +19,7 @@ It is a good place to put:
 * Transformations of inline HTML elements that are difficult to implement as their own blocks
 
 It is not the best place to put:
-* Regex-based operations that perform worse on longer documents (e.g. regex operations with a lot of potential backtracking, see: https://blog.stevenlevithan.com/archives/greedy-lazy-performance) - consider putting these in parser-enhancements, so that they can run on lots of small documents.
+* * Regex-based operations that perform worse on longer documents (e.g. regex operations with a lot of potential backtracking, see: https://blog.stevenlevithan.com/archives/greedy-lazy-performance) - consider putting these in specialised React components, so that they can run on fewer, smaller documents.
 * Transformations based on frontmatter variables; the frontmatter is extracted after the pre-parser phase, as are partials; partials should inherit frontmatter variables (such as published_date) from their 'parent' page. Consider putting these in parser-enhancements, so that the variables we use are consistently applied & easier to access.
 * Transformations intended to have a very specific output on the front-end; rather than rely on the parser/parser enhancements/component mapping/components to interpret a string change differently, consider implementing these changes later on in the pipeline.
   * Replacing data with data from another source; consider putting these in parser-enhancements.
