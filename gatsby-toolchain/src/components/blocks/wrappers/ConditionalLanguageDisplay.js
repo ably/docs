@@ -1,10 +1,10 @@
 import React, { Children, useContext } from 'react';
-import { IGNORED_LANGUAGES } from '../../../../data/createPages/createPageVariants';
+import { IGNORED_LANGUAGES_FOR_DISPLAY } from '../../../../data/createPages/createPageVariants';
 import PageLanguageContext from '../../../contexts/page-language-context';
 
 const ConditionalLanguageDisplay = ({ attribs, children }) => {
     const language = useContext(PageLanguageContext);
-    const langIsRelevant = attribs && attribs.lang && !IGNORED_LANGUAGES.includes(attribs.lang);
+    const langIsRelevant = attribs && attribs.lang && !IGNORED_LANGUAGES_FOR_DISPLAY.includes(attribs.lang);
     // When we wrap child elements, we'll just need to ensure that the first lang attribute encountered is set to null
     if(langIsRelevant && attribs.lang !== language) {
         return null;
