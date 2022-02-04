@@ -1,10 +1,9 @@
 import React from 'react';
 import Header from '../Header';
 
-const Layout = ({children}) => (<>
-    <title>Documentation</title>
+const Layout = ({ languages, children }) => (<>
     <header>
-        <Header />
+        <Header languages={ languages } />
     </header>
     <main className={`pt-64 grid grid-cols-5`}>
         {children}
