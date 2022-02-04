@@ -1,4 +1,6 @@
 import * as fc from 'fast-check';
+import { convertBlangBlocksToTokens } from '../pre-parser/language';
+import { brokenBlangExample, brokenBlangTokenExpectedResult } from '../pre-parser/language/blang.raw.examples';
 import { convertBlangBlocksToHtml } from "./blang";
 
 const createRelevantString = (content, {
@@ -37,6 +39,12 @@ describe('Converts Blang strings to HTML', () => {
         });
         const result = convertBlangBlocksToHtml(blangBlock);
         expect(result).toEqual(`<div lang="javascript"><!-- start javascript language block --><div>Lorem ipsum adipiscitor</div></div><!-- /end javascript language block -->`);
+    });
+    test('Converts broken Blang block while keeping multiple languages separate', () => {
+        // cf. data/transform/pre-parser/language/conversions.test.js
+        const tokenizedBlock = convertBlangBlocksToTokens(brokenBlangExample);
+        const result = convertBlangBlocksToHtml(tokenizedBlock);
+        expect(result.replace(/\s+/g,'')).toEqual(brokenBlangTokenExpectedResult.replace(/\s+/g,''));
     });
 
     // Fastcheck property testing

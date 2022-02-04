@@ -34,6 +34,7 @@ const preParser = (content) => {
     // Textile compatibility operations
     result = compressMultipleNewlinesInLists(result)
     result = manuallyReplaceHTags(result);
+
     return result;
 }
 
