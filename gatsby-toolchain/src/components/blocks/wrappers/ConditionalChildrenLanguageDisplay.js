@@ -1,5 +1,5 @@
 import React, { Children, useContext } from 'react';
-import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../../../data/createPages/createPageVariants';
+import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES_FOR_DISPLAY } from '../../../../data/createPages/createPageVariants';
 import PageLanguageContext from '../../../contexts/page-language-context';
 
 const makeGroup = (lang, index) => ({
@@ -43,7 +43,7 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
             if(
                 attribs &&
                 attribs.lang &&
-                !IGNORED_LANGUAGES.includes(attribs.lang)
+                !IGNORED_LANGUAGES_FOR_DISPLAY.includes(attribs.lang)
             ) {
                 if(!currentGroup) {
                     currentGroup = makeGroup(attribs.lang, index);
