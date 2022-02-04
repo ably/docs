@@ -1,5 +1,5 @@
 const yaml = require('js-yaml');
-const { upperFirst, camelCase, identity, isPlainObject, lowerFirst, isEmpty, merge, isNumber } = require('lodash');
+const { upperFirst, camelCase, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
 const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require("./front-matter");
 const DataTypes = require("../types");
 const { ROOT_LEVEL, MAX_LEVEL } = require("../../src/components/Sidebar/consts");
@@ -39,7 +39,7 @@ const retrieveAndReplaceInlineTOC = contentString => ({
   inlineTOCOnly: (tryRetrieveInlineTOC(contentString) ?? [,null])[1]
 });
 
-const removeFalsy = dataArray => dataArray.filter(identity);
+const removeFalsy = dataArray => dataArray.filter(x => !!x);
 const makeTypeFromParentType = type => node => upperFirst(camelCase(`${node.internal.type}${type}`));
 
 const createNodesFromPath = (type, { createNode, createNodeId, createContentDigest }) => path => {
@@ -84,7 +84,6 @@ const constructDataObjectsFromStrings = (contentStrings, frontmatterMeta) => {
     contentStrings;
   const dataObjects = contentStrings.map(
     (data, i) => i % 2 === 0 ?
-      // TODO: record partial indent level and skip_first_indent here
       { data: data, type: DataTypes.Html } :
       { data: data, type: DataTypes.Partial }
   );
@@ -102,7 +101,6 @@ const flattenContentOrderedList = contentOrderedList => contentOrderedList.reduc
 const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, createContentDigest, createNodeId }) => updateWithTransform => {
     const slug = node.relativePath.replace(/(.*)\.[^.]+$/, "$1");
     const preTextileTransform = preParser(content);
-    // We could re-arrange & limit this to the last array item if we are confident that no partials will appear in the API reference.
     const {
       noInlineTOC,
       inlineTOCOnly

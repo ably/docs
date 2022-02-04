@@ -2,6 +2,7 @@ import React from 'react';
 import DOMPurify from 'dompurify';
 import blocksFromData from '../blocks-from-data';
 import { isArray } from 'lodash';
+import ConditionalChildrenLanguageDisplay from '../wrappers/ConditionalChildrenLanguageDisplay';
 
 // This is not to be used in production.
 const DangerousHtml = ({ data }) => <div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(data, {
@@ -11,7 +12,7 @@ const DangerousHtml = ({ data }) => <div dangerouslySetInnerHTML={{__html: DOMPu
     FORBID_TAGS: ['svg', 'math']
 }) }}></div>;
 
-const Html = ({ data }) => isArray(data) ? <>{blocksFromData(data)}</> : <>{data}</>;
+const Html = ({ data }) => isArray(data) ? <ConditionalChildrenLanguageDisplay>{blocksFromData(data)}</ConditionalChildrenLanguageDisplay> : <>{data}</>;
 
 export {
     DangerousHtml
