@@ -6,6 +6,7 @@ const HYPERTEXT_LANGUAGE = 'html';
 const YETANOTHERMARKUP_LANGUAGE = 'yaml';
 
 const IGNORED_LANGUAGES = [DEFAULT_LANGUAGE, TEXT_LANGUAGE, HYPERTEXT_LANGUAGE, YETANOTHERMARKUP_LANGUAGE];
+const IGNORED_LANGUAGES_FOR_DISPLAY = [TEXT_LANGUAGE, HYPERTEXT_LANGUAGE, YETANOTHERMARKUP_LANGUAGE];
 
 // Mutation (modifying the languageSet provided) is much easier here
 // Should also be safer given the guarantees of a Set()
@@ -49,6 +50,7 @@ const createLanguagePageVariants = (createPage, documentTemplate) => (contentOrd
 module.exports = {
     DEFAULT_LANGUAGE,
     IGNORED_LANGUAGES,
+    IGNORED_LANGUAGES_FOR_DISPLAY,
     addLanguagesToSet,
     createLanguagePageVariants
 }
