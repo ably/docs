@@ -33,9 +33,25 @@ const liftLangAttributes = cheerioNodes => cheerioNodes('dl dt > div[lang]').eac
     cheerioNodes(elem).removeAttr('lang');
 });
 
+const duplicateLangAttributes = cheerioNodes => cheerioNodes('*[lang]').each((_i, elem) => {
+    const maybeLanguages = cheerioNodes(elem).attr('lang');
+    if(/^[^,]+$/.test(maybeLanguages)) {
+        return;
+    }
+    const langs = maybeLanguages.split(',');
+    langs.forEach(lang => {
+        cheerioNodes(elem)
+            .clone()
+            .attr('lang', lang)
+            .insertAfter(cheerioNodes(elem));
+    });
+    cheerioNodes(elem).remove();
+});
+
 const htmlParser = content => {
     const loadedDom = cheerio.load(content, null);
     liftLangAttributes(loadedDom);
+    duplicateLangAttributes(loadedDom);
     const loadedDomBodyNodes = loadedDom('body').children('*');
     const parsedNodes = cheerioParser(loadedDomBodyNodes);
     return [{
@@ -46,6 +62,7 @@ const htmlParser = content => {
 
 module.exports = {
     liftLangAttributes,
+    duplicateLangAttributes,
     cheerioNodeParser,
     htmlParser
 }
