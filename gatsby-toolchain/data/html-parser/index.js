@@ -25,9 +25,19 @@ const cheerioParser = cheerioNodes => {
     return data.toArray();
 }
 
+/** Source: Ably 'docs' repo ./app/assets/javascripts/lang-manager.js ll.61-66 */
+const liftLangAttributes = cheerioNodes => cheerioNodes('dl dt > div[lang]').each(() => {
+    const lang = cheerioNodes(this).attr('lang');
+    cheerioNodes(this).parent('dt').attr('lang', lang);
+    cheerioNodes(this).parent('dt').next('dd').attr('lang', lang);
+    cheerioNodes(this).removeAttr('lang');
+});
+
 const htmlParser = content => {
     const loadedDom = cheerio.load(content, null);
-    const parsedNodes = cheerioParser(loadedDom('body').children('*'));
+    liftLangAttributes(loadedDom);
+    const loadedDomBodyNodes = loadedDom('body').children('*');
+    const parsedNodes = cheerioParser(loadedDomBodyNodes);
     return [{
         data: parsedNodes,
         type: DataTypes.Html
