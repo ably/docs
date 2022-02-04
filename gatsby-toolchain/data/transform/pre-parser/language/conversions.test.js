@@ -1,4 +1,4 @@
-const { convertBlangBlocksToTokens } = require(".");
+const { convertBlangBlocksToTokens, convertJSAllToNodeAndJavaScript } = require(".");
 const { riskyBlangExample, riskyBlangExpectedResult } = require("./blang.raw.examples");
 
 describe('Converts specific example blang blocks to HTML', () => {
@@ -34,3 +34,25 @@ describe('Converts specific example blang blocks to HTML', () => {
         expect(result).toEqual(riskyBlangExpectedResult);
     });
 });
+
+describe('Converts jsall to javascript, nodejs', ()=> {
+    test('Converts simple <span lang="jsall"> element to <span lang="javascript,nodejs">', () => {
+        /**
+         * Potential issues uncovered by test:
+         * Problem:
+         *      Languages aren't joined together correctly by the replacer
+         * Solution:
+         *      Ensure commas are in the correct place, jsall is supported in any list location
+         */
+        const result = convertJSAllToNodeAndJavaScript('<span lang="jsall">');
+        expect(result).toEqual('<span lang="javascript,nodejs">');
+    });
+    test('Converts lists beginning `jsall:` to `javascript,nodejs:`', () => {
+        const result = convertJSAllToNodeAndJavaScript(`  jsall: Lorem ipsum`);
+        expect(result).toEqual('  javascript,nodejs: Lorem ipsum');
+    });
+    test('Converts enclosures containing `jsall` to `[...,javascript,nodejs,...]', () => {
+        const result = convertJSAllToNodeAndJavaScript('blang[java,jsall,csharp]');
+        expect(result).toEqual('blang[javascript,nodejs,java,csharp]');
+    });
+})
