@@ -137,7 +137,7 @@ h4. Parameters
 const listDivParsedExample = `<div lang=\"default\">
 <p><h4>Parameters</h4></p>
 <dl>
-  <dt><div lang=\"&quot;javascript,nodejs)\">callback</div></dt>
+  <dt><div lang=\"javascript,nodejs\">callback</div></dt>
   <dd>is a function of the form <code>function(err)</code> and is called once the channel attach succeeds or fails</dd>
   <dt><div lang=\"ruby\">&amp;block</div></dt>
   <dd>yields once the channel becomes attached</dd>

@@ -9,8 +9,17 @@ const classToClassName = attribs => {
     return attribs;
 };
 
+const keyFromID = attribs => {
+    if(!attribs || !attribs.id) {
+        return attribs;
+    }
+    attribs.key = attribs.id;
+    return attribs;
+}
+
 const filterAttribsForReact = compose(
-    classToClassName
+    classToClassName,
+    keyFromID
 );
 
 export {

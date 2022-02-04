@@ -4,8 +4,17 @@ import Layout from '../components/layout';
 import Html from '../components/blocks/Html';
 import { LeftSideBar } from '../components/StaticQuerySidebar';
 import DataTypes from '../../data/types';
+import PageLanguageContext from '../contexts/page-language-context';
+import Article from '../components/Article';
+import { IGNORED_LANGUAGES } from '../../data/createPages/createPageVariants';
 
-const Document = ({ pageContext: { contentOrderedList }, data: { inlineTOC: { tableOfContents }} }) => {
+const Document = ({ pageContext: { contentOrderedList, language, languages }, data: { inlineTOC: { tableOfContents }} }) => {
+    const filteredLanguages = useMemo(() =>
+        languages
+            .filter(language => /^[^,]+$/.test(language))
+            .filter(language => !IGNORED_LANGUAGES.includes(language)),
+        [languages]
+    );
     const elements = useMemo(() => contentOrderedList.filter(
         ({ type }) =>  Object.values(DataTypes).includes(type)
     ).map(
@@ -13,7 +22,14 @@ const Document = ({ pageContext: { contentOrderedList }, data: { inlineTOC: { ta
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html data={data} key={i}/>
     ), [contentOrderedList]);
-    return <Layout><LeftSideBar className="col-span-1" /><article className="col-span-4">{ elements }</article></Layout>;
+    return <PageLanguageContext.Provider value={ language }>
+        <Layout languages={filteredLanguages }>
+            <LeftSideBar className="col-span-1 px-8" />
+            <Article>{
+                elements
+            }</Article>
+        </Layout>
+    </PageLanguageContext.Provider>;
 };
 
 export default Document;
