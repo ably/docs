@@ -1,6 +1,6 @@
 import * as fc from 'fast-check';
 const HtmlDataTypes = require('../types/html');
-const { filterHtmlLanguageContent, DEFAULT_LANGUAGE } = require('./createPageVariants');
+const { DEFAULT_LANGUAGE, addLanguagesToSet } = require('./createPageVariants');
 
 const simpleHtmlDataObject = {
     data: [],
@@ -35,16 +35,14 @@ const set = new Set();
 
 beforeEach(() => set.clear());
 
-describe('Data objects parsed from HTML should be filtered against the provided language', () => {
-    test('A simple single HTML element is correctly filtered and KEPT', () => {
-        const result = filterHtmlLanguageContent(set)(simpleHtmlDataObject);
-        expect(result).toEqual(simpleHtmlDataObject);
+describe('Data objects parsed from HTML should have languages added to the set of languages', () => {
+    test('A simple single HTML element is not registered', () => {
+        addLanguagesToSet(set)(simpleHtmlDataObject);
         expect(set.size).toEqual(0);
     });
-    test('A simple single HTML element is correctly filtered and REMOVED', () => {
-        const result = filterHtmlLanguageContent(set)
+    test('A simple single HTML element is registered', () => {
+        const result = addLanguagesToSet(set)
             (makeSimpleHtml('javascript'));
-        expect(result).toEqual(null);
         expect(set.size).toEqual(1);
         expect(set.has('javascript')).toBe(true);
     })
@@ -53,9 +51,8 @@ describe('Data objects parsed from HTML should be filtered against the provided 
         fc.assert(
             fc.property(genSimpleHtmlDataObject,
                 simpleObject => {
-                    const result = filterHtmlLanguageContent(set,simpleObject.attribs.lang)
+                    addLanguagesToSet(set,simpleObject.attribs.lang)
                         (simpleObject);
-                    expect(result).toEqual(simpleObject);
                     expect(set.size).toEqual(0);
                 }
             ).beforeEach(() => set.clear())
@@ -65,9 +62,8 @@ describe('Data objects parsed from HTML should be filtered against the provided 
         fc.assert(
             fc.property(genSimpleHtmlDataObject, fc.string({minLength:1}),
                 (simpleObject, str) => {
-                    const result = filterHtmlLanguageContent(set,`${simpleObject.attribs.lang}${str}`)
+                    addLanguagesToSet(set,`${simpleObject.attribs.lang}${str}`)
                         (simpleObject);
-                    expect(result).toEqual(null);
                     expect(set.size).toEqual(1);
                     expect(set.has(simpleObject.attribs.lang)).toBe(true);
                 }
@@ -79,13 +75,8 @@ describe('Data objects parsed from HTML should be filtered against the provided 
         fc.assert(
             fc.property(genCompoundHtmlDataObject,
                 compoundObject => {
-                    const result = filterHtmlLanguageContent(set,compoundObject.attribs.lang)
+                    addLanguagesToSet(set,compoundObject.attribs.lang)
                         (compoundObject);
-                    expect(result).not.toEqual(null);
-                    expect(result).toEqual({
-                        ...compoundObject,
-                        data: []
-                    });
                     expect(set.size).toEqual(1);
                     expect(set.has(compoundObject.data[0].attribs.lang)).toBe(true);
                 }

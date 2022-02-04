@@ -5,7 +5,6 @@ import { Article, Aside, Div, Main, Section, Span } from './blocks/dividers';
 import { A, Address, Audio, Blockquote, Iframe, Img, Quote, Video } from './blocks/external-references';
 import { H1, H2, H3, H4, H5, H6, Header } from './blocks/headings';
 import { Dd, Dt, Dl, Li, Ol, Ul } from './blocks/list';
-import Br from './blocks/non-semantic/Br';
 import Wbr from './blocks/non-semantic/Wbr';
 import { Abbr, Details, Dfn, Summary, Time } from './blocks/semantic-enhancements';
 import { Code, Kbd, Output, Pre, Samp, Var } from './blocks/software';
