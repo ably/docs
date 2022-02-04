@@ -1,10 +1,15 @@
 const { isArray } = require("lodash");
 
 const DEFAULT_LANGUAGE = 'default';
+const TEXT_LANGUAGE = 'text';
+const HYPERTEXT_LANGUAGE = 'html';
+const YETANOTHERMARKUP_LANGUAGE = 'yaml';
+
+const IGNORED_LANGUAGES = [DEFAULT_LANGUAGE, TEXT_LANGUAGE, HYPERTEXT_LANGUAGE, YETANOTHERMARKUP_LANGUAGE];
 
 // Mutation (modifying the languageSet provided) is much easier here
 // Should also be safer given the guarantees of a Set()
-const filterHtmlLanguageContent = (languageSet, languageToKeep = DEFAULT_LANGUAGE) => (content) => {
+const addLanguagesToSet = (languageSet, languageToKeep = DEFAULT_LANGUAGE) => (content) => {
     const {
         data = '',
         attribs: {
@@ -15,25 +20,17 @@ const filterHtmlLanguageContent = (languageSet, languageToKeep = DEFAULT_LANGUAG
     } = content;
     if(isArray(data)) {
         if(lang !== languageToKeep) {
-            languageSet && languageSet.add(lang);
-            return null;
+            languageSet.add(lang);
         }
-        return {
-            ...content,   
-            data: data.map(filterHtmlLanguageContent(languageSet, languageToKeep)).filter(x => !!x)
-        }
+        data.forEach(addLanguagesToSet(languageSet, languageToKeep))
     }
-    return content;
 }
 
-const createLanguagePageVariantsAndModifyContent = (createPage, documentTemplate) => (contentOrderedList, slug) => {
+const createLanguagePageVariants = (createPage, documentTemplate) => (contentOrderedList, slug) => {
     const languageSet = new Set();
-    const filterContentAndFillSet = filterHtmlLanguageContent(languageSet);
-    const modifiedContent = contentOrderedList.map(filterContentAndFillSet);
+    contentOrderedList.forEach(addLanguagesToSet(languageSet));
     
     languageSet.forEach(lang => {
-        const filterContent = filterHtmlLanguageContent(null, lang);
-
         createPage({
             path: `/documentation/${slug}/language/${lang}`,
             component: documentTemplate,
@@ -41,15 +38,17 @@ const createLanguagePageVariantsAndModifyContent = (createPage, documentTemplate
                 // The slug is the canonical slug, not the variant path
                 slug,
                 language: lang,
-                contentOrderedList: contentOrderedList.map(filterContent).filter(x => !!x)
-            },
+                languages: Array.from(languageSet),
+                contentOrderedList
+            }
         });
     });
-    return modifiedContent;
+    return Array.from(languageSet);
 }
 
 module.exports = {
     DEFAULT_LANGUAGE,
-    filterHtmlLanguageContent,
-    createLanguagePageVariantsAndModifyContent
+    IGNORED_LANGUAGES,
+    addLanguagesToSet,
+    createLanguagePageVariants
 }

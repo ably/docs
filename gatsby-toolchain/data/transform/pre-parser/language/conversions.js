@@ -28,13 +28,16 @@ const { extractIndented } = require("../shared-utilities/extract-indented");
 const JSALL_REGEX = /(?:\[([^\]]+,)?jsall(,[^\]]+)?\])|(?:lang=(["'])([^"']+,)?jsall(,[^"']+)?\3)|(?:(  jsall\: ))/gm;
 
 const jsAllReplacer = (match, langBefore, langAfter, quote, langBefore2, langAfter2) => {
-    const langs = [langBefore || langBefore2, langAfter || langAfter2].filter(identity);
-    const languageExpandedString = langs.length > 0 ? `,${langs.join(',')}` : '';
+    const langs = [langBefore || langBefore2, langAfter || langAfter2].filter(x => !!x);
     if(quote) {
-        return `lang="javascript,nodejs${languageExpandedString})`;
-    } else if(match === 'jsall:') {
-        return 'javascript, nodejs:';
+        const languageExpandedString = langs.length > 0 ? `${langs.join(',')}` : '';
+        return `lang="javascript,nodejs${languageExpandedString}"`;
+    } else if(match === '  jsall: ') {
+        return '  javascript,nodejs: ';
     } else {
+        const languageExpandedString = langs.length > 0 ?
+            `,${langs.map(lang => lang.replaceAll(',','')).join(',')}` :
+            '';
         return `[javascript,nodejs${languageExpandedString}]`;
     }
 }
