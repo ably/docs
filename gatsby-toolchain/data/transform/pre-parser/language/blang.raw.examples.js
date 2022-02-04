@@ -318,7 +318,58 @@ h4. Example usage
 {{/LANG_BLOCK}}
 `;
 
+const brokenBlangExample = `
+h4.
+  default: Properties
+  java:    Members
+  ruby:    Attributes
+
+blang[default].
+    - <span lang="ruby">:cipher</span><span lang="csharp,go">CipherParams</span><span lang="jsall,java,swift,objc">cipher</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See "an example":/realtime/encryption#getting-started<br>__Type: "@CipherParams@":/realtime/encryption#cipher-params<span lang="jsall,java,ruby,php"> or <span lang="jsall">an options object</span><span lang="java">a @Param[]@ list</span><span lang="ruby">an options hash</span><span lang="php">an Associative Array</span> containing at a minimum a @key@</span>__
+
+blang[jsall,java,swift,objc,csharp].
+  - <span lang="jsall,java,swift,objc">params</span><span lang="csharp">Params</span> := Optional "parameters":/realtime/channels/channel-parameters/overview which specify behaviour of the channel.<br>__Type: <span lang='java'>@Map<String, String>@</span><span lang='jsall,objc,csharp,swift'>@JSON Object@</span>__
+  - <span lang="jsall,java,swift,objc">cipher</span><span lang="csharp">CipherParams</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See "an example":/realtime/encryption#getting-started<br>__Type: "@CipherParams@":/realtime/encryption#cipher-params<span lang="jsall,java,ruby,php"> or <span lang="jsall">an options object</span><span lang="java">a @Param[]@ list</span><span lang="ruby">an options hash</span><span lang="php">an Associative Array</span> containing at a minimum a @key@</span>__
+`;
+
+const brokenBlangExpectedResult = `
+h4.
+default: Properties
+java:    Members
+ruby:    Attributes
+{{LANG_BLOCK[default]}}
+- <span lang=\"ruby\">:cipher</span><span lang=\"csharp,go\">CipherParams</span><span lang=\"jsall,java,swift,objc\">cipher</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See \"an example\":/realtime/encryption#getting-started<br>__Type: \"@CipherParams@\":/realtime/encryption#cipher-params<span lang=\"jsall,java,ruby,php\"> or <span lang=\"jsall\">an options object</span><span lang=\"java\">a @Param[]@ list</span><span lang=\"ruby\">an options hash</span><span lang=\"php\">an Associative Array</span> containing at a minimum a @key@</span>__
+{{/LANG_BLOCK}}
+{{LANG_BLOCK[jsall,java,swift,objc,csharp]}}
+- <span lang=\"jsall,java,swift,objc\">params</span><span lang=\"csharp\">Params</span> := Optional \"parameters\":/realtime/channels/channel-parameters/overview which specify behaviour of the channel.<br>__Type: <span lang='java'>@Map<String, String>@</span><span lang='jsall,objc,csharp,swift'>@JSON Object@</span>__
+- <span lang=\"jsall,java,swift,objc\">cipher</span><span lang=\"csharp\">CipherParams</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See \"an example\":/realtime/encryption#getting-started<br>__Type: \"@CipherParams@\":/realtime/encryption#cipher-params<span lang=\"jsall,java,ruby,php\"> or <span lang=\"jsall\">an options object</span><span lang=\"java\">a @Param[]@ list</span><span lang=\"ruby\">an options hash</span><span lang=\"php\">an Associative Array</span> containing at a minimum a @key@</span>__
+{{/LANG_BLOCK}}
+`;
+
+const brokenBlangTokenExpectedResult = `
+h4.
+default: Properties
+java:    Members
+ruby:    Attributes<div lang=\"default\"><!-- start default language block -->- <span lang=\"ruby\">:cipher</span><span lang=\"csharp,go\">CipherParams</span><span lang=\"jsall,java,swift,objc\">cipher</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See \"an example\":/realtime/encryption#getting-started<br>__Type: \"@CipherParams@\":/realtime/encryption#cipher-params<span lang=\"jsall,java,ruby,php\"> or <span lang=\"jsall\">an options object</span><span lang=\"java\">a @Param[]@ list</span><span lang=\"ruby\">an options hash</span><span lang=\"php\">an Associative Array</span> containing at a minimum a @key@</span>__</div><!-- /end default language block --><div lang=\"jsall,java,swift,objc,csharp\"><!-- start jsall,java,swift,objc,csharp language block -->- <span lang=\"jsall,java,swift,objc\">params</span><span lang=\"csharp\">Params</span> := Optional \"parameters\":/realtime/channels/channel-parameters/overview which specify behaviour of the channel.<br>__Type: <span lang='java'>@Map<String, String>@</span><span lang='jsall,objc,csharp,swift'>@JSON Object@</span>__
+- <span lang=\"jsall,java,swift,objc\">cipher</span><span lang=\"csharp\">CipherParams</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See \"an example\":/realtime/encryption#getting-started<br>__Type: \"@CipherParams@\":/realtime/encryption#cipher-params<span lang=\"jsall,java,ruby,php\"> or <span lang=\"jsall\">an options object</span><span lang=\"java\">a @Param[]@ list</span><span lang=\"ruby\">an options hash</span><span lang=\"php\">an Associative Array</span> containing at a minimum a @key@</span>__</div><!-- /end jsall,java,swift,objc,csharp language block -->
+`;
+
+const brokenBlangTokenAfterJSConversionExpectedResult = `
+h4.
+      default: Properties
+      java:    Members
+      ruby:    Attributes
+    blang[default].
+        - <span lang=\"ruby\">:cipher</span><span lang=\"csharp,go\">CipherParams</span><span lang=\"javascript,nodejs,java,swift,objc\">cipher</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See \"an example\":/realtime/encryption#getting-started<br>__Type: \"@CipherParams@\":/realtime/encryption#cipher-params<span lang=\"javascript,nodejs,java,ruby,php\"> or <span lang=\"javascript,nodejs\">an options object</span><span lang=\"java\">a @Param[]@ list</span><span lang=\"ruby\">an options hash</span><span lang=\"php\">an Associative Array</span> containing at a minimum a @key@</span>__
+    blang[javascript,nodejs,java,swift,objc,csharp].
+      - <span lang=\"javascript,nodejs,java,swift,objc\">params</span><span lang=\"csharp\">Params</span> := Optional \"parameters\":/realtime/channels/channel-parameters/overview which specify behaviour of the channel.<br>__Type: <span lang='java'>@Map<String, String>@</span><span lang=\"javascript,nodejs,objc,csharp,swift\">@JSON Object@</span>__
+      - <span lang=\"javascript,nodejs,java,swift,objc\">cipher</span><span lang=\"csharp\">CipherParams</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See \"an example\":/realtime/encryption#getting-started<br>__Type: \"@CipherParams@\":/realtime/encryption#cipher-params<span lang=\"javascript,nodejs,java,ruby,php\"> or <span lang=\"javascript,nodejs\">an options object</span><span lang=\"java\">a @Param[]@ list</span><span lang=\"ruby\">an options hash</span><span lang=\"php\">an Associative Array</span> containing at a minimum a @key@</span>__`;
+
 module.exports = {
     riskyBlangExample,
-    riskyBlangExpectedResult
+    riskyBlangExpectedResult,
+    brokenBlangExample,
+    brokenBlangExpectedResult,
+    brokenBlangTokenExpectedResult,
+    brokenBlangTokenAfterJSConversionExpectedResult
 }
