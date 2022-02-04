@@ -36,7 +36,9 @@ const jsAllReplacer = (match, langBefore, langAfter, quote, langBefore2, langAft
         return '  javascript,nodejs: ';
     } else {
         const languageExpandedString = langs.length > 0 ?
-            `,${langs.map(lang => lang.replaceAll(',','')).join(',')}` :
+            `,${langs.map(lang => {
+                return lang.split(',')
+            }).flat().filter(x => !!x).join(',')}` :
             '';
         return `[javascript,nodejs${languageExpandedString}]`;
     }
