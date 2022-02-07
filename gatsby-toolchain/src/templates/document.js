@@ -7,14 +7,18 @@ import DataTypes from '../../data/types';
 import PageLanguageContext from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { IGNORED_LANGUAGES } from '../../data/createPages/createPageVariants';
+import { H1 } from '../components/blocks/headings';
 
-const Document = ({ pageContext: { contentOrderedList, language, languages }, data: { inlineTOC: { tableOfContents }} }) => {
+const Document = ({ pageContext: { contentOrderedList, language, languages }, data: { inlineTOC: { tableOfContents }, document: {
+    meta: { title }
+} } }) => {
     const filteredLanguages = useMemo(() =>
         languages
             .filter(language => /^[^,]+$/.test(language))
             .filter(language => !IGNORED_LANGUAGES.includes(language)),
         [languages]
     );
+    console.log(title);
     const elements = useMemo(() => contentOrderedList.filter(
         ({ type }) =>  Object.values(DataTypes).includes(type)
     ).map(
@@ -26,7 +30,9 @@ const Document = ({ pageContext: { contentOrderedList, language, languages }, da
     return <PageLanguageContext.Provider value={ language }>
         <Layout languages={filteredLanguages }>
             <LeftSideBar className="col-span-1 px-8" />
-            <Article>{
+            <Article>
+                <H1 data={ title } attribs={{ id: 'title' }} />
+                {
                 elements
             }</Article>
         </Layout>
@@ -38,9 +44,8 @@ export default Document;
 export const query = graphql`
     query($slug: String!) {
         document: fileHtml(slug: { eq: $slug }) {
-            contentOrderedList {
-                data
-                type
+            meta {
+                title
             }
         }
         inlineTOC: fileInlineToc(slug: { eq: $slug }) {
