@@ -3,7 +3,6 @@ import React from 'react';
 import Sidebar from '../Sidebar';
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
 
-
 const LeftSideBar = ({ className }) => {
     const data = useStaticQuery(graphql`
         fragment SubMenuFields on PageFurnitureYaml {
