@@ -22,6 +22,7 @@ const Document = ({ pageContext: { contentOrderedList, language, languages }, da
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html data={data} key={i}/>
     ), [contentOrderedList]);
+
     return <PageLanguageContext.Provider value={ language }>
         <Layout languages={filteredLanguages }>
             <LeftSideBar className="col-span-1 px-8" />
