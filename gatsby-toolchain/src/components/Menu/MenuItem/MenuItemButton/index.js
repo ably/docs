@@ -12,7 +12,7 @@ const UnstyledButton = styled.button`
 `;
 
 const MenuItemButton = styled(UnstyledButton)`
-    color: ${text.linkInverse};
+    color: ${text.aux};
 
     &:focus,
     &:hover {

@@ -4,13 +4,14 @@ import styled from 'styled-components';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/createPageVariants';
 import PageLanguageContext from '../../contexts/page-language-context';
 import languageLabels from '../../maps/language';
-import { primary } from '../../styles/colors';
+import { primary, text } from '../../styles/colors';
 
 const HoverLink = styled(Link)`
     cursor: pointer;
     display: block;
     position: relative;
     user-select: none;
+    color: ${text.aux};
 
     &:hover, &.active, &.is-active {
         color: ${ primary.richOrange}
