@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DEFAULT_LANGUAGE } from '../../../../data/createPages/createPageVariants';
 import languageLabels from '../../../maps/language';
 import MenuItemButton, { SelectedMenuItemButton } from '../../Menu/MenuItem/MenuItemButton';
 import Html from '../Html';
@@ -13,7 +14,7 @@ const LocalLanguageAlternatives = ({ language, languages, data, children }) => {
         setSelectedLanguage(value);
     };
 
-    const languageName = languageLabels[language];
+    const languageName = language === DEFAULT_LANGUAGE ? language : languageLabels[language];
     const label = `No ${languageName} example exists, select:`;
     const languageItems = languages.map(lang => ({
         Component: lang === selectedLanguage ? SelectedMenuItemButton : MenuItemButton,
