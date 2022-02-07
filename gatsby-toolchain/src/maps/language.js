@@ -24,21 +24,22 @@ const languageLabels = {
 /**  Source: Ably Voltaire, src/components/code-block/code-block.js */
 const languageSyntaxHighlighterNames = {
     plaintext: { label: null, key: 'plaintext' },
-    Javascript: { label: 'JS', key: 'javascript' },
-    Java: { label: 'Java', key: 'java' },
-    Ruby: { label: 'Ruby', key: 'ruby' },
-    Python: { label: 'Python', key: 'python' },
-    PHP: { label: 'PHP', key: 'php' },
-    Shell: { label: 'Shell', key: 'bash' },
-    'C#': { label: 'C#', key: 'cs' },
-    Go: { label: 'Go', key: 'go' },
-    HTML: { label: 'HTML', key: 'xml' },
-    'C++': { label: 'C++', key: 'cpp' },
-    Dart: { label: 'Dart', key: 'dart' },
-    Swift: { label: 'Swift', key: 'swift' },
-    'Objective C': { label: 'Objective C', key: 'objectivec' },
-    'Node.js': { label: 'Node.js', key: 'javascript' },
-    JSON: { label: 'JSON', key: 'json' },
+    javascript: { label: 'JS', key: 'javascript' },
+    java: { label: 'Java', key: 'java' },
+    ruby: { label: 'Ruby', key: 'ruby' },
+    python: { label: 'Python', key: 'python' },
+    php: { label: 'PHP', key: 'php' },
+    shell: { label: 'Shell', key: 'bash' },
+    csharp: { label: 'C#', key: 'cs' },
+    go: { label: 'Go', key: 'go' },
+    html: { label: 'HTML', key: 'xml' },
+    cpp: { label: 'C++', key: 'cpp' },
+    dart: { label: 'Dart', key: 'dart' },
+    swift: { label: 'Swift', key: 'swift' },
+    objc: { label: 'Objective C', key: 'objectivec' },
+    nodejs: { label: 'Node.js', key: 'javascript' },
+    json: { label: 'JSON', key: 'json' },
+    // android: { label: 'Android', key: 'androidstudio' } Android Studio has an error when registering the language
 };
   
 export { languageSyntaxHighlighterNames };
