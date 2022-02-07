@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { primary, secondary } from '../../styles/colors';
+import { primary, secondary, text } from '../../styles/colors';
 
 /** cf. Ably website repo
  * app/assets/javascripts/modules/documentation/htmlTemplates.js
@@ -45,7 +45,7 @@ const HorizontalCodeMenu = styled(HorizontalMenu)`
     background-color: ${primary.charcoal};
 	align-items: center;
 
-    color: ${primary.white};
+    color: ${text.linkInverse};
 	.c-menu__item,
 	.c-menu__trigger{
 		letter-spacing: -0.1px;
@@ -60,13 +60,13 @@ const HorizontalCodeMenu = styled(HorizontalMenu)`
 		font-family: 'Inconsolata', monospace;
 		background: none;
 		padding: 0;
-		color: ${secondary.smokeGrey};
+		color: ${text.aux};
 
 
 		&:hover,
 		&.active,
 		&.is-active{
-			color: ${primary.brightOrange};
+			color: ${text.linkHoverAlternateMuted};
 		}
 	}
 

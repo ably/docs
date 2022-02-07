@@ -8,9 +8,9 @@ import MenuItem from './MenuItem';
 
 const TopCodeMenu = ({ languages }) => {
     const pageLanguage = useContext(PageLanguageContext);
-    const showCodeMenu = languages.length > 1;
+    const showCodeMenu = languages && languages.length > 1;
     const showDefaultLink = pageLanguage !==  DEFAULT_LANGUAGE;
-    return <div className='pt-64'>{
+    return <div className='fixed pt-64 right-0 z-10'>{
         showCodeMenu ? <HorizontalCodeMenu>
             <MenuLabel>Show code examples in:</MenuLabel>
             { showDefaultLink ?
