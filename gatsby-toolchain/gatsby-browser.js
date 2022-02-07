@@ -11,6 +11,7 @@ import {
 } from "@ably/ui/core/scripts";
   
 import sprites from "@ably/ui/core/sprites.svg";
+import { replace } from 'lodash';
   
 document.addEventListener("DOMContentLoaded", () => {
     // Inserts a sprite map for <use> tags
@@ -26,3 +27,26 @@ document.addEventListener("DOMContentLoaded", () => {
   
     attachStoreToWindow(store);
 });
+
+const versionRegex = /\/versions\/v\d+\.\d+/;
+const languageRegex = /\/language\/\w+/;
+
+const shouldUpdateScroll = ({
+  prevRouterProps,
+  routerProps: { location },
+}) => {
+  if(!prevRouterProps || !location) {
+    return false;
+  }
+  const curr = location.href;
+  const prev =  prevRouterProps.location.href;
+
+  const plainCurr = curr.replace(versionRegex,'').replace(languageRegex,'');
+  const plainPrev = prev.replace(versionRegex,'').replace(languageRegex,'');
+
+  return plainCurr !== plainPrev;
+};
+
+export {
+  shouldUpdateScroll
+}
