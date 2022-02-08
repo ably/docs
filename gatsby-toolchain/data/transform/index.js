@@ -1,11 +1,12 @@
 const yaml = require('js-yaml');
-const { upperFirst, camelCase, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
+const { upperFirst, camelCase, isPlainObject, lowerFirst, isEmpty, merge, update } = require('lodash');
 const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require("./front-matter");
 const DataTypes = require("../types");
 const { ROOT_LEVEL, MAX_LEVEL } = require("../../src/components/Sidebar/consts");
 const { preParser } = require("./pre-parser");
 const { enhancedParse } = require("./parser-enhancements");
-const { indent } = require('./shared-utilities');
+const { maybeRetrievePartial } = require("./retrieve-partials");
+const { flattenContentOrderedList } = require("./shared-utilities");
 
 const INLINE_TOC_REGEX = /^inline\-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
 
@@ -90,12 +91,24 @@ const constructDataObjectsFromStrings = (contentStrings, frontmatterMeta) => {
   return dataObjects;
 }
 
-const flattenContentOrderedList = contentOrderedList => contentOrderedList.reduce((acc, {data, type}) => {
-  if(Array.isArray(data)) {
-      return acc.concat(flattenContentOrderedList(data));
-  }
-  return acc.concat([{ data, type }]);
-}, []);
+const createInlineToc = (inlineTOCOnly, slug, parentNode, { createContentDigest, createNodeId, updateWithTransform }) => {
+  const loadedInlineTOC = yaml.load(inlineTOCOnly,'utf-8');
+  const inlineTOCLinks = {
+    tableOfContents: processTOCItems(loadedInlineTOC)
+  };
+  const inlineTOCNode = merge(inlineTOCLinks, {
+    id: createNodeId(`${parentNode.id} >>> InlineTOC`),
+    children: [],
+    parent: parentNode.id,
+    slug,
+    internal: {
+      contentDigest: createContentDigest(inlineTOCLinks),
+      type: makeTypeFromParentType('InlineTOC')(parentNode),
+    }
+  });
+
+  updateWithTransform({ parent: parentNode, child: inlineTOCNode });
+}
 
 // Source: https://www.gatsbyjs.com/docs/how-to/plugins-and-themes/creating-a-transformer-plugin/
 const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, createContentDigest, createNodeId }) => updateWithTransform => {
@@ -105,22 +118,9 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
       noInlineTOC,
       inlineTOCOnly
     } = retrieveAndReplaceInlineTOC(preTextileTransform);
-    const loadedInlineTOC = yaml.load(inlineTOCOnly,'utf-8');
-    const inlineTOCLinks = {
-      tableOfContents: processTOCItems(loadedInlineTOC)
-    };
-    const inlineTOCNode = merge(inlineTOCLinks, {
-      id: createNodeId(`${id} >>> InlineTOC`),
-      children: [],
-      parent: node.id,
-      slug,
-      internal: {
-        contentDigest: createContentDigest(inlineTOCLinks),
-        type: makeTypeFromParentType('InlineTOC')(node),
-      }
-    });
 
-    updateWithTransform({ parent: node, child: inlineTOCNode });
+    createInlineToc(inlineTOCOnly, slug, node, { createContentDigest, createNodeId, updateWithTransform });
+
     const withPartials = parseNanocPartials(noInlineTOC);
     const withoutFalsyValues = removeFalsy(withPartials);
 
@@ -162,75 +162,6 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
         htmlNode[`htmlId`] = content.id
     }
     updateWithTransform({ parent: node, child: htmlNode })
-}
-
-const maybeRetrievePartial = graphql => async ({ data, type }) => {
-  if(type !== DataTypes.Partial) {
-    return { data, type };
-  }
-  const fileName = (data.match(/<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/) ?? [,''])[1];
-
-  const attributes = data.split(',');
-
-  let attributeObject = {};
-  if(attributes.length > 1) {
-    const attributePairs = attributes.slice(1)
-      .map(attr => {
-        const pairs = attr.match(/\s+(\w+):\s+(\w+)/);
-        return pairs.length === 3 ? [pairs[1],pairs[2]] : null;
-      })
-      .filter(x => !!x);
-    attributeObject = Object.fromEntries(attributePairs);
-  }
-
-  const result = await graphql(`
-      query {
-        fileHtmlPartial(relativePath: { eq:"${fileName}.textile"}) {
-          contentOrderedList {
-            data
-            type
-          }
-        }
-      }
-    `)
-  const partial = result.data.fileHtmlPartial;
-  const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
-  let contentOrderedList = partial && partial.contentOrderedList;
-  if(partial) {
-    contentOrderedList = await Promise.all(contentOrderedList.map(retrievePartialFromGraphQL));
-    contentOrderedList = flattenContentOrderedList(contentOrderedList);
-
-    if(attributeObject['indent']) {
-      if(attributeObject['skip_first_indent']) {
-        contentOrderedList = contentOrderedList.map((content, i) => {
-          if(i === 0) {
-            return {
-              ...content,
-              data: indent(
-                content.data.substring(content.data.indexOf("\n") + 1),
-                parseInt(attributeObject['indent'])
-              )
-            };
-          }
-
-          return {
-            ...content,
-            data: indent(content.data, parseInt(attributeObject['indent']))
-          }
-        });
-      } else {
-        contentOrderedList = contentOrderedList.map(content => ({
-          ...content,
-          data: indent(content.data, parseInt(attributeObject['indent']))
-        }));
-      }
-    }
-  }
-
-  return {
-    data: contentOrderedList,
-    type
-  };
 }
 
 module.exports = {
