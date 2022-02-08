@@ -18,7 +18,6 @@ const Document = ({ pageContext: { contentOrderedList, language, languages }, da
             .filter(language => !IGNORED_LANGUAGES.includes(language)),
         [languages]
     );
-    console.log(title);
     const elements = useMemo(() => contentOrderedList.filter(
         ({ type }) =>  Object.values(DataTypes).includes(type)
     ).map(
@@ -32,9 +31,8 @@ const Document = ({ pageContext: { contentOrderedList, language, languages }, da
             <LeftSideBar className="col-span-1 px-8" />
             <Article>
                 <H1 data={ title } attribs={{ id: 'title' }} />
-                {
-                elements
-            }</Article>
+                {elements}
+            </Article>
         </Layout>
     </PageLanguageContext.Provider>;
 };

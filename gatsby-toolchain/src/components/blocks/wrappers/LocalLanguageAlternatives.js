@@ -14,8 +14,9 @@ const LocalLanguageAlternatives = ({ language, languages, data, children }) => {
         setSelectedLanguage(value);
     };
 
-    const languageName = language === DEFAULT_LANGUAGE ? language : languageLabels[language];
-    const label = `No ${languageName} example exists, select:`;
+    const label = language === DEFAULT_LANGUAGE ? 
+        `Select:` :
+        `No ${languageLabels[language]} example exists, select:`;
     const languageItems = languages.map(lang => ({
         Component: lang === selectedLanguage ? SelectedMenuItemButton : MenuItemButton,
         props: {
