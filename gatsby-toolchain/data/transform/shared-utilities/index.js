@@ -4,7 +4,15 @@ const indent = (str, indentAmount, spacer = '\t') => {
     return result;
 }
 
+const flattenContentOrderedList = contentOrderedList => contentOrderedList.reduce((acc, {data, type}) => {
+    if(Array.isArray(data)) {
+        return acc.concat(flattenContentOrderedList(data));
+    }
+    return acc.concat([{ data, type }]);
+  }, []);
+
 module.exports = {
-    indent
+    indent,
+    flattenContentOrderedList
 }
   
