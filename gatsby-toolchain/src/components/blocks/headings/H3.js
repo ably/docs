@@ -1,7 +1,7 @@
 import React from 'react';
 import Html from '../Html';
 import styled from 'styled-components';
-import { fonts, spacing } from '../../../styles';
+import { fonts } from '../../../styles';
 
 const StyledH3 = styled.h3`
     ${fonts.h3};
