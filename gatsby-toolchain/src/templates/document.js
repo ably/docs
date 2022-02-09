@@ -8,10 +8,16 @@ import PageLanguageContext from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { IGNORED_LANGUAGES } from '../../data/createPages/createPageVariants';
 import { H1 } from '../components/blocks/headings';
+import VersionMenu from '../components/Menu/version-menu';
 
-const Document = ({ pageContext: { contentOrderedList, language, languages }, data: { inlineTOC: { tableOfContents }, document: {
-    meta: { title }
-} } }) => {
+const Document = ({
+    pageContext: { contentOrderedList, language, languages, version, slug },
+    data: { inlineTOC: { tableOfContents },
+    document: {
+        meta: { title }
+    },
+    versions
+ } }) => {
     const filteredLanguages = useMemo(() =>
         languages
             .filter(language => /^[^,]+$/.test(language))
@@ -31,6 +37,7 @@ const Document = ({ pageContext: { contentOrderedList, language, languages }, da
             <LeftSideBar className="col-span-1 px-8" />
             <Article>
                 <H1 data={ title } attribs={{ id: 'title' }} />
+                <VersionMenu versions={ versions.edges } version={ version } rootVersion={ slug }/>
                 {elements}
             </Article>
         </Layout>
@@ -44,6 +51,15 @@ export const query = graphql`
         document: fileHtml(slug: { eq: $slug }) {
             meta {
                 title
+            }
+        }
+        versions: allFileHtmlVersion(filter: { parentSlug: {eq: $slug }}) {
+            edges {
+                node {
+                    parentSlug
+                    slug
+                    version
+                }
             }
         }
         inlineTOC: fileInlineToc(slug: { eq: $slug }) {
