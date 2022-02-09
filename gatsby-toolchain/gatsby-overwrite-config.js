@@ -1,6 +1,5 @@
 const onCreateWebpackConfig = ({ actions, getConfig }, options = {}) => {
     const prevConfig = getConfig();
-  
     actions.replaceWebpackConfig({
         ...prevConfig,
         resolve: {
@@ -13,4 +12,6 @@ const onCreateWebpackConfig = ({ actions, getConfig }, options = {}) => {
     });
 };
 
-export default onCreateWebpackConfig;
+module.exports = {
+    onCreateWebpackConfig
+};
