@@ -1,5 +1,6 @@
 const { createPages } = require('./data/createPages');
 const { onCreateNode } = require('./data/onCreateNode');
+const { onCreateWebpackConfig } = require('./gatsby-overwrite-config');
 
 const createSchemaCustomization = ({ actions }) => {
   const { createTypes } = actions
@@ -17,6 +18,7 @@ const createSchemaCustomization = ({ actions }) => {
   createTypes(typeDefs)
 }
 
+exports.onCreateWebpackConfig = onCreateWebpackConfig;
 exports.onCreateNode = onCreateNode;
 exports.createPages = createPages;
 exports.createSchemaCustomization = createSchemaCustomization;
