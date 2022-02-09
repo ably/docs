@@ -6,7 +6,7 @@ const onCreateWebpackConfig = ({ actions, getConfig }, options = {}) => {
         resolve: {
             ...prevConfig.resolve,
             fallback: {
-                ...prevConfig.fallback,
+                ...prevConfig.resolve.fallback,
                 util: require.resolve("util/")
             }
         }
