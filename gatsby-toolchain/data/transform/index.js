@@ -108,7 +108,24 @@ const createInlineToc = (inlineTOCOnly, slug, parentNode, { createContentDigest,
   });
 
   updateWithTransform({ parent: parentNode, child: inlineTOCNode });
-}
+};
+
+const splitDataAndMetaData = text => {
+  const withPartials = parseNanocPartials(text);
+  const withoutFalsyValues = removeFalsy(withPartials);
+
+  const frontmatterMeta = tryRetrieveMetaData(withoutFalsyValues[0]);
+  if(frontmatterMeta !== NO_MATCH) {
+    withoutFalsyValues[0] = frontmatterMeta.body;
+  }
+
+  const asDataObjects = constructDataObjectsFromStrings(withoutFalsyValues, frontmatterMeta);
+
+  return {
+    data: asDataObjects,
+    frontmatterMeta
+  };
+};
 
 // Source: https://www.gatsbyjs.com/docs/how-to/plugins-and-themes/creating-a-transformer-plugin/
 const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, createContentDigest, createNodeId }) => updateWithTransform => {
@@ -121,17 +138,9 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
 
     createInlineToc(inlineTOCOnly, slug, node, { createContentDigest, createNodeId, updateWithTransform });
 
-    const withPartials = parseNanocPartials(noInlineTOC);
-    const withoutFalsyValues = removeFalsy(withPartials);
-
-    const frontmatterMeta = tryRetrieveMetaData(withoutFalsyValues[0]);
-    if(frontmatterMeta !== NO_MATCH) {
-      withoutFalsyValues[0] = frontmatterMeta.body;
-    }
-
-    const asDataObjects = constructDataObjectsFromStrings(withoutFalsyValues, frontmatterMeta);
+    const { data, frontmatterMeta } = splitDataAndMetaData(noInlineTOC);
     const newNodeData = {
-      contentOrderedList: asDataObjects,
+      contentOrderedList: data,
       id,
       children: [],
       parent: node.id,
@@ -141,8 +150,10 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
       newNodeData.meta = filterAllowedMetaFields(frontmatterMeta.attributes);
     }
 
+    const contentDigest = createContentDigest(data);
+
     const newNodeInternals = {
-      contentDigest: createContentDigest(asDataObjects),
+      contentDigest,
       type,
       mediaType: 'text/html'
     };
@@ -154,14 +165,41 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
       // Partials should never have a slug, every other page type needs one.
       newNodeData.slug = slug;
     }
+
     const htmlNode = {
       ...newNodeData,
       internal: newNodeInternals,
     }
     if (content.id) {
-        htmlNode[`htmlId`] = content.id
+      htmlNode.internal[`htmlId`] = content.id
     }
-    updateWithTransform({ parent: node, child: htmlNode })
+
+    if(/\/versions\/v[\d\.]+/.test(slug)) {
+      const parentSlug = slug.replace(/\/versions\/v[\d\.]+/,'');
+      htmlNode.parentSlug = parentSlug;
+      const version = slug.match(/\/versions\/v([\d\.]+)/)[1];
+      htmlNode.version = version;
+      const versionNodeInternals = {
+        contentDigest,
+        type: makeTypeFromParentType('Version')(htmlNode),
+        mediaType: 'text/html'
+      };
+      const versionNodeData = {
+        parent: id,
+        id: createNodeId(`${id} >>> Version`),
+        children: [],
+        parentSlug,
+        slug,
+        version
+      };
+      const versionNode = {
+        ...versionNodeData,
+        internal: versionNodeInternals
+      };
+      updateWithTransform({ parent: htmlNode, child: versionNode });
+    }
+
+    updateWithTransform({ parent: node, child: htmlNode });
 }
 
 module.exports = {
