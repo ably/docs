@@ -77,12 +77,12 @@ const Code = ({ data, attribs }) => {
                 customStyle={{
                     backgroundColor: colors.containers.three,
                     padding: '20px',
-                    borderLeft: '10px solid ${colors.containers.one}',
+                    borderLeft: `10px solid ${colors.containers.one}`,
                     borderRadius: '4px',
                     margin: 0,
-                    }}
-                    language={displayLanguage.key}
-                    style={githubGist}
+                }}
+                language={displayLanguage.key}
+                style={githubGist}
             >
                 {data[0].data}
             </SyntaxHighlighter>
