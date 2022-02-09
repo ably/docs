@@ -1,4 +1,5 @@
 const { isArray } = require("lodash");
+const { LATEST_ABLY_API_VERSION } = require("../transform/constants");
 
 const DEFAULT_LANGUAGE = 'default';
 const TEXT_LANGUAGE = 'text';
@@ -28,7 +29,7 @@ const addLanguagesToSet = (languageSet, languageToKeep = DEFAULT_LANGUAGE) => (c
     }
 }
 
-const createLanguagePageVariants = (createPage, documentTemplate) => (contentOrderedList, slug) => {
+const createLanguagePageVariants = (createPage, documentTemplate) => (contentOrderedList, slug, parentSlug = null, version = null) => {
     const languageSet = new Set();
     contentOrderedList.forEach(addLanguagesToSet(languageSet));
     
@@ -38,7 +39,8 @@ const createLanguagePageVariants = (createPage, documentTemplate) => (contentOrd
             component: documentTemplate,
             context: {
                 // The slug is the canonical slug, not the variant path
-                slug,
+                slug: parentSlug ?? slug,
+                version: version ?? LATEST_ABLY_API_VERSION,
                 language: lang,
                 languages: Array.from(languageSet),
                 contentOrderedList
