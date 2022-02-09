@@ -11,7 +11,6 @@ import {
 } from "@ably/ui/core/scripts";
   
 import sprites from "@ably/ui/core/sprites.svg";
-import { replace } from 'lodash';
   
 document.addEventListener("DOMContentLoaded", () => {
     // Inserts a sprite map for <use> tags
