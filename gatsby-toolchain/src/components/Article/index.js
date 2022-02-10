@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Article = ({ children }) => <article className="col-span-4">{
+const Article = ({ columns=3, children }) => <article className={`col-span-${columns}`}>{
         children    
 }</article>;
 
