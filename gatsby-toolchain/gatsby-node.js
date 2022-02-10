@@ -16,7 +16,7 @@ const createSchemaCustomization = ({ actions }) => {
     }
   `
   createTypes(typeDefs)
-}
+};
 
 exports.onCreateWebpackConfig = onCreateWebpackConfig;
 exports.onCreateNode = onCreateNode;
