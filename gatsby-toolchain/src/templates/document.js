@@ -3,7 +3,6 @@ import { graphql } from 'gatsby';
 import Layout from '../components/layout';
 import Html from '../components/blocks/Html';
 import { LeftSideBar } from '../components/StaticQuerySidebar';
-import DataTypes from '../../data/types';
 import PageLanguageContext from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { IGNORED_LANGUAGES } from '../../data/createPages/createPageVariants';
@@ -11,7 +10,13 @@ import { H1 } from '../components/blocks/headings';
 import VersionMenu from '../components/Menu/version-menu';
 
 const Document = ({
-    pageContext: { contentOrderedList, language, languages, version, slug },
+    pageContext: {
+        contentOrderedList,
+        language,
+        languages,
+        version,
+        slug
+    },
     data: { inlineTOC: { tableOfContents },
     document: {
         meta: { title }
@@ -24,9 +29,7 @@ const Document = ({
             .filter(language => !IGNORED_LANGUAGES.includes(language)),
         [languages]
     );
-    const elements = useMemo(() => contentOrderedList.filter(
-        ({ type }) =>  Object.values(DataTypes).includes(type)
-    ).map(
+    const elements = useMemo(() => contentOrderedList.map(
         // It is currently safe to use an index as a key.
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html data={data} key={i}/>
@@ -35,11 +38,12 @@ const Document = ({
     return <PageLanguageContext.Provider value={ language }>
         <Layout languages={filteredLanguages }>
             <LeftSideBar className="col-span-1 px-8" />
-            <Article>
+            <Article columns={3}>
                 <H1 data={ title } attribs={{ id: 'title' }} />
                 <VersionMenu versions={ versions.edges } version={ version } rootVersion={ slug }/>
                 {elements}
             </Article>
+            <p className="col-span-1"></p>
         </Layout>
     </PageLanguageContext.Provider>;
 };
