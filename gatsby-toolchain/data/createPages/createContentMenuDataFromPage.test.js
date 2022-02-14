@@ -1,5 +1,7 @@
+import { htmlParser } from "../html-parser";
+import { postParser } from "../transform/post-parser";
 import HtmlDataTypes from "../types/html";
-import createContentMenuDataFromPage, { idFromName, getTextFromPage } from "./createContentMenuDataFromPage";
+import { createContentMenuDataFromPage, idFromName, getTextFromPage } from "./createContentMenuDataFromPage";
 
 describe('IDs of form `word1-word2-word3` are generated from names of form `Word1Word2 Word3`', () => {
     test('Non-matching names are not altered', () => {
@@ -45,18 +47,18 @@ describe('Text is retrieved recursively from data objects representing HTML page
 
 const h2DataObjectWithID = {
     data: 'Hello World',
-    type: HtmlDataTypes.h2,
+    name: HtmlDataTypes.h2,
     attribs: { id: 'override' }
 };
 
 const simpleH2DataObject = {
     data: 'Hello World',
-    type: HtmlDataTypes.h2
+    name: HtmlDataTypes.h2
 };
 
 const simpleH3DataObject = {
     data: 'Hello World',
-    type: HtmlDataTypes.h3
+    name: HtmlDataTypes.h3
 };
 
 const nestedDataObjectWithMenuItems ={
@@ -91,13 +93,13 @@ const noIDNestedH2Item = {
         },
         {
             data: 'Highlighted Text',
-            type: HtmlDataTypes.span
+            name: HtmlDataTypes.span
         },
         {
             data: 'End transmission',
         }
     ],
-    type: HtmlDataTypes.h2
+    name: HtmlDataTypes.h2
 };
 
 describe('Content menu data is retrieved recursively from data objects representing HTML pages', () => {
@@ -135,5 +137,34 @@ describe('Content menu data is retrieved recursively from data objects represent
             "level": 2,
             "name": "Hello WorldHighlighted TextEnd transmission"
         }]);
+    });
+});
+
+const brokenHtmlSample = `<h2 id="language-specific-content"><span lang="default">Language specific (default)</span><span lang="javascript">Language specific (JavaScript)</span></h2>`;
+
+describe('Content menu data is retrieved correctly from data objects generated from HTML that has broken in the past', () => {
+    /**
+     * Potential issues uncovered by test:
+     * Problem:
+     *      language headings aren't filtered by site
+     * Solution:
+     *      languages should be filtered by site
+     */
+    const processedHtml = htmlParser(postParser(brokenHtmlSample));
+    test('Only language matching the default language is extracted for usage by the createContentMenuDataFromPage function', () => {
+        const result = processedHtml.map(item => createContentMenuDataFromPage(item));
+        expect(result).toEqual( [[{
+            "id": "language-specific-content",
+            "level": 2,
+            "name": "Language specific (default)",
+        },],]);
+    });
+    test('Only language matching a provided langauge is extracted for usage by the createContentMenuDataFromPage function', () => {
+        const result = processedHtml.map(item => createContentMenuDataFromPage(item, [], 'javascript'));
+        expect(result).toEqual( [[{
+            "id": "language-specific-content",
+            "level": 2,
+            "name": "Language specific (JavaScript)",
+        },],]);
     });
 });
