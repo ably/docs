@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { spacing, mq } from '../../styles';
+import { spacing, mq, colors } from '../../styles';
 
 // Source: Voltaire. See Ably UI if we need shared component.
 const NAV_HEIGHT_DESKTOP = 64;
@@ -18,6 +18,14 @@ const StickySidebar = styled.aside`
 
     ${mq.minWidth.medium} {
         display: block;
+    }
+    border-bottom: solid 1px ${ colors.containers.one };
+
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+    ::-webkit-scrollbar {
+        width: 0;
+        background: transparent;
     }
 `;
 
