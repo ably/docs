@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DEFAULT_LANGUAGE } from '../../../../data/createPages/createPageVariants';
+import { DEFAULT_LANGUAGE } from "../../../../data/createPages/constants";
 import languageLabels from '../../../maps/language';
 import MenuItemButton, { SelectedMenuItemButton } from '../../Menu/MenuItem/MenuItemButton';
 import Html from '../Html';

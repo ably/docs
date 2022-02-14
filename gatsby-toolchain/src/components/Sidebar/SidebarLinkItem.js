@@ -1,16 +1,18 @@
-import { Link } from 'gatsby';
 import React, { useMemo } from 'react';
 import SidebarItem from './SidebarItem';
+import SidebarLink from './SidebarLink';
 import SidebarLinkMenu from './SidebarLinkMenu';
 
-const SidebarLinkItem = ({ label, link, content, level }) => {
+const SidebarLinkItem = ({ uuid, label, link, content, level, interactable = false, indent = 0 }) => {
     const linkContent = useMemo(() => Array.isArray(content) ?
-        <SidebarLinkMenu key={ label } data={ content } /> :
-        <Link to={ link }>{ content }</Link>, [content, label, link]);
+        <SidebarLinkMenu key={ label } data={ content } indent={indent + 16}/> :
+        <SidebarLink to={ link } $leaf={true} indent={indent}>{ content }</SidebarLink>, [content, label, link]);
     return <SidebarItem
+        uuid={uuid}
         label={ label }
         content={ linkContent }
-        level={ level } />;
+        level={ level }
+        interactable={interactable} />;
 }
 
 export default SidebarLinkItem;
