@@ -1,6 +1,7 @@
 import * as fc from 'fast-check';
+import { DEFAULT_LANGUAGE } from './constants';
 const HtmlDataTypes = require('../types/html');
-const { DEFAULT_LANGUAGE, addLanguagesToSet } = require('./createPageVariants');
+const { addLanguagesToSet } = require('./createPageVariants');
 
 const simpleHtmlDataObject = {
     data: [],

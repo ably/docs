@@ -2,7 +2,7 @@ import styled from 'styled-components';
 import { spacing, mq } from '../../styles';
 
 // Source: Voltaire. See Ably UI if we need shared component.
-const NAV_HEIGHT_DESKTOP = 56;
+const NAV_HEIGHT_DESKTOP = 64;
 const DISTANCE_FROM_TOP_DESKTOP = spacing.medium.value;
 
 const StickySidebar = styled.aside`

@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { HorizontalCodeMenu } from '.';
-import { DEFAULT_LANGUAGE } from '../../../data/createPages/createPageVariants';
+import { DEFAULT_LANGUAGE } from "../../../data/createPages/constants";
 import PageLanguageContext from '../../contexts/page-language-context';
 import LanguageLink from '../Link/LanguageLink';
 import MenuLabel from './Label';

@@ -1,6 +1,6 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
-import { DEFAULT_LANGUAGE } from '../../../../data/createPages/createPageVariants';
+import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import { Span } from '../dividers';
 import ConditionalChildrenLanguageDisplay from './ConditionalChildrenLanguageDisplay';
 

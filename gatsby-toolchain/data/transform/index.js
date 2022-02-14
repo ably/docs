@@ -174,6 +174,7 @@ const transformNanocTextiles = (node, content, id, type, { createNodesFromPath, 
       htmlNode.internal[`htmlId`] = content.id
     }
 
+    // Add completely separate nodes to keep track of relevant versions
     if(/\/versions\/v[\d\.]+/.test(slug)) {
       const parentSlug = slug.replace(/\/versions\/v[\d\.]+/,'');
       htmlNode.parentSlug = parentSlug;

@@ -1,4 +1,4 @@
-import { DEFAULT_LANGUAGE } from "../../data/createPages/createPageVariants";
+import { DEFAULT_LANGUAGE } from "../../data/createPages/constants";
 
 const languageLabels = {
     'javascript': 'JS',
