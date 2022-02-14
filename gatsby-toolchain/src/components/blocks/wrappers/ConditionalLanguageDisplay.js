@@ -1,5 +1,5 @@
 import React, { Children, useContext } from 'react';
-import { IGNORED_LANGUAGES_FOR_DISPLAY } from '../../../../data/createPages/createPageVariants';
+import { IGNORED_LANGUAGES_FOR_DISPLAY } from '../../../../data/createPages/constants';
 import PageLanguageContext from '../../../contexts/page-language-context';
 
 const ConditionalLanguageDisplay = ({ attribs, children }) => {

@@ -1,7 +1,7 @@
 import { Link } from 'gatsby';
 import React, { useContext } from 'react';
 import styled from 'styled-components';
-import { DEFAULT_LANGUAGE } from '../../../data/createPages/createPageVariants';
+import { DEFAULT_LANGUAGE } from "../../../data/createPages/constants";
 import PageLanguageContext from '../../contexts/page-language-context';
 import languageLabels from '../../maps/language';
 import { primary, text } from '../../styles/colors';

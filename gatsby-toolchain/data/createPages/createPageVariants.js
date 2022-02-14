@@ -1,14 +1,7 @@
 const { isArray } = require("lodash");
 const { LATEST_ABLY_API_VERSION } = require("../transform/constants");
-
-const DEFAULT_LANGUAGE = 'default';
-const TEXT_LANGUAGE = 'text';
-const HYPERTEXT_LANGUAGE = 'html';
-const YETANOTHERMARKUP_LANGUAGE = 'yaml';
-const JSON_LANGUAGE = 'json';
-
-const IGNORED_LANGUAGES = [DEFAULT_LANGUAGE, TEXT_LANGUAGE, HYPERTEXT_LANGUAGE, YETANOTHERMARKUP_LANGUAGE, JSON_LANGUAGE];
-const IGNORED_LANGUAGES_FOR_DISPLAY = [TEXT_LANGUAGE, HYPERTEXT_LANGUAGE, YETANOTHERMARKUP_LANGUAGE, JSON_LANGUAGE];
+const { DEFAULT_LANGUAGE } = require("./constants");
+const { createContentMenuDataFromPage } = require("./createContentMenuDataFromPage");
 
 // Mutation (modifying the languageSet provided) is much easier here
 // Should also be safer given the guarantees of a Set()
@@ -34,6 +27,7 @@ const createLanguagePageVariants = (createPage, documentTemplate) => (contentOrd
     contentOrderedList.forEach(addLanguagesToSet(languageSet));
     
     languageSet.forEach(lang => {
+        const contentMenu = contentOrderedList.map(item => createContentMenuDataFromPage(item, [], lang));
         createPage({
             path: `/documentation/${slug}/language/${lang}`,
             component: documentTemplate,
@@ -43,7 +37,8 @@ const createLanguagePageVariants = (createPage, documentTemplate) => (contentOrd
                 version: version ?? LATEST_ABLY_API_VERSION,
                 language: lang,
                 languages: Array.from(languageSet),
-                contentOrderedList
+                contentOrderedList,
+                contentMenu: contentMenu ?? []
             }
         });
     });
@@ -51,9 +46,6 @@ const createLanguagePageVariants = (createPage, documentTemplate) => (contentOrd
 }
 
 module.exports = {
-    DEFAULT_LANGUAGE,
-    IGNORED_LANGUAGES,
-    IGNORED_LANGUAGES_FOR_DISPLAY,
     addLanguagesToSet,
     createLanguagePageVariants
 }
