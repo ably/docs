@@ -5,9 +5,10 @@ import Html from '../components/blocks/Html';
 import { LeftSideBar } from '../components/StaticQuerySidebar';
 import PageLanguageContext from '../contexts/page-language-context';
 import Article from '../components/Article';
-import { IGNORED_LANGUAGES } from '../../data/createPages/createPageVariants';
+import { IGNORED_LANGUAGES } from "../../data/createPages/constants";
 import { H1 } from '../components/blocks/headings';
 import VersionMenu from '../components/Menu/version-menu';
+import RightSidebar from '../components/Sidebar/RightSidebar';
 
 const Document = ({
     pageContext: {
@@ -15,6 +16,7 @@ const Document = ({
         language,
         languages,
         version,
+        contentMenu,
         slug
     },
     data: { inlineTOC: { tableOfContents },
@@ -23,6 +25,7 @@ const Document = ({
     },
     versions
  } }) => {
+     console.log(contentMenu);
     const filteredLanguages = useMemo(() =>
         languages
             .filter(language => /^[^,]+$/.test(language))
@@ -37,13 +40,13 @@ const Document = ({
 
     return <PageLanguageContext.Provider value={ language }>
         <Layout languages={filteredLanguages }>
-            <LeftSideBar className="col-span-1 px-8" />
+            <LeftSideBar className="col-span-1 px-16" />
             <Article columns={3}>
                 <H1 data={ title } attribs={{ id: 'title' }} />
                 <VersionMenu versions={ versions.edges } version={ version } rootVersion={ slug }/>
                 {elements}
             </Article>
-            <p className="col-span-1"></p>
+            <RightSidebar className="col-span-1 px-16" menuData={contentMenu[0]}/>
         </Layout>
     </PageLanguageContext.Provider>;
 };
@@ -78,4 +81,4 @@ export const query = graphql`
             }
         }
     }
-`
+`;
