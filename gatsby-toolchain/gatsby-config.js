@@ -11,6 +11,7 @@ module.exports = {
     "gatsby-plugin-sharp",
     "gatsby-transformer-yaml",
     "gatsby-transformer-sharp",
+    // Images
     {
       resolve: "gatsby-source-filesystem",
       options: {
@@ -19,6 +20,7 @@ module.exports = {
       },
       __key: "images",
     },
+    // Data
     {
       resolve: "gatsby-source-filesystem",
       options: {
