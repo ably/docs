@@ -1,5 +1,5 @@
 import React, { Children, useContext } from 'react';
-import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES_FOR_DISPLAY } from '../../../../data/createPages/createPageVariants';
+import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES_FOR_DISPLAY } from "../../../../data/createPages/constants";
 import PageLanguageContext from '../../../contexts/page-language-context';
 
 const makeGroup = (lang, index, data) => ({
