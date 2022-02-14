@@ -27,6 +27,20 @@ const StickySidebar = styled.aside`
         width: 0;
         background: transparent;
     }
+
+    ::after {
+        content: "";
+        font-size: 12px;
+        text-align: bottom;
+        display: block;
+        position: sticky;
+        width: 100%;
+        height: 10%;
+        bottom: 0;
+        background: linear-gradient(0deg, white 0%, rgba(0,0,0,0) 100%);
+        touch-action: none;
+        pointer-events: none;
+    }
 `;
 
 export default StickySidebar;
