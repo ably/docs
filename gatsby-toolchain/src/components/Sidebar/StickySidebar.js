@@ -21,13 +21,6 @@ const StickySidebar = styled.aside`
     }
     border-bottom: solid 1px ${ colors.containers.one };
 
-    -ms-overflow-style: none;  /* Internet Explorer 10+ */
-    scrollbar-width: none;  /* Firefox */
-    ::-webkit-scrollbar {
-        width: 0;
-        background: transparent;
-    }
-
     ::after {
         content: "";
         font-size: 12px;
