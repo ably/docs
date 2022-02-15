@@ -11,6 +11,10 @@ import {
 } from "@ably/ui/core/scripts";
   
 import sprites from "@ably/ui/core/sprites.svg";
+
+const PAGE_OFFSET = 94;
+
+const offsetScroll = () => window.scrollBy(0,-PAGE_OFFSET);
   
 document.addEventListener("DOMContentLoaded", () => {
     // Inserts a sprite map for <use> tags
@@ -24,12 +28,10 @@ document.addEventListener("DOMContentLoaded", () => {
       ...reducerFlashes,
     });
   
+    window.addEventListener('hashchange', offsetScroll);
+
     attachStoreToWindow(store);
 });
-
-const smoothscroll = () => {
-
-};
 
 const versionRegex = /\/versions\/v\d+\.\d+/;
 const languageRegex = /\/language\/\w+/;
@@ -49,7 +51,7 @@ const shouldUpdateScroll = ({
   const plainPrev = prev.replace(versionRegex,'').replace(languageRegex,'').replace(hashRegex, '');
 
   return plainCurr !== plainPrev // If the current location is a variant of the previous location, do not update scroll
-    && !(location.href.indexOf("#") > -1); // If we're going to a hash link on page B from page A, do not update scroll
+    && !(location.href.indexOf("#") > -1); // If we're going to any hash link on page B from page A, do not update scroll; we want to visit the specific section
 };
 
 export {
