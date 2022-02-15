@@ -27,6 +27,10 @@ document.addEventListener("DOMContentLoaded", () => {
     attachStoreToWindow(store);
 });
 
+const smoothscroll = () => {
+
+};
+
 const versionRegex = /\/versions\/v\d+\.\d+/;
 const languageRegex = /\/language\/\w+/;
 
