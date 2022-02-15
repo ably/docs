@@ -33,6 +33,7 @@ const smoothscroll = () => {
 
 const versionRegex = /\/versions\/v\d+\.\d+/;
 const languageRegex = /\/language\/\w+/;
+const hashRegex = /(\/?#.*)$/;
 
 const shouldUpdateScroll = ({
   prevRouterProps,
@@ -44,10 +45,11 @@ const shouldUpdateScroll = ({
   const curr = location.href;
   const prev =  prevRouterProps.location.href;
 
-  const plainCurr = curr.replace(versionRegex,'').replace(languageRegex,'');
-  const plainPrev = prev.replace(versionRegex,'').replace(languageRegex,'');
+  const plainCurr = curr.replace(versionRegex,'').replace(languageRegex,'').replace(hashRegex, '');
+  const plainPrev = prev.replace(versionRegex,'').replace(languageRegex,'').replace(hashRegex, '');
 
-  return plainCurr !== plainPrev;
+  return plainCurr !== plainPrev // If the current location is a variant of the previous location, do not update scroll
+    && !(location.href.indexOf("#") > -1); // If we're going to a hash link on page B from page A, do not update scroll
 };
 
 export {
