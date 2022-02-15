@@ -25,7 +25,6 @@ const Document = ({
     },
     versions
  } }) => {
-     console.log(contentMenu);
     const filteredLanguages = useMemo(() =>
         languages
             .filter(language => /^[^,]+$/.test(language))
