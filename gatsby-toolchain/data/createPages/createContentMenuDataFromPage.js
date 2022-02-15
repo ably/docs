@@ -71,7 +71,7 @@ const createContentMenuDataFromPage = (page, contentMenuData = [], language = DE
         };
         contentMenuData.push(contentMenuItem);
     }
-    return contentMenuData;
+    return contentMenuData.filter(item => !!item && item.name !== '');
 };
 
 module.exports = {
