@@ -32,7 +32,7 @@ const RightSidebar = ({ menuData, className }) => {
         }
         previous = menuItem;
     }
-    return <Sidebar title="Table of contents" data={sidebarData} className={className} interactableLinkMenu={true}/>;
+    return <Sidebar title="On this page" data={sidebarData} className={className} interactableLinkMenu={true}/>;
 };
 
 export default RightSidebar;
