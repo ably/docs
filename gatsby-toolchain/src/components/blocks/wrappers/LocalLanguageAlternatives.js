@@ -3,7 +3,7 @@ import { DEFAULT_LANGUAGE } from "../../../../data/createPages/constants";
 import languageLabels from '../../../maps/language';
 import MenuItemButton, { SelectedMenuItemButton } from '../../Menu/MenuItem/MenuItemButton';
 import Html from '../Html';
-import HorizontalMenuWrapper from './HorizontalMenuWrapper';
+import HorizontalMenu from '../../Menu/HorizontalMenu';
 
 const LocalLanguageAlternatives = ({ language, languages, data, children }) => {
     const [selected, setSelected] = useState(children);
@@ -26,9 +26,10 @@ const LocalLanguageAlternatives = ({ language, languages, data, children }) => {
         content: languageLabels[lang] ?? ''
     }));
 
-    return <HorizontalMenuWrapper label={ label } items={ languageItems }>
+    return <>
+        <HorizontalMenu label={ label } items={ languageItems } />
         {selected}
-    </HorizontalMenuWrapper>;
+    </>;
 };
 
 export default LocalLanguageAlternatives;
