@@ -1,7 +1,7 @@
 /**
- * Spans must have whitespace trimmed, because they should be inline and (as language spans)
+ * Consecutive Spans must have whitespace trimmed, because they should be inline and (as language spans)
  * interchangeeable with each other.
- * Divs must have whitespace levels enforced, the reason being practical; textile does not read nested divs
+ * Consecutive Divs must have whitespace levels enforced, the reason being practical; textile does not read nested divs
  * that end during a list correctly, which makes sense as it's technically invalid HTML (it should place the
  * final </div> outside the <dl></dl> but it isn't clever enough to manage that)
  */
