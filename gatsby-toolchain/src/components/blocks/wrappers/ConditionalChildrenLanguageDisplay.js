@@ -1,52 +1,7 @@
 import React, { Children, useContext } from 'react';
-import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES_FOR_DISPLAY } from "../../../../data/createPages/constants";
+import { IGNORED_LANGUAGES_FOR_DISPLAY } from "../../../../data/createPages/constants";
 import PageLanguageContext from '../../../contexts/page-language-context';
-
-const makeGroup = (lang, index, data) => ({
-    start: index,
-    end: index,
-    index,
-    primary: lang,
-    languages: [lang],
-    data: {
-        [lang]: data
-    }
-});
-
-const assignPrimary = (group, lang, targetLanguage, data, index) => {
-    group.languages.push(lang);
-    if(lang === targetLanguage) {
-        return {
-            ...group,
-            index,
-            data: null,
-            primary: targetLanguage
-        }
-    }
-    if(lang === DEFAULT_LANGUAGE && group.primary !== targetLanguage) {
-        return {
-            ...group,
-            index,
-            data: null,
-            primary: DEFAULT_LANGUAGE
-        }
-    }
-    if(group.data === null) {
-        return group;
-    }
-    return {
-        ...group,
-        data: Object.assign(group.data, {
-            [lang]: data
-        })
-    };
-}
-
-const addToFilter = (group, toFilter) => {
-    for(let i = 0; group.start + i <= group.end; ++i) {
-        toFilter[group.start+i] = group.languages[i] !== group.primary;
-    }
-}
+import { makeGroup, assignPrimary, addToFilter, isIrrelevantForLanguageDisplay } from './language-utilities';
 
 const ConditionalChildrenLanguageDisplay = ({ children }) => {
     const language = useContext(PageLanguageContext);
@@ -56,6 +11,9 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
     Children.forEach(
         children,
         ({ props, props: { attribs = null } }, index) => {
+            if(isIrrelevantForLanguageDisplay(props.data)) {
+                return;
+            }
             if(
                 attribs &&
                 attribs.lang &&
@@ -72,14 +30,15 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
                     currentGroup.end = index;
                     currentGroup = assignPrimary(currentGroup, attribs.lang, language, props.data, index);
                 }
-            } else {
-                if(!!currentGroup) {
-                    addToFilter(currentGroup, toFilter);
-                    childLanguageGroups.push({...currentGroup});
-                }
-                currentGroup = false;
-                toFilter[index] = false;
+                return;
             }
+
+            if(!!currentGroup) {
+                addToFilter(currentGroup, toFilter);
+                childLanguageGroups.push({...currentGroup});
+            }
+            currentGroup = false;
+            toFilter[index] = false;
         }
     );
     if(!!currentGroup) {
