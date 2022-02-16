@@ -28,8 +28,7 @@ const cheerioParser = cheerioNodes => {
 /** Source: Ably 'docs' repo ./app/assets/javascripts/lang-manager.js ll.61-66 */
 const liftLangAttributes = cheerioNodes => cheerioNodes('dl dt > div[lang]').each((_i, elem) => {
     const lang = cheerioNodes(elem).attr('lang');
-    cheerioNodes(elem).parent('dt').attr('lang', lang);
-    cheerioNodes(elem).parent('dt').next('dd').attr('lang', lang);
+    cheerioNodes(elem).parent('dt').nextUntil('dt').addBack().wrapAll(`<div lang="${lang}">`);
     cheerioNodes(elem).removeAttr('lang');
 });
 
