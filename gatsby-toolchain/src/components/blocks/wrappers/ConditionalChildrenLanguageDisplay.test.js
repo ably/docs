@@ -23,9 +23,18 @@ const twoChildrenInstance = TestRenderer.create(<ConditionalChildrenLanguageDisp
     <Span data='alternative' attribs={{ lang: 'javascript' }}/>
 </ConditionalChildrenLanguageDisplay>).root;
 
+const sameLanguageTwoChildrenInstance = TestRenderer.create(<ConditionalChildrenLanguageDisplay>
+    <Span data='content' attribs={{ lang: 'javascript' }}/>
+    <Span data='alternative' attribs={{ lang: 'javascript' }}/>
+</ConditionalChildrenLanguageDisplay>).root;
+
 describe('ConditionalChildrenLanguageDisplay only displays one child of alternatives', () => {
     test('A basic instance of two children with different lang attributes only shows the default language option', () => {
         expect(twoChildrenInstance.findAllByType(Span).length).toBe(1);
+    });
+
+    test('Two different instances in a row shows both language options', () => {
+        expect(sameLanguageTwoChildrenInstance.findAllByType(Span).length).toBe(2);
     });
 });
 
