@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Textarea = ({ data, attribs }) => <textarea {...attribs}><Html data={ data } /></textarea>;
+const Textarea = GenericHtmlBlock('textarea');
 
 export default Textarea;

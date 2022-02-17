@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Img = ({ data, attribs }) => <img {...attribs}><Html data={ data } /></img>;
+const Img = GenericHtmlBlock('img');
 
 export default Img;

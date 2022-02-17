@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Var = ({ data, attribs }) => <var {...attribs}><Html data={ data } /></var>;
+const Var = GenericHtmlBlock('var');
 
 export default Var;

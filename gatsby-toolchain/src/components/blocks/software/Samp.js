@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Samp = ({ data, attribs }) => <samp {...attribs}><Html data={ data } /></samp>;
+const Samp = GenericHtmlBlock('samp');
 
 export default Samp;

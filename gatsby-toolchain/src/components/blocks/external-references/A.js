@@ -1,6 +1,7 @@
 import { Link } from 'gatsby';
 import React from 'react';
 import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
 const A = ({ data, attribs }) => {
     if(
@@ -9,7 +10,7 @@ const A = ({ data, attribs }) => {
     ) {
         return <Link {...{ ...attribs, to: attribs.href }}><Html data={ data } /></Link>
     }
-    return <a {...attribs}><Html data={ data } /></a>;
+    return GenericHtmlBlock('a')({ data, attribs });
 }
 
 export default A;

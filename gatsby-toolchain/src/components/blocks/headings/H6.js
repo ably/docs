@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const H6 = ({ data, attribs }) => <h6 {...attribs}><Html data={ data } /></h6>;
+const H6 = GenericHtmlBlock('h6');
 
 export default H6;

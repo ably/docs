@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../../Html';
+import GenericHtmlBlock from '../../Html/GenericHtmlBlock';
 
-const Strong = ({ data, attribs }) => <strong {...attribs}><Html data={ data } /></strong>;
+const Strong = GenericHtmlBlock('strong');
 
 export default Strong;
