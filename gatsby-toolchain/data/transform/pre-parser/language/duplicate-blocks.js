@@ -31,7 +31,7 @@ const MULTI_LANG_BLOCK_REGEX_STRING = `${
 
 const MULTI_LANG_BLOCK_REGEX = new RegExp(MULTI_LANG_BLOCK_REGEX_STRING, 'gm');
 
-const duplicateLanguageBlock = (block, classes, content) => lang => `${block}[${lang}]${ classes ? `(${classes})` : '' }. \n${content}`;
+const duplicateLanguageBlock = (block, classes, content) => lang => `${block}[${lang}]${ classes ? `(${classes})` : '' }. ${content}`;
 
 const duplicateLanguageBlocks = (content) => {
     const replacer = (match, block, languages, classes, content) => {

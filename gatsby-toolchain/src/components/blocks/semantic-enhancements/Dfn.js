@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Dfn = ({ data, attribs }) => <dfn {...attribs}><Html data={ data } /></dfn>;
+const Dfn = GenericHtmlBlock('dfn');
 
 export default Dfn;

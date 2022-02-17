@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Quote = ({ data, attribs }) => <q {...attribs}><Html data={ data } /></q>;
+const Quote = GenericHtmlBlock('q');
 
 export default Quote;
