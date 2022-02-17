@@ -72,10 +72,10 @@ const getNodeText = node => {
   };
 
 describe('LocalLanguageAlternatives displays statically as expected', () => {
-    test('Snapshot of LocalLanguageAlternatives is the same', () => {
+    it('Snapshot of LocalLanguageAlternatives is the same', () => {
         expect(languageAlternativesRenderer.toJSON()).toMatchSnapshot();
     });
-    test('Contains default content', () => {
+    it('Contains default content', () => {
         expect(getNodeText(languageAlternativesInstance)).toEqual('This is default content.');
     });
 });

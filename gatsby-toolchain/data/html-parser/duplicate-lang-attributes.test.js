@@ -11,7 +11,7 @@ const nestedSpanContent = `<div lang="nodejs">
 </div>`;
 
 describe('Duplicate language blocks with commas', () => {
-    test('Duplicates language blocks with commas', () => {
+    it('Duplicates language blocks with commas', () => {
         const loadedDom = cheerio.load(content, null);
         duplicateLangAttributes(loadedDom);
         expect(loadedDom.html().replace(/\s+/g,'')).toEqual(`<html><head></head><body>
@@ -21,7 +21,7 @@ describe('Duplicate language blocks with commas', () => {
         </body></html>`.replace(/\s+/g,''));
     });
 
-    test('Duplicates nested span language blocks with commas', () => {
+    it('Duplicates nested span language blocks with commas', () => {
         const loadedDom = cheerio.load(nestedSpanContent, null);
         duplicateLangAttributes(loadedDom);
         expect(loadedDom.html().replace(/\s+/g,'')).toEqual(`<html><head></head><body><div lang=\"nodejs\">
