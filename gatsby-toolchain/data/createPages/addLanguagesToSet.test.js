@@ -37,18 +37,18 @@ const set = new Set();
 beforeEach(() => set.clear());
 
 describe('Data objects parsed from HTML should have languages added to the set of languages', () => {
-    test('A simple single HTML element is not registered', () => {
+    it('A simple single HTML element is not registered', () => {
         addLanguagesToSet(set)(simpleHtmlDataObject);
         expect(set.size).toEqual(0);
     });
-    test('A simple single HTML element is registered', () => {
+    it('A simple single HTML element is registered', () => {
         const result = addLanguagesToSet(set)
             (makeSimpleHtml('javascript'));
         expect(set.size).toEqual(1);
         expect(set.has('javascript')).toBe(true);
     })
 
-    test('Any generated simple single HTML elements are correctly filtered and KEPT', () => {
+    it('Any generated simple single HTML elements are correctly filtered and KEPT', () => {
         fc.assert(
             fc.property(genSimpleHtmlDataObject,
                 simpleObject => {
@@ -59,7 +59,7 @@ describe('Data objects parsed from HTML should have languages added to the set o
             ).beforeEach(() => set.clear())
         );
     });
-    test('Any generated simple single HTML elements are correctly filtered and REMOVED', () => {
+    it('Any generated simple single HTML elements are correctly filtered and REMOVED', () => {
         fc.assert(
             fc.property(genSimpleHtmlDataObject, fc.string({minLength:1}),
                 (simpleObject, str) => {
@@ -72,7 +72,7 @@ describe('Data objects parsed from HTML should have languages added to the set o
         );
     });
 
-    test('Any generated compound HTML elements are correctly filtered and REMOVED', () => {
+    it('Any generated compound HTML elements are correctly filtered and REMOVED', () => {
         fc.assert(
             fc.property(genCompoundHtmlDataObject,
                 compoundObject => {
