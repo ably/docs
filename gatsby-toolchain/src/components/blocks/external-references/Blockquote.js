@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from "../Html/GenericHtmlBlock";
 
-const Blockquote = ({ data, attribs }) => <blockquote {...attribs}><Html data={ data } /></blockquote>;
+const Blockquote = GenericHtmlBlock('blockquote');
 
 export default Blockquote;
