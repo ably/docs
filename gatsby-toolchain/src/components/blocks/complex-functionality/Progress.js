@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Progress = ({ data, attribs }) => <progress {...attribs}><Html data={ data } /></progress>;
+const Progress = GenericHtmlBlock('progress');
 
 export default Progress;

@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Noscript = ({ data, attribs }) => <noscript {...attribs}><Html data={ data } /></noscript>;
+const Noscript = GenericHtmlBlock('noscript');
 
 export default Noscript;

@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Dl = ({ data, attribs }) => <dl {...attribs}><Html data={ data } /></dl>;
+const Dl = GenericHtmlBlock('dl');
 
 export default Dl;

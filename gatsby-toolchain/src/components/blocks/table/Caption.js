@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Caption = ({ data, attribs }) => <caption {...attribs}><Html data={ data } /></caption>;
+const Caption = GenericHtmlBlock('caption');
 
 export default Caption;
