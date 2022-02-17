@@ -22,7 +22,7 @@ const alphaNumericString = fc.asciiString({minLength:1}).map(str => str.replace(
 
 describe('Converts Blang strings to HTML', () => {
     // Single checks
-    test('Leaves single non-blang strings alone', () => {
+    it('Leaves single non-blang strings alone', () => {
         const nonBlangString = createRelevantString('Lorem ipsum adipiscitor', {
             isBlang: false,
             outerTag: true,
@@ -31,7 +31,7 @@ describe('Converts Blang strings to HTML', () => {
         const result = convertBlangBlocksToHtml(nonBlangString);
         expect(result).toEqual(nonBlangString);
     });
-    test('Converts single Blang blocks to HTML', () => {
+    it('Converts single Blang blocks to HTML', () => {
         const blangBlock = createRelevantString('Lorem ipsum adipiscitor', {
             isBlang: true,
             outerTag: true,
@@ -40,7 +40,7 @@ describe('Converts Blang strings to HTML', () => {
         const result = convertBlangBlocksToHtml(blangBlock);
         expect(result).toEqual(`<div lang="javascript"><!-- start javascript language block --><div>Lorem ipsum adipiscitor</div></div><!-- /end javascript language block -->`);
     });
-    test('Converts broken Blang block while keeping multiple languages separate', () => {
+    it('Converts broken Blang block while keeping multiple languages separate', () => {
         // cf. data/transform/pre-parser/language/conversions.test.js
         const tokenizedBlock = convertBlangBlocksToTokens(brokenBlangExample);
         const result = convertBlangBlocksToHtml(tokenizedBlock);
@@ -48,7 +48,7 @@ describe('Converts Blang strings to HTML', () => {
     });
 
     // Fastcheck property testing
-    test('Never interferes with a non-blang string', () => {
+    it('Never interferes with a non-blang string', () => {
         fc.assert(fc.property(
             fc.string(), fc.string(), fc.boolean(), fc.boolean(),
             (content, language, innerTag, outerTag) => {
@@ -63,7 +63,7 @@ describe('Converts Blang strings to HTML', () => {
             }
         ));
     });
-    test('Always replaces a blang block with HTML', () => {
+    it('Always replaces a blang block with HTML', () => {
         fc.assert(fc.property(
             fc.string(), alphaNumericString, fc.boolean(),
             (content, language, outerTag) => {

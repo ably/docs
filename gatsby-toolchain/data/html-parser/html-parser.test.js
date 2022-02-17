@@ -16,7 +16,7 @@ const buildExpectedFromTagArray = (tagArray, innerText) => tagArray.length === 0
 }];
 
 describe('Cheerio node parser transforms data as expected', () => {
-    test('A single text node has no attributes', () => {
+    it('A single text node has no attributes', () => {
         const input = {
             children: [],
             attribs: {},
@@ -33,7 +33,7 @@ describe('Cheerio node parser transforms data as expected', () => {
         const actual = cheerioNodeParser(null,input);
         expect(actual).toEqual(expected);
     });
-    test('A node with children has them moved into the data property', () => {
+    it('A node with children has them moved into the data property', () => {
         const input = {
             children: [{
                 children: [],
@@ -63,7 +63,7 @@ describe('Cheerio node parser transforms data as expected', () => {
 
 describe("HTML parsing into data objects works as expected", () => {
     // The behaviour of invalid HTML is defined by Cheerio and beyond the scope of this testing suite unless specific examples cause issues.
-    test('A specific, known-valid piece of HTML is capable of being interpreted into data objects in the correct format by the HTML parser', () => {
+    it('A specific, known-valid piece of HTML is capable of being interpreted into data objects in the correct format by the HTML parser', () => {
         const validHtml = "<p>Lorem ipsum dolor sit mae adipiscing color</p>"+
             "<p>insertium paragraphicus <strong>loremitor</strong></p>"+
             "<div><span>A good example of some common text</span> with text both in and out of elements.</div>";
@@ -117,7 +117,7 @@ describe("HTML parsing into data objects works as expected", () => {
         expect(actual).toEqual(expected);
     });
 
-    test('Arbitrary valid HTML is capable of being interpreted into data objects in the correct format by the HTML parser', () => {
+    it('Arbitrary valid HTML is capable of being interpreted into data objects in the correct format by the HTML parser', () => {
         fc.assert(
             fc.property(htmlString, ({ result, tagResult, innerText }) => {
                 const [{data: actual}] = htmlParser(result);

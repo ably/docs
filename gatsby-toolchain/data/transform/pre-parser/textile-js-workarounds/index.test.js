@@ -14,20 +14,20 @@ const {
 const { preParser } = require('../');
 
 describe('Reads a definition string correctly', () => {
-    test('A definition string is rendered into a valid HTML definition list from textile', () => {
+    it('A definition string is rendered into a valid HTML definition list from textile', () => {
         expect(textile(compressMultipleNewlinesInLists(definitionList)).replace(/\s/g, '')).toEqual(expectedDefinitionList.replace(/\s/g, ''));
     });
 });
 
 
 describe('Reads an h[1-6]. string correctly', () => {
-    test('An h[1-6]. line nested inside an outer HTML tag gets read correctly in textile', () => {
+    it('An h[1-6]. line nested inside an outer HTML tag gets read correctly in textile', () => {
         expect(textile(manuallyReplaceHTags(nestedH1_6String))).toEqual(nestedH1_6Html);
     });
 });
 
 describe('Reads nested divs correctly', () => {
-    test('A nested div gets read correctly after preParse operations', () => {
+    it('A nested div gets read correctly after preParse operations', () => {
         const processedDivs = textile(preParser(nestedDiv));
         const firstDiv = processedDivs.split('\n')[1];
         expect(firstDiv).toEqual(`<div lang=\"default\">`);
@@ -35,14 +35,14 @@ describe('Reads nested divs correctly', () => {
 });
 
 describe('Reads spans with hashes correctly', () => {
-    test('A span with a hash/pound/octothorpe value gets read correctly', () => {
+    it('A span with a hash/pound/octothorpe value gets read correctly', () => {
         const processedSpan = textile(preParser(spanWithHashExample));
         expect(processedSpan).toEqual(spanWithHashResult);
     });
 });
 
 describe('Reads divs closing over a definition list correctly', () => {
-    test('A series of one or more divs followed by another div gets parsed correctly', () => {
+    it('A series of one or more divs followed by another div gets parsed correctly', () => {
         const preParsedDivs = preParser(listDivExample);
         const processedDivs = textile(preParsedDivs);
         expect(processedDivs.replace(/\s/g, '')).toEqual(listDivParsedExample.replace(/\s/g, ''));
