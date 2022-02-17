@@ -1,8 +1,7 @@
 import { duplicateLanguageBlocks } from ".";
 import { duplicateLanguageBlock } from "./duplicate-blocks";
 
-const langBlockExpected = `h1[javascript](exampleClass). 
-Some content`;
+const langBlockExpected = `h1[javascript](exampleClass). Some content`;
 
 describe('Given the data for a single language block, constructs a valid output', () => {
     it('Creates a valid output block', () => {
@@ -16,16 +15,13 @@ Some content
 
 `;
 const bcExpected =
-`bc[javascript]. 
-Some content
+`bc[javascript]. Some content
 
-bc[csharp]. 
-Some content
+bc[csharp]. Some content
 
 `;
 
-const h1SingleLanguageTest = `h1[javascript].
-Some content
+const h1SingleLanguageTest = `h1[javascript]. Some content
 
 `;
 
