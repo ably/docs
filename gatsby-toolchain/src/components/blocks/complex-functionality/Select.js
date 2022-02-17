@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Select = ({ data, attribs }) => <select {...attribs}><Html data={ data } /></select>;
+const Select = GenericHtmlBlock('select');
 
 export default Select;

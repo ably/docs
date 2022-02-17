@@ -1,5 +1,5 @@
-import React from 'react';
+import SelfClosingHtmlBlock from '../Html/SelfClosingHtmlBlock';
 
-const Input = ({ data, attribs }) => <input {...attribs}/>;
+const Input = SelfClosingHtmlBlock('input');
 
 export default Input;

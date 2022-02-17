@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Thead = ({ data, attribs }) => <thead {...attribs}><Html data={ data } /></thead>;
+const Thead = GenericHtmlBlock('thead');
 
 export default Thead;

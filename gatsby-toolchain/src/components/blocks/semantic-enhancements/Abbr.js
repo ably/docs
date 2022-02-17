@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Abbr = ({ data, attribs }) => <abbr {...attribs}><Html data={ data } /></abbr>;
+const Abbr = GenericHtmlBlock('abbr');
 
 export default Abbr;

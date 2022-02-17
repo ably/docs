@@ -5,14 +5,14 @@ const withExpansion = (Heading, anchor, expandTitle, expandID, title, content) =
         <Heading id={anchor} expandTitle={ expandTitle }>{ title }</Heading>
         <div className={'collapsible-wrapper'}>
             <input id={`collapsible-heading${expandID}`} class='minimize-checkbox toggle' type='checkbox' />
-            <label for={`collapsible-heading${expandID}`} class='label-collapsible'>{expandTitle}</label>
+            <label htmlFor={`collapsible-heading${expandID}`} class='label-collapsible'>{expandTitle}</label>
             <div class='collapsible-content'>
             <div class='collapsible-inner'>
                 <br/>
                 {content}
                 <br/>
             </div>
-            <label for={`collapsible-heading${expandID}`} class='label-collapsible-close'>- View Less</label>
+            <label htmlFor={`collapsible-heading${expandID}`} class='label-collapsible-close'>- View Less</label>
             </div>
         </div>
     </>;

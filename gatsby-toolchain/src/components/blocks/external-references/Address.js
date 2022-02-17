@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Address = ({ data, attribs }) => <address {...attribs}><Html data={ data } /></address>;
+const Address = GenericHtmlBlock('address');
 
 export default Address;
