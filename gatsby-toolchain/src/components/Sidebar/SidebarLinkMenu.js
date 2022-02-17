@@ -12,7 +12,7 @@ const OrderedList = styled.ol`
 `;
 
 const SidebarLinkMenu = ({ data, interactable = false, indent = 0 }) => {
-    const preExpanded = []
+    const preExpanded = useMemo(() => [], []);
     const linkMenu = useMemo(() => data.map(({ label, link, level = ROOT_LEVEL, content = false }) => {
         const uuid = encodeURIComponent(`${label}${link}`);
 
@@ -33,12 +33,12 @@ const SidebarLinkMenu = ({ data, interactable = false, indent = 0 }) => {
                     indent={indent} />
                 </li> :
             <li key={ label }><SidebarLink to={ link } $leaf={indent > 0}>{ label }</SidebarLink></li>
-        }), [data, interactable]);
+        }), [data, interactable, indent, preExpanded]);
     return <Accordion allowMultipleExpanded={true} allowZeroExpanded={true} preExpanded={preExpanded}>
         <OrderedList>
             { linkMenu }
         </OrderedList>
     </Accordion>;
-}
+};
 
 export default SidebarLinkMenu;
