@@ -2,7 +2,7 @@ import { DEFAULT_LANGUAGE } from "../../../../data/createPages/constants";
 import { assignPrimary } from "./language-utilities";
 
 describe('Assigning primary to language groups works as expected', () => {
-    test('Primary language results in null data, primary language being returned', () => {
+    it('Primary language results in null data, primary language being returned', () => {
         const result = assignPrimary(
             {
                 languages: []
@@ -21,7 +21,7 @@ describe('Assigning primary to language groups works as expected', () => {
         expect(result).toEqual(expected);
     });
 
-    test('Default language results in null data, primary language being returned', () => {
+    it('Default language results in null data, primary language being returned', () => {
         const result = assignPrimary(
             {
                 languages: []
@@ -40,7 +40,7 @@ describe('Assigning primary to language groups works as expected', () => {
         expect(result).toEqual(expected);
     });
 
-    test('If data is already null, and there\'s been no override, return the group unchanged (except for added language)', () => {
+    it('If data is already null, and there\'s been no override, return the group unchanged (except for added language)', () => {
         const result = assignPrimary(
             {
                 languages: [],
