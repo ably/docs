@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Time = ({ data, attribs }) => <time {...attribs}><Html data={ data } /></time>;
+const Time = GenericHtmlBlock('time');
 
 export default Time;

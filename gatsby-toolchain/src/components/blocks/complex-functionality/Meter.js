@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Meter = ({ data, attribs }) => <meter {...attribs}><Html data={ data } /></meter>;
+const Meter = GenericHtmlBlock('meter');
 
 export default Meter;

@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Header = ({ data, attribs }) => <header {...attribs}><Html data={ data } /></header>;
+const Header = GenericHtmlBlock('header');
 
 export default Header;

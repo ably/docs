@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Tfoot = ({ data, attribs }) => <tfoot {...attribs}><Html data={ data } /></tfoot>;
+const Tfoot = GenericHtmlBlock('tfoot');
 
 export default Tfoot;

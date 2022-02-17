@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../../Html';
+import GenericHtmlBlock from '../../Html/GenericHtmlBlock';
 
-const Sub = ({ data, attribs }) => <sub {...attribs}><Html data={ data } /></sub>;
+const Sub = GenericHtmlBlock('sub');
 
 export default Sub;

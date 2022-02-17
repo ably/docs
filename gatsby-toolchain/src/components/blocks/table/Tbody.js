@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Tbody = ({ data, attribs }) => <tbody {...attribs}><Html data={ data } /></tbody>;
+const Tbody = GenericHtmlBlock('tbody');
 
 export default Tbody;

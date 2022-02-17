@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Summary = ({ data, attribs }) => <summary {...attribs}><Html data={ data } /></summary>;
+const Summary = GenericHtmlBlock('summmary');
 
 export default Summary;

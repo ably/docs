@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Ul = ({ data, attribs }) => <ul {...attribs}><Html data={ data } /></ul>;
+const Ul = GenericHtmlBlock('ul');
 
 export default Ul;

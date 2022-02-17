@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Section = ({ data, attribs }) => <section {...attribs}><Html data={ data } /></section>;
+const Section = GenericHtmlBlock('section');
 
 export default Section;
