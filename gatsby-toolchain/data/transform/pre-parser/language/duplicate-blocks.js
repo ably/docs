@@ -31,20 +31,23 @@ const MULTI_LANG_BLOCK_REGEX_STRING = `${
 
 const MULTI_LANG_BLOCK_REGEX = new RegExp(MULTI_LANG_BLOCK_REGEX_STRING, 'gm');
 
+const duplicateLanguageBlock = (block, classes, content) => lang => `${block}[${lang}]${ classes ? `(${classes})` : '' }. \n${content}`;
+
 const duplicateLanguageBlocks = (content) => {
     const replacer = (match, block, languages, classes, content) => {
         const langs = languages.split(/\s*,/);
         if(langs.length > 1) {
             return langs
-                .map(lang => `${block}[${lang}]${ classes ? `(${classes})` : '' }. ${content}`)
+                .map(duplicateLanguageBlock(block, classes, content))
                 .join('\n\n') + '\n\n';
 
         }
         return match;
     }
     return content.replace(MULTI_LANG_BLOCK_REGEX, replacer);
-}
+};
 
 module.exports = {
+    duplicateLanguageBlock,
     duplicateLanguageBlocks
-}
+};

@@ -1,6 +1,5 @@
-import React from 'react';
 import styled from 'styled-components';
-import { primary, secondary, text } from '../../styles/colors';
+import { primary, text } from '../../styles/colors';
 
 /** cf. Ably website repo
  * app/assets/javascripts/modules/documentation/htmlTemplates.js
