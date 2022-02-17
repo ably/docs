@@ -6,7 +6,6 @@ import textile from 'textile-js';
 import { htmlParser, liftLangAttributes } from '../../../../data/html-parser';
 import { postParser } from '../../../../data/transform/post-parser';
 import { preParser } from '../../../../data/transform/pre-parser';
-import { Span } from '../dividers';
 import ConditionalChildrenLanguageDisplay from './ConditionalChildrenLanguageDisplay';
 import blocksFromData from '../blocks-from-data';
 
@@ -19,22 +18,36 @@ const rawData = `
 `;
 
 const twoChildrenInstance = TestRenderer.create(<ConditionalChildrenLanguageDisplay>
-    <Span data='content' attribs={{ lang: DEFAULT_LANGUAGE }}/>
-    <Span data='alternative' attribs={{ lang: 'javascript' }}/>
+    {blocksFromData([{
+        'name': 'span',
+        'data': 'content',
+        'attribs': { lang: DEFAULT_LANGUAGE }
+    }, {
+        'name': 'span',
+        'data': 'alternative',
+        'attribs': { lang: 'javascript' }
+    }])}
 </ConditionalChildrenLanguageDisplay>).root;
 
 const sameLanguageTwoChildrenInstance = TestRenderer.create(<ConditionalChildrenLanguageDisplay>
-    <Span data='content' attribs={{ lang: 'javascript' }}/>
-    <Span data='alternative' attribs={{ lang: 'javascript' }}/>
+    {blocksFromData([{
+        'name': 'span',
+        'data': 'content',
+        'attribs': { lang: 'javascript' }
+    }, {
+        'name': 'span',
+        'data': 'alternative',
+        'attribs': { lang: 'javascript' }
+    }])}
 </ConditionalChildrenLanguageDisplay>).root;
 
 describe('ConditionalChildrenLanguageDisplay only displays one child of alternatives', () => {
     it('A basic instance of two children with different lang attributes only shows the default language option', () => {
-        expect(twoChildrenInstance.findAllByType(Span).length).toBe(1);
+        expect(twoChildrenInstance.findAllByType('span').length).toBe(1);
     });
 
     it('Two different instances in a row shows both language options', () => {
-        expect(sameLanguageTwoChildrenInstance.findAllByType(Span).length).toBe(2);
+        expect(sameLanguageTwoChildrenInstance.findAllByType('span').length).toBe(2);
     });
 });
 
