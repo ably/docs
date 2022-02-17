@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Aside = ({ data, attribs }) => <aside {...attribs}><Html data={ data } /></aside>;
+const Aside = GenericHtmlBlock('aside');
 
 export default Aside;

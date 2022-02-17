@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Paragraph = ({ data, attribs }) => <p {...attribs}><Html data={ data } /></p>;
+const Paragraph = GenericHtmlBlock('p');
 
 export default Paragraph;

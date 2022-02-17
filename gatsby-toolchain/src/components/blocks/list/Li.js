@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Li = ({ data, attribs }) => <li {...attribs}><Html data={ data } /></li>;
+const Li = GenericHtmlBlock('li');
 
 export default Li;
