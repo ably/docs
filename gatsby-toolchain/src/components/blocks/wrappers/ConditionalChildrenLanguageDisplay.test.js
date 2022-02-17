@@ -29,18 +29,18 @@ const sameLanguageTwoChildrenInstance = TestRenderer.create(<ConditionalChildren
 </ConditionalChildrenLanguageDisplay>).root;
 
 describe('ConditionalChildrenLanguageDisplay only displays one child of alternatives', () => {
-    test('A basic instance of two children with different lang attributes only shows the default language option', () => {
+    it('A basic instance of two children with different lang attributes only shows the default language option', () => {
         expect(twoChildrenInstance.findAllByType(Span).length).toBe(1);
     });
 
-    test('Two different instances in a row shows both language options', () => {
+    it('Two different instances in a row shows both language options', () => {
         expect(sameLanguageTwoChildrenInstance.findAllByType(Span).length).toBe(2);
     });
 });
 
 describe('Integration: ConditionalChildrenLanguageDisplay only displays one <dt><dd> pair of children from alternatives for parsed definition lists', () => {
     const parsedData = postParser(textile(preParser(rawData)));
-    test('Text parser stage returns expected results', () => {
+    it('Text parser stage returns expected results', () => {
         expect(parsedData.replace(/\s/g,'')).toEqual(`<dl>
             <dt><div lang=\"javascript,nodejs\">callback</div></dt>
             <dd>is a function of the form <code>function(err)</code> which is called upon completion</dd>
@@ -57,7 +57,7 @@ describe('Integration: ConditionalChildrenLanguageDisplay only displays one <dt>
 
     // cf. lift-language-attributes.test.js
     // Included here to allow for easy debugging of which particular stage of the process is broken
-    test('Lift language attributes stage returns expected results', () => {
+    it('Lift language attributes stage returns expected results', () => {
         const loadedDom = cheerio.load(parsedData, null);
         liftLangAttributes(loadedDom);
         expect(loadedDom('body *').html().replace(/\s/g,'')).toEqual(`<div lang=\"javascript,nodejs\"><dt><div>callback</div></dt><dd>is a function of the form <code>function(err)</code> which is called upon completion</dd></div>
@@ -69,7 +69,7 @@ describe('Integration: ConditionalChildrenLanguageDisplay only displays one <dt>
     });
 
     const htmlParsed = htmlParser(parsedData);
-    test('HTML parser stage returns expected results', () => {    
+    it('HTML parser stage returns expected results', () => {    
         expect(htmlParsed[0].data[0].data).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
@@ -88,7 +88,7 @@ describe('Integration: ConditionalChildrenLanguageDisplay only displays one <dt>
         );
     });
 
-    test('ConditionalChildrenLanguageDisplay displays the expected results from HTML data', () => {
+    it('ConditionalChildrenLanguageDisplay displays the expected results from HTML data', () => {
         const renderedData = TestRenderer.create(<ConditionalChildrenLanguageDisplay>
             {blocksFromData(htmlParsed)}
         </ConditionalChildrenLanguageDisplay>);
