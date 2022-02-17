@@ -28,7 +28,7 @@ import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
 // Android Studio has an error when registering the language.
 
 import { spacing, fonts, colors } from '../../../styles';
-import { languageSyntaxHighlighterNames } from '../../../maps/language';
+import languageLabels, { languageSyntaxHighlighterNames } from '../../../maps/language';
 import HtmlDataTypes from '../../../../data/types/html';
 
 const Container = styled.div`
@@ -72,7 +72,7 @@ const Code = ({ data, attribs }) => {
         const displayLanguage = attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
             ? languageSyntaxHighlighterNames[attribs.lang]
             : languageSyntaxHighlighterNames['plaintext'];
-        return <Container {...attribs}>
+        return <Container {...attribs} language={languageLabels[attribs.lang]}>
             <SyntaxHighlighter 
                 customStyle={{
                     backgroundColor: colors.containers.three,

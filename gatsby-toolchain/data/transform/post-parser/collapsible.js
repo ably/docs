@@ -38,9 +38,12 @@ const convertCollapsibleContentToHtml = content => content.replace(
 
 const convertCollapsibleMarkupToHtml = content => content.replace(
     COLLAPSIBLE_WRAPPER_REGEX,
-    (_match, p1) => `\n\n<div class="collapsible-content">\n${convertCollapsibleContentToHtml(p1)}\n</div>\n\n`
+    (_match, p1) => `\n\n<div class="collapsible-wrapper">\n${convertCollapsibleContentToHtml(p1)}\n</div>\n\n`
 );
 
 module.exports = {
+    getRegexStringForToken,
+    convertCollapsibleInnerToHtml,
+    convertCollapsibleContentToHtml,
     convertCollapsibleMarkupToHtml
 }

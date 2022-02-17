@@ -44,5 +44,7 @@ const addLanguageSupportForGithubStyleCode = content => {
 };
 
 module.exports = {
+    minIndent,
+    stripHeredoc,
     addLanguageSupportForGithubStyleCode
 }

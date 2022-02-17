@@ -2,7 +2,7 @@ const { convertBlangBlocksToTokens, convertJSAllToNodeAndJavaScript } = require(
 const { riskyBlangExample, riskyBlangExpectedResult, brokenBlangExample, brokenBlangExpectedResult, brokenBlangTokenAfterJSConversionExpectedResult } = require("./blang.raw.examples");
 
 describe('Converts specific example blang blocks to HTML', () => {
-    test('Converts example block taken from _connection_state.textile to HTML, discovered to be failing on 21/01/2022', () => {
+    it('Converts example block taken from _connection_state.textile to HTML, discovered to be failing on 21/01/2022', () => {
         /**
          * Potential issues uncovered by test:
          * Problem:
@@ -33,14 +33,14 @@ describe('Converts specific example blang blocks to HTML', () => {
         const result = convertBlangBlocksToTokens(riskyBlangExample);
         expect(result).toEqual(riskyBlangExpectedResult);
     });
-    test('Converts example block taken from _channel_options.textile to HTML, discovered to be failing on 04/02/2022', () => {
+    it('Converts example block taken from _channel_options.textile to HTML, discovered to be failing on 04/02/2022', () => {
         const result = convertBlangBlocksToTokens(brokenBlangExample);
         expect(result.replace(/\s+/g,'')).toEqual(brokenBlangExpectedResult.replace(/\s+/g,''));
     });
 });
 
 describe('Converts jsall to javascript, nodejs', ()=> {
-    test('Converts simple <span lang="jsall"> element to <span lang="javascript,nodejs">', () => {
+    it('Converts simple <span lang="jsall"> element to <span lang="javascript,nodejs">', () => {
         /**
          * Potential issues uncovered by test:
          * Problem:
@@ -51,15 +51,15 @@ describe('Converts jsall to javascript, nodejs', ()=> {
         const result = convertJSAllToNodeAndJavaScript('<span lang="jsall">');
         expect(result).toEqual('<span lang="javascript,nodejs">');
     });
-    test('Converts lists beginning `jsall:` to `javascript,nodejs:`', () => {
+    it('Converts lists beginning `jsall:` to `javascript,nodejs:`', () => {
         const result = convertJSAllToNodeAndJavaScript(`  jsall: Lorem ipsum`);
         expect(result).toEqual('  javascript,nodejs: Lorem ipsum');
     });
-    test('Converts enclosures containing `jsall` to `[...,javascript,nodejs,...]', () => {
+    it('Converts enclosures containing `jsall` to `[...,javascript,nodejs,...]', () => {
         const result = convertJSAllToNodeAndJavaScript('blang[java,jsall,csharp]');
         expect(result).toEqual('blang[javascript,nodejs,java,csharp]');
     });
-    test('Converts example block taken from _channel_options.textile to multiple languages, discovered to be failing on 04/02/2022', () => {
+    it('Converts example block taken from _channel_options.textile to multiple languages, discovered to be failing on 04/02/2022', () => {
         /**
          * Potential issues uncovered by test:
          * Problem:
