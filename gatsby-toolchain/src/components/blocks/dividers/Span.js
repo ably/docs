@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Span = ({ data, attribs }) => <span {...attribs}><Html data={ data } /></span>;
+const Span = GenericHtmlBlock('span');
 
 export default Span;

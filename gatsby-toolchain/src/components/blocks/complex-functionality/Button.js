@@ -1,6 +1,5 @@
-import React from 'react';
-import Html from '../Html';
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Button = ({ data, attribs }) => <button {...attribs}><Html data={ data } /></button>;
+const Button = GenericHtmlBlock('button');
 
 export default Button;
