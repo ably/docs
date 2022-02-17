@@ -7,7 +7,7 @@ const content = `<dl>
 </dl>`;
 
 describe('Lift language attributes into <dt> and <dd> elements', () => {
-    test('Lifts language attributes into <dt> and <dd> elements', () => {
+    it('Lifts language attributes into <dt> and <dd> elements', () => {
         const loadedDom = cheerio.load(content, null);
         liftLangAttributes(loadedDom);
         expect(loadedDom('body').html().replace(/\s+/g,'')).toEqual(`<dl>
