@@ -3,8 +3,8 @@ import { fonts } from '../../../styles';
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
 const StyledH3 = styled.h3`
-    ${fonts.h3};
-    margin: 48px 0 24px;
+  ${fonts.h3};
+  margin: 48px 0 24px;
 `;
 
 const H3 = GenericHtmlBlock(StyledH3);
