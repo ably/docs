@@ -2,6 +2,7 @@
  * Source: Ably Voltaire src/components/code-block/code-block.js
  */
 import React from 'react';
+import PropTypes from 'prop-types';
 import Html from '../Html';
 
 import styled from 'styled-components';
@@ -66,30 +67,41 @@ SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.objc.key, obje
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.json.key, json);
 
 const Code = ({ data, attribs }) => {
-    const isString = data.length === 1 && data[0].type === HtmlDataTypes.text && attribs && attribs.lang;
+  const isString = data.length === 1 && data[0].type === HtmlDataTypes.text && attribs && attribs.lang;
 
-    if(isString) {
-        const displayLanguage = attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
-            ? languageSyntaxHighlighterNames[attribs.lang]
-            : languageSyntaxHighlighterNames['plaintext'];
-        return <Container {...attribs} language={languageLabels[attribs.lang]}>
-            <SyntaxHighlighter 
-                customStyle={{
-                    backgroundColor: colors.containers.three,
-                    padding: '20px',
-                    borderLeft: `10px solid ${colors.containers.one}`,
-                    borderRadius: '4px',
-                    margin: 0,
-                }}
-                language={displayLanguage.key}
-                style={githubGist}
-            >
-                {data[0].data}
-            </SyntaxHighlighter>
-        </Container>;
-    }
-    return <code {...attribs}><Html data={ data } /></code>
+  if (isString) {
+    const displayLanguage =
+      attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
+        ? languageSyntaxHighlighterNames[attribs.lang]
+        : languageSyntaxHighlighterNames['plaintext'];
+    return (
+      <Container {...attribs} language={languageLabels[attribs.lang]}>
+        <SyntaxHighlighter
+          customStyle={{
+            backgroundColor: colors.containers.three,
+            padding: '20px',
+            borderLeft: `10px solid ${colors.containers.one}`,
+            borderRadius: '4px',
+            margin: 0,
+          }}
+          language={displayLanguage.key}
+          style={githubGist}
+        >
+          {data[0].data}
+        </SyntaxHighlighter>
+      </Container>
+    );
+  }
+  return (
+    <code {...attribs}>
+      <Html data={data} />
+    </code>
+  );
+};
 
-}
+Code.propTypes = {
+  data: PropTypes.array,
+  attribs: PropTypes.object,
+};
 
 export default Code;

@@ -1,4 +1,4 @@
-import GenericHtmlBlock from "../Html/GenericHtmlBlock";
+import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
 const Blockquote = GenericHtmlBlock('blockquote');
 
