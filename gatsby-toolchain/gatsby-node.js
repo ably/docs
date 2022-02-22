@@ -3,7 +3,7 @@ const { onCreateNode } = require('./data/onCreateNode');
 const { onCreateWebpackConfig } = require('./gatsby-overwrite-config');
 
 const createSchemaCustomization = ({ actions }) => {
-  const { createTypes } = actions
+  const { createTypes } = actions;
   // PageFurnitureYaml ensures that all fields we expect are defined on every level.
   const typeDefs = `
     type PageFurnitureYaml implements Node {
@@ -14,8 +14,8 @@ const createSchemaCustomization = ({ actions }) => {
       contentString: String
       contentArray: [PageFurnitureYaml!]
     }
-  `
-  createTypes(typeDefs)
+  `;
+  createTypes(typeDefs);
 };
 
 exports.onCreateWebpackConfig = onCreateWebpackConfig;
