@@ -1,13 +1,13 @@
-import * as React from "react";
-import Layout from "../components/layout";
-import { LeftSideBar } from "../components/StaticQuerySidebar";
+import * as React from 'react';
+import Layout from '../components/layout';
+import { LeftSideBar } from '../components/StaticQuerySidebar';
 
 const IndexPage = () => {
   return (
     <Layout>
       <LeftSideBar />
     </Layout>
-  )
-}
+  );
+};
 
-export default IndexPage
+export default IndexPage;
