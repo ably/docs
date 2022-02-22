@@ -1,3 +1,3 @@
-import { LeftSideBar } from "./left-sidebar";
+import { LeftSideBar } from './left-sidebar';
 
 export { LeftSideBar };
