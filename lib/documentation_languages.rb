@@ -12,7 +12,7 @@ module Ably
     'objc' => { name: 'Obj-C', extension: 'm' },
     'swift' => { name: 'Swift', extension: 'swift' },
     'go' => { name: 'Go', extension: 'go' },
-    'csharp' => { name: 'C# .Net', extension: 'cs' },
+    'csharp' => { name: 'C# .NET', extension: 'cs' },
     'cplusplus' => { name: 'C++', extension: 'cpp' },
     'flutter' => { name: 'Flutter', extension: 'dart' },
     'c' => { name: 'C', extension: 'c' },
