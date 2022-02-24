@@ -31,7 +31,7 @@ const SidebarLinkMenu = ({ data, interactable = false, indent = 0 }) => {
 
         preExpanded.push(uuid);
         return content ? (
-          <li key={label}>
+          <li key={`${label}-${link}-${level}`}>
             <SidebarLinkItem
               uuid={uuid}
               label={labelMaybeWithLink}
@@ -43,7 +43,7 @@ const SidebarLinkMenu = ({ data, interactable = false, indent = 0 }) => {
             />
           </li>
         ) : (
-          <li key={label}>
+          <li key={`${label}-${link}-${level}`}>
             <SidebarLink to={link} $leaf={indent > 0}>
               {label}
             </SidebarLink>
