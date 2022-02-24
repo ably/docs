@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Select from 'react-select';
 import { SmallMenuLabel } from './Label';
-import { LATEST_ABLY_API_VERSION } from '../../../data/transform/constants';
+import { LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
 import { navigate } from 'gatsby';
 
 const routeToPage = ({ value }) => {
@@ -12,7 +12,7 @@ const routeToPage = ({ value }) => {
 const VersionMenu = ({ versions, version, rootVersion }) => {
   const latestOption = [
     {
-      label: LATEST_ABLY_API_VERSION,
+      label: LATEST_ABLY_API_VERSION_STRING,
       value: rootVersion,
     },
   ];
