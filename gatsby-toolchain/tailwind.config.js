@@ -1,4 +1,4 @@
-const extendConfig = require("@ably/ui/tailwind.extend.js");
+const extendConfig = require('@ably/ui/tailwind.extend.js');
 
 const periodicTableOfRealtimeColors = {
   'low-level-transport': 'var(--color-jazzy-pink)',
@@ -16,6 +16,9 @@ const periodicTableOfRealtimeColors = {
   'realtime-db-software': '#a4863b',
   'realtime-application-service': '#76767c',
   'streaming-gateway-service': '#338F9B',
+  'containers-one': '#ebebeb',
+  'containers-two': '#f1f1f1',
+  'containers-three': '#f8f8f8',
 };
 
 module.exports = extendConfig((ablyUIConfig) => ({
@@ -37,7 +40,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
     ...ablyUIConfig.theme,
     spacing: {
       ...ablyUIConfig.theme.spacing,
-      128: "var(--spacing-128)",
+      128: 'var(--spacing-128)',
     },
     extend: {
       ...ablyUIConfig.theme.extend,
