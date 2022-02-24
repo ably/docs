@@ -12,7 +12,7 @@ import AIChevronDown from '../../styles/svg/ai-chevron-down.js';
 import AIChevronUp from '../../styles/svg/ai-chevron-up';
 import { ChildPropTypes } from '../../react-utilities';
 
-const ExpandableIndicator = ({ expanded, className }) =>
+const ExpandableIndicator = ({ expanded, className = '' }) =>
   expanded ? (
     <AIChevronUp className={`flex-shrink-0 ${className}`} />
   ) : (
