@@ -1,23 +1,24 @@
+const { compose } = require('lodash/fp');
 const { convertBlangBlocksToHtml } = require('./blang');
 const { convertCollapsibleMarkupToHtml } = require('./collapsible');
 
 /**
  * Added by the pre-parser in order to survive textile parsing
  */
-const addGithubLineBreaks = content => content.replaceAll('{{{github_br}}}', '\n');
+const addGithubLineBreaks = (content) => content.replaceAll('{{{github_br}}}', '\n');
 
-const LINK_EXTERNAL_REGEX = /(<a[^>]*)class="external"([^>]*>)/m
+const LINK_EXTERNAL_REGEX = /(<a[^>]*)class="external"([^>]*>)/m;
 
-const convertExternalLinksToBlankTarget = content => content.replace(LINK_EXTERNAL_REGEX, '$1target="_blank" rel="noopener noreferrer"$2');
+const convertExternalLinksToBlankTarget = (content) =>
+  content.replace(LINK_EXTERNAL_REGEX, '$1target="_blank" rel="noopener noreferrer"$2');
 
-const postParser = content => {
-    let result = addGithubLineBreaks(content);
-    result = convertBlangBlocksToHtml(result);
-    result = convertExternalLinksToBlankTarget(result);
-    result = convertCollapsibleMarkupToHtml(result);
-    return result;
-}
+const postParser = compose(
+  convertCollapsibleMarkupToHtml,
+  convertExternalLinksToBlankTarget,
+  convertBlangBlocksToHtml,
+  addGithubLineBreaks,
+);
 
 module.exports = {
-    postParser
-}
+  postParser,
+};
