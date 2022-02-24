@@ -8,7 +8,7 @@ import PageLanguageContext from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import { H1 } from '../components/blocks/headings';
-import VersionMenu from '../components/Menu/version-menu';
+import VersionMenu from '../components/Menu/VersionMenu';
 import RightSidebar from '../components/Sidebar/RightSidebar';
 
 const Document = ({
