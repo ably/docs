@@ -12,6 +12,18 @@ import AIChevronDown from '../../styles/svg/ai-chevron-down.js';
 import AIChevronUp from '../../styles/svg/ai-chevron-up';
 import { ChildPropTypes } from '../../react-utilities';
 
+const ExpandableIndicator = ({ expanded, className }) =>
+  expanded ? (
+    <AIChevronUp className={`flex-shrink-0 ${className}`} />
+  ) : (
+    <AIChevronDown className={`flex-shrink-0 ${className}`} />
+  );
+
+ExpandableIndicator.propTypes = {
+  expanded: PropTypes.bool,
+  className: PropTypes.string,
+};
+
 const AccordionHeadingPropTypes = {
   label: PropTypes.oneOfType([PropTypes.node, PropTypes.string]),
   level: PropTypes.number,
@@ -21,9 +33,11 @@ const AccordionHeadingPropTypes = {
 const InteractableAccordionHeading = ({ label, level }) => (
   <div className={`flex justify-between`}>
     {label}
-    <AccordionItemHeading aria-level={level || ROOT_LEVEL}>
+    <AccordionItemHeading className="bg-containers-three w-28" aria-level={level || ROOT_LEVEL}>
       <AccordionItemButton>
-        <AccordionItemState>{({ expanded }) => (expanded ? <AIChevronUp /> : <AIChevronDown />)}</AccordionItemState>
+        <AccordionItemState>
+          {({ expanded }) => <ExpandableIndicator className={'h-full mx-8'} expanded={expanded} />}
+        </AccordionItemState>
       </AccordionItemButton>
     </AccordionItemHeading>
   </div>
@@ -33,7 +47,10 @@ InteractableAccordionHeading.propTypes = AccordionHeadingPropTypes;
 
 const NonInteractableAccordionHeading = ({ label, level }) => (
   <AccordionItemHeading aria-level={level || ROOT_LEVEL}>
-    <AccordionItemButton>{label}</AccordionItemButton>
+    <AccordionItemButton className="flex items-center">
+      {label}
+      <AccordionItemState>{({ expanded }) => <ExpandableIndicator expanded={expanded} />}</AccordionItemState>
+    </AccordionItemButton>
   </AccordionItemHeading>
 );
 
