@@ -16,7 +16,7 @@ const A = ({ data, attribs }) => {
 };
 
 A.propTypes = {
-  data: PropTypes.array,
+  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
   attribs: PropTypes.object,
 };
 
