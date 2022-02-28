@@ -35,7 +35,7 @@ const VersionMenu = ({ versions, version, rootVersion }) => {
       )}
       {version && version !== LATEST_ABLY_API_VERSION_STRING && (
         <Warning
-          message={`You are viewing an old version (${version}) of this documentation. We recommend you `}
+          message={` You are viewing an old version (${version}) of this documentation. We recommend you `}
           linkText={`view the latest version, ${LATEST_ABLY_API_VERSION_STRING}`}
           href={`/documentation/${rootVersion}`}
         />
