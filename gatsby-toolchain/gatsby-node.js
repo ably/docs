@@ -11,8 +11,8 @@ const createSchemaCustomization = ({ actions }) => {
       link: String!
       name: String
       level: Int
-      contentString: String
-      contentArray: [PageFurnitureYaml!]
+      text: String
+      items: [PageFurnitureYaml!]
     }
   `;
   createTypes(typeDefs);
