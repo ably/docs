@@ -3,16 +3,32 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Html from '../Html';
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
+import styled, { css } from 'styled-components';
+import { secondary } from '../../../styles/colors';
+
+const styles = css`
+  :hover {
+    color: ${secondary.actionBlue};
+  }
+`;
+
+const StyledGatsbyLink = styled(Link)`
+  ${styles}
+`;
+
+const StyledALink = styled.a`
+  ${styles}
+`;
 
 const A = ({ data, attribs }) => {
   if (attribs.href && /^(\/|#|https?:\/\/(?:www.)?ably.com\/documentation).*/.test(attribs.href)) {
     return (
-      <Link {...{ ...attribs, to: attribs.href }}>
+      <StyledGatsbyLink {...{ ...attribs, to: attribs.href }}>
         <Html data={data} />
-      </Link>
+      </StyledGatsbyLink>
     );
   }
-  return GenericHtmlBlock('a')({ data, attribs });
+  return GenericHtmlBlock(StyledALink)({ data, attribs });
 };
 
 A.propTypes = {
