@@ -6,7 +6,10 @@ import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 import styled, { css } from 'styled-components';
 import { secondary } from '../../../styles/colors';
 
+const onPageNav = /[#?]/;
+
 const styles = css`
+  color: revert;
   :hover {
     color: ${secondary.actionBlue};
   }
@@ -21,7 +24,11 @@ const StyledALink = styled.a`
 `;
 
 const A = ({ data, attribs }) => {
-  if (attribs.href && /^(\/|#|https?:\/\/(?:www.)?ably.com\/documentation).*/.test(attribs.href)) {
+  if (
+    attribs.href &&
+    /^(\/|#|https?:\/\/(?:www.)?ably.com\/documentation).*/.test(attribs.href) &&
+    !onPageNav.test(attribs.href)
+  ) {
     return (
       <StyledGatsbyLink {...{ ...attribs, to: attribs.href }}>
         <Html data={data} />
