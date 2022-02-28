@@ -22,26 +22,53 @@ Given a YAML file similar to:
 
 ```yaml
 name: "Example"
-contentArray:
+items:
   - label: "Example Parent Heading"
     link: "/relative-url"
     level: 3
-    contentString: "Example string"
+    text: "Example string"
 ```
 
 The SidebarLinkMenu will render an unordered list of links containing the label, link, and content (if any) in an expandable and collapsible way.
 
 The level will correspond to the [aria-level](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-level) of the element. If left blank, it will default to 3. This corresponds semantically with the ```<h3></h3>``` HTML element.
 
+**Due to how GraphQL works, we only currently support nesting a few levels deep; if you add a sub-menu and it does not show up, this is why.**
+
+Add extra sections to the following GraphQL to expand how deeply-nested the menus can be:
+
+**Support one level deep:**
+```
+{
+    items {
+        ...SubMenuFields
+    }
+}
+```
+
+**Support two levels deep:**
+```
+{
+    items {
+        ...SubMenuFields
+        items {
+            ...SubMenuFields
+        }
+    }
+}
+```
+
+This pattern can be expanded indefinitely.
+
 ### Examples:
 
 #### With Collapsible Content
 ```yaml
 name: "Example"
-contentArray:
+items:
   - label: "Example Parent Heading"
     link: "/relative-url"
-    contentString: "Example string"
+    text: "Example string"
 ```
 
 Resulting in:
@@ -58,10 +85,10 @@ Resulting in:
 
 ```yaml
 name: "Example"
-contentArray:
+items:
   - label: "Example Parent Heading"
     link: "/relative-url"
-    contentArray:
+    text:
           - label: "Example Child Heading"
             link: "/relative-url"
 ```
