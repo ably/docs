@@ -9,7 +9,7 @@ const SidebarHeadingStyle = css`
   display: block;
   padding: ${spacing.small};
   text-decoration: none;
-  margin-left: ${({ $leaf, indent }) => `${($leaf ? 16 : 0) + (indent ?? 0)}px`};
+  margin-left: ${({ $leaf, indent }) => `${($leaf ? 4 : 0) + (indent ?? 0)}px`};
 
   color: ${({ active }) => (active ? colors.text.linkHoverAlternate : colors.text.main)};
   border-left: ${({ active, $leaf }) =>
