@@ -45,7 +45,6 @@ const CAlertMessage = styled.div`
   }
 
   position: relative;
-  z-index: 2;
   display: flex;
   width: 100%;
   align-content: center;
@@ -54,7 +53,7 @@ const CAlertMessage = styled.div`
 const SuggestDestination = ({ message, messageLevel, href, linkText }) => (
   <>
     {MESSAGE_ICONS[messageLevel]}
-    <CAlertMessage className="px-4">
+    <CAlertMessage className="px-8">
       <span>
         <strong>{messageLevel}</strong>
         {message}
