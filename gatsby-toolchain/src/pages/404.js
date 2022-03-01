@@ -1,12 +1,11 @@
 import * as React from 'react';
-import { StyledH1 } from '../components/blocks/headings/H1';
-import { StyledGatsbyLink } from '../components/blocks/external-references/A';
+import { Link } from 'gatsby';
 
 const NotFoundPage = () => {
   return (
     <main>
       <title>Not found</title>
-      <StyledH1>404: Page not found</StyledH1>
+      <h1>404: Page not found</h1>
       <p>
         Sorry - we couldn&apos;t find what you were looking for.
         <br />
@@ -28,7 +27,7 @@ const NotFoundPage = () => {
           </>
         ) : null}
         <br />
-        <StyledGatsbyLink to="/documentation">Return to documentation home page</StyledGatsbyLink>.
+        <Link to="/documentation">Return to documentation home page</Link>.
       </p>
     </main>
   );
