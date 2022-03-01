@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { graphql } from 'gatsby';
-import Layout from '../components/layout';
+import Layout from '../components/Layout';
 import Html from '../components/blocks/Html';
 import { LeftSideBar } from '../components/StaticQuerySidebar';
 import PageLanguageContext from '../contexts/page-language-context';
