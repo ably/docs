@@ -9,5 +9,4 @@ const StyledH1 = styled.h1`
 
 const H1 = GenericHtmlBlock(StyledH1);
 
-export { StyledH1 };
 export default H1;
