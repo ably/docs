@@ -43,4 +43,5 @@ A.propTypes = {
   attribs: PropTypes.object,
 };
 
+export { StyledGatsbyLink };
 export default A;
