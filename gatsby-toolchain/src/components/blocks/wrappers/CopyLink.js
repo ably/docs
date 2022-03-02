@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { ChildPropTypes } from '../../../react-utilities';
 import styled from 'styled-components';
@@ -55,11 +55,21 @@ const LinkCopyButton = ({ id, ...props }) => {
     setContent('Copy section link to clipboard');
     setCopySuccess(null);
   };
+
+  useEffect(() => {
+    const resetStateTimeout = setTimeout(resetState, 2000);
+    return () => clearTimeout(resetStateTimeout);
+  }, [copySuccess]);
   return (
     <div className="relative">
-      {hover && <LinkHoverPopup copySuccess={copySuccess}>{content}</LinkHoverPopup>}
+      {hover && (
+        <LinkHoverPopup id={'link-copy-tooltip'} role="tooltip" copySuccess={copySuccess}>
+          {content}
+        </LinkHoverPopup>
+      )}
       <StyledLinkCopyButton
         {...props}
+        aria-describedby={'link-hover-tooltip'}
         id={id}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
