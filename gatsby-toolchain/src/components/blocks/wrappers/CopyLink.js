@@ -107,4 +107,5 @@ CopyLink.propTypes = {
   children: ChildPropTypes,
 };
 
+export { LinkHoverPopup };
 export default CopyLink;
