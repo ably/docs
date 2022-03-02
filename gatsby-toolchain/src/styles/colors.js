@@ -16,6 +16,11 @@ export const secondary = {
   acceptGreen: '#00C766',
 };
 
+export const tertiary = {
+  warningRed: '#FFCCCB',
+  backgroundGreen: '#98FB98',
+};
+
 export const containers = {
   one: '#ebebeb',
   two: '#f1f1f1',
