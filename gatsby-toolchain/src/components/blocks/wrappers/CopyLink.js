@@ -52,7 +52,7 @@ const LinkCopyButton = ({ id, ...props }) => {
   const [copySuccess, setCopySuccess] = useState(null);
 
   const resetState = () => {
-    setContent('Copy link to clipboard');
+    setContent('Copy section link to clipboard');
     setCopySuccess(null);
   };
   return (
@@ -67,12 +67,12 @@ const LinkCopyButton = ({ id, ...props }) => {
           const linkToCopy = `${window.location.href}#${id}`;
           navigator.clipboard.writeText(linkToCopy).then(
             () => {
-              setContent('Link copied ✓');
+              setContent('Section link copied ✓');
               setCopySuccess(true);
               setTimeout(resetState, 2000);
             },
             (err) => {
-              setContent(`Failed to copy link ×\n\n${err}`);
+              setContent(`Failed to copy section link ×\n\n${err}`);
               setCopySuccess(false);
               setTimeout(resetState, 2000);
             },
@@ -96,7 +96,7 @@ const CopyLink = ({ attribs, children }) => {
   }
   return (
     <div className="flex items-center" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-      {hover && <LinkCopyButton title="Copy link" id={attribs.id} />}
+      {hover && <LinkCopyButton title="Copy link to section" id={attribs.id} />}
       {children}
     </div>
   );
