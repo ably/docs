@@ -79,12 +79,10 @@ const LinkCopyButton = ({ id, ...props }) => {
             () => {
               setContent('Section link copied ✓');
               setCopySuccess(true);
-              setTimeout(resetState, 2000);
             },
             (err) => {
               setContent(`Failed to copy section link ×\n\n${err}`);
               setCopySuccess(false);
-              setTimeout(resetState, 2000);
             },
           );
         }}
