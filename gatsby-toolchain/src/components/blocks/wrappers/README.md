@@ -4,7 +4,7 @@ These concrete examples are to demonstrate why I am using Wrappers for certain c
 
 The advantages are that:
 1. They do not lock in the data provided at the time the Component is wrapped
-2. They can access hooks without misnaming them to look like real Components
+2. They can access hooks without misnaming them to look like plain Components
 
 The drawbacks are that they are more verbose and more magical than HOCs:
 1. It is not obvious that something is being done to the wrapped component
