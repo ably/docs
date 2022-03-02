@@ -4,7 +4,7 @@ import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
 const StyledH1 = styled.h1`
   ${fonts.h1}
-  margin-bottom: ${spacing.medium};
+  margin: ${spacing.medium} 0 ${spacing.medium};
 `;
 
 const H1 = GenericHtmlBlock(StyledH1);
