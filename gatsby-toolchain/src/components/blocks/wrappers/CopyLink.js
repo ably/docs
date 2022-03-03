@@ -118,7 +118,6 @@ const CopyLink = ({ attribs, children }) => {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onFocus={() => setHover(true)}
-      onBlur={() => setHover(false)}
     >
       {hover && <LinkCopyButton id={attribs.id} />}
       {children}
