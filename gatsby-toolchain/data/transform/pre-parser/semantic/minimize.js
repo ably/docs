@@ -2,8 +2,7 @@ const { extractIndented } = require('../shared-utilities/extract-indented');
 
 const MINIMIZE_REGEX = /^minimize\.\s*(.*)$/m;
 
-const MINIMIZED_HEADINGS_REGEX =
-  /^(h[1-6])(\(#[^\)]+\))?\(minimize(?:=([^\)]*))?\)\.(.*?)\n\n(.+?)(?=(?:\n\nh[1-6])|(?:\Z))/gm;
+const MINIMIZED_HEADINGS_REGEX = /^(h[1-6])(\(#[^)]+\))?\(minimize(?:=([^)]*))?\)\.(.*?)\n\n(.+?)(?=(?:\n\nh[1-6]))/gm;
 
 // borgar-textile does not handle nested divs; we replace these strings with divs with appropriate classes
 // while rehydrating in React
