@@ -10,6 +10,9 @@ const StyledLinkCopyButton = styled.button`
   :hover {
     color: ${secondary.actionBlue};
   }
+  :focus {
+    outline: none;
+  }
 `;
 
 const LinkHoverPopup = styled.div`
@@ -56,12 +59,26 @@ const LinkCopyButton = ({ id, ...props }) => {
     setCopySuccess(null);
   };
 
+  const copyLink = () => {
+    const linkToCopy = `${window.location.href}#${id}`;
+    navigator.clipboard.writeText(linkToCopy).then(
+      () => {
+        setContent('Section link copied ✓');
+        setCopySuccess(true);
+      },
+      (err) => {
+        setContent(`Failed to copy section link ×\n\n${err}`);
+        setCopySuccess(false);
+      },
+    );
+  };
+
   useEffect(() => {
     const resetStateTimeout = setTimeout(resetState, 2000);
     return () => clearTimeout(resetStateTimeout);
   }, [copySuccess]);
   return (
-    <div className="relative">
+    <div className="relative" onKeyPress={(event) => event.key === 'Enter' && copyLink()}>
       {hover && (
         <LinkHoverPopup id={'link-copy-tooltip'} role="tooltip" copySuccess={copySuccess}>
           {content}
@@ -71,21 +88,13 @@ const LinkCopyButton = ({ id, ...props }) => {
         {...props}
         aria-describedby={'link-hover-tooltip'}
         id={id}
+        tabIndex="0"
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        onClick={() => {
-          const linkToCopy = `${window.location.href}#${id}`;
-          navigator.clipboard.writeText(linkToCopy).then(
-            () => {
-              setContent('Section link copied ✓');
-              setCopySuccess(true);
-            },
-            (err) => {
-              setContent(`Failed to copy section link ×\n\n${err}`);
-              setCopySuccess(false);
-            },
-          );
-        }}
+        onFocus={() => setHover(true)}
+        onBlur={() => setHover(false)}
+        onClick={copyLink}
+        autoFocus
       >
         <AILink />
       </StyledLinkCopyButton>
@@ -103,8 +112,15 @@ const CopyLink = ({ attribs, children }) => {
     return <>{children}</>;
   }
   return (
-    <div className="flex items-center" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-      {hover && <LinkCopyButton title="Copy section link" id={attribs.id} />}
+    <div
+      className="flex items-center"
+      tabIndex="0"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onFocus={() => setHover(true)}
+      onBlur={() => setHover(false)}
+    >
+      {hover && <LinkCopyButton id={attribs.id} />}
       {children}
     </div>
   );
