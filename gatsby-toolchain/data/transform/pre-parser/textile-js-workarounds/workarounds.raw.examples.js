@@ -19,7 +19,7 @@ A series of connection states is defined as follows:
 - failed := This state is entered if the client library encounters a failure condition that it cannot recover from. This may be a fatal connection error received from the Ably service (e.g. an attempt to connect with an incorrect API key), or some local terminal error (e.g. the token in use has expired and the library does not have any way to renew it).<br><br>In the failed state, no reconnection attempts are made automatically by the library, and clients may not publish messages. A new connection attempt can be triggered by an explicit call to "<span lang="default">@connect()@</span><span lang="ruby">@connect@</span><span lang="csharp">@Connect()@:#connect</span>":#connect on the @Connection@ object.
 `;
 
-const expectedDefinitionList = `<h3 id=\"connection-states\">Available connection states</h3>
+const expectedDefinitionList = `<h3 id="connection-states">Available connection states</h3>
 <p>A series of connection states is defined as follows:</p>
 <dl>
 <dt>initialized</dt>
@@ -31,13 +31,13 @@ const expectedDefinitionList = `<h3 id=\"connection-states\">Available connectio
 <dt>disconnected</dt>
 <dd>A temporary failure condition. No current connection exists because there is no network connectivity or no host is available.<br /><br />The disconnected state is entered if an established connection is dropped, or if a connection attempt was unsuccessful. In the disconnected state the library will periodically attempt to open a new connection (approximately every 15 seconds), anticipating that the connection will be re-established soon and thus connection and channel continuity will be possible. <br /><br />In this state, developers can continue to publish messages as they are automatically placed in a local queue, to be sent as soon as a connection is reestablished. Messages published by other clients whilst this client is disconnected will be delivered to it upon reconnection, so long as the connection was resumed within 2 minutes. <br /><br />After 2 minutes have elapsed, recovery is no longer possible and the connection will move to the <code>suspended</code> state.</dd>
 <dt>suspended</dt>
-<dd>A long term failure condition. No current connection exists because there is no network connectivity or no host is available.<br /><br />The suspended state is entered after a failed connection attempt if there has then been no connection for a period of two minutes. In the suspended state, the library will periodically attempt to open a new connection every 30 seconds. Developers are unable to publish messages in this state. A new connection attempt can also be triggered by an explicit call to <a href=\"#connect\"><span lang=\"default\"><code>connect()</code></span><span lang=\"ruby\"><code>connect</code></span><span lang=\"csharp\"><code>Connect()</code>:#connect</span></a> on the <code>Connection</code> object.<br /><br />Once the connection has been re-established, channels will be automatically re-attached. The client has been disconnected for too long for them to resume from where they left off, so if it wants to catch up on messages published by other clients while it was disconnected, it needs to use the <a href=\"/realtime/history\">history <span class=\"caps\">API</span></a>.</dd>
+<dd>A long term failure condition. No current connection exists because there is no network connectivity or no host is available.<br /><br />The suspended state is entered after a failed connection attempt if there has then been no connection for a period of two minutes. In the suspended state, the library will periodically attempt to open a new connection every 30 seconds. Developers are unable to publish messages in this state. A new connection attempt can also be triggered by an explicit call to <a href="#connect"><span lang="default"><code>connect()</code></span><span lang="ruby"><code>connect</code></span><span lang="csharp"><code>Connect()</code>:#connect</span></a> on the <code>Connection</code> object.<br /><br />Once the connection has been re-established, channels will be automatically re-attached. The client has been disconnected for too long for them to resume from where they left off, so if it wants to catch up on messages published by other clients while it was disconnected, it needs to use the <a href="/realtime/history">history <span class="caps">API</span></a>.</dd>
 <dt>closing</dt>
 <dd>An explicit request by the developer to close the connection has been sent to the Ably service. If a reply is not received from Ably within a short period of time, the connection will be forcibly terminated and the connection state will become <code>closed</code>.</dd>
 <dt>closed</dt>
-<dd>The connection has been explicitly closed by the client.<br /><br />In the closed state, no reconnection attempts are made automatically by the library, and clients may not publish messages. No connection state is preserved by the service or by the library. A new connection attempt can be triggered by an explicit call to <a href=\"#connect\"><span lang=\"default\"><code>connect()</code></span><span lang=\"ruby\"><code>connect</code></span><span lang=\"csharp\"><code>Connect()</code>:#connect</span></a> on the <code>Connection</code> object, which will result in a new connection.</dd>
+<dd>The connection has been explicitly closed by the client.<br /><br />In the closed state, no reconnection attempts are made automatically by the library, and clients may not publish messages. No connection state is preserved by the service or by the library. A new connection attempt can be triggered by an explicit call to <a href="#connect"><span lang="default"><code>connect()</code></span><span lang="ruby"><code>connect</code></span><span lang="csharp"><code>Connect()</code>:#connect</span></a> on the <code>Connection</code> object, which will result in a new connection.</dd>
 <dt>failed</dt>
-<dd>This state is entered if the client library encounters a failure condition that it cannot recover from. This may be a fatal connection error received from the Ably service (e.g. an attempt to connect with an incorrect <span class=\"caps\">API</span> key), or some local terminal error (e.g. the token in use has expired and the library does not have any way to renew it).<br /><br />In the failed state, no reconnection attempts are made automatically by the library, and clients may not publish messages. A new connection attempt can be triggered by an explicit call to <a href=\"#connect\"><span lang=\"default\"><code>connect()</code></span><span lang=\"ruby\"><code>connect</code></span><span lang=\"csharp\"><code>Connect()</code>:#connect</span></a> on the <code>Connection</code> object.</dd>
+<dd>This state is entered if the client library encounters a failure condition that it cannot recover from. This may be a fatal connection error received from the Ably service (e.g. an attempt to connect with an incorrect <span class="caps">API</span> key), or some local terminal error (e.g. the token in use has expired and the library does not have any way to renew it).<br /><br />In the failed state, no reconnection attempts are made automatically by the library, and clients may not publish messages. A new connection attempt can be triggered by an explicit call to <a href="#connect"><span lang="default"><code>connect()</code></span><span lang="ruby"><code>connect</code></span><span lang="csharp"><code>Connect()</code>:#connect</span></a> on the <code>Connection</code> object.</dd>
 </dl>`;
 
 const nestedH1_6String = `<div>
@@ -122,8 +122,8 @@ csharp: State
 
 The current <span lang="java">"@io.ably.lib.realtime.ChannelState@":#channel-state @state@</span><span lang="csharp">"@IO.Ably.Realtime.ChannelState@":#channel-state @state@</span><span lang="ruby">"@Ably::Realtime::Channel::STATE@":#channel-state @state@</span><span lang="objc,swift">"@ARTRealtimeChannelState@":#channel-state</span><span lang="default">"@ChannelState@":#channel-state</span> of this @Channel@. See the supported "channel states":#channel-states for more information.`;
 
-const spanWithHashResult = `<h6 id=\"state\"><span lang=\"default\">state</span><span lang=\"csharp\">State</span></h6>
-<p>The current <span lang=\"java\"><a href=\"#channel-state\"><code>io.ably.lib.realtime.ChannelState</code></a> <code>state</code></span><span lang=\"csharp\"><a href=\"#channel-state\"><code>IO.Ably.Realtime.ChannelState</code></a> <code>state</code></span><span lang=\"ruby\"><a href=\"#channel-state\"><code>Ably::Realtime::Channel::STATE</code></a> <code>state</code></span><span lang=\"objc,swift\"><a href=\"#channel-state\"><code>ARTRealtimeChannelState</code></a></span><span lang=\"default\"><a href=\"#channel-state\"><code>ChannelState</code></a></span> of this <code>Channel</code>. See the supported <a href=\"#channel-states\">channel states</a> for more information.</p>`;
+const spanWithHashResult = `<h6 id="state"><span lang="default">state</span><span lang="csharp">State</span></h6>
+<p>The current <span lang="java"><a href="#channel-state"><code>io.ably.lib.realtime.ChannelState</code></a> <code>state</code></span><span lang="csharp"><a href="#channel-state"><code>IO.Ably.Realtime.ChannelState</code></a> <code>state</code></span><span lang="ruby"><a href="#channel-state"><code>Ably::Realtime::Channel::STATE</code></a> <code>state</code></span><span lang="objc,swift"><a href="#channel-state"><code>ARTRealtimeChannelState</code></a></span><span lang="default"><a href="#channel-state"><code>ChannelState</code></a></span> of this <code>Channel</code>. See the supported <a href="#channel-states">channel states</a> for more information.</p>`;
 
 const listDivExample = `<div lang="default">
 h4. Parameters
@@ -134,29 +134,29 @@ h4. Parameters
 - <div lang="swift,objc">callback</div> := called once the channel becomes attached or if an error occurs
 </div><div lang="flutter"></div>`;
 
-const listDivParsedExample = `<div lang=\"default\">
+const listDivParsedExample = `<div lang="default">
 <p><h4>Parameters</h4></p>
 <dl>
-  <dt><div lang=\"javascript,nodejs\">callback</div></dt>
+  <dt><div lang="javascript,nodejs">callback</div></dt>
   <dd>is a function of the form <code>function(err)</code> and is called once the channel attach succeeds or fails</dd>
-  <dt><div lang=\"ruby\">&amp;block</div></dt>
+  <dt><div lang="ruby">&amp;block</div></dt>
   <dd>yields once the channel becomes attached</dd>
-  <dt><div lang=\"csharp\">callback</div></dt>
+  <dt><div lang="csharp">callback</div></dt>
   <dd>is a lambda expression of the form <code>Action&lt;TimeSpan, ErrorInfo&gt;</code> and is called once the channel attach succeeds or fails</dd>
-  <dt><div lang=\"swift,objc\">callback</div></dt>
+  <dt><div lang="swift,objc">callback</div></dt>
   <dd>called once the channel becomes attached or if an error occurs</dd>
 </dl>
 </div>
-<div lang=\"flutter\"></div>`;
+<div lang="flutter"></div>`;
 
 module.exports = {
-    definitionList,
-    expectedDefinitionList,
-    nestedH1_6String,
-    nestedH1_6Html,
-    nestedDiv,
-    spanWithHashExample,
-    spanWithHashResult,
-    listDivExample,
-    listDivParsedExample
+  definitionList,
+  expectedDefinitionList,
+  nestedH1_6String,
+  nestedH1_6Html,
+  nestedDiv,
+  spanWithHashExample,
+  spanWithHashResult,
+  listDivExample,
+  listDivParsedExample,
 };
