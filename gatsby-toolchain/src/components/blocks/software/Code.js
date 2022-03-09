@@ -31,6 +31,7 @@ import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
 import { spacing, fonts, colors } from '../../../styles';
 import languageLabels, { languageSyntaxHighlighterNames } from '../../../maps/language';
 import HtmlDataTypes from '../../../../data/types/html';
+import { secondary } from '../../../styles/colors';
 
 const Container = styled.div`
   ${fonts.efficientBody}
@@ -66,6 +67,11 @@ SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.swift.key, swi
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.objc.key, objectivec);
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.json.key, json);
 
+const StyledBasicCodeElement = styled.code`
+  background-color: ${secondary.subtleOrange};
+  padding: 2.5px 0;
+`;
+
 const Code = ({ data, attribs }) => {
   const isString = data.length === 1 && data[0].type === HtmlDataTypes.text && attribs && attribs.lang;
 
@@ -93,9 +99,9 @@ const Code = ({ data, attribs }) => {
     );
   }
   return (
-    <code {...attribs}>
+    <StyledBasicCodeElement {...attribs}>
       <Html data={data} />
-    </code>
+    </StyledBasicCodeElement>
   );
 };
 
