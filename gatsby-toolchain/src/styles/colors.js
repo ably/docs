@@ -14,6 +14,7 @@ export const secondary = {
   smokeGrey: '#999999',
   deniedRed: '#EC465B',
   acceptGreen: '#00C766',
+  subtleOrange: '#fde9d7',
 };
 
 export const tertiary = {
