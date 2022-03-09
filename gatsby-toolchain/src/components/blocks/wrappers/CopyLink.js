@@ -49,8 +49,8 @@ const LinkHoverPopup = styled.div`
   }
 `;
 
-const LinkCopyButton = ({ id, ...props }) => {
-  const [hover, setHover] = useState(true);
+const LinkCopyButton = ({ id, parentHovered, ...props }) => {
+  const [hover, setHover] = useState(false);
   const [content, setContent] = useState('Copy section link to clipboard');
   const [copySuccess, setCopySuccess] = useState(null);
 
@@ -79,7 +79,7 @@ const LinkCopyButton = ({ id, ...props }) => {
   }, [copySuccess]);
   return (
     <div className="relative" onKeyPress={(event) => event.key === 'Enter' && copyLink()}>
-      {hover && (
+      {(hover || parentHovered) && (
         <LinkHoverPopup id={'link-copy-tooltip'} role="tooltip" copySuccess={copySuccess}>
           {content}
         </LinkHoverPopup>
@@ -94,7 +94,6 @@ const LinkCopyButton = ({ id, ...props }) => {
         onFocus={() => setHover(true)}
         onBlur={() => setHover(false)}
         onClick={copyLink}
-        autoFocus
       >
         <AILink />
       </StyledLinkCopyButton>
@@ -112,14 +111,8 @@ const CopyLink = ({ attribs, children }) => {
     return <>{children}</>;
   }
   return (
-    <div
-      className="flex items-center"
-      tabIndex="0"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      onFocus={() => setHover(true)}
-    >
-      {hover && <LinkCopyButton id={attribs.id} />}
+    <div className={`flex items-center`} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <LinkCopyButton id={attribs.id} parentHovered={hover} />
       {children}
     </div>
   );
