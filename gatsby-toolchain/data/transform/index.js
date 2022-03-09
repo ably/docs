@@ -140,6 +140,9 @@ const transformNanocTextiles =
   (node, content, id, type, { createNodesFromPath, createContentDigest, createNodeId }) =>
   (updateWithTransform) => {
     const slug = node.relativePath.replace(/(.*)\.[^.]+$/, '$1');
+    if (node.sourceInstanceName === 'textile-partials') {
+      content = `${content}\n`;
+    }
     const preTextileTransform = preParser(content);
     const { noInlineTOC, inlineTOCOnly } = retrieveAndReplaceInlineTOC(preTextileTransform);
 
