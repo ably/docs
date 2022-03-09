@@ -35,7 +35,7 @@ const LinkHoverPopup = styled.div`
   &:after {
     content: '';
     position: absolute;
-    left: 10px;
+    left: 4px;
     width: 0;
     height: 0;
     bottom: 64px;
