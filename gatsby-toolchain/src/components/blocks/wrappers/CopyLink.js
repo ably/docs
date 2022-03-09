@@ -103,6 +103,7 @@ const LinkCopyButton = ({ id, parentHovered, ...props }) => {
 
 LinkCopyButton.propTypes = {
   id: PropTypes.string,
+  parentHovered: PropTypes.bool,
 };
 
 const CopyLink = ({ attribs, children }) => {
