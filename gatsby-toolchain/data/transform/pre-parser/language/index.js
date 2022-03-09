@@ -4,13 +4,12 @@ const { enforceWhiteSpaceLevelsBetweenLanguageElements } = require('./white-spac
 const { convertJSAllToNodeAndJavaScript, convertBlangBlocksToTokens } = require('./conversions');
 const { addLanguageSupportForBlockQuotes, addLanguageSupportForHeadings } = require('./html-support');
 
-
 module.exports = {
-    convertJSAllToNodeAndJavaScript,
-    convertBlangBlocksToTokens,
-    addLanguageSupportForGithubStyleCode,
-    duplicateLanguageBlocks,
-    enforceWhiteSpaceLevelsBetweenLanguageElements,
-    addLanguageSupportForBlockQuotes,
-    addLanguageSupportForHeadings
-}
+  convertJSAllToNodeAndJavaScript,
+  convertBlangBlocksToTokens,
+  addLanguageSupportForGithubStyleCode,
+  duplicateLanguageBlocks,
+  enforceWhiteSpaceLevelsBetweenLanguageElements,
+  addLanguageSupportForBlockQuotes,
+  addLanguageSupportForHeadings,
+};
