@@ -9,22 +9,13 @@ const {
   addLanguageSupportForHeadings,
 } = require('./language');
 const { stripComments, addMinimizeForHeadings, addMinimizedIndent } = require('./semantic');
-const {
-  compressMultipleNewlinesInLists,
-  manuallyReplaceHTags,
-  fixInlineCode,
-  fixTextileDefinitionLists,
-} = require('./textile-js-workarounds');
+const { textileJSCompatibility } = require('./textile-js-workarounds');
 
 // Newlines before closing tags inhibit textile-js' ability to correctly parse HTML
 const removeNewlinesBeforeClosingTags = (content) => content.replace(/\n+(<\/\w+>)/g, '$1');
 
 const preParser = compose(
-  // Textile compatibility operations
-  manuallyReplaceHTags,
-  compressMultipleNewlinesInLists,
-  fixInlineCode,
-  fixTextileDefinitionLists,
+  textileJSCompatibility,
   // Language operations
   addLanguageSupportForHeadings,
   addLanguageSupportForBlockQuotes,
