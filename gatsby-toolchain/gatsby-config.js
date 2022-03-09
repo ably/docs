@@ -11,6 +11,7 @@ module.exports = {
     'gatsby-plugin-sharp',
     'gatsby-transformer-yaml',
     'gatsby-transformer-sharp',
+    'gatsby-plugin-react-helmet',
     // Images
     {
       resolve: 'gatsby-source-filesystem',
@@ -44,6 +45,13 @@ module.exports = {
         path: './data/yaml/page-furniture',
       },
       __key: 'yaml-page-furniture',
+    },
+    // Meta Data
+    {
+      resolve: `gatsby-plugin-manifest`,
+      options: {
+        icon: 'src/images/favicon.png',
+      },
     },
   ],
 };
