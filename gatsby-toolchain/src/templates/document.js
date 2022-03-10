@@ -6,13 +6,14 @@ import Html from '../components/blocks/Html';
 import { LeftSideBar } from '../components/StaticQuerySidebar';
 import PageLanguageContext from '../contexts/page-language-context';
 import Article from '../components/Article';
-import { IGNORED_LANGUAGES } from '../../data/createPages/constants';
+import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import { H1 } from '../components/blocks/headings';
 import VersionMenu from '../components/Menu/VersionMenu';
 import RightSidebar from '../components/Sidebar/RightSidebar';
 
 const Document = ({
-  pageContext: { contentOrderedList, language, languages, version, contentMenu, slug },
+  location: { search },
+  pageContext: { contentOrderedList, languages, version, contentMenu, slug },
   data: {
     document: {
       meta: { title },
@@ -37,6 +38,9 @@ const Document = ({
     [contentOrderedList],
   );
 
+  const params = new URLSearchParams(search);
+  const language = params.get('lang') ?? DEFAULT_LANGUAGE;
+
   return (
     <PageLanguageContext.Provider value={language}>
       <Layout languages={filteredLanguages}>
@@ -53,6 +57,9 @@ const Document = ({
 };
 
 Document.propTypes = {
+  location: PropTypes.objectOf({
+    search: PropTypes.string,
+  }),
   pageContext: PropTypes.object,
   data: PropTypes.object,
 };
