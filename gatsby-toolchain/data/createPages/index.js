@@ -7,6 +7,7 @@ const { createLanguagePageVariants } = require('./createPageVariants');
 const { LATEST_ABLY_API_VERSION_STRING } = require('../transform/constants');
 const { createContentMenuDataFromPage } = require('./createContentMenuDataFromPage');
 const { DEFAULT_LANGUAGE } = require('./constants');
+const { identity } = require('lodash');
 
 const createPages = async ({ graphql, actions: { createPage } }) => {
   const documentTemplate = path.resolve(`src/templates/document.js`);
@@ -38,7 +39,7 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
       const postParsedContent = postParser(textile(content));
       const contentOrderedList = htmlParser(postParsedContent);
       const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item));
-      const languages = createLanguagePageVariants(createPage, documentTemplate)(
+      const languages = createLanguagePageVariants(identity, documentTemplate)(
         contentOrderedList,
         edge.node.slug,
         edge.node.parentSlug,
