@@ -3,9 +3,9 @@ import PropTypes from 'prop-types';
 import { HorizontalCodeMenu } from '.';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 import PageLanguageContext from '../../contexts/page-language-context';
-import LanguageLink from '../Link/LanguageLink';
 import MenuLabel from './Label';
 import MenuItem from './MenuItem';
+import LanguageButton from '../Button/LanguageButton';
 
 const TopCodeMenu = ({ languages }) => {
   const pageLanguage = useContext(PageLanguageContext);
@@ -18,12 +18,12 @@ const TopCodeMenu = ({ languages }) => {
           <MenuLabel>Show code examples in:</MenuLabel>
           {showDefaultLink ? (
             <MenuItem key={DEFAULT_LANGUAGE}>
-              <LanguageLink language={DEFAULT_LANGUAGE} />
+              <LanguageButton language={DEFAULT_LANGUAGE} />
             </MenuItem>
           ) : null}
           {languages.map((language) => (
             <MenuItem key={language}>
-              <LanguageLink language={language} />
+              <LanguageButton language={language} />
             </MenuItem>
           ))}
         </HorizontalCodeMenu>
