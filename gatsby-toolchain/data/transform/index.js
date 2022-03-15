@@ -10,7 +10,6 @@ const { flattenContentOrderedList } = require('./shared-utilities');
 
 const INLINE_TOC_REGEX = /^inline-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
 
-// TODO: split this into more focused files.
 // Just the partial name: /<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/
 const parseNanocPartials = (contentString) =>
   contentString.split(/(<%=\s+partial\s+partial_version\('[^')]*'\)[^%>]*%>)/);
@@ -139,7 +138,7 @@ const splitDataAndMetaData = (text) => {
 const transformNanocTextiles =
   (node, content, id, type, { createNodesFromPath, createContentDigest, createNodeId }) =>
   (updateWithTransform) => {
-    const slug = node.relativePath.replace(/(.*)\.[^.]+$/, '$1');
+    const slug = node.relativePath.replace(/(.*)\.[^.]+$/, '$1').replace('root/', '');
     if (node.sourceInstanceName === 'textile-partials') {
       content = `${content}\n`;
     }
