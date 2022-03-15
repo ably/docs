@@ -57,7 +57,7 @@ const Document = ({
 };
 
 Document.propTypes = {
-  location: PropTypes.objectOf({
+  location: PropTypes.shape({
     search: PropTypes.string,
   }),
   pageContext: PropTypes.object,
