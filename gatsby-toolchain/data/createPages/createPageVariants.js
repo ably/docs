@@ -16,7 +16,7 @@ const addLanguagesToSet =
     } = content;
     if (isArray(data)) {
       if (lang !== languageToKeep) {
-        languageSet.add(lang);
+        languageSet.add(lang.trim());
       }
       data.forEach(addLanguagesToSet(languageSet, languageToKeep));
     }
