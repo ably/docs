@@ -72,10 +72,14 @@ const StyledBasicCodeElement = styled.code`
   padding: 2.5px 0;
 `;
 
-const Code = ({ data, attribs }) => {
-  const isString = data.length === 1 && data[0].type === HtmlDataTypes.text && attribs && attribs.lang;
+const multilineRegex = /\r|\n/gm;
 
-  if (isString) {
+const Code = ({ data, attribs }) => {
+  const isString = data.length === 1 && data[0].type === HtmlDataTypes.text;
+  const hasRenderableLanguages = isString && attribs && attribs.lang;
+  const hasMultilineText = isString && multilineRegex.test(data[0].data);
+
+  if (hasRenderableLanguages || hasMultilineText) {
     const displayLanguage =
       attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
         ? languageSyntaxHighlighterNames[attribs.lang]
