@@ -1,5 +1,5 @@
-import GenericHtmlBlock from '../Html/GenericHtmlBlock';
+import SelfClosingHtmlBlock from '../Html/SelfClosingHtmlBlock';
 
-const Img = GenericHtmlBlock('img');
+const Img = SelfClosingHtmlBlock('img');
 
 export default Img;
