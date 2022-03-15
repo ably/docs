@@ -1,4 +1,5 @@
 import * as fc from 'fast-check';
+import alphaNumericString from '../../../test-generators.js/alphanumeric';
 import { convertBlangBlocksToTokens } from '../pre-parser/language';
 import { brokenBlangExample, brokenBlangTokenExpectedResult } from '../pre-parser/language/blang.raw.examples';
 import { convertBlangBlocksToHtml } from './blang';
@@ -14,8 +15,6 @@ const createRelevantString = (
         ${isBlang ? '{{/LANG_BLOCK}}' : ''}
     ${outerTag ? '</p>' : ''}`;
 };
-
-const alphaNumericString = fc.asciiString({ minLength: 1 }).map((str) => str.replace(/[^a-zA-Z0-9]/g, 'a'));
 
 describe('Converts Blang strings to HTML', () => {
   // Single checks
