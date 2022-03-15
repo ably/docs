@@ -60,7 +60,7 @@ const LinkCopyButton = ({ id, parentHovered, ...props }) => {
   };
 
   const copyLink = () => {
-    const linkToCopy = `${window.location.href}#${id}`;
+    const linkToCopy = `${window.location.href.replace(/#.*$/, '')}#${id}`;
     navigator.clipboard.writeText(linkToCopy).then(
       () => {
         setContent('Section link copied ✓');
