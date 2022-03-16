@@ -15,12 +15,11 @@ const Document = ({
   location: { search },
   pageContext: { contentOrderedList, languages, version, contentMenu, slug },
   data: {
-    document: {
-      meta: { title },
-    },
+    document: { meta },
     versions,
   },
 }) => {
+  const title = meta ? meta.title : '';
   const filteredLanguages = useMemo(
     () =>
       languages
