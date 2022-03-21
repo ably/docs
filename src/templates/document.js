@@ -14,10 +14,7 @@ import RightSidebar from '../components/Sidebar/RightSidebar';
 const Document = ({
   location: { search },
   pageContext: { contentOrderedList, languages, version, contentMenu, slug },
-  data: {
-    document,
-    versions,
-  },
+  data: { document, versions },
 }) => {
   const title = document && document.meta ? document.meta.title : '';
   const filteredLanguages = useMemo(
