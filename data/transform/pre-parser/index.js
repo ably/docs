@@ -1,4 +1,5 @@
 const { compose } = require('lodash/fp');
+const { replaceERB } = require('./erbjs');
 const {
   convertJSAllToNodeAndJavaScript,
   convertBlangBlocksToTokens,
@@ -15,6 +16,7 @@ const { textileJSCompatibility } = require('./textile-js-workarounds');
 const removeNewlinesBeforeClosingTags = (content) => content.replace(/\n+(<\/\w+>)/g, '$1');
 
 const preParser = compose(
+  // Textile compatibility must follow all other changes
   textileJSCompatibility,
   // Language operations
   addLanguageSupportForHeadings,
@@ -29,6 +31,8 @@ const preParser = compose(
   addMinimizeForHeadings,
   removeNewlinesBeforeClosingTags,
   stripComments,
+  // ERB to JS
+  replaceERB,
 );
 
 module.exports = {
