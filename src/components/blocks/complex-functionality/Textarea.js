@@ -1,5 +1,5 @@
-import GenericHtmlBlock from '../Html/GenericHtmlBlock';
+import EditableHtmlBlock from '../Html/EditableHtmlBlock';
 
-const Textarea = GenericHtmlBlock('textarea');
+const Textarea = EditableHtmlBlock('textarea');
 
 export default Textarea;
