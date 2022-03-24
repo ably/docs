@@ -25,4 +25,4 @@ The reason these are complicated are because:
    2. Requires a small DSL to manage the tokens in between JS and Ruby
 2. Transpiling snippets directly:
    1. ERB can still be nested, so some level of recursive interpretation is necessary
-   2. Many of the dependent variables are implicitly available because of Rails' magic, so they are 
+   2. Many of the dependent variables are implicitly available because of Rails' magic, so they are not easy to access without transpiling all the Ruby & Rails code.
