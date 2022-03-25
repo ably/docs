@@ -37,11 +37,11 @@ Even though Ably provides a full suite of "authentication and authorization feat
 
 With the rise of serverless solutions such as "Microsoft Azure Functions":https://azure.microsoft.com/en-gb/services/functions/, the problem goes away. Create server functions that contain your business logic, credentials and other sensitive data, hook them up to your application, and all of the sensitive work is hidden away from the user, not to mention being managed by world-class infrastructure providers such as Amazon, Google or Microsoft.
 
-Ably's *"Integration Events":https://ably.com/integrations* feature provides a way to define custom criteria that will automatically trigger different kinds of actions in response to channel messages, "channel lifecycle events":/realtime/channel-metadata#lifecycle-events (such as a channel being created) and presence events (such as users entering or leaving a channel), and is how we'll integrate with your server functions without exposing them to your users.
+Ably's *"Webhooks":https://ably.com/integrations* feature provides a way to define custom criteria that will automatically trigger different kinds of actions in response to channel messages, "channel lifecycle events":/realtime/channel-metadata#lifecycle-events (such as a channel being created) and presence events (such as users entering or leaving a channel), and is how we'll integrate with your server functions without exposing them to your users.
 
 h2. What we'll be building
 
-For this tutorial, we'll be using * Events":/general/events* events in response to incoming messages in order to *automatically invoke your own Azure functions*. We're going to build a simple pizza ordering system with a virtual pizza assistant chat bot. When a new customer hits your website, they'll be assigned a random ID, and their messages will be published to a private channel created just for that customer. An Event triggered by those messages will call your Azure functions to invoke the pizza chat bot to take their order. Using the Ably REST API, it will post its responses back on another channel that the web application subscribes to.
+For this tutorial, we'll be using * Webhooks":/general/events* events in response to incoming messages in order to *automatically invoke your own Azure functions*. We're going to build a simple pizza ordering system with a virtual pizza assistant chat bot. When a new customer hits your website, they'll be assigned a random ID, and their messages will be published to a private channel created just for that customer. A webhook triggered by those messages will call your Azure functions to invoke the pizza chat bot to take their order. Using the Ably REST API, it will post its responses back on another channel that the web application subscribes to.
 
 To get you up and running quickly, we've implemented a simple JavaScript-based pizza chat bot and made it available via this tutorial's repository. The chat bot helps each customer design their own pizza, keep track of the order price, and then finalize the pizza order when they're finished. The "nlp compromise":http://compromise.cool/ npm package is used for basic language parsing, and "fuzzyset.js":http://glench.github.io/fuzzyset.js/ gives the bot the ability to cope with spelling mistakes, typographical errors and other textual variations it might encounter.
 
@@ -220,9 +220,9 @@ Finally, Ably requires anonymous access to your function in order to call it. In
   <img src="/images/tutorials/reactor/reactor-event-azure-function-4.png" style="width: 100%" alt="Authorization level should be 'Anonymous'">
 </a>
 
-h2. Step 3: Configure an Ably Integrations event
+h2. Step 3: Configure a webhook
 
-The next thing is to set up a Integrations event, which we need in order to relay channel messages from the customer to our Azure function for processing. We'll actually be using two channels - one outbound, and one inbound. We'll do this to ensure that only the customer's communications are sent to Azure, and so that the browser app need only process messages from the chat bot. Channels only consume resources while in use, so using two channels in this way is not a problem.
+The next thing is to set up a webhooks, which we need in order to relay channel messages from the customer to our Azure function for processing. We'll actually be using two channels - one outbound, and one inbound. We'll do this to ensure that only the customer's communications are sent to Azure, and so that the browser app need only process messages from the chat bot. Channels only consume resources while in use, so using two channels in this way is not a problem.
 
 Just as in step 1-b of this tutorial, go to the dashboard for the Ably app you're using. From there, click the "Integrations" tab, followed by "New Integration Rule":
 
@@ -230,10 +230,10 @@ Just as in step 1-b of this tutorial, go to the dashboard for the Ably app you'r
   <img src="/images/tutorials/reactor/reactor-event-rule-1.png" style="width: 100%" alt="Create a new Integration rule">
 </a>
 
-Choose the "Ably Event" option:
+Choose the "Webhook" option:
 
 <a href="/images/tutorials/reactor/reactor-event-rule-2.png" target="_blank">
-  <img src="/images/tutorials/reactor/reactor-event-rule-2.png" style="width: 100%" alt="Select the Ably Event option">
+  <img src="/images/tutorials/reactor/reactor-event-rule-2.png" style="width: 100%" alt="Select the Webhook option">
 </a>
 
 Choose the "Azure" option:
@@ -247,7 +247,7 @@ Fill out the form to provide Ably with the details it needs to invoke your Azure
 # Enter the name of the Azure Function app you created in step 2. In the screenshot it was "ably-pizza-tutorial", but you will have entered something of your own.
 # Enter @InvokePizzaAssistant@ - the name of your Azure function.
 # Make sure "Message" is set as the source.
-# Enter a regular expression that the Integrations event will use to whitelist the Ably channels for which the event should be triggered. @^pizza:customer:@ means that the channel name must begin with the string @pizza:customer:@, with no restrictions on the characters that follow.
+# Enter a regular expression that the webhooks will use to whitelist the Ably channels for which the event should be triggered. @^pizza:customer:@ means that the channel name must begin with the string @pizza:customer:@, with no restrictions on the characters that follow.
 # Ensure that the "Enveloped" checkbox is unchecked, so that only the raw JSON from the app gets sent to Azure.
 # Click the blue "Create" button.
 
@@ -255,7 +255,7 @@ Fill out the form to provide Ably with the details it needs to invoke your Azure
   <img src="/images/tutorials/reactor/reactor-event-rule-4-azure.png" style="width: 100%" alt="Fill out the form">
 </a>
 
-Your Integrations event will now be created, and you'll be able to continue developing your app.
+Your webhook will now be created, and you'll be able to continue developing your app.
 
 h2. Step 4: Developing the browser app
 
@@ -388,7 +388,7 @@ h3. &#40;c) Filling out the primary functionality
 
 Now that you've verified that you're able to connect to Ably and send and receive messages, it's time to update the code to integrate it with everything you did earlier in this tutorial.
 
-First, we'll need two channels rather than one. The first channel is the outbound channel, and is where the Integrations event will be listening for messages to forward on to your Azure function. The second channel is the inbound channel where the bot's response messages will be posted, and is the channel to which your script will attach a listener.
+First, we'll need two channels rather than one. The first channel is the outbound channel, and is where the webhook will be listening for messages to forward on to your Azure function. The second channel is the inbound channel where the bot's response messages will be posted, and is the channel to which your script will attach a listener.
 
 If two different customers are trying to order a pizza at the same time, we don't want their messages getting mixed in together. To address this, we'll be appending a random customer identification value to the inbound and outbound channel names, with the effect being that every customer is allocated their own unique pair of inbound and outbound channels. The customer ID will also need to be included in outbound messages so that your Azure function can figure out where to send responses. The channels will only be used for the duration of the chat session, which means the maximum number of active channels at any one time will be equal to twice the number of customers currently placing pizza orders. See the "pricing page":https://ably.com/pricing/self-service for details about the peak connection limit available for your Ably account.
 
@@ -457,7 +457,7 @@ function postMessage(message) {
   appendMessageElement('user', inputField.value.trim());
 
   // Post to the outbound channel, and wrap both the message and the customer ID
-  // in a plain object that the event will include when forwarding the data
+  // in a plain object that the webhook  will include when forwarding the data
   // on to your Azure function.
   outboundChannel.publish('user', { user: customerId, message });
 }
@@ -573,7 +573,7 @@ Congratulations, you're done!
 
 h2. Next Steps
 
-1. Take a look at the "Events documentation":https://ably.com/documentation/general/events for further details about what was described in this tutorial.
+1. Take a look at the "Webhooks documentation":https://ably.com/documentation/general/events for further details about what was described in this tutorial.
 2. If you would like to find out more about Ably Integrations features and capabilities, see "Ably Integrations":https://ably.com/integrations.
 3. Learn more about "Ably features":https://ably.com/platform by stepping through our other "Ably tutorials":https://ably.com/tutorials
 4. Gain a good technical "overview of how the Ably realtime platform works":https://ably.com/documentation/how-ably-works
