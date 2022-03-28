@@ -124,11 +124,23 @@ This is a static site generated using [Gatsby](https://www.gatsbyjs.com/) and do
 
 ## Run
 
+Install node & npm.
+
+If you use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to manage your Ruby runtime versions, we have included a [`.tool-versions`](.tool-versions) file. Note that if you `brew install`ed your asdf installation instead of `git clone`ing it, npm [may not be installed  correctly](https://youtrack.jetbrains.com/issue/WEB-51052).
+
+`npm i`
+
 `gatsby clean && gatsby develop`
 
 Visit `localhost:8000` for homepage.
 
 Visit `localhost:8000/documentation/${relativePath}` for documentation pages, e.g. `localhost:8000/documentation/client-lib-development-guide/documentation-formatting-guide`.
+
+Or:
+
+`gatsby clean && gatsby build && gatsby serve`
+
+Visit `localhost:9000` for homepage.
 
 ## Further Information
 
