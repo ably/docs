@@ -4,7 +4,7 @@ const { postParser } = require('../transform/post-parser');
 const textile = require('textile-js');
 const { htmlParser } = require('../html-parser');
 const { createLanguagePageVariants } = require('./createPageVariants');
-const { LATEST_ABLY_API_VERSION_STRING } = require('../transform/constants');
+const { LATEST_ABLY_API_VERSION_STRING, DOCUMENTATION_PATH } = require('../transform/constants');
 const { createContentMenuDataFromPage } = require('./createContentMenuDataFromPage');
 const { DEFAULT_LANGUAGE } = require('./constants');
 const { identity } = require('lodash');
@@ -46,7 +46,7 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
         edge.node.version,
       );
       createPage({
-        path: `/documentation/${edge.node.slug}`,
+        path: `${DOCUMENTATION_PATH}${edge.node.slug}`,
         component: documentTemplate,
         context: {
           slug: edge.node.parentSlug ? edge.node.parentSlug : edge.node.slug,
