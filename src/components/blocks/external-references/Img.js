@@ -1,15 +1,5 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import SelfClosingHtmlBlock from '../Html/SelfClosingHtmlBlock';
 
-const Img = ({ attribs }) => {
-    console.log(attribs && attribs.src && attribs.src.replace(/^\/images(.*)/, '$1'));
-    return (
-  <img src={attribs && attribs.src && attribs.src.replace(/^\/images(.*)/, '$1')} {...attribs} />
-);
-    }
-Img.propTypes = {
-  src: PropTypes.string,
-  attribs: PropTypes.object,
-};
+const Img = SelfClosingHtmlBlock('img');
 
 export default Img;
