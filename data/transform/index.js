@@ -146,7 +146,6 @@ const transformNanocTextiles =
     const { noInlineTOC, inlineTOCOnly } = retrieveAndReplaceInlineTOC(preTextileTransform);
 
     createInlineToc(inlineTOCOnly, slug, node, { createContentDigest, createNodeId, updateWithTransform });
-
     const { data, frontmatterMeta } = splitDataAndMetaData(noInlineTOC);
     // retrieve images here
     const newNodeData = {
