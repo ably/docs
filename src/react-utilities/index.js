@@ -6,6 +6,7 @@ const removeProp = (prop) => (attribs) => {
     return attribs;
   }
   delete attribs[prop];
+  return attribs;
 };
 
 const removeStyles = removeProp('style');
