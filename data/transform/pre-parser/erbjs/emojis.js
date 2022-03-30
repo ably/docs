@@ -6,11 +6,10 @@ const emojiReplacer = (content) =>
     emojis
       .split(', ')
       .map(
-        (emoji) =>
-          `<label><input type="radio" name="avatar" value="${emoji.replace(
-            /^'(.*)'$/,
-            '$1',
-          )}" /><span class="emoji">${emoji.replace(/^'(.*)'$/, '$1')}</span></label>`,
+        (emojiWithQuotes) => {
+          const cleanedEmoji = emojiWithQuotes.replace(/^'(.*)'$/, '$1');
+          return `<label><input type="radio" name="avatar" value="${cleanedEmoji}" /><span class="emoji">${cleanedEmoji}</span></label>`;
+        }
       )
       .join('\n'),
   );
