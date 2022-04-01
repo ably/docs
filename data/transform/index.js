@@ -147,7 +147,6 @@ const transformNanocTextiles =
 
     createInlineToc(inlineTOCOnly, slug, node, { createContentDigest, createNodeId, updateWithTransform });
     const { data, frontmatterMeta } = splitDataAndMetaData(noInlineTOC);
-    // retrieve images here
     const newNodeData = {
       contentOrderedList: data,
       id,
