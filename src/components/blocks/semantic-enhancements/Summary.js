@@ -1,5 +1,5 @@
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const Summary = GenericHtmlBlock('summmary');
+const Summary = GenericHtmlBlock('summary');
 
 export default Summary;
