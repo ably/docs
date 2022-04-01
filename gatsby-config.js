@@ -1,6 +1,6 @@
 module.exports = {
   siteMetadata: {
-    siteUrl: 'https://www.ably.com/documentation',
+    siteUrl: 'https://www.ably.com/docs',
     title: 'Documentation | Ably Realtime',
   },
   plugins: [
