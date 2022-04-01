@@ -3,6 +3,9 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Html from '../Html';
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
+import styled, { css } from 'styled-components';
+import { secondary } from '../../../styles/colors';
+import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
 
 import '@ably/ui/core/styles.css';
 
@@ -18,11 +21,15 @@ const StyledGatsbyLink = ({ children, ...props }) => (
 const A = ({ data, attribs }) => {
   if (
     attribs.href &&
-    /^(\/|#|https?:\/\/(?:www.)?ably.com\/documentation).*/.test(attribs.href) &&
+    /^(\/|#|https?:\/\/(?:www.)?ably.com\/docs).*/.test(attribs.href) &&
     !onPageNav.test(attribs.href)
   ) {
+    let href = attribs.href;
+    if (/^\/(?!docs\/).*/.test(attribs.href)) {
+      href = `/${DOCUMENTATION_NAME}${attribs.href}`;
+    }
     return (
-      <StyledGatsbyLink {...{ ...attribs, to: attribs.href }}>
+      <StyledGatsbyLink {...{ ...attribs, to: href }}>
         <Html data={data} />
       </StyledGatsbyLink>
     );
