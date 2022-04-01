@@ -2,12 +2,12 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Select from 'react-select';
 import { SmallMenuLabel } from './Label';
-import { LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
+import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
 import { navigate } from 'gatsby';
 import { Warning } from '../Notifications';
 
 const routeToPage = ({ value }) => {
-  navigate(`/documentation/${value}`);
+  navigate(`${DOCUMENTATION_PATH}${value}`);
 };
 
 const VersionMenu = ({ versions, version, rootVersion }) => {
@@ -37,7 +37,7 @@ const VersionMenu = ({ versions, version, rootVersion }) => {
         <Warning
           message={` You are viewing an old version (${version}) of this documentation. We recommend you `}
           linkText={`view the latest version, ${LATEST_ABLY_API_VERSION_STRING}`}
-          href={`/documentation/${rootVersion}`}
+          href={`${DOCUMENTATION_PATH}${rootVersion}`}
         />
       )}
     </div>
