@@ -1,5 +1,5 @@
 const { isArray } = require('lodash');
-const { LATEST_ABLY_API_VERSION_STRING } = require('../transform/constants');
+const { LATEST_ABLY_API_VERSION_STRING, DOCUMENTATION_PATH } = require('../transform/constants');
 const { DEFAULT_LANGUAGE } = require('./constants');
 const { createContentMenuDataFromPage } = require('./createContentMenuDataFromPage');
 
@@ -31,7 +31,7 @@ const createLanguagePageVariants =
     languageSet.forEach((lang) => {
       const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item, [], lang));
       createPage({
-        path: `/documentation/${slug}/language/${lang}`,
+        path: `${DOCUMENTATION_PATH}${slug}/language/${lang}`,
         component: documentTemplate,
         context: {
           // The slug is the canonical slug, not the variant path
