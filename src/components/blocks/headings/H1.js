@@ -1,13 +1,14 @@
 import React from 'react';
 import LinkableHtmlBlock from '../Html/LinkableHtmlBlock';
 import '@ably/ui/core/styles.css';
-import { ChildPropTypes } from '../../../react-utilities';
 
-const AblyH1 = ({ children }) => <h1 className="ui-text-h1">{children}</h1>;
+// eslint-disable-next-line react/prop-types
+const StyledH1 = ({ props, children }) => (
+  <h1 {...props} className="ui-text-h1">
+    {children}
+  </h1>
+);
 
-const H1 = LinkableHtmlBlock(AblyH1, 'mb-40');
+const H1 = LinkableHtmlBlock(StyledH1);
 
-AblyH1.propTypes = {
-  children: ChildPropTypes,
-};
 export default H1;
