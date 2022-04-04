@@ -13,7 +13,7 @@ const definitionListCell = css`
 const StyledDl = styled.dl`
   border-top: ${borders.defaultBorder};
   display: grid;
-  grid-auto-rows: 1fr;
+  grid-auto-rows: minmax(min-content, max-content);
   grid-auto-flow: column;
   margin-bottom: 20px;
 
