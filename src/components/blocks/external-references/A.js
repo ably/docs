@@ -11,7 +11,7 @@ const onPageNav = /[#?]/;
 const styles = css`
   color: revert;
   :hover {
-    color: ${secondary.actionBlue};
+    color: ${secondary.black};
   }
 `;
 

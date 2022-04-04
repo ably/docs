@@ -8,7 +8,7 @@ import { secondary, tertiary } from '../../../styles/colors';
 const StyledLinkCopyButton = styled.button`
   height: 100%;
   :hover {
-    color: ${secondary.actionBlue};
+    color: ${secondary.black};
   }
   :focus {
     outline: none;

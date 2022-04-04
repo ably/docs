@@ -41,7 +41,7 @@ const HorizontalMenu = styled(Menu)`
 `;
 
 const HorizontalCodeMenu = styled(HorizontalMenu)`
-  background-color: ${primary.charcoal};
+  background-color: ${primary.charcoalGrey};
 
   color: ${text.linkInverse};
   .c-menu__item,
