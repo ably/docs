@@ -27,10 +27,10 @@ const linkHoverFailureRenderer = TestRenderer.create(linkHoverElementFailure);
 
 describe('CopyLink displays statically as expected', () => {
   it('Snapshot of CopyLink is the same', () => {
-    //expect(copyLinkRenderer.toJSON()).toMatchSnapshot();
+    expect(copyLinkRenderer.toJSON()).toMatchSnapshot();
   });
   it('Snapshot of CopyLink with ID is the same', () => {
-    //expect(copyLinkIdRenderer.toJSON()).toMatchSnapshot();
+    expect(copyLinkIdRenderer.toJSON()).toMatchSnapshot();
   });
 });
 
