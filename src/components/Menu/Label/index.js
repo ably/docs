@@ -18,7 +18,7 @@ const SmallMenuLabel = styled.span`
   font-weight: 700;
   font-size: 12px;
   margin-right: 0;
-  color: ${primary.charcoal};
+  color: ${primary.charcoalGrey};
 `;
 
 export { SmallMenuLabel };
