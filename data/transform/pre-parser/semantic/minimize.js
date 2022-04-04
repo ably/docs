@@ -25,7 +25,7 @@ const addMinimizedIndent = (content) => {
   let expandNum = 0;
   let position = content.search(MINIMIZE_REGEX);
   while (position > -1) {
-    const [minimizeTitle, body] = content.match(MINIMIZE_REGEX)[0].split('\n');
+    const minimizeTitle = content.match(MINIMIZE_REGEX)[0].trim();
     const matchTitle = minimizeTitle === 'minimize.' ? VIEW_MORE_TEXT : minimizeTitle.replace('minimize.','');
 
     // Only indented lines are part of the hidden panel
