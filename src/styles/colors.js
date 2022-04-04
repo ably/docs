@@ -3,15 +3,15 @@
 export const primary = {
   richOrange: '#ed760a',
   brightOrange: '#f9a01b',
-  charcoal: '#333333',
+  charcoalGrey: '#292831',
   white: '#fff',
   black: '#161616',
 };
 
 export const secondary = {
-  actionBlue: '#50b4f3',
+  black: '#03020D',
   cableGrey: '#555555',
-  smokeGrey: '#999999',
+  darkGrey: '#76767C',
   deniedRed: '#EC465B',
   acceptGreen: '#00C766',
   subtleOrange: '#fde9d7',
@@ -24,18 +24,18 @@ export const tertiary = {
 
 export const containers = {
   one: '#ebebeb',
-  two: '#f1f1f1',
-  three: '#f8f8f8',
+  two: '#F5F5F6',
+  three: '#FAFAFB',
 };
 
 export const borders = { ...containers };
 
 export const text = {
-  aux: secondary.smokeGrey,
+  aux: secondary.darkGrey,
   main: secondary.cableGrey,
   bold: primary.black,
   highlight: primary.richOrange,
-  link: secondary.actionBlue,
+  link: secondary.black,
   linkInverse: primary.white,
   linkHover: '#2f93d2',
   linkHoverAlternate: primary.richOrange,
