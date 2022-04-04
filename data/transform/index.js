@@ -138,7 +138,10 @@ const splitDataAndMetaData = (text) => {
 const transformNanocTextiles =
   (node, content, id, type, { createNodesFromPath, createContentDigest, createNodeId }) =>
   (updateWithTransform) => {
-    const slug = node.relativePath.replace(/(.*)\.[^.]+$/, '$1').replace('root/', '');
+    const slug = node.relativePath
+      .replace(/(.*)\.[^.]+$/, '$1')
+      .replace('root/', '')
+      .replace(/index$/, '');
     if (node.sourceInstanceName === 'textile-partials') {
       content = `${content}\n`;
     }
