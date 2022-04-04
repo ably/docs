@@ -44,11 +44,13 @@ const sectionMinimizeNoTitle = `minimize.
   It is also possible to create a minimizable section with the *minimize. [Optional minimizable text]* line, with any following indented lines being included in the minimizable section. If no optional minimize button text is typed, it will default to *View More*.
 
 h3. Next title`;
-const sectionMinimizeExpected = `<details><summary>Click to see how to minimize by block</summary><div>It is also possible to create a minimizable section with the *minimize. [Optional minimizable text]* line, with any following indented lines being included in the minimizable section. If no optional minimize button text is typed, it will default to *View More*.</div></details>
+const sectionMinimizeExpected = `<details><summary>Click to see how to minimize by block</summary><div>It is also possible to create a minimizable section with the *minimize. [Optional minimizable text]* line, with any following indented lines being included in the minimizable section. If no optional minimize button text is typed, it will default to *View More*.
+</div></details>
 
 
 h3. Next title`;
-const sectionMinimizeExpectedNoTitle = `<details><summary>View More</summary><div>It is also possible to create a minimizable section with the *minimize. [Optional minimizable text]* line, with any following indented lines being included in the minimizable section. If no optional minimize button text is typed, it will default to *View More*.</div></details>
+const sectionMinimizeExpectedNoTitle = `<details><summary>View More</summary><div>It is also possible to create a minimizable section with the *minimize. [Optional minimizable text]* line, with any following indented lines being included in the minimizable section. If no optional minimize button text is typed, it will default to *View More*.
+</div></details>
 
 
 h3. Next title`;
