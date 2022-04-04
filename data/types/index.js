@@ -13,10 +13,10 @@
  * These are acceptable trade-offs for quick development but a good focus point for reconsideration & improvements later.
  */
 const DataTypes = Object.freeze({
-    Partial: "Partial",
-    String: "String",
-    Html: "Html",
-    DateString: "DateString",
+  Partial: 'Partial',
+  String: 'String',
+  Html: 'Html',
+  DateString: 'DateString',
 });
 
 module.exports = DataTypes;
