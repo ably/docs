@@ -1,4 +1,6 @@
-const MINIMIZE_REGEX = /^minimize\.(.*)([\n])(.*)$/m;
+const { extractIndented } = require('../shared-utilities/extract-indented');
+
+const MINIMIZE_REGEX = /^minimize\.(.*)[\r\n]/m;
 const MINIMIZED_HEADINGS_REGEX = /^(h[1-6])(\(#[^)]+\))?\(minimize(?:=([^)]*))?\)\.(.*?)\n\n(.+?)(?=(?:\n\nh[1-6]))/gm;
 const VIEW_MORE_TEXT = 'View More';
 
@@ -14,6 +16,11 @@ const addMinimizeForHeadings = (content) => {
   return content.replace(MINIMIZED_HEADINGS_REGEX, replacer);
 };
 
+const getAllContentAfterRegex = (content, position) => {
+  const nextContent = content.slice(position); // get content after regex
+  return nextContent.replace(MINIMIZE_REGEX, '').slice(1);
+}
+
 const addMinimizedIndent = (content) => {
   let expandNum = 0;
   let position = content.search(MINIMIZE_REGEX);
@@ -21,10 +28,13 @@ const addMinimizedIndent = (content) => {
     const [minimizeTitle, body] = content.match(MINIMIZE_REGEX)[0].split('\n');
     const matchTitle = minimizeTitle === 'minimize.' ? VIEW_MORE_TEXT : minimizeTitle.replace('minimize.','');
 
+    // Only indented lines are part of the hidden panel
+    const { onlyIndentedLines, nonIndentedLineLocation } = extractIndented(getAllContentAfterRegex(content, position), 'minimize.');
+
     content =
       content.substring(0, position) + 
-      getDetailsComponentAsString(matchTitle.trim(), body.trim()) +
-      content.substring(position + content.match(MINIMIZE_REGEX)[0].length);
+      getDetailsComponentAsString(matchTitle.trim(), onlyIndentedLines) +
+      content.substring(position + content.match(MINIMIZE_REGEX)[0].length + nonIndentedLineLocation);
     position = content.search(MINIMIZE_REGEX);
     ++expandNum;
   }
