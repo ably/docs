@@ -10,7 +10,7 @@ import { Abbr, Details, Dfn, Summary, Time } from './blocks/semantic-enhancement
 import { Code, Kbd, Output, Pre, Samp, Var } from './blocks/software';
 import { Em, Small, Strong, Sub, Sup } from './blocks/styles';
 import { Caption, Col, Colgroup, Table, Tbody, Td, Tfoot, Th, Thead, Tr } from './blocks/table';
-import Paragraph from './blocks/paragraphs';
+import { Paragraph } from './blocks/typography';
 
 const IS_TEXT = null;
 
