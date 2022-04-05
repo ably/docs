@@ -9,7 +9,7 @@ import '@ably/ui/core/styles.css';
 const onPageNav = /[#?]/;
 
 // eslint-disable-next-line react/prop-types
-const StyledGatsbyLink = ({ props, children }) => (
+const StyledGatsbyLink = ({ children, ...props }) => (
   <Link className="ui-link" {...props}>
     {children}
   </Link>
