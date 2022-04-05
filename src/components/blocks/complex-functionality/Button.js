@@ -1,5 +1,60 @@
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
+import '@ably/ui/core/styles.css';
+import PropTypes from 'prop-types';
 
-const Button = GenericHtmlBlock('button');
+const Button = ({ data, attribs }) => {
+  switch (attribs['data-variant']) {
+    case 'primary-alt':
+      return PrimaryAltButton({ data, attribs });
+    case 'secondary':
+      return SecondaryButton({ data, attribs });
+    case 'primary-inverted':
+      return PrimaryButtonInverted({ data, attribs });
+    case 'secondary-inverted':
+      return SecondaryButtonInverted({ data, attribs });
+    default:
+      return PrimaryButton({ data, attribs });
+  }
+};
+
+const PrimaryButton = ({ data, attribs }) =>
+  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn' } });
+
+export const PrimaryAltButton = ({ data, attribs }) =>
+  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-alt' } });
+
+export const SecondaryButton = ({ data, attribs }) =>
+  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-secondary' } });
+
+export const PrimaryButtonInverted = ({ data, attribs }) =>
+  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-invert' } });
+
+export const SecondaryButtonInverted = ({ data, attribs }) =>
+  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-secondary-invert' } });
+
+Button.propTypes = {
+  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
+  attribs: PropTypes.object,
+};
+
+PrimaryAltButton.propTypes = {
+  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
+  attribs: PropTypes.object,
+};
+
+SecondaryButton.propTypes = {
+  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
+  attribs: PropTypes.object,
+};
+
+PrimaryButtonInverted.propTypes = {
+  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
+  attribs: PropTypes.object,
+};
+
+SecondaryButtonInverted.propTypes = {
+  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
+  attribs: PropTypes.object,
+};
 
 export default Button;
