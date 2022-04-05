@@ -1,11 +1,13 @@
-import styled from 'styled-components';
-import { fonts, spacing } from '../../../styles';
+import React from 'react';
 import LinkableHtmlBlock from '../Html/LinkableHtmlBlock';
+import '@ably/ui/core/styles.css';
 
-const StyledH1 = styled.h1`
-  ${fonts.h1}
-  margin: ${spacing.medium} 0 ${spacing.medium};
-`;
+// eslint-disable-next-line react/prop-types
+const StyledH1 = ({ props, children }) => (
+  <h1 {...props} className="ui-text-h1">
+    {children}
+  </h1>
+);
 
 const H1 = LinkableHtmlBlock(StyledH1);
 
