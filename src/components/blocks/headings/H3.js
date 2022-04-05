@@ -1,12 +1,13 @@
-import styled from 'styled-components';
-import { fonts } from '../../../styles';
+import React from 'react';
 import LinkableHtmlBlock from '../Html/LinkableHtmlBlock';
+import '@ably/ui/core/styles.css';
+import PropTypes from 'prop-types';
 
-const StyledH3 = styled.h3`
-  ${fonts.h3};
-  margin: 24px 0 24px;
-`;
+const AblyH3 = ({ children }) => <h3 className="ui-text-h3 mb-24">{children}</h3>;
 
-const H3 = LinkableHtmlBlock(StyledH3);
+const H3 = LinkableHtmlBlock(AblyH3);
 
+AblyH3.propTypes = {
+  children: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
+};
 export default H3;
