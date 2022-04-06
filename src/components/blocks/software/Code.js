@@ -35,6 +35,7 @@ import HtmlDataTypes from '../../../../data/types/html';
 import { secondary } from '../../../styles/colors';
 
 const Container = styled.div`
+  position: relative;
   &::after {
     content: '${({ language }) => language}';
     position: absolute;
@@ -45,7 +46,6 @@ const Container = styled.div`
     font-size: 10px;
     line-height: 1;
     padding: ${({ language }) => (language ? '6px' : 0)};
-    border-top-right-radius: 4px;
     border-bottom-left-radius: 4px;
   }
 `;
