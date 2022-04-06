@@ -3,7 +3,6 @@ import '@ably/ui/core/styles.css';
 import PropTypes from 'prop-types';
 
 const Paragraph = ({ data, attribs }) => {
-  console.log('Attribs', attribs);
   switch (attribs['data-variant']) {
     case 'p1-strong':
       return P1Strong({ data, attribs });
