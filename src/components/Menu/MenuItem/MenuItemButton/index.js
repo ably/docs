@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { text } from '../../../../styles/colors';
+import { primary, text } from '../../../../styles/colors';
 
 const UnstyledButton = styled.button`
   appearance: none !important;
@@ -11,7 +11,7 @@ const UnstyledButton = styled.button`
 `;
 
 const MenuItemButton = styled(UnstyledButton)`
-  color: ${text.aux};
+  color: ${primary.black};
 
   &:focus,
   &:hover {
