@@ -10,6 +10,8 @@ module VersionsHelper
     realtime
     rest
     rest-api
+    api
+    api/rest-sdk
     shared
     types
     core-features
