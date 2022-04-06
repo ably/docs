@@ -78,7 +78,7 @@ const LinkCopyButton = ({ id, parentHovered, ...props }) => {
     return () => clearTimeout(resetStateTimeout);
   }, [copySuccess]);
   return (
-    <div className="relative -mt-16" onKeyPress={(event) => event.key === 'Enter' && copyLink()}>
+    <div className="relative" onKeyPress={(event) => event.key === 'Enter' && copyLink()}>
       {(hover || parentHovered) && (
         <LinkHoverPopup id={'link-copy-tooltip'} role="tooltip" copySuccess={copySuccess}>
           {content}
@@ -106,13 +106,17 @@ LinkCopyButton.propTypes = {
   parentHovered: PropTypes.bool,
 };
 
-const CopyLink = ({ attribs, children }) => {
+const CopyLink = ({ attribs, marginBottom, children }) => {
   const [hover, setHover] = useState(false);
   if (!attribs || !attribs.id) {
     return <>{children}</>;
   }
   return (
-    <div className={`flex items-center`} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+    <div
+      className={`flex items-center ${marginBottom}`}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
       {children}
       <LinkCopyButton id={attribs.id} parentHovered={hover} />
     </div>
@@ -121,6 +125,7 @@ const CopyLink = ({ attribs, children }) => {
 
 CopyLink.propTypes = {
   attribs: PropTypes.object,
+  marginBottom: PropTypes.string,
   children: ChildPropTypes,
 };
 
