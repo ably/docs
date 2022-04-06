@@ -1,18 +1,21 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { HorizontalCodeMenu } from '.';
+import { HorizontalMenu as HM } from '.';
 import MenuLabel from './Label';
 import MenuItem from './MenuItem';
+import '@ably/ui/core/styles.css';
 
 const HorizontalMenu = ({ label, items }) => (
-  <HorizontalCodeMenu>
+  <HM>
     {label && <MenuLabel>{label}</MenuLabel>}
     {items.map(({ Component, props, content }, index) => (
       <MenuItem key={index}>
-        <Component {...props}>{content}</Component>
+        <Component className="ui-text-menu3" {...props}>
+          {content}
+        </Component>
       </MenuItem>
     ))}
-  </HorizontalCodeMenu>
+  </HM>
 );
 
 HorizontalMenu.propTypes = {
