@@ -11,7 +11,6 @@ module VersionsHelper
     rest
     rest-api
     api
-    api/rest-sdk
     shared
     types
     core-features
