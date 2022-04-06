@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 import PageLanguageContext from '../../contexts/page-language-context';
 import languageLabels from '../../maps/language';
-import { text, primary } from '../../styles/colors';
+import { primary } from '../../styles/colors';
 import { navigate } from 'gatsby';
 
 const HoverButton = styled.button`
@@ -12,8 +12,7 @@ const HoverButton = styled.button`
   display: block;
   position: relative;
   user-select: none;
-  color: ${text.aux};
-  padding-top: 8px;
+  color: ${primary.black};
 
   &:hover,
   &.active,
