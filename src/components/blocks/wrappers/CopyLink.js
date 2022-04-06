@@ -78,7 +78,7 @@ const LinkCopyButton = ({ id, parentHovered, ...props }) => {
     return () => clearTimeout(resetStateTimeout);
   }, [copySuccess]);
   return (
-    <div className="relative mt-8" onKeyPress={(event) => event.key === 'Enter' && copyLink()}>
+    <div className="relative -mt-16" onKeyPress={(event) => event.key === 'Enter' && copyLink()}>
       {(hover || parentHovered) && (
         <LinkHoverPopup id={'link-copy-tooltip'} role="tooltip" copySuccess={copySuccess}>
           {content}
