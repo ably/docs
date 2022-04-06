@@ -9,6 +9,8 @@ import styled from 'styled-components';
 
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import githubGist from 'react-syntax-highlighter/dist/cjs/styles/hljs/github-gist.js';
+import '@ably/ui/core/Code/component.css';
+import '@ably/ui/core/styles.css';
 
 // Supported languages need to be imported here
 // https://github.com/highlightjs/highlight.js/blob/master/SUPPORTED_LANGUAGES.md
@@ -28,22 +30,18 @@ import objectivec from 'react-syntax-highlighter/dist/cjs/languages/hljs/objecti
 import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
 // Android Studio has an error when registering the language.
 
-import { spacing, fonts, colors } from '../../../styles';
 import languageLabels, { languageSyntaxHighlighterNames } from '../../../maps/language';
 import HtmlDataTypes from '../../../../data/types/html';
 import { secondary } from '../../../styles/colors';
 
 const Container = styled.div`
-  ${fonts.efficientBody}
-  margin: 0 0 ${spacing.medium} 0;
-  position: relative;
-
   &::after {
     content: '${({ language }) => language}';
     position: absolute;
     top: 0;
     right: 0;
-    background-color: ${colors.containers.one};
+    color: #f5f5f6;
+    background-color: #76767c;
     font-size: 10px;
     line-height: 1;
     padding: ${({ language }) => (language ? '6px' : 0)};
@@ -86,17 +84,7 @@ const Code = ({ data, attribs }) => {
         : languageSyntaxHighlighterNames['plaintext'];
     return (
       <Container {...attribs} language={languageLabels[attribs.lang]}>
-        <SyntaxHighlighter
-          customStyle={{
-            backgroundColor: colors.containers.three,
-            padding: '20px',
-            borderLeft: `10px solid ${colors.containers.one}`,
-            borderRadius: '4px',
-            margin: 0,
-          }}
-          language={displayLanguage.key}
-          style={githubGist}
-        >
+        <SyntaxHighlighter language={displayLanguage.key} style={githubGist}>
           {data[0].data}
         </SyntaxHighlighter>
       </Container>
