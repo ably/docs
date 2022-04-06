@@ -17,6 +17,9 @@ const StyledDl = styled.dl`
   grid-auto-flow: column;
   margin-bottom: 20px;
 
+  div {
+    display: contents;
+  }
   dt {
     grid-column: 1;
     ${definitionListCell}
