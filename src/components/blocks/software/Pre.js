@@ -7,7 +7,7 @@ import '@ably/ui/core/styles.css';
 const Pre = ({ data, language, languages, altData, attribs }) => {
   const withModifiedClassname = {
     ...attribs,
-    className: `bg-cool-black text-white p-0 rounded-lg border border-cool-black`,
+    className: `doc-pre-container`,
   };
   return (
     <pre {...withModifiedClassname}>
