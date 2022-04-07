@@ -17,11 +17,7 @@ const LanguageButton = ({ language }) => {
   const isActiveClassName = language === pageLanguage ? 'active' : 'inactive';
 
   return (
-    // Extract to styles.css
-    <button
-      className={`mb-12 inline-block rounded-sm selected transition-colors text-white focus:outline-none ml-1 block py-8 px-12 no-underline text-menu2 bg-dark-grey hover:bg-gui-active rounded ${isActiveClassName}`}
-      onClick={() => navigate(href)}
-    >
+    <button className={`docs-menu-item-button ${isActiveClassName}`} onClick={() => navigate(href)}>
       {languageLabels[language] ?? language}
     </button>
   );

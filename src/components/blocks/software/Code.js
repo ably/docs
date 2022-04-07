@@ -33,6 +33,7 @@ import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
 import languageLabels, { languageSyntaxHighlighterNames } from '../../../maps/language';
 import HtmlDataTypes from '../../../../data/types/html';
 import { secondary } from '../../../styles/colors';
+import { ChildPropTypes } from '../../../react-utilities';
 
 const Container = styled.div`
   position: relative;
@@ -65,10 +66,11 @@ SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.swift.key, swi
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.objc.key, objectivec);
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.json.key, json);
 
-const InlineCodeElement = styled.code`
-  background-color: ${secondary.subtleOrange};
-  padding: 2.5px 0;
-`;
+const InlineCodeElement = ({ children, ...props }) => (
+  <code {...props} className="font-mono font-semibold text-code bg-mid-grey">
+    {children}
+  </code>
+);
 
 const multilineRegex = /\r|\n/gm;
 
@@ -104,6 +106,9 @@ const Code = ({ data, attribs }) => {
 Code.propTypes = {
   data: PropTypes.array,
   attribs: PropTypes.object,
+};
+InlineCodeElement.propTypes = {
+  children: ChildPropTypes,
 };
 
 export default Code;
