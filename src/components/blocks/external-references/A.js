@@ -3,8 +3,6 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Html from '../Html';
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
-import styled, { css } from 'styled-components';
-import { secondary } from '../../../styles/colors';
 import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
 
 import '@ably/ui/core/styles.css';
