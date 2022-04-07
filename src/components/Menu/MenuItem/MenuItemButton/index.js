@@ -1,27 +1,19 @@
+import React from 'react';
 import styled from 'styled-components';
-import { primary, text } from '../../../../styles/colors';
+import { ChildPropTypes } from '../../../../react-utilities';
+import { text } from '../../../../styles/colors';
+import '../../styles.css';
 
-const UnstyledButton = styled.button`
-  appearance: none !important;
-  background: none;
-  outline: none;
-  box-shadow: none;
-  border: 0;
-  border-radius: 0;
-`;
+const MenuItemButton = ({ children }) => <button className="docs-menu-item-button">{children}</button>;
 
-const MenuItemButton = styled(UnstyledButton)`
-  color: ${primary.black};
-
-  &:focus,
-  &:hover {
-    color: ${text.linkHoverAlternate};
-  }
-`;
-
+// Replace this with tailwind alternative
 const SelectedMenuItemButton = styled(MenuItemButton)`
   color: ${text.highlight};
 `;
+
+MenuItemButton.propTypes = {
+  children: ChildPropTypes,
+};
 
 export { SelectedMenuItemButton };
 
