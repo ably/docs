@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import PropTypes from 'prop-types';
-import { HorizontalMenu as HM } from '.';
+import { TopHorizontalMenu } from '.';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 import PageLanguageContext from '../../contexts/page-language-context';
 import MenuLabel from './Label';
@@ -12,9 +12,9 @@ const TopCodeMenu = ({ languages }) => {
   const showCodeMenu = languages && languages.length > 1;
   const showDefaultLink = pageLanguage !== DEFAULT_LANGUAGE;
   return (
-    <div className="fixed right-0 z-10 w-full items-end">
+    <div className="fixed right-0 z-10 mt-64 w-full items-end">
       {showCodeMenu ? (
-        <HM>
+        <TopHorizontalMenu>
           <MenuLabel>Show code examples in:</MenuLabel>
           {showDefaultLink ? (
             <MenuItem key={DEFAULT_LANGUAGE}>
@@ -26,7 +26,7 @@ const TopCodeMenu = ({ languages }) => {
               <LanguageButton language={language} />
             </MenuItem>
           ))}
-        </HM>
+        </TopHorizontalMenu>
       ) : null}
     </div>
   );
