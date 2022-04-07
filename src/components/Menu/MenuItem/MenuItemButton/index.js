@@ -1,17 +1,24 @@
 import React from 'react';
-import styled from 'styled-components';
 import { ChildPropTypes } from '../../../../react-utilities';
-import { text } from '../../../../styles/colors';
 import '../../styles.css';
 
-const MenuItemButton = ({ children }) => <button className="docs-menu-item-button">{children}</button>;
+const MenuItemButton = ({ children, ...props }) => (
+  <button className="docs-menu-item-button" {...props}>
+    {children}
+  </button>
+);
 
-// Replace this with tailwind alternative
-const SelectedMenuItemButton = styled(MenuItemButton)`
-  color: ${text.highlight};
-`;
+const SelectedMenuItemButton = ({ children, ...props }) => (
+  <button className="docs-menu-item-button-selected" {...props}>
+    {children}
+  </button>
+);
 
 MenuItemButton.propTypes = {
+  children: ChildPropTypes,
+};
+
+SelectedMenuItemButton.propTypes = {
   children: ChildPropTypes,
 };
 

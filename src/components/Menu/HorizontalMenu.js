@@ -10,9 +10,7 @@ const HorizontalMenu = ({ label, items }) => (
     {label && <MenuLabel>{label}</MenuLabel>}
     {items.map(({ Component, props, content }, index) => (
       <MenuItem key={index}>
-        <Component className="ui-text-menu3" {...props}>
-          {content}
-        </Component>
+        <Component {...props}>{content}</Component>
       </MenuItem>
     ))}
   </HM>
