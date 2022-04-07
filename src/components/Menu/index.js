@@ -1,9 +1,8 @@
 import React from 'react';
 import { ChildPropTypes } from '../../react-utilities';
+import './styles.css';
 
-const HorizontalMenu = ({ children }) => (
-  <menu className="flex px-8 m-0 overflow-y-hidden overflow-x-auto whitespace-nowrap bg-dark-grey">{children}</menu>
-);
+const HorizontalMenu = ({ children }) => <menu className="docs-horizontal-menu">{children}</menu>;
 
 HorizontalMenu.propTypes = {
   children: ChildPropTypes,
