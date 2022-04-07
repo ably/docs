@@ -12,7 +12,7 @@ const TopCodeMenu = ({ languages }) => {
   const showCodeMenu = languages && languages.length > 1;
   const showDefaultLink = pageLanguage !== DEFAULT_LANGUAGE;
   return (
-    <div className="fixed pt-64 right-0 z-10 w-full items-end">
+    <div className="fixed right-0 z-10 w-full items-end">
       {showCodeMenu ? (
         <HM>
           <MenuLabel>Show code examples in:</MenuLabel>

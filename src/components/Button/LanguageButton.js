@@ -1,28 +1,10 @@
 import React, { useContext } from 'react';
 import PropTypes from 'prop-types';
-import styled from 'styled-components';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 import PageLanguageContext from '../../contexts/page-language-context';
 import languageLabels from '../../maps/language';
-import { primary } from '../../styles/colors';
 import { navigate } from 'gatsby';
-
-const HoverButton = styled.button`
-  cursor: pointer;
-  display: block;
-  position: relative;
-  user-select: none;
-  color: ${primary.black};
-
-  &:hover,
-  &.active,
-  &.is-active {
-    color: ${primary.richOrange};
-  }
-  &:focus {
-    outline: none;
-  }
-`;
+import '@ably/ui/core/styles.css';
 
 const LanguageButton = ({ language }) => {
   const pageLanguage = useContext(PageLanguageContext);
@@ -35,9 +17,13 @@ const LanguageButton = ({ language }) => {
   const isActiveClassName = language === pageLanguage ? 'active' : 'inactive';
 
   return (
-    <HoverButton className={isActiveClassName} onClick={() => navigate(href)}>
+    // Extract to styles.css
+    <button
+      className={`mb-12 inline-block rounded-sm selected transition-colors text-white focus:outline-none ml-1 block py-8 px-12 no-underline text-menu2 bg-dark-grey hover:bg-gui-active rounded ${isActiveClassName}`}
+      onClick={() => navigate(href)}
+    >
       {languageLabels[language] ?? language}
-    </HoverButton>
+    </button>
   );
 };
 

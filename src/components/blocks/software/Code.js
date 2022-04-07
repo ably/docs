@@ -8,9 +8,9 @@ import Html from '../Html';
 import styled from 'styled-components';
 
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
-import githubGist from 'react-syntax-highlighter/dist/cjs/styles/hljs/github-gist.js';
 import '@ably/ui/core/Code/component.css';
 import '@ably/ui/core/styles.css';
+import './styles.css';
 
 // Supported languages need to be imported here
 // https://github.com/highlightjs/highlight.js/blob/master/SUPPORTED_LANGUAGES.md
@@ -65,7 +65,7 @@ SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.swift.key, swi
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.objc.key, objectivec);
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.json.key, json);
 
-const StyledBasicCodeElement = styled.code`
+const InlineCodeElement = styled.code`
   background-color: ${secondary.subtleOrange};
   padding: 2.5px 0;
 `;
@@ -82,18 +82,22 @@ const Code = ({ data, attribs }) => {
       attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
         ? languageSyntaxHighlighterNames[attribs.lang]
         : languageSyntaxHighlighterNames['plaintext'];
+    const withModifiedAttribs = {
+      ...attribs,
+      className: 'p-32 overflow-auto',
+    };
     return (
-      <Container {...attribs} language={languageLabels[attribs.lang]}>
-        <SyntaxHighlighter language={displayLanguage.key} style={githubGist}>
+      <Container {...withModifiedAttribs} language={languageLabels[attribs.lang]}>
+        <SyntaxHighlighter style={{ hljs: { background: 'inherit' } }} language={displayLanguage.key}>
           {data[0].data}
         </SyntaxHighlighter>
       </Container>
     );
   }
   return (
-    <StyledBasicCodeElement {...attribs}>
+    <InlineCodeElement {...attribs}>
       <Html data={data} />
-    </StyledBasicCodeElement>
+    </InlineCodeElement>
   );
 };
 
