@@ -6,7 +6,7 @@ import MenuItem from './MenuItem';
 import '@ably/ui/core/styles.css';
 
 const HorizontalMenu = ({ label, items }) => (
-  <HM>
+  <HM className="docs-code-explorer-language-navigation">
     {label && <MenuLabel>{label}</MenuLabel>}
     {items.map(({ Component, props, content }, index) => (
       <MenuItem key={index}>
