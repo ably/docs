@@ -17,8 +17,8 @@ const periodicTableOfRealtimeColors = {
   'realtime-application-service': '#76767c',
   'streaming-gateway-service': '#338F9B',
   'containers-one': '#ebebeb',
-  'containers-two': '#f1f1f1',
-  'containers-three': '#f8f8f8',
+  'containers-two': '#F5F5F6',
+  'containers-three': '#FAFAFB',
 };
 
 module.exports = extendConfig((ablyUIConfig) => ({

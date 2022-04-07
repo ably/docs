@@ -1,12 +1,13 @@
-import styled from 'styled-components';
-import { fonts, spacing } from '../../../styles';
+import React from 'react';
 import LinkableHtmlBlock from '../Html/LinkableHtmlBlock';
+import '@ably/ui/core/styles.css';
+import { ChildPropTypes } from '../../../react-utilities';
 
-const StyledH2 = styled.h2`
-  ${fonts.h2};
-  margin: ${spacing.medium} 0 ${spacing.medium};
-`;
+const AblyH2 = ({ children }) => <h2 className="ui-text-h2">{children}</h2>;
 
-const H2 = LinkableHtmlBlock(StyledH2);
+const H2 = LinkableHtmlBlock(AblyH2, 'mb-32');
 
+AblyH2.propTypes = {
+  children: ChildPropTypes,
+};
 export default H2;

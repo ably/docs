@@ -7,22 +7,16 @@ import styled, { css } from 'styled-components';
 import { secondary } from '../../../styles/colors';
 import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
 
+import '@ably/ui/core/styles.css';
+
 const onPageNav = /[#?]/;
 
-const styles = css`
-  color: revert;
-  :hover {
-    color: ${secondary.actionBlue};
-  }
-`;
-
-const StyledGatsbyLink = styled(Link)`
-  ${styles}
-`;
-
-const StyledALink = styled.a`
-  ${styles}
-`;
+// eslint-disable-next-line react/prop-types
+const StyledGatsbyLink = ({ children, ...props }) => (
+  <Link className="ui-link" {...props}>
+    {children}
+  </Link>
+);
 
 const A = ({ data, attribs }) => {
   if (
@@ -40,7 +34,7 @@ const A = ({ data, attribs }) => {
       </StyledGatsbyLink>
     );
   }
-  return GenericHtmlBlock(StyledALink)({ data, attribs });
+  return GenericHtmlBlock('a')({ data, attribs: { ...attribs, className: 'ui-link' } });
 };
 
 A.propTypes = {
