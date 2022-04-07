@@ -111,6 +111,42 @@ curl https://rest.ably.io/channels/kafka-connect-ably-example/messages \
 
 If it's worked you should see the same messages you sent in the response. **Note** that by default Ably only persists messages for 2 minutes, so if the messages aren't there try sending the messages again and make the History request within 2 minutes of that.
 
+h2(#using-connector-multi-channel). Sending Messages from One Topic to Multiple Channels
+
+With the above, we're able to send all messages which go into a Kafka Topic to an Ably Channel. Often though it can be far more powerful to have ways to define where messages in a Kafka Topic should go dependant on certain parameters. A common example would be that chat messages sent to a group chat should all be sent to a specific group of users.
+
+The Ably Kafka Connector allows you to do this by defining the @channel@ parameter in the config file with variables. For example, if we specify the @channel@ in the @config/docker-compose-connector.properties@ file to be:
+
+```[yml]
+...
+channel = group:${key}
+...
+```
+
+This will result in the Ably Channel messages are sent to to correspond in name to the key of each message. If the key were set to @my_group@ for example, the message would be sent to the channel @group:my_group@.
+
+We can test this out by stopping the current instances, starting up a new instance of Kafka and the Connector using the @docker-compose@ file as above, and then sending a message.
+
+```[sh]
+docker-compose down
+docker-compose up -d
+docker-compose exec -T kafka kafka-console-producer --topic kafka-connect-ably-example --broker-list kafka:9092 --property "parse.key=true" --property "key.separator=:" <<EOF
+my_group:message 1
+my_group:message 2
+EOF
+```
+
+In the above code when producing data, we're specifying how we'll include a key in the messages via the proprties @key.separator@ and @parse.key@. The separator is defined to be a colon (:), so the messages both have a key of @my_group@.
+
+We can check if the messages have been sent to the channel we expect to to have been sent to (@group:my_group@) with a call to History as we did in the previous example:
+
+```[sh]
+curl https://rest.ably.io/channels/group:my_group/messages \
+ -u "MY_API_KEY"
+```
+
+**Note** make sure to replace MY_API_KEY with your API key.
+
 h2(#conclusion). Conclusion
 
 With the above running, we now have the ability to send messages from Kafka into an Ably Channel. From here, we can distribute these messages to as many users as desired. This can be incredibly powerful for many use-cases, such as vehicle tracking, "ticket booking systems":https://ably.com/blog/realtime-ticket-booking-solution-kafka-fastapi-ably, "chat apps":https://ably.com/topic/apache-kafka-chat-application, and generally any scenario where you'd be interested in distributing data to end users. "Find out more on these use-cases and best practices in this article":https://ably.com/solutions/extend-kafka-to-the-edge.
