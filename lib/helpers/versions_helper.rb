@@ -8,6 +8,7 @@ module VersionsHelper
     general
     sse
     realtime
+    api
     rest
     rest-api
     api
