@@ -1,11 +1,6 @@
-/**
- * Source: Ably Voltaire src/components/code-block/code-block.js
- */
 import React from 'react';
 import PropTypes from 'prop-types';
 import Html from '../Html';
-
-import styled from 'styled-components';
 
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import '@ably/ui/core/Code/component.css';
@@ -32,24 +27,14 @@ import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
 
 import languageLabels, { languageSyntaxHighlighterNames } from '../../../maps/language';
 import HtmlDataTypes from '../../../../data/types/html';
-import { secondary } from '../../../styles/colors';
 import { ChildPropTypes } from '../../../react-utilities';
 
-const Container = styled.div`
-  position: relative;
-  &::after {
-    content: '${({ language }) => language}';
-    position: absolute;
-    top: 0;
-    right: 0;
-    color: #f5f5f6;
-    background-color: #76767c;
-    font-size: 10px;
-    line-height: 1;
-    padding: ${({ language }) => (language ? '6px' : 0)};
-    border-bottom-left-radius: 4px;
-  }
-`;
+const SelectedLanguage = ({ language }) =>
+  language ? <div className="doc-language-label">{language.label}</div> : null;
+
+SelectedLanguage.propTypes = {
+  language: PropTypes.string,
+};
 
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.javascript.key, js);
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.java.key, java);
@@ -67,7 +52,7 @@ SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.objc.key, obje
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.json.key, json);
 
 const InlineCodeElement = ({ children, ...props }) => (
-  <code {...props} className="font-mono font-semibold text-code bg-mid-grey">
+  <code {...props} className="font-mono font-semibold text-code bg-mid-grey p-4">
     {children}
   </code>
 );
@@ -86,14 +71,15 @@ const Code = ({ data, attribs }) => {
         : languageSyntaxHighlighterNames['plaintext'];
     const withModifiedAttribs = {
       ...attribs,
-      className: 'p-32 overflow-auto',
+      className: `p-32 overflow-auto relative`,
     };
     return (
-      <Container {...withModifiedAttribs} language={languageLabels[attribs.lang]}>
+      <div {...withModifiedAttribs} language={languageLabels[attribs.lang]}>
+        <SelectedLanguage language={displayLanguage} />
         <SyntaxHighlighter style={{ hljs: { background: 'inherit' } }} language={displayLanguage.key}>
           {data[0].data}
         </SyntaxHighlighter>
-      </Container>
+      </div>
     );
   }
   return (
