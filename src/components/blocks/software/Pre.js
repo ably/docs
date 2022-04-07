@@ -2,18 +2,25 @@ import React from 'react';
 import PropType from 'prop-types';
 import Html from '../Html';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
+import '@ably/ui/core/styles.css';
 
-const Pre = ({ data, language, languages, altData, attribs }) => (
-  <pre className={`mt-32 mb-0`} {...attribs}>
-    {language ? (
-      <LocalLanguageAlternatives language={language} languages={languages} data={altData}>
+const Pre = ({ data, language, languages, altData, attribs }) => {
+  const withModifiedClassname = {
+    ...attribs,
+    className: `bg-cool-black text-white p-0 rounded-lg border border-cool-black`,
+  };
+  return (
+    <pre {...withModifiedClassname}>
+      {language ? (
+        <LocalLanguageAlternatives language={language} languages={languages} data={altData}>
+          <Html data={data} />
+        </LocalLanguageAlternatives>
+      ) : (
         <Html data={data} />
-      </LocalLanguageAlternatives>
-    ) : (
-      <Html data={data} />
-    )}
-  </pre>
-);
+      )}
+    </pre>
+  );
+};
 
 Pre.propTypes = {
   data: PropType.array,
