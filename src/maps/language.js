@@ -39,7 +39,8 @@ const languageSyntaxHighlighterNames = {
   objc: { label: 'Objective C', key: 'objectivec' },
   nodejs: { label: 'Node.js', key: 'javascript' },
   json: { label: 'JSON', key: 'json' },
-  // android: { label: 'Android', key: 'androidstudio' } Android Studio has an error when registering the language
+  android: { label: 'Android', key: 'androidstudio' },
+  flutter: { label: 'Flutter', key: 'flutter' },
 };
 
 export { languageSyntaxHighlighterNames };
