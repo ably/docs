@@ -4,8 +4,8 @@ import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import languageLabels from '../../../maps/language';
 import MenuItemButton, { SelectedMenuItemButton } from '../../Menu/MenuItem/MenuItemButton';
 import Html from '../Html';
-import HorizontalMenu from '../../Menu/HorizontalMenu';
 import { ChildPropTypes } from '../../../react-utilities';
+import LanguageNavigation from '../../Menu/LanguageNavigation';
 
 const LocalLanguageAlternatives = ({ language, languages, data, children }) => {
   const [selected, setSelected] = useState(children);
@@ -16,7 +16,7 @@ const LocalLanguageAlternatives = ({ language, languages, data, children }) => {
     setSelectedLanguage(value);
   };
 
-  const label = language === DEFAULT_LANGUAGE ? `Select:` : `No ${languageLabels[language]} example exists, select:`;
+  const label = language === DEFAULT_LANGUAGE ? `SELECT` : `No ${languageLabels[language]} example exists, select:`;
   const languageItems = languages.map((lang) => ({
     Component: lang === selectedLanguage ? SelectedMenuItemButton : MenuItemButton,
     props: {
@@ -28,7 +28,7 @@ const LocalLanguageAlternatives = ({ language, languages, data, children }) => {
 
   return (
     <>
-      <HorizontalMenu label={label} items={languageItems} />
+      <LanguageNavigation label={label} items={languageItems} />
       {selected}
     </>
   );
