@@ -20,39 +20,19 @@ const Button = ({ data, attribs }) => {
 const PrimaryButton = ({ data, attribs }) =>
   GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn' } });
 
-export const PrimaryAltButton = ({ data, attribs }) =>
+const PrimaryAltButton = ({ data, attribs }) =>
   GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-alt' } });
 
-export const SecondaryButton = ({ data, attribs }) =>
+const SecondaryButton = ({ data, attribs }) =>
   GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-secondary' } });
 
-export const PrimaryButtonInverted = ({ data, attribs }) =>
+const PrimaryButtonInverted = ({ data, attribs }) =>
   GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-invert' } });
 
-export const SecondaryButtonInverted = ({ data, attribs }) =>
+const SecondaryButtonInverted = ({ data, attribs }) =>
   GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-secondary-invert' } });
 
 Button.propTypes = {
-  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
-  attribs: PropTypes.object,
-};
-
-PrimaryAltButton.propTypes = {
-  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
-  attribs: PropTypes.object,
-};
-
-SecondaryButton.propTypes = {
-  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
-  attribs: PropTypes.object,
-};
-
-PrimaryButtonInverted.propTypes = {
-  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
-  attribs: PropTypes.object,
-};
-
-SecondaryButtonInverted.propTypes = {
   data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
   attribs: PropTypes.object,
 };
