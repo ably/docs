@@ -3,7 +3,7 @@ import { ChildPropTypes } from '../../../react-utilities';
 import '@ably/ui/core/styles.css';
 import '../styles.css';
 
-const MenuLabel = ({ children }) => <li className="docs-menu-item pr-4 text-white">{children}</li>;
+const MenuLabel = ({ children }) => <li className="docs-menu-item docs-menu-item-label">{children}</li>;
 
 MenuLabel.propTypes = {
   children: ChildPropTypes,
