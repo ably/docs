@@ -15,8 +15,10 @@ They represent the final stage before the user will see our documents.
 
 It is a good place to put:
 * Broad changes to behaviour, presentation, layout, markup
-* Fine changes to behaviour, presentation, layout, markup; see `components/blocks`
+* Changes to main body content driven by page data in GraphQL; see [`components/blocks`](./blocks/README.md)
 
 It is not the best place to put:
-* Regex-based operations; consider putting these in pre-parser or parser-enhancements
+* String transformation operations such as regex substitutions; consider putting these in pre-parser or parser-enhancements
 * Meta-data-based operations; ideally these should happen in parser-enhancements
+
+Use the NullComponent instead of null. This is an empty React Fragment that has been named for purposes of consistency and clarity.
