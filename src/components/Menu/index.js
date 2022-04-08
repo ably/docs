@@ -1,78 +1,16 @@
-import styled from 'styled-components';
-import { primary, text } from '../../styles/colors';
+import React from 'react';
+import { ChildPropTypes } from '../../react-utilities';
+import './styles.css';
 
-/** cf. Ably website repo
- * app/assets/javascripts/modules/documentation/htmlTemplates.js
- * app/assets/stylesheets/components/_c.menu.scss
- */
-const Menu = styled.menu`
-  position: relative;
-  list-style: none;
-  margin-bottom: 0px;
-  padding-left: 0;
+const HorizontalMenu = ({ children }) => <menu className="docs-horizontal-menu">{children}</menu>;
+const TopHorizontalMenu = ({ children }) => <menu className="docs-top-horizontal-menu">{children}</menu>;
 
-  .c-menu__item {
-    position: relative;
-    white-space: nowrap;
-    word-break: initial;
-  }
-`;
+HorizontalMenu.propTypes = {
+  children: ChildPropTypes,
+};
 
-const HorizontalMenu = styled(Menu)`
-  position: relative;
-  display: flex;
-  padding: 0;
-  margin: 0;
-  overflow-y: hidden;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  white-space: nowrap;
+TopHorizontalMenu.propTypes = {
+  children: ChildPropTypes,
+};
 
-  .c-menu__item {
-    padding: 0 10px;
-  }
-
-  .c-menu__trigger {
-    cursor: pointer;
-    display: block;
-    position: relative;
-    user-select: none;
-  }
-`;
-
-const HorizontalCodeMenu = styled(HorizontalMenu)`
-  background-color: ${primary.charcoalGrey};
-
-  color: ${text.linkInverse};
-  .c-menu__item,
-  .c-menu__trigger {
-    letter-spacing: -0.1px;
-  }
-  .c-menu__item {
-    font-size: 13px;
-    line-height: 30px;
-  }
-
-  .c-menu__trigger {
-    font-size: inherit;
-    font-family: 'Inconsolata', monospace;
-    background: none;
-    padding: 0;
-    color: ${text.aux};
-
-    &:hover,
-    &.active,
-    &.is-active {
-      color: ${text.linkHoverAlternateMuted};
-    }
-  }
-
-  .c-menu__label {
-    font-size: 12px;
-    line-height: 30px;
-    font-weight: 700;
-    padding: --spacing(8);
-  }
-`;
-
-export { HorizontalMenu, HorizontalCodeMenu };
+export { HorizontalMenu, TopHorizontalMenu };

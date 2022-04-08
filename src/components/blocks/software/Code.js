@@ -1,14 +1,11 @@
-/**
- * Source: Ably Voltaire src/components/code-block/code-block.js
- */
 import React from 'react';
 import PropTypes from 'prop-types';
 import Html from '../Html';
 
-import styled from 'styled-components';
-
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
-import githubGist from 'react-syntax-highlighter/dist/cjs/styles/hljs/github-gist.js';
+import '@ably/ui/core/Code/component.css';
+import '@ably/ui/core/styles.css';
+import './styles.css';
 
 // Supported languages need to be imported here
 // https://github.com/highlightjs/highlight.js/blob/master/SUPPORTED_LANGUAGES.md
@@ -28,29 +25,16 @@ import objectivec from 'react-syntax-highlighter/dist/cjs/languages/hljs/objecti
 import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
 // Android Studio has an error when registering the language.
 
-import { spacing, fonts, colors } from '../../../styles';
 import languageLabels, { languageSyntaxHighlighterNames } from '../../../maps/language';
 import HtmlDataTypes from '../../../../data/types/html';
-import { secondary } from '../../../styles/colors';
+import { ChildPropTypes } from '../../../react-utilities';
 
-const Container = styled.div`
-  ${fonts.efficientBody}
-  margin: 0 0 ${spacing.medium} 0;
-  position: relative;
+const SelectedLanguage = ({ language }) =>
+  language ? <div className="doc-language-label">{language.label}</div> : null;
 
-  &::after {
-    content: '${({ language }) => language}';
-    position: absolute;
-    top: 0;
-    right: 0;
-    background-color: ${colors.containers.one};
-    font-size: 10px;
-    line-height: 1;
-    padding: ${({ language }) => (language ? '6px' : 0)};
-    border-top-right-radius: 4px;
-    border-bottom-left-radius: 4px;
-  }
-`;
+SelectedLanguage.propTypes = {
+  language: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
+};
 
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.javascript.key, js);
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.java.key, java);
@@ -67,10 +51,11 @@ SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.swift.key, swi
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.objc.key, objectivec);
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.json.key, json);
 
-const StyledBasicCodeElement = styled.code`
-  background-color: ${secondary.subtleOrange};
-  padding: 2.5px 0;
-`;
+const InlineCodeElement = ({ children, ...props }) => (
+  <code {...props} className="font-mono font-semibold text-code p-4">
+    {children}
+  </code>
+);
 
 const multilineRegex = /\r|\n/gm;
 
@@ -84,34 +69,32 @@ const Code = ({ data, attribs }) => {
       attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
         ? languageSyntaxHighlighterNames[attribs.lang]
         : languageSyntaxHighlighterNames['plaintext'];
+    const withModifiedAttribs = {
+      ...attribs,
+      className: `p-32 overflow-auto relative ui-text-code`,
+    };
     return (
-      <Container {...attribs} language={languageLabels[attribs.lang]}>
-        <SyntaxHighlighter
-          customStyle={{
-            backgroundColor: colors.containers.three,
-            padding: '20px',
-            borderLeft: `10px solid ${colors.containers.one}`,
-            borderRadius: '4px',
-            margin: 0,
-          }}
-          language={displayLanguage.key}
-          style={githubGist}
-        >
+      <div {...withModifiedAttribs} language={languageLabels[attribs.lang]}>
+        <SelectedLanguage language={displayLanguage} />
+        <SyntaxHighlighter style={{ hljs: { background: 'inherit' } }} language={displayLanguage.key}>
           {data[0].data}
         </SyntaxHighlighter>
-      </Container>
+      </div>
     );
   }
   return (
-    <StyledBasicCodeElement {...attribs}>
+    <InlineCodeElement {...attribs}>
       <Html data={data} />
-    </StyledBasicCodeElement>
+    </InlineCodeElement>
   );
 };
 
 Code.propTypes = {
   data: PropTypes.array,
   attribs: PropTypes.object,
+};
+InlineCodeElement.propTypes = {
+  children: ChildPropTypes,
 };
 
 export default Code;

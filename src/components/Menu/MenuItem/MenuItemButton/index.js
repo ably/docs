@@ -1,27 +1,26 @@
-import styled from 'styled-components';
-import { text } from '../../../../styles/colors';
+import React from 'react';
+import { ChildPropTypes } from '../../../../react-utilities';
+import '../../styles.css';
 
-const UnstyledButton = styled.button`
-  appearance: none !important;
-  background: none;
-  outline: none;
-  box-shadow: none;
-  border: 0;
-  border-radius: 0;
-`;
+const MenuItemButton = ({ children, ...props }) => (
+  <button className="docs-menu-item-button" {...props}>
+    {children}
+  </button>
+);
 
-const MenuItemButton = styled(UnstyledButton)`
-  color: ${text.aux};
+const SelectedMenuItemButton = ({ children, ...props }) => (
+  <button className="docs-menu-item-button-selected" {...props}>
+    {children}
+  </button>
+);
 
-  &:focus,
-  &:hover {
-    color: ${text.linkHoverAlternate};
-  }
-`;
+MenuItemButton.propTypes = {
+  children: ChildPropTypes,
+};
 
-const SelectedMenuItemButton = styled(MenuItemButton)`
-  color: ${text.highlight};
-`;
+SelectedMenuItemButton.propTypes = {
+  children: ChildPropTypes,
+};
 
 export { SelectedMenuItemButton };
 
