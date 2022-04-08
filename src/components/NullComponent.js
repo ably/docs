@@ -1,5 +1,5 @@
 import React from 'react';
 
-const NullComponent = <></>;
+const NullComponent = () => <></>;
 
 export default NullComponent;
