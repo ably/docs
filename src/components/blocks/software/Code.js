@@ -52,7 +52,7 @@ SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.objc.key, obje
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.json.key, json);
 
 const InlineCodeElement = ({ children, ...props }) => (
-  <code {...props} className="font-mono font-semibold text-code bg-mid-grey p-4">
+  <code {...props} className="font-mono font-semibold text-code p-4">
     {children}
   </code>
 );
@@ -71,7 +71,7 @@ const Code = ({ data, attribs }) => {
         : languageSyntaxHighlighterNames['plaintext'];
     const withModifiedAttribs = {
       ...attribs,
-      className: `p-32 overflow-auto relative`,
+      className: `p-32 overflow-auto relative ui-text-code`,
     };
     return (
       <div {...withModifiedAttribs} language={languageLabels[attribs.lang]}>
