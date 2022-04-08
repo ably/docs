@@ -33,7 +33,7 @@ const SelectedLanguage = ({ language }) =>
   language ? <div className="doc-language-label">{language.label}</div> : null;
 
 SelectedLanguage.propTypes = {
-  language: PropTypes.string,
+  language: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
 };
 
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.javascript.key, js);
