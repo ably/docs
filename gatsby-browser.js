@@ -48,6 +48,7 @@ const shouldUpdateScroll = ({ prevRouterProps, routerProps: { location } }) => {
 
   const plainCurr = curr.replace(versionRegex, '').replace(languageRegex, '').replace(hashRegex, '');
   const plainPrev = prev.replace(versionRegex, '').replace(languageRegex, '').replace(hashRegex, '');
+  console.log(plainCurr, plainPrev);
 
   return (
     plainCurr !== plainPrev && // If the current location is a variant of the previous location, do not update scroll
