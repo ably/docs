@@ -5,13 +5,13 @@ import Html from '../Html';
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
 
-import '@ably/ui/core/styles.css';
+import './styles.css';
 
 const onPageNav = /[#?]/;
 
 // eslint-disable-next-line react/prop-types
 const StyledGatsbyLink = ({ children, ...props }) => (
-  <Link className="ui-link" {...props}>
+  <Link className="docs-link" {...props}>
     {children}
   </Link>
 );
@@ -32,7 +32,7 @@ const A = ({ data, attribs }) => {
       </StyledGatsbyLink>
     );
   }
-  return GenericHtmlBlock('a')({ data, attribs: { ...attribs, className: 'ui-link' } });
+  return GenericHtmlBlock('a')({ data, attribs: { ...attribs, className: 'docs-link' } });
 };
 
 A.propTypes = {
