@@ -1,3 +1,5 @@
 export interface Attribs {
-  attribs: Object;
+  type?: string;
+  class?: string;
+  className?: string;
 }
