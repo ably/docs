@@ -30,7 +30,7 @@ const StickySidebar = styled.aside`
     width: 100%;
     height: 10%;
     bottom: 0;
-    background: linear-gradient(0deg, white 0%, rgba(0, 0, 0, 0) 100%);
+    background: linear-gradient(0deg, white 0%, rgba(255, 255, 255, 0) 100%);
     touch-action: none;
     pointer-events: none;
   }
