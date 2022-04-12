@@ -1,24 +1,23 @@
 import React from 'react';
-import { HtmlBlockComponentProps } from '../block';
 import SelfClosingHtmlBlock from '../Html/SelfClosingHtmlBlock';
 import './styles.css';
 
-const Input = ({ attribs }: HtmlBlockComponentProps) => {
-  switch (attribs.type) {
+const Input = (props:React.ComponentProps<"input">) => {
+  switch (props.type) {
     case 'text':
-      return <InputTextField attribs={attribs} />;
+      return <InputTextField {...props} />;
     default: {
       const Type = SelfClosingHtmlBlock('input');
-      return <Type attribs={attribs} />;
+      return <Type {...props} />;
     }
   }
 };
 
-const InputTextField = ({ attribs }: HtmlBlockComponentProps) => (
+const InputTextField = (props:React.ComponentProps<"input">) => (
   <input
     {...{
       className: 'input-field',
-      ...attribs,
+      ...props,
     }}
   />
 );
