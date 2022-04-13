@@ -10,7 +10,6 @@ import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/cons
 import VersionMenu from '../components/Menu/VersionMenu';
 import RightSidebar from '../components/Sidebar/RightSidebar';
 import PageTitle from '../components/PageTitle';
-import CopyLink from '../components/blocks/wrappers/CopyLink';
 
 const Document = ({
   location: { search },
