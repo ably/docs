@@ -1,4 +1,4 @@
-import { Link } from 'gatsby';
+import { GatsbyLinkProps, Link } from 'gatsby';
 import React from 'react';
 import PropTypes from 'prop-types';
 import Html from '../Html';
@@ -9,9 +9,8 @@ import './styles.css';
 
 const onPageNav = /[#?]/;
 
-// eslint-disable-next-line react/prop-types
-const StyledGatsbyLink = ({ children, ...props }) => (
-  <Link className="docs-link" {...props}>
+const StyledGatsbyLink = ({ to, children, ...props }: Omit<GatsbyLinkProps<{}>, 'ref'>) => (
+  <Link className="docs-link" to={to} {...props}>
     {children}
   </Link>
 );
@@ -27,7 +26,7 @@ const A = ({ data, attribs }) => {
       href = `/${DOCUMENTATION_NAME}${attribs.href}`;
     }
     return (
-      <StyledGatsbyLink {...{ ...attribs, to: href }}>
+      <StyledGatsbyLink to={href} {...{ ...attribs }}>
         <Html data={data} />
       </StyledGatsbyLink>
     );
