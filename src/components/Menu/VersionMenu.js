@@ -30,7 +30,7 @@ const VersionMenu = ({ versions, version, rootVersion }) => {
   return (
     <>
       {versions.length > 0 && (
-        <div className="flex justify-end items-center col-span-2 mb-40">
+        <div className="flex justify-end items-center col-span-1 mb-40">
           <SmallMenuLabel htmlFor={'version-menu'}>API Version:</SmallMenuLabel>
           <Select
             components={{ IndicatorSeparator: () => null }}
@@ -41,10 +41,37 @@ const VersionMenu = ({ versions, version, rootVersion }) => {
                 width: '100px',
                 border: 0,
                 boxShadow: 'none',
+                fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
+                fontSize: '14px',
               }),
               option: (provided) => ({
                 ...provided,
+                cursor: 'pointer',
                 width: '100px',
+                border: 0,
+                boxShadow: 'none',
+                fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
+                backgroundColor: 'transparent',
+                fontSize: '14px',
+                '&:hover': {
+                  color: 'var(--color-gui-hover)',
+                  backgroundColor: 'white',
+                },
+                '&:focus': {
+                  color: 'var(--color-gui-hover)',
+                  backgroundColor: 'white',
+                },
+                '&:target': {
+                  color: 'var(--color-gui-hover)',
+                  backgroundColor: 'white',
+                },
+              }),
+              dropdownIndicator: (provided) => ({
+                ...provided,
+                color: 'var(--color-cool-black)',
+                '&:hover': {
+                  color: 'var(--color-gui-hover)',
+                },
               }),
             }}
             inputId={'version-menu'}
