@@ -7,7 +7,6 @@ import { LeftSideBar } from '../components/StaticQuerySidebar';
 import PageLanguageContext from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
-import { H1 } from '../components/blocks/headings';
 import VersionMenu from '../components/Menu/VersionMenu';
 import RightSidebar from '../components/Sidebar/RightSidebar';
 import PageTitle from '../components/PageTitle';
