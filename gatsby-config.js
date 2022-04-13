@@ -12,6 +12,7 @@ module.exports = {
     'gatsby-transformer-yaml',
     'gatsby-transformer-sharp',
     'gatsby-plugin-react-helmet',
+    'gatsby-plugin-ts',
     // Images
     {
       resolve: 'gatsby-source-filesystem',
