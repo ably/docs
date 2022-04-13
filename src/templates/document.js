@@ -43,9 +43,7 @@ const Document = ({
       <Layout languages={filteredLanguages}>
         <LeftSideBar className="col-span-1 px-16" />
         <Article columns={3}>
-          <CopyLink id="title" marginBottom="mb-40">
-            <PageTitle id="title">{title}</PageTitle>
-          </CopyLink>
+          <PageTitle id="title">{title}</PageTitle>
           <VersionMenu versions={versions.edges} version={version} rootVersion={slug} />
           <div className="col-span-3">{elements}</div>
         </Article>
