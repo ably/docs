@@ -33,7 +33,7 @@ const AccordionHeadingPropTypes = {
 const InteractableAccordionHeading = ({ label, level }) => (
   <div className={`flex justify-between`}>
     {label}
-    <AccordionItemHeading className="bg-containers-three w-28" aria-level={level || ROOT_LEVEL}>
+    <AccordionItemHeading aria-level={level || ROOT_LEVEL}>
       <AccordionItemButton>
         <AccordionItemState>
           {({ expanded }) => <ExpandableIndicator className={'h-full mx-8'} expanded={expanded} />}
