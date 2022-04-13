@@ -1,13 +1,13 @@
-import React, { FunctionComponent as FC} from 'react'
+import React, { FunctionComponent as FC } from 'react';
 import '../../styles.css';
 
-const MenuItemButton:FC = ({ children, ...props }) => (
+const MenuItemButton: FC = ({ children, ...props }) => (
   <button className="docs-menu-item-button" {...props}>
     {children}
   </button>
 );
 
-const SelectedMenuItemButton:FC = ({ children, ...props }) => (
+const SelectedMenuItemButton: FC = ({ children, ...props }) => (
   <button className="docs-menu-item-button-selected" {...props}>
     {children}
   </button>
