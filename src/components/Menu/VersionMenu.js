@@ -26,12 +26,12 @@ const VersionMenu = ({ versions, version, rootVersion }) => {
   const currentValue = version ? { label: version, value: version } : latestOption;
 
   return (
-    <div>
+    <>
       {versions.length > 0 && (
-        <>
+        <div>
           <SmallMenuLabel htmlFor={'version-menu'}>API Version:</SmallMenuLabel>
           <Select inputId={'version-menu'} value={currentValue} options={options} onChange={routeToPage} />
-        </>
+        </div>
       )}
       {version && version !== LATEST_ABLY_API_VERSION_STRING && (
         <Warning
@@ -40,7 +40,7 @@ const VersionMenu = ({ versions, version, rootVersion }) => {
           href={`${DOCUMENTATION_PATH}${rootVersion}`}
         />
       )}
-    </div>
+    </>
   );
 };
 
