@@ -8,7 +8,7 @@ const Layout = ({ languages, children }) => (
     <header>
       <Header languages={languages} />
     </header>
-    <main className={`pt-128 grid grid-cols-5`}>{children}</main>
+    <main className={`${languages && languages.length > 1 ? 'pt-128' : 'pt-96'} grid grid-cols-5`}>{children}</main>
   </>
 );
 

@@ -3,7 +3,7 @@ import { spacing, mq, colors } from '../../styles';
 
 // Source: Voltaire. See Ably UI if we need shared component.
 const NAV_HEIGHT_DESKTOP = 64;
-const DISTANCE_FROM_TOP_DESKTOP = spacing.large.value;
+const DISTANCE_FROM_TOP_DESKTOP = 0;
 
 const StickySidebar = styled.aside`
   transition: transform 0.3s;
@@ -30,7 +30,7 @@ const StickySidebar = styled.aside`
     width: 100%;
     height: 10%;
     bottom: 0;
-    background: linear-gradient(0deg, white 0%, rgba(0, 0, 0, 0) 100%);
+    background: linear-gradient(0deg, white 0%, rgba(255, 255, 255, 0) 100%);
     touch-action: none;
     pointer-events: none;
   }
