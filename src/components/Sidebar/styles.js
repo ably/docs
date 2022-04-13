@@ -11,7 +11,7 @@ const SidebarHeadingStyle = css`
   text-decoration: none;
   margin-left: ${({ $leaf, indent }) => `${($leaf ? 4 : 0) + (indent ?? 0)}px`};
 
-  color: ${({ active }) => (active ? colors.text.linkHoverAlternate : colors.text.main)};
+  color: ${({ active }) => (active ? colors.text.linkHoverAlternate : colors.text.link)};
   border-left: ${({ active, $leaf }) =>
     active
       ? `${$leaf ? 1 : 2}px solid ${colors.text.linkHoverAlternateMuted}`
@@ -25,9 +25,6 @@ const SidebarHeadingStyle = css`
   ${mq.minWidth.small} {
     padding: ${spacing.xsmall} ${spacing.small};
   }
-
-  border-image: linear-gradient(to left, white, ${colors.containers.one} 25%, ${colors.containers.one} 75%, white) 1;
-  border-bottom: 1px solid;
 `;
 
 export { SidebarHeadingStyle };
