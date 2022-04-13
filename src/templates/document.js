@@ -10,6 +10,8 @@ import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/cons
 import { H1 } from '../components/blocks/headings';
 import VersionMenu from '../components/Menu/VersionMenu';
 import RightSidebar from '../components/Sidebar/RightSidebar';
+import PageTitle from '../components/PageTitle';
+import CopyLink from '../components/blocks/wrappers/CopyLink';
 
 const Document = ({
   location: { search },
@@ -42,9 +44,11 @@ const Document = ({
       <Layout languages={filteredLanguages}>
         <LeftSideBar className="col-span-1 px-16" />
         <Article columns={3}>
-          <H1 data={title} attribs={{ id: 'title' }} />
+          <CopyLink id="title" marginBottom="mb-40">
+            <PageTitle id="title">{title}</PageTitle>
+          </CopyLink>
           <VersionMenu versions={versions.edges} version={version} rootVersion={slug} />
-          {elements}
+          <div className="col-span-3">{elements}</div>
         </Article>
         <RightSidebar className="col-span-1 px-16" menuData={contentMenu[0]} />
       </Layout>
