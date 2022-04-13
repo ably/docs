@@ -9,7 +9,7 @@ MenuLabel.propTypes = {
   children: ChildPropTypes,
 };
 
-const SmallMenuLabel = ({ children }) => <span className="align-middle ui-text-menu3">{children}</span>;
+const SmallMenuLabel = ({ children }) => <span className="align-middle p-4 ui-text-menu3">{children}</span>;
 
 SmallMenuLabel.propTypes = {
   children: ChildPropTypes,
