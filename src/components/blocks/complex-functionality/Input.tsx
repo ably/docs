@@ -1,8 +1,9 @@
 import React from 'react';
 import SelfClosingHtmlBlock from '../Html/SelfClosingHtmlBlock';
 import './styles.css';
+import { Attribs } from '../../attribs';
 
-const Input = ({ attribs }: { attribs: React.ComponentProps<'input'> }) => {
+const Input = ({ attribs }: Attribs<'input'>) => {
   switch (attribs.type) {
     case 'text':
       return <InputTextField {...attribs} />;
