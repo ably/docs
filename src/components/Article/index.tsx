@@ -1,7 +1,7 @@
 import React, { FunctionComponent as FC } from 'react';
 
 const Article: FC<{ columns: number }> = ({ columns = 3, children }) => (
-  <article className={`col-span-${columns} grid grid-cols-3`}>{children}</article>
+  <article className={`col-span-${columns} grid grid-cols-3 mt-12`}>{children}</article>
 );
 
 export default Article;
