@@ -17,6 +17,7 @@ const LanguageButton = ({ language }) => {
   const isActiveClassName = language === pageLanguage ? 'active' : 'inactive';
 
   return (
+    // 'active' className is not a Tailwind class, so does not need to be purged.
     <button className={`docs-menu-item-button ${isActiveClassName}`} onClick={() => navigate(href)}>
       {languageLabels[language] ?? language}
     </button>
