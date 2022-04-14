@@ -5,4 +5,3 @@ export { default as H4 } from './H4';
 export { default as H5 } from './H5';
 export { default as H6 } from './H6';
 export { default as Header } from './Header';
-export { default as WithExpansion } from './WithExpansion';
