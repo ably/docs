@@ -7,9 +7,9 @@ import { LeftSideBar } from '../components/StaticQuerySidebar';
 import PageLanguageContext from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
-import { H1 } from '../components/blocks/headings';
 import VersionMenu from '../components/Menu/VersionMenu';
 import RightSidebar from '../components/Sidebar/RightSidebar';
+import PageTitle from '../components/PageTitle';
 
 const Document = ({
   location: { search },
@@ -42,9 +42,9 @@ const Document = ({
       <Layout languages={filteredLanguages}>
         <LeftSideBar className="col-span-1 px-16" />
         <Article columns={3}>
-          <H1 data={title} attribs={{ id: 'title' }} />
+          <PageTitle id="title">{title}</PageTitle>
           <VersionMenu versions={versions.edges} version={version} rootVersion={slug} />
-          {elements}
+          <div className="col-span-3">{elements}</div>
         </Article>
         <RightSidebar className="col-span-1 px-16" menuData={contentMenu[0]} />
       </Layout>
