@@ -17,9 +17,9 @@ export const secondary = {
   subtleOrange: '#fde9d7',
 };
 
-export const tertiary = {
-  warningRed: '#FFCCCB',
-  backgroundGreen: '#98FB98',
+export const gui = {
+  error: '#FB0C0C',
+  success: '#11CB24',
 };
 
 export const containers = {
