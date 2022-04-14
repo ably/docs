@@ -23,7 +23,7 @@ const Warning = ({ message, href, linkText }) => {
   const [hidden, setHidden] = useState(false);
   return (
     hidden || (
-      <CAlertWarning className="px-4 col-span-3">
+      <CAlertWarning className="p-8 col-span-3 mb-40">
         <SuggestDestination message={message} messageLevel={MESSAGE_LEVEL.WARNING} href={href} linkText={linkText} />
         <button type="button" className="text-white" onClick={() => setHidden(true)} aria-label="Close">
           <AICloseRounded role="presentation" />
