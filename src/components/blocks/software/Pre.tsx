@@ -9,7 +9,6 @@ const Pre = ({ data, language, languages, altData, attribs }: PreProps): ReactEl
     ...attribs,
     className: `docs-pre-container`,
   };
-  console.log(altData);
   return (
     <pre {...withModifiedClassname}>
       {language ? (
