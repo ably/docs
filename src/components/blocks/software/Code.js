@@ -30,7 +30,7 @@ import HtmlDataTypes from '../../../../data/types/html';
 import { ChildPropTypes } from '../../../react-utilities';
 
 const SelectedLanguage = ({ language }) =>
-  language ? <div className="doc-language-label">{language.label}</div> : null;
+  language ? <div className="docs-language-label">{language.label}</div> : null;
 
 SelectedLanguage.propTypes = {
   language: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
