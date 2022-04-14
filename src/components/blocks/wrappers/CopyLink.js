@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { ChildPropTypes } from '../../../react-utilities';
 import styled from 'styled-components';
 import AILink from '../../../styles/svg/ai-link';
-import { secondary, tertiary } from '../../../styles/colors';
+import { gui, secondary } from '../../../styles/colors';
 
 const StyledLinkCopyButton = styled.button`
   height: 100%;
@@ -15,11 +15,13 @@ const StyledLinkCopyButton = styled.button`
   }
 `;
 
+const successColor = ({ copySuccess }) => (copySuccess ? gui.success : copySuccess === null ? '#fff' : gui.error);
+
 const LinkHoverPopup = styled.div`
   display: inline-block;
   position: absolute;
-  background-color: ${({ copySuccess }) =>
-    copySuccess ? tertiary.backgroundGreen : copySuccess === null ? '#fff' : tertiary.warningRed};
+  background-color: ${successColor};
+
   box-shadow: 0px 2px 20px 0px rgba(0, 0, 0, 0.3);
   border-radius: 4px;
   color: ${secondary.cableGrey};
@@ -41,9 +43,7 @@ const LinkHoverPopup = styled.div`
     bottom: 64px;
     border-left: 10px solid transparent;
     border-right: 10px solid transparent;
-    border-bottom: 10px solid
-      ${({ copySuccess }) =>
-        copySuccess ? tertiary.backgroundGreen : copySuccess === null ? '#fff' : tertiary.warningRed};
+    border-bottom: 10px solid ${successColor};
     z-index: inherit;
     transition: border-bottom 1000ms linear;
   }
