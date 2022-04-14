@@ -8,7 +8,7 @@ const mapMenuItemToSidebarItem = ({ name, id, level }) => ({
   level,
 });
 
-const RightSidebar = ({ menuData, className }) => {
+const RightSidebar = ({ menuData, languages, className }) => {
   let parent;
   let previous;
   const menuLength = menuData.length;
@@ -29,12 +29,21 @@ const RightSidebar = ({ menuData, className }) => {
     }
     previous = menuItem;
   }
-  return <Sidebar title="On this page" data={sidebarData} className={className} interactableLinkMenu={true} />;
+  return (
+    <Sidebar
+      title="On this page"
+      languages={languages}
+      data={sidebarData}
+      className={className}
+      interactableLinkMenu={true}
+    />
+  );
 };
 
 RightSidebar.propTypes = {
   menuData: PropTypes.array,
   className: PropTypes.string,
+  languages: PropTypes.bool,
 };
 
 export default RightSidebar;

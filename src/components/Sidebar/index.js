@@ -8,12 +8,13 @@ import { EXPAND_MENU } from './consts';
 const Sidebar = ({
   data,
   className,
+  languages = false,
   interactableLinkMenu = false,
   title = null,
   expandMenu = EXPAND_MENU.EXPANDED,
 }) => {
   return (
-    <StickySidebar className={className}>
+    <StickySidebar className={className} languages={languages}>
       {title && <SidebarTitle title={title} />}
       <SidebarLinkMenu data={data} interactable={interactableLinkMenu} expandMenu={expandMenu} />
     </StickySidebar>
@@ -23,6 +24,7 @@ const Sidebar = ({
 Sidebar.propTypes = {
   data: PropTypes.array,
   className: PropTypes.string,
+  languages: PropTypes.bool,
   interactableLinkMenu: PropTypes.bool,
   title: PropTypes.string,
   expandMenu: PropTypes.oneOf(Object.values(EXPAND_MENU)),

@@ -74,7 +74,7 @@ const Code = ({ data, attribs }) => {
         <SelectedLanguage language={displayLanguage} />
         <SyntaxHighlighter
           className="ui-text-code"
-          style={{ hljs: { background: 'inherit' } }}
+          style={{ hljs: { background: 'inherit', fontSize: `var(--fs-code)`, lineHeight: `var(--lh-loose)` } }}
           language={displayLanguage.key}
         >
           {data[0].data}
