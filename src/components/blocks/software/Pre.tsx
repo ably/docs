@@ -1,13 +1,13 @@
-import React from 'react';
-import PropType from 'prop-types';
+import React, { ReactElement } from 'react';
 import Html from '../Html';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import '@ably/ui/core/styles.css';
+import { PreProps } from './pre-props';
 
-const Pre = ({ data, language, languages, altData, attribs }) => {
+const Pre = ({ data, language, languages, altData, attribs }: PreProps): ReactElement => {
   const withModifiedClassname = {
     ...attribs,
-    className: `doc-pre-container`,
+    className: `docs-pre-container`,
   };
   return (
     <pre {...withModifiedClassname}>
@@ -20,14 +20,6 @@ const Pre = ({ data, language, languages, altData, attribs }) => {
       )}
     </pre>
   );
-};
-
-Pre.propTypes = {
-  data: PropType.array,
-  language: PropType.string,
-  languages: PropType.array,
-  altData: PropType.object,
-  attribs: PropType.object,
 };
 
 export default Pre;
