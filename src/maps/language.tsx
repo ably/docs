@@ -1,6 +1,14 @@
 import { DEFAULT_LANGUAGE } from '../../data/createPages/constants';
 
-const languageLabels = {
+type LanguageLabels = {
+  [language: string]: string;
+};
+
+type LanguageSyntaxHighlighterNames = {
+  [language: string]: { label: string | null; key: string };
+};
+
+const languageLabels: LanguageLabels = {
   javascript: 'JS',
   java: 'Java',
   ruby: 'Ruby',
@@ -22,7 +30,7 @@ const languageLabels = {
 };
 
 /**  Source: Ably Voltaire, src/components/code-block/code-block.js */
-const languageSyntaxHighlighterNames = {
+const languageSyntaxHighlighterNames: LanguageSyntaxHighlighterNames = {
   plaintext: { label: null, key: 'plaintext' },
   javascript: { label: 'JS', key: 'javascript' },
   java: { label: 'Java', key: 'java' },

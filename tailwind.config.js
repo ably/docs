@@ -24,15 +24,43 @@ const periodicTableOfRealtimeColors = {
 module.exports = extendConfig((ablyUIConfig) => ({
   ...ablyUIConfig,
   purge: {
-    content: ['./src/**/*.{js,jsx}', './node_modules/@ably/ui/**/*', ...ablyUIConfig.purge.content],
+    content: ['./src/**/*.{js,jsx,ts,tsx}', './node_modules/@ably/ui/**/*', ...ablyUIConfig.purge.content],
     options: {
       ...ablyUIConfig.purge.options,
       safelist: {
         ...ablyUIConfig.purge.options.safelist,
+        /**
+         * Purge exclusions must be added for all dynamic classNames.
+         * We should seek to remove these where possible, replacing with docs-* classNames or static classNames.
+         * If dynamic classNames are no longer present they can be removed here:
+         * mb-40, mb-32, mb-24 => src/components/blocks/headings/
+         * pt-128, pt-96 => src/components/Layout/index.js
+         * px-16 => src/templates/document.js := see also
+         *  - src/components/Sidebar/RightSidebar/index.js
+         *  - src/components/Sidebar/LeftSidebar/index.js
+         *  - src/components/Sidebar/index.js
+         * h-full, mx-8 => src/components/Sidebar/SidebarItem.js
+         */
         standard: [
           ...Object.keys(periodicTableOfRealtimeColors).map((c) => `bg-${c}`),
           ...ablyUIConfig.purge.options.safelist.standard,
+          'mb-40',
+          'mb-32',
+          'mb-24',
+          'pt-128',
+          'pt-96',
+          'px-16',
+          'h-full',
+          'mx-8',
         ],
+        /**
+         * Purge exclusions must be added for all dynamic classNames.
+         * We should seek to consolidate these where possible, replacing with docs-* classNames.
+         * If dynamic classNames are no longer present they can be removed here:
+         * docs-.* => Preferred prefix for custom classes throughout
+         * col-span-.*  => src/components/Article/index.js
+         */
+        greedy: [...ablyUIConfig.purge.options.safelist.greedy, /^docs-.*/, /^col-span-.*/],
       },
     },
   },
