@@ -3,7 +3,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Sidebar from '../Sidebar';
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
-import { EXPAND_MENU } from '../Sidebar/consts';
+import { EXPAND_MENU } from '../Sidebar/expand-menu-enum';
 
 const LeftSideBar = ({ className, languages }) => {
   const data = useStaticQuery(graphql`
