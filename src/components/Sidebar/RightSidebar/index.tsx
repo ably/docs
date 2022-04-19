@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { ReactElement } from 'react';
 import PropTypes from 'prop-types';
 import Sidebar from '..';
+import { RightSidebarProps } from './right-sidebar-props';
+import { MenuData } from './menu-data';
+import { SidebarData } from '../sidebar-data';
 
-const mapMenuItemToSidebarItem = ({ name, id, level }) => ({
+const mapMenuItemToSidebarItem = ({ name, id, level }: MenuData): SidebarData => ({
   label: name,
   link: `#${id}`,
   level,
 });
 
-const RightSidebar = ({ menuData, languages, className }) => {
+const RightSidebar = ({ menuData, languages, className }: RightSidebarProps): ReactElement => {
   let parent;
   let previous;
   const menuLength = menuData.length;
@@ -17,10 +20,10 @@ const RightSidebar = ({ menuData, languages, className }) => {
     const menuItem = {
       ...mapMenuItemToSidebarItem(menuData[i]),
     };
-    if (previous && menuItem.level > previous.level && previous.parent) {
+    if (previous && menuItem.level && previous.level && menuItem.level > previous.level && previous.parent) {
       menuItem.parent = previous.parent;
       previous.content = previous.content ? previous.content.concat([menuItem]) : [menuItem];
-    } else if (parent && menuItem.level > parent.level) {
+    } else if (parent && menuItem.level && parent.level && menuItem.level > parent.level) {
       menuItem.parent = parent;
       parent.content = parent.content ? parent.content.concat([menuItem]) : [menuItem];
     } else {

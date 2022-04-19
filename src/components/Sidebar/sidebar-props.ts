@@ -7,5 +7,5 @@ export type SidebarProps = {
   title?: string | null;
   languages: boolean;
   interactableLinkMenu: boolean;
-  expandMenu: EXPAND_MENU;
+  expandMenu?: EXPAND_MENU;
 };
