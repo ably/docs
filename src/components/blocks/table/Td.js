@@ -6,6 +6,7 @@ const StyledTd = styled.td`
   border: ${borders.defaultBorder};
   padding: 5px;
   position: relative;
+  font-weight: 300;
 `;
 
 const Td = GenericHtmlBlock(StyledTd);
