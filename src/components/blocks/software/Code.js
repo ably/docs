@@ -69,14 +69,14 @@ const Code = ({ data, attribs }) => {
       attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
         ? languageSyntaxHighlighterNames[attribs.lang]
         : languageSyntaxHighlighterNames['plaintext'];
-    const withModifiedAttribs = {
-      ...attribs,
-      className: `p-32 overflow-auto relative ui-text-code`,
-    };
     return (
-      <div {...withModifiedAttribs} language={languageLabels[attribs.lang]}>
+      <div {...attribs} className="p-32 overflow-auto relative" language={languageLabels[attribs.lang]}>
         <SelectedLanguage language={displayLanguage} />
-        <SyntaxHighlighter style={{ hljs: { background: 'inherit' } }} language={displayLanguage.key}>
+        <SyntaxHighlighter
+          className="ui-text-code"
+          style={{ hljs: { background: 'inherit', fontSize: `var(--fs-code)`, lineHeight: `var(--lh-loose)` } }}
+          language={displayLanguage.key}
+        >
           {data[0].data}
         </SyntaxHighlighter>
       </div>

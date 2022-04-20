@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import SidebarItem from './SidebarItem';
 import SidebarLink from './SidebarLink';
 import SidebarLinkMenu from './SidebarLinkMenu';
-import { EXPAND_MENU } from './consts';
+import { EXPAND_MENU } from './expand-menu-enum';
 
 const SidebarLinkItem = ({
   uuid,

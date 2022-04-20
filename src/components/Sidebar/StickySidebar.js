@@ -3,6 +3,7 @@ import { spacing, mq, colors } from '../../styles';
 
 // Source: Voltaire. See Ably UI if we need shared component.
 const NAV_HEIGHT_DESKTOP = 64;
+const DISTANCE_FROM_TOP_WITH_LANGUAGE_MENU_DESKTOP = 64;
 const DISTANCE_FROM_TOP_DESKTOP = 0;
 
 const StickySidebar = styled.aside`
@@ -14,7 +15,8 @@ const StickySidebar = styled.aside`
   height: calc((100vh - 70px) - ${NAV_HEIGHT_DESKTOP + DISTANCE_FROM_TOP_DESKTOP}px);
   overflow-y: auto;
   max-width: ${spacing.page.rightCol};
-  top: ${NAV_HEIGHT_DESKTOP + DISTANCE_FROM_TOP_DESKTOP}px;
+  top: ${({ 'data-languages': languages }) =>
+    NAV_HEIGHT_DESKTOP + (languages ? DISTANCE_FROM_TOP_WITH_LANGUAGE_MENU_DESKTOP : DISTANCE_FROM_TOP_DESKTOP)}px;
 
   ${mq.minWidth.medium} {
     display: block;

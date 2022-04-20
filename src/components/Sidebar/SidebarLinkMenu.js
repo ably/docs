@@ -2,10 +2,11 @@ import React, { useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Accordion } from 'react-accessible-accordion';
 import styled from 'styled-components';
-import { EXPAND_MENU, ROOT_LEVEL } from './consts';
+import { ROOT_LEVEL } from './consts';
 import SidebarLabel from './SidebarLabel';
 import SidebarLink from './SidebarLink';
 import SidebarLinkItem from './SidebarLinkItem';
+import { EXPAND_MENU } from './expand-menu-enum';
 
 const OrderedList = styled.ol`
   margin: 0;
