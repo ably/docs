@@ -8,7 +8,7 @@ import { SidebarData } from './sidebar-data';
 type SidebarProps = {
   data: SidebarData[];
   className: string;
-  title?: string | null;
+  title: string;
   languages: boolean;
   interactableLinkMenu: boolean;
   expandMenu?: EXPAND_MENU;
@@ -17,9 +17,9 @@ type SidebarProps = {
 const Sidebar = ({
   data,
   className,
+  title,
   languages = false,
   interactableLinkMenu = false,
-  title = null,
   expandMenu = EXPAND_MENU.EXPANDED,
 }: SidebarProps): ReactElement => (
   <StickySidebar className={className} data-languages={languages}>
