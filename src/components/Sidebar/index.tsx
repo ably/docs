@@ -3,7 +3,16 @@ import SidebarLinkMenu from './SidebarLinkMenu';
 import SidebarTitle from './SidebarTitle';
 import StickySidebar from './StickySidebar';
 import { EXPAND_MENU } from './expand-menu-enum';
-import { SidebarProps } from './sidebar-props';
+import { SidebarData } from './sidebar-data';
+
+type SidebarProps = {
+  data: SidebarData[];
+  className: string;
+  title?: string | null;
+  languages: boolean;
+  interactableLinkMenu: boolean;
+  expandMenu?: EXPAND_MENU;
+};
 
 const Sidebar = ({
   data,

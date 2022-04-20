@@ -1,15 +1,20 @@
 import React, { ReactElement } from 'react';
 import PropTypes from 'prop-types';
 import Sidebar from '..';
-import { RightSidebarProps } from './right-sidebar-props';
-import { MenuData } from './menu-data';
 import { SidebarData } from '../sidebar-data';
+import { MenuData } from './menu-data';
 
 const mapMenuItemToSidebarItem = ({ name, id, level }: MenuData): SidebarData => ({
   label: name,
   link: `#${id}`,
   level,
 });
+
+type RightSidebarProps = {
+  menuData: MenuData[];
+  languages: boolean;
+  className: string;
+};
 
 const RightSidebar = ({ menuData, languages, className }: RightSidebarProps): ReactElement => {
   let parent;
