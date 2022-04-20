@@ -8,7 +8,7 @@ import { SidebarData } from './sidebar-data';
 type SidebarProps = {
   data: SidebarData[];
   className: string;
-  title: string;
+  title?: string;
   languages: boolean;
   interactableLinkMenu: boolean;
   expandMenu?: EXPAND_MENU;
