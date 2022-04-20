@@ -24,6 +24,7 @@ const Document = ({
         .filter((language) => !IGNORED_LANGUAGES.includes(language)),
     [languages],
   );
+  const languagesExist = filteredLanguages.length > 1;
   const elements = useMemo(
     () =>
       contentOrderedList.map(
@@ -40,13 +41,13 @@ const Document = ({
   return (
     <PageLanguageContext.Provider value={language}>
       <Layout languages={filteredLanguages}>
-        <LeftSideBar className="col-span-1 px-16" />
+        <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
         <Article columns={3}>
           <PageTitle id="title">{title}</PageTitle>
           <VersionMenu versions={versions.edges} version={version} rootVersion={slug} />
           <div className="col-span-3">{elements}</div>
         </Article>
-        <RightSidebar className="col-span-1 px-16" menuData={contentMenu[0]} />
+        <RightSidebar className="col-span-1 px-16" languages={languagesExist} menuData={contentMenu[0]} />
       </Layout>
     </PageLanguageContext.Provider>
   );
