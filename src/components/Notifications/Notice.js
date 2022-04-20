@@ -23,7 +23,7 @@ const CAlertMessage = styled.div`
 
   a {
     color: white;
-    font-weight: 700;
+    font-weight: 500;
     text-decoration: underline;
     opacity: 0.8;
     transition: opacity 0.2s;
