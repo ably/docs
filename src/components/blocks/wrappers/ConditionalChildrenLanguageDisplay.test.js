@@ -69,7 +69,7 @@ describe('Integration: ConditionalChildrenLanguageDisplay only displays one <dt>
             <dt><div lang="javascript,nodejs">callback</div></dt>
             <dd>is a function of the form <code>function(err)</code> which is called upon completion</dd>
             <dt><div lang="java">listener</div></dt>
-            <dd>Listener to be notified on completion<br /><i>Type: <a href="#completion-listener"><code>CompletionListener</code></a></i></dd>
+            <dd>Listener to be notified on completion<br /><em>Type: <a href="#completion-listener"><code>CompletionListener</code></a></em></dd>
             <dt><div lang="csharp">callback</div></dt>
             <dd>is an action of the form <code>Action&lt;bool, ErrorInfo&gt;</code> which is called upon completion</dd>
             <dt><div lang="ruby">&amp;block</div></dt>
@@ -87,7 +87,7 @@ describe('Integration: ConditionalChildrenLanguageDisplay only displays one <dt>
     liftLangAttributes(loadedDom);
     expect(loadedDom('body *').html().replace(/\s/g, '')).toEqual(
       `<div lang="javascript,nodejs"><dt><div>callback</div></dt><dd>is a function of the form <code>function(err)</code> which is called upon completion</dd></div>
-    	<div lang="java"><dt><div>listener</div></dt><dd>Listener to be notified on completion<br><i>Type: <a href="#completion-listener"><code>CompletionListener</code></a></i></dd></div>
+    	<div lang="java"><dt><div>listener</div></dt><dd>Listener to be notified on completion<br><em>Type: <a href="#completion-listener"><code>CompletionListener</code></a></em></dd></div>
     	<div lang="csharp"><dt><div>callback</div></dt><dd>is an action of the form <code>Action&lt;bool, ErrorInfo&gt;</code> which is called upon completion</dd></div>
     	<div lang="ruby"><dt><div>&amp;block</div></dt><dd>yields upon successfully publishing the message</dd></div>
     	<div lang="objc,swift"><dt><div>callback</div></dt><dd>called upon publishing the message, or with an error</dd></div>
