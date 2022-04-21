@@ -40,6 +40,11 @@ ${secondEntry}`;
     },
   );
 
+// Ruby variables are not read correctly by textile-js when used as definition list <dt>s
+// The colon is interpreted as the end of the <dt> and beginning of the <dd>, despite no following '='
+// : or <span.*>:
+const fixDefinitionListRowsWithRubyItems = (content) => content.replace(/- /gm, '$1&#58;$2');
+
 module.exports = {
   fixTextileDefinitionLists,
 };

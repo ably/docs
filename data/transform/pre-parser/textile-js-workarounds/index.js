@@ -1,5 +1,5 @@
 const { compose } = require('lodash/fp');
-const { fixDuplicateQuoteLinks } = require('./fix-duplicate-quote-links');
+const { fixDuplicateQuoteLinks, fixHtmlElementsInLinks } = require('./fix-links');
 const { fixInlineCode } = require('./fix-inline-code');
 const { fixTextileDefinitionLists } = require('./fix-textile-definition-lists');
 
@@ -16,6 +16,7 @@ const textileJSCompatibility = compose(
   compressMultipleNewlinesInLists,
   manuallyReplaceHTags,
   fixDuplicateQuoteLinks,
+  fixHtmlElementsInLinks,
 );
 
 module.exports = {
