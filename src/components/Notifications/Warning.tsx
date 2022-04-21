@@ -26,7 +26,7 @@ const Warning: FC<{ message: string; href: string; linkText: string }> = ({ mess
   ) : (
     <CAlertWarning className="p-8 col-span-3 mb-40">
       <SuggestDestination message={message} messageLevel={MESSAGE_LEVEL.WARNING} href={href} linkText={linkText} />
-      <button type="button" className="text-white" onClick={() => setVisible(false)} aria-label="Close">
+      <button type="button" className="text-white" onClick={() => setVisible(true)} aria-label="Close">
         <AICloseRounded role="role" />
       </button>
     </CAlertWarning>

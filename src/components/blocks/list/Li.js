@@ -1,9 +1,11 @@
+import React from 'react';
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
-import styled from 'styled-components';
 
-const StyledLi = styled.li`
-  font-weight: 300;
-`;
+const StyledLi = ({ children, ...props }) => (
+  <li {...props} className="ui-text-p1 mb-16">
+    {children}
+  </li>
+);
 
 const Li = GenericHtmlBlock(StyledLi);
 
