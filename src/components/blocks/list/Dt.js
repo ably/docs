@@ -6,7 +6,6 @@ const StyledDt = styled.dt`
   margin: 0 0 10px;
   @media (min-width: 40em) {
     min-width: 120px;
-    padding-right: 20px;
   }
 `;
 
