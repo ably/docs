@@ -7,7 +7,7 @@ import { borders } from '../../../../styles';
 const definitionListCell = css`
   border-bottom: ${borders.defaultBorder};
   height: 100%;
-  padding: 15px 0;
+  padding: 15px 20px 15px 0;
 `;
 
 const StyledDl = styled.dl`
@@ -26,6 +26,13 @@ const StyledDl = styled.dl`
   }
   dd {
     ${definitionListCell}
+  }
+  dd > em {
+    float: right;
+    display: block;
+    text-align: right;
+    font-size: 12px;
+    margin-top: 12px;
   }
 `;
 
