@@ -2,6 +2,7 @@ const { compose } = require('lodash/fp');
 const { fixDuplicateQuoteLinks, fixHtmlElementsInLinks } = require('./fix-links');
 const { fixInlineCode } = require('./fix-inline-code');
 const { fixTextileDefinitionLists } = require('./fix-textile-definition-lists');
+const { addItalicisedText } = require('./add-italicised-text');
 
 // textile-js, unlike RedCloth, cannot parse multiple new lines between list items
 // each list item will instead be wrapped in its own list collection
@@ -17,6 +18,7 @@ const textileJSCompatibility = compose(
   manuallyReplaceHTags,
   fixDuplicateQuoteLinks,
   fixHtmlElementsInLinks,
+  addItalicisedText,
 );
 
 module.exports = {
