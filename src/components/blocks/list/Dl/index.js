@@ -27,6 +27,13 @@ const StyledDl = styled.dl`
   dd {
     ${definitionListCell}
   }
+  dd > em {
+    float: right;
+    display: block;
+    text-align: right;
+    font-size: 12px;
+    margin-top: 12px;
+  }
 `;
 
 const Dl = ({ data, attribs }) => {
