@@ -4,8 +4,11 @@
 // force the element to be an <a href>
 const fixDuplicateQuoteLinks = (content) => content.replace(/"(@[^"]*@)"[^:]/g, '$1');
 
-// HTML elements immediately after links cause difficulties for the parser.
-const fixHtmlElementsInLinks = (content) => content.replace(/"([^"]+)":([^<\s]+)</gm, '<a href="$2">$1</a><');
+// Alternate versions inside links cause difficulties for the parser.
+
+
+// HTML elements immediately after links cause difficulties for the parser, appearing in links.
+const fixHtmlElementsInLinks = (content) => content.replace(/"([^"<]+)":([^<\s]+)</gm, '<a href="$2">$1</a><');
 
 module.exports = {
   fixDuplicateQuoteLinks,
