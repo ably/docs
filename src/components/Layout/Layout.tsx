@@ -1,9 +1,7 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import React, { FunctionComponent as FC } from 'react';
 import Header from '../Header';
-import { ChildPropTypes } from '../../react-utilities';
 
-const Layout = ({ languages, children }) => (
+const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => (
   <>
     <header>
       <Header languages={languages} />
@@ -11,10 +9,5 @@ const Layout = ({ languages, children }) => (
     <main className={`${languages && languages.length > 1 ? 'pt-128' : 'pt-96'} grid grid-cols-5`}>{children}</main>
   </>
 );
-
-Layout.propTypes = {
-  languages: PropTypes.array,
-  children: ChildPropTypes,
-};
 
 export default Layout;
