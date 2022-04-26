@@ -16,6 +16,10 @@ languages:
   - csharp
   - go
 jump_to:
+  Token Types:
+    - Tokens#tokens
+  Objects:
+    - Auth object#auth-object
   Auth API properties:
     - clientId#client-id
   Auth API methods:
@@ -26,20 +30,33 @@ jump_to:
     - Related Types#related-types
 ---
 
+This is the Authentication API Reference.
+
+h2(#tokens). Tokens
+
+In the documentation, references to Ably-compatible tokens typically refer either to an Ably Token, or an "Ably JWT":#ably-jwt. For Ably Tokens, this can either be referring to the @TokenDetails@ object that contain the @token@ string or the token string itself. @TokenDetails@ objects are obtained when "requesting an Ably Token":/api/realtime-sdk/authentication#request-token from the Ably service and contain not only the @token@ string in the @token@ attribute, but also contain attributes describing the properties of the Ably Token. For "Ably JWT":#ably-jwt, this will be simply referring to a JWT which has been signed by an Ably private API key.
+
+h2(#auth-object). Auth object
+
+The Auth object is available as the <span lang="java">"@auth@ field":/api/rest-sdk#auth</span><span lang="default">"@auth@ property":/api/rest-sdk#auth</span><span lang="csharp">"@Auth@ property":/api/rest-sdk#auth</span><span lang="ruby">"@auth@ attribute":/api/rest-sdk#auth</span> of an "Ably REST client instance":/api/rest-sdk#constructor.
+
+The principal use-case for the @Auth@ object is to create Ably "@TokenRequest@":/api/realtime-sdk/authentication#token-request objects with "createTokenRequest":/api/realtime-sdk/authentication#create-token-request or obtain "Ably Tokens":#ably-tokens from Ably with "requestToken":#request-token, and then issue them to other "less trusted" clients. Typically, your servers should be the only devices to have a "private API key":https://faqs.ably.com/what-is-an-app-api-key, and this private API key is used to securely sign Ably "@TokenRequest@":/api/realtime-sdk/authentication#token-request objects or request "Ably Tokens":#ably-tokens from Ably. Clients are then issued with these short-lived "Ably Tokens":#ably-tokens or Ably "@TokenRequest@":/api/realtime-sdk/authentication#token-request objects, and the libraries can then use these to authenticate with Ably. If you adopt this model, your private API key is never shared with clients directly.
+
+A subsidiary use-case for the @Auth@ object is to preemptively trigger renewal of a token or to acquire a new token with a revised set of capabilities by explicitly calling "<span lang="default">@authorize@</span><span lang="csharp">@Authorize@</span>":/api/realtime-sdk/authentication#authorize.
+
 inline-toc.
+  Properties:
+    - clientId#client-id
   Methods:
     - authorize
     - createTokenRequest#create-token-request
     - requestToken#request-token
-  Properties:
-    - clientId#client-id
   Related types:
     - AuthOptions#auth-options
     - TokenDetails#token-details
     - TokenRequest#token-request
     - TokenParams#token-params
-
-The Auth object is available as the <span lang="java">"@auth@ field":/api/rest-sdk#auth</span><span lang="default">"@auth@ property":/api/rest-sdk#auth</span><span lang="csharp">"@Auth@ property":/api/rest-sdk#auth</span><span lang="ruby">"@auth@ attribute":/api/rest-sdk#auth</span> of an "Ably REST client instance":/api/rest-sdk#constructor.
+    - Ably JWT#ably-jwt
 
 h2(#properties).
   default: Auth Properties
@@ -457,3 +474,45 @@ h3(#token-request).
   java:      io.ably.lib.rest.Auth.TokenRequest
 
 <%= partial partial_version('types/_token_request') %>
+
+h3(#ably-jwt). Ably JWT
+
+An Ably JWT is not strictly an Ably construct, rather it is a "JWT":https://jwt.io/ which has been constructed to be compatible with Ably. The JWT must adhere to the following to ensure compatibility:
+
+* *The JOSE header must include:*
+** @kid@ - Key name, such that an API key of @{{API_KEY}}@ will have key name @{{API_KEY_NAME}}@
+* *The JWT claim set must include:*
+** @iat@ - time of issue in seconds
+** @exp@ - expiry time in seconds
+* *The JWT claim set may include:*
+** @x-ably-capability@ - JSON text encoding of the "capability":https://ably.com/documentation/core-features/authentication#tokens
+** @x-ably-clientId@ - client ID
+
+Arbitrary additional claims and headers are supported (apart from those prefixed with @x-ably-@ which are reserved for future use).
+
+The Ably JWT must be signed with the secret part of your "Ably API key":https://faqs.ably.com/what-is-an-app-api-key using the signature algorithm HS256 (HMAC using the SHA-256 hash algorithm). View the "JSON Web Algorithms (JWA) specification":https://tools.ietf.org/html/rfc7518 for further information.
+
+We recommend you use one of the many "JWT libraries available for simplicity":https://jwt.io/ when creating your JWTs.
+
+The following is an example of creating an Ably JWT:
+
+```[javascript](code-editor:authentication/jwt-token)
+  var header = {
+    "typ":"JWT",
+    "alg":"HS256",
+    "kid": "{{API_KEY_NAME}}"
+  };
+  var currentTime = Math.round(Date.now()/1000);
+  var claims = {
+    "iat": currentTime, /* current time in seconds */
+    "exp": currentTime + 3600, /* time of expiration in seconds */
+    "x-ably-capability": "{\"*\":[\"*\"]}"
+  };
+  var base64Header = btoa(header);
+  var base64Claims = btoa(claims);
+  /* Apply the hash specified in the header */
+  var signature = hash((base64Header + "." + base64Claims), "{{API_KEY_SECRET}}");
+  var ablyJwt = base64Header + "." + base64Claims + "." + signature;
+```
+
+*Note:* At present Ably does not support asymmetric signatures based on a keypair belonging to a third party. If this is something you'd be interested in, please "get in touch":https://ably.com/contact.
