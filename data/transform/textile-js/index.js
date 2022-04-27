@@ -1,5 +1,9 @@
-import { ruleApplications } from './rules';
+const { ruleApplications } = require('./rules');
 
-export const textile = (content) => {
+const textile = (content) => {
   return ruleApplications(content);
+};
+
+module.exports = {
+  textile,
 };

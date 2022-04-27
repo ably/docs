@@ -1,13 +1,13 @@
 const { flattenContentOrderedList, maybeRetrievePartial } = require('../transform');
 const path = require('path');
 const { postParser } = require('../transform/post-parser');
-const textile = require('textile-js');
 const { htmlParser } = require('../html-parser');
 const { createLanguagePageVariants } = require('./createPageVariants');
 const { LATEST_ABLY_API_VERSION_STRING, DOCUMENTATION_PATH } = require('../transform/constants');
 const { createContentMenuDataFromPage } = require('./createContentMenuDataFromPage');
 const { DEFAULT_LANGUAGE } = require('./constants');
 const { identity } = require('lodash');
+const { textile } = require('../transform/textile-js');
 
 const createPages = async ({ graphql, actions: { createPage } }) => {
   const documentTemplate = path.resolve(`src/templates/document.js`);

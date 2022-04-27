@@ -1,4 +1,4 @@
-import { compose } from 'lodash/fp';
+const { compose } = require('lodash/fp');
 
 const notextileInstances = [];
 const notextileReplacer = (_match, p1) => {
@@ -42,7 +42,7 @@ const nestableListReplacer =
     return result;
   };
 
-export const rules = [
+const rules = [
   // Add notextile text back in
   [/{{NOTEXTILE:(\d+)}}/g, (_match, p1) => notextileInstances[parseInt(p1)]],
   // Remove line breaks from preformatted elements
@@ -134,4 +134,9 @@ export const rules = [
   [/<notextile>(.*?)<\/notextile>/g, notextileReplacer],
 ];
 
-export const ruleApplications = compose(...rules.map((rule) => (content) => content.replace(rule[0], rule[1])));
+const ruleApplications = compose(...rules.map((rule) => (content) => content.replace(rule[0], rule[1])));
+
+module.exports = {
+  rules,
+  ruleApplications,
+};
