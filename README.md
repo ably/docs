@@ -13,7 +13,7 @@ Docs are authored in [Textile](https://textile-lang.com/) and rendered using the
 
 > **Note**: The instructions on this page are intended for general users. If you are a member of Ably staff there is more specific information in the [internal README](README_INTERNAL.md).
 
-## Quickstart
+## Quick start
 
 To run the static site locally, perform the following steps:
 
@@ -111,11 +111,12 @@ docker-compose up
 ## Help and contact
 
 If you have any questions or suggestions, please [get in touch](https://ably.com/contact).
+
 # New Toolchain: Gatsby Documentation Repository
 
 This is a static site generated using [Gatsby](https://www.gatsbyjs.com/) and documentation written in:
 
-* [Textile](https://github.com/textile/textile-spec) - Held in the [./data/textile](./data/textile) folders, enhanced with certain additional features described in [./data/textile/nanoc-compatible/client-lib-development-guide/documentation-formatting-guide.textile](./data/textile/nanoc-compatible/client-lib-development-guide/documentation-formatting-guide.textile)
+- [Textile](https://github.com/textile/textile-spec) - Held in the [./data/textile](./data/textile) folders, enhanced with certain additional features described in [./data/textile/nanoc-compatible/client-lib-development-guide/documentation-formatting-guide.textile](./data/textile/nanoc-compatible/client-lib-development-guide/documentation-formatting-guide.textile)
 
 - <https://docs.ably.com>: A static site which always reflects the latest version of the contents of this repository, being deployed automatically when the `main` branch is updated.
 - <https://ably.com/docs>: Our official documentation, which points to a specific version of this repository. Changes in this repo are not automatically reflected in the official docs, but require intervention by the Ably website team.
@@ -126,7 +127,7 @@ This is a static site generated using [Gatsby](https://www.gatsbyjs.com/) and do
 
 Install node & npm.
 
-If you use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to manage your Ruby runtime versions, we have included a [`.tool-versions`](.tool-versions) file. Note that if you `brew install`ed your asdf installation instead of `git clone`ing it, npm [may not be installed  correctly](https://youtrack.jetbrains.com/issue/WEB-51052).
+If you use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to manage your Ruby runtime versions, we have included a [`.tool-versions`](.tool-versions) file. Note that if you `brew install`ed your asdf installation instead of `git clone`ing it, npm [may not be installed correctly](https://youtrack.jetbrains.com/issue/WEB-51052).
 
 `npm i`
 
