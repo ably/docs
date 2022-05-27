@@ -1,12 +1,11 @@
 import styled from 'styled-components';
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
+import { resetStyles } from './reset-styles';
 
 // Unset these values inherited from AblyUI/reset.css
 const StyledUl = styled.ul`
   list-style: unset;
-  margin: unset;
-  padding: unset;
-  padding-left: 1em;
+  ${resetStyles}
 `;
 
 const Ul = GenericHtmlBlock(StyledUl);
