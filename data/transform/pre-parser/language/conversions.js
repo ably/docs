@@ -53,7 +53,7 @@ const convertJSAllToNodeAndJavaScript = (content) => {
 
 const BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/m;
 
-const langBlockWrapper = (languages) => `\n{{LANG_BLOCK[${languages}]}}\n`;
+const langBlockWrapper = (languages) => `\n{{LANG_BLOCK[${languages}]}}\n\n`;
 const langBlockEnd = '{{/LANG_BLOCK}}\n';
 
 const convertBlangBlocksToTokens = (content) => {

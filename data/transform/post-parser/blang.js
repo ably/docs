@@ -15,7 +15,7 @@ const BLANG_REGEX_STRING = `${
 const BLANG_REGEX = new RegExp(BLANG_REGEX_STRING, 'gms');
 const convertBlangBlocksToHtml = (content) =>
   content.replace(BLANG_REGEX, (_match, p1, p2) => {
-    return `<div lang="${p1}"><!-- start ${p1} language block -->${p2.trim()}</div><!-- /end ${p1} language block -->`;
+    return `<div lang="${p1}"><!-- start ${p1} language block -->\n${p2.trim()}</div><!-- /end ${p1} language block -->`;
   });
 
 module.exports = {
