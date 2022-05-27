@@ -5,7 +5,6 @@ const { fixTextileDefinitionLists } = require('./fix-textile-definition-lists');
 const { addItalicisedText } = require('./add-italicised-text');
 const { fixLeadingHtmlTags } = require('./fix-leading-html-tags');
 const { addBoldText } = require('./add-bold-text');
-const { addHyphenListSupport } = require('./add-hyphen-list-support');
 const { makeImplicitOrderedListExplicit } = require('./make-implicit-ordered-list-explicit');
 
 // textile-js, unlike RedCloth, cannot parse multiple new lines between list items
@@ -24,7 +23,6 @@ const textileJSCompatibility = compose(
   manuallyReplaceHTags,
   fixDuplicateQuoteLinks,
   fixHtmlElementsInLinks,
-  addHyphenListSupport,
   addItalicisedText,
   addBoldText,
 );
