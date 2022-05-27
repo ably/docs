@@ -1,10 +1,13 @@
+const textile = require('textile-js');
 const { convertBlangBlocksToTokens, convertJSAllToNodeAndJavaScript } = require('.');
+const { preParser } = require('..');
 const {
   riskyBlangExample,
   riskyBlangExpectedResult,
   brokenBlangExample,
   brokenBlangExpectedResult,
   brokenBlangTokenAfterJSConversionExpectedResult,
+  brokenCodeInsideBlangExample,
 } = require('./blang.raw.examples');
 
 describe('Converts specific example blang blocks to HTML', () => {
@@ -42,6 +45,48 @@ describe('Converts specific example blang blocks to HTML', () => {
   it('Converts example block taken from _channel_options.textile to HTML, discovered to be failing on 04/02/2022', () => {
     const result = convertBlangBlocksToTokens(brokenBlangExample);
     expect(result.replace(/\s+/g, '')).toEqual(brokenBlangExpectedResult.replace(/\s+/g, ''));
+  });
+
+  it('Preparses & textile-parses block taken from connection.textile to HTML, discovered to be failing on 04/04/2022', () => {
+    /**
+     * Potential issues uncovered by test:
+     * Problem:
+     *      Textile wraps the first line of a LANG_BLOCK in a paragraph tag
+     * Solution:
+     *      Add an extra newline to the LANG_BLOCK token string
+     * Example of Cause:
+     *      e.g. {{LANG_BLOCK[a]}}\nbc[javascript]. ...
+     */
+    expect(preParser(brokenCodeInsideBlangExample)).toBe(`
+{{LANG_BLOCK[javascript,nodejs]}}
+
+bc[javascript]. 
+realtime.connection.on('connected', function(stateChange) {
+  console.log('Ably is connected');
+});
+{{{github_br}}}
+
+bc[nodejs]. 
+realtime.connection.on('connected', function(stateChange) {
+  console.log('Ably is connected');
+});
+{{{github_br}}}
+
+{{/LANG_BLOCK}}
+`);
+    expect(textile(preParser(brokenCodeInsideBlangExample)))
+      .toBe(`<p>{{LANG_<span class="caps">BLOCK</span>[javascript,nodejs]}}</p>
+<pre lang="javascript"><code lang="javascript">
+realtime.connection.on('connected', function(stateChange) {
+  console.log('Ably is connected');
+});
+{{{github_br}}}</code></pre>
+<pre lang="nodejs"><code lang="nodejs">
+realtime.connection.on('connected', function(stateChange) {
+  console.log('Ably is connected');
+});
+{{{github_br}}}</code></pre>
+<p>{{/LANG_<span class="caps">BLOCK</span>}}</p>`);
   });
 });
 
