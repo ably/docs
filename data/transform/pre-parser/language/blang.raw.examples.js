@@ -153,6 +153,7 @@ blang[flutter].
 
 const riskyBlangExpectedResult = `
 {{LANG_BLOCK[jsall]}}
+
 @ConnectionState@ is a String with a value matching any of the "@Realtime Connection@ states":/realtime/connection#connection-states.
 
 \`\`\`[javascript]
@@ -171,6 +172,7 @@ const riskyBlangExpectedResult = `
 {{/LANG_BLOCK}}
 
 {{LANG_BLOCK[java]}}
+
 @io.ably.lib.realtime.ConnectionState@ is an enum representing all the "@Realtime Connection@ states":/realtime/connection#connection-states.
 
 \`\`\`[java]
@@ -189,6 +191,7 @@ const riskyBlangExpectedResult = `
 {{/LANG_BLOCK}}
 
 {{LANG_BLOCK[csharp]}}
+
 @IO.Ably.Realtime.ConnectionState@ is an enum representing all the "@Realtime Connection@ states":/realtime/connection#connection-states.
 
 \`\`\`[csharp]
@@ -208,6 +211,7 @@ const riskyBlangExpectedResult = `
 {{/LANG_BLOCK}}
 
 {{LANG_BLOCK[ruby]}}
+
 @Ably::Realtime::Connection::STATE@ is an enum-like value representing all the "@Realtime Connection@ states":/realtime/connection#connection-states. @STATE@ can be represented interchangeably as either symbols or constants.
 
 h4. Symbol states
@@ -252,6 +256,7 @@ h4. Example usage
 {{/LANG_BLOCK}}
 
 {{LANG_BLOCK[objc,swift]}}
+
 @ARTRealtimeConnectionState@ is an enum representing all the "@Realtime Connection@ states":/realtime/connection#connection-states.
 
 \`\`\`[objc]
@@ -283,6 +288,7 @@ h4. Example usage
 {{/LANG_BLOCK}}
 
 {{LANG_BLOCK[go]}}
+
 @ConnectionState@ is an enum representing all the "@Realtime Connection@ states":/realtime/connection#connection-states.
 
 \`\`\`[go]
@@ -301,6 +307,7 @@ h4. Example usage
 {{/LANG_BLOCK}}
 
 {{LANG_BLOCK[flutter]}}
+
 @ably.ConnectionState@ is an enum representing all the "@Realtime Connection@ states":/realtime/connection#connection-states.
 
 \`\`\`[flutter]
@@ -365,6 +372,15 @@ h4.
       - <span lang="javascript,nodejs,java,swift,objc">params</span><span lang="csharp">Params</span> := Optional "parameters":/realtime/channels/channel-parameters/overview which specify behaviour of the channel.<br>__Type: <span lang='java'>@Map<String, String>@</span><span lang="javascript,nodejs,objc,csharp,swift">@JSON Object@</span>__
       - <span lang="javascript,nodejs,java,swift,objc">cipher</span><span lang="csharp">CipherParams</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See "an example":/realtime/encryption#getting-started<br>__Type: "@CipherParams@":/realtime/encryption#cipher-params<span lang="javascript,nodejs,java,ruby,php"> or <span lang="javascript,nodejs">an options object</span><span lang="java">a @Param[]@ list</span><span lang="ruby">an options hash</span><span lang="php">an Associative Array</span> containing at a minimum a @key@</span>__`;
 
+const brokenCodeInsideBlangExample = `blang[jsall].
+  \`\`\`[jsall]
+    realtime.connection.on('connected', function(stateChange) {
+      console.log('Ably is connected');
+    });
+  \`\`\`
+
+`;
+
 module.exports = {
   riskyBlangExample,
   riskyBlangExpectedResult,
@@ -372,4 +388,5 @@ module.exports = {
   brokenBlangExpectedResult,
   brokenBlangTokenExpectedResult,
   brokenBlangTokenAfterJSConversionExpectedResult,
+  brokenCodeInsideBlangExample,
 };
