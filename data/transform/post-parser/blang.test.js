@@ -35,7 +35,8 @@ describe('Converts Blang strings to HTML', () => {
     });
     const result = convertBlangBlocksToHtml(blangBlock);
     expect(result).toBe(
-      `<div lang="javascript"><!-- start javascript language block --><div>Lorem ipsum adipiscitor</div></div><!-- /end javascript language block -->`,
+      `<div lang="javascript"><!-- start javascript language block -->
+<div>Lorem ipsum adipiscitor</div></div><!-- /end javascript language block -->`,
     );
   });
   it('Converts broken Blang block while keeping multiple languages separate', () => {
@@ -71,7 +72,8 @@ describe('Converts Blang strings to HTML', () => {
         });
         const result = convertBlangBlocksToHtml(blangBlock);
         expect(result).toBe(
-          `<div lang="${language}"><!-- start ${language} language block -->${content.trim()}</div><!-- /end ${language} language block -->`,
+          `<div lang="${language}"><!-- start ${language} language block -->
+${content.trim()}</div><!-- /end ${language} language block -->`,
         );
       }),
     );
