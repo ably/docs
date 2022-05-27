@@ -4,7 +4,7 @@ const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require('./fr
 const DataTypes = require('../types');
 const { ROOT_LEVEL, MAX_LEVEL } = require('../../src/components/Sidebar/consts');
 const { preParser } = require('./pre-parser');
-const { enhancedParse } = require('./parser-enhancements');
+const { processAfterFrontmatterExtracted } = require('./parser-enhancements');
 const { maybeRetrievePartial } = require('./retrieve-partials');
 const { flattenContentOrderedList } = require('./shared-utilities');
 
@@ -85,7 +85,7 @@ const createNodesFromPath =
 const constructDataObjectsFromStrings = (contentStrings, frontmatterMeta) => {
   contentStrings =
     frontmatterMeta !== NO_MATCH && frontmatterMeta.attributes
-      ? contentStrings.map((content) => enhancedParse(content, frontmatterMeta.attributes))
+      ? contentStrings.map((content) => processAfterFrontmatterExtracted(content, frontmatterMeta.attributes))
       : contentStrings;
   const dataObjects = contentStrings.map((data, i) =>
     i % 2 === 0 ? { data: data, type: DataTypes.Html } : { data: data, type: DataTypes.Partial },
