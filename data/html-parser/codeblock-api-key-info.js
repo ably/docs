@@ -1,5 +1,3 @@
-const cheerio = require('cheerio');
-
 const addAPIKeyInfoToCodeBlock = (cheerioNodes) =>
   cheerioNodes('pre > code').each((_i, elem) => {
     const loadedCodeElement = cheerioNodes(elem);
