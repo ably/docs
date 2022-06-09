@@ -1,8 +1,17 @@
+/**
+ * ENV variables for use with website app:
+ * ASSET_PREFIX - ensure gatsby gets assets from the docs app, not from the website app
+ * PREFIX_PATHS -  ensure that gatsby uses the ASSET_PREFIX
+ * WEBSITE_API_USER_DATA - e.g. "http://localhost:3000/api/me", endpoint for website user data
+ */
+const assetPrefix = process.env.ASSET_PREFIX || 'http://localhost:9000';
+
 module.exports = {
   siteMetadata: {
     siteUrl: 'https://www.ably.com/docs',
     title: 'Documentation | Ably Realtime',
   },
+  assetPrefix,
   plugins: [
     'gatsby-plugin-postcss',
     'gatsby-plugin-styled-components',

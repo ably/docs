@@ -28,7 +28,7 @@ import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
 import languageLabels, { languageSyntaxHighlighterNames } from '../../../maps/language';
 import HtmlDataTypes from '../../../../data/types/html';
 import { ChildPropTypes } from '../../../react-utilities';
-import SessionStateContext from '../../../contexts/session-state-context';
+import UserContext from '../../../contexts/user-context';
 
 const SelectedLanguage = ({ language }) =>
   language ? <div className="docs-language-label">{language.label}</div> : null;
@@ -51,7 +51,7 @@ const lr = (x) => {
 };
 
 const APIKeyMenuSelect = ({ dataContainsKey, signedIn = false, session = {} }) =>
-  dataContainsKey === 'true' ? signedIn ? <APIKeyMenu session={lr(session)} /> : <APIKeyIndicator /> : null;
+  dataContainsKey === 'true' ? signedIn ? <APIKeyMenu session={session} /> : <APIKeyIndicator /> : null;
 
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.javascript.key, js);
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.java.key, java);
@@ -88,15 +88,15 @@ const Code = ({ data, attribs }) => {
         : languageSyntaxHighlighterNames['plaintext'];
     return (
       <div {...attribs} className="p-32 overflow-auto relative" language={languageLabels[attribs.lang]}>
-        <SessionStateContext.Consumer>
+        <UserContext.Consumer>
           {(value) => (
             <APIKeyMenuSelect
               dataContainsKey={attribs['data-contains-key']}
-              signedIn={!!value.signedIn}
-              session={value}
+              signedIn={!!lr(value).sessionState.signedIn}
+              session={value.sessionState}
             />
           )}
-        </SessionStateContext.Consumer>
+        </UserContext.Consumer>
         <SelectedLanguage language={displayLanguage} />
         <SyntaxHighlighter
           className="ui-text-code"
