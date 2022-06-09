@@ -15,7 +15,7 @@ export const reducerApiKeyData = {
   [API_KEYS_REDUCER_KEY]: (state = initialState, action: Action) => {
     switch (action.type) {
       case API_KEY_LOADED_EVENT:
-        return { ...state, data: action.payload };
+        return { ...state, data: { ...state.data, ...action.payload } };
       default:
         return state;
     }
