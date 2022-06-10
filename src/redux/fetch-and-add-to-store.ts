@@ -2,6 +2,8 @@
  * cf. src/core/remote-session-data.js Ably UI repository
  */
 
+import { identity } from 'lodash';
+
 const NOT_FOUND_ERROR_CODE = 'not-found';
 const DEFAULT_CACHE_STRATEGY = 'no-cache';
 
@@ -10,7 +12,26 @@ const isJsonResponse = (res: Response): boolean => {
   return !!contentType && contentType.includes('application/json');
 };
 
-export const addDataToStore = async (store: Store, url: string, type: string): Promise<void> => {
+export const getJsonResponse = async (url: string, type: string) => {
+  const res = await fetch(url, { cache: DEFAULT_CACHE_STRATEGY });
+  const jsonResponse = isJsonResponse(res);
+  if (!jsonResponse) {
+    const text = await res.text();
+    throw new Error(`${type} endpoint at ${url} is not serving JSON, received:\n\n${text}`);
+  }
+
+  const payload = await res.json();
+  return payload;
+};
+
+export type DataProcessor = (payload: Record<string, unknown>) => Promise<Record<string, unknown>>;
+
+export const addDataToStore = async (
+  store: Store,
+  url: string,
+  type: string,
+  dataProcessor: DataProcessor = identity,
+): Promise<void> => {
   try {
     if (!url) {
       console.warn(`Skipping fetching data of type ${type}, invalid URL: ${url}`);
@@ -18,21 +39,16 @@ export const addDataToStore = async (store: Store, url: string, type: string): P
       return;
     }
 
-    const res = await fetch(url, { cache: DEFAULT_CACHE_STRATEGY });
-    const jsonResponse = isJsonResponse(res);
-    if (!jsonResponse) {
-      const text = await res.text();
-      throw new Error(`${type} endpoint at ${url} is not serving JSON, received:\n\n${text}`);
-    }
+    const payload = await getJsonResponse(url, type);
 
-    const payload = await res.json();
+    const processedPayload = await dataProcessor(payload);
 
-    switch (payload.error) {
+    switch (processedPayload.error) {
       case NOT_FOUND_ERROR_CODE:
         dataLoaded({}, store, type);
         return;
       default:
-        dataLoaded(payload, store, type);
+        dataLoaded(processedPayload, store, type);
         return;
     }
   } catch (e) {

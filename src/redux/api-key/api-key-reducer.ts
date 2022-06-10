@@ -1,7 +1,12 @@
 import { API_KEY_LOADED_EVENT, API_KEYS_REDUCER_KEY } from './constants';
 
+export type ApiKeyValue = {
+  name: string;
+  url: string;
+};
+
 type ApiKeyState = {
-  data: Record<string, unknown>;
+  data: Array<Record<string, ApiKeyValue>>;
 };
 
 type Action = {
@@ -9,13 +14,13 @@ type Action = {
   type: string;
 };
 
-const initialState: ApiKeyState = { data: {} };
+const initialState: ApiKeyState = { data: [] };
 
 export const reducerApiKeyData = {
-  [API_KEYS_REDUCER_KEY]: (state = initialState, action: Action) => {
+  [API_KEYS_REDUCER_KEY]: (state: ApiKeyState = initialState, action: Action) => {
     switch (action.type) {
       case API_KEY_LOADED_EVENT:
-        return { ...state, data: { ...state.data, ...action.payload } };
+        return { ...state, data: action.payload };
       default:
         return state;
     }
