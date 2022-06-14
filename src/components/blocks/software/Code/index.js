@@ -30,6 +30,7 @@ import HtmlDataTypes from '../../../../../data/types/html';
 import UserContext, { devApiKeysPresent } from '../../../../contexts/user-context';
 import APIKeyMenuSelector from './ApiKeyMenuSelector';
 import InlineCodeElement from './InlineCodeElement';
+import CodeCopyButton from './CodeCopyButton';
 
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
 
@@ -113,6 +114,7 @@ const Code = ({ data, attribs }) => {
             </SyntaxHighlighter>
           )}
         </UserContext.Consumer>
+        <CodeCopyButton content={contentWithKey} />
       </div>
     );
   }
