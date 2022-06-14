@@ -65,13 +65,21 @@ const Code = ({ data, attribs }) => {
   const isString = data.length === 1 && data[0].type === HtmlDataTypes.text;
   const hasRenderableLanguages = isString && attribs && attribs.lang;
   const hasMultilineText = isString && multilineRegex.test(data[0].data);
-  const dataContainsKey = attribs['data-contains-key'] === 'true';
 
   if (hasRenderableLanguages || hasMultilineText) {
-    const content = useMemo(() =>
-      dataContainsKey ? data[0].data.replace(/{{API_KEY}}/g, activeApiKey.value) : data[0].data,
+    const dataContainsKey = attribs['data-contains-key'] === 'true';
+    const content = data[0].data;
+    /**
+     * Refer to Decision Record:
+     * https://ably.atlassian.net/wiki/spaces/ENG/pages/2070053031/DR9+API+Keys+vs+tokens+vs+authUrls+in+docs+code+snippets#Recommendation
+     * Referenced on ticket:
+     * https://ably.atlassian.net/browse/EDX-49
+     */
+    const contentWithObfuscatedKey = useMemo(
+      () => content.replace(/{{API_KEY}}/g, '*********************************************************'),
+      [content, activeApiKey],
     );
-
+    const contentWithKey = useMemo(() => content.replace(/{{API_KEY}}/g, activeApiKey.value), [content, activeApiKey]);
     const displayLanguage =
       attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
         ? languageSyntaxHighlighterNames[attribs.lang]
@@ -90,13 +98,21 @@ const Code = ({ data, attribs }) => {
           )}
         </UserContext.Consumer>
         <SelectedLanguage language={displayLanguage} />
-        <SyntaxHighlighter
-          className="ui-text-code"
-          style={{ hljs: { background: 'inherit', fontSize: `var(--fs-code)`, lineHeight: `var(--lh-loose)` } }}
-          language={displayLanguage.key}
-        >
-          {content}
-        </SyntaxHighlighter>
+        <UserContext.Consumer>
+          {(value) => (
+            <SyntaxHighlighter
+              className="ui-text-code"
+              style={{ hljs: { background: 'inherit', fontSize: `var(--fs-code)`, lineHeight: `var(--lh-loose)` } }}
+              language={displayLanguage.key}
+            >
+              {dataContainsKey
+                ? value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN
+                  ? contentWithObfuscatedKey
+                  : contentWithKey
+                : content}
+            </SyntaxHighlighter>
+          )}
+        </UserContext.Consumer>
       </div>
     );
   }
