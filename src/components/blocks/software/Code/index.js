@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 import Html from '../../Html';
 
@@ -31,6 +31,8 @@ import UserContext, { devApiKeysPresent } from '../../../../contexts/user-contex
 import APIKeyMenuSelector from './ApiKeyMenuSelector';
 import InlineCodeElement from './InlineCodeElement';
 
+export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
+
 const SelectedLanguage = ({ language }) =>
   language ? <div className="docs-language-label">{language.label}</div> : null;
 
@@ -56,11 +58,20 @@ SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.json.key, json
 const multilineRegex = /\r|\n/gm;
 
 const Code = ({ data, attribs }) => {
+  const [activeApiKey, setActiveApiKey] = useState({
+    label: DEFAULT_API_KEY_MESSAGE,
+    value: DEFAULT_API_KEY_MESSAGE,
+  });
   const isString = data.length === 1 && data[0].type === HtmlDataTypes.text;
   const hasRenderableLanguages = isString && attribs && attribs.lang;
   const hasMultilineText = isString && multilineRegex.test(data[0].data);
+  const dataContainsKey = attribs['data-contains-key'] === 'true';
 
   if (hasRenderableLanguages || hasMultilineText) {
+    const content = useMemo(() =>
+      dataContainsKey ? data[0].data.replace(/{{API_KEY}}/g, activeApiKey.value) : data[0].data,
+    );
+
     const displayLanguage =
       attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
         ? languageSyntaxHighlighterNames[attribs.lang]
@@ -70,8 +81,10 @@ const Code = ({ data, attribs }) => {
         <UserContext.Consumer>
           {(value) => (
             <APIKeyMenuSelector
-              dataContainsKey={attribs['data-contains-key'] === 'true'}
+              dataContainsKey={dataContainsKey}
               userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
+              setActiveApiKey={setActiveApiKey}
+              activeApiKey={activeApiKey}
               signedIn={!!value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN}
             />
           )}
@@ -82,7 +95,7 @@ const Code = ({ data, attribs }) => {
           style={{ hljs: { background: 'inherit', fontSize: `var(--fs-code)`, lineHeight: `var(--lh-loose)` } }}
           language={displayLanguage.key}
         >
-          {data[0].data}
+          {content}
         </SyntaxHighlighter>
       </div>
     );
