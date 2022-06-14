@@ -142,6 +142,17 @@ Or:
 
 Visit `localhost:9000` for homepage.
 
+## Environment Variables
+
+Note that any env variables needed to show in the browser must be prefixed with `GATSBY_` in order to appear.
+
+* GATSBY_DOCS_SIGNED_IN - set to any string to force the application to behave as though you are logged in
+* GATSBY_DOCS_API_KEYS - set to any string to force the application to behave as though you have API keys available
+* GATSBY_WEBSITE_API_USER_DATA - the URL from which basic user data can be retrieved
+* GATSBY_WEBSITE_API_API_KEYS_DATA - the URL from which user API keys can be retrieved
+
+Place these in .env.development to run locally.
+
 ## Further Information
 
 Documentation is included throughout this repository in the form of README.md files at folder level. Thanks in part to support for this sort of setup from GitHub, these are intended to:
@@ -153,15 +164,3 @@ Documentation is included throughout this repository in the form of README.md fi
 4. Support new & external developers in quickly understanding how separate parts of the application are expected to work
 
 We have selected folder-level README files instead of the alternative of a dedicated documentation folder because we think it enables points `1` and `4` more directly, especially with the support from GitHub. The aim is to make browsing the repository much more clear even if you have no context for the repository.
-
-## Roadmap
-
-**Alpha** - the roadmap is speculative &amp; subject to complete change at any time.
-
-1. Basic rendering; rendering of partials
-2. Text parsing &amp; well-formed HTML creation
-3. HTML parsing &amp; mapping of HTML data to dedicated React components
-4. Navigation &amp; design improvements
-5. Testing &amp; CI pipeline work
-6. More complex frontend functionality
-7. Alpha complete, enter Beta phase.

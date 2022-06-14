@@ -27,7 +27,7 @@ import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
 
 import languageLabels, { languageSyntaxHighlighterNames } from '../../../../maps/language';
 import HtmlDataTypes from '../../../../../data/types/html';
-import UserContext from '../../../../contexts/user-context';
+import UserContext, { devApiKeysPresent } from '../../../../contexts/user-context';
 import APIKeyMenuSelector from './ApiKeyMenuSelector';
 import InlineCodeElement from './InlineCodeElement';
 
@@ -71,8 +71,8 @@ const Code = ({ data, attribs }) => {
           {(value) => (
             <APIKeyMenuSelector
               dataContainsKey={attribs['data-contains-key'] === 'true'}
-              userApiKeys={value.apiKeys.data}
-              signedIn={!!value.sessionState.signedIn}
+              userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
+              signedIn={!!value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN}
             />
           )}
         </UserContext.Consumer>
