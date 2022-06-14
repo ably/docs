@@ -1,11 +1,10 @@
 /**
  * cf. src/core/remote-session-data.js Ably UI repository
  */
-
 import { identity } from 'lodash';
 
 const NOT_FOUND_ERROR_CODE = 'not-found';
-const DEFAULT_CACHE_STRATEGY = 'no-cache';
+export const DEFAULT_CACHE_STRATEGY = 'no-cache';
 
 const isJsonResponse = (res: Response): boolean => {
   const contentType = res.headers.get('content-type');

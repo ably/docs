@@ -6,10 +6,11 @@ import { connectState, selectSessionData, fetchSessionData, getRemoteDataStore }
 import UserContext, { UserDetails } from '../../contexts/user-context';
 import { fetchApiKeyData } from '../../redux/api-key';
 import { selectData } from '../../redux/select-data';
-import { API_KEYS_REDUCER_KEY } from '../../redux/api-key/constants';
-
-const WEB_API_USER_DATA_ENDPOINT = process.env.GATSBY_WEBSITE_API_USER_DATA || 'http://localhost:3000/api/me';
-const WEB_API_KEYS_DATA_ENDPOINT = process.env.GATSBY_WEBSITE_API_API_KEYS_DATA || 'http://localhost:3000/api/api_keys';
+import {
+  API_KEYS_REDUCER_KEY,
+  WEB_API_KEYS_DATA_ENDPOINT,
+  WEB_API_USER_DATA_ENDPOINT,
+} from '../../redux/api-key/constants';
 
 const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
   const [sessionState, setSessionState] = useState({});
@@ -26,7 +27,6 @@ const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
   }, []);
 
   const userState: UserDetails = { sessionState, apiKeys };
-
   return (
     <UserContext.Provider value={userState}>
       <header>
