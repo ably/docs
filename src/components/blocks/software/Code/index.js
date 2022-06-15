@@ -67,7 +67,7 @@ const Code = ({ data, attribs }) => {
   const hasRenderableLanguages = isString && attribs && attribs.lang;
   const hasMultilineText = isString && multilineRegex.test(data[0].data);
 
-  const content = data[0].data;
+  const content = data[0]?.data ?? '';
   /**
    * Refer to Decision Record:
    * https://ably.atlassian.net/wiki/spaces/ENG/pages/2070053031/DR9+API+Keys+vs+tokens+vs+authUrls+in+docs+code+snippets#Recommendation
@@ -75,10 +75,14 @@ const Code = ({ data, attribs }) => {
    * https://ably.atlassian.net/browse/EDX-49
    */
   const contentWithObfuscatedKey = useMemo(
-    () => content.replace(/{{API_KEY}}/g, '*********************************************************'),
+    () =>
+      content.replace && content.replace(/{{API_KEY}}/g, '*********************************************************'),
     [content, activeApiKey],
   );
-  const contentWithKey = useMemo(() => content.replace(/{{API_KEY}}/g, activeApiKey.value), [content, activeApiKey]);
+  const contentWithKey = useMemo(
+    () => content.replace && content.replace(/{{API_KEY}}/g, activeApiKey.value),
+    [content, activeApiKey],
+  );
 
   if (hasRenderableLanguages || hasMultilineText) {
     const dataContainsKey = attribs['data-contains-key'] === 'true';
