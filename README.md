@@ -5,7 +5,7 @@ _[Ably](https://ably.com) is the platform that powers synchronized digital exper
 This repository contains Ably's documentation, which is visible in two locations:
 
 - <https://docs.ably.com>: A static site which always reflects the latest version of the contents of this repository, being deployed automatically when the `main` branch is updated.
-- <https://ably.com/documentation>: Our official documentation, which points to a specific version of this repository. Changes in this repo are not automatically reflected in the official docs, but require intervention by the Ably website team.
+- <https://ably.com/docs>: Our official documentation, which points to a specific version of this repository. Changes in this repo are not automatically reflected in the official docs, but require intervention by the Ably website team.
 
 Docs are authored in [Textile](https://textile-lang.com/) and rendered using the Ruby-based [Nanoc](https://nanoc.ws/) static site generator.
 
