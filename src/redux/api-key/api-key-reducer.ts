@@ -11,7 +11,7 @@ type ApiKeyState = {
 
 type Action = {
   payload: Record<string, unknown>;
-  type: string;
+  type: typeof API_KEY_LOADED_EVENT;
 };
 
 const initialState: ApiKeyState = { data: [] };
