@@ -1,6 +1,6 @@
 import { SetStateAction } from 'react';
 import { CSSObjectWithLabel, StylesConfig } from 'react-select';
-import { primary } from '../../../../styles/colors';
+import { gui, primary } from '../../../../styles/colors';
 
 const SELECT_HEIGHT = '24px';
 
@@ -14,6 +14,10 @@ const optionStyles = (provided: CSSObjectWithLabel) => ({
   boxShadow: 'none',
   fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
   fontSize: '14px',
+  '&:active': {
+    ...provided[':active'],
+    backgroundColor: gui.active,
+  },
 });
 
 const controlStyles = (provided: CSSObjectWithLabel) => ({
