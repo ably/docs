@@ -1,15 +1,12 @@
-import React, { Dispatch, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import '@ably/ui/core/styles.css';
 import { gui } from '../../../../styles/colors';
 
 const DEFAULT_BUTTON_CONTENT = `Copy ⎘`;
 
 const CodeCopyButton = ({ content }: { content: string }) => {
-  const [buttonContent, setButtonContent]: [string, Dispatch<React.SetStateAction<string>>] =
-    useState<string>(DEFAULT_BUTTON_CONTENT);
-  const [copySuccess, setCopySuccess]: [boolean | null, Dispatch<React.SetStateAction<boolean | null>>] = useState<
-    boolean | null
-  >(null);
+  const [buttonContent, setButtonContent] = useState<string>(DEFAULT_BUTTON_CONTENT);
+  const [copySuccess, setCopySuccess] = useState<boolean | null>(null);
 
   const resetState = () => {
     setButtonContent(DEFAULT_BUTTON_CONTENT);
