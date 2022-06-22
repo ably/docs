@@ -1,7 +1,8 @@
-// Essentially jQuery for parsing the DOM
+// Essentially jQuery for parsing the DOM server side
 const cheerio = require('cheerio');
 const DataTypes = require('../types');
 const HtmlDataTypes = require('../types/html');
+const { addAPIKeyInfoToCodeBlock } = require('./codeblock-api-key-info');
 
 const cheerioNodeParser = (_i, { type = null, name = '', data = '', attribs = {}, children = [] }) => {
   if (!type || type === HtmlDataTypes.text) {
@@ -50,6 +51,7 @@ const htmlParser = (content) => {
   const loadedDom = cheerio.load(content, null);
   liftLangAttributes(loadedDom);
   duplicateLangAttributes(loadedDom);
+  addAPIKeyInfoToCodeBlock(loadedDom);
   const loadedDomBodyNodes = loadedDom('body').children('*');
   const parsedNodes = cheerioParser(loadedDomBodyNodes);
   return [
