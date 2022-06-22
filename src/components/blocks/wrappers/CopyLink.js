@@ -88,7 +88,7 @@ const LinkCopyButton = ({ id, parentHovered, ...props }) => {
         {...props}
         aria-describedby={'link-hover-tooltip'}
         id={id}
-        tabIndex="0"
+        tabIndex={0}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         onFocus={() => setHover(true)}

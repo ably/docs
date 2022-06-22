@@ -23,7 +23,7 @@ const LocalLanguageAlternatives = ({ language, languages, data, children }) => {
       onClick,
       value: lang,
     },
-    content: languageLabels[lang] ?? '',
+    content: languageLabels[lang] ?? lang,
   }));
 
   return (
