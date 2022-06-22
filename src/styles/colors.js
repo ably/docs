@@ -20,6 +20,7 @@ export const secondary = {
 export const gui = {
   error: '#FB0C0C',
   success: '#11CB24',
+  active: '#074095',
 };
 
 export const containers = {

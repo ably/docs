@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import Html from '../Html';
+import Html from '../../Html';
 
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import '@ably/ui/core/Code/component.css';
 import '@ably/ui/core/styles.css';
-import './styles.css';
+import '../styles.css';
 
 // Supported languages need to be imported here
 // https://github.com/highlightjs/highlight.js/blob/master/SUPPORTED_LANGUAGES.md
@@ -25,9 +25,14 @@ import objectivec from 'react-syntax-highlighter/dist/cjs/languages/hljs/objecti
 import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
 // Android Studio has an error when registering the language.
 
-import languageLabels, { languageSyntaxHighlighterNames } from '../../../maps/language';
-import HtmlDataTypes from '../../../../data/types/html';
-import { ChildPropTypes } from '../../../react-utilities';
+import languageLabels, { languageSyntaxHighlighterNames } from '../../../../maps/language';
+import HtmlDataTypes from '../../../../../data/types/html';
+import UserContext, { devApiKeysPresent } from '../../../../contexts/user-context';
+import APIKeyMenuSelector from './ApiKeyMenuSelector';
+import InlineCodeElement from './InlineCodeElement';
+import CodeCopyButton from './CodeCopyButton';
+
+export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
 
 const SelectedLanguage = ({ language }) =>
   language ? <div className="docs-language-label">{language.label}</div> : null;
@@ -51,34 +56,70 @@ SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.swift.key, swi
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.objc.key, objectivec);
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.json.key, json);
 
-const InlineCodeElement = ({ children, ...props }) => (
-  <code {...props} className="font-mono font-semibold text-code p-4">
-    {children}
-  </code>
-);
-
 const multilineRegex = /\r|\n/gm;
 
 const Code = ({ data, attribs }) => {
+  const [activeApiKey, setActiveApiKey] = useState({
+    label: DEFAULT_API_KEY_MESSAGE,
+    value: DEFAULT_API_KEY_MESSAGE,
+  });
   const isString = data.length === 1 && data[0].type === HtmlDataTypes.text;
   const hasRenderableLanguages = isString && attribs && attribs.lang;
   const hasMultilineText = isString && multilineRegex.test(data[0].data);
 
+  const content = data[0]?.data ?? '';
+  /**
+   * Refer to Decision Record:
+   * https://ably.atlassian.net/wiki/spaces/ENG/pages/2070053031/DR9+API+Keys+vs+tokens+vs+authUrls+in+docs+code+snippets#Recommendation
+   * Referenced on ticket:
+   * https://ably.atlassian.net/browse/EDX-49
+   */
+  const contentWithObfuscatedKey = useMemo(
+    () =>
+      content.replace && content.replace(/{{API_KEY}}/g, '*********************************************************'),
+    [content, activeApiKey],
+  );
+  const contentWithKey = useMemo(
+    () => content.replace && content.replace(/{{API_KEY}}/g, activeApiKey.value),
+    [content, activeApiKey],
+  );
+
   if (hasRenderableLanguages || hasMultilineText) {
+    const dataContainsKey = attribs['data-contains-key'] === 'true';
     const displayLanguage =
       attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
         ? languageSyntaxHighlighterNames[attribs.lang]
         : languageSyntaxHighlighterNames['plaintext'];
     return (
       <div {...attribs} className="p-32 overflow-auto relative" language={languageLabels[attribs.lang]}>
+        <UserContext.Consumer>
+          {(value) => (
+            <APIKeyMenuSelector
+              dataContainsKey={dataContainsKey}
+              userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
+              setActiveApiKey={setActiveApiKey}
+              activeApiKey={activeApiKey}
+              signedIn={!!value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN}
+            />
+          )}
+        </UserContext.Consumer>
         <SelectedLanguage language={displayLanguage} />
-        <SyntaxHighlighter
-          className="ui-text-code"
-          style={{ hljs: { background: 'inherit', fontSize: `var(--fs-code)`, lineHeight: `var(--lh-loose)` } }}
-          language={displayLanguage.key}
-        >
-          {data[0].data}
-        </SyntaxHighlighter>
+        <UserContext.Consumer>
+          {(value) => (
+            <SyntaxHighlighter
+              className="ui-text-code"
+              style={{ hljs: { background: 'inherit', fontSize: `var(--fs-code)`, lineHeight: `var(--lh-loose)` } }}
+              language={displayLanguage.key}
+            >
+              {dataContainsKey
+                ? value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN
+                  ? contentWithObfuscatedKey
+                  : contentWithKey
+                : content}
+            </SyntaxHighlighter>
+          )}
+        </UserContext.Consumer>
+        <CodeCopyButton content={contentWithKey} />
       </div>
     );
   }
@@ -92,9 +133,6 @@ const Code = ({ data, attribs }) => {
 Code.propTypes = {
   data: PropTypes.array,
   attribs: PropTypes.object,
-};
-InlineCodeElement.propTypes = {
-  children: ChildPropTypes,
 };
 
 export default Code;
