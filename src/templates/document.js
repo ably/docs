@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Helmet } from 'react-helmet';
 import PropTypes from 'prop-types';
 import { graphql } from 'gatsby';
 import Layout from '../components/Layout';
@@ -10,13 +11,22 @@ import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/cons
 import VersionMenu from '../components/Menu/VersionMenu';
 import RightSidebar from '../components/Sidebar/RightSidebar';
 import PageTitle from '../components/PageTitle';
+import { DOCUMENTATION_PATH } from '../../data/transform/constants';
+
+const getMetaDataDetails = (document, prop, alternative = '') =>
+  document && document.meta && document.meta[prop] ? document.meta[prop] : alternative;
+
+const CANONICAL_ROOT = `https://www.ably.com${DOCUMENTATION_PATH}`;
+const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
 
 const Document = ({
   location: { search },
   pageContext: { contentOrderedList, languages, version, contentMenu, slug },
   data: { document, versions },
 }) => {
-  const title = document && document.meta ? document.meta.title : '';
+  const title = getMetaDataDetails(document, 'title');
+  const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK);
+  const canonical = `${CANONICAL_ROOT}${slug}`;
   const filteredLanguages = useMemo(
     () =>
       languages
@@ -40,6 +50,15 @@ const Document = ({
 
   return (
     <PageLanguageContext.Provider value={language}>
+      <Helmet>
+        <title>{title}</title>
+        <meta property="og:title" content={title} />
+        <meta property="twitter:title" content={title} />
+        <link rel="canonical" href={canonical} />
+        <meta name="description" content={description} />
+        <meta property="og:description" content={description} />
+        <meta name="twitter:description" content={description} />
+      </Helmet>
       <Layout languages={filteredLanguages}>
         <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
         <Article columns={3}>

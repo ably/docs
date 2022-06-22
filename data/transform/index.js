@@ -127,7 +127,6 @@ const splitDataAndMetaData = (text) => {
   }
 
   const asDataObjects = constructDataObjectsFromStrings(withoutFalsyValues, frontmatterMeta);
-
   return {
     data: asDataObjects,
     frontmatterMeta,
@@ -157,8 +156,20 @@ const transformNanocTextiles =
       parent: node.id,
     };
 
+    const isVersion = /\/versions\/v[\d.]+/.test(slug);
+
     if (frontmatterMeta !== NO_MATCH) {
       newNodeData.meta = filterAllowedMetaFields(frontmatterMeta.attributes);
+      if (
+        !isVersion &&
+        process.env.NODE_ENV === 'development' &&
+        process.env.EDITOR_WARNINGS_OFF !== 'true' &&
+        !newNodeData.meta.meta_description
+      ) {
+        console.warn(
+          `No meta_description for file: ${node.relativePath}\n\nPlease add a custom meta_description to the frontmatter YAML at the top of the file.\n\n`,
+        );
+      }
     }
 
     const contentDigest = createContentDigest(data);
@@ -186,7 +197,7 @@ const transformNanocTextiles =
     }
 
     // Add completely separate nodes to keep track of relevant versions
-    if (/\/versions\/v[\d.]+/.test(slug)) {
+    if (isVersion) {
       const parentSlug = slug.replace(/\/versions\/v[\d.]+/, '');
       htmlNode.parentSlug = parentSlug;
       const version = slug.match(/\/versions\/v([\d.]+)/)[1];
