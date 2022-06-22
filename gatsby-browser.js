@@ -10,6 +10,8 @@ import {
   reducerSessionData,
 } from '@ably/ui/core/scripts';
 
+import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer.ts';
+
 import sprites from '@ably/ui/core/sprites.svg';
 
 const PAGE_OFFSET = 128;
@@ -23,6 +25,7 @@ const onClientEntry = () => {
   const store = createRemoteDataStore({
     ...reducerBlogPosts,
     ...reducerSessionData,
+    ...reducerApiKeyData,
     ...reducerFlashes,
   });
 
