@@ -25,107 +25,105 @@ meta_description: "How to persist data into S3."
 meta_keywords: "Ably realtime, AWS Lambda Functions, integrations"
 ---
 
-Ably's "Webhooks":/general/events enables users to configure automated rules that react in response to events happening in channels such as messages being sent or changes in presence. When combined with "AWS Lambda":https://aws.amazon.com/lambda/ this enables the creation of rules with varying complexity. In this tutorial you will cover how to create a more basic pipeline that takes messages sent to a channel and persists them in a file in "AWS Simple Storage Service (S3)":https://aws.amazon.com/s3/.
+Ably "webhooks":/general/events enable users to configure custom rules that react to channel events. For example, triggering an action when a message is sent, or when a user joins the channel. You can use our integration with "AWS Lambda":https://aws.amazon.com/lambda/ to create these rules.
 
-TODO - Add files to tutorial repo when finalized
+In this tutorial you will learn how to create a channel rule that intercepts messages sent to a channel and persists them to a file in "AWS Simple Storage Service (S3)":https://aws.amazon.com/s3/.
 
-An example file for this tutorial is "available on Github":https://github.com/ably/tutorials/TODO
+###. TODO: update the GH repo link
 
-The branch contains two files:
+The solution code for this tutorial is "available on Github":https://github.com/ably/tutorials/TODO
 
-* index.html - The example page to subscribe and publish messages with Ably
-* lambda_function.py - The AWS Lambda functioned that persists data to S3
+This repository contains two files:
 
-To follow this tutorial you'll need an AWS account that you can create Lambda functions with and point your Ably webhook towards. If you don't have an AWS account you can create one for free "here":https://aws.amazon.com/.
+* @index.html@ - A web page that enables users to subscribe to a channel and publish messages
+* @lambda_function.py@ - The AWS Lambda function that persists data to S3
 
-h2(#set-up-user). Set up a user
+To follow this tutorial you will need an AWS account. If you don't have an AWS account you can "create one for free":https://aws.amazon.com/free.
 
-Once you've logged into AWS you need to set up a user capable of using both Lambda and S3. AWS Users provide granularity over the who can access what within the AWS ecosystem. We're just going to be setting fairly generic high-level policies but you may want to employ stricter policies in a production deployment.
+h2(#set-up-user). Create an AWS user
+
+Once you've logged into AWS you need to set up a user capable of using both Lambda and S3. In this tutorial, you will grant fairly  high-level policies but you may want to employ stricter policies in a production deployment.
 
 From the "AWS dashboard":http://console.aws.amazon.com/:
 
-# Click @Services@ from the top left menu
-# Select @IAM@ (you can search in the toolbar if necessary)
-# Click @Users@ from the left hand menu
-# Click @Add users@
-# Set the @User name@ as @ably-persistence@
-# Check the @Programmatic access@ checkbox
-# Click @Next: permissions@
-# On the @Set permissions@ page:
-## Click @Attach existing policies directly@
+# In the search bar, type "IAM" and press enter
+# Click the *IAM* link in the search results
+# Select *Users* from the left hand menu
+# Click the *Add users* button
+# Enter @ably-persistence@ as the user name
+# Check the *Access-key - Programmatic access* checkbox
+# Click the *Next: permissions* button at the bottom of the page
+# On the *Set permissions* page:
+## Select *Attach existing policies directly*
 ## Type @AWSLambdaRole@ into the search box
-## Check the @AWSLambdaRole@ checkbox
-## Click @Next: Review@
-# Click @Create user@, ignoring the optional tag options
-# Your new user will be displayed with its @Access key ID@ and @Secret access key@:
-## Copy the access key ID
-## Click the @Show@ link in the last column to reveal the secret key
-## Copy the secret key into your text file
+## Check the *AWSLambdaRole* checkbox
+# Click the *Next: Tags* button at the bottom of the page
+# On the optional Add tags page, click the *Next: Review* buttomn at the bottom of the page
+# Click @Create user@
 
-h2(#set-up-s3). Set up S3
+The page displays your new user with its associated *Access key ID* and *Secret access key*. Copy these keys and paste them somewhere: you will need them later in this tutorial.
 
-For this tutorial you will be using S3 to store and update a simple plain text file. S3 is one of many scalable storage solutions in the AWS ecosystem but you can apply the basic principles to other services and other file types.
+h2(#set-up-s3). Configure storage with S3
 
-The first step is to set up an S3 bucket to host the file you'll use to persist data to. For simplicity you'll just be using a plain.txt file for this tutorial, but the principles also apply to other formats. 
+In this tutorial you will use S3 to store a simple plain text file. S3 is one of many scalable storage solutions in the AWS ecosystem but you can apply the principles shown in this tutorial to persist data with other services.
+
+The first step is to set up an S3 bucket to host the file.
 
 From the "AWS dashboard":http://console.aws.amazon.com/:
 
-# Click @Services@ from the top left menu
-# Select @S3@ (you can search in the toolbar if necessary)
-# Click @Create bucket@
-# Set the @Bucket name@ to a unique name: @your-bucket-name-here@
-# Click @Create bucket@
+# In the console search bar, type "S3" and press enter
+# Click the *S3* link in the search results
+# Click *Create bucket*
+# Enter @ably-message-data@ as the name of your bucket
+# Click *Create bucket*
 
-While you're in S3 you will also create the file you'll be updating with our persisted data:
+Create the text file and upload it to your new bucket:
 
 # In your local environment create an empty @test.txt@ file
-# Click @your-bucket-name-here@
-# Click @Upload@
-# Click @Add files@
-# Navigate to and select your @test.txt@ file then click @Open@
-# Click @Upload@
+# Select the @ably-message-data@ bucket in the list of buckets
+# Click the *Upload* button
+# Click the *Add files* button
+# Navigate to and select your @test.txt@ file then click *Open*
+# Click the *Upload* button at the bottom of the page
 
-h2(#role). Set up Role
+h2(#role). Configure Lambda permissions
 
-Before you write the code for the Lambda function, you need to assign it a role defining what it has access to. For simplicity you're going to again grant set fairly generic high-level access but you may want to employ stricter access in a production deployment.
+Before you write the code for the Lambda function, you need to assign it a role that defines what it has access to. You will grant high-level access in this tutorial but you should use stricter access controls in a production deployment.
 
 
 From the "AWS dashboard":http://console.aws.amazon.com/:
 
-# Click @Services@ from the top left menu
-# Select @IAM@ (you can search in the toolbar if necessary)
-# Click @Roles@ from the left hand menu
-# Click @Create role@ button
-# Select the @AWS Service@ tile
-# Click @Lambda@ as the @Common use cases@
-# Click @Next@
-# Chose the correct roles:
-## Type @AWSLambdaBasicExecutionRole@ into the search box
-## Check the @AWSLambdaBasicExecutionRole@ checkbox
-## Click @Clear filters@
-## Type @AmazonS3FullAccess@ into the search box
-## Check the @AmazonS3FullAccess@ checkbox
-## Click @Next@
-# Enter @ably-persistence@ as the @Role Name@
-# Click @Create role@
+# In the console search bar, type "IAM" and press enter
+# Click the *IAM* link in the search results
+# Click *Roles* in the left hand menu
+# Click the *Create role* button
+# Select the *AWS service* tile
+# Select Lambda as the @Common use cases@
+# Click the *Next* button
+# On the Add permissions page, search for and select the following policies. Click the *Clear filters* button after each search.
+## @AWSLambdaBasicExecutionRole@ 
+## @AmazonS3FullAccess@
+## Click the *Next* button at the bottom of the page
+# Enter @ably-persistence@ as the Role name
+# Click the *Create role* button at the bottom of the page
 
 h2(#create-lambda). Create the Lambda function
 
-You can now create the Lambda role itself. Lambda is used as the logic center and pipeline for persistence in this tutorial. Although you will be doing a straightforward function you can set up more comprehensive functions to suit your business needs.
+You can now write the code for your Lambda function
 
 From the "AWS dashboard":http://console.aws.amazon.com/:
 
-# Click @Services@ from the top left menu
-# Select @Lambda@ (you can search in the toolbar if necessary)
-# Click @Create function@
-# Click @Author from Scratch@
-# Set your function name as @ably-persistence@
-# Click @Change default execution role@
-# Select @Python 3.9@ from the @Runtime@ drop down
-# Click @Use an existing role@ and choose @ably-persistence@ from the drop down
-# Click @Create function@
+# In the console search bar, type "Lambda" and press enter
+# Click the *Lambda* link in the search results
+# Click the *Create function* button
+# Select the *Author from scratch* tile
+# Enter @ably-persistence@ as the Function name
+# Select the latest supported version of Python from the @Runtime@ drop down
+# Click *Change default execution role* to expand that section
+# Select *Use an existing role* and choose @ably-persistence@ from the drop down
+# Click the *Create function* button at the bottom of the page
 
-You'll be presented with the function page with an empty "lambda_function.py" in your page:
+AWS displays your new Lambda function, with a sample event handler:
 
 <a href="/images/tutorials/persistence/new-lambda.png" target="_blank">
   <img src="/images/tutorials/persistence/new-lambda.png" style="width: 100%" alt="New lambda page">
@@ -140,59 +138,55 @@ from urllib.parse import unquote_plus
 s3_client = boto3.client('s3')
 
 def lambda_handler(event, context):
-    
-    event_name = (event['name'])                   # Choosing name field
-    message = (event['data'])                      # Choosing data field
-    data_to_save = event_name + ' : ' + message    # Combining fields
-    print(data_to_save)                            # Checking combination
-    
-    bucket_name = "your-bucket-name-here"          # Target S3 Bucket
+    bucket_name = "ably-message-data"             # Target S3 Bucket
     file_name = "test.txt"                         # Target file
-    lambda_path = "/tmp/" + file_name              # Path of file being download
-    s3_path = "output/" + file_name                # Path of file being uploaded
+    lambda_path = "/tmp/" + file_name              # Download file path
+    s3_path = "output/" + file_name                # Upload file path
     
-    file_object = open(lambda_path, 'a')           # Open downloaded file to append
-    file_object.write("\n" + data_to_save)         # Update downloaded file
+    file_object = open(lambda_path, 'a')           # Open downloaded file to append text to
+    file_object.write("\n Message: " + event)      # Write the data to the text file
     file_object.close()                            # Save and close edited file
     
     s3 = boto3.resource("s3")
     s3.meta.client.upload_file(lambda_path, bucket_name, file_name)
 ```
 
-Once the webhook is set up this code will be invoked every time a message is published. When invoked it will take the data from the JSON Ably sends to Lambda, then open our @test.txt@, append the latest message, save the message and finally upload it back to S3.
+bq. **Important!** Click the *Deploy* button to deploy your Lambda function code before continuing. Ensure that you re-deploy the function every time you make a change to the code.
+
+When you have configured your webhook, this code will be invoked every time a message is published. It will take the data from the message payload it receives from Ably, append it to the @test.txt@ file and upload it back to S3. 
 
 Now you're finished in AWS you can set up the Ably half of the workflow.
 
-h2(#installation). Set up Ably app and API Key
+h2(#installation). Create a new Ably app and API Key
 
 You're going to need an API key to use when sending messages to our channel. In your "Ably dashboard":https://ably.com/accounts:
 
-# Hover over @Dashboard@ then select @Apps Dashboard@
-# Click @Create New App@
-# Name your new app
-# Copy the API Key somewhere safe
+# Click the *Create New App* button
+# Enter a new name for your app
+# Click the *Create app* button
+# Copy the Private API Key somewhere safe
 
-h2(#webhook). Set up the webhook 
+h2(#webhook). Configure your webhook 
 
-Now you have an app you can set up an integration rule with AWS Lambda to trigger when a new message is published using the app. In your "Ably dashboard":https://ably.com/accounts:
+Now you have an app you can set up an integration rule with AWS Lambda which triggers when a new message is published within the app. In your "Ably dashboard":https://ably.com/accounts:
 
-# Hover over @Dashboard@ then select @Apps Dashboard@
-# Click the name of your app in the URL breadcrumb 
-# Click @Integrations@ then @New Integration Rule@
-# Select @Webhook@ by clicking @Choose@ below it then 
-# Select @AWS Lambda@ by clicking @Choose@ below it
-# Set your webhook settings:
-## Set @AWS Region@ to the the Region your AWS account is located in
-## Enter @ably-persistence@ as the @Function Name@
-## Enter the AWS Key you saved earlier as your @AWS Credentials@
-## Uncheck @Encoding@ (to keep the tutorial as streamlined as possible)
-## Click @Create@
+# Click the name of your app in the "breadcrumb trail" at the top of the page
+# Select the *Integrations* tab
+# Click the *New Integration Rule* button
+# Select Webhook by clicking the *Choose* button below it, then do the same for AWS Lambda
+# In the New Integration Rule dialog:
+## Select the region your AWS account is located in
+## Enter @ably-persistence@ as the Function Name
+## Enter your AWS Credentials. This must be in the format @AccessKeyID:SecretKeyID@. For example, @AKIAUUFPRLMPNUEMFQPK:hGdpSuMaEthcNtxH/KMdyDsrjxYj53sDwWuvjm3p@
+## Select *JSON* as the Encoding option
+## Uncheck *Enveloped* (to keep the tutorial as simple as possible)
+## Click the *Create* button
 
-h2(#create-ably-page). Create file to publish messages
+h2(#create-ably-page). Create a user interface
 
-To start generating messages to be persisted you are going to set up a basic HTML page that subscribes and publishes to a channel when you click a button.
+To start generating messages to supply to your webhook you will set up a basic HTML page. This page will subscribe to a channel and publish messages to that channel when the user clicks a button.
 
-Create a new @index.html@ file and add:
+Create a new @index.html@ file on your local machine with the following contents:
 
 ```[html]
 <!DOCTYPE html>
@@ -238,18 +232,18 @@ Create a new @index.html@ file and add:
 </html>
 ```
 
-When you load @index.html@ and click the button a new message will be sent and be displayed on the page. You can see that connections have been made and messages sent by checking the "Stats" tab of your app's "Ably dashboard":https://ably.com/accounts.
+This file displays a simple interface for testing your webhook. It uses the Ably Realtime SDL to publish messages to and subscribe to messages from the @persistencetest@ channel.
 
-If you now navigate to your "S3 Bucket":https://s3.console.aws.amazon.com/s3/buckets and open the file you added earlier you should see it now contains the messages sent when pushing the button in "index.html". It may take a couple of minutes for AWS to process the requests.
+Ensure that you replace @ABLY_API_KEY@ with your own app's API key from the "Ably dashboard":https://ably.com/accounts.
+
+Open @index.html@, and when the button caption states that you are connected to Ably, click it. A new, random message is sent to the channel. You can further inspect the connections made to and messages sent from your app by viewing the "Stats" tab for your app in the "Ably dashboard":https://ably.com/accounts.
+
+If you now navigate to your "S3 Buckets":https://s3.console.aws.amazon.com/s3/buckets and select the @ably-message-data@ bucket. Click the @test.txt@ link and then click the *Open* button. Your browser will download the @test.txt@ file. Open the file in a text editor and verify that it contains the list of messages sent.
 
 h2(#next-steps). Next Steps
 
 # Learn more about "Ably Webhooks":https://ably.com/documentation/general/events.
 # Learn about "Ably features":https://ably.com/platform.
-# Explore more "Ably tutorials":https://ably.com/tutorials or "Ably Integrations":https://ably.com/integrations.
+# Explore more "Ably tutorials":https://ably.com/tutorials and "Ably Integrations":https://ably.com/integrations.
 # Get an "overview of how Ably works":https://ably.com/documentation/how-ably-works.
 # "Get in touch if you need help":https://ably.com/contact.
-
-
-
-
