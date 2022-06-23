@@ -265,8 +265,6 @@ export type DirectoryCtimeArgs = {
 export type Site = Node & {
   buildTime?: Maybe<Scalars['Date']>;
   siteMetadata?: Maybe<SiteSiteMetadata>;
-  port?: Maybe<Scalars['Int']>;
-  host?: Maybe<Scalars['String']>;
   assetPrefix?: Maybe<Scalars['String']>;
   polyfill?: Maybe<Scalars['Boolean']>;
   pathPrefix?: Maybe<Scalars['String']>;
@@ -921,8 +919,6 @@ export type QueryAllDirectoryArgs = {
 export type QuerySiteArgs = {
   buildTime?: InputMaybe<DateQueryOperatorInput>;
   siteMetadata?: InputMaybe<SiteSiteMetadataFilterInput>;
-  port?: InputMaybe<IntQueryOperatorInput>;
-  host?: InputMaybe<StringQueryOperatorInput>;
   assetPrefix?: InputMaybe<StringQueryOperatorInput>;
   polyfill?: InputMaybe<BooleanQueryOperatorInput>;
   pathPrefix?: InputMaybe<StringQueryOperatorInput>;
@@ -2911,8 +2907,6 @@ export type SiteFieldsEnum =
   | 'siteMetadata___title'
   | 'siteMetadata___description'
   | 'siteMetadata___siteUrl'
-  | 'port'
-  | 'host'
   | 'assetPrefix'
   | 'polyfill'
   | 'pathPrefix'
@@ -3057,8 +3051,6 @@ export type SiteGroupConnectionGroupArgs = {
 export type SiteFilterInput = {
   buildTime?: InputMaybe<DateQueryOperatorInput>;
   siteMetadata?: InputMaybe<SiteSiteMetadataFilterInput>;
-  port?: InputMaybe<IntQueryOperatorInput>;
-  host?: InputMaybe<StringQueryOperatorInput>;
   assetPrefix?: InputMaybe<StringQueryOperatorInput>;
   polyfill?: InputMaybe<BooleanQueryOperatorInput>;
   pathPrefix?: InputMaybe<StringQueryOperatorInput>;
