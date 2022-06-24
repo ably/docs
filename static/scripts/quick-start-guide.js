@@ -5,14 +5,14 @@ window.ably = {
   ...window.ably,
   docs: {
     DOCS_API_KEY: false,
+    RANDOM_CHANNEL_NAME: false,
     onApiKeyRetrieved: () => {},
   },
 };
 
 function subscribeToCurlRequest(key) {
-  var ably = new Ably.Realtime(key),
-    channelName = '{{RANDOM_CHANNEL_NAME}}';
-  if (channelName === '{{RANDOM_CHANNEL' + '_NAME}}') {
+  var ably = new Ably.Realtime(key);
+  if (!window.ably.RANDOM_CHANNEL_NAME) {
     channelName = window.randomChannelName;
   }
   ably.channels.get(channelName).subscribe('greeting', function (message) {
