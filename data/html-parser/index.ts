@@ -17,7 +17,7 @@ type HtmlDataType = keyof typeof HtmlDataTypes;
 type AnyCheerioElement = {
   type?: null | 'text' | 'tag' | 'script' | 'style' | 'comment';
   name: HtmlDataType;
-  data?: string;
+  data: string;
   attribs?: null | Attributes;
   children: cheerio.Element[];
 };
@@ -30,13 +30,7 @@ type ParsedNode = {
 };
 
 export const cheerioNodeParser = (_i: number, node: cheerio.Element): ParsedNode => {
-  const {
-    type = null,
-    name = <HtmlDataType>HtmlDataTypes.text,
-    data = '',
-    attribs = {},
-    children = [],
-  }: AnyCheerioElement = defaults(
+  const { type, name, data, attribs, children }: AnyCheerioElement = defaults(
     {
       type: null,
       name: HtmlDataTypes.text,
