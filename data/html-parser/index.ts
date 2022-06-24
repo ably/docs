@@ -15,10 +15,10 @@ type HtmlDataType = keyof typeof HtmlDataTypes;
  * Data that we need to check from any cheerio element to see what to do with it
  */
 type AnyCheerioElement = {
-  type?: null | undefined | 'text' | 'tag' | 'script' | 'style' | 'comment';
+  type?: null | 'text' | 'tag' | 'script' | 'style' | 'comment';
   name: HtmlDataType;
-  data?: undefined | string;
-  attribs?: null | undefined | Attributes;
+  data?: string;
+  attribs?: null | Attributes;
   children: cheerio.Element[];
 };
 
@@ -26,7 +26,7 @@ type ParsedNode = {
   data: string | ParsedNode[];
   type: typeof HtmlDataTypes.text | typeof HtmlDataTypes.tag;
   name: string;
-  attribs?: null | undefined | Attributes;
+  attribs?: null | Attributes;
 };
 
 export const cheerioNodeParser = (_i: number, node: cheerio.Element): ParsedNode => {
