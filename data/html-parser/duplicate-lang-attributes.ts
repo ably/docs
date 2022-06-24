@@ -3,10 +3,7 @@ import cheerio from 'cheerio';
 export const duplicateLangAttributes = (cheerioNodes: cheerio.Selector) =>
   cheerioNodes('*[lang]').each((_i, elem) => {
     const maybeLanguages = cheerioNodes(elem).attr('lang');
-    if (!maybeLanguages) {
-      return;
-    }
-    if (/^[^,]+$/.test(maybeLanguages)) {
+    if (!maybeLanguages || /^[^,]+$/.test(maybeLanguages)) {
       return;
     }
     const langs = maybeLanguages.split(',');
