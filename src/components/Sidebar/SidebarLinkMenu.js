@@ -68,7 +68,7 @@ const SidebarLinkMenu = ({ data, interactable = false, expandMenu = EXPAND_MENU.
           </li>
         ) : (
           <li key={`${label}-${link}-${level}`}>
-            <SidebarLink to={link} $leaf={indent > 0} active={isActive} indent={indent}>
+            <SidebarLink to={link} $leaf={indent > 0} $active={isActive} indent={indent}>
               {label}
             </SidebarLink>
           </li>
