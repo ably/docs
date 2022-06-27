@@ -50,7 +50,7 @@ const LeftSideBar = ({ className, languages }) => {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
   }
   return (
-    <Sidebar className={className} languages={languages} data={sidebarData} expandMenu={EXPAND_MENU.COLLAPSE_NEXT} />
+    <Sidebar className={className} languages={languages} data={sidebarData} expandMenu={EXPAND_MENU.SECTION_MATCH} />
   );
 };
 

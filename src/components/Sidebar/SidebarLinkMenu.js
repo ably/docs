@@ -7,6 +7,7 @@ import SidebarLabel from './SidebarLabel';
 import SidebarLink from './SidebarLink';
 import SidebarLinkItem from './SidebarLinkItem';
 import { EXPAND_MENU } from './expand-menu-enum';
+import { checkSectionMatch } from './check-section-match';
 
 const OrderedList = styled.ol`
   margin: 0;
@@ -31,6 +32,8 @@ const SidebarLinkMenu = ({ data, interactable = false, expandMenu = EXPAND_MENU.
         );
 
         if ([EXPAND_MENU.EXPANDED, EXPAND_MENU.COLLAPSE_NEXT].includes(expandMenu)) {
+          preExpanded.push(uuid);
+        } else if (EXPAND_MENU.SECTION_MATCH === expandMenu && checkSectionMatch('match')(data)) {
           preExpanded.push(uuid);
         }
         const nextExpandMenu = EXPAND_MENU.COLLAPSE_NEXT
