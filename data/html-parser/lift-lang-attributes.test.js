@@ -1,5 +1,5 @@
 const cheerio = require('cheerio');
-const { liftLangAttributes } = require('.');
+const { liftLangAttributes } = require('./lift-lang-attributes');
 
 const content = `<dl>
     <dt><div lang='javascript'>Term</div></dt>

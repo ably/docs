@@ -1,4 +1,7 @@
-const onCreateWebpackConfig = ({ actions, getConfig }, options = {}) => {
+import { GatsbyNode } from 'gatsby';
+import path from 'path';
+
+export const onCreateWebpackConfig: GatsbyNode['onCreateWebpackConfig'] = ({ actions, getConfig }) => {
   const prevConfig = getConfig();
   actions.replaceWebpackConfig({
     ...prevConfig,
@@ -6,12 +9,8 @@ const onCreateWebpackConfig = ({ actions, getConfig }, options = {}) => {
       ...prevConfig.resolve,
       fallback: {
         ...prevConfig.resolve.fallback,
-        util: require.resolve('util/'),
+        util: path.resolve('util/'),
       },
     },
   });
-};
-
-module.exports = {
-  onCreateWebpackConfig,
 };
