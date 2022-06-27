@@ -1,5 +1,5 @@
 const cheerio = require('cheerio');
-const { duplicateLangAttributes } = require('.');
+const { duplicateLangAttributes } = require('./duplicate-lang-attributes');
 const { DOCUMENTATION_PATH } = require('../transform/constants');
 
 const content = `<div lang='javascript,csharp,objc'>Content</div>`;
