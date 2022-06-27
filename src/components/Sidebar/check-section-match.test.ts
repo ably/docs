@@ -1,4 +1,4 @@
-import { Arbitrary, array, assert, constant, letrec, nat, oneof, property, record, string } from 'fast-check';
+import { Arbitrary, array, assert, constant, letrec, nat, oneof, option, property, record, string } from 'fast-check';
 import { checkSectionMatch } from './check-section-match';
 import { SidebarData } from './sidebar-data';
 
@@ -77,6 +77,19 @@ const sidebarDataArbitraryTreeWithMatchingLink = letrec((tie) => ({
   }),
 })).node;
 
+const sidebarDataArbitraryTreeWithoutMatchingLink = letrec((tie) => ({
+  node: record({
+    label: string(),
+    link: string().filter((s) => s !== '/docs/match'),
+    level: nat(),
+    content: oneof(
+      { depthIdentifier: 'node', maxDepth: 5 },
+      constant(undefined),
+      array(tie('node'), { minLength: 1, maxLength: 3, depthIdentifier: 'node' }),
+    ),
+  }),
+})).node;
+
 describe('Property test of Check Section Matches function', () => {
   it('Matches when sidebar data contains a link', () => {
     assert(
@@ -86,5 +99,12 @@ describe('Property test of Check Section Matches function', () => {
       ),
     );
   });
-  it('Does not match when sidebar data does not contain a link', () => {});
+  it('Does not match when sidebar data does not contain a link', () => {
+    assert(
+      // @ts-ignore
+      property(sidebarDataArbitraryTreeWithoutMatchingLink, (sidebarData: SidebarData) =>
+        expect(simpleSectionMatch(sidebarData)).toBe(false),
+      ),
+    );
+  });
 });
