@@ -21,6 +21,26 @@ const SidebarLinkMenu = ({ data, interactable = false, expandMenu = EXPAND_MENU.
       data.map(({ label, link, level = ROOT_LEVEL, content = false }) => {
         const uuid = encodeURIComponent(`${label}${link}`);
 
+        if ([EXPAND_MENU.EXPANDED, EXPAND_MENU.COLLAPSE_NEXT].includes(expandMenu)) {
+          preExpanded.push(uuid);
+        } else if (
+          EXPAND_MENU.SECTION_MATCH === expandMenu &&
+          checkSectionMatch(window.location.pathname)({
+            label,
+            link,
+            level,
+            content,
+          })
+        ) {
+          preExpanded.push(uuid);
+        }
+        const nextExpandMenu =
+          expandMenu === EXPAND_MENU.COLLAPSE_NEXT
+            ? EXPAND_MENU.COLLAPSED
+            : expandMenu === EXPAND_MENU.EXPAND_NEXT
+            ? EXPAND_MENU.EXPANDED
+            : expandMenu;
+
         const labelMaybeWithLink = interactable ? (
           <SidebarLink $leaf={false} indent={indent} level={level} to={link}>
             {label}
@@ -31,16 +51,8 @@ const SidebarLinkMenu = ({ data, interactable = false, expandMenu = EXPAND_MENU.
           </SidebarLabel>
         );
 
-        if ([EXPAND_MENU.EXPANDED, EXPAND_MENU.COLLAPSE_NEXT].includes(expandMenu)) {
-          preExpanded.push(uuid);
-        } else if (EXPAND_MENU.SECTION_MATCH === expandMenu && checkSectionMatch('match')(data)) {
-          preExpanded.push(uuid);
-        }
-        const nextExpandMenu = EXPAND_MENU.COLLAPSE_NEXT
-          ? EXPAND_MENU.COLLAPSED
-          : EXPAND_MENU.EXPAND_NEXT
-          ? EXPAND_MENU.EXPANDED
-          : expandMenu;
+        const isActive = link === window.location.pathname;
+
         return content ? (
           <li key={`${label}-${link}-${level}`}>
             <SidebarLinkItem
@@ -56,7 +68,7 @@ const SidebarLinkMenu = ({ data, interactable = false, expandMenu = EXPAND_MENU.
           </li>
         ) : (
           <li key={`${label}-${link}-${level}`}>
-            <SidebarLink to={link} $leaf={indent > 0} indent={indent}>
+            <SidebarLink to={link} $leaf={indent > 0} active={isActive} indent={indent}>
               {label}
             </SidebarLink>
           </li>

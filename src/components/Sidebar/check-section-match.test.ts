@@ -72,9 +72,9 @@ const sidebarDataArbitraryTreeWithMatchingLink = letrec((tie) => {
       link: string().filter((s) => s !== '/docs/match'),
       level: nat(),
       content: oneof(
-        { maxDepth: 5 },
-        array(sidebarDataArbitraryWithMatchingLink, { minLength: 1, maxLength: 5 }),
-        array(sidebarNode, { minLength: 1, maxLength: 5 }),
+        { depthIdentifier: 'node', maxDepth: 5 },
+        array(sidebarDataArbitraryWithMatchingLink, { minLength: 1, maxLength: 20, depthIdentifier: 'node' }),
+        array(sidebarNode, { minLength: 1, maxLength: 20, depthIdentifier: 'node' }),
       ),
     }),
   };
