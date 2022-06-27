@@ -1,4 +1,4 @@
-const { isEmpty } = require('lodash');
+import { isEmpty } from 'lodash';
 
 /**
  * Breakdown;
@@ -22,7 +22,7 @@ const DIV_DL_REGEX =
  * If a div with a lang attribute has no second portion, it is the end of the definition list; it must be left unchanged.
  * If a div has both a first & second portion, it can be adjusted to.
  */
-const fixTextileDefinitionLists = (content) =>
+export const fixDivsInDefinitionLists = (content: string) =>
   content.replace(
     DIV_DL_REGEX,
     (match, textilePreamble, lang, maybeFirstDt, maybeFirstDd, secondLang, maybeSecondDt, maybeSecondDd) => {
@@ -39,7 +39,3 @@ const fixTextileDefinitionLists = (content) =>
 ${secondEntry}`;
     },
   );
-
-module.exports = {
-  fixTextileDefinitionLists,
-};
