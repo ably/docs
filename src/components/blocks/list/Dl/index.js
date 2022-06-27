@@ -27,7 +27,7 @@ const StyledDl = styled.dl`
   dd {
     ${definitionListCell}
   }
-  dd > em {
+  dd > em:last-of-type {
     float: right;
     display: block;
     text-align: right;
