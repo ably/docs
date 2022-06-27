@@ -4,7 +4,7 @@ export const removeParagraphsFromDefinitionListsAndMerge = (cheerioNodes: cheeri
     // Remove empty paragraphs immediately after any dl
     const siblings = cheerioNodes(elem)
       .siblings('p')
-      .filter((_i, elem) => {
+      .filter((_, elem) => {
         const self = cheerioNodes(elem);
         return self.text().trim() === '';
       });
