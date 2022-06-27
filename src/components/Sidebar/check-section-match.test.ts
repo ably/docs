@@ -71,9 +71,8 @@ const sidebarDataArbitraryTreeWithMatchingLink = letrec((tie) => ({
     level: nat(),
     content: oneof(
       { maxDepth: 5 },
-      array(sidebarDataArbitraryWithMatchingLink),
-      constant(undefined),
-      array(tie('node')),
+      array(sidebarDataArbitraryWithMatchingLink, { minLength: 1, maxLength: 5 }),
+      array(tie('node'), { minLength: 1, maxLength: 5 }),
     ),
   }),
 })).node;
