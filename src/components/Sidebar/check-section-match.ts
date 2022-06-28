@@ -11,8 +11,5 @@ export const checkSectionMatch =
   (match: string) =>
   (data: SidebarData): boolean => {
     const content = data.content;
-    if (content && isArray(content)) {
-      return any(checkSectionMatch(match), content);
-    }
-    return !!data.link && match === data.link;
+    return content && isArray(content) ? any(checkSectionMatch(match), content) : match === data.link;
   };
