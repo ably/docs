@@ -11,9 +11,9 @@ const SidebarHeadingStyle = css`
   text-decoration: none;
   margin-left: ${({ $leaf, indent }) => `${($leaf ? 4 : 0) + (indent ?? 0)}px`};
 
-  color: ${({ active }) => (active ? colors.text.linkHoverAlternate : colors.text.link)};
-  border-left: ${({ active, $leaf }) =>
-    active
+  color: ${({ $active }) => ($active ? colors.text.linkHoverAlternate : colors.text.link)};
+  border-left: ${({ $active, $leaf }) =>
+    $active
       ? `${$leaf ? 1 : 2}px solid ${colors.text.linkHoverAlternateMuted}`
       : `${$leaf ? 1 : 2}px solid transparent`};
 
