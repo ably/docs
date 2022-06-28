@@ -12,9 +12,9 @@ jump_to:
     - RestClient
     - Auth#rest-auth
     - Channels#rest-channels
-    - Channel#rest-channel
+    - RestChannel#rest-channel
     - Plugins#plugins
-    - Presence#rest-presence
+    - RestPresence#rest-presence
     - Encryption#rest-encryption
     - Forwards compatibility#rest-compatibility
     - Batch Operations#batch-operations
@@ -22,8 +22,8 @@ jump_to:
     - RealtimeClient
     - Connection#realtime-connection
     - Channels#realtime-channels
-    - Channel#realtime-channel
-    - Presence#realtime-presence
+    - RealtimeChannel#realtime-channel
+    - RealtimePresence#realtime-presence
     - EventEmitter#eventemitter
     - Forwards compatibility#realtime-compatibility
     - State conditions and operations#state-conditions-and-operations
@@ -124,7 +124,7 @@ h3(#restclient). RestClient
 ** @(RSC15j)@ Requests to fallback hosts must use a matching Host header as this is necessary when fallbacks are proxied through a CDN. For example, if a request to @rest.ably.io@ fails and will be retried to @c.ably-realtime.com@, the Host header must be set to @c.ably-realtime.com@ in the retried request
 ** @(RSC15d)@ Errors that necessitate use of an alternative host include: host unresolvable or unreachable, request timeout, or a response but with an applicable HTTP status code in the range @500 <= code <= 504@. Resending requests that have failed for other failure conditions will not fix the problem and will simply increase the load on other datacenters unnecessarily
 ** @(RSC15f)@ Once/if a given fallback host succeeds, the client should store that successful fallback host for @ClientOptions.fallbackRetryTimeout@. Future HTTP requests during that period should use that host. If during this period a "qualifying errors":#RSC15d occurs on that host, or after @fallbackRetryTimeout@ has expired, it should be un-stored, and the fallback sequence begun again from scratch, starting with the default primary host (@rest.ably.io@ or @ClientOptions#restHost@) or, in the case of an existing fallback realtime connection as per (RTN17e), with the current fallback realtime host.
-* @(RSC17)@ When instancing the library, if a @clientId@ attribute is set in @ClientOptions@, then the @Auth#clientId@ attribute will contain the provided @clientId@
+* @(RSC17)@ When instantiating a @RestClient@, if a @clientId@ attribute is set in @ClientOptions@, then the @Auth#clientId@ attribute will contain the provided @clientId@
 * @(RSC19)@ @RestClient#request@ function is provided as a convenience for customers who wish to use REST API functionality that is either not documented or is not included in the API for our client libraries. The REST client library provides a function to issue HTTP requests to the Ably endpoints with all the built in functionality of the library such as authentication, paging, fallback hosts, MsgPack and JSON support etc. The function:
 ** @(RSC19a)@ Method signature is @request(string method, string path, Dict<String, String> params?, JsonObject | JsonArray body?, Dict<String, String> headers?) -> HttpPaginatedResponse@ with arguments: @method@ is a valid "HTTP verb":https://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html (must support @"GET"@, @"POST"@, and @"PUT"@, should support @"PATCH"@ and @"DELETE", may support others); @path@ is the path component of the URL such as @"/channels"@; @params@ and @headers@ are optional arguments containing pairs of key value strings (multi-valued headers are not supported) that will result in query params and HTTP headers being added respectively in the request (the argument types can be idiomatic for the language such as @Object@ in the case of JavaScript); @body@ is an optional @JsonObject@ or @JsonArray@ like object argument that can be easily serialized to MsgPack or JSON
 ** @(RSC19b)@ All requests will unconditionally use the default authentication mechanism configured for the REST client i.e. basic or token authentication (see "Auth":#rest-auth)
@@ -157,7 +157,7 @@ h3(#rest-auth). Auth
 *** @(RSA4a2)@ if the server responds with a token error (401 HTTP status code and an Ably error value @40140 <= code < 40150@), then the client library should indicate an error with error code @40171@, not retry the request and, in the case of the realtime library, transition the connection to the @FAILED@ state
 ** @(RSA4b)@ When the client does have a means to renew the token automatically, and the server has responded with a token error (@statusCode@ value of 401 and error @code@ value in the range @40140 <= code < 40150@) or the client library has optionally detected the current token has expired (see "RSA4b1":#RSA4b1), then the client should automatically make a single attempt to reissue the token and resend the request using the new token. If the token creation failed or the subsequent request with the new token failed due to a token error, then the request should result in an error (in the case of a realtime library, follow @RSA4c@)
 *** @(RSA4b1)@ Client libraries can optionally save a round-trip request to the Ably service for expired tokens by detecting when a token has expired when all of the following applies: the current token is a @TokenDetails@ object with an @expires@ attribute; the library has previously queried the time from the Ably service and persisted the local clock offset according to "RSA10k":#RSA10k; the @expires@ time has passed based on the Ably service time and not the local clock (which is not guaranteed to be accurate)
-** @(RSA4c)@ If an attempt by the realtime client library to authenticate is made using the @authUrl@ or @authCallback@, and the request to @authUrl@ fails (unless @RSA4d@ applies), the callback @authCallback@ results in an error (unless "RSA4d":#RSA4d applies), an attempt to exchange a @TokenRequest@ for a @TokenDetails@ results in an error (unless "RSA4d":#RSA4d applies), the provided token is in an invalid format (as defined in "RSA4e":#RSA4e), or the attempt times out after "@realtimeRequestTimeout@":#DF1b, then:
+** @(RSA4c)@ If an attempt by the realtime client library to authenticate is made using the @authUrl@ or @authCallback@, and the request to @authUrl@ fails (unless @RSA4d@ applies), the callback @authCallback@ results in an error (unless "RSA4d":#RSA4d applies), an attempt to exchange a @TokenRequest@ for a @TokenDetails@ results in an error (unless "RSA4d":#RSA4d applies), the provided token is in an invalid format (as defined in "RSA4e":#RSA4e), or the attempt times out after "@realtimeRequestTimeout@":#TO3l11, then:
 *** @(RSA4c1)@An @ErrorInfo@ with @code@ @80019@, @statusCode@ 401, and @cause@ set to the underlying cause should be emitted with the state change if there is one (per @RSA4c2/3@) and set as the connection @errorReason@
 *** @(RSA4c2)@If the connection is @CONNECTING@, then the connection attempt should be treated as unsuccessful, and as such the connection should transition to the @DISCONNECTED@ or @SUSPENDED@ state as defined in "RTN14":#RTN14 and "RTN15":#RTN15
 *** @(RSA4c3)@If the connection is @CONNECTED@, then the connection should remain @CONNECTED@
@@ -189,7 +189,7 @@ h3(#rest-auth). Auth
 *** @(RSA7b2)@ Token authentication is being used, and the @TokenRequest@ or @TokenDetails@ object, used for authentication, has a @clientId@ value that is not @null@
 *** @(RSA7b3)@ Following a realtime connection being established, if the @CONNECTED@ @ProtocolMessages@ contains a @clientId@ that is not @null@. @clientId@ is an attribute of @ProtocolMessage#connectionDetails@ within a @CONNECTED@ @ProtocolMessage@
 *** @(RSA7b4)@ When a wildcard string @'*'@ is present in the @TokenRequest@, @TokenDetails@, or @ProtocolMessage#connectionDetails@ object, then the client does not have an identity but is allowed to assume an identity when performing operations with Ably. As such, @Auth#clientId@ should contain the string value @'*'@ indicating that the current client is allowed to perform operations on behalf of any @clientId@
-** @(RSA7c)@ A @clientId@ provided in the @ClientOptions@ when instancing the library must be either @null@ or a string, and cannot contain only a wildcard @'*'@ string value as that client ID value is reserved
+** @(RSA7c)@ A @clientId@ provided in the @ClientOptions@ when instantiating a @RestClient@ must be either @null@ or a string, and cannot contain only a wildcard @'*'@ string value as that client ID value is reserved
 * @(RSA8)@ @Auth#requestToken@ function:
 ** @(RSA8e)@ Method signature is @requestToken(TokenParams, AuthOptions)@. @TokenParams@ and @AuthOptions@ are optional. When @TokenParams@ or @AuthOptions@ are provided, the values of each attribute are not merged with the configured client library defaults, but rather are used instead of the stored values (even when @null@). If the object arguments are omitted, the client library configured defaults are used
 ** @(RSA8a)@ Implicitly creates a @TokenRequest@ if required, and requests a token from Ably if required. Returns a @TokenDetails@ object
@@ -232,24 +232,24 @@ h3(#rest-auth). Auth
 ** @(RSA16a)@ Holds a @TokenDetails@ representing the token currently in use by the library, if any;
 ** @(RSA16b)@ If the library is provided with a token without the corresponding @TokenDetails@, then this holds a @TokenDetails@ instance in which only the @token@ attribute is populated with that token string
 ** @(RSA16c)@ Is set with the current token (if applicable) on instantiation and each time it is replaced, whether the result of an explicit @Auth#authorize@ operation, or a library-initiated renewal resulting from expiry or a token error response
-** @(RSA16d)@ Is empty if there is no current token, including after a previous token has been determined to be invalid or expired, or if the library is using basic auth
+** @(RSA16d)@ Is @null@ if there is no current token, including after a previous token has been determined to be invalid or expired, or if the library is using basic auth
 
 h3(#rest-channels). Channels
 
-* @(RSN1)@ @Channels@ is a collection of @Channel@ objects accessible through @Rest#channels@
+* @(RSN1)@ @Channels@ is a collection of @RestChannel@ objects accessible through @RestClient#channels@
 * @(RSN2)@ Methods should exist to check if a channel exists or iterate through the existing channels
 * @(RSN3)@ @Channels#get@ function:
-** @(RSN3a)@ Creates a new @Channel@ object for the specified channel if none exists, or returns the existing channel. @ChannelOptions@ can be provided in an optional second argument
-** @(RSN3b)@ If options are provided, the options are set on the @Channel@
-** @(RSN3c)@ Accessing an existing @Channel@ with options in the form @Channels#get(channel, options)@ will update the options on the channel and then return the existing @Channel@ object. (Note that this is soft-deprecated and may be removed in a future release, so should not be implemented in new client libraries. The supported way to update a set of @ChannelOptions@ is @Channel#setOptions@)
+** @(RSN3a)@ Creates a new @RestChannel@ object for the specified channel if none exists, or returns the existing channel. @ChannelOptions@ can be provided in an optional second argument
+** @(RSN3b)@ If options are provided, the options are set on the @RestChannel@
+** @(RSN3c)@ Accessing an existing @RestChannel@ with options in the form @Channels#get(channel, options)@ will update the options on the channel and then return the existing @RestChannel@ object. (Note that this is soft-deprecated and may be removed in a future release, so should not be implemented in new client libraries. The supported way to update a set of @ChannelOptions@ is @RestChannel#setOptions@)
 * @(RSN4)@ @Channels#release@ function:
 ** @(RSN4a)@ Takes one argument, the channel name, and releases the corresponding channel entity (that is, deletes it to allow it to be garbage collected)
 ** @(RSN4b)@ Calling @release()@ with a channel name that does not correspond to an extant channel entity must return without error
 ** @(RSN4c)@ This clause has been deleted.
 
-h3(#rest-channel). Channel
+h3(#rest-channel). RestChannel
 
-* @(RSL1)@ @Channel#publish@ function:
+* @(RSL1)@ @RestChannel#publish@ function:
 ** @(RSL1a)@ Expects either a @Message@ object, an array of @Message@ objects, or a @name@ string and @data@ payload
 ** @(RSL1b)@ When @name@ and @data@ (or a @Message@) is provided, a single message is published to Ably
 ** @(RSL1c)@ When an array of @Message@ objects is provided, a single request is made to Ably
@@ -271,13 +271,13 @@ h3(#rest-channel). Channel
 *** @(RSL1k5)@ An explicit test for idempotency of publishes with client-supplied ids shall exist that involves multiple explicit publish requests for a given message and verifies that the net outcome is that the message is published only once.
 ** @(RSL1l)@ The @publish(Message)@ and @publish(Message[])@ forms of the method should take an extra @Dict<String, Stringifiable>@ argument. These parameters should be encoded using normal querystring-encoding and sent as part of the query string of the REST publish. (@Stringifiable@ is defined in @RTC1f@)
 *** @(RSL1l1)@ Publish params can be tested by publishing with a @_forceNack=true@ parameter, which will result in the publish being rejected with a @40099@ error code
-* @(RSL2)@ @Channel#history@ function:
+* @(RSL2)@ @RestChannel#history@ function:
 ** @(RSL2a)@ Returns a @PaginatedResult@ page containing the first page of messages in the @PaginatedResult#items@ attribute returned from the history request
 ** @(RSL2b)@ Supports the following params:
 *** @(RSL2b1)@ @start@ and @end@ are timestamp fields represented as milliseconds since epoch, or where suitable to the language, Time objects. @start@ must be equal to or less than @end@ and is unaffected by the request direction
 *** @(RSL2b2)@ @direction@ backwards or forwards; if omitted the direction defaults to the REST API default (backwards)
 *** @(RSL2b3)@ @limit@ supports up to 1,000 items; if omitted the direction defaults to the REST API default (100)
-* @(RSL3)@ @Channel#presence@ attribute contains a @Presence@ object for this channel
+* @(RSL3)@ @RestChannel#presence@ attribute contains a @RestPresence@ object for this channel
 * @(RSL4)@ Message encoding
 ** @(RSL4a)@ Payloads must be binary, strings, or objects capable of JSON representation, or can be empty (omitted). Any other data type should not be permitted and result in an error
 ** @(RSL4b)@ If a message is encoded, the @encoding@ attribute represents the encoding(s) applied in right to left format i.e. "utf-8/base64" indicates that the original payload has "utf-8" encoding and has subsequently been encoded in Base64 format
@@ -292,7 +292,7 @@ h3(#rest-channel). Channel
 *** @(RSL4d3)@ a JSON Message payload is stringified either as a JSON Object or Array and represented as a JSON string and the @encoding@ attribute is set to "json"
 *** @(RSL4d4)@ All messages received will be decoded based on the @encoding@ field and deliver payloads in the format they were sent in i.e. binary, string, or a structured type containing the parsed JSON
 * @(RSL5)@ Message payload encryption
-** @(RSL5a)@ When a @Channel@ is instantiated with a (non-null) @cipher@ channelOption, message payloads will be automatically encrypted when sent to Ably and decrypted when received on this channel, using the @cipher@ configuration
+** @(RSL5a)@ When a @RestChannel@ is instantiated with a (non-null) @cipher@ channelOption, message payloads will be automatically encrypted when sent to Ably and decrypted when received on this channel, using the @cipher@ configuration
 ** @(RSL5b)@ AES 256 and 128 CBC encryption must be supported
 ** @(RSL5c)@ Tests must exist that encrypt and decrypt the following fixture data for "AES 128":https://github.com/ably/ably-common/blob/main/test-resources/crypto-data-128.json and "AES 256":https://github.com/ably/ably-common/blob/main/test-resources/crypto-data-256.json to ensure the client library encryption is compatible across libraries
 * @(RSL6)@ Message decoding
@@ -300,8 +300,8 @@ h3(#rest-channel). Channel
 *** @(RSL6a1)@ A set of tests must exist to ensure that the client library provides data encoding & decoding interoperability with other client libraries. The tests must use the "set of predefined interoperability message fixtures":https://github.com/ably/ably-common/blob/main/test-resources/messages-encoding.json to 1) publish a raw message to the REST API using the JSON transport and subscribe to the message using Realtime to ensure the @data@ attribute matches the fixture; 2) publish a message using the REST client library and retrieve the raw message using the history REST API using the JSON transport ensuring the @data@ matches the fixture; 3) perform the client library operation using both @JSON@ and @MsgPack@ transports. For reference, see the "Ruby":https://github.com/ably/ably-ruby/pull/94 and "iOS":https://github.com/ably/ably-cocoa/pull/459 implementations
 *** @(RSL6a2)@ A set of tests must exist to ensure that the client library provides interoperability for the @extras@ field which is a JSON-encodable object (ie a value that represents a JSON @object@ value and supports serialization to and from JSON text). The test, at a minimum, should publish a message with an @extras@ object such as @{"push":[{"title":"Testing"}]}@ and ensure it is received with an equivalent JSON-encodable object
 ** @(RSL6b)@ If, for example, incompatible encryption details are provided or invalid Base64 is detected in the message payload, an error message will be sent to the logger, but the message will still be delivered with last successful decoding and the @encoding@ field. For example, if a message had a decoding of "utf-8/cipher+aes-128-cbc/base64", and the payload was successfully Base64 decoded but the payload could not be decrypted because the @CipherParam@ details were not configured, the message would be delivered with a binary payload and an @encoding@ with the value "utf-8/cipher+aes-128-cbc". Additional steps need to be taken if decoding failed on "vcdiff" encoding; see "RTL18":#RTL18
-* @(RSL7)@ @Channel#setOptions@ takes a @ChannelOptions@ object and sets or updates the stored channel options, then indicates success
-* @(RSL8)@ @Channel#status@ function: makes a http get request to @<restHost>/channels/<channelId>@ where @<restHost>@ represents the current rest host as described by "@RSC11@":#RSC11
+* @(RSL7)@ @RestChannel#setOptions@ takes a @ChannelOptions@ object and sets or updates the stored channel options, then indicates success
+* @(RSL8)@ @RestChannel#status@ function: makes a http get request to @<restHost>/channels/<channelId>@ where @<restHost>@ represents the current rest host as described by "@RSC11@":#RSC11
 ** @(RSL8a)@ Returns a @ChannelDetails@ object
 
 h3(#plugins). Plugins
@@ -310,15 +310,15 @@ h3(#plugins). Plugins
 * @(PC3)@ A plugin provided with the @PluginType@ enum key value of @vcdiff@ should be capable of decoding "vcdiff"-encoded messages. It must implement the @VCDiffDecoder@ interface and the client library must be able to use it by casting it to this interface.
 ** @(PC3a)@ The base argument of the @VCDiffDecoder.decode@ method should receive the stored base payload of the last message on a channel as specified by "RTL19":#RTL19. If the base payload is a string it should be encoded to binary using UTF-8 before being passed as base argument of the @VCDiffDecoder.decode@ method.
 
-h3(#rest-presence). Presence
-* @(RSP1)@ Presence object is associated with a single channel and is accessible through @Channel#presence@
+h3(#rest-presence). RestPresence
+* @(RSP1)@ RestPresence object is associated with a single channel and is accessible through @RestChannel#presence@
 * @(RSP2)@ There is no way to register a member as present on a channel via the REST API
-* @(RSP3)@ @Presence#get@ function:
+* @(RSP3)@ @RestPresence#get@ function:
 ** @(RSP3a)@ Returns a @PaginatedResult@ page containing the first page of members present in the @PaginatedResult#items@ attribute returned from the presence request. Each member is represented as a @PresenceMessage@. Supports the following params:
 *** @(RSP3a1)@ @limit@ supports up to 1,000 items; if unspecified it defaults to the REST API default (100)
 *** @(RSP3a2)@ @clientId@ filters members by the provided @clientId@
 *** @(RSP3a3)@ @connectionId@ filters members by the provided @connectionId@
-* @(RSP4)@ @Presence#history@ function:
+* @(RSP4)@ @RestPresence#history@ function:
 ** @(RSP4a)@ Returns a @PaginatedResult@ page containing the first page of messages in the @PaginatedResult#items@ attribute returned from the presence request
 ** @(RSP4b)@ Supports the following params:
 *** @(RSP4b1)@ @start@ and @end@ are timestamp fields represented as milliseconds since epoch, or where appropriate to the language, Date/Time objects. @start@ must be equal to or less than @end@ and is unaffected by the request direction
@@ -329,7 +329,7 @@ h3(#rest-presence). Presence
 h3(#rest-encryption). Encryption
 * @(RSE1)@ @Crypto::getDefaultParams@ function:
 ** @(RSE1a)@ Returns a complete @CipherParams@ instance, using the default values for any field not supplied
-** @(RSE1b)@ Takes a hashmap (or language equivalent) consisting of any subset of @CipherParams@ fields that includes a @key@
+** @(RSE1b)@ Takes a @CipherParamOptions@ instance.
 ** @(RSE1c)@ The @key@ must be either a binary (e.g. a byte array, depending on the language), or a base64-encoded string. If the key is a string, the function should base64-decode it into a binary. Since the conversion to base64 is not under Ably control, this should be done leniently -- in particular, it should work with base64url (RFC 4648 s.5, which uses @-@ and @_@ instead of @+@ and @/@) as well as base64 (RFC 4648 s.4)
 ** @(RSE1d)@ Calculates a @keyLength@ from the key (its size in bits).
 ** @(RSE1e)@ Checks that the provided options are valid and self-consistent as best it can, raises an exception if not. At a minimum, this should include checking the calculated @keyLength@ is a valid key length for the encryption algorithm (for example, 128 or 256 for @AES@)
@@ -386,7 +386,7 @@ h3(#realtimeclient). RealtimeClient
 *** @(RTC8b1)@ The @authorize@ call should be indicated as completed with the new token once the connection has moved to the @CONNECTED@ state, or with an error if the connection instead moves to the @FAILED@, @SUSPENDED@, or @CLOSED@ states
 ** @(RTC8c)@ If the connection is in the @DISCONNECTED@, @SUSPENDED@, @FAILED@, or @CLOSED@ state when @auth#authorize@ is called, after obtaining a token the library should move to the @CONNECTING@ state and initiate a connection attempt using the new token, and @RTC8b1@ applies.
 * @(RTC9)@ @RealtimeClient#request@ is a wrapper around @RestClient#request@ (see "RSC19":#RSC19) delivered in an idiomatic way for the realtime library, e.g. in the case of Ruby, with an evented async callback interface
-* @(RTC10)@ The client library should never register any listeners for internal use with the public @EventEmitter@ interfaces (such as @Connection#on@) or message/event subscription interfaces (such as @Channel#subscribe@) in such a way that a user of the library calling @Connection#off()@ or @Channel#unsubscribe()@ to remove all listeners would result in the library not working as expected
+* @(RTC10)@ The client library should never register any listeners for internal use with the public @EventEmitter@ interfaces (such as @Connection#on@) or message/event subscription interfaces (such as @RealtimeChannel#subscribe@) in such a way that a user of the library calling @Connection#off()@ or @RealtimeChannel#unsubscribe()@ to remove all listeners would result in the library not working as expected
 * @(RTC11)@ Unexpected internal exceptions, as defined in "@RSC20@":#RSC20, must be handled as gracefully as possible and reported to Ably's error reporting service when enabled. The aim when handling unexpected exceptions should be to ensure that no invalid or inconsistent state can potentially be left after handling the exception; depending on circumstances the remedial action could include failing the transport, failing the connection, rejecting a message, reinitialising the library completely, etc.
 
 h3(#realtime-connection). Connection
@@ -409,7 +409,7 @@ h3(#realtime-connection). Connection
 ** @(RTN4e)@ A @ConnectionStateChange@ object is emitted as the first argument for every @ConnectionEvent@ (including both @RTN4a@ connection state changes and @RTL4h@ @UPDATE@ events)
 ** @(RTN4f)@ The @ConnectionStateChange@ object may contain a @reason@ consisting of an @ErrorInfo@ object with details of the error that has occurred for the @Connection@. Any state change triggered by a @ProtocolMessage@ that contains an @error@ member should populate the @reason@ with that error in the corresponding state change event
 ** @(RTN4i)@ Optionally, for backwards compatibility with 0.8 libraries, the @Connection@ @EventEmitter@ can provide an overloaded method that supports @on(ConnectionState)@, but must issue a deprecation warning
-* @(RTN5)@ A test should exist that instances many (50+) clients simultaneously and performs a few basic operations such as attaching to a channel, publishing a message, and expecting all of those messages to arrive on all clients to ensure that there are no concurrency issues with the client library
+* @(RTN5)@ A test should exist that instantiates many (50+) clients simultaneously and performs a few basic operations such as attaching to a channel, publishing a message, and expecting all of those messages to arrive on all clients to ensure that there are no concurrency issues with the client library
 * @(RTN6)@ A @Connection@ is successful and considered @CONNECTED@ once the "websocket":https://ably.com/topic/websockets connection is open and the initial @CONNECTED@ @ProtocolMessage@ has been received
 * @(RTN21)@ If the @CONNECTED@ @ProtocolMessage@ contains a @connectionDetails@ property, the attributes within @ConnectionDetails@ will be used as the defaults for this client library, overriding any configured options at the time the @CONNECTED@ @ProtocolMessage@ is received
 * @(RTN7)@ @ACK@ and @NACK@:
@@ -431,7 +431,7 @@ h3(#realtime-connection). Connection
 ** @(RTN11a)@ Explicitly connects to the Ably service if not already connected
 ** @(RTN11b)@ If the state is @CLOSING@, the client should make a new connection with a new transport instance and remove all references to the old one. In particular, it should make sure that, when the @CLOSED@ @ProtocolMessage@ arrives for the old connection, it doesn't affect the new one.
 ** @(RTN11c)@ If the state is @DISCONNECTED@ or @SUSPENDED@, skips the ongoing wait in the retry process described in "RTN14d":#RTN14d and "RTN14e":#RTN14e, so that the next reconnection attempt happens immediately.
-** @(RTN11d)@ If the state is @CLOSED@ or @FAILED@, transitions all the channels to @INITIALIZED@ and unsets their @Channel.errorReason@, unsets the @Connection.errorReason@, clears all connection state (including in particular @Connection.recoveryKey@), and resets the @msgSerial@ to @0@
+** @(RTN11d)@ If the state is @CLOSED@ or @FAILED@, transitions all the channels to @INITIALIZED@ and unsets their @RealtimeChannel.errorReason@, unsets the @Connection.errorReason@, clears all connection state (including in particular @Connection.recoveryKey@), and resets the @msgSerial@ to @0@
 * @(RTN12)@ @Connection#close@ function:
 ** @(RTN12f)@ If the connection state is @CONNECTING@, moves immediately to @CLOSING@. If the connection attempt succeeds, ie. a @CONNECTED@ @ProtocolMessage@ arrives from Ably, then do as specified in "RTN12a":#RTN12a. If it doesn't succeed, move to @CLOSED@.
 ** @(RTN12a)@ If the connection state is @CONNECTED@, sends a @CLOSE@ @ProtocolMessage@ to the server, transitions the state to @CLOSING@ and waits for a @CLOSED@ @ProtocolMessage@ to be received
@@ -449,7 +449,7 @@ h3(#realtime-connection). Connection
 ** @(RTN14b)@ If a connection request fails due to an @ERROR@ @ProtocolMessage@ being received by the client containing a token error (@statusCode@ value of 401 and error @code@ value in the range @40140 <= code < 40150@) and an empty @channel@ attribute, then if the token is renewable, a single attempt to create a new token should be made and a new connection attempt initiated using the newly created token. If the attempt to create a new token fails, or the subsequent connection attempt fails due to another token error, then the connection will transition to the @DISCONNECTED@ state, and the @Connection#errorReason@ should be set. (If no means to renew the token is provided, @RSA4a@ applies)
 ** @(RTN14g)@ If an @ERROR@ @ProtocolMessage@ with an empty @channel@ attribute is received for any reason other than "RTN14b":#RTN14b, then the connection will transition to the @FAILED@ state and the server will terminate the connection. Additionally the @Connection#errorReason@ must be set with the error from the @ERROR@ @ProtocolMessage@
 ** @(RTN14c)@ A new connection attempt will fail if not connected within the "default realtime request timeout":#defaults
-** @(RTN14d)@ If a connection attempt fails for any recoverable reason (i.e. a network failure, a timeout such as "RTN14c":#RTN14c, or a disconnected response, other than a token failure "RTN14b":#RTN14b), the @Connection#state@ will transition to @DISCONNECTED@, the @Connection#errorReason@ will be updated, a @ConnectionStateChange@ with the @reason@ will be emitted, and new connection attempts will periodically be made until the maximum time in that state threshold is reached.  The @retryIn@ attribute of the @ConnectionStateChange@ object will contain the time in milliseconds until the next connection attempt. See the @disconnectedRetryTimeout@ of @ClientOptions@ below. Each time a new connection attempt is made the state will transition to @CONNECTING@ and then to @CONNECTED@ if successful, or @DISCONNECTED@ if unsuccessful and the "default @connectionStateTtl@":#defaults has not been exceeded. Fallback hosts are used for new connection attempts in accordance with "RTN17":#RTN17.
+** @(RTN14d)@ If a connection attempt fails for any recoverable reason (i.e. a network failure, a timeout such as "RTN14c":#RTN14c, or a disconnected response, other than a token failure "RTN14b":#RTN14b), the @Connection#state@ will transition to @DISCONNECTED@, the @Connection#errorReason@ will be updated, a @ConnectionStateChange@ with the @reason@ will be emitted, and new connection attempts will periodically be made until the maximum time in that state threshold is reached.  The @retryIn@ attribute of the @ConnectionStateChange@ object will contain the time in milliseconds until the next connection attempt. @retryIn@ should be calculated as described in "@RTB1@":#RTB1. Each time a new connection attempt is made the state will transition to @CONNECTING@ and then to @CONNECTED@ if successful, or @DISCONNECTED@ if unsuccessful and the "default @connectionStateTtl@":#defaults has not been exceeded. Fallback hosts are used for new connection attempts in accordance with "RTN17":#RTN17.
 ** @(RTN14e)@ Once the connection state has been in the @DISCONNECTED@ state for more than the "default @connectionStateTtl@":#defaults, the state will change to @SUSPENDED@ and be emitted with the @reason@, and the @Connection#errorReason@ will be updated. In this state, a new connection attempt will be made periodically as specified within @suspendedRetryTimeout@ of @ClientOptions@
 ** @(RTN14f)@ The connection will remain in the @SUSPENDED@ state indefinitely, whilst periodically attempting to reestablish a connection
 * @(RTN15)@ @Connection@ failures once @CONNECTED@:
@@ -503,35 +503,35 @@ h3(#realtime-connection). Connection
 
 h3(#realtime-channels). Channels
 
-* @(RTS1)@ @Channels@ is a collection of @Channel@ objects accessible through @Realtime#channels@
+* @(RTS1)@ @Channels@ is a collection of @RealtimeChannel@ objects accessible through @RealtimeClient#channels@
 * @(RTS2)@ Methods should exist to check if a channel exists or iterate through the existing channels
 * @(RTS3)@ @Channels#get@ function:
-** @(RTS3a)@ Creates a new @Channel@ object for the specified channel if none exists, or returns the existing channel. @ChannelOptions@ can be provided in an optional second argument
-** @(RTS3b)@ If options are provided, the options are set on the @Channel@ when creating a new @Channel@
-** @(RTS3c)@ Accessing an existing @Channel@ with options in the form @Channels#get(channel, options)@ will update the options on the channel and then return the existing @Channel@ object. (Note that this is soft-deprecated and may be removed in a future release, so should not be implemented in new client libraries. The supported way to update a set of @ChannelOptions@ is @Channel#setOptions@)
-*** @(RTS3c1)@ If a new set of @ChannelOptions@ is supplied to @Channels#get@ that would trigger a reattachment of the channel if supplied to @Channel#setOptions@ per "@RTL16a@":#RTL16a, it must raise an error, informing the user that they must use @Channel#setOptions@ instead
+** @(RTS3a)@ Creates a new @RealtimeChannel@ object for the specified channel if none exists, or returns the existing channel. @ChannelOptions@ can be provided in an optional second argument
+** @(RTS3b)@ If options are provided, the options are set on the @RealtimeChannel@ when creating a new @RealtimeChannel@
+** @(RTS3c)@ Accessing an existing @RealtimeChannel@ with options in the form @Channels#get(channel, options)@ will update the options on the channel and then return the existing @RealtimeChannel@ object. (Note that this is soft-deprecated and may be removed in a future release, so should not be implemented in new client libraries. The supported way to update a set of @ChannelOptions@ is @RealtimeChannel#setOptions@)
+*** @(RTS3c1)@ If a new set of @ChannelOptions@ is supplied to @Channels#get@ that would trigger a reattachment of the channel if supplied to @RealtimeChannel#setOptions@ per "@RTL16a@":#RTL16a, it must raise an error, informing the user that they must use @RealtimeChannel#setOptions@ instead
 * @(RTS4)@ @Channels#release@ function:
 ** @(RTS4a)@ Detaches the channel and then releases the channel resource i.e. it's deleted and can then be garbage collected
 
-h3(#realtime-channel). Channel
+h3(#realtime-channel). RealtimeChannel
 
-* @(RTL1)@ As soon as a @Channel@ becomes attached, all incoming messages and presence messages (where 'incoming' is defined as 'received from Ably over the realtime transport') are processed and emitted where applicable. @PRESENCE@ and @SYNC@ messages are passed to the @Presence@ object ensuring it maintains a map of current members on a channel in realtime
-* @(RTL2)@ The @Channel@ implements @EventEmitter@ and emits @ChannelEvent@ events, where a @ChannelEvent@ is either a @ChannelState@ or @UPDATE@, and a @ChannelState@ is either @INITIALIZED@, @ATTACHING@, @ATTACHED@, @DETACHING@, @DETACHED@, @SUSPENDED@ and @FAILED@
+* @(RTL1)@ As soon as a @RealtimeChannel@ becomes attached, all incoming messages and presence messages (where 'incoming' is defined as 'received from Ably over the realtime transport') are processed and emitted where applicable. @PRESENCE@ and @SYNC@ messages are passed to the @RealtimePresence@ object ensuring it maintains a map of current members on a channel in realtime
+* @(RTL2)@ The @RealtimeChannel@ implements @EventEmitter@ and emits @ChannelEvent@ events, where a @ChannelEvent@ is either a @ChannelState@ or @UPDATE@, and a @ChannelState@ is either @INITIALIZED@, @ATTACHING@, @ATTACHED@, @DETACHING@, @DETACHED@, @SUSPENDED@ and @FAILED@
 ** @(RTL2a)@ It emits a @ChannelState@ @ChannelEvent@ for every channel state change
 ** @(RTL2g)@ It emits an @UPDATE@ @ChannelEvent@ for changes to channel conditions for which the @ChannelState@ (e.g. @ATTACHED@) does not change, unless explicitly prevented by a more specific condition (see "RTL12":#RTL12). (The library must never emit a @ChannelState@ @ChannelEvent@ for a state equal to the previous state)
-** @(RTL2b)@ @Channel#state@ attribute is the current state of the channel
+** @(RTL2b)@ @RealtimeChannel#state@ attribute is the current state of the channel
 ** @(RTL2d)@ A @ChannelStateChange@ object is emitted as the first argument for every @ChannelEvent@ (including both @RTL2a@ state changes and @RTL2g@ @UPDATE@ events). It may optionally contain a @reason@ consisting of an @ErrorInfo@ object; any state change triggered by a @ProtocolMessage@ that contains an @error@ member should populate the @reason@ with that error in the corresponding state change event
 ** @(RTL2f)@ When a channel @ATTACHED@ @ProtocolMessage@ is received, the @ProtocolMessage@ may contain a @RESUMED@ bit flag indicating that the channel has been resumed. The corresponding @ChannelStateChange@ (either @ATTACHED@ per @RTL2a@, or @UPDATE@ per @RTL12@) will contain a @resumed@ boolean attribute with value @true@ if the bit flag @RESUMED@ was included. When @resumed@ is @true@, this indicates that the channel attach resumed the channel state from an existing connection and there has been no loss of message continuity. In all other cases, @resumed@ is false. A test should exist to ensure that @resumed@ is always false when a channel first becomes @ATTACHED@, it is @true@ when the channel is @ATTACHED@ following a successful "connection recovery":#RTN16, and is @false@ when the channel is @ATTACHED@ following a failed "connection recovery":#RTN16
-** @(RTL2h)@ Optionally, for backwards compatibility with 0.8 libraries, the @Channel@ @EventEmitter@ can provide an overloaded method that supports @on(ChannelState)@, but must issue a deprecation warning
+** @(RTL2h)@ Optionally, for backwards compatibility with 0.8 libraries, the @RealtimeChannel@ @EventEmitter@ can provide an overloaded method that supports @on(ChannelState)@, but must issue a deprecation warning
 * @(RTL3)@ Connection state change side effects:
 ** @(RTL3e)@ If the connection state enters the @DISCONNECTED@ state, it will have no effect on the channel states.
-** @(RTL3a)@ If the connection state enters the @FAILED@ state, then an @ATTACHING@ or @ATTACHED@ channel state will transition to @FAILED@ and set the @Channel#errorReason@
+** @(RTL3a)@ If the connection state enters the @FAILED@ state, then an @ATTACHING@ or @ATTACHED@ channel state will transition to @FAILED@ and set the @RealtimeChannel#errorReason@
 ** @(RTL3b)@ If the connection state enters the @CLOSED@ state, then an @ATTACHING@ or @ATTACHED@ channel state will transition to @DETACHED@
 ** @(RTL3c)@ If the connection state enters the @SUSPENDED@ state, then an @ATTACHING@ or @ATTACHED@ channel state will transition to @SUSPENDED@
 ** @(RTL3d)@ If the connection state enters the @CONNECTED@ state, then a @SUSPENDED@ channel will initiate an attach operation and transition to @ATTACHING@. If the attach operation times out, the channel should return to the @SUSPENDED@ state (see "RTL4f":#RTL4f)
 * @(RTL11)@ If a channel enters the @DETACHED@, @SUSPENDED@ or @FAILED@ state, then all presence actions that are still queued for send on that channel per "RTP16b":#RTP16b should be deleted from the queue, and any callback passed to the corresponding presence method invocation should be called with an @ErrorInfo@ indicating the failure
 ** @(RTL11a)@ For clarity, any messages awaiting an @ACK@ or @NACK@ are unaffected by channel state changes i.e. a channel that becomes detached following an explicit request to detach may still receive an @ACK@ or @NACK@ for messages published on that channel later
-* @(RTL4)@ @Channel#attach@ function:
+* @(RTL4)@ @RealtimeChannel#attach@ function:
 ** @(RTL4a)@ If already @ATTACHED@ nothing is done
 ** @(RTL4h)@ If the channel is in a pending state @DETACHING@ or @ATTACHING@, do the attach operation after the completion of the pending request
 ** @(RTL4g)@ If the channel is in the @FAILED@ state, the @attach@ request sets its @errorReason@ to @null@, and proceeds with a channel attach described in "RTL4b":#RTL4b, "RTL4i":#RTL4i and "RTL4c":#RTL4c
@@ -541,15 +541,15 @@ h3(#realtime-channel). Channel
 ** @(RTL4c)@ Otherwise an @ATTACH@ ProtocolMessage is sent to the server, the state transitions to @ATTACHING@ and the channel becomes @ATTACHED@ when the confirmation @ATTACHED@ ProtocolMessage is received
 ** @(RTL4f)@ Once an @ATTACH@ @ProtocolMessage@ is sent, if an @ATTACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the attach request should be treated as though it has failed and the channel should transition to the @SUSPENDED@ state. The channel will then be subsequently automatically re-attached as described in "RTL13":#RTL13
 ** @(RTL4d)@ A callback (or other language-idiomatic equivalent) can be provided that is called when the channel next moves to one of @ATTACHED@, @DETACHED@, @SUSPENDED@, or @FAILED@ states. In the case of @ATTACHED@ the callback is called with no argument. In all other cases it is called with an @ErrorInfo@ corresponding to the @ChannelStateChange.reason@ of the state change (or a fallback if there is no @reason@) to indicate that the attach has failed. (Note: when combined with RTL4f, this means that if the connection is @CONNECTED@, the callback is guaranteed to be called within @realtimeRequestTimeout@ of the @attach()@ call)
-** @(RTL4e)@ If the user does not have sufficient permissions to attach to the channel, the channel will transition to @FAILED@ and set the @Channel#errorReason@
+** @(RTL4e)@ If the user does not have sufficient permissions to attach to the channel, the channel will transition to @FAILED@ and set the @RealtimeChannel#errorReason@
 ** @(RTL4j)@ If the attach is not a clean attach (defined in @RTL4j1@), for example an automatic reattach triggered by "@RTN15c3@":#RTN15c3 or "@RTL13a@":#RTL13a (non-exhaustive), the library should set the "@ATTACH_RESUME@":#TR3f flag in the @ATTACH@ message
 *** @(RTL4j1)@ A 'clean attach' is an attach attempt where the channel has either not previously been attached or has been explicitly detached since the last time it was attached. Note that this is not purely a function of the immediate previous channel state. An example implementation would be to set the flag from an @attachResume@ private boolean variable on the channel, that starts out set to @false@, is set to @true@ when the channel moves to the @ATTACHED@ state, and set to @false@ when the channel moves to the @DETACHING@ or @FAILED@ states.
 *** @(RTL4j2)@ The client library can test that the flag is being correctly encoded (and that @RTL4k@ channel params are correctly included) by publishing a message on a channel, then having another two clients attach to that channel both specifying a @rewind@ channel param of @"1"@, one of which has the @ATTACH_RESUME@ flag forcibly set, other doesn't. The client without the flag set should receive the previously-published message once the attach succeeds; the one with that flag set should not
 ** @(RTL4k)@ If the user has specified a non-empty @params@ object in the @ChannelOptions@ ("@TB2c@":#TB2c), it must be included in a @params@ field of the @ATTACH@ @ProtocolMessage@
-*** @(RTL4k1)@ If any channel parameters are requested (which may be through the @params@ field of the @ATTACH@ message or some other way opaque to the client library), the @ATTACHED@ (and any subsequent @ATTACHED@ s) will include a @params@ property (also a @Dict<String, String>@) containing the subset of those params that the server has recognised and validated. This should be exposed as a read-only @params@ field of the @Channel@ (or a @getParams()@ method where that is more idiomatic). An @ATTACHED@ message with no @params@ property must be treated as equivalent to a @params@ of @{}@ (that is, @Channel.params@ should be set to the empty dict)
+*** @(RTL4k1)@ If any channel parameters are requested (which may be through the @params@ field of the @ATTACH@ message or some other way opaque to the client library), the @ATTACHED@ (and any subsequent @ATTACHED@ s) will include a @params@ property (also a @Dict<String, String>@) containing the subset of those params that the server has recognised and validated. This should be exposed as a read-only @params@ field of the @RealtimeChannel@ (or a @getParams()@ method where that is more idiomatic). An @ATTACHED@ message with no @params@ property must be treated as equivalent to a @params@ of @{}@ (that is, @RealtimeChannel.params@ should be set to the empty dict)
 ** @(RTL4l)@ If the user has specified a @modes@ array in the @ChannelOptions@ ("@TB2d@":#TB2d), it must be encoded as a bitfield per "@TR3@":#TR3 and set as the @flags@ field of the @ATTACH@ @ProtocolMessage@. (For the avoidance of doubt, when multiple different spec items require flags to be set in the @ATTACH@, the final @flags@ field should be the bitwise OR of them all)
-** @(RTL4m)@ On receipt of an @ATTACHED@, the client library should decode the @flags@ into an array of @ChannelMode@ s (that is, the same format as @ChannelOptions.modes@) and expose it as a read-only @modes@ field of the @Channel@ (or a @getModes()@ method where that is more idiomatic). This should only contain @ChannelMode@ s: it should not contain flags which are not modes (see "@TB2d@":#TB2d)
-* @(RTL5)@ @Channel#detach@ function:
+** @(RTL4m)@ On receipt of an @ATTACHED@, the client library should decode the @flags@ into an array of @ChannelMode@ s (that is, the same format as @ChannelOptions.modes@) and expose it as a read-only @modes@ field of the @RealtimeChannel@ (or a @getModes()@ method where that is more idiomatic). This should only contain @ChannelMode@ s: it should not contain flags which are not modes (see "@TB2d@":#TB2d)
+* @(RTL5)@ @RealtimeChannel#detach@ function:
 ** @(RTL5a)@ If the channel state is @INITIALIZED@ or @DETACHED@ nothing is done
 ** @(RTL5i)@ If the channel is in a pending state @DETACHING@ or @ATTACHING@, do the detach operation after the completion of the pending request
 ** @(RTL5b)@ If the channel state is @FAILED@, the @detach@ request results in an error
@@ -560,8 +560,8 @@ h3(#realtime-channel). Channel
 ** @(RTL5f)@ Once a @DETACH@ @ProtocolMessage@ is sent, if a @DETACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the detach request should be treated as though it has failed and the channel will return to its previous state
 ** @(RTL5k)@ If the channel receives an @ATTACHED@ message while in the @DETACHING@ state, it should send a new @DETACH@ message and remain in the @DETACHING@ state
 ** @(RTL5e)@ If the language permits, a callback can be provided that is called when the channel is detached successfully or the detach fails and the @ErrorInfo@ error is passed as an argument to the callback
-* @(RTL6)@ @Channel#publish@ function:
-** @(RTL6a)@ Messages are encoded in the same way as the REST @Channel#publish@ method, and "RSL1g":#RSL1g (size limit) applies similarly
+* @(RTL6)@ @RealtimeChannel#publish@ function:
+** @(RTL6a)@ Messages are encoded in the same way as the @RestChannel#publish@ method, and "RSL1g":#RSL1g (size limit) applies similarly
 *** @(RTL6a1)@ "RSL1k":#RSL1k (@idempotentRestPublishing@ option), "RSL1j1":#RSL1j1 (idempotent publishing test), and "RSL1l":#RSL1l (@publish(Message, params)@ form) do not apply to realtime publishes
 ** @(RTL6b)@ An optional callback can be provided to the @#publish@ method that is called when the message is successfully delivered or upon failure with the appropriate @ErrorInfo@ error. A test should exist to publish lots of messages on a few connections to ensure all message success callbacks are called for all messages published
 ** @(RTL6i)@ Expects either a @Message@ object, an array of @Message@ objects, or a @name@ string and @data@ payload:
@@ -589,36 +589,36 @@ h3(#realtime-channel). Channel
 **** @(RTL6g1b)@ Ably will assign a @clientId@ upon receiving the @Message@. A test should assert that the @clientId@ value is populated for the @Message@ when received
 *** @(RTL6g2)@ When publishing a @Message@ with the @clientId@ attribute value set to the identified client's @clientId@, Ably will accept the message and publish it. A test should assert that the @clientId@ value is populated for the @Message@ when received
 *** @(RTL6g3)@ When publishing a @Message@ with a different @clientId@ attribute value from the identified client's @clientId@, the client library should reject that publish operation immediately. The message should not be sent to Ably and it should result in an error, typically in the form of an error callback. The connection and channel must remain available for further operations
-*** @(RTL6g4)@ When using Token Auth, unless a @clientId@ has been provided in @ClientOptions@ or inferred following authentication, the client library is unidentified and will not be constrained when publishing messages with any explicit @clientId@. If a @Message@ with a @clientId@ value is published before the @clientId@ is configured or inferred following authentication, the client library should not reject any explicit @clientId@ specified in a message. A test should instance a library without an explicit @clientId@ and an @authCallback@ that returns a @tokenDetails@ object with a @clientId@, then publish a message with the same @clientId@ before authentication, and ensure that the message is published following authentication and received back with the @clientId@ intact. A further test should follow the same sequence of events, but should instead use an incompatible @clientId@ in the message, expecting that the message is rejected by the Ably service and the message error should contain the server error message, and the connection and channel should remain available for further operations
+*** @(RTL6g4)@ When using Token Auth, unless a @clientId@ has been provided in @ClientOptions@ or inferred following authentication, the client library is unidentified and will not be constrained when publishing messages with any explicit @clientId@. If a @Message@ with a @clientId@ value is published before the @clientId@ is configured or inferred following authentication, the client library should not reject any explicit @clientId@ specified in a message. A test should instantiate a client without an explicit @clientId@ and an @authCallback@ that returns a @tokenDetails@ object with a @clientId@, then publish a message with the same @clientId@ before authentication, and ensure that the message is published following authentication and received back with the @clientId@ intact. A further test should follow the same sequence of events, but should instead use an incompatible @clientId@ in the message, expecting that the message is rejected by the Ably service and the message error should contain the server error message, and the connection and channel should remain available for further operations
 ** @(RTL6h)@ The @publish(name, data)@ form should not take any arguments other than those two. If a client library has supported additional arguments to the @(name, data)@ form (e.g. separate arguments for @clientId@ and @extras@, or a single @attributes@ argument) in any 1.x version, it should continue to do so until version 2.0.
 ** @(RTL6f)@ @Message#connectionId@ should match the current @Connection#id@ for all published messages, a test should exist to ensure the @connectionId@ for received messages matches that of the publisher
-* @(RTL7)@ @Channel#subscribe@ function:
-** @(RTL7a)@ Subscribe with no arguments subscribes a listener to all messages
-** @(RTL7b)@ Subscribe with a single name argument subscribes a listener to only messages whose @name@ member matches the string name
-** @(RTL7c)@ Implicitly attaches the @Channel@ if the channel is in the @INITIALIZED@ state. The optional callback, if provided, is called according to "@RTL4d@":#RTL4d based on the implicit attach operation. The listener will always be registered regardless of the implicit attach result
-** @(RTL7d)@ Messages delivered are automatically decoded based on the @encoding@ attribute; see REST @Channel@ encoding features. Tests should exist to publish and subscribe to encoded messages using the "AES 128":https://github.com/ably/ably-common/blob/main/test-resources/crypto-data-128.json and "AES 256":https://github.com/ably/ably-common/blob/main/test-resources/crypto-data-256.json fixture test data
+* @(RTL7)@ @RealtimeChannel#subscribe@ function:
+** @(RTL7a)@ Subscribe with a single listener argument subscribes a listener to all messages
+** @(RTL7b)@ Subscribe with a name argument and a listener argument subscribes a listener to only messages whose @name@ member matches the string name
+** @(RTL7c)@ Implicitly attaches the @RealtimeChannel@ if the channel is in the @INITIALIZED@ state. The optional callback, if provided, is called according to "@RTL4d@":#RTL4d based on the implicit attach operation. The listener will always be registered regardless of the implicit attach result
+** @(RTL7d)@ Messages delivered are automatically decoded based on the @encoding@ attribute; see @RestChannel@ encoding features. Tests should exist to publish and subscribe to encoded messages using the "AES 128":https://github.com/ably/ably-common/blob/main/test-resources/crypto-data-128.json and "AES 256":https://github.com/ably/ably-common/blob/main/test-resources/crypto-data-256.json fixture test data
 ** @(RTL7e)@ If a message cannot be decoded or decrypted successfully, it should be delivered to the listener with the @encoding@ attribute set indicating the residual encoding state, and an error should be logged
-** @(RTL7f)@ A test should exist ensuring published messages are not echoed back to the subscriber when @echoMessages@ is set to false in the @Realtime@ library constructor
-* @(RTL8)@ @Channel#unsubscribe@ function:
-** @(RTL8a)@ Unsubscribe with no arguments unsubscribes the provided listener to all messages if subscribed
-** @(RTL8b)@ Unsubscribe with a single name argument unsubscribes the provided listener if previously subscribed with a name-specific subscription
-* @(RTL9)@ @Channel#presence@ attribute:
-** @(RTL9a)@ Returns the @Presence@ object for this channel
-* @(RTL10)@ @Channel#history@ function:
-** @(RTL10a)@ Supports all the same params as REST @Channel#history@
-** @(RTL10b)@ Additionally supports the param @untilAttach@, which if true, will only retrieve messages prior to the moment that the channel was attached or emitted an @UPDATE@ indicating loss of continuity. This bound is specified by passing the querystring param @fromSerial@ with the @Channel#properties.attachSerial@ assigned to the channel in the @ATTACHED@ @ProtocolMessage@ (see "RTL15a":#RTL15a). If the @untilAttach@ param is specified when the channel is not attached, it results in an error
+** @(RTL7f)@ A test should exist ensuring published messages are not echoed back to the subscriber when @echoMessages@ is set to false in the @RealtimeClient@ library constructor
+* @(RTL8)@ @RealtimeChannel#unsubscribe@ function:
+** @(RTL8a)@ Unsubscribe with a single listener argument unsubscribes the provided listener to all messages if subscribed
+** @(RTL8b)@ Unsubscribe with a name argument and a listener argument unsubscribes the provided listener if previously subscribed with a name-specific subscription
+* @(RTL9)@ @RealtimeChannel#presence@ attribute:
+** @(RTL9a)@ Returns the @RealtimePresence@ object for this channel
+* @(RTL10)@ @RealtimeChannel#history@ function:
+** @(RTL10a)@ Supports all the same params as @RestChannel#history@
+** @(RTL10b)@ Additionally supports the param @untilAttach@, which if true, will only retrieve messages prior to the moment that the channel was attached or emitted an @UPDATE@ indicating loss of continuity. This bound is specified by passing the querystring param @fromSerial@ with the @RealtimeChannel#properties.attachSerial@ assigned to the channel in the @ATTACHED@ @ProtocolMessage@ (see "RTL15a":#RTL15a). If the @untilAttach@ param is specified when the channel is not attached, it results in an error
 ** @(RTL10c)@ Returns a @PaginatedResult@ page containing the first page of messages in the @PaginatedResult#items@ attribute returned from the history request
 ** @(RTL10d)@ A test should exist that publishes messages from one client, and upon confirmation of message delivery, a history request should be made on another client to ensure all messages are available
 * @(RTL12)@ An attached channel may receive an additional @ATTACHED@ @ProtocolMessage@ from Ably at any point. (This is typically triggered following a transport being resumed to indicate a partial loss of message continuity on that channel, in which case the @ProtocolMessage@ will have a @resumed@ flag set to false). If and only if the @resumed@ flag is false, this should result in the channel emitting an @UPDATE@ event with a @ChannelStateChange@ object. The @ChannelStateChange@ object should have both @previous@ and @current@ attributes set to @attached@, the @reason@ attribute set to to the @error@ member of the @ATTACHED@ @ProtocolMessage@ (if any), and the @resumed@ attribute set per the @RESUMED@ bitflag of the @ATTACHED@ @ProtocolMessage@. (Note that @UPDATE@ should be the only event emitted: in particular, the library must not emit an @ATTACHED@ event if the channel was already attached, see @RTL2g@).
-* @(RTL15)@ @Channel#properties@ attribute is a @ChannelProperties@ object representing properties of the channel state. @properties@ is a publicly accessible member of the channel, but it is an experimental and unstable API. It has the following attributes:
+* @(RTL15)@ @RealtimeChannel#properties@ attribute is a @ChannelProperties@ object representing properties of the channel state. @properties@ is a publicly accessible member of the channel, but it is an experimental and unstable API. It has the following attributes:
 ** @(RTL15a)@ @attachSerial@ is unset when the channel is instantiated, and is updated with the @channelSerial@ from each @ATTACHED@ @ProtocolMessage@ received from Ably with a matching @channel@ attribute. The @attachSerial@ value is used for @untilAttach@ queries, see "RTL10b":#RTL10b
 * @(RTL13)@ If the channel receives a server initiated @DETACHED@ message when it is in the @ATTACHING@, @ATTACHED@ or @SUSPENDED@ state (i.e. the client has not explicitly requested a detach putting the channel into the @DETACHING@ state), then the following applies:
 ** @(RTL13a)@ If the channel is in the @ATTACHED@ or @SUSPENDED@ states, an attempt to reattach the channel should be made immediately by sending a new @ATTACH@ message and the channel should transition to the @ATTACHING@ state with the error emitted in the @ChannelStateChange@ event.
-** @(RTL13b)@ If the attempt to re-attach fails, or if the channel was already in the @ATTACHING@ state, the channel will transition to the @SUSPENDED@ state and the error will be emitted in the @ChannelStateChange@ event. An attempt to re-attach the channel automatically will then be made after the period defined in @ClientOptions#channelRetryTimeout@. When re-attaching the channel, the channel will transition to the @ATTACHING@ state. If that request to attach fails i.e. it times out or a @DETACHED@ message is received, then the process described here in @RTL13b@ will be repeated, indefinitely
+** @(RTL13b)@ If the attempt to re-attach fails, or if the channel was already in the @ATTACHING@ state, the channel will transition to the @SUSPENDED@ state and the error will be emitted in the @ChannelStateChange@ event. An attempt to re-attach the channel automatically will then be made after the period defined by "@RTB1@":#RTB1. When re-attaching the channel, the channel will transition to the @ATTACHING@ state. If that request to attach fails i.e. it times out or a @DETACHED@ message is received, then the process described here in @RTL13b@ will be repeated, indefinitely
 ** @(RTL13c)@ If the connection is no longer @CONNECTED@, then the automatic attempts to re-attach the channel described in "RTL13b":#RTL13b must be cancelled as any implicit channel state changes subsequently will be covered by "RTL3":#RTL3
-* @(RTL14)@ If an @ERROR ProtocolMessage@ is received for this channel (the channel attribute matches this channel's name), then the channel should immediately transition to the FAILED state, and the @Channel.errorReason@ should be set
-* @(RTL16)@ @Channel#setOptions@ takes a @ChannelOptions@ object and sets or updates the stored channel options.
-** @(RTL16a)@ If the user has provided either @ChannelOptions.params@ or @ChannelOptions.modes@ and the channel is in either the @attached@ or @attaching@ state, @Channel#setOptions@ sends an @ATTACH@ message to the server with the params & modes encoded per "@RTL4@":#RTL4, and indicates success once the server has replied with an @ATTACHED@ (or indicates failure if the channel becomes detached or failed before that happens, as with @Channel#attach@); else it indicates success immediately
+* @(RTL14)@ If an @ERROR ProtocolMessage@ is received for this channel (the channel attribute matches this channel's name), then the channel should immediately transition to the FAILED state, and the @RealtimeChannel.errorReason@ should be set
+* @(RTL16)@ @RealtimeChannel#setOptions@ takes a @ChannelOptions@ object and sets or updates the stored channel options.
+** @(RTL16a)@ If the user has provided either @ChannelOptions.params@ or @ChannelOptions.modes@ and the channel is in either the @attached@ or @attaching@ state, @RealtimeChannel#setOptions@ sends an @ATTACH@ message to the server with the params & modes encoded per "@RTL4@":#RTL4, and indicates success once the server has replied with an @ATTACHED@ (or indicates failure if the channel becomes detached or failed before that happens, as with @RealtimeChannel#attach@); else it indicates success immediately
 * @(RTL17)@ No messages should be passed to subscribers if the channel is in any state other than @ATTACHED@.
 * @(RTL18)@ Given "vcdiff"-encoded deltas are applied to the previous message published on a channel, when a "vcdiff" encoding fails to be decoded, it makes it impossible for a client to apply subsequent deltas received from that point of failure forward. As such, the client must automatically execute the following recovery procedure in lieu of "RTL7e":#"RTL7e":
 ** @(RTL18a)@ Log error with code 40018
@@ -636,7 +636,7 @@ h3(#realtime-channel). Channel
 ** @(RTL22c)@ The listener must only execute if all criteria defined in the provided @MessageFilter@ object are met.
 ** @(RTL22d)@ The method should use the @MessageFilter@ object if possible and idiomatic for the language.
 
-h3(#realtime-presence). Presence
+h3(#realtime-presence). RealtimePresence
 
 * @(RTP1)@ When a channel @ATTACHED@ @ProtocolMessage@ is received, the @ProtocolMessage@ may contain a @HAS_PRESENCE@ bit flag indicating that it will perform a presence sync, see "TR3":#TR3 . (Note that this does not imply that there are definitely members present, only that there may be; the sync may be empty). If the flag is 1, the server will shortly perform a @SYNC@ operation as described in "RTP18":#RTP18 . If that flag is 0 or there is no @flags@ field, the presence map should be considered in sync immediately with no members present on the channel
 * @(RTP2)@ A @PresenceMap@ should be used to maintain a list of members present on a channel. Broadly, this is is a map of "memberKeys":#TP3h to presence messages, all with @PRESENT@ actions (during a sync there may also be ones with an @ABSENT@ action, see "RTP2f":#RTP2f).
@@ -648,83 +648,83 @@ h3(#realtime-presence). Presence
 ** @(RTP2d)@ When a presence message with an action of @ENTER@, @UPDATE@, or @PRESENT@ arrives, it should be added to the presence map with the action set to @PRESENT@
 ** @(RTP2e)@ If a @SYNC@ is not in progress, then when a presence message with an action of @LEAVE@ arrives,  that @memberKey@ should be deleted from the presence map, if present
 ** @(RTP2f)@ If a @SYNC@ is in progress, then when a presence message with an action of @LEAVE@ arrives, it should be stored in the presence map with the action set to @ABSENT@. When the @SYNC@ completes, any @ABSENT@ members should be deleted from the presence map. (This is because in a @SYNC@, we might receive a @LEAVE@ before the corresponding @ENTER@).
-** @(RTP2g)@ Any incoming presence message that passes the newness check should be emitted on the @Presence@ object, with an event name set to its original action. Note: this action may not be the same one that it will have when stored in the presence map. For example: an incoming presence message with an @ENTER@ action will be emitted as an @enter@ event, and the emitted presence message will have its action set to @ENTER@. However, it will be stored in the presence map with a @PRESENT@ action.
+** @(RTP2g)@ Any incoming presence message that passes the newness check should be emitted on the @RealtimePresence@ object, with an event name set to its original action. Note: this action may not be the same one that it will have when stored in the presence map. For example: an incoming presence message with an @ENTER@ action will be emitted as an @enter@ event, and the emitted presence message will have its action set to @ENTER@. However, it will be stored in the presence map with a @PRESENT@ action.
 * @(RTP18)@ The realtime system reserves the right to initiate a sync of the presence members at any point once a channel is attached. A server initiated sync provides Ably with a means to send a complete list of members present on the channel at any point
 ** @(RTP18a)@ The client library determines that a new sync has started whenever a @SYNC@ @ProtocolMessage@ is received with a @channel@ attribute and a new sync sequence identifier in the @channelSerial@ attribute. The @channelSerial@ is used as the sync cursor and is a two-part identifier @<sync sequence id>:<cursor value>@. If a new sequence identifier is sent from Ably, then the client library must consider that to be the start of a new sync sequence and any previous in-flight sync should be discarded
 ** @(RTP18b)@ The sync operation for that sequence identifier has completed once the cursor is empty; that is, when the @channelSerial@ looks like @<sync sequence id>:@
 ** @(RTP18c)@ a @SYNC@ may also be sent with no @channelSerial@ attribute. In this case, the sync data is entirely contained within that @ProtocolMessage@
 * @(RTP19)@ If the @PresenceMap@ has existing members when a @SYNC@ is started, the client library must ensure that members no longer present on the channel are removed from the local @PresenceMap@ once the sync is complete. In order to do this, the client library must keep track of any members that have not been added or updated in the @PresenceMap@ during the sync process. Note that a member can be added or updated when received in a @SYNC@ message or when received in a @PRESENCE@ message during the sync process. Once the sync is complete, the members in the @PresenceMap@ that have not been added or updated should be removed from the @PresenceMap@ and a @LEAVE@ event should be published for each. The @PresenceMessage@ published should contain the original attributes of the presence member with the @action@ set to @LEAVE@, @PresenceMessage#id@ set to @null@, and the @timestamp@ set to the current time. This behavior should be tested as follows: @ENTER@ presence on a channel, wait for @SYNC@ to complete, inject a member directly into the local @PresenceMap@ so that it only exists locally and not on the server, send a @SYNC@ message with the @channel@ attribute populated with the current channel which will trigger a server initiated @SYNC@. A @LEAVE@ event should then be published for the injected member, and checking the @PresenceMap@ should reveal that the member was removed and the valid member entered for this connection is still present
 ** @(RTP19a)@ If the @PresenceMap@ has existing members when an @ATTACHED@ message is received without a @HAS_PRESENCE@ flag, the client library should emit a @LEAVE@ event for each existing member, and the @PresenceMessage@ published should contain the original attributes of the presence member with the @action@ set to @LEAVE@, @PresenceMessage#id@ set to @null@, and the @timestamp@ set to the current time. Once complete, all members in the @PresenceMap@ should be removed as there are no members present on the channel
-* @(RTP17)@ The Presence object should also keep a second @PresenceMap@ containing only members that match the current @connectionId@. Any incoming presence message that satisfies @RTP17b@ should be applied to this object in the same way as for the normal @PresenceMap@. This object should be private and is used to maintain a list of members that need to be automatically re-entered by the @Presence@ object when required to by @RTP17c@.
-** @(RTP17a)@ All members belonging to the current connection are published as a @PresenceMessage@ on the @Channel@ by the server irrespective of whether the client has permission to subscribe or the @Channel@ is configured to publish presence events. A test should exist that attaches to a @Channel@ with a @presence@ capability and without a @subscribe@ capability. It should then enter the @Channel@ and ensure that the member entered from the current connection is present in the internal and public presence set available via "@Presence#get@":#RTP11
+* @(RTP17)@ The RealtimePresence object should also keep a second @PresenceMap@ containing only members that match the current @connectionId@. Any incoming presence message that satisfies @RTP17b@ should be applied to this object in the same way as for the normal @PresenceMap@. This object should be private and is used to maintain a list of members that need to be automatically re-entered by the @RealtimePresence@ object when required to by @RTP17c@.
+** @(RTP17a)@ All members belonging to the current connection are published as a @PresenceMessage@ on the @RealtimeChannel@ by the server irrespective of whether the client has permission to subscribe or the @RealtimeChannel@ is configured to publish presence events. A test should exist that attaches to a @RealtimeChannel@ with a @presence@ capability and without a @subscribe@ capability. It should then enter the @RealtimeChannel@ and ensure that the member entered from the current connection is present in the internal and public presence set available via "@RealtimePresence#get@":#RTP11
 ** @(RTP17b)@ The events that should be applied to the @RTP17@ presence map are: any @ENTER@, @PRESENT@ or @UPDATE@ event with a @connectionId@ that matches the current client's @connectionId@; any @LEAVE@ event with a @connectionId@ that matches the current client's @connectionId@ and is not a 'synthesized leave' (an event that has a connectionId which is not an initial substring of its id, per "@RTP2b1@":#RTP2b1 )
-** @(RTP17c)@ The Presence object should perform automatic re-entry in the following situations:
+** @(RTP17c)@ The RealtimePresence object should perform automatic re-entry in the following situations:
 *** @(RTP17c1)@ After a @SYNC@ operation has completed, per "@RTP18b@":#RTP18b
 *** @(RTP17c2)@ When an @ATTACHED@ message is received with no "@HAS_PRESENCE@":#TR3a flag (so no @SYNC@ is expected as the server does not believe anyone is currently present)
 ** @(RTP17d)@ Automatic re-entry consists of, for each member of the @RTP17@ internal @PresenceMap@ whose @memberKey@ is not also a member of the normal @PresenceMap@, publishing a @PresenceMessage@ with an @ENTER@ action using the @clientId@ and @data@ attributes from that member, and removing that member from the internal @PresenceMap@
 ** @(RTP17e)@ If the publish attempt fails for an automatic presence @ENTER@ (for example, by Ably rejecting it with a @NACK@), an @UPDATE@ event should be emitted on the channel with @resumed@ set to true and @reason@ set to an @ErrorInfo@ object with @code@ @91004@, a @message@ indicating that an automatic re-enter has failed and indicating the @clientId@, and @cause@ set to the reason for the enter failure. The error should also be logged at @warn@ level or higher.
-* @(RTP4)@ Ensure a test exists that enters 250 members using @Presence#enterClient@ on a single connection, and checks for @PRESENT@ events to be emitted on another connection for each member, and once sync is complete, all 250 members should be present in a @Presence#get@ request
-* @(RTP5)@ Channel state change side effects:
-** @(RTP5a)@ If the channel enters the @DETACHED@ or @FAILED@ state then all queued presence messages will fail immediately, and the @PresenceMap@ and "internal PresenceMap (see RTP17)":#RTP17 is cleared. The latter ensures members are not automatically re-entered if the @Channel@ later becomes attached. Since channels in the @DETACHED@ and @FAILED@ states will not receive any presence updates from Ably, presence events (specifically @LEAVE@) should not be emitted when the @PresenceMap@ is cleared as each presence member's state is unknown
+* @(RTP4)@ Ensure a test exists that enters 250 members using @RealtimePresence#enterClient@ on a single connection, and checks for @PRESENT@ events to be emitted on another connection for each member, and once sync is complete, all 250 members should be present in a @RealtimePresence#get@ request
+* @(RTP5)@ RealtimeChannel state change side effects:
+** @(RTP5a)@ If the channel enters the @DETACHED@ or @FAILED@ state then all queued presence messages will fail immediately, and the @PresenceMap@ and "internal PresenceMap (see RTP17)":#RTP17 is cleared. The latter ensures members are not automatically re-entered if the @RealtimeChannel@ later becomes attached. Since channels in the @DETACHED@ and @FAILED@ states will not receive any presence updates from Ably, presence events (specifically @LEAVE@) should not be emitted when the @PresenceMap@ is cleared as each presence member's state is unknown
 ** @(RTP5f)@ If the channel enters the @SUSPENDED@ state then all queued presence messages will fail immediately, and the @PresenceMap@ is maintained. This ensures that if the channel later becomes @ATTACHED@, it will only publish presence events for the changes in the @PresenceMap@ that have occurred whilst the client was disconnected. A test should exist for a channel that is in the @SUSPENDED@ state containing presence members to transition to the @ATTACHED@ state, and following the @SYNC@ process after attaching, any members present before and after the sync should not emit presence events, all other changes should be reflected in the @PresenceMap@ and should emit presence events on the channel
 ** @(RTP5b)@ If a channel enters the @ATTACHED@ state then all queued presence messages will be sent immediately. A presence @SYNC@ may be initiated per "@RTP1@":#RTP1
 * @(RTP16)@ Connection state conditions:
 ** @(RTP16a)@ If the channel is @ATTACHED@ then the presence messages are handled per @RTL6c2@. (That is: they should be sent to the connection, to be published immediately if the connection is @CONNECTED@, else if the connection state and @queueMessages@ option allows they may be placed in a connection-wide queue to be published once the connection becomes @CONNECTED@, else rejected)
 ** @(RTP16b)@ If the channel is @ATTACHING@ or @INITIALIZED@, then if @ClientOptions.queueMessages@ has not been explicitly set to @false@, the presence messages should be queued at a channel level, to be handled per @RTP16a@ once the channel becomes @ATTACHED@, or failed if the channel state becomes @SUSPENDED@, @FAILED@, or @DETACHED@ first
 ** @(RTP16c)@ In any other case the operation should result in an error
-* @(RTP6)@ @Presence#subscribe@ function:
-** @(RTP6a)@ Subscribe with no arguments subscribes a listener to all presence messages
-** @(RTP6b)@ Subscribe with a single action argument - such as @ENTER@, @LEAVE@, @UPDATE@ or @PRESENT@ - subscribes a listener to receive only presence messages with that action
-** @(RTP6c)@ Implicitly attaches the @Channel@ if the channel is in the @INITIALIZED@ state. The optional callback, if provided, is called according to "@RTL4d@":#RTL4d based on the implicit attach operation. The listener will always be registered regardless of the implicit attach result
-* @(RTP7)@ @Presence#unsubscribe@ function:
-** @(RTP7a)@ Unsubscribe with no arguments unsubscribes the listener if previously subscribed with an action-specific subscription
-** @(RTP7b)@ Unsubscribe with a single action argument unsubscribes the provided listener to all presence messages for that action
-* @(RTP8)@ @Presence#enter@ function:
+* @(RTP6)@ @RealtimePresence#subscribe@ function:
+** @(RTP6a)@ Subscribe with a single listener argument subscribes a listener to all presence messages
+** @(RTP6b)@ Subscribe with an action argument and a listener argument - such as @ENTER@, @LEAVE@, @UPDATE@ or @PRESENT@ - subscribes a listener to receive only presence messages with that action
+** @(RTP6c)@ Implicitly attaches the @RealtimeChannel@ if the channel is in the @INITIALIZED@ state. The optional callback, if provided, is called according to "@RTL4d@":#RTL4d based on the implicit attach operation. The listener will always be registered regardless of the implicit attach result
+* @(RTP7)@ @RealtimePresence#unsubscribe@ function:
+** @(RTP7a)@ Unsubscribe with a single listener argument unsubscribes the listener if previously subscribed with an action-specific subscription
+** @(RTP7b)@ Unsubscribe with an action argument and a listener argument unsubscribes the provided listener to all presence messages for that action
+* @(RTP8)@ @RealtimePresence#enter@ function:
 ** @(RTP8a)@ Enters the current client into this channel, optionally with the data and/or extras provided
 ** @(RTP8b)@ Optionally a callback can be provided that is called for both success or failure to enter
 ** @(RTP8c)@ A @PRESENCE ProtocolMessage@ with a @PresenceMessage@ with the action @ENTER@ is sent to the Ably service. The @clientId@ attribute of the @PresenceMessage@ must not be present. Entering without an explicit @PresenceMessage#clientId@, implicitly uses the @clientId@ for the current connection
-** @(RTP8d)@ Implicitly attaches the @Channel@ if the channel is in the @INITIALIZED@ state. However, if the channel is in the @DETACHED@ or @FAILED@ state, the @enter@ request results in an error
+** @(RTP8d)@ Implicitly attaches the @RealtimeChannel@ if the channel is in the @INITIALIZED@ state. However, if the channel is in the @DETACHED@ or @FAILED@ state, the @enter@ request results in an error
 ** @(RTP8e)@ Optional data and/or extras can be included when entering a channel that will be encoded and decoded as with normal messages. A test should exist to ensure data and extras used with enter are encoded & decoded correctly. Also, when data and/or extras is provided when entering, but neither data nor extras are provided when leaving, the data attribute should be emitted in the @LEAVE@ event for this client
 ** @(RTP8f)@ If the client library is authenticated but unidentified (i.e. @clientId@ is a wildcard @'*'@ or client is anonymous), the @enter@ request results in an error immediately
 ** @(RTP8g)@ If the channel is @DETACHED@ or @FAILED@, the @enter@ request results in an error immediately
 ** @(RTP8h)@ If the Ably service determines that the client does not have required presence permission, a @NACK@ is sent to the client resulting in an error
 ** @(RTP8i)@ If the Ably service determines that the client is unidentified, a @NACK@ is sent to the client resulting in an error
-* @(RTP9)@ @Presence#update@ function:
+* @(RTP9)@ @RealtimePresence#update@ function:
 ** @(RTP9a)@ Updates the data and/or extras for the present member with an updated value or empty value (eg @null@)
 ** @(RTP9b)@ If the client was not already entered, it enters this client into this channel
 ** @(RTP9c)@ Optionally a callback can be provided that is called for both success or failure to update
 ** @(RTP9d)@ A @PRESENCE ProtocolMessage@ with a @PresenceMessage@ with the action @UPDATE@ is sent to the Ably service. The @clientId@ attribute of the @PresenceMessage@ must not be present. Updating without an explicit @PresenceMessage#clientId@, implicitly uses the @clientId@ for the current connection
-** @(RTP9e)@ In all other ways, this method is identical to @Presence#enter@ and should have matching tests
-* @(RTP10)@ @Presence#leave@ function:
+** @(RTP9e)@ In all other ways, this method is identical to @RealtimePresence#enter@ and should have matching tests
+* @(RTP10)@ @RealtimePresence#leave@ function:
 ** @(RTP10a)@ Leaves this client from the channel and the data and/or extras will be updated with the values provided. If the language permits the data argument to be omitted, then the previously set data value will be sent as a convenience
 ** @(RTP10b)@ Optionally a callback can be provided that is called for both success or failure to leave
 ** @(RTP10c)@ A @PRESENCE ProtocolMessage@ with a @PresenceMessage@ with the action @LEAVE@ is sent to the Ably service. The @clientId@ attribute of the @PresenceMessage@ must not be present. Leaving without an explicit @PresenceMessage#clientId@, implicitly uses the @clientId@ for the current connection
 ** @(RTP10d)@ If the client is not currently @ENTERED@, Ably will respond with an @ACK@ and the request will succeed (i.e. the outcome of asking to @LEAVE@ when not present vs being present is the same)
-** @(RTP10e)@ In all other ways, this method is identical to @Presence#enter@ and should have matching tests
-* @(RTP11)@ @Presence#get@ function:
+** @(RTP10e)@ In all other ways, this method is identical to @RealtimePresence#enter@ and should have matching tests
+* @(RTP11)@ @RealtimePresence#get@ function:
 ** @(RTP11a)@ Returns the list of current members on the channel in a callback. By default, will wait for the @SYNC@ to be completed, see "RTP11c1":#RTP11c1
-** @(RTP11b)@ Implicitly attaches the @Channel@ if the channel is in the @INITIALIZED@ state. However, if the channel is in or enters the @DETACHED@ or @FAILED@ state before the operation succeeds, it will result in an error
-** @(RTP11d)@ If the @Channel@ is in the @SUSPENDED@ state then the @get@ function will by default, or if @waitForSync@ is set to @true@, result in an error with @code@ @91005@ and a @message@ stating that the presence state is out of sync due to the channel being in a @SUSPENDED@ state. If however the @get@ function is called with @waitForSync@ set to @false@, then it immediately returns the members currently stored in the @PresenceMap@ giving developers access to the members that were present at the time the channel became @SUSPENDED@
+** @(RTP11b)@ Implicitly attaches the @RealtimeChannel@ if the channel is in the @INITIALIZED@ state. However, if the channel is in or enters the @DETACHED@ or @FAILED@ state before the operation succeeds, it will result in an error
+** @(RTP11d)@ If the @RealtimeChannel@ is in the @SUSPENDED@ state then the @get@ function will by default, or if @waitForSync@ is set to @true@, result in an error with @code@ @91005@ and a @message@ stating that the presence state is out of sync due to the channel being in a @SUSPENDED@ state. If however the @get@ function is called with @waitForSync@ set to @false@, then it immediately returns the members currently stored in the @PresenceMap@ giving developers access to the members that were present at the time the channel became @SUSPENDED@
 ** @(RTP11c)@ An optional set of params can be provided:
 *** @(RTP11c1)@ @waitForSync@ (default @true@). When @true@, method will wait until @SYNC@ is complete before returning a list of members. When @false@, known set of presence members is returned immediately, which may be incomplete if the @SYNC@ is not finished
 *** @(RTP11c2)@ @clientId@ filters members by the provided @clientId@
 *** @(RTP11c3)@ @connectionId@ filters members by the provided @connectionId@
-* @(RTP12)@ @Presence#history@ function:
-** @(RTP12a)@ Supports all the same params as REST @Presence#history@
+* @(RTP12)@ @RealtimePresence#history@ function:
+** @(RTP12a)@ Supports all the same params as @RestPresence#history@
 ** @(RTP12c)@ Returns a @PaginatedResult@ page containing the first page of messages in the @PaginatedResult#items@ attribute returned from the history request
 ** @(RTP12d)@ A test should exist that registers presence with a few clients, and upon confirmation of entering the channel for all clients, a presence history request should be made using another client to ensure all presence events are available
-* @(RTP13)@ @Presence#syncComplete@ attribute is @true@ if the initial @SYNC@ operation has completed for the members present on the channel
-* @(RTP14)@ @Presence#enterClient@ function:
+* @(RTP13)@ @RealtimePresence#syncComplete@ attribute is @true@ if the initial @SYNC@ operation has completed for the members present on the channel
+* @(RTP14)@ @RealtimePresence#enterClient@ function:
 ** @(RTP14a)@ Enters into presence on a channel on behalf of another @clientId@. This allows a single client with suitable permissions to register presence on behalf of any number of clients using a single connection
 ** @(RTP14b)@ Optionally a callback can be provided that is called for both success or failure to enter
 ** @(RTP14c)@ Data can optionally be provided when entering and will follow the normal encoding & decoding rules
-** @(RTP14d)@ A test should exist that registers a number of members each with a different @clientId@ on a presence channel, and then a @Presence#get@ should be used to verify that all members are present as expected
-* @(RTP15)@ @Presence#enterClient@ @Presence#updateClient@ and @Presence#leaveClient@ function:
+** @(RTP14d)@ A test should exist that registers a number of members each with a different @clientId@ on a presence channel, and then a @RealtimePresence#get@ should be used to verify that all members are present as expected
+* @(RTP15)@ @RealtimePresence#enterClient@ @RealtimePresence#updateClient@ and @RealtimePresence#leaveClient@ function:
 ** @(RTP15a)@ Performs an enter, update or leave for given @clientId@. These methods apply if the Realtime library was not initialized with a specific @clientId@. This allows a single client with suitable permissions to update presence on behalf of any number of clients using a single connection. Otherwise these are functionality equivalent to the corresponding @enter@, @update@ and @leave@ methods, and equivalent test coverage should be provided
-** @(RTP15b)@ Tests should use @enterClient@, @updateClient@ and @leaveClient@ for many members from one @Realtime@ client and check that the operations are reflected in the presence map and the expected events are emitted on a separate client
-** @(RTP15c)@ Tests should also ensure that using these methods has no side effects on a client that has entered normally using @Presence#enter@
+** @(RTP15b)@ Tests should use @enterClient@, @updateClient@ and @leaveClient@ for many members from one @RealtimeClient@ instance and check that the operations are reflected in the presence map and the expected events are emitted on a separate client
+** @(RTP15c)@ Tests should also ensure that using these methods has no side effects on a client that has entered normally using @RealtimePresence#enter@
 ** @(RTP15d)@ A callback can be provided that will be called upon success or failure
-** @(RTP15e)@ Implicitly attaches the @Channel@ if the channel is in the @INITIALIZED@ state. However, if the channel is in or enters the @DETACHED@ or @FAILED@ state before the operation succeeds, it will result in an error
+** @(RTP15e)@ Implicitly attaches the @RealtimeChannel@ if the channel is in the @INITIALIZED@ state. However, if the channel is in or enters the @DETACHED@ or @FAILED@ state before the operation succeeds, it will result in an error
 ** @(RTP15f)@ If the client is identified and has a valid @clientId@, and the @clientId@ argument does not match the client's @clientId@, then it should indicate an error. The connection and channel remain available for further operations
 
 h3(#eventemitter). EventEmitter mixin / interface
@@ -734,8 +734,13 @@ h3(#eventemitter). EventEmitter mixin / interface
 * @(RTE3)@ @EventEmitter#on@ registers the provided listener for either all events when no @event@ argument is provided, or for only a single named event when an @event@ argument is provided. If @on@ is called more than once with the same listener and @event@, the listener is added multiple times to its listener registry. Therefore, as an example, assuming the same listener is registered twice using @on@, and an event is emitted once, the listener would be invoked twice
 * @(RTE4)@ @EventEmitter#once@ registers the provided listener for either the first event that is emitted when no @event@ argument is provided, or for only the first occurrence of a single named event when an @event@ argument is provided. If @once@ is called more than once with the same listener, the listener is added multiple times to its listener registry. Therefore, as an example, assuming the same listener is registered twice using @once@, and an event is emitted once, the listener would be invoked twice. However, all subsequent events emitted would not invoke the listener as @once@ ensures that each registration is only invoked once
 * @(RTE5)@ @EventEmitter#off@ deregisters a listener. If called with a specific event and a listener, it removes all registrations that match both the given listener and the given event; if called only with a listener, it removes all registrations matching the given listener, regardless of whether they are associated with an event or not; if called with no arguments, it removes all registrations, for all events and listeners
-* @(RTE6)@ @EventEmitter#emit@ emits an event, calling registered listeners with the given event name and any other given arguments. If an exception is raised in any of the listeners, the exception is caught by the @EventEmitter@ and the exception is logged to the Ably logger. Tests must exist to ensure exceptions raised in client code do not propagate and inhibit other event processing within the client library
+* @(RTE6)@ @EventEmitter#emit@ emits an event, calling registered listeners with the given event name and any other given arguments. If an exception is raised in any of the listeners, the exception is caught by the @EventEmitter@ and the exception is logged to the Ably logger. Tests must exist to ensure exceptions raised in client code do not propagate and inhibit other event processing within the client library. This method is internal to the SDK and should not be exposed in its public interface.
 ** @(RTE6a)@ The set of listeners called by @emit@ must not change over the course of the @emit@. That is: If a listener being called by @emit@ registers another listener, that second listener should not be called by that invocation of @emit@ (even if it would have been called had it already been present); and if a listener being called by @emit@ removes other listeners, but those other listeners would otherwise have been called during that @emit@ invocation, they should still be called. Tests should exist for both adding and removing. See "https://goo.gl/OVTtjO":https://goo.gl/OVTtjO
+
+h3(#backoff-jitter). Incremental backoff and jitter
+* @(RTB1)@ For connections in the @DISCONNECTED@ state and realtime channels in the @SUSPENDED@ state the time until retry is calculated as the product of the initial retry timeout (for @DISCONNECTED@ connections this is the @disconnectedRetryTimeout@, for @SUSPENDED@ channels this is the @channelRetryTimeout@), the backoff coefficient as defined by "@RTB1a@":#RTB1a, and the jitter coefficient as defined by "@RTB1b@":#RTB1b.
+** @(RTB1a)@ The backoff coefficient for the nth retry is calculated as the minimum of @(n + 2) / 3@ and @2@ (resulting in the sequence @[1, 4/3, 5/3, 2, 2, ...]@).
+** @(RTB1b)@ The jitter coefficient is a random number between 0.8 and 1. The randomness of this number doesn't need to be cryptographically secure but should be approximately uniformly distributed.
 
 h3(#realtime-compatibility). Forwards compatibility
 * @(RTF1)@ The library must apply the "robustness principle":https://en.wikipedia.org/wiki/Robustness_principle in its processing of requests and responses with the Ably system. In particular, deserialization of ProtocolMessages and related types, and associated enums, must be tolerant to unrecognised attributes or enum values. Such unrecognised values must be ignored.
@@ -825,7 +830,7 @@ h3(#connection-states-operations). @Connection.state@ effects on realtime operat
 </tr>
 
 <tr>
-  <td>Channel @attach@</td>
+  <td>RealtimeChannel @attach@</td>
 
   <!-- When INITIALIZED -->
   <td>"RTL4h":#RTL4h</td>
@@ -847,7 +852,7 @@ h3(#connection-states-operations). @Connection.state@ effects on realtime operat
 </tr>
 
 <tr>
-  <td>Channel @detach@</td>
+  <td>RealtimeChannel @detach@</td>
 
   <!-- When INITIALIZED -->
   <td>"RTL5h":#RTL5h</td>
@@ -869,7 +874,7 @@ h3(#connection-states-operations). @Connection.state@ effects on realtime operat
 </tr>
 
 <tr>
-  <td>Channel @publish@</td>
+  <td>RealtimeChannel @publish@</td>
 
   <!-- When INITIALIZED -->
   <td>"RTL6c2":#RTL6c2</td>
@@ -1018,7 +1023,7 @@ h2(#push-notifications). Push notifications
 ** @(RSH1b)@ @#deviceRegistrations@ provides access to the admin @PushDeviceRegistrations@ object with the following methods:
 *** @(RSH1b1)@ @#get(deviceId)@ performs a request to "/push/deviceRegistrations/:deviceId":/api/rest-api#get-device-registration and returns a @DeviceDetails@ object if the @deviceId@ is found or results in a not found error if the device cannot be found. If the client has been "activated as a push target device":#activation-state-machine, and the specified @deviceId@ is that of the present client, then this request must include "push device authentication":#push-device-authentication.
 *** @(RSH1b2)@ @#list(params)@ performs a request to "/push/deviceRegistrations":/api/rest-api#list-device-registrations and returns a paginated result with @DeviceDetails@ objects filtered by the provided params, as supported by the REST API. A test should exist filtering by @deviceId@ and separately by @clientId@, and then controlling the pagination with the @limit@ attribute
-*** @(RSH1b3)@ @#save(device)@ issues a @PUT@ request to "/push/deviceRegistrations/:deviceId":/api/rest-api#update-device-registration using the @DeviceDetails@ object (and optionally a JSON-encodable object) argument. A test should exist for a successful save, a successful subsequent save with an update, and a failed save operation. If the client has been "activated as a push target device":#activation-state-machine, and the specified @deviceId@ is that of the present client, then this request must include "push device authentication":#push-device-authentication.
+*** @(RSH1b3)@ @#save(device)@ issues a @PUT@ request to "/push/deviceRegistrations/:deviceId":/api/rest-api#update-device-registration using the @DeviceDetails@ object argument. A test should exist for a successful save, a successful subsequent save with an update, and a failed save operation. If the client has been "activated as a push target device":#activation-state-machine, and the specified @deviceId@ is that of the present client, then this request must include "push device authentication":#push-device-authentication.
 *** @(RSH1b4)@ @#remove(deviceId)@ issues a @DELETE@ request to "/push/deviceRegistrations/:deviceId":/api/rest-api#delete-device-registration and deletes the registered device specified  by @deviceId@. A test should exist that deletes a device and succeeds, and then also deletes a device that does not exist but still succeeds
 *** @(RSH1b5)@ @#removeWhere(params)@ issues a @DELETE@ request to "/push/deviceRegistrations":/api/rest-api#delete-device-registrations and deletes the registered devices matching the provided @params@. A test should exist that deletes devices by @clientId@ and by @deviceId@ separately, then additionally issues a delete for devices with no matching params and checks the operation still succeeds. If the client has been "activated as a push target device":#activation-state-machine, and the specified @deviceId@ is that of the present client, then this request must include "push device authentication":#push-device-authentication.
 ** @(RSH1c)@ @#channelSubscriptions@ provides access to the admin @ChannelSubscriptions@ object with the following methods:
@@ -1036,7 +1041,7 @@ h2(#push-notifications). Push notifications
 
 h3(#activation-state-machine). Activation State Machine
 
-* @(RSH3)@ In platforms that support receiving push notifications, in order to connect the device's push features with Ably's, the library must perform the process described in the following abstract state machine. While this process should be implemented in whatever way better fits the concrete platform, it should be taken into account that its lifetime is that of the _app_ that runs it, which outlives that of the @Rest@ instance or (typically) the process running the app. This typically forces some kind of on-disk storage to which the state machine's state must be persisted, so that it can be recovered later by new instances and processes running the app triggered by external events.
+* @(RSH3)@ In platforms that support receiving push notifications, in order to connect the device's push features with Ably's, the library must perform the process described in the following abstract state machine. While this process should be implemented in whatever way better fits the concrete platform, it should be taken into account that its lifetime is that of the _app_ that runs it, which outlives that of the @RestClient@ instance or (typically) the process running the app. This typically forces some kind of on-disk storage to which the state machine's state must be persisted, so that it can be recovered later by new instances and processes running the app triggered by external events.
 ** @(RSH3a)@ State @NotActivated@ (the initial one).
 *** @(RSH3a1)@ On event @CalledDeactivate@:
 **** @(RSH3a1a)@ Makes @Push#deactivate@ return or call its callback with no error.
@@ -1147,8 +1152,8 @@ h3(#push-channels). Push channels
 
 h3(#local-device). LocalDevice
 
-* @(RSH8)@ In platforms that support receiving push notifications, the @device@ method on the @Rest@ or @Realtime@ interfaces returns an instance of @LocalDevice@ that represents the current state of the device in respect of it being a target for push notifications.
-** @(RSH8a)@ The @LocalDevice@ is initialised when first required, either as a result of a call to @Rest#device@ or @Realtime#device@, or as a result of an operation involving the Activation State Machine. The @LocalDevice@ @id@, @clientId@, @deviceSecret@ and @deviceIdentityToken@ attributes are populated, together with any @recipient@-related attributes, to the extent that they exist, from the persisted state.
+* @(RSH8)@ In platforms that support receiving push notifications, the @device@ method on the @RestClient@ or @RealtimeClient@ interfaces returns an instance of @LocalDevice@ that represents the current state of the device in respect of it being a target for push notifications.
+** @(RSH8a)@ The @LocalDevice@ is initialised when first required, either as a result of a call to @RestClient#device@ or @RealtimeClient#device@, or as a result of an operation involving the Activation State Machine. The @LocalDevice@ @id@, @clientId@, @deviceSecret@ and @deviceIdentityToken@ attributes are populated, together with any @recipient@-related attributes, to the extent that they exist, from the persisted state.
 ** @(RSH8b)@ The @LocalDevice@ @id@ and @deviceSecret@ attributes are generated, and persisted as part of the @LocalDevice@ state, when required by step "@(RSH3a2b)@":#RSH3a2b in the Activation State Machine. At that time, the @clientId@ attribute is also initialised, if the client is identified according to "@(RSA7)@":#RSA7.
 ** @(RSH8c)@ Following successful registration of a @LocalDevice@, following the procedure in "@(RSH3c2a)@":#RSH3c2a, the now known @deviceIdentityToken@ is set and persisted.
 ** @(RSH8d)@ If the @LocalDevice* is created by an unidentified client (see "@(RSA7)@":#RSA7 ) and therefore has no @clientId@ set, but the client subsequently becomes identified (as a result of "@(RSA7b2)@":#RSA7b2 or "@(RSA7b3)@":#RSA7b3 ), then the @LocalDevice@ @clientId@ is set and persisted.
@@ -1229,7 +1234,7 @@ h4. ProtocolMessage
 h4. PaginatedResult
 
 * @(TG1)@ A @PaginatedResult@ is a type that represents a page of results from a "paginated query":/rest-api/#pagination. The response is accompanied by metadata that indicates the relative queries available
-* @(TG2)@ @PaginatedResult@ wraps all message and presence history, stats and REST presence requests. Instancing this type should not result in an error if paging headers are not returned from the REST API
+* @(TG2)@ @PaginatedResult@ wraps all message and presence history, stats and REST presence requests. Instantiating this type should not result in an error if paging headers are not returned from the REST API
 * @(TG3)@ @PaginatedResult#items@ attribute contains a page of results (for example an Array of @Message@ objects for a channel history request)
 * @(TG4)@ @PaginatedResult#next@ function returns a new @PaginatedResult@ loaded with the next page of results. If there are no further pages, then @null@ is returned
 * @(TG5)@ @PaginatedResult#first@ function returns a new @PaginatedResult@ for the first page of results
@@ -1324,7 +1329,7 @@ h4. ConnectionStateChange
 
 h4. ChannelStateChange
 
-* @(TH1)@ Whenever the channel state changes, a @ChannelStateChange@ object is emitted on the @Channel@ object
+* @(TH1)@ Whenever the channel state changes, a @ChannelStateChange@ object is emitted on the @RealtimeChannel@ object
 * @(TH2)@ The @ChannelStateChange@ object contains the current state in attribute @current@, the previous state in attribute @previous@
 * @(TH5)@ The @ConnectionStateChange@ object contains the @event@ that generated the channel state change
 * @(TH3)@ If the channel state change includes error information, then the @reason@ attribute will contain an @ErrorInfo@ object describing the reason for the error
@@ -1354,7 +1359,7 @@ h4. ChannelProperties
 
 h4. ChannelDetails
 
-* @(CHD1)@ @ChannelDetails@ is a type that represents information for a channel including channelId, name, status and occupancy
+* @(CHD1)@ @ChannelDetails@ is a type that represents information for a channel including channelId, status and occupancy
 * @(CHD2)@ The attributes of @ChannelDetails@ consist of:
 ** @(CHD2a)@ @channelId@ string - the identifier of the channel
 ** @(CHD2b)@ @status@ @ChannelStatus@ - the status of the channel
@@ -1414,7 +1419,7 @@ h4. BatchPresence
 h3(#options). Option types
 
 h4. ClientOptions
-* @(TO1)@ Ably library options used when instancing a REST or Realtime client library
+* @(TO1)@ Ably library options used when instantiating a REST or Realtime client
 * @(TO2)@ Note: @ClientOptions@ does not currently define a default for max message size or request size. This will be added in the future to ensure that REST requests does not exceed the limits before the request is made to the server. In the case of realtime, the connection constraints will be sent to the client in the initial @CONNECTED@ @ProtocolMessage@
 * @(TO3)@ The attributes of @ClientOptions@ consist of:
 ** @(TO3a)@ @clientId@ string - the id of the client represented by this instance
@@ -1454,6 +1459,7 @@ h4. ClientOptions
 *** @(TO3l7)@ @channelRetryTimeout@ integer - default 15,000 (15s). When a channel becomes @SUSPENDED@ following a server initiated @DETACHED@, after this delay in milliseconds, if the channel is still @SUSPENDED@ and the connection is @CONNECTED@, the client library will attempt to re-attach the channel automatically
 *** @(TO3l3)@ @httpOpenTimeout@ integer - default 4,000 (4s). Timeout for opening the connection, available in the client library if supported by the transport
 *** @(TO3l4)@ @httpRequestTimeout@ integer - default 10,000 (10s). Timeout for any single HTTP request and response
+*** @(TO3l11)@ @realtimeRequestTimeout@ integer - default 10,000 (10s). When a realtime client library is establishing a connection with Ably, or sending a @HEARTBEAT@, @CONNECT@, @ATTACH@, @DETACH@ or @CLOSE@ @ProtocolMessage@ to Ably, this is the amount of time that the client library will wait before considering that request as failed and triggering a suitable failure condition
 *** @(TO3l5)@ @httpMaxRetryCount@ integer - default 3. Max number of fallback hosts to use as a fallback when an HTTP request to the primary host is unreachable or indicates that it is unserviceable
 *** @(TO3l6)@ @httpMaxRetryDuration@ integer - default 15,000 (15s). Max elapsed time in which fallback host retries for HTTP requests will be attempted i.e. if the first default host attempt takes 7s, and then the subsequent fallback retry attempt takes 10s, no further fallback host attempts will be made as the total elapsed time of 17s exceeds the default 15s limit
 *** @(TO3l8)@ @maxMessageSize@ integer - default 65536 (64KiB). The maximum size of messages that can be published in one go. That is, the size of the @ProtocolMessage.messages@ or @ProtocolMessage.presence@ array for a realtime publish or presence action, or the message or array of messages being published for a REST publish. For realtime publishes, the default will be overridden by the @maxMessageSize@ in the @connectionDetails@, see "CD2c":#CD2c
@@ -1462,7 +1468,7 @@ h4. ClientOptions
 **** @(TO3l8c)@ The size of a @binary@ @data@ property is its size in bytes (of the actual binary, not the base64 representation, regardless of whether the binary protocol is in use)
 **** @(TO3l8d)@ The size of the @extras@ property is the string length of its JSON representation
 **** @(TO3l8e)@ The size of a @null@ or omitted property is zero
-*** @(TO3l9)@ @maxFrameSize@ integer - default 524288 (512KiB). The maximum size of a single POST body or "WebSocket":https://ably.com/topic/websockets frame. This is mostly only relevant for `Rest#request` (e.g. for batch publishes), since publishes will hit the @maxMessageSize@ limit before this
+*** @(TO3l9)@ @maxFrameSize@ integer - default 524288 (512KiB). The maximum size of a single POST body or "WebSocket":https://ably.com/topic/websockets frame. This is mostly only relevant for `RestClient#request` (e.g. for batch publishes), since publishes will hit the @maxMessageSize@ limit before this
 *** @(TO3l10)@ @fallbackRetryTimeout@ integer - default 600000 (10 minutes). (After a failed request to the default endpoint, followed by a successful request to a fallback endpoint), the period in milliseconds before HTTP requests are retried  against the default endpoint
 ** @(TO3o)@ @plugins@ @Dict<PluginType:Plugin>@ A map between a @PluginType@ and a @Plugin@ object. The client library might downcast a @Plugin@ to particular plugin type.
 ** @(TO3p)@ @addRequestIds@ boolean - defaults to false. If true, @RSC7c@ applies
@@ -1489,11 +1495,11 @@ h4. AuthOptions
 ** @(AO2g)@ @queryTime@ - If true, the library will when issuing a token request query the Ably system for the current time instead of relying on a locally-available time of day
 
 h4. ChannelOptions
-* @(TB1)@ options provided when instancing a channel
+* @(TB1)@ options provided when instantiating a channel
 * @(TB2)@ The attributes of @ChannelOptions@ consist of:
 ** @(TB2b)@ @cipher@, which is either:
 *** @(TB2b1)@ A @CipherParams@ instance, or
-*** @(TB2b2)@ an options hash (or language equivalent) consisting of any subset of @CipherParams@ fields that includes a @key@. In this case, the client library should call @getDefaultParams@, passing it the options hash, to obtain a @CipherParams@ instance
+*** @(TB2b2)@ A @CipherParamOptions@ instance. In this case, the client library should call @getDefaultParams@, passing it the options hash, to obtain a @CipherParams@ instance
 ** @(TB2c)@ @params@ (for realtime client libraries only) a @Dict<string,string>@ of key/value pairs
 ** @(TB2d)@ @modes@ (for realtime client libraries only) an array of @ChannelMode@ s, where a @ChannelMode@ is a member of an enum containing the names of those children of "@TR3@":#TR3 whose value is ≥16 (or see the IDL below)
 * @(TB3)@ The client lib may optionally provide an alternative constructor @withCipherKey@ for ChannelOptions that takes a @key@ only. (This must be differentiated from the normal constructor such that it is clear that the value being passed in is a key). (This is intended for languages where requiring a hash map is unidiomatic)
@@ -1502,9 +1508,17 @@ h4. CipherParams
 * @(TZ1)@ params to configure encryption for a channel
 * @(TZ2)@ The attributes of @CipherParams@ consist of anything necessary to implement the supported algorithms, in addition to the following standardised attributes:
 ** @(TZ2a)@ @algorithm@ string - Default is @AES@. Optionally specify the algorithm to use for encryption, currently only @AES@ is supported
-** @(TZ2b)@ @keyLength@ integer - the length in bits of the @key@
+** @(TZ2b)@ @keyLength@ integer - the length in bits of the @key@; for example 128 or 256
 ** @(TZ2d)@ @key@ binary - private key used to encrypt and decrypt payloads
 ** @(TZ2c)@ @mode@ string - Default is @CBC@. Optionally specify cipher mode, currently only @CBC@ is supported
+
+h4. CipherParamOptions
+* @(CO1)@ Values used for creating a @CipherParams@ instance. Depending on the language, may be implemented as a hashmap or a class.
+* @(CO2)@ The attributes of @CipherParamOptions@ consist of:
+** @(CO2a)@ @algorithm@ (optional) string - the algorithm to use for encryption; currently the only supported non-null value is @AES@
+** @(CO2b)@ @key@ binary or string - private key used to encrypt and decrypt payloads
+** @(CO2c)@ @keyLength@ (optional) integer - the length in bits of the @key@; for example 128 or 256
+** @(C02d)@ @mode@ (optional) string – the cipher mode; currently the only supported non-null value is @CBC@
 
 h3(#types-push). Push notifications
 
@@ -1535,7 +1549,7 @@ The following default values are configured for the client library:
 
 * @(DF1)@ Realtime defaults:
 ** @(DF1a)@ @connectionStateTtl@ integer - default 120s. The duration that Ably will persist the connection state when a Realtime client is abruptly disconnected. When the client is in the @DISCONNECTED@ state, once this TTL has passed, the client should transition the state to the @SUSPENDED@ state signifying that the state is now lost i.e. channels need to be re-attached manually. Note that this default is overriden by @connectionStateTtl@, if specified in the @ConnectionDetails@ of the @CONNECTED@ @ProtocolMessage@
-** @(DF1b)@ @realtimeRequestTimeout@ - default 10s. When a realtime client library is establishing a connection with Ably, or sending a @HEARTBEAT@, @CONNECT@, @ATTACH@, @DETACH@ or @CLOSE@ @ProtocolMessage@ to Ably, this is the amount of time that the client library will wait before considering that request as failed and triggering a suitable failure condition
+** @(DF1b)@ This clause has been replaced by "TO3l11":#TO3l11.
 
 h2(#idl). Interface Definition
 
@@ -1560,9 +1574,8 @@ Please note the following conventions:
 * @JSONObject@ and @JSONArray@ denote any type or interface in the target language that represents an "RFC4627":https://www.ietf.org/rfc/rfc4627.txt @object@ or @array@ value respectively. Such types serialize to, and may be deserialized from, the corresponding JSON text. In the specification text above, values of these types are collectively referred to as "JSON-encodable".
 
 ```
-class Rest:
-  constructor(keyStr: String) // RSC1
-  constructor(tokenStr: String) // RSC1
+class RestClient:
+  constructor(keyOrTokenStr: String) // RSC1
   constructor(ClientOptions) // RSC1
   auth: Auth // RSC5
   push: Push
@@ -1574,7 +1587,7 @@ class Rest:
     String path,
     Dict<String, String> params?,
     JsonObject | JsonArray body?,
-    Dict<String, String> headers
+    Dict<String, String> headers?
   ) => io HttpPaginatedResponse // RSC19
   stats(
     start: Time api-default epoch(), // RSC6b1
@@ -1585,9 +1598,8 @@ class Rest:
   ) => io PaginatedResult<Stats> // RSC6a
   time() => io Time // RSC16
 
-class Realtime:
-  constructor(keyStr: String) // RSC1
-  constructor(tokenStr: String) // RSC1
+class RealtimeClient:
+  constructor(keyOrTokenStr: String) // RSC1
   constructor(ClientOptions) // RSC1
   auth: Auth // RTC4
   push: Push
@@ -1603,7 +1615,13 @@ class Realtime:
     JsonObject | JsonArray body?,
     Dict<String, String> headers?
   ) => io HttpPaginatedResponse // RTC9
-  stats: // Same as Rest.stats, RTC5a
+  stats(
+    start: Time api-default epoch(),
+    end: Time api-default now(),
+    direction: .Backwards | .Forwards api-default .Backwards,
+    limit: int api-default 100,
+    unit: .Minute | .Hour | .Day | .Month api-default .Minute
+  ) => io PaginatedResult<Stats> // Same as RestClient.stats, RTC5a
   close() // proxy for RTN12
   connect() // proxy for RTN11
   time() => io Time // RTC6a
@@ -1617,12 +1635,13 @@ class ClientOptions:
   environment: String? // RSC15b, TO3k1
   logHandler: // platform specific - TO3c
   logLevel: // platform specific - TO3b
-  logExceptionReportingUrl: String default "[library specific]" // TO3c (deprecated)
+  logExceptionReportingUrl: String default "[library specific]" // TO3m (deprecated)
   port: Int default 80 // TO3k4
   queueMessages: Bool default true // RTP16b, TO3g
   restHost: String default "rest.ably.io" // RSC12, TO3k2
   realtimeHost: String default "realtime.ably.io" // RTC1d, TO3k3
   fallbackHosts: String[] default nil // RSC15b, RSC15a, TO3k6
+  fallbackHostsUseDefault: Bool default false // TO3k7 (deprecated)
   recover: String? // RTC1c, TO3i
   tls: Bool default true // RSC18, TO3d
   tlsPort: Int default 443 // TO3k5
@@ -1635,10 +1654,12 @@ class ClientOptions:
   channelRetryTimeout: Duration default 15s // RTL13b, TO3l7
   httpOpenTimeout: Duration default 4s // TO3l3
   httpRequestTimeout: Duration default 10s // TO3l4
+  realtimeRequestTimeout: Duration default 10s // TO3l11
   httpMaxRetryCount: Int default 3 // TO3l5
   httpMaxRetryDuration: Duration default 15s // TO3l6
   maxMessageSize: Int default 65536 // TO3l8
   maxFrameSize: Int default 524288 // TO3l8
+  fallbackRetryTimeout: Duration default 600s // TO3l10
   plugins: Dict<PluginType, Plugin> // TO3o
   idempotentRestPublishing: bool default true // RSL1k1, RTL6a1, TO3n
   agents: [String: String?]? // RSC7d6 - interface only offered by some libraries
@@ -1667,6 +1688,7 @@ class Auth:
   authorize(TokenParams?, AuthOptions?) => io TokenDetails // RSA10
   createTokenRequest(TokenParams?, AuthOptions?) => io TokenRequest // RSA9
   requestToken(TokenParams?, AuthOptions?) => io TokenDetails // RSA8e
+  tokenDetails: TokenDetails? // RSA16
 
 class TokenDetails:
   +fromJson(String | JsonObject) -> TokenDetails// TD7
@@ -1747,6 +1769,9 @@ class MessageFilter:
   refTimeserial: string // RTL22a
   refType: string // RTL22a
   name: string // RTL22a
+  
+class ChannelProperties:
+  attachSerial: String // CP2a
 
 class BatchOperations:
   publish([BatchSpec]) => BatchResult<BatchPublishResponse> // BO2a
@@ -1810,7 +1835,7 @@ class ChannelStateChange:
 
 class ChannelOptions:
   +withCipherKey(key: Binary | String)? -> ChannelOptions // TB3
-  cipher: (CipherParams | Params)? // RSL5a, TB2b
+  cipher: (CipherParams | CipherParamOptions)? // RSL5a, TB2b
   params?: Dict<String, String> // TB2c
   modes?: [ChannelMode] // TB2d
 
@@ -1839,8 +1864,14 @@ class CipherParams:
   keyLength: Int // TZ2b
   mode: String default "CBC" // TZ2c
 
+class CipherParamOptions: // CO1 (may be implemented as a hashmap or a class depending on language)
+  algorithm?: String // CO2a
+  key: Binary | String // CO2b
+  keyLength?: Int // CO2c
+  mode?: String // CO2d
+
 class Crypto:
-  +getDefaultParams(Params) -> CipherParams // RSE1
+  +getDefaultParams(CipherParamOptions) -> CipherParams // RSE1
   +generateRandomKey(keyLength: Int?) => io Binary // RSE2
 
 class RestPresence:
@@ -1889,7 +1920,7 @@ enum PresenceAction:
   LEAVE // TP2
   UPDATE // TP2
 
-class ConnectionDetails:
+class ConnectionDetails: // internal
   clientId: String? // RSA12a, CD2a
   connectionKey: String // RTN15e, CD2b
   connectionStateTtl: Duration // CD2f, RTN14e, DF1a
@@ -1977,7 +2008,7 @@ class Connection:
   state: ConnectionState // RTN4d
   close() // RTN12
   connect() // RTC1b, RTN3, RTN11
-  ping() => io // RTN13
+  ping() => io Duration // RTN13
 
 enum ConnectionState:
   INITIALIZED
@@ -2064,11 +2095,9 @@ class JsonObject:
   // Platform-dependent, typically a Dict-like object
 
 class PushDeviceRegistrations:
-  get(DeviceDetails) => io DeviceDetails // RSH1b1
   get(deviceId: String) => io DeviceDetails // RSH1b1
   list(params: Dict<String, String>) => io PaginatedResult<DeviceDetails> // RSH1b2
   save(DeviceDetails) => io DeviceDetails // RSH1b3
-  remove(DeviceDetails) => io // RSH1b4
   remove(deviceId: String) => io // RSH1b4
   removeWhere(params: Dict<String, String>) => io // RSH1b5
 
@@ -2123,7 +2152,7 @@ class EventEmitter<Event, Data>:
   off() // RTE5
   off((Data...) ->) // RTE5
   off(Event, (Data...) ->) // RTE5
-  emit(Event, Data...)  // RTE6
+  emit(Event, Data...)  // internal, RTE6
 
 class PaginatedResult<T>:
   items: [T] // TG3
