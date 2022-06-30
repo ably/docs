@@ -2,7 +2,14 @@ import React, { FunctionComponent as FC, useEffect, useState } from 'react';
 import Header from '../Header';
 // Session-related scripts
 import '@ably/ui/core/scripts';
-import { connectState, selectSessionData, fetchSessionData, getRemoteDataStore } from '@ably/ui/core/scripts';
+import {
+  connectState,
+  loadSprites,
+  selectSessionData,
+  fetchSessionData,
+  getRemoteDataStore,
+} from '@ably/ui/core/scripts';
+import sprites from '@ably/ui/core/sprites.svg';
 import UserContext, { UserDetails } from '../../contexts/user-context';
 import { fetchApiKeyData } from '../../redux/api-key';
 import { selectData } from '../../redux/select-data';
@@ -22,6 +29,8 @@ const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
 
   useEffect(() => {
     const store = getRemoteDataStore();
+
+    loadSprites(sprites);
 
     connectState(selectSessionData, setSessionState);
     fetchSessionData(store, WEB_API_USER_DATA_ENDPOINT);
