@@ -21,11 +21,13 @@ const SidebarLinkMenu = ({ data, interactable = false, expandMenu = EXPAND_MENU.
       data.map(({ label, link, level = ROOT_LEVEL, content = false }) => {
         const uuid = encodeURIComponent(`${label}${link}`);
 
+        const safeWindow = typeof window === 'undefined' ? { location: '' } : window;
+
         if ([EXPAND_MENU.EXPANDED, EXPAND_MENU.COLLAPSE_NEXT].includes(expandMenu)) {
           preExpanded.push(uuid);
         } else if (
           EXPAND_MENU.SECTION_MATCH === expandMenu &&
-          checkSectionMatch(window.location.pathname)({
+          checkSectionMatch(safeWindow.location.pathname)({
             label,
             link,
             level,
@@ -51,7 +53,7 @@ const SidebarLinkMenu = ({ data, interactable = false, expandMenu = EXPAND_MENU.
           </SidebarLabel>
         );
 
-        const isActive = link === window.location.pathname;
+        const isActive = link === safeWindow.location.pathname;
 
         return content ? (
           <li key={`${label}-${link}-${level}`}>
