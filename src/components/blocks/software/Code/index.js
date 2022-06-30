@@ -86,6 +86,7 @@ const Code = ({ data, attribs }) => {
 
   if (hasRenderableLanguages || hasMultilineText) {
     const dataContainsKey = attribs['data-contains-key'] === 'true';
+    console.log(dataContainsKey);
     const displayLanguage =
       attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
         ? languageSyntaxHighlighterNames[attribs.lang]
