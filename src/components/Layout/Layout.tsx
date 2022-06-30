@@ -11,6 +11,10 @@ import {
   WEB_API_KEYS_DATA_ENDPOINT,
   WEB_API_USER_DATA_ENDPOINT,
 } from '../../redux/api-key/constants';
+import { Script } from 'gatsby';
+import { hubspotIdentifyUser } from '../../third-party/hubspot';
+
+const hubspotTrackingId = process.env.HUBSPOT_TRACKING_ID || '';
 
 const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
   const [sessionState, setSessionState] = useState({});
@@ -26,9 +30,12 @@ const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
     fetchApiKeyData(store, WEB_API_KEYS_DATA_ENDPOINT);
   }, []);
 
+  useEffect(() => hubspotIdentifyUser(sessionState), [sessionState]);
+
   const userState: UserDetails = { sessionState, apiKeys };
   return (
     <UserContext.Provider value={userState}>
+      <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} />
       <header>
         <Header languages={languages} />
       </header>
