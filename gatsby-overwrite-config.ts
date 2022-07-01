@@ -10,6 +10,8 @@ export const onCreateWebpackConfig: GatsbyNode['onCreateWebpackConfig'] = ({ act
       fallback: {
         ...prevConfig.resolve.fallback,
         util: path.resolve('util/'),
+        crypto: 'crypto',
+        stream: 'stream-browserify',
       },
     },
   });
