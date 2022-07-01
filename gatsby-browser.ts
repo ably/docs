@@ -1,7 +1,6 @@
 import './src/styles/global.css';
 
 import { reducerFlashes } from '@ably/ui/core/Flash';
-import { crypto } from 'crypto-browserify';
 
 import {
   createRemoteDataStore,
