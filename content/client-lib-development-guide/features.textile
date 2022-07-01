@@ -630,6 +630,11 @@ h3(#realtime-channel). RealtimeChannel
 ** @(RTL19c)@ In the case of a delta message with a @vcdiff@ @encoding@ step, the @vcdiff@ decoder must be used to decode the base payload of the of delta message, applying that delta to the stored base payload. The direct result of that vcdiff delta application, before performing any further decoding steps, is stored as the updated base payload.
 * @(RTL20)@ The @id@ of the last received message on each channel must be stored along with the base payload. When processing a delta message (i.e. one whose @encoding@ contains @vcdiff@ step) the stored last message @id@ must be compared against the delta reference @id@, indicated in the @Message.extras.delta.from@ field of the delta message. If the delta reference @id@ of the received delta message does not equal the stored @id@ corresponding to the base payload, the message decoding must fail. The recovery procedure from "RTL18":#RTL18 must be executed.
 * @(RTL21)@ The messages in the @messages@ array of a @ProtocolMessage@ should each be decoded in ascending order of their index in the array.
+* @(RTL22)@ Methods must be provided for attaching and removing a listener which only executes when the message matches a set of criteria.
+** @(RTL22a)@ The method must allow for filters matching one or more of: @extras.ref.timeserial@, @extras.ref.type@ or @name@. See #MFI1 for an object implementation.
+** @(RTL22b)@ The method must allow for matching only messages which do not have @extras.ref@.
+** @(RTL22c)@ The listener must only execute if all provided criteria are met.
+** @(RTL22d)@ The method should use the @MessageFilter@ object if possible and idiomatic for the language.
 
 h3(#realtime-presence). RealtimePresence
 
@@ -1174,7 +1179,7 @@ h4. Message
 ** @(TM2g)@ @name@ string
 ** @(TM2d)@ @data@ string, buffer or JSON-encodable object or array
 ** @(TM2e)@ @encoding@ string
-** @(TM2i)@ @extras@ JSON-encodable object, used to contain any arbitrary key value pairs which may also contain other primitive JSON types, JSON-encodable objects or JSON-encodable arrays. The @extras@ field is provided to contain message metadata and/or ancillary payloads in support of specific functionality, e.g. push. Each of these supported extensions is documented separately; for 1.1 the only supported extension is @push@, via the @extras.push@ member; 1.2 adds the @delta@ extension which is of type @DeltaExtras@, and the @headers@ extension, which contains arbitrary @string->string@ key-value pairs, settable at publish time. Unless otherwise specified, the client library should not attempt to do any filtering or validation of the @extras@ field itself, but should treat it opaquely, encoding it and passing it to realtime unaltered.
+** @(TM2i)@ @extras@ JSON-encodable object, used to contain any arbitrary key value pairs which may also contain other primitive JSON types, JSON-encodable objects or JSON-encodable arrays. The @extras@ field is provided to contain message metadata and/or ancillary payloads in support of specific functionality, e.g. push. Each of these supported extensions is documented separately; for 1.1 the only supported extension is @push@, via the @extras.push@ member; 1.2 adds the @delta@ extension which is of type @DeltaExtras@, the @headers@ extension, which contains arbitrary @string->string@ key-value pairs, settable at publish time, and @ref@ which is of type @ReferenceExtras@. Unless otherwise specified, the client library should not attempt to do any filtering or validation of the @extras@ field itself, but should treat it opaquely, encoding it and passing it to realtime unaltered.
 ** @(TM2f)@ @timestamp@ time in milliseconds since epoch. If a message received from Ably does not contain a @timestamp@, it should be set to the @timestamp@ of the encapsulating @ProtocolMessage@
 * @(TM3)@ @fromEncoded@ and @fromEncodedArray@ are alternative constructors that take an (already deserialized) @Message@-like object (or array of such objects), and optionally a @channelOptions@, and return a @Message@ (or array of such @Messages@) that's decoded and decrypted as specified in @RSL6@, using the cipher in the @channelOptions@ if the message is encrypted, with any residual transforms (ones that the library cannot decode or decrypt) left in the @encoding@ property per @RSL6b@. This is intended for users receiving messages other than from a REST or Realtime channel (for example, from a queue), to avoid them having to parse the @encoding@ string themselves.
 
@@ -1445,6 +1450,21 @@ h4. BatchPresence
 ** @(PBE2b)@ @action@ - identical to #TP3b - null if @error@ is present
 ** @(PBE2c)@ @error@ - an @ErrorInfo@ object representing the failure reason for this channel - null if @action@ is present
 
+h4. MessageFilter
+* @(MFI1)@ Supplies filter options to subscribe as defined in #RTL22
+* @(MFI2)@ Contains the following attributes:
+** @(MFI2a)@ @isRef@ - A boolean for checking if a message contains an @extras.ref@ field
+** @(MFI2b)@ @refTimeserial@ - A string for checking if a message's @extras.ref.timeserial@ matches the supplied value
+** @(MFI2c)@ @refType@ - A string for checking if a message's @extras.ref.type@ matches the supplied value
+** @(MFI2d)@ @name@ - A string for checking if a message's @name@ matches the supplied value
+
+h4. ReferenceExtras
+* @(REX1)@ Is an object attached to the @extras@ field of a message to reference a previous message.
+* @(REX2)@ Contains the following fields:
+** @(REX2a)@ @timeserial@ - The @timeserial@ of the message being referenced
+** @(REX2b)@ @type@ - The type of reference, user defined
+*** @(REX2b1)@ Should be written in reverse domain name notation
+*** @(REX2b2)@ Types beginning with @com.ably.@ are reserved
 
 h3(#options). Option types
 
@@ -1787,11 +1807,19 @@ class RealtimeChannel:
   publish(name: String?, data: Data?) => io // RTL6i
   subscribe((Message) ->) => io // RTL7a
   subscribe(String, (Message) ->) => io // RTL7b
+  subscribe(MessageFilter, (Message) ->) // RTL22
   unsubscribe() // RTL8a, RTE5
   unsubscribe((Message) ->) // RTL8a
   unsubscribe(String, (Message) ->) // RTL8a
+  unsubscribe(MessageFilter, (Message) ->) // RTL22
   setOptions(options: ChannelOptions) => io // RTL16
 
+class MessageFilter: // RTL22a
+  isRef: bool // MFI2a
+  refTimeserial: string // MFI2b
+  refType: string // MFI2c
+  name: string // MFI2d
+  
 class ChannelProperties:
   attachSerial: String // CP2a
 
@@ -2258,6 +2286,11 @@ class VCDiffDecoder
 class DeltaExtras
   from: String // the id of the message the delta was generated from
   format: String //the delta format. Only vcdiff is supported as at API version 1.2
+
+class ReferenceExtras:
+  timeserial: String // REX2a
+  type: String //REX2b
+
 ```
 
 h2(#old-specs). Old specs
