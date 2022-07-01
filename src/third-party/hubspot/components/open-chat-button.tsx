@@ -73,8 +73,9 @@ const OpenChatButton = ({ label, labelWhenInactive, options: { withIcon } }: Ope
   };
 
   useEffect(() => {
-    const safeWindow =
-      typeof window === 'undefined' ? { HubSpotConversations: undefined, hsConversationsOnReady: [] } : window;
+    const safeWindow = (
+      typeof window === 'undefined' ? { HubSpotConversations: undefined, hsConversationsOnReady: [] } : window
+    ) as Window;
 
     const widget = safeWindow.HubSpotConversations?.widget;
 
