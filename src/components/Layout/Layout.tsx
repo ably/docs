@@ -44,7 +44,7 @@ const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
   const userState: UserDetails = { sessionState, apiKeys };
   return (
     <UserContext.Provider value={userState}>
-      <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} />
+      <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" />
       <header>
         <Header languages={languages} />
       </header>
