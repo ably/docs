@@ -67,9 +67,11 @@ const MAX_RETRY_COUNT = 20;
 
 const OpenChatButton = ({ label, labelWhenInactive, options: { withIcon } }: OpenChatButtonProps) => {
   const [status, setStatus] = useState(INACTIVE);
+  const [selectedLabel, setSelectedLabel] = useState(labelWhenInactive);
 
   const enableChatButton: () => void = () => {
     setStatus(ACTIVE);
+    setSelectedLabel(label);
   };
 
   useEffect(() => {
@@ -96,7 +98,7 @@ const OpenChatButton = ({ label, labelWhenInactive, options: { withIcon } }: Ope
   return (
     <button type="button" className="ui-btn-secondary-invert" disabled={status} data-id="open-chat-widget">
       {withIcon && <Icon name="icon-gui-live-chat" size="1.5rem" color="ui-btn-icon" />}
-      {labelWhenInactive}
+      {selectedLabel}
     </button>
   );
 };
