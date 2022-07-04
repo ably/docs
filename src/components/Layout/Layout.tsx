@@ -21,7 +21,7 @@ import {
 import { Script } from 'gatsby';
 import { hubspotIdentifyUser } from '../../third-party/hubspot';
 
-const hubspotTrackingId = process.env.HUBSPOT_TRACKING_ID || '';
+const hubspotTrackingId = process.env.HUBSPOT_TRACKING_ID;
 
 const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
   const [sessionState, setSessionState] = useState({});
