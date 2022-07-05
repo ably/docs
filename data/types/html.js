@@ -74,6 +74,7 @@ const HtmlDataTypes = Object.freeze({
   select: 'select',
   textarea: 'textarea',
   // other/utility
+  script: 'script',
   br: 'br',
   wbr: 'wbr',
 });

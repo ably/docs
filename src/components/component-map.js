@@ -11,6 +11,7 @@ import { Code, Kbd, Output, Pre, Samp, Var } from './blocks/software';
 import { Em, Small, Strong, Sub, Sup } from './blocks/styles';
 import { Caption, Col, Colgroup, Table, Tbody, Td, Tfoot, Th, Thead, Tr } from './blocks/table';
 import { Paragraph } from './blocks/typography';
+import NullComponent from './NullComponent';
 
 const IS_TEXT = null;
 
@@ -87,6 +88,7 @@ const HtmlTypeComponentMap = Object.freeze({
   [HtmlDataTypes.select]: Select,
   [HtmlDataTypes.textarea]: Textarea,
   // other/utility
+  [HtmlDataTypes.script]: NullComponent,
   [HtmlDataTypes.br]: null,
   [HtmlDataTypes.wbr]: Wbr,
 });
