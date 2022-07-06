@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { ChildPropTypes } from '../../../react-utilities';
 import styled from 'styled-components';
@@ -15,7 +15,8 @@ const StyledLinkCopyButton = styled.button`
   }
 `;
 
-const successColor = ({ copySuccess }) => (copySuccess ? gui.success : copySuccess === null ? '#fff' : gui.error);
+const successColor = ({ copySuccess }: { copySuccess: boolean | null }) =>
+  copySuccess ? gui.success : copySuccess === null ? '#fff' : gui.error;
 
 const LinkHoverPopup = styled.div`
   display: inline-block;
@@ -49,10 +50,10 @@ const LinkHoverPopup = styled.div`
   }
 `;
 
-const LinkCopyButton = ({ id, parentHovered, ...props }) => {
+const LinkCopyButton = ({ id, ...props }: { id: string }) => {
   const [hover, setHover] = useState(false);
   const [content, setContent] = useState('Copy section link to clipboard');
-  const [copySuccess, setCopySuccess] = useState(null);
+  const [copySuccess, setCopySuccess] = useState<null | boolean>(null);
 
   const resetState = () => {
     setContent('Copy section link to clipboard');
@@ -79,7 +80,7 @@ const LinkCopyButton = ({ id, parentHovered, ...props }) => {
   }, [copySuccess]);
   return (
     <div className="relative pt-8" onKeyPress={(event) => event.key === 'Enter' && copyLink()}>
-      {(hover || parentHovered) && (
+      {hover && (
         <LinkHoverPopup id={'link-copy-tooltip'} role="tooltip" copySuccess={copySuccess}>
           {content}
         </LinkHoverPopup>
@@ -106,19 +107,22 @@ LinkCopyButton.propTypes = {
   parentHovered: PropTypes.bool,
 };
 
-const CopyLink = ({ attribs, marginBottom, children }) => {
-  const [hover, setHover] = useState(false);
+const CopyLink = ({
+  attribs,
+  marginBottom,
+  children,
+}: {
+  attribs: { id?: string };
+  marginBottom: string;
+  children: ReactNode;
+}) => {
   if (!attribs || !attribs.id) {
     return <>{children}</>;
   }
   return (
-    <div
-      className={`flex items-center ${marginBottom}`}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
+    <div className={`flex items-center ${marginBottom}`}>
       {children}
-      <LinkCopyButton id={attribs.id} parentHovered={hover} />
+      <LinkCopyButton id={attribs.id} />
     </div>
   );
 };
