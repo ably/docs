@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import PropTypes from 'prop-types';
-import { graphql, Script } from 'gatsby';
+import { graphql, Script, ScriptStrategy } from 'gatsby';
 import Layout from '../components/Layout';
 import Html from '../components/blocks/Html';
 import { LeftSideBar } from '../components/StaticQuerySidebar';
@@ -59,7 +59,6 @@ const Document = ({
         <meta property="og:description" content={description} />
         <meta name="twitter:description" content={description} />
       </Helmet>
-      {script && <Script src={`../scripts/${slug}.js`} />}
       <Layout languages={filteredLanguages}>
         <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
         <Article columns={3}>
@@ -69,6 +68,7 @@ const Document = ({
         </Article>
         <RightSidebar className="col-span-1 px-16" languages={languagesExist} menuData={contentMenu[0]} />
       </Layout>
+      {script && <Script src={`../scripts/${slug}.js`} strategy={ScriptStrategy.idle} />}
     </PageLanguageContext.Provider>
   );
 };
