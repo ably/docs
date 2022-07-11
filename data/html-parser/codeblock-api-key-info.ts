@@ -1,4 +1,6 @@
-const addAPIKeyInfoToCodeBlock = (cheerioNodes) =>
+import cheerio from 'cheerio';
+
+export const addAPIKeyInfoToCodeBlock = (cheerioNodes: cheerio.Selector) =>
   cheerioNodes('pre > code').each((_, elem) => {
     const loadedCodeElement = cheerioNodes(elem);
     const content = loadedCodeElement.text();
@@ -6,7 +8,3 @@ const addAPIKeyInfoToCodeBlock = (cheerioNodes) =>
       cheerioNodes(elem).attr('data-contains-key', 'true');
     }
   });
-
-module.exports = {
-  addAPIKeyInfoToCodeBlock,
-};
