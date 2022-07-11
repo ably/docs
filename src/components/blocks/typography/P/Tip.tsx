@@ -12,6 +12,7 @@ import { colors } from '../../../../styles';
  */
 const LeftsideElement = styled.span`
   width: 8px;
+  border-radius: 0.5em 0 0 0.5em;
   background-color: #08ff13;
   left: 0;
   cursor: default;
@@ -46,7 +47,7 @@ const InlineContentContainer = styled.div`
 
 const InlineGridParagraph = styled.p`
   display: inline-grid;
-  border-radius: 0.5rem;
+  border-radius: 0.5em;
   background-color: ${colors.containers.three};
   border-width: 2px;
   border-color: #d9d9da;
