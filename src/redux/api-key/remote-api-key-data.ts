@@ -4,6 +4,18 @@ import { addDataToStore, DEFAULT_CACHE_STRATEGY, getJsonResponse } from '../fetc
 import { ApiKeyValue } from './api-key-reducer';
 import { API_KEY_LOADED_EVENT, WEB_API_TEMP_KEY_ENDPOINT } from './constants';
 
+declare global {
+  interface Window {
+    ably: {
+      docs: {
+        DOCS_API_KEY: boolean | string;
+        randomChannelName: string;
+        onApiKeyRetrieved: () => void;
+      };
+    };
+  }
+}
+
 const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>) => {
   if (payload.error) {
     console.error(`Error retrieving data from url, ${payload.error}`);
@@ -35,6 +47,12 @@ const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>)
       return { ...value, apiKeys };
     }),
   );
+  /**
+   * Supporting ad hoc scripts; the following 3 lines can be removed when ad hoc scripts are.
+   */
+  if (window.ably?.docs) {
+    window.ably.docs.DOCS_API_KEY = apiKeyData[0].apiKeys[0].whole_key;
+  }
   return {
     ...payload,
     data: apiKeyData,
