@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import languageLabels from '../../../maps/language';
 import MenuItemButton, { SelectedMenuItemButton } from '../../Menu/MenuItem/MenuItemButton';
 import Html from '../Html';
 import LanguageNavigation from '../../Menu/LanguageNavigation';
+import PageLanguageContext from '../../../contexts/page-language-context';
 
 const LocalLanguageAlternatives = ({
   language,
@@ -13,9 +14,11 @@ const LocalLanguageAlternatives = ({
 }: {
   language: string;
   languages: string[];
-  data: Record<string, string | any[] | null | undefined>;
+  data: Record<string, string | unknown[] | null | undefined>;
   children: React.ReactNode;
 }) => {
+  const pageLanguage = useContext(PageLanguageContext);
+
   const [selected, setSelected] = useState(children);
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
 
