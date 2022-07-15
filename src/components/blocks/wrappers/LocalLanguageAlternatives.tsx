@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import languageLabels from '../../../maps/language';
 import MenuItemButton, { SelectedMenuItemButton } from '../../Menu/MenuItem/MenuItemButton';
 import Html from '../Html';
-import { ChildPropTypes } from '../../../react-utilities';
 import LanguageNavigation from '../../Menu/LanguageNavigation';
 
-const LocalLanguageAlternatives = ({ language, languages, data, children }) => {
+const LocalLanguageAlternatives = ({
+  language,
+  languages,
+  data,
+  children,
+}: {
+  language: string;
+  languages: string[];
+  data: Record<string, string | any[] | null | undefined>;
+  children: React.ReactNode;
+}) => {
   const [selected, setSelected] = useState(children);
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
 
-  const onClick = ({ target: { value } }) => {
+  const onClick = ({ target: { value } }: { target: { value: string } }) => {
     setSelected(<Html data={data[value]} />);
     setSelectedLanguage(value);
   };
@@ -32,13 +40,6 @@ const LocalLanguageAlternatives = ({ language, languages, data, children }) => {
       {selected}
     </>
   );
-};
-
-LocalLanguageAlternatives.propTypes = {
-  language: PropTypes.string,
-  languages: PropTypes.array,
-  data: PropTypes.object,
-  children: ChildPropTypes,
 };
 
 export default LocalLanguageAlternatives;
