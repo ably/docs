@@ -49,7 +49,7 @@ const InlineGridParagraph = styled.p`
   display: inline-grid;
   border-radius: 0.5em;
   background-color: ${colors.containers.three};
-  border-width: 2px;
+  border-width: 1px;
   border-color: #d9d9da;
   grid-template-rows: auto auto;
   font-size: 16px;

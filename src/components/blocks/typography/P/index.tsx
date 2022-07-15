@@ -3,9 +3,10 @@ import '@ably/ui/core/styles.css';
 import { PendingClassName } from './PendingClassName';
 import { HtmlComponentProps } from '../../../html-component-props';
 import { Tip } from './Tip';
+import { attribsContainClass } from '../../../../clientside-data-utilities';
 
 const Paragraph = ({ data, attribs }: HtmlComponentProps<'p'> & { attribs: { ['data-variant']: string } }) => {
-  const isTip = attribs.className && (attribs.className === 'tip' || attribs.className.includes(' tip '));
+  const isTip = attribsContainClass('tip', attribs);
   const BaseComponent = isTip ? Tip : GenericHtmlBlock('p');
   const ParagraphComponent = PendingClassName({ data, attribs }, BaseComponent);
   switch (attribs['data-variant']) {
