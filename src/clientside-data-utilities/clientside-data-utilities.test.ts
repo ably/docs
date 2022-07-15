@@ -44,7 +44,7 @@ describe('Ensures that attribs object contains the expected className', () => {
         nat(2), // Where to place the class within the className
         (cssClass, className, position) => {
           const attribs = {
-            className: className.replace(cssClass, `#${cssClass}`),
+            className: className.replaceAll(cssClass, `#${cssClass}`),
           };
           if (position === 0) {
             attribs.className = `${cssClass}${attribs.className}`;
