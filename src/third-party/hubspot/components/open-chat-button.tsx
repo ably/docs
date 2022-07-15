@@ -21,20 +21,17 @@ type OpenChatButtonProps = {
   };
 };
 
-const ACTIVE = true;
-const INACTIVE = false;
-
 const safeWindow = (
   typeof window === 'undefined' ? { HubSpotConversations: undefined, hsConversationsOnReady: [] } : window
 ) as Window;
 
 const OpenChatButton = ({ label, labelWhenInactive, options: { withIcon } }: OpenChatButtonProps) => {
-  const [status, setStatus] = useState(INACTIVE);
+  const [isActive, setIsActive] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState(labelWhenInactive);
   const [clickHandler, setClickHandler] = useState(identity);
 
   const activateChatButton: () => void = () => {
-    setStatus(ACTIVE);
+    setIsActive(true);
     setSelectedLabel(label);
     setClickHandler((event) => {
       const widget = safeWindow.HubSpotConversations?.widget;
@@ -48,7 +45,7 @@ const OpenChatButton = ({ label, labelWhenInactive, options: { withIcon } }: Ope
   };
 
   const deActivateChatButton: () => void = () => {
-    setStatus(INACTIVE);
+    setIsActive(false);
     setSelectedLabel(labelWhenInactive);
     setClickHandler(identity);
   };
@@ -78,7 +75,7 @@ const OpenChatButton = ({ label, labelWhenInactive, options: { withIcon } }: Ope
     <button
       type="button"
       className="ui-btn-secondary-invert"
-      disabled={status}
+      disabled={isActive}
       data-id="open-chat-widget"
       onClick={clickHandler}
     >

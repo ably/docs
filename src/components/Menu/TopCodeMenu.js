@@ -6,7 +6,6 @@ import PageLanguageContext from '../../contexts/page-language-context';
 import MenuLabel from './Label';
 import MenuItem from './MenuItem';
 import LanguageButton from '../Button/LanguageButton';
-import NullComponent from '../NullComponent';
 
 const TopCodeMenu = ({ languages }) => {
   const pageLanguage = useContext(PageLanguageContext);
@@ -21,18 +20,14 @@ const TopCodeMenu = ({ languages }) => {
             <MenuItem key={DEFAULT_LANGUAGE}>
               <LanguageButton language={DEFAULT_LANGUAGE} />
             </MenuItem>
-          ) : (
-            <NullComponent />
-          )}
+          ) : null}
           {languages.map((language) => (
             <MenuItem key={language}>
               <LanguageButton language={language} />
             </MenuItem>
           ))}
         </TopHorizontalMenu>
-      ) : (
-        <NullComponent />
-      )}
+      ) : null}
     </div>
   );
 };

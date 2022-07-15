@@ -20,14 +20,18 @@ type HubspotUser = {
   adminUrl: string;
 };
 
-type HubspotUserIdentityProps = {
+export const hubspotIdentifyUser = ({
+  emulatingUser,
+  user,
+  hubspot,
+}: {
   emulatingUser?: boolean;
   user?: HubspotUser;
   hubspot?: AblyHubspotData;
-};
-
-export const hubspotIdentifyUser = ({ emulatingUser, user, hubspot }: HubspotUserIdentityProps) => {
-  if (!hubspot || !window) return;
+}) => {
+  if (!hubspot || !window) {
+    return;
+  }
   if (!window._hsq) {
     window._hsq = [];
   }
