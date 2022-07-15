@@ -8,7 +8,7 @@ const { LATEST_ABLY_API_VERSION_STRING, DOCUMENTATION_PATH } = require('../trans
 const { createContentMenuDataFromPage } = require('./createContentMenuDataFromPage');
 const { DEFAULT_LANGUAGE } = require('./constants');
 const { identity } = require('lodash');
-const { existsSync } = require('fs');
+const { safeFileExists } = require('./safeFileExists');
 
 const createPages = async ({ graphql, actions: { createPage } }) => {
   const documentTemplate = path.resolve(`src/templates/document.js`);
@@ -46,14 +46,9 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
         edge.node.parentSlug,
         edge.node.version,
       );
-      // Check if script exists for page
-      let script = false;
-      try {
-        script = existsSync(`static/scripts/${edge.node.slug}.js`);
-      } catch (err) {
-        script = false;
-        console.error(`Error checking if script file exists for slug`, err);
-      }
+
+      const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
+
       createPage({
         path: `${DOCUMENTATION_PATH}${edge.node.slug}`,
         component: documentTemplate,
