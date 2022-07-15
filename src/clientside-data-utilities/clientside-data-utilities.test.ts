@@ -1,4 +1,4 @@
-import { assert, property, constant, lorem, nat } from 'fast-check';
+import { assert, property, lorem, nat } from 'fast-check';
 import { attribsContainClass } from '.';
 
 describe('Ensures that attribs object contains the expected className', () => {
