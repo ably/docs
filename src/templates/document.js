@@ -5,7 +5,7 @@ import { graphql, Script, ScriptStrategy } from 'gatsby';
 import Layout from '../components/Layout';
 import Html from '../components/blocks/Html';
 import { LeftSideBar } from '../components/StaticQuerySidebar';
-import PageLanguageContext from '../contexts/page-language-context';
+import PageLanguageContext, { PageLanguagesContext } from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import VersionMenu from '../components/Menu/VersionMenu';
@@ -50,24 +50,26 @@ const Document = ({
 
   return (
     <PageLanguageContext.Provider value={language}>
-      <Helmet>
-        <title>{title}</title>
-        <meta property="og:title" content={title} />
-        <meta property="twitter:title" content={title} />
-        <link rel="canonical" href={canonical} />
-        <meta name="description" content={description} />
-        <meta property="og:description" content={description} />
-        <meta name="twitter:description" content={description} />
-      </Helmet>
-      <Layout languages={filteredLanguages}>
-        <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
-        <Article columns={3}>
-          <PageTitle id="title">{title}</PageTitle>
-          <VersionMenu versions={versions.edges} version={version} rootVersion={slug} />
-          <div className="col-span-3">{elements}</div>
-        </Article>
-        <RightSidebar className="col-span-1 px-16" languages={languagesExist} menuData={contentMenu[0]} />
-      </Layout>
+      <PageLanguagesContext.Provider value={languages}>
+        <Helmet>
+          <title>{title}</title>
+          <meta property="og:title" content={title} />
+          <meta property="twitter:title" content={title} />
+          <link rel="canonical" href={canonical} />
+          <meta name="description" content={description} />
+          <meta property="og:description" content={description} />
+          <meta name="twitter:description" content={description} />
+        </Helmet>
+        <Layout languages={filteredLanguages}>
+          <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
+          <Article columns={3}>
+            <PageTitle id="title">{title}</PageTitle>
+            <VersionMenu versions={versions.edges} version={version} rootVersion={slug} />
+            <div className="col-span-3">{elements}</div>
+          </Article>
+          <RightSidebar className="col-span-1 px-16" languages={languagesExist} menuData={contentMenu[0]} />
+        </Layout>
+      </PageLanguagesContext.Provider>
       {script && <Script src={`../scripts/${slug}.js`} strategy={ScriptStrategy.idle} />}
     </PageLanguageContext.Provider>
   );
