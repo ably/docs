@@ -21,7 +21,7 @@ const addLanguageSupportForGithubStyleCode = (content) => {
    */
   const langRegex = '\\[([^\\]]+)\\]'; // e.g. [javascript], [    ], [jsall, ruby]
   const codeEditorRegex = '\\(([^\\)]+)\\)'; // e.g. (code-editor), (    ), (!@£$)
-  // optinally match anything like [javascript](code-editor:realtime/channel-publish)
+  // optionally match anything like [javascript](code-editor:realtime/channel-publish)
   const langAndEditorRegex = `(?:${langRegex})?(?:${codeEditorRegex})?`;
   /**
    * Wrap the regex strings so they'll match

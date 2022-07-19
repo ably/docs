@@ -1,6 +1,6 @@
 import { curry, propOr } from 'lodash/fp';
 import HtmlDataTypes from '../../data/types/html';
-import { Button, Input, Meter, Noscript, Progress, Select, Textarea } from './blocks/complex-functionality';
+import { Button, Input, Meter, Noscript, Progress, Script, Select, Textarea } from './blocks/complex-functionality';
 import { Article, Aside, Div, Main, Section, Span } from './blocks/dividers';
 import { A, Address, Audio, Blockquote, Iframe, Img, Quote, Video } from './blocks/external-references';
 import { H1, H2, H3, H4, H5, H6, Header } from './blocks/headings';
@@ -87,6 +87,7 @@ const HtmlTypeComponentMap = Object.freeze({
   [HtmlDataTypes.select]: Select,
   [HtmlDataTypes.textarea]: Textarea,
   // other/utility
+  [HtmlDataTypes.script]: Script,
   [HtmlDataTypes.br]: null,
   [HtmlDataTypes.wbr]: Wbr,
 });
