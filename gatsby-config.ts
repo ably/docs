@@ -3,6 +3,8 @@ export const siteMetadata = {
   title: 'Documentation | Ably Realtime',
 };
 
+export const assetPrefix = process.env.ASSET_PREFIX ?? 'http://localhost:9000';
+
 export const plugins = [
   'gatsby-plugin-postcss',
   'gatsby-plugin-styled-components',

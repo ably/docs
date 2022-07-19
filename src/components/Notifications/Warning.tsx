@@ -3,7 +3,6 @@ import SuggestDestination, { MESSAGE_LEVEL } from './Notice';
 import AICloseRounded from '../../styles/svg/ai-close-rounded';
 import { primary } from '../../styles/colors';
 import styled from 'styled-components';
-import NullComponent from '../NullComponent';
 
 const CAlertWarning = styled.div`
   background-color: ${primary.brightOrange};
@@ -21,9 +20,7 @@ const CAlertWarning = styled.div`
 
 const Warning: FC<{ message: string; href: string; linkText: string }> = ({ message, href, linkText }) => {
   const [isVisible, setVisible] = useState(false);
-  return isVisible ? (
-    <NullComponent />
-  ) : (
+  return isVisible ? null : (
     <CAlertWarning className="p-8 col-span-3 mb-40">
       <SuggestDestination message={message} messageLevel={MESSAGE_LEVEL.WARNING} href={href} linkText={linkText} />
       <button type="button" className="text-white" onClick={() => setVisible(true)} aria-label="Close">
