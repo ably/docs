@@ -8,6 +8,7 @@ const { LATEST_ABLY_API_VERSION_STRING, DOCUMENTATION_PATH } = require('../trans
 const { createContentMenuDataFromPage } = require('./createContentMenuDataFromPage');
 const { DEFAULT_LANGUAGE } = require('./constants');
 const { identity } = require('lodash');
+const { safeFileExists } = require('./safeFileExists');
 
 const createPages = async ({ graphql, actions: { createPage } }) => {
   const documentTemplate = path.resolve(`src/templates/document.js`);
@@ -45,6 +46,9 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
         edge.node.parentSlug,
         edge.node.version,
       );
+
+      const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
+
       createPage({
         path: `${DOCUMENTATION_PATH}${edge.node.slug}`,
         component: documentTemplate,
@@ -55,6 +59,7 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
           languages,
           contentOrderedList: contentOrderedList,
           contentMenu,
+          script,
         },
       });
     }),

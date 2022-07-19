@@ -5,3 +5,4 @@ export { default as Noscript } from './Noscript';
 export { default as Progress } from './Progress';
 export { default as Select } from './Select';
 export { default as Textarea } from './Textarea';
+export { default as Script } from './Script';
