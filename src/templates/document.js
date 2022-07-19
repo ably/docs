@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import PropTypes from 'prop-types';
-import { graphql } from 'gatsby';
+import { graphql, Script, ScriptStrategy } from 'gatsby';
 import Layout from '../components/Layout';
 import Html from '../components/blocks/Html';
 import { LeftSideBar } from '../components/StaticQuerySidebar';
@@ -21,7 +21,7 @@ const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, exten
 
 const Document = ({
   location: { search },
-  pageContext: { contentOrderedList, languages, version, contentMenu, slug },
+  pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
   data: { document, versions },
 }) => {
   const title = getMetaDataDetails(document, 'title');
@@ -68,6 +68,7 @@ const Document = ({
         </Article>
         <RightSidebar className="col-span-1 px-16" languages={languagesExist} menuData={contentMenu[0]} />
       </Layout>
+      {script && <Script src={`../scripts/${slug}.js`} strategy={ScriptStrategy.idle} />}
     </PageLanguageContext.Provider>
   );
 };
