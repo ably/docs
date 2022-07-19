@@ -3,25 +3,19 @@ import './src/styles/global.css';
 import { reducerFlashes } from '@ably/ui/core/Flash';
 
 import {
-  loadSprites,
   createRemoteDataStore,
   attachStoreToWindow,
   reducerBlogPosts,
   reducerSessionData,
 } from '@ably/ui/core/scripts';
 
-import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer.ts';
-
-import sprites from '@ably/ui/core/sprites.svg';
+import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
 
 const PAGE_OFFSET = 128;
 
 const offsetScroll = () => window.scrollBy(0, -PAGE_OFFSET);
 
 const onClientEntry = () => {
-  // Inserts a sprite map for <use> tags
-  loadSprites(sprites);
-
   const store = createRemoteDataStore({
     ...reducerBlogPosts,
     ...reducerSessionData,
