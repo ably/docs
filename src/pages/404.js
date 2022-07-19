@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link } from 'gatsby';
-import { DOCUMENTATION_NAME } from '../../../data/transform/constants';
+import { DOCUMENTATION_NAME } from '../../data/transform/constants';
 
 const NotFoundPage = () => {
   return (

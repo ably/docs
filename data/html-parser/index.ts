@@ -3,6 +3,7 @@ import cheerio from 'cheerio';
 import { defaults, pickAll } from 'lodash/fp';
 import DataTypes from '../types';
 import HtmlDataTypes from '../types/html';
+import { addAPIKeyInfoToCodeBlock } from './codeblock-api-key-info';
 import { duplicateLangAttributes } from './duplicate-lang-attributes';
 import { liftLangAttributes } from './lift-lang-attributes';
 import { removeParagraphsFromDefinitionListsAndMerge } from './remove-paragraphs-from-definition-lists';
@@ -65,6 +66,7 @@ export const htmlParser = (content: string) => {
   const loadedDom = cheerio.load(content);
   liftLangAttributes(loadedDom);
   duplicateLangAttributes(loadedDom);
+  addAPIKeyInfoToCodeBlock(loadedDom);
   removeParagraphsFromDefinitionListsAndMerge(loadedDom);
   const loadedDomBodyNodes = loadedDom('body').children('*');
   const parsedNodes = cheerioParser(loadedDomBodyNodes);
