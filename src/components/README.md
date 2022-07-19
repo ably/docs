@@ -20,5 +20,3 @@ It is a good place to put:
 It is not the best place to put:
 * String transformation operations such as regex substitutions; consider putting these in pre-parser or parser-enhancements
 * Meta-data-based operations; ideally these should happen in parser-enhancements
-
-Use the NullComponent instead of null. This is an empty React Fragment that has been named for purposes of consistency and clarity.

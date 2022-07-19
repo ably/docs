@@ -1,5 +1,5 @@
-const { default: fc } = require('fast-check');
-const { addBoldText } = require('./add-bold-text');
+import { default as fc } from 'fast-check';
+import { addBoldText } from './add-bold-text';
 
 const stringWithoutAsterisks = fc.string().map((s) => s.replace('*', ''));
 
