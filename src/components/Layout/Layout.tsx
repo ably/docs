@@ -2,7 +2,14 @@ import React, { FunctionComponent as FC, useEffect, useState } from 'react';
 import Header from '../Header';
 // Session-related scripts
 import '@ably/ui/core/scripts';
-import { connectState, selectSessionData, fetchSessionData, getRemoteDataStore } from '@ably/ui/core/scripts';
+import {
+  connectState,
+  loadSprites,
+  selectSessionData,
+  fetchSessionData,
+  getRemoteDataStore,
+} from '@ably/ui/core/scripts';
+import sprites from '@ably/ui/core/sprites.svg';
 import UserContext, { UserDetails } from '../../contexts/user-context';
 import { fetchApiKeyData } from '../../redux/api-key';
 import { selectData } from '../../redux/select-data';
@@ -11,6 +18,10 @@ import {
   WEB_API_KEYS_DATA_ENDPOINT,
   WEB_API_USER_DATA_ENDPOINT,
 } from '../../redux/api-key/constants';
+import { Script } from 'gatsby';
+import { hubspotIdentifyUser } from '../../third-party/hubspot';
+
+const hubspotTrackingId = process.env.HUBSPOT_TRACKING_ID;
 
 const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
   const [sessionState, setSessionState] = useState({});
@@ -19,6 +30,8 @@ const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
   useEffect(() => {
     const store = getRemoteDataStore();
 
+    loadSprites(sprites);
+
     connectState(selectSessionData, setSessionState);
     fetchSessionData(store, WEB_API_USER_DATA_ENDPOINT);
 
@@ -26,9 +39,12 @@ const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
     fetchApiKeyData(store, WEB_API_KEYS_DATA_ENDPOINT);
   }, []);
 
+  useEffect(() => hubspotIdentifyUser(sessionState), [sessionState]);
+
   const userState: UserDetails = { sessionState, apiKeys };
   return (
     <UserContext.Provider value={userState}>
+      {hubspotTrackingId && <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" />}
       <header>
         <Header languages={languages} />
       </header>

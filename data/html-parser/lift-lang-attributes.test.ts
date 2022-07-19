@@ -1,5 +1,5 @@
-const cheerio = require('cheerio');
-const { liftLangAttributes } = require('./lift-lang-attributes');
+import cheerio from 'cheerio';
+import { liftLangAttributes } from './lift-lang-attributes';
 
 const content = `<dl>
     <dt><div lang='javascript'>Term</div></dt>
@@ -8,9 +8,10 @@ const content = `<dl>
 
 describe('Lift language attributes into <dt> and <dd> elements', () => {
   it('Lifts language attributes into <dt> and <dd> elements', () => {
-    const loadedDom = cheerio.load(content, null);
+    const loadedDom = cheerio.load(content);
     liftLangAttributes(loadedDom);
-    expect(loadedDom('body').html().replace(/\s+/g, '')).toEqual(
+    const html = loadedDom('body').html() ?? '';
+    expect(html.replace(/\s+/g, '')).toEqual(
       `<dl>
         <div lang="javascript">
             <dt><div>Term</div></dt>
