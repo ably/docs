@@ -43,6 +43,9 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
       return null;
     }
     const relevantGroup = childLanguageGroups.find((group) => group.index === index);
+    if (relevantGroup?.languages) {
+      console.log(relevantGroup);
+    }
     if (relevantGroup && relevantGroup.data && relevantGroup.languages.length > 1) {
       return React.cloneElement(child, {
         language,

@@ -30,18 +30,12 @@ const assignPrimary = (
 ) => {
   group.languages.push(lang);
   if (lang === targetLanguage) {
-    return {
-      ...group,
-      index,
-      primary: targetLanguage,
-    };
+    group.index = index;
+    group.primary = targetLanguage;
   }
   if (lang === DEFAULT_LANGUAGE && group.primary !== targetLanguage) {
-    return {
-      ...group,
-      index,
-      primary: DEFAULT_LANGUAGE,
-    };
+    group.index = index;
+    group.primary = DEFAULT_LANGUAGE;
   }
   if (group.data === null) {
     return group;
