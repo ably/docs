@@ -1,7 +1,16 @@
 import { isString } from 'lodash';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 
-const makeGroup = (lang, index, data) => ({
+type LanguageGroup = {
+  start: number;
+  end: number;
+  index: number;
+  primary: string;
+  languages: string[];
+  data: Record<string, Record<string, unknown>> | null;
+};
+
+const makeGroup = (lang: string, index: number, data: Record<string, Record<string, unknown>>): LanguageGroup => ({
   start: index,
   end: index,
   index,
@@ -12,13 +21,18 @@ const makeGroup = (lang, index, data) => ({
   },
 });
 
-const assignPrimary = (group, lang, targetLanguage, data, index) => {
+const assignPrimary = (
+  group: LanguageGroup,
+  lang: string,
+  targetLanguage: string,
+  data: Record<string, Record<string, unknown>>,
+  index: number,
+) => {
   group.languages.push(lang);
   if (lang === targetLanguage) {
     return {
       ...group,
       index,
-      data: null,
       primary: targetLanguage,
     };
   }
@@ -26,7 +40,6 @@ const assignPrimary = (group, lang, targetLanguage, data, index) => {
     return {
       ...group,
       index,
-      data: null,
       primary: DEFAULT_LANGUAGE,
     };
   }
@@ -41,12 +54,13 @@ const assignPrimary = (group, lang, targetLanguage, data, index) => {
   };
 };
 
-const addToFilter = (group, toFilter) => {
+const addToFilter = (group: LanguageGroup, toFilter: boolean[]) => {
   for (let i = 0; group.start + i <= group.end; ++i) {
     toFilter[group.start + i] = group.languages[i] !== group.primary;
   }
 };
 
-const isIrrelevantForLanguageDisplay = (data) => !!data && isString(data) && /^\s*$/.test(data);
+const isIrrelevantForLanguageDisplay = (data: Record<string, Record<string, unknown>>): boolean =>
+  !!data && isString(data) && /^\s*$/.test(data);
 
 export { makeGroup, assignPrimary, addToFilter, isIrrelevantForLanguageDisplay };

@@ -2,10 +2,16 @@ import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import { assignPrimary } from './language-utilities';
 
 describe('Assigning primary to language groups works as expected', () => {
-  it('Primary language results in null data, primary language being returned', () => {
+  // NB: This test used to test for the opposite behaviour, hence the inclusion
+  it('Primary language does not result in null data', () => {
     const result = assignPrimary(
       {
         languages: [],
+        start: 0,
+        end: 0,
+        index: 0,
+        primary: '',
+        data: {},
       },
       'javascript', // Current language
       'javascript', // target language
@@ -13,7 +19,9 @@ describe('Assigning primary to language groups works as expected', () => {
       0,
     );
     const expected = {
-      data: null,
+      data: {},
+      start: 0,
+      end: 0,
       index: 0,
       languages: ['javascript'],
       primary: 'javascript',
@@ -21,10 +29,16 @@ describe('Assigning primary to language groups works as expected', () => {
     expect(result).toEqual(expected);
   });
 
-  it('Default language results in null data, primary language being returned', () => {
+  // NB: This test used to test for the opposite behaviour, hence the inclusion
+  it('Default language does not result in null data', () => {
     const result = assignPrimary(
       {
         languages: [],
+        start: 0,
+        end: 0,
+        index: 0,
+        primary: '',
+        data: {},
       },
       DEFAULT_LANGUAGE, // Current language
       'javascript', // target language
@@ -32,7 +46,9 @@ describe('Assigning primary to language groups works as expected', () => {
       0,
     );
     const expected = {
-      data: null,
+      data: {},
+      start: 0,
+      end: 0,
       index: 0,
       languages: [DEFAULT_LANGUAGE],
       primary: DEFAULT_LANGUAGE,
@@ -45,6 +61,10 @@ describe('Assigning primary to language groups works as expected', () => {
       {
         languages: [],
         data: null,
+        start: 0,
+        end: 0,
+        index: 0,
+        primary: '',
       },
       'csharp', // Current language
       'javascript', // target language
@@ -54,6 +74,10 @@ describe('Assigning primary to language groups works as expected', () => {
     const expected = {
       languages: ['csharp'],
       data: null,
+      start: 0,
+      end: 0,
+      index: 0,
+      primary: '',
     };
     expect(result).toEqual(expected);
   });

@@ -11,7 +11,7 @@ const Pre = ({ data, language, languages, altData, attribs }: PreProps): ReactEl
   };
   return (
     <pre {...withModifiedClassname}>
-      {language ? (
+      {languages ? (
         <LocalLanguageAlternatives language={language} languages={languages} data={altData}>
           <Html data={data} />
         </LocalLanguageAlternatives>

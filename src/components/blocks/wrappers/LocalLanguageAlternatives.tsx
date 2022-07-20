@@ -28,8 +28,9 @@ const LocalLanguageAlternatives = ({
     setSelectedLanguage(value);
   };
 
-  const label =
-    language === DEFAULT_LANGUAGE ? `SELECT` : `No ${languageLabels[language] ?? language} example exists, select:`;
+  const label = [...languages, DEFAULT_LANGUAGE].includes(language)
+    ? `SELECT`
+    : `No ${languageLabels[language] ?? language} example exists, select:`;
   const languageItems = languages.map((lang) => {
     // Site navigation button
     if (pageLanguages.includes(lang)) {

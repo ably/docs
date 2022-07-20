@@ -43,20 +43,13 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
       return null;
     }
     const relevantGroup = childLanguageGroups.find((group) => group.index === index);
-    if (
-      relevantGroup &&
-      relevantGroup.data &&
-      relevantGroup.primary !== language &&
-      relevantGroup.languages.length > 1
-    ) {
-      console.log('example found', relevantGroup.data);
+    if (relevantGroup && relevantGroup.data && relevantGroup.languages.length > 1) {
       return React.cloneElement(child, {
         language,
         languages: relevantGroup.languages,
         altData: relevantGroup.data,
       });
     }
-    console.log('no example found', relevantGroup);
     return child;
   });
 };

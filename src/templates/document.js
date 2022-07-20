@@ -42,7 +42,7 @@ const Document = ({
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html data={data} key={i} />,
       ),
-    [contentOrderedList],
+    [contentOrderedList, language],
   );
 
   const params = new URLSearchParams(search);
