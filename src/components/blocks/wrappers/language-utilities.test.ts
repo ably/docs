@@ -19,7 +19,9 @@ describe('Assigning primary to language groups works as expected', () => {
       0,
     );
     const expected = {
-      data: {},
+      data: {
+        javascript: {},
+      },
       start: 0,
       end: 0,
       index: 0,
@@ -46,7 +48,9 @@ describe('Assigning primary to language groups works as expected', () => {
       0,
     );
     const expected = {
-      data: {},
+      data: {
+        default: {},
+      },
       start: 0,
       end: 0,
       index: 0,
