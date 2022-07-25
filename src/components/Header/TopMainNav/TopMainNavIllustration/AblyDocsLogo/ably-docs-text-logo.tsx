@@ -1,7 +1,7 @@
 import React from 'react';
 
 export const AblyDocsTextLogo = () => (
-  <svg width="61" height="22" viewBox="0 0 61 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg className="h-32" width="61" height="32" viewBox="0 0 61 22" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path
       d="M7.13709 21.05C13.3721 21.05 17.9831 16.874 17.9831 10.755C17.9831 4.63596 13.3721 0.459961 7.13709 0.459961H0.496094V21.05H7.13709ZM7.13709 2.69296C11.9801 2.69296 15.5181 5.94096 15.5181 10.755C15.5181 15.569 11.9801 18.817 7.13709 18.817H2.90309V2.69296H7.13709Z"
       fill="#FF5416"
