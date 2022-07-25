@@ -139,83 +139,84 @@ This step shows you how to create the server code from scratch. If you get stuck
 npm install jsonwebtoken express
 ```
 
-3. Copy your API key to the clipboard, from your Ably Dashboard. It will be of the form @12AB3a.ab3GOm:c-B4Emryq9aFmOxP@.
+3. Copy your API key to the clipboard, from your Ably Dashboard. It will be of the form:
+@12AB3a.ab3GOm:c-B4Emryq9aFmOxP@.
 
 4. Create a @.env@ file with the following content:
 
 ```
-API_KEY=your_api_key
+ABLY_API_KEY=your_api_key
 ```
 
-5. Paste in your API key to replace @your_api_key@.
+Paste in your API key to replace @your_api_key@.
 
-6. Create a new file called @server.js@. Add the following code at the top of the file:
+5. Create a new file called @server.js@. Add the following code at the top of the file:
 
 ```[javascript]
 const jwt = require("jsonwebtoken")
 require('dotenv').config()
 ```
 
-This includes the JWT library you'll be using, and also loads the environment file containing your @API_KEY@.
+This includes the JWT library you'll be using, and also loads the environment file containing your @ABLY_API_KEY@.
 
-7. Add the following code:
+6. Add the following code:
 
 ```[javascript]
-const apiKey = process.env.API_KEY
-const keyParts = apiKey.split(':', 2);
-const keyName   = keyParts[0];
-const keySecret = keyParts[1];
-const ttlSeconds = 3600
+const apiKey = process.env.ABLY_API_KEY;
+const [ keyId, keySecret ] = apiKey.split(":");
+
+const expiresIn = 3600;
+const jwtOptions = { expiresIn, keyId };
 ```
 
-The Ably API key is split into two parts here: @keyName@, which is used for the @keyId@ in the JWT, and @keySecret@, which is used to sign the JWT.
+The Ably API key is split into two parts here: @keyId@, which is used for the @keyId@ in the JWT, and @keySecret@, which is used to sign the JWT.
 
-The @ttlSeconds@ constant is the duration (time-to-live) in seconds for which the JWT will be valid for. After this time the token has expired and can no longer be used for authentication, and a new one must be created.
+The @expiresIn@ constant is the duration in seconds for which the JWT will be valid for. After this time the token has expired and can no longer be used for authentication, and a new one must be created.
 
 A JWT is typically made up of three different entities of data: a header, a payload and a signature. However, since you are using the "jsonwebtoken":https://www.npmjs.com/package/jsonwebtoken npm library, these details are abstracted away and you only need a key secret and any application-specific payload data. You can also add other options, such as if you need to use a non-default hashing algorithm.
 
-8. With Ably, you must send the time-to-live as well as the @keyid@ as part of the @jwtOptions@ parameter. You can optionally configure capabilities for the client using this token or a client ID, these will be part of the payload. Add the following code:
+With Ably, you must send the time-to-live (@expiresIn@) as well as the @keyId@ as part of the @jwtOptions@ parameter. You can optionally configure capabilities for the client using this token or a client ID, these will be part of the payload. Add the following code:
+
+7. To finish the web app you use "Express":https://www.npmjs.com/package/express to build a simple server to serve files on your localhost:
 
 ```[javascript]
-const jwtPayload = {
-    'x-ably-capability': JSON.stringify({ '*': ['publish', 'subscribe'] }),
-    'x-ably-clientId': 'OPTIONAL_CLIENT_ID'
-}
+const express = require('express');
 
-const jwtOptions = {
-    expiresIn: ttlSeconds,
-    keyid: `${keyName}`
-}
-```
+const app = express();
 
-9. To finish the web app you use "Express":https://www.npmjs.com/package/express to build a simple server to serve files on your localhost:
-
-```[javascript]
-const express = require('express'),
-    app = express();
 app.use('/', express.static(__dirname))
 ```
 
 The Express server uses a middleware to serve the content, and uses @express.static(__dirname)@ to specify that any HTML files in the root folder are served directly.
 
-10. Create the @/auth@ route in this server. This route is responsible for creating a JWT and sending this token back to the client:
+9. Create the @/auth@ route in this server. This route is responsible for creating a JWT and sending this token back to the client. Normally we would validate the User before issuing the JWT token but for simplicity we'll just use their input as the `clientId`.
+
+In the front-end HTML we call the authUrl with a querysting variable, `/auth?clientId={username}:{password}`, which we access with the Express Request object. The parameters of the GET query are exposed by the @Request.query@ collection. In our example the users input will be available as @req.query.clientId@
 
 ```[javascript]
-app.get('/auth', (req, res) => {
-    console.log('Sucessfully connected to the server auth endpoint')
-    jwt.sign(jwtPayload, keySecret, jwtOptions, (err, tokenId) => {
-        console.log('JSON Web Token signed by auth server')
-        if (err) {
-            console.trace()
-            return
-        }
-        res.header('Cache-Control', 'private, no-cache, no-store, must-revalidate')
-        res.setHeader('Content-Type', 'application/json')
-        console.log('Sending signed JWT token back to client')
-        res.send(JSON.stringify(tokenId));
-    })
+app.get("/auth", (req, res) => {
+  console.log("Sucessfully connected to the server auth endpoint");
 
-})
+  const randomId = Math.random().toString(16).slice(-8);
+  const clientId = req.query.clientId || randomId;
+
+  const jwtPayload = {
+    "x-ably-capability": capability,
+    "x-ably-clientId": clientId,
+  };
+
+  jwt.sign(jwtPayload, keySecret, jwtOptions, (err, tokenId) => {
+    console.log("JSON Web Token signed by auth server");
+
+    if (err) return console.trace();
+
+    res.header("Cache-Control", "private, no-cache, no-store, must-revalidate");
+    res.setHeader("Content-Type", "application/json");
+
+    console.log("Sending signed JWT token back to client", tokenId);
+    res.send(JSON.stringify(tokenId));
+  });
+});
 ```
 
 The previous code is invoked when a client application invokes the @/auth@ route on your auth server.
@@ -228,7 +229,7 @@ Note that a cache-control has been added to the response header in order to prev
 
 ```[javascript]
 app.listen(3000, function () {
-    console.log('Web server listening on port 3000');
+    console.log('Web server listening on port', 3000);
 });
 ```
 
@@ -244,26 +245,25 @@ You will now learn how to create a client with a simple login form. For the simp
 
 ```[html]
 <html>
-<head>
-  <script src="https://cdn.ably.io/lib/ably.min-1.js" type="text/javascript"></script>
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-  <section class="container">
-    <div class="login">
-      <h1>Ably JWT auth example</h1>
-      <form>
-        <input type="text" placeholder="Enter Username" name="username">
-        <br/>
-        <input type="password" placeholder="Password" name="password">
-        <br/>
-        <p class="submit">
+  <head>
+    <script src="https://cdn.ably.io/lib/ably.min-1.js" type="text/javascript"></script>
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+
+  <body>
+    <section class="container">
+      <div class="login">
+        <h1>Ably JWT auth example</h1>
+        <form>
+          <label for="username">Username</label>
+          <input type="text" placeholder="Enter Username" id="username" />
+          <label for="password">Password</label>
+          <input type="password" placeholder="Password" id="password" />
           <button type="submit" onclick="login(event)">Login</button>
-        </p>
-      </form>
-    </div>
-  </section>
-</body>
+        </form>
+      </div>
+    </section>
+  </body>
 </html>
 ```
 
@@ -276,19 +276,35 @@ The last part is to add the logic into this form. You'll instantiate Ably's Real
 ```[html]
 <script type="text/javascript">
 console.log('On login page now')
+
+
 function login(e) {
-    e.preventDefault();
-    console.log('Fetching JWT token from auth server')
-    const realtime = new Ably.Realtime({ authUrl: '/auth' });
-    realtime.connection.once('connected', function () {
-    console.log('Client connected to Ably using JWT')
-    alert("Client successfully connected to Ably using JWT auth")
-    })
-}
+  e.preventDefault();
+
+  const username = document.querySelector("#username").value;
+  const password = document.querySelector("#password").value;
+
+  if (!`${username}`.trim() || !`${password}`.trim()) {
+    return alert("Error! Require username and password");
+  }
+
+  // Send user details to the auth server
+  const authUrl = `/auth?clientId=${username}:${password}`;
+  const realtime = new Ably.Realtime({ authUrl });
+
+  console.log("Fetching JWT token from auth server", username, password);
+
+  realtime.connection.once("connected", () => {
+    const { tokenDetails } = realtime.auth;
+    console.log("Client connected to Ably using JWT", tokenDetails);
+    alert("Client successfully connected Ably using JWT auth");
+  });
 </script>
 ```
 
 The code begins by instantiating Ably's Realtime client library, then you assign the path of auth server, @/auth@ to the @authUrl@ parameter. The @/auth@ path of on auth server is responsible for signing a JWT using the private API key and then returning back the @tokenId@, the JWT itself.
+
+It is worth noticing that we also sending the user input to the @authUrl@ as a querystring @(/auth?clientId=${username}:${password})@. This is so that our authentication server can validate the user requesting the JWT. In this simple example we will not cover that, and this detail is to demonstrate how you might send user input to your server to control user connections.
 
 With the returned JWT, the client automatically attempts to connect to Ably using it. If the client successfully authenticates with Ably, the code displays an alert to let the user know that the connection was successful.
 
