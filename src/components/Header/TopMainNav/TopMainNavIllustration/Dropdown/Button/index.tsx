@@ -1,23 +1,24 @@
 import React from 'react';
-import { DropdownData } from '../types';
+import { DropdownDataIdentifier } from '../types';
 
 export const DropdownButton = ({
-  dropdownData,
+  title,
   setDropdownData,
+  clearDropdownData,
 }: {
-  dropdownData: DropdownData;
+  title: DropdownDataIdentifier;
   setDropdownData: () => void;
-  children: React.ReactNode;
+  clearDropdownData: () => void;
 }) => (
   <button
     type="button"
     data-id="meganav-control"
     className={`ui-meganav-link h-64 flex items-center group`}
     aria-expanded="false"
-    aria-label={`Show ${dropdownData.summaryTitle}`}
-    onClick={setDropdownData}
+    aria-label={`Show ${title}`}
+    onMouseEnter={setDropdownData}
   >
-    {dropdownData.summaryTitle}
+    {title}
     {/* Take this arrow from the sidebar menu */}
   </button>
 );

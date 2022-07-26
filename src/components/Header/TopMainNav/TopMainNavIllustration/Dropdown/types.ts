@@ -1,3 +1,4 @@
+import { dropdownData } from './Button/dropdown-data';
 import { Content } from './Contents/types';
 
 export type DropdownData = {
@@ -10,3 +11,5 @@ export type DropdownData = {
   contents: Content[];
   title: string;
 };
+
+export type DropdownDataIdentifier = keyof typeof dropdownData | null;
