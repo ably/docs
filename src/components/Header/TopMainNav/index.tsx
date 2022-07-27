@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { keys } from 'lodash/fp';
 import { TopHorizontalMenuLight } from '../../Menu/index';
-import { DropdownButton } from './TopMainNavIllustration/Dropdown/Button';
-import { dropdownData } from './TopMainNavIllustration/Dropdown/Button/dropdown-data';
-import { DropdownMenu } from './TopMainNavIllustration/Dropdown/dropdown-menu';
+import { DropdownButton } from './Dropdown/Button';
+import { dropdownData } from './Dropdown/Button/dropdown-data';
+import { DropdownMenu } from './Dropdown/dropdown-menu';
 import { Logo } from './TopMainNavIllustration/logo';
-import { SearchPlaceholder } from './TopMainNavIllustration/SearchBar';
-import { DropdownDataIdentifier } from './TopMainNavIllustration/Dropdown/types';
-import { MaybeSignedIn } from './TopMainNavUser/maybe-signed-in';
+import { SearchPlaceholder } from './SearchBar';
+import { DropdownDataIdentifier } from './Dropdown/types';
+import { TopMainNavUserMenu } from './TopMainNavUser';
 
 export const TopMainNav = () => {
   const [dropdownDataID, setDropdownDataID] = useState<DropdownDataIdentifier>(null);
@@ -23,7 +23,7 @@ export const TopMainNav = () => {
           <DropdownButton key={i} title={dropdownDataID} setDropdownData={setDropdownData(dropdownDataID)} />
         ))}
         {dropdownDataID && <DropdownMenu {...dropdownData[dropdownDataID]} />}
-        <MaybeSignedIn sessionState={{}} />
+        <TopMainNavUserMenu sessionState={{}} />
       </TopHorizontalMenuLight>
     </div>
   );
