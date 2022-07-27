@@ -2,7 +2,7 @@ import { dropdownData } from './Button/dropdown-data';
 import { Content } from './Contents/types';
 
 export type DropdownData = {
-  summaryTitle: string;
+  summaryTitle: keyof typeof dropdownData;
   summaryDescription: string;
   summaryLink?: {
     text: string;

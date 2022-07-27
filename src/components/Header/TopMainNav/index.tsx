@@ -14,17 +14,12 @@ export const TopMainNav = () => {
   const clearDropdownData = () => setDropdownDataID(null);
   const titlesFromDropdownData = keys(dropdownData) as Array<keyof typeof dropdownData>;
   return (
-    <div className="fixed bg-white h-64 z-50" onMouseLeave={() => setDropdownDataID(null)}>
+    <div className="fixed bg-white h-64 z-50" onMouseLeave={clearDropdownData}>
       <TopHorizontalMenuLight>
         <Logo href="/docs" />
         <SearchPlaceholder />
         {titlesFromDropdownData.map((dropdownDataID, i) => (
-          <DropdownButton
-            key={i}
-            title={dropdownDataID}
-            setDropdownData={setDropdownData(dropdownDataID)}
-            clearDropdownData={clearDropdownData}
-          />
+          <DropdownButton key={i} title={dropdownDataID} setDropdownData={setDropdownData(dropdownDataID)} />
         ))}
         {dropdownDataID && <DropdownMenu {...dropdownData[dropdownDataID]} />}
       </TopHorizontalMenuLight>

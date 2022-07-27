@@ -1,14 +1,12 @@
 import React from 'react';
-import { DropdownDataIdentifier } from '../types';
+import { dropdownData } from './dropdown-data';
 
 export const DropdownButton = ({
   title,
   setDropdownData,
-  clearDropdownData,
 }: {
-  title: DropdownDataIdentifier;
+  title: keyof typeof dropdownData;
   setDropdownData: () => void;
-  clearDropdownData: () => void;
 }) => (
   <button
     type="button"
@@ -17,6 +15,7 @@ export const DropdownButton = ({
     aria-expanded="false"
     aria-label={`Show ${title}`}
     onMouseEnter={setDropdownData}
+    aria-control={title}
   >
     {title}
     {/* Take this arrow from the sidebar menu */}
