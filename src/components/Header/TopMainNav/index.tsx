@@ -7,6 +7,7 @@ import { DropdownMenu } from './TopMainNavIllustration/Dropdown/dropdown-menu';
 import { Logo } from './TopMainNavIllustration/logo';
 import { SearchPlaceholder } from './TopMainNavIllustration/SearchBar';
 import { DropdownDataIdentifier } from './TopMainNavIllustration/Dropdown/types';
+import { MaybeSignedIn } from './TopMainNavUser/maybe-signed-in';
 
 export const TopMainNav = () => {
   const [dropdownDataID, setDropdownDataID] = useState<DropdownDataIdentifier>(null);
@@ -14,7 +15,7 @@ export const TopMainNav = () => {
   const clearDropdownData = () => setDropdownDataID(null);
   const titlesFromDropdownData = keys(dropdownData) as Array<keyof typeof dropdownData>;
   return (
-    <div className="fixed bg-white h-64 z-50 flex ui-grid-px" onMouseLeave={clearDropdownData}>
+    <div className="fixed bg-white h-64 z-50 flex ui-grid-px justify-end w-full" onMouseLeave={clearDropdownData}>
       <TopHorizontalMenuLight>
         <Logo href="/docs" />
         <SearchPlaceholder />
@@ -22,6 +23,7 @@ export const TopMainNav = () => {
           <DropdownButton key={i} title={dropdownDataID} setDropdownData={setDropdownData(dropdownDataID)} />
         ))}
         {dropdownDataID && <DropdownMenu {...dropdownData[dropdownDataID]} />}
+        <MaybeSignedIn sessionState={{}} />
       </TopHorizontalMenuLight>
     </div>
   );
