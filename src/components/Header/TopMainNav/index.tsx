@@ -14,7 +14,7 @@ export const TopMainNav = () => {
   const clearDropdownData = () => setDropdownDataID(null);
   const titlesFromDropdownData = keys(dropdownData) as Array<keyof typeof dropdownData>;
   return (
-    <div className="fixed bg-white h-64 z-50" onMouseLeave={clearDropdownData}>
+    <div className="fixed bg-white h-64 z-50 flex ui-grid-px" onMouseLeave={clearDropdownData}>
       <TopHorizontalMenuLight>
         <Logo href="/docs" />
         <SearchPlaceholder />

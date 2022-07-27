@@ -11,13 +11,13 @@ export const DropdownButton = ({
   <button
     type="button"
     data-id="meganav-control"
-    className={`ui-meganav-link h-64 flex items-center group`}
+    className="ui-meganav-link h-32 flex items-center group"
     aria-expanded="false"
     aria-label={`Show ${title}`}
     onMouseEnter={setDropdownData}
     aria-control={title}
   >
-    {title}
-    {/* Take this arrow from the sidebar menu */}
+    <span className="w-full">{title}</span>
+    <svg width="16"></svg>
   </button>
 );
