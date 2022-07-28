@@ -16,19 +16,18 @@ const LanguageButton = ({ language }: { language: string }) => {
   );
   const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
 
+  const cacheVisitPreferredLanguage = () => {
+    if (isPageLanguageDefault) {
+      safeWindow.localStorage.clear();
+    } else {
+      safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
+    }
+    navigate(href);
+  };
+
   return (
     // 'active' className doesn’t need to be in the Tailwind config safe list as it isn’t part of the Tailwind ecosystem.
-    <button
-      className={maybeActiveButtonClassName}
-      onClick={() => {
-        if (isPageLanguageDefault) {
-          safeWindow.localStorage.clear();
-        } else {
-          safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
-        }
-        navigate(href);
-      }}
-    >
+    <button className={maybeActiveButtonClassName} onClick={cacheVisitPreferredLanguage}>
       {languageLabels[language] ?? language}
     </button>
   );
