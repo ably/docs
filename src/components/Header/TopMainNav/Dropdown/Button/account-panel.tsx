@@ -1,4 +1,5 @@
 import React from 'react';
+import { SessionState } from '../../../../../contexts/user-context';
 import { SignOutLink } from '../../TopMainNavUser/SignedIn/sign-out-link';
 import { DropdownData } from '../types';
 
@@ -7,7 +8,7 @@ const AccountPanel = ({
   links,
   preferredEmail,
 }: {
-  sessionState: Record<string, unknown>;
+  sessionState: SessionState;
   links: { href: string; text: string }[];
   preferredEmail: string;
 }) => (
@@ -30,11 +31,13 @@ const AccountPanel = ({
 
     <p className="ui-meganav-overline mx-16">{preferredEmail}</p>
     <ul className="mb-8 mx-16">
-      <li>
-        <a href={sessionState.mySettings.href} className="ui-meganav-account-link">
-          {sessionState.mySettings.text}
-        </a>
-      </li>
+      {sessionState.mySettings && (
+        <li>
+          <a href={sessionState.mySettings.href} className="ui-meganav-account-link">
+            {sessionState.mySettings.text}
+          </a>
+        </li>
+      )}
       {sessionState.myAccessTokens && (
         <li>
           <a href={sessionState.myAccessTokens.href} className="ui-meganav-account-link">
@@ -64,6 +67,6 @@ const AccountPanel = ({
 export const AccountPanelDropdownData: DropdownData = {
   summaryTitle: 'Your Account',
   summaryDescription: '',
-  contents: AccountPanel,
+  contents: [],
   title: '',
 };

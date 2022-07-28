@@ -1,14 +1,14 @@
 import { createContext } from 'react';
 
-type AccountLink = {
+type Link = {
   href: string;
   text: string;
 };
 
 type Account = {
   links: {
-    dashboard: AccountLink;
-    [key: string]: AccountLink;
+    dashboard: Link;
+    [key: string]: Link;
   };
 };
 
@@ -17,6 +17,13 @@ export type SessionState = {
   accountName?: string;
   preferredEmail?: string;
   account?: Account;
+  mySettings?: Link;
+  myAccessTokens?: Link;
+  logOut?: {
+    token: string;
+    href: string;
+    text: string;
+  };
 };
 
 export type UserDetails = {

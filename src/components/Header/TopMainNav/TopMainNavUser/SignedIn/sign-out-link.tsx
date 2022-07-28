@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { MouseEventHandler, useRef } from 'react';
 
 export const SignOutLink = ({
   token,
@@ -9,11 +9,19 @@ export const SignOutLink = ({
   token: string;
   href: string;
   text: string;
-  children: ({ href, text, onClick }: { href: string; text: string; onClick: (e: Event) => void }) => React.ReactNode;
+  children: ({
+    href,
+    text,
+    onClick,
+  }: {
+    href: string;
+    text: string;
+    onClick: MouseEventHandler<HTMLAnchorElement>;
+  }) => React.ReactNode;
 }) => {
   const formRef = useRef<HTMLFormElement>(null);
 
-  const onClick = (e: Event) => {
+  const onClick: MouseEventHandler<HTMLAnchorElement> = (e) => {
     if (formRef.current) {
       formRef.current.submit();
     }
