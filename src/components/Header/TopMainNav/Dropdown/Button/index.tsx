@@ -5,7 +5,7 @@ export const DropdownButton = ({
   title,
   setDropdownData,
 }: {
-  title: keyof typeof dropdownData;
+  title: keyof typeof dropdownData | string;
   setDropdownData: () => void;
 }) => (
   <button

@@ -23,7 +23,7 @@ export const TopMainNav = () => {
           <DropdownButton key={i} title={dropdownDataID} setDropdownData={setDropdownData(dropdownDataID)} />
         ))}
         {dropdownDataID && <DropdownMenu {...dropdownData[dropdownDataID]} />}
-        <TopMainNavUserMenu sessionState={{}} />
+        <TopMainNavUserMenu sessionState={{}} setDropdownData={setDropdownDataID} />
       </TopHorizontalMenuLight>
     </div>
   );

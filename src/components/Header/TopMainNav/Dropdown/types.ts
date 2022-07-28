@@ -1,3 +1,4 @@
+import React from 'react';
 import { dropdownData } from './Button/dropdown-data';
 import { Content } from './Contents/types';
 
