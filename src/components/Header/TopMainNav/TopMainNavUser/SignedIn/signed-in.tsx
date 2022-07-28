@@ -1,4 +1,5 @@
 import React from 'react';
+import { SessionState } from '../../../../../contexts/user-context';
 import { DropdownButton } from '../../Dropdown/Button';
 import { DropdownDataIdentifier } from '../../Dropdown/types';
 
@@ -20,7 +21,7 @@ export const SignedIn = ({
   sessionState,
   setDropdownData,
 }: {
-  sessionState: Record<string, unknown>;
+  sessionState: SessionState;
   setDropdownData: React.Dispatch<React.SetStateAction<DropdownDataIdentifier>>;
 }) => {
   const links = isAccount(sessionState.account) ? Object.values(sessionState.account.links) : [];

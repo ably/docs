@@ -8,6 +8,7 @@ import { Logo } from './TopMainNavIllustration/logo';
 import { SearchPlaceholder } from './SearchBar';
 import { DropdownDataIdentifier } from './Dropdown/types';
 import { TopMainNavUserMenu } from './TopMainNavUser';
+import UserContext from '../../../contexts/user-context';
 
 export const TopMainNav = () => {
   const [dropdownDataID, setDropdownDataID] = useState<DropdownDataIdentifier>(null);
@@ -23,7 +24,9 @@ export const TopMainNav = () => {
           <DropdownButton key={i} title={dropdownDataID} setDropdownData={setDropdownData(dropdownDataID)} />
         ))}
         {dropdownDataID && <DropdownMenu {...dropdownData[dropdownDataID]} />}
-        <TopMainNavUserMenu sessionState={{}} setDropdownData={setDropdownDataID} />
+        <UserContext.Consumer>
+          {({ sessionState }) => <TopMainNavUserMenu sessionState={sessionState} setDropdownData={setDropdownDataID} />}
+        </UserContext.Consumer>
       </TopHorizontalMenuLight>
     </div>
   );
