@@ -1,5 +1,4 @@
 import React from 'react';
-import { dropdownData } from './dropdown-data';
 
 export const DropdownButton = ({ title, setDropdownData }: { title: string; setDropdownData: () => void }) => (
   <button

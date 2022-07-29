@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { keys } from 'lodash/fp';
 import { TopHorizontalMenuLight } from '../../Menu/index';
 import { DropdownButton } from './Dropdown/Button';
 import { dropdownData } from './Dropdown/Button/dropdown-data';

@@ -13,7 +13,7 @@ export const SignedIn = ({
 }) => {
   const accountName = truncate({ length: 19 }, sessionState.accountName ?? '');
   return sessionState.account && Object.keys(sessionState.account).length !== 0 ? (
-    <menu className="hidden md:flex items-center">
+    <menu className="hidden md:flex items-center list-none">
       <li className="ui-meganav-item relative">
         <DropdownButton title={accountName} setDropdownData={() => setDropdownData('Your Account')} />
       </li>

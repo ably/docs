@@ -20,14 +20,12 @@ export const DropdownMenu = ({
   contents,
   CustomComponent,
 }: DropdownData) => {
-  console.log(CustomComponent);
   if (CustomComponent) {
     return (
       <UserContext.Consumer>
         {({ sessionState }: { sessionState: SessionState }) => {
           const links = isAccount(sessionState.account) ? Object.values(sessionState.account.links) : [];
           const preferredEmail = truncate({ length: 19 }, sessionState.preferredEmail ?? '');
-          console.log(sessionState);
           return <CustomComponent sessionState={sessionState} links={links} preferredEmail={preferredEmail} />;
         }}
       </UserContext.Consumer>
