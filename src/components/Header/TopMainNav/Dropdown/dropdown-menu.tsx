@@ -1,11 +1,42 @@
+/* eslint-disable react/prop-types */
+import { truncate } from 'lodash/fp';
 import React from 'react';
+import UserContext, { SessionState } from '../../../../contexts/user-context';
 import { ContentsContainer } from './Contents';
 import { Summary } from './Summary';
 import { DropdownData } from './types';
 
-export const DropdownMenu = ({ summaryTitle, summaryDescription, summaryLink, title, contents }: DropdownData) => (
-  <aside id={summaryTitle}>
-    <Summary titleText={summaryTitle} descriptionText={summaryDescription} />
-    <ContentsContainer title={title} contents={contents} />
-  </aside>
-);
+type Account = {
+  links: { href: string; text: string }[];
+};
+
+const isAccount = (obj: unknown): obj is Account => typeof obj === 'object' && obj !== null && 'links' in obj;
+
+export const DropdownMenu = ({
+  summaryTitle,
+  summaryDescription,
+  summaryLink,
+  title,
+  contents,
+  CustomComponent,
+}: DropdownData) => {
+  console.log(CustomComponent);
+  if (CustomComponent) {
+    return (
+      <UserContext.Consumer>
+        {({ sessionState }: { sessionState: SessionState }) => {
+          const links = isAccount(sessionState.account) ? Object.values(sessionState.account.links) : [];
+          const preferredEmail = truncate({ length: 19 }, sessionState.preferredEmail ?? '');
+          console.log(sessionState);
+          return <CustomComponent sessionState={sessionState} links={links} preferredEmail={preferredEmail} />;
+        }}
+      </UserContext.Consumer>
+    );
+  }
+  return (
+    <aside id={summaryTitle}>
+      <Summary titleText={summaryTitle} descriptionText={summaryDescription} />
+      <ContentsContainer title={title} contents={contents} />
+    </aside>
+  );
+};

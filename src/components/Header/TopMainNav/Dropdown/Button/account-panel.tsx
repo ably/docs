@@ -69,4 +69,5 @@ export const AccountPanelDropdownData: DropdownData = {
   summaryDescription: '',
   contents: [],
   title: '',
+  CustomComponent: AccountPanel,
 };

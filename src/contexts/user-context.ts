@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 
-type Link = {
+export type Link = {
   href: string;
   text: string;
 };

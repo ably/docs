@@ -1,13 +1,7 @@
 import React from 'react';
 import { dropdownData } from './dropdown-data';
 
-export const DropdownButton = ({
-  title,
-  setDropdownData,
-}: {
-  title: keyof typeof dropdownData | string;
-  setDropdownData: () => void;
-}) => (
+export const DropdownButton = ({ title, setDropdownData }: { title: string; setDropdownData: () => void }) => (
   <button
     type="button"
     data-id="meganav-control"

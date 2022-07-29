@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link, SessionState } from '../../../../contexts/user-context';
 import { dropdownData } from './Button/dropdown-data';
 import { Content } from './Contents/types';
 
@@ -11,6 +12,7 @@ export type DropdownData = {
   };
   contents: Content[];
   title: string;
+  CustomComponent?: React.FunctionComponent<{ sessionState: SessionState; links: Link[]; preferredEmail: string }>;
 };
 
 export type DropdownDataIdentifier = keyof typeof dropdownData | null;
