@@ -35,7 +35,7 @@ Please note:
 * For the Pusher key, use the part of the [Ably API key](https://faqs.ably.com/what-is-an-app-api-key) before the colon; for the secret, use the part after the colon.
 * You can add any other Pusher options you would normally use in the initializer.
 * In the Pusher client library terminology, the 'encrypted' option controls whether the the lib uses TLS, not end-to-end encryption. Setting the `encrypted` option to true is not mandatory, but strongly recommended to avoid sending private keys over plain text connections.
-* Pusher adapter clients are not "identified" in the Ably sense. Make sure you do not have 'require identification' channel rule on for any channels/namespaces you will be accessing with the adapter. See [this article](https://faqs.ably.com/what-are-channel-rules-and-how-can-i-use-them-in-my-app) on how to change channel rules. If you get an "Ably error 40160", this is the reason why.
+* Pusher adapter clients are not "identified" in the Ably sense. Make sure you do not have 'require identification' channel rule on for any channels/namespaces you will be accessing with the adapter. See [this article](/general/channel-rules-namespaces) on how to change channel rules. If you get an "Ably error 40160", this is the reason why.
 * *The Pusher channel will have a different name from the corresponding Ably channel*. See the 'Channels' section below.
 
 ## Supported features
