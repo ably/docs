@@ -1,4 +1,5 @@
 import React from 'react';
+import AIChevronDown from '../../../../../styles/svg/ai-chevron-down';
 
 export const DropdownButton = ({ title, setDropdownData }: { title: string; setDropdownData: () => void }) => (
   <button
@@ -11,6 +12,6 @@ export const DropdownButton = ({ title, setDropdownData }: { title: string; setD
     aria-controls={title}
   >
     <span className="w-full">{title}</span>
-    <svg width="16"></svg>
+    <AIChevronDown className="flex-shrink-0" />
   </button>
 );
