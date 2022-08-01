@@ -15,7 +15,7 @@ export const TopMainNav = () => {
   const clearDropdownData = () => setDropdownDataID(null);
   const menuItems: (keyof typeof dropdownData)[] = ['API References', 'Resources'];
   return (
-    <div className="fixed bg-white h-64 z-50 flex ui-grid-px justify-end w-full" onMouseLeave={clearDropdownData}>
+    <div className="fixed bg-white h-64 z-50 flex ui-grid-px justify-between w-full" onMouseLeave={clearDropdownData}>
       <TopHorizontalMenuLight>
         <Logo href="/docs" />
         <SearchPlaceholder />

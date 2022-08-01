@@ -12,6 +12,6 @@ export const DropdownButton = ({ title, setDropdownData }: { title: string; setD
     aria-controls={title}
   >
     <span className="w-full">{title}</span>
-    <AIChevronDown className="flex-shrink-0" />
+    <AIChevronDown className="flex-shrink-0 mx-8" />
   </button>
 );
