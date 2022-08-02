@@ -23,14 +23,17 @@ const HoverLink = styled(Link)`
 const LanguageLink = ({ language }: { language: string }) => {
   const pageLanguage = useContext(PageLanguageContext);
 
-  const { isLanguageDefault, isPageLanguageDefault, isActiveClassName } = getLanguageDefaults(language, pageLanguage);
+  const { isLanguageDefault, isPageLanguageDefault, maybeActiveButtonClassName } = getLanguageDefaults(
+    language,
+    pageLanguage,
+  );
   const href = isPageLanguageDefault
     ? `./language/${language}`
     : `../../${isLanguageDefault ? '' : `language/${language}`}`;
 
   return (
     // 'active' className doesn’t need to be in the Tailwind config safe list as it isn’t part of the Tailwind ecosystem.
-    <HoverLink className={isActiveClassName} to={href}>
+    <HoverLink className={maybeActiveButtonClassName} to={href}>
       {languageLabels[language] ?? language}
     </HoverLink>
   );
