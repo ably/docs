@@ -1,11 +1,23 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { HorizontalMenu } from '.';
 import MenuLabel from './Label';
 import MenuItem from './MenuItem';
 import '@ably/ui/core/styles.css';
 
-const LanguageNavigation = ({ label, items }) => (
+type LanguageNavigationProps = {
+  label: string | JSX.Element;
+  items: {
+    Component: React.FunctionComponent<{ language: string }>;
+    props: {
+      language: string;
+      onClick?: (event: { target: { value: string } }) => void;
+      value?: string;
+    };
+    content: string;
+  }[];
+};
+
+const LanguageNavigation = ({ label, items }: LanguageNavigationProps) => (
   <HorizontalMenu>
     {label && <MenuLabel>{label}</MenuLabel>}
     {items.map(({ Component, props, content }, index) => (
@@ -15,10 +27,5 @@ const LanguageNavigation = ({ label, items }) => (
     ))}
   </HorizontalMenu>
 );
-
-LanguageNavigation.propTypes = {
-  label: PropTypes.oneOfType([PropTypes.node, PropTypes.string]),
-  items: PropTypes.array,
-};
 
 export default LanguageNavigation;
