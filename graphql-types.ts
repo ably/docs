@@ -260,8 +260,6 @@ export type DirectoryCtimeArgs = {
 export type Site = Node & {
   buildTime?: Maybe<Scalars['Date']>;
   siteMetadata?: Maybe<SiteSiteMetadata>;
-  port?: Maybe<Scalars['Int']>;
-  host?: Maybe<Scalars['String']>;
   assetPrefix?: Maybe<Scalars['String']>;
   polyfill?: Maybe<Scalars['Boolean']>;
   pathPrefix?: Maybe<Scalars['String']>;
@@ -623,7 +621,6 @@ export type PageFurnitureYaml = Node & {
   level?: Maybe<Scalars['Int']>;
   text?: Maybe<Scalars['String']>;
   items?: Maybe<Array<PageFurnitureYaml>>;
-  new?: Maybe<Scalars['Boolean']>;
   id: Scalars['ID'];
   parent?: Maybe<Node>;
   children: Array<Node>;
@@ -866,8 +863,6 @@ export type QueryAllDirectoryArgs = {
 export type QuerySiteArgs = {
   buildTime?: InputMaybe<DateQueryOperatorInput>;
   siteMetadata?: InputMaybe<SiteSiteMetadataFilterInput>;
-  port?: InputMaybe<IntQueryOperatorInput>;
-  host?: InputMaybe<StringQueryOperatorInput>;
   assetPrefix?: InputMaybe<StringQueryOperatorInput>;
   polyfill?: InputMaybe<BooleanQueryOperatorInput>;
   pathPrefix?: InputMaybe<StringQueryOperatorInput>;
@@ -1005,7 +1000,6 @@ export type QueryPageFurnitureYamlArgs = {
   level?: InputMaybe<IntQueryOperatorInput>;
   text?: InputMaybe<StringQueryOperatorInput>;
   items?: InputMaybe<PageFurnitureYamlFilterListInput>;
-  new?: InputMaybe<BooleanQueryOperatorInput>;
   id?: InputMaybe<StringQueryOperatorInput>;
   parent?: InputMaybe<NodeFilterInput>;
   children?: InputMaybe<NodeFilterListInput>;
@@ -1265,7 +1259,6 @@ export type PageFurnitureYamlFilterInput = {
   level?: InputMaybe<IntQueryOperatorInput>;
   text?: InputMaybe<StringQueryOperatorInput>;
   items?: InputMaybe<PageFurnitureYamlFilterListInput>;
-  new?: InputMaybe<BooleanQueryOperatorInput>;
   id?: InputMaybe<StringQueryOperatorInput>;
   parent?: InputMaybe<NodeFilterInput>;
   children?: InputMaybe<NodeFilterListInput>;
@@ -1644,10 +1637,8 @@ export type FileFieldsEnum =
   | 'childrenPageFurnitureYaml___items___items___level'
   | 'childrenPageFurnitureYaml___items___items___text'
   | 'childrenPageFurnitureYaml___items___items___items'
-  | 'childrenPageFurnitureYaml___items___items___new'
   | 'childrenPageFurnitureYaml___items___items___id'
   | 'childrenPageFurnitureYaml___items___items___children'
-  | 'childrenPageFurnitureYaml___items___new'
   | 'childrenPageFurnitureYaml___items___id'
   | 'childrenPageFurnitureYaml___items___parent___id'
   | 'childrenPageFurnitureYaml___items___parent___children'
@@ -1662,7 +1653,6 @@ export type FileFieldsEnum =
   | 'childrenPageFurnitureYaml___items___internal___mediaType'
   | 'childrenPageFurnitureYaml___items___internal___owner'
   | 'childrenPageFurnitureYaml___items___internal___type'
-  | 'childrenPageFurnitureYaml___new'
   | 'childrenPageFurnitureYaml___id'
   | 'childrenPageFurnitureYaml___parent___id'
   | 'childrenPageFurnitureYaml___parent___parent___id'
@@ -1719,10 +1709,8 @@ export type FileFieldsEnum =
   | 'childPageFurnitureYaml___items___items___level'
   | 'childPageFurnitureYaml___items___items___text'
   | 'childPageFurnitureYaml___items___items___items'
-  | 'childPageFurnitureYaml___items___items___new'
   | 'childPageFurnitureYaml___items___items___id'
   | 'childPageFurnitureYaml___items___items___children'
-  | 'childPageFurnitureYaml___items___new'
   | 'childPageFurnitureYaml___items___id'
   | 'childPageFurnitureYaml___items___parent___id'
   | 'childPageFurnitureYaml___items___parent___children'
@@ -1737,7 +1725,6 @@ export type FileFieldsEnum =
   | 'childPageFurnitureYaml___items___internal___mediaType'
   | 'childPageFurnitureYaml___items___internal___owner'
   | 'childPageFurnitureYaml___items___internal___type'
-  | 'childPageFurnitureYaml___new'
   | 'childPageFurnitureYaml___id'
   | 'childPageFurnitureYaml___parent___id'
   | 'childPageFurnitureYaml___parent___parent___id'
@@ -2601,8 +2588,6 @@ export type SiteFieldsEnum =
   | 'siteMetadata___title'
   | 'siteMetadata___description'
   | 'siteMetadata___siteUrl'
-  | 'port'
-  | 'host'
   | 'assetPrefix'
   | 'polyfill'
   | 'pathPrefix'
@@ -2740,8 +2725,6 @@ export type SiteGroupConnectionGroupArgs = {
 export type SiteFilterInput = {
   buildTime?: InputMaybe<DateQueryOperatorInput>;
   siteMetadata?: InputMaybe<SiteSiteMetadataFilterInput>;
-  port?: InputMaybe<IntQueryOperatorInput>;
-  host?: InputMaybe<StringQueryOperatorInput>;
   assetPrefix?: InputMaybe<StringQueryOperatorInput>;
   polyfill?: InputMaybe<BooleanQueryOperatorInput>;
   pathPrefix?: InputMaybe<StringQueryOperatorInput>;
@@ -3887,10 +3870,8 @@ export type PageFurnitureYamlFieldsEnum =
   | 'items___items___items___level'
   | 'items___items___items___text'
   | 'items___items___items___items'
-  | 'items___items___items___new'
   | 'items___items___items___id'
   | 'items___items___items___children'
-  | 'items___items___new'
   | 'items___items___id'
   | 'items___items___parent___id'
   | 'items___items___parent___children'
@@ -3905,7 +3886,6 @@ export type PageFurnitureYamlFieldsEnum =
   | 'items___items___internal___mediaType'
   | 'items___items___internal___owner'
   | 'items___items___internal___type'
-  | 'items___new'
   | 'items___id'
   | 'items___parent___id'
   | 'items___parent___parent___id'
@@ -3944,7 +3924,6 @@ export type PageFurnitureYamlFieldsEnum =
   | 'items___internal___mediaType'
   | 'items___internal___owner'
   | 'items___internal___type'
-  | 'new'
   | 'id'
   | 'parent___id'
   | 'parent___parent___id'
