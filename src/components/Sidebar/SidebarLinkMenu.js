@@ -8,6 +8,7 @@ import SidebarLink from './SidebarLink';
 import SidebarLinkItem from './SidebarLinkItem';
 import { EXPAND_MENU } from './expand-menu-enum';
 import { checkSectionMatch } from './check-section-match';
+import { safeWindow } from '../../utilities/browser/safe-window';
 
 const OrderedList = styled.ol`
   margin: 0;
@@ -20,9 +21,6 @@ const SidebarLinkMenu = ({ data, interactable = false, expandMenu = EXPAND_MENU.
     () =>
       data.map(({ label, link, level = ROOT_LEVEL, content = false }) => {
         const uuid = encodeURIComponent(`${label}${link}`);
-
-        const safeWindow = typeof window === 'undefined' ? { location: '' } : window;
-
         if ([EXPAND_MENU.EXPANDED, EXPAND_MENU.COLLAPSE_NEXT].includes(expandMenu)) {
           preExpanded.push(uuid);
         } else if (
