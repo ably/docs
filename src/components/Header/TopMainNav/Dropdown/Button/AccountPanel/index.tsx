@@ -1,6 +1,7 @@
 import React from 'react';
 import { SessionState } from '../../../../../../contexts/user-context';
 import { SignOutLink } from '../../../TopMainNavUser/SignedIn/sign-out-link';
+import { DropdownContentLink } from '../../Contents/types';
 import { AccountOptions } from './account-options';
 import { AccountUtilityLinks } from './account-utility-links';
 
@@ -15,7 +16,7 @@ export const AccountPanel = ({
   preferredEmail,
 }: {
   sessionState: SessionState;
-  links: { href: string; text: string }[];
+  links: DropdownContentLink[];
   preferredEmail: string;
 }) => (
   <div className="fixed top-64 min-h-256 left-1/4 w-3/4 bg-white" style={boxShadowStyling} id={'account-panel'}>

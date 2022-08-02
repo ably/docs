@@ -14,6 +14,13 @@ export const APIReferencesDropdownData: DropdownData = {
     },
     {
       link: {
+        href: `/${DOCUMENTATION_NAME}/api/sse`,
+        text: 'SSE API',
+      },
+      description: 'The Ably Server-Sent Events API',
+    },
+    {
+      link: {
         href: `/${DOCUMENTATION_NAME}/api/rest-sdk`,
         text: 'REST SDK',
       },
@@ -25,13 +32,6 @@ export const APIReferencesDropdownData: DropdownData = {
         text: 'REST API',
       },
       description: 'A raw REST API is also provided as an alternative to a client SDK.',
-    },
-    {
-      link: {
-        href: `/${DOCUMENTATION_NAME}/api/sse`,
-        text: 'SSE API',
-      },
-      description: 'The Ably Server-Sent Events API',
     },
     {
       link: {

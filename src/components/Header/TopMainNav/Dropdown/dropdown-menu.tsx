@@ -3,11 +3,12 @@ import { truncate } from 'lodash/fp';
 import React from 'react';
 import UserContext, { SessionState } from '../../../../contexts/user-context';
 import { ContentsContainer } from './Contents';
+import { DropdownContentLink } from './Contents/types';
 import { Summary } from './Summary';
 import { DropdownData } from './types';
 
 type Account = {
-  links: { href: string; text: string }[];
+  links: DropdownContentLink[];
 };
 
 const isAccount = (obj: unknown): obj is Account => typeof obj === 'object' && obj !== null && 'links' in obj;
