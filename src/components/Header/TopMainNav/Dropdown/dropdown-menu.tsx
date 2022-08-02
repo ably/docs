@@ -34,7 +34,7 @@ export const DropdownMenu = ({
   }
   return (
     <aside id={summaryTitle}>
-      <Summary titleText={summaryTitle} descriptionText={summaryDescription} />
+      <Summary titleText={summaryTitle} descriptionText={summaryDescription} summaryLink={summaryLink} />
       <ContentsContainer title={title} contents={contents} />
     </aside>
   );

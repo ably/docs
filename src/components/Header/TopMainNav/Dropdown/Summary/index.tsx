@@ -1,6 +1,8 @@
 import React from 'react';
 import { dropdownData } from '../Button/dropdown-data';
 import { DropdownContentLink } from '../Contents/types';
+import '../../../../blocks/external-references/styles.css';
+import { SummaryLinkIcon } from './SummaryLinkIcon';
 
 export const Summary = ({
   titleText,
@@ -25,6 +27,15 @@ export const Summary = ({
     <p className="px-32 pt-32" style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }}>
       {descriptionText}
     </p>
-    {summaryLink ? <a href={summaryLink.href}>{summaryLink.text}</a> : <div></div>}
+    {summaryLink ? (
+      <div className="h-full px-32 pt-32 docs-link font-medium">
+        <a className="mr-4" style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }} href={summaryLink.href}>
+          {summaryLink.text}
+        </a>
+        <SummaryLinkIcon />
+      </div>
+    ) : (
+      <div></div>
+    )}
   </div>
 );

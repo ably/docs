@@ -4,6 +4,10 @@ import { DropdownData } from '../types';
 export const APIReferencesDropdownData: DropdownData = {
   summaryTitle: 'API References',
   summaryDescription: 'API Reference section of the Ably developer documentation.',
+  summaryLink: {
+    href: `/${DOCUMENTATION_NAME}/api`,
+    text: 'Visit API References',
+  },
   contents: [
     {
       link: {
