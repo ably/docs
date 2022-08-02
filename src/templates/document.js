@@ -39,6 +39,10 @@ const Document = ({
   const title = getMetaDataDetails(document, 'title');
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK);
   const canonical = `${CANONICAL_ROOT}${slug}`;
+
+  const params = new URLSearchParams(search);
+  const language = params.get('lang') ?? DEFAULT_LANGUAGE;
+
   const filteredLanguages = useMemo(
     () =>
       languages
@@ -56,9 +60,6 @@ const Document = ({
       ),
     [contentOrderedList, language],
   );
-
-  const params = new URLSearchParams(search);
-  const language = params.get('lang') ?? DEFAULT_LANGUAGE;
 
   return (
     <PageLanguageContext.Provider value={language}>
