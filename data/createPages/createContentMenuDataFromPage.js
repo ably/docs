@@ -2,7 +2,6 @@ const { isArray } = require('lodash');
 const HtmlDataTypes = require('../types/html');
 const { DEFAULT_LANGUAGE } = require('./constants');
 
-const TYPES_TO_SIGNAL_END_OF_SECTION = [HtmlDataTypes.h1];
 const TYPES_TO_ADD_TO_CONTENT_MENU = [HtmlDataTypes.h2, HtmlDataTypes.h3];
 const TYPES_TO_LEVEL_MAP = {
   [HtmlDataTypes.h2]: 2,
@@ -14,6 +13,7 @@ const idFromName = (name) =>
     .replace(/([a-z0-9])([A-Z]+)/g, '$1-$2')
     .replace(/\s+/g, '-')
     // Should be more efficient than 2x replace, but pattern shouldn't be expanded beyond [\(\)]:
+    // eslint-disable-next-line no-useless-escape
     .replace(/[\(\)]/g, (match) => (match === '(' ? '%28' : '%29'))
     .toLowerCase();
 

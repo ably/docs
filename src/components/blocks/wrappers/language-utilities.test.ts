@@ -1,60 +1,55 @@
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import { assignPrimary } from './language-utilities';
 
+const createLanguageGroupWithDefaults = (
+  data: Record<string, Record<string, unknown>> | null = null,
+  primary = '',
+  languages: string[] = [],
+) => ({
+  start: 0,
+  end: 0,
+  index: 0,
+  primary,
+  data,
+  languages,
+});
+
 describe('Assigning primary to language groups works as expected', () => {
-  it('Primary language results in null data, primary language being returned', () => {
+  // NB: This test used to test for the opposite behaviour, hence the inclusion
+  it('Primary language does not result in null data', () => {
     const result = assignPrimary(
-      {
-        languages: [],
-      },
+      createLanguageGroupWithDefaults({}),
       'javascript', // Current language
       'javascript', // target language
       {}, // Data for React to render, if any
       0,
     );
-    const expected = {
-      data: null,
-      index: 0,
-      languages: ['javascript'],
-      primary: 'javascript',
-    };
+    const expected = createLanguageGroupWithDefaults({ javascript: {} }, 'javascript', ['javascript']);
     expect(result).toEqual(expected);
   });
 
-  it('Default language results in null data, primary language being returned', () => {
+  // NB: This test used to test for the opposite behaviour, hence the inclusion
+  it('Default language does not result in null data', () => {
     const result = assignPrimary(
-      {
-        languages: [],
-      },
+      createLanguageGroupWithDefaults({}),
       DEFAULT_LANGUAGE, // Current language
       'javascript', // target language
       {}, // Data for React to render, if any
       0,
     );
-    const expected = {
-      data: null,
-      index: 0,
-      languages: [DEFAULT_LANGUAGE],
-      primary: DEFAULT_LANGUAGE,
-    };
+    const expected = createLanguageGroupWithDefaults({ [DEFAULT_LANGUAGE]: {} }, DEFAULT_LANGUAGE, [DEFAULT_LANGUAGE]);
     expect(result).toEqual(expected);
   });
 
   it("If data is already null, and there's been no override, return the group unchanged (except for added language)", () => {
     const result = assignPrimary(
-      {
-        languages: [],
-        data: null,
-      },
+      createLanguageGroupWithDefaults(),
       'csharp', // Current language
       'javascript', // target language
       {}, // Data for React to render, if any
       0,
     );
-    const expected = {
-      languages: ['csharp'],
-      data: null,
-    };
+    const expected = createLanguageGroupWithDefaults(null, '', ['csharp']);
     expect(result).toEqual(expected);
   });
 });
