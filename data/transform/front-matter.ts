@@ -6,10 +6,7 @@ const ALLOWED_META_FIELDS = ['title', 'meta_description', 'languages'];
 
 export const tryRetrieveMetaData = (metaDataString: string) => {
   const frontMatter = fm(metaDataString);
-  if (isEmpty(frontMatter.attributes)) {
-    return NO_MATCH;
-  }
-  return frontMatter;
+  return isEmpty(frontMatter.attributes) ? NO_MATCH : frontMatter;
 };
 
 export const filterAllowedMetaFields = (metaObject: Record<string, string | string[]>) =>
