@@ -8,6 +8,7 @@ import { SearchBar } from './SearchBar';
 import { DropdownDataIdentifier } from './Dropdown/types';
 import { TopMainNavUserMenu } from './TopMainNavUser';
 import UserContext from '../../../contexts/user-context';
+import { HorizontalMenuItemGroup } from '../../Menu/HorizontalMenuItemGroup';
 
 export const TopMainNav = () => {
   const [dropdownDataID, setDropdownDataID] = useState<DropdownDataIdentifier>(null);
@@ -17,14 +18,20 @@ export const TopMainNav = () => {
   return (
     <div className="fixed bg-white h-64 z-50 flex w-full" onMouseLeave={clearDropdownData}>
       <TopHorizontalMenuLight>
-        <Logo href="/docs" />
-        <SearchBar />
-        {menuItems.map((dropdownDataID, i) => (
-          <DropdownButton key={i} title={dropdownDataID} setDropdownData={setDropdownData(dropdownDataID)} />
-        ))}
-        <UserContext.Consumer>
-          {({ sessionState }) => <TopMainNavUserMenu sessionState={sessionState} setDropdownData={setDropdownDataID} />}
-        </UserContext.Consumer>
+        <HorizontalMenuItemGroup>
+          <Logo href="/docs" />
+          <SearchBar />
+        </HorizontalMenuItemGroup>
+        <HorizontalMenuItemGroup>
+          {menuItems.map((dropdownDataID, i) => (
+            <DropdownButton key={i} title={dropdownDataID} setDropdownData={setDropdownData(dropdownDataID)} />
+          ))}
+          <UserContext.Consumer>
+            {({ sessionState }) => (
+              <TopMainNavUserMenu sessionState={sessionState} setDropdownData={setDropdownDataID} />
+            )}
+          </UserContext.Consumer>
+        </HorizontalMenuItemGroup>
       </TopHorizontalMenuLight>
       {dropdownDataID && <DropdownMenu {...dropdownData[dropdownDataID]} />}
     </div>
