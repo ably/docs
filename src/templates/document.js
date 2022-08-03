@@ -21,6 +21,7 @@ const getMetaDataDetails = (document, prop, alternative = '') =>
 
 const CANONICAL_ROOT = `https://www.ably.com${DOCUMENTATION_PATH}`;
 const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
+const NO_LANGUAGE = 'none';
 
 const Document = ({
   location: { search },
@@ -38,6 +39,7 @@ const Document = ({
 
   const title = getMetaDataDetails(document, 'title');
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK);
+  const menuLanguages = getMetaDataDetails(document, 'languages', languages);
   const canonical = `${CANONICAL_ROOT}${slug}`;
 
   const params = new URLSearchParams(search);
@@ -45,10 +47,12 @@ const Document = ({
 
   const filteredLanguages = useMemo(
     () =>
-      languages
-        .filter((language) => /^[^,]+$/.test(language))
-        .filter((language) => !IGNORED_LANGUAGES.includes(language)),
-    [languages],
+      menuLanguages.includes(NO_LANGUAGE)
+        ? []
+        : menuLanguages
+            .filter((language) => /^[^,]+$/.test(language))
+            .filter((language) => !IGNORED_LANGUAGES.includes(language)),
+    [menuLanguages],
   );
   const languagesExist = filteredLanguages.length > 1;
   const elements = useMemo(
@@ -103,6 +107,8 @@ export const query = graphql`
     document: fileHtml(slug: { eq: $slug }) {
       meta {
         title
+        meta_description
+        languages
       }
     }
     versions: allFileHtmlVersion(filter: { parentSlug: { eq: $slug } }) {
