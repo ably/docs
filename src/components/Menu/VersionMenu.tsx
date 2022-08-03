@@ -1,16 +1,40 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import Select from 'react-select';
+import Select, { SingleValue } from 'react-select';
 import { SmallMenuLabel } from './Label';
 import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
 import { navigate } from 'gatsby';
 import { Warning } from '../Notifications';
 
-const routeToPage = ({ value }) => {
-  navigate(`${DOCUMENTATION_PATH}${value}`);
+type PageVersion = {
+  node: {
+    version: string;
+    slug: string;
+  };
 };
 
-const VersionMenu = ({ versions, version, rootVersion }) => {
+const routeToPage = (
+  newValue: SingleValue<{
+    label: string;
+    value: string;
+  }>,
+) => {
+  if (!newValue) {
+    console.warn('No option selected from version menu');
+    return;
+  }
+  navigate(`${DOCUMENTATION_PATH}${newValue.value}`);
+};
+
+const VersionMenu = ({
+  versions,
+  version,
+  rootVersion,
+}: {
+  versions: PageVersion[];
+  version: string;
+  rootVersion: string;
+}) => {
   const latestOption = [
     {
       label: LATEST_ABLY_API_VERSION_STRING,
