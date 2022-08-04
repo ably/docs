@@ -36,7 +36,6 @@ export const LanguageDropdownSelector = ({
       classNamePrefix="react-select"
       menuPosition="fixed"
       isSearchable={false}
-      menuIsOpen={true}
       styles={{
         control: controlStyles({ width: '192px' }),
         option: optionStyles({ width: '256px' }),
