@@ -9,7 +9,7 @@ However, the API is not always intuitive. Here are some quick reference points i
 Modifying styles is achieved through an interface that maps provided styles into an object with custom styles:
 
 ```
-(provided) => ({ ...provided, myCustomStyleRule: '1px' })
+(provided) => ({ ...provided, myCustomStyleRule: '1px' });
 ```
 
 The TypeScript signature of these is always (for our purposes):
@@ -31,6 +31,24 @@ Save these functions separately in `/src/components/Menu/ReactSelectStyles`.
 Try to make these shareable between dropdowns as much as possible, if they are not reasonably shareable between dropdowns consider creating a separate folder.
 
 If you cannot find a way to style a component the way that you want, you can try to completely replace it using the `components` prop, described [in the official documentation](https://react-select.com/components).
+
+Styles can be modified based on `state` as well, as follows:
+
+```
+(provided, state) => ({ ...provided, myCustomStyleRule: state.isFocused ? '1px' : '0px' });
+```
+
+Options to drive state-based styling include:
+
+```
+/** Text to be displayed representing the option. */
+label: string;
+/** The data of the selected option. */
+data: Option;
+isDisabled: boolean;
+isFocused: boolean;
+isSelected: boolean;
+```
 
 ## Useful Tips
 

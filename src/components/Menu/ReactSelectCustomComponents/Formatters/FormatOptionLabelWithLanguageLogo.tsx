@@ -7,7 +7,7 @@ export const FormatOptionLabelWithLanguageLogo = (languageOption: ReactSelectOpt
   return (
     <div className="language-option items-center flex gap-8">
       <Component />
-      <span className="font-medium px-8">{languageOption.label}</span>
+      <span className="px-8">{languageOption.label}</span>
     </div>
   );
 };

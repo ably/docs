@@ -10,6 +10,7 @@ export const controlStyles: (
   (provided) => ({
     ...provided,
     width,
+    fontWeight: '500',
     boxShadow: 'none',
     fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
     fontSize: '14px',

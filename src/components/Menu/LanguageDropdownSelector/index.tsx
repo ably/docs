@@ -36,7 +36,7 @@ export const LanguageDropdownSelector = ({
       isSearchable={false}
       styles={{
         control: controlStyles({ width: '192px' }),
-        option: optionStyles({ width: '256px' }),
+        option: optionStyles({ width: '192px' }),
         dropdownIndicator: dropdownIndicatorStyles,
         groupHeading: groupHeadingStyles,
         menuList: menuListStyles,
