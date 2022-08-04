@@ -4,7 +4,6 @@ import { SmallMenuLabel } from './Label';
 import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
 import { Warning } from '../Notifications';
 import { routeToPage } from './route-to-page';
-import { containerListStyles } from './ReactSelectStyles/container-styles';
 import { dropdownIndicatorStyles } from './ReactSelectStyles/dropdown-indicator-styles';
 import { optionStyles } from './ReactSelectStyles/option-styles';
 import { controlStyles } from './ReactSelectStyles/control-styles';
@@ -56,7 +55,6 @@ const VersionMenu = ({
               control: controlStyles({ width: '100px' }),
               option: optionStyles({ width: '100px' }),
               dropdownIndicator: dropdownIndicatorStyles,
-              container: containerListStyles,
               groupHeading: groupHeadingStyles,
               menuList: menuListStyles,
             }}

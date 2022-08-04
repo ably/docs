@@ -1,8 +1,6 @@
 import React from 'react';
 import Select from 'react-select';
 import { optionStyles } from '../ReactSelectStyles/option-styles';
-import { routeToPage } from '../route-to-page';
-import { containerListStyles } from '../ReactSelectStyles/container-styles';
 import { controlStyles } from '../ReactSelectStyles/control-styles';
 import { dropdownIndicatorStyles } from '../ReactSelectStyles/dropdown-indicator-styles';
 import { groupHeadingStyles } from '../ReactSelectStyles/group-heading-styles';
@@ -40,7 +38,6 @@ export const LanguageDropdownSelector = ({
         control: controlStyles({ width: '192px' }),
         option: optionStyles({ width: '256px' }),
         dropdownIndicator: dropdownIndicatorStyles,
-        container: containerListStyles,
         groupHeading: groupHeadingStyles,
         menuList: menuListStyles,
       }}
