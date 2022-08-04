@@ -8,7 +8,6 @@ import { dropdownIndicatorStyles } from '../ReactSelectStyles/dropdown-indicator
 import { groupHeadingStyles } from '../ReactSelectStyles/group-heading-styles';
 import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicator-separator';
 import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
-import { initial } from 'lodash';
 import { menuListStyles } from '../ReactSelectStyles/menu-list-styles';
 
 export const LanguageDropdownSelector = ({
