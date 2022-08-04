@@ -6,9 +6,10 @@ import { containerListStyles } from '../ReactSelectStyles/container-styles';
 import { controlStyles } from '../ReactSelectStyles/control-styles';
 import { dropdownIndicatorStyles } from '../ReactSelectStyles/dropdown-indicator-styles';
 import { groupHeadingStyles } from '../ReactSelectStyles/group-heading-styles';
-import { menuListStyles } from './LanguageDropdownReactSelectStyles/menu-list-styles';
 import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicator-separator';
 import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
+import { initial } from 'lodash';
+import { menuListStyles } from '../ReactSelectStyles/menu-list-styles';
 
 export const LanguageDropdownSelector = ({
   language,
@@ -29,8 +30,8 @@ export const LanguageDropdownSelector = ({
         option: optionStyles({ width: '256px' }),
         dropdownIndicator: dropdownIndicatorStyles,
         container: containerListStyles,
-        menuList: menuListStyles,
         groupHeading: groupHeadingStyles,
+        menuList: menuListStyles,
       }}
       inputId={'language-menu'}
       value={{ label: language, value: language }}

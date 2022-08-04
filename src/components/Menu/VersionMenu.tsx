@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import Select from 'react-select';
 import { SmallMenuLabel } from './Label';
 import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
@@ -11,6 +10,7 @@ import { optionStyles } from './ReactSelectStyles/option-styles';
 import { controlStyles } from './ReactSelectStyles/control-styles';
 import { noIndicatorSeparator } from './ReactSelectCustomComponents/no-indicator-separator';
 import { groupHeadingStyles } from './ReactSelectStyles/group-heading-styles';
+import { menuListStyles } from './ReactSelectStyles/menu-list-styles';
 
 type PageVersion = {
   node: {
@@ -58,6 +58,7 @@ const VersionMenu = ({
               dropdownIndicator: dropdownIndicatorStyles,
               container: containerListStyles,
               groupHeading: groupHeadingStyles,
+              menuList: menuListStyles,
             }}
             inputId={'version-menu'}
             value={currentValue}
@@ -75,12 +76,6 @@ const VersionMenu = ({
       )}
     </>
   );
-};
-
-VersionMenu.propTypes = {
-  versions: PropTypes.array,
-  version: PropTypes.string,
-  rootVersion: PropTypes.string,
 };
 
 export default VersionMenu;
