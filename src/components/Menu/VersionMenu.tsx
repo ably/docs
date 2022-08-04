@@ -9,6 +9,8 @@ import { containerListStyles } from './ReactSelectStyles/container-styles';
 import { dropdownIndicatorStyles } from './ReactSelectStyles/dropdown-indicator-styles';
 import { optionStyles } from './ReactSelectStyles/option-styles';
 import { controlStyles } from './ReactSelectStyles/control-styles';
+import { noIndicatorSeparator } from './ReactSelectCustomComponents/no-indicator-separator';
+import { groupHeadingStyles } from './ReactSelectStyles/group-heading-styles';
 
 type PageVersion = {
   node: {
@@ -48,13 +50,14 @@ const VersionMenu = ({
         <div className="flex justify-end items-center col-span-1 mb-40">
           <SmallMenuLabel htmlFor={'version-menu'}>API Version:</SmallMenuLabel>
           <Select
-            components={{ IndicatorSeparator: () => null }}
+            components={noIndicatorSeparator}
             classNamePrefix="react-select"
             styles={{
               control: controlStyles({ width: '100px' }),
               option: optionStyles({ width: '100px' }),
               dropdownIndicator: dropdownIndicatorStyles,
               container: containerListStyles,
+              groupHeading: groupHeadingStyles,
             }}
             inputId={'version-menu'}
             value={currentValue}

@@ -7,4 +7,5 @@ export const groupHeadingStyles: StylesConfigFunction<
 > = (provided) => ({
   ...provided,
   letterSpacing: '0.1em',
+  color: '--var(cool-black)',
 });
