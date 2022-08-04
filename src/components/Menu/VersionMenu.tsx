@@ -18,42 +18,46 @@ type PageVersion = {
   };
 };
 
-const VersionMenu = ({
-  versions,
-  version,
-  rootVersion,
-}: {
+export type VersionData = {
   versions: PageVersion[];
   version: string;
   rootVersion: string;
-}) => {
+};
+
+const VersionMenu = ({ versions, version, rootVersion }: VersionData) => {
   const latestOption = [
     {
       label: LATEST_ABLY_API_VERSION_STRING,
       value: rootVersion,
     },
   ];
-  const options = latestOption
-    .concat(
-      versions.map((v) => ({
-        label: v.node.version,
-        value: v.node.slug,
-      })),
-    )
+  const options = versions
+    .map((v) => ({
+      label: v.node.version,
+      value: v.node.slug,
+    }))
     .sort((a, b) => parseFloat(b.label) - parseFloat(a.label));
-  const currentValue = version ? { label: version, value: version } : latestOption[0];
+  const currentValue = version ? { label: `API v ${version}`, value: version } : latestOption[0];
 
   return (
     <>
       {versions.length > 0 && (
-        <div className="flex justify-end items-center col-span-1 mb-40">
-          <SmallMenuLabel htmlFor={'version-menu'}>API Version:</SmallMenuLabel>
+        <div className="flex justify-end items-center col-span-1">
+          {version && version !== LATEST_ABLY_API_VERSION_STRING && (
+            <Warning
+              message={` Version ${version}. We recommend `}
+              linkText={`the latest version, ${LATEST_ABLY_API_VERSION_STRING}`}
+              href={`${DOCUMENTATION_PATH}${rootVersion}`}
+            />
+          )}
           <Select
             components={noIndicatorSeparator}
+            isSearchable={false}
             classNamePrefix="react-select"
+            menuPosition="fixed"
             styles={{
-              control: controlStyles({ width: '100px' }),
-              option: optionStyles({ width: '100px' }),
+              control: controlStyles({ width: '96px', border: '0', boxShadow: 'none' }),
+              option: optionStyles({ width: '128px' }),
               dropdownIndicator: dropdownIndicatorStyles,
               groupHeading: groupHeadingStyles,
               menuList: menuListStyles,
@@ -64,13 +68,6 @@ const VersionMenu = ({
             onChange={routeToPage}
           />
         </div>
-      )}
-      {version && version !== LATEST_ABLY_API_VERSION_STRING && (
-        <Warning
-          message={` You are viewing an old version (${version}) of this documentation. We recommend you `}
-          linkText={`view the latest version, ${LATEST_ABLY_API_VERSION_STRING}`}
-          href={`${DOCUMENTATION_PATH}${rootVersion}`}
-        />
       )}
     </>
   );

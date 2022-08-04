@@ -6,10 +6,9 @@ import { CustomReactSelectStyles } from './custom-react-select-styles';
 export const controlStyles: (
   customStyles: CustomReactSelectStyles,
 ) => StylesConfigFunction<ControlProps<ReactSelectOption, false, ReactSelectOptGroup>> =
-  ({ width }) =>
-  (provided) => ({
+  (customStyles) => (provided) => ({
     ...provided,
-    width,
+    ...customStyles,
     fontWeight: '500',
     boxShadow: 'none',
     fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,

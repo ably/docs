@@ -52,8 +52,26 @@ isSelected: boolean;
 
 ## Useful Tips
 
+### Debugging Styles
+
 You can set `menuIsOpen` on the React Select element to keep the menu permanently open so you can inspect CSS styles, how components render, and so forth:
 
 ```
 <Select menuIsOpen={true} />
 ```
+
+### Menu Positioning Issues
+
+If the React Select dropdown menu is appearing in the wrong place, make sure you set `menuPosition` to the CSS position property of the containing element.
+
+For example:
+
+```
+<Select menuPosition="fixed" />
+```
+
+### Setting Widths
+
+You will often need to make sure multiple components have their widths set in order for the changes to take effect, for example both the control and the options widths usually need to be the same.
+
+It is very difficult to set some subcomponents to have greater widths than their parent components, for example the menuList or option components cannot usually be wider than the control component.

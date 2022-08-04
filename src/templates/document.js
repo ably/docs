@@ -8,7 +8,6 @@ import { LeftSideBar } from '../components/StaticQuerySidebar';
 import PageLanguageContext, { PageLanguagesContext } from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
-import VersionMenu from '../components/Menu/VersionMenu';
 import RightSidebar from '../components/Sidebar/RightSidebar';
 import PageTitle from '../components/PageTitle';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
@@ -28,6 +27,8 @@ const Document = ({
   pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
   data: { document, versions },
 }) => {
+  const params = new URLSearchParams(search);
+  const language = params.get('lang') ?? DEFAULT_LANGUAGE;
   useEffect(() => {
     const preferredLanguage = safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY);
     if (preferredLanguage && language !== preferredLanguage) {
@@ -42,8 +43,11 @@ const Document = ({
   const menuLanguages = getMetaDataDetails(document, 'languages', languages);
   const canonical = `${CANONICAL_ROOT}${slug}`;
 
-  const params = new URLSearchParams(search);
-  const language = params.get('lang') ?? DEFAULT_LANGUAGE;
+  const versionData = {
+    versions: versions.edges,
+    version,
+    rootVersion: slug,
+  };
 
   const filteredLanguages = useMemo(
     () =>
@@ -77,11 +81,10 @@ const Document = ({
           <meta property="og:description" content={description} />
           <meta name="twitter:description" content={description} />
         </Helmet>
-        <Layout languages={filteredLanguages}>
+        <Layout languages={filteredLanguages} versionData={versionData}>
           <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
           <Article columns={3}>
             <PageTitle id="title">{title}</PageTitle>
-            <VersionMenu versions={versions.edges} version={version} rootVersion={slug} />
             <div className="col-span-3">{elements}</div>
           </Article>
           <RightSidebar className="col-span-1 px-16" languages={languagesExist} menuData={contentMenu[0]} />
