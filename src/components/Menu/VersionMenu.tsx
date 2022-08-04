@@ -1,29 +1,20 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import Select, { SingleValue } from 'react-select';
+import Select from 'react-select';
 import { SmallMenuLabel } from './Label';
 import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
-import { navigate } from 'gatsby';
 import { Warning } from '../Notifications';
+import { routeToPage } from './route-to-page';
+import { containerListStyles } from './ReactSelectStyles/container-styles';
+import { dropdownIndicatorStyles } from './ReactSelectStyles/dropdown-indicator-styles';
+import { optionStyles } from './ReactSelectStyles/option-styles';
+import { controlStyles } from './ReactSelectStyles/control-styles';
 
 type PageVersion = {
   node: {
     version: string;
     slug: string;
   };
-};
-
-const routeToPage = (
-  newValue: SingleValue<{
-    label: string;
-    value: string;
-  }>,
-) => {
-  if (!newValue) {
-    console.warn('No option selected from version menu');
-    return;
-  }
-  navigate(`${DOCUMENTATION_PATH}${newValue.value}`);
 };
 
 const VersionMenu = ({
@@ -60,43 +51,10 @@ const VersionMenu = ({
             components={{ IndicatorSeparator: () => null }}
             classNamePrefix="react-select"
             styles={{
-              control: (provided) => ({
-                ...provided,
-                width: '100px',
-                border: 0,
-                boxShadow: 'none',
-                fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
-                fontSize: '14px',
-              }),
-              option: (provided) => ({
-                ...provided,
-                cursor: 'pointer',
-                width: '100px',
-                border: 0,
-                boxShadow: 'none',
-                fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
-                backgroundColor: 'transparent',
-                fontSize: '14px',
-                '&:hover': {
-                  color: 'var(--color-gui-hover)',
-                  backgroundColor: 'white',
-                },
-                '&:focus': {
-                  color: 'var(--color-gui-hover)',
-                  backgroundColor: 'white',
-                },
-                '&:target': {
-                  color: 'var(--color-gui-hover)',
-                  backgroundColor: 'white',
-                },
-              }),
-              dropdownIndicator: (provided) => ({
-                ...provided,
-                color: 'var(--color-cool-black)',
-                '&:hover': {
-                  color: 'var(--color-gui-hover)',
-                },
-              }),
+              control: controlStyles({ width: '100px' }),
+              option: optionStyles({ width: '100px' }),
+              dropdownIndicator: dropdownIndicatorStyles,
+              container: containerListStyles,
             }}
             inputId={'version-menu'}
             value={currentValue}

@@ -2,9 +2,7 @@ import React, { useContext } from 'react';
 import { TopHorizontalMenu } from '.';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 import PageLanguageContext from '../../contexts/page-language-context';
-import MenuLabel from './Label';
-import MenuItem from './MenuItem';
-import LanguageButton from '../Button/LanguageButton';
+import { LanguageDropdownSelector } from './LanguageDropdownSelector';
 
 const TopCodeMenu = ({ languages }: { languages: string[] }) => {
   const pageLanguage = useContext(PageLanguageContext);
@@ -14,17 +12,7 @@ const TopCodeMenu = ({ languages }: { languages: string[] }) => {
     <div className="fixed right-0 z-10 mt-64 w-full items-end">
       {showCodeMenu ? (
         <TopHorizontalMenu>
-          <MenuLabel>Show code examples in:</MenuLabel>
-          {showDefaultLink ? (
-            <MenuItem key={DEFAULT_LANGUAGE}>
-              <LanguageButton language={DEFAULT_LANGUAGE} />
-            </MenuItem>
-          ) : null}
-          {languages.map((language) => (
-            <MenuItem key={language}>
-              <LanguageButton language={language} />
-            </MenuItem>
-          ))}
+          <LanguageDropdownSelector language={pageLanguage} languages={languages} showDefaultLink={showDefaultLink} />
         </TopHorizontalMenu>
       ) : null}
     </div>
