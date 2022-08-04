@@ -1,6 +1,5 @@
 import React from 'react';
 import Select from 'react-select';
-import { SmallMenuLabel } from './Label';
 import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
 import { Warning } from '../Notifications';
 import { routeToPage } from './route-to-page';
@@ -10,6 +9,7 @@ import { controlStyles } from './ReactSelectStyles/control-styles';
 import { noIndicatorSeparator } from './ReactSelectCustomComponents/no-indicator-separator';
 import { groupHeadingStyles } from './ReactSelectStyles/group-heading-styles';
 import { menuListStyles } from './ReactSelectStyles/menu-list-styles';
+import { noPaddingValueContainerStyles } from './ReactSelectStyles/Versions/no-padding-value-container-styles';
 
 type PageVersion = {
   node: {
@@ -61,6 +61,7 @@ const VersionMenu = ({ versions, version, rootVersion }: VersionData) => {
               dropdownIndicator: dropdownIndicatorStyles,
               groupHeading: groupHeadingStyles,
               menuList: menuListStyles,
+              valueContainer: noPaddingValueContainerStyles,
             }}
             inputId={'version-menu'}
             value={currentValue}
