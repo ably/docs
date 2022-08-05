@@ -5,8 +5,5 @@ export type ReactSelectOption = {
 
 export type ReactSelectOptGroup = {
   label: string;
-  options: {
-    label: string;
-    value: string;
-  }[];
+  options: ReactSelectOption[];
 };
