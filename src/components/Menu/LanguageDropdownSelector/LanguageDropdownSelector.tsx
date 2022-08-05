@@ -26,7 +26,10 @@ export const LanguageDropdownSelector = ({
 }) => {
   const isSelectedLanguage = (option: ReactSelectOption) => option.value === language;
   const isNotSelectedLanguage = (option: ReactSelectOption) => option.value !== language;
-  const options = languages.map((lang) => ({ label: languageLabels[lang] ?? lang, value: lang }));
+  let options = languages.map((lang) => ({ label: languageLabels[lang] ?? lang, value: lang }));
+  if (!showDefaultLink) {
+    options = options.filter(({ value }) => value !== DEFAULT_LANGUAGE);
+  }
   const selectedOption = options.find(isSelectedLanguage);
   return (
     <Select

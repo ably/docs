@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { TopHorizontalMenuEndAlign } from '.';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 import PageLanguageContext from '../../contexts/page-language-context';
-import { LanguageDropdownSelector } from './LanguageDropdownSelector';
+import { LanguageDropdownSelector } from './LanguageDropdownSelector/LanguageDropdownSelector';
 import VersionMenu, { VersionData } from './VersionMenu';
 
 const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionData: VersionData }) => {
