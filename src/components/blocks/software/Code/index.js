@@ -89,10 +89,7 @@ const Code = ({ data, attribs }) => {
   const contentWithObfuscatedKey = useMemo(
     () =>
       dataContainsKey
-        ? contentWithRandomChannelName.replace(
-            /{{API_KEY}}/g,
-            '*********************************************************',
-          )
+        ? contentWithRandomChannelName.replace(/{{API_KEY}}/g, new Array(57).join('*'))
         : contentWithRandomChannelName,
     [contentWithRandomChannelName, activeApiKey],
   );
