@@ -1,3 +1,5 @@
+import { memoize } from 'lodash/fp';
+
 // Source: ably/website: lib/random_words.rb
 const words = [
   'abs',
@@ -215,6 +217,6 @@ const words = [
   'zoo',
 ];
 
-const randomWord = words.find((_element, index) => index === Math.floor(Math.random() * words.length));
+const randomWord = () => words[Math.floor(Math.random() * words.length)];
 
-export const getRandomChannelName = () => `${randomWord}-${randomWord}-${randomWord}`;
+export const getRandomChannelName = memoize(() => `${randomWord()}-${randomWord()}-${randomWord()}`);

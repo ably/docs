@@ -88,14 +88,20 @@ const Code = ({ data, attribs }) => {
    */
   const contentWithObfuscatedKey = useMemo(
     () =>
-      contentWithRandomChannelName.replace &&
-      contentWithRandomChannelName.replace(/{{API_KEY}}/g, '*********************************************************'),
-    [content, activeApiKey],
+      dataContainsKey
+        ? contentWithRandomChannelName.replace(
+            /{{API_KEY}}/g,
+            '*********************************************************',
+          )
+        : contentWithRandomChannelName,
+    [contentWithRandomChannelName, activeApiKey],
   );
   const contentWithKey = useMemo(
     () =>
-      contentWithRandomChannelName.replace && contentWithRandomChannelName.replace(/{{API_KEY}}/g, activeApiKey.value),
-    [content, activeApiKey],
+      dataContainsKey
+        ? contentWithRandomChannelName.replace(/{{API_KEY}}/g, activeApiKey.value)
+        : contentWithRandomChannelName,
+    [contentWithRandomChannelName, activeApiKey],
   );
 
   if (hasRenderableLanguages || hasMultilineText) {
