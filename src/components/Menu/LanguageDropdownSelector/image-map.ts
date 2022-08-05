@@ -12,8 +12,27 @@ import { Python } from './LanguageLogos/Python';
 import { Ruby } from './LanguageLogos/Ruby';
 import { Swift } from './LanguageLogos/Swift';
 
+const imageMapKeys = [
+  'csharp',
+  'dotnet',
+  'flutter',
+  'go',
+  'java',
+  'javascript',
+  'nodejs',
+  'objc',
+  'php',
+  'python',
+  'ruby',
+  'swift',
+];
+type ImageMapKey = typeof imageMapKeys[number];
+
+export const isInImageMap = (maybeImageMapKey: string): maybeImageMapKey is ImageMapKey =>
+  imageMapKeys.includes(maybeImageMapKey as ImageMapKey);
+
 export const imageMap: {
-  [key: string]: FunctionComponent;
+  [key in ImageMapKey]: FunctionComponent;
 } = {
   csharp: CSharp,
   dotnet: DotNet,
