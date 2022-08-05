@@ -7,7 +7,7 @@ import TopCodeMenu from '../Menu/TopCodeMenu';
 import ablyStack from '@ably/ui/core/images/ably-stack.svg';
 import { VersionMenuProps } from '../Menu/VersionMenu';
 
-const Header = ({ languages, versionData }: { languages: Array<string>; versionData: VersionMenuProps }) => {
+const Header = ({ languages, versionData }: { languages: string[]; versionData: VersionMenuProps }) => {
   return (
     <>
       <Meganav
