@@ -10,6 +10,7 @@ import { noIndicatorSeparator } from './ReactSelectCustomComponents/no-indicator
 import { groupHeadingStyles } from './ReactSelectStyles/group-heading-styles';
 import { menuListStyles } from './ReactSelectStyles/menu-list-styles';
 import { noPaddingValueContainerStyles } from './ReactSelectStyles/Versions/no-padding-value-container-styles';
+import { ReactSelectOption } from './react-select-option-types';
 
 type PageVersion = {
   node: {
@@ -18,26 +19,34 @@ type PageVersion = {
   };
 };
 
-export type VersionData = {
+export type VersionMenuProps = {
   versions: PageVersion[];
   version: string;
   rootVersion: string;
 };
 
-const VersionMenu = ({ versions, version, rootVersion }: VersionData) => {
-  const latestOption = [
-    {
-      label: LATEST_ABLY_API_VERSION_STRING,
-      value: rootVersion,
-    },
-  ];
-  const options = versions
-    .map((v) => ({
-      label: v.node.version,
-      value: v.node.slug,
-    }))
-    .sort((a, b) => parseFloat(b.label) - parseFloat(a.label));
-  const currentValue = version ? { label: `API v ${version}`, value: version } : latestOption[0];
+const versionToOption = (v: PageVersion) => ({
+  label: v.node.version,
+  value: v.node.slug,
+});
+
+const parseAndCompareOptionLabelFloats = (a: ReactSelectOption, b: ReactSelectOption) =>
+  parseFloat(b.label) - parseFloat(a.label);
+
+const versionsToSortedOptions = (versions: PageVersion[]) =>
+  versions.map(versionToOption).sort(parseAndCompareOptionLabelFloats);
+
+const getCurrentVersionOrRootVersion = (version: string, rootVersion: string) =>
+  version
+    ? { label: `API v ${version}`, value: version }
+    : {
+        label: `API v ${LATEST_ABLY_API_VERSION_STRING}`,
+        value: rootVersion,
+      };
+
+const VersionMenu = ({ versions, version, rootVersion }: VersionMenuProps) => {
+  const options = versionsToSortedOptions(versions);
+  const currentValue = getCurrentVersionOrRootVersion(version, rootVersion);
 
   return (
     <>

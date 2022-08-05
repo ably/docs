@@ -5,9 +5,9 @@ import Meganav from '@ably/ui/core/Meganav';
 import TopCodeMenu from '../Menu/TopCodeMenu';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 import ablyStack from '@ably/ui/core/images/ably-stack.svg';
-import { VersionData } from '../Menu/VersionMenu';
+import { VersionMenuProps } from '../Menu/VersionMenu';
 
-const Header = ({ languages, versionData }: { languages: Array<string>; versionData: VersionData }) => {
+const Header = ({ languages, versionData }: { languages: Array<string>; versionData: VersionMenuProps }) => {
   return (
     <>
       <Meganav

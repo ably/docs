@@ -20,11 +20,15 @@ import {
 } from '../../redux/api-key/constants';
 import { Script } from 'gatsby';
 import { hubspotIdentifyUser } from '../../third-party/hubspot';
-import { VersionData } from '../Menu/VersionMenu';
+import { VersionMenuProps } from '../Menu/VersionMenu';
 
 const hubspotTrackingId = process.env.HUBSPOT_TRACKING_ID;
 
-const Layout: FC<{ languages: Array<string>; versionData: VersionData }> = ({ languages, versionData, children }) => {
+const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = ({
+  languages,
+  versionData,
+  children,
+}) => {
   const [sessionState, setSessionState] = useState({});
   const [apiKeys, setApiKeys] = useState({});
 
