@@ -54,7 +54,7 @@ h2(#test-guidelines). Test guidelines
 * @(G1)@ Every test should be executed using all supported protocols (i.e. JSON and "MessagePack":https://msgpack.org/ if supported).  This includes both sending & receiving data
 * @(G2)@ All tests by default are run against a special Ably sandbox environment.  This environment allows apps to be provisioned without any authentication that can then be used for client library testing. Bear in mind that all apps created in the sandbox environment are automatically deleted after 60 minutes and have low limits to prevent abuse. Apps are configured by sending a @POST@ request to @https://sandbox-rest.ably.io/apps@ with a JSON body that specifies the keys and their associated capabilities, channel namespace rules and any presence fixture data that is required; see "ably-common test-app-setup.json":https://github.com/ably/ably-common/blob/main/test-resources/test-app-setup.json. Presence fixture data is necessary for the REST library presence tests as there is no way to register presence on a channel in the REST library
 * @(G3)@ Testing statistics can be tricky due to timing issues and slow test suites as a result of sending requests to generate statistics.  As such, we provide a special stats endpoint in our sandbox environment that allows stats to be injected into our metrics system so that stats tests can make predictable assertions.  To create stats you must send an authenticated @POST@ request to the stats JSON to @https://sandbox-rest.ably.io/stats@ with the stats data you wish to create. See the "JavaScript stats fixture":https://github.com/ably/ably-js/blob/4e65d4e13eb8750a375b9511e4dd059092c0e481/spec/rest/stats.test.js#L8-L51 and "setup helper":https://github.com/ably/ably-js/blob/4e65d4e13eb8750a375b9511e4dd059092c0e481/spec/common/modules/testapp_manager.js#L158-L182 as an example
-* @(G4)@ This spec defines API version 1.2. A client library must identify to Ably the version of the spec it uses in all requests and connections, per "RSC7a":#RSC7a and "RTN2f":#RTN2f. The spec it uses is defined as the latest API version for which the library implements all spec items relating to the wire protocol
+* @(G4)@ This spec defines API version 2.0. A client library must identify to Ably the version of the spec it uses in all requests and connections, per "RSC7a":#RSC7a and "RTN2f":#RTN2f. The spec it uses is defined as the latest API version for which the library implements all spec items relating to the wire protocol
 
 h2(#rest). REST client library
 
@@ -79,7 +79,7 @@ h3(#restclient). RestClient
 * @(RSC21)@ @RestClient#push@ attribute provides access to the @Push@ object that was instantiated with the @ClientOptions@ provided in the @RestClient@ constructor
 * @(RSC22)@ @RestClient#batch@ attribute provides access to the @BatchOperations@ object that was instantiated with the @ClientOptions@ provided in the @RestClient@ constructor
 * @(RSC7)@ Sends REST requests over HTTP and HTTPS to the REST endpoint @rest.ably.io@
-** @(RSC7a)@ The header @X-Ably-Version: 1.2@ must be included in all REST requests to the Ably endpoint
+** @(RSC7a)@ The header @X-Ably-Version: 2.0@ must be included in all REST requests to the Ably endpoint
 ** @(RSC7b)@ (Please note this clause and the associated header have now been superseded by "RCS7d":#RSC7d) The header @X-Ably-Lib: [lib][.optional variant]?-[version]@ should be included in all REST requests to the Ably endpoint where @[lib]@ is the name of the library such as @js@ for @ably-js@, @[.optional variant]@ is an optional library variant, such as @laravel@ for the @php@ library, which is always delimited with a period such as @php.laravel@, and where @[version]@ is the full client library version using "Semver":http://semver.org/ such as @1.0.2@. For example, the 1.0.0 version of the JavaScript library would use the header @X-Ably-Lib: js-1.0.0@.
 *** @(RSC7b1)@ When it is not possible to send the @X-Ably-Lib@ header, such as for @JSONP@ requests, the library version should be sent as a query param such as @lib=js-1.0.0@
 ** @(RSC7c)@ If the @addRequestIds@ client option is enabled, every REST request to Ably should include in a @request_id@ query string parameter a random string obtained by url-safe base64-encoding a sequence of at least 9 bytes obtained from a source of randomness. This request ID must remain the same if a request is retried to a fallback host per @RSC15@. Any log messages associated with the request should include the request ID. If the request fails, the request ID must be included in the @ErrorInfo@ returned to the user.
@@ -448,9 +448,7 @@ h3(#realtime-connection). Connection
 * @(RTN9)@ @Connection#key@ attribute:
 ** @(RTN9a)@ Is unset until connected
 ** @(RTN9b)@ Is a unique private connection key provided by Ably that is used to reconnect and retain connection state following an unexpected disconnection. You should have a test to ensure multiple connected clients have unique connection keys
-* @(RTN10)@ @Connection#serial@ attribute:
-** @(RTN10a)@ Is unset until connected, and is then set from the @connectionSerial@ attribute of the @CONNECTED@ @ProtocolMessage@
-** @(RTN10b)@ Continues to be updated by every @ProtocolMessage@ received from Ably that contains a @connectionSerial@. A test should exist that checks that the serial is updated when a @ProtocolMessage@ is received with the value from that @ProtocolMessage@. It should not otherwise change; in particular, unlike the library-internal @msgSerial@, it should not change as a result of publishing a message or receiving an @ACK@.
+* @(RTN10)@ This clause has been removed as of the 2.0 spec.
 * @(RTN11)@ @Connection#connect@ function:
 ** @(RTN11a)@ Explicitly connects to the Ably service if not already connected
 ** @(RTN11b)@ If the state is @CLOSING@, the client should make a new connection with a new transport instance and remove all references to the old one. In particular, it should make sure that, when the @CLOSED@ @ProtocolMessage@ arrives for the old connection, it doesn't affect the new one.
@@ -488,7 +486,7 @@ h3(#realtime-connection). Connection
 *** @(RTN15g3)@ When a connection attempt succeeds after the connection state has been cleared in this way, channels that were previously @ATTACHED@, @ATTACHING@, or @SUSPENDED@ must be automatically reattached, just as if the connection was a resume attempt which failed per "RTN15c3":#RTN15c3
 ** @(RTN15b)@ In order for a connection to be resumed and connection state to be recovered, the client must have received a @CONNECTED@ ProtocolMessage which will include a private connection key. To resume that connection, the library reconnects to the "websocket":https://ably.com/topic/websockets endpoint with two additional querystring params:
 *** @(RTN15b1)@ @resume@ is the @ProtocolMessage#connectionKey@ from the most recent @CONNECTED@ @ProtocolMessage@ received
-*** @(RTN15b2)@ @connectionSerial@ is the most recent @ProtocolMessage#connectionSerial@ (from any message, not just a @CONNECTED@) received from Ably (equivalently, the @Connection#serial@)
+*** @(RTN15b2)@ This clause has been removed as of the 2.0 spec.
 ** @(RTN15c)@ The system's response to a resume request will be one of the following:
 **** @(RTN15c1)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and no @error@. In this case, the server is indicating that the resume succeeded, all channels are still attached, and all backlog messages are available. The client should not change the state of attached channels, and immediately process any messages queued by the connection
 **** @(RTN15c2)@ @CONNECTED@ @ProtocolMessage@ with the same @connectionId@ as the current client, and an @error@. In this case, the server is indicating that the resume succeeded but with a non-fatal error, all channels are still attached, and some backlog messages may be unavailable. The @ErrorInfo@ received should be set as the @reason@ in the @CONNECTED@ event, and the @Connection#errorReason@ should be set. The client should not change the state of attached channels, and immediately process any messages queued by the connection. Any channels that are not resumed in full may receive an @ATTACHED@ @ProtocolMessage@ with an @error@, see "RTL12":#RTL12
@@ -503,8 +501,10 @@ h3(#realtime-connection). Connection
 ** @(RTN20b)@ When @DISCONNECTED@ or @SUSPENDED@, if the operating system indicates that the underlying internet connection is now available, the client library should immediately attempt to connect
 * @(RTN16)@ @Connection@ recovery:
 ** @(RTN16a)@ Connection recovery follows the resume spec "RTN15c":#RTN15c in respect to the expected response from the server. However, connection recovery is different in that the library has no state at the time of connection and recovers the connection based as a result of @recover@ key being explicitly provided to the Realtime library when instantiated. Once a connection is recovered, all channels must be explicitly attached by the developer
-** @(RTN16b)@ @Connection#recoveryKey@ is an attribute composed of the @connectionKey@, and the latest @connectionSerial@ received on the connection, and the current @msgSerial@
-** @(RTN16c)@ @Connection#recoveryKey@ becomes @Null@ when a connection is explicitly @CLOSED@ or @CLOSED@ by the server, as connection state is not retained for connections closed intentionally. The @Connection#key@ and @Connection#id@ is set to @Null@
+** @(RTN16b)@ This clause has been removed as of the 2.0 spec and replaced with @RTN16g@.
+** @(RTN16g)@ @Connection#getRecoveryKey@ is function that returns a string which incorporates the @connectionKey@, the current @msgSerial@, and a collection of pairs of channel @name@ and current @channelSerial@ for every currently attached channel. This must be serialized in a way which is able to encode any unicode channel name. The SDK may assume that the recovery key will only be consumed by the same type of SDK, so this spec does not specify any particular serialization; however, the format should be forward-compatible through the same major version of the SDK.
+*** @(RTN16g1)@ SDKs which choose not to increment their public major version when implementing protocol v2.0 may continue to implement this as a @Connection#recoveryKey@ attribute until the next major version change, using a getter function that's backwards-compatible with attribute access where possible, else by recomputing the recovery key string on every message.
+** @(RTN16c)@ @Connection#getRecoveryKey@ should return @Null@ when a the SDK is in the @CLOSED@, @CLOSING@, @FAILED@, or @SUSPENDED@ states, or when it does not have a @connectionKey@ (for example, it has not yet become connected). The @Connection#key@ and @Connection#id@ should also be @Null@ at these times.
 ** @(RTN16d)@ When a connection is successfully recovered, the @Connection#id@ will be identical to the @id@ of the connection that was recovered, and @Connection#key@ will always be updated to the @ConnectionDetails#connectionKey@ provided in the first @CONNECTED@ @ProtocolMessage@
 ** @(RTN16e)@ If the @recover@ option is missing or no longer valid when connecting to Ably, the client will connect anyway, but emit a @ConnectionStateChange@ with a @reason@, and will additionally set the @Connection#errorReason@ with an @ErrorInfo@ object describing the failure
 ** @(RTN16f)@ The @msgSerial@ component of the @recoveryKey@, unlike the other two components, is not sent to Ably, but rather is used to set the library internal @msgSerial@. (If the recover fails, the counter should be reset to 0 per "RTN15c3":#RTN15c3 )
@@ -565,6 +565,7 @@ h3(#realtime-channel). RealtimeChannel
 *** @(RTL4b1)@ Note that an attach attempt immediately after the library is instantiated, assuming @autoConnect@ (@TO3e@)is not set to @false@, should not raise an error (that is, should fall under @RTL4i@, not @RTL4b@), since the library should be in a @CONNECTING@ state at that point
 ** @(RTL4i)@ If the connection state is @CONNECTING@ or @DISCONNECTED@, do the operation once the connection state is @CONNECTED@
 ** @(RTL4c)@ Otherwise an @ATTACH@ ProtocolMessage is sent to the server, the state transitions to @ATTACHING@ and the channel becomes @ATTACHED@ when the confirmation @ATTACHED@ ProtocolMessage is received
+*** @(RTL4c1)@ The @ATTACH@ ProtocolMessage @channelSerial@ field must be set to the @channelSerial@ of the most recent message/presence ProtocolMessage received on that channel (which will have been stored in the channel per @RTL25@). If no messages have been received on the channel, the field may be set to @null@ or omitted.
 ** @(RTL4f)@ Once an @ATTACH@ @ProtocolMessage@ is sent, if an @ATTACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the attach request should be treated as though it has failed and the channel should transition to the @SUSPENDED@ state. The channel will then be subsequently automatically re-attached as described in "RTL13":#RTL13
 ** @(RTL4d)@ A callback (or other language-idiomatic equivalent) can be provided that is called when the channel next moves to one of @ATTACHED@, @DETACHED@, @SUSPENDED@, or @FAILED@ states. In the case of @ATTACHED@ the callback is called with no argument. In all other cases it is called with an @ErrorInfo@ corresponding to the @ChannelStateChange.reason@ of the state change (or a fallback if there is no @reason@) to indicate that the attach has failed. (Note: when combined with RTL4f, this means that if the connection is @CONNECTED@, the callback is guaranteed to be called within @realtimeRequestTimeout@ of the @attach()@ call)
 ** @(RTL4e)@ If the user does not have sufficient permissions to attach to the channel, the channel will transition to @FAILED@ and set the @RealtimeChannel#errorReason@
@@ -663,6 +664,7 @@ h3(#realtime-channel). RealtimeChannel
 ** @(RTL22c)@ The listener must only execute if all provided criteria are met.
 ** @(RTL22d)@ The method should use the @MessageFilter@ object if possible and idiomatic for the language.
 * @(RTL24)@ @RealtimeChannel#errorReason@ attribute is an optional @ErrorInfo@ object which is set by the library when an error occurs on the channel, as described by "RTN11d":#RTN11d, "RTL3a":#RTL3a, "RTL4e":#RTL4e, "RTL4g":#RTL4g, "RTL14":#RTL14.
+* @(RTL25)@ When a @ProtocolMessage@ with either @Message@ or @Presence@ actions is received on a channel, the channel should store its @TR4c@ @channelSerial@.
 
 h3(#realtime-presence). RealtimePresence
 
@@ -694,6 +696,7 @@ h3(#realtime-presence). RealtimePresence
 * @(RTP4)@ Ensure a test exists that enters 250 members using @RealtimePresence#enterClient@ on a single connection, and checks for @PRESENT@ events to be emitted on another connection for each member, and once sync is complete, all 250 members should be present in a @RealtimePresence#get@ request
 * @(RTP5)@ RealtimeChannel state change side effects:
 ** @(RTP5a)@ If the channel enters the @DETACHED@ or @FAILED@ state then all queued presence messages will fail immediately, and the @PresenceMap@ and "internal PresenceMap (see RTP17)":#RTP17 is cleared. The latter ensures members are not automatically re-entered if the @RealtimeChannel@ later becomes attached. Since channels in the @DETACHED@ and @FAILED@ states will not receive any presence updates from Ably, presence events (specifically @LEAVE@) should not be emitted when the @PresenceMap@ is cleared as each presence member's state is unknown
+*** @(RTP5a1)@ A channel entering the @DETACHED@, @SUSPENDED@, or @FAILED@ state should also clear any @channelSerial@ it has stored per @RTL25@.
 ** @(RTP5f)@ If the channel enters the @SUSPENDED@ state then all queued presence messages will fail immediately, and the @PresenceMap@ is maintained. This ensures that if the channel later becomes @ATTACHED@, it will only publish presence events for the changes in the @PresenceMap@ that have occurred whilst the client was disconnected. A test should exist for a channel that is in the @SUSPENDED@ state containing presence members to transition to the @ATTACHED@ state, and following the @SYNC@ process after attaching, any members present before and after the sync should not emit presence events, all other changes should be reflected in the @PresenceMap@ and should emit presence events on the channel
 ** @(RTP5b)@ If a channel enters the @ATTACHED@ state then all queued presence messages will be sent immediately. A presence @SYNC@ may be initiated per "@RTP1@":#RTP1
 * @(RTP16)@ Connection state conditions:
@@ -1260,7 +1263,7 @@ h4. ProtocolMessage
 ** @(TR4b)@ @channel@ string
 ** @(TR4c)@ @channelSerial@ string
 ** @(TR4d)@ @connectionId@ string
-** @(TR4f)@ @connectionSerial@ long
+** @(TR4f)@ This attribute has been removed as of the 2.0 spec
 ** @(TR4o)@ @connectionDetails@ @ConnectionDetails@ object - provides details on the constraints or defaults for the connection such as max message size, client ID or connection state TTL
 ** @(TR4g)@ @count@ integer
 ** @(TR4h)@ @error@ @ErrorInfo@ object
@@ -1880,7 +1883,7 @@ class MessageFilter: // MFI*
   refTimeserial: string // MFI2b
   refType: string // MFI2c
   name: string // MFI2d
-  
+
 class ChannelProperties: // CP*
   attachSerial: String // CP2a
 
@@ -2076,7 +2079,6 @@ class ProtocolMessage: // internal
   channelSerial: String? // TR4c
   connectionDetails: ConnectionDetails? // RSA7b3, RTN19, TR4o
   connectionId: String? // RTN15c1, TR4d
-  connectionSerial: Int? // RTN10c, TR4f
   count: Int? // TR4g
   error: ErrorInfo? // RTN15c2, TR4h
   flags: Int? // TR4i; bitfield containing zero or more boolean flags specified in TR3
@@ -2115,8 +2117,7 @@ class Connection: // RTN*
   errorReason: ErrorInfo? // RTN25
   id: String? // RTN8
   key: String? // RTN9
-  recoveryKey: String? // RTN16b, RTN16c
-  serial: Int? // RTN10
+  getRecoveryKey(): String? // RTN16g, RTN16c
   state: ConnectionState // RTN4d
   close() // RTN12
   connect() // RTC1b, RTN3, RTN11
