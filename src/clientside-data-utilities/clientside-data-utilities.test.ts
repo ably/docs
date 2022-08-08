@@ -11,7 +11,7 @@ const arbitrariesForAttribsContainClassTest = [
 const checkDesiredClassNamePresence =
   (shouldBePresent: boolean) => (cssClass: string, className: string, position: number) => {
     const attribs = {
-      className: shouldBePresent ? className : className.replace(cssClass, `#${cssClass}`),
+      className: shouldBePresent ? className : className.replaceAll(cssClass, `#${cssClass}`),
     };
     if (position === 0) {
       attribs.className = `${cssClass}${shouldBePresent ? ' ' : ''}${attribs.className}`;
