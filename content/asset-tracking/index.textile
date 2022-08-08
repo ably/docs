@@ -169,6 +169,139 @@ The following logic is used:
 3. Then, based on the @ResolutionSet@ provided, and also the state of the thresholds, the correct @Resolution@ is identified from the set. This resolution is then compared with the one from previous step, and the more precise one is selected.
 4. The low battery multiplier is applied if needed.
 
+h3(#custom-resolution-policy). Custom resolution policy
+
+To create your custom resolution policy there are two required classes you must implement, and some optional ones. The required classes are:
+
+- @ResolutionPolicy@ := Responsible for calculating network and GPS resolutions.
+- @ResolutionPolicy.Factory@ := Responsible for creating the resolution policy instance.
+
+The optional classes are:
+
+- @ResolutionPolicy.Hooks.SubscriberSetListener@ := Called whenever the amount of subscribers changes.
+- @ResolutionPolicy.Hooks.TrackableSetListener@ := Called whenever the amount of trackables changes or the active trackable changes.
+- @ResolutionPolicy.Methods.ProximityHandler@ := Called when the proximity is reached or cancelled.
+
+From within the @ResolutionPolicy@ class you have access to the following:
+
+- @ResolutionPolicy.Methods@ := You can use this to perform actions on the publisher, for example, @refresh()@ and notify the publisher about some events, such as @setProximityThreshold()@.
+- @ResolutionPolicy.Hooks@ := You can use this to attach the optional listeners.
+
+Additionally, you can create custom @ResolutionConstraints@ that can be specified later, when creating a @Trackable@. This allows you to add constraints to a trackable that can be used when resolving a resolution by your custom resolution policy, for example, you can set a battery threshold and modify the frequency of messages based on the current battery level.
+
+You then need to provide your custom resolution policy factory to the @Publisher@ builder:
+
+```[kotlin]
+Publisher.publishers()
+    .resolutionPolicy(CustomResolutionPolicyFactory("optional param"))
+    // other required configurations
+   .start()
+```
+
+The simplest custom implementation is shown in the following example code:
+
+```[kotlin]
+class CustomResolutionPolicyFactory : ResolutionPolicy.Factory {
+    override fun createResolutionPolicy(
+        hooks: ResolutionPolicy.Hooks,
+        methods: ResolutionPolicy.Methods
+    ): ResolutionPolicy {
+        return CustomResolutionPolicy(hooks, methods)
+    }
+}
+
+class CustomResolutionPolicy(
+    hooks: ResolutionPolicy.Hooks,
+    private val methods: ResolutionPolicy.Methods,
+) : ResolutionPolicy {
+    override fun resolve(resolutions: Set<Resolution>): Resolution =
+        resolveGpsResolution(resolutions)
+
+    override fun resolve(request: TrackableResolutionRequest): Resolution =
+        resolveNetworkResolution(request)
+
+    private fun resolveGpsResolution(requests: Set<Resolution>): Resolution =
+        TODO()
+
+    private fun resolveNetworkResolution(request: TrackableResolutionRequest): Resolution =
+        TODO()
+}
+```
+
+An example with all optional listeners, and a custom parameter implemented, is shown in the following code:
+
+```[kotlin]
+class CustomResolutionPolicyFactory(
+    private val customParameter: String,
+) : ResolutionPolicy.Factory {
+    override fun createResolutionPolicy(
+        hooks: ResolutionPolicy.Hooks,
+        methods: ResolutionPolicy.Methods
+    ): ResolutionPolicy {
+        return CustomResolutionPolicy(hooks, methods, customParameter)
+    }
+}
+
+class CustomResolutionPolicy(
+    hooks: ResolutionPolicy.Hooks,
+    private val methods: ResolutionPolicy.Methods,
+    private val customParameter: String,
+) : ResolutionPolicy {
+    private val proximityHandler = CustomProximityHandler()
+
+    init {
+        hooks.trackables(CustomTrackableSetListener())
+        hooks.subscribers(CustomSubscriberSetListener())
+    }
+
+    override fun resolve(resolutions: Set<Resolution>): Resolution =
+        resolveGpsResolution(resolutions)
+
+    override fun resolve(request: TrackableResolutionRequest): Resolution =
+        resolveNetworkResolution(request)
+
+    private fun resolveGpsResolution(requests: Set<Resolution>): Resolution =
+        TODO()
+
+    private fun resolveNetworkResolution(request: TrackableResolutionRequest): Resolution =
+        TODO()
+
+    private inner class CustomSubscriberSetListener : ResolutionPolicy.Hooks.SubscriberSetListener {
+        override fun onSubscriberAdded(subscriber: Subscriber) {
+            // do something
+        }
+
+        override fun onSubscriberRemoved(subscriber: Subscriber) {
+            // do something
+        }
+    }
+
+    private inner class CustomTrackableSetListener : ResolutionPolicy.Hooks.TrackableSetListener {
+        override fun onTrackableAdded(trackable: Trackable) {
+            // do something
+        }
+
+        override fun onTrackableRemoved(trackable: Trackable) {
+            // do something
+        }
+
+        override fun onActiveTrackableChanged(trackable: Trackable?) {
+            // do something
+        }
+    }
+
+    private inner class CustomProximityHandler : ResolutionPolicy.Methods.ProximityHandler {
+        override fun onProximityReached(threshold: Proximity) {
+            // do something
+        }
+
+        override fun onProximityCancelled() {
+            // do something
+        }
+    }
+}
+```
+
 h2(#see-also). See also
 
 * "Using the example apps":/asset-tracking/example-apps
