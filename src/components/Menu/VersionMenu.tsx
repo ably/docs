@@ -33,19 +33,22 @@ const versionToOption = (v: PageVersion) => ({
 const parseAndCompareOptionLabelFloats = (a: ReactSelectOption, b: ReactSelectOption) =>
   parseFloat(b.label) - parseFloat(a.label);
 
-const versionsToSortedOptions = (versions: PageVersion[]) =>
-  versions.map(versionToOption).sort(parseAndCompareOptionLabelFloats);
+const getRootVersionOption = (rootVersion: string, prefix?: boolean) => ({
+  label: `${prefix ? 'API v ' : ''}${LATEST_ABLY_API_VERSION_STRING}`,
+  value: rootVersion,
+});
+
+const versionsToSortedOptions = (versions: PageVersion[], rootVersion: string) =>
+  versions
+    .map(versionToOption)
+    .concat([getRootVersionOption(rootVersion)])
+    .sort(parseAndCompareOptionLabelFloats);
 
 const getCurrentVersionOrRootVersion = (version: string, rootVersion: string) =>
-  version
-    ? { label: `API v ${version}`, value: version }
-    : {
-        label: `API v ${LATEST_ABLY_API_VERSION_STRING}`,
-        value: rootVersion,
-      };
+  version ? { label: `API v ${version}`, value: version } : getRootVersionOption(rootVersion, true);
 
 const VersionMenu = ({ versions, version, rootVersion }: VersionMenuProps) => {
-  const options = versionsToSortedOptions(versions);
+  const options = versionsToSortedOptions(versions, rootVersion);
   const currentValue = getCurrentVersionOrRootVersion(version, rootVersion);
 
   return (
