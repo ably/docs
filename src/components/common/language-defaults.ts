@@ -1,6 +1,6 @@
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 
-export const ACTIVE_LANGUAGE_BUTTON_CLASS_NAME = 'docs-menu-item-button-active';
+export const ACTIVE_LANGUAGE_BUTTON_CLASS_NAME = 'docs-menu-item-button-selected';
 export const INACTIVE_LANGUAGE_BUTTON_CLASS_NAME = 'docs-menu-item-button';
 
 type languageButtonClassName = typeof ACTIVE_LANGUAGE_BUTTON_CLASS_NAME | typeof INACTIVE_LANGUAGE_BUTTON_CLASS_NAME;
