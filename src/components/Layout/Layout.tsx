@@ -20,10 +20,15 @@ import {
 } from '../../redux/api-key/constants';
 import { Script } from 'gatsby';
 import { hubspotIdentifyUser } from '../../third-party/hubspot';
+import { VersionMenuProps } from '../Menu/VersionMenu';
 
 const hubspotTrackingId = process.env.HUBSPOT_TRACKING_ID;
 
-const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
+const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = ({
+  languages,
+  versionData,
+  children,
+}) => {
   const [sessionState, setSessionState] = useState({});
   const [apiKeys, setApiKeys] = useState({});
 
@@ -46,7 +51,7 @@ const Layout: FC<{ languages: Array<string> }> = ({ languages, children }) => {
     <UserContext.Provider value={userState}>
       {hubspotTrackingId && <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" />}
       <header>
-        <Header languages={languages} />
+        <Header languages={languages} versionData={versionData} />
       </header>
       <main className={`${languages && languages.length > 1 ? 'pt-128' : 'pt-96'} grid grid-cols-5`}>{children}</main>
     </UserContext.Provider>
