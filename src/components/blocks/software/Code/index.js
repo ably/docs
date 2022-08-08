@@ -31,7 +31,12 @@ import UserContext, { devApiKeysPresent } from '../../../../contexts/user-contex
 import APIKeyMenuSelector from './ApiKeyMenuSelector';
 import InlineCodeElement from './InlineCodeElement';
 import CodeCopyButton from './CodeCopyButton';
+import { API_KEY_DATA_ATTRIBUTE } from '../../../../../data/html-parser/add-info-to-codeblocks/codeblock-api-key-info';
+import { RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE } from '../../../../../data/html-parser/add-info-to-codeblocks/codeblock-random-channel-name';
+import { MultilineCodeContent } from './MultilineCodeContent';
+import { getRandomChannelName } from './get-random-channel-name';
 
+const API_KEY_LENGTH = 57;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
 
 const SelectedLanguage = ({ language }) =>
@@ -67,7 +72,15 @@ const Code = ({ data, attribs }) => {
   const hasRenderableLanguages = isString && attribs && attribs.lang;
   const hasMultilineText = isString && multilineRegex.test(data[0].data);
 
+  const dataContainsKey = attribs[`data-contains-${API_KEY_DATA_ATTRIBUTE}`] === 'true';
+  const dataContainsRandomChannelName = attribs[`data-contains-${RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE}`] === 'true';
+
   const content = data[0]?.data ?? '';
+  const contentWithRandomChannelName = useMemo(
+    () =>
+      dataContainsRandomChannelName ? content.replace(/{{RANDOM_CHANNEL_NAME}}/g, getRandomChannelName()) : content,
+    [],
+  );
   /**
    * Refer to Decision Record:
    * https://ably.atlassian.net/wiki/spaces/ENG/pages/2070053031/DR9+API+Keys+vs+tokens+vs+authUrls+in+docs+code+snippets#Recommendation
@@ -76,20 +89,25 @@ const Code = ({ data, attribs }) => {
    */
   const contentWithObfuscatedKey = useMemo(
     () =>
-      content.replace && content.replace(/{{API_KEY}}/g, '*********************************************************'),
-    [content, activeApiKey],
+      dataContainsKey
+        ? contentWithRandomChannelName.replace(/{{API_KEY}}/g, new Array(API_KEY_LENGTH).join('*'))
+        : contentWithRandomChannelName,
+    [contentWithRandomChannelName, activeApiKey],
   );
   const contentWithKey = useMemo(
-    () => content.replace && content.replace(/{{API_KEY}}/g, activeApiKey.value),
-    [content, activeApiKey],
+    () =>
+      dataContainsKey
+        ? contentWithRandomChannelName.replace(/{{API_KEY}}/g, activeApiKey.value)
+        : contentWithRandomChannelName,
+    [contentWithRandomChannelName, activeApiKey],
   );
 
   if (hasRenderableLanguages || hasMultilineText) {
-    const dataContainsKey = attribs['data-contains-key'] === 'true';
     const displayLanguage =
       attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
         ? languageSyntaxHighlighterNames[attribs.lang]
         : languageSyntaxHighlighterNames['plaintext'];
+
     return (
       <div {...attribs} className="p-32 overflow-auto relative" language={languageLabels[attribs.lang]}>
         <UserContext.Consumer>
@@ -106,20 +124,17 @@ const Code = ({ data, attribs }) => {
         <SelectedLanguage language={displayLanguage} />
         <UserContext.Consumer>
           {(value) => (
-            <SyntaxHighlighter
-              className="ui-text-code"
-              style={{ hljs: { background: 'inherit', fontSize: `var(--fs-code)`, lineHeight: `var(--lh-loose)` } }}
-              language={displayLanguage.key}
-            >
-              {dataContainsKey
-                ? value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN
-                  ? contentWithObfuscatedKey
-                  : contentWithKey
-                : content}
-            </SyntaxHighlighter>
+            <MultilineCodeContent
+              signedIn={value.sessionState.signedIn}
+              dataContainsKey={dataContainsKey}
+              content={contentWithRandomChannelName}
+              contentWithKey={contentWithKey}
+              contentWithObfuscatedKey={contentWithObfuscatedKey}
+              displayLanguage={displayLanguage.key}
+            />
           )}
         </UserContext.Consumer>
-        <CodeCopyButton content={contentWithKey} />
+        <CodeCopyButton content={dataContainsKey ? contentWithKey : contentWithRandomChannelName} />
       </div>
     );
   }
