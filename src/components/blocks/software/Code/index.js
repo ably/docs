@@ -36,6 +36,7 @@ import { RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE } from '../../../../../data/html-par
 import { MultilineCodeContent } from './MultilineCodeContent';
 import { getRandomChannelName } from './get-random-channel-name';
 
+const API_KEY_LENGTH = 57;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
 
 const SelectedLanguage = ({ language }) =>
@@ -89,7 +90,7 @@ const Code = ({ data, attribs }) => {
   const contentWithObfuscatedKey = useMemo(
     () =>
       dataContainsKey
-        ? contentWithRandomChannelName.replace(/{{API_KEY}}/g, new Array(57).join('*'))
+        ? contentWithRandomChannelName.replace(/{{API_KEY}}/g, new Array(API_KEY_LENGTH).join('*'))
         : contentWithRandomChannelName,
     [contentWithRandomChannelName, activeApiKey],
   );
