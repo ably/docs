@@ -8,7 +8,7 @@ const CAlertWarning = styled.div`
   background-color: ${primary.brightOrange};
   color: white;
   position: relative;
-  min-height: 60px;
+  max-height: 36px;
   display: flex;
   width: 100%;
   align-items: center;
@@ -21,7 +21,7 @@ const CAlertWarning = styled.div`
 const Warning: FC<{ message: string; href: string; linkText: string }> = ({ message, href, linkText }) => {
   const [isVisible, setVisible] = useState(false);
   return isVisible ? null : (
-    <CAlertWarning className="p-8 col-span-3 mb-40">
+    <CAlertWarning className="p-8 col-span-3 invisible md:visible">
       <SuggestDestination message={message} messageLevel={MESSAGE_LEVEL.WARNING} href={href} linkText={linkText} />
       <button type="button" className="text-white" onClick={() => setVisible(true)} aria-label="Close">
         <AICloseRounded role="role" />
