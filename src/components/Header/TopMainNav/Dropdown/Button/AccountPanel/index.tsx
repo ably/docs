@@ -5,11 +5,6 @@ import { DropdownContentLink } from '../../Contents/types';
 import { AccountOptions } from './account-options';
 import { AccountUtilityLinks } from './account-utility-links';
 
-// Workaround for Tailwind not working correctly
-const boxShadowStyling = {
-  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-};
-
 export const AccountPanel = ({
   sessionState,
   links,
@@ -19,7 +14,7 @@ export const AccountPanel = ({
   links: DropdownContentLink[];
   preferredEmail: string;
 }) => (
-  <div className="fixed top-64 min-h-256 left-1/4 w-3/4 bg-white" style={boxShadowStyling} id={'account-panel'}>
+  <div className="fixed top-64 min-h-256 left-1/4 w-3/4 bg-white shadow-container" id={'account-panel'}>
     {/* Users exist without accounts in which case there are no links here */}
     {sessionState.account && <AccountOptions links={links} />}
     <p className="ui-meganav-overline mx-16">{preferredEmail}</p>

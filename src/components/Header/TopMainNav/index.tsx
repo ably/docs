@@ -4,7 +4,7 @@ import { DropdownButton } from './Dropdown/Button';
 import { dropdownData } from './Dropdown/Button/dropdown-data';
 import { DropdownMenu } from './Dropdown/dropdown-menu';
 import { Logo } from './TopMainNavIllustration/logo';
-import { SearchBar } from './SearchBar';
+import { SearchBar } from './SearchBar/SearchBar';
 import { DropdownDataIdentifier } from './Dropdown/types';
 import { TopMainNavUserMenu } from './TopMainNavUser';
 import UserContext from '../../../contexts/user-context';
@@ -16,7 +16,7 @@ export const TopMainNav = () => {
   const clearDropdownData = () => setDropdownDataID(null);
   const menuItems: (keyof typeof dropdownData)[] = ['API References', 'Resources'];
   return (
-    <div className="fixed bg-white h-64 z-50 flex w-full" onMouseLeave={clearDropdownData}>
+    <div className="fixed bg-white h-64 z-50 flex w-full border-b border-mid-grey" onMouseLeave={clearDropdownData}>
       <TopHorizontalMenuLight>
         <HorizontalMenuItemGroup>
           <Logo href="/docs" />
