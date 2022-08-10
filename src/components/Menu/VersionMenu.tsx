@@ -77,7 +77,12 @@ const VersionMenu = ({ versions, version, rootVersion }: VersionMenuProps) => {
             }}
             inputId={'version-menu'}
             value={currentValue}
-            options={options}
+            options={[
+              {
+                label: 'Version:',
+                options: options,
+              },
+            ]}
             onChange={routeToPage}
           />
         </div>
