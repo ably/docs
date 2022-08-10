@@ -66,6 +66,10 @@ module.exports = extendConfig((ablyUIConfig) => ({
   },
   theme: {
     ...ablyUIConfig.theme,
+    boxShadow: {
+      ...ablyUIConfig.theme.boxShadow,
+      'container-avoid-left': '40px 40px 40px 0px rgba(0,0,0,0.1)',
+    },
     spacing: {
       ...ablyUIConfig.theme.spacing,
       128: 'var(--spacing-128)',

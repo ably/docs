@@ -1,7 +1,33 @@
 import { createContext } from 'react';
 
+export type Link = {
+  href: string;
+  text: string;
+};
+
+type Account = {
+  links: {
+    dashboard: Link;
+    [key: string]: Link;
+  };
+};
+
+export type SessionState = {
+  signedIn?: boolean;
+  accountName?: string;
+  preferredEmail?: string;
+  account?: Account;
+  mySettings?: Link;
+  myAccessTokens?: Link;
+  logOut?: {
+    token: string;
+    href: string;
+    text: string;
+  };
+};
+
 export type UserDetails = {
-  sessionState: Record<string, unknown>;
+  sessionState: SessionState;
   apiKeys: Record<string, unknown>;
 };
 
