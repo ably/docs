@@ -1,4 +1,4 @@
-import { AccountPanel } from './AccountPanel';
+import { AccountPanel } from './AccountPanel/index';
 import { DropdownData } from '../types';
 
 export const AccountPanelDropdownData: DropdownData = {

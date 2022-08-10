@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { SearchIcon } from './SearchIcon';
+import { SearchIcon } from '.';
 
 export const SearchBar = () => {
   const [searchTerm, setSearchTerm] = useState('');

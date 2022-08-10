@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { TopHorizontalMenuLight } from '../../Menu/index';
-import { DropdownButton } from './Dropdown/Button';
-import { dropdownData } from './Dropdown/Button/dropdown-data';
-import { DropdownMenu } from './Dropdown/dropdown-menu';
-import { Logo } from './TopMainNavIllustration/logo';
-import { SearchBar } from './SearchBar/SearchBar';
-import { DropdownDataIdentifier } from './Dropdown/types';
+import { DropdownButton, dropdownData } from './Dropdown/Button';
+import { DropdownMenu, DropdownDataIdentifier } from './Dropdown';
+import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo';
+import { SearchBar } from './SearchBar';
 import { TopMainNavUserMenu } from './TopMainNavUser';
 import UserContext from '../../../contexts/user-context';
 import { HorizontalMenuItemGroup } from '../../Menu/HorizontalMenuItemGroup';
+import { DOCUMENTATION_PATH } from '../../../../data/transform/constants';
 
 export const TopMainNav = () => {
   const [dropdownDataID, setDropdownDataID] = useState<DropdownDataIdentifier>(null);
@@ -19,7 +18,7 @@ export const TopMainNav = () => {
     <div className="fixed bg-white h-64 z-50 flex w-full border-b border-mid-grey" onMouseLeave={clearDropdownData}>
       <TopHorizontalMenuLight>
         <HorizontalMenuItemGroup>
-          <Logo href="/docs" />
+          <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
           <SearchBar />
         </HorizontalMenuItemGroup>
         <HorizontalMenuItemGroup>

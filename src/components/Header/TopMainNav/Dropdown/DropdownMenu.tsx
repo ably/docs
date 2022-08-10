@@ -2,8 +2,7 @@
 import { truncate } from 'lodash/fp';
 import React from 'react';
 import UserContext, { SessionState } from '../../../../contexts/user-context';
-import { ContentsContainer } from './Contents';
-import { DropdownContentLink } from './Contents/types';
+import { ContentsContainer, DropdownContentLink } from './Contents';
 import { Summary } from './Summary';
 import { DropdownData } from './types';
 

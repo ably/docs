@@ -1,5 +1,5 @@
 import React from 'react';
-import { DropdownContentLink } from '../../Contents/types';
+import { DropdownContentLink } from '../../Contents';
 
 export const AccountOptions = ({ links }: { links: DropdownContentLink[] }) => (
   <>

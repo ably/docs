@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, SessionState } from '../../../../contexts/user-context';
 import { dropdownData } from './Button/dropdown-data';
-import { Content } from './Contents/types';
+import { Content } from './Contents';
 
 export type DropdownData = {
   summaryTitle: keyof typeof dropdownData;

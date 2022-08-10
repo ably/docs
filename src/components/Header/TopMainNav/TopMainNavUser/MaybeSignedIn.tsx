@@ -1,8 +1,8 @@
 import React from 'react';
 import { SessionState } from '../../../../contexts/user-context';
 import { DropdownDataIdentifier } from '../Dropdown/types';
-import { SignedOut } from './signed-out';
-import { SignedIn } from './SignedIn/signed-in';
+import { SignedOut } from './SignedOut';
+import { SignedIn } from './SignedIn';
 
 export const MaybeSignedIn = ({
   sessionState,

@@ -1,7 +1,7 @@
 import React from 'react';
-import { MaybeSignedIn } from './maybe-signed-in';
-import { SignedInPlaceholder } from './SignedIn/signed-in-placeholder';
-import { DropdownDataIdentifier } from '../Dropdown/types';
+import { MaybeSignedIn } from './MaybeSignedIn';
+import { SignedInPlaceholder } from './SignedIn';
+import { DropdownDataIdentifier } from '../Dropdown';
 import { SessionState } from '../../../../contexts/user-context';
 
 export const TopMainNavUserMenu = ({

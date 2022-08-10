@@ -1,5 +1,5 @@
 import React from 'react';
-import { DropdownMenuContainer } from '../dropdown-menu-container';
+import { DropdownMenuContainer } from '../DropdownMenuContainer';
 import { DropdownItemContent } from './DropdownItemContent';
 import { Title } from './Title';
 import { Content } from './types';

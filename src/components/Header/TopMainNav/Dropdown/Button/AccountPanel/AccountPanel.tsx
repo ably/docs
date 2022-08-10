@@ -1,9 +1,8 @@
 import React from 'react';
 import { SessionState } from '../../../../../../contexts/user-context';
-import { SignOutLink } from '../../../TopMainNavUser/SignedIn/sign-out-link';
-import { DropdownContentLink } from '../../Contents/types';
-import { AccountOptions } from './account-options';
-import { AccountUtilityLinks } from './account-utility-links';
+import { SignOutLink } from '../../../TopMainNavUser/SignedIn';
+import { DropdownContentLink } from '../../Contents';
+import { AccountOptions, AccountUtilityLinks } from '.';
 
 export const AccountPanel = ({
   sessionState,

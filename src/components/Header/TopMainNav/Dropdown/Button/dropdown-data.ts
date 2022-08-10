@@ -1,4 +1,4 @@
-import { AccountPanelDropdownData } from './account-panel';
+import { AccountPanelDropdownData } from './AccountPanelDropdownData';
 import { APIReferencesDropdownData } from './api-references';
 import { ResourcesDropDownData } from './resource-data';
 

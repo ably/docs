@@ -1,5 +1,5 @@
 import React from 'react';
-import { TopMainNavLink } from './link';
+import { TopMainNavLink } from './TopMainNavLink';
 
 export const SignedOut = () => (
   <menu className="hidden list-none md:flex items-center right-0">

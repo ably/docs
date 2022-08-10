@@ -1,8 +1,8 @@
 import React from 'react';
 import { dropdownData } from '../Button/dropdown-data';
-import { DropdownContentLink } from '../Contents/types';
+import { DropdownContentLink } from '../Contents';
 import '../../../../blocks/external-references/styles.css';
-import { SummaryLinkIcon } from './SummaryLinkIcon';
+import { SummaryLinkIcon } from '.';
 
 export const Summary = ({
   titleText,

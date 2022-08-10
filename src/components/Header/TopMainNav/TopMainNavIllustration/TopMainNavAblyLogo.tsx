@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const Logo = ({ href = '/' }: { href: string }) => (
+export const TopMainNavAblyLogo = ({ href = '/' }: { href: string }) => (
   <a href={href} className="h-32">
     <svg width="173" height="32" viewBox="0 0 173 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
