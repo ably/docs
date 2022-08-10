@@ -2,7 +2,7 @@ import React from 'react';
 
 export const TopMainNavLink = ({
   href,
-  dataId = 'meganav-link',
+  dataId,
   children,
 }: {
   href: string;
