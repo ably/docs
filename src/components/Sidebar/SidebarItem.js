@@ -8,21 +8,8 @@ import {
   AccordionItemState,
 } from 'react-accessible-accordion';
 import { ROOT_LEVEL } from './consts';
-import AIChevronDown from '../../styles/svg/ai-chevron-down.js';
-import AIChevronUp from '../../styles/svg/ai-chevron-up';
 import { ChildPropTypes } from '../../react-utilities';
-
-const ExpandableIndicator = ({ expanded, className = '' }) =>
-  expanded ? (
-    <AIChevronUp className={`flex-shrink-0 ${className}`} />
-  ) : (
-    <AIChevronDown className={`flex-shrink-0 ${className}`} />
-  );
-
-ExpandableIndicator.propTypes = {
-  expanded: PropTypes.bool,
-  className: PropTypes.string,
-};
+import { ExpandableIndicator } from './ExpandableIndicator';
 
 const AccordionHeadingPropTypes = {
   label: PropTypes.oneOfType([PropTypes.node, PropTypes.string]),
