@@ -1,5 +1,5 @@
 import React from 'react';
-import { dropdownData } from '../Button/dropdown-data';
+import { dropdownData } from '../Button';
 import { DropdownContentLink } from '../Contents';
 import '../../../../blocks/external-references/styles.css';
 import { SummaryLinkIcon } from '.';

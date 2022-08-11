@@ -619,6 +619,7 @@ export type ImageSharpResize = {
 export type PageFurnitureYaml = Node & {
   label: Scalars['String'];
   link: Scalars['String'];
+  description?: Maybe<Scalars['String']>;
   name?: Maybe<Scalars['String']>;
   level?: Maybe<Scalars['Int']>;
   text?: Maybe<Scalars['String']>;
@@ -1001,6 +1002,7 @@ export type QueryAllImageSharpArgs = {
 export type QueryPageFurnitureYamlArgs = {
   label?: InputMaybe<StringQueryOperatorInput>;
   link?: InputMaybe<StringQueryOperatorInput>;
+  description?: InputMaybe<StringQueryOperatorInput>;
   name?: InputMaybe<StringQueryOperatorInput>;
   level?: InputMaybe<IntQueryOperatorInput>;
   text?: InputMaybe<StringQueryOperatorInput>;
@@ -1260,6 +1262,7 @@ export type PageFurnitureYamlFilterListInput = {
 export type PageFurnitureYamlFilterInput = {
   label?: InputMaybe<StringQueryOperatorInput>;
   link?: InputMaybe<StringQueryOperatorInput>;
+  description?: InputMaybe<StringQueryOperatorInput>;
   name?: InputMaybe<StringQueryOperatorInput>;
   level?: InputMaybe<IntQueryOperatorInput>;
   text?: InputMaybe<StringQueryOperatorInput>;
@@ -1627,18 +1630,21 @@ export type FileFieldsEnum =
   | 'childrenPageFurnitureYaml'
   | 'childrenPageFurnitureYaml___label'
   | 'childrenPageFurnitureYaml___link'
+  | 'childrenPageFurnitureYaml___description'
   | 'childrenPageFurnitureYaml___name'
   | 'childrenPageFurnitureYaml___level'
   | 'childrenPageFurnitureYaml___text'
   | 'childrenPageFurnitureYaml___items'
   | 'childrenPageFurnitureYaml___items___label'
   | 'childrenPageFurnitureYaml___items___link'
+  | 'childrenPageFurnitureYaml___items___description'
   | 'childrenPageFurnitureYaml___items___name'
   | 'childrenPageFurnitureYaml___items___level'
   | 'childrenPageFurnitureYaml___items___text'
   | 'childrenPageFurnitureYaml___items___items'
   | 'childrenPageFurnitureYaml___items___items___label'
   | 'childrenPageFurnitureYaml___items___items___link'
+  | 'childrenPageFurnitureYaml___items___items___description'
   | 'childrenPageFurnitureYaml___items___items___name'
   | 'childrenPageFurnitureYaml___items___items___level'
   | 'childrenPageFurnitureYaml___items___items___text'
@@ -1699,18 +1705,21 @@ export type FileFieldsEnum =
   | 'childrenPageFurnitureYaml___internal___type'
   | 'childPageFurnitureYaml___label'
   | 'childPageFurnitureYaml___link'
+  | 'childPageFurnitureYaml___description'
   | 'childPageFurnitureYaml___name'
   | 'childPageFurnitureYaml___level'
   | 'childPageFurnitureYaml___text'
   | 'childPageFurnitureYaml___items'
   | 'childPageFurnitureYaml___items___label'
   | 'childPageFurnitureYaml___items___link'
+  | 'childPageFurnitureYaml___items___description'
   | 'childPageFurnitureYaml___items___name'
   | 'childPageFurnitureYaml___items___level'
   | 'childPageFurnitureYaml___items___text'
   | 'childPageFurnitureYaml___items___items'
   | 'childPageFurnitureYaml___items___items___label'
   | 'childPageFurnitureYaml___items___items___link'
+  | 'childPageFurnitureYaml___items___items___description'
   | 'childPageFurnitureYaml___items___items___name'
   | 'childPageFurnitureYaml___items___items___level'
   | 'childPageFurnitureYaml___items___items___text'
@@ -3860,24 +3869,28 @@ export type PageFurnitureYamlEdge = {
 export type PageFurnitureYamlFieldsEnum =
   | 'label'
   | 'link'
+  | 'description'
   | 'name'
   | 'level'
   | 'text'
   | 'items'
   | 'items___label'
   | 'items___link'
+  | 'items___description'
   | 'items___name'
   | 'items___level'
   | 'items___text'
   | 'items___items'
   | 'items___items___label'
   | 'items___items___link'
+  | 'items___items___description'
   | 'items___items___name'
   | 'items___items___level'
   | 'items___items___text'
   | 'items___items___items'
   | 'items___items___items___label'
   | 'items___items___items___link'
+  | 'items___items___items___description'
   | 'items___items___items___name'
   | 'items___items___items___level'
   | 'items___items___items___text'
