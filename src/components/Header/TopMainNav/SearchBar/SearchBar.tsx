@@ -8,14 +8,14 @@ export const SearchBar = () => {
   return (
     <div
       onClick={focusOnSearchInput}
-      className="hidden sm:flex h-48 px-16 mx-16 bg-light-grey border border-mid-grey rounded-md flex-row justify-self-start self-center"
+      className="hidden sm:flex h-48 px-16 mx-16 bg-light-grey border border-mid-grey rounded-md flex-row flex-shrink justify-self-start self-center"
     >
       <SearchIcon className="place-self-center" />
       <input
         type="text"
         ref={textInput}
         placeholder="Search"
-        className="h-48 w-256 font-light bg-transparent pl-8 text-base outline-none"
+        className="h-48 font-light bg-transparent pl-8 text-base outline-none"
         value={searchTerm}
         onChange={({ target: { value } }) => setSearchTerm(value)}
       />

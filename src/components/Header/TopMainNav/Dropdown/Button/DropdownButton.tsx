@@ -5,7 +5,7 @@ export const DropdownButton = ({ title, setDropdownData }: { title: string; setD
   <button
     type="button"
     data-id="meganav-control"
-    className="ui-meganav-link h-32 flex items-center group min-w-max"
+    className="hidden ui-meganav-link h-32 sm:flex items-center group min-w-max self-end hover:text-cool-black focus:text-cool-black"
     aria-expanded="false"
     aria-label={`Show ${title}`}
     onMouseEnter={setDropdownData}
