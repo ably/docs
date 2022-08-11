@@ -8,7 +8,7 @@ export const SearchBar = () => {
   return (
     <div
       onClick={focusOnSearchInput}
-      className="h-48 px-16 mx-16 bg-light-grey border border-mid-grey rounded-md flex flex-row justify-self-start self-center"
+      className="hidden sm:flex h-48 px-16 mx-16 bg-light-grey border border-mid-grey rounded-md flex-row justify-self-start self-center"
     >
       <SearchIcon className="place-self-center" />
       <input
