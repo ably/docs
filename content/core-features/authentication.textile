@@ -211,6 +211,53 @@ ably.auth.requestToken({ clientId: 'client@example.com' }, function(err, tokenDe
 
 *Note:* The authenticity of the JWT *will not* be checked, due to Ably not having access to your SECRET key.
 
+h4(#jwt-claims). Using JWT for authenticated user claims
+
+It is possible to use JWTs to authenticate claims for users in your channels, allowing or disallowing certain interactions.
+
+Messages can include trusted fields in the `extras` object that contain information copied from their authentication token, making it unique to each user. These fields are deemed trusted as their content is added is supplied directly from Ably and not the client. The trusted field is a channel-specific piece of information and needs to be set for other channels if similar permissions are desired.
+
+*Note:* This does not apply to presence or metadata messages.
+
+An example use case is when using "Message Interactions":/realtime/messages#message-interactions you might want to create a moderator in a chat channel that has the ability to delete sent messages. When the moderator sends an interaction request to delete a message Ably checks that the user's claim for a value moderator for that channel before actioning their request.
+
+To set the trusted fields you need to include `ably.channel.` in your JWT authentication payload, for example:
+
+```[javascript]
+const claims = {
+  "sub": "1234567890",
+  "name": "John Doe",
+  "x-ably-capabilities": <...>,
+  "x-ably-clientId": <...>,
+  "ably.channel.chat1":  <opaque data>, // claims for just the chat1 channel
+  "ably.channel.chat:*": <opaque data>, // claims for channels in the "chat" namespace
+  "ably.channel.*":  	<opaque data>, // claims for all channels
+}
+```
+
+This is an example of how you might check if a message has permission:
+
+```[javascript]
+  const hasPermission = (message)=>{
+    if(!message.extras?.permissions)
+      return false;
+
+    if(message.extras.permissions["*"]?.includes(message.extras.ref.type))
+      return true;
+
+    if(message.extras.permissions[message.channel]?.includes(message.extras.ref.type))
+      return true;
+
+    for(let key in message.extras.permissions){
+      if(!key.endsWith("*"))continue;
+      if(message.channel.startsWith(key.substring(0, key.length-1)))
+        return true;
+    }
+    
+    return false;
+  };
+```
+
 h2(#selecting-auth). Selecting an authentication mechanism
 
 <%= partial partial_version('core-features/_authentication_comparison') %>
