@@ -213,13 +213,13 @@ ably.auth.requestToken({ clientId: 'client@example.com' }, function(err, tokenDe
 
 h4(#jwt-claims). Using JWT for authenticated user claims
 
-It is possible to use JWTs to authenticate claims for users in your channels, allowing or disallowing certain interactions.
+It is possible for JWTs to contain authenticated claims for users that can be used to allow or disallow certain interactions in your channels.
 
-Messages can include trusted fields in the `extras` object that contain information copied from their authentication token, making it unique to each user. These fields are deemed trusted as their content is added is supplied directly from Ably and not the client. The trusted field is a channel-specific piece of information and needs to be set for other channels if similar permissions are desired.
+Messages can be annotated with trusted metadata copied from the client's authentication token by Ably servers. Clients are unable to directly publish messages with user claim metadata and claims contained within the authentication token are signed to prevent tampering. Claims can be scoped to individual channels or to namespaces of channels, see our "namespaces documentation":https://ably.com/docs/general/channel-rules-namespaces/ for more information. The most specific user claim will be annotated to the message as part of the `extras` object.
 
 *Note:* This does not apply to presence or metadata messages.
 
-An example use case is when using "Message Interactions":/realtime/messages#message-interactions you might want to create a moderator in a chat channel that has the ability to delete sent messages. When the moderator sends an interaction request to delete a message Ably checks that the user's claim for a value moderator for that channel before actioning their request.
+An example use case is when using "Message Interactions":/realtime/messages#message-interactions. You might want to use trusted claims to define 'moderator' users in a chat channel who have the ability to delete any sent messages. When the moderator sends an interaction to mark messages in a channel as deleted, your application should check that user's claims to verify they are a moderator for that channel before actioning their request.
 
 To set the trusted fields you need to include `ably.channel.` in your JWT authentication payload, for example:
 
@@ -229,33 +229,19 @@ const claims = {
   "name": "John Doe",
   "x-ably-capabilities": <...>,
   "x-ably-clientId": <...>,
-  "ably.channel.chat1":  <opaque data>, // claims for just the chat1 channel
-  "ably.channel.chat:*": <opaque data>, // claims for channels in the "chat" namespace
-  "ably.channel.*":  	<opaque data>, // claims for all channels
+  "ably.channel.chat1": "admin", // the user is an admin for the chat1 channel
+  "ably.channel.chat:*": "moderator", // the user is a moderator in channels within the chat namespace
+  "ably.channel.*": "guest", // the user is a guest in all other channels
 }
 ```
 
-This is an example of how you might check if a message has permission:
+The claims from the token are copied into messages, allowing them to be checked for permission:
 
 ```[javascript]
-  const hasPermission = (message)=>{
-    if(!message.extras?.permissions)
-      return false;
-
-    if(message.extras.permissions["*"]?.includes(message.extras.ref.type))
-      return true;
-
-    if(message.extras.permissions[message.channel]?.includes(message.extras.ref.type))
-      return true;
-
-    for(let key in message.extras.permissions){
-      if(!key.endsWith("*"))continue;
-      if(message.channel.startsWith(key.substring(0, key.length-1)))
-        return true;
-    }
-    
-    return false;
-  };
+const fromModerator = (message) => {
+    const userClaim = message.extras && message.extras.userClaim;
+    return (userClaim && userClaim == 'moderator');
+}
 ```
 
 h2(#selecting-auth). Selecting an authentication mechanism
