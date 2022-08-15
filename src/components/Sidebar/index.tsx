@@ -5,12 +5,12 @@ import StickySidebar from './StickySidebar';
 import { EXPAND_MENU } from './expand-menu-enum';
 import { SidebarData } from './sidebar-data';
 
-type SidebarProps = {
+export type SidebarProps = {
   data: SidebarData[];
   className: string;
   title?: string;
-  languages: boolean;
-  interactableLinkMenu: boolean;
+  languages?: boolean;
+  interactableLinkMenu?: boolean;
   expandMenu?: EXPAND_MENU;
 };
 

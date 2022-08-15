@@ -3,11 +3,12 @@ import { TopHorizontalMenuLight } from '../../Menu/index';
 import { DropdownButton, dropdownData } from './Dropdown/Button';
 import { DropdownMenu, DropdownDataIdentifier } from './Dropdown';
 import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo';
-import { SearchBar } from './SearchBar';
+import { displayModes, SearchBar } from './SearchBar';
 import { TopMainNavUserMenu } from './TopMainNavUser';
 import UserContext from '../../../contexts/user-context';
 import { HorizontalMenuItemGroup } from '../../Menu/HorizontalMenuItemGroup';
 import { DOCUMENTATION_PATH } from '../../../../data/transform/constants';
+import { HamburgerMenu } from './HamburgerMenu/HamburgerMenu';
 
 export const TopMainNav = () => {
   const [dropdownDataID, setDropdownDataID] = useState<DropdownDataIdentifier>(null);
@@ -19,7 +20,7 @@ export const TopMainNav = () => {
       <TopHorizontalMenuLight>
         <HorizontalMenuItemGroup>
           <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
-          <SearchBar />
+          <SearchBar displayMode={displayModes.FULL_SCREEN} />
         </HorizontalMenuItemGroup>
         <HorizontalMenuItemGroup>
           {menuItems.map((dropdownDataID, i) => (
@@ -27,7 +28,15 @@ export const TopMainNav = () => {
           ))}
           <UserContext.Consumer>
             {({ sessionState }) => (
-              <TopMainNavUserMenu sessionState={sessionState} setDropdownData={setDropdownDataID} />
+              <>
+                <TopMainNavUserMenu sessionState={sessionState} setDropdownData={setDropdownDataID} />
+                <HamburgerMenu
+                  sessionState={sessionState}
+                  dropdownDataID={dropdownDataID}
+                  clearDropdownData={clearDropdownData}
+                  setDropdownData={setDropdownData}
+                />
+              </>
             )}
           </UserContext.Consumer>
         </HorizontalMenuItemGroup>

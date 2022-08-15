@@ -5083,6 +5083,13 @@ export type DocumentPathSortInput = {
   order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
 };
 
+export type SubMenuFieldsFragment = { label: string, link: string, level?: number | null, text?: string | null };
+
+export type Unnamed_1_QueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type Unnamed_1_Query = { pageFurnitureYaml?: { items?: Array<{ label: string, link: string, level?: number | null, text?: string | null, items?: Array<{ label: string, link: string, level?: number | null, text?: string | null, items?: Array<{ label: string, link: string, level?: number | null, text?: string | null, items?: Array<{ label: string, link: string, level?: number | null, text?: string | null }> | null }> | null }> | null }> | null } | null, allDocumentPath: { edges: Array<{ node: { id: string, label?: string | null, level?: number | null, link?: string | null, parent?: { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | null } }> } };
+
 export type GatsbyImageSharpFixedFragment = { base64?: string | null, width: number, height: number, src: string, srcSet: string };
 
 export type GatsbyImageSharpFixed_TracedSvgFragment = { tracedSVG?: string | null, width: number, height: number, src: string, srcSet: string };

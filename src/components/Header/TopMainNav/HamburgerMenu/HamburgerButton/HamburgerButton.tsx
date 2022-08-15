@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { HamburgerIcon } from './HamburgerIcon';
 
-export const HamburgerButton = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <button onClick={() => setIsOpen(!isOpen)}>
-      <HamburgerIcon isOpen={isOpen} />
-    </button>
-  );
-};
+export const HamburgerButton = ({
+  isOpen,
+  setIsOpen,
+}: {
+  isOpen: boolean;
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+}) => (
+  <button onClick={() => setIsOpen(!isOpen)}>
+    <HamburgerIcon isOpen={isOpen} />
+  </button>
+);
