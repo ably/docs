@@ -3,7 +3,8 @@ import { DropdownData } from '../types';
 
 export const APIReferencesDropdownData: DropdownData = {
   summaryTitle: 'API References',
-  summaryDescription: 'Build applications with Ably using APIs that are simple to use, and that offer a consistent experience across languages.',
+  summaryDescription:
+    'Build applications with Ably using APIs that are simple to use, and that offer a consistent experience across languages.',
   summaryLink: {
     href: `/${DOCUMENTATION_NAME}/api`,
     text: 'Visit API References',
@@ -14,14 +15,16 @@ export const APIReferencesDropdownData: DropdownData = {
         href: `/${DOCUMENTATION_NAME}/api/realtime-sdk`,
         text: 'Realtime SDK',
       },
-      description: 'Enable clients to maintain a persistent connection to Ably to publish and subscribe to messages, and to announce their presence on channels.',
+      description:
+        'Enable clients to maintain a persistent connection to Ably to publish and subscribe to messages, and to announce their presence on channels.',
     },
     {
       link: {
         href: `/${DOCUMENTATION_NAME}/api/sse`,
         text: 'SSE API',
       },
-      description: 'Subscribe to a realtime stream of events from Ably without having to install a realtime client library.',
+      description:
+        'Subscribe to a realtime stream of events from Ably without having to install a realtime client library.',
     },
     {
       link: {
@@ -42,7 +45,8 @@ export const APIReferencesDropdownData: DropdownData = {
         href: `/${DOCUMENTATION_NAME}/api/control-api`,
         text: 'Control API',
       },
-      description: 'Manage your Ably account programmatically and build web apps and command-line tools to administer your Ably realtime infrastructure.',
+      description:
+        'Manage your Ably account programmatically and build web apps and command-line tools to administer your Ably realtime infrastructure.',
     },
   ],
   title: 'API References Available',
