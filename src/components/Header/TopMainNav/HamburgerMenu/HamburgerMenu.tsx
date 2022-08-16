@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { SessionState } from '../../../../contexts/user-context';
 import { EXPAND_MENU } from '../../../Sidebar/expand-menu-enum';
 import { SidebarDataRetrieval } from '../../../StaticQuerySidebar/SidebarDataRetrieval';
-import { DropdownDataIdentifier } from '../Dropdown';
 import { displayModes, SearchBar } from '../SearchBar';
 import { HamburgerButton } from './HamburgerButton';
 import { HamburgerDropdownContainer } from './HamburgerDropdown/HamburgerDropdownContainer';

@@ -4,4 +4,5 @@ export type SidebarData = {
   label: string;
   link: string;
   level?: number;
+  closed?: boolean;
 };

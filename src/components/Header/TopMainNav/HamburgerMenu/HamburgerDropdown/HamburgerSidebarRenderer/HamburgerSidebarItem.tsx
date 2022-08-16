@@ -14,6 +14,7 @@ export const HamburgerSidebarItem = (props: SidebarData) => {
             <HamburgerSidebarSubmenu
               addToExpandedMenuPath={addToExpandedMenuPath}
               label={props.label}
+              closed={props.closed}
               content={props.content}
             />
           ) : (
