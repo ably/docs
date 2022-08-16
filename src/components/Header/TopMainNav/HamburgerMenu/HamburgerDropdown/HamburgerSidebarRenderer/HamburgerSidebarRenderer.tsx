@@ -12,9 +12,13 @@ export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData, index: 
 export const HamburgerSidebarRenderer = ({ className, data }: SidebarProps) => {
   const [expandedMenu, setExpandedMenu] = useState<ExpandedMenu>([]);
   const addToExpandedMenuPath = (menuItemID: string) => setExpandedMenu(expandedMenu.concat([menuItemID]));
+  const removeFromExpandedMenuPath = (menuItemID: string) =>
+    setExpandedMenu(expandedMenu.filter((expandedMenuPathSection) => expandedMenuPathSection !== menuItemID));
+  const addOrRemoveExpandedMenuPath = (menuItemID: string) =>
+    expandedMenu.includes(menuItemID) ? removeFromExpandedMenuPath(menuItemID) : addToExpandedMenuPath(menuItemID);
   const dataItems = useMemo(() => closeAndFilterSidebarItems(data, expandedMenu), [data, expandedMenu]);
   return (
-    <HamburgerExpandedMenuContext.Provider value={{ expandedMenu, addToExpandedMenuPath }}>
+    <HamburgerExpandedMenuContext.Provider value={{ expandedMenu, handleMenuExpansion: addOrRemoveExpandedMenuPath }}>
       <ol className={className}>{dataItems.map(dataToHamburgerSidebarItem)}</ol>
     </HamburgerExpandedMenuContext.Provider>
   );

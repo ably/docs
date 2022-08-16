@@ -4,20 +4,28 @@ import { DispatchExpandedMenu } from './hamburger-expanded-menu-context';
 import { dataToHamburgerSidebarItem } from './HamburgerSidebarRenderer';
 
 export const HamburgerSidebarSubmenu = ({
-  addToExpandedMenuPath,
+  handleMenuExpansion,
   label,
+  level,
   closed,
   content,
 }: {
-  addToExpandedMenuPath: DispatchExpandedMenu;
+  handleMenuExpansion: DispatchExpandedMenu;
   label: string;
+  level?: number;
   closed?: boolean;
   content: SidebarData[];
-}) => (
-  <>
-    <h4 className="cursor-pointer" onClick={() => addToExpandedMenuPath(label)}>
-      {label}
-    </h4>
-    {!closed && content ? <ol>{content.map(dataToHamburgerSidebarItem)}</ol> : null}
-  </>
-);
+}) => {
+  const isNested = level && level > 1;
+  const LabelComponent = isNested ? 'h5' : 'h4';
+  return (
+    <>
+      <LabelComponent className="cursor-pointer max-w-full w-256 mr-24" onClick={() => handleMenuExpansion(label)}>
+        {label}
+      </LabelComponent>
+      {!closed && content ? (
+        <ol className={isNested ? 'ml-8' : ''}>{content.map(dataToHamburgerSidebarItem)}</ol>
+      ) : null}
+    </>
+  );
+};

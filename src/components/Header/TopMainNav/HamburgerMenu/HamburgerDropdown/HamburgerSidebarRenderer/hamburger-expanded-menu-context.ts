@@ -7,12 +7,12 @@ export type DispatchExpandedMenu = (menuItemID: string) => void | IdentityPlaceh
 
 export type ExpandedMenuContext = {
   expandedMenu: ExpandedMenu;
-  addToExpandedMenuPath: DispatchExpandedMenu;
+  handleMenuExpansion: DispatchExpandedMenu;
 };
 
 const DEFAULT_EXPANDED_MENU_CONTEXT: ExpandedMenuContext = {
   expandedMenu: [],
-  addToExpandedMenuPath: identity,
+  handleMenuExpansion: identity,
 };
 
 export const HamburgerExpandedMenuContext = createContext(DEFAULT_EXPANDED_MENU_CONTEXT);
