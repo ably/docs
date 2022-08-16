@@ -30,12 +30,7 @@ export const TopMainNav = () => {
             {({ sessionState }) => (
               <>
                 <TopMainNavUserMenu sessionState={sessionState} setDropdownData={setDropdownDataID} />
-                <HamburgerMenu
-                  sessionState={sessionState}
-                  dropdownDataID={dropdownDataID}
-                  clearDropdownData={clearDropdownData}
-                  setDropdownData={setDropdownData}
-                />
+                <HamburgerMenu sessionState={sessionState} />
               </>
             )}
           </UserContext.Consumer>

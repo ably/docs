@@ -8,8 +8,10 @@ import { LeftSidebarProps } from './LeftSideBar';
 export const SidebarDataRetrieval = ({
   className,
   languages,
+  expandMenu,
   Component,
 }: LeftSidebarProps & {
+  expandMenu: EXPAND_MENU;
   Component: React.FunctionComponent<SidebarProps>;
 }) => {
   const data = useStaticQuery(graphql`
@@ -55,7 +57,5 @@ export const SidebarDataRetrieval = ({
   } else {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
   }
-  return (
-    <Component className={className} languages={languages} data={sidebarData} expandMenu={EXPAND_MENU.SECTION_MATCH} />
-  );
+  return <Component className={className} languages={languages} data={sidebarData} expandMenu={expandMenu} />;
 };
