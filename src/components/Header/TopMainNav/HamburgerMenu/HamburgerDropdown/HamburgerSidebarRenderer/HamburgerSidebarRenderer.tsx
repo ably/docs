@@ -13,9 +13,8 @@ export const HamburgerSidebarRenderer = ({ className, data }: SidebarProps) => {
   const [expandedMenu, setExpandedMenu] = useState<ExpandedMenu>([]);
   const addToExpandedMenuPath = (menuItemID: string) => setExpandedMenu(expandedMenu.concat([menuItemID]));
   const dataItems = useMemo(() => closeAndFilterSidebarItems(data, expandedMenu), [data, expandedMenu]);
-  console.log(dataItems);
   return (
-    <HamburgerExpandedMenuContext.Provider value={{ addToExpandedMenuPath }}>
+    <HamburgerExpandedMenuContext.Provider value={{ expandedMenu, addToExpandedMenuPath }}>
       <ol className={className}>{dataItems.map(dataToHamburgerSidebarItem)}</ol>
     </HamburgerExpandedMenuContext.Provider>
   );

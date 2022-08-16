@@ -6,10 +6,12 @@ export type ExpandedMenu = string[];
 export type DispatchExpandedMenu = (menuItemID: string) => void | IdentityPlaceholderFunction;
 
 export type ExpandedMenuContext = {
+  expandedMenu: ExpandedMenu;
   addToExpandedMenuPath: DispatchExpandedMenu;
 };
 
 const DEFAULT_EXPANDED_MENU_CONTEXT: ExpandedMenuContext = {
+  expandedMenu: [],
   addToExpandedMenuPath: identity,
 };
 
