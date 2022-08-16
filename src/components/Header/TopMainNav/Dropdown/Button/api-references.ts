@@ -3,7 +3,7 @@ import { DropdownData } from '../types';
 
 export const APIReferencesDropdownData: DropdownData = {
   summaryTitle: 'API References',
-  summaryDescription: 'API Reference section of the Ably developer documentation.',
+  summaryDescription: 'Build applications with Ably using APIs that are simple to use, and that offer a consistent experience across languages.',
   summaryLink: {
     href: `/${DOCUMENTATION_NAME}/api`,
     text: 'Visit API References',
@@ -14,35 +14,35 @@ export const APIReferencesDropdownData: DropdownData = {
         href: `/${DOCUMENTATION_NAME}/api/realtime-sdk`,
         text: 'Realtime SDK',
       },
-      description: 'Client library realtime SDK.',
+      description: 'Enable clients to maintain a persistent connection to Ably to publish and subscribe to messages, and to announce their presence on channels.',
     },
     {
       link: {
         href: `/${DOCUMENTATION_NAME}/api/sse`,
         text: 'SSE API',
       },
-      description: 'The Ably Server-Sent Events API',
+      description: 'Subscribe to a realtime stream of events from Ably without having to install a realtime client library.',
     },
     {
       link: {
         href: `/${DOCUMENTATION_NAME}/api/rest-sdk`,
         text: 'REST SDK',
       },
-      description: 'Client library REST SDK.',
+      description: 'Interact with Ably’s REST API using a simple client library SDK.',
     },
     {
       link: {
         href: `/${DOCUMENTATION_NAME}/api/rest-api`,
         text: 'REST API',
       },
-      description: 'A raw REST API is also provided as an alternative to a client SDK.',
+      description: 'Communicate directly with the Ably service over REST without installing a client library SDK.',
     },
     {
       link: {
         href: `/${DOCUMENTATION_NAME}/api/control-api`,
         text: 'Control API',
       },
-      description: 'Ably Control API is a REST API that enables you to manage your Ably account programmatically.',
+      description: 'Manage your Ably account programmatically and build web apps and command-line tools to administer your Ably realtime infrastructure.',
     },
   ],
   title: 'API References Available',
