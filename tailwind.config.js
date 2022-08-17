@@ -75,6 +75,8 @@ module.exports = extendConfig((ablyUIConfig) => ({
       30: '1.875rem',
       128: 'var(--spacing-128)',
       300: '18.75rem',
+      420: '26.25rem',
+      full: '100%',
     },
     extend: {
       ...ablyUIConfig.theme.extend,
