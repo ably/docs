@@ -8,7 +8,7 @@ import { TopMainNavUserMenu } from './TopMainNavUser';
 import UserContext from '../../../contexts/user-context';
 import { HorizontalMenuItemGroup } from '../../Menu/HorizontalMenuItemGroup';
 import { DOCUMENTATION_PATH } from '../../../../data/transform/constants';
-import { HamburgerMenu } from './HamburgerMenu/HamburgerMenu';
+import { HamburgerMenu } from './HamburgerMenu';
 
 export const TopMainNav = () => {
   const [dropdownDataID, setDropdownDataID] = useState<DropdownDataIdentifier>(null);
