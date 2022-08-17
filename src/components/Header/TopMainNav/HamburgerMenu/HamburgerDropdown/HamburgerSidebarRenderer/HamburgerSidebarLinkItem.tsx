@@ -1,5 +1,5 @@
 import React from 'react';
-import { HamburgerSidebarItemContainer } from './HamburgerSidebarItemContainer';
+import { HamburgerSidebarItemContainer } from '.';
 
 export const HamburgerSidebarLinkItem = ({ link, label }: { link: string; label: string }) => (
   <HamburgerSidebarItemContainer>

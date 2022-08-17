@@ -1,8 +1,8 @@
 import React from 'react';
 import { SidebarData } from '../../../../../Sidebar/sidebar-data';
 import { HamburgerExpandedMenuContext } from './hamburger-expanded-menu-context';
-import { HamburgerSidebarLinkItem } from './HamburgerSidebarLinkItem';
-import { HamburgerSidebarSubmenu } from './HamburgerSidebarSubmenu';
+import { HamburgerSidebarLinkItem } from '.';
+import { HamburgerSidebarSubmenu } from '.';
 
 export const HamburgerSidebarItem = (props: SidebarData) => {
   const hasContent = !!props.content;

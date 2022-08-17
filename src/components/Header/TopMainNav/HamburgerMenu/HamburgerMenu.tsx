@@ -4,9 +4,7 @@ import { EXPAND_MENU } from '../../../Sidebar/expand-menu-enum';
 import { SidebarDataRetrieval } from '../../../StaticQuerySidebar/SidebarDataRetrieval';
 import { displayModes, SearchBar } from '../SearchBar';
 import { HamburgerButton } from './HamburgerButton';
-import { HamburgerDropdownContainer } from './HamburgerDropdown/HamburgerDropdownContainer';
-import { HamburgerDropdownFooter } from './HamburgerDropdown/HamburgerDropdownFooter';
-import { HamburgerSidebarRenderer } from './HamburgerDropdown/HamburgerSidebarRenderer/HamburgerSidebarRenderer';
+import { HamburgerDropdownContainer, HamburgerDropdownFooter, HamburgerSidebarRenderer } from './HamburgerDropdown';
 
 export const HamburgerMenu = ({ sessionState }: { sessionState: SessionState }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);

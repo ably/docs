@@ -2,8 +2,8 @@ import React from 'react';
 import { SidebarData } from '../../../../../Sidebar/sidebar-data';
 import { MAX_NESTING_LEVEL } from './constants';
 import { DispatchExpandedMenu } from './hamburger-expanded-menu-context';
-import { HamburgerSidebarItemContainer } from './HamburgerSidebarItemContainer';
-import { dataToHamburgerSidebarItem } from './HamburgerSidebarRenderer';
+import { HamburgerSidebarItemContainer } from '.';
+import { dataToHamburgerSidebarItem } from '.';
 
 export const HamburgerSidebarSubmenu = ({
   handleMenuExpansion,

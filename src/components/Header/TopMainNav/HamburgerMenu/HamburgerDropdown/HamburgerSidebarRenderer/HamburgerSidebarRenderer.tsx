@@ -3,7 +3,7 @@ import { SidebarProps } from '../../../../../Sidebar';
 import { SidebarData } from '../../../../../Sidebar/sidebar-data';
 import { closeAndFilterSidebarItems } from './close-and-filter-sidebar-items';
 import { ExpandedMenu, HamburgerExpandedMenuContext } from './hamburger-expanded-menu-context';
-import { HamburgerSidebarItem } from './HamburgerSidebarItem';
+import { HamburgerSidebarItem } from '.';
 import { replaceSidebarItemsAdHoc } from './replace-sidebar-items-adhoc';
 
 export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData, index: number) => (
