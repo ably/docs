@@ -72,6 +72,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
     },
     spacing: {
       ...ablyUIConfig.theme.spacing,
+      12: '0.75rem',
       30: '1.875rem',
       128: 'var(--spacing-128)',
       300: '18.75rem',
@@ -91,6 +92,10 @@ module.exports = extendConfig((ablyUIConfig) => ({
         15: '15',
         16: '16',
         17: '17',
+      },
+      fontSize: {
+        ...ablyUIConfig.theme.extend.fontSize,
+        16: ['16px', '18px'],
       },
     },
   },

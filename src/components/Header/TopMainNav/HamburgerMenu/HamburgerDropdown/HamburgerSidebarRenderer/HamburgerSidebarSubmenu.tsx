@@ -2,6 +2,7 @@ import React from 'react';
 import { SidebarData } from '../../../../../Sidebar/sidebar-data';
 import { MAX_NESTING_LEVEL } from './constants';
 import { DispatchExpandedMenu } from './hamburger-expanded-menu-context';
+import { HamburgerSidebarItemContainer } from './HamburgerSidebarItemContainer';
 import { dataToHamburgerSidebarItem } from './HamburgerSidebarRenderer';
 
 export const HamburgerSidebarSubmenu = ({
@@ -32,16 +33,21 @@ export const HamburgerSidebarSubmenu = ({
 
   return (
     <>
-      <LabelComponent
-        className="cursor-pointer max-w-full mr-24 flex justify-between text-base"
-        onClick={() => handleMenuExpansion(label)}
-      >
-        <span>
-          {shouldDisplayRootLevelHeaderIndicator && <img className="pr-24" src="/images/icons/bold-chevron-left.svg" />}
-          {label}
-        </span>
-        {!isRootLevelHeader && <img className={chevronRotation} src="/images/icons/chevron-down.svg" />}
-      </LabelComponent>
+      <HamburgerSidebarItemContainer>
+        <LabelComponent
+          className="cursor-pointer max-w-full mr-24 flex flex-grow justify-between text-16"
+          onClick={() => handleMenuExpansion(label)}
+          tabIndex={0}
+        >
+          <span>
+            {shouldDisplayRootLevelHeaderIndicator && (
+              <img className="pr-24 h-12" src="/images/icons/bold-chevron-left.svg" />
+            )}
+            {label}
+          </span>
+          {!isRootLevelHeader && <img className={chevronRotation} src="/images/icons/chevron-down.svg" />}
+        </LabelComponent>
+      </HamburgerSidebarItemContainer>
       {!closed && content ? (
         <ol className={maybeRootLevelIndentation}>{content.map(dataToHamburgerSidebarItem)}</ol>
       ) : null}
