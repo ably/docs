@@ -5,6 +5,7 @@ import { SidebarDataRetrieval } from '../../../StaticQuerySidebar/SidebarDataRet
 import { displayModes, SearchBar } from '../SearchBar';
 import { HamburgerButton } from './HamburgerButton';
 import { HamburgerDropdownContainer } from './HamburgerDropdown/HamburgerDropdownContainer';
+import { HamburgerDropdownFooter } from './HamburgerDropdown/HamburgerDropdownFooter';
 import { HamburgerSidebarRenderer } from './HamburgerDropdown/HamburgerSidebarRenderer/HamburgerSidebarRenderer';
 
 export const HamburgerMenu = ({ sessionState }: { sessionState: SessionState }) => {
@@ -20,6 +21,7 @@ export const HamburgerMenu = ({ sessionState }: { sessionState: SessionState }) 
             expandMenu={EXPAND_MENU.COLLAPSED}
             Component={HamburgerSidebarRenderer}
           />
+          <HamburgerDropdownFooter sessionState={sessionState} />
         </HamburgerDropdownContainer>
       )}
     </div>

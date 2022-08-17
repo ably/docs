@@ -43,7 +43,7 @@ export const HamburgerSidebarRenderer = ({ className, data }: SidebarProps) => {
 
   return (
     <HamburgerExpandedMenuContext.Provider value={{ expandedMenu, handleMenuExpansion: addOrRemoveExpandedMenuPath }}>
-      <ol className={`${className} border-b border-mid-grey`}>{dataItems.map(dataToHamburgerSidebarItem)}</ol>
+      <ol className={className}>{dataItems.map(dataToHamburgerSidebarItem)}</ol>
     </HamburgerExpandedMenuContext.Provider>
   );
 };
