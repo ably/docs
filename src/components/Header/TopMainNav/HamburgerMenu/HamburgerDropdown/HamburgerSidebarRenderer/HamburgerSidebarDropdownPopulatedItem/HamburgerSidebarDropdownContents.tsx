@@ -1,19 +1,15 @@
 import React from 'react';
-import { DropdownData } from '../../../../Dropdown';
-import { DispatchExpandedMenu } from '../hamburger-expanded-menu-context';
-import { BackButton } from './BackButton';
-import { HamburgerSidebarSummary } from './HamburgerSidebarSummary';
+import { Content, DropdownItemContent, dropdownTitleStyles } from '../../../../Dropdown/Contents';
 
-export const HamburgerSidebarDropdownContents = ({
-  summaryTitle,
-  summaryDescription,
-  summaryLink,
-  contents,
-  title,
-  handleMenuExpansion,
-}: DropdownData & { handleMenuExpansion: DispatchExpandedMenu }) => (
-  <menu className="p-0">
-    <BackButton onClick={() => handleMenuExpansion(summaryTitle)} />
-    <HamburgerSidebarSummary titleText={summaryTitle} descriptionText={summaryDescription} summaryLink={summaryLink} />
-  </menu>
+export const HamburgerSidebarDropdownContents = ({ contents, title }: { contents: Content[]; title: string }) => (
+  <div>
+    <h4 className="uppercase pt-32 pl-24 font-medium" style={dropdownTitleStyles}>
+      {title}
+    </h4>
+    <menu className="list-none grid grid-cols-1 gap-16 pl-24 pb-24 font-light">
+      {contents.map((content, i) => (
+        <DropdownItemContent key={i} content={content} />
+      ))}
+    </menu>
+  </div>
 );

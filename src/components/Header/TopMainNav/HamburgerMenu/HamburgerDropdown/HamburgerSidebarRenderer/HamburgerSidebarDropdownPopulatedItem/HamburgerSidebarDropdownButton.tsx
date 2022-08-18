@@ -2,7 +2,7 @@ import React from 'react';
 import { DropdownData } from '../../../../Dropdown';
 import { DispatchExpandedMenu } from '../hamburger-expanded-menu-context';
 import { HamburgerSidebarItemContainer } from '../HamburgerSidebarItemContainer';
-import { HamburgerSidebarDropdownContents } from './HamburgerSidebarDropdownContents';
+import { HamburgerSidebarDropdownMenu } from './HamburgerSidebarDropdownMenu';
 
 export const HamburgerSidebarDropdownButton = ({
   handleMenuExpansion,
@@ -27,6 +27,6 @@ export const HamburgerSidebarDropdownButton = ({
       </h4>
     </HamburgerSidebarItemContainer>
   ) : (
-    <HamburgerSidebarDropdownContents handleMenuExpansion={handleMenuExpansion} {...content} />
+    <HamburgerSidebarDropdownMenu handleMenuExpansion={handleMenuExpansion} {...content} />
   );
 };
