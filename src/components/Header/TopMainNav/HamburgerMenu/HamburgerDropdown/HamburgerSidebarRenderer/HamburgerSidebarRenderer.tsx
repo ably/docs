@@ -6,10 +6,14 @@ import { ExpandedMenu, HamburgerExpandedMenuContext } from './hamburger-expanded
 import { HamburgerSidebarItem } from '.';
 import { addAdhocSidebarItems } from './add-adhoc-sidebar-items';
 import { removeAdhocSidebarItems } from './remove-adhoc-sidebar-items';
+import { HamburgerSidebarDropdownPopulatedItem } from './HamburgerSidebarDropdownPopulatedItem/HamburgerSidebarDropdownPopulatedItem';
 
-export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData, index: number) => (
-  <HamburgerSidebarItem key={index} {...sidebarItemData} />
-);
+export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData, index: number) =>
+  sidebarItemData.dropdownData ? (
+    <HamburgerSidebarDropdownPopulatedItem key={index} {...sidebarItemData} />
+  ) : (
+    <HamburgerSidebarItem key={index} {...sidebarItemData} />
+  );
 
 export const HamburgerSidebarRenderer = ({ className, data }: SidebarProps) => {
   const [expandedMenu, setExpandedMenu] = useState<ExpandedMenu>([]);
@@ -29,9 +33,16 @@ export const HamburgerSidebarRenderer = ({ className, data }: SidebarProps) => {
     [dataItemsWithAdHocReplacements, expandedMenu],
   );
 
+  const sidebarContents =
+    dataItems.length === 1 && !!dataItems[0].dropdownData ? (
+      <HamburgerSidebarDropdownPopulatedItem key={0} {...dataItems[0]} />
+    ) : (
+      <ol className={className}>{dataItems.map(dataToHamburgerSidebarItem)}</ol>
+    );
+
   return (
     <HamburgerExpandedMenuContext.Provider value={{ expandedMenu, handleMenuExpansion: addOrRemoveExpandedMenuPath }}>
-      <ol className={className}>{dataItems.map(dataToHamburgerSidebarItem)}</ol>
+      {sidebarContents}
     </HamburgerExpandedMenuContext.Provider>
   );
 };

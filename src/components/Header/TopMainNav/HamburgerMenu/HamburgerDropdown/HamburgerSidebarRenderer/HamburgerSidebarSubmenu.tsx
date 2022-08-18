@@ -4,6 +4,7 @@ import { MAX_NESTING_LEVEL } from './constants';
 import { DispatchExpandedMenu } from './hamburger-expanded-menu-context';
 import { HamburgerSidebarItemContainer } from '.';
 import { dataToHamburgerSidebarItem } from '.';
+import { DropdownData } from '../../../Dropdown';
 
 const getClosedRotation = (rotation: number, isClosed: boolean) => (rotation + (isClosed ? 180 : 0)) % 360;
 

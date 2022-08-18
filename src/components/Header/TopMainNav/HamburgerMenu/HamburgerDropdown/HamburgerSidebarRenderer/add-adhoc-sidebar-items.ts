@@ -11,6 +11,7 @@ const mapDropdownDataToSidebarData = (dropdownData: DropdownData): SidebarData =
     label: dropdownContent.link.text,
     link: dropdownContent.link.href,
   })),
+  dropdownData: dropdownData,
 });
 
 export const addAdhocSidebarItems = (data: SidebarData[]) => {
