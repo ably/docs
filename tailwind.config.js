@@ -40,6 +40,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
          *  - src/components/Sidebar/LeftSidebar/index.js
          *  - src/components/Sidebar/index.js
          * h-full, mx-8 => src/components/Sidebar/SidebarItem.js
+         * transform => src/components/Header/TopMainNav/HamburgerMenu/HamburgerDropdown/HamburgerSidebarRenderer/HamburgerSidebarSubmenu.tsx
          */
         standard: [
           ...Object.keys(periodicTableOfRealtimeColors).map((c) => `bg-${c}`),
@@ -52,6 +53,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
           'px-16',
           'h-full',
           'mx-8',
+          'transform',
         ],
         /**
          * Purge exclusions must be added for all dynamic classNames.
@@ -59,8 +61,9 @@ module.exports = extendConfig((ablyUIConfig) => ({
          * If dynamic classNames are no longer present they can be removed here:
          * docs-.* => Preferred prefix for custom classes throughout
          * col-span-.*  => src/components/Article/index.js
+         * rotate- => src/components/Header/TopMainNav/HamburgerMenu/HamburgerDropdown/HamburgerSidebarRenderer/HamburgerSidebarSubmenu.tsx
          */
-        greedy: [...ablyUIConfig.purge.options.safelist.greedy, /^docs-.*/, /^col-span-.*/],
+        greedy: [...ablyUIConfig.purge.options.safelist.greedy, /^docs-.*/, /^col-span-.*/, /^rotate-/],
       },
     },
   },
@@ -92,6 +95,10 @@ module.exports = extendConfig((ablyUIConfig) => ({
         15: '15',
         16: '16',
         17: '17',
+      },
+      rotate: {
+        ...ablyUIConfig.theme.rotate,
+        270: '270deg',
       },
       fontSize: {
         ...ablyUIConfig.theme.extend.fontSize,

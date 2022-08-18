@@ -1,3 +1,5 @@
+import { DropdownData } from '../Header/TopMainNav/Dropdown';
+
 export type SidebarData = {
   content?: SidebarData[];
   parent?: SidebarData;
@@ -5,4 +7,5 @@ export type SidebarData = {
   link: string;
   level?: number;
   closed?: boolean;
+  dropdownData?: DropdownData;
 };

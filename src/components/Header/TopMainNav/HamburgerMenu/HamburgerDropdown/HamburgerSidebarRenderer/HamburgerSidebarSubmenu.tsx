@@ -5,6 +5,8 @@ import { DispatchExpandedMenu } from './hamburger-expanded-menu-context';
 import { HamburgerSidebarItemContainer } from '.';
 import { dataToHamburgerSidebarItem } from '.';
 
+const getClosedRotation = (rotation: number, isClosed: boolean) => (rotation + (isClosed ? 180 : 0)) % 360;
+
 export const HamburgerSidebarSubmenu = ({
   handleMenuExpansion,
   label,
@@ -22,13 +24,15 @@ export const HamburgerSidebarSubmenu = ({
 }) => {
   const isNested = level && level > 0;
   const rootLevel = nestedLevel - 1;
-  const validRootLevelHeader = rootLevel > MAX_NESTING_LEVEL ? MAX_NESTING_LEVEL : rootLevel;
+  const isMaxNestedLevel = level && level > MAX_NESTING_LEVEL;
+  const nestedRootLevelHeader = rootLevel > MAX_NESTING_LEVEL;
+  const validRootLevelHeader = nestedRootLevelHeader ? MAX_NESTING_LEVEL : rootLevel;
   const isRootLevelHeader = level === validRootLevelHeader;
   const shouldDisplayRootLevelHeaderIndicator = !closed && isRootLevelHeader;
 
   const LabelComponent = isNested ? 'h5' : 'h4';
-
-  const chevronRotation = closed ? '' : 'transform rotate-180';
+  const defaultChevronRotationAmount = isMaxNestedLevel && !isRootLevelHeader ? 0 : 270;
+  const chevronRotation = `transform rotate-${getClosedRotation(defaultChevronRotationAmount, !closed)}`;
   const maybeRootLevelIndentation = isRootLevelHeader ? 'ml-30' : 'ml-8';
 
   return (
