@@ -3,7 +3,7 @@ import { DropdownDataIdentifier } from '../../../../Dropdown';
 import { DropdownContentLink } from '../../../../Dropdown/Contents';
 import { MaybeShowHamburgerSummaryLink } from './MaybeShowHamburgerSummaryLink';
 
-export const HamburgerSidebarSummary = ({
+export const HamburgerSidebarDropdownSummary = ({
   titleText,
   descriptionText,
   summaryLink,
