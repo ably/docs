@@ -2,14 +2,14 @@ import { truncate } from 'lodash/fp';
 import React from 'react';
 import { SessionState } from '../../../../../contexts/user-context';
 import { DropdownButton } from '../../Dropdown/Button';
-import { DropdownDataIdentifier } from '../../Dropdown/types';
+import { NullableDropdownDataIdentifier } from '../../Dropdown/types';
 
 export const SignedIn = ({
   sessionState,
   setDropdownData,
 }: {
   sessionState: SessionState;
-  setDropdownData: React.Dispatch<React.SetStateAction<DropdownDataIdentifier>>;
+  setDropdownData: React.Dispatch<React.SetStateAction<NullableDropdownDataIdentifier>>;
 }) => {
   const accountName = truncate({ length: 19 }, sessionState.accountName ?? '');
   return sessionState.account && Object.keys(sessionState.account).length !== 0 ? (

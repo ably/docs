@@ -4,7 +4,8 @@ import { SidebarData } from '../../../../../Sidebar/sidebar-data';
 import { closeAndFilterSidebarItems } from './close-and-filter-sidebar-items';
 import { ExpandedMenu, HamburgerExpandedMenuContext } from './hamburger-expanded-menu-context';
 import { HamburgerSidebarItem } from '.';
-import { replaceSidebarItemsAdHoc } from './replace-sidebar-items-adhoc';
+import { addAdhocSidebarItems } from './add-adhoc-sidebar-items';
+import { removeAdhocSidebarItems } from './remove-adhoc-sidebar-items';
 
 export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData, index: number) => (
   <HamburgerSidebarItem key={index} {...sidebarItemData} />
@@ -21,20 +22,7 @@ export const HamburgerSidebarRenderer = ({ className, data }: SidebarProps) => {
   const addOrRemoveExpandedMenuPath = (menuItemID: string) =>
     expandedMenu.includes(menuItemID) ? removeFromExpandedMenuPath(menuItemID) : addToExpandedMenuPath(menuItemID);
 
-  const dataItemsWithAdHocReplacements = useMemo(
-    () =>
-      replaceSidebarItemsAdHoc(data, [
-        {
-          sidebarLabel: 'API Reference',
-          dropdownLabel: 'API References',
-        },
-        {
-          sidebarLabel: 'Useful Resources',
-          dropdownLabel: 'Resources',
-        },
-      ]),
-    [data],
-  );
+  const dataItemsWithAdHocReplacements = useMemo(() => addAdhocSidebarItems(removeAdhocSidebarItems(data)), [data]);
 
   const dataItems = useMemo(
     () => closeAndFilterSidebarItems(dataItemsWithAdHocReplacements, expandedMenu),

@@ -1,6 +1,6 @@
 import React from 'react';
 import { SessionState } from '../../../../contexts/user-context';
-import { DropdownDataIdentifier } from '../Dropdown/types';
+import { NullableDropdownDataIdentifier } from '../Dropdown/types';
 import { SignedOut } from './SignedOut';
 import { SignedIn } from './SignedIn';
 
@@ -9,6 +9,6 @@ export const MaybeSignedIn = ({
   setDropdownData,
 }: {
   sessionState: SessionState;
-  setDropdownData: React.Dispatch<React.SetStateAction<DropdownDataIdentifier>>;
+  setDropdownData: React.Dispatch<React.SetStateAction<NullableDropdownDataIdentifier>>;
 }) =>
   sessionState.signedIn ? <SignedIn sessionState={sessionState} setDropdownData={setDropdownData} /> : <SignedOut />;

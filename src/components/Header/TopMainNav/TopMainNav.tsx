@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TopHorizontalMenuLight } from '../../Menu/index';
 import { DropdownButton, dropdownData } from './Dropdown/Button';
-import { DropdownMenu, DropdownDataIdentifier } from './Dropdown';
+import { DropdownMenu, DropdownDataIdentifier, NullableDropdownDataIdentifier } from './Dropdown';
 import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo';
 import { displayModes, SearchBar } from './SearchBar';
 import { TopMainNavUserMenu } from './TopMainNavUser';
@@ -11,7 +11,7 @@ import { DOCUMENTATION_PATH } from '../../../../data/transform/constants';
 import { HamburgerMenu } from './HamburgerMenu';
 
 export const TopMainNav = () => {
-  const [dropdownDataID, setDropdownDataID] = useState<DropdownDataIdentifier>(null);
+  const [dropdownDataID, setDropdownDataID] = useState<NullableDropdownDataIdentifier>(null);
   const setDropdownData = (value: DropdownDataIdentifier) => () => setDropdownDataID(value);
   const clearDropdownData = () => setDropdownDataID(null);
   const menuItems: (keyof typeof dropdownData)[] = ['API References', 'Resources'];
