@@ -19,11 +19,3 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
   `;
   createTypes(typeDefs);
 };
-
-// Gatsby doesn't allow you to change sitemap filename, so we have to do it manually.
-// https://github.com/gatsbyjs/gatsby/issues/31515
-exports.onPostBuild = () => {
-  if (fs.existsSync('./public/docs/sitemap-index.xml')) {
-    fs.renameSync('./public/docs/sitemap-index.xml', './public/docs/sitemap.xml');
-  }
-};

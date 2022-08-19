@@ -20,24 +20,18 @@ export const plugins = [
       resolveSiteUrl: () => siteMetadata.siteUrl,
       excludes: ['/_*'],
       output: '/docs',
-      filterPages: ({ path }) => {
-        // NOTE: these didn't work in `exclude` field, so we had to use custom regex in filterPage function
-        if (
-          // Legacy versions of pages are excluded from the sitemap (anything with a URL containing .../versions/vx.x/where x is at least one digit, e.g. v1.1, v1.2
-          /\/\b(versions)\b\/(v)[0-9]./.test(path) ||
-          // Urls with /docs/code-
-          /\/\b(docs)\/\b(code-)/.test(path) ||
-          // anything with a URL beginning with /docs/tutorials
-          /\/\b(docs)\b\/(tutorials)\//.test(path) ||
-          // /documentation/
-          /\/\b(documentation)\/$/.test(path) ||
-          // Exclude root domain url
-          path === '/'
-        )
-          return true;
-
-        return false;
-      },
+      // NOTE: these didn't work in `exclude` field, so we had to use custom regex in filterPage function
+      filterPages: ({ path }) =>
+        // Legacy versions of pages are excluded from the sitemap (anything with a URL containing .../versions/vx.x/where x is at least one digit, e.g. v1.1, v1.2
+        /\/\b(versions)\b\/(v)[0-9]./.test(path) ||
+        // Urls with /docs/code-
+        /\/\b(docs)\/\b(code-)/.test(path) ||
+        // anything with a URL beginning with /docs/tutorials
+        /\/\b(docs)\b\/(tutorials)\//.test(path) ||
+        // /documentation/
+        /\/\b(documentation)\/$/.test(path) ||
+        // Exclude root domain url
+        path === '/',
       serialize: ({ path }) => ({
         url: path,
         changefreq: 'monthly',
