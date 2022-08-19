@@ -25,8 +25,10 @@ const RightSidebar = ({ menuData, languages, className }: RightSidebarProps): Re
     const menuItem = {
       ...mapMenuItemToSidebarItem(menuData[i]),
     };
-    if (previous && menuItem.level && previous.level && menuItem.level > previous.level && previous.parent) {
-      menuItem.parent = previous.parent;
+    const [previousLevel, previousParent] = previous ? [previous.level, previous.parent] : [false, false];
+    const previousItemsExist = previousLevel && previousParent;
+    if (previous && previousItemsExist && menuItem.level && menuItem.level > previousLevel) {
+      menuItem.parent = previousParent as SidebarData;
       previous.content = previous.content ? previous.content.concat([menuItem]) : [menuItem];
     } else if (parent && menuItem.level && parent.level && menuItem.level > parent.level) {
       menuItem.parent = parent;

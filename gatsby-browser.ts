@@ -11,10 +11,6 @@ import {
 
 import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
 
-const PAGE_OFFSET = 128;
-
-const offsetScroll = () => window.scrollBy(0, -PAGE_OFFSET);
-
 const onClientEntry = () => {
   const store = createRemoteDataStore({
     ...reducerBlogPosts,
@@ -24,7 +20,6 @@ const onClientEntry = () => {
   });
 
   attachStoreToWindow(store);
-  window.addEventListener('hashchange', offsetScroll);
 };
 
 const versionRegex = /\/versions\/v\d+\.\d+/;
