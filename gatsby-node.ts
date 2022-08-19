@@ -1,4 +1,3 @@
-import fs from 'fs';
 import { GatsbyNode } from 'gatsby';
 export { createPages } from './data/createPages';
 export { onCreateNode } from './data/onCreateNode';
