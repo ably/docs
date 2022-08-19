@@ -1,16 +1,16 @@
 import { identity } from 'lodash';
 import { createContext } from 'react';
+import { IdentityPlaceholderFunction } from '../../../../../../contexts/boolean-state-context';
 
-export type IdentityPlaceholderFunction = <T>(t: T) => T;
 export type ExpandedMenu = string[];
 export type DispatchExpandedMenu = (menuItemID: string) => void | IdentityPlaceholderFunction;
 
-export type ExpandedMenuContext = {
+export type ExpandedMenuStateContext = {
   expandedMenu: ExpandedMenu;
   handleMenuExpansion: DispatchExpandedMenu;
 };
 
-const DEFAULT_EXPANDED_MENU_CONTEXT: ExpandedMenuContext = {
+const DEFAULT_EXPANDED_MENU_CONTEXT: ExpandedMenuStateContext = {
   expandedMenu: [],
   handleMenuExpansion: identity,
 };
