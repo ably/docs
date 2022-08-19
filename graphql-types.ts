@@ -629,6 +629,14 @@ export type PageFurnitureYaml = Node & {
   internal: Internal;
 };
 
+export type Error = Node & {
+  message?: Maybe<Scalars['String']>;
+  id: Scalars['ID'];
+  parent?: Maybe<Node>;
+  children: Array<Node>;
+  internal: Internal;
+};
+
 export type FileInlineToc = Node & {
   id: Scalars['ID'];
   parent?: Maybe<Node>;
@@ -743,6 +751,8 @@ export type Query = {
   allImageSharp: ImageSharpConnection;
   pageFurnitureYaml?: Maybe<PageFurnitureYaml>;
   allPageFurnitureYaml: PageFurnitureYamlConnection;
+  error?: Maybe<Error>;
+  allError: ErrorConnection;
   fileInlineToc?: Maybe<FileInlineToc>;
   allFileInlineToc: FileInlineTocConnection;
   fileHtmlVersion?: Maybe<FileHtmlVersion>;
@@ -1015,6 +1025,23 @@ export type QueryPageFurnitureYamlArgs = {
 export type QueryAllPageFurnitureYamlArgs = {
   filter?: InputMaybe<PageFurnitureYamlFilterInput>;
   sort?: InputMaybe<PageFurnitureYamlSortInput>;
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type QueryErrorArgs = {
+  message?: InputMaybe<StringQueryOperatorInput>;
+  id?: InputMaybe<StringQueryOperatorInput>;
+  parent?: InputMaybe<NodeFilterInput>;
+  children?: InputMaybe<NodeFilterListInput>;
+  internal?: InputMaybe<InternalFilterInput>;
+};
+
+
+export type QueryAllErrorArgs = {
+  filter?: InputMaybe<ErrorFilterInput>;
+  sort?: InputMaybe<ErrorSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
@@ -4066,6 +4093,194 @@ export type PageFurnitureYamlGroupConnectionGroupArgs = {
 
 export type PageFurnitureYamlSortInput = {
   fields?: InputMaybe<Array<InputMaybe<PageFurnitureYamlFieldsEnum>>>;
+  order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
+};
+
+export type ErrorConnection = {
+  totalCount: Scalars['Int'];
+  edges: Array<ErrorEdge>;
+  nodes: Array<Error>;
+  pageInfo: PageInfo;
+  distinct: Array<Scalars['String']>;
+  max?: Maybe<Scalars['Float']>;
+  min?: Maybe<Scalars['Float']>;
+  sum?: Maybe<Scalars['Float']>;
+  group: Array<ErrorGroupConnection>;
+};
+
+
+export type ErrorConnectionDistinctArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorConnectionMaxArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorConnectionMinArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorConnectionSumArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorConnectionGroupArgs = {
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+  field: ErrorFieldsEnum;
+};
+
+export type ErrorEdge = {
+  next?: Maybe<Error>;
+  node: Error;
+  previous?: Maybe<Error>;
+};
+
+export type ErrorFieldsEnum =
+  | 'message'
+  | 'id'
+  | 'parent___id'
+  | 'parent___parent___id'
+  | 'parent___parent___parent___id'
+  | 'parent___parent___parent___children'
+  | 'parent___parent___children'
+  | 'parent___parent___children___id'
+  | 'parent___parent___children___children'
+  | 'parent___parent___internal___content'
+  | 'parent___parent___internal___contentDigest'
+  | 'parent___parent___internal___description'
+  | 'parent___parent___internal___fieldOwners'
+  | 'parent___parent___internal___ignoreType'
+  | 'parent___parent___internal___mediaType'
+  | 'parent___parent___internal___owner'
+  | 'parent___parent___internal___type'
+  | 'parent___children'
+  | 'parent___children___id'
+  | 'parent___children___parent___id'
+  | 'parent___children___parent___children'
+  | 'parent___children___children'
+  | 'parent___children___children___id'
+  | 'parent___children___children___children'
+  | 'parent___children___internal___content'
+  | 'parent___children___internal___contentDigest'
+  | 'parent___children___internal___description'
+  | 'parent___children___internal___fieldOwners'
+  | 'parent___children___internal___ignoreType'
+  | 'parent___children___internal___mediaType'
+  | 'parent___children___internal___owner'
+  | 'parent___children___internal___type'
+  | 'parent___internal___content'
+  | 'parent___internal___contentDigest'
+  | 'parent___internal___description'
+  | 'parent___internal___fieldOwners'
+  | 'parent___internal___ignoreType'
+  | 'parent___internal___mediaType'
+  | 'parent___internal___owner'
+  | 'parent___internal___type'
+  | 'children'
+  | 'children___id'
+  | 'children___parent___id'
+  | 'children___parent___parent___id'
+  | 'children___parent___parent___children'
+  | 'children___parent___children'
+  | 'children___parent___children___id'
+  | 'children___parent___children___children'
+  | 'children___parent___internal___content'
+  | 'children___parent___internal___contentDigest'
+  | 'children___parent___internal___description'
+  | 'children___parent___internal___fieldOwners'
+  | 'children___parent___internal___ignoreType'
+  | 'children___parent___internal___mediaType'
+  | 'children___parent___internal___owner'
+  | 'children___parent___internal___type'
+  | 'children___children'
+  | 'children___children___id'
+  | 'children___children___parent___id'
+  | 'children___children___parent___children'
+  | 'children___children___children'
+  | 'children___children___children___id'
+  | 'children___children___children___children'
+  | 'children___children___internal___content'
+  | 'children___children___internal___contentDigest'
+  | 'children___children___internal___description'
+  | 'children___children___internal___fieldOwners'
+  | 'children___children___internal___ignoreType'
+  | 'children___children___internal___mediaType'
+  | 'children___children___internal___owner'
+  | 'children___children___internal___type'
+  | 'children___internal___content'
+  | 'children___internal___contentDigest'
+  | 'children___internal___description'
+  | 'children___internal___fieldOwners'
+  | 'children___internal___ignoreType'
+  | 'children___internal___mediaType'
+  | 'children___internal___owner'
+  | 'children___internal___type'
+  | 'internal___content'
+  | 'internal___contentDigest'
+  | 'internal___description'
+  | 'internal___fieldOwners'
+  | 'internal___ignoreType'
+  | 'internal___mediaType'
+  | 'internal___owner'
+  | 'internal___type';
+
+export type ErrorGroupConnection = {
+  totalCount: Scalars['Int'];
+  edges: Array<ErrorEdge>;
+  nodes: Array<Error>;
+  pageInfo: PageInfo;
+  distinct: Array<Scalars['String']>;
+  max?: Maybe<Scalars['Float']>;
+  min?: Maybe<Scalars['Float']>;
+  sum?: Maybe<Scalars['Float']>;
+  group: Array<ErrorGroupConnection>;
+  field: Scalars['String'];
+  fieldValue?: Maybe<Scalars['String']>;
+};
+
+
+export type ErrorGroupConnectionDistinctArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorGroupConnectionMaxArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorGroupConnectionMinArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorGroupConnectionSumArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorGroupConnectionGroupArgs = {
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+  field: ErrorFieldsEnum;
+};
+
+export type ErrorFilterInput = {
+  message?: InputMaybe<StringQueryOperatorInput>;
+  id?: InputMaybe<StringQueryOperatorInput>;
+  parent?: InputMaybe<NodeFilterInput>;
+  children?: InputMaybe<NodeFilterListInput>;
+  internal?: InputMaybe<InternalFilterInput>;
+};
+
+export type ErrorSortInput = {
+  fields?: InputMaybe<Array<InputMaybe<ErrorFieldsEnum>>>;
   order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
 };
 

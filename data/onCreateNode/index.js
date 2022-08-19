@@ -14,12 +14,24 @@ const onCreateNode = async ({
 
   if (node.extension === 'textile') {
     const content = await loadNodeContent(node);
-
-    transformNanocTextiles(node, content, createNodeId(`${node.id} >>> HTML`), makeTypeFromParentType('Html')(node), {
-      createContentDigest,
-      createNodesFromPath: createNodesFromPath('DocumentPath', { createNode, createNodeId, createContentDigest }),
-      createNodeId,
-    })(createChildNode);
+    try {
+      transformNanocTextiles(node, content, createNodeId(`${node.id} >>> HTML`), makeTypeFromParentType('Html')(node), {
+        createContentDigest,
+        createNodesFromPath: createNodesFromPath('DocumentPath', { createNode, createNodeId, createContentDigest }),
+        createNodeId,
+      })(createChildNode);
+    } catch (error) {
+      const ErrorNode = {
+        id: createNodeId(`${error.message} >>> Error`),
+        message: error.message,
+        internal: {
+          contentDigest: createContentDigest(error.message),
+          type: 'Error',
+        },
+      };
+      createNode(ErrorNode);
+      console.error(error.message);
+    }
   }
 };
 
