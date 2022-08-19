@@ -7,6 +7,7 @@ import { HamburgerSidebarItem } from '.';
 import { addAdhocSidebarItems } from './add-adhoc-sidebar-items';
 import { removeAdhocSidebarItems } from './remove-adhoc-sidebar-items';
 import { HamburgerSidebarDropdownPopulatedItem } from './HamburgerSidebarDropdownPopulatedItem/HamburgerSidebarDropdownPopulatedItem';
+import { MAX_NESTING_LEVEL } from './constants';
 
 export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData, index: number) =>
   sidebarItemData.dropdownData ? (
@@ -20,7 +21,10 @@ export const HamburgerSidebarRenderer = ({ className, data }: SidebarProps) => {
   const addToExpandedMenuPath = (menuItemID: string) => setExpandedMenu(expandedMenu.concat([menuItemID]));
   const removeFromExpandedMenuPath = (menuItemID: string) => {
     const location = expandedMenu.findIndex((expandedMenuPathSection) => expandedMenuPathSection === menuItemID);
-    const expandedMenuWithoutMenuItem = expandedMenu.slice(0, location);
+    const shouldRemoveAllChildren = location <= MAX_NESTING_LEVEL;
+    const expandedMenuWithoutMenuItem = shouldRemoveAllChildren
+      ? expandedMenu.slice(0, location)
+      : expandedMenu.filter((expandedMenuPathSection) => expandedMenuPathSection !== menuItemID);
     setExpandedMenu(expandedMenuWithoutMenuItem);
   };
   const addOrRemoveExpandedMenuPath = (menuItemID: string) =>
