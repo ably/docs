@@ -27,9 +27,7 @@ const languageRegex = /\?lang=\w+/;
 const hashRegex = /(\/?#.*)$/;
 
 /**
- *  The 'shouldUpdateScroll' function does not pertain to the offsetScroll event listener above
- *  `shouldUpdateScroll` is specific to Gatsby
- *  `offsetScroll` is a simple event listener with no dependencies (other than 'window')
+ *  The 'shouldUpdateScroll' function will fire when navigating to new pages within Gatsby
  */
 const shouldUpdateScroll = ({ prevRouterProps, routerProps: { location } }) => {
   if (!prevRouterProps || !location) {

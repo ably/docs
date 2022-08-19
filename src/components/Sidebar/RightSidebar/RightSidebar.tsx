@@ -1,5 +1,4 @@
 import React, { ReactElement } from 'react';
-import PropTypes from 'prop-types';
 import Sidebar from '..';
 import { SidebarData } from '../sidebar-data';
 import { MenuData } from './menu-data';
@@ -16,7 +15,7 @@ type RightSidebarProps = {
   className: string;
 };
 
-const RightSidebar = ({ menuData, languages, className }: RightSidebarProps): ReactElement => {
+export const RightSidebar = ({ menuData, languages, className }: RightSidebarProps): ReactElement => {
   let parent;
   let previous;
   const menuLength = menuData.length;
@@ -49,11 +48,3 @@ const RightSidebar = ({ menuData, languages, className }: RightSidebarProps): Re
     />
   );
 };
-
-RightSidebar.propTypes = {
-  menuData: PropTypes.array,
-  className: PropTypes.string,
-  languages: PropTypes.bool,
-};
-
-export default RightSidebar;

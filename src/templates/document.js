@@ -8,12 +8,12 @@ import { LeftSideBar } from '../components/StaticQuerySidebar';
 import PageLanguageContext, { PageLanguagesContext } from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
-import RightSidebar from '../components/Sidebar/RightSidebar';
 import PageTitle from '../components/PageTitle';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { safeWindow } from '../utilities/browser/safe-window';
 import { PREFERRED_LANGUAGE_KEY } from '../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../components/common/language-defaults';
+import { RightSidebar, RightSidebarMobile } from '../components/Sidebar/RightSidebar';
 
 const getMetaDataDetails = (document, prop, alternative = '') =>
   document && document.meta && document.meta[prop] ? document.meta[prop] : alternative;
@@ -84,6 +84,7 @@ const Document = ({
         <Layout languages={filteredLanguages} versionData={versionData}>
           <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
           <Article columns={3}>
+            <RightSidebarMobile menuData={contentMenu[0]} languages={languagesExist} />
             <PageTitle id="title">{title}</PageTitle>
             <div className="col-span-3">{elements}</div>
           </Article>
