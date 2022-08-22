@@ -15,6 +15,9 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       text: String
       items: [PageFurnitureYaml!]
     }
+    type Error implements Node {
+      message: String
+    }
   `;
   createTypes(typeDefs);
 };
