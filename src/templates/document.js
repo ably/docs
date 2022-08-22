@@ -4,7 +4,6 @@ import PropTypes from 'prop-types';
 import { graphql, navigate, Script, ScriptStrategy } from 'gatsby';
 import Layout from '../components/Layout';
 import Html from '../components/blocks/Html';
-import { LeftSideBar } from '../components/StaticQuerySidebar';
 import PageLanguageContext, { PageLanguagesContext } from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
@@ -82,7 +81,6 @@ const Document = ({
           <meta name="twitter:description" content={description} />
         </Helmet>
         <Layout languages={filteredLanguages} versionData={versionData}>
-          <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
           <Article>
             <PageTitle id="title">{title}</PageTitle>
             <div className="col-span-3">{elements}</div>

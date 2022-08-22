@@ -4,8 +4,9 @@ import PropTypes from 'prop-types';
 import Sidebar from '../Sidebar';
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
 import { EXPAND_MENU } from '../Sidebar/expand-menu-enum';
+import { AblySidebarIconContainer } from './AblySidebarIconContainer';
 
-const LeftSideBar = ({ className, languages }) => {
+const LeftSideBar = ({ className }) => {
   const data = useStaticQuery(graphql`
     fragment SubMenuFields on PageFurnitureYaml {
       label
@@ -50,7 +51,15 @@ const LeftSideBar = ({ className, languages }) => {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
   }
   return (
-    <Sidebar className={className} languages={languages} data={sidebarData} expandMenu={EXPAND_MENU.SECTION_MATCH} />
+    <div className={`${className} mr-24`}>
+      <Sidebar
+        className={`${className} border-b border-color-mid-grey px-16`}
+        languages={false}
+        data={sidebarData}
+        expandMenu={EXPAND_MENU.SECTION_MATCH}
+      />
+      <AblySidebarIconContainer />
+    </div>
   );
 };
 

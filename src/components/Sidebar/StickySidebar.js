@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { spacing, mq, colors } from '../../styles';
+import { spacing, mq } from '../../styles';
 
 // Source: Voltaire. See Ably UI if we need shared component.
 const NAV_HEIGHT_DESKTOP = 64;
@@ -12,7 +12,7 @@ const StickySidebar = styled.aside`
   z-index: 1;
   display: none;
   // the 70px here is just to leave some breathing room at the bottom of the page
-  height: calc((100vh - 70px) - ${NAV_HEIGHT_DESKTOP + DISTANCE_FROM_TOP_DESKTOP}px);
+  height: calc((100vh - 96px) - ${NAV_HEIGHT_DESKTOP + DISTANCE_FROM_TOP_DESKTOP}px);
   overflow-y: auto;
   max-width: ${spacing.page.rightCol};
   top: ${({ 'data-languages': languages }) =>
@@ -20,21 +20,6 @@ const StickySidebar = styled.aside`
 
   ${mq.minWidth.medium} {
     display: block;
-  }
-  border-bottom: solid 1px ${colors.containers.one};
-
-  ::after {
-    content: '';
-    font-size: 12px;
-    text-align: bottom;
-    display: block;
-    position: sticky;
-    width: 100%;
-    height: 10%;
-    bottom: 0;
-    background: linear-gradient(0deg, white 0%, rgba(255, 255, 255, 0) 100%);
-    touch-action: none;
-    pointer-events: none;
   }
 `;
 
