@@ -166,7 +166,7 @@ const transformNanocTextiles =
         process.env.EDITOR_WARNINGS_OFF !== 'true' &&
         !newNodeData.meta.meta_description
       ) {
-        console.warn(
+        throw new Error(
           `No meta_description for file: ${node.relativePath}\n\nPlease add a custom meta_description to the frontmatter YAML at the top of the file.\n\n`,
         );
       }

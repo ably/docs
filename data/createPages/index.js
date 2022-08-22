@@ -14,6 +14,11 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
   const documentTemplate = path.resolve(`src/templates/document.js`);
   const result = await graphql(`
     query {
+      allError {
+        nodes {
+          message
+        }
+      }
       allFileHtml {
         edges {
           node {
@@ -29,6 +34,9 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
       }
     }
   `);
+  if (result.data.allError.nodes && result.data.allError.nodes.length > 0) {
+    process.exit(1);
+  }
   const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
   await Promise.all(
     result.data.allFileHtml.edges.map(async (edge) => {
