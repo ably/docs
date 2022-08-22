@@ -1,4 +1,4 @@
-import { useEffect, useReducer, Dispatch } from 'react';
+import { useCallback, useEffect, useReducer } from 'react';
 // @ts-ignore - addsearch has no types
 import AddSearchClient from 'addsearch-js-client';
 
@@ -36,7 +36,7 @@ type Result = {
   rangeFacets: null;
 };
 
-type State = {
+export type State = {
   client: string | null;
   query?: string;
   page: Result['page'];
@@ -65,25 +65,19 @@ type Action = {
   payload?: SetupActionPayload | SetResultsPayload | Pick<State, 'query' | 'page'>;
 };
 
-interface Props {
+interface UpdateUrlProps {
   query?: string;
-  page: number;
+  page: Result['page'];
 }
 
-const updateUrl = ({ query = '', page }: Props) => {
+const updateUrl = ({ query = '', page }: UpdateUrlProps) => {
   const url = new URL(window.location.href);
 
-  if (query === '') {
-    url.searchParams.delete('q');
-  } else {
-    url.searchParams.set('q', query);
-  }
+  if (query === '') url.searchParams.delete('q');
+  else url.searchParams.set('q', query);
 
-  if (page > 1) {
-    url.searchParams.set('page', page.toString());
-  } else {
-    url.searchParams.delete('page');
-  }
+  if (page && page > 1) url.searchParams.set('page', page.toString());
+  else url.searchParams.delete('page');
 
   window.history.pushState({}, '', url);
 };
@@ -110,12 +104,9 @@ const reducer = (state: State, action: Action) => {
       const { query, page } = action.payload as Pick<State, 'query' | 'page'>;
       const { enableParamsSync, query: currentQuery, page: currentPage } = state;
 
-      if (query === currentQuery && page === currentPage) {
-        return state;
-      }
-      if (enableParamsSync) {
-        updateUrl({ query, page });
-      }
+      if (query === currentQuery && page === currentPage) return state;
+
+      if (enableParamsSync) updateUrl({ query, page });
 
       return { ...state, query, page };
     }
@@ -131,13 +122,6 @@ const reducer = (state: State, action: Action) => {
   }
 };
 
-const setupAction = (dispatch: Dispatch<Action>) => (payload: SetupActionPayload) =>
-  dispatch({ type: 'setup', payload });
-const setResultsAction = (dispatch: Dispatch<Action>) => (payload: SetResultsPayload) =>
-  dispatch({ type: 'set-results', payload });
-const searchAction = (dispatch: Dispatch<Action>) => (payload: State) => dispatch({ type: 'search', payload });
-const setLoadingAction = (dispatch: Dispatch<Action>) => () => dispatch({ type: 'set-loading' });
-
 const initialState: State = {
   client: null,
   query: '',
@@ -149,7 +133,7 @@ const initialState: State = {
   enableParamsSync: false,
 };
 
-interface Props {
+interface UseSearchProps {
   addsearchApiKey?: string;
   enableParamsSync?: boolean;
   pageLength?: number;
@@ -159,50 +143,50 @@ interface Props {
     page,
     pageLength,
   }: {
-    client: string;
+    // NOTE: `client` is the AddSearchClient instance that is not typed
+    client: any;
     query?: string;
-    page: number;
+    page: State['page'];
     pageLength: number;
-  }) => Record<string, unknown>;
+  }) => void;
 }
 
-const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10, configureClient }: Props) => {
+const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10, configureClient }: UseSearchProps) => {
   const [state, dispatch] = useReducer(reducer, { ...initialState, enableParamsSync });
   const { client, query, page } = state;
 
-  const setup = setupAction(dispatch);
-  const setResults = setResultsAction(dispatch);
-  const search = searchAction(dispatch);
-  const setLoading = setLoadingAction(dispatch);
+  const search = useCallback(
+    (payload: Pick<State, 'query' | 'page'>) => dispatch({ type: 'search', payload }),
+    [dispatch],
+  );
+  const setResults = useCallback(
+    (payload: SetResultsPayload) => dispatch({ type: 'set-results', payload }),
+    [dispatch],
+  );
 
   useEffect(() => {
-    if (!addsearchApiKey) {
-      return;
-    }
+    if (!addsearchApiKey) return;
 
-    setup({ addsearchApiKey, url: new URL(window.location.href) });
-  }, [addsearchApiKey, setup]);
+    dispatch({ type: 'setup', payload: { addsearchApiKey, url: new URL(window.location.href) } });
+  }, [addsearchApiKey]);
 
   useEffect(() => {
-    if (!client) {
-      return;
-    }
+    if (!client) return;
 
     if (query === '') {
       setResults({ ...initialState, client });
       return;
     }
 
-    setLoading();
+    dispatch({ type: 'set-loading' });
 
-    if (configureClient) {
+    if (configureClient)
       configureClient({
         client,
         query,
         page,
         pageLength,
       });
-    }
 
     client.search(query, (result: Result) => {
       if (result.error) {
@@ -228,7 +212,7 @@ const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10,
         results: null,
       });
     });
-  }, [query, page, client, setResults, setLoading, configureClient, pageLength]);
+  }, [query, page, pageLength, client, configureClient, setResults]);
 
   return {
     state,
