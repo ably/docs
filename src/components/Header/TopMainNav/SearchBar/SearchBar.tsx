@@ -4,6 +4,9 @@ import debounce from 'lodash.debounce';
 import { useSearch, State } from 'src/hooks';
 import { SearchIcon } from '.';
 
+// NOTE: function is outside the component because it triggers a rerender and calls are being made more often than required
+const fetchSearch = debounce((queryValues, callback) => callback(queryValues), 500);
+
 export const SearchBar = () => {
   const location = useLocation();
   const initialSearch = new URLSearchParams(location.search).get('q');
@@ -20,17 +23,11 @@ export const SearchBar = () => {
     enableParamsSync: true,
   });
 
-  const fetchResults = debounce((queryValues: Pick<State, 'query' | 'page'>) => {
-    search(queryValues);
-  }, 500);
-
   const handleSearch = ({ target }: ChangeEvent<HTMLInputElement>) => {
     const { value } = target;
     setSearchTerm(value);
-    fetchResults({ query: value, page: 1 });
+    fetchSearch({ query: value, page: 1 }, search);
   };
-
-  console.log('results', results);
 
   return (
     <div
