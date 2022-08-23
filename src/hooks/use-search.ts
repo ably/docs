@@ -130,7 +130,6 @@ const initialState: State = {
   results: null,
   error: null,
   loading: false,
-  enableParamsSync: false,
 };
 
 interface UseSearchProps {
