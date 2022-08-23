@@ -10,6 +10,7 @@ type SidebarProps = {
   className: string;
   title?: string;
   languages: boolean;
+  indentOffset?: number;
   interactableLinkMenu: boolean;
   expandMenu?: EXPAND_MENU;
 };
@@ -18,13 +19,19 @@ const Sidebar = ({
   data,
   className,
   title,
+  indentOffset = 0,
   languages = false,
   interactableLinkMenu = false,
   expandMenu = EXPAND_MENU.EXPANDED,
 }: SidebarProps): ReactElement => (
   <StickySidebar className={className} data-languages={languages}>
     {title && <SidebarTitle title={title} />}
-    <SidebarLinkMenu data={data} interactable={interactableLinkMenu} expandMenu={expandMenu} />
+    <SidebarLinkMenu
+      data={data}
+      interactable={interactableLinkMenu}
+      expandMenu={expandMenu}
+      indentOffset={indentOffset}
+    />
   </StickySidebar>
 );
 

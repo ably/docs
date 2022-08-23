@@ -1,6 +1,9 @@
 import styled from 'styled-components';
 
 export const LeftSidebarContainer = styled.div`
+  @media only screen and (max-width: 1040px) {
+    display: none;
+  }
   > aside > .accordion > ol > li {
     > .accordion__item {
       > .accordion__heading {
@@ -14,11 +17,9 @@ export const LeftSidebarContainer = styled.div`
           visibility: hidden;
         }
       }
-      > .accordion__panel > .accordion > ol > li {
-        span {
-          padding-left: 0;
-        }
-      }
     }
+  }
+  > aside > .accordion > ol > li {
+    margin-bottom: 20px;
   }
 `;

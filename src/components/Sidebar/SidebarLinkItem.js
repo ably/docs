@@ -5,20 +5,31 @@ import SidebarLink from './SidebarLink';
 import SidebarLinkMenu from './SidebarLinkMenu';
 import { EXPAND_MENU } from './expand-menu-enum';
 
+const INDENTATION_INCREASE = 8;
+
 const SidebarLinkItem = ({
   uuid,
   label,
   link,
   content,
   level,
+  indentOffset,
   interactable = false,
   indent = 0,
   expandMenu = EXPAND_MENU.EXPANDED,
 }) => {
+  const nextIndent = indentOffset > 0 ? indent : indent + INDENTATION_INCREASE;
+  const nextIndentOffset = indentOffset - 1;
   const linkContent = useMemo(
     () =>
       Array.isArray(content) ? (
-        <SidebarLinkMenu key={label} data={content} indent={indent + 16} expandMenu={expandMenu} />
+        <SidebarLinkMenu
+          key={label}
+          data={content}
+          indent={nextIndent}
+          expandMenu={expandMenu}
+          indentOffset={nextIndentOffset}
+        />
       ) : (
         <SidebarLink to={link} $leaf={true} indent={indent}>
           {content}

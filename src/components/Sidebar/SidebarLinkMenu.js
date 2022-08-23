@@ -15,7 +15,13 @@ const OrderedList = styled.ol`
   padding: 0;
 `;
 
-const SidebarLinkMenu = ({ data, interactable = false, expandMenu = EXPAND_MENU.EXPANDED, indent = 0 }) => {
+const SidebarLinkMenu = ({
+  data,
+  interactable = false,
+  expandMenu = EXPAND_MENU.EXPANDED,
+  indent = 0,
+  indentOffset = 0,
+}) => {
   const preExpanded = useMemo(() => [], []);
   const linkMenu = useMemo(
     () =>
@@ -64,6 +70,7 @@ const SidebarLinkMenu = ({ data, interactable = false, expandMenu = EXPAND_MENU.
               interactable={interactable}
               expandMenu={nextExpandMenu}
               indent={indent}
+              indentOffset={indentOffset}
             />
           </li>
         ) : (

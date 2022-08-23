@@ -57,6 +57,7 @@ const LeftSideBar = ({ className }) => {
         className={`${className} border-b border-color-mid-grey px-16 pt-12`}
         languages={false}
         data={sidebarData}
+        indentOffset={1}
         expandMenu={EXPAND_MENU.SECTION_MATCH}
       />
       <AblySidebarIconContainer />

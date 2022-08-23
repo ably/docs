@@ -34,7 +34,7 @@ InteractableAccordionHeading.propTypes = AccordionHeadingPropTypes;
 
 const NonInteractableAccordionHeading = ({ label, level }) => (
   <AccordionItemHeading aria-level={level || ROOT_LEVEL}>
-    <AccordionItemButton className="flex items-center">
+    <AccordionItemButton className="flex items-center justify-between">
       {label}
       <AccordionItemState>{({ expanded }) => <ExpandableIndicator expanded={expanded} />}</AccordionItemState>
     </AccordionItemButton>
