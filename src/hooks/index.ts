@@ -1,1 +1,1 @@
-export { default as useSearch, State } from './use-search';
+export * from './use-search';

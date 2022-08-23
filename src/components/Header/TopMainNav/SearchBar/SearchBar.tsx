@@ -1,7 +1,7 @@
 import React, { ChangeEvent, useRef, useState } from 'react';
 import { useLocation } from '@reach/router';
 import debounce from 'lodash.debounce';
-import { useSearch, State } from 'src/hooks';
+import { useSearch } from 'src/hooks';
 import { SearchIcon } from '.';
 
 // NOTE: function is outside the component because it triggers a rerender and calls are being made more often than required
@@ -16,7 +16,6 @@ export const SearchBar = () => {
   const focusOnSearchInput = () => textInput.current && textInput.current.focus && textInput.current.focus();
 
   const {
-    state: { results },
     actions: { search },
   } = useSearch({
     addsearchApiKey: process.env.GATSBY_ADDSEARCH_API_KEY,
@@ -26,7 +25,7 @@ export const SearchBar = () => {
   const handleSearch = ({ target }: ChangeEvent<HTMLInputElement>) => {
     const { value } = target;
     setSearchTerm(value);
-    fetchSearch({ query: value, page: 1 }, search);
+    fetchSearch({ query: value }, search);
   };
 
   return (

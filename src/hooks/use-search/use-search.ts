@@ -39,7 +39,7 @@ type Result = {
 export type State = {
   client: string | null;
   query?: string;
-  page: Result['page'];
+  page?: Result['page'];
   totalHits: Result['total_hits'];
   results: Hit[] | null;
   error: Result['error'] | null;
@@ -67,7 +67,7 @@ type Action = {
 
 interface UpdateUrlProps {
   query?: string;
-  page: Result['page'];
+  page?: Result['page'];
 }
 
 const updateUrl = ({ query = '', page }: UpdateUrlProps) => {
