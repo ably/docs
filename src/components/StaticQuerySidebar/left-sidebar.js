@@ -5,6 +5,7 @@ import Sidebar from '../Sidebar';
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
 import { EXPAND_MENU } from '../Sidebar/expand-menu-enum';
 import { AblySidebarIconContainer } from './AblySidebarIconContainer';
+import { LeftSidebarContainer } from './LeftSidebarContainer';
 
 const LeftSideBar = ({ className }) => {
   const data = useStaticQuery(graphql`
@@ -51,7 +52,7 @@ const LeftSideBar = ({ className }) => {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
   }
   return (
-    <div className={`${className} mr-24`}>
+    <LeftSidebarContainer className={`${className} mr-24`}>
       <Sidebar
         className={`${className} border-b border-color-mid-grey px-16`}
         languages={false}
@@ -59,7 +60,7 @@ const LeftSideBar = ({ className }) => {
         expandMenu={EXPAND_MENU.SECTION_MATCH}
       />
       <AblySidebarIconContainer />
-    </div>
+    </LeftSidebarContainer>
   );
 };
 

@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import Sidebar from '..';
 import { SidebarData } from '../sidebar-data';
 import { MenuData } from './menu-data';
+import { EXPAND_MENU } from '../expand-menu-enum';
 
 const mapMenuItemToSidebarItem = ({ name, id, level }: MenuData): SidebarData => ({
   label: name,
@@ -44,6 +45,7 @@ const RightSidebar = ({ menuData, languages, className }: RightSidebarProps): Re
       data={sidebarData}
       className={className}
       interactableLinkMenu={true}
+      expandMenu={EXPAND_MENU.EXPANDED}
     />
   );
 };
