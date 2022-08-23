@@ -54,7 +54,7 @@ const LeftSideBar = ({ className }) => {
   return (
     <LeftSidebarContainer className={`${className} mr-24`}>
       <Sidebar
-        className={`${className} border-b border-color-mid-grey px-16`}
+        className={`${className} border-b border-color-mid-grey px-16 pt-12`}
         languages={false}
         data={sidebarData}
         expandMenu={EXPAND_MENU.SECTION_MATCH}

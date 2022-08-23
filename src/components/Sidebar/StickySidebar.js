@@ -11,7 +11,7 @@ const StickySidebar = styled.aside`
   position: sticky;
   z-index: 1;
   display: none;
-  // the 70px here is just to leave some breathing room at the bottom of the page
+  // the 96px here is just to leave some breathing room at the bottom of the page
   height: calc((100vh - 96px) - ${NAV_HEIGHT_DESKTOP + DISTANCE_FROM_TOP_DESKTOP}px);
   overflow-y: auto;
   max-width: ${spacing.page.rightCol};
