@@ -52,12 +52,13 @@ const LeftSideBar = ({ className }) => {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
   }
   return (
-    <LeftSidebarContainer className={`${className} mr-24`}>
+    <LeftSidebarContainer className={className}>
       <Sidebar
         className={`${className} border-b border-color-mid-grey px-16 pt-12`}
         languages={false}
         data={sidebarData}
         indentOffset={1}
+        expandableLinkMenu={true}
         expandMenu={EXPAND_MENU.SECTION_MATCH}
       />
       <AblySidebarIconContainer />

@@ -17,7 +17,8 @@ const OrderedList = styled.ol`
 
 const SidebarLinkMenu = ({
   data,
-  interactable = false,
+  highlightedMenuId,
+  expandable = true,
   expandMenu = EXPAND_MENU.EXPANDED,
   indent = 0,
   indentOffset = 0,
@@ -47,18 +48,17 @@ const SidebarLinkMenu = ({
             ? EXPAND_MENU.EXPANDED
             : expandMenu;
 
-        const labelMaybeWithLink = interactable ? (
-          <SidebarLink $leaf={false} indent={indent} level={level} to={link}>
-            {label}
-          </SidebarLink>
-        ) : (
-          <SidebarLabel $leaf={false} indent={indent} level={level}>
+        const isActive = highlightedMenuId === link || safeWindow.location.pathname === link;
+
+        const labelMaybeWithLink = expandable ? (
+          <SidebarLabel $leaf={false} $active={isActive} indent={indent} level={level}>
             {label}
           </SidebarLabel>
+        ) : (
+          <SidebarLink $leaf={false} $active={isActive} indent={indent} level={level} to={link}>
+            {label}
+          </SidebarLink>
         );
-
-        const isActive = link === safeWindow.location.pathname;
-
         return content ? (
           <li key={`${label}-${link}-${level}`}>
             <SidebarLinkItem
@@ -67,10 +67,11 @@ const SidebarLinkMenu = ({
               link={link}
               level={level}
               content={content}
-              interactable={interactable}
+              expandable={expandable}
               expandMenu={nextExpandMenu}
               indent={indent}
               indentOffset={indentOffset}
+              $active={isActive}
             />
           </li>
         ) : (
@@ -81,7 +82,7 @@ const SidebarLinkMenu = ({
           </li>
         );
       }),
-    [data, interactable, indent, expandMenu, preExpanded],
+    [data, expandable, indent, expandMenu, preExpanded, highlightedMenuId],
   );
   return (
     <Accordion allowMultipleExpanded={true} allowZeroExpanded={true} preExpanded={preExpanded}>
@@ -92,8 +93,9 @@ const SidebarLinkMenu = ({
 
 SidebarLinkMenu.propTypes = {
   data: PropTypes.array,
-  interactable: PropTypes.bool,
+  expandable: PropTypes.bool,
   expandMenu: PropTypes.oneOf(Object.values(EXPAND_MENU)),
+  highlightedMenuId: PropTypes.string,
   indent: PropTypes.number,
 };
 

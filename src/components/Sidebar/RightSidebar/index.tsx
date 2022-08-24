@@ -4,6 +4,9 @@ import Sidebar from '..';
 import { SidebarData } from '../sidebar-data';
 import { MenuData } from './menu-data';
 import { EXPAND_MENU } from '../expand-menu-enum';
+import { flattenDeep } from 'lodash/fp';
+import { useGetCurrentHeader } from '../../../hooks/get-current-header-id';
+import { HighlightedMenuContext } from '../../../contexts/highlighted-menu-context';
 
 const mapMenuItemToSidebarItem = ({ name, id, level }: MenuData): SidebarData => ({
   label: name,
@@ -22,6 +25,7 @@ const RightSidebar = ({ menuData, languages, className }: RightSidebarProps): Re
   let previous;
   const menuLength = menuData.length;
   const sidebarData = [];
+
   for (let i = 0; i < menuLength; ++i) {
     const menuItem = {
       ...mapMenuItemToSidebarItem(menuData[i]),
@@ -38,15 +42,26 @@ const RightSidebar = ({ menuData, languages, className }: RightSidebarProps): Re
     }
     previous = menuItem;
   }
+
+  const flatTableOfContents = flattenDeep(
+    sidebarData.map((sidebarData: SidebarData) =>
+      sidebarData.content ? [sidebarData, ...sidebarData.content] : sidebarData,
+    ),
+  );
+
+  const highlightedMenuItem = useGetCurrentHeader(flatTableOfContents);
+
   return (
-    <Sidebar
-      title="On this page"
-      languages={languages}
-      data={sidebarData}
-      className={className}
-      interactableLinkMenu={true}
-      expandMenu={EXPAND_MENU.EXPANDED}
-    />
+    <HighlightedMenuContext.Provider value={highlightedMenuItem}>
+      <Sidebar
+        title="On this page"
+        languages={languages}
+        data={sidebarData}
+        className={className}
+        expandableLinkMenu={false}
+        expandMenu={EXPAND_MENU.EXPANDED}
+      />
+    </HighlightedMenuContext.Provider>
   );
 };
 

@@ -61,7 +61,7 @@ const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = 
         <main
           className={`${
             languageAlternativesExist ? 'pt-128' : 'pt-96'
-          } col-span-4 grid grid-cols-4 2xl:grid-cols-6 2xl:col-span-6`}
+          } ml-24 col-span-4 grid grid-cols-4 2xl:grid-cols-6 2xl:col-span-6`}
         >
           {children}
         </main>
