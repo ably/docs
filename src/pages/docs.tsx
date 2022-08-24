@@ -46,7 +46,6 @@ const IndexPage = ({
           rootVersion: LATEST_ABLY_API_VERSION_STRING,
         }}
       >
-        <LeftSideBar />
         <HomepageContent sections={sections} />
       </Layout>
     </>

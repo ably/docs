@@ -755,8 +755,8 @@ export type FileHtmlContentOrderedList = {
 
 export type FileHtmlMeta = {
   title?: Maybe<Scalars['String']>;
-  languages?: Maybe<Array<Maybe<Scalars['String']>>>;
   meta_description?: Maybe<Scalars['String']>;
+  languages?: Maybe<Array<Maybe<Scalars['String']>>>;
 };
 
 export type DocumentPath = Node & {
@@ -1507,8 +1507,8 @@ export type FileHtmlContentOrderedListFilterInput = {
 
 export type FileHtmlMetaFilterInput = {
   title?: InputMaybe<StringQueryOperatorInput>;
-  languages?: InputMaybe<StringQueryOperatorInput>;
   meta_description?: InputMaybe<StringQueryOperatorInput>;
+  languages?: InputMaybe<StringQueryOperatorInput>;
 };
 
 export type FileHtmlVersionFilterListInput = {
@@ -2223,8 +2223,8 @@ export type FileFieldsEnum =
   | 'childrenFileHtml___contentOrderedList___data'
   | 'childrenFileHtml___contentOrderedList___type'
   | 'childrenFileHtml___meta___title'
-  | 'childrenFileHtml___meta___languages'
   | 'childrenFileHtml___meta___meta_description'
+  | 'childrenFileHtml___meta___languages'
   | 'childrenFileHtml___slug'
   | 'childrenFileHtml___parentSlug'
   | 'childrenFileHtml___version'
@@ -2305,8 +2305,8 @@ export type FileFieldsEnum =
   | 'childFileHtml___contentOrderedList___data'
   | 'childFileHtml___contentOrderedList___type'
   | 'childFileHtml___meta___title'
-  | 'childFileHtml___meta___languages'
   | 'childFileHtml___meta___meta_description'
+  | 'childFileHtml___meta___languages'
   | 'childFileHtml___slug'
   | 'childFileHtml___parentSlug'
   | 'childFileHtml___version'
@@ -5382,8 +5382,8 @@ export type FileHtmlFieldsEnum =
   | 'contentOrderedList___data'
   | 'contentOrderedList___type'
   | 'meta___title'
-  | 'meta___languages'
   | 'meta___meta_description'
+  | 'meta___languages'
   | 'slug'
   | 'parentSlug'
   | 'version'
