@@ -72,6 +72,14 @@ export const plugins = [
     },
     __key: 'yaml-page-furniture',
   },
+  {
+    resolve: 'gatsby-source-filesystem',
+    options: {
+      name: 'yaml-page-content',
+      path: './data/yaml/page-content',
+    },
+    __key: 'yaml-page-content',
+  },
   // Meta Data
   {
     resolve: `gatsby-plugin-manifest`,
