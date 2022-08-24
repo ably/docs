@@ -19,155 +19,155 @@ describe('useSearch', () => {
 
       expect(result.current.state.client).toBeNull();
     });
+  });
 
-    describe('enableParamsSync', () => {
-      afterEach(() => {
-        const url = new URL(window.location.href);
-        window.history.replaceState({}, '', url);
-      });
-
-      it('sets state from the URL', () => {
-        const url = new URL(`${window.location}search?q=kafka&page=2`);
-        window.history.replaceState({}, '', url);
-
-        const { result } = renderHook(() =>
-          useSearch({
-            addsearchApiKey: 'key',
-            enableParamsSync: true,
-          }),
-        );
-
-        expect(result.current.state.query).toBe('kafka');
-        expect(result.current.state.page).toBe(2);
-      });
+  describe('enableParamsSync', () => {
+    afterEach(() => {
+      const url = new URL(window.location.href);
+      window.history.replaceState({}, '', url);
     });
 
-    describe('search', () => {
-      it('calls search', () => {
-        const { result } = renderHook(() =>
-          useSearch({
-            addsearchApiKey: 'key',
-          }),
-        );
+    it('sets state from the URL', () => {
+      const url = new URL(`${window.location.href}search?q=kafka&page=2`);
+      window.history.replaceState({}, '', url);
 
-        const searchMock = jest.fn();
-        jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
+      const { result } = renderHook(() =>
+        useSearch({
+          addsearchApiKey: 'key',
+          enableParamsSync: true,
+        }),
+      );
 
-        act(() => {
-          result.current.actions.search({ query: 'kafka', page: 2 });
-        });
+      expect(result.current.state.query).toBe('kafka');
+      expect(result.current.state.page).toBe(2);
+    });
+  });
 
-        expect(result.current.state.query).toBe('kafka');
-        expect(result.current.state.page).toBe(2);
-        expect(searchMock).toHaveBeenCalled();
+  describe('search', () => {
+    it('calls search', () => {
+      const { result } = renderHook(() =>
+        useSearch({
+          addsearchApiKey: 'key',
+        }),
+      );
+
+      const searchMock = jest.fn();
+      jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
+
+      act(() => {
+        result.current.actions.search({ query: 'kafka', page: 2 });
       });
 
-      it('resets state if query is deleted', () => {
-        const { result } = renderHook(() =>
-          useSearch({
-            addsearchApiKey: 'key',
-          }),
-        );
+      expect(result.current.state.query).toBe('kafka');
+      expect(result.current.state.page).toBe(2);
+      expect(searchMock).toHaveBeenCalled();
+    });
 
-        const searchMock = jest.fn();
-        jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
+    it('resets state if query is deleted', () => {
+      const { result } = renderHook(() =>
+        useSearch({
+          addsearchApiKey: 'key',
+        }),
+      );
 
-        act(() => {
-          result.current.actions.search({ query: 'kafka', page: 2 });
-        });
+      const searchMock = jest.fn();
+      jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
 
-        expect(result.current.state.query).toBe('kafka');
-        expect(result.current.state.page).toBe(2);
-        expect(searchMock).toHaveBeenCalled();
-        searchMock.mockClear();
-
-        act(() => {
-          result.current.actions.search({ query: '' });
-        });
-
-        expect(result.current.state.query).toBe('');
-        expect(result.current.state.page).toBe(1);
-        expect(searchMock).not.toHaveBeenCalled();
+      act(() => {
+        result.current.actions.search({ query: 'kafka', page: 2 });
       });
 
-      it('sets loading state', () => {
-        const { result } = renderHook(() =>
-          useSearch({
-            addsearchApiKey: 'key',
-          }),
-        );
+      expect(result.current.state.query).toBe('kafka');
+      expect(result.current.state.page).toBe(2);
+      expect(searchMock).toHaveBeenCalled();
+      searchMock.mockClear();
 
-        const searchMock = jest.fn();
-        jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
-
-        expect(result.current.state.loading).toBe(false);
-
-        act(() => {
-          result.current.actions.search({ query: 'kafka' });
-        });
-
-        expect(result.current.state.loading).toBe(true);
+      act(() => {
+        result.current.actions.search({ query: '' });
       });
 
-      it('sets error if api returns error', () => {
-        const { result } = renderHook(() =>
-          useSearch({
-            addsearchApiKey: 'key',
-          }),
-        );
+      expect(result.current.state.query).toBe('');
+      expect(result.current.state.page).toBe(1);
+      expect(searchMock).not.toHaveBeenCalled();
+    });
 
-        const searchMock = jest.fn((_, cb) => cb({ error: { message: 'Error' } }));
-        jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
+    it('sets loading state', () => {
+      const { result } = renderHook(() =>
+        useSearch({
+          addsearchApiKey: 'key',
+        }),
+      );
 
-        act(() => {
-          result.current.actions.search({ query: 'kafka' });
-        });
+      const searchMock = jest.fn();
+      jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
 
-        expect(result.current.state.loading).toBe(false);
-        expect(result.current.state.error).toEqual({ message: 'Error' });
-        expect(result.current.state.totalHits).toBe(0);
-        expect(result.current.state.results).toBeNull();
+      expect(result.current.state.loading).toBe(false);
+
+      act(() => {
+        result.current.actions.search({ query: 'kafka' });
       });
 
-      it('sets results if api returns results', () => {
-        const { result } = renderHook(() =>
-          useSearch({
-            addsearchApiKey: 'key',
-          }),
-        );
+      expect(result.current.state.loading).toBe(true);
+    });
 
-        const searchMock = jest.fn((_, cb) => cb({ hits: [{ id: 1 }], total_hits: 1 }));
-        jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
+    it('sets error if api returns error', () => {
+      const { result } = renderHook(() =>
+        useSearch({
+          addsearchApiKey: 'key',
+        }),
+      );
 
-        act(() => {
-          result.current.actions.search({ query: 'kafka' });
-        });
+      const searchMock = jest.fn((_, cb) => cb({ error: { message: 'Error' } }));
+      jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
 
-        expect(result.current.state.loading).toBe(false);
-        expect(result.current.state.error).toBeNull();
-        expect(result.current.state.totalHits).toBe(1);
-        expect(result.current.state.results).toEqual([{ id: 1 }]);
+      act(() => {
+        result.current.actions.search({ query: 'kafka' });
       });
 
-      it('sets error if api returns netiher error or hits', () => {
-        const { result } = renderHook(() =>
-          useSearch({
-            addsearchApiKey: 'key',
-          }),
-        );
+      expect(result.current.state.loading).toBe(false);
+      expect(result.current.state.error).toEqual({ message: 'Error' });
+      expect(result.current.state.totalHits).toBe(0);
+      expect(result.current.state.results).toBeNull();
+    });
 
-        const searchMock = jest.fn((_, cb) => cb({}));
-        jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
+    it('sets results if api returns results', () => {
+      const { result } = renderHook(() =>
+        useSearch({
+          addsearchApiKey: 'key',
+        }),
+      );
 
-        act(() => {
-          result.current.actions.search({ query: 'kafka' });
-        });
+      const searchMock = jest.fn((_, cb) => cb({ hits: [{ id: 1 }], total_hits: 1 }));
+      jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
 
-        expect(result.current.state.loading).toBe(false);
-        expect(result.current.state.error).toEqual({ message: 'Invalid API response.' });
-        expect(result.current.state.totalHits).toBe(0);
-        expect(result.current.state.results).toBeNull();
+      act(() => {
+        result.current.actions.search({ query: 'kafka' });
       });
+
+      expect(result.current.state.loading).toBe(false);
+      expect(result.current.state.error).toBeNull();
+      expect(result.current.state.totalHits).toBe(1);
+      expect(result.current.state.results).toEqual([{ id: 1 }]);
+    });
+
+    it('sets error if api returns netiher error or hits', () => {
+      const { result } = renderHook(() =>
+        useSearch({
+          addsearchApiKey: 'key',
+        }),
+      );
+
+      const searchMock = jest.fn((_, cb) => cb({}));
+      jest.spyOn(result.current.state.client, 'search').mockImplementation(searchMock);
+
+      act(() => {
+        result.current.actions.search({ query: 'kafka' });
+      });
+
+      expect(result.current.state.loading).toBe(false);
+      expect(result.current.state.error).toEqual({ message: 'Invalid API response.' });
+      expect(result.current.state.totalHits).toBe(0);
+      expect(result.current.state.results).toBeNull();
     });
   });
 });
