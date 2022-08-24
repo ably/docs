@@ -74,6 +74,10 @@ module.exports = extendConfig((ablyUIConfig) => ({
       ...ablyUIConfig.theme.spacing,
       128: 'var(--spacing-128)',
     },
+    screens: {
+      ...ablyUIConfig.theme.screens,
+      '2xl': '1920px',
+    },
     extend: {
       ...ablyUIConfig.theme.extend,
       colors: periodicTableOfRealtimeColors,

@@ -53,7 +53,9 @@ const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = 
       <header>
         <Header languages={languages} versionData={versionData} />
       </header>
-      <main className={`${languages && languages.length > 1 ? 'pt-128' : 'pt-96'} grid grid-cols-5`}>{children}</main>
+      <main className={`${languages && languages.length > 1 ? 'pt-128' : 'pt-96'} grid grid-cols-5 2xl:grid-cols-7`}>
+        {children}
+      </main>
     </UserContext.Provider>
   );
 };
