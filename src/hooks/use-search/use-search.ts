@@ -211,7 +211,7 @@ const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10,
         results: null,
       });
     });
-  }, [query, page, pageLength, client, configureClient, setResults]);
+  }, [query, page, pageLength, client, setResults]);
 
   return {
     state,

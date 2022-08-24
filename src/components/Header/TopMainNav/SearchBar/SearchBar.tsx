@@ -1,11 +1,7 @@
 import React, { ChangeEvent, useRef, useState } from 'react';
 import { useLocation } from '@reach/router';
-import debounce from 'lodash.debounce';
 import { useSearch } from 'src/hooks';
 import { SearchIcon } from '.';
-
-// NOTE: function is outside the component because it triggers a rerender and calls are being made more often than required
-const fetchSearch = debounce((queryValues, callback) => callback(queryValues), 500);
 
 export const SearchBar = () => {
   const location = useLocation();
@@ -20,12 +16,15 @@ export const SearchBar = () => {
   } = useSearch({
     addsearchApiKey: process.env.GATSBY_ADDSEARCH_API_KEY,
     enableParamsSync: true,
+    configureClient: ({ client }) => {
+      client.setThrottleTime(800);
+    },
   });
 
   const handleSearch = ({ target }: ChangeEvent<HTMLInputElement>) => {
     const { value } = target;
     setSearchTerm(value);
-    fetchSearch({ query: value }, search);
+    search({ query: value });
   };
 
   return (
