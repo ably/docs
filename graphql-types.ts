@@ -68,6 +68,10 @@ export type File = Node & {
   childrenPageFurnitureYaml?: Maybe<Array<Maybe<PageFurnitureYaml>>>;
   /** Returns the first child node of type PageFurnitureYaml or null if there are no children of given type on this node */
   childPageFurnitureYaml?: Maybe<PageFurnitureYaml>;
+  /** Returns all children nodes filtered by type PageContentYaml */
+  childrenPageContentYaml?: Maybe<Array<Maybe<PageContentYaml>>>;
+  /** Returns the first child node of type PageContentYaml or null if there are no children of given type on this node */
+  childPageContentYaml?: Maybe<PageContentYaml>;
   /** Returns all children nodes filtered by type FileInlineToc */
   childrenFileInlineToc?: Maybe<Array<Maybe<FileInlineToc>>>;
   /** Returns the first child node of type FileInlineToc or null if there are no children of given type on this node */
@@ -629,6 +633,47 @@ export type PageFurnitureYaml = Node & {
   internal: Internal;
 };
 
+export type Error = Node & {
+  message?: Maybe<Scalars['String']>;
+  id: Scalars['ID'];
+  parent?: Maybe<Node>;
+  children: Array<Node>;
+  internal: Internal;
+};
+
+export type PageContentYaml = Node & {
+  id: Scalars['ID'];
+  parent?: Maybe<Node>;
+  children: Array<Node>;
+  internal: Internal;
+  name?: Maybe<Scalars['String']>;
+  meta?: Maybe<PageContentYamlMeta>;
+  sections?: Maybe<Array<Maybe<PageContentYamlSections>>>;
+};
+
+export type PageContentYamlMeta = {
+  title?: Maybe<Scalars['String']>;
+  description?: Maybe<Scalars['String']>;
+  image?: Maybe<Scalars['String']>;
+  twitter?: Maybe<Scalars['String']>;
+};
+
+export type PageContentYamlSections = {
+  title?: Maybe<Scalars['String']>;
+  description?: Maybe<Scalars['String']>;
+  level?: Maybe<Scalars['String']>;
+  defaultCallToAction?: Maybe<Scalars['String']>;
+  cards?: Maybe<Array<Maybe<PageContentYamlSectionsCards>>>;
+};
+
+export type PageContentYamlSectionsCards = {
+  title?: Maybe<Scalars['String']>;
+  content?: Maybe<Scalars['String']>;
+  callToAction?: Maybe<Scalars['String']>;
+  link?: Maybe<Scalars['String']>;
+  flag?: Maybe<Scalars['String']>;
+};
+
 export type FileInlineToc = Node & {
   id: Scalars['ID'];
   parent?: Maybe<Node>;
@@ -710,8 +755,8 @@ export type FileHtmlContentOrderedList = {
 
 export type FileHtmlMeta = {
   title?: Maybe<Scalars['String']>;
-  meta_description?: Maybe<Scalars['String']>;
   languages?: Maybe<Array<Maybe<Scalars['String']>>>;
+  meta_description?: Maybe<Scalars['String']>;
 };
 
 export type DocumentPath = Node & {
@@ -743,6 +788,10 @@ export type Query = {
   allImageSharp: ImageSharpConnection;
   pageFurnitureYaml?: Maybe<PageFurnitureYaml>;
   allPageFurnitureYaml: PageFurnitureYamlConnection;
+  error?: Maybe<Error>;
+  allError: ErrorConnection;
+  pageContentYaml?: Maybe<PageContentYaml>;
+  allPageContentYaml: PageContentYamlConnection;
   fileInlineToc?: Maybe<FileInlineToc>;
   allFileInlineToc: FileInlineTocConnection;
   fileHtmlVersion?: Maybe<FileHtmlVersion>;
@@ -795,6 +844,8 @@ export type QueryFileArgs = {
   childImageSharp?: InputMaybe<ImageSharpFilterInput>;
   childrenPageFurnitureYaml?: InputMaybe<PageFurnitureYamlFilterListInput>;
   childPageFurnitureYaml?: InputMaybe<PageFurnitureYamlFilterInput>;
+  childrenPageContentYaml?: InputMaybe<PageContentYamlFilterListInput>;
+  childPageContentYaml?: InputMaybe<PageContentYamlFilterInput>;
   childrenFileInlineToc?: InputMaybe<FileInlineTocFilterListInput>;
   childFileInlineToc?: InputMaybe<FileInlineTocFilterInput>;
   childrenFileHtmlPartial?: InputMaybe<FileHtmlPartialFilterListInput>;
@@ -1015,6 +1066,42 @@ export type QueryPageFurnitureYamlArgs = {
 export type QueryAllPageFurnitureYamlArgs = {
   filter?: InputMaybe<PageFurnitureYamlFilterInput>;
   sort?: InputMaybe<PageFurnitureYamlSortInput>;
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type QueryErrorArgs = {
+  message?: InputMaybe<StringQueryOperatorInput>;
+  id?: InputMaybe<StringQueryOperatorInput>;
+  parent?: InputMaybe<NodeFilterInput>;
+  children?: InputMaybe<NodeFilterListInput>;
+  internal?: InputMaybe<InternalFilterInput>;
+};
+
+
+export type QueryAllErrorArgs = {
+  filter?: InputMaybe<ErrorFilterInput>;
+  sort?: InputMaybe<ErrorSortInput>;
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+};
+
+
+export type QueryPageContentYamlArgs = {
+  id?: InputMaybe<StringQueryOperatorInput>;
+  parent?: InputMaybe<NodeFilterInput>;
+  children?: InputMaybe<NodeFilterListInput>;
+  internal?: InputMaybe<InternalFilterInput>;
+  name?: InputMaybe<StringQueryOperatorInput>;
+  meta?: InputMaybe<PageContentYamlMetaFilterInput>;
+  sections?: InputMaybe<PageContentYamlSectionsFilterListInput>;
+};
+
+
+export type QueryAllPageContentYamlArgs = {
+  filter?: InputMaybe<PageContentYamlFilterInput>;
+  sort?: InputMaybe<PageContentYamlSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
@@ -1270,6 +1357,51 @@ export type PageFurnitureYamlFilterInput = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
+export type PageContentYamlFilterListInput = {
+  elemMatch?: InputMaybe<PageContentYamlFilterInput>;
+};
+
+export type PageContentYamlFilterInput = {
+  id?: InputMaybe<StringQueryOperatorInput>;
+  parent?: InputMaybe<NodeFilterInput>;
+  children?: InputMaybe<NodeFilterListInput>;
+  internal?: InputMaybe<InternalFilterInput>;
+  name?: InputMaybe<StringQueryOperatorInput>;
+  meta?: InputMaybe<PageContentYamlMetaFilterInput>;
+  sections?: InputMaybe<PageContentYamlSectionsFilterListInput>;
+};
+
+export type PageContentYamlMetaFilterInput = {
+  title?: InputMaybe<StringQueryOperatorInput>;
+  description?: InputMaybe<StringQueryOperatorInput>;
+  image?: InputMaybe<StringQueryOperatorInput>;
+  twitter?: InputMaybe<StringQueryOperatorInput>;
+};
+
+export type PageContentYamlSectionsFilterListInput = {
+  elemMatch?: InputMaybe<PageContentYamlSectionsFilterInput>;
+};
+
+export type PageContentYamlSectionsFilterInput = {
+  title?: InputMaybe<StringQueryOperatorInput>;
+  description?: InputMaybe<StringQueryOperatorInput>;
+  level?: InputMaybe<StringQueryOperatorInput>;
+  defaultCallToAction?: InputMaybe<StringQueryOperatorInput>;
+  cards?: InputMaybe<PageContentYamlSectionsCardsFilterListInput>;
+};
+
+export type PageContentYamlSectionsCardsFilterListInput = {
+  elemMatch?: InputMaybe<PageContentYamlSectionsCardsFilterInput>;
+};
+
+export type PageContentYamlSectionsCardsFilterInput = {
+  title?: InputMaybe<StringQueryOperatorInput>;
+  content?: InputMaybe<StringQueryOperatorInput>;
+  callToAction?: InputMaybe<StringQueryOperatorInput>;
+  link?: InputMaybe<StringQueryOperatorInput>;
+  flag?: InputMaybe<StringQueryOperatorInput>;
+};
+
 export type FileInlineTocFilterListInput = {
   elemMatch?: InputMaybe<FileInlineTocFilterInput>;
 };
@@ -1375,8 +1507,8 @@ export type FileHtmlContentOrderedListFilterInput = {
 
 export type FileHtmlMetaFilterInput = {
   title?: InputMaybe<StringQueryOperatorInput>;
-  meta_description?: InputMaybe<StringQueryOperatorInput>;
   languages?: InputMaybe<StringQueryOperatorInput>;
+  meta_description?: InputMaybe<StringQueryOperatorInput>;
 };
 
 export type FileHtmlVersionFilterListInput = {
@@ -1769,6 +1901,115 @@ export type FileFieldsEnum =
   | 'childPageFurnitureYaml___internal___mediaType'
   | 'childPageFurnitureYaml___internal___owner'
   | 'childPageFurnitureYaml___internal___type'
+  | 'childrenPageContentYaml'
+  | 'childrenPageContentYaml___id'
+  | 'childrenPageContentYaml___parent___id'
+  | 'childrenPageContentYaml___parent___parent___id'
+  | 'childrenPageContentYaml___parent___parent___children'
+  | 'childrenPageContentYaml___parent___children'
+  | 'childrenPageContentYaml___parent___children___id'
+  | 'childrenPageContentYaml___parent___children___children'
+  | 'childrenPageContentYaml___parent___internal___content'
+  | 'childrenPageContentYaml___parent___internal___contentDigest'
+  | 'childrenPageContentYaml___parent___internal___description'
+  | 'childrenPageContentYaml___parent___internal___fieldOwners'
+  | 'childrenPageContentYaml___parent___internal___ignoreType'
+  | 'childrenPageContentYaml___parent___internal___mediaType'
+  | 'childrenPageContentYaml___parent___internal___owner'
+  | 'childrenPageContentYaml___parent___internal___type'
+  | 'childrenPageContentYaml___children'
+  | 'childrenPageContentYaml___children___id'
+  | 'childrenPageContentYaml___children___parent___id'
+  | 'childrenPageContentYaml___children___parent___children'
+  | 'childrenPageContentYaml___children___children'
+  | 'childrenPageContentYaml___children___children___id'
+  | 'childrenPageContentYaml___children___children___children'
+  | 'childrenPageContentYaml___children___internal___content'
+  | 'childrenPageContentYaml___children___internal___contentDigest'
+  | 'childrenPageContentYaml___children___internal___description'
+  | 'childrenPageContentYaml___children___internal___fieldOwners'
+  | 'childrenPageContentYaml___children___internal___ignoreType'
+  | 'childrenPageContentYaml___children___internal___mediaType'
+  | 'childrenPageContentYaml___children___internal___owner'
+  | 'childrenPageContentYaml___children___internal___type'
+  | 'childrenPageContentYaml___internal___content'
+  | 'childrenPageContentYaml___internal___contentDigest'
+  | 'childrenPageContentYaml___internal___description'
+  | 'childrenPageContentYaml___internal___fieldOwners'
+  | 'childrenPageContentYaml___internal___ignoreType'
+  | 'childrenPageContentYaml___internal___mediaType'
+  | 'childrenPageContentYaml___internal___owner'
+  | 'childrenPageContentYaml___internal___type'
+  | 'childrenPageContentYaml___name'
+  | 'childrenPageContentYaml___meta___title'
+  | 'childrenPageContentYaml___meta___description'
+  | 'childrenPageContentYaml___meta___image'
+  | 'childrenPageContentYaml___meta___twitter'
+  | 'childrenPageContentYaml___sections'
+  | 'childrenPageContentYaml___sections___title'
+  | 'childrenPageContentYaml___sections___description'
+  | 'childrenPageContentYaml___sections___level'
+  | 'childrenPageContentYaml___sections___defaultCallToAction'
+  | 'childrenPageContentYaml___sections___cards'
+  | 'childrenPageContentYaml___sections___cards___title'
+  | 'childrenPageContentYaml___sections___cards___content'
+  | 'childrenPageContentYaml___sections___cards___callToAction'
+  | 'childrenPageContentYaml___sections___cards___link'
+  | 'childrenPageContentYaml___sections___cards___flag'
+  | 'childPageContentYaml___id'
+  | 'childPageContentYaml___parent___id'
+  | 'childPageContentYaml___parent___parent___id'
+  | 'childPageContentYaml___parent___parent___children'
+  | 'childPageContentYaml___parent___children'
+  | 'childPageContentYaml___parent___children___id'
+  | 'childPageContentYaml___parent___children___children'
+  | 'childPageContentYaml___parent___internal___content'
+  | 'childPageContentYaml___parent___internal___contentDigest'
+  | 'childPageContentYaml___parent___internal___description'
+  | 'childPageContentYaml___parent___internal___fieldOwners'
+  | 'childPageContentYaml___parent___internal___ignoreType'
+  | 'childPageContentYaml___parent___internal___mediaType'
+  | 'childPageContentYaml___parent___internal___owner'
+  | 'childPageContentYaml___parent___internal___type'
+  | 'childPageContentYaml___children'
+  | 'childPageContentYaml___children___id'
+  | 'childPageContentYaml___children___parent___id'
+  | 'childPageContentYaml___children___parent___children'
+  | 'childPageContentYaml___children___children'
+  | 'childPageContentYaml___children___children___id'
+  | 'childPageContentYaml___children___children___children'
+  | 'childPageContentYaml___children___internal___content'
+  | 'childPageContentYaml___children___internal___contentDigest'
+  | 'childPageContentYaml___children___internal___description'
+  | 'childPageContentYaml___children___internal___fieldOwners'
+  | 'childPageContentYaml___children___internal___ignoreType'
+  | 'childPageContentYaml___children___internal___mediaType'
+  | 'childPageContentYaml___children___internal___owner'
+  | 'childPageContentYaml___children___internal___type'
+  | 'childPageContentYaml___internal___content'
+  | 'childPageContentYaml___internal___contentDigest'
+  | 'childPageContentYaml___internal___description'
+  | 'childPageContentYaml___internal___fieldOwners'
+  | 'childPageContentYaml___internal___ignoreType'
+  | 'childPageContentYaml___internal___mediaType'
+  | 'childPageContentYaml___internal___owner'
+  | 'childPageContentYaml___internal___type'
+  | 'childPageContentYaml___name'
+  | 'childPageContentYaml___meta___title'
+  | 'childPageContentYaml___meta___description'
+  | 'childPageContentYaml___meta___image'
+  | 'childPageContentYaml___meta___twitter'
+  | 'childPageContentYaml___sections'
+  | 'childPageContentYaml___sections___title'
+  | 'childPageContentYaml___sections___description'
+  | 'childPageContentYaml___sections___level'
+  | 'childPageContentYaml___sections___defaultCallToAction'
+  | 'childPageContentYaml___sections___cards'
+  | 'childPageContentYaml___sections___cards___title'
+  | 'childPageContentYaml___sections___cards___content'
+  | 'childPageContentYaml___sections___cards___callToAction'
+  | 'childPageContentYaml___sections___cards___link'
+  | 'childPageContentYaml___sections___cards___flag'
   | 'childrenFileInlineToc'
   | 'childrenFileInlineToc___id'
   | 'childrenFileInlineToc___parent___id'
@@ -1982,8 +2223,8 @@ export type FileFieldsEnum =
   | 'childrenFileHtml___contentOrderedList___data'
   | 'childrenFileHtml___contentOrderedList___type'
   | 'childrenFileHtml___meta___title'
-  | 'childrenFileHtml___meta___meta_description'
   | 'childrenFileHtml___meta___languages'
+  | 'childrenFileHtml___meta___meta_description'
   | 'childrenFileHtml___slug'
   | 'childrenFileHtml___parentSlug'
   | 'childrenFileHtml___version'
@@ -2064,8 +2305,8 @@ export type FileFieldsEnum =
   | 'childFileHtml___contentOrderedList___data'
   | 'childFileHtml___contentOrderedList___type'
   | 'childFileHtml___meta___title'
-  | 'childFileHtml___meta___meta_description'
   | 'childFileHtml___meta___languages'
+  | 'childFileHtml___meta___meta_description'
   | 'childFileHtml___slug'
   | 'childFileHtml___parentSlug'
   | 'childFileHtml___version'
@@ -2271,6 +2512,8 @@ export type FileFilterInput = {
   childImageSharp?: InputMaybe<ImageSharpFilterInput>;
   childrenPageFurnitureYaml?: InputMaybe<PageFurnitureYamlFilterListInput>;
   childPageFurnitureYaml?: InputMaybe<PageFurnitureYamlFilterInput>;
+  childrenPageContentYaml?: InputMaybe<PageContentYamlFilterListInput>;
+  childPageContentYaml?: InputMaybe<PageContentYamlFilterInput>;
   childrenFileInlineToc?: InputMaybe<FileInlineTocFilterListInput>;
   childFileInlineToc?: InputMaybe<FileInlineTocFilterInput>;
   childrenFileHtmlPartial?: InputMaybe<FileHtmlPartialFilterListInput>;
@@ -4069,6 +4312,389 @@ export type PageFurnitureYamlSortInput = {
   order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
 };
 
+export type ErrorConnection = {
+  totalCount: Scalars['Int'];
+  edges: Array<ErrorEdge>;
+  nodes: Array<Error>;
+  pageInfo: PageInfo;
+  distinct: Array<Scalars['String']>;
+  max?: Maybe<Scalars['Float']>;
+  min?: Maybe<Scalars['Float']>;
+  sum?: Maybe<Scalars['Float']>;
+  group: Array<ErrorGroupConnection>;
+};
+
+
+export type ErrorConnectionDistinctArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorConnectionMaxArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorConnectionMinArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorConnectionSumArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorConnectionGroupArgs = {
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+  field: ErrorFieldsEnum;
+};
+
+export type ErrorEdge = {
+  next?: Maybe<Error>;
+  node: Error;
+  previous?: Maybe<Error>;
+};
+
+export type ErrorFieldsEnum =
+  | 'message'
+  | 'id'
+  | 'parent___id'
+  | 'parent___parent___id'
+  | 'parent___parent___parent___id'
+  | 'parent___parent___parent___children'
+  | 'parent___parent___children'
+  | 'parent___parent___children___id'
+  | 'parent___parent___children___children'
+  | 'parent___parent___internal___content'
+  | 'parent___parent___internal___contentDigest'
+  | 'parent___parent___internal___description'
+  | 'parent___parent___internal___fieldOwners'
+  | 'parent___parent___internal___ignoreType'
+  | 'parent___parent___internal___mediaType'
+  | 'parent___parent___internal___owner'
+  | 'parent___parent___internal___type'
+  | 'parent___children'
+  | 'parent___children___id'
+  | 'parent___children___parent___id'
+  | 'parent___children___parent___children'
+  | 'parent___children___children'
+  | 'parent___children___children___id'
+  | 'parent___children___children___children'
+  | 'parent___children___internal___content'
+  | 'parent___children___internal___contentDigest'
+  | 'parent___children___internal___description'
+  | 'parent___children___internal___fieldOwners'
+  | 'parent___children___internal___ignoreType'
+  | 'parent___children___internal___mediaType'
+  | 'parent___children___internal___owner'
+  | 'parent___children___internal___type'
+  | 'parent___internal___content'
+  | 'parent___internal___contentDigest'
+  | 'parent___internal___description'
+  | 'parent___internal___fieldOwners'
+  | 'parent___internal___ignoreType'
+  | 'parent___internal___mediaType'
+  | 'parent___internal___owner'
+  | 'parent___internal___type'
+  | 'children'
+  | 'children___id'
+  | 'children___parent___id'
+  | 'children___parent___parent___id'
+  | 'children___parent___parent___children'
+  | 'children___parent___children'
+  | 'children___parent___children___id'
+  | 'children___parent___children___children'
+  | 'children___parent___internal___content'
+  | 'children___parent___internal___contentDigest'
+  | 'children___parent___internal___description'
+  | 'children___parent___internal___fieldOwners'
+  | 'children___parent___internal___ignoreType'
+  | 'children___parent___internal___mediaType'
+  | 'children___parent___internal___owner'
+  | 'children___parent___internal___type'
+  | 'children___children'
+  | 'children___children___id'
+  | 'children___children___parent___id'
+  | 'children___children___parent___children'
+  | 'children___children___children'
+  | 'children___children___children___id'
+  | 'children___children___children___children'
+  | 'children___children___internal___content'
+  | 'children___children___internal___contentDigest'
+  | 'children___children___internal___description'
+  | 'children___children___internal___fieldOwners'
+  | 'children___children___internal___ignoreType'
+  | 'children___children___internal___mediaType'
+  | 'children___children___internal___owner'
+  | 'children___children___internal___type'
+  | 'children___internal___content'
+  | 'children___internal___contentDigest'
+  | 'children___internal___description'
+  | 'children___internal___fieldOwners'
+  | 'children___internal___ignoreType'
+  | 'children___internal___mediaType'
+  | 'children___internal___owner'
+  | 'children___internal___type'
+  | 'internal___content'
+  | 'internal___contentDigest'
+  | 'internal___description'
+  | 'internal___fieldOwners'
+  | 'internal___ignoreType'
+  | 'internal___mediaType'
+  | 'internal___owner'
+  | 'internal___type';
+
+export type ErrorGroupConnection = {
+  totalCount: Scalars['Int'];
+  edges: Array<ErrorEdge>;
+  nodes: Array<Error>;
+  pageInfo: PageInfo;
+  distinct: Array<Scalars['String']>;
+  max?: Maybe<Scalars['Float']>;
+  min?: Maybe<Scalars['Float']>;
+  sum?: Maybe<Scalars['Float']>;
+  group: Array<ErrorGroupConnection>;
+  field: Scalars['String'];
+  fieldValue?: Maybe<Scalars['String']>;
+};
+
+
+export type ErrorGroupConnectionDistinctArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorGroupConnectionMaxArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorGroupConnectionMinArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorGroupConnectionSumArgs = {
+  field: ErrorFieldsEnum;
+};
+
+
+export type ErrorGroupConnectionGroupArgs = {
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+  field: ErrorFieldsEnum;
+};
+
+export type ErrorFilterInput = {
+  message?: InputMaybe<StringQueryOperatorInput>;
+  id?: InputMaybe<StringQueryOperatorInput>;
+  parent?: InputMaybe<NodeFilterInput>;
+  children?: InputMaybe<NodeFilterListInput>;
+  internal?: InputMaybe<InternalFilterInput>;
+};
+
+export type ErrorSortInput = {
+  fields?: InputMaybe<Array<InputMaybe<ErrorFieldsEnum>>>;
+  order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
+};
+
+export type PageContentYamlConnection = {
+  totalCount: Scalars['Int'];
+  edges: Array<PageContentYamlEdge>;
+  nodes: Array<PageContentYaml>;
+  pageInfo: PageInfo;
+  distinct: Array<Scalars['String']>;
+  max?: Maybe<Scalars['Float']>;
+  min?: Maybe<Scalars['Float']>;
+  sum?: Maybe<Scalars['Float']>;
+  group: Array<PageContentYamlGroupConnection>;
+};
+
+
+export type PageContentYamlConnectionDistinctArgs = {
+  field: PageContentYamlFieldsEnum;
+};
+
+
+export type PageContentYamlConnectionMaxArgs = {
+  field: PageContentYamlFieldsEnum;
+};
+
+
+export type PageContentYamlConnectionMinArgs = {
+  field: PageContentYamlFieldsEnum;
+};
+
+
+export type PageContentYamlConnectionSumArgs = {
+  field: PageContentYamlFieldsEnum;
+};
+
+
+export type PageContentYamlConnectionGroupArgs = {
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+  field: PageContentYamlFieldsEnum;
+};
+
+export type PageContentYamlEdge = {
+  next?: Maybe<PageContentYaml>;
+  node: PageContentYaml;
+  previous?: Maybe<PageContentYaml>;
+};
+
+export type PageContentYamlFieldsEnum =
+  | 'id'
+  | 'parent___id'
+  | 'parent___parent___id'
+  | 'parent___parent___parent___id'
+  | 'parent___parent___parent___children'
+  | 'parent___parent___children'
+  | 'parent___parent___children___id'
+  | 'parent___parent___children___children'
+  | 'parent___parent___internal___content'
+  | 'parent___parent___internal___contentDigest'
+  | 'parent___parent___internal___description'
+  | 'parent___parent___internal___fieldOwners'
+  | 'parent___parent___internal___ignoreType'
+  | 'parent___parent___internal___mediaType'
+  | 'parent___parent___internal___owner'
+  | 'parent___parent___internal___type'
+  | 'parent___children'
+  | 'parent___children___id'
+  | 'parent___children___parent___id'
+  | 'parent___children___parent___children'
+  | 'parent___children___children'
+  | 'parent___children___children___id'
+  | 'parent___children___children___children'
+  | 'parent___children___internal___content'
+  | 'parent___children___internal___contentDigest'
+  | 'parent___children___internal___description'
+  | 'parent___children___internal___fieldOwners'
+  | 'parent___children___internal___ignoreType'
+  | 'parent___children___internal___mediaType'
+  | 'parent___children___internal___owner'
+  | 'parent___children___internal___type'
+  | 'parent___internal___content'
+  | 'parent___internal___contentDigest'
+  | 'parent___internal___description'
+  | 'parent___internal___fieldOwners'
+  | 'parent___internal___ignoreType'
+  | 'parent___internal___mediaType'
+  | 'parent___internal___owner'
+  | 'parent___internal___type'
+  | 'children'
+  | 'children___id'
+  | 'children___parent___id'
+  | 'children___parent___parent___id'
+  | 'children___parent___parent___children'
+  | 'children___parent___children'
+  | 'children___parent___children___id'
+  | 'children___parent___children___children'
+  | 'children___parent___internal___content'
+  | 'children___parent___internal___contentDigest'
+  | 'children___parent___internal___description'
+  | 'children___parent___internal___fieldOwners'
+  | 'children___parent___internal___ignoreType'
+  | 'children___parent___internal___mediaType'
+  | 'children___parent___internal___owner'
+  | 'children___parent___internal___type'
+  | 'children___children'
+  | 'children___children___id'
+  | 'children___children___parent___id'
+  | 'children___children___parent___children'
+  | 'children___children___children'
+  | 'children___children___children___id'
+  | 'children___children___children___children'
+  | 'children___children___internal___content'
+  | 'children___children___internal___contentDigest'
+  | 'children___children___internal___description'
+  | 'children___children___internal___fieldOwners'
+  | 'children___children___internal___ignoreType'
+  | 'children___children___internal___mediaType'
+  | 'children___children___internal___owner'
+  | 'children___children___internal___type'
+  | 'children___internal___content'
+  | 'children___internal___contentDigest'
+  | 'children___internal___description'
+  | 'children___internal___fieldOwners'
+  | 'children___internal___ignoreType'
+  | 'children___internal___mediaType'
+  | 'children___internal___owner'
+  | 'children___internal___type'
+  | 'internal___content'
+  | 'internal___contentDigest'
+  | 'internal___description'
+  | 'internal___fieldOwners'
+  | 'internal___ignoreType'
+  | 'internal___mediaType'
+  | 'internal___owner'
+  | 'internal___type'
+  | 'name'
+  | 'meta___title'
+  | 'meta___description'
+  | 'meta___image'
+  | 'meta___twitter'
+  | 'sections'
+  | 'sections___title'
+  | 'sections___description'
+  | 'sections___level'
+  | 'sections___defaultCallToAction'
+  | 'sections___cards'
+  | 'sections___cards___title'
+  | 'sections___cards___content'
+  | 'sections___cards___callToAction'
+  | 'sections___cards___link'
+  | 'sections___cards___flag';
+
+export type PageContentYamlGroupConnection = {
+  totalCount: Scalars['Int'];
+  edges: Array<PageContentYamlEdge>;
+  nodes: Array<PageContentYaml>;
+  pageInfo: PageInfo;
+  distinct: Array<Scalars['String']>;
+  max?: Maybe<Scalars['Float']>;
+  min?: Maybe<Scalars['Float']>;
+  sum?: Maybe<Scalars['Float']>;
+  group: Array<PageContentYamlGroupConnection>;
+  field: Scalars['String'];
+  fieldValue?: Maybe<Scalars['String']>;
+};
+
+
+export type PageContentYamlGroupConnectionDistinctArgs = {
+  field: PageContentYamlFieldsEnum;
+};
+
+
+export type PageContentYamlGroupConnectionMaxArgs = {
+  field: PageContentYamlFieldsEnum;
+};
+
+
+export type PageContentYamlGroupConnectionMinArgs = {
+  field: PageContentYamlFieldsEnum;
+};
+
+
+export type PageContentYamlGroupConnectionSumArgs = {
+  field: PageContentYamlFieldsEnum;
+};
+
+
+export type PageContentYamlGroupConnectionGroupArgs = {
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+  field: PageContentYamlFieldsEnum;
+};
+
+export type PageContentYamlSortInput = {
+  fields?: InputMaybe<Array<InputMaybe<PageContentYamlFieldsEnum>>>;
+  order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
+};
+
 export type FileInlineTocConnection = {
   totalCount: Scalars['Int'];
   edges: Array<FileInlineTocEdge>;
@@ -4756,8 +5382,8 @@ export type FileHtmlFieldsEnum =
   | 'contentOrderedList___data'
   | 'contentOrderedList___type'
   | 'meta___title'
-  | 'meta___meta_description'
   | 'meta___languages'
+  | 'meta___meta_description'
   | 'slug'
   | 'parentSlug'
   | 'version'
@@ -5082,6 +5708,11 @@ export type DocumentPathSortInput = {
   fields?: InputMaybe<Array<InputMaybe<DocumentPathFieldsEnum>>>;
   order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
 };
+
+export type HomePageQueryQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type HomePageQueryQuery = { pageContentYaml?: { sections?: Array<{ title?: string | null, level?: string | null, description?: string | null, defaultCallToAction?: string | null, cards?: Array<{ title?: string | null, content?: string | null, link?: string | null, flag?: string | null, callToAction?: string | null } | null> | null } | null> | null, meta?: { title?: string | null, description?: string | null, image?: string | null, twitter?: string | null } | null } | null };
 
 export type GatsbyImageSharpFixedFragment = { base64?: string | null, width: number, height: number, src: string, srcSet: string };
 
