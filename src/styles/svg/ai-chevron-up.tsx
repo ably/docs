@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 // Gatsby SVG React plugin does not work with latest version of Gatsby/webpack
-const AIChevronUp = ({ className }) => (
+const AIChevronUp = ({ className }: { className: string }) => (
   <svg
     className={className}
     version="1.1"
