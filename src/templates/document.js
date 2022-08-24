@@ -83,7 +83,7 @@ const Document = ({
         </Helmet>
         <Layout languages={filteredLanguages} versionData={versionData}>
           <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
-          <Article columns={3}>
+          <Article>
             <PageTitle id="title">{title}</PageTitle>
             <div className="col-span-3">{elements}</div>
           </Article>
