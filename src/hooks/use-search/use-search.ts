@@ -38,7 +38,7 @@ type Result = {
 
 export type State = {
   client: string | null;
-  query?: string;
+  query: string;
   page?: Result['page'];
   totalHits: Result['total_hits'];
   results: Hit[] | null;
