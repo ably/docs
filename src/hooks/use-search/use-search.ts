@@ -73,11 +73,17 @@ interface UpdateUrlProps {
 const updateUrl = ({ query = '', page }: UpdateUrlProps) => {
   const url = new URL(window.location.href);
 
-  if (query === '') url.searchParams.delete('q');
-  else url.searchParams.set('q', query);
+  if (query === '') {
+    url.searchParams.delete('q');
+  } else {
+    url.searchParams.set('q', query);
+  }
 
-  if (page && page > 1) url.searchParams.set('page', page.toString());
-  else url.searchParams.delete('page');
+  if (page && page > 1) {
+    url.searchParams.set('page', page.toString());
+  } else {
+    url.searchParams.delete('page');
+  }
 
   window.history.pushState({}, '', url);
 };
@@ -104,9 +110,13 @@ const reducer = (state: State, action: Action) => {
       const { query, page } = action.payload as Pick<State, 'query' | 'page'>;
       const { enableParamsSync, query: currentQuery, page: currentPage } = state;
 
-      if (query === currentQuery && page === currentPage) return state;
+      if (query === currentQuery && page === currentPage) {
+        return state;
+      }
 
-      if (enableParamsSync) updateUrl({ query, page });
+      if (enableParamsSync) {
+        updateUrl({ query, page });
+      }
 
       return { ...state, query, page };
     }
@@ -164,13 +174,17 @@ const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10,
   );
 
   useEffect(() => {
-    if (!addsearchApiKey) return;
+    if (!addsearchApiKey) {
+      return;
+    }
 
     dispatch({ type: 'setup', payload: { addsearchApiKey, url: new URL(window.location.href) } });
   }, [addsearchApiKey]);
 
   useEffect(() => {
-    if (!client) return;
+    if (!client) {
+      return;
+    }
 
     if (query === '') {
       setResults({ ...initialState, client });
@@ -179,13 +193,14 @@ const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10,
 
     dispatch({ type: 'set-loading' });
 
-    if (configureClient)
+    if (configureClient) {
       configureClient({
         client,
         query,
         page,
         pageLength,
       });
+    }
 
     client.search(query, (result: Result) => {
       if (result.error) {
