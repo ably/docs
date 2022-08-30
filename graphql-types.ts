@@ -90,14 +90,12 @@ export type File = Node & {
   internal: Internal;
 };
 
-
 export type FileModifiedTimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
   fromNow?: InputMaybe<Scalars['Boolean']>;
   difference?: InputMaybe<Scalars['String']>;
   locale?: InputMaybe<Scalars['String']>;
 };
-
 
 export type FileAccessTimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
@@ -106,14 +104,12 @@ export type FileAccessTimeArgs = {
   locale?: InputMaybe<Scalars['String']>;
 };
 
-
 export type FileChangeTimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
   fromNow?: InputMaybe<Scalars['Boolean']>;
   difference?: InputMaybe<Scalars['String']>;
   locale?: InputMaybe<Scalars['String']>;
 };
-
 
 export type FileBirthTimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
@@ -122,7 +118,6 @@ export type FileBirthTimeArgs = {
   locale?: InputMaybe<Scalars['String']>;
 };
 
-
 export type FileAtimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
   fromNow?: InputMaybe<Scalars['Boolean']>;
@@ -130,14 +125,12 @@ export type FileAtimeArgs = {
   locale?: InputMaybe<Scalars['String']>;
 };
 
-
 export type FileMtimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
   fromNow?: InputMaybe<Scalars['Boolean']>;
   difference?: InputMaybe<Scalars['String']>;
   locale?: InputMaybe<Scalars['String']>;
 };
-
 
 export type FileCtimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
@@ -206,14 +199,12 @@ export type Directory = Node & {
   internal: Internal;
 };
 
-
 export type DirectoryModifiedTimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
   fromNow?: InputMaybe<Scalars['Boolean']>;
   difference?: InputMaybe<Scalars['String']>;
   locale?: InputMaybe<Scalars['String']>;
 };
-
 
 export type DirectoryAccessTimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
@@ -222,14 +213,12 @@ export type DirectoryAccessTimeArgs = {
   locale?: InputMaybe<Scalars['String']>;
 };
 
-
 export type DirectoryChangeTimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
   fromNow?: InputMaybe<Scalars['Boolean']>;
   difference?: InputMaybe<Scalars['String']>;
   locale?: InputMaybe<Scalars['String']>;
 };
-
 
 export type DirectoryBirthTimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
@@ -238,7 +227,6 @@ export type DirectoryBirthTimeArgs = {
   locale?: InputMaybe<Scalars['String']>;
 };
 
-
 export type DirectoryAtimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
   fromNow?: InputMaybe<Scalars['Boolean']>;
@@ -246,14 +234,12 @@ export type DirectoryAtimeArgs = {
   locale?: InputMaybe<Scalars['String']>;
 };
 
-
 export type DirectoryMtimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
   fromNow?: InputMaybe<Scalars['Boolean']>;
   difference?: InputMaybe<Scalars['String']>;
   locale?: InputMaybe<Scalars['String']>;
 };
-
 
 export type DirectoryCtimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
@@ -278,7 +264,6 @@ export type Site = Node & {
   children: Array<Node>;
   internal: Internal;
 };
-
 
 export type SiteBuildTimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
@@ -345,7 +330,6 @@ export type SiteBuildMetadata = Node & {
   internal: Internal;
 };
 
-
 export type SiteBuildMetadataBuildTimeArgs = {
   formatString?: InputMaybe<Scalars['String']>;
   fromNow?: InputMaybe<Scalars['Boolean']>;
@@ -353,44 +337,17 @@ export type SiteBuildMetadataBuildTimeArgs = {
   locale?: InputMaybe<Scalars['String']>;
 };
 
-export type GatsbyImageFormat =
-  | 'NO_CHANGE'
-  | 'AUTO'
-  | 'JPG'
-  | 'PNG'
-  | 'WEBP'
-  | 'AVIF';
+export type GatsbyImageFormat = 'NO_CHANGE' | 'AUTO' | 'JPG' | 'PNG' | 'WEBP' | 'AVIF';
 
-export type GatsbyImageLayout =
-  | 'FIXED'
-  | 'FULL_WIDTH'
-  | 'CONSTRAINED';
+export type GatsbyImageLayout = 'FIXED' | 'FULL_WIDTH' | 'CONSTRAINED';
 
-export type GatsbyImagePlaceholder =
-  | 'DOMINANT_COLOR'
-  | 'TRACED_SVG'
-  | 'BLURRED'
-  | 'NONE';
+export type GatsbyImagePlaceholder = 'DOMINANT_COLOR' | 'TRACED_SVG' | 'BLURRED' | 'NONE';
 
-export type ImageFormat =
-  | 'NO_CHANGE'
-  | 'AUTO'
-  | 'JPG'
-  | 'PNG'
-  | 'WEBP'
-  | 'AVIF';
+export type ImageFormat = 'NO_CHANGE' | 'AUTO' | 'JPG' | 'PNG' | 'WEBP' | 'AVIF';
 
-export type ImageFit =
-  | 'COVER'
-  | 'CONTAIN'
-  | 'FILL'
-  | 'INSIDE'
-  | 'OUTSIDE';
+export type ImageFit = 'COVER' | 'CONTAIN' | 'FILL' | 'INSIDE' | 'OUTSIDE';
 
-export type ImageLayout =
-  | 'FIXED'
-  | 'FULL_WIDTH'
-  | 'CONSTRAINED';
+export type ImageLayout = 'FIXED' | 'FULL_WIDTH' | 'CONSTRAINED';
 
 export type ImageCropFocus =
   | 'CENTER'
@@ -443,7 +400,6 @@ export type ImageSharp = Node & {
   internal: Internal;
 };
 
-
 export type ImageSharpFixedArgs = {
   width?: InputMaybe<Scalars['Int']>;
   height?: InputMaybe<Scalars['Int']>;
@@ -465,7 +421,6 @@ export type ImageSharpFixedArgs = {
   rotate?: InputMaybe<Scalars['Int']>;
   trim?: InputMaybe<Scalars['Float']>;
 };
-
 
 export type ImageSharpFluidArgs = {
   maxWidth?: InputMaybe<Scalars['Int']>;
@@ -491,7 +446,6 @@ export type ImageSharpFluidArgs = {
   srcSetBreakpoints?: InputMaybe<Array<InputMaybe<Scalars['Int']>>>;
 };
 
-
 export type ImageSharpGatsbyImageDataArgs = {
   layout?: InputMaybe<ImageLayout>;
   width?: InputMaybe<Scalars['Int']>;
@@ -512,7 +466,6 @@ export type ImageSharpGatsbyImageDataArgs = {
   transformOptions?: InputMaybe<TransformOptions>;
   backgroundColor?: InputMaybe<Scalars['String']>;
 };
-
 
 export type ImageSharpResizeArgs = {
   width?: InputMaybe<Scalars['Int']>;
@@ -564,11 +517,7 @@ export type ImageSharpFluid = {
   presentationHeight: Scalars['Int'];
 };
 
-export type ImagePlaceholder =
-  | 'DOMINANT_COLOR'
-  | 'TRACED_SVG'
-  | 'BLURRED'
-  | 'NONE';
+export type ImagePlaceholder = 'DOMINANT_COLOR' | 'TRACED_SVG' | 'BLURRED' | 'NONE';
 
 export type BlurredOptions = {
   /** Width of the generated low-res preview. Default is 20px */
@@ -808,7 +757,6 @@ export type Query = {
   allDocumentPath: DocumentPathConnection;
 };
 
-
 export type QueryFileArgs = {
   sourceInstanceName?: InputMaybe<StringQueryOperatorInput>;
   absolutePath?: InputMaybe<StringQueryOperatorInput>;
@@ -862,14 +810,12 @@ export type QueryFileArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllFileArgs = {
   filter?: InputMaybe<FileFilterInput>;
   sort?: InputMaybe<FileSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryDirectoryArgs = {
   sourceInstanceName?: InputMaybe<StringQueryOperatorInput>;
@@ -909,14 +855,12 @@ export type QueryDirectoryArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllDirectoryArgs = {
   filter?: InputMaybe<DirectoryFilterInput>;
   sort?: InputMaybe<DirectorySortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QuerySiteArgs = {
   buildTime?: InputMaybe<DateQueryOperatorInput>;
@@ -935,14 +879,12 @@ export type QuerySiteArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllSiteArgs = {
   filter?: InputMaybe<SiteFilterInput>;
   sort?: InputMaybe<SiteSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QuerySiteFunctionArgs = {
   functionRoute?: InputMaybe<StringQueryOperatorInput>;
@@ -958,14 +900,12 @@ export type QuerySiteFunctionArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllSiteFunctionArgs = {
   filter?: InputMaybe<SiteFunctionFilterInput>;
   sort?: InputMaybe<SiteFunctionSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QuerySitePageArgs = {
   path?: InputMaybe<StringQueryOperatorInput>;
@@ -981,14 +921,12 @@ export type QuerySitePageArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllSitePageArgs = {
   filter?: InputMaybe<SitePageFilterInput>;
   sort?: InputMaybe<SitePageSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QuerySitePluginArgs = {
   resolve?: InputMaybe<StringQueryOperatorInput>;
@@ -1006,14 +944,12 @@ export type QuerySitePluginArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllSitePluginArgs = {
   filter?: InputMaybe<SitePluginFilterInput>;
   sort?: InputMaybe<SitePluginSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QuerySiteBuildMetadataArgs = {
   buildTime?: InputMaybe<DateQueryOperatorInput>;
@@ -1023,14 +959,12 @@ export type QuerySiteBuildMetadataArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllSiteBuildMetadataArgs = {
   filter?: InputMaybe<SiteBuildMetadataFilterInput>;
   sort?: InputMaybe<SiteBuildMetadataSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryImageSharpArgs = {
   fixed?: InputMaybe<ImageSharpFixedFilterInput>;
@@ -1044,14 +978,12 @@ export type QueryImageSharpArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllImageSharpArgs = {
   filter?: InputMaybe<ImageSharpFilterInput>;
   sort?: InputMaybe<ImageSharpSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryPageFurnitureYamlArgs = {
   label?: InputMaybe<StringQueryOperatorInput>;
@@ -1066,14 +998,12 @@ export type QueryPageFurnitureYamlArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllPageFurnitureYamlArgs = {
   filter?: InputMaybe<PageFurnitureYamlFilterInput>;
   sort?: InputMaybe<PageFurnitureYamlSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryFileHtmlArgs = {
   contentOrderedList?: InputMaybe<FileHtmlContentOrderedListItemFilterListInput>;
@@ -1090,14 +1020,12 @@ export type QueryFileHtmlArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllFileHtmlArgs = {
   filter?: InputMaybe<FileHtmlFilterInput>;
   sort?: InputMaybe<FileHtmlSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryErrorArgs = {
   message?: InputMaybe<StringQueryOperatorInput>;
@@ -1107,14 +1035,12 @@ export type QueryErrorArgs = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
-
 export type QueryAllErrorArgs = {
   filter?: InputMaybe<ErrorFilterInput>;
   sort?: InputMaybe<ErrorSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryPageContentYamlArgs = {
   id?: InputMaybe<StringQueryOperatorInput>;
@@ -1126,14 +1052,12 @@ export type QueryPageContentYamlArgs = {
   sections?: InputMaybe<PageContentYamlSectionsFilterListInput>;
 };
 
-
 export type QueryAllPageContentYamlArgs = {
   filter?: InputMaybe<PageContentYamlFilterInput>;
   sort?: InputMaybe<PageContentYamlSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryFileInlineTocArgs = {
   id?: InputMaybe<StringQueryOperatorInput>;
@@ -1144,14 +1068,12 @@ export type QueryFileInlineTocArgs = {
   slug?: InputMaybe<StringQueryOperatorInput>;
 };
 
-
 export type QueryAllFileInlineTocArgs = {
   filter?: InputMaybe<FileInlineTocFilterInput>;
   sort?: InputMaybe<FileInlineTocSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryFileHtmlVersionArgs = {
   id?: InputMaybe<StringQueryOperatorInput>;
@@ -1163,14 +1085,12 @@ export type QueryFileHtmlVersionArgs = {
   version?: InputMaybe<StringQueryOperatorInput>;
 };
 
-
 export type QueryAllFileHtmlVersionArgs = {
   filter?: InputMaybe<FileHtmlVersionFilterInput>;
   sort?: InputMaybe<FileHtmlVersionSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryFileHtmlPartialArgs = {
   id?: InputMaybe<StringQueryOperatorInput>;
@@ -1182,14 +1102,12 @@ export type QueryFileHtmlPartialArgs = {
   relativePath?: InputMaybe<StringQueryOperatorInput>;
 };
 
-
 export type QueryAllFileHtmlPartialArgs = {
   filter?: InputMaybe<FileHtmlPartialFilterInput>;
   sort?: InputMaybe<FileHtmlPartialSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
-
 
 export type QueryDocumentPathArgs = {
   id?: InputMaybe<StringQueryOperatorInput>;
@@ -1200,7 +1118,6 @@ export type QueryDocumentPathArgs = {
   label?: InputMaybe<StringQueryOperatorInput>;
   level?: InputMaybe<IntQueryOperatorInput>;
 };
-
 
 export type QueryAllDocumentPathArgs = {
   filter?: InputMaybe<DocumentPathFilterInput>;
@@ -1547,26 +1464,21 @@ export type FileConnection = {
   group: Array<FileGroupConnection>;
 };
 
-
 export type FileConnectionDistinctArgs = {
   field: FileFieldsEnum;
 };
-
 
 export type FileConnectionMaxArgs = {
   field: FileFieldsEnum;
 };
 
-
 export type FileConnectionMinArgs = {
   field: FileFieldsEnum;
 };
 
-
 export type FileConnectionSumArgs = {
   field: FileFieldsEnum;
 };
-
 
 export type FileConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -2511,26 +2423,21 @@ export type FileGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type FileGroupConnectionDistinctArgs = {
   field: FileFieldsEnum;
 };
-
 
 export type FileGroupConnectionMaxArgs = {
   field: FileFieldsEnum;
 };
 
-
 export type FileGroupConnectionMinArgs = {
   field: FileFieldsEnum;
 };
 
-
 export type FileGroupConnectionSumArgs = {
   field: FileFieldsEnum;
 };
-
 
 export type FileGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -2596,9 +2503,7 @@ export type FileSortInput = {
   order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
 };
 
-export type SortOrderEnum =
-  | 'ASC'
-  | 'DESC';
+export type SortOrderEnum = 'ASC' | 'DESC';
 
 export type DirectoryConnection = {
   totalCount: Scalars['Int'];
@@ -2612,26 +2517,21 @@ export type DirectoryConnection = {
   group: Array<DirectoryGroupConnection>;
 };
 
-
 export type DirectoryConnectionDistinctArgs = {
   field: DirectoryFieldsEnum;
 };
-
 
 export type DirectoryConnectionMaxArgs = {
   field: DirectoryFieldsEnum;
 };
 
-
 export type DirectoryConnectionMinArgs = {
   field: DirectoryFieldsEnum;
 };
 
-
 export type DirectoryConnectionSumArgs = {
   field: DirectoryFieldsEnum;
 };
-
 
 export type DirectoryConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -2785,26 +2685,21 @@ export type DirectoryGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type DirectoryGroupConnectionDistinctArgs = {
   field: DirectoryFieldsEnum;
 };
-
 
 export type DirectoryGroupConnectionMaxArgs = {
   field: DirectoryFieldsEnum;
 };
 
-
 export type DirectoryGroupConnectionMinArgs = {
   field: DirectoryFieldsEnum;
 };
 
-
 export type DirectoryGroupConnectionSumArgs = {
   field: DirectoryFieldsEnum;
 };
-
 
 export type DirectoryGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -2873,26 +2768,21 @@ export type SiteConnection = {
   group: Array<SiteGroupConnection>;
 };
 
-
 export type SiteConnectionDistinctArgs = {
   field: SiteFieldsEnum;
 };
-
 
 export type SiteConnectionMaxArgs = {
   field: SiteFieldsEnum;
 };
 
-
 export type SiteConnectionMinArgs = {
   field: SiteFieldsEnum;
 };
 
-
 export type SiteConnectionSumArgs = {
   field: SiteFieldsEnum;
 };
-
 
 export type SiteConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -3027,26 +2917,21 @@ export type SiteGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type SiteGroupConnectionDistinctArgs = {
   field: SiteFieldsEnum;
 };
-
 
 export type SiteGroupConnectionMaxArgs = {
   field: SiteFieldsEnum;
 };
 
-
 export type SiteGroupConnectionMinArgs = {
   field: SiteFieldsEnum;
 };
 
-
 export type SiteGroupConnectionSumArgs = {
   field: SiteFieldsEnum;
 };
-
 
 export type SiteGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -3088,26 +2973,21 @@ export type SiteFunctionConnection = {
   group: Array<SiteFunctionGroupConnection>;
 };
 
-
 export type SiteFunctionConnectionDistinctArgs = {
   field: SiteFunctionFieldsEnum;
 };
-
 
 export type SiteFunctionConnectionMaxArgs = {
   field: SiteFunctionFieldsEnum;
 };
 
-
 export type SiteFunctionConnectionMinArgs = {
   field: SiteFunctionFieldsEnum;
 };
 
-
 export type SiteFunctionConnectionSumArgs = {
   field: SiteFunctionFieldsEnum;
 };
-
 
 export type SiteFunctionConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -3237,26 +3117,21 @@ export type SiteFunctionGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type SiteFunctionGroupConnectionDistinctArgs = {
   field: SiteFunctionFieldsEnum;
 };
-
 
 export type SiteFunctionGroupConnectionMaxArgs = {
   field: SiteFunctionFieldsEnum;
 };
 
-
 export type SiteFunctionGroupConnectionMinArgs = {
   field: SiteFunctionFieldsEnum;
 };
 
-
 export type SiteFunctionGroupConnectionSumArgs = {
   field: SiteFunctionFieldsEnum;
 };
-
 
 export type SiteFunctionGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -3320,26 +3195,21 @@ export type SitePageConnection = {
   group: Array<SitePageGroupConnection>;
 };
 
-
 export type SitePageConnectionDistinctArgs = {
   field: SitePageFieldsEnum;
 };
-
 
 export type SitePageConnectionMaxArgs = {
   field: SitePageFieldsEnum;
 };
 
-
 export type SitePageConnectionMinArgs = {
   field: SitePageFieldsEnum;
 };
 
-
 export type SitePageConnectionSumArgs = {
   field: SitePageFieldsEnum;
 };
-
 
 export type SitePageConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -3518,26 +3388,21 @@ export type SitePageGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type SitePageGroupConnectionDistinctArgs = {
   field: SitePageFieldsEnum;
 };
-
 
 export type SitePageGroupConnectionMaxArgs = {
   field: SitePageFieldsEnum;
 };
 
-
 export type SitePageGroupConnectionMinArgs = {
   field: SitePageFieldsEnum;
 };
 
-
 export type SitePageGroupConnectionSumArgs = {
   field: SitePageFieldsEnum;
 };
-
 
 export type SitePageGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -3576,26 +3441,21 @@ export type SitePluginConnection = {
   group: Array<SitePluginGroupConnection>;
 };
 
-
 export type SitePluginConnectionDistinctArgs = {
   field: SitePluginFieldsEnum;
 };
-
 
 export type SitePluginConnectionMaxArgs = {
   field: SitePluginFieldsEnum;
 };
 
-
 export type SitePluginConnectionMinArgs = {
   field: SitePluginFieldsEnum;
 };
 
-
 export type SitePluginConnectionSumArgs = {
   field: SitePluginFieldsEnum;
 };
-
 
 export type SitePluginConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -3727,26 +3587,21 @@ export type SitePluginGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type SitePluginGroupConnectionDistinctArgs = {
   field: SitePluginFieldsEnum;
 };
-
 
 export type SitePluginGroupConnectionMaxArgs = {
   field: SitePluginFieldsEnum;
 };
 
-
 export type SitePluginGroupConnectionMinArgs = {
   field: SitePluginFieldsEnum;
 };
 
-
 export type SitePluginGroupConnectionSumArgs = {
   field: SitePluginFieldsEnum;
 };
-
 
 export type SitePluginGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -3771,26 +3626,21 @@ export type SiteBuildMetadataConnection = {
   group: Array<SiteBuildMetadataGroupConnection>;
 };
 
-
 export type SiteBuildMetadataConnectionDistinctArgs = {
   field: SiteBuildMetadataFieldsEnum;
 };
-
 
 export type SiteBuildMetadataConnectionMaxArgs = {
   field: SiteBuildMetadataFieldsEnum;
 };
 
-
 export type SiteBuildMetadataConnectionMinArgs = {
   field: SiteBuildMetadataFieldsEnum;
 };
 
-
 export type SiteBuildMetadataConnectionSumArgs = {
   field: SiteBuildMetadataFieldsEnum;
 };
-
 
 export type SiteBuildMetadataConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -3914,26 +3764,21 @@ export type SiteBuildMetadataGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type SiteBuildMetadataGroupConnectionDistinctArgs = {
   field: SiteBuildMetadataFieldsEnum;
 };
-
 
 export type SiteBuildMetadataGroupConnectionMaxArgs = {
   field: SiteBuildMetadataFieldsEnum;
 };
 
-
 export type SiteBuildMetadataGroupConnectionMinArgs = {
   field: SiteBuildMetadataFieldsEnum;
 };
 
-
 export type SiteBuildMetadataGroupConnectionSumArgs = {
   field: SiteBuildMetadataFieldsEnum;
 };
-
 
 export type SiteBuildMetadataGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -3966,26 +3811,21 @@ export type ImageSharpConnection = {
   group: Array<ImageSharpGroupConnection>;
 };
 
-
 export type ImageSharpConnectionDistinctArgs = {
   field: ImageSharpFieldsEnum;
 };
-
 
 export type ImageSharpConnectionMaxArgs = {
   field: ImageSharpFieldsEnum;
 };
 
-
 export type ImageSharpConnectionMinArgs = {
   field: ImageSharpFieldsEnum;
 };
 
-
 export type ImageSharpConnectionSumArgs = {
   field: ImageSharpFieldsEnum;
 };
-
 
 export type ImageSharpConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -4140,26 +3980,21 @@ export type ImageSharpGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type ImageSharpGroupConnectionDistinctArgs = {
   field: ImageSharpFieldsEnum;
 };
-
 
 export type ImageSharpGroupConnectionMaxArgs = {
   field: ImageSharpFieldsEnum;
 };
 
-
 export type ImageSharpGroupConnectionMinArgs = {
   field: ImageSharpFieldsEnum;
 };
 
-
 export type ImageSharpGroupConnectionSumArgs = {
   field: ImageSharpFieldsEnum;
 };
-
 
 export type ImageSharpGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -4184,26 +4019,21 @@ export type PageFurnitureYamlConnection = {
   group: Array<PageFurnitureYamlGroupConnection>;
 };
 
-
 export type PageFurnitureYamlConnectionDistinctArgs = {
   field: PageFurnitureYamlFieldsEnum;
 };
-
 
 export type PageFurnitureYamlConnectionMaxArgs = {
   field: PageFurnitureYamlFieldsEnum;
 };
 
-
 export type PageFurnitureYamlConnectionMinArgs = {
   field: PageFurnitureYamlFieldsEnum;
 };
 
-
 export type PageFurnitureYamlConnectionSumArgs = {
   field: PageFurnitureYamlFieldsEnum;
 };
-
 
 export type PageFurnitureYamlConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -4408,26 +4238,21 @@ export type PageFurnitureYamlGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type PageFurnitureYamlGroupConnectionDistinctArgs = {
   field: PageFurnitureYamlFieldsEnum;
 };
-
 
 export type PageFurnitureYamlGroupConnectionMaxArgs = {
   field: PageFurnitureYamlFieldsEnum;
 };
 
-
 export type PageFurnitureYamlGroupConnectionMinArgs = {
   field: PageFurnitureYamlFieldsEnum;
 };
 
-
 export type PageFurnitureYamlGroupConnectionSumArgs = {
   field: PageFurnitureYamlFieldsEnum;
 };
-
 
 export type PageFurnitureYamlGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -4452,26 +4277,21 @@ export type FileHtmlConnection = {
   group: Array<FileHtmlGroupConnection>;
 };
 
-
 export type FileHtmlConnectionDistinctArgs = {
   field: FileHtmlFieldsEnum;
 };
-
 
 export type FileHtmlConnectionMaxArgs = {
   field: FileHtmlFieldsEnum;
 };
 
-
 export type FileHtmlConnectionMinArgs = {
   field: FileHtmlFieldsEnum;
 };
 
-
 export type FileHtmlConnectionSumArgs = {
   field: FileHtmlFieldsEnum;
 };
-
 
 export type FileHtmlConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -4694,26 +4514,21 @@ export type FileHtmlGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type FileHtmlGroupConnectionDistinctArgs = {
   field: FileHtmlFieldsEnum;
 };
-
 
 export type FileHtmlGroupConnectionMaxArgs = {
   field: FileHtmlFieldsEnum;
 };
 
-
 export type FileHtmlGroupConnectionMinArgs = {
   field: FileHtmlFieldsEnum;
 };
 
-
 export type FileHtmlGroupConnectionSumArgs = {
   field: FileHtmlFieldsEnum;
 };
-
 
 export type FileHtmlGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -4738,26 +4553,21 @@ export type ErrorConnection = {
   group: Array<ErrorGroupConnection>;
 };
 
-
 export type ErrorConnectionDistinctArgs = {
   field: ErrorFieldsEnum;
 };
-
 
 export type ErrorConnectionMaxArgs = {
   field: ErrorFieldsEnum;
 };
 
-
 export type ErrorConnectionMinArgs = {
   field: ErrorFieldsEnum;
 };
 
-
 export type ErrorConnectionSumArgs = {
   field: ErrorFieldsEnum;
 };
-
 
 export type ErrorConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -4881,26 +4691,21 @@ export type ErrorGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type ErrorGroupConnectionDistinctArgs = {
   field: ErrorFieldsEnum;
 };
-
 
 export type ErrorGroupConnectionMaxArgs = {
   field: ErrorFieldsEnum;
 };
 
-
 export type ErrorGroupConnectionMinArgs = {
   field: ErrorFieldsEnum;
 };
 
-
 export type ErrorGroupConnectionSumArgs = {
   field: ErrorFieldsEnum;
 };
-
 
 export type ErrorGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -4933,26 +4738,21 @@ export type PageContentYamlConnection = {
   group: Array<PageContentYamlGroupConnection>;
 };
 
-
 export type PageContentYamlConnectionDistinctArgs = {
   field: PageContentYamlFieldsEnum;
 };
-
 
 export type PageContentYamlConnectionMaxArgs = {
   field: PageContentYamlFieldsEnum;
 };
 
-
 export type PageContentYamlConnectionMinArgs = {
   field: PageContentYamlFieldsEnum;
 };
 
-
 export type PageContentYamlConnectionSumArgs = {
   field: PageContentYamlFieldsEnum;
 };
-
 
 export type PageContentYamlConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -5091,26 +4891,21 @@ export type PageContentYamlGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type PageContentYamlGroupConnectionDistinctArgs = {
   field: PageContentYamlFieldsEnum;
 };
-
 
 export type PageContentYamlGroupConnectionMaxArgs = {
   field: PageContentYamlFieldsEnum;
 };
 
-
 export type PageContentYamlGroupConnectionMinArgs = {
   field: PageContentYamlFieldsEnum;
 };
 
-
 export type PageContentYamlGroupConnectionSumArgs = {
   field: PageContentYamlFieldsEnum;
 };
-
 
 export type PageContentYamlGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -5135,26 +4930,21 @@ export type FileInlineTocConnection = {
   group: Array<FileInlineTocGroupConnection>;
 };
 
-
 export type FileInlineTocConnectionDistinctArgs = {
   field: FileInlineTocFieldsEnum;
 };
-
 
 export type FileInlineTocConnectionMaxArgs = {
   field: FileInlineTocFieldsEnum;
 };
 
-
 export type FileInlineTocConnectionMinArgs = {
   field: FileInlineTocFieldsEnum;
 };
 
-
 export type FileInlineTocConnectionSumArgs = {
   field: FileInlineTocFieldsEnum;
 };
-
 
 export type FileInlineTocConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -5284,26 +5074,21 @@ export type FileInlineTocGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type FileInlineTocGroupConnectionDistinctArgs = {
   field: FileInlineTocFieldsEnum;
 };
-
 
 export type FileInlineTocGroupConnectionMaxArgs = {
   field: FileInlineTocFieldsEnum;
 };
 
-
 export type FileInlineTocGroupConnectionMinArgs = {
   field: FileInlineTocFieldsEnum;
 };
 
-
 export type FileInlineTocGroupConnectionSumArgs = {
   field: FileInlineTocFieldsEnum;
 };
-
 
 export type FileInlineTocGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -5328,26 +5113,21 @@ export type FileHtmlVersionConnection = {
   group: Array<FileHtmlVersionGroupConnection>;
 };
 
-
 export type FileHtmlVersionConnectionDistinctArgs = {
   field: FileHtmlVersionFieldsEnum;
 };
-
 
 export type FileHtmlVersionConnectionMaxArgs = {
   field: FileHtmlVersionFieldsEnum;
 };
 
-
 export type FileHtmlVersionConnectionMinArgs = {
   field: FileHtmlVersionFieldsEnum;
 };
 
-
 export type FileHtmlVersionConnectionSumArgs = {
   field: FileHtmlVersionFieldsEnum;
 };
-
 
 export type FileHtmlVersionConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -5473,26 +5253,21 @@ export type FileHtmlVersionGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type FileHtmlVersionGroupConnectionDistinctArgs = {
   field: FileHtmlVersionFieldsEnum;
 };
-
 
 export type FileHtmlVersionGroupConnectionMaxArgs = {
   field: FileHtmlVersionFieldsEnum;
 };
 
-
 export type FileHtmlVersionGroupConnectionMinArgs = {
   field: FileHtmlVersionFieldsEnum;
 };
 
-
 export type FileHtmlVersionGroupConnectionSumArgs = {
   field: FileHtmlVersionFieldsEnum;
 };
-
 
 export type FileHtmlVersionGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -5517,26 +5292,21 @@ export type FileHtmlPartialConnection = {
   group: Array<FileHtmlPartialGroupConnection>;
 };
 
-
 export type FileHtmlPartialConnectionDistinctArgs = {
   field: FileHtmlPartialFieldsEnum;
 };
-
 
 export type FileHtmlPartialConnectionMaxArgs = {
   field: FileHtmlPartialFieldsEnum;
 };
 
-
 export type FileHtmlPartialConnectionMinArgs = {
   field: FileHtmlPartialFieldsEnum;
 };
 
-
 export type FileHtmlPartialConnectionSumArgs = {
   field: FileHtmlPartialFieldsEnum;
 };
-
 
 export type FileHtmlPartialConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -5664,26 +5434,21 @@ export type FileHtmlPartialGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type FileHtmlPartialGroupConnectionDistinctArgs = {
   field: FileHtmlPartialFieldsEnum;
 };
-
 
 export type FileHtmlPartialGroupConnectionMaxArgs = {
   field: FileHtmlPartialFieldsEnum;
 };
 
-
 export type FileHtmlPartialGroupConnectionMinArgs = {
   field: FileHtmlPartialFieldsEnum;
 };
 
-
 export type FileHtmlPartialGroupConnectionSumArgs = {
   field: FileHtmlPartialFieldsEnum;
 };
-
 
 export type FileHtmlPartialGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -5708,26 +5473,21 @@ export type DocumentPathConnection = {
   group: Array<DocumentPathGroupConnection>;
 };
 
-
 export type DocumentPathConnectionDistinctArgs = {
   field: DocumentPathFieldsEnum;
 };
-
 
 export type DocumentPathConnectionMaxArgs = {
   field: DocumentPathFieldsEnum;
 };
 
-
 export type DocumentPathConnectionMinArgs = {
   field: DocumentPathFieldsEnum;
 };
 
-
 export type DocumentPathConnectionSumArgs = {
   field: DocumentPathFieldsEnum;
 };
-
 
 export type DocumentPathConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;
@@ -5853,26 +5613,21 @@ export type DocumentPathGroupConnection = {
   fieldValue?: Maybe<Scalars['String']>;
 };
 
-
 export type DocumentPathGroupConnectionDistinctArgs = {
   field: DocumentPathFieldsEnum;
 };
-
 
 export type DocumentPathGroupConnectionMaxArgs = {
   field: DocumentPathFieldsEnum;
 };
 
-
 export type DocumentPathGroupConnectionMinArgs = {
   field: DocumentPathFieldsEnum;
 };
 
-
 export type DocumentPathGroupConnectionSumArgs = {
   field: DocumentPathFieldsEnum;
 };
-
 
 export type DocumentPathGroupConnectionGroupArgs = {
   skip?: InputMaybe<Scalars['Int']>;

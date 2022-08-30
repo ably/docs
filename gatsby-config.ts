@@ -14,6 +14,7 @@ export const plugins = [
   'gatsby-transformer-sharp',
   'gatsby-plugin-react-helmet',
   'gatsby-plugin-ts',
+  'gatsby-plugin-root-import',
   {
     resolve: 'gatsby-plugin-sitemap',
     options: {

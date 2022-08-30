@@ -18,4 +18,6 @@ module.exports = {
   testURL: `http://localhost`,
   setupFiles: [`<rootDir>/loadershim.js`],
   coverageReporters: ['text'],
+  setupFilesAfterEnv: ['<rootDir>/setupTests.js'],
+  testEnvironment: 'jsdom',
 };
