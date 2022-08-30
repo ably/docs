@@ -1,5 +1,5 @@
 import React, { FunctionComponent as FC } from 'react';
-import { HorizontalMenu } from '.';
+import { HorizontalMenu, HorizontalMenuVariant } from '.';
 import MenuLabel from './Label';
 import MenuItem from './MenuItem';
 import '@ably/ui/core/styles.css';

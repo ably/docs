@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TopHorizontalMenuLight } from '../../Menu/index';
+import { HorizontalMenu, HorizontalMenuVariant } from '../../Menu/index';
 import { DropdownButton, dropdownData } from './Dropdown/Button';
 import { DropdownMenu, DropdownDataIdentifier } from './Dropdown';
 import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo';
@@ -16,7 +16,7 @@ export const TopMainNav = () => {
   const menuItems: (keyof typeof dropdownData)[] = ['API References', 'Resources'];
   return (
     <div className="fixed bg-white h-64 z-50 flex w-full border-b border-mid-grey" onMouseLeave={clearDropdownData}>
-      <TopHorizontalMenuLight>
+      <HorizontalMenu variant={HorizontalMenuVariant.light}>
         <HorizontalMenuItemGroup>
           <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
           <SearchBar />
@@ -31,7 +31,7 @@ export const TopMainNav = () => {
             )}
           </UserContext.Consumer>
         </HorizontalMenuItemGroup>
-      </TopHorizontalMenuLight>
+      </HorizontalMenu>
       {dropdownDataID && <DropdownMenu {...dropdownData[dropdownDataID]} />}
     </div>
   );

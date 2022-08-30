@@ -2,7 +2,6 @@ import React, { useContext, FunctionComponent as FC } from 'react';
 import PageLanguageContext from '../../contexts/page-language-context';
 import languageLabels from '../../maps/language';
 import { navigate } from 'gatsby';
-import '../Menu/styles.css';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../common/language-defaults';
 import { safeWindow } from '../../utilities/browser/safe-window';
 import { PREFERRED_LANGUAGE_KEY } from '../../utilities/language/constants';
