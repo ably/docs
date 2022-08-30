@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { HorizontalMenu, HorizontalMenuVariant } from '.';
+import { HorizontalMenu, HorizontalMenuVariant } from 'src/components';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 import PageLanguageContext from '../../contexts/page-language-context';
 import { LanguageDropdownSelector } from './LanguageDropdownSelector/LanguageDropdownSelector';

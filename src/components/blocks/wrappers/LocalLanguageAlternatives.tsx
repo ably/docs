@@ -4,7 +4,7 @@ import { MenuItemButton } from '../../Menu/MenuItemButton';
 import Html from '../Html';
 import LanguageNavigation from '../../Menu/LanguageNavigation';
 import { PageLanguagesContext } from '../../../contexts/page-language-context';
-import LanguageButton from '../../Button/LanguageButton';
+import { LanguageButton } from 'src/components';
 import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
 
 const LocalLanguageAlternatives = ({
@@ -50,7 +50,7 @@ const LocalLanguageAlternatives = ({
 
   return (
     <>
-      <LanguageNavigation items={languageItems as LanguageNavigationProps['items']} />
+      <LanguageNavigation items={languageItems as LanguageNavigationProps['items']} language={selectedLanguage} />
       {selected}
     </>
   );

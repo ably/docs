@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HorizontalMenu, HorizontalMenuVariant } from '../../Menu/index';
+import { HorizontalMenu, HorizontalMenuVariant } from 'src/components';
 import { DropdownButton, dropdownData } from './Dropdown/Button';
 import { DropdownMenu, DropdownDataIdentifier } from './Dropdown';
 import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo';
