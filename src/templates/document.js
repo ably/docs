@@ -112,6 +112,7 @@ export const query = graphql`
         title
         meta_description
         languages
+        redirect_from
       }
     }
     versions: allFileHtmlVersion(filter: { parentSlug: { eq: $slug } }) {

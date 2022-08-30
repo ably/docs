@@ -10,7 +10,7 @@ const { DEFAULT_LANGUAGE } = require('./constants');
 const { identity } = require('lodash');
 const { safeFileExists } = require('./safeFileExists');
 
-const createPages = async ({ graphql, actions: { createPage } }) => {
+const createPages = async ({ graphql, actions: { createPage, createRedirect } }) => {
   const documentTemplate = path.resolve(`src/templates/document.js`);
   const result = await graphql(`
     query {
@@ -29,6 +29,9 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
               data
               type
             }
+            meta {
+              redirect_from
+            }
           }
         }
       }
@@ -45,6 +48,7 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
       )
         .map((content) => (content.data ? content.data : ''))
         .join('\n');
+
       const postParsedContent = postParser(textile(content));
       const contentOrderedList = htmlParser(postParsedContent);
       const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item));
@@ -56,6 +60,23 @@ const createPages = async ({ graphql, actions: { createPage } }) => {
       );
 
       const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
+
+      const pagePath = `${DOCUMENTATION_PATH}${edge.node.slug}`;
+
+      const redirectFromList = edge.node.meta?.redirect_from;
+      if (redirectFromList) {
+        redirectFromList.forEach((redirectFrom) => {
+          const alreadyDocsPage = /^\/docs.*/.test(redirectFrom);
+          const redirectFromPath = `${alreadyDocsPage ? '' : '/docs'}${redirectFrom}`;
+          createRedirect({
+            fromPath: redirectFromPath,
+            toPath: pagePath,
+            isPermanent: true,
+            force: true,
+            redirectInBrowser: true,
+          });
+        });
+      }
 
       createPage({
         path: `${DOCUMENTATION_PATH}${edge.node.slug}`,

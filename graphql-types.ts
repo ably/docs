@@ -68,6 +68,10 @@ export type File = Node & {
   childrenPageFurnitureYaml?: Maybe<Array<Maybe<PageFurnitureYaml>>>;
   /** Returns the first child node of type PageFurnitureYaml or null if there are no children of given type on this node */
   childPageFurnitureYaml?: Maybe<PageFurnitureYaml>;
+  /** Returns all children nodes filtered by type FileHtml */
+  childrenFileHtml?: Maybe<Array<Maybe<FileHtml>>>;
+  /** Returns the first child node of type FileHtml or null if there are no children of given type on this node */
+  childFileHtml?: Maybe<FileHtml>;
   /** Returns all children nodes filtered by type PageContentYaml */
   childrenPageContentYaml?: Maybe<Array<Maybe<PageContentYaml>>>;
   /** Returns the first child node of type PageContentYaml or null if there are no children of given type on this node */
@@ -80,10 +84,6 @@ export type File = Node & {
   childrenFileHtmlPartial?: Maybe<Array<Maybe<FileHtmlPartial>>>;
   /** Returns the first child node of type FileHtmlPartial or null if there are no children of given type on this node */
   childFileHtmlPartial?: Maybe<FileHtmlPartial>;
-  /** Returns all children nodes filtered by type FileHtml */
-  childrenFileHtml?: Maybe<Array<Maybe<FileHtml>>>;
-  /** Returns the first child node of type FileHtml or null if there are no children of given type on this node */
-  childFileHtml?: Maybe<FileHtml>;
   id: Scalars['ID'];
   parent?: Maybe<Node>;
   children: Array<Node>;
@@ -633,6 +633,34 @@ export type PageFurnitureYaml = Node & {
   internal: Internal;
 };
 
+export type FileHtmlContentOrderedListItem = {
+  data: Scalars['String'];
+  type: Scalars['String'];
+};
+
+export type FileHtmlMetaData = {
+  languages?: Maybe<Array<Maybe<Scalars['String']>>>;
+  meta_description?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+  redirect_from?: Maybe<Array<Maybe<Scalars['String']>>>;
+};
+
+export type FileHtml = Node & {
+  contentOrderedList?: Maybe<Array<Maybe<FileHtmlContentOrderedListItem>>>;
+  meta?: Maybe<FileHtmlMetaData>;
+  slug?: Maybe<Scalars['String']>;
+  parentSlug?: Maybe<Scalars['String']>;
+  version?: Maybe<Scalars['String']>;
+  /** Returns all children nodes filtered by type FileHtmlVersion */
+  childrenFileHtmlVersion?: Maybe<Array<Maybe<FileHtmlVersion>>>;
+  /** Returns the first child node of type FileHtmlVersion or null if there are no children of given type on this node */
+  childFileHtmlVersion?: Maybe<FileHtmlVersion>;
+  id: Scalars['ID'];
+  parent?: Maybe<Node>;
+  children: Array<Node>;
+  internal: Internal;
+};
+
 export type Error = Node & {
   message?: Maybe<Scalars['String']>;
   id: Scalars['ID'];
@@ -732,33 +760,6 @@ export type FileHtmlPartialContentOrderedList = {
   type?: Maybe<Scalars['String']>;
 };
 
-export type FileHtml = Node & {
-  id: Scalars['ID'];
-  parent?: Maybe<Node>;
-  children: Array<Node>;
-  internal: Internal;
-  contentOrderedList?: Maybe<Array<Maybe<FileHtmlContentOrderedList>>>;
-  meta?: Maybe<FileHtmlMeta>;
-  slug?: Maybe<Scalars['String']>;
-  parentSlug?: Maybe<Scalars['String']>;
-  version?: Maybe<Scalars['String']>;
-  /** Returns all children nodes filtered by type FileHtmlVersion */
-  childrenFileHtmlVersion?: Maybe<Array<Maybe<FileHtmlVersion>>>;
-  /** Returns the first child node of type FileHtmlVersion or null if there are no children of given type on this node */
-  childFileHtmlVersion?: Maybe<FileHtmlVersion>;
-};
-
-export type FileHtmlContentOrderedList = {
-  data?: Maybe<Scalars['String']>;
-  type?: Maybe<Scalars['String']>;
-};
-
-export type FileHtmlMeta = {
-  title?: Maybe<Scalars['String']>;
-  languages?: Maybe<Array<Maybe<Scalars['String']>>>;
-  meta_description?: Maybe<Scalars['String']>;
-};
-
 export type DocumentPath = Node & {
   id: Scalars['ID'];
   parent?: Maybe<Node>;
@@ -788,6 +789,8 @@ export type Query = {
   allImageSharp: ImageSharpConnection;
   pageFurnitureYaml?: Maybe<PageFurnitureYaml>;
   allPageFurnitureYaml: PageFurnitureYamlConnection;
+  fileHtml?: Maybe<FileHtml>;
+  allFileHtml: FileHtmlConnection;
   error?: Maybe<Error>;
   allError: ErrorConnection;
   pageContentYaml?: Maybe<PageContentYaml>;
@@ -798,8 +801,6 @@ export type Query = {
   allFileHtmlVersion: FileHtmlVersionConnection;
   fileHtmlPartial?: Maybe<FileHtmlPartial>;
   allFileHtmlPartial: FileHtmlPartialConnection;
-  fileHtml?: Maybe<FileHtml>;
-  allFileHtml: FileHtmlConnection;
   documentPath?: Maybe<DocumentPath>;
   allDocumentPath: DocumentPathConnection;
 };
@@ -844,14 +845,14 @@ export type QueryFileArgs = {
   childImageSharp?: InputMaybe<ImageSharpFilterInput>;
   childrenPageFurnitureYaml?: InputMaybe<PageFurnitureYamlFilterListInput>;
   childPageFurnitureYaml?: InputMaybe<PageFurnitureYamlFilterInput>;
+  childrenFileHtml?: InputMaybe<FileHtmlFilterListInput>;
+  childFileHtml?: InputMaybe<FileHtmlFilterInput>;
   childrenPageContentYaml?: InputMaybe<PageContentYamlFilterListInput>;
   childPageContentYaml?: InputMaybe<PageContentYamlFilterInput>;
   childrenFileInlineToc?: InputMaybe<FileInlineTocFilterListInput>;
   childFileInlineToc?: InputMaybe<FileInlineTocFilterInput>;
   childrenFileHtmlPartial?: InputMaybe<FileHtmlPartialFilterListInput>;
   childFileHtmlPartial?: InputMaybe<FileHtmlPartialFilterInput>;
-  childrenFileHtml?: InputMaybe<FileHtmlFilterListInput>;
-  childFileHtml?: InputMaybe<FileHtmlFilterInput>;
   id?: InputMaybe<StringQueryOperatorInput>;
   parent?: InputMaybe<NodeFilterInput>;
   children?: InputMaybe<NodeFilterListInput>;
@@ -1071,6 +1072,29 @@ export type QueryAllPageFurnitureYamlArgs = {
 };
 
 
+export type QueryFileHtmlArgs = {
+  contentOrderedList?: InputMaybe<FileHtmlContentOrderedListItemFilterListInput>;
+  meta?: InputMaybe<FileHtmlMetaDataFilterInput>;
+  slug?: InputMaybe<StringQueryOperatorInput>;
+  parentSlug?: InputMaybe<StringQueryOperatorInput>;
+  version?: InputMaybe<StringQueryOperatorInput>;
+  childrenFileHtmlVersion?: InputMaybe<FileHtmlVersionFilterListInput>;
+  childFileHtmlVersion?: InputMaybe<FileHtmlVersionFilterInput>;
+  id?: InputMaybe<StringQueryOperatorInput>;
+  parent?: InputMaybe<NodeFilterInput>;
+  children?: InputMaybe<NodeFilterListInput>;
+  internal?: InputMaybe<InternalFilterInput>;
+};
+
+
+export type QueryAllFileHtmlArgs = {
+  filter?: InputMaybe<FileHtmlFilterInput>;
+  sort?: InputMaybe<FileHtmlSortInput>;
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+};
+
+
 export type QueryErrorArgs = {
   message?: InputMaybe<StringQueryOperatorInput>;
   id?: InputMaybe<StringQueryOperatorInput>;
@@ -1157,29 +1181,6 @@ export type QueryFileHtmlPartialArgs = {
 export type QueryAllFileHtmlPartialArgs = {
   filter?: InputMaybe<FileHtmlPartialFilterInput>;
   sort?: InputMaybe<FileHtmlPartialSortInput>;
-  skip?: InputMaybe<Scalars['Int']>;
-  limit?: InputMaybe<Scalars['Int']>;
-};
-
-
-export type QueryFileHtmlArgs = {
-  id?: InputMaybe<StringQueryOperatorInput>;
-  parent?: InputMaybe<NodeFilterInput>;
-  children?: InputMaybe<NodeFilterListInput>;
-  internal?: InputMaybe<InternalFilterInput>;
-  contentOrderedList?: InputMaybe<FileHtmlContentOrderedListFilterListInput>;
-  meta?: InputMaybe<FileHtmlMetaFilterInput>;
-  slug?: InputMaybe<StringQueryOperatorInput>;
-  parentSlug?: InputMaybe<StringQueryOperatorInput>;
-  version?: InputMaybe<StringQueryOperatorInput>;
-  childrenFileHtmlVersion?: InputMaybe<FileHtmlVersionFilterListInput>;
-  childFileHtmlVersion?: InputMaybe<FileHtmlVersionFilterInput>;
-};
-
-
-export type QueryAllFileHtmlArgs = {
-  filter?: InputMaybe<FileHtmlFilterInput>;
-  sort?: InputMaybe<FileHtmlSortInput>;
   skip?: InputMaybe<Scalars['Int']>;
   limit?: InputMaybe<Scalars['Int']>;
 };
@@ -1357,6 +1358,54 @@ export type PageFurnitureYamlFilterInput = {
   internal?: InputMaybe<InternalFilterInput>;
 };
 
+export type FileHtmlFilterListInput = {
+  elemMatch?: InputMaybe<FileHtmlFilterInput>;
+};
+
+export type FileHtmlFilterInput = {
+  contentOrderedList?: InputMaybe<FileHtmlContentOrderedListItemFilterListInput>;
+  meta?: InputMaybe<FileHtmlMetaDataFilterInput>;
+  slug?: InputMaybe<StringQueryOperatorInput>;
+  parentSlug?: InputMaybe<StringQueryOperatorInput>;
+  version?: InputMaybe<StringQueryOperatorInput>;
+  childrenFileHtmlVersion?: InputMaybe<FileHtmlVersionFilterListInput>;
+  childFileHtmlVersion?: InputMaybe<FileHtmlVersionFilterInput>;
+  id?: InputMaybe<StringQueryOperatorInput>;
+  parent?: InputMaybe<NodeFilterInput>;
+  children?: InputMaybe<NodeFilterListInput>;
+  internal?: InputMaybe<InternalFilterInput>;
+};
+
+export type FileHtmlContentOrderedListItemFilterListInput = {
+  elemMatch?: InputMaybe<FileHtmlContentOrderedListItemFilterInput>;
+};
+
+export type FileHtmlContentOrderedListItemFilterInput = {
+  data?: InputMaybe<StringQueryOperatorInput>;
+  type?: InputMaybe<StringQueryOperatorInput>;
+};
+
+export type FileHtmlMetaDataFilterInput = {
+  languages?: InputMaybe<StringQueryOperatorInput>;
+  meta_description?: InputMaybe<StringQueryOperatorInput>;
+  title?: InputMaybe<StringQueryOperatorInput>;
+  redirect_from?: InputMaybe<StringQueryOperatorInput>;
+};
+
+export type FileHtmlVersionFilterListInput = {
+  elemMatch?: InputMaybe<FileHtmlVersionFilterInput>;
+};
+
+export type FileHtmlVersionFilterInput = {
+  id?: InputMaybe<StringQueryOperatorInput>;
+  parent?: InputMaybe<NodeFilterInput>;
+  children?: InputMaybe<NodeFilterListInput>;
+  internal?: InputMaybe<InternalFilterInput>;
+  parentSlug?: InputMaybe<StringQueryOperatorInput>;
+  slug?: InputMaybe<StringQueryOperatorInput>;
+  version?: InputMaybe<StringQueryOperatorInput>;
+};
+
 export type PageContentYamlFilterListInput = {
   elemMatch?: InputMaybe<PageContentYamlFilterInput>;
 };
@@ -1476,53 +1525,6 @@ export type FileHtmlPartialContentOrderedListFilterListInput = {
 export type FileHtmlPartialContentOrderedListFilterInput = {
   data?: InputMaybe<StringQueryOperatorInput>;
   type?: InputMaybe<StringQueryOperatorInput>;
-};
-
-export type FileHtmlFilterListInput = {
-  elemMatch?: InputMaybe<FileHtmlFilterInput>;
-};
-
-export type FileHtmlFilterInput = {
-  id?: InputMaybe<StringQueryOperatorInput>;
-  parent?: InputMaybe<NodeFilterInput>;
-  children?: InputMaybe<NodeFilterListInput>;
-  internal?: InputMaybe<InternalFilterInput>;
-  contentOrderedList?: InputMaybe<FileHtmlContentOrderedListFilterListInput>;
-  meta?: InputMaybe<FileHtmlMetaFilterInput>;
-  slug?: InputMaybe<StringQueryOperatorInput>;
-  parentSlug?: InputMaybe<StringQueryOperatorInput>;
-  version?: InputMaybe<StringQueryOperatorInput>;
-  childrenFileHtmlVersion?: InputMaybe<FileHtmlVersionFilterListInput>;
-  childFileHtmlVersion?: InputMaybe<FileHtmlVersionFilterInput>;
-};
-
-export type FileHtmlContentOrderedListFilterListInput = {
-  elemMatch?: InputMaybe<FileHtmlContentOrderedListFilterInput>;
-};
-
-export type FileHtmlContentOrderedListFilterInput = {
-  data?: InputMaybe<StringQueryOperatorInput>;
-  type?: InputMaybe<StringQueryOperatorInput>;
-};
-
-export type FileHtmlMetaFilterInput = {
-  title?: InputMaybe<StringQueryOperatorInput>;
-  languages?: InputMaybe<StringQueryOperatorInput>;
-  meta_description?: InputMaybe<StringQueryOperatorInput>;
-};
-
-export type FileHtmlVersionFilterListInput = {
-  elemMatch?: InputMaybe<FileHtmlVersionFilterInput>;
-};
-
-export type FileHtmlVersionFilterInput = {
-  id?: InputMaybe<StringQueryOperatorInput>;
-  parent?: InputMaybe<NodeFilterInput>;
-  children?: InputMaybe<NodeFilterListInput>;
-  internal?: InputMaybe<InternalFilterInput>;
-  parentSlug?: InputMaybe<StringQueryOperatorInput>;
-  slug?: InputMaybe<StringQueryOperatorInput>;
-  version?: InputMaybe<StringQueryOperatorInput>;
 };
 
 export type FileConnection = {
@@ -1901,6 +1903,173 @@ export type FileFieldsEnum =
   | 'childPageFurnitureYaml___internal___mediaType'
   | 'childPageFurnitureYaml___internal___owner'
   | 'childPageFurnitureYaml___internal___type'
+  | 'childrenFileHtml'
+  | 'childrenFileHtml___contentOrderedList'
+  | 'childrenFileHtml___contentOrderedList___data'
+  | 'childrenFileHtml___contentOrderedList___type'
+  | 'childrenFileHtml___meta___languages'
+  | 'childrenFileHtml___meta___meta_description'
+  | 'childrenFileHtml___meta___title'
+  | 'childrenFileHtml___meta___redirect_from'
+  | 'childrenFileHtml___slug'
+  | 'childrenFileHtml___parentSlug'
+  | 'childrenFileHtml___version'
+  | 'childrenFileHtml___childrenFileHtmlVersion'
+  | 'childrenFileHtml___childrenFileHtmlVersion___id'
+  | 'childrenFileHtml___childrenFileHtmlVersion___parent___id'
+  | 'childrenFileHtml___childrenFileHtmlVersion___parent___children'
+  | 'childrenFileHtml___childrenFileHtmlVersion___children'
+  | 'childrenFileHtml___childrenFileHtmlVersion___children___id'
+  | 'childrenFileHtml___childrenFileHtmlVersion___children___children'
+  | 'childrenFileHtml___childrenFileHtmlVersion___internal___content'
+  | 'childrenFileHtml___childrenFileHtmlVersion___internal___contentDigest'
+  | 'childrenFileHtml___childrenFileHtmlVersion___internal___description'
+  | 'childrenFileHtml___childrenFileHtmlVersion___internal___fieldOwners'
+  | 'childrenFileHtml___childrenFileHtmlVersion___internal___ignoreType'
+  | 'childrenFileHtml___childrenFileHtmlVersion___internal___mediaType'
+  | 'childrenFileHtml___childrenFileHtmlVersion___internal___owner'
+  | 'childrenFileHtml___childrenFileHtmlVersion___internal___type'
+  | 'childrenFileHtml___childrenFileHtmlVersion___parentSlug'
+  | 'childrenFileHtml___childrenFileHtmlVersion___slug'
+  | 'childrenFileHtml___childrenFileHtmlVersion___version'
+  | 'childrenFileHtml___childFileHtmlVersion___id'
+  | 'childrenFileHtml___childFileHtmlVersion___parent___id'
+  | 'childrenFileHtml___childFileHtmlVersion___parent___children'
+  | 'childrenFileHtml___childFileHtmlVersion___children'
+  | 'childrenFileHtml___childFileHtmlVersion___children___id'
+  | 'childrenFileHtml___childFileHtmlVersion___children___children'
+  | 'childrenFileHtml___childFileHtmlVersion___internal___content'
+  | 'childrenFileHtml___childFileHtmlVersion___internal___contentDigest'
+  | 'childrenFileHtml___childFileHtmlVersion___internal___description'
+  | 'childrenFileHtml___childFileHtmlVersion___internal___fieldOwners'
+  | 'childrenFileHtml___childFileHtmlVersion___internal___ignoreType'
+  | 'childrenFileHtml___childFileHtmlVersion___internal___mediaType'
+  | 'childrenFileHtml___childFileHtmlVersion___internal___owner'
+  | 'childrenFileHtml___childFileHtmlVersion___internal___type'
+  | 'childrenFileHtml___childFileHtmlVersion___parentSlug'
+  | 'childrenFileHtml___childFileHtmlVersion___slug'
+  | 'childrenFileHtml___childFileHtmlVersion___version'
+  | 'childrenFileHtml___id'
+  | 'childrenFileHtml___parent___id'
+  | 'childrenFileHtml___parent___parent___id'
+  | 'childrenFileHtml___parent___parent___children'
+  | 'childrenFileHtml___parent___children'
+  | 'childrenFileHtml___parent___children___id'
+  | 'childrenFileHtml___parent___children___children'
+  | 'childrenFileHtml___parent___internal___content'
+  | 'childrenFileHtml___parent___internal___contentDigest'
+  | 'childrenFileHtml___parent___internal___description'
+  | 'childrenFileHtml___parent___internal___fieldOwners'
+  | 'childrenFileHtml___parent___internal___ignoreType'
+  | 'childrenFileHtml___parent___internal___mediaType'
+  | 'childrenFileHtml___parent___internal___owner'
+  | 'childrenFileHtml___parent___internal___type'
+  | 'childrenFileHtml___children'
+  | 'childrenFileHtml___children___id'
+  | 'childrenFileHtml___children___parent___id'
+  | 'childrenFileHtml___children___parent___children'
+  | 'childrenFileHtml___children___children'
+  | 'childrenFileHtml___children___children___id'
+  | 'childrenFileHtml___children___children___children'
+  | 'childrenFileHtml___children___internal___content'
+  | 'childrenFileHtml___children___internal___contentDigest'
+  | 'childrenFileHtml___children___internal___description'
+  | 'childrenFileHtml___children___internal___fieldOwners'
+  | 'childrenFileHtml___children___internal___ignoreType'
+  | 'childrenFileHtml___children___internal___mediaType'
+  | 'childrenFileHtml___children___internal___owner'
+  | 'childrenFileHtml___children___internal___type'
+  | 'childrenFileHtml___internal___content'
+  | 'childrenFileHtml___internal___contentDigest'
+  | 'childrenFileHtml___internal___description'
+  | 'childrenFileHtml___internal___fieldOwners'
+  | 'childrenFileHtml___internal___ignoreType'
+  | 'childrenFileHtml___internal___mediaType'
+  | 'childrenFileHtml___internal___owner'
+  | 'childrenFileHtml___internal___type'
+  | 'childFileHtml___contentOrderedList'
+  | 'childFileHtml___contentOrderedList___data'
+  | 'childFileHtml___contentOrderedList___type'
+  | 'childFileHtml___meta___languages'
+  | 'childFileHtml___meta___meta_description'
+  | 'childFileHtml___meta___title'
+  | 'childFileHtml___meta___redirect_from'
+  | 'childFileHtml___slug'
+  | 'childFileHtml___parentSlug'
+  | 'childFileHtml___version'
+  | 'childFileHtml___childrenFileHtmlVersion'
+  | 'childFileHtml___childrenFileHtmlVersion___id'
+  | 'childFileHtml___childrenFileHtmlVersion___parent___id'
+  | 'childFileHtml___childrenFileHtmlVersion___parent___children'
+  | 'childFileHtml___childrenFileHtmlVersion___children'
+  | 'childFileHtml___childrenFileHtmlVersion___children___id'
+  | 'childFileHtml___childrenFileHtmlVersion___children___children'
+  | 'childFileHtml___childrenFileHtmlVersion___internal___content'
+  | 'childFileHtml___childrenFileHtmlVersion___internal___contentDigest'
+  | 'childFileHtml___childrenFileHtmlVersion___internal___description'
+  | 'childFileHtml___childrenFileHtmlVersion___internal___fieldOwners'
+  | 'childFileHtml___childrenFileHtmlVersion___internal___ignoreType'
+  | 'childFileHtml___childrenFileHtmlVersion___internal___mediaType'
+  | 'childFileHtml___childrenFileHtmlVersion___internal___owner'
+  | 'childFileHtml___childrenFileHtmlVersion___internal___type'
+  | 'childFileHtml___childrenFileHtmlVersion___parentSlug'
+  | 'childFileHtml___childrenFileHtmlVersion___slug'
+  | 'childFileHtml___childrenFileHtmlVersion___version'
+  | 'childFileHtml___childFileHtmlVersion___id'
+  | 'childFileHtml___childFileHtmlVersion___parent___id'
+  | 'childFileHtml___childFileHtmlVersion___parent___children'
+  | 'childFileHtml___childFileHtmlVersion___children'
+  | 'childFileHtml___childFileHtmlVersion___children___id'
+  | 'childFileHtml___childFileHtmlVersion___children___children'
+  | 'childFileHtml___childFileHtmlVersion___internal___content'
+  | 'childFileHtml___childFileHtmlVersion___internal___contentDigest'
+  | 'childFileHtml___childFileHtmlVersion___internal___description'
+  | 'childFileHtml___childFileHtmlVersion___internal___fieldOwners'
+  | 'childFileHtml___childFileHtmlVersion___internal___ignoreType'
+  | 'childFileHtml___childFileHtmlVersion___internal___mediaType'
+  | 'childFileHtml___childFileHtmlVersion___internal___owner'
+  | 'childFileHtml___childFileHtmlVersion___internal___type'
+  | 'childFileHtml___childFileHtmlVersion___parentSlug'
+  | 'childFileHtml___childFileHtmlVersion___slug'
+  | 'childFileHtml___childFileHtmlVersion___version'
+  | 'childFileHtml___id'
+  | 'childFileHtml___parent___id'
+  | 'childFileHtml___parent___parent___id'
+  | 'childFileHtml___parent___parent___children'
+  | 'childFileHtml___parent___children'
+  | 'childFileHtml___parent___children___id'
+  | 'childFileHtml___parent___children___children'
+  | 'childFileHtml___parent___internal___content'
+  | 'childFileHtml___parent___internal___contentDigest'
+  | 'childFileHtml___parent___internal___description'
+  | 'childFileHtml___parent___internal___fieldOwners'
+  | 'childFileHtml___parent___internal___ignoreType'
+  | 'childFileHtml___parent___internal___mediaType'
+  | 'childFileHtml___parent___internal___owner'
+  | 'childFileHtml___parent___internal___type'
+  | 'childFileHtml___children'
+  | 'childFileHtml___children___id'
+  | 'childFileHtml___children___parent___id'
+  | 'childFileHtml___children___parent___children'
+  | 'childFileHtml___children___children'
+  | 'childFileHtml___children___children___id'
+  | 'childFileHtml___children___children___children'
+  | 'childFileHtml___children___internal___content'
+  | 'childFileHtml___children___internal___contentDigest'
+  | 'childFileHtml___children___internal___description'
+  | 'childFileHtml___children___internal___fieldOwners'
+  | 'childFileHtml___children___internal___ignoreType'
+  | 'childFileHtml___children___internal___mediaType'
+  | 'childFileHtml___children___internal___owner'
+  | 'childFileHtml___children___internal___type'
+  | 'childFileHtml___internal___content'
+  | 'childFileHtml___internal___contentDigest'
+  | 'childFileHtml___internal___description'
+  | 'childFileHtml___internal___fieldOwners'
+  | 'childFileHtml___internal___ignoreType'
+  | 'childFileHtml___internal___mediaType'
+  | 'childFileHtml___internal___owner'
+  | 'childFileHtml___internal___type'
   | 'childrenPageContentYaml'
   | 'childrenPageContentYaml___id'
   | 'childrenPageContentYaml___parent___id'
@@ -2180,171 +2349,6 @@ export type FileFieldsEnum =
   | 'childFileHtmlPartial___contentOrderedList___data'
   | 'childFileHtmlPartial___contentOrderedList___type'
   | 'childFileHtmlPartial___relativePath'
-  | 'childrenFileHtml'
-  | 'childrenFileHtml___id'
-  | 'childrenFileHtml___parent___id'
-  | 'childrenFileHtml___parent___parent___id'
-  | 'childrenFileHtml___parent___parent___children'
-  | 'childrenFileHtml___parent___children'
-  | 'childrenFileHtml___parent___children___id'
-  | 'childrenFileHtml___parent___children___children'
-  | 'childrenFileHtml___parent___internal___content'
-  | 'childrenFileHtml___parent___internal___contentDigest'
-  | 'childrenFileHtml___parent___internal___description'
-  | 'childrenFileHtml___parent___internal___fieldOwners'
-  | 'childrenFileHtml___parent___internal___ignoreType'
-  | 'childrenFileHtml___parent___internal___mediaType'
-  | 'childrenFileHtml___parent___internal___owner'
-  | 'childrenFileHtml___parent___internal___type'
-  | 'childrenFileHtml___children'
-  | 'childrenFileHtml___children___id'
-  | 'childrenFileHtml___children___parent___id'
-  | 'childrenFileHtml___children___parent___children'
-  | 'childrenFileHtml___children___children'
-  | 'childrenFileHtml___children___children___id'
-  | 'childrenFileHtml___children___children___children'
-  | 'childrenFileHtml___children___internal___content'
-  | 'childrenFileHtml___children___internal___contentDigest'
-  | 'childrenFileHtml___children___internal___description'
-  | 'childrenFileHtml___children___internal___fieldOwners'
-  | 'childrenFileHtml___children___internal___ignoreType'
-  | 'childrenFileHtml___children___internal___mediaType'
-  | 'childrenFileHtml___children___internal___owner'
-  | 'childrenFileHtml___children___internal___type'
-  | 'childrenFileHtml___internal___content'
-  | 'childrenFileHtml___internal___contentDigest'
-  | 'childrenFileHtml___internal___description'
-  | 'childrenFileHtml___internal___fieldOwners'
-  | 'childrenFileHtml___internal___ignoreType'
-  | 'childrenFileHtml___internal___mediaType'
-  | 'childrenFileHtml___internal___owner'
-  | 'childrenFileHtml___internal___type'
-  | 'childrenFileHtml___contentOrderedList'
-  | 'childrenFileHtml___contentOrderedList___data'
-  | 'childrenFileHtml___contentOrderedList___type'
-  | 'childrenFileHtml___meta___title'
-  | 'childrenFileHtml___meta___languages'
-  | 'childrenFileHtml___meta___meta_description'
-  | 'childrenFileHtml___slug'
-  | 'childrenFileHtml___parentSlug'
-  | 'childrenFileHtml___version'
-  | 'childrenFileHtml___childrenFileHtmlVersion'
-  | 'childrenFileHtml___childrenFileHtmlVersion___id'
-  | 'childrenFileHtml___childrenFileHtmlVersion___parent___id'
-  | 'childrenFileHtml___childrenFileHtmlVersion___parent___children'
-  | 'childrenFileHtml___childrenFileHtmlVersion___children'
-  | 'childrenFileHtml___childrenFileHtmlVersion___children___id'
-  | 'childrenFileHtml___childrenFileHtmlVersion___children___children'
-  | 'childrenFileHtml___childrenFileHtmlVersion___internal___content'
-  | 'childrenFileHtml___childrenFileHtmlVersion___internal___contentDigest'
-  | 'childrenFileHtml___childrenFileHtmlVersion___internal___description'
-  | 'childrenFileHtml___childrenFileHtmlVersion___internal___fieldOwners'
-  | 'childrenFileHtml___childrenFileHtmlVersion___internal___ignoreType'
-  | 'childrenFileHtml___childrenFileHtmlVersion___internal___mediaType'
-  | 'childrenFileHtml___childrenFileHtmlVersion___internal___owner'
-  | 'childrenFileHtml___childrenFileHtmlVersion___internal___type'
-  | 'childrenFileHtml___childrenFileHtmlVersion___parentSlug'
-  | 'childrenFileHtml___childrenFileHtmlVersion___slug'
-  | 'childrenFileHtml___childrenFileHtmlVersion___version'
-  | 'childrenFileHtml___childFileHtmlVersion___id'
-  | 'childrenFileHtml___childFileHtmlVersion___parent___id'
-  | 'childrenFileHtml___childFileHtmlVersion___parent___children'
-  | 'childrenFileHtml___childFileHtmlVersion___children'
-  | 'childrenFileHtml___childFileHtmlVersion___children___id'
-  | 'childrenFileHtml___childFileHtmlVersion___children___children'
-  | 'childrenFileHtml___childFileHtmlVersion___internal___content'
-  | 'childrenFileHtml___childFileHtmlVersion___internal___contentDigest'
-  | 'childrenFileHtml___childFileHtmlVersion___internal___description'
-  | 'childrenFileHtml___childFileHtmlVersion___internal___fieldOwners'
-  | 'childrenFileHtml___childFileHtmlVersion___internal___ignoreType'
-  | 'childrenFileHtml___childFileHtmlVersion___internal___mediaType'
-  | 'childrenFileHtml___childFileHtmlVersion___internal___owner'
-  | 'childrenFileHtml___childFileHtmlVersion___internal___type'
-  | 'childrenFileHtml___childFileHtmlVersion___parentSlug'
-  | 'childrenFileHtml___childFileHtmlVersion___slug'
-  | 'childrenFileHtml___childFileHtmlVersion___version'
-  | 'childFileHtml___id'
-  | 'childFileHtml___parent___id'
-  | 'childFileHtml___parent___parent___id'
-  | 'childFileHtml___parent___parent___children'
-  | 'childFileHtml___parent___children'
-  | 'childFileHtml___parent___children___id'
-  | 'childFileHtml___parent___children___children'
-  | 'childFileHtml___parent___internal___content'
-  | 'childFileHtml___parent___internal___contentDigest'
-  | 'childFileHtml___parent___internal___description'
-  | 'childFileHtml___parent___internal___fieldOwners'
-  | 'childFileHtml___parent___internal___ignoreType'
-  | 'childFileHtml___parent___internal___mediaType'
-  | 'childFileHtml___parent___internal___owner'
-  | 'childFileHtml___parent___internal___type'
-  | 'childFileHtml___children'
-  | 'childFileHtml___children___id'
-  | 'childFileHtml___children___parent___id'
-  | 'childFileHtml___children___parent___children'
-  | 'childFileHtml___children___children'
-  | 'childFileHtml___children___children___id'
-  | 'childFileHtml___children___children___children'
-  | 'childFileHtml___children___internal___content'
-  | 'childFileHtml___children___internal___contentDigest'
-  | 'childFileHtml___children___internal___description'
-  | 'childFileHtml___children___internal___fieldOwners'
-  | 'childFileHtml___children___internal___ignoreType'
-  | 'childFileHtml___children___internal___mediaType'
-  | 'childFileHtml___children___internal___owner'
-  | 'childFileHtml___children___internal___type'
-  | 'childFileHtml___internal___content'
-  | 'childFileHtml___internal___contentDigest'
-  | 'childFileHtml___internal___description'
-  | 'childFileHtml___internal___fieldOwners'
-  | 'childFileHtml___internal___ignoreType'
-  | 'childFileHtml___internal___mediaType'
-  | 'childFileHtml___internal___owner'
-  | 'childFileHtml___internal___type'
-  | 'childFileHtml___contentOrderedList'
-  | 'childFileHtml___contentOrderedList___data'
-  | 'childFileHtml___contentOrderedList___type'
-  | 'childFileHtml___meta___title'
-  | 'childFileHtml___meta___languages'
-  | 'childFileHtml___meta___meta_description'
-  | 'childFileHtml___slug'
-  | 'childFileHtml___parentSlug'
-  | 'childFileHtml___version'
-  | 'childFileHtml___childrenFileHtmlVersion'
-  | 'childFileHtml___childrenFileHtmlVersion___id'
-  | 'childFileHtml___childrenFileHtmlVersion___parent___id'
-  | 'childFileHtml___childrenFileHtmlVersion___parent___children'
-  | 'childFileHtml___childrenFileHtmlVersion___children'
-  | 'childFileHtml___childrenFileHtmlVersion___children___id'
-  | 'childFileHtml___childrenFileHtmlVersion___children___children'
-  | 'childFileHtml___childrenFileHtmlVersion___internal___content'
-  | 'childFileHtml___childrenFileHtmlVersion___internal___contentDigest'
-  | 'childFileHtml___childrenFileHtmlVersion___internal___description'
-  | 'childFileHtml___childrenFileHtmlVersion___internal___fieldOwners'
-  | 'childFileHtml___childrenFileHtmlVersion___internal___ignoreType'
-  | 'childFileHtml___childrenFileHtmlVersion___internal___mediaType'
-  | 'childFileHtml___childrenFileHtmlVersion___internal___owner'
-  | 'childFileHtml___childrenFileHtmlVersion___internal___type'
-  | 'childFileHtml___childrenFileHtmlVersion___parentSlug'
-  | 'childFileHtml___childrenFileHtmlVersion___slug'
-  | 'childFileHtml___childrenFileHtmlVersion___version'
-  | 'childFileHtml___childFileHtmlVersion___id'
-  | 'childFileHtml___childFileHtmlVersion___parent___id'
-  | 'childFileHtml___childFileHtmlVersion___parent___children'
-  | 'childFileHtml___childFileHtmlVersion___children'
-  | 'childFileHtml___childFileHtmlVersion___children___id'
-  | 'childFileHtml___childFileHtmlVersion___children___children'
-  | 'childFileHtml___childFileHtmlVersion___internal___content'
-  | 'childFileHtml___childFileHtmlVersion___internal___contentDigest'
-  | 'childFileHtml___childFileHtmlVersion___internal___description'
-  | 'childFileHtml___childFileHtmlVersion___internal___fieldOwners'
-  | 'childFileHtml___childFileHtmlVersion___internal___ignoreType'
-  | 'childFileHtml___childFileHtmlVersion___internal___mediaType'
-  | 'childFileHtml___childFileHtmlVersion___internal___owner'
-  | 'childFileHtml___childFileHtmlVersion___internal___type'
-  | 'childFileHtml___childFileHtmlVersion___parentSlug'
-  | 'childFileHtml___childFileHtmlVersion___slug'
-  | 'childFileHtml___childFileHtmlVersion___version'
   | 'id'
   | 'parent___id'
   | 'parent___parent___id'
@@ -2512,14 +2516,14 @@ export type FileFilterInput = {
   childImageSharp?: InputMaybe<ImageSharpFilterInput>;
   childrenPageFurnitureYaml?: InputMaybe<PageFurnitureYamlFilterListInput>;
   childPageFurnitureYaml?: InputMaybe<PageFurnitureYamlFilterInput>;
+  childrenFileHtml?: InputMaybe<FileHtmlFilterListInput>;
+  childFileHtml?: InputMaybe<FileHtmlFilterInput>;
   childrenPageContentYaml?: InputMaybe<PageContentYamlFilterListInput>;
   childPageContentYaml?: InputMaybe<PageContentYamlFilterInput>;
   childrenFileInlineToc?: InputMaybe<FileInlineTocFilterListInput>;
   childFileInlineToc?: InputMaybe<FileInlineTocFilterInput>;
   childrenFileHtmlPartial?: InputMaybe<FileHtmlPartialFilterListInput>;
   childFileHtmlPartial?: InputMaybe<FileHtmlPartialFilterInput>;
-  childrenFileHtml?: InputMaybe<FileHtmlFilterListInput>;
-  childFileHtml?: InputMaybe<FileHtmlFilterInput>;
   id?: InputMaybe<StringQueryOperatorInput>;
   parent?: InputMaybe<NodeFilterInput>;
   children?: InputMaybe<NodeFilterListInput>;
@@ -4312,6 +4316,278 @@ export type PageFurnitureYamlSortInput = {
   order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
 };
 
+export type FileHtmlConnection = {
+  totalCount: Scalars['Int'];
+  edges: Array<FileHtmlEdge>;
+  nodes: Array<FileHtml>;
+  pageInfo: PageInfo;
+  distinct: Array<Scalars['String']>;
+  max?: Maybe<Scalars['Float']>;
+  min?: Maybe<Scalars['Float']>;
+  sum?: Maybe<Scalars['Float']>;
+  group: Array<FileHtmlGroupConnection>;
+};
+
+
+export type FileHtmlConnectionDistinctArgs = {
+  field: FileHtmlFieldsEnum;
+};
+
+
+export type FileHtmlConnectionMaxArgs = {
+  field: FileHtmlFieldsEnum;
+};
+
+
+export type FileHtmlConnectionMinArgs = {
+  field: FileHtmlFieldsEnum;
+};
+
+
+export type FileHtmlConnectionSumArgs = {
+  field: FileHtmlFieldsEnum;
+};
+
+
+export type FileHtmlConnectionGroupArgs = {
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+  field: FileHtmlFieldsEnum;
+};
+
+export type FileHtmlEdge = {
+  next?: Maybe<FileHtml>;
+  node: FileHtml;
+  previous?: Maybe<FileHtml>;
+};
+
+export type FileHtmlFieldsEnum =
+  | 'contentOrderedList'
+  | 'contentOrderedList___data'
+  | 'contentOrderedList___type'
+  | 'meta___languages'
+  | 'meta___meta_description'
+  | 'meta___title'
+  | 'meta___redirect_from'
+  | 'slug'
+  | 'parentSlug'
+  | 'version'
+  | 'childrenFileHtmlVersion'
+  | 'childrenFileHtmlVersion___id'
+  | 'childrenFileHtmlVersion___parent___id'
+  | 'childrenFileHtmlVersion___parent___parent___id'
+  | 'childrenFileHtmlVersion___parent___parent___children'
+  | 'childrenFileHtmlVersion___parent___children'
+  | 'childrenFileHtmlVersion___parent___children___id'
+  | 'childrenFileHtmlVersion___parent___children___children'
+  | 'childrenFileHtmlVersion___parent___internal___content'
+  | 'childrenFileHtmlVersion___parent___internal___contentDigest'
+  | 'childrenFileHtmlVersion___parent___internal___description'
+  | 'childrenFileHtmlVersion___parent___internal___fieldOwners'
+  | 'childrenFileHtmlVersion___parent___internal___ignoreType'
+  | 'childrenFileHtmlVersion___parent___internal___mediaType'
+  | 'childrenFileHtmlVersion___parent___internal___owner'
+  | 'childrenFileHtmlVersion___parent___internal___type'
+  | 'childrenFileHtmlVersion___children'
+  | 'childrenFileHtmlVersion___children___id'
+  | 'childrenFileHtmlVersion___children___parent___id'
+  | 'childrenFileHtmlVersion___children___parent___children'
+  | 'childrenFileHtmlVersion___children___children'
+  | 'childrenFileHtmlVersion___children___children___id'
+  | 'childrenFileHtmlVersion___children___children___children'
+  | 'childrenFileHtmlVersion___children___internal___content'
+  | 'childrenFileHtmlVersion___children___internal___contentDigest'
+  | 'childrenFileHtmlVersion___children___internal___description'
+  | 'childrenFileHtmlVersion___children___internal___fieldOwners'
+  | 'childrenFileHtmlVersion___children___internal___ignoreType'
+  | 'childrenFileHtmlVersion___children___internal___mediaType'
+  | 'childrenFileHtmlVersion___children___internal___owner'
+  | 'childrenFileHtmlVersion___children___internal___type'
+  | 'childrenFileHtmlVersion___internal___content'
+  | 'childrenFileHtmlVersion___internal___contentDigest'
+  | 'childrenFileHtmlVersion___internal___description'
+  | 'childrenFileHtmlVersion___internal___fieldOwners'
+  | 'childrenFileHtmlVersion___internal___ignoreType'
+  | 'childrenFileHtmlVersion___internal___mediaType'
+  | 'childrenFileHtmlVersion___internal___owner'
+  | 'childrenFileHtmlVersion___internal___type'
+  | 'childrenFileHtmlVersion___parentSlug'
+  | 'childrenFileHtmlVersion___slug'
+  | 'childrenFileHtmlVersion___version'
+  | 'childFileHtmlVersion___id'
+  | 'childFileHtmlVersion___parent___id'
+  | 'childFileHtmlVersion___parent___parent___id'
+  | 'childFileHtmlVersion___parent___parent___children'
+  | 'childFileHtmlVersion___parent___children'
+  | 'childFileHtmlVersion___parent___children___id'
+  | 'childFileHtmlVersion___parent___children___children'
+  | 'childFileHtmlVersion___parent___internal___content'
+  | 'childFileHtmlVersion___parent___internal___contentDigest'
+  | 'childFileHtmlVersion___parent___internal___description'
+  | 'childFileHtmlVersion___parent___internal___fieldOwners'
+  | 'childFileHtmlVersion___parent___internal___ignoreType'
+  | 'childFileHtmlVersion___parent___internal___mediaType'
+  | 'childFileHtmlVersion___parent___internal___owner'
+  | 'childFileHtmlVersion___parent___internal___type'
+  | 'childFileHtmlVersion___children'
+  | 'childFileHtmlVersion___children___id'
+  | 'childFileHtmlVersion___children___parent___id'
+  | 'childFileHtmlVersion___children___parent___children'
+  | 'childFileHtmlVersion___children___children'
+  | 'childFileHtmlVersion___children___children___id'
+  | 'childFileHtmlVersion___children___children___children'
+  | 'childFileHtmlVersion___children___internal___content'
+  | 'childFileHtmlVersion___children___internal___contentDigest'
+  | 'childFileHtmlVersion___children___internal___description'
+  | 'childFileHtmlVersion___children___internal___fieldOwners'
+  | 'childFileHtmlVersion___children___internal___ignoreType'
+  | 'childFileHtmlVersion___children___internal___mediaType'
+  | 'childFileHtmlVersion___children___internal___owner'
+  | 'childFileHtmlVersion___children___internal___type'
+  | 'childFileHtmlVersion___internal___content'
+  | 'childFileHtmlVersion___internal___contentDigest'
+  | 'childFileHtmlVersion___internal___description'
+  | 'childFileHtmlVersion___internal___fieldOwners'
+  | 'childFileHtmlVersion___internal___ignoreType'
+  | 'childFileHtmlVersion___internal___mediaType'
+  | 'childFileHtmlVersion___internal___owner'
+  | 'childFileHtmlVersion___internal___type'
+  | 'childFileHtmlVersion___parentSlug'
+  | 'childFileHtmlVersion___slug'
+  | 'childFileHtmlVersion___version'
+  | 'id'
+  | 'parent___id'
+  | 'parent___parent___id'
+  | 'parent___parent___parent___id'
+  | 'parent___parent___parent___children'
+  | 'parent___parent___children'
+  | 'parent___parent___children___id'
+  | 'parent___parent___children___children'
+  | 'parent___parent___internal___content'
+  | 'parent___parent___internal___contentDigest'
+  | 'parent___parent___internal___description'
+  | 'parent___parent___internal___fieldOwners'
+  | 'parent___parent___internal___ignoreType'
+  | 'parent___parent___internal___mediaType'
+  | 'parent___parent___internal___owner'
+  | 'parent___parent___internal___type'
+  | 'parent___children'
+  | 'parent___children___id'
+  | 'parent___children___parent___id'
+  | 'parent___children___parent___children'
+  | 'parent___children___children'
+  | 'parent___children___children___id'
+  | 'parent___children___children___children'
+  | 'parent___children___internal___content'
+  | 'parent___children___internal___contentDigest'
+  | 'parent___children___internal___description'
+  | 'parent___children___internal___fieldOwners'
+  | 'parent___children___internal___ignoreType'
+  | 'parent___children___internal___mediaType'
+  | 'parent___children___internal___owner'
+  | 'parent___children___internal___type'
+  | 'parent___internal___content'
+  | 'parent___internal___contentDigest'
+  | 'parent___internal___description'
+  | 'parent___internal___fieldOwners'
+  | 'parent___internal___ignoreType'
+  | 'parent___internal___mediaType'
+  | 'parent___internal___owner'
+  | 'parent___internal___type'
+  | 'children'
+  | 'children___id'
+  | 'children___parent___id'
+  | 'children___parent___parent___id'
+  | 'children___parent___parent___children'
+  | 'children___parent___children'
+  | 'children___parent___children___id'
+  | 'children___parent___children___children'
+  | 'children___parent___internal___content'
+  | 'children___parent___internal___contentDigest'
+  | 'children___parent___internal___description'
+  | 'children___parent___internal___fieldOwners'
+  | 'children___parent___internal___ignoreType'
+  | 'children___parent___internal___mediaType'
+  | 'children___parent___internal___owner'
+  | 'children___parent___internal___type'
+  | 'children___children'
+  | 'children___children___id'
+  | 'children___children___parent___id'
+  | 'children___children___parent___children'
+  | 'children___children___children'
+  | 'children___children___children___id'
+  | 'children___children___children___children'
+  | 'children___children___internal___content'
+  | 'children___children___internal___contentDigest'
+  | 'children___children___internal___description'
+  | 'children___children___internal___fieldOwners'
+  | 'children___children___internal___ignoreType'
+  | 'children___children___internal___mediaType'
+  | 'children___children___internal___owner'
+  | 'children___children___internal___type'
+  | 'children___internal___content'
+  | 'children___internal___contentDigest'
+  | 'children___internal___description'
+  | 'children___internal___fieldOwners'
+  | 'children___internal___ignoreType'
+  | 'children___internal___mediaType'
+  | 'children___internal___owner'
+  | 'children___internal___type'
+  | 'internal___content'
+  | 'internal___contentDigest'
+  | 'internal___description'
+  | 'internal___fieldOwners'
+  | 'internal___ignoreType'
+  | 'internal___mediaType'
+  | 'internal___owner'
+  | 'internal___type';
+
+export type FileHtmlGroupConnection = {
+  totalCount: Scalars['Int'];
+  edges: Array<FileHtmlEdge>;
+  nodes: Array<FileHtml>;
+  pageInfo: PageInfo;
+  distinct: Array<Scalars['String']>;
+  max?: Maybe<Scalars['Float']>;
+  min?: Maybe<Scalars['Float']>;
+  sum?: Maybe<Scalars['Float']>;
+  group: Array<FileHtmlGroupConnection>;
+  field: Scalars['String'];
+  fieldValue?: Maybe<Scalars['String']>;
+};
+
+
+export type FileHtmlGroupConnectionDistinctArgs = {
+  field: FileHtmlFieldsEnum;
+};
+
+
+export type FileHtmlGroupConnectionMaxArgs = {
+  field: FileHtmlFieldsEnum;
+};
+
+
+export type FileHtmlGroupConnectionMinArgs = {
+  field: FileHtmlFieldsEnum;
+};
+
+
+export type FileHtmlGroupConnectionSumArgs = {
+  field: FileHtmlFieldsEnum;
+};
+
+
+export type FileHtmlGroupConnectionGroupArgs = {
+  skip?: InputMaybe<Scalars['Int']>;
+  limit?: InputMaybe<Scalars['Int']>;
+  field: FileHtmlFieldsEnum;
+};
+
+export type FileHtmlSortInput = {
+  fields?: InputMaybe<Array<InputMaybe<FileHtmlFieldsEnum>>>;
+  order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
+};
+
 export type ErrorConnection = {
   totalCount: Scalars['Int'];
   edges: Array<ErrorEdge>;
@@ -5243,277 +5519,6 @@ export type FileHtmlPartialGroupConnectionGroupArgs = {
 
 export type FileHtmlPartialSortInput = {
   fields?: InputMaybe<Array<InputMaybe<FileHtmlPartialFieldsEnum>>>;
-  order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
-};
-
-export type FileHtmlConnection = {
-  totalCount: Scalars['Int'];
-  edges: Array<FileHtmlEdge>;
-  nodes: Array<FileHtml>;
-  pageInfo: PageInfo;
-  distinct: Array<Scalars['String']>;
-  max?: Maybe<Scalars['Float']>;
-  min?: Maybe<Scalars['Float']>;
-  sum?: Maybe<Scalars['Float']>;
-  group: Array<FileHtmlGroupConnection>;
-};
-
-
-export type FileHtmlConnectionDistinctArgs = {
-  field: FileHtmlFieldsEnum;
-};
-
-
-export type FileHtmlConnectionMaxArgs = {
-  field: FileHtmlFieldsEnum;
-};
-
-
-export type FileHtmlConnectionMinArgs = {
-  field: FileHtmlFieldsEnum;
-};
-
-
-export type FileHtmlConnectionSumArgs = {
-  field: FileHtmlFieldsEnum;
-};
-
-
-export type FileHtmlConnectionGroupArgs = {
-  skip?: InputMaybe<Scalars['Int']>;
-  limit?: InputMaybe<Scalars['Int']>;
-  field: FileHtmlFieldsEnum;
-};
-
-export type FileHtmlEdge = {
-  next?: Maybe<FileHtml>;
-  node: FileHtml;
-  previous?: Maybe<FileHtml>;
-};
-
-export type FileHtmlFieldsEnum =
-  | 'id'
-  | 'parent___id'
-  | 'parent___parent___id'
-  | 'parent___parent___parent___id'
-  | 'parent___parent___parent___children'
-  | 'parent___parent___children'
-  | 'parent___parent___children___id'
-  | 'parent___parent___children___children'
-  | 'parent___parent___internal___content'
-  | 'parent___parent___internal___contentDigest'
-  | 'parent___parent___internal___description'
-  | 'parent___parent___internal___fieldOwners'
-  | 'parent___parent___internal___ignoreType'
-  | 'parent___parent___internal___mediaType'
-  | 'parent___parent___internal___owner'
-  | 'parent___parent___internal___type'
-  | 'parent___children'
-  | 'parent___children___id'
-  | 'parent___children___parent___id'
-  | 'parent___children___parent___children'
-  | 'parent___children___children'
-  | 'parent___children___children___id'
-  | 'parent___children___children___children'
-  | 'parent___children___internal___content'
-  | 'parent___children___internal___contentDigest'
-  | 'parent___children___internal___description'
-  | 'parent___children___internal___fieldOwners'
-  | 'parent___children___internal___ignoreType'
-  | 'parent___children___internal___mediaType'
-  | 'parent___children___internal___owner'
-  | 'parent___children___internal___type'
-  | 'parent___internal___content'
-  | 'parent___internal___contentDigest'
-  | 'parent___internal___description'
-  | 'parent___internal___fieldOwners'
-  | 'parent___internal___ignoreType'
-  | 'parent___internal___mediaType'
-  | 'parent___internal___owner'
-  | 'parent___internal___type'
-  | 'children'
-  | 'children___id'
-  | 'children___parent___id'
-  | 'children___parent___parent___id'
-  | 'children___parent___parent___children'
-  | 'children___parent___children'
-  | 'children___parent___children___id'
-  | 'children___parent___children___children'
-  | 'children___parent___internal___content'
-  | 'children___parent___internal___contentDigest'
-  | 'children___parent___internal___description'
-  | 'children___parent___internal___fieldOwners'
-  | 'children___parent___internal___ignoreType'
-  | 'children___parent___internal___mediaType'
-  | 'children___parent___internal___owner'
-  | 'children___parent___internal___type'
-  | 'children___children'
-  | 'children___children___id'
-  | 'children___children___parent___id'
-  | 'children___children___parent___children'
-  | 'children___children___children'
-  | 'children___children___children___id'
-  | 'children___children___children___children'
-  | 'children___children___internal___content'
-  | 'children___children___internal___contentDigest'
-  | 'children___children___internal___description'
-  | 'children___children___internal___fieldOwners'
-  | 'children___children___internal___ignoreType'
-  | 'children___children___internal___mediaType'
-  | 'children___children___internal___owner'
-  | 'children___children___internal___type'
-  | 'children___internal___content'
-  | 'children___internal___contentDigest'
-  | 'children___internal___description'
-  | 'children___internal___fieldOwners'
-  | 'children___internal___ignoreType'
-  | 'children___internal___mediaType'
-  | 'children___internal___owner'
-  | 'children___internal___type'
-  | 'internal___content'
-  | 'internal___contentDigest'
-  | 'internal___description'
-  | 'internal___fieldOwners'
-  | 'internal___ignoreType'
-  | 'internal___mediaType'
-  | 'internal___owner'
-  | 'internal___type'
-  | 'contentOrderedList'
-  | 'contentOrderedList___data'
-  | 'contentOrderedList___type'
-  | 'meta___title'
-  | 'meta___languages'
-  | 'meta___meta_description'
-  | 'slug'
-  | 'parentSlug'
-  | 'version'
-  | 'childrenFileHtmlVersion'
-  | 'childrenFileHtmlVersion___id'
-  | 'childrenFileHtmlVersion___parent___id'
-  | 'childrenFileHtmlVersion___parent___parent___id'
-  | 'childrenFileHtmlVersion___parent___parent___children'
-  | 'childrenFileHtmlVersion___parent___children'
-  | 'childrenFileHtmlVersion___parent___children___id'
-  | 'childrenFileHtmlVersion___parent___children___children'
-  | 'childrenFileHtmlVersion___parent___internal___content'
-  | 'childrenFileHtmlVersion___parent___internal___contentDigest'
-  | 'childrenFileHtmlVersion___parent___internal___description'
-  | 'childrenFileHtmlVersion___parent___internal___fieldOwners'
-  | 'childrenFileHtmlVersion___parent___internal___ignoreType'
-  | 'childrenFileHtmlVersion___parent___internal___mediaType'
-  | 'childrenFileHtmlVersion___parent___internal___owner'
-  | 'childrenFileHtmlVersion___parent___internal___type'
-  | 'childrenFileHtmlVersion___children'
-  | 'childrenFileHtmlVersion___children___id'
-  | 'childrenFileHtmlVersion___children___parent___id'
-  | 'childrenFileHtmlVersion___children___parent___children'
-  | 'childrenFileHtmlVersion___children___children'
-  | 'childrenFileHtmlVersion___children___children___id'
-  | 'childrenFileHtmlVersion___children___children___children'
-  | 'childrenFileHtmlVersion___children___internal___content'
-  | 'childrenFileHtmlVersion___children___internal___contentDigest'
-  | 'childrenFileHtmlVersion___children___internal___description'
-  | 'childrenFileHtmlVersion___children___internal___fieldOwners'
-  | 'childrenFileHtmlVersion___children___internal___ignoreType'
-  | 'childrenFileHtmlVersion___children___internal___mediaType'
-  | 'childrenFileHtmlVersion___children___internal___owner'
-  | 'childrenFileHtmlVersion___children___internal___type'
-  | 'childrenFileHtmlVersion___internal___content'
-  | 'childrenFileHtmlVersion___internal___contentDigest'
-  | 'childrenFileHtmlVersion___internal___description'
-  | 'childrenFileHtmlVersion___internal___fieldOwners'
-  | 'childrenFileHtmlVersion___internal___ignoreType'
-  | 'childrenFileHtmlVersion___internal___mediaType'
-  | 'childrenFileHtmlVersion___internal___owner'
-  | 'childrenFileHtmlVersion___internal___type'
-  | 'childrenFileHtmlVersion___parentSlug'
-  | 'childrenFileHtmlVersion___slug'
-  | 'childrenFileHtmlVersion___version'
-  | 'childFileHtmlVersion___id'
-  | 'childFileHtmlVersion___parent___id'
-  | 'childFileHtmlVersion___parent___parent___id'
-  | 'childFileHtmlVersion___parent___parent___children'
-  | 'childFileHtmlVersion___parent___children'
-  | 'childFileHtmlVersion___parent___children___id'
-  | 'childFileHtmlVersion___parent___children___children'
-  | 'childFileHtmlVersion___parent___internal___content'
-  | 'childFileHtmlVersion___parent___internal___contentDigest'
-  | 'childFileHtmlVersion___parent___internal___description'
-  | 'childFileHtmlVersion___parent___internal___fieldOwners'
-  | 'childFileHtmlVersion___parent___internal___ignoreType'
-  | 'childFileHtmlVersion___parent___internal___mediaType'
-  | 'childFileHtmlVersion___parent___internal___owner'
-  | 'childFileHtmlVersion___parent___internal___type'
-  | 'childFileHtmlVersion___children'
-  | 'childFileHtmlVersion___children___id'
-  | 'childFileHtmlVersion___children___parent___id'
-  | 'childFileHtmlVersion___children___parent___children'
-  | 'childFileHtmlVersion___children___children'
-  | 'childFileHtmlVersion___children___children___id'
-  | 'childFileHtmlVersion___children___children___children'
-  | 'childFileHtmlVersion___children___internal___content'
-  | 'childFileHtmlVersion___children___internal___contentDigest'
-  | 'childFileHtmlVersion___children___internal___description'
-  | 'childFileHtmlVersion___children___internal___fieldOwners'
-  | 'childFileHtmlVersion___children___internal___ignoreType'
-  | 'childFileHtmlVersion___children___internal___mediaType'
-  | 'childFileHtmlVersion___children___internal___owner'
-  | 'childFileHtmlVersion___children___internal___type'
-  | 'childFileHtmlVersion___internal___content'
-  | 'childFileHtmlVersion___internal___contentDigest'
-  | 'childFileHtmlVersion___internal___description'
-  | 'childFileHtmlVersion___internal___fieldOwners'
-  | 'childFileHtmlVersion___internal___ignoreType'
-  | 'childFileHtmlVersion___internal___mediaType'
-  | 'childFileHtmlVersion___internal___owner'
-  | 'childFileHtmlVersion___internal___type'
-  | 'childFileHtmlVersion___parentSlug'
-  | 'childFileHtmlVersion___slug'
-  | 'childFileHtmlVersion___version';
-
-export type FileHtmlGroupConnection = {
-  totalCount: Scalars['Int'];
-  edges: Array<FileHtmlEdge>;
-  nodes: Array<FileHtml>;
-  pageInfo: PageInfo;
-  distinct: Array<Scalars['String']>;
-  max?: Maybe<Scalars['Float']>;
-  min?: Maybe<Scalars['Float']>;
-  sum?: Maybe<Scalars['Float']>;
-  group: Array<FileHtmlGroupConnection>;
-  field: Scalars['String'];
-  fieldValue?: Maybe<Scalars['String']>;
-};
-
-
-export type FileHtmlGroupConnectionDistinctArgs = {
-  field: FileHtmlFieldsEnum;
-};
-
-
-export type FileHtmlGroupConnectionMaxArgs = {
-  field: FileHtmlFieldsEnum;
-};
-
-
-export type FileHtmlGroupConnectionMinArgs = {
-  field: FileHtmlFieldsEnum;
-};
-
-
-export type FileHtmlGroupConnectionSumArgs = {
-  field: FileHtmlFieldsEnum;
-};
-
-
-export type FileHtmlGroupConnectionGroupArgs = {
-  skip?: InputMaybe<Scalars['Int']>;
-  limit?: InputMaybe<Scalars['Int']>;
-  field: FileHtmlFieldsEnum;
-};
-
-export type FileHtmlSortInput = {
-  fields?: InputMaybe<Array<InputMaybe<FileHtmlFieldsEnum>>>;
   order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
 };
 

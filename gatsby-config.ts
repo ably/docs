@@ -87,4 +87,5 @@ export const plugins = [
       icon: 'src/images/favicon.png',
     },
   },
+  `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/
 ];
