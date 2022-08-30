@@ -1,11 +1,12 @@
 import React, { useContext, useState } from 'react';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import languageLabels from '../../../maps/language';
-import MenuItemButton, { SelectedMenuItemButton } from '../../Menu/MenuItem/MenuItemButton';
+import MenuItemButton from '../../Menu/MenuItem/MenuItemButton';
 import Html from '../Html';
 import LanguageNavigation from '../../Menu/LanguageNavigation';
 import { PageLanguagesContext } from '../../../contexts/page-language-context';
 import LanguageButton from '../../Button/LanguageButton';
+import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
 
 const LocalLanguageAlternatives = ({
   language,
@@ -42,11 +43,12 @@ const LocalLanguageAlternatives = ({
     }
     // Local button, if global language option doesn't exist
     return {
-      Component: lang === selectedLanguage ? SelectedMenuItemButton : MenuItemButton,
+      Component: MenuItemButton,
       props: {
         language: '',
         onClick,
         value: lang,
+        isSelected: lang === selectedLanguage,
       },
       content: languageLabels[lang] ?? lang,
     };
@@ -54,7 +56,7 @@ const LocalLanguageAlternatives = ({
 
   return (
     <>
-      <LanguageNavigation label={label} items={languageItems} />
+      <LanguageNavigation label={label} items={languageItems as LanguageNavigationProps['items']} />
       {selected}
     </>
   );
