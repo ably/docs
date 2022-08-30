@@ -1,10 +1,27 @@
-import React, { useRef, useState } from 'react';
+import React, { ChangeEvent, useRef } from 'react';
+import { useSearch } from 'src/hooks';
 import { SearchIcon } from '.';
 
 export const SearchBar = () => {
-  const [searchTerm, setSearchTerm] = useState('');
   const textInput = useRef<null | HTMLInputElement>(null);
-  const focusOnSearchInput = () => textInput.current && textInput.current.focus && textInput.current.focus();
+  const focusOnSearchInput = () => textInput.current && textInput.current.focus();
+
+  const {
+    state: { query },
+    actions: { search },
+  } = useSearch({
+    addsearchApiKey: process.env.GATSBY_ADDSEARCH_API_KEY,
+    enableParamsSync: true,
+    configureClient: ({ client }) => {
+      client.setThrottleTime(800);
+    },
+  });
+
+  const handleSearch = ({ target }: ChangeEvent<HTMLInputElement>) => {
+    const { value } = target;
+    search({ query: value });
+  };
+
   return (
     <div
       onClick={focusOnSearchInput}
@@ -16,8 +33,8 @@ export const SearchBar = () => {
         ref={textInput}
         placeholder="Search"
         className="h-48 w-256 font-light bg-transparent pl-8 text-base outline-none"
-        value={searchTerm}
-        onChange={({ target: { value } }) => setSearchTerm(value)}
+        value={query}
+        onChange={handleSearch}
       />
     </div>
   );
