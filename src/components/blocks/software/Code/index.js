@@ -39,13 +39,6 @@ import { getRandomChannelName } from './get-random-channel-name';
 const API_KEY_LENGTH = 57;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
 
-const SelectedLanguage = ({ language }) =>
-  language ? <div className="docs-language-label">{language.label}</div> : null;
-
-SelectedLanguage.propTypes = {
-  language: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
-};
-
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.javascript.key, js);
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.java.key, java);
 SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.ruby.key, ruby);
@@ -121,7 +114,6 @@ const Code = ({ data, attribs }) => {
             />
           )}
         </UserContext.Consumer>
-        <SelectedLanguage language={displayLanguage} />
         <UserContext.Consumer>
           {(value) => (
             <MultilineCodeContent

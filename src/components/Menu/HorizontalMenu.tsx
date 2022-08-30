@@ -23,7 +23,6 @@ const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.menu }: Prop
   >
     {children}
   </menu>
-  // <>{children}</>
 );
 
 export default HorizontalMenu;

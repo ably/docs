@@ -7,12 +7,12 @@ import { PreProps } from './pre-props';
 const Pre = ({ data, language, languages, altData, attribs }: PreProps): ReactElement => {
   const withModifiedClassname = {
     ...attribs,
-    className: `docs-pre-container`,
+    className: `bg-cool-black text-white p-0 rounded-lg border border-cool-black mb-32`,
   };
   return (
     <pre {...withModifiedClassname}>
       {languages ? (
-        <LocalLanguageAlternatives language={language} languages={languages} data={altData}>
+        <LocalLanguageAlternatives languages={languages} data={altData}>
           <Html data={data} />
         </LocalLanguageAlternatives>
       ) : (

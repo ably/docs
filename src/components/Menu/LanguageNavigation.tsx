@@ -1,7 +1,6 @@
 import React, { FunctionComponent as FC } from 'react';
-import { HorizontalMenu, HorizontalMenuVariant } from '.';
-import MenuLabel from './Label';
-import MenuItem from './MenuItem';
+import { HorizontalMenu } from '.';
+import { CopyIcon } from 'src/icons';
 import '@ably/ui/core/styles.css';
 
 export interface LanguageNavigationComponentProps {
@@ -12,7 +11,6 @@ export interface LanguageNavigationComponentProps {
 }
 
 export interface LanguageNavigationProps {
-  label: string | JSX.Element;
   items: {
     Component: FC<LanguageNavigationComponentProps>;
     props: LanguageNavigationComponentProps;
@@ -20,14 +18,16 @@ export interface LanguageNavigationProps {
   }[];
 }
 
-const LanguageNavigation: FC<LanguageNavigationProps> = ({ label, items }) => (
+const LanguageNavigation: FC<LanguageNavigationProps> = ({ items }) => (
   <HorizontalMenu>
-    {label && <MenuLabel>{label}</MenuLabel>}
     {items.map(({ Component, props, content }, index) => (
-      <MenuItem key={index}>
-        <Component {...props}>{content}</Component>
-      </MenuItem>
+      <Component {...props} key={index}>
+        {content}
+      </Component>
     ))}
+    <ButtonWithTooltip tooltip="Copy" notification="Copied!" onClick={}>
+      <CopyIcon />
+    </ButtonWithTooltip>
   </HorizontalMenu>
 );
 

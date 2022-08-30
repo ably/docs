@@ -80,9 +80,6 @@ module.exports = extendConfig((ablyUIConfig) => ({
     },
     extend: {
       ...ablyUIConfig.theme.extend,
-      fontFamily: {
-        'next-book': ['NEXT Book,Arial,Helvetica,sans-serif'],
-      },
       colors: periodicTableOfRealtimeColors,
       gridRowStart: {
         9: '9',
