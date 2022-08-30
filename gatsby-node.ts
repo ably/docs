@@ -15,6 +15,20 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       text: String
       items: [PageFurnitureYaml!]
     }
+    type FileHtmlContentOrderedListItem {
+      data: String!
+      type: String!
+    }
+    type FileHtmlMetaData {
+      languages: [String]
+      meta_description: String
+      title: String
+      redirect_from: [String]
+    }
+    type FileHtml implements Node {
+      contentOrderedList: [FileHtmlContentOrderedListItem]
+      meta: FileHtmlMetaData
+    }
     type Error implements Node {
       message: String
     }
