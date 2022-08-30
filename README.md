@@ -37,6 +37,27 @@ To run with the website, run:
 
 `gatsby clean && gatsby build --prefix-paths && gatsby serve --prefix-paths`
 
+## Redirects
+
+Redirects are currently implemented using Gatsby's in-built redirect functionality.
+
+To set up a redirect, add the following to the frontmatter of the page that you want to be the _destination_ of the redirect:
+
+```yaml
+redirect_from:
+  - /redirect-from-this-path/
+```
+
+You can also add a single redirect, however while this is supported it is not the principal way to add redirects; adding a YAML array, as shown above, is the most stable and predictable way to add a redirect.
+
+```yaml
+redirect_from: /redirect-from-this-single-path/
+```
+
+If a redirect is not already prepended with `/docs`, `/docs` will be prepended to the redirect source URL; if you need a redirect from the main website to a docs page, Gatsby currently cannot handle this.
+
+Otherwise, the redirect will be left intact.
+
 ## Environment Variables
 
 Note that any env variables needed to show in the browser must be prefixed with `GATSBY_` in order to appear.
