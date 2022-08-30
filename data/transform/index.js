@@ -1,6 +1,6 @@
 const yaml = require('js-yaml');
 const { upperFirst, camelCase, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
-const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require('./front-matter');
+const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH, prepareAllowedMetaFields } = require('./front-matter');
 const DataTypes = require('../types');
 const { ROOT_LEVEL, MAX_LEVEL } = require('../../src/components/Sidebar/consts');
 const { preParser } = require('./pre-parser');
@@ -159,7 +159,7 @@ const transformNanocTextiles =
     const isVersion = /\/versions\/v[\d.]+/.test(slug);
 
     if (frontmatterMeta !== NO_MATCH) {
-      newNodeData.meta = filterAllowedMetaFields(frontmatterMeta.attributes);
+      newNodeData.meta = prepareAllowedMetaFields(filterAllowedMetaFields(frontmatterMeta.attributes));
       if (
         !isVersion &&
         process.env.NODE_ENV === 'development' &&
