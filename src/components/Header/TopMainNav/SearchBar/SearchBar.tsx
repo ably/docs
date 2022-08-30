@@ -25,7 +25,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
         type="text"
         ref={textInput}
         placeholder="Search"
-        className="h-48 font-light bg-transparent pl-8 text-base outline-none"
+        className="font-light bg-transparent pl-8 text-base outline-none"
         value={searchTerm}
         onChange={({ target: { value } }) => setSearchTerm(value)}
       />
