@@ -26,6 +26,8 @@ export const TopMainNav = () => {
           {menuItems.map((dropdownDataID, i) => (
             <DropdownButton key={i} title={dropdownDataID} setDropdownData={setDropdownData(dropdownDataID)} />
           ))}
+        </HorizontalMenuItemGroup>
+        <HorizontalMenuItemGroup>
           <UserContext.Consumer>
             {({ sessionState }) => (
               <>
