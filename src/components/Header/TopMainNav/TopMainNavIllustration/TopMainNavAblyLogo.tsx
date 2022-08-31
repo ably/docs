@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useMemo, useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import { safeWindow } from '../../../../utilities/browser/safe-window';
 
 export const TopMainNavAblyLogo = ({ href = '/' }: { href: string }) => {
@@ -8,7 +8,7 @@ export const TopMainNavAblyLogo = ({ href = '/' }: { href: string }) => {
     setWidth(window.innerWidth);
   }, []);
   return (
-    <a href={href} className="h-32 flex-none">
+    <a href={href} className="h-32 flex-non self-center">
       {width > 1024 ? (
         <img src="/images/icons/ably-docs-logo.svg" />
       ) : (

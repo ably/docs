@@ -30,7 +30,7 @@ export const RightSidebarMobile = ({ menuData, languages }: { menuData: MenuData
     NAV_HEIGHT_DESKTOP + (languages ? DISTANCE_FROM_TOP_WITH_LANGUAGE_MENU_DESKTOP : DISTANCE_FROM_TOP_DESKTOP);
   return (
     <div
-      className="sticky bg-white col-span-3 flex flex-row items-center z-1 w-full h-48 md:hidden"
+      className="sticky bg-white col-span-3 flex flex-row items-center top-0 z-1 w-full h-48 md:hidden"
       style={{ top: distanceFromTop }}
     >
       <span className="pr-12">On this page: </span>

@@ -8,7 +8,7 @@ export const HamburgerButton = ({
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }) => (
-  <button onClick={() => setIsOpen(!isOpen)}>
+  <button className="self-center" onClick={() => setIsOpen(!isOpen)}>
     <HamburgerIcon isOpen={isOpen} />
   </button>
 );

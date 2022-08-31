@@ -9,11 +9,11 @@ import { removeAdhocSidebarItems } from './remove-adhoc-sidebar-items';
 import { HamburgerSidebarDropdownPopulatedItem } from './HamburgerSidebarDropdownPopulatedItem/HamburgerSidebarDropdownPopulatedItem';
 import { MAX_NESTING_LEVEL } from './constants';
 
-export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData, index: number) =>
+export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData) =>
   sidebarItemData.dropdownData ? (
-    <HamburgerSidebarDropdownPopulatedItem key={index} {...sidebarItemData} />
+    <HamburgerSidebarDropdownPopulatedItem key={sidebarItemData.label} {...sidebarItemData} />
   ) : (
-    <HamburgerSidebarItem key={index} {...sidebarItemData} />
+    <HamburgerSidebarItem key={sidebarItemData.label} {...sidebarItemData} />
   );
 
 export const HamburgerSidebarRenderer = ({ className, data }: SidebarProps) => {

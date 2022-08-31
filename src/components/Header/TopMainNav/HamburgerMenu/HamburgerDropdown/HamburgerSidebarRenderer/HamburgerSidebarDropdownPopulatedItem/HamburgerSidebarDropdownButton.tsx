@@ -22,11 +22,13 @@ export const HamburgerSidebarDropdownButton = ({
         closed ? (
           <HamburgerSidebarItemContainer>
             <h4
-              className="cursor-pointer max-w-full mr-24 flex flex-grow justify-between text-16"
+              className="cursor-pointer max-w-full mr-24 flex flex-grow justify-between text-16
+                            focus-within:outline-none focus-within:text-gui-focus"
               onClick={() => {
                 handleMenuExpansion(label);
                 dispatchBooleanChange(false);
               }}
+              onKeyDown={({ key }) => key === 'Enter' && handleMenuExpansion(label)}
               tabIndex={0}
             >
               <span>{label}</span>

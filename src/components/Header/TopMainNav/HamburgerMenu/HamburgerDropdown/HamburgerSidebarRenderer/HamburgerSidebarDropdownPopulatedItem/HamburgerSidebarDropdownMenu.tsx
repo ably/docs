@@ -22,7 +22,7 @@ export const HamburgerSidebarDropdownMenu = ({
 }: DropdownData & HamburgerSidebarDropdownMenuFunctionProps) => (
   <menu className="p-0">
     <BackButton
-      onClick={() => {
+      toggle={() => {
         handleMenuExpansion(summaryTitle);
         showFooter(true);
       }}

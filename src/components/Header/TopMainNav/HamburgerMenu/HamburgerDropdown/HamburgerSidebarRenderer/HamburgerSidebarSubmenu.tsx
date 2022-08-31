@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { SidebarData } from '../../../../../Sidebar/sidebar-data';
 import { MAX_NESTING_LEVEL } from './constants';
 import { DispatchExpandedMenu } from './hamburger-expanded-menu-context';
@@ -35,12 +35,22 @@ export const HamburgerSidebarSubmenu = ({
   const chevronRotation = `transform rotate-${getClosedRotation(defaultChevronRotationAmount, !closed)}`;
   const maybeRootLevelIndentation = isRootLevelHeader ? 'ml-30' : 'ml-8';
 
+  const focusRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (shouldDisplayRootLevelHeaderIndicator) {
+      focusRef?.current?.focus();
+    }
+  }, [shouldDisplayRootLevelHeaderIndicator, focusRef]);
+
   return (
     <>
       <HamburgerSidebarItemContainer>
         <LabelComponent
-          className="cursor-pointer max-w-full mr-24 flex flex-grow justify-between text-16"
+          ref={focusRef}
+          className="cursor-pointer max-w-full mr-24 flex flex-grow justify-between text-16
+                    focus-within:outline-none focus-within:text-gui-focus"
           onClick={() => handleMenuExpansion(label)}
+          onKeyDown={({ key }) => key === 'Enter' && handleMenuExpansion(label)}
           tabIndex={0}
         >
           <span>
