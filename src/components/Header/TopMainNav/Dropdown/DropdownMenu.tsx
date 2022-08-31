@@ -5,6 +5,7 @@ import UserContext, { SessionState } from '../../../../contexts/user-context';
 import { ContentsContainer, DropdownContentLink } from './Contents';
 import { Summary } from './Summary';
 import { DropdownData } from './types';
+import { kebabCase } from 'lodash';
 
 type Account = {
   links: DropdownContentLink[];
@@ -32,7 +33,7 @@ export const DropdownMenu = ({
     );
   }
   return (
-    <aside id={summaryTitle}>
+    <aside className="flex flex-wrap top-64 fixed w-full left-0" id={kebabCase(summaryTitle)}>
       <Summary titleText={summaryTitle} descriptionText={summaryDescription} summaryLink={summaryLink} />
       <ContentsContainer title={title} contents={contents} />
     </aside>

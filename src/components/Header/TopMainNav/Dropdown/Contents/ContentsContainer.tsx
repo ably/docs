@@ -7,7 +7,7 @@ import { Content } from './types';
 export const ContentsContainer = ({ contents, title }: { contents: Content[]; title: string }) => (
   <DropdownMenuContainer id={title}>
     <Title>{title}</Title>
-    <menu className="list-none grid grid-cols-2 gap-16">
+    <menu className="list-none grid grid-cols-2 gap-16 pl-32 pb-24">
       {contents.map((content, i) => (
         <DropdownItemContent key={i} content={content} />
       ))}
