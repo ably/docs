@@ -1,7 +1,7 @@
 import React from 'react';
 
 export const TopMainNavAblyLogo = ({ href = '/' }: { href: string }) => (
-  <a href={href} className="h-32">
+  <a href={href} className="h-32 self-center">
     <svg width="173" height="32" viewBox="0 0 173 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
         d="M116.137 25.05C122.372 25.05 126.983 20.874 126.983 14.755C126.983 8.63596 122.372 4.45996 116.137 4.45996H109.496V25.05H116.137ZM116.137 6.69296C120.98 6.69296 124.518 9.94096 124.518 14.755C124.518 19.569 120.98 22.817 116.137 22.817H111.903V6.69296H116.137Z"

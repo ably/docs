@@ -15,4 +15,4 @@ export type DropdownData = {
   CustomComponent?: React.FunctionComponent<{ sessionState: SessionState; links: Link[]; preferredEmail: string }>;
 };
 
-export type DropdownDataIdentifier = keyof typeof dropdownData | null;
+export type DropdownDataIdentifier = keyof typeof dropdownData;
