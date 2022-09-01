@@ -648,6 +648,7 @@ export type FileHtmlMetaData = {
 export type FileHtml = Node & {
   contentOrderedList?: Maybe<Array<Maybe<FileHtmlContentOrderedListItem>>>;
   meta?: Maybe<FileHtmlMetaData>;
+  articleType?: Maybe<Scalars['String']>;
   slug?: Maybe<Scalars['String']>;
   parentSlug?: Maybe<Scalars['String']>;
   version?: Maybe<Scalars['String']>;
@@ -751,6 +752,7 @@ export type FileHtmlPartial = Node & {
   parent?: Maybe<Node>;
   children: Array<Node>;
   internal: Internal;
+  articleType?: Maybe<Scalars['String']>;
   contentOrderedList?: Maybe<Array<Maybe<FileHtmlPartialContentOrderedList>>>;
   relativePath?: Maybe<Scalars['String']>;
 };
@@ -1075,6 +1077,7 @@ export type QueryAllPageFurnitureYamlArgs = {
 export type QueryFileHtmlArgs = {
   contentOrderedList?: InputMaybe<FileHtmlContentOrderedListItemFilterListInput>;
   meta?: InputMaybe<FileHtmlMetaDataFilterInput>;
+  articleType?: InputMaybe<StringQueryOperatorInput>;
   slug?: InputMaybe<StringQueryOperatorInput>;
   parentSlug?: InputMaybe<StringQueryOperatorInput>;
   version?: InputMaybe<StringQueryOperatorInput>;
@@ -1173,6 +1176,7 @@ export type QueryFileHtmlPartialArgs = {
   parent?: InputMaybe<NodeFilterInput>;
   children?: InputMaybe<NodeFilterListInput>;
   internal?: InputMaybe<InternalFilterInput>;
+  articleType?: InputMaybe<StringQueryOperatorInput>;
   contentOrderedList?: InputMaybe<FileHtmlPartialContentOrderedListFilterListInput>;
   relativePath?: InputMaybe<StringQueryOperatorInput>;
 };
@@ -1365,6 +1369,7 @@ export type FileHtmlFilterListInput = {
 export type FileHtmlFilterInput = {
   contentOrderedList?: InputMaybe<FileHtmlContentOrderedListItemFilterListInput>;
   meta?: InputMaybe<FileHtmlMetaDataFilterInput>;
+  articleType?: InputMaybe<StringQueryOperatorInput>;
   slug?: InputMaybe<StringQueryOperatorInput>;
   parentSlug?: InputMaybe<StringQueryOperatorInput>;
   version?: InputMaybe<StringQueryOperatorInput>;
@@ -1514,6 +1519,7 @@ export type FileHtmlPartialFilterInput = {
   parent?: InputMaybe<NodeFilterInput>;
   children?: InputMaybe<NodeFilterListInput>;
   internal?: InputMaybe<InternalFilterInput>;
+  articleType?: InputMaybe<StringQueryOperatorInput>;
   contentOrderedList?: InputMaybe<FileHtmlPartialContentOrderedListFilterListInput>;
   relativePath?: InputMaybe<StringQueryOperatorInput>;
 };
@@ -1911,6 +1917,7 @@ export type FileFieldsEnum =
   | 'childrenFileHtml___meta___meta_description'
   | 'childrenFileHtml___meta___title'
   | 'childrenFileHtml___meta___redirect_from'
+  | 'childrenFileHtml___articleType'
   | 'childrenFileHtml___slug'
   | 'childrenFileHtml___parentSlug'
   | 'childrenFileHtml___version'
@@ -1994,6 +2001,7 @@ export type FileFieldsEnum =
   | 'childFileHtml___meta___meta_description'
   | 'childFileHtml___meta___title'
   | 'childFileHtml___meta___redirect_from'
+  | 'childFileHtml___articleType'
   | 'childFileHtml___slug'
   | 'childFileHtml___parentSlug'
   | 'childFileHtml___version'
@@ -2303,6 +2311,7 @@ export type FileFieldsEnum =
   | 'childrenFileHtmlPartial___internal___mediaType'
   | 'childrenFileHtmlPartial___internal___owner'
   | 'childrenFileHtmlPartial___internal___type'
+  | 'childrenFileHtmlPartial___articleType'
   | 'childrenFileHtmlPartial___contentOrderedList'
   | 'childrenFileHtmlPartial___contentOrderedList___data'
   | 'childrenFileHtmlPartial___contentOrderedList___type'
@@ -2345,6 +2354,7 @@ export type FileFieldsEnum =
   | 'childFileHtmlPartial___internal___mediaType'
   | 'childFileHtmlPartial___internal___owner'
   | 'childFileHtmlPartial___internal___type'
+  | 'childFileHtmlPartial___articleType'
   | 'childFileHtmlPartial___contentOrderedList'
   | 'childFileHtmlPartial___contentOrderedList___data'
   | 'childFileHtmlPartial___contentOrderedList___type'
@@ -4369,6 +4379,7 @@ export type FileHtmlFieldsEnum =
   | 'meta___meta_description'
   | 'meta___title'
   | 'meta___redirect_from'
+  | 'articleType'
   | 'slug'
   | 'parentSlug'
   | 'version'
@@ -5471,6 +5482,7 @@ export type FileHtmlPartialFieldsEnum =
   | 'internal___mediaType'
   | 'internal___owner'
   | 'internal___type'
+  | 'articleType'
   | 'contentOrderedList'
   | 'contentOrderedList___data'
   | 'contentOrderedList___type'

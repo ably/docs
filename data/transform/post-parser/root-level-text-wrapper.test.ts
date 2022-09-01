@@ -16,9 +16,8 @@ Wherever possible, success response bodies contain links, in <a href="https://en
 
 const textileTransformedUnwrappedTextSample = rootLevelTextWrapper(sampleUnwrappedText);
 
-describe('No section should be left unwrapped by an HTML element at the root level', () => {
-  it('Should successfully transform the content into HTML data', () => {
-    expect(textileTransformedUnwrappedTextSample).toBe(`<p>The properties of an Ably error are:</p>
+it('No section should be left unwrapped by an HTML element at the root level', () => {
+  expect(textileTransformedUnwrappedTextSample).toBe(`<p>The properties of an Ably error are:</p>
 <dl>
   <dt>code</dt>
   <dd>A specific reason code as defined in the <a href="https://github.com/ably/ably-common/blob/main/protocol/errors.json">public errors definition</a>, where one is known</dd>
@@ -29,5 +28,4 @@ describe('No section should be left unwrapped by an HTML element at the root lev
 </dl>
 <p>Wherever possible, success response bodies contain links, in <a href="https://en.wikipedia.org/wiki/HATEOAS"><span class="caps">HATEOS</span></a> style, to other resources relevant to the response; where these are present these are included as <code>href</code> attributes on the applicable part of the response object.</p>
 <p><code>GET</code>, <code>PUT</code>, <code>POST</code> and <code>DELETE</code> are available in all contexts where they make sense. <code>GET</code> is always idempotent.</p>`);
-  });
 });
