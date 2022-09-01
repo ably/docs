@@ -1,6 +1,6 @@
 // Essentially jQuery for parsing the DOM
 import cheerio from 'cheerio';
-import { defaults, pickAll } from 'lodash/fp';
+import { defaults, isEmpty, pickAll } from 'lodash/fp';
 import DataTypes from '../types';
 import HtmlDataTypes from '../types/html';
 import { addAPIKeyInfoToCodeBlock } from './add-info-to-codeblocks/codeblock-api-key-info';
