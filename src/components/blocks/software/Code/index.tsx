@@ -1,66 +1,38 @@
 import React, { useMemo, useState } from 'react';
-import PropTypes from 'prop-types';
-import Html from '../../Html';
 
-import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
-import '@ably/ui/core/Code/component.css';
-import '@ably/ui/core/styles.css';
-import '../styles.css';
+import Html from 'src/components/blocks/Html';
+import { languageSyntaxHighlighterNames } from 'src/maps/language';
+import UserContext, { devApiKeysPresent } from 'src/contexts/user-context';
 
-// Supported languages need to be imported here
-// https://github.com/highlightjs/highlight.js/blob/master/SUPPORTED_LANGUAGES.md
-import js from 'react-syntax-highlighter/dist/cjs/languages/hljs/javascript';
-import ruby from 'react-syntax-highlighter/dist/cjs/languages/hljs/ruby';
-import java from 'react-syntax-highlighter/dist/cjs/languages/hljs/java';
-import python from 'react-syntax-highlighter/dist/cjs/languages/hljs/python';
-import php from 'react-syntax-highlighter/dist/cjs/languages/hljs/php';
-import bash from 'react-syntax-highlighter/dist/cjs/languages/hljs/bash';
-import cs from 'react-syntax-highlighter/dist/cjs/languages/hljs/csharp';
-import go from 'react-syntax-highlighter/dist/cjs/languages/hljs/go';
-import xml from 'react-syntax-highlighter/dist/cjs/languages/hljs/xml';
-import cpp from 'react-syntax-highlighter/dist/cjs/languages/hljs/cpp';
-import dart from 'react-syntax-highlighter/dist/cjs/languages/hljs/dart';
-import swift from 'react-syntax-highlighter/dist/cjs/languages/hljs/swift';
-import objectivec from 'react-syntax-highlighter/dist/cjs/languages/hljs/objectivec';
-import json from 'react-syntax-highlighter/dist/cjs/languages/hljs/json';
-// Android Studio has an error when registering the language.
-
-import languageLabels, { languageSyntaxHighlighterNames } from '../../../../maps/language';
 import HtmlDataTypes from '../../../../../data/types/html';
-import UserContext, { devApiKeysPresent } from '../../../../contexts/user-context';
+import { API_KEY_DATA_ATTRIBUTE } from '../../../../../data/html-parser/add-info-to-codeblocks/codeblock-api-key-info';
+import { RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE } from '../../../../../data/html-parser/add-info-to-codeblocks/codeblock-random-channel-name';
+
 import APIKeyMenuSelector from './ApiKeyMenuSelector';
 import InlineCodeElement from './InlineCodeElement';
 import CodeCopyButton from './CodeCopyButton';
-import { API_KEY_DATA_ATTRIBUTE } from '../../../../../data/html-parser/add-info-to-codeblocks/codeblock-api-key-info';
-import { RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE } from '../../../../../data/html-parser/add-info-to-codeblocks/codeblock-random-channel-name';
 import { MultilineCodeContent } from './MultilineCodeContent';
 import { getRandomChannelName } from './get-random-channel-name';
+
+import '@ably/ui/core/styles.css';
+import '../styles.css';
 
 const API_KEY_LENGTH = 57;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
 
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.javascript.key, js);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.java.key, java);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.ruby.key, ruby);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.python.key, python);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.php.key, php);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.shell.key, bash);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.csharp.key, cs);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.go.key, go);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.html.key, xml);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.cpp.key, cpp);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.dart.key, dart);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.swift.key, swift);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.objc.key, objectivec);
-SyntaxHighlighter.registerLanguage(languageSyntaxHighlighterNames.json.key, json);
-
 const multilineRegex = /\r|\n/gm;
 
-const Code = ({ data, attribs }) => {
+type Props = {
+  data: Array<any>;
+  attribs: Record<string, any>;
+};
+
+const Code = ({ data, attribs }: Props) => {
   const [activeApiKey, setActiveApiKey] = useState({
     label: DEFAULT_API_KEY_MESSAGE,
     value: DEFAULT_API_KEY_MESSAGE,
   });
+
   const isString = data.length === 1 && data[0].type === HtmlDataTypes.text;
   const hasRenderableLanguages = isString && attribs && attribs.lang;
   const hasMultilineText = isString && multilineRegex.test(data[0].data);
@@ -74,6 +46,7 @@ const Code = ({ data, attribs }) => {
       dataContainsRandomChannelName ? content.replace(/{{RANDOM_CHANNEL_NAME}}/g, getRandomChannelName()) : content,
     [],
   );
+
   /**
    * Refer to Decision Record:
    * https://ably.atlassian.net/wiki/spaces/ENG/pages/2070053031/DR9+API+Keys+vs+tokens+vs+authUrls+in+docs+code+snippets#Recommendation
@@ -103,11 +76,12 @@ const Code = ({ data, attribs }) => {
 
     return (
       <>
-        <div {...attribs} className="p-32 overflow-auto relative" language={languageLabels[attribs.lang]}>
+        <div {...attribs} className="overflow-auto relative">
           <UserContext.Consumer>
             {(value) => (
               <APIKeyMenuSelector
                 dataContainsKey={dataContainsKey}
+                // @ts-ignore - fix api key type mismatch
                 userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
                 setActiveApiKey={setActiveApiKey}
                 activeApiKey={activeApiKey}
@@ -137,11 +111,6 @@ const Code = ({ data, attribs }) => {
       <Html data={data} />
     </InlineCodeElement>
   );
-};
-
-Code.propTypes = {
-  data: PropTypes.array,
-  attribs: PropTypes.object,
 };
 
 export default Code;

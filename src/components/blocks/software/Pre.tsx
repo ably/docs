@@ -1,16 +1,23 @@
-import React, { ReactElement } from 'react';
+import React, { ReactElement, HTMLAttributes } from 'react';
 import Html from '../Html';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import '@ably/ui/core/styles.css';
-import { PreProps } from './pre-props';
 
-const Pre = ({ data, language, languages, altData, attribs }: PreProps): ReactElement => {
+import { HtmlComponentProps } from '../../html-component-props';
+
+type PreProps = HtmlComponentProps<'div'> & {
+  language: string;
+  languages: string[];
+  altData?: Record<string, string | any[] | null | undefined>;
+};
+
+const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
   const withModifiedClassname = {
     ...attribs,
-    className: `bg-cool-black text-white p-0 rounded-lg border border-cool-black mb-32 relative`,
+    className: `bg-cool-black text-white p-0 rounded-lg mb-32 relative overflow-hidden`,
   };
   return (
-    <pre {...withModifiedClassname}>
+    <div {...withModifiedClassname}>
       {languages ? (
         <LocalLanguageAlternatives languages={languages} data={altData}>
           <Html data={data} />
@@ -18,7 +25,7 @@ const Pre = ({ data, language, languages, altData, attribs }: PreProps): ReactEl
       ) : (
         <Html data={data} />
       )}
-    </pre>
+    </div>
   );
 };
 
