@@ -81,6 +81,7 @@ export const createDocuments: GatsbyNode['createPages'] = async ({
 
       const postParsedContent = postParser(textile(content));
       const contentOrderedList = htmlParser(postParsedContent);
+
       const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item));
 
       const languages = getLanguagesFromContent(contentOrderedList);
