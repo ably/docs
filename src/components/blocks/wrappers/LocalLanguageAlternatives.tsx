@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, MouseEvent } from 'react';
 import languageLabels from '../../../maps/language';
 import { MenuItemButton } from '../../Menu/MenuItemButton';
 import Html from '../Html';
@@ -21,7 +21,7 @@ const LocalLanguageAlternatives = ({
   const [selected, setSelected] = useState(children);
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
 
-  const onClick = ({ target: { value } }: { target: { value: string } }) => {
+  const onClick = ({ currentTarget: { value } }: MouseEvent<HTMLButtonElement>) => {
     setSelected(<Html data={data ? data[value] : ''} />);
     setSelectedLanguage(value);
   };
@@ -50,7 +50,7 @@ const LocalLanguageAlternatives = ({
 
   return (
     <>
-      <LanguageNavigation items={languageItems as LanguageNavigationProps['items']} language={selectedLanguage} />
+      <LanguageNavigation items={languageItems as LanguageNavigationProps['items']} />
       {selected}
     </>
   );

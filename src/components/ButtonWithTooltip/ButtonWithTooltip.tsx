@@ -26,21 +26,23 @@ const ButtonWithTooltip = ({ tooltip, notification, children, onClick, className
   };
 
   return (
-    <button type="button" {...buttonProps} onClick={handleClick} className={cn(button, className)} ref={buttonRef}>
-      <span className={tooltipClass}>
+    <div className="relative">
+      <button type="button" {...buttonProps} onClick={handleClick} className={cn(button, className)} ref={buttonRef}>
+        {children}
+      </button>
+      <div className={tooltipClass}>
         <span>{tooltip}</span>
-      </span>
+      </div>
       {notification && (
-        <span
+        <div
           className={cn(notificationClass, {
             [isVisible]: notificationIsVisible,
           })}
         >
           <span>{notification}</span>
-        </span>
+        </div>
       )}
-      {children}
-    </button>
+    </div>
   );
 };
 

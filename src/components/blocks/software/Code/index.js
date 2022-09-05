@@ -102,32 +102,34 @@ const Code = ({ data, attribs }) => {
         : languageSyntaxHighlighterNames['plaintext'];
 
     return (
-      <div {...attribs} className="p-32 overflow-auto relative" language={languageLabels[attribs.lang]}>
-        <UserContext.Consumer>
-          {(value) => (
-            <APIKeyMenuSelector
-              dataContainsKey={dataContainsKey}
-              userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
-              setActiveApiKey={setActiveApiKey}
-              activeApiKey={activeApiKey}
-              signedIn={!!value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN}
-            />
-          )}
-        </UserContext.Consumer>
-        <UserContext.Consumer>
-          {(value) => (
-            <MultilineCodeContent
-              signedIn={value.sessionState.signedIn}
-              dataContainsKey={dataContainsKey}
-              content={contentWithRandomChannelName}
-              contentWithKey={contentWithKey}
-              contentWithObfuscatedKey={contentWithObfuscatedKey}
-              displayLanguage={displayLanguage.key}
-            />
-          )}
-        </UserContext.Consumer>
+      <>
+        <div {...attribs} className="p-32 overflow-auto relative" language={languageLabels[attribs.lang]}>
+          <UserContext.Consumer>
+            {(value) => (
+              <APIKeyMenuSelector
+                dataContainsKey={dataContainsKey}
+                userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
+                setActiveApiKey={setActiveApiKey}
+                activeApiKey={activeApiKey}
+                signedIn={!!value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN}
+              />
+            )}
+          </UserContext.Consumer>
+          <UserContext.Consumer>
+            {(value) => (
+              <MultilineCodeContent
+                signedIn={value.sessionState.signedIn}
+                dataContainsKey={dataContainsKey}
+                content={contentWithRandomChannelName}
+                contentWithKey={contentWithKey}
+                contentWithObfuscatedKey={contentWithObfuscatedKey}
+                displayLanguage={displayLanguage.key}
+              />
+            )}
+          </UserContext.Consumer>
+        </div>
         <CodeCopyButton content={dataContainsKey ? contentWithKey : contentWithRandomChannelName} />
-      </div>
+      </>
     );
   }
   return (
