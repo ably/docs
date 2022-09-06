@@ -1,6 +1,6 @@
 import React from 'react';
-import { filterAttribsForReact } from '../../react-utilities';
-import { componentMap } from '../component-map';
+import { filterAttribsForReact } from '../../../react-utilities';
+import { componentMap } from '../block-component-maps/component-map';
 import Html from '../Html';
 
 export const defaultBlocksFromData = (data) =>

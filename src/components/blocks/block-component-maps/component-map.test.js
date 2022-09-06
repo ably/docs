@@ -1,4 +1,4 @@
-import HtmlDataTypes from '../../data/types/html';
+import HtmlDataTypes from '../../../../data/types/html';
 import { componentMap, IS_TEXT } from '.';
 
 // This test verges on testing third-party libraries, but lodash-fp is poorly documented so it has been included.

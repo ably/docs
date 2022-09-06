@@ -7,6 +7,7 @@ import { componentMap } from './component-map';
 export const IS_TEXT = null;
 
 const ApiReferenceHtmlTypeComponentMap = Object.freeze({
+  // external references
   [HtmlDataTypes.blockquote]: Blockquote,
   // headings
   [HtmlDataTypes.h6]: H6,

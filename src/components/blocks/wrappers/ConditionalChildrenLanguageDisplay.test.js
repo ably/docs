@@ -8,7 +8,7 @@ import { liftLangAttributes } from '../../../../data/html-parser/lift-lang-attri
 import { postParser } from '../../../../data/transform/post-parser';
 import { preParser } from '../../../../data/transform/pre-parser';
 import ConditionalChildrenLanguageDisplay from './ConditionalChildrenLanguageDisplay';
-import { defaultBlocksFromData } from '../blocks-from-data';
+import { defaultBlocksFromData } from '../create-blocks/default-blocks-from-data';
 
 const rawData = `
 - <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
