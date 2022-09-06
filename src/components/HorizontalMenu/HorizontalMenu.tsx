@@ -1,6 +1,6 @@
 import React from 'react';
 import cn from 'classnames';
-import { base, menu, end, light } from './HorizontalMenu.module.css';
+import { end, light } from './HorizontalMenu.module.css';
 
 export enum HorizontalMenuVariant {
   menu = 'menu',
@@ -15,8 +15,8 @@ interface Props {
 
 const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.menu }: Props) => (
   <menu
-    className={cn(base, {
-      [menu]: variant === HorizontalMenuVariant.menu,
+    className={cn('flex overflow-visible m-0', {
+      'rounded-t border-b border-charcoal-grey relative p-0': variant === HorizontalMenuVariant.menu,
       [end]: variant === HorizontalMenuVariant.end,
       [light]: variant === HorizontalMenuVariant.light,
     })}
