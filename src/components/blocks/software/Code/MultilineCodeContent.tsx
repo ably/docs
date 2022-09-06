@@ -55,8 +55,8 @@ export const MultilineCodeContent = ({
   }, [displayLanguage]);
 
   return (
-    <pre ref={preRef} className={cn(`language-${displayLanguage}`)}>
+    <code ref={preRef} className={cn(`language-${displayLanguage} p-32`)} style={{ whiteSpace: 'pre-wrap' }}>
       {renderedContent}
-    </pre>
+    </code>
   );
 };
