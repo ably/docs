@@ -14,7 +14,7 @@ import { Paragraph } from '../typography';
 
 export const IS_TEXT = null;
 
-const HtmlTypeComponentMap = Object.freeze({
+export const HtmlTypeComponentMap = Object.freeze({
   // text
   [HtmlDataTypes.p]: Paragraph,
   // semantic styles
@@ -92,4 +92,13 @@ const HtmlTypeComponentMap = Object.freeze({
   [HtmlDataTypes.wbr]: Wbr,
 });
 
+const ApiReferenceHtmlTypeComponentMap = Object.freeze({
+  // external references
+  [HtmlDataTypes.blockquote]: Blockquote,
+  // headings
+  [HtmlDataTypes.h6]: H6,
+});
+
 export const componentMap = propOr(IS_TEXT, curry.placeholder, HtmlTypeComponentMap);
+export const apiReferenceComponentMap = (htmlDataType) =>
+  propOr(componentMap(htmlDataType), htmlDataType, ApiReferenceHtmlTypeComponentMap);

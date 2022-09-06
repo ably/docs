@@ -1,6 +1,6 @@
 import React from 'react';
 import { filterAttribsForReact } from '../../../react-utilities';
-import { apiReferenceComponentMap } from '../block-component-maps/api-reference-component-map';
+import { apiReferenceComponentMap } from '../block-component-maps/component-map';
 import Html from '../Html';
 
 export const apiReferenceBlocksFromData = (data) =>
