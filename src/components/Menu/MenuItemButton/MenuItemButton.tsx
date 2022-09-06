@@ -2,9 +2,9 @@ import React, { FunctionComponent as FC, HTMLAttributes } from 'react';
 import cn from 'classnames';
 import styles from './MenuItemButton.module.css';
 
-interface Props extends HTMLAttributes<HTMLButtonElement> {
+type Props = {
   isSelected: boolean;
-}
+} & HTMLAttributes<HTMLButtonElement>;
 
 const MenuItemButton: FC<Props> = ({ isSelected, ...props }) => (
   <button
