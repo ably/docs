@@ -2,14 +2,14 @@ import React from 'react';
 import { graphql } from 'gatsby';
 import { templatePropTypes } from './template-prop-types';
 import Template from './base-template';
-import { BlockTypeContext } from 'src/contexts/block-type-context';
-import { ARTICLE_TYPES } from 'data/transform/constants';
+import { ArticleTypeContext } from 'src/contexts/article-type-context';
+import { ARTICLE_TYPES } from '../../data/transform/constants';
 
 const ApiReference = (props) => {
   return (
-    <BlockTypeContext.Provider value={ARTICLE_TYPES.apiReference}>
+    <ArticleTypeContext.Provider value={ARTICLE_TYPES.apiReference}>
       <Template {...props} />
-    </BlockTypeContext.Provider>
+    </ArticleTypeContext.Provider>
   );
 };
 

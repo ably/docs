@@ -1,7 +1,7 @@
 import React from 'react';
-import { filterAttribsForReact } from '../../react-utilities';
-import { apiReferenceComponentMap } from '../component-map';
-import Html from './Html';
+import { filterAttribsForReact } from '../../../react-utilities';
+import { apiReferenceComponentMap } from '../block-component-maps/api-reference-component-map';
+import Html from '../Html';
 
 const apiReferenceBlocksFromData = (data) =>
   data.map(({ attribs, data, name }, i) => {

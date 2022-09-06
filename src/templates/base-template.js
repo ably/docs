@@ -9,11 +9,11 @@ import Article from '../components/Article';
 import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import RightSidebar from '../components/Sidebar/RightSidebar';
 import PageTitle from '../components/PageTitle';
-import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { safeWindow } from '../utilities/browser/safe-window';
 import { PREFERRED_LANGUAGE_KEY } from '../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../components/common/language-defaults';
 import { templatePropTypes } from './template-prop-types';
+import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 
 const getMetaDataDetails = (document, prop, alternative = '') =>
   document && document.meta && document.meta[prop] ? document.meta[prop] : alternative;
