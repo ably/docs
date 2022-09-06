@@ -5,4 +5,4 @@ export const DOCUMENTATION_PATH = `/${DOCUMENTATION_NAME}/`;
 export const ARTICLE_TYPES = {
   document: 'document',
   apiReference: 'apiReference',
-};
+} as const;
