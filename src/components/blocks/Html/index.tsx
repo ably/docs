@@ -4,12 +4,8 @@ import blocksFromData from '../blocks-from-data';
 import { isArray } from 'lodash';
 import ConditionalChildrenLanguageDisplay from '../wrappers/ConditionalChildrenLanguageDisplay';
 
-interface DangerousHtmlProps {
-  data: string;
-}
-
 // This is not to be used in production.
-const DangerousHtml = ({ data }: DangerousHtmlProps) => (
+const DangerousHtml = ({ data }: { data: string }) => (
   <div
     dangerouslySetInnerHTML={{
       __html: DOMPurify.sanitize(data, {

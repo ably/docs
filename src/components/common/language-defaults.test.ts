@@ -12,6 +12,7 @@ describe('getLanguageDefaults', () => {
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
         expect(isLanguageDefault).toBe(true);
         expect(isPageLanguageDefault).toBe(false);
+        // TODO: isLanguageActive
       }),
     );
   });
@@ -21,6 +22,7 @@ describe('getLanguageDefaults', () => {
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
         expect(isLanguageDefault).toBe(false);
         expect(isPageLanguageDefault).toBe(true);
+        // TODO: isLanguageActive
       }),
     );
   });
@@ -30,6 +32,7 @@ describe('getLanguageDefaults', () => {
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
         expect(isLanguageDefault).toBe(true);
         expect(isPageLanguageDefault).toBe(true);
+        // TODO: isLanguageActive
       }),
     );
   });
@@ -42,6 +45,7 @@ describe('getLanguageDefaults', () => {
         );
         expect(isLanguageDefault).toBe(false);
         expect(isPageLanguageDefault).toBe(false);
+        // TODO: isLanguageActive
       }),
     );
   });
@@ -54,6 +58,7 @@ describe('getLanguageDefaults', () => {
         );
         expect(isLanguageDefault).toBe(false);
         expect(isPageLanguageDefault).toBe(false);
+        // TODO: isLanguageActive
       }),
     );
   });
