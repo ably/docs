@@ -17,6 +17,7 @@ It is a good place to put:
 * Operations that cannot take place before the parser runs, for example:
   * Operations that rely on text that would be interpreted by the parser as meaningful syntax
   * Operations that depend on the specific operations in the pre-parsing stage, such as regex operations on whitespace
+  * Operations that depend on some HTML to already be present, but cannot be processed through the htmlParser/Cheerio, such as operations on plain text that is not wrapped in HTML but contains some HTML markup.
 
 It is not the best place to put:
 * Operations that remove information for developers only - consider putting these in pre-parser, so there's less text to process later on, and parsing the more complex HTML structure is a little easier.
