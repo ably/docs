@@ -1,5 +1,6 @@
 import { curry, propOr } from 'lodash/fp';
 import HtmlDataTypes from '../../../../data/types/html';
+import { ApiReferenceH6 } from '../api-reference/headings/ApiReferenceH6';
 import { Button, Input, Meter, Noscript, Progress, Script, Select, Textarea } from '../complex-functionality';
 import { Article, Aside, Div, Main, Section, Span } from '../dividers';
 import { A, Address, Audio, Blockquote, Iframe, Img, Quote, Video } from '../external-references';
@@ -96,7 +97,7 @@ const ApiReferenceHtmlTypeComponentMap = Object.freeze({
   // external references
   [HtmlDataTypes.blockquote]: Blockquote,
   // headings
-  [HtmlDataTypes.h6]: H6,
+  [HtmlDataTypes.h6]: ApiReferenceH6,
 });
 
 export const componentMap = propOr(IS_TEXT, curry.placeholder, HtmlTypeComponentMap);
