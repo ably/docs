@@ -1,5 +1,6 @@
 const { compose } = require('lodash/fp');
 const { convertBlangBlocksToHtml } = require('./blang');
+const { rootLevelTextWrapper } = require('./root-level-text-wrapper');
 
 /**
  * Added by the pre-parser in order to survive textile parsing
@@ -11,7 +12,12 @@ const LINK_EXTERNAL_REGEX = /(<a[^>]*)class="external"([^>]*>)/m;
 const convertExternalLinksToBlankTarget = (content) =>
   content.replace(LINK_EXTERNAL_REGEX, '$1target="_blank" rel="noopener noreferrer"$2');
 
-const postParser = compose(convertExternalLinksToBlankTarget, convertBlangBlocksToHtml, addGithubLineBreaks);
+const postParser = compose(
+  convertExternalLinksToBlankTarget,
+  convertBlangBlocksToHtml,
+  addGithubLineBreaks,
+  rootLevelTextWrapper,
+);
 
 module.exports = {
   postParser,
