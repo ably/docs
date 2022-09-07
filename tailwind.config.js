@@ -4,6 +4,8 @@ const periodicTableOfRealtimeColors = {
   'low-level-transport': 'var(--color-jazzy-pink)',
   'application-transport': '#e40060',
   'realtime-transport': '#ff2739',
+  'api-reference-attribute-highlight': '#ffe6dc',
+  'api-reference-attribute-border': '#ff9e7a',
   'event-driven-push-transport': '#d9d9da',
   'push-notifications': '#80B9F2',
   'realtime-and-messaging-protocol': '#4af7ff',

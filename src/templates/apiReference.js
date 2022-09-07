@@ -19,7 +19,7 @@ export default ApiReference;
 
 export const query = graphql`
   query ($slug: String!) {
-    apiReference: fileHtml(slug: { eq: $slug }) {
+    document: fileHtml(slug: { eq: $slug }) {
       meta {
         title
         meta_description
