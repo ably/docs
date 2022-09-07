@@ -15,6 +15,7 @@ interface Props {
 
 const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.menu }: Props) => (
   <menu
+    role="menu"
     className={cn('flex overflow-visible m-0', {
       'rounded-t border-b border-charcoal-grey relative p-0': variant === HorizontalMenuVariant.menu,
       [end]: variant === HorizontalMenuVariant.end,

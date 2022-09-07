@@ -76,7 +76,7 @@ const Code = ({ data, attribs }: Props) => {
 
     return (
       <>
-        <div {...attribs} className="overflow-auto relative p-16">
+        <div {...attribs} className="overflow-auto relative p-16" data-testid="code-block">
           <UserContext.Consumer>
             {(value) => (
               <APIKeyMenuSelector

@@ -9,56 +9,65 @@ describe('getLanguageDefaults', () => {
   it('Returns the language defaults as expected when language is DEFAULT_LANGUAGE and pageLanguage is not DEFAULT_LANGUAGE', () => {
     assert(
       property(arbitraryDefaultLanguage, arbitraryNotDefaultLanguage, (language, pageLanguage) => {
-        const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
+        const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(
+          language,
+          pageLanguage,
+        );
         expect(isLanguageDefault).toBe(true);
         expect(isPageLanguageDefault).toBe(false);
-        // TODO: isLanguageActive
+        expect(isLanguageActive).toBe(false);
       }),
     );
   });
   it('Returns the language defaults as expected when language is not DEFAULT_LANGUAGE and pageLanguage is DEFAULT_LANGUAGE', () => {
     assert(
       property(arbitraryNotDefaultLanguage, arbitraryDefaultLanguage, (language, pageLanguage) => {
-        const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
+        const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(
+          language,
+          pageLanguage,
+        );
         expect(isLanguageDefault).toBe(false);
         expect(isPageLanguageDefault).toBe(true);
-        // TODO: isLanguageActive
+        expect(isLanguageActive).toBe(false);
       }),
     );
   });
   it('Returns the language defaults as expected when language is DEFAULT_LANGUAGE and pageLanguage is DEFAULT_LANGUAGE', () => {
     assert(
       property(arbitraryDefaultLanguage, arbitraryDefaultLanguage, (language, pageLanguage) => {
-        const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
+        const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(
+          language,
+          pageLanguage,
+        );
         expect(isLanguageDefault).toBe(true);
         expect(isPageLanguageDefault).toBe(true);
-        // TODO: isLanguageActive
+        expect(isLanguageActive).toBe(true);
       }),
     );
   });
   it('Returns the language defaults as expected when language is not DEFAULT_LANGUAGE and pageLanguage is not DEFAULT_LANGUAGE but the same', () => {
     assert(
       property(arbitraryNotDefaultLanguage, (languageOrPageLanguage) => {
-        const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
+        const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(
           languageOrPageLanguage,
           languageOrPageLanguage,
         );
         expect(isLanguageDefault).toBe(false);
         expect(isPageLanguageDefault).toBe(false);
-        // TODO: isLanguageActive
+        expect(isLanguageActive).toBe(true);
       }),
     );
   });
   it('Returns the language defaults as expected when language is not DEFAULT_LANGUAGE and pageLanguage is not DEFAULT_LANGUAGE but different', () => {
     assert(
       property(arbitraryNotDefaultLanguage, arbitraryNotDefaultLanguage, (language, pageLanguage) => {
-        const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
+        const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(
           language,
           `${pageLanguage}${language}#`,
         );
         expect(isLanguageDefault).toBe(false);
         expect(isPageLanguageDefault).toBe(false);
-        // TODO: isLanguageActive
+        expect(isLanguageActive).toBe(false);
       }),
     );
   });

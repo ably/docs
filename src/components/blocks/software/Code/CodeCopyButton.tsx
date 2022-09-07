@@ -1,4 +1,4 @@
-import React, { FunctionComponent as FC, MouseEvent } from 'react';
+import React, { FunctionComponent as FC } from 'react';
 import Icon from '@ably/ui/core/Icon';
 import { ButtonWithTooltip } from 'src/components';
 import '@ably/ui/core/styles.css';
@@ -8,8 +8,7 @@ type Props = {
 };
 
 const CodeCopyButton: FC<Props> = ({ content }) => {
-  const handleCopy = (e: MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
+  const handleCopy = () => {
     navigator.clipboard.writeText(content);
   };
 

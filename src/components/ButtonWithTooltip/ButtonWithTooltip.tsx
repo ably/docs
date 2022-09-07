@@ -30,7 +30,7 @@ const ButtonWithTooltip = ({ tooltip, notification, children, onClick, className
       <button type="button" {...buttonProps} onClick={handleClick} className={cn(button, className)} ref={buttonRef}>
         {children}
       </button>
-      <div className={tooltipClass}>
+      <div className={tooltipClass} role="tooltip">
         <span>{tooltip}</span>
       </div>
       {notification && (

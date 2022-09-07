@@ -3,10 +3,10 @@ import cn from 'classnames';
 import styles from './MenuItemButton.module.css';
 
 type Props = {
-  isSelected: boolean;
+  isSelected?: boolean;
 } & HTMLAttributes<HTMLButtonElement>;
 
-const MenuItemButton: FC<Props> = ({ isSelected, ...props }) => (
+const MenuItemButton: FC<Props> = ({ isSelected = false, ...props }) => (
   <button
     className={cn(styles.button, {
       [styles.isSelected]: isSelected,
