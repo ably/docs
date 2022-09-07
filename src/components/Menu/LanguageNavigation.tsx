@@ -17,7 +17,7 @@ export interface LanguageNavigationProps {
   }[];
 }
 
-const LanguageNavigation: FC<LanguageNavigationProps> = ({ items }) => {
+const LanguageNavigation = ({ items }: LanguageNavigationProps) => {
   return (
     <HorizontalMenu>
       {items.map(({ Component, props, content }, index) => (
