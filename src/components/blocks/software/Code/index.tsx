@@ -20,7 +20,7 @@ import '../styles.css';
 const API_KEY_LENGTH = 57;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
 
-const multilineRegex = /\r|\n/gm;
+export const multilineRegex = /\r|\n/gm;
 
 type Props = {
   data: Array<any>;

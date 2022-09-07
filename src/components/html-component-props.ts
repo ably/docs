@@ -6,5 +6,6 @@ export type ValidReactElement =
 
 export type HtmlComponentProps<T extends ValidReactElement> = {
   attribs: React.ComponentProps<T>;
-  data: HtmlComponentProps<ValidReactElement>[];
+  data: HtmlComponentProps<ValidReactElement>[] | string;
+  type?: string;
 };
