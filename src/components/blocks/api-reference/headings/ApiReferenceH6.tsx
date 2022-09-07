@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 import GenericHtmlBlock from '../../Html/GenericHtmlBlock';
 
+// Preferring styled comopnents here because props pass through automatically.
 const StyledApiReferenceH6 = styled.h6`
   align-items: center;
   padding: 4px 6px;
