@@ -29,7 +29,6 @@ const LanguageLink = ({ language }: { language: string }) => {
     : `../../${isLanguageDefault ? '' : `language/${language}`}`;
 
   return (
-    // 'active' className doesn’t need to be in the Tailwind config safe list as it isn’t part of the Tailwind ecosystem.
     <HoverLink to={href}>{languageLabels[language] ?? language}</HoverLink>
   );
 };
