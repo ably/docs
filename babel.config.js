@@ -2,13 +2,6 @@ module.exports = {
   presets: ['babel-preset-gatsby', '@babel/preset-typescript'],
   plugins: [
     [
-      'module-resolver',
-      {
-        root: ['./src'],
-        extensions: ['.js', '.jsx', '.ts', '.tsx'],
-      },
-    ],
-    [
       'prismjs',
       {
         languages: [
@@ -19,7 +12,9 @@ module.exports = {
           'css',
           'dart',
           'go',
+          'java',
           'javascript',
+          'kotlin',
           'jsx',
           'objectivec',
           'php',
