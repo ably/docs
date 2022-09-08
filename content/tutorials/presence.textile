@@ -4,18 +4,21 @@ authors:
   author_image: https://avatars1.githubusercontent.com/u/5908687?s=460&v=4
   author_name: Simon Woolf
   author_profile_url: https://github.com/SimonWoolf
+- author_bio: ''
+  author_image: https://avatars.githubusercontent.com/u/18176755?s=460&v=4
+  author_name: Mark Lewin
+  author_profile_url: https://github.com/marklewin 
 category:
 - channels
 date_published: '2016-11-01T23:57:06+00:00'
-excerpt: Learn how to track who and which devices are online or offline, and what
-  the status of each user is.
+excerpt: Learn how to use the Presence capability to list clients or devices present on a channel and determine their current status.
 group: sdk
 index: 15
 languages:
 - javascript
 - ruby
 - nodejs
-last_updated: '2021-11-19T16:35:45+00:00'
+last_updated: '2022-08-11T16:35:45+00:00'
 level: medium
 platform: mixed
 reading_time: 15
@@ -31,9 +34,10 @@ Presence enables clients to be aware of other clients that are currently “pres
 
 When someone enters or leaves a channel, or updates their member data, a presence event is emitted to all presence subscribers on that channel. Subscribing to presence events makes it incredibly easy to build an app that shows, in real time, any changes to clients connected to Ably and present on a channel.
 
-The optional payload can be a string, JSON object, JSON array, or binary data, same as with message data.
+The optional payload can be a string, JSON object, JSON array, or binary data: the same as with message data.
 
-"Using our Presence API":/realtime/presence is easy. Let's get started.
+Using the "Presence API":/realtime/presence is straightforward. Follow the steps in this tutorial to learn how.
+
 
 <%= partial partial_version('tutorials/_step-1-create-app-and-api-key') %>
 
@@ -41,21 +45,41 @@ h2.
   default: Step 2 - Install Ably
 
 blang[javascript].
-  To start using Ably in your web app, you first need to include the Ably library. We recommend that you include the latest client library from our CDN using a simple @<script>@ tag. The client library must be instantiated with the API key you copied in Step 1. As we'll be using presence, we also include the @clientId@, which is what we'll appear as in the presence set. Note that in production we recommend you always use the "token authentication scheme":/core-features/authentication#token-authentication for browser clients, however in this example we use an API key for simplicity.
+  Create a blank HTML page called @example.html@, to host your web app:
 
-  Include the code below just before your closing your HTML @</html>@ tag.
-
-  ```[javascript]
-    <!-- Include the latest Ably Library  -->
-    <script src="//cdn.ably.io/lib/ably.min-1.js"></script>
-
-    <!-- instantiate the Ably library  -->
-    <script type="text/javascript">
-      var realtime = new Ably.Realtime({key: apiKey, clientId: 'jamie'});
-    </script>
+  ```[html]
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="UTF-8" />
+          <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Ably Presence</title>
+        </head>
+        <body>
+        </body>
+      </html>
   ```
 
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-javascript-step2
+blang[javascript].
+  To start using Ably in your web app, you first need to include the Ably client library. In this example, we recommend that you include the latest client library from our CDN using a simple @<script>@ tag. You should then instantiate the client library with the API key you copied in Step 1.
+
+  bq. **Note**: in production, Ably recommends that you always use the "token authentication scheme":/core-features/authentication#token-authentication for browser clients, however in this example you will use an API key for simplicity.
+
+blang[javascript].
+  Include the code below just before your closing @</html>@ tag. 
+
+  ```[javascript]
+    <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
+    <script>
+      const apiKey = "YOUR_ABLY_API_KEY"; // Replace with your API key
+      const randomId = Math.random().toString(36).slice(-10); 
+      const realtime = new Ably.Realtime.Promise({
+        key: apiKey,
+        clientId: randomId, // Your ID in the presence set
+      });
+    </script>
+  ```
 
 blang[nodejs].
   To start using Ably you first need to install the NPM module. The NPM module can be installed as follows:
@@ -64,16 +88,64 @@ blang[nodejs].
     npm install ably
   ```
 
-  The client library must be instantiated with the API key you copied in Step 1. API keys used with "basic authentication":/core-features/authentication#basic-authentication for your own servers is generally preferred, however clients running on insecure devices should always use the "token authentication scheme":/core-features/authentication#token-authentication instead. In this example, we use an API key for simplicity.
+  The client library must be instantiated with the API key you copied in Step 1. API keys used with "basic authentication":/core-features/authentication#basic-authentication for your own servers is generally preferred, however clients running on insecure devices should always use the "token authentication scheme":/core-features/authentication#token-authentication instead. In this tutorial, you will use an API key for simplicity.
 
   Add the following to a file named @example.js@ to instantiate the Ably library inside your Node.js server:
 
   ```[nodejs]
-    var Ably = require("ably");
-    var realtime = new Ably.Realtime({ key: apiKey });
+    const Ably = require("ably");
+
+    const apiKey = "YOUR_ABLY_API_KEY"; // Replace with your API key
+    const randomId = Math.random().toString(36).slice(-10); 
+    const realtime = new Ably.Realtime.Promise({
+      key: apiKey,
+      clientId: randomId, // Your ID in the presence set
+    });
   ```
 
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-nodejs-step2
+blang[javascript,nodejs].
+  This code uses the Promise-based version of the Ably client library (@Ably.Realtime.Promise@) that enables you to use the much tidier @await/async@ syntax, instead of relying on callbacks. It generates a random @clientID@ that will be used to identify this particular client in the presence set.
+
+
+blang[javascript,nodejs].
+  Below the line that instantiates the Ably client library, create an @async@ function called @doPresence()@ and call it. This is where you will connect to Ably. It is also where you will write the code for the subsequent steps in this tutorial.
+
+blang[javascript].
+  ```[javascript]
+    <script>
+      ...
+      const realtime = new Ably.Realtime.Promise({
+        key: apiKey,
+        clientId: randomId, // Your ID in the presence set
+      });
+
+      async function doPresence() {
+        // Connect to Ably
+        await realtime.connection.once("connected");
+        console.log("Connected to Ably!");
+        // Your code goes here
+      }
+      doPresence();
+    </script>
+  ```
+
+blang[nodejs].
+  ```[nodejs]
+  ...
+  const realtime = new Ably.Realtime.Promise({
+    key: apiKey,
+    clientId: randomId, // Your ID in the presence set
+  });
+
+  async function doPresence() {
+    // Connect to Ably
+    await realtime.connection.once("connected");
+    console.log("Connected to Ably!");    
+    // Your code goes here
+  }
+  doPresence();
+  ```
+
 
 blang[ruby].
   To start using Ably you first need to install the Ably RubyGem. The RubyGem can be installed as follows:
@@ -88,7 +160,7 @@ blang[ruby].
     gem 'ably'
   ```
 
-  The client library must be instantiated with the API key you copied in Step 1. API keys used with "basic authentication":/core-features/authentication#basic-authentication for your own servers is generally preferred, however clients running on insecure devices should always use the "token authentication scheme":/core-features/authentication#token-authentication instead. In this example, we use an API key for simplicity. As we'll be using presence, we also include the @client_id@, which is what we'll appear as in the presence set.
+  The client library must be instantiated with the API key you copied in Step 1. API keys used with "basic authentication":/core-features/authentication#basic-authentication for your own servers is generally preferred, however clients running on insecure devices should always use the "token authentication scheme":/core-features/authentication#token-authentication instead. In this tutorial, you will use an API key for simplicity. As you'll be using presence, you will also include a @client_id@, which is what will identify your client in the presence set.
 
   The Ruby realtime library uses "EventMachine":https://github.com/eventmachine/eventmachine to run the client library within an asynchronous event loop. However, typically when using Ruby on servers, most developers use the synchronous "REST client library API":/rest. As this tutorial needs realtime access to be present and subscribe to presence messages, it uses the Ruby realtime library.
 
@@ -101,30 +173,28 @@ blang[ruby].
     end
   ```
 
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-ruby-step2
-
 h2. Step 3 - Enter the presence set
 
-With Ably, you can be "attached":/realtime/channels to a channel (that is: be receiving messages published on that channel, or publishing them yourself) without necessarily being present on the channel. If you want to be present, and be seen by other users, you need to explicitly enter the presence set. For example, for a channel called "chatroom":
+With Ably, you can be "attached":/realtime/channels to a channel (that is: be receiving messages published on that channel, or publishing them yourself) without necessarily being present on the channel. If you want to be present, and be seen by other users, you need to explicitly enter the presence set. In this tutorial, you will create a channel called "chatroom" by attaching to it, and then enter the channel's presence set:
 
 blang[javascript,nodejs].
   ```[javascript]
-    var channel = realtime.channels.get('chatroom');
-    channel.attach(function(err) {
-      if(err) { return console.error("Error attaching to the channel"); }
-      console.log('We are now attached to the channel');
-      channel.presence.enter('hello', function(err) {
-        if(err) { return console.error("Error entering presence"); }
-        console.log('We are now successfully present');
+      // Attach to the "chatroom" channel
+      const channel = realtime.channels.get("chatroom");
+      await channel.attach((err) => {
+        if (err) {
+          return console.error("Error attaching to the channel.");
+        }
       });
-    });
+
+      // Enter the presence set of the "chatroom" channel
+      await channel.presence.enter("hello", (err) => {
+        if (err) {
+          return console.error("Error entering presence set.");
+        }
+        console.log("This client has entered the presence set.");
+      });
   ```
-
-blang[javascript].
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-javascript-step3
-
-blang[nodejs].
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-nodejs-step3
 
 blang[ruby].
   ```[ruby]
@@ -137,89 +207,47 @@ blang[ruby].
     end
   ```
 
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-ruby-step3
+You are now in the presence set. The name you will appear as is the @client ID@ that you used to instantiate the Ably client library in step 2.
 
-We're now in the presence set. The name we'll appear as is the @client ID@ that we included in the Realtime constructor in step 2.
+Similarly, you can call @channel.presence.leave@ to leave the presence set.
 
-Similarly, we can call @channel.presence.leave@ to leave the presence set.
-
-(Side note: while in this tutorial we had free choice of @client ID@, in most situations you don't want that. Instead you want your server to constrain what @client ID@ people can use -- for example, to their logged-in username -- so that no-one can pretend to be someone else. When using "Token authentication":/core-features/authentication#token-authentication, your server can issue tokens with a specific @client ID@. When such a token is used by someone, their connection is bound to that @client ID@.)
+**Side note:** Although in this tutorial you can choose any @client ID@, in most situations you don't want that. Instead you want your server to constrain what @client ID@ people can use -- for example, to their logged-in username -- so that no-one can pretend to be someone else. When using "Token authentication":/core-features/authentication#token-authentication, your server can issue tokens with a specific @client ID@. When such a token is used by someone, their connection is bound to that @client ID@.
 
 A single @client ID@ may be present multiple times on the same channel, via different client connections; but each will be seen as a different member of the presence set, as they are differentiated by their unique @connection ID@. For example, if a client with @client ID@ “Sarah” is connected to a chat channel on both a desktop and a mobile device simultaneously, “Sarah” will be present twice in the presence member set with the same client ID, each with a different @connection ID@. A member of the presence set is therefore unique by the combination of the @client ID@ and @connection ID@ strings.
 
-h3. Step 3a - Updating your presence data
+h3. Updating your presence data (optional)
 
-In the previous step, we set a payload for our entry in the presence set: the string 'hello', which other clients will receive with the notification that we've entered. We can update that whenever we want, and other clients will receive the update:
+In the previous step, you set a payload for your entry in the presence set: the string "hello", which other clients will receive with the notification that this particular client has entered the channel. You can update that whenever you want, and other clients will receive the update. This is not required for the tutorial, but the following code shows how to achieve it:
 
 blang[javascript,nodejs].
   ```[javascript]
-    channel.presence.update('howdy!', function(err) {
+    channel.presence.update("howdy!", (err) => {
       if(err) { return console.error("Error updating presence data"); }
-      console.log('We have successfully updated our data');
+      console.log("Update OK");
     })
   ```
 
 blang[ruby].
   ```[ruby]
-      channel.presence.update(data: 'hello') do
-        puts "We have successfully updated our data"
-      end
+    channel.presence.update(data: 'howdy!') do
+      puts "Update OK"
     end
   ```
 
-h2. Step 4 - Get present members
+h2. Step 4 - Subscribe to presence changes
 
-The next thing to do is to find out who else is present. (Spoiler: it's currently just you).
+In this step, you will subscribe to receive presence events from the "chatroom" channel. Events include when new members enter the channel, or existing ones leave the channel or update their data.
 
-blang[javascript,nodejs].
-  ```[javascript]
-    channel.presence.get(function(err, members) {
-      if(err) { return console.error("Error fetching presence data"); }
-      console.log('There are ' + members.length + ' clients present on this channel');
-      var first = members[0];
-      console.log('The first member is ' + first.clientId);
-      console.log('and their data is ' + first.data);
-    });
-  ```
-
-blang[javascript].
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-javascript-step4
-
-blang[nodejs].
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-javascript-step4
-
-blang[ruby].
-  ```[ruby]
-    channel.presence.get do |members|
-      puts "There are #{members.length} clients present on this channel"
-      first = members[0]
-      puts "The first member is #{first.clientId} and their data is #{first.data}"
-    end
-  ```
-
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-ruby-step4
-
-As soon as you are attached to the channel, the presence set starts to sync with Ably. When you make this call to get the presence set, it will (by default) wait until it has finished syncing before completing. For small presence sets this will take only a few milliseconds; for larger ones (with hundreds of members) the full sync can take a little longer.
-
-h2. Step 5 - Subscribe to presence changes
-
-Getting a list of who's present when your app loads is all well and good, but you probably also want to know when that changes: when new members enter, or existing ones update their data or leave. You can do this by subscribing to presence messages. Presence messages will include the @client ID@ of the member, and an @action@ that tells you what happened to that member: either @enter@, @update@, or @leave@. In this simple example, every time there's a change, we just call @presence.get@ again to get the new state of the presence set.
+Presence event messages will include the @client ID@ of the member, and an @action@ that tells you what happened to that member: either @enter@, @update@, or @leave@.
 
 blang[javascript,nodejs].
   ```[javascript]
-    channel.presence.subscribe(function(presenceMsg) {
-      console.log('Received a ' + presenceMsg.action + ' from ' + presenceMsg.clientId);
-      channel.presence.get(function(err, members) {
-        console.log('There are now ' + members.length + ' clients present on this channel');
-      });
+    // Subscribe to the presence set to receive updates
+    await channel.presence.subscribe((presenceMessage) => {
+      const { action, clientId } = presenceMessage;
+      console.log("Presence update:", action, "from:", clientId);
     });
   ```
-
-blang[javascript].
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-javascript-step5
-
-blang[nodejs].
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-nodejs-step5
 
 blang[ruby].
   ```[ruby]
@@ -231,48 +259,94 @@ blang[ruby].
     end
   ```
 
-  "See this step in Github":https://github.com/ably/tutorials/commit/presence-ruby-step5
+h2. Step 5 - List present members
+
+Every time the presence set changes, you want to call @presence.get@ to get the new state of the presence set and update the list of channel members.
+
+Modify the @channel.presence.subscribe@ event handler in the preceding step as follows:
 
 
-And that's it. To see this in action, try out the live demo below.
 
-h2(#live-demo). Live demo
+blang[javascript].
+  ```[javascript]
+    // Subscribe to the presence set to receive updates
+    await channel.presence.subscribe((presenceMessage) => {
+      const { action, clientId } = presenceMessage;
+      console.log("Presence update:", action, "from:", clientId);
 
-Enter your name and connect to Ably. (Your name will become the @client ID@ of the Ably connection). Once connected, choose an avatar, then click 'Enter' to enter the presence set, and 'Leave' to leave it again. <a href="#" id="new-browser" target="_blank">Open this demo in other browser windows</a> and enter presence in them as well, and see how every window shows an up-to-date presence set.
+      // Update the list of channel members when the presence set changes
+      channel.presence.get((err, members) => {
+        if (err) {
+          return console.error(`Error retrieving presence data: ${err}`);
+        }
+        document.getElementById("presence-set").innerHTML = members
+          .map((member) => {
+            return `<li>${member.clientId}</li>`;
+          })
+          .join("");
+      });
+    });
+  ```
 
-Once you're entered, try tapping a different avatar to change it, and seeing it change in all the other windows in real time.
+blang[nodejs].
+  ```[nodejs]
+    // Subscribe to the presence set to receive updates
+    await channel.presence.subscribe((presenceMessage) => {
+      console.log(
+        "Presence update: " +
+          presenceMessage.action +
+          " from " +
+          presenceMessage.clientId
+      );
+      // Update the list of channel members when the presence set changes
+      channel.presence.get((err, members) => {
+        if (err) {
+          return console.error(`Error retrieving presence data: ${err}`);
+        }
+        const clientIDs = members.map(({ clientId }) => clientId);
+        console.log("The presence set now consists of: ", clientIDs);
+      });
+    });
+  ```
 
-<div id="presence-tutorial-demo">
-  <div>
-    <p>
-      Name: <input type="text" id="name" value="" autocomplete="off">
-      <button id="connect-to-ably" autocomplete="off">Connect to Ably</button>
-    </p>
-    <div id="presence-controls" style="display: none;">
-      <p class="emoji-radios">
-        Avatar:
-        <% ['👦', '👧', '👨', '👩', '😺'].each do |emoji| %>
-          <label><input type="radio" name="avatar" value="<%= emoji %>" /><span class="emoji"><%= emoji %></span></label>
-        <% end %>
-      </p>
-      <p id="avatar-tip" style="display: none;">Tip: select a new avatar at any time to change it. This will update your presence data.</p>
+blang[ruby].
+  ```[ruby]
+    channel.presence.get do |members|
+      puts "There are #{members.length} clients present on this channel"
+      first = members[0]
+      puts "The first member is #{first.clientId} and their data is #{first.data}"
+    end
+  ```
 
-      <button id="toggle-presence">Enter Presence</button>
+As soon as you are attached to the channel, the presence set starts to sync with Ably. When you make this call to get the presence set, it will wait until it has finished syncing before completing. For small presence sets this will take only a few milliseconds; for larger ones (with hundreds of members) the full sync can take a little longer.
 
-      <ul id="presence-set">
-      No-one is present yet. Try selecting an avatar and clicking 'Enter Presence'
-      </ul>
-  </div>
+blang[javascript].
+  Open this file in multiple browser tabs and inspect the browser's console. You should see new members appearing in the list of present members as you open more tabs and disappearing from the presence set when you close a tab.
 
-  <textarea id="output" rows="10" style="width: 60%; margin-top: 10px; font-family: courier, courier new; background-color: #333; color: orange" disabled></textarea>
-</div>
+blang[nodejs].
+  Run your code with @node example.js@ in multiple terminal windows and inspect the output. You should see new members appearing in the list of present members when you run your app in a new terminal window. They will disappear from the presence set when you terminate the running program in a terminal window.
 
-<img src="/images/ably-logo-white-outline.png" id="ably-qr-logo" style="visibility: hidden; width: 1px; height: 1px" crossOrigin="anonymous">
+blang[ruby].
+  Run your code with @ruby example.rb@ in multiple terminal windows and inspect the output. You should see new members appearing in the list of present members when you run your app in a new terminal window. They will disappear from the presence set when you terminate the running program in a terminal window.
+
+h2. Step 6 - Conclusion
+
+In this tutorial, you learned how to:
+
+* Attach to a channel
+* Enter (and leave) the presence set for the channel
+* Access the list of members present on a channel
+* Update a present member's status
+* Listen for presence changes
+
+To see another example of Presence in action, try out the live demo below.
+
+
 
 h2. Download tutorial source code
 
 blang[javascript].
-  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/presence-javascript.
+  The complete source code for this tutorial is available "on Github":https://github.com/ably/tutorials/tree/presence-javascript.
 
   We recommend that you clone the repo locally:
 
@@ -285,7 +359,7 @@ blang[javascript].
   And then run the demo locally by adding your "Ably API key":https://faqs.ably.com/setting-up-and-managing-api-keys to @example.html@ and opening the page in your browser.
 
 blang[nodejs].
-  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/presence-nodejs.
+  The complete source code for this tutorial is available "on Github":https://github.com/ably/tutorials/commits/presence-nodejs.
 
   We recommend that you clone the repo locally:
 
@@ -298,7 +372,7 @@ blang[nodejs].
   And then run the demo locally by adding your "Ably API key":https://faqs.ably.com/setting-up-and-managing-api-keys to @example.js@ and running the demo @node example.js@
 
 blang[ruby].
-  The complete source code for each step of "this tutorial is available on Github":https://github.com/ably/tutorials/commits/presence-ruby
+  The complete source code for this tutorial is available "on Github":https://github.com/ably/tutorials/commits/presence-ruby
 
   We recommend that you clone the repo locally:
 
@@ -313,123 +387,7 @@ blang[ruby].
 h2. Next steps
 
 1. If you would like to find out more about how channels, publishing and subscribing works, see the "Realtime channels":/realtime/channels & "messages":/realtime/messages documentation
-1. If you would like to find out more about how presence works, see the "Realtime presence documentation":/realtime/presence
-2. Learn more about "Ably features":https://ably.com/platform by stepping through our other "Ably tutorials":https://ably.com/tutorials
-3. Gain a good technical "overview of how the Ably realtime platform works":https://ably.com/docs/key-concepts
-4. "Get in touch if you need help":https://ably.com/contact
-
-<script src="//cdn.ably.io/lib/ably.min-1.js"  crossorigin="anonymous"></script>
-<script type="text/javascript">
-  window.addEventListener("load", function() {
-    var started,
-      $output = $('#output'),
-      $togglePresence = $('button#toggle-presence'),
-      inPresenceSet = false,
-      $name = $('input#name'),
-      $connectBtn = $('#connect-to-ably'),
-      channelName = getQueryParam('channel') || getRandomChannelName();
-
-    $name.val(getRandomName());
-
-    $('#connect-to-ably').on('click', function() {
-      var name = $.trim($name.val());
-      if(!name) {
-        log('You need to enter your name before you can enter presence');
-        return;
-      }
-
-      started = new Date().getTime(),
-        ably = new Ably.Realtime({
-          clientId: name,
-          authUrl: 'https://ably.com/ably-auth/token/docs',
-          closeOnUnload: true // See https://faqs.ably.com/why-dont-presence-members-leave-as-soon-as-i-close-a-tab
-        }),
-        channel = ably.channels.get(channelName);
-
-      ably.connection.on(function(stateChange) {
-        log('[Ably: ' + stateChange.current + ' ]');
-      });
-
-      ably.connection.on('connected', function() {
-        $connectBtn.text('Connected to Ably')
-        $connectBtn.prop("disabled", true);
-        $name.prop("disabled", true);
-      });
-
-      channel.attach(function(err) {
-        if(err) {
-          log('[Error attaching to channel: ' + err.toString() + ']');
-        } else {
-          log('[Attached to channel ' + channelName + ']');
-          $('#presence-controls').slideDown();
-          channel.presence.subscribe(function(msg) {
-            log('[Received presence ' + msg.action + ' from ' + msg.clientId + ', avatar: ' + msg.data + ']');
-            channel.presence.get(function(err, presenceSet) {
-              $('#presence-set').html($.map(presenceSet, function(item) {
-                return '<li><span class="emoji">' + (item.data || '') +'</span> ' + item.clientId + '</li>';
-              }).join());
-            });
-          });
-        }
-      });
-
-      function enterPresence() {
-        var avatar = $('input[name=avatar]:checked').val();
-        log("[Entering...] ");
-        channel.presence.enter(avatar, function(err) {
-          if(err) {
-            log('[Error entering presence: ' + err.toString() + ']');
-          } else {
-            log('[Successfully entered the presence set]');
-            inPresenceSet = true;
-            $togglePresence.text('Leave Presence');
-            $('#avatar-tip').slideDown();
-          }
-        });
-      };
-
-      function leavePresence() {
-        log("[Leaving...] ");
-        channel.presence.leave(function(err) {
-          if(err) {
-            log('[Error leaving presence: ' + err.toString() + ']');
-          } else {
-            log('[Successfully left the presence set]');
-            $togglePresence.text('Enter Presence');
-            inPresenceSet = false;
-          }
-        });
-      };
-
-      $togglePresence.on('click', function() {
-        inPresenceSet ? leavePresence() : enterPresence();
-      });
-
-      $('input[type=radio][name=avatar]').change(function() {
-        if(!inPresenceSet) { return; };
-        var avatar = $('input[name=avatar]:checked').val();
-
-        log("[Updating avatar...] ");
-        channel.presence.update(avatar, function(err) {
-          if(err) {
-            log('[Error updating avatar: ' + err.toString() + ']');
-          } else {
-            log('[Successfully updated avatar]');
-          }
-        });
-      });
-    });
-
-    /* Set up the link to open a new window with this random channel name */
-    var urlWithChannel = document.location.href.replace(/#.*$/, '');
-    if (urlWithChannel.indexOf('channel=') < 0) {
-      urlWithChannel += (urlWithChannel.indexOf('?') < 0 ? '?' : '&') + "channel=" + escape(channelName);
-    }
-    $('a#new-browser').attr('href', urlWithChannel + "#live-demo");
-
-    function log(msg) {
-      var timePassed = Math.round((new Date().getTime() - started) / 100) / 10;
-      $output.text(timePassed + "s - " + msg + "\n" + $output.text());
-    }
-  });
-</script>
+2. If you would like to find out more about how presence works, see the "Realtime presence documentation":/realtime/presence
+3. Learn more about "Ably features":https://ably.com/platform by stepping through our other "Ably tutorials":/tutorials
+4. Gain a good technical overview of "how the Ably realtime platform works":/key-concepts
+5. "Get in touch if you need help":https://ably.com/contact
