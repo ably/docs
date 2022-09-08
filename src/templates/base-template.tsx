@@ -14,6 +14,7 @@ import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../componen
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
 import { storage } from 'src/utilities/browser/storage';
+import { Head } from 'src/components/Head';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -75,15 +76,7 @@ const Template = ({
   return (
     <PageLanguageContext.Provider value={language}>
       <PageLanguagesContext.Provider value={languages}>
-        <Helmet>
-          <title>{title}</title>
-          <meta property="og:title" content={title} />
-          <meta property="twitter:title" content={title} />
-          <link rel="canonical" href={canonical} />
-          <meta name="description" content={description} />
-          <meta property="og:description" content={description} />
-          <meta name="twitter:description" content={description} />
-        </Helmet>
+        <Head title={title} canonical={canonical} description={description} />
         <Layout languages={filteredLanguages} versionData={versionData}>
           <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
           <Article>
