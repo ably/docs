@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { TopHorizontalMenuEndAlign } from '.';
+import { HorizontalMenu, HorizontalMenuVariant } from 'src/components';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 import PageLanguageContext from '../../contexts/page-language-context';
 import { LanguageDropdownSelector } from './LanguageDropdownSelector/LanguageDropdownSelector';
@@ -12,10 +12,10 @@ const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionD
   return (
     <div className="fixed right-0 z-10 mt-64 w-full items-end bg-white border-b border-mid-grey">
       {showCodeMenu ? (
-        <TopHorizontalMenuEndAlign>
+        <HorizontalMenu variant={HorizontalMenuVariant.end}>
           <VersionMenu {...versionData} />
           <LanguageDropdownSelector language={pageLanguage} languages={languages} showDefaultLink={showDefaultLink} />
-        </TopHorizontalMenuEndAlign>
+        </HorizontalMenu>
       ) : null}
     </div>
   );
