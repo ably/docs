@@ -1,12 +1,11 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import DOMPurify from 'dompurify';
 import blocksFromData from '../blocks-from-data';
 import { isArray } from 'lodash';
 import ConditionalChildrenLanguageDisplay from '../wrappers/ConditionalChildrenLanguageDisplay';
 
 // This is not to be used in production.
-const DangerousHtml = ({ data }) => (
+const DangerousHtml = ({ data }: { data: string }) => (
   <div
     dangerouslySetInnerHTML={{
       __html: DOMPurify.sanitize(data, {
@@ -19,19 +18,16 @@ const DangerousHtml = ({ data }) => (
   ></div>
 );
 
-DangerousHtml.propTypes = {
-  data: PropTypes.string,
-};
+interface HtmlProps {
+  data: string | any[] | null | undefined;
+}
 
-const Html = ({ data }) =>
-  isArray(data) ? (
+const Html = ({ data }: HtmlProps) => {
+  return isArray(data) ? (
     <ConditionalChildrenLanguageDisplay>{blocksFromData(data)}</ConditionalChildrenLanguageDisplay>
   ) : (
     <>{data}</>
   );
-
-Html.propTypes = {
-  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
 };
 
 export { DangerousHtml };

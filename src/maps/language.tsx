@@ -38,7 +38,7 @@ const languageSyntaxHighlighterNames: LanguageSyntaxHighlighterNames = {
   python: { label: 'Python', key: 'python' },
   php: { label: 'PHP', key: 'php' },
   shell: { label: 'Shell', key: 'bash' },
-  csharp: { label: 'C#', key: 'cs' },
+  csharp: { label: 'C#', key: 'csharp' },
   go: { label: 'Go', key: 'go' },
   html: { label: 'HTML', key: 'xml' },
   cpp: { label: 'C++', key: 'cpp' },
@@ -47,8 +47,10 @@ const languageSyntaxHighlighterNames: LanguageSyntaxHighlighterNames = {
   objc: { label: 'Objective C', key: 'objectivec' },
   nodejs: { label: 'Node.js', key: 'javascript' },
   json: { label: 'JSON', key: 'json' },
-  android: { label: 'Android', key: 'androidstudio' },
-  flutter: { label: 'Flutter', key: 'flutter' },
+  // Kotlin is now preferred, however existing examples use Java & Android interchangeably.
+  android: { label: 'Android', key: 'java' },
+  // Currently the Flutter platform expects the Dart language
+  flutter: { label: 'Flutter', key: 'dart' },
 };
 
 export { languageSyntaxHighlighterNames };
