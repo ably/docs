@@ -16,7 +16,7 @@ const StyledApiReferenceBlockquote = ({
 );
 
 export const ApiReferenceBlockquote = ({ data, attribs }: HtmlComponentProps<'blockquote'>) => {
-  if (attribs.className && attribs.className.includes('definition')) {
+  if (attribs?.className && attribs.className.includes('definition')) {
     return (
       <StyledApiReferenceBlockquote attribs={attribs}>
         <Html data={data} />

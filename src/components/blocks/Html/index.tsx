@@ -7,7 +7,7 @@ import { HtmlComponentProps, ValidReactElement } from 'src/components/html-compo
 import { ArticleTypeContext } from '../../../contexts/article-type-context';
 import { ARTICLE_TYPES } from '../../../../data/transform/constants';
 
-const Html = ({ data }: HtmlComponentProps<ValidReactElement>) =>
+const Html = ({ data }: { data: HtmlComponentProps<ValidReactElement>[] | string | null }) =>
   isArray(data) ? (
     <ArticleTypeContext.Consumer>
       {(articleType) => {

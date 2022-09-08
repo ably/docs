@@ -5,6 +5,11 @@ const apiReferenceSpecificColors = {
   'api-reference-attribute-border': '#ff9e7a',
 };
 
+const highlightColors = {
+  'notification-background': '#0073e6',
+  'active-language-button': '#ff5416',
+};
+
 module.exports = extendConfig((ablyUIConfig) => ({
   ...ablyUIConfig,
   purge: {
@@ -27,6 +32,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
          */
         standard: [
           ...Object.keys(apiReferenceSpecificColors).map((c) => `bg-${c}`),
+          ...Object.keys(highlightColors).map((c) => `bg-${c}`),
           ...ablyUIConfig.purge.options.safelist.standard,
           'mb-40',
           'mb-32',
@@ -83,6 +89,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
       },
       colors: {
         ...apiReferenceSpecificColors,
+        ...highlightColors,
       },
       gridRowStart: {
         9: '9',

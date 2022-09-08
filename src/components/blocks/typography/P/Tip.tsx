@@ -59,7 +59,7 @@ const InlineGridParagraph = styled.p`
 
 // This needs to be set to a grid in order to render properly
 export const Tip = ({ data, attribs }: HtmlComponentProps<'p'>) => (
-  <InlineGridParagraph className={`${attribs.className}`}>
+  <InlineGridParagraph className={`${attribs?.className}`}>
     <LeftsideElement>&nbsp;</LeftsideElement>
     <TipTitleElement>Tip</TipTitleElement>
     <InlineContentContainer className={`inline`}>
