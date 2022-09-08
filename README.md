@@ -70,7 +70,7 @@ Place these in .env.development to run locally.
 
 ## Further Information
 
-Documentation is included throughout this repository in the form of README.md files at folder level. Thanks in part to support for this sort of setup from GitHub, these are intended to:
+Documentation is included throughout this repository in the form of README.md files at folder level. These are intended to:
 
 1. Aid navigation through the repository, so documentation contributors and developers can easily see if they are in the right place
 2. Support documentation contributors in understanding the expected results from their work
