@@ -1,5 +1,5 @@
 import React, { useReducer, useRef } from 'react';
-import { TopHorizontalMenuLight } from '../../Menu/index';
+import { HorizontalMenu, HorizontalMenuVariant } from 'src/components';
 import { dropdownData } from './Dropdown/Button';
 import { DropdownButtonAndMenu } from './Dropdown/Button/DropdownButton';
 import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo';
@@ -22,7 +22,7 @@ export const TopMainNav = () => {
 
   return (
     <div ref={ref} className="fixed bg-white h-64 z-50 flex w-full border-b border-mid-grey" id="top-main-nav">
-      <TopHorizontalMenuLight>
+      <HorizontalMenu variant={HorizontalMenuVariant.light}>
         <HorizontalMenuItemGroup additionalStyles="flex-grow">
           <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
           <SearchBar />
@@ -46,7 +46,7 @@ export const TopMainNav = () => {
             )}
           </UserContext.Consumer>
         </HorizontalMenuItemGroup>
-      </TopHorizontalMenuLight>
+      </HorizontalMenu>
     </div>
   );
 };
