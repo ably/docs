@@ -3,11 +3,11 @@ import { DEFAULT_API_KEY_MESSAGE } from '.';
 import APIKeyIndicator from './ApiKeyIndicator';
 import APIKeyMenu, { APIKeyMenuProps, Option } from './ApiKeyMenu';
 
-type APIKeyMenuSelectorProps = {
+type APIKeyMenuSelectorProps = APIKeyMenuProps & {
   dataContainsKey: boolean;
   signedIn: boolean;
   activeApiKey: Option;
-} & APIKeyMenuProps;
+};
 
 const APIKeyMenuSelector = ({
   dataContainsKey,

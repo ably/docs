@@ -1,13 +1,6 @@
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 
-export const ACTIVE_LANGUAGE_BUTTON_CLASS_NAME = 'docs-menu-item-button-selected';
-export const INACTIVE_LANGUAGE_BUTTON_CLASS_NAME = 'docs-menu-item-button';
-
-type languageButtonClassName = typeof ACTIVE_LANGUAGE_BUTTON_CLASS_NAME | typeof INACTIVE_LANGUAGE_BUTTON_CLASS_NAME;
-
 const isLanguageDefault = (language: string) => language === DEFAULT_LANGUAGE;
-const getActiveClassName = (language: string, pageLanguage: string) =>
-  language === pageLanguage ? ACTIVE_LANGUAGE_BUTTON_CLASS_NAME : INACTIVE_LANGUAGE_BUTTON_CLASS_NAME;
 
 export const getLanguageDefaults = (
   language: string,
@@ -15,11 +8,11 @@ export const getLanguageDefaults = (
 ): {
   isLanguageDefault: boolean;
   isPageLanguageDefault: boolean;
-  maybeActiveButtonClassName: languageButtonClassName;
+  isLanguageActive: boolean;
 } => ({
   isLanguageDefault: isLanguageDefault(language),
   isPageLanguageDefault: isLanguageDefault(pageLanguage),
-  maybeActiveButtonClassName: getActiveClassName(language, pageLanguage),
+  isLanguageActive: language === pageLanguage,
 });
 
 export const createLanguageHrefFromDefaults = (
