@@ -17,7 +17,7 @@ const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.menu }: Prop
   <menu
     role="menu"
     className={cn('flex overflow-visible m-0', {
-      'rounded-t border-b border-charcoal-grey relative p-0': variant === HorizontalMenuVariant.menu,
+      'border-b border-charcoal-grey relative p-0': variant === HorizontalMenuVariant.menu,
       [end]: variant === HorizontalMenuVariant.end,
       [light]: variant === HorizontalMenuVariant.light,
     })}

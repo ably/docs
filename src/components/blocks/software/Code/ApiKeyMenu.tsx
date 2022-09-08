@@ -1,10 +1,7 @@
 import React, { Dispatch, useState } from 'react';
 import Select from 'react-select';
 import { DEFAULT_API_KEY_MESSAGE } from '.';
-import { SmallMenuLabel } from '../../../Menu/Label';
 import { selectMenuStyles } from './api-key-menu-styles';
-
-const VALUE_PREFIX = 'API Key: ';
 
 export type Option = {
   label: string;
@@ -27,7 +24,9 @@ const errorOption = {
   value: 'Placeholder: replace with default API Key',
 };
 
-const makeLabel = (apiKey: AppApiKey) => `${VALUE_PREFIX}${apiKey.name}`;
+const makeLabel = (apiKey: AppApiKey) => {
+  return `${apiKey.whole_key.slice(0, 10)}... - ${apiKey.name}`;
+};
 
 export type APIKeyMenuProps = {
   userApiKeys: UserApiKey[];
@@ -40,7 +39,7 @@ const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
   const [value, setValue] = useState(
     initialApiKeyOption
       ? {
-          label: `${makeLabel(initialApiKeyOption[0])}`,
+          label: makeLabel(initialApiKeyOption[0]),
           value: initialApiKeyOption[0].whole_key,
         }
       : errorOption,
@@ -53,11 +52,12 @@ const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
       value: appApiKey.whole_key,
     })),
   }));
+
   return (
     <>
-      <SmallMenuLabel>API Key:</SmallMenuLabel>
       <Select
         value={value}
+        isSearchable={false}
         onChange={(value) => {
           setValue(value ?? errorOption);
           setActiveApiKey(value ?? { label: DEFAULT_API_KEY_MESSAGE, value: DEFAULT_API_KEY_MESSAGE });

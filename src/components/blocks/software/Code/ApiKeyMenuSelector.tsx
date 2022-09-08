@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { DEFAULT_API_KEY_MESSAGE } from '.';
 import APIKeyIndicator from './ApiKeyIndicator';
 import APIKeyMenu, { APIKeyMenuProps, Option } from './ApiKeyMenu';
+import { SmallMenuLabel } from '../../../Menu/Label';
 
 type APIKeyMenuSelectorProps = APIKeyMenuProps & {
   dataContainsKey: boolean;
@@ -26,11 +27,14 @@ const APIKeyMenuSelector = ({
     }
   }, [userApiKeys, activeApiKey, setActiveApiKey]);
   return dataContainsKey ? (
-    signedIn && userApiKeys ? (
-      <APIKeyMenu userApiKeys={userApiKeys} setActiveApiKey={setActiveApiKey} />
-    ) : (
-      <APIKeyIndicator />
-    )
+    <div className="border-t border-charcoal-grey py-14 px-16 flex items-center">
+      <SmallMenuLabel>API Key:</SmallMenuLabel>
+      {signedIn && userApiKeys ? (
+        <APIKeyMenu userApiKeys={userApiKeys} setActiveApiKey={setActiveApiKey} />
+      ) : (
+        <APIKeyIndicator />
+      )}
+    </div>
   ) : null;
 };
 

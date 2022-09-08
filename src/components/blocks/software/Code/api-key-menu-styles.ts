@@ -6,14 +6,14 @@ const SELECT_HEIGHT = '24px';
 
 const optionStyles = (provided: CSSObjectWithLabel) => ({
   ...provided,
-  width: '200px',
   border: 0,
   margin: 0,
+  width: 200,
   color: '#D9D9DA',
-  backgroundColor: primary.charcoalGrey,
+  backgroundColor: 'transparent',
   boxShadow: 'none',
   fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
-  fontSize: '14px',
+  fontSize: 14,
   '&:active': {
     ...provided[':active'],
     backgroundColor: gui.active,
@@ -26,7 +26,7 @@ const controlStyles = (provided: CSSObjectWithLabel) => ({
   border: 0,
   margin: 0,
   color: '#D9D9DA',
-  backgroundColor: primary.charcoalGrey,
+  backgroundColor: 'transparent',
   boxShadow: 'none',
   fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
   fontSize: '14px',
@@ -35,22 +35,10 @@ const controlStyles = (provided: CSSObjectWithLabel) => ({
   minHeight: SELECT_HEIGHT,
 });
 
-const heightStyles = (provided: CSSObjectWithLabel) => ({
-  ...provided,
-  height: SELECT_HEIGHT,
-});
-
 export const selectMenuStyles: StylesConfig<SetStateAction<{ label: string; value: string }>, false> = {
   container: (provided: CSSObjectWithLabel) => ({
     ...provided,
-    position: 'absolute',
-    top: '0.25em',
-    left: '0.25em',
-    backgroundColor: primary.charcoalGrey,
-    minHeight: SELECT_HEIGHT,
-    height: SELECT_HEIGHT,
   }),
-  valueContainer: heightStyles,
   indicatorSeparator: () => ({
     display: 'none',
   }),
