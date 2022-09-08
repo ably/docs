@@ -7,8 +7,8 @@ import { colors } from '../../../../styles';
 /**
  * This is required because Tailwind v2 does not offer a good way to style one side of a border.
  * The closest to what design requires here is:
- * rounded-lg bg-containers-three ring-2 ring-event-driven-push-transport ring-inset border-l-8 border-event-driven-software p-4
- bg-event-driven-software w-8 left-0 cursor-default
+ * rounded-lg bg-{#FAFAFB} ring-2 ring-{#d9d9da} ring-inset border-l-8 border-{#08ff13} e p-4
+ bg-{#08ff13} w-8 left-0 cursor-default
  */
 const LeftsideElement = styled.span`
   width: 8px;

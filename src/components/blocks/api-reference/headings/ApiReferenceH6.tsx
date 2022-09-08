@@ -15,12 +15,12 @@ const StyledApiReferenceH6 = ({ attribs, children }: { attribs: ComponentProps<'
 );
 styled.h6`
   align-items: center;
-  padding: 4px 6px;
+  padding: 0.25rem 0.375rem;
   background: #ffe6dc;
-  margin-top: 10px;
-  margin-bottom: 24px;
-  border: 1px solid #ff9e7a;
-  border-radius: 2px;
+  margin-top: 0.625rem;
+  margin-bottom: 1.5rem;
+  border: 0.063rem solid #ff9e7a;
+  border-radius: 0.125rem;
   width: fit-content;
 `;
 

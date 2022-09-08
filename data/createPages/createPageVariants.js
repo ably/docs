@@ -42,7 +42,7 @@ const createLanguagePageVariants =
           slug: parentSlug ?? slug,
           version: version ?? LATEST_ABLY_API_VERSION_STRING,
           language: lang,
-          languages: languages,
+          languages,
           contentOrderedList,
           contentMenu: contentMenu ?? [],
         },
