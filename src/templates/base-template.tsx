@@ -12,11 +12,14 @@ import PageTitle from '../components/PageTitle';
 import { safeWindow } from '../utilities/browser/safe-window';
 import { PREFERRED_LANGUAGE_KEY } from '../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../components/common/language-defaults';
-import { templatePropTypes } from './template-prop-types';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
+import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
 
-const getMetaDataDetails = (document, prop, alternative = '') =>
-  document?.meta?.[prop] ? document.meta[prop] : alternative;
+const getMetaDataDetails = (
+  document: AblyDocument,
+  prop: keyof AblyDocumentMeta,
+  alternative: string | string[] = '',
+) => (document?.meta?.[prop] ? document.meta[prop] : alternative);
 
 const CANONICAL_ROOT = `https://www.ably.com${DOCUMENTATION_PATH}`;
 const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
@@ -26,7 +29,7 @@ const Template = ({
   location: { search },
   pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
   data: { document, versions },
-}) => {
+}: AblyTemplateData) => {
   const params = new URLSearchParams(search);
   const language = params.get('lang') ?? DEFAULT_LANGUAGE;
   useEffect(() => {
@@ -38,9 +41,9 @@ const Template = ({
     }
   }, []);
 
-  const title = getMetaDataDetails(document, 'title');
-  const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK);
-  const menuLanguages = getMetaDataDetails(document, 'languages', languages);
+  const title = getMetaDataDetails(document, 'title') as string;
+  const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
+  const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
   const canonical = `${CANONICAL_ROOT}${slug}`;
 
   const versionData = {
@@ -84,7 +87,7 @@ const Template = ({
         <Layout languages={filteredLanguages} versionData={versionData}>
           <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
           <Article>
-            <PageTitle id="title">{title}</PageTitle>
+            <PageTitle>{title}</PageTitle>
             <div className="col-span-3">{elements}</div>
           </Article>
           <RightSidebar className="col-span-1 px-16" languages={languagesExist} menuData={contentMenu[0]} />
@@ -94,7 +97,5 @@ const Template = ({
     </PageLanguageContext.Provider>
   );
 };
-
-Template.propTypes = templatePropTypes;
 
 export default Template;

@@ -1,19 +1,17 @@
 import React from 'react';
 import { graphql } from 'gatsby';
-import { templatePropTypes } from './template-prop-types';
 import Template from './base-template';
 import { ArticleTypeContext } from 'src/contexts/article-type-context';
 import { ARTICLE_TYPES } from '../../data/transform/constants';
+import { AblyTemplateData } from './template-data';
 
-const ApiReference = (props) => {
+const ApiReference = (props: AblyTemplateData) => {
   return (
     <ArticleTypeContext.Provider value={ARTICLE_TYPES.apiReference}>
       <Template {...props} />
     </ArticleTypeContext.Provider>
   );
 };
-
-ApiReference.propTypes = templatePropTypes;
 
 export default ApiReference;
 

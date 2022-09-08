@@ -1,13 +1,11 @@
 import React from 'react';
 import { graphql } from 'gatsby';
-import { templatePropTypes } from './template-prop-types';
 import Template from './base-template';
+import { AblyTemplateData } from './template-data';
 
-const Document = (props) => {
+const Document = (props: AblyTemplateData) => {
   return <Template {...props} />;
 };
-
-Document.propTypes = templatePropTypes;
 
 export default Document;
 

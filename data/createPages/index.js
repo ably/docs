@@ -21,7 +21,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
    */
 
   // DOCUMENT TEMPLATE
-  const documentTemplate = path.resolve(`src/templates/document.js`);
+  const documentTemplate = path.resolve(`src/templates/document.tsx`);
   const documentResult = await graphql(`
     query {
       allError {
@@ -51,7 +51,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
     process.exit(1);
   }
   // API REFERENCES TEMPLATE
-  const apiReferenceTemplate = path.resolve(`src/templates/apiReference.js`);
+  const apiReferenceTemplate = path.resolve(`src/templates/apiReference.tsx`);
   const apiReferenceResult = await graphql(`
     query {
       allFileHtml(filter: { articleType: { eq: "apiReference" } }) {

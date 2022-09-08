@@ -5900,6 +5900,20 @@ export type HomePageQueryQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type HomePageQueryQuery = { pageContentYaml?: { sections?: Array<{ title?: string | null, level?: string | null, description?: string | null, defaultCallToAction?: string | null, cards?: Array<{ title?: string | null, content?: string | null, link?: string | null, flag?: string | null, callToAction?: string | null } | null> | null } | null> | null, meta?: { title?: string | null, description?: string | null, image?: string | null, twitter?: string | null } | null } | null };
 
+export type Unnamed_1_QueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type Unnamed_1_Query = { document?: { meta?: { title?: string | null, meta_description?: string | null, languages?: Array<string | null> | null, redirect_from?: Array<string | null> | null } | null } | null, versions: { edges: Array<{ node: { parentSlug?: string | null, slug?: string | null, version?: string | null } }> }, inlineTOC?: { tableOfContents?: { content?: Array<{ key?: string | null, values?: Array<{ linkTitle?: string | null, link?: string | null } | null> | null } | null> | null } | null } | null };
+
+export type Unnamed_2_QueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type Unnamed_2_Query = { document?: { meta?: { title?: string | null, meta_description?: string | null, languages?: Array<string | null> | null, redirect_from?: Array<string | null> | null } | null } | null, versions: { edges: Array<{ node: { parentSlug?: string | null, slug?: string | null, version?: string | null } }> }, inlineTOC?: { tableOfContents?: { content?: Array<{ key?: string | null, values?: Array<{ linkTitle?: string | null, link?: string | null } | null> | null } | null> | null } | null } | null };
+
 export type GatsbyImageSharpFixedFragment = { base64?: string | null, width: number, height: number, src: string, srcSet: string };
 
 export type GatsbyImageSharpFixed_TracedSvgFragment = { tracedSVG?: string | null, width: number, height: number, src: string, srcSet: string };
