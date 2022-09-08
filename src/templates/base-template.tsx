@@ -9,11 +9,11 @@ import Article from '../components/Article';
 import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import RightSidebar from '../components/Sidebar/RightSidebar';
 import PageTitle from '../components/PageTitle';
-import { safeWindow } from '../utilities/browser/safe-window';
 import { PREFERRED_LANGUAGE_KEY } from '../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../components/common/language-defaults';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
+import { storage } from 'src/utilities/browser/storage';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -33,7 +33,7 @@ const Template = ({
   const params = new URLSearchParams(search);
   const language = params.get('lang') ?? DEFAULT_LANGUAGE;
   useEffect(() => {
-    const preferredLanguage = safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY);
+    const preferredLanguage = storage.getItem(PREFERRED_LANGUAGE_KEY);
     if (preferredLanguage && language !== preferredLanguage) {
       const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(preferredLanguage, language);
       const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, preferredLanguage);
