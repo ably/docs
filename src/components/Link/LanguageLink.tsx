@@ -28,9 +28,7 @@ const LanguageLink = ({ language }: { language: string }) => {
     ? `./language/${language}`
     : `../../${isLanguageDefault ? '' : `language/${language}`}`;
 
-  return (
-    <HoverLink to={href}>{languageLabels[language] ?? language}</HoverLink>
-  );
+  return <HoverLink to={href}>{languageLabels[language] ?? language}</HoverLink>;
 };
 
 export default LanguageLink;
