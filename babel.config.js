@@ -16,7 +16,6 @@ module.exports = {
           'javascript',
           'kotlin',
           'jsx',
-          'nodejs',
           'objectivec',
           'php',
           'python',
