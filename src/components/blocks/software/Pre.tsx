@@ -1,4 +1,4 @@
-import React, { ReactElement, HTMLAttributes } from 'react';
+import React, { ReactElement } from 'react';
 import Html from '../Html';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import '@ably/ui/core/styles.css';

@@ -16,7 +16,7 @@ const rubyProps = {
 const shProps = {
   data: [
     {
-      data: `curl https://rest.ably.io/channels/{{RANDOM_CHANNEL_NAME}}/publish \\\n  --user \"{{API_KEY}}\" \\\n  --data \"name=greeting&data=Hello\"`,
+      data: `curl https://rest.ably.io/channels/{{RANDOM_CHANNEL_NAME}}/publish \\\n  --user "{{API_KEY}}" \\\n  --data "name=greeting&data=Hello"`,
       name: 'text',
       type: 'text',
     },
