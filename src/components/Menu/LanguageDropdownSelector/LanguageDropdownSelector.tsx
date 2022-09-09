@@ -1,19 +1,21 @@
 import React from 'react';
 import Select from 'react-select';
-import { optionStyles } from '../ReactSelectStyles/option-styles';
-import { controlStyles } from '../ReactSelectStyles/control-styles';
-import { dropdownIndicatorStyles } from '../ReactSelectStyles/dropdown-indicator-styles';
-import { groupHeadingStyles } from '../ReactSelectStyles/group-heading-styles';
 import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicator-separator';
 import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
-import { menuListStyles } from '../ReactSelectStyles/menu-list-styles';
 import languageLabels from '../../../maps/language';
 import { ReactSelectOption } from '../react-select-option-types';
 import { PREFERRED_LANGUAGE_KEY } from '../../../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common/language-defaults';
-import { safeWindow } from '../../../utilities/browser/safe-window';
 import { navigate } from 'gatsby';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
+import {
+  controlStyles,
+  dropdownIndicatorStyles,
+  groupHeadingStyles,
+  menuListStyles,
+  menuStyles,
+  optionStyles,
+} from '../ReactSelectStyles';
 import { storage } from 'src/utilities/browser/storage';
 
 export const LanguageDropdownSelector = ({
@@ -43,6 +45,7 @@ export const LanguageDropdownSelector = ({
         option: optionStyles({ width: '192px' }),
         dropdownIndicator: dropdownIndicatorStyles,
         groupHeading: groupHeadingStyles,
+        menu: menuStyles,
         menuList: menuListStyles,
       }}
       inputId={'language-menu'}
