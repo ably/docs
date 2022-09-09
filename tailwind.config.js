@@ -29,6 +29,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
          *  - src/components/Sidebar/LeftSidebar/index.js
          *  - src/components/Sidebar/index.js
          * h-full, mx-8 => src/components/Sidebar/SidebarItem.js
+         * transform => src/components/Header/TopMainNav/HamburgerMenu/HamburgerDropdown/HamburgerSidebarRenderer/HamburgerSidebarSubmenu.tsx
          */
         standard: [
           ...Object.keys(apiReferenceSpecificColors).map((c) => `bg-${c}`),
@@ -42,6 +43,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
           'px-16',
           'h-full',
           'mx-8',
+          'transform',
         ],
         /**
          * Purge exclusions must be added for all dynamic classNames.
@@ -49,8 +51,9 @@ module.exports = extendConfig((ablyUIConfig) => ({
          * If dynamic classNames are no longer present they can be removed here:
          * docs-.* => Preferred prefix for custom classes throughout
          * col-span-.*  => src/components/Article/index.js
+         * rotate- => src/components/Header/TopMainNav/HamburgerMenu/HamburgerDropdown/HamburgerSidebarRenderer/HamburgerSidebarSubmenu.tsx
          */
-        greedy: [...ablyUIConfig.purge.options.safelist.greedy, /^docs-.*/, /^col-span-.*/],
+        greedy: [...ablyUIConfig.purge.options.safelist.greedy, /^docs-.*/, /^col-span-.*/, /^rotate-/],
       },
     },
   },
@@ -63,10 +66,16 @@ module.exports = extendConfig((ablyUIConfig) => ({
     spacing: {
       ...ablyUIConfig.theme.spacing,
       2: '0.125rem',
-      22: '1.375rem',
+      12: '0.75rem',
       13: '0.8125rem',
+      22: '1.375rem',
+      30: '1.875rem',
+      38: '2.375rem',
       128: 'var(--spacing-128)',
+      300: '18.75rem',
       320: '20rem',
+      420: '26.25rem',
+      full: '100%',
     },
     screens: {
       ...ablyUIConfig.theme.screens,
@@ -101,6 +110,18 @@ module.exports = extendConfig((ablyUIConfig) => ({
         15: '15',
         16: '16',
         17: '17',
+      },
+      rotate: {
+        ...ablyUIConfig.theme.extend.rotate,
+        270: '270deg',
+      },
+      zIndex: {
+        ...ablyUIConfig.theme.extend.zIndex,
+        1: '1',
+      },
+      fontSize: {
+        ...ablyUIConfig.theme.extend.fontSize,
+        16: ['16px', '18px'],
       },
     },
   },

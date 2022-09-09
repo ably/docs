@@ -1,11 +1,19 @@
 import { graphql, useStaticQuery } from 'gatsby';
 import React from 'react';
-import PropTypes from 'prop-types';
-import Sidebar from '../Sidebar';
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
 import { EXPAND_MENU } from '../Sidebar/expand-menu-enum';
+import { SidebarProps } from '../Sidebar';
+import { LeftSidebarProps } from './LeftSideBar';
 
-const LeftSideBar = ({ className, languages }) => {
+export const SidebarDataRetrieval = ({
+  className,
+  languages,
+  expandMenu,
+  Component,
+}: LeftSidebarProps & {
+  expandMenu: EXPAND_MENU;
+  Component: React.FunctionComponent<SidebarProps>;
+}) => {
   const data = useStaticQuery(graphql`
     fragment SubMenuFields on PageFurnitureYaml {
       label
@@ -49,14 +57,5 @@ const LeftSideBar = ({ className, languages }) => {
   } else {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
   }
-  return (
-    <Sidebar className={className} languages={languages} data={sidebarData} expandMenu={EXPAND_MENU.SECTION_MATCH} />
-  );
+  return <Component className={className} languages={languages} data={sidebarData} expandMenu={expandMenu} />;
 };
-
-LeftSideBar.propTypes = {
-  className: PropTypes.string,
-  languages: PropTypes.bool,
-};
-
-export { LeftSideBar };

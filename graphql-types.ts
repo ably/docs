@@ -649,7 +649,6 @@ export type FileHtmlMetaData = {
 export type FileHtml = Node & {
   contentOrderedList?: Maybe<Array<Maybe<FileHtmlContentOrderedListItem>>>;
   meta?: Maybe<FileHtmlMetaData>;
-  articleType?: Maybe<Scalars['String']>;
   slug?: Maybe<Scalars['String']>;
   parentSlug?: Maybe<Scalars['String']>;
   version?: Maybe<Scalars['String']>;
@@ -753,7 +752,6 @@ export type FileHtmlPartial = Node & {
   parent?: Maybe<Node>;
   children: Array<Node>;
   internal: Internal;
-  articleType?: Maybe<Scalars['String']>;
   contentOrderedList?: Maybe<Array<Maybe<FileHtmlPartialContentOrderedList>>>;
   relativePath?: Maybe<Scalars['String']>;
 };
@@ -1078,7 +1076,6 @@ export type QueryAllPageFurnitureYamlArgs = {
 export type QueryFileHtmlArgs = {
   contentOrderedList?: InputMaybe<FileHtmlContentOrderedListItemFilterListInput>;
   meta?: InputMaybe<FileHtmlMetaDataFilterInput>;
-  articleType?: InputMaybe<StringQueryOperatorInput>;
   slug?: InputMaybe<StringQueryOperatorInput>;
   parentSlug?: InputMaybe<StringQueryOperatorInput>;
   version?: InputMaybe<StringQueryOperatorInput>;
@@ -1177,7 +1174,6 @@ export type QueryFileHtmlPartialArgs = {
   parent?: InputMaybe<NodeFilterInput>;
   children?: InputMaybe<NodeFilterListInput>;
   internal?: InputMaybe<InternalFilterInput>;
-  articleType?: InputMaybe<StringQueryOperatorInput>;
   contentOrderedList?: InputMaybe<FileHtmlPartialContentOrderedListFilterListInput>;
   relativePath?: InputMaybe<StringQueryOperatorInput>;
 };
@@ -1371,7 +1367,6 @@ export type FileHtmlFilterListInput = {
 export type FileHtmlFilterInput = {
   contentOrderedList?: InputMaybe<FileHtmlContentOrderedListItemFilterListInput>;
   meta?: InputMaybe<FileHtmlMetaDataFilterInput>;
-  articleType?: InputMaybe<StringQueryOperatorInput>;
   slug?: InputMaybe<StringQueryOperatorInput>;
   parentSlug?: InputMaybe<StringQueryOperatorInput>;
   version?: InputMaybe<StringQueryOperatorInput>;
@@ -1521,7 +1516,6 @@ export type FileHtmlPartialFilterInput = {
   parent?: InputMaybe<NodeFilterInput>;
   children?: InputMaybe<NodeFilterListInput>;
   internal?: InputMaybe<InternalFilterInput>;
-  articleType?: InputMaybe<StringQueryOperatorInput>;
   contentOrderedList?: InputMaybe<FileHtmlPartialContentOrderedListFilterListInput>;
   relativePath?: InputMaybe<StringQueryOperatorInput>;
 };
@@ -1933,7 +1927,6 @@ export type FileFieldsEnum =
   | 'childrenFileHtml___meta___meta_description'
   | 'childrenFileHtml___meta___title'
   | 'childrenFileHtml___meta___redirect_from'
-  | 'childrenFileHtml___articleType'
   | 'childrenFileHtml___slug'
   | 'childrenFileHtml___parentSlug'
   | 'childrenFileHtml___version'
@@ -2022,7 +2015,6 @@ export type FileFieldsEnum =
   | 'childFileHtml___meta___meta_description'
   | 'childFileHtml___meta___title'
   | 'childFileHtml___meta___redirect_from'
-  | 'childFileHtml___articleType'
   | 'childFileHtml___slug'
   | 'childFileHtml___parentSlug'
   | 'childFileHtml___version'
@@ -2352,7 +2344,6 @@ export type FileFieldsEnum =
   | 'childrenFileHtmlPartial___internal___owner'
   | 'childrenFileHtmlPartial___internal___type'
   | 'childrenFileHtmlPartial___internal___contentFilePath'
-  | 'childrenFileHtmlPartial___articleType'
   | 'childrenFileHtmlPartial___contentOrderedList'
   | 'childrenFileHtmlPartial___contentOrderedList___data'
   | 'childrenFileHtmlPartial___contentOrderedList___type'
@@ -2398,7 +2389,6 @@ export type FileFieldsEnum =
   | 'childFileHtmlPartial___internal___owner'
   | 'childFileHtmlPartial___internal___type'
   | 'childFileHtmlPartial___internal___contentFilePath'
-  | 'childFileHtmlPartial___articleType'
   | 'childFileHtmlPartial___contentOrderedList'
   | 'childFileHtmlPartial___contentOrderedList___data'
   | 'childFileHtmlPartial___contentOrderedList___type'
@@ -4493,7 +4483,6 @@ export type FileHtmlFieldsEnum =
   | 'meta___meta_description'
   | 'meta___title'
   | 'meta___redirect_from'
-  | 'articleType'
   | 'slug'
   | 'parentSlug'
   | 'version'
@@ -5644,7 +5633,6 @@ export type FileHtmlPartialFieldsEnum =
   | 'internal___owner'
   | 'internal___type'
   | 'internal___contentFilePath'
-  | 'articleType'
   | 'contentOrderedList'
   | 'contentOrderedList___data'
   | 'contentOrderedList___type'
@@ -5895,17 +5883,17 @@ export type DocumentPathSortInput = {
   order?: InputMaybe<Array<InputMaybe<SortOrderEnum>>>;
 };
 
+export type SubMenuFieldsFragment = { label: string, link: string, level?: number | null, text?: string | null };
+
+export type Unnamed_1_QueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type Unnamed_1_Query = { pageFurnitureYaml?: { items?: Array<{ label: string, link: string, level?: number | null, text?: string | null, items?: Array<{ label: string, link: string, level?: number | null, text?: string | null, items?: Array<{ label: string, link: string, level?: number | null, text?: string | null, items?: Array<{ label: string, link: string, level?: number | null, text?: string | null }> | null }> | null }> | null }> | null } | null, allDocumentPath: { edges: Array<{ node: { id: string, label?: string | null, level?: number | null, link?: string | null, parent?: { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | { id: string } | null } }> } };
+
 export type HomePageQueryQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type HomePageQueryQuery = { pageContentYaml?: { sections?: Array<{ title?: string | null, level?: string | null, description?: string | null, defaultCallToAction?: string | null, cards?: Array<{ title?: string | null, content?: string | null, link?: string | null, flag?: string | null, callToAction?: string | null } | null> | null } | null> | null, meta?: { title?: string | null, description?: string | null, image?: string | null, twitter?: string | null } | null } | null };
-
-export type Unnamed_1_QueryVariables = Exact<{
-  slug: Scalars['String'];
-}>;
-
-
-export type Unnamed_1_Query = { document?: { meta?: { title?: string | null, meta_description?: string | null, languages?: Array<string | null> | null, redirect_from?: Array<string | null> | null } | null } | null, versions: { edges: Array<{ node: { parentSlug?: string | null, slug?: string | null, version?: string | null } }> }, inlineTOC?: { tableOfContents?: { content?: Array<{ key?: string | null, values?: Array<{ linkTitle?: string | null, link?: string | null } | null> | null } | null> | null } | null } | null };
 
 export type Unnamed_2_QueryVariables = Exact<{
   slug: Scalars['String'];
@@ -5913,6 +5901,13 @@ export type Unnamed_2_QueryVariables = Exact<{
 
 
 export type Unnamed_2_Query = { document?: { meta?: { title?: string | null, meta_description?: string | null, languages?: Array<string | null> | null, redirect_from?: Array<string | null> | null } | null } | null, versions: { edges: Array<{ node: { parentSlug?: string | null, slug?: string | null, version?: string | null } }> }, inlineTOC?: { tableOfContents?: { content?: Array<{ key?: string | null, values?: Array<{ linkTitle?: string | null, link?: string | null } | null> | null } | null> | null } | null } | null };
+
+export type Unnamed_3_QueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type Unnamed_3_Query = { document?: { meta?: { title?: string | null, meta_description?: string | null, languages?: Array<string | null> | null, redirect_from?: Array<string | null> | null } | null } | null, versions: { edges: Array<{ node: { parentSlug?: string | null, slug?: string | null, version?: string | null } }> }, inlineTOC?: { tableOfContents?: { content?: Array<{ key?: string | null, values?: Array<{ linkTitle?: string | null, link?: string | null } | null> | null } | null> | null } | null } | null };
 
 export type GatsbyImageSharpFixedFragment = { base64?: string | null, width: number, height: number, src: string, srcSet: string };
 

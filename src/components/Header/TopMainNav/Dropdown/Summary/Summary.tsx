@@ -1,38 +1,24 @@
 import React from 'react';
-import { dropdownData } from '../Button/dropdown-data';
 import { DropdownContentLink } from '../Contents';
 import '../../../../blocks/external-references/styles.css';
-import { SummaryLinkIcon } from '.';
+import { DropdownDataIdentifier } from '../types';
+import { MaybeShowSummaryLink } from './MaybeShowSummaryLink';
+import { SummaryTitle } from './SummaryTitle';
+import { SummaryDescription } from './SummaryDescription';
+import '../../../../blocks/external-references/styles.css';
 
 export const Summary = ({
   titleText,
   descriptionText,
   summaryLink,
 }: {
-  titleText: keyof typeof dropdownData;
+  titleText: DropdownDataIdentifier;
   descriptionText: string;
   summaryLink?: DropdownContentLink;
 }) => (
-  /* Tailwind 'text-sm', 'shadow-sm' and 'tracking-widest' classes do not apply */
   <div className="bg-extra-light-grey left-0 max-h-512 w-1/4 flex flex-col shadow-container-avoid-left">
-    <strong
-      className="uppercase pt-32 px-32"
-      style={{ fontSize: '0.875rem', lineHeight: '1.25rem', letterSpacing: '0.1em' }}
-    >
-      {titleText}
-    </strong>
-    <p className="px-32 pt-32" style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }}>
-      {descriptionText}
-    </p>
-    {summaryLink ? (
-      <div className="h-full px-32 pt-32 docs-link font-medium">
-        <a className="mr-4" style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }} href={summaryLink.href}>
-          {summaryLink.text}
-        </a>
-        <SummaryLinkIcon />
-      </div>
-    ) : (
-      <div></div>
-    )}
+    <SummaryTitle titleText={titleText} />
+    <SummaryDescription descriptionText={descriptionText} />
+    <MaybeShowSummaryLink summaryLink={summaryLink} />
   </div>
 );

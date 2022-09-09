@@ -3,7 +3,7 @@ import { DropdownData } from '../types';
 export const ResourcesDropDownData: DropdownData = {
   summaryTitle: 'Resources',
   summaryDescription:
-    'Find further information on how to use Ably and its SDKs, the latest feature updates and check the status of Ably services.',
+    "Ably's learning resources are available to help you with multiple SDKs, tutorials to implement with Ably for common realtime use-cases, and critical information for developers",
   contents: [
     {
       link: {
