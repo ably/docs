@@ -5,11 +5,11 @@ import { SidebarDataRetrieval } from './SidebarDataRetrieval';
 import { EXPAND_MENU } from '../Sidebar/expand-menu-enum';
 
 export type LeftSidebarProps = {
-  className: string;
+  className?: string;
   languages?: boolean;
 };
 
-const LeftSideBar = ({ className, languages = false }: LeftSidebarProps) => (
+const LeftSideBar = ({ className = '', languages = false }: LeftSidebarProps) => (
   <SidebarDataRetrieval
     className={className}
     languages={languages}

@@ -1,6 +1,6 @@
 const yaml = require('js-yaml');
 const { upperFirst, camelCase, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
-const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH } = require('./front-matter');
+const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH, prepareAllowedMetaFields } = require('./front-matter');
 const DataTypes = require('../types');
 const { ROOT_LEVEL, MAX_LEVEL } = require('../../src/components/Sidebar/consts');
 const { preParser } = require('./pre-parser');
@@ -159,14 +159,14 @@ const transformNanocTextiles =
     const isVersion = /\/versions\/v[\d.]+/.test(slug);
 
     if (frontmatterMeta !== NO_MATCH) {
-      newNodeData.meta = filterAllowedMetaFields(frontmatterMeta.attributes);
+      newNodeData.meta = prepareAllowedMetaFields(filterAllowedMetaFields(frontmatterMeta.attributes));
       if (
         !isVersion &&
         process.env.NODE_ENV === 'development' &&
         process.env.EDITOR_WARNINGS_OFF !== 'true' &&
         !newNodeData.meta.meta_description
       ) {
-        console.warn(
+        throw new Error(
           `No meta_description for file: ${node.relativePath}\n\nPlease add a custom meta_description to the frontmatter YAML at the top of the file.\n\n`,
         );
       }

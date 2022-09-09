@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, SessionState } from '../../../../contexts/user-context';
-import { dropdownData } from './Button';
+import { dropdownData } from './Button/dropdown-data';
 import { Content } from './Contents';
 
 export type DropdownData = {
@@ -16,5 +16,3 @@ export type DropdownData = {
 };
 
 export type DropdownDataIdentifier = keyof typeof dropdownData;
-
-export type NullableDropdownDataIdentifier = keyof typeof dropdownData | null;

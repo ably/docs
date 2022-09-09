@@ -9,37 +9,42 @@ export const ResourcesDropDownData: DropdownData = {
       link: {
         href: '/tutorials',
         text: 'Tutorials & Demos',
+        external: true,
       },
       description:
-        'A selection of tutorials demonstrating the use of the Ably Client library SDKs and the Ably REST API.',
+        'Choose from a range of tutorials to get started with Ably, or watch a demo showcasing Ably in action.',
     },
     {
       link: {
         href: '/download',
-        text: 'Explore all SDKs',
+        text: 'Download SDKs',
+        external: true,
       },
-      description: 'Download official Ably client library SDKs.',
+      description: 'Explore and download Ably Client Library SDKs and other realtime protocol libraries.',
     },
     {
       link: {
         href: 'https://faqs.ably.com/',
         text: 'FAQs',
+        external: true,
       },
-      description: "Experiencing issues? Chances are we've got you covered in our FAQs.",
+      description: 'Search the Ably FAQs for answers to common questions.',
     },
     {
       link: {
         href: 'https://changelog.ably.com/',
         text: 'Changelog',
+        external: true,
       },
-      description: 'Changes to Ably products and to the Ably Client Library SDKs',
+      description: 'See the latest updates to Ably features and Client Library SDKs.',
     },
     {
       link: {
         href: 'https://status.ably.io/',
         text: 'System Status',
+        external: true,
       },
-      description: 'Ably service health dashboard',
+      description: 'Check the status of all Ably services.',
     },
   ],
   title: 'Resources Available',

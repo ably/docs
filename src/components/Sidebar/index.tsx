@@ -7,7 +7,7 @@ import { SidebarData } from './sidebar-data';
 
 export type SidebarProps = {
   data: SidebarData[];
-  className: string;
+  className?: string;
   title?: string;
   languages?: boolean;
   interactableLinkMenu?: boolean;
@@ -16,7 +16,7 @@ export type SidebarProps = {
 
 const Sidebar = ({
   data,
-  className,
+  className = '',
   title,
   languages = false,
   interactableLinkMenu = false,

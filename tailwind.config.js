@@ -75,16 +75,37 @@ module.exports = extendConfig((ablyUIConfig) => ({
     },
     spacing: {
       ...ablyUIConfig.theme.spacing,
+      2: '0.125rem',
       12: '0.75rem',
+      13: '0.8125rem',
+      22: '1.375rem',
       30: '1.875rem',
       38: '2.375rem',
       128: 'var(--spacing-128)',
       300: '18.75rem',
+      320: '20rem',
       420: '26.25rem',
       full: '100%',
     },
+    screens: {
+      ...ablyUIConfig.theme.screens,
+      '2xl': '1920px',
+    },
     extend: {
       ...ablyUIConfig.theme.extend,
+      width: {
+        ...ablyUIConfig.theme.extend.width,
+        160: '10rem',
+      },
+      minWidth: {
+        ...ablyUIConfig.theme.extend.minWidth,
+        170: '10.625rem',
+      },
+      maxWidth: {
+        ...ablyUIConfig.theme.extend.maxWidth,
+        400: '25rem',
+        512: '32rem',
+      },
       colors: periodicTableOfRealtimeColors,
       gridRowStart: {
         9: '9',

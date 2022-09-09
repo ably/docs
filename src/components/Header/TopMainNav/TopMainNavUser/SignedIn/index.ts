@@ -1,3 +1,3 @@
 export * from './SignedInPlaceholder';
-export * from './SignedIn';
+export * from './SignIn';
 export * from './SignOutLink';

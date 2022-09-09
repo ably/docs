@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { safeWindow } from '../../../../utilities/browser/safe-window';
 
-export const TopMainNavAblyLogo = ({ href = '/' }: { href: string }) => {
+export const TopMainNavAblyLogo = ({ href = '/' }: { href?: string }) => {
   const [width, setWidth] = useState(1920);
   useLayoutEffect(() => {
     safeWindow.addEventListener('resize', () => setWidth(window.innerWidth));
