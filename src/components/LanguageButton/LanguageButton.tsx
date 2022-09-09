@@ -9,6 +9,7 @@ import { PREFERRED_LANGUAGE_KEY } from '../../utilities/language/constants';
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
 
 import { button, isActive } from './LanguageButton.module.css';
+import { storage } from 'src/utilities/browser/storage';
 
 const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language }) => {
   const pageLanguage = useContext(PageLanguageContext);
@@ -18,9 +19,9 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language }) => {
 
   const cacheVisitPreferredLanguage = () => {
     if (isPageLanguageDefault) {
-      safeWindow.localStorage.clear();
+      storage.clear();
     } else {
-      safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
+      storage.setItem(PREFERRED_LANGUAGE_KEY, language);
     }
     navigate(href);
   };

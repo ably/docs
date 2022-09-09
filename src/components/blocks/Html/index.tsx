@@ -1,34 +1,23 @@
 import React from 'react';
-import DOMPurify from 'dompurify';
-import blocksFromData from '../blocks-from-data';
+import { defaultBlocksFromData } from '../create-blocks/default-blocks-from-data';
+import { apiReferenceBlocksFromData } from '../create-blocks/api-reference-blocks-from-data';
 import { isArray } from 'lodash';
 import ConditionalChildrenLanguageDisplay from '../wrappers/ConditionalChildrenLanguageDisplay';
+import { HtmlComponentProps, ValidReactElement } from 'src/components/html-component-props';
+import { ArticleTypeContext } from '../../../contexts/article-type-context';
+import { ARTICLE_TYPES } from '../../../../data/transform/constants';
 
-// This is not to be used in production.
-const DangerousHtml = ({ data }: { data: string }) => (
-  <div
-    dangerouslySetInnerHTML={{
-      __html: DOMPurify.sanitize(data, {
-        // The SVG and Math tags have been used in the past as attack vectors for mXSS,
-        // but if we really need them should be safe enough to enable.
-        // This is probably too cautious but we have no need for them at time of writing, so forbidding them is free.
-        FORBID_TAGS: ['svg', 'math'],
-      }),
-    }}
-  ></div>
-);
-
-interface HtmlProps {
-  data: string | any[] | null | undefined;
-}
-
-const Html = ({ data }: HtmlProps) => {
-  return isArray(data) ? (
-    <ConditionalChildrenLanguageDisplay>{blocksFromData(data)}</ConditionalChildrenLanguageDisplay>
+const Html = ({ data }: { data: HtmlComponentProps<ValidReactElement>[] | string | null }) =>
+  isArray(data) ? (
+    <ArticleTypeContext.Consumer>
+      {(articleType) => {
+        const blockCreator =
+          articleType === ARTICLE_TYPES.apiReference ? apiReferenceBlocksFromData : defaultBlocksFromData;
+        return <ConditionalChildrenLanguageDisplay>{blockCreator(data)}</ConditionalChildrenLanguageDisplay>;
+      }}
+    </ArticleTypeContext.Consumer>
   ) : (
     <>{data}</>
   );
-};
 
-export { DangerousHtml };
 export default Html;

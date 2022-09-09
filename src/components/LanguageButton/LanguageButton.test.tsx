@@ -5,6 +5,7 @@ import { PREFERRED_LANGUAGE_KEY } from 'src/utilities/language/constants';
 import PageLanguageContext from 'src/contexts/page-language-context';
 
 import LanguageButton from './LanguageButton';
+import { storage } from 'src/utilities/browser/storage';
 
 describe(`<LanguageButton />`, () => {
   it('renders default state button', () => {
@@ -41,6 +42,6 @@ describe(`<LanguageButton />`, () => {
 
     const button = screen.getByRole('button');
     await userEvent.click(button);
-    expect(localStorage.getItem(PREFERRED_LANGUAGE_KEY)).toBe('javascript');
+    expect(storage.getItem(PREFERRED_LANGUAGE_KEY)).toBe('javascript');
   });
 });

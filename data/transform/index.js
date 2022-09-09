@@ -7,6 +7,7 @@ const { preParser } = require('./pre-parser');
 const { processAfterFrontmatterExtracted } = require('./parser-enhancements');
 const { maybeRetrievePartial } = require('./retrieve-partials');
 const { flattenContentOrderedList } = require('./shared-utilities');
+const { ARTICLE_TYPES } = require('./constants');
 
 const INLINE_TOC_REGEX = /^inline-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
 
@@ -149,7 +150,14 @@ const transformNanocTextiles =
 
     createInlineToc(inlineTOCOnly, slug, node, { createContentDigest, createNodeId, updateWithTransform });
     const { data, frontmatterMeta } = splitDataAndMetaData(noInlineTOC);
+
+    let articleType = ARTICLE_TYPES.document;
+    if (/^api\/.*/.test(slug)) {
+      articleType = ARTICLE_TYPES.apiReference;
+    }
+
     const newNodeData = {
+      articleType,
       contentOrderedList: data,
       id,
       children: [],
