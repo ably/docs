@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useRef, useState } from 'react';
+import React, { ChangeEvent, useRef } from 'react';
 import { useSearch } from 'src/hooks';
 import { SearchIcon } from '.';
 import { FullSizeSearchDisplay } from './FullSizeSearchDisplay';
@@ -12,10 +12,9 @@ export const displayModes = {
 type DisplayMode = keyof typeof displayModes;
 
 export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const textInput = useRef<null | HTMLInputElement>(null);
   const focusOnSearchInput = () => textInput.current && textInput.current.focus && textInput.current.focus();
-  
+
   let StyledSearchComponent = FullSizeSearchDisplay;
   if (displayMode === displayModes.MOBILE) {
     StyledSearchComponent = MobileSearchDisplay;
