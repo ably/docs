@@ -1,11 +1,10 @@
 import { SetStateAction } from 'react';
 import { CSSObjectWithLabel, StylesConfig } from 'react-select';
-import { gui, primary } from '../../../../styles/colors';
+import { gui } from 'src/styles/colors';
 
 const SELECT_HEIGHT = '24px';
 
-const optionStyles = (provided: CSSObjectWithLabel) => ({
-  ...provided,
+const optionStyles = {
   border: 0,
   margin: 0,
   width: 200,
@@ -14,15 +13,15 @@ const optionStyles = (provided: CSSObjectWithLabel) => ({
   boxShadow: 'none',
   fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
   fontSize: 14,
+  fontWeight: 300,
   '&:active': {
-    ...provided[':active'],
     backgroundColor: gui.active,
   },
-});
+};
 
 const controlStyles = (provided: CSSObjectWithLabel) => ({
   ...provided,
-  width: '200px',
+  width: 200,
   border: 0,
   margin: 0,
   color: '#D9D9DA',
@@ -43,13 +42,31 @@ export const selectMenuStyles: StylesConfig<SetStateAction<{ label: string; valu
     display: 'none',
   }),
   control: controlStyles,
-  option: optionStyles,
-  singleValue: optionStyles,
-  groupHeading: optionStyles,
+  singleValue: (provided: CSSObjectWithLabel) => ({ ...provided, ...optionStyles }),
   menu: (provided: CSSObjectWithLabel) => ({
     ...provided,
-    backgroundColor: primary.charcoalGrey,
+    backgroundColor: 'white',
     top: '1em',
+    right: 0,
+    boxShadow: '0px 24px 80px rgba(0, 0, 0, 0.1)',
+    padding: 8,
+    border: '1px solid #F5F5F6',
+    borderRadius: 6,
+    width: 275,
+  }),
+  group: (provided: CSSObjectWithLabel) => ({
+    ...provided,
+    padding: 0,
+  }),
+  groupHeading: (provided: CSSObjectWithLabel) => ({
+    ...provided,
+    ...optionStyles,
+    color: '#76767C',
+    padding: '0 8px',
+  }),
+  menuList: (provided: CSSObjectWithLabel) => ({
+    ...provided,
+    padding: 0,
   }),
   input: (provided: CSSObjectWithLabel) => ({
     ...provided,

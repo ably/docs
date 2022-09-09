@@ -18,6 +18,7 @@ export interface LanguageNavigationProps {
 }
 
 const LanguageNavigation = ({ items }: LanguageNavigationProps) => {
+  console.log(items);
   return (
     <HorizontalMenu>
       {items.map(({ Component, props, content }, index) => (
@@ -25,6 +26,7 @@ const LanguageNavigation = ({ items }: LanguageNavigationProps) => {
           {content}
         </Component>
       ))}
+      <div>{/* <Select /> */}</div>
     </HorizontalMenu>
   );
 };

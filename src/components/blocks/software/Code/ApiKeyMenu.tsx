@@ -1,7 +1,6 @@
 import React, { Dispatch, useState } from 'react';
-import Select from 'react-select';
+import { Select } from 'src/components';
 import { DEFAULT_API_KEY_MESSAGE } from '.';
-import { selectMenuStyles } from './api-key-menu-styles';
 
 export type Option = {
   label: string;
@@ -54,18 +53,18 @@ const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
   }));
 
   return (
-    <>
-      <Select
-        value={value}
-        isSearchable={false}
-        onChange={(value) => {
-          setValue(value ?? errorOption);
-          setActiveApiKey(value ?? { label: DEFAULT_API_KEY_MESSAGE, value: DEFAULT_API_KEY_MESSAGE });
-        }}
-        options={options}
-        styles={selectMenuStyles}
-      />
-    </>
+    <Select
+      value={value}
+      isSearchable={false}
+      onChange={(value) => {
+        // @ts-ignore - TODO: fix react-select props
+        setValue(value ?? errorOption);
+        // @ts-ignore - TODO: fix react-select props
+        setActiveApiKey(value ?? { label: DEFAULT_API_KEY_MESSAGE, value: DEFAULT_API_KEY_MESSAGE });
+      }}
+      options={options}
+      menuIsOpen
+    />
   );
 };
 
