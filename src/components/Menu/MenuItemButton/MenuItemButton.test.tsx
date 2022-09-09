@@ -27,7 +27,7 @@ describe('<MenuItemButton />', () => {
 
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
       <button
-        class="button isSelected"
+        class="button selected"
       >
         Selected Item
       </button>

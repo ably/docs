@@ -1,20 +1,23 @@
 import { curry, propOr } from 'lodash/fp';
-import HtmlDataTypes from '../../data/types/html';
-import { Button, Input, Meter, Noscript, Progress, Script, Select, Textarea } from './blocks/complex-functionality';
-import { Article, Aside, Div, Main, Section, Span } from './blocks/dividers';
-import { A, Address, Audio, Blockquote, Iframe, Img, Quote, Video } from './blocks/external-references';
-import { H1, H2, H3, H4, H5, H6, Header } from './blocks/headings';
-import { Dd, Dt, Dl, Li, Ol, Ul } from './blocks/list';
-import Wbr from './blocks/non-semantic/Wbr';
-import { Abbr, Details, Dfn, Summary, Time } from './blocks/semantic-enhancements';
-import { Code, Kbd, Output, Pre, Samp, Var } from './blocks/software';
-import { Em, Small, Strong, Sub, Sup } from './blocks/styles';
-import { Caption, Col, Colgroup, Table, Tbody, Td, Tfoot, Th, Thead, Tr } from './blocks/table';
-import { Paragraph } from './blocks/typography';
+import HtmlDataTypes from '../../../../data/types/html';
+import { ApiReferenceBlockquote } from '../api-reference/external-references/ApiReferenceBlockquote';
+import { ApiReferenceH6 } from '../api-reference/headings/ApiReferenceH6';
+import { ApiReferenceCode } from '../api-reference/software/Code/ApiReferenceCode';
+import { Button, Input, Meter, Noscript, Progress, Script, Select, Textarea } from '../complex-functionality';
+import { Article, Aside, Div, Main, Section, Span } from '../dividers';
+import { A, Address, Audio, Blockquote, Iframe, Img, Quote, Video } from '../external-references';
+import { H1, H2, H3, H4, H5, H6, Header } from '../headings';
+import { Dd, Dt, Dl, Li, Ol, Ul } from '../list';
+import Wbr from '../non-semantic/Wbr';
+import { Abbr, Details, Dfn, Summary, Time } from '../semantic-enhancements';
+import { Code, Kbd, Output, Pre, Samp, Var } from '../software';
+import { Em, Small, Strong, Sub, Sup } from '../styles';
+import { Caption, Col, Colgroup, Table, Tbody, Td, Tfoot, Th, Thead, Tr } from '../table';
+import { Paragraph } from '../typography';
 
-const IS_TEXT = null;
+export const IS_TEXT = null;
 
-const HtmlTypeComponentMap = Object.freeze({
+export const HtmlTypeComponentMap = Object.freeze({
   // text
   [HtmlDataTypes.p]: Paragraph,
   // semantic styles
@@ -92,7 +95,15 @@ const HtmlTypeComponentMap = Object.freeze({
   [HtmlDataTypes.wbr]: Wbr,
 });
 
-const componentMap = propOr(IS_TEXT, curry.placeholder, HtmlTypeComponentMap);
+const ApiReferenceHtmlTypeComponentMap = Object.freeze({
+  // external references
+  [HtmlDataTypes.blockquote]: ApiReferenceBlockquote,
+  // headings
+  [HtmlDataTypes.h6]: ApiReferenceH6,
+  // software-related
+  [HtmlDataTypes.code]: ApiReferenceCode,
+});
 
-export { IS_TEXT };
-export default componentMap;
+export const componentMap = propOr(IS_TEXT, curry.placeholder, HtmlTypeComponentMap);
+export const apiReferenceComponentMap = (htmlDataType) =>
+  propOr(componentMap(htmlDataType), htmlDataType, ApiReferenceHtmlTypeComponentMap);
