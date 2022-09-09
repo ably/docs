@@ -9,6 +9,9 @@ const Paragraph = ({ data, attribs }: HtmlComponentProps<'p'> & { attribs: { ['d
   const isTip = attribsContainClass('tip', attribs);
   const BaseComponent = isTip ? Tip : GenericHtmlBlock('p');
   const ParagraphComponent = PendingClassName({ data, attribs }, BaseComponent);
+  if (attribs.className && attribs.className.includes('definition')) {
+    return ParagraphComponent('font-mono font-semibold text-code');
+  }
   switch (attribs['data-variant']) {
     case 'p1-strong':
       return ParagraphComponent('ui-text-p1 font-medium mb-32');

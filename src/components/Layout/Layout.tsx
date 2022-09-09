@@ -56,7 +56,7 @@ const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = 
       {hubspotTrackingId && <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" />}
       <Navigation />
       <div className="grid grid-cols-5 2xl:grid-cols-7">
-        <LeftSideBar className="col-span-1 bg-extra-light-grey" />
+        <LeftSideBar className="col-span-1 bg-extra-light-grey pt-78" />
         <TopCodeMenu languages={languages} versionData={versionData} />
         <main
           className={`${

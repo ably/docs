@@ -14,6 +14,7 @@ export const plugins = [
   'gatsby-transformer-sharp',
   'gatsby-plugin-react-helmet',
   'gatsby-plugin-ts',
+  'gatsby-plugin-root-import',
   {
     resolve: 'gatsby-plugin-sitemap',
     options: {
@@ -87,4 +88,5 @@ export const plugins = [
       icon: 'src/images/favicon.png',
     },
   },
+  `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/
 ];

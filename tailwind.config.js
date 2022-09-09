@@ -1,24 +1,13 @@
 const extendConfig = require('@ably/ui/tailwind.extend.js');
 
-const periodicTableOfRealtimeColors = {
-  'low-level-transport': 'var(--color-jazzy-pink)',
-  'application-transport': '#e40060',
-  'realtime-transport': '#ff2739',
-  'event-driven-push-transport': '#d9d9da',
-  'push-notifications': '#80B9F2',
-  'realtime-and-messaging-protocol': '#4af7ff',
-  'event-driven-software': '#08ff13',
-  'open-source-realtime-software': '#82a912',
-  'cloud-native-realtime-service': '#ff5416',
-  'proprietary-realtime-software': '#0073e6',
-  'decentralized-protocol': '#9b4633',
-  'framework-extension-for-realtime': '#b76868',
-  'realtime-db-software': '#a4863b',
-  'realtime-application-service': '#76767c',
-  'streaming-gateway-service': '#338F9B',
-  'containers-one': '#ebebeb',
-  'containers-two': '#F5F5F6',
-  'containers-three': '#FAFAFB',
+const apiReferenceSpecificColors = {
+  'api-reference-attribute-highlight': '#ffe6dc',
+  'api-reference-attribute-border': '#ff9e7a',
+};
+
+const highlightColors = {
+  'notification-background': '#0073e6',
+  'active-language-button': '#ff5416',
 };
 
 module.exports = extendConfig((ablyUIConfig) => ({
@@ -40,9 +29,11 @@ module.exports = extendConfig((ablyUIConfig) => ({
          *  - src/components/Sidebar/LeftSidebar/index.js
          *  - src/components/Sidebar/index.js
          * h-full, mx-8 => src/components/Sidebar/SidebarItem.js
+         * transform => src/components/Header/TopMainNav/HamburgerMenu/HamburgerDropdown/HamburgerSidebarRenderer/HamburgerSidebarSubmenu.tsx
          */
         standard: [
-          ...Object.keys(periodicTableOfRealtimeColors).map((c) => `bg-${c}`),
+          ...Object.keys(apiReferenceSpecificColors).map((c) => `bg-${c}`),
+          ...Object.keys(highlightColors).map((c) => `bg-${c}`),
           ...ablyUIConfig.purge.options.safelist.standard,
           'mb-40',
           'mb-32',
@@ -52,6 +43,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
           'px-16',
           'h-full',
           'mx-8',
+          'transform',
         ],
         /**
          * Purge exclusions must be added for all dynamic classNames.
@@ -59,8 +51,9 @@ module.exports = extendConfig((ablyUIConfig) => ({
          * If dynamic classNames are no longer present they can be removed here:
          * docs-.* => Preferred prefix for custom classes throughout
          * col-span-.*  => src/components/Article/index.js
+         * rotate- => src/components/Header/TopMainNav/HamburgerMenu/HamburgerDropdown/HamburgerSidebarRenderer/HamburgerSidebarSubmenu.tsx
          */
-        greedy: [...ablyUIConfig.purge.options.safelist.greedy, /^docs-.*/, /^col-span-.*/],
+        greedy: [...ablyUIConfig.purge.options.safelist.greedy, /^docs-.*/, /^col-span-.*/, /^rotate-/],
       },
     },
   },
@@ -72,7 +65,17 @@ module.exports = extendConfig((ablyUIConfig) => ({
     },
     spacing: {
       ...ablyUIConfig.theme.spacing,
+      2: '0.125rem',
+      12: '0.75rem',
+      13: '0.8125rem',
+      22: '1.375rem',
+      30: '1.875rem',
+      38: '2.375rem',
       128: 'var(--spacing-128)',
+      300: '18.75rem',
+      320: '20rem',
+      420: '26.25rem',
+      full: '100%',
     },
     screens: {
       ...ablyUIConfig.theme.screens,
@@ -80,7 +83,23 @@ module.exports = extendConfig((ablyUIConfig) => ({
     },
     extend: {
       ...ablyUIConfig.theme.extend,
-      colors: periodicTableOfRealtimeColors,
+      width: {
+        ...ablyUIConfig.theme.extend.width,
+        160: '10rem',
+      },
+      minWidth: {
+        ...ablyUIConfig.theme.extend.minWidth,
+        170: '10.625rem',
+      },
+      maxWidth: {
+        ...ablyUIConfig.theme.extend.maxWidth,
+        400: '25rem',
+        512: '32rem',
+      },
+      colors: {
+        ...apiReferenceSpecificColors,
+        ...highlightColors,
+      },
       gridRowStart: {
         9: '9',
         10: '10',
@@ -91,6 +110,18 @@ module.exports = extendConfig((ablyUIConfig) => ({
         15: '15',
         16: '16',
         17: '17',
+      },
+      rotate: {
+        ...ablyUIConfig.theme.extend.rotate,
+        270: '270deg',
+      },
+      zIndex: {
+        ...ablyUIConfig.theme.extend.zIndex,
+        1: '1',
+      },
+      fontSize: {
+        ...ablyUIConfig.theme.extend.fontSize,
+        16: ['16px', '18px'],
       },
     },
   },

@@ -6,19 +6,19 @@ import { EXPAND_MENU } from './expand-menu-enum';
 import { SidebarData } from './sidebar-data';
 import { HighlightedMenuContext } from '../../contexts/highlighted-menu-context';
 
-type SidebarProps = {
+export type SidebarProps = {
   data: SidebarData[];
-  className: string;
+  className?: string;
   title?: string;
-  languages: boolean;
   indentOffset?: number;
-  expandableLinkMenu: boolean;
+  expandableLinkMenu?: boolean;
+  languages?: boolean;
   expandMenu?: EXPAND_MENU;
 };
 
 const Sidebar = ({
   data,
-  className,
+  className = '',
   title,
   indentOffset = 0,
   languages = false,

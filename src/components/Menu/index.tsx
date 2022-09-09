@@ -8,5 +8,5 @@ export const TopHorizontalMenuEndAlign = ({ children }: { children: React.ReactN
   <menu className="docs-top-horizontal-menu justify-end w-full">{children}</menu>
 );
 export const TopHorizontalMenuLight = ({ children }: { children: React.ReactNode }) => (
-  <menu className="docs-top-horizontal-menu justify-between w-full">{children}</menu>
+  <menu className="docs-top-horizontal-menu justify-between w-full pl-64 pr-64">{children}</menu>
 );

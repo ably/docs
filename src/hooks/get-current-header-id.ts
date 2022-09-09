@@ -25,11 +25,8 @@ export const useGetCurrentHeader = (flatTableOfContents: SidebarData[]) => {
     flatTableOfContents: SidebarData[],
     setHeadingId: typeof setHighlightedHeadingId,
   ) => {
-    const topNav = document.getElementsByClassName('docs-top-horizontal-menu');
-    const topNavBoundingRects = Array.from(topNav).map(
-      (topNavItem: Element) => topNavItem.getBoundingClientRect().height,
-    );
-    const topNavHeight = topNavBoundingRects.reduce(add);
+    const topNav = document.getElementById('top-main-nav') as HTMLElement;
+    const topNavHeight = topNav.getBoundingClientRect().height;
     for (const headingLine of flatTableOfContents) {
       const element = document.getElementById(headingLine.link.replaceAll('#', ''));
       if (element) {
