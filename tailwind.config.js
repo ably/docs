@@ -1,24 +1,13 @@
 const extendConfig = require('@ably/ui/tailwind.extend.js');
 
-const periodicTableOfRealtimeColors = {
-  'low-level-transport': 'var(--color-jazzy-pink)',
-  'application-transport': '#e40060',
-  'realtime-transport': '#ff2739',
-  'event-driven-push-transport': '#d9d9da',
-  'push-notifications': '#80B9F2',
-  'realtime-and-messaging-protocol': '#4af7ff',
-  'event-driven-software': '#08ff13',
-  'open-source-realtime-software': '#82a912',
-  'cloud-native-realtime-service': '#ff5416',
-  'proprietary-realtime-software': '#0073e6',
-  'decentralized-protocol': '#9b4633',
-  'framework-extension-for-realtime': '#b76868',
-  'realtime-db-software': '#a4863b',
-  'realtime-application-service': '#76767c',
-  'streaming-gateway-service': '#338F9B',
-  'containers-one': '#ebebeb',
-  'containers-two': '#F5F5F6',
-  'containers-three': '#FAFAFB',
+const apiReferenceSpecificColors = {
+  'api-reference-attribute-highlight': '#ffe6dc',
+  'api-reference-attribute-border': '#ff9e7a',
+};
+
+const highlightColors = {
+  'notification-background': '#0073e6',
+  'active-language-button': '#ff5416',
 };
 
 module.exports = extendConfig((ablyUIConfig) => ({
@@ -42,7 +31,8 @@ module.exports = extendConfig((ablyUIConfig) => ({
          * h-full, mx-8 => src/components/Sidebar/SidebarItem.js
          */
         standard: [
-          ...Object.keys(periodicTableOfRealtimeColors).map((c) => `bg-${c}`),
+          ...Object.keys(apiReferenceSpecificColors).map((c) => `bg-${c}`),
+          ...Object.keys(highlightColors).map((c) => `bg-${c}`),
           ...ablyUIConfig.purge.options.safelist.standard,
           'mb-40',
           'mb-32',
@@ -97,7 +87,10 @@ module.exports = extendConfig((ablyUIConfig) => ({
         400: '25rem',
         512: '32rem',
       },
-      colors: periodicTableOfRealtimeColors,
+      colors: {
+        ...apiReferenceSpecificColors,
+        ...highlightColors,
+      },
       gridRowStart: {
         9: '9',
         10: '10',

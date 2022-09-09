@@ -16,18 +16,14 @@ import { getRandomChannelName } from './get-random-channel-name';
 
 import '@ably/ui/core/styles.css';
 import '../styles.css';
+import { NestedHtmlComponentProps } from 'src/components/html-component-props';
 
 const API_KEY_LENGTH = 57;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
 
-const multilineRegex = /\r|\n/gm;
+export const multilineRegex = /\r|\n/gm;
 
-type Props = {
-  data: Array<any>;
-  attribs: Record<string, any>;
-};
-
-const Code = ({ data, attribs }: Props) => {
+const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
   const [activeApiKey, setActiveApiKey] = useState({
     label: DEFAULT_API_KEY_MESSAGE,
     value: DEFAULT_API_KEY_MESSAGE,
@@ -35,12 +31,12 @@ const Code = ({ data, attribs }: Props) => {
 
   const isString = data.length === 1 && data[0].type === HtmlDataTypes.text;
   const hasRenderableLanguages = isString && attribs && attribs.lang;
-  const hasMultilineText = isString && multilineRegex.test(data[0].data);
+  const hasMultilineText = isString && multilineRegex.test(data[0].data as string);
 
-  const dataContainsKey = attribs[`data-contains-${API_KEY_DATA_ATTRIBUTE}`] === 'true';
-  const dataContainsRandomChannelName = attribs[`data-contains-${RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE}`] === 'true';
+  const dataContainsKey = attribs?.[`data-contains-${API_KEY_DATA_ATTRIBUTE}`] === 'true';
+  const dataContainsRandomChannelName = attribs?.[`data-contains-${RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE}`] === 'true';
 
-  const content = data[0]?.data ?? '';
+  const content = (data[0]?.data as string) ?? '';
   const contentWithRandomChannelName = useMemo(
     () =>
       dataContainsRandomChannelName ? content.replace(/{{RANDOM_CHANNEL_NAME}}/g, getRandomChannelName()) : content,
@@ -70,7 +66,7 @@ const Code = ({ data, attribs }: Props) => {
 
   if (hasRenderableLanguages || hasMultilineText) {
     const displayLanguage =
-      attribs.lang && languageSyntaxHighlighterNames[attribs.lang]
+      attribs?.lang && languageSyntaxHighlighterNames[attribs?.lang]
         ? languageSyntaxHighlighterNames[attribs.lang]
         : languageSyntaxHighlighterNames['plaintext'];
 
