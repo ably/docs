@@ -3,12 +3,12 @@ import Html from '../Html';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import '@ably/ui/core/styles.css';
 
-import { HtmlComponentProps } from '../../html-component-props';
+import { HtmlComponentProps, ValidReactElement } from '../../html-component-props';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
   languages: string[];
-  altData?: Record<string, string | any[] | null | undefined>;
+  altData?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
 };
 
 const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {

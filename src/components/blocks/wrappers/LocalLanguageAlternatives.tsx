@@ -6,6 +6,7 @@ import LanguageNavigation from '../../Menu/LanguageNavigation';
 import { PageLanguagesContext } from '../../../contexts/page-language-context';
 import { LanguageButton } from 'src/components';
 import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
+import { HtmlComponentProps, ValidReactElement } from 'src/components/html-component-props';
 
 const LocalLanguageAlternatives = ({
   languages,
@@ -13,7 +14,7 @@ const LocalLanguageAlternatives = ({
   children,
 }: {
   languages: string[];
-  data: Record<string, string | any[] | null | undefined> | undefined;
+  data?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
   children: React.ReactNode;
 }) => {
   const pageLanguages = useContext(PageLanguagesContext);

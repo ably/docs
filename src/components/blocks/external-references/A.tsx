@@ -18,7 +18,7 @@ const StyledGatsbyLink = ({ to, children, ...props }: Omit<GatsbyLinkProps<Recor
 
 const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
   if (
-    attribs.href &&
+    attribs?.href &&
     /^(\/|#|https?:\/\/(?:www.)?ably.com\/docs).*/.test(attribs.href) &&
     !onPageNav.test(attribs.href)
   ) {
