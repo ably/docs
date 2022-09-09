@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo } from 'react';
-import { Helmet } from 'react-helmet';
 import { navigate, Script, ScriptStrategy } from 'gatsby';
 import Layout from '../components/Layout';
 import Html from '../components/blocks/Html';
