@@ -4,6 +4,7 @@ export const LeftSidebarContainer = styled.div`
   @media only screen and (max-width: 1040px) {
     display: none;
   }
+  background-color: var(--color-extra-light-grey);
   > aside > .accordion > ol > li {
     > .accordion__item {
       > .accordion__heading {
