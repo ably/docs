@@ -8,7 +8,7 @@ import { liftLangAttributes } from '../../../../data/html-parser/lift-lang-attri
 import { postParser } from '../../../../data/transform/post-parser';
 import { preParser } from '../../../../data/transform/pre-parser';
 import ConditionalChildrenLanguageDisplay from './ConditionalChildrenLanguageDisplay';
-import blocksFromData from '../blocks-from-data';
+import { defaultBlocksFromData } from '../create-blocks/default-blocks-from-data';
 
 const rawData = `
 - <div lang="jsall">callback</div> := is a function of the form @function(err)@ which is called upon completion
@@ -20,7 +20,7 @@ const rawData = `
 
 const twoChildrenInstance = TestRenderer.create(
   <ConditionalChildrenLanguageDisplay>
-    {blocksFromData([
+    {defaultBlocksFromData([
       {
         name: 'span',
         data: 'content',
@@ -37,7 +37,7 @@ const twoChildrenInstance = TestRenderer.create(
 
 const sameLanguageTwoChildrenInstance = TestRenderer.create(
   <ConditionalChildrenLanguageDisplay>
-    {blocksFromData([
+    {defaultBlocksFromData([
       {
         name: 'span',
         data: 'content',
@@ -118,7 +118,7 @@ describe('Integration: ConditionalChildrenLanguageDisplay only displays one <dt>
 
   it('ConditionalChildrenLanguageDisplay displays the expected results from HTML data', () => {
     const renderedData = TestRenderer.create(
-      <ConditionalChildrenLanguageDisplay>{blocksFromData(htmlParsed)}</ConditionalChildrenLanguageDisplay>,
+      <ConditionalChildrenLanguageDisplay>{defaultBlocksFromData(htmlParsed)}</ConditionalChildrenLanguageDisplay>,
     );
     const tree = renderedData.toJSON();
     expect(tree).toMatchSnapshot();
