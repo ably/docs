@@ -12,5 +12,6 @@ export const safeWindow =
           key: identity,
           clear: identity,
         },
+        addEventListener: identity,
       }
     : window;
