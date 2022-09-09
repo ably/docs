@@ -6,7 +6,6 @@ import languageLabels from '../../../maps/language';
 import { ReactSelectOption } from '../react-select-option-types';
 import { PREFERRED_LANGUAGE_KEY } from '../../../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common/language-defaults';
-import { safeWindow } from '../../../utilities/browser/safe-window';
 import { navigate } from 'gatsby';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import {
@@ -17,6 +16,7 @@ import {
   menuStyles,
   optionStyles,
 } from '../ReactSelectStyles';
+import { storage } from 'src/utilities/browser/storage';
 
 export const LanguageDropdownSelector = ({
   language,
@@ -61,9 +61,9 @@ export const LanguageDropdownSelector = ({
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(newLanguage, language);
         const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, newLanguage);
         if (isPageLanguageDefault) {
-          safeWindow.localStorage.clear();
+          storage.clear();
         } else {
-          safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
+          storage.setItem(PREFERRED_LANGUAGE_KEY, language);
         }
         navigate(href);
       }}

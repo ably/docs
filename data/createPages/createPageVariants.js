@@ -22,13 +22,17 @@ const addLanguagesToSet =
     }
   };
 
+const getLanguagesFromContent = (contentOrderedList) => {
+  const languageSet = new Set();
+  contentOrderedList.forEach(addLanguagesToSet(languageSet));
+  return Array.from(languageSet);
+};
+
 const createLanguagePageVariants =
   (createPage, documentTemplate) =>
   (contentOrderedList, slug, parentSlug = null, version = null) => {
-    const languageSet = new Set();
-    contentOrderedList.forEach(addLanguagesToSet(languageSet));
-
-    languageSet.forEach((lang) => {
+    const languages = getLanguagesFromContent(contentOrderedList);
+    languages.forEach((lang) => {
       const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item, [], lang));
       createPage({
         path: `${DOCUMENTATION_PATH}${slug}/language/${lang}`,
@@ -38,16 +42,17 @@ const createLanguagePageVariants =
           slug: parentSlug ?? slug,
           version: version ?? LATEST_ABLY_API_VERSION_STRING,
           language: lang,
-          languages: Array.from(languageSet),
+          languages,
           contentOrderedList,
           contentMenu: contentMenu ?? [],
         },
       });
     });
-    return Array.from(languageSet);
+    return languages;
   };
 
 module.exports = {
   addLanguagesToSet,
+  getLanguagesFromContent,
   createLanguagePageVariants,
 };
