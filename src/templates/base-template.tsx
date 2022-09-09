@@ -6,10 +6,10 @@ import { LeftSideBar } from '../components/StaticQuerySidebar';
 import PageLanguageContext, { PageLanguagesContext } from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
-import RightSidebar from '../components/Sidebar/RightSidebar';
 import PageTitle from '../components/PageTitle';
 import { PREFERRED_LANGUAGE_KEY } from '../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../components/common/language-defaults';
+import { RightSidebar, RightSidebarMobile } from '../components/Sidebar/RightSidebar';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
 import { storage } from 'src/utilities/browser/storage';
@@ -79,6 +79,7 @@ const Template = ({
         <Layout languages={filteredLanguages} versionData={versionData}>
           <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
           <Article>
+            <RightSidebarMobile menuData={contentMenu[0]} languages={languagesExist} />
             <PageTitle>{title}</PageTitle>
             <div className="col-span-3">{elements}</div>
           </Article>
