@@ -1,10 +1,10 @@
 import styled from 'styled-components';
 import { spacing, mq, colors } from '../../styles';
-
-// Source: Voltaire. See Ably UI if we need shared component.
-const NAV_HEIGHT_DESKTOP = 64;
-const DISTANCE_FROM_TOP_WITH_LANGUAGE_MENU_DESKTOP = 64;
-const DISTANCE_FROM_TOP_DESKTOP = 0;
+import {
+  DISTANCE_FROM_TOP_DESKTOP,
+  DISTANCE_FROM_TOP_WITH_LANGUAGE_MENU_DESKTOP,
+  NAV_HEIGHT_DESKTOP,
+} from '../../utilities/layout/sticky-positioning-constants';
 
 const StickySidebar = styled.aside`
   transition: transform 0.3s;

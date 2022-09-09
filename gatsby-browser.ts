@@ -11,10 +11,6 @@ import {
 
 import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
 
-const PAGE_OFFSET = 128;
-
-const offsetScroll = () => window.scrollBy(0, -PAGE_OFFSET);
-
 const onClientEntry = () => {
   const store = createRemoteDataStore({
     ...reducerBlogPosts,
@@ -24,7 +20,6 @@ const onClientEntry = () => {
   });
 
   attachStoreToWindow(store);
-  window.addEventListener('hashchange', offsetScroll);
 };
 
 const versionRegex = /\/versions\/v\d+\.\d+/;
@@ -32,9 +27,7 @@ const languageRegex = /\?lang=\w+/;
 const hashRegex = /(\/?#.*)$/;
 
 /**
- *  The 'shouldUpdateScroll' function does not pertain to the offsetScroll event listener above
- *  `shouldUpdateScroll` is specific to Gatsby
- *  `offsetScroll` is a simple event listener with no dependencies (other than 'window')
+ *  The 'shouldUpdateScroll' function will fire when navigating to new pages within Gatsby
  */
 const shouldUpdateScroll = ({ prevRouterProps, routerProps: { location } }) => {
   if (!prevRouterProps || !location) {

@@ -8,4 +8,5 @@ export const groupHeadingStyles: StylesConfigFunction<
   ...provided,
   letterSpacing: '0.1em',
   color: '--var(cool-black)',
+  zIndex: 12,
 });

@@ -1,10 +1,24 @@
 import React, { ChangeEvent, useRef } from 'react';
 import { useSearch } from 'src/hooks';
 import { SearchIcon } from '.';
+import { FullSizeSearchDisplay } from './FullSizeSearchDisplay';
+import { MobileSearchDisplay } from './MobileSearchDisplay';
 
-export const SearchBar = () => {
+export const displayModes = {
+  FULL_SCREEN: 'FULL_SCREEN',
+  MOBILE: 'MOBILE',
+} as const;
+
+type DisplayMode = keyof typeof displayModes;
+
+export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
   const textInput = useRef<null | HTMLInputElement>(null);
-  const focusOnSearchInput = () => textInput.current && textInput.current.focus();
+  const focusOnSearchInput = () => textInput.current && textInput.current.focus && textInput.current.focus();
+
+  let StyledSearchComponent = FullSizeSearchDisplay;
+  if (displayMode === displayModes.MOBILE) {
+    StyledSearchComponent = MobileSearchDisplay;
+  }
 
   const {
     state: { query },
@@ -21,12 +35,8 @@ export const SearchBar = () => {
     const { value } = target;
     search({ query: value });
   };
-
   return (
-    <div
-      onClick={focusOnSearchInput}
-      className="h-48 px-16 mx-16 bg-light-grey border border-mid-grey rounded-md flex flex-row justify-self-start self-center min-w-170 max-w-400 flex-grow"
-    >
+    <StyledSearchComponent onClick={focusOnSearchInput}>
       <SearchIcon className="place-self-center" />
       <input
         type="text"
@@ -36,6 +46,6 @@ export const SearchBar = () => {
         value={query}
         onChange={handleSearch}
       />
-    </div>
+    </StyledSearchComponent>
   );
 };
