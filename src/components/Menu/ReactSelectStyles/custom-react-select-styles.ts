@@ -1,1 +1,1 @@
-export type CustomReactSelectStyles = { width: string; border?: string; boxShadow?: string };
+export type CustomReactSelectStyles = { width: string; border?: string; boxShadow?: string; activeText?: string };
