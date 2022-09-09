@@ -6,7 +6,7 @@ import { CustomReactSelectStyles } from './custom-react-select-styles';
 export const optionStyles: (
   customStyles: CustomReactSelectStyles,
 ) => StylesConfigFunction<OptionProps<ReactSelectOption, false, ReactSelectOptGroup>> =
-  ({ width }) =>
+  ({ width, activeText }) =>
   (provided) => ({
     ...provided,
     cursor: 'pointer',
@@ -14,18 +14,19 @@ export const optionStyles: (
     border: 0,
     boxShadow: 'none',
     fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
+    color: 'var(--color-cool-black)',
     backgroundColor: 'transparent',
     fontSize: '14px',
     '&:hover': {
-      color: 'var(--color-gui-hover)',
+      color: activeText ? activeText : 'var(--color-gui-hover)',
       backgroundColor: 'white',
     },
     '&:focus': {
-      color: 'var(--color-gui-hover)',
+      color: activeText ? activeText : 'var(--color-gui-hover)',
       backgroundColor: 'white',
     },
     '&:target': {
-      color: 'var(--color-gui-hover)',
+      color: activeText ? activeText : 'var(--color-gui-hover)',
       backgroundColor: 'white',
     },
   });
