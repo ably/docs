@@ -6,6 +6,8 @@ import {
   NAV_HEIGHT_DESKTOP,
 } from '../../utilities/layout/sticky-positioning-constants';
 
+const STICKY_SIDEBAR_DISTANCE_FROM_TOP = DISTANCE_FROM_TOP_DESKTOP + 15;
+
 const StickySidebar = styled.aside`
   transition: transform 0.3s;
   position: sticky;
@@ -16,7 +18,7 @@ const StickySidebar = styled.aside`
   overflow-y: auto;
   max-width: ${spacing.page.rightCol};
   top: ${({ 'data-languages': languages }) =>
-    NAV_HEIGHT_DESKTOP + (languages ? DISTANCE_FROM_TOP_WITH_LANGUAGE_MENU_DESKTOP : DISTANCE_FROM_TOP_DESKTOP)}px;
+    NAV_HEIGHT_DESKTOP + (languages ? DISTANCE_FROM_TOP_WITH_LANGUAGE_MENU_DESKTOP : STICKY_SIDEBAR_DISTANCE_FROM_TOP)}px;
 
   ${mq.minWidth.medium} {
     display: block;
