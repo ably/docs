@@ -2,7 +2,6 @@ import * as React from 'react';
 import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../../data/transform/constants';
 import { HomepageContent, Section } from '../components/Homepage/HomepageContent';
 import Layout from '../components/Layout';
-import { LeftSideBar } from '../components/StaticQuerySidebar';
 import { graphql } from 'gatsby';
 import { Helmet } from 'react-helmet';
 
@@ -46,7 +45,6 @@ const IndexPage = ({
           rootVersion: LATEST_ABLY_API_VERSION_STRING,
         }}
       >
-        <LeftSideBar />
         <HomepageContent sections={sections} />
       </Layout>
     </>

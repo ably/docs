@@ -2,7 +2,6 @@ import React, { useEffect, useMemo } from 'react';
 import { navigate, Script, ScriptStrategy } from 'gatsby';
 import Layout from '../components/Layout';
 import Html from '../components/blocks/Html';
-import { LeftSideBar } from '../components/StaticQuerySidebar';
 import PageLanguageContext, { PageLanguagesContext } from '../contexts/page-language-context';
 import Article from '../components/Article';
 import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
@@ -77,7 +76,6 @@ const Template = ({
       <PageLanguagesContext.Provider value={languages}>
         <Head title={title} canonical={canonical} description={description} />
         <Layout languages={filteredLanguages} versionData={versionData}>
-          <LeftSideBar className="col-span-1 px-16" languages={languagesExist} />
           <Article>
             <RightSidebarMobile menuData={contentMenu[0]} languages={languagesExist} />
             <PageTitle>{title}</PageTitle>

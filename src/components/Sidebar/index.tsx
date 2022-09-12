@@ -4,13 +4,15 @@ import SidebarTitle from './SidebarTitle';
 import StickySidebar from './StickySidebar';
 import { EXPAND_MENU } from './expand-menu-enum';
 import { SidebarData } from './sidebar-data';
+import { HighlightedMenuContext } from '../../contexts/highlighted-menu-context';
 
 export type SidebarProps = {
   data: SidebarData[];
   className?: string;
   title?: string;
+  indentOffset?: number;
+  expandableLinkMenu?: boolean;
   languages?: boolean;
-  interactableLinkMenu?: boolean;
   expandMenu?: EXPAND_MENU;
 };
 
@@ -18,13 +20,24 @@ const Sidebar = ({
   data,
   className = '',
   title,
+  indentOffset = 0,
   languages = false,
-  interactableLinkMenu = false,
+  expandableLinkMenu = true,
   expandMenu = EXPAND_MENU.EXPANDED,
 }: SidebarProps): ReactElement => (
   <StickySidebar className={className} data-languages={languages}>
     {title && <SidebarTitle title={title} />}
-    <SidebarLinkMenu data={data} interactable={interactableLinkMenu} expandMenu={expandMenu} />
+    <HighlightedMenuContext.Consumer>
+      {(highlightedMenuId) => (
+        <SidebarLinkMenu
+          data={data}
+          expandable={expandableLinkMenu}
+          expandMenu={expandMenu}
+          indentOffset={indentOffset}
+          highlightedMenuId={highlightedMenuId}
+        />
+      )}
+    </HighlightedMenuContext.Consumer>
   </StickySidebar>
 );
 
