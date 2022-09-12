@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import Sidebar from '../Sidebar';
 import { SidebarDataRetrieval } from './SidebarDataRetrieval';
 import { EXPAND_MENU } from '../Sidebar/expand-menu-enum';
+import { LeftSidebarContainer } from './LeftSidebarContainer';
+import { AblySidebarIconContainer } from './AblySidebarIconContainer';
 
 export type LeftSidebarProps = {
   className?: string;
@@ -10,12 +12,15 @@ export type LeftSidebarProps = {
 };
 
 const LeftSideBar = ({ className = '', languages = false }: LeftSidebarProps) => (
-  <SidebarDataRetrieval
-    className={className}
-    languages={languages}
-    expandMenu={EXPAND_MENU.SECTION_MATCH}
-    Component={Sidebar}
-  />
+  <LeftSidebarContainer>
+    <SidebarDataRetrieval
+      className={className}
+      languages={languages}
+      expandMenu={EXPAND_MENU.SECTION_MATCH}
+      Component={Sidebar}
+    />
+    <AblySidebarIconContainer />
+  </LeftSidebarContainer>
 );
 
 LeftSideBar.propTypes = {
