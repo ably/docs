@@ -1,5 +1,5 @@
 import React, { FunctionComponent as FC, useEffect, useState } from 'react';
-import { Navigation } from '../Header';
+import { Header } from '../Header';
 // Session-related scripts
 import '@ably/ui/core/scripts';
 import {
@@ -54,7 +54,7 @@ const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = 
   return (
     <UserContext.Provider value={userState}>
       {hubspotTrackingId && <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" />}
-      <Navigation />
+      <Header />
       <div className="grid grid-cols-5 2xl:grid-cols-7">
         <LeftSideBar className="col-span-1 bg-extra-light-grey px-24" />
         <TopCodeMenu languages={languages} versionData={versionData} />

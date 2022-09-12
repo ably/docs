@@ -1,1 +1,1 @@
-export { Navigation } from './Header';
+export { Header } from './Header';

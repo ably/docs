@@ -1,7 +1,7 @@
 import React from 'react';
 import { TopMainNav } from './TopMainNav';
 
-export const Navigation = () => {
+export const Header = () => {
   return (
     <>
       <header>
