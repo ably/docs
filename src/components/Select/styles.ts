@@ -8,7 +8,7 @@ const optionStyles = {
   border: 0,
   margin: 0,
   width: 200,
-  color: '#D9D9DA',
+  color: 'var(--color-white)',
   backgroundColor: 'transparent',
   boxShadow: 'none',
   fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
@@ -19,38 +19,32 @@ const optionStyles = {
   },
 };
 
-const controlStyles = (provided: CSSObjectWithLabel) => ({
-  ...provided,
-  width: 200,
-  border: 0,
-  margin: 0,
-  color: '#D9D9DA',
-  backgroundColor: 'transparent',
-  boxShadow: 'none',
-  fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
-  fontSize: '14px',
-  lineHeight: 'var(--lh-snug)',
-  height: SELECT_HEIGHT,
-  minHeight: SELECT_HEIGHT,
-});
-
 export const selectMenuStyles: StylesConfig<SetStateAction<{ label: string; value: string }>, false> = {
-  container: (provided: CSSObjectWithLabel) => ({
-    ...provided,
-  }),
   indicatorSeparator: () => ({
     display: 'none',
   }),
-  control: controlStyles,
+  control: (provided: CSSObjectWithLabel) => ({
+    ...provided,
+    border: 0,
+    margin: 0,
+    color: 'var(--color-white)',
+    backgroundColor: 'transparent',
+    boxShadow: 'none',
+    fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
+    fontSize: '14px',
+    lineHeight: 'var(--lh-snug)',
+    height: SELECT_HEIGHT,
+    minHeight: SELECT_HEIGHT,
+  }),
   singleValue: (provided: CSSObjectWithLabel) => ({ ...provided, ...optionStyles }),
   menu: (provided: CSSObjectWithLabel) => ({
     ...provided,
-    backgroundColor: 'white',
+    backgroundColor: 'var(--color-white)',
     top: '1em',
     right: 0,
     boxShadow: '0px 24px 80px rgba(0, 0, 0, 0.1)',
     padding: 8,
-    border: '1px solid #F5F5F6',
+    border: '1px solid var(--color-light-grey)',
     borderRadius: 6,
     width: 275,
   }),
@@ -61,7 +55,7 @@ export const selectMenuStyles: StylesConfig<SetStateAction<{ label: string; valu
   groupHeading: (provided: CSSObjectWithLabel) => ({
     ...provided,
     ...optionStyles,
-    color: '#76767C',
+    color: 'var(--color-dark-grey)',
     padding: '0 8px',
   }),
   menuList: (provided: CSSObjectWithLabel) => ({
@@ -70,16 +64,13 @@ export const selectMenuStyles: StylesConfig<SetStateAction<{ label: string; valu
   }),
   input: (provided: CSSObjectWithLabel) => ({
     ...provided,
-    color: '#D9D9DA',
+    color: 'var(--color-white)',
   }),
   dropdownIndicator: (provided: CSSObjectWithLabel) => ({
     ...provided,
     height: SELECT_HEIGHT,
     padding: '2px 8px 8px 8px',
     verticalAlign: 'center',
-    color: '#D9D9DA',
-    '&:hover': {
-      color: 'white',
-    },
+    color: 'var(--color-white)',
   }),
 };

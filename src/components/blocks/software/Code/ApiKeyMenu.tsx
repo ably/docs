@@ -63,7 +63,6 @@ const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
         setActiveApiKey(value ?? { label: DEFAULT_API_KEY_MESSAGE, value: DEFAULT_API_KEY_MESSAGE });
       }}
       options={options}
-      menuIsOpen
     />
   );
 };
