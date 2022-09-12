@@ -1,5 +1,5 @@
 import React, { ChangeEvent, useRef } from 'react';
-import { useSearch } from 'src/hooks';
+import { useSearch } from '../../../../hooks';
 import { SearchIcon } from '.';
 import { FullSizeSearchDisplay } from './FullSizeSearchDisplay';
 import { MobileSearchDisplay } from './MobileSearchDisplay';

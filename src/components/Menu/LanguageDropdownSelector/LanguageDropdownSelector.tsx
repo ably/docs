@@ -16,7 +16,7 @@ import {
   menuStyles,
   optionStyles,
 } from '../ReactSelectStyles';
-import { storage } from 'src/utilities/browser/storage';
+import { storage } from '../../../utilities/browser/storage';
 
 export const LanguageDropdownSelector = ({
   language,
