@@ -18,7 +18,8 @@ const StickySidebar = styled.aside`
   overflow-y: auto;
   max-width: ${spacing.page.rightCol};
   top: ${({ 'data-languages': languages }) =>
-    NAV_HEIGHT_DESKTOP + (languages ? DISTANCE_FROM_TOP_WITH_LANGUAGE_MENU_DESKTOP : STICKY_SIDEBAR_DISTANCE_FROM_TOP)}px;
+    NAV_HEIGHT_DESKTOP +
+    (languages ? DISTANCE_FROM_TOP_WITH_LANGUAGE_MENU_DESKTOP : STICKY_SIDEBAR_DISTANCE_FROM_TOP)}px;
 
   ${mq.minWidth.medium} {
     display: block;
