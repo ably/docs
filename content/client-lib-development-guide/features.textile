@@ -572,7 +572,7 @@ h3(#realtime-channel). RealtimeChannel
 *** @(RTL4b1)@ Note that an attach attempt immediately after the library is instantiated, assuming @autoConnect@ (@TO3e@)is not set to @false@, should not raise an error (that is, should fall under @RTL4i@, not @RTL4b@), since the library should be in a @CONNECTING@ state at that point
 ** @(RTL4i)@ If the connection state is @CONNECTING@ or @DISCONNECTED@, do the operation once the connection state is @CONNECTED@
 ** @(RTL4c)@ Otherwise an @ATTACH@ ProtocolMessage is sent to the server, the state transitions to @ATTACHING@ and the channel becomes @ATTACHED@ when the confirmation @ATTACHED@ ProtocolMessage is received
-*** @(RTL4c1)@ The @ATTACH@ ProtocolMessage @channelSerial@ field must be set to the @channelSerial@ of the most recent message/presence ProtocolMessage received on that channel (which will have been stored in the channel per @RTL25@). If no messages have been received on the channel, the field may be set to @null@ or omitted.
+*** @(RTL4c1)@ The @ATTACH@ ProtocolMessage @channelSerial@ field must be set to the @channelSerial@ of the most recent message/presence ProtocolMessage received on that channel (which will have been stored in the channel per @RTL15b@). If no messages have been received on the channel, the field may be set to @null@ or omitted.
 ** @(RTL4f)@ Once an @ATTACH@ @ProtocolMessage@ is sent, if an @ATTACHED@ @ProtocolMessage@ is not received within the "default realtime request timeout":#defaults, the attach request should be treated as though it has failed and the channel should transition to the @SUSPENDED@ state. The channel will then be subsequently automatically re-attached as described in "RTL13":#RTL13
 ** @(RTL4d)@ A callback (or other language-idiomatic equivalent) can be provided that is called when the channel next moves to one of @ATTACHED@, @DETACHED@, @SUSPENDED@, or @FAILED@ states. In the case of @ATTACHED@ the callback is called with no argument. In all other cases it is called with an @ErrorInfo@ corresponding to the @ChannelStateChange.reason@ of the state change (or a fallback if there is no @reason@) to indicate that the attach has failed. (Note: when combined with RTL4f, this means that if the connection is @CONNECTED@, the callback is guaranteed to be called within @realtimeRequestTimeout@ of the @attach()@ call)
 ** @(RTL4e)@ If the user does not have sufficient permissions to attach to the channel, the channel will transition to @FAILED@ and set the @RealtimeChannel#errorReason@
@@ -647,6 +647,7 @@ h3(#realtime-channel). RealtimeChannel
 * @(RTL12)@ An attached channel may receive an additional @ATTACHED@ @ProtocolMessage@ from Ably at any point. (This is typically triggered following a transport being resumed to indicate a partial loss of message continuity on that channel, in which case the @ProtocolMessage@ will have a @resumed@ flag set to false). If and only if the @resumed@ flag is false, this should result in the channel emitting an @UPDATE@ event with a @ChannelStateChange@ object. The @ChannelStateChange@ object should have both @previous@ and @current@ attributes set to @attached@, the @reason@ attribute set to to the @error@ member of the @ATTACHED@ @ProtocolMessage@ (if any), and the @resumed@ attribute set per the @RESUMED@ bitflag of the @ATTACHED@ @ProtocolMessage@. (Note that @UPDATE@ should be the only event emitted: in particular, the library must not emit an @ATTACHED@ event if the channel was already attached, see @RTL2g@).
 * @(RTL15)@ @RealtimeChannel#properties@ attribute is a @ChannelProperties@ object representing properties of the channel state. @properties@ is a publicly accessible member of the channel, but it is an experimental and unstable API. It has the following attributes:
 ** @(RTL15a)@ @attachSerial@ is unset when the channel is instantiated, and is updated with the @channelSerial@ from each @ATTACHED@ @ProtocolMessage@ received from Ably with a matching @channel@ attribute. The @attachSerial@ value is used for @untilAttach@ queries, see "RTL10b":#RTL10b
+** @(RTL15b)@ @channelSerial@ is updated whenever a @ProtocolMessage@ with either @Message@ or @Presence@ actions is received on a channel, and is set to the @TR4c@ @channelSerial@ of that @ProtocolMessage@.
 * @(RTL13)@ If the channel receives a server initiated @DETACHED@ message when it is in the @ATTACHING@, @ATTACHED@ or @SUSPENDED@ state (i.e. the client has not explicitly requested a detach putting the channel into the @DETACHING@ state), then the following applies:
 ** @(RTL13a)@ If the channel is in the @ATTACHED@ or @SUSPENDED@ states, an attempt to reattach the channel should be made immediately by sending a new @ATTACH@ message and the channel should transition to the @ATTACHING@ state with the error emitted in the @ChannelStateChange@ event.
 ** @(RTL13b)@ If the attempt to re-attach fails, or if the channel was already in the @ATTACHING@ state, the channel will transition to the @SUSPENDED@ state and the error will be emitted in the @ChannelStateChange@ event. An attempt to re-attach the channel automatically will then be made after the period defined by "@RTB1@":#RTB1. When re-attaching the channel, the channel will transition to the @ATTACHING@ state. If that request to attach fails i.e. it times out or a @DETACHED@ message is received, then the process described here in @RTL13b@ will be repeated, indefinitely
@@ -671,7 +672,6 @@ h3(#realtime-channel). RealtimeChannel
 ** @(RTL22c)@ The listener must only execute if all provided criteria are met.
 ** @(RTL22d)@ The method should use the @MessageFilter@ object if possible and idiomatic for the language.
 * @(RTL24)@ @RealtimeChannel#errorReason@ attribute is an optional @ErrorInfo@ object which is set by the library when an error occurs on the channel, as described by "RTN11d":#RTN11d, "RTL3a":#RTL3a, "RTL4e":#RTL4e, "RTL4g":#RTL4g, "RTL14":#RTL14.
-* @(RTL25)@ When a @ProtocolMessage@ with either @Message@ or @Presence@ actions is received on a channel, the channel should store its @TR4c@ @channelSerial@.
 
 h3(#realtime-presence). RealtimePresence
 
@@ -703,7 +703,7 @@ h3(#realtime-presence). RealtimePresence
 * @(RTP4)@ Ensure a test exists that enters 250 members using @RealtimePresence#enterClient@ on a single connection, and checks for @PRESENT@ events to be emitted on another connection for each member, and once sync is complete, all 250 members should be present in a @RealtimePresence#get@ request
 * @(RTP5)@ RealtimeChannel state change side effects:
 ** @(RTP5a)@ If the channel enters the @DETACHED@ or @FAILED@ state then all queued presence messages will fail immediately, and the @PresenceMap@ and "internal PresenceMap (see RTP17)":#RTP17 is cleared. The latter ensures members are not automatically re-entered if the @RealtimeChannel@ later becomes attached. Since channels in the @DETACHED@ and @FAILED@ states will not receive any presence updates from Ably, presence events (specifically @LEAVE@) should not be emitted when the @PresenceMap@ is cleared as each presence member's state is unknown
-*** @(RTP5a1)@ A channel entering the @DETACHED@, @SUSPENDED@, or @FAILED@ state should also clear any @channelSerial@ it has stored per @RTL25@.
+*** @(RTP5a1)@ A channel entering the @DETACHED@, @SUSPENDED@, or @FAILED@ state should also clear any @channelSerial@ it has stored per @RTL15b@.
 ** @(RTP5f)@ If the channel enters the @SUSPENDED@ state then all queued presence messages will fail immediately, and the @PresenceMap@ is maintained. This ensures that if the channel later becomes @ATTACHED@, it will only publish presence events for the changes in the @PresenceMap@ that have occurred whilst the client was disconnected. A test should exist for a channel that is in the @SUSPENDED@ state containing presence members to transition to the @ATTACHED@ state, and following the @SYNC@ process after attaching, any members present before and after the sync should not emit presence events, all other changes should be reflected in the @PresenceMap@ and should emit presence events on the channel
 ** @(RTP5b)@ If a channel enters the @ATTACHED@ state then all queued presence messages will be sent immediately. A presence @SYNC@ may be initiated per "@RTP1@":#RTP1
 * @(RTP16)@ Connection state conditions:
@@ -1440,7 +1440,8 @@ h4. ConnectionDetails
 h4. ChannelProperties
 * @(CP1)@ properties of a channel and its state
 * @(CP2)@ The attributes of @ChannelProperties@ consist of:
-** @(CP2a)@ @attachSerial@ string - contains the last @channelSerial@ received in an @ATTACHED@ @ProtocolMesage@ for the channel, see "RTL15a":#RTL15a
+** @(CP2a)@ @attachSerial@ string - contains the last @channelSerial@ received in an @ATTACHED@ @ProtocolMessage@ for the channel, see "RTL15a":#RTL15a
+** @(CP2b)@ @channelSerial@ string - contains the last @channelSerial@ received in any message or presence @ProtocolMesage@ on the channel, see "RTL15b":#RTL15b
 
 h4. ChannelDetails
 
@@ -1893,6 +1894,7 @@ class MessageFilter: // MFI*
 
 class ChannelProperties: // CP*
   attachSerial: String // CP2a
+  channelSerial: String // CP2b
 
 class BatchOperations: // BO*
   publish([BatchSpec]) => BatchResult<BatchPublishResponse> // BO2a
