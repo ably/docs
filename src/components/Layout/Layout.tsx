@@ -1,5 +1,5 @@
 import React, { FunctionComponent as FC, useEffect, useState } from 'react';
-import Header from '../Header';
+import { Header } from '../Header';
 // Session-related scripts
 import '@ably/ui/core/scripts';
 import {
@@ -21,6 +21,8 @@ import {
 import { Script } from 'gatsby';
 import { hubspotIdentifyUser } from '../../third-party/hubspot';
 import { VersionMenuProps } from '../Menu/VersionMenu';
+import { LeftSideBar } from '../StaticQuerySidebar';
+import TopCodeMenu from '../Menu/TopCodeMenu';
 
 const hubspotTrackingId = process.env.HUBSPOT_TRACKING_ID;
 
@@ -47,15 +49,23 @@ const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = 
   useEffect(() => hubspotIdentifyUser(sessionState), [sessionState]);
 
   const userState: UserDetails = { sessionState, apiKeys };
+
+  const languageAlternativesExist = languages && languages.length > 1;
   return (
     <UserContext.Provider value={userState}>
       {hubspotTrackingId && <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" />}
-      <header>
-        <Header languages={languages} versionData={versionData} />
-      </header>
-      <main className={`${languages && languages.length > 1 ? 'pt-128' : 'pt-96'} grid grid-cols-5 2xl:grid-cols-7`}>
-        {children}
-      </main>
+      <Header />
+      <div className="grid grid-cols-5 2xl:grid-cols-7">
+        <LeftSideBar className="col-span-1 bg-extra-light-grey px-24" />
+        <TopCodeMenu languages={languages} versionData={versionData} />
+        <main
+          className={`${
+            languageAlternativesExist ? 'pt-128' : 'pt-96'
+          } ml-24 col-span-4 grid grid-cols-4 2xl:grid-cols-6 2xl:col-span-6`}
+        >
+          {children}
+        </main>
+      </div>
     </UserContext.Provider>
   );
 };

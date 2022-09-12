@@ -16,6 +16,7 @@ const Container = styled.article`
 export const BodySectionCard = ({ title, content, link, flag, callToAction }: CardProps) => (
   <Container
     tabIndex={0}
+    title={link}
     className="cursor-pointer select-none bg-extra-light-grey border border-mid-grey rounded-lg w-full p-24 flex flex-col"
     onClick={navigateExternal(link)}
     onKeyDown={({ key }) => key === EXTERNAL_NAVIGATION_KEY && navigateExternal(link)()}
