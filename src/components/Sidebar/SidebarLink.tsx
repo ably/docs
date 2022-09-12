@@ -1,9 +1,7 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { Link } from 'gatsby';
 import styled from 'styled-components';
 import { SidebarHeadingStyle } from './styles';
-import { ChildPropTypes } from '../../react-utilities';
 
 const onPageNav = /[#?]/;
 
@@ -14,7 +12,12 @@ const SidebarAnchor = styled.a`
   ${SidebarHeadingStyle}
 `;
 
-const SidebarLink = ({ to, children, ...props }) =>
+type SidebarLinkProps = {
+  to: string;
+  children: React.ReactNode;
+};
+
+const SidebarLink = ({ to, children, ...props }: SidebarLinkProps) =>
   onPageNav.test(to) ? (
     /**
      *  Relevant page of documentation: https://www.gatsbyjs.com/docs/reference/built-in-components/gatsby-link/#recommendations-for-programmatic-in-app-navigation
@@ -28,10 +31,4 @@ const SidebarLink = ({ to, children, ...props }) =>
       {children}
     </SidebarGatsbyLink>
   );
-
-SidebarLink.propTypes = {
-  to: PropTypes.string,
-  children: ChildPropTypes,
-};
-
 export default SidebarLink;

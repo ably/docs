@@ -12,14 +12,9 @@ const SidebarHeadingStyle = css`
   margin-left: ${({ $leaf, indent }) => `${($leaf ? 4 : 0) + (indent ?? 0)}px`};
 
   color: ${({ $active }) => ($active ? colors.text.linkHoverAlternate : colors.text.link)};
-  border-left: ${({ $active, $leaf }) =>
-    $active
-      ? `${$leaf ? 1 : 2}px solid ${colors.text.linkHoverAlternateMuted}`
-      : `${$leaf ? 1 : 2}px solid transparent`};
 
   &:hover {
     color: ${colors.text.linkHoverAlternate};
-    border-left: ${({ $leaf }) => ($leaf ? 1 : 2)}px solid ${colors.text.linkHoverAlternateMuted};
   }
 
   ${mq.minWidth.small} {
