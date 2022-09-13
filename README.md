@@ -21,6 +21,10 @@ If you use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to mana
 
 `npm i`
 
+If Gatsby CLI is not already installed:
+
+`npm install -g gatsby-cli`
+
 `gatsby clean && gatsby develop`
 
 Visit `localhost:8000` for homepage.
