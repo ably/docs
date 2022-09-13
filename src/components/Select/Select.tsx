@@ -1,5 +1,6 @@
 import React, { SetStateAction } from 'react';
 import ReactSelect, { Props, OptionProps } from 'react-select';
+import merge from 'lodash/merge';
 import Icon from '@ably/ui/core/Icon';
 import { selectMenuStyles } from './styles';
 import { ReactSelectOption } from './types';
@@ -22,12 +23,13 @@ const CustomOption = ({
   );
 };
 
-const Select = (props: Props<SetStateAction<ReactSelectOption>, false>) => {
+const Select = ({ styles, ...props }: Props<SetStateAction<ReactSelectOption>, false>) => {
   return (
     <ReactSelect
       {...props}
       components={{ Option: CustomOption }}
-      styles={selectMenuStyles}
+      // TODO: this doesnt work
+      styles={merge(styles, selectMenuStyles)}
       classNamePrefix="ably-select"
     />
   );
