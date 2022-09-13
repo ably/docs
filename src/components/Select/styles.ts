@@ -20,6 +20,10 @@ const optionStyles = {
 };
 
 export const selectMenuStyles: StylesConfig<SetStateAction<ReactSelectOption>, false> = {
+  container: (provided: CSSObjectWithLabel) => ({
+    ...provided,
+    width: '100%',
+  }),
   indicatorSeparator: () => ({
     display: 'none',
   }),
@@ -35,6 +39,7 @@ export const selectMenuStyles: StylesConfig<SetStateAction<ReactSelectOption>, f
     lineHeight: 'var(--lh-snug)',
     height: SELECT_HEIGHT,
     minHeight: SELECT_HEIGHT,
+    cursor: 'pointer',
   }),
   singleValue: (provided: CSSObjectWithLabel) => ({ ...provided, ...optionStyles }),
   menu: (provided: CSSObjectWithLabel) => ({
@@ -72,5 +77,9 @@ export const selectMenuStyles: StylesConfig<SetStateAction<ReactSelectOption>, f
     padding: '2px 8px 8px 8px',
     verticalAlign: 'center',
     color: 'var(--color-white)',
+    '&:hover': {
+      color: 'var(--color-white)',
+      cursor: 'pointer',
+    },
   }),
 };

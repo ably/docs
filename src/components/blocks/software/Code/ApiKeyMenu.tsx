@@ -3,6 +3,8 @@ import { SingleValue } from 'react-select';
 import { Select, ReactSelectOption } from 'src/components';
 import { DEFAULT_API_KEY_MESSAGE } from '.';
 
+import { container } from './ApiKeyMenu.module.css';
+
 type AppApiKey = {
   name: string;
   whole_key: string;
@@ -49,15 +51,17 @@ const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
   }));
 
   return (
-    <Select
-      value={value}
-      isSearchable={false}
-      onChange={(newValue: SingleValue<SetStateAction<ReactSelectOption>>) => {
-        setValue(newValue ?? errorOption);
-        setActiveApiKey(newValue ?? { label: DEFAULT_API_KEY_MESSAGE, value: DEFAULT_API_KEY_MESSAGE });
-      }}
-      options={options}
-    />
+    <div className={container}>
+      <Select
+        value={value}
+        isSearchable={false}
+        onChange={(newValue: SingleValue<SetStateAction<ReactSelectOption>>) => {
+          setValue(newValue ?? errorOption);
+          setActiveApiKey(newValue ?? { label: DEFAULT_API_KEY_MESSAGE, value: DEFAULT_API_KEY_MESSAGE });
+        }}
+        options={options}
+      />
+    </div>
   );
 };
 

@@ -2,7 +2,7 @@ import React, { useContext, useState, MouseEvent } from 'react';
 import languageLabels from '../../../maps/language';
 import { MenuItemButton } from '../../Menu/MenuItemButton';
 import Html from '../Html';
-import LanguageNavigation from '../../Menu/LanguageNavigation';
+import { LanguageNavigation } from '../../Menu/LanguageNavigation';
 import { PageLanguagesContext } from '../../../contexts/page-language-context';
 import { LanguageButton } from 'src/components';
 import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';

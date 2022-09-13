@@ -6,10 +6,11 @@ import {
   HorizontalMenu,
   ReactSelectOption,
   Select,
-  HorizontalMenuVariant,
 } from 'src/components';
 import { PageLanguageContext } from 'src/contexts';
 import { cacheVisitPreferredLanguage } from 'src/utilities';
+
+import { drodownContainer } from './LanguageNavigation.module.css';
 
 export interface LanguageNavigationComponentProps {
   language: string;
@@ -39,16 +40,11 @@ const LanguageNavigation = ({ items }: LanguageNavigationProps) => {
           {content}
         </Component>
       ))}
-      <div className="flex justify-end md:hidden py-12 pl-16 pr-40">
+      <div className={`${drodownContainer} flex justify-end md:hidden py-12 pl-16 pr-40`}>
         <Select
           options={options}
           value={value}
           isSearchable={false}
-          styles={{
-            control: () => ({
-              width: 50,
-            }),
-          }}
           onChange={(newValue: SingleValue<SetStateAction<ReactSelectOption>>) => {
             if (newValue) {
               // @ts-ignore
