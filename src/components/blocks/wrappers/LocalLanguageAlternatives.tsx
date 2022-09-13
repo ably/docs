@@ -3,7 +3,7 @@ import languageLabels from '../../../maps/language';
 import { MenuItemButton } from '../../Menu/MenuItemButton';
 import Html from '../Html';
 import { LanguageNavigation } from '../../Menu/LanguageNavigation';
-import { PageLanguagesContext } from '../../../contexts/page-language-context';
+import { PageLanguagesContext } from 'src/contexts';
 import { LanguageButton } from 'src/components';
 import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
 import { HtmlComponentProps, ValidReactElement } from 'src/components/html-component-props';
