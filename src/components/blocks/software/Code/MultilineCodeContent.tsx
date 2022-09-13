@@ -46,7 +46,7 @@ export const MultilineCodeContent = ({
 
   useLayoutEffect(() => {
     Prism.hooks.add('before-highlight', function (env) {
-      env.code = env.element.innerHTML;
+      env.code = env.element.textContent || '';
     });
 
     if (preRef.current) {
