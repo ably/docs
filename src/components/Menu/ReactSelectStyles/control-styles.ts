@@ -1,6 +1,6 @@
 import { ControlProps } from 'react-select';
 import { StylesConfigFunction } from 'react-select/dist/declarations/src/styles';
-import { ReactSelectOptGroup, ReactSelectOption } from '../react-select-option-types';
+import { ReactSelectOptGroup, ReactSelectOption } from 'src/components';
 import { CustomReactSelectStyles } from './custom-react-select-styles';
 
 export const controlStyles: (

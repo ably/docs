@@ -1,10 +1,15 @@
-import React from 'react';
-import ReactSelect, { Props } from 'react-select';
+import React, { SetStateAction } from 'react';
+import ReactSelect, { Props, OptionProps } from 'react-select';
 import Icon from '@ably/ui/core/Icon';
 import { selectMenuStyles } from './styles';
+import { ReactSelectOption } from './types';
 
-// TODO: fix react-select props
-const CustomOption = ({ innerProps, innerRef, isSelected, label }: any) => {
+const CustomOption = ({
+  innerProps,
+  innerRef,
+  isSelected,
+  label,
+}: OptionProps<SetStateAction<ReactSelectOption>, false>) => {
   return (
     <div
       ref={innerRef}
@@ -17,9 +22,15 @@ const CustomOption = ({ innerProps, innerRef, isSelected, label }: any) => {
   );
 };
 
-const Select = (props: Props) => {
-  // TODO: fix react-select props
-  return <ReactSelect {...props} components={{ Option: CustomOption }} styles={selectMenuStyles as any} />;
+const Select = (props: Props<SetStateAction<ReactSelectOption>, false>) => {
+  return (
+    <ReactSelect
+      {...props}
+      components={{ Option: CustomOption }}
+      styles={selectMenuStyles}
+      classNamePrefix="ably-select"
+    />
+  );
 };
 
 export default Select;

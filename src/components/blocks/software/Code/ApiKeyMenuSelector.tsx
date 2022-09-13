@@ -1,13 +1,14 @@
 import React, { useEffect } from 'react';
+import { ReactSelectOption } from 'src/components';
 import { DEFAULT_API_KEY_MESSAGE } from '.';
 import APIKeyIndicator from './ApiKeyIndicator';
-import APIKeyMenu, { APIKeyMenuProps, Option } from './ApiKeyMenu';
+import APIKeyMenu, { APIKeyMenuProps } from './ApiKeyMenu';
 import { SmallMenuLabel } from '../../../Menu/Label';
 
 type APIKeyMenuSelectorProps = APIKeyMenuProps & {
   dataContainsKey: boolean;
   signedIn: boolean;
-  activeApiKey: Option;
+  activeApiKey: ReactSelectOption;
 };
 
 const APIKeyMenuSelector = ({

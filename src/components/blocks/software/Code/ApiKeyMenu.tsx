@@ -1,11 +1,7 @@
-import React, { Dispatch, useState } from 'react';
-import { Select } from 'src/components';
+import React, { Dispatch, useState, SetStateAction } from 'react';
+import { SingleValue } from 'react-select';
+import { Select, ReactSelectOption } from 'src/components';
 import { DEFAULT_API_KEY_MESSAGE } from '.';
-
-export type Option = {
-  label: string;
-  value: string;
-};
 
 type AppApiKey = {
   name: string;
@@ -29,13 +25,13 @@ const makeLabel = (apiKey: AppApiKey) => {
 
 export type APIKeyMenuProps = {
   userApiKeys: UserApiKey[];
-  setActiveApiKey: Dispatch<React.SetStateAction<Option>>;
+  setActiveApiKey: Dispatch<SetStateAction<ReactSelectOption>>;
 };
 
 const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
   const initialApiKeyOption = userApiKeys[0].apiKeys;
 
-  const [value, setValue] = useState(
+  const [value, setValue] = useState<ReactSelectOption>(
     initialApiKeyOption
       ? {
           label: makeLabel(initialApiKeyOption[0]),
@@ -56,11 +52,9 @@ const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
     <Select
       value={value}
       isSearchable={false}
-      onChange={(value) => {
-        // @ts-ignore - TODO: fix react-select props
-        setValue(value ?? errorOption);
-        // @ts-ignore - TODO: fix react-select props
-        setActiveApiKey(value ?? { label: DEFAULT_API_KEY_MESSAGE, value: DEFAULT_API_KEY_MESSAGE });
+      onChange={(newValue: SingleValue<SetStateAction<ReactSelectOption>>) => {
+        setValue(newValue ?? errorOption);
+        setActiveApiKey(newValue ?? { label: DEFAULT_API_KEY_MESSAGE, value: DEFAULT_API_KEY_MESSAGE });
       }}
       options={options}
     />

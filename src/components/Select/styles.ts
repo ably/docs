@@ -1,6 +1,6 @@
 import { SetStateAction } from 'react';
-import { CSSObjectWithLabel, StylesConfig } from 'react-select';
-import { gui } from 'src/styles/colors';
+import { CSSObjectWithLabel, GroupBase, StylesConfig } from 'react-select';
+import { ReactSelectOption } from './types';
 
 const SELECT_HEIGHT = '24px';
 
@@ -15,11 +15,11 @@ const optionStyles = {
   fontSize: 14,
   fontWeight: 300,
   '&:active': {
-    backgroundColor: gui.active,
+    backgroundColor: 'var(--color-gui-active)',
   },
 };
 
-export const selectMenuStyles: StylesConfig<SetStateAction<{ label: string; value: string }>, false> = {
+export const selectMenuStyles: StylesConfig<SetStateAction<ReactSelectOption>, false> = {
   indicatorSeparator: () => ({
     display: 'none',
   }),
