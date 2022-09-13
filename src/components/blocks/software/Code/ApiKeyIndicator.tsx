@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import Icon from '@ably/ui/core/Icon';
 
-const APIKeyIndicator = ({ tooltip }: { tooltip: string }) => {
-  const [tooltipHover, setTooltipHover] = useState<boolean>(false);
+type ApiKeyIndicatorProps = { tooltip: string };
+
+const APIKeyIndicator = ({ tooltip }: ApiKeyIndicatorProps) => {
+  const [tooltipHover, setTooltipHover] = useState(false);
+  const showTooltipHover = useCallback(() => setTooltipHover(true), []);
+  const hideTooltipHover = useCallback(() => setTooltipHover(false), []);
   return (
     <div
       className="flex flex-row w-full justify-start mt-2"
-      onMouseOver={() => setTooltipHover(true)}
-      onMouseOut={() => setTooltipHover(false)}
+      onMouseOver={showTooltipHover}
+      onMouseOut={hideTooltipHover}
     >
       <div className="docs-api-key-label" title={tooltip}>
         Demo Only
