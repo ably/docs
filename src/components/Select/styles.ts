@@ -19,7 +19,7 @@ const optionStyles = {
   },
 };
 
-export const selectMenuStyles: StylesConfig<SetStateAction<ReactSelectOption>, false> = {
+export const selectMenuStyles: StylesConfig<ReactSelectOption, false> = {
   container: (provided: CSSObjectWithLabel) => ({
     ...provided,
     width: '100%',

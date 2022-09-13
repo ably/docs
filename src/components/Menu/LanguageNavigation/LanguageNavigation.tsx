@@ -45,9 +45,8 @@ const LanguageNavigation = ({ items }: LanguageNavigationProps) => {
           options={options}
           value={value}
           isSearchable={false}
-          onChange={(newValue: SingleValue<SetStateAction<ReactSelectOption>>) => {
+          onChange={(newValue: SingleValue<ReactSelectOption>) => {
             if (newValue) {
-              // @ts-ignore
               const language = newValue.value;
               const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
               const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);

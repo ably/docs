@@ -1,15 +1,10 @@
-import React, { SetStateAction } from 'react';
+import React from 'react';
 import ReactSelect, { Props, OptionProps } from 'react-select';
 import Icon from '@ably/ui/core/Icon';
 import { selectMenuStyles } from './styles';
 import { ReactSelectOption } from './types';
 
-const CustomOption = ({
-  innerProps,
-  innerRef,
-  isSelected,
-  label,
-}: OptionProps<SetStateAction<ReactSelectOption>, false>) => {
+const CustomOption = ({ innerProps, innerRef, isSelected, label }: OptionProps<ReactSelectOption, false>) => {
   return (
     <div
       ref={innerRef}
@@ -22,7 +17,7 @@ const CustomOption = ({
   );
 };
 
-const Select = ({ ...props }: Props<SetStateAction<ReactSelectOption>, false>) => {
+const Select = ({ ...props }: Props<ReactSelectOption, false>) => {
   return (
     <ReactSelect
       {...props}
