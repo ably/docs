@@ -1,7 +1,7 @@
 import { navigate } from 'gatsby';
 import { SingleValue } from 'react-select';
+import { ReactSelectOption } from 'src/components';
 import { DOCUMENTATION_PATH } from '../../../data/transform/constants';
-import { ReactSelectOption } from './react-select-option-types';
 
 export const routeToPage = (newValue: SingleValue<ReactSelectOption>) => {
   if (!newValue) {
