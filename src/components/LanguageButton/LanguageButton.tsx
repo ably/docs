@@ -8,7 +8,6 @@ import { cacheVisitPreferredLanguage } from 'src/utilities';
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
 
 import { button, isActive } from './LanguageButton.module.css';
-import { storage } from 'src/utilities/browser/storage';
 
 const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language }) => {
   const pageLanguage = useContext(PageLanguageContext);
