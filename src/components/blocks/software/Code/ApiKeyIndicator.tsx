@@ -1,12 +1,33 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
+import Icon from '@ably/ui/core/Icon';
 
-const tooltip =
-  'This code example uses a temporary key that is rate limited and expires in 4 hours. Sign in to Ably to use your API keys instead.';
+type ApiKeyIndicatorProps = { tooltip: string };
 
-const APIKeyIndicator = () => (
-  <div className="docs-api-key-label" title={tooltip}>
-    Api Key: Demo Only
-  </div>
-);
+const APIKeyIndicator = ({ tooltip }: ApiKeyIndicatorProps) => {
+  const [tooltipHover, setTooltipHover] = useState(false);
+  const showTooltipHover = useCallback(() => setTooltipHover(true), []);
+  const hideTooltipHover = useCallback(() => setTooltipHover(false), []);
+  return (
+    <div
+      className="flex flex-row w-full justify-start mt-2"
+      onMouseOver={showTooltipHover}
+      onMouseOut={hideTooltipHover}
+    >
+      <div className="docs-api-key-label" title={tooltip}>
+        Demo Only
+      </div>
+      <Icon additionalCSS="ml-4 cursor-help" name="icon-gui-info" size="1rem" />
+      {tooltipHover ? (
+        <aside
+          className="w-240 max-w-240 absolute -mt-140 box-border
+          whitespace-pre-wrap bg-white shadow-tooltip rounded border border-light-grey
+          text-cool-black font-sans p-16 text-center text-p3 leading-5 cursor-default"
+        >
+          {tooltip}
+        </aside>
+      ) : null}
+    </div>
+  );
+};
 
 export default APIKeyIndicator;
