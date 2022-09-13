@@ -73,6 +73,8 @@ module.exports = extendConfig((ablyUIConfig) => ({
       38: '2.375rem',
       78: '4.875rem',
       128: 'var(--spacing-128)',
+      140: '8.75rem',
+      240: '15rem',
       300: '18.75rem',
       320: '20rem',
       420: '26.25rem',
