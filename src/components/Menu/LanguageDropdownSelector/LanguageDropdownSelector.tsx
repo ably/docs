@@ -3,7 +3,7 @@ import Select from 'react-select';
 import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicator-separator';
 import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
 import languageLabels from '../../../maps/language';
-import { ReactSelectOption } from '../react-select-option-types';
+import { ReactSelectOption } from 'src/components';
 import { PREFERRED_LANGUAGE_KEY } from '../../../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common/language-defaults';
 import { navigate } from 'gatsby';
