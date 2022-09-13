@@ -10,7 +10,7 @@ import { HtmlComponentProps, ValidReactElement } from '../../html-component-prop
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
-  languages: string[];
+  languages?: string[];
   altData?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
 };
 
