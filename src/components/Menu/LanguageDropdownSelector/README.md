@@ -17,7 +17,7 @@ The TypeScript signature of these is always (for our purposes):
 ```
 import { MyComponentProps } from 'react-select';
 import { StylesConfigFunction } from 'react-select/dist/declarations/src/styles';
-import { ReactSelectOptGroup, ReactSelectOption } from '../react-select-option-types';
+import { ReactSelectOptGroup, ReactSelectOption } from 'src/components';
 
 export const myComponentStyles: StylesConfigFunction<
   MyComponentProps<ReactSelectOption, false, ReactSelectOptGroup>

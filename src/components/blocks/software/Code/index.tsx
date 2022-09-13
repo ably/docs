@@ -75,18 +75,6 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
         <div {...attribs} className="overflow-auto relative p-16" data-testid="code-block">
           <UserContext.Consumer>
             {(value) => (
-              <APIKeyMenuSelector
-                dataContainsKey={dataContainsKey}
-                // @ts-ignore - fix api key type mismatch
-                userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
-                setActiveApiKey={setActiveApiKey}
-                activeApiKey={activeApiKey}
-                signedIn={!!value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN}
-              />
-            )}
-          </UserContext.Consumer>
-          <UserContext.Consumer>
-            {(value) => (
               <MultilineCodeContent
                 signedIn={value.sessionState.signedIn}
                 dataContainsKey={dataContainsKey}
@@ -98,6 +86,18 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
             )}
           </UserContext.Consumer>
         </div>
+        <UserContext.Consumer>
+          {(value) => (
+            <APIKeyMenuSelector
+              dataContainsKey={dataContainsKey}
+              // @ts-ignore - fix api key type mismatch
+              userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
+              setActiveApiKey={setActiveApiKey}
+              activeApiKey={activeApiKey}
+              signedIn={!!value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN}
+            />
+          )}
+        </UserContext.Consumer>
         <CodeCopyButton content={dataContainsKey ? contentWithKey : contentWithRandomChannelName} />
       </>
     );
