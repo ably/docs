@@ -10,7 +10,7 @@ import { noIndicatorSeparator } from './ReactSelectCustomComponents/no-indicator
 import { groupHeadingStyles } from './ReactSelectStyles/group-heading-styles';
 import { menuListStyles } from './ReactSelectStyles/menu-list-styles';
 import { noPaddingValueContainerStyles } from './ReactSelectStyles/Versions/no-padding-value-container-styles';
-import { ReactSelectOption } from './react-select-option-types';
+import { ReactSelectOption } from 'src/components';
 
 type PageVersion = {
   node: {

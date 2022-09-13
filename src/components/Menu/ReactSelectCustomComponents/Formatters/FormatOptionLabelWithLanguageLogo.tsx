@@ -1,5 +1,5 @@
 import React from 'react';
-import { ReactSelectOption } from '../../react-select-option-types';
+import { ReactSelectOption } from 'src/components';
 import { imageMap, isInImageMap } from '../../LanguageDropdownSelector/image-map';
 
 const returnNullIfNoLanguageAvailable = (languageOption: ReactSelectOption) =>
