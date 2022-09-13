@@ -1,15 +1,9 @@
-import React, { Dispatch, useState } from 'react';
-import Select from 'react-select';
+import React, { Dispatch, useState, SetStateAction } from 'react';
+import { SingleValue } from 'react-select';
+import { Select, ReactSelectOption } from 'src/components';
 import { DEFAULT_API_KEY_MESSAGE } from '.';
-import { SmallMenuLabel } from '../../../Menu/Label';
-import { selectMenuStyles } from './api-key-menu-styles';
 
-const VALUE_PREFIX = 'API Key: ';
-
-export type Option = {
-  label: string;
-  value: string;
-};
+import { container } from './ApiKeyMenu.module.css';
 
 type AppApiKey = {
   name: string;
@@ -27,20 +21,22 @@ const errorOption = {
   value: 'Placeholder: replace with default API Key',
 };
 
-const makeLabel = (apiKey: AppApiKey) => `${VALUE_PREFIX}${apiKey.name}`;
+const makeLabel = (apiKey: AppApiKey) => {
+  return `${apiKey.whole_key.slice(0, 10)}... - ${apiKey.name}`;
+};
 
 export type APIKeyMenuProps = {
   userApiKeys: UserApiKey[];
-  setActiveApiKey: Dispatch<React.SetStateAction<Option>>;
+  setActiveApiKey: Dispatch<SetStateAction<ReactSelectOption>>;
 };
 
 const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
   const initialApiKeyOption = userApiKeys[0].apiKeys;
 
-  const [value, setValue] = useState(
+  const [value, setValue] = useState<ReactSelectOption>(
     initialApiKeyOption
       ? {
-          label: `${makeLabel(initialApiKeyOption[0])}`,
+          label: makeLabel(initialApiKeyOption[0]),
           value: initialApiKeyOption[0].whole_key,
         }
       : errorOption,
@@ -53,19 +49,19 @@ const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
       value: appApiKey.whole_key,
     })),
   }));
+
   return (
-    <>
-      <SmallMenuLabel>API Key:</SmallMenuLabel>
+    <div className={container}>
       <Select
         value={value}
-        onChange={(value) => {
-          setValue(value ?? errorOption);
-          setActiveApiKey(value ?? { label: DEFAULT_API_KEY_MESSAGE, value: DEFAULT_API_KEY_MESSAGE });
+        isSearchable={false}
+        onChange={(newValue: SingleValue<SetStateAction<ReactSelectOption>>) => {
+          setValue(newValue ?? errorOption);
+          setActiveApiKey(newValue ?? { label: DEFAULT_API_KEY_MESSAGE, value: DEFAULT_API_KEY_MESSAGE });
         }}
         options={options}
-        styles={selectMenuStyles}
       />
-    </>
+    </div>
   );
 };
 
