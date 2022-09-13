@@ -5,6 +5,9 @@ import APIKeyIndicator from './ApiKeyIndicator';
 import APIKeyMenu, { APIKeyMenuProps } from './ApiKeyMenu';
 import { SmallMenuLabel } from '../../../Menu/Label';
 
+const NO_API_KEY_TOOLTIP =
+  'This code example uses a temporary key that is rate limited and expires in 4 hours. Sign in to Ably to use your API keys instead.';
+
 type APIKeyMenuSelectorProps = APIKeyMenuProps & {
   dataContainsKey: boolean;
   signedIn: boolean;
@@ -33,7 +36,7 @@ const APIKeyMenuSelector = ({
       {signedIn && userApiKeys ? (
         <APIKeyMenu userApiKeys={userApiKeys} setActiveApiKey={setActiveApiKey} />
       ) : (
-        <APIKeyIndicator />
+        <APIKeyIndicator tooltip={NO_API_KEY_TOOLTIP} />
       )}
     </div>
   ) : null;
