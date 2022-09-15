@@ -1,4 +1,5 @@
 import React from 'react';
+import { StaticImage } from 'src/components/StaticImage';
 
 export const BackButton = ({ toggle }: { toggle: () => void }) => (
   <div
@@ -9,7 +10,7 @@ export const BackButton = ({ toggle }: { toggle: () => void }) => (
     onKeyDown={(event) => event.key === 'Enter' && toggle()}
   >
     <span className="text-gui-default align-middle pl-24">
-      <img className="pr-8 h-12" src="/images/icons/bold-chevron-left.svg" />
+      <StaticImage className="pr-8 h-12" src="/images/icons/bold-chevron-left.svg" />
       Back
     </span>
   </div>
