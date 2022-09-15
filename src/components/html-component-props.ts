@@ -6,7 +6,7 @@ export type ValidReactElement =
 
 type ReactAttributes<T extends ValidReactElement> = React.ComponentProps<T> & { [key: `data-${string}`]: string };
 
-type HtmlAttributes<T extends ValidReactElement> = Omit<ReactAttributes<T>, 'ref'>;
+export type HtmlAttributes<T extends ValidReactElement> = Omit<ReactAttributes<T>, 'ref'>;
 
 export type NestedHtmlComponentProps<T extends ValidReactElement> = {
   attribs?: HtmlAttributes<T>;
