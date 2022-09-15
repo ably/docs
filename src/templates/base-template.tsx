@@ -12,7 +12,7 @@ import { RightSidebar, RightSidebarMobile } from '../components/Sidebar/RightSid
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
 import { Head } from 'src/components/Head';
-import { safeWindow } from 'src/utilities';
+import { safeWindow, srcFromDocsSite } from 'src/utilities';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -84,7 +84,7 @@ const Template = ({
           <RightSidebar className="col-span-1 px-16" languages={languagesExist} menuData={contentMenu[0]} />
         </Layout>
       </PageLanguagesContext.Provider>
-      {script && <Script src={`../scripts/${slug}.js`} strategy={ScriptStrategy.idle} />}
+      {script && <Script src={srcFromDocsSite(`/scripts/${slug}.js`)} strategy={ScriptStrategy.idle} />}
     </PageLanguageContext.Provider>
   );
 };
