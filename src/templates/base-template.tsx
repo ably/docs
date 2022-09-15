@@ -11,8 +11,8 @@ import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../componen
 import { RightSidebar, RightSidebarMobile } from '../components/Sidebar/RightSidebar';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
-import { storage } from 'src/utilities/browser/storage';
 import { Head } from 'src/components/Head';
+import { safeWindow, srcFromDocsSite } from 'src/utilities';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -32,7 +32,7 @@ const Template = ({
   const params = new URLSearchParams(search);
   const language = params.get('lang') ?? DEFAULT_LANGUAGE;
   useEffect(() => {
-    const preferredLanguage = storage.getItem(PREFERRED_LANGUAGE_KEY);
+    const preferredLanguage = safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY);
     if (preferredLanguage && language !== preferredLanguage) {
       const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(preferredLanguage, language);
       const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, preferredLanguage);
@@ -84,7 +84,7 @@ const Template = ({
           <RightSidebar className="col-span-1 px-16" languages={languagesExist} menuData={contentMenu[0]} />
         </Layout>
       </PageLanguagesContext.Provider>
-      {script && <Script src={`../scripts/${slug}.js`} strategy={ScriptStrategy.idle} />}
+      {script && <Script src={srcFromDocsSite(`/scripts/${slug}.js`)} strategy={ScriptStrategy.idle} />}
     </PageLanguageContext.Provider>
   );
 };

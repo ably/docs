@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useState } from 'react';
+import { StaticImage } from 'src/components/StaticImage';
 import { safeWindow } from '../../../../utilities/browser/safe-window';
 
 export const TopMainNavAblyLogo = ({ href = '/' }: { href?: string }) => {
@@ -10,9 +11,9 @@ export const TopMainNavAblyLogo = ({ href = '/' }: { href?: string }) => {
   return (
     <a href={href} className="h-32 flex-non self-center">
       {width > 1024 ? (
-        <img src="/images/icons/ably-docs-logo.svg" />
+        <StaticImage src="/images/icons/ably-docs-logo.svg" />
       ) : (
-        <img className="h-32" src="/images/icons/ably-logo.svg" />
+        <StaticImage className="h-32" src="/images/icons/ably-logo.svg" />
       )}
     </a>
   );
