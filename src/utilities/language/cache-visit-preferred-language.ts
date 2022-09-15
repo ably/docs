@@ -1,11 +1,11 @@
 import { navigate } from 'gatsby';
-import { PREFERRED_LANGUAGE_KEY, storage } from 'src/utilities';
+import { PREFERRED_LANGUAGE_KEY, safeWindow } from 'src/utilities';
 
 export const cacheVisitPreferredLanguage = (isPageLanguageDefault: boolean, language: string, href: string) => {
   if (isPageLanguageDefault) {
-    storage.clear();
+    safeWindow.localStorage.clear();
   } else {
-    storage.setItem(PREFERRED_LANGUAGE_KEY, language);
+    safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
   }
   navigate(href);
 };
