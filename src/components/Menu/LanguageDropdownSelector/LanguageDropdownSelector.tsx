@@ -16,7 +16,7 @@ import {
   menuStyles,
   optionStyles,
 } from '../ReactSelectStyles';
-import { storage } from '../../../utilities/browser/storage';
+import { safeWindow } from 'src/utilities';
 
 const makeOptionFromLang = (lang: string) => ({ label: languageLabels[lang] ?? lang, value: lang });
 
@@ -63,9 +63,9 @@ export const LanguageDropdownSelector = ({
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(newLanguage, language);
         const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, newLanguage);
         if (isPageLanguageDefault) {
-          storage.clear();
+          safeWindow.localStorage.clear();
         } else {
-          storage.setItem(PREFERRED_LANGUAGE_KEY, language);
+          safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
         }
         navigate(href);
       }}
