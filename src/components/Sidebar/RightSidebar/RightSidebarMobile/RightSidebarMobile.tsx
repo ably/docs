@@ -33,7 +33,7 @@ export const RightSidebarMobile = ({ menuData, languages }: { menuData: MenuData
       className="sticky bg-white col-span-3 flex flex-row items-center top-0 z-1 w-full h-48 md:hidden"
       style={{ top: distanceFromTop }}
     >
-      <span className="pr-12">On this page: </span>
+      <span className="pr-12 hidden xs:inline text-p3 sm:text-p1">On this page: </span>
       <Select
         components={noIndicatorSeparator}
         classNamePrefix="react-select"
