@@ -38,7 +38,7 @@ const StyledDl = styled.dl`
 
 const Dl = ({ data, attribs }: HtmlComponentProps<'dl'>) => {
   return (
-    <StyledDl ref={null} {...attribs}>
+    <StyledDl {...attribs}>
       <Html data={data} />
     </StyledDl>
   );
