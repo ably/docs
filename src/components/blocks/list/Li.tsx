@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { FC } from 'react';
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 
-const StyledLi = ({ children, ...props }) => (
+const StyledLi: FC = ({ children, ...props }) => (
   <li {...props} className="ui-text-p1 mb-16">
     {children}
   </li>

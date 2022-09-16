@@ -1,8 +1,8 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import Html from '../../Html';
 import styled, { css } from 'styled-components';
 import { borders } from '../../../../styles';
+import { HtmlComponentProps } from 'src/components/html-component-props';
 
 const definitionListCell = css`
   border-bottom: ${borders.defaultBorder};
@@ -36,17 +36,12 @@ const StyledDl = styled.dl`
   }
 `;
 
-const Dl = ({ data, attribs }) => {
+const Dl = ({ data, attribs }: HtmlComponentProps<'dl'>) => {
   return (
     <StyledDl {...attribs}>
       <Html data={data} />
     </StyledDl>
   );
-};
-
-Dl.propTypes = {
-  data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
-  attribs: PropTypes.object,
 };
 
 export default Dl;

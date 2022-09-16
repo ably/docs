@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { FC } from 'react';
 import LinkableHtmlBlock from '../Html/LinkableHtmlBlock';
 import '@ably/ui/core/styles.css';
-import { ChildPropTypes } from '../../../react-utilities';
+import { HtmlAttributes } from 'src/components/html-component-props';
 
-const AblyH2 = ({ children, ...attribs }) => (
+const AblyH2: FC<HtmlAttributes<'h2'>> = ({ children, ...attribs }) => (
   <h2 {...attribs} className="ui-text-h2">
     {children}
   </h2>
@@ -11,7 +11,4 @@ const AblyH2 = ({ children, ...attribs }) => (
 
 const H2 = LinkableHtmlBlock(AblyH2, 'mb-32');
 
-AblyH2.propTypes = {
-  children: ChildPropTypes,
-};
 export default H2;
