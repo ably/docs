@@ -1,9 +1,10 @@
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
 import '@ably/ui/core/styles.css';
 import PropTypes from 'prop-types';
+import { HtmlComponentProps } from 'src/components/html-component-props';
 
-const Button = ({ data, attribs }) => {
-  switch (attribs['data-variant']) {
+const Button = ({ data, attribs }: HtmlComponentProps<'button'>) => {
+  switch (attribs?.['data-variant']) {
     case 'primary-alt':
       return PrimaryAltButton({ data, attribs });
     case 'secondary':
@@ -17,19 +18,19 @@ const Button = ({ data, attribs }) => {
   }
 };
 
-const PrimaryButton = ({ data, attribs }) =>
+const PrimaryButton = ({ data, attribs }: HtmlComponentProps<'button'>) =>
   GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn' } });
 
-const PrimaryAltButton = ({ data, attribs }) =>
+const PrimaryAltButton = ({ data, attribs }: HtmlComponentProps<'button'>) =>
   GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-alt' } });
 
-const SecondaryButton = ({ data, attribs }) =>
+const SecondaryButton = ({ data, attribs }: HtmlComponentProps<'button'>) =>
   GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-secondary' } });
 
-const PrimaryButtonInverted = ({ data, attribs }) =>
+const PrimaryButtonInverted = ({ data, attribs }: HtmlComponentProps<'button'>) =>
   GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-invert' } });
 
-const SecondaryButtonInverted = ({ data, attribs }) =>
+const SecondaryButtonInverted = ({ data, attribs }: HtmlComponentProps<'button'>) =>
   GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-secondary-invert' } });
 
 Button.propTypes = {
