@@ -1,7 +1,7 @@
 import { isString } from 'lodash';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 
-type LanguageGroup = {
+export type LanguageGroup = {
   start: number;
   end: number;
   index: number;
