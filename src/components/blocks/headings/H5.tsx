@@ -2,9 +2,11 @@ import styled from 'styled-components';
 import { fonts, spacing } from '../../../styles';
 import LinkableHtmlBlock from '../Html/LinkableHtmlBlock';
 
+const small: string = spacing.small.toString();
+
 const StyledH5 = styled.h5`
   ${fonts.h5};
-  margin: ${spacing.small} 0 ${spacing.small};
+  margin: ${small} 0 ${small};
 `;
 
 const H5 = LinkableHtmlBlock(StyledH5);
