@@ -1,4 +1,4 @@
-const { css } = require('styled-components');
+import { css } from 'styled-components';
 
 // Unset these values inherited from AblyUI/reset.css
 const resetStyles = css`
