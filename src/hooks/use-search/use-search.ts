@@ -11,7 +11,7 @@ type Image = {
 
 type DocumentType = 'html' | 'pdf' | 'doc' | 'docx' | 'ppt' | 'pptx';
 
-type Hit = {
+export type HitType = {
   id: string;
   url: string;
   title: string;
@@ -31,7 +31,7 @@ type Result = {
   page: number;
   total_hits: number;
   processing_time_ms: number;
-  hits: Hit[];
+  hits: HitType[];
   facets: null;
   rangeFacets: null;
 };
@@ -41,7 +41,7 @@ export type State = {
   query: string;
   page?: Result['page'];
   totalHits: Result['total_hits'];
-  results: Hit[] | null;
+  results: HitType[] | null;
   error: Result['error'] | null;
   loading: boolean;
   enableParamsSync?: boolean;
@@ -56,7 +56,7 @@ type SetResultsPayload = {
   loading: boolean;
   error: Result['error'];
   totalHits: Result['total_hits'];
-  results: Hit[] | null;
+  results: HitType[] | null;
   client?: string;
 };
 
