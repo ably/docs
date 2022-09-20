@@ -1,17 +1,14 @@
 import React, { ChangeEvent, useRef, useState } from 'react';
-import useKeyboardShortcut from 'use-keyboard-shortcut';
 
-import { useSearch } from 'src/hooks';
+import { useSearch, useKeyboardShortcut } from 'src/hooks';
 import { SearchIcon } from '.';
 import { SearchDisplay } from './SearchDisplay';
 import { SuggestionBox } from './SuggestionBox';
 
-export const displayModes = {
-  FULL_SCREEN: 'FULL_SCREEN',
-  MOBILE: 'MOBILE',
-} as const;
-
-type DisplayMode = keyof typeof displayModes;
+export enum DisplayMode {
+  FULL_SCREEN = 'FULL_SCREEN',
+  MOBILE = 'MOBILE',
+}
 
 export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
   const textInput = useRef<null | HTMLInputElement>(null);
@@ -48,7 +45,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
   );
 
   return (
-    <SearchDisplay onClick={focusOnSearchInput} isMobile={displayMode === displayModes.MOBILE}>
+    <SearchDisplay onClick={focusOnSearchInput} isMobile={displayMode === DisplayMode.MOBILE}>
       <SearchIcon className="place-self-center" />
       <input
         type="text"

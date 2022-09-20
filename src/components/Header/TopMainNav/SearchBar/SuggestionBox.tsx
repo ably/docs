@@ -2,7 +2,7 @@ import React, { useState, MouseEvent } from 'react';
 import { HitType } from 'src/hooks';
 import htmr from 'htmr';
 
-import { container } from './SuggestionBox.module.css';
+import { container, resultsBox } from './SuggestionBox.module.css';
 
 type Props = {
   results: HitType[] | null;
@@ -10,18 +10,19 @@ type Props = {
 };
 
 export const SuggestionBox = ({ results, isActive }: Props) => {
-  const [captureLink, setCaptureLink] = useState<string | null>(null);
+  const [capture, setCapture] = useState<{ link: string; title: string } | null>(null);
 
   const handleOptionHover = (event: MouseEvent<HTMLAnchorElement>) => {
-    const newCaptureLink = event.currentTarget.getAttribute('data-capture');
-    if (captureLink === newCaptureLink) {
+    const link = event.currentTarget.getAttribute('data-capture') as string;
+    const title = event.currentTarget.getAttribute('data-title') as string;
+    if (capture?.link === link) {
       return;
     }
-    setCaptureLink(newCaptureLink);
+    setCapture({ link, title });
   };
 
   const handleOptionHoverOut = () => {
-    setCaptureLink(null);
+    setCapture(null);
   };
 
   if (!isActive || !results || results.length === 0) {
@@ -29,8 +30,8 @@ export const SuggestionBox = ({ results, isActive }: Props) => {
   }
 
   return (
-    <div className={container}>
-      <div className="col-span-6">
+    <div aria-label="suggestions" className={container}>
+      <div className={`col-span-6 border-r border-mid-grey pr-16 py-16`}>
         <div className="font-light text-dark-grey uppercase text-menu3 px-16">Results from docs</div>
         {results &&
           results.map(({ title, highlight, url, id, images: { capture } }) => (
@@ -39,8 +40,10 @@ export const SuggestionBox = ({ results, isActive }: Props) => {
               href={url}
               className="block p-16 hover:bg-light-grey rounded-lg"
               data-capture={capture}
+              data-title={title}
               onMouseOver={handleOptionHover}
               onMouseLeave={handleOptionHoverOut}
+              role="link"
             >
               <h4 className="text-menu2 mb-6 font-medium">{title}</h4>
               <div className="text-menu3 font-light text-charcoal-grey">{htmr(highlight)}</div>
@@ -48,8 +51,8 @@ export const SuggestionBox = ({ results, isActive }: Props) => {
             </a>
           ))}
       </div>
-      <div className="col-span-4 relative">
-        {captureLink && <img className="sticky top-16" src={captureLink} alt="current link capture" />}
+      <div className="col-span-4 relative py-16 pl-16">
+        {capture && <img className="sticky top-16" src={capture.link} alt={capture.title} />}
       </div>
     </div>
   );

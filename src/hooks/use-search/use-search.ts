@@ -94,7 +94,8 @@ const reducer = (state: State, action: Action) => {
       const { addsearchApiKey } = action.payload as SetupActionPayload;
       const { enableParamsSync } = state;
       const client = new AddSearchClient(addsearchApiKey);
-
+      // NOTE: we only want to see results from docs at this point. To be changed later if we need to.
+      client.setCategoryFilters('1xdocs');
       const { url } = action.payload as SetupActionPayload;
       const params = { page: 1, query: '' };
 
