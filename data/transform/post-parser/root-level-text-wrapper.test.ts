@@ -1,3 +1,6 @@
+import textile from 'textile-js';
+import { postParser } from '.';
+import { preParser } from '../pre-parser';
 import { rootLevelTextWrapper } from './root-level-text-wrapper';
 
 // If this is broken, the line beginning with 'Wherever possible..." will show up
@@ -14,6 +17,14 @@ const sampleUnwrappedText = `<p>The properties of an Ably error are:</p>
 Wherever possible, success response bodies contain links, in <a href="https://en.wikipedia.org/wiki/HATEOAS"><span class="caps">HATEOS</span></a> style, to other resources relevant to the response; where these are present these are included as <code>href</code> attributes on the applicable part of the response object.
 <p><code>GET</code>, <code>PUT</code>, <code>POST</code> and <code>DELETE</code> are available in all contexts where they make sense. <code>GET</code> is always idempotent.</p>`;
 
+const spanInclusiveUnwrappedTextSample = `blang[default].
+  This will instantiate the library using the specified "ClientOptions":#client-options.
+
+blang[ruby].
+  This will instantiate the library and create a new @Ably::Rest::Client@ using the specified "@ClientOptions@":#client-options.
+
+The REST constructor is used to instantiate the library. The REST library may be instantiated multiple times with the same or different "@ClientOptions@":#client-options in any given context. Except where specified otherwise, instances operate independently of one another.`;
+
 const textileTransformedUnwrappedTextSample = rootLevelTextWrapper(sampleUnwrappedText);
 
 it('No section should be left unwrapped by an HTML element at the root level', () => {
@@ -28,4 +39,6 @@ it('No section should be left unwrapped by an HTML element at the root level', (
 </dl>
 <p>Wherever possible, success response bodies contain links, in <a href="https://en.wikipedia.org/wiki/HATEOAS"><span class="caps">HATEOS</span></a> style, to other resources relevant to the response; where these are present these are included as <code>href</code> attributes on the applicable part of the response object.</p>
 <p><code>GET</code>, <code>PUT</code>, <code>POST</code> and <code>DELETE</code> are available in all contexts where they make sense. <code>GET</code> is always idempotent.</p>`);
+
+  expect(textile(preParser(spanInclusiveUnwrappedTextSample))).toBeNull();
 });

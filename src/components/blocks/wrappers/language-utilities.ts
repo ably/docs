@@ -1,4 +1,5 @@
 import { isString } from 'lodash';
+import { HtmlComponentPropsData } from 'src/components/html-component-props';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 
 export type LanguageGroup = {
@@ -54,7 +55,7 @@ const addToFilter = (group: LanguageGroup, toFilter: boolean[]) => {
   }
 };
 
-const isIrrelevantForLanguageDisplay = (data: Record<string, Record<string, unknown>>): boolean =>
+const isIrrelevantForLanguageDisplay = (data: HtmlComponentPropsData): boolean =>
   !!data && isString(data) && /^\s*$/.test(data);
 
 export { makeGroup, assignPrimary, addToFilter, isIrrelevantForLanguageDisplay };

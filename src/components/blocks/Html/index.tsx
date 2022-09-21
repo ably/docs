@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Fragment } from 'react';
 import { defaultBlocksFromData } from '../create-blocks/default-blocks-from-data';
 import { apiReferenceBlocksFromData } from '../create-blocks/api-reference-blocks-from-data';
 import { isArray } from 'lodash';

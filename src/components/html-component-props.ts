@@ -14,8 +14,11 @@ export type NestedHtmlComponentProps<T extends ValidReactElement> = {
   type?: string;
 };
 
+export type HtmlComponentPropsData = HtmlComponentProps<ValidReactElement>[] | string | null;
+
 export type HtmlComponentProps<T extends ValidReactElement> = {
   attribs?: HtmlAttributes<T>;
-  data: HtmlComponentProps<ValidReactElement>[] | string | null;
+  data: HtmlComponentPropsData;
+  name?: string;
   type?: string;
 };

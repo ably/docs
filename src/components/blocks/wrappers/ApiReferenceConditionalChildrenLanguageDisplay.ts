@@ -1,7 +1,13 @@
-import React, { Children, ReactElement, ReactNode, useContext } from 'react';
+import React, { Children, ReactElement, useContext } from 'react';
 import { IGNORED_LANGUAGES_FOR_DISPLAY } from '../../../../data/createPages/constants';
 import PageLanguageContext from '../../../contexts/page-language-context';
-import { makeGroup, addToFilter, isIrrelevantForLanguageDisplay, LanguageGroup } from './language-utilities';
+import {
+  makeGroup,
+  assignPrimary,
+  addToFilter,
+  isIrrelevantForLanguageDisplay,
+  LanguageGroup,
+} from './language-utilities';
 
 export const ApiReferenceConditionalChildrenLanguageDisplay = ({ children }: { children: ReactElement }) => {
   const language = useContext(PageLanguageContext);
@@ -12,7 +18,7 @@ export const ApiReferenceConditionalChildrenLanguageDisplay = ({ children }: { c
     if (isIrrelevantForLanguageDisplay(props.data)) {
       return;
     }
-    if (attribs.lang && !IGNORED_LANGUAGES_FOR_DISPLAY.includes(attribs.lang)) {
+    if (attribs && attribs.lang && !IGNORED_LANGUAGES_FOR_DISPLAY.includes(attribs.lang)) {
       if (!currentGroup) {
         currentGroup = makeGroup(attribs.lang, index, props.data);
       } else if (currentGroup.languages.includes(attribs.lang)) {
@@ -22,7 +28,7 @@ export const ApiReferenceConditionalChildrenLanguageDisplay = ({ children }: { c
         currentGroup = makeGroup(attribs.lang, index, props.data);
       } else {
         currentGroup.end = index;
-        currentGroup.primary = language;
+        currentGroup = assignPrimary(currentGroup, attribs.lang, language, props.data, index);
       }
       return;
     }

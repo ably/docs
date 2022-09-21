@@ -7,7 +7,6 @@ import languageLabels from 'src/maps/language';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import { HtmlComponentProps, ValidReactElement } from '../../html-component-props';
-import { isString } from 'lodash';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
@@ -24,11 +23,6 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
     ...attribs,
     className: `bg-cool-black text-white p-0 rounded-lg relative`,
   };
-  if (languages?.length ?? 0 > 1) {
-    if (!isString(data?.[0])) {
-      console.log('Data', languages, Object.keys(altData ?? {}), data?.[0].data?.[0]);
-    }
-  }
   return (
     <div
       className={cn('my-32', {
