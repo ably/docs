@@ -17,17 +17,17 @@ describe('<SearchBar />', () => {
     expect(document.activeElement).toEqual(screen.getByPlaceholderText('Search'));
   });
 
-  it.only('should open search box on typing in search input and close on click outside', async () => {
+  it('should open search box on typing in search input and close on click outside', async () => {
     const user = userEvent.setup();
-    render(<SearchBar displayMode={DisplayMode.FULL_SCREEN} />);
+    const { container } = render(<SearchBar displayMode={DisplayMode.FULL_SCREEN} />);
 
     await user.type(screen.getByPlaceholderText('Search'), 'test');
     expect(screen.getByLabelText('suggestions')).toBeInTheDocument();
 
     await user.hover(screen.getAllByRole('link')[0]);
-    expect(screen.getAllByAltText(addsearchMock.hits[0].title)).toBeInTheDocument();
+    expect(screen.getByAltText(addsearchMock.hits[0].title)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('document'));
-    expect(screen.getByLabelText('suggestions')).not.toBeInTheDocument();
+    await user.click(container.querySelector('document') as Element);
+    expect(screen.queryByLabelText('suggestions')).not.toBeInTheDocument();
   });
 });

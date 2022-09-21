@@ -172,7 +172,6 @@ interface UseSearchProps {
 const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10, configureClient }: UseSearchProps) => {
   const [state, dispatch] = useReducer(reducer, { ...initialState, enableParamsSync });
   const { client, query, page } = state;
-
   const setup = setupAction(dispatch);
   const setResults = setResultsAction(dispatch);
   const search = searchAction(dispatch);
