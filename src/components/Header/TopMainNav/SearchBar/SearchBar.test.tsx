@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DisplayMode, SearchBar } from './SearchBar';
 import addsearchMock from '../../../../../__fixtures__/addsearchMock.json';
@@ -19,15 +19,17 @@ describe('<SearchBar />', () => {
 
   it('should open search box on typing in search input and close on click outside', async () => {
     const user = userEvent.setup();
-    const { container } = render(<SearchBar displayMode={DisplayMode.FULL_SCREEN} />);
+    render(<SearchBar displayMode={DisplayMode.FULL_SCREEN} />);
 
-    await user.type(screen.getByPlaceholderText('Search'), 'test');
+    const searchInput = screen.getByPlaceholderText('Search');
+
+    await user.type(searchInput, 'test');
     expect(screen.getByLabelText('suggestions')).toBeInTheDocument();
 
     await user.hover(screen.getAllByRole('link')[0]);
     expect(screen.getByAltText(addsearchMock.hits[0].title)).toBeInTheDocument();
 
-    await user.click(container.querySelector('document') as Element);
+    fireEvent.blur(searchInput);
     expect(screen.queryByLabelText('suggestions')).not.toBeInTheDocument();
   });
 });
