@@ -1,6 +1,3 @@
-import textile from 'textile-js';
-import { postParser } from '.';
-import { preParser } from '../pre-parser';
 import { rootLevelTextWrapper } from './root-level-text-wrapper';
 
 // If this is broken, the line beginning with 'Wherever possible..." will show up
