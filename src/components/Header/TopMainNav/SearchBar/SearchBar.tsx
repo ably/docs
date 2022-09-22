@@ -1,6 +1,7 @@
 import React, { ChangeEvent, useRef, useState } from 'react';
 
-import { useSearch, useKeyboardShortcut } from 'src/hooks';
+import { useSearch } from 'src/hooks';
+import useKeyboardShortcut from 'use-keyboard-shortcut';
 import { SearchIcon } from '.';
 import { SearchDisplay } from './SearchDisplay';
 import { SuggestionBox } from './SuggestionBox';
@@ -13,7 +14,7 @@ export enum DisplayMode {
 export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
   const textInput = useRef<null | HTMLInputElement>(null);
   const [isInFocus, setIsInFocus] = useState(false);
-  const focusOnSearchInput = () => textInput.current && textInput.current.focus();
+  const focusOnSearchInput = () => textInput?.current?.focus();
 
   const {
     state: { query, results },
@@ -31,18 +32,10 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
     search({ query: value });
   };
 
-  useKeyboardShortcut(
-    ['Meta', 'K'],
-    () => {
-      if (textInput.current) {
-        textInput.current.focus();
-      }
-    },
-    {
-      overrideSystem: true,
-      repeatOnHold: false,
-    },
-  );
+  useKeyboardShortcut(['Meta', 'K'], () => textInput?.current?.focus(), {
+    overrideSystem: true,
+    repeatOnHold: false,
+  });
 
   return (
     <SearchDisplay onClick={focusOnSearchInput} isMobile={displayMode === DisplayMode.MOBILE}>

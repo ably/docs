@@ -2,7 +2,7 @@ import React, { useState, MouseEvent } from 'react';
 import { HitType } from 'src/hooks';
 import htmr from 'htmr';
 
-import { container, resultsBox } from './SuggestionBox.module.css';
+import { container } from './SuggestionBox.module.css';
 
 type Props = {
   results: HitType[] | null;
