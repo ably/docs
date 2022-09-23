@@ -13,8 +13,8 @@ const Div = ({ data, attribs }: HtmlComponentProps<'div'>) => {
   const firstChild = data?.[0];
   const childName = isString(firstChild) || !firstChild?.name ? 'text' : firstChild?.name;
   const shouldShowBlock =
-    matchesLanguageOrDefault(pageLanguage, attribs?.lang) &&
-    !DIV_CONTENTS_WHICH_SHOULD_IGNORE_NORMAL_LANGUAGE_RULES.includes(childName);
+    matchesLanguageOrDefault(pageLanguage, attribs?.lang) ||
+    DIV_CONTENTS_WHICH_SHOULD_IGNORE_NORMAL_LANGUAGE_RULES.includes(childName);
   return shouldShowBlock ? (
     <div {...attribs}>
       <Html data={data} />
