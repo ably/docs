@@ -1,5 +1,4 @@
 import React, { useContext } from 'react';
-import PropTypes from 'prop-types';
 import { matchesLanguageOrDefault } from '../wrappers/language-utilities';
 import { PageLanguageContext } from 'src/contexts';
 import Html from '../Html';
