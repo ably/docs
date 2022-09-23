@@ -11,7 +11,7 @@ type Image = {
 
 type DocumentType = 'html' | 'pdf' | 'doc' | 'docx' | 'ppt' | 'pptx';
 
-type Hit = {
+export type HitType = {
   id: string;
   url: string;
   title: string;
@@ -31,7 +31,7 @@ type Result = {
   page: number;
   total_hits: number;
   processing_time_ms: number;
-  hits: Hit[];
+  hits: HitType[];
   facets: null;
   rangeFacets: null;
 };
@@ -41,7 +41,7 @@ export type State = {
   query: string;
   page?: Result['page'];
   totalHits: Result['total_hits'];
-  results: Hit[] | null;
+  results: HitType[] | null;
   error: Result['error'] | null;
   loading: boolean;
   enableParamsSync?: boolean;
@@ -56,7 +56,7 @@ type SetResultsPayload = {
   loading: boolean;
   error: Result['error'];
   totalHits: Result['total_hits'];
-  results: Hit[] | null;
+  results: HitType[] | null;
   client?: string;
 };
 
@@ -94,7 +94,8 @@ const reducer = (state: State, action: Action) => {
       const { addsearchApiKey } = action.payload as SetupActionPayload;
       const { enableParamsSync } = state;
       const client = new AddSearchClient(addsearchApiKey);
-
+      // NOTE: we only want to see results from docs at this point. To be changed later if we need to.
+      client.setCategoryFilters('1xdocs');
       const { url } = action.payload as SetupActionPayload;
       const params = { page: 1, query: '' };
 
@@ -171,7 +172,6 @@ interface UseSearchProps {
 const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10, configureClient }: UseSearchProps) => {
   const [state, dispatch] = useReducer(reducer, { ...initialState, enableParamsSync });
   const { client, query, page } = state;
-
   const setup = setupAction(dispatch);
   const setResults = setResultsAction(dispatch);
   const search = searchAction(dispatch);
