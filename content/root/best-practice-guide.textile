@@ -239,18 +239,27 @@ As this is server-side filtering, clients won't be receiving presence notificati
 
 h3(#use-existing-presence-set). Using the synced presence set provided by the realtime library
 
-Monitoring presence events can be quite complex. For this reason, the @Presence@ object in the realtime library exposes a @get@ "method":/api/realtime-sdk/presence#get allowing a client to retrieve an array of all members present on the channel. The Ably client is responsible for keeping track of the presence set from the time that the channel is attached. An up-to-date presence set is pushed to the client following attach and this set is updated on each subsequent presence event. Thus @get@ returns the already-known presence set retained in memory and does not trigger a new request to the Ably service. You can simply use this method as shown below, instead of venturing into the complexity of building one of your own.
+A common need is to keep an updated list of currently-present members in your user interface.
+
+To achieve this, many developers try to build the initial list using "@Presence.get()@":/api/realtime-sdk/presence#get and then mutate that list whenever a new presence event arrives, from that event. However, we recommend against doing this, because it's easy to get wrong and end up with a list that's out of sync with the real presence set.
+
+One common error is to fail to take into account that a single @clientId@ may be present multiple times on the same channel via different client connections; as far as Ably is concerned, these are different members of the presence set for the channel as they have different @connectionId@s. For example, if a client with ID “Sarah” is connected to a chat channel on both a desktop and a mobile device simultaneously, or maybe via multiple tabs in a browser, “Sarah” will be present twice in the presence member set with the same @clientID@. So if she leaves the channel on her mobile, and your app sees the @leave@ event and removes her entry from that list, you will get an incorrect list.
+
+Instead, our recommended best practice is to just get the presence set afresh from the client library whenever you see a presence event, and rebuild the list in your user interface from that.
+
+With a realtime SDK, the @get@ operation is free and local, it just gives you the presence set that the client has already synced with the server (and which is kept updated by the server), so there is no cost to this.
+
+For example:
 
 ```[javascript]
-channel.presence.get((err, members) => {
-  console.log('There are ' + members.length + ' members on this channel');
-  console.log('The first member has client ID: ' + members[0].clientId);
+channel.presence.on((presenceMessage) => {
+    // Ignore the presence message, just rebuild your state from the get() method
+    // (including uniquifying by clientId if you only want one entry per clientId)
+    channel.presence.get((err, members) => {
+        console.log('There are ' + members.length + ' members on this channel');
+    });
 });
 ```
-
-h3(#using-presence-set-as-single-source-of-truth). Using the presence set as a single source of truth to see which clients are present
-
-A single @clientId@ may be present multiple times on the same channel via different client connections. As far as Ably is concerned, these are different members of the presence set for the channel, however they will be differentiated by their unique @connectionId@. For example, if a client with ID “Sarah” is connected to a chat channel on both a desktop and a mobile device simultaneously, or maybe via multiple tabs in a browser, “Sarah” will be present twice in the presence member set with the same @clientID@, yet will have two unique connection IDs. This means that if "Sarah" leaves the channel on her mobile, it doesn't necessarily mean she's gone as she might still be connected via desktop. For this reason, you should always use the presence set, which you can retrieve using the @get@ "method":/api/realtime-sdk/presence#get, as the single source of truth to see which clients are connected.
 
 h3(#testing-apps). App testing
 
