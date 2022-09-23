@@ -9,7 +9,6 @@ const LinkableHtmlBlock = (Type, marginBottom) => {
   const InnerBlock = ({ data, attribs }) => {
     const pageLanguage = useContext(PageLanguageContext);
     const shouldShowBlock = childOrSelfHasLanguageMatchingPageLanguageOrDefault(pageLanguage, data, attribs?.lang);
-    console.log(data, shouldShowBlock);
     if (shouldShowBlock) {
       return (
         <CopyLink attribs={attribs} marginBottom={marginBottom}>

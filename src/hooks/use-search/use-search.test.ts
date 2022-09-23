@@ -1,4 +1,5 @@
-import { renderHook, act } from '@testing-library/react-hooks';
+import { waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react-hooks/dom';
 
 import useSearch from './use-search';
 
@@ -27,15 +28,17 @@ describe('useSearch', () => {
       window.history.replaceState({}, '', url);
     });
 
-    it('sets state from the URL', () => {
+    it('sets state from the URL', async () => {
       const url = new URL(`${window.location.href}search?q=kafka&page=2`);
       window.history.replaceState({}, '', url);
 
-      const { result } = renderHook(() =>
-        useSearch({
-          addsearchApiKey: 'key',
-          enableParamsSync: true,
-        }),
+      const { result } = await waitFor(() =>
+        renderHook(() =>
+          useSearch({
+            addsearchApiKey: 'key',
+            enableParamsSync: true,
+          }),
+        ),
       );
 
       expect(result.current.state.query).toBe('kafka');
