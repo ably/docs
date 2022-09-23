@@ -2,14 +2,8 @@ import React, { ChangeEvent, useRef, useState } from 'react';
 
 import { useSearch } from 'src/hooks';
 import useKeyboardShortcut from 'use-keyboard-shortcut';
-import { SearchIcon } from '.';
-import { SearchDisplay } from './SearchDisplay';
+import { SearchIcon, DisplayMode, SearchDisplay } from '.';
 import { SuggestionBox } from './SuggestionBox';
-
-export enum DisplayMode {
-  FULL_SCREEN = 'FULL_SCREEN',
-  MOBILE = 'MOBILE',
-}
 
 export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
   const textInput = useRef<null | HTMLInputElement>(null);
@@ -38,7 +32,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
   });
 
   return (
-    <SearchDisplay onClick={focusOnSearchInput} isMobile={displayMode === DisplayMode.MOBILE}>
+    <SearchDisplay onClick={focusOnSearchInput} displayMode={displayMode}>
       <SearchIcon className="place-self-center" />
       <input
         type="text"

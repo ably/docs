@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { DisplayMode, SearchBar } from './SearchBar';
+import { DisplayMode, SearchBar } from '.';
 import addsearchMock from '../../../../../__fixtures__/addsearchMock.json';
 
 describe('<SearchBar />', () => {
