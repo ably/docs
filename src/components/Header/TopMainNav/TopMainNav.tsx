@@ -4,7 +4,7 @@ import { dropdownData } from './Dropdown/Button';
 import { initialState, mainNavReducer } from './main-nav-reducer';
 import { useFunctionOnOutsideClick } from '../../../hooks/useFunctionOnOutsideClick';
 import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo';
-import { displayModes, SearchBar } from './SearchBar';
+import { DisplayMode, SearchBar } from './SearchBar';
 import { TopMainNavUserMenu } from './TopMainNavUser';
 import UserContext from '../../../contexts/user-context';
 import { HorizontalMenuItemGroup } from '../../Menu/HorizontalMenuItemGroup';
@@ -23,7 +23,7 @@ export const TopMainNav = () => {
       <HorizontalMenu variant={HorizontalMenuVariant.light}>
         <HorizontalMenuItemGroup additionalStyles="flex-grow">
           <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
-          <SearchBar displayMode={displayModes.FULL_SCREEN} />
+          <SearchBar displayMode={DisplayMode.FULL_SCREEN} />
         </HorizontalMenuItemGroup>
         <HorizontalMenuItemGroup>
           {menuItems.map((buttonDropdownDataID, i) => (
