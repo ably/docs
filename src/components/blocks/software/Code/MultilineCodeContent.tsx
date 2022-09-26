@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import Prism from 'prismjs';
 import cn from 'classnames';
 
@@ -44,7 +44,7 @@ export const MultilineCodeContent = ({
     contentWithObfuscatedKey,
   );
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     Prism.hooks.add('before-highlight', function (env) {
       env.code = env.element.textContent || '';
     });
