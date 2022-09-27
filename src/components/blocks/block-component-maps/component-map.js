@@ -1,5 +1,6 @@
 import { curry, propOr } from 'lodash/fp';
 import HtmlDataTypes from '../../../../data/types/html';
+import ApiReferenceSpan from '../api-reference/dividers/ApiReferenceSpan';
 import { ApiReferenceBlockquote } from '../api-reference/external-references/ApiReferenceBlockquote';
 import { ApiReferenceH6 } from '../api-reference/headings/ApiReferenceH6';
 import { ApiReferenceCode } from '../api-reference/software/Code/ApiReferenceCode';
@@ -102,6 +103,8 @@ const ApiReferenceHtmlTypeComponentMap = Object.freeze({
   [HtmlDataTypes.h6]: ApiReferenceH6,
   // software-related
   [HtmlDataTypes.code]: ApiReferenceCode,
+  // dividers
+  [HtmlDataTypes.span]: ApiReferenceSpan,
 });
 
 export const componentMap = propOr(IS_TEXT, curry.placeholder, HtmlTypeComponentMap);
