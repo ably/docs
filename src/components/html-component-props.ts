@@ -8,7 +8,7 @@ type ReactAttributes<T extends ValidReactElement> = React.ComponentProps<T> & { 
 
 export type HtmlAttributes<T extends ValidReactElement> = Omit<ReactAttributes<T>, 'ref'> & {
   lang?: string;
-  forceDisplay?: boolean;
+  forcedisplay?: string;
 };
 
 export type NestedHtmlComponentProps<T extends ValidReactElement> = {

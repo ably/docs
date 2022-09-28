@@ -23,6 +23,6 @@ export const ensureChildDataShows = (data: HtmlComponentPropsData): HtmlComponen
   return data.map((child) => ({
     ...child,
     data: ensureChildDataShows(child.data),
-    attribs: { ...child.attribs, forceDisplay: true },
+    attribs: { ...child.attribs, forcedisplay: 'true' },
   }));
 };

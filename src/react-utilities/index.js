@@ -32,4 +32,4 @@ const filterAttribsForReact = compose(classToClassName, keyFromID, removeStyles)
 
 const ChildPropTypes = PropTypes.oneOfType([PropTypes.arrayOf(PropTypes.node), PropTypes.node]);
 
-export { filterAttribsForReact, ChildPropTypes };
+export { removeProp, filterAttribsForReact, ChildPropTypes };

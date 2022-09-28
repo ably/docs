@@ -20,7 +20,8 @@ const childExistsOfIgnoredType = (data: HtmlComponentPropsData) =>
 const ApiReferenceDiv = ({ data, attribs }: HtmlComponentProps<'div'>) => {
   const pageLanguage = useContext(PageLanguageContext);
   const shouldShowBlock =
-    attribs?.forceDisplay || matchesLanguageOrDefault(pageLanguage, attribs?.lang) || childExistsOfIgnoredType(data);
+    attribs?.forcedisplay || matchesLanguageOrDefault(pageLanguage, attribs?.lang) || childExistsOfIgnoredType(data);
+
   return shouldShowBlock ? (
     <div {...attribs}>
       <Html data={data} />
