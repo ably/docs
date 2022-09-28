@@ -1,51 +1,55 @@
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, MouseEvent, useState } from 'react';
 import cn from 'classnames';
 
-import { ButtonWithTooltip } from 'src/components';
 import AILink from '../../../styles/svg/ai-link';
 
-import { container, buttonContainer } from './CopyLink.module.css';
+import { container, button, isHidden, isVisible, notification, buttonContainer } from './CopyLink.module.css';
 
 const CopyLink = ({
   attribs,
-  marginBottom,
+  marginBottom = '',
   children,
 }: {
-  attribs: { id?: string };
-  marginBottom: string;
+  attribs?: { id?: string };
+  marginBottom?: string;
   children: ReactNode;
 }) => {
-  const [copySuccess, setCopySuccess] = useState<null | boolean>(null);
-
-  useEffect(() => {
-    const resetStateTimeout = setTimeout(() => {
-      setCopySuccess(null);
-    }, 2000);
-    return () => clearTimeout(resetStateTimeout);
-  }, [copySuccess]);
+  const [notificationIsVisible, setNotificationIsVisible] = useState(false);
 
   if (!attribs || !attribs.id) {
     return <>{children}</>;
   }
 
-  const copyLink = () => {
+  const handleCopyLink = (e: MouseEvent<HTMLButtonElement>) => {
     const linkToCopy = `${window.location.href.replace(/#.*$/, '')}#${attribs.id}`;
     navigator.clipboard.writeText(linkToCopy);
+    setNotificationIsVisible(true);
+    setTimeout(() => {
+      setNotificationIsVisible(false);
+    }, 1000);
   };
 
   return (
-    <div className={cn('flex items-center', container, marginBottom)}>
+    <div className={cn(container, marginBottom)}>
       {children}
-      <ButtonWithTooltip
-        id={attribs.id}
-        tabIndex={0}
-        className={buttonContainer}
-        notification="Copied"
-        onClick={copyLink}
-      >
-        {/* TODO: use Icon from ably-ui here */}
-        <AILink />
-      </ButtonWithTooltip>
+      <div className={buttonContainer}>
+        <div
+          className={cn(notification, {
+            [isVisible]: notificationIsVisible,
+          })}
+        >
+          Copied!
+        </div>
+        <button
+          onClick={handleCopyLink}
+          className={cn(button, {
+            [isHidden]: notificationIsVisible,
+          })}
+        >
+          {/* TODO: use Icon from ably-ui here */}
+          <AILink />
+        </button>
+      </div>
     </div>
   );
 };
