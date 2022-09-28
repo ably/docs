@@ -142,6 +142,12 @@ const transformNanocTextiles =
       .replace(/(.*)\.[^.]+$/, '$1')
       .replace('root/', '')
       .replace(/index$/, '');
+
+    // NOTE: we need to exclude all the tutorials pages from the docs site
+    if (/^tutorials\/.*/.test(slug)) {
+      return;
+    }
+
     if (node.sourceInstanceName === 'textile-partials') {
       content = `${content}\n`;
     }
