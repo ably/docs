@@ -3,7 +3,7 @@ import cn from 'classnames';
 import { button, tooltipClass, isVisible, notificationClass } from './ButtonWithTooltip.module.css';
 
 interface Props extends HTMLAttributes<HTMLButtonElement> {
-  tooltip?: string;
+  tooltip: string;
   notification?: string;
 }
 
@@ -30,11 +30,9 @@ const ButtonWithTooltip = ({ tooltip, notification, children, onClick, className
       <button type="button" {...buttonProps} onClick={handleClick} className={cn(button, className)} ref={buttonRef}>
         {children}
       </button>
-      {tooltip && (
-        <div className={tooltipClass} role="tooltip">
-          <span>{tooltip}</span>
-        </div>
-      )}
+      <div className={tooltipClass} role="tooltip">
+        <span>{tooltip}</span>
+      </div>
       {notification && (
         <div
           className={cn(notificationClass, {
