@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { graphql } from 'gatsby';
 import Template from './base-template';
 import { ArticleTypeContext } from 'src/contexts/article-type-context';
