@@ -1,6 +1,10 @@
 import styled from 'styled-components';
 
 export const LeftSidebarContainer = styled.div`
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  z-index: 20;
   @media only screen and (max-width: 1040px) {
     display: none;
   }
