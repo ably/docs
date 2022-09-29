@@ -1,5 +1,6 @@
 import React, { ReactNode, MouseEvent, useState } from 'react';
 import cn from 'classnames';
+import Icon from '@ably/ui/core/Icon';
 
 import AILink from '../../../styles/svg/ai-link';
 
@@ -46,8 +47,7 @@ const CopyLink = ({
             [isHidden]: notificationIsVisible,
           })}
         >
-          {/* TODO: use Icon from ably-ui here */}
-          <AILink />
+          <Icon name="icon-gui-link" size="1rem" />
         </button>
       </div>
     </div>
