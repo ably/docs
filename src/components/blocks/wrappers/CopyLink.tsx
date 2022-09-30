@@ -1,8 +1,6 @@
-import React, { ReactNode, MouseEvent, useState } from 'react';
+import React, { ReactNode, useState } from 'react';
 import cn from 'classnames';
 import Icon from '@ably/ui/core/Icon';
-
-import AILink from '../../../styles/svg/ai-link';
 
 import { container, button, isHidden, isVisible, notification, buttonContainer } from './CopyLink.module.css';
 
@@ -21,7 +19,7 @@ const CopyLink = ({
     return <>{children}</>;
   }
 
-  const handleCopyLink = (e: MouseEvent<HTMLButtonElement>) => {
+  const handleCopyLink = () => {
     const linkToCopy = `${window.location.href.replace(/#.*$/, '')}#${attribs.id}`;
     navigator.clipboard.writeText(linkToCopy);
     setNotificationIsVisible(true);

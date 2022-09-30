@@ -7,6 +7,7 @@ import { addAPIKeyInfoToCodeBlock } from './add-info-to-codeblocks/codeblock-api
 import { addRandomChannelInfoToCodeBlock } from './add-info-to-codeblocks/codeblock-random-channel-name';
 import { duplicateLangAttributes } from './duplicate-lang-attributes';
 import { liftLangAttributes } from './lift-lang-attributes';
+import { removeChildrenFromPreWrappedCodeElements } from './remove-children-from-pre-wrapped-code-elements';
 import { removeParagraphsFromDefinitionListsAndMerge } from './remove-paragraphs-from-definition-lists';
 
 type Attributes = { [attr: string]: string };
@@ -70,6 +71,7 @@ export const htmlParser = (content: string) => {
   addAPIKeyInfoToCodeBlock(loadedDom);
   addRandomChannelInfoToCodeBlock(loadedDom);
   removeParagraphsFromDefinitionListsAndMerge(loadedDom);
+  removeChildrenFromPreWrappedCodeElements(loadedDom);
   const loadedDomBodyNodes = loadedDom('body').children('*');
   const parsedNodes = cheerioParser(loadedDomBodyNodes);
   return [

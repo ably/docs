@@ -2,14 +2,14 @@ import React from 'react';
 import HtmlDataTypes from '../../../../../../data/types/html';
 import { multilineRegex, default as Code } from '../../../software/Code';
 import { NestedHtmlComponentProps } from '../../../../html-component-props';
-import { isString } from 'lodash';
 import { ApiReferenceInlineCodeElement } from './ApiReferenceInlineCodeElement';
 import Html from '../../../Html';
+import { every, some } from 'lodash/fp';
 
 export const ApiReferenceCode = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
-  const containsString = !isString(data) && data.length === 1 && data[0].type === HtmlDataTypes.text;
-  const hasRenderableLanguages = containsString && attribs && attribs.lang;
-  const hasMultilineText = containsString && multilineRegex.test(data[0].data as string);
+  const isString = every((child) => child.type === HtmlDataTypes.text, data);
+  const hasRenderableLanguages = isString && attribs && attribs.lang;
+  const hasMultilineText = isString && some((child) => multilineRegex.test(child.data as string), data);
   if (hasRenderableLanguages || hasMultilineText) {
     return <Code data={data} attribs={attribs} />;
   }
