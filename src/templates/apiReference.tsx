@@ -5,14 +5,11 @@ import { ArticleTypeContext } from 'src/contexts/article-type-context';
 import { ARTICLE_TYPES } from '../../data/transform/constants';
 import { AblyTemplateData } from './template-data';
 
-const ApiReference = (props: AblyTemplateData) => {
-  return (
-    <ArticleTypeContext.Provider value={ARTICLE_TYPES.apiReference}>
-      <Template {...props} />
-    </ArticleTypeContext.Provider>
-  );
-};
-
+const ApiReference = (props: AblyTemplateData) => (
+  <ArticleTypeContext.Provider value={ARTICLE_TYPES.apiReference}>
+    <Template {...props} />
+  </ArticleTypeContext.Provider>
+);
 export default ApiReference;
 
 export const query = graphql`
