@@ -23,7 +23,6 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
     ...attribs,
     className: `bg-cool-black text-white p-0 rounded-lg relative`,
   };
-
   return (
     <div
       className={cn('my-32', {
