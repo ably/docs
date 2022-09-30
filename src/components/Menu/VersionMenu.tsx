@@ -1,7 +1,7 @@
 import React from 'react';
 import Select from 'react-select';
 import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
-import { Warning } from '../Notifications';
+import { Notification, NotificationVariant } from '../Notification';
 import { routeToPage } from './route-to-page';
 import { dropdownIndicatorStyles } from './ReactSelectStyles/dropdown-indicator-styles';
 import { optionStyles } from './ReactSelectStyles/option-styles';
@@ -56,10 +56,12 @@ const VersionMenu = ({ versions, version, rootVersion }: VersionMenuProps) => {
       {versions.length > 0 && (
         <div className="flex justify-end items-center col-span-1">
           {version && version !== LATEST_ABLY_API_VERSION_STRING && (
-            <Warning
+            <Notification
+              variant={NotificationVariant.Warning}
               message={` Version ${version}. We recommend `}
               linkText={`the latest version, ${LATEST_ABLY_API_VERSION_STRING}`}
               href={`${DOCUMENTATION_PATH}${rootVersion}`}
+              className="mr-12"
             />
           )}
           <Select
