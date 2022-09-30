@@ -1,7 +1,8 @@
-import { isString } from 'lodash';
+import { isArray, isString } from 'lodash';
+import { HtmlComponentPropsData } from 'src/components/html-component-props';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 
-type LanguageGroup = {
+export type LanguageGroup = {
   start: number;
   end: number;
   index: number;
@@ -54,7 +55,31 @@ const addToFilter = (group: LanguageGroup, toFilter: boolean[]) => {
   }
 };
 
-const isIrrelevantForLanguageDisplay = (data: Record<string, Record<string, unknown>>): boolean =>
+const matchesLanguageOrDefault = (pageLanguage: string, language?: string) =>
+  !language || pageLanguage === language || DEFAULT_LANGUAGE === language;
+
+const childMatchesLanguageOrDefault = (pageLanguage: string, data: HtmlComponentPropsData) => {
+  if (!isArray(data) || data.length !== 1 || !data[0].attribs?.lang) {
+    return true;
+  }
+  return matchesLanguageOrDefault(pageLanguage, data[0].attribs?.lang);
+};
+
+const childOrSelfHasLanguageMatchingPageLanguageOrDefault = (
+  pageLanguage: string,
+  data: HtmlComponentPropsData,
+  language?: string,
+) => matchesLanguageOrDefault(pageLanguage, language) && childMatchesLanguageOrDefault(pageLanguage, data);
+
+const isIrrelevantForLanguageDisplay = (data: HtmlComponentPropsData): boolean =>
   !!data && isString(data) && /^\s*$/.test(data);
 
-export { makeGroup, assignPrimary, addToFilter, isIrrelevantForLanguageDisplay };
+export {
+  makeGroup,
+  assignPrimary,
+  addToFilter,
+  isIrrelevantForLanguageDisplay,
+  matchesLanguageOrDefault,
+  childMatchesLanguageOrDefault,
+  childOrSelfHasLanguageMatchingPageLanguageOrDefault,
+};
