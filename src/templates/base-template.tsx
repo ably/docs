@@ -31,14 +31,6 @@ const Template = ({
 }: AblyTemplateData) => {
   const params = new URLSearchParams(search);
   const language = params.get('lang') ?? DEFAULT_LANGUAGE;
-  useEffect(() => {
-    const preferredLanguage = safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY);
-    if (preferredLanguage && language !== preferredLanguage) {
-      const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(preferredLanguage, language);
-      const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, preferredLanguage);
-      navigate(href);
-    }
-  }, []);
 
   const title = getMetaDataDetails(document, 'title') as string;
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
@@ -70,6 +62,19 @@ const Template = ({
       ),
     [contentOrderedList, language],
   );
+
+  useEffect(() => {
+    if (language === DEFAULT_LANGUAGE || !filteredLanguages.includes(language)) {
+      const preferredLanguage = safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY);
+      if (preferredLanguage) {
+        const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(preferredLanguage, language);
+        const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, preferredLanguage);
+        navigate(href);
+      }
+    } else {
+      safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
+    }
+  }, []);
 
   return (
     <PageLanguageContext.Provider value={language}>

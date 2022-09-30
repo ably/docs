@@ -65,7 +65,7 @@ export const LanguageDropdownSelector = ({
         if (isPageLanguageDefault) {
           safeWindow.localStorage.clear();
         } else {
-          safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
+          safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, newLanguage);
         }
         navigate(href);
       }}
