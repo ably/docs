@@ -10,5 +10,5 @@
  *
  * Regex101: https://regex101.com/r/j4BLqX/1
  */
-const rootLevelTextFinder = /(<\/[A-Za-z]+>)\n([A-Z].*)\n/g;
-export const rootLevelTextWrapper = (content: string) => content.replace(rootLevelTextFinder, '$1\n<p>$2</p>\n');
+const rootLevelTextFinder = /^([A-Z].*)/gm;
+export const rootLevelTextWrapper = (content: string) => content.replace(rootLevelTextFinder, '<p>$1</p>');

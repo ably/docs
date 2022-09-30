@@ -20,6 +20,19 @@ const classToClassName = (attribs) => {
   return attribs;
 };
 
+const addReactFriendlySpanNames = (attribs) => {
+  if (!attribs) {
+    return attribs;
+  }
+  if (!attribs.colspan && !attribs.rowspan) {
+    return attribs;
+  }
+  attribs.colSpan = attribs.colspan;
+  attribs.rowSpan = attribs.rowspan;
+  // Retain these values in case we want to move away from Styled Components.
+  return attribs;
+};
+
 const keyFromID = (attribs) => {
   if (!attribs || !attribs.id) {
     return attribs;
@@ -28,8 +41,8 @@ const keyFromID = (attribs) => {
   return attribs;
 };
 
-const filterAttribsForReact = compose(classToClassName, keyFromID, removeStyles);
+const filterAttribsForReact = compose(addReactFriendlySpanNames, classToClassName, keyFromID, removeStyles);
 
 const ChildPropTypes = PropTypes.oneOfType([PropTypes.arrayOf(PropTypes.node), PropTypes.node]);
 
-export { filterAttribsForReact, ChildPropTypes };
+export { removeProp, filterAttribsForReact, ChildPropTypes };

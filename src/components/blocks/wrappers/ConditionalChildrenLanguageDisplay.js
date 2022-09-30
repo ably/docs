@@ -8,11 +8,11 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
   let currentGroup = false;
   const childLanguageGroups = [];
   const toFilter = [];
-  Children.forEach(children, ({ props, props: { attribs = null } }, index) => {
+  Children.forEach(children, ({ props, props: { attribs = {} } }, index) => {
     if (isIrrelevantForLanguageDisplay(props.data)) {
       return;
     }
-    if (attribs && attribs.lang && !IGNORED_LANGUAGES_FOR_DISPLAY.includes(attribs.lang)) {
+    if (attribs.lang && !IGNORED_LANGUAGES_FOR_DISPLAY.includes(attribs.lang)) {
       if (!currentGroup) {
         currentGroup = makeGroup(attribs.lang, index, props.data);
       } else if (currentGroup.languages.includes(attribs.lang)) {
