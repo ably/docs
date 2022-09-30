@@ -1,6 +1,6 @@
-const { compose } = require('lodash/fp');
-const { replaceERB } = require('./erbjs');
-const {
+import { compose } from 'lodash/fp';
+import { replaceERB } from './erbjs';
+import {
   convertJSAllToNodeAndJavaScript,
   convertBlangBlocksToTokens,
   addLanguageSupportForGithubStyleCode,
@@ -8,14 +8,14 @@ const {
   enforceWhiteSpaceLevelsBetweenLanguageElements,
   addLanguageSupportForBlockQuotes,
   addLanguageSupportForHeadings,
-} = require('./language');
-const { stripComments, addMinimizeForHeadings, addMinimizedIndent } = require('./semantic');
-const { textileJSCompatibility } = require('./textile-js-workarounds');
+} from './language';
+import { stripComments, addMinimizeForHeadings, addMinimizedIndent } from './semantic';
+import { textileJSCompatibility } from './textile-js-workarounds';
 
 // Newlines before closing tags inhibit textile-js' ability to correctly parse HTML
-const removeNewlinesBeforeClosingTags = (content) => content.replace(/\n+(<\/\w+>)/g, '$1');
+const removeNewlinesBeforeClosingTags: StringTransformation = (content) => content.replace(/\n+(<\/\w+>)/g, '$1');
 
-const preParser = compose(
+export const preParser = compose(
   // Textile compatibility must follow all other changes
   textileJSCompatibility,
   // Language operations
@@ -34,7 +34,3 @@ const preParser = compose(
   // ERB to JS
   replaceERB,
 );
-
-module.exports = {
-  preParser,
-};
