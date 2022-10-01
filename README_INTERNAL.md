@@ -123,13 +123,7 @@ You need to reference the JSBin using the appropriate URL. To make retrieving th
 
 ## Branch and tag scheme for features spec
 
-The `main` branch contains the most recent version of the spec together with any subsequent fixes and non-breaking improvements. This is the version that a client library developer who is implementing a feature should use as a reference. It is also the version that is deployed to `docs.ably.com`.
-
-When proposing a spec change, changes that you want to incorporate into the current version of the client libraries should be made against `main`. Changes that should _not_ be incorporated until the next minor or major version should be made against the corresponding `integration/<major>.<minor>` branch, e.g. `integration/1.2` (which ideally should be regularly rebased on top of `main`).
-
-When a new minor or major version of the spec is released, it is tagged with a version number such as `v1.2`. Conformance to the spec at that tag is what defines whether a library can be released with that major/minor version.
-
-Client library developers are not expected to monitor the docs repo for spec fixes that occur after the release tag. If a given spec fix needs to be made to client libraries at that time, then when merging the PR to `main` you should open a GitHub issue in each individual client library repo to request that the fix is made. If you don't do this then you cannot expect the fix to be incorporated until the next spec release. When updating a client library to a spec version, client library developers should work from a diff from the tag of the previous release, so as to incorporate all changes since that tag.
+The spec has moved to [the `ably/specification` repository](https://github.com/ably/specification), where contribution guidance can be found for it.
 
 ## Checking for broken links using Nanoc
 
