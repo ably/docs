@@ -1,14 +1,14 @@
-const textile = require('textile-js');
-const { convertBlangBlocksToTokens, convertJSAllToNodeAndJavaScript } = require('.');
-const { preParser } = require('..');
-const {
+import textile from 'textile-js';
+import { convertBlangBlocksToTokens, convertJSAllToNodeAndJavaScript } from '.';
+import { preParser } from '..';
+import {
   riskyBlangExample,
   riskyBlangExpectedResult,
   brokenBlangExample,
   brokenBlangExpectedResult,
   brokenBlangTokenAfterJSConversionExpectedResult,
   brokenCodeInsideBlangExample,
-} = require('./blang.raw.examples');
+} from './blang.raw.examples';
 
 describe('Converts specific example blang blocks to HTML', () => {
   it('Converts example block taken from _connection_state.textile to HTML, discovered to be failing on 21/01/2022', () => {
