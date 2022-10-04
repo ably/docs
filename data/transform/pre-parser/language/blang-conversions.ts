@@ -61,7 +61,7 @@ export const convertJSAllToNodeAndJavaScript = (content: string) => {
 const BLANG_REGEX = /^blang\[([\w,]+)\]\.\s*$/m;
 
 const langBlockWrapper = (languages: string) => `\n{{LANG_BLOCK[${languages}]}}\n\n`;
-const langBlockEnd = '{{/LANG_BLOCK}}\n';
+const langBlockEnd = '{{/LANG_BLOCK}}\n\n';
 
 export const convertBlangBlocksToTokens = (content: string) => {
   let position = content.search(BLANG_REGEX);
