@@ -18,11 +18,6 @@ site = "output"
 config_folder = "config"
 readme = "README.md"
 
-desc "Run validation and tests on this docs repo"
-task :default do
-  ruby "scripts/find-duplicate-spec-items"
-end
-
 desc "remove files in output directory"
 task :clean do
   puts "Removing output..."
