@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Accordion } from 'react-accessible-accordion';
 import styled from 'styled-components';
 import { ROOT_LEVEL } from './consts';
@@ -85,7 +85,7 @@ const SidebarLinkMenu = ({
           </li>
         ) : (
           <li key={`${label}-${link}-${level}`}>
-            <SidebarLink to={link} isLeaf={indent > 0} isActive={isActive} indent={indent}>
+            <SidebarLink to={link} isActive={isActive} indent={indent}>
               {label}
             </SidebarLink>
           </li>
@@ -93,6 +93,7 @@ const SidebarLinkMenu = ({
       }),
     [data, expandable, indent, expandMenu, preExpanded, highlightedMenuId, indentOffset],
   );
+
   return (
     <Accordion allowMultipleExpanded={true} allowZeroExpanded={true} preExpanded={preExpanded}>
       <OrderedList>{linkMenu}</OrderedList>

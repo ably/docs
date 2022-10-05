@@ -52,7 +52,7 @@ const SidebarLinkItem = ({
           )}
         </HighlightedMenuContext.Consumer>
       ) : (
-        <SidebarLink to={link} isLeaf isActive={isActive} indent={indent}>
+        <SidebarLink to={link} isActive={isActive} indent={indent}>
           {content}
         </SidebarLink>
       ),
