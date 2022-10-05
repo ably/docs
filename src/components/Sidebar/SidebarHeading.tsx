@@ -23,8 +23,6 @@ const SidebarHeading = <C extends ElementType>({
   ...props
 }: Props<C>) => {
   const Component = as || 'span';
-  const { children } = props;
-  console.log('SidebarHeading', { isActive, children });
 
   return (
     <Component

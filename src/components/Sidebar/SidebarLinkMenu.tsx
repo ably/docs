@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Accordion } from 'react-accessible-accordion';
 import styled from 'styled-components';
 import { ROOT_LEVEL } from './consts';
