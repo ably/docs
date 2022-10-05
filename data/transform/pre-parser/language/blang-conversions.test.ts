@@ -1,14 +1,13 @@
-const textile = require('textile-js');
-const { convertBlangBlocksToTokens, convertJSAllToNodeAndJavaScript } = require('.');
-const { preParser } = require('..');
-const {
+import textile from 'textile-js';
+import { convertBlangBlocksToTokens, convertJSAllToNodeAndJavaScript } from '.';
+import { preParser } from '..';
+import {
   riskyBlangExample,
-  riskyBlangExpectedResult,
   brokenBlangExample,
   brokenBlangExpectedResult,
   brokenBlangTokenAfterJSConversionExpectedResult,
   brokenCodeInsideBlangExample,
-} = require('./blang.raw.examples');
+} from './blang.raw.examples';
 
 describe('Converts specific example blang blocks to HTML', () => {
   it('Converts example block taken from _connection_state.textile to HTML, discovered to be failing on 21/01/2022', () => {
@@ -40,7 +39,7 @@ describe('Converts specific example blang blocks to HTML', () => {
      *      Correct handling of undefined markup not a high priority during alpha development, but should revisit.
      */
     const result = convertBlangBlocksToTokens(riskyBlangExample);
-    expect(result).toEqual(riskyBlangExpectedResult);
+    expect(result).toMatchSnapshot();
   });
   it('Converts example block taken from _channel_options.textile to HTML, discovered to be failing on 04/02/2022', () => {
     const result = convertBlangBlocksToTokens(brokenBlangExample);
@@ -57,23 +56,26 @@ describe('Converts specific example blang blocks to HTML', () => {
      * Example of Cause:
      *      e.g. {{LANG_BLOCK[a]}}\nbc[javascript]. ...
      */
-    expect(preParser(brokenCodeInsideBlangExample)).toBe(`
-{{LANG_BLOCK[javascript,nodejs]}}
+    expect(preParser(brokenCodeInsideBlangExample)).toMatchInlineSnapshot(`
+      "
+      {{LANG_BLOCK[javascript,nodejs]}}
 
-bc[javascript]. 
-realtime.connection.on('connected', function(stateChange) {
-  console.log('Ably is connected');
-});
-{{{github_br}}}
+      bc[javascript]. 
+      realtime.connection.on('connected', function(stateChange) {
+        console.log('Ably is connected');
+      });
+      {{{github_br}}}
 
-bc[nodejs]. 
-realtime.connection.on('connected', function(stateChange) {
-  console.log('Ably is connected');
-});
-{{{github_br}}}
+      bc[nodejs]. 
+      realtime.connection.on('connected', function(stateChange) {
+        console.log('Ably is connected');
+      });
+      {{{github_br}}}
 
-{{/LANG_BLOCK}}
-`);
+      {{/LANG_BLOCK}}
+
+      "
+    `);
     expect(textile(preParser(brokenCodeInsideBlangExample)))
       .toBe(`<p>{{LANG_<span class="caps">BLOCK</span>[javascript,nodejs]}}</p>
 <pre lang="javascript"><code lang="javascript">

@@ -134,7 +134,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
         version: edge.node.version ?? LATEST_ABLY_API_VERSION_STRING,
         language: DEFAULT_LANGUAGE,
         languages,
-        contentOrderedList: contentOrderedList,
+        contentOrderedList,
         contentMenu,
         script,
       },

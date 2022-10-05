@@ -1,6 +1,6 @@
 const INDENTATION_REGEX = /^(\s+).*$/m;
 
-const extractIndented = (text, name = 'Indentable', allowEmptyLines = false) => {
+export const extractIndented = (text: string, name = 'Indentable', allowEmptyLines = false) => {
   /**
    * Find some amount of indentation followed by some amount of content
    */
@@ -38,8 +38,4 @@ const extractIndented = (text, name = 'Indentable', allowEmptyLines = false) => 
   const onlyIndentedLines = text.slice(0, nonIndentedLineLocation).replace(indentationRegex, '$1');
 
   return { onlyIndentedLines, nonIndentedLineLocation };
-};
-
-module.exports = {
-  extractIndented,
 };

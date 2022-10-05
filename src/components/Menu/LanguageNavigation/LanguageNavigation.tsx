@@ -1,4 +1,4 @@
-import React, { FunctionComponent as FC, useContext, SetStateAction } from 'react';
+import React, { FunctionComponent as FC, useContext } from 'react';
 import { SingleValue } from 'react-select';
 import {
   createLanguageHrefFromDefaults,
@@ -8,6 +8,7 @@ import {
   Select,
 } from 'src/components';
 import { PageLanguageContext } from 'src/contexts';
+import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../data/createPages/constants';
 import { cacheVisitPreferredLanguage } from 'src/utilities';
 
 import { drodownContainer } from './LanguageNavigation.module.css';
@@ -29,9 +30,9 @@ export interface LanguageNavigationProps {
 
 const LanguageNavigation = ({ items }: LanguageNavigationProps) => {
   const pageLanguage = useContext(PageLanguageContext);
-
+  const selectedLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
   const options = items.map((item) => ({ label: item.content, value: item.props.language }));
-  const value = options.find((option) => option.value === pageLanguage);
+  const value = options.find((option) => option.value === selectedLanguage);
 
   return (
     <HorizontalMenu className="justify-end md:justify-start">
