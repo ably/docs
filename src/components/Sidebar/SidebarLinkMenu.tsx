@@ -1,19 +1,28 @@
 import React, { useMemo } from 'react';
-import PropTypes from 'prop-types';
 import { Accordion } from 'react-accessible-accordion';
 import styled from 'styled-components';
 import { ROOT_LEVEL } from './consts';
-import SidebarLabel from './SidebarLabel';
+import SidebarHeading from './SidebarHeading';
 import SidebarLink from './SidebarLink';
 import SidebarLinkItem from './SidebarLinkItem';
 import { EXPAND_MENU } from './expand-menu-enum';
 import { checkSectionMatch } from './check-section-match';
 import { safeWindow } from '../../utilities/browser/safe-window';
+import { SidebarData } from './sidebar-data';
 
 const OrderedList = styled.ol`
   margin: 0;
   padding: 0;
 `;
+
+type Props = {
+  data: SidebarData[];
+  expandable?: boolean;
+  expandMenu: EXPAND_MENU;
+  highlightedMenuId: string | null;
+  indent?: number;
+  indentOffset?: number;
+};
 
 const SidebarLinkMenu = ({
   data,
@@ -22,11 +31,11 @@ const SidebarLinkMenu = ({
   expandMenu = EXPAND_MENU.EXPANDED,
   indent = 0,
   indentOffset = 0,
-}) => {
-  const preExpanded = useMemo(() => [], []);
+}: Props) => {
+  const preExpanded: string[] = useMemo(() => [], []);
   const linkMenu = useMemo(
     () =>
-      data.map(({ label, link, level = ROOT_LEVEL, content = false }) => {
+      data.map(({ label, link, level = ROOT_LEVEL, content }) => {
         const uuid = encodeURIComponent(`${label}${link}`);
         if ([EXPAND_MENU.EXPANDED, EXPAND_MENU.COLLAPSE_NEXT].includes(expandMenu)) {
           preExpanded.push(uuid);
@@ -51,11 +60,11 @@ const SidebarLinkMenu = ({
         const isActive = highlightedMenuId === link || safeWindow.location.pathname === link;
 
         const labelMaybeWithLink = expandable ? (
-          <SidebarLabel $leaf={false} $active={isActive} indent={indent} level={level}>
+          <SidebarHeading isActive={isActive} indent={indent}>
             {label}
-          </SidebarLabel>
+          </SidebarHeading>
         ) : (
-          <SidebarLink $leaf={false} $active={isActive} indent={indent} level={level} to={link}>
+          <SidebarLink isActive={isActive} indent={indent} to={link}>
             {label}
           </SidebarLink>
         );
@@ -71,32 +80,25 @@ const SidebarLinkMenu = ({
               expandMenu={nextExpandMenu}
               indent={indent}
               indentOffset={indentOffset}
-              $active={isActive}
+              isActive={isActive}
             />
           </li>
         ) : (
           <li key={`${label}-${link}-${level}`}>
-            <SidebarLink to={link} $leaf={indent > 0} $active={isActive} indent={indent}>
+            <SidebarLink to={link} isActive={isActive} indent={indent}>
               {label}
             </SidebarLink>
           </li>
         );
       }),
-    [data, expandable, indent, expandMenu, preExpanded, highlightedMenuId],
+    [data, expandable, indent, expandMenu, preExpanded, highlightedMenuId, indentOffset],
   );
+
   return (
     <Accordion allowMultipleExpanded={true} allowZeroExpanded={true} preExpanded={preExpanded}>
       <OrderedList>{linkMenu}</OrderedList>
     </Accordion>
   );
-};
-
-SidebarLinkMenu.propTypes = {
-  data: PropTypes.array,
-  expandable: PropTypes.bool,
-  expandMenu: PropTypes.oneOf(Object.values(EXPAND_MENU)),
-  highlightedMenuId: PropTypes.string,
-  indent: PropTypes.number,
 };
 
 export default SidebarLinkMenu;
