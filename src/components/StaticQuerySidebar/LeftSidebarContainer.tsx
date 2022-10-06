@@ -16,7 +16,6 @@ export const LeftSidebarContainer = styled.div`
           text-transform: uppercase;
           font-weight: 500;
           letter-spacing: 0.1em;
-          height: 40px;
         }
         svg {
           visibility: hidden;
