@@ -1,5 +1,6 @@
 const DataTypes = require('../../types');
-const { indent, flattenContentOrderedList } = require('../shared-utilities');
+const { flattenContentOrderedList } = require('../shared-utilities');
+const { applyIndent } = require('./applyIndent');
 const { skipAndApplyIndent } = require('./applyIndent');
 
 const maybeRetrievePartial =
@@ -47,15 +48,13 @@ const maybeRetrievePartial =
 
       // Finally, apply the indentation specified from the attributeObject and return the data
       const indentation = parseInt(attributeObject['indent']);
+      const applyIndentation = applyIndent(indentation);
       const skipAndApplyIndentation = skipAndApplyIndent(indentation);
       if (attributeObject['indent']) {
         if (attributeObject['skip_first_indent']) {
           contentOrderedList = contentOrderedList.map(skipAndApplyIndentation);
         } else {
-          contentOrderedList = contentOrderedList.map((content) => ({
-            ...content,
-            data: indent(content.data, parseInt(attributeObject['indent'])),
-          }));
+          contentOrderedList = contentOrderedList.map(applyIndentation);
         }
       }
     }

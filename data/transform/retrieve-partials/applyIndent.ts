@@ -1,11 +1,21 @@
 import { indent } from '../shared-utilities';
-import { StringContentOrderedList } from '../StringContentOrderedList';
+import { StringContent } from '../StringContentOrderedList';
 
-export const skipAndApplyIndent = (indentation: number) => (content: StringContentOrderedList, i: number) => {
+export const applyIndent = (indentation: number) => (content: StringContent) => ({
+  ...content,
+  data: indent(content.data, indentation),
+});
+
+export const skipAndApplyIndent = (indentation: number) => (content: StringContent, i: number) => {
   if (i === 0) {
+    const lines = content.data.split('\n');
+    const data = `${lines[0]}\n${lines
+      .slice(1)
+      .map((line) => indent(line, indentation))
+      .join('\n')}`;
     return {
       ...content,
-      data: indent(content.data.substring(content.data.indexOf('\n') + 1), indentation),
+      data,
     };
   }
 
