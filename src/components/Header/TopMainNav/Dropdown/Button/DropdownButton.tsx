@@ -1,9 +1,11 @@
 import { kebabCase } from 'lodash';
 import React from 'react';
-import AIChevronDown from '../../../../../styles/svg/ai-chevron-down';
+import Icon from '@ably/ui/core/Icon';
 import { DropdownMenu } from '../DropdownMenu';
 import { DropdownDataIdentifier } from '../types';
 import { dropdownData } from './dropdown-data';
+
+import { chevronDown } from './DropdownButton.module.css';
 
 export type DropDownEvent = (dataId: DropdownDataIdentifier) => void;
 
@@ -38,7 +40,7 @@ export const DropdownButtonAndMenu = ({
         aria-controls={dropdownDataID}
       >
         <span className="w-full">{titleOverride || dropdownDataID}</span>
-        <AIChevronDown className="flex-shrink-0 mx-8" />
+        <Icon name="icon-gui-disclosure-arrow" size="1rem" additionalCSS={chevronDown} />
       </button>
       {isOpen && <DropdownMenu {...dropdownData[dropdownDataID]} />}
     </div>
