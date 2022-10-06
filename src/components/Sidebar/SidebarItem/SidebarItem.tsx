@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ReactElement } from 'react';
 import { AccordionItem, AccordionItemPanel } from 'react-accessible-accordion';
 import { ExpandableAccordionHeading } from './ExpandableAccordionHeading';
 import { NonExpandableHeading } from './NonExpandableHeading';
@@ -18,7 +18,7 @@ const AccordionHeading = ({ label, level, expandable = true }: AccordionHeadingP
 
 type SidebarItemProps = AccordionHeadingProps & {
   uuid: string;
-  content: React.ReactNode[];
+  content: ReactElement;
 };
 
 export const SidebarItem = ({ uuid, label, level, content, expandable = true }: SidebarItemProps) => (
