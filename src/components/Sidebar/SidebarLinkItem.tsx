@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import PropTypes from 'prop-types';
+import React, { useMemo, ReactNode } from 'react';
+
 import { SidebarItem } from './SidebarItem';
 import SidebarLink from './SidebarLink';
 import SidebarLinkMenu from './SidebarLinkMenu';
@@ -7,6 +7,19 @@ import { EXPAND_MENU } from './expand-menu-enum';
 import { HighlightedMenuContext } from '../../contexts/highlighted-menu-context';
 
 const INDENTATION_INCREASE = 8;
+
+type Props = {
+  uuid: string;
+  label: ReactNode | string;
+  link: string;
+  content: boolean | string | any[];
+  level: number;
+  expandable: boolean;
+  indent: number;
+  expandMenu: EXPAND_MENU;
+  isActive: boolean;
+  indentOffset: number;
+};
 
 const SidebarLinkItem = ({
   uuid,
@@ -18,17 +31,18 @@ const SidebarLinkItem = ({
   expandable = false,
   indent = 0,
   expandMenu = EXPAND_MENU.EXPANDED,
-  $active = false,
-}) => {
+  isActive = false,
+}: Props) => {
   const nextIndent = indentOffset > 0 ? indent : indent + INDENTATION_INCREASE;
   const nextIndentOffset = indentOffset - 1;
+
   const linkContent = useMemo(
     () =>
       Array.isArray(content) ? (
         <HighlightedMenuContext.Consumer>
           {(highlightedMenuId) => (
             <SidebarLinkMenu
-              key={label}
+              key={highlightedMenuId}
               data={content}
               indent={nextIndent}
               expandMenu={expandMenu}
@@ -38,25 +52,14 @@ const SidebarLinkItem = ({
           )}
         </HighlightedMenuContext.Consumer>
       ) : (
-        <SidebarLink to={link} $leaf={true} $active={$active} indent={indent}>
+        <SidebarLink to={link} isActive={isActive} indent={indent}>
           {content}
         </SidebarLink>
       ),
-    [content, indent, label, link, expandMenu, $active],
+    [content, indent, link, expandMenu, isActive, nextIndent, nextIndentOffset],
   );
-  return <SidebarItem uuid={uuid} label={label} content={linkContent} level={level} expandable={expandable} />;
-};
 
-SidebarLinkItem.propTypes = {
-  uuid: PropTypes.string,
-  label: PropTypes.oneOfType([PropTypes.node, PropTypes.string]),
-  link: PropTypes.string,
-  content: PropTypes.oneOfType([PropTypes.string, PropTypes.array]),
-  level: PropTypes.number,
-  expandable: PropTypes.bool,
-  indent: PropTypes.number,
-  expandMenu: PropTypes.oneOf(Object.values(EXPAND_MENU)),
-  $active: PropTypes.bool,
+  return <SidebarItem uuid={uuid} label={label} content={linkContent} level={level} expandable={expandable} />;
 };
 
 export default SidebarLinkItem;

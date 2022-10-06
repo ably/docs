@@ -1,34 +1,22 @@
 import React from 'react';
 import { Link } from 'gatsby';
-import styled from 'styled-components';
-import { SidebarHeadingStyle } from './styles';
+import SidebarHeading, { SidebarHeadingProps } from './SidebarHeading';
 
 const onPageNav = /[#?]/;
-
-const SidebarGatsbyLink = styled(Link)`
-  ${SidebarHeadingStyle}
-`;
-const SidebarAnchor = styled.a`
-  ${SidebarHeadingStyle}
-`;
 
 type SidebarLinkProps = {
   to: string;
   children: React.ReactNode;
-};
+} & SidebarHeadingProps<any>;
 
-const SidebarLink = ({ to, children, ...props }: SidebarLinkProps) =>
+const SidebarLink = ({ to, ...props }: SidebarLinkProps) =>
   onPageNav.test(to) ? (
     /**
      *  Relevant page of documentation: https://www.gatsbyjs.com/docs/reference/built-in-components/gatsby-link/#recommendations-for-programmatic-in-app-navigation
      *  "If you need this (in-app navigation) behavior, you should either use an anchor tag or import the navigate helper from gatsby"
      */
-    <SidebarAnchor href={to} {...props}>
-      {children}
-    </SidebarAnchor>
+    <SidebarHeading as="a" href={to} {...props} />
   ) : (
-    <SidebarGatsbyLink to={to} {...props}>
-      {children}
-    </SidebarGatsbyLink>
+    <SidebarHeading as={Link} to={to} {...props} />
   );
 export default SidebarLink;
