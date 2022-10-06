@@ -1,4 +1,6 @@
 import React, { ReactElement } from 'react';
+import cn from 'classnames';
+
 import SidebarLinkMenu from './SidebarLinkMenu';
 import SidebarTitle from './SidebarTitle';
 import StickySidebar from './StickySidebar';
@@ -24,21 +26,30 @@ const Sidebar = ({
   languages = false,
   expandableLinkMenu = true,
   expandMenu = EXPAND_MENU.EXPANDED,
-}: SidebarProps): ReactElement => (
-  <StickySidebar className={className} data-languages={languages}>
-    {title && <SidebarTitle title={title} />}
-    <HighlightedMenuContext.Consumer>
-      {(highlightedMenuId) => (
-        <SidebarLinkMenu
-          data={data}
-          expandable={expandableLinkMenu}
-          expandMenu={expandMenu}
-          indentOffset={indentOffset}
-          highlightedMenuId={highlightedMenuId}
-        />
-      )}
-    </HighlightedMenuContext.Consumer>
-  </StickySidebar>
-);
+}: SidebarProps): ReactElement => {
+  return (
+    <StickySidebar className={cn('pt-8', className)} data-languages={languages}>
+      {title && <SidebarTitle title={title} />}
+      {data.map(({ label, content }) => (
+        <div key={label} className="mb-32">
+          {label && <div className="font-medium uppercase text-menu3 mb-8">{label}</div>}
+          <HighlightedMenuContext.Consumer>
+            {(highlightedMenuId) =>
+              content && (
+                <SidebarLinkMenu
+                  data={content}
+                  expandable={expandableLinkMenu}
+                  expandMenu={expandMenu}
+                  indentOffset={indentOffset}
+                  highlightedMenuId={highlightedMenuId}
+                />
+              )
+            }
+          </HighlightedMenuContext.Consumer>
+        </div>
+      ))}
+    </StickySidebar>
+  );
+};
 
 export default Sidebar;
