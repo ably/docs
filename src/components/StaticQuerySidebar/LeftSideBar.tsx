@@ -1,9 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import Sidebar from '../Sidebar';
+
+import { Sidebar, EXPAND_MENU } from 'src/components';
+
 import { SidebarDataRetrieval } from './SidebarDataRetrieval';
-import { EXPAND_MENU } from '../Sidebar/expand-menu-enum';
-import { LeftSidebarContainer } from './LeftSidebarContainer';
 import { AblySidebarIconContainer } from './AblySidebarIconContainer';
 
 export type LeftSidebarProps = {
@@ -12,7 +12,7 @@ export type LeftSidebarProps = {
 };
 
 const LeftSideBar = ({ className = '', languages = false }: LeftSidebarProps) => (
-  <LeftSidebarContainer>
+  <div className="h-screen hidden md:block md:sticky top-0 z-20 bg-extra-light-grey">
     <SidebarDataRetrieval
       className={className}
       languages={languages}
@@ -20,7 +20,7 @@ const LeftSideBar = ({ className = '', languages = false }: LeftSidebarProps) =>
       Component={Sidebar}
     />
     <AblySidebarIconContainer />
-  </LeftSidebarContainer>
+  </div>
 );
 
 LeftSideBar.propTypes = {
