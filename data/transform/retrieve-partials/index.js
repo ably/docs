@@ -1,5 +1,6 @@
 const DataTypes = require('../../types');
-const { indent, flattenContentOrderedList } = require('../shared-utilities');
+const { flattenContentOrderedList } = require('../shared-utilities');
+const { applyIndent } = require('./applyIndent');
 
 const maybeRetrievePartial =
   (graphql) =>
@@ -7,6 +8,7 @@ const maybeRetrievePartial =
     if (type !== DataTypes.Partial) {
       return { data, type };
     }
+    // Retrieving data about the partial
     // eslint-disable-next-line no-sparse-arrays
     const fileName = (data.match(/<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/) ?? [, ''])[1];
 
@@ -24,6 +26,7 @@ const maybeRetrievePartial =
       attributeObject = Object.fromEntries(attributePairs);
     }
 
+    // Retrieving the data contained in the partial based on the file name
     const result = await graphql(`
         query {
             fileHtmlPartial(relativePath: { eq:"${fileName}.textile"}) {
@@ -38,32 +41,16 @@ const maybeRetrievePartial =
     const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
     let contentOrderedList = partial && partial.contentOrderedList;
     if (partial) {
+      // Repeat this operation on any partials contained inside the partial
       contentOrderedList = await Promise.all(contentOrderedList.map(retrievePartialFromGraphQL));
       contentOrderedList = flattenContentOrderedList(contentOrderedList);
 
+      // Finally, apply the indentation specified from the attributeObject and return the data
+      const indentation = parseInt(attributeObject['indent']);
+      const applyIndentation = applyIndent(indentation);
       if (attributeObject['indent']) {
-        if (attributeObject['skip_first_indent']) {
-          contentOrderedList = contentOrderedList.map((content, i) => {
-            if (i === 0) {
-              return {
-                ...content,
-                data: indent(
-                  content.data.substring(content.data.indexOf('\n') + 1),
-                  parseInt(attributeObject['indent']),
-                ),
-              };
-            }
-
-            return {
-              ...content,
-              data: indent(content.data, parseInt(attributeObject['indent'])),
-            };
-          });
-        } else {
-          contentOrderedList = contentOrderedList.map((content) => ({
-            ...content,
-            data: indent(content.data, parseInt(attributeObject['indent'])),
-          }));
+        if (!attributeObject['skip_first_indent']) {
+          contentOrderedList = contentOrderedList.map(applyIndentation);
         }
       }
     }
