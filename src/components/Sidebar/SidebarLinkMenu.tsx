@@ -53,7 +53,8 @@ export const SidebarLinkMenu = ({
             ? EXPAND_MENU.EXPANDED
             : expandMenu;
 
-        const isActive = link !== null && (highlightedMenuId === link || safeWindow.location.pathname === link);
+        // NOTE: first condition is a fix for a build stage. safeWindow.location.pathname is also an empty string
+        const isActive = link !== '' && (highlightedMenuId === link || safeWindow.location.pathname === link);
 
         const labelMaybeWithLink = expandable ? (
           <SidebarHeading isActive={isActive} indent={indent}>
