@@ -1,7 +1,6 @@
 const DataTypes = require('../../types');
 const { flattenContentOrderedList } = require('../shared-utilities');
 const { applyIndent } = require('./applyIndent');
-const { skipAndApplyIndent } = require('./applyIndent');
 
 const maybeRetrievePartial =
   (graphql) =>
@@ -49,11 +48,8 @@ const maybeRetrievePartial =
       // Finally, apply the indentation specified from the attributeObject and return the data
       const indentation = parseInt(attributeObject['indent']);
       const applyIndentation = applyIndent(indentation);
-      const skipAndApplyIndentation = skipAndApplyIndent(indentation);
       if (attributeObject['indent']) {
-        if (attributeObject['skip_first_indent']) {
-          contentOrderedList = contentOrderedList.map(skipAndApplyIndentation);
-        } else {
+        if (!attributeObject['skip_first_indent']) {
           contentOrderedList = contentOrderedList.map(applyIndentation);
         }
       }
