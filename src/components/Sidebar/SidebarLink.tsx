@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'gatsby';
-import SidebarHeading, { SidebarHeadingProps } from './SidebarHeading';
+import { SidebarHeading, SidebarHeadingProps } from './';
 
 const onPageNav = /[#?]/;
 
@@ -9,7 +9,7 @@ type SidebarLinkProps = {
   children: React.ReactNode;
 } & SidebarHeadingProps<any>;
 
-const SidebarLink = ({ to, ...props }: SidebarLinkProps) =>
+export const SidebarLink = ({ to, ...props }: SidebarLinkProps) =>
   onPageNav.test(to) ? (
     /**
      *  Relevant page of documentation: https://www.gatsbyjs.com/docs/reference/built-in-components/gatsby-link/#recommendations-for-programmatic-in-app-navigation
@@ -19,4 +19,3 @@ const SidebarLink = ({ to, ...props }: SidebarLinkProps) =>
   ) : (
     <SidebarHeading as={Link} to={to} {...props} />
   );
-export default SidebarLink;

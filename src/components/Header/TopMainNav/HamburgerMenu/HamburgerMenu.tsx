@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
+
+import { EXPAND_MENU } from 'src/components';
 import { SessionState } from '../../../../contexts/user-context';
-import { EXPAND_MENU } from '../../../Sidebar/expand-menu-enum';
 import { SidebarDataRetrieval } from '../../../StaticQuerySidebar/SidebarDataRetrieval';
 import { DisplayMode, SearchBar } from '../SearchBar';
 import { HamburgerHasFooterContext } from './hamburger-has-footer-context';

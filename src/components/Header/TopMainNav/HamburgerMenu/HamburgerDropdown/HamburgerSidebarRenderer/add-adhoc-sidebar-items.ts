@@ -1,4 +1,4 @@
-import { SidebarData } from '../../../../../Sidebar/sidebar-data';
+import { SidebarData } from 'src/components';
 import { DropdownData, DropdownDataIdentifier } from '../../../Dropdown';
 import { dropdownData } from '../../../Dropdown/Button';
 

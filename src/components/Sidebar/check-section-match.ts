@@ -1,12 +1,8 @@
 import { isArray } from 'lodash';
 import { any } from 'lodash/fp';
 
-type SidebarData = {
-  label: string;
-  link?: string;
-  level?: number;
-  content?: null | string | SidebarData[];
-};
+import { SidebarData } from './types';
+
 export const checkSectionMatch =
   (match: string) =>
   (data: SidebarData): boolean => {
