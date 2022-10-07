@@ -1,4 +1,4 @@
-import { SidebarData } from '../../../../../Sidebar/sidebar-data';
+import { SidebarData } from 'src/components';
 
 const ADHOC_SIDEBAR_EXCLUSIONS = ['API Reference', 'Useful Resources'];
 

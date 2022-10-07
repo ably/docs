@@ -1,6 +1,7 @@
 import { useMemo, useLayoutEffect, useState } from 'react';
 import throttle from 'lodash.throttle';
-import { SidebarData } from '../components/Sidebar/sidebar-data';
+
+import { SidebarData } from 'src/components';
 
 // Source: ably/voltaire: src/templates/ghost/utils/get-current-header-id.ts
 

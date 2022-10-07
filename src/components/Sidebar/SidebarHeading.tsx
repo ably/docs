@@ -14,12 +14,12 @@ type Props<C extends ElementType> = PropsWithChildren<SidebarHeadingProps<C>> &
   ComponentPropsWithoutRef<C> &
   Omit<React.ComponentPropsWithoutRef<C>, keyof SidebarHeadingProps<C>>;
 
-const SidebarHeading = <C extends ElementType>({
+export const SidebarHeading = <C extends ElementType>({
   as,
   indent = 0,
   isExpanded = false,
   isActive = false,
-  className,
+  className = '',
   ...props
 }: Props<C>) => {
   const Component = as || 'span';
@@ -27,7 +27,6 @@ const SidebarHeading = <C extends ElementType>({
   return (
     <Component
       {...props}
-      style={{ marginLeft: `${indent <= 8 ? 0 : indent - 8}px` }}
       className={cn(
         sidebar,
         {
@@ -35,10 +34,9 @@ const SidebarHeading = <C extends ElementType>({
           'font-medium': isActive || isExpanded,
           'text-active-orange': isActive,
         },
+        `ml-${indent}`,
         className,
       )}
     />
   );
 };
-
-export default SidebarHeading;

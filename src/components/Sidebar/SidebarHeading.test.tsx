@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import SidebarHeading from './SidebarHeading';
+import { SidebarHeading } from './SidebarHeading';
 
 describe('<SidebarHeading />', () => {
   test('should render font in light and cool-black when not active', () => {

@@ -1,10 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { SidebarData } from '../../../../../Sidebar/sidebar-data';
+
+import { SidebarData } from 'src/components';
+import { StaticImage } from 'src/components/StaticImage';
+
 import { MAX_NESTING_LEVEL } from './constants';
 import { DispatchExpandedMenu } from './hamburger-expanded-menu-context';
 import { HamburgerSidebarItemContainer } from '.';
 import { dataToHamburgerSidebarItem } from '.';
-import { StaticImage } from 'src/components/StaticImage';
 
 const getClosedRotation = (rotation: number, isClosed: boolean) => (rotation + (isClosed ? 180 : 0)) % 360;
 

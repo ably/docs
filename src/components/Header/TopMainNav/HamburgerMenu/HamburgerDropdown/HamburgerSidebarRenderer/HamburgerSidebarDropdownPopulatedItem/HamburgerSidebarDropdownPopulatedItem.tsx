@@ -1,5 +1,6 @@
 import React from 'react';
-import { SidebarData } from '../../../../../../Sidebar/sidebar-data';
+import { SidebarData } from 'src/components';
+
 import { DropdownData } from '../../../../Dropdown';
 import { HamburgerExpandedMenuContext } from '../hamburger-expanded-menu-context';
 import { HamburgerSidebarDropdownButton } from './HamburgerSidebarDropdownButton';
