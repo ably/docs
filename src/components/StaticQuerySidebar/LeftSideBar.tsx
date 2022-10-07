@@ -1,8 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import Sidebar from '../Sidebar';
+
+import { Sidebar, EXPAND_MENU } from 'src/components';
+
 import { SidebarDataRetrieval } from './SidebarDataRetrieval';
-import { EXPAND_MENU } from '../Sidebar/expand-menu-enum';
 import { AblySidebarIconContainer } from './AblySidebarIconContainer';
 
 export type LeftSidebarProps = {

@@ -1,15 +1,14 @@
 import React, { ReactElement } from 'react';
 import { flattenDeep } from 'lodash/fp';
+import cn from 'classnames';
 
 import { useGetCurrentHeader } from 'src/hooks/get-current-header-id';
 import { HighlightedMenuContext } from 'src/contexts/highlighted-menu-context';
-import { SidebarData } from 'src/components/Sidebar/sidebar-data';
-import { EXPAND_MENU } from 'src/components/Sidebar/expand-menu-enum';
-import SidebarLinkMenu from 'src/components/Sidebar/SidebarLinkMenu';
-import StickySidebar from 'src/components/Sidebar/StickySidebar';
+import { SidebarData, SectionTitle, EXPAND_MENU, SidebarLinkMenu } from 'src/components';
 
-import { SectionTitle } from '../SectionTitle';
 import { MenuData } from './menu-data';
+
+import { stickySidebar, withLanguageNavBar } from './RightSidebar.module.css';
 
 const mapMenuItemToSidebarItem = ({ name, id, level }: MenuData): SidebarData => ({
   label: name,
@@ -58,7 +57,16 @@ export const RightSidebar = ({ menuData, languages, className }: RightSidebarPro
 
   return (
     <HighlightedMenuContext.Provider value={highlightedMenuItem}>
-      <StickySidebar className={className} data-languages={languages}>
+      <aside
+        className={cn(
+          stickySidebar,
+          {
+            [withLanguageNavBar]: languages,
+          },
+          className,
+        )}
+        data-languages={languages}
+      >
         <SectionTitle className="py-12 px-8">On this page</SectionTitle>
         <HighlightedMenuContext.Consumer>
           {(highlightedMenuId) => (
@@ -70,7 +78,7 @@ export const RightSidebar = ({ menuData, languages, className }: RightSidebarPro
             />
           )}
         </HighlightedMenuContext.Consumer>
-      </StickySidebar>
+      </aside>
     </HighlightedMenuContext.Provider>
   );
 };

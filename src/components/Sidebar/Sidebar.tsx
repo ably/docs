@@ -2,11 +2,10 @@ import React, { ReactElement } from 'react';
 import cn from 'classnames';
 
 import { HighlightedMenuContext } from 'src/contexts/highlighted-menu-context';
-import SidebarLinkMenu from './SidebarLinkMenu';
-import StickySidebar from './StickySidebar';
-import { EXPAND_MENU } from './expand-menu-enum';
-import { SidebarData } from './sidebar-data';
-import { SectionTitle } from './SectionTitle';
+import { SidebarLinkMenu, SectionTitle } from './';
+import { SidebarData, EXPAND_MENU } from './types';
+
+import { stickySidebar } from './Sidebar.module.css';
 
 export type SidebarProps = {
   data: SidebarData[];
@@ -18,7 +17,7 @@ export type SidebarProps = {
   expandMenu?: EXPAND_MENU;
 };
 
-const Sidebar = ({
+export const Sidebar = ({
   data,
   className = '',
   indentOffset = 0,
@@ -27,7 +26,7 @@ const Sidebar = ({
   expandMenu = EXPAND_MENU.EXPANDED,
 }: SidebarProps): ReactElement => {
   return (
-    <StickySidebar className={cn('pt-8', className)} data-languages={languages}>
+    <aside className={cn(stickySidebar, className)} data-languages={languages}>
       {data.map(({ label, content }) => (
         <div key={label} className="mb-32">
           {label && <SectionTitle className="mb-8">{label}</SectionTitle>}
@@ -46,8 +45,6 @@ const Sidebar = ({
           </HighlightedMenuContext.Consumer>
         </div>
       ))}
-    </StickySidebar>
+    </aside>
   );
 };
-
-export default Sidebar;

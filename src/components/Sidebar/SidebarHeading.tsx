@@ -14,7 +14,7 @@ type Props<C extends ElementType> = PropsWithChildren<SidebarHeadingProps<C>> &
   ComponentPropsWithoutRef<C> &
   Omit<React.ComponentPropsWithoutRef<C>, keyof SidebarHeadingProps<C>>;
 
-const SidebarHeading = <C extends ElementType>({
+export const SidebarHeading = <C extends ElementType>({
   as,
   indent = 0,
   isExpanded = false,
@@ -40,5 +40,3 @@ const SidebarHeading = <C extends ElementType>({
     />
   );
 };
-
-export default SidebarHeading;
