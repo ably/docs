@@ -1,11 +1,14 @@
 import React, { ReactElement } from 'react';
-import Sidebar from '..';
-import { SidebarData } from '../sidebar-data';
-import { MenuData } from './menu-data';
-import { EXPAND_MENU } from '../expand-menu-enum';
 import { flattenDeep } from 'lodash/fp';
-import { useGetCurrentHeader } from '../../../hooks/get-current-header-id';
-import { HighlightedMenuContext } from '../../../contexts/highlighted-menu-context';
+import cn from 'classnames';
+
+import { useGetCurrentHeader } from 'src/hooks/get-current-header-id';
+import { HighlightedMenuContext } from 'src/contexts/highlighted-menu-context';
+import { SidebarData, SectionTitle, EXPAND_MENU, SidebarLinkMenu } from 'src/components';
+
+import { MenuData } from './menu-data';
+
+import { stickySidebar, withLanguageNavBar } from './RightSidebar.module.css';
 
 const mapMenuItemToSidebarItem = ({ name, id, level }: MenuData): SidebarData => ({
   label: name,
@@ -23,7 +26,7 @@ export const RightSidebar = ({ menuData, languages, className }: RightSidebarPro
   let parent;
   let previous;
   const menuLength = menuData.length;
-  const sidebarData = [];
+  const sidebarData: SidebarData[] = [];
 
   for (let i = 0; i < menuLength; ++i) {
     const menuItem = {
@@ -54,14 +57,28 @@ export const RightSidebar = ({ menuData, languages, className }: RightSidebarPro
 
   return (
     <HighlightedMenuContext.Provider value={highlightedMenuItem}>
-      <Sidebar
-        title="On this page"
-        languages={languages}
-        data={sidebarData}
-        className={className}
-        expandableLinkMenu={false}
-        expandMenu={EXPAND_MENU.EXPANDED}
-      />
+      <aside
+        className={cn(
+          stickySidebar,
+          {
+            [withLanguageNavBar]: languages,
+          },
+          className,
+        )}
+        data-languages={languages}
+      >
+        <SectionTitle className="py-12 px-8">On this page</SectionTitle>
+        <HighlightedMenuContext.Consumer>
+          {(highlightedMenuId) => (
+            <SidebarLinkMenu
+              data={sidebarData}
+              expandable={false}
+              expandMenu={EXPAND_MENU.EXPANDED}
+              highlightedMenuId={highlightedMenuId}
+            />
+          )}
+        </HighlightedMenuContext.Consumer>
+      </aside>
     </HighlightedMenuContext.Provider>
   );
 };

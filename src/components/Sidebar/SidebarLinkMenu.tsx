@@ -1,14 +1,10 @@
 import React, { useMemo } from 'react';
 import { Accordion } from 'react-accessible-accordion';
 import styled from 'styled-components';
+
 import { ROOT_LEVEL } from './consts';
-import SidebarHeading from './SidebarHeading';
-import SidebarLink from './SidebarLink';
-import SidebarLinkItem from './SidebarLinkItem';
-import { EXPAND_MENU } from './expand-menu-enum';
-import { checkSectionMatch } from './check-section-match';
+import { SidebarLinkItem, SidebarHeading, SidebarLink, EXPAND_MENU, SidebarData, checkSectionMatch } from './';
 import { safeWindow } from '../../utilities/browser/safe-window';
-import { SidebarData } from './sidebar-data';
 
 const OrderedList = styled.ol`
   margin: 0;
@@ -24,7 +20,7 @@ type Props = {
   indentOffset?: number;
 };
 
-const SidebarLinkMenu = ({
+export const SidebarLinkMenu = ({
   data,
   highlightedMenuId,
   expandable = true,
@@ -57,7 +53,8 @@ const SidebarLinkMenu = ({
             ? EXPAND_MENU.EXPANDED
             : expandMenu;
 
-        const isActive = highlightedMenuId === link || safeWindow.location.pathname === link;
+        // NOTE: first condition is a fix for a build stage. safeWindow.location.pathname is also an empty string
+        const isActive = link !== '' && (highlightedMenuId === link || safeWindow.location.pathname === link);
 
         const labelMaybeWithLink = expandable ? (
           <SidebarHeading isActive={isActive} indent={indent}>
@@ -100,5 +97,3 @@ const SidebarLinkMenu = ({
     </Accordion>
   );
 };
-
-export default SidebarLinkMenu;
