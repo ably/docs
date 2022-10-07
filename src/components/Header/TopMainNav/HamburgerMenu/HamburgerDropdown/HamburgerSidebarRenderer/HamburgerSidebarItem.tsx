@@ -1,5 +1,5 @@
 import React from 'react';
-import { SidebarData } from '../../../../../Sidebar/sidebar-data';
+import { SidebarData } from 'src/components';
 import { HamburgerExpandedMenuContext } from './hamburger-expanded-menu-context';
 import { HamburgerSidebarLinkItem } from '.';
 import { HamburgerSidebarSubmenu } from '.';

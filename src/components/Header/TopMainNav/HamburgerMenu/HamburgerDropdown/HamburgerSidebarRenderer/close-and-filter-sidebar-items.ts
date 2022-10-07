@@ -1,4 +1,4 @@
-import { SidebarData } from '../../../../../Sidebar/sidebar-data';
+import { SidebarData } from 'src/components';
 import { ExpandedMenu } from './hamburger-expanded-menu-context';
 
 const markSidebarItemAsClosed = (sidebarItem: SidebarData) =>

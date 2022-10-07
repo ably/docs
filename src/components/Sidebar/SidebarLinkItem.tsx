@@ -1,9 +1,6 @@
 import React, { useMemo, ReactNode } from 'react';
 
-import { SidebarItem } from './SidebarItem';
-import SidebarLink from './SidebarLink';
-import SidebarLinkMenu from './SidebarLinkMenu';
-import { EXPAND_MENU } from './expand-menu-enum';
+import { SidebarItem, SidebarLink, SidebarLinkMenu, EXPAND_MENU } from './';
 import { HighlightedMenuContext } from '../../contexts/highlighted-menu-context';
 
 const INDENTATION_INCREASE = 8;
@@ -21,7 +18,7 @@ type Props = {
   indentOffset: number;
 };
 
-const SidebarLinkItem = ({
+export const SidebarLinkItem = ({
   uuid,
   label,
   link,
@@ -61,5 +58,3 @@ const SidebarLinkItem = ({
 
   return <SidebarItem uuid={uuid} label={label} content={linkContent} level={level} expandable={expandable} />;
 };
-
-export default SidebarLinkItem;
