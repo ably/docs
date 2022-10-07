@@ -53,7 +53,17 @@ const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = 
   const languageAlternativesExist = languages && languages.length > 1;
   return (
     <UserContext.Provider value={userState}>
-      {hubspotTrackingId && <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" />}
+      {process.env.GATSBY_GOOGLE_TAG_MANAGER_AUTH_TOKEN && process.env.GATSBY_GOOGLE_TAG_MANAGER_PREVIEW ? (
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=GTM-TZ37KKW&gtm_auth=${process.env.GATSBY_GOOGLE_TAG_MANAGER_AUTH_TOKEN}&gtm_preview=${process.env.GATSBY_GOOGLE_TAG_MANAGER_PREVIEW}&gtm_cookies_win=x`}
+            height="0"
+            width="0"
+            style={{ display: 'none', visibility: 'hidden' }}
+          ></iframe>
+        </noscript>
+      ) : null}
+      {hubspotTrackingId ? <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" /> : null}
       <Header />
       <div className="grid grid-cols-5 2xl:grid-cols-7">
         <LeftSideBar className="col-span-1 bg-extra-light-grey px-24" />
