@@ -9,3 +9,11 @@ export type SidebarData = {
   closed?: boolean;
   dropdownData?: DropdownData;
 };
+
+export enum EXPAND_MENU {
+  EXPANDED,
+  COLLAPSED,
+  SECTION_MATCH,
+  EXPAND_NEXT,
+  COLLAPSE_NEXT,
+}

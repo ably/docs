@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { SidebarProps } from '../../../../../Sidebar';
-import { SidebarData } from '../../../../../Sidebar/sidebar-data';
+import { SidebarData, SidebarProps } from 'src/components';
 import { closeAndFilterSidebarItems } from './close-and-filter-sidebar-items';
 import { ExpandedMenu, HamburgerExpandedMenuContext } from './hamburger-expanded-menu-context';
 import { HamburgerSidebarItem } from '.';

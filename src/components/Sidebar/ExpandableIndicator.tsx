@@ -1,10 +1,25 @@
 import React from 'react';
-import AIChevronDown from '../../styles/svg/ai-chevron-down';
-import AIChevronUp from '../../styles/svg/ai-chevron-up';
+import Icon from '@ably/ui/core/Icon';
+import cn from 'classnames';
 
-export const ExpandableIndicator = ({ expanded = false, className = '' }: { expanded?: boolean; className?: string }) =>
-  expanded ? (
-    <AIChevronUp className={`flex-shrink-0 stroke-0 ${className}`} />
-  ) : (
-    <AIChevronDown className={`flex-shrink-0 ${className}`} />
-  );
+import { expendableIndicator, isExpanded } from './ExpandableIndicator.module.css';
+
+export const ExpandableIndicator = ({
+  expanded = false,
+  className = '',
+}: {
+  expanded?: boolean;
+  className?: string;
+}) => (
+  <Icon
+    name="icon-gui-disclosure-arrow"
+    size="1rem"
+    additionalCSS={cn(
+      expendableIndicator,
+      {
+        [isExpanded]: expanded,
+      },
+      className,
+    )}
+  />
+);
