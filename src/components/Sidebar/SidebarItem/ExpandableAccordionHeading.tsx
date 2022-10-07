@@ -25,7 +25,7 @@ export const ExpandableAccordionHeading = ({ label, level }: AccordionHeadingPro
               setIsExpanded(expanded);
             }
 
-            return <ExpandableIndicator expanded={expanded}></ExpandableIndicator>;
+            return <ExpandableIndicator expanded={expanded} />;
           }}
         </AccordionItemState>
       </AccordionItemButton>

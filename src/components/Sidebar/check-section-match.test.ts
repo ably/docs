@@ -1,6 +1,6 @@
 import { Arbitrary, array, assert, constant, letrec, nat, oneof, property, record, string } from 'fast-check';
 import { checkSectionMatch } from './check-section-match';
-import { SidebarData } from './sidebar-data';
+import { SidebarData } from './types';
 
 const simpleSectionMatch = checkSectionMatch('/docs/match');
 
@@ -12,12 +12,6 @@ describe('Check Section Matches function', () => {
         link: '/docs/match',
       }),
     ).toBe(true));
-  it('Does not match on a simple absence of slug', () =>
-    expect(
-      simpleSectionMatch({
-        label: 'Test Data',
-      }),
-    ).toBe(false));
   it('Does not match on a non-matching slug', () =>
     expect(
       simpleSectionMatch({
@@ -39,22 +33,6 @@ describe('Check Section Matches function', () => {
         ],
       }),
     ).toBe(true));
-  it('Does not match without a nested slug', () =>
-    expect(
-      simpleSectionMatch({
-        label: 'Test Data',
-        link: '/docs',
-        content: [
-          {
-            label: 'Test Data Two',
-            link: '/docs/no-match',
-          },
-          {
-            label: 'Test Data Two',
-          },
-        ],
-      }),
-    ).toBe(false));
 });
 
 const sidebarDataArbitraryWithMatchingLink: Arbitrary<SidebarData> = record({

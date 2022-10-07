@@ -1,8 +1,8 @@
-import { graphql, useStaticQuery } from 'gatsby';
 import React from 'react';
+import { graphql, useStaticQuery } from 'gatsby';
+import { EXPAND_MENU, SidebarProps } from 'src/components';
+
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
-import { EXPAND_MENU } from '../Sidebar/expand-menu-enum';
-import { SidebarProps } from '../Sidebar';
 import { LeftSidebarProps } from './LeftSideBar';
 
 export const SidebarDataRetrieval = ({
