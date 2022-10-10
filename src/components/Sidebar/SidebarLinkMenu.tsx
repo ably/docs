@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { ROOT_LEVEL } from './consts';
 import { SidebarLinkItem, SidebarHeading, SidebarLink, EXPAND_MENU, SidebarData, checkSectionMatch } from './';
 import { safeWindow } from '../../utilities/browser/safe-window';
+import { isArray } from 'lodash/fp';
 
 const OrderedList = styled.ol`
   margin: 0;
@@ -33,7 +34,8 @@ export const SidebarLinkMenu = ({
     () =>
       data.map(({ label, link, level = ROOT_LEVEL, content }) => {
         const uuid = encodeURIComponent(`${label}${link}`);
-        if ([EXPAND_MENU.EXPANDED, EXPAND_MENU.COLLAPSE_NEXT].includes(expandMenu)) {
+        const autoExpandMenu = isArray(content) && link !== '' ? EXPAND_MENU.EXPANDED : expandMenu;
+        if ([EXPAND_MENU.EXPANDED, EXPAND_MENU.COLLAPSE_NEXT].includes(autoExpandMenu)) {
           preExpanded.push(uuid);
         } else if (
           EXPAND_MENU.SECTION_MATCH === expandMenu &&
@@ -46,6 +48,7 @@ export const SidebarLinkMenu = ({
         ) {
           preExpanded.push(uuid);
         }
+
         const nextExpandMenu =
           expandMenu === EXPAND_MENU.COLLAPSE_NEXT
             ? EXPAND_MENU.COLLAPSED
@@ -56,8 +59,10 @@ export const SidebarLinkMenu = ({
         // NOTE: first condition is a fix for a build stage. safeWindow.location.pathname is also an empty string
         const isActive = link !== '' && (highlightedMenuId === link || safeWindow.location.pathname === link);
 
+        const alwaysExpanded = isArray(content) && link !== '';
+
         const labelMaybeWithLink = expandable ? (
-          <SidebarHeading isActive={isActive} indent={indent}>
+          <SidebarHeading as={alwaysExpanded ? 'a' : 'span'} href={link} isActive={isActive} indent={indent}>
             {label}
           </SidebarHeading>
         ) : (
@@ -65,6 +70,7 @@ export const SidebarLinkMenu = ({
             {label}
           </SidebarLink>
         );
+
         return content ? (
           <li key={`${label}-${link}-${level}`}>
             <SidebarLinkItem
@@ -74,6 +80,7 @@ export const SidebarLinkMenu = ({
               level={level}
               content={content}
               expandable={expandable}
+              collapsible={!alwaysExpanded}
               expandMenu={nextExpandMenu}
               indent={indent}
               indentOffset={indentOffset}

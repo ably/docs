@@ -8,6 +8,7 @@ export type SidebarHeadingProps<C extends ElementType> = {
   indent?: number;
   isExpanded?: boolean;
   isActive?: boolean;
+  href?: string;
 };
 
 type Props<C extends ElementType> = PropsWithChildren<SidebarHeadingProps<C>> &
@@ -20,6 +21,7 @@ export const SidebarHeading = <C extends ElementType>({
   isExpanded = false,
   isActive = false,
   className = '',
+  href,
   ...props
 }: Props<C>) => {
   const Component = as || 'span';
@@ -27,11 +29,12 @@ export const SidebarHeading = <C extends ElementType>({
   return (
     <Component
       {...props}
+      href={href}
       className={cn(
         sidebar,
         {
-          'font-light text-cool-black': !isActive,
-          'font-medium': isActive || isExpanded,
+          'font-light text-cool-black': !isActive && !href,
+          'font-medium': isActive || isExpanded || !!href,
           'text-active-orange': isActive,
         },
         `ml-${indent}`,
