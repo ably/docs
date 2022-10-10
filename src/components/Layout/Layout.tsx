@@ -25,6 +25,8 @@ import { LeftSideBar } from '../StaticQuerySidebar';
 import TopCodeMenu from '../Menu/TopCodeMenu';
 
 const hubspotTrackingId = process.env.HUBSPOT_TRACKING_ID;
+const googleTagManagerAuthToken = process.env.GATSBY_GOOGLE_TAG_MANAGER_AUTH_TOKEN;
+const googleTagManagerPreview = process.env.GATSBY_GOOGLE_TAG_MANAGER_PREVIEW;
 
 const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = ({
   languages,
@@ -56,7 +58,7 @@ const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = 
       {process.env.GATSBY_GOOGLE_TAG_MANAGER_AUTH_TOKEN && process.env.GATSBY_GOOGLE_TAG_MANAGER_PREVIEW ? (
         <noscript>
           <iframe
-            src={`https://www.googletagmanager.com/ns.html?id=GTM-TZ37KKW&gtm_auth=${process.env.GATSBY_GOOGLE_TAG_MANAGER_AUTH_TOKEN}&gtm_preview=${process.env.GATSBY_GOOGLE_TAG_MANAGER_PREVIEW}&gtm_cookies_win=x`}
+            src={`https://www.googletagmanager.com/ns.html?id=GTM-TZ37KKW&gtm_auth=${googleTagManagerAuthToken}&gtm_preview=${googleTagManagerPreview}&gtm_cookies_win=x`}
             height="0"
             width="0"
             style={{ display: 'none', visibility: 'hidden' }}

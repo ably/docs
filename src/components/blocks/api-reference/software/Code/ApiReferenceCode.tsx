@@ -4,12 +4,15 @@ import { multilineRegex, default as Code } from '../../../software/Code';
 import { NestedHtmlComponentProps } from '../../../../html-component-props';
 import { ApiReferenceInlineCodeElement } from './ApiReferenceInlineCodeElement';
 import Html from '../../../Html';
-import { every, some } from 'lodash/fp';
 
 export const ApiReferenceCode = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
-  const isString = every((child) => child.type === HtmlDataTypes.text, data);
-  const hasRenderableLanguages = isString && attribs && attribs.lang;
-  const hasMultilineText = isString && some((child) => multilineRegex.test(child.data as string), data);
+  const hasSingleString = data?.[0]?.type === HtmlDataTypes.text;
+  const singleStringHasMultilineText = hasSingleString && multilineRegex.test(data?.[0].data as string);
+  const hasRenderableLanguages = attribs && attribs.lang;
+  const hasMultilineText = singleStringHasMultilineText || data.length > 1;
+  if (attribs?.lang === 'csharp') {
+    console.log(hasMultilineText, data);
+  }
   if (hasRenderableLanguages || hasMultilineText) {
     return <Code data={data} attribs={attribs} />;
   }
