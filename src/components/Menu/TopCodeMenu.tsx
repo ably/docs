@@ -9,16 +9,14 @@ const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionD
   const pageLanguage = useContext(PageLanguageContext);
   const showCodeMenu = languages && languages.length > 1;
   const showDefaultLink = pageLanguage !== DEFAULT_LANGUAGE;
-  return (
-    <div className="fixed right-0 z-10 mt-64 w-full items-end bg-white border-b border-mid-grey md:col-span-4 md:w-4/5 2xl:w-full">
-      {showCodeMenu ? (
-        <HorizontalMenu variant={HorizontalMenuVariant.end}>
-          <VersionMenu {...versionData} />
-          <LanguageDropdownSelector language={pageLanguage} languages={languages} showDefaultLink={showDefaultLink} />
-        </HorizontalMenu>
-      ) : null}
+  return showCodeMenu ? (
+    <div className="fixed right-0 z-10 mt-64 w-full items-end border-b border-mid-grey bg-white md:col-span-4 md:w-4/5 2xl:w-full">
+      <HorizontalMenu variant={HorizontalMenuVariant.end}>
+        <VersionMenu {...versionData} />
+        <LanguageDropdownSelector language={pageLanguage} languages={languages} showDefaultLink={showDefaultLink} />
+      </HorizontalMenu>
     </div>
-  );
+  ) : null;
 };
 
 export default TopCodeMenu;

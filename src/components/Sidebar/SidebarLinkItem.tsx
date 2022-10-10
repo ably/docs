@@ -12,6 +12,7 @@ type Props = {
   content: boolean | string | any[];
   level: number;
   expandable: boolean;
+  collapsible: boolean;
   indent: number;
   expandMenu: EXPAND_MENU;
   isActive: boolean;
@@ -26,13 +27,13 @@ export const SidebarLinkItem = ({
   level,
   indentOffset,
   expandable = false,
+  collapsible = false,
   indent = 0,
   expandMenu = EXPAND_MENU.EXPANDED,
   isActive = false,
 }: Props) => {
   const nextIndent = indentOffset > 0 ? indent : indent + INDENTATION_INCREASE;
   const nextIndentOffset = indentOffset - 1;
-
   const linkContent = useMemo(
     () =>
       Array.isArray(content) ? (
@@ -56,5 +57,14 @@ export const SidebarLinkItem = ({
     [content, indent, link, expandMenu, isActive, nextIndent, nextIndentOffset],
   );
 
-  return <SidebarItem uuid={uuid} label={label} content={linkContent} level={level} expandable={expandable} />;
+  return (
+    <SidebarItem
+      uuid={uuid}
+      label={label}
+      content={linkContent}
+      level={level}
+      expandable={expandable}
+      collapsible={collapsible}
+    />
+  );
 };
