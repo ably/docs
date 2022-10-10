@@ -33,13 +33,8 @@ export const SidebarHeading = <C extends ElementType>({
       className={cn(
         sidebar,
         {
-<<<<<<< HEAD
           'font-light text-cool-black': !isActive && !href,
-          'font-medium': isActive || isExpanded || !!href,
-=======
-          'font-light text-cool-black': !isActive,
-          'font-medium': isActive || isExpandable,
->>>>>>> f9794898 (Add isExpandable prop instead of isExpanded)
+          'font-medium': isActive || isExpandable || !!href,
           'text-active-orange': isActive,
         },
         `ml-${indent}`,
