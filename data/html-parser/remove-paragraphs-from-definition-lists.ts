@@ -6,12 +6,12 @@ export const removeParagraphsFromDefinitionListsAndMerge = (cheerioNodes: cheeri
       .siblings('p')
       .filter((_, elem) => {
         const self = cheerioNodes(elem);
-        return self.text().trim() === '';
+        const hasHtml = self.html();
+        return hasHtml !== null && hasHtml.trim() === '';
       });
     if (siblings.length) {
       siblings.remove();
     }
-
     // Now merge multiple consecutive dls
     const nextDl = cheerioNodes(elem).nextUntil(':not(dl)');
     cheerioNodes(elem).append(nextDl.children());
