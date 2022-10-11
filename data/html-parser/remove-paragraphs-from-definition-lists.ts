@@ -1,5 +1,5 @@
-export const removeParagraphsFromDefinitionListsAndMerge = (cheerioNodes: cheerio.Selector) => {
-  return cheerioNodes('dl').each((_i: number, elem: cheerio.Element) => {
+export const removeParagraphsFromDefinitionListsAndMerge = (cheerioNodes: cheerio.Selector) =>
+  cheerioNodes('dl').each((_i: number, elem: cheerio.Element) => {
     // As jQuery/Cheerio is stateful and imperative, including comments to clarify
     // Remove empty paragraphs immediately after any dl
     const siblings = cheerioNodes(elem)
@@ -17,4 +17,3 @@ export const removeParagraphsFromDefinitionListsAndMerge = (cheerioNodes: cheeri
     cheerioNodes(elem).append(nextDl.children());
     nextDl.remove();
   });
-};
