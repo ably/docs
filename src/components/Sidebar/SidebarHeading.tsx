@@ -34,7 +34,7 @@ export const SidebarHeading = <C extends ElementType>({
         sidebar,
         {
           'font-light text-cool-black': !isActive && !href,
-          'font-medium': isActive || isExpandable || !!href,
+          'font-medium': isActive || isExpandable,
           'text-active-orange': isActive,
         },
         `ml-${indent}`,
