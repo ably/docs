@@ -17,7 +17,6 @@ import { getRandomChannelName } from './get-random-channel-name';
 import '@ably/ui/core/styles.css';
 import '../styles.css';
 import { NestedHtmlComponentProps } from 'src/components/html-component-props';
-import { every, some } from 'lodash/fp';
 
 const API_KEY_LENGTH = 57;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
@@ -30,9 +29,10 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
     value: DEFAULT_API_KEY_MESSAGE,
   });
 
-  const isString = every((child) => child.type === HtmlDataTypes.text, data);
-  const hasRenderableLanguages = isString && attribs && attribs.lang;
-  const hasMultilineText = isString && some((child) => multilineRegex.test(child.data as string), data);
+  const hasSingleString = data?.[0]?.type === HtmlDataTypes.text;
+  const singleStringHasMultilineText = hasSingleString && multilineRegex.test(data?.[0].data as string);
+  const hasRenderableLanguages = attribs && attribs.lang;
+  const hasMultilineText = singleStringHasMultilineText || data.length > 1;
 
   const dataContainsKey = attribs?.[`data-contains-${API_KEY_DATA_ATTRIBUTE}`] === 'true';
   const dataContainsRandomChannelName = attribs?.[`data-contains-${RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE}`] === 'true';
