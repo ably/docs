@@ -29,6 +29,8 @@ const languageLabels: LanguageLabels = {
   [DEFAULT_LANGUAGE]: 'Any',
 };
 
+const longLanguageLabels: LanguageLabels = { ...languageLabels, csharp: 'C# .NET', javascript: 'JavaScript' };
+
 /**  Source: Ably Voltaire, src/components/code-block/code-block.js */
 const languageSyntaxHighlighterNames: LanguageSyntaxHighlighterNames = {
   plaintext: { label: null, key: 'plaintext' },
@@ -53,5 +55,5 @@ const languageSyntaxHighlighterNames: LanguageSyntaxHighlighterNames = {
   flutter: { label: 'Flutter', key: 'dart' },
 };
 
-export { languageSyntaxHighlighterNames };
+export { languageSyntaxHighlighterNames, longLanguageLabels };
 export default languageLabels;

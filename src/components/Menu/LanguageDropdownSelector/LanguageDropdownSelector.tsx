@@ -2,7 +2,7 @@ import React from 'react';
 import Select from 'react-select';
 import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicator-separator';
 import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
-import languageLabels from '../../../maps/language';
+import { longLanguageLabels } from '../../../maps/language';
 import { ReactSelectOption } from 'src/components';
 import { PREFERRED_LANGUAGE_KEY } from '../../../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common/language-defaults';
@@ -18,7 +18,7 @@ import {
 } from '../ReactSelectStyles';
 import { safeWindow } from 'src/utilities';
 
-const makeOptionFromLang = (lang: string) => ({ label: languageLabels[lang] ?? lang, value: lang });
+const makeOptionFromLang = (lang: string) => ({ label: longLanguageLabels[lang] ?? lang, value: lang });
 
 export const LanguageDropdownSelector = ({
   language,
