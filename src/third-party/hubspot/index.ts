@@ -7,11 +7,11 @@ declare global {
   }
 }
 
-type AblyHubspotData = {
+export type AblyHubspotData = {
   identifyKey: string;
 };
 
-type HubspotUser = {
+export type HubspotUser = {
   email: string;
   firstName: string;
   lastName: string;
