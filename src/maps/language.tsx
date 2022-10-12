@@ -9,13 +9,13 @@ type LanguageSyntaxHighlighterNames = {
 };
 
 const languageLabels: LanguageLabels = {
-  javascript: 'JavaScript',
+  javascript: 'JS',
   java: 'Java',
   ruby: 'Ruby',
   python: 'Python',
   php: 'PHP',
   shell: 'Shell',
-  csharp: 'C# .NET',
+  csharp: 'C#',
   go: 'Go',
   html: 'HTML',
   cpp: 'C++',
@@ -28,6 +28,8 @@ const languageLabels: LanguageLabels = {
   android: 'Android',
   [DEFAULT_LANGUAGE]: 'Any',
 };
+
+const longLanguageLabels: LanguageLabels = { ...languageLabels, csharp: 'C# .NET', javascript: 'JavaScript' };
 
 /**  Source: Ably Voltaire, src/components/code-block/code-block.js */
 const languageSyntaxHighlighterNames: LanguageSyntaxHighlighterNames = {
@@ -53,5 +55,5 @@ const languageSyntaxHighlighterNames: LanguageSyntaxHighlighterNames = {
   flutter: { label: 'Flutter', key: 'dart' },
 };
 
-export { languageSyntaxHighlighterNames };
+export { languageSyntaxHighlighterNames, longLanguageLabels };
 export default languageLabels;
