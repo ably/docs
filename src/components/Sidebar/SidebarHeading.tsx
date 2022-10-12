@@ -6,7 +6,7 @@ import { sidebar } from './SidebarHeading.module.css';
 export type SidebarHeadingProps<C extends ElementType> = {
   as?: C;
   indent?: number;
-  isExpanded?: boolean;
+  isExpandable?: boolean;
   isActive?: boolean;
   href?: string;
 };
@@ -18,7 +18,7 @@ type Props<C extends ElementType> = PropsWithChildren<SidebarHeadingProps<C>> &
 export const SidebarHeading = <C extends ElementType>({
   as,
   indent = 0,
-  isExpanded = false,
+  isExpandable = false,
   isActive = false,
   className = '',
   href,
@@ -34,7 +34,7 @@ export const SidebarHeading = <C extends ElementType>({
         sidebar,
         {
           'font-light text-cool-black': !isActive && !href,
-          'font-medium': isActive || isExpanded || !!href,
+          'font-medium': isActive || isExpandable || !!href,
           'text-active-orange': isActive,
         },
         `ml-${indent}`,
