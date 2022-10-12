@@ -1,14 +1,9 @@
-import styled from 'styled-components';
-import { fonts, spacing } from '../../../styles';
-import LinkableHtmlBlock from '../Html/LinkableHtmlBlock';
+import React from 'react';
+import LinkableHtmlBlock from 'src/components/blocks/Html/LinkableHtmlBlock';
+import { HtmlAttributes } from 'src/components/html-component-props';
 
-const small: string = spacing.small.toString();
+const AblyH5 = ({ ...props }: HtmlAttributes<'h5'>) => (
+  <h5 className="ui-text-h5 font-sans my-16 font-bold leading-normal" {...props} />
+);
 
-const StyledH5 = styled.h5`
-  ${fonts.h5};
-  margin: ${small} 0 ${small};
-`;
-
-const H5 = LinkableHtmlBlock(StyledH5);
-
-export default H5;
+export default LinkableHtmlBlock(AblyH5);
