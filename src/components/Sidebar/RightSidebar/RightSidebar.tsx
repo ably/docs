@@ -1,4 +1,4 @@
-import React, { ReactElement } from 'react';
+import React from 'react';
 import { flattenDeep } from 'lodash/fp';
 import cn from 'classnames';
 
@@ -22,7 +22,7 @@ type RightSidebarProps = {
   className: string;
 };
 
-export const RightSidebar = ({ menuData, languages, className }: RightSidebarProps): ReactElement => {
+export const RightSidebar = ({ menuData, languages, className }: RightSidebarProps) => {
   let parent;
   let previous;
   const menuLength = menuData.length;
@@ -54,6 +54,10 @@ export const RightSidebar = ({ menuData, languages, className }: RightSidebarPro
   );
 
   const highlightedMenuItem = useGetCurrentHeader(flatTableOfContents);
+
+  if (menuLength === 0) {
+    return null;
+  }
 
   return (
     <HighlightedMenuContext.Provider value={highlightedMenuItem}>
