@@ -21,7 +21,7 @@ describe('<SidebarHeading />', () => {
 
   test('should render font in medium and cool-black when expanded', () => {
     render(
-      <SidebarHeading isExpanded as="button">
+      <SidebarHeading isExpandable as="button">
         Text
       </SidebarHeading>,
     );
