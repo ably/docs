@@ -2,7 +2,15 @@ import React, { ReactNode, useState } from 'react';
 import cn from 'classnames';
 import Icon from '@ably/ui/core/Icon';
 
-import { container, button, isHidden, isVisible, notification, buttonContainer } from './CopyLink.module.css';
+import {
+  button,
+  buttonContainer,
+  childrenContainer,
+  container,
+  isHidden,
+  isVisible,
+  notification,
+} from './CopyLink.module.css';
 
 const CopyLink = ({
   attribs,
@@ -30,23 +38,25 @@ const CopyLink = ({
 
   return (
     <div className={cn(container, marginBottom)}>
-      {children}
-      <div className={buttonContainer}>
-        <div
-          className={cn(notification, {
-            [isVisible]: notificationIsVisible,
-          })}
-        >
-          Copied!
+      <div className={childrenContainer}>
+        {children}
+        <div className={buttonContainer}>
+          <div
+            className={cn(notification, {
+              [isVisible]: notificationIsVisible,
+            })}
+          >
+            Copied!
+          </div>
+          <button
+            onClick={handleCopyLink}
+            className={cn(button, {
+              [isHidden]: notificationIsVisible,
+            })}
+          >
+            <Icon name="icon-gui-link" size="1rem" />
+          </button>
         </div>
-        <button
-          onClick={handleCopyLink}
-          className={cn(button, {
-            [isHidden]: notificationIsVisible,
-          })}
-        >
-          <Icon name="icon-gui-link" size="1rem" />
-        </button>
       </div>
     </div>
   );
