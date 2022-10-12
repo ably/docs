@@ -9,13 +9,13 @@ type LanguageSyntaxHighlighterNames = {
 };
 
 const languageLabels: LanguageLabels = {
-  javascript: 'JS',
+  javascript: 'JavaScript',
   java: 'Java',
   ruby: 'Ruby',
   python: 'Python',
   php: 'PHP',
   shell: 'Shell',
-  csharp: 'C#',
+  csharp: 'C# .NET',
   go: 'Go',
   html: 'HTML',
   cpp: 'C++',
