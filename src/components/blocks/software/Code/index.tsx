@@ -102,7 +102,10 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
             />
           )}
         </UserContext.Consumer>
-        <CodeCopyButton content={dataContainsKey ? contentWithKey : contentWithRandomChannelName} />
+        <CodeCopyButton
+          language={attribs?.lang}
+          content={dataContainsKey ? contentWithKey : contentWithRandomChannelName}
+        />
       </>
     );
   }
