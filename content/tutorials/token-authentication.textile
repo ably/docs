@@ -12,11 +12,15 @@ authors:
   author_image: https://avatars3.githubusercontent.com/u/6329153?s=460&v=4
   author_name: Shelin Hime
   author_profile_url: https://github.com/ShelinHime
+- author_bio: ''
+  author_image: https://avatars.githubusercontent.com/u/18176755?s=460&v=4
+  author_name: Mark Lewin
+  author_profile_url: https://github.com/marklewin
 category:
 - channels
 date_published: '2016-09-11T14:03:38+01:00'
-excerpt: Learn how clients can use token authentication and how to issue tokens with
-  correct permissions server side
+excerpt: Learn to authenticate clients using tokens and how to issue tokens with
+  different capabilities from your server
 group: sdk
 index: 50
 languages:
@@ -27,7 +31,7 @@ languages:
 - ruby
 - nodejs
 - swift
-last_updated: '2021-11-19T16:35:45+00:00'
+last_updated: '2022-10-12T16:35:45+00:00'
 level: medium
 platform: mixed
 reading_time: 20
@@ -35,13 +39,18 @@ section: tutorials
 tags:
 - Authentication
 title: Implementing Token Authentication
-meta_description: "How clients can use token authentication and how to issue tokens with correct permissions on the server."
+meta_description: "Learn to authenticate clients using tokens and how to issue tokens with
+  different capabilities from your server."
 meta_keywords: "Ably realtime, token authentication"
 ---
 
-Ably supports two types of authentication schemes, "basic authentication":/core-features/authentication#basic-authentication using a private API key, which should be used on servers (not on user devices), and "token authentication":/core-features/authentication#token-authentication which should be used on user devices. In token authentication, your server can generate short-lived tokens and pass them to users when they need to communicate with Ably. These tokens can be limited to specific capabilities on specific channels. Make sure to follow the principle of least privilege, giving clients only the capabilities they need. 
+Ably supports two types of authentication schemes, "basic authentication":/core-features/authentication#basic-authentication using a private API key, which should be used on servers (not on user devices), and "token authentication":/core-features/authentication#token-authentication which should be by clients. With token authentication, your server generates short-lived tokens and passes them to clients that need to communicate with Ably. You can limit these tokens to specific capabilities (subscribe only, publish and subscribe) on named channels.
 
-Clients should be "configured":/api/realtime-sdk/types#client-options with an @authUrl@ or @authCallback@, which the Ably client SDK will use to either generate a new token or renew an expired token, as required. @authUrl@ is used in this tutorial since the client is web based and your cookies would be automatically sent to your server if it's on the same domain. @authCallback@ should be used on other platforms to give you more control over how this request is made to your servers.
+> *Note*:Ensure that you follow the principle of least privilege, by giving clients only the capabilities they need. 
+
+To implement token authentication on the client, you must configure them using an @authUrl@ or @authCallback@ "client option":api/realtime-sdk/types#client-options. The Ably Client Library SDK will use this to request a token for initial access and will automatically request a new token when the existing token expires.
+
+This tutorial uses @authUrl@ is used in this tutorial, because the client is web-based and your cookies would be automatically sent to your server if it is on the same domain. You should use @authCallback@ on other platforms to give you more control over how this request is made to your servers.
 
 <%= partial partial_version('tutorials/_step-1-create-app-and-api-key') %>
 
@@ -95,14 +104,13 @@ blang[nodejs,android].
 
   The server-client library must be instantiated with the private API key you copied in Step 1. This will ensure that the "basic authentication scheme":/core-features/authentication#basic-authentication is used, which is almost always the right choice for your own trusted servers where the risk of compromise of your API key credentials is low.
 
-  Add the following to a file named @server.js@ to instantiate the Ably library inside your Node.js server:
+  Add the following to a file named @server.js@ to instantiate the Ably library on your Node.js server:
 
   ```[nodejs]
-    var Ably = require("ably");
-    var rest = new Ably.Rest({ key: apiKey });
+    const Ably = require("ably");
+    const rest = new Ably.Rest({ key: apiKey });
   ```
-blang[nodejs].
-  "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-node-step2
+
 blang[android].
   "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-android-step2
 
@@ -284,29 +292,15 @@ blang[java].
   "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-java-step3
 
 blang[nodejs,android].
-  "Express.js":https://expressjs.com/ is a very popular and simple web framework for Node.js. You'll need to get this setup:
+  This tutorial uses "Express.js":https://expressjs.com/ - a simple and popular web framework for Node.js. 
 
-  Firstly you need to add the @express@ NPM module and create a @package.json@ file:
+  First, install the @express@ NPM module and save it to your @package.json@ file:
 
-  ```[json]
-  {
-    "name": "ably-tutorials",
-    "repository": "https://github.com/ably/tutorials",
-    "license": "Apache-2.0",
-    "engines": {
-      "node": ">=0.10"
-    },
-    "scripts": {
-      "start": "node ./server.js"
-    },
-    "dependencies": {
-      "ably": ">=1.2",
-      "express": "~4.0"
-    }
-  }
+  ```[nodejs]
+  npm install --save express
   ```
 
-  Then you need to set up a vanilla HTTP Express.js server in @server.js@:
+  Then, set up a vanilla HTTP Express.js server in @server.js@:
 
   ```[nodejs]
     const express = require('express'),
@@ -321,9 +315,8 @@ blang[nodejs,android].
     });
   ```
 
-  If you would like to try running the server now, you can do so with @node server.js@. Once running, open your browser to "http://localhost:3000/":http://localhost:3000/ and you should see the text "Hello, I am a very simple server".
-blang[nodejs].
-  "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-node-step3
+  Test that you server is running by executing @node server.js@ in the root of your project directory. Then, open your browser to "http://localhost:3000/":http://localhost:3000/ and you should see the text "Hello, I am a very simple server".
+
 blang[android].
   "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-android-step3
 
@@ -481,18 +474,24 @@ blang[nodejs,android].
   By adding the following route to your Express.js server, it will be ready to service clients wanting to authenticate with Ably.
 
   ```[nodejs]
-    /* Issue token requests to clients sending a request to the /auth endpoint */
-    app.get('/auth', function (req, res) {
-      var tokenParams = {}; /* Use token defaults for now */
-      rest.auth.createTokenRequest(tokenParams, function(err, tokenRequest) {
-        if (err) {
-          res.status(500).send('Error requesting token: ' + JSON.stringify(err));
-        } else {
-          res.setHeader('Content-Type', 'application/json');
-          res.send(JSON.stringify(tokenRequest));
-        }
-      });
-    });
+    // Issue token requests to clients sending a request to the /auth endpoint
+    app.get("/auth", (req, res) => {
+      let tokenParams;
+      // Check if the user is logged in
+      if (req.cookies.username) {
+        /* Issue a token with pub & sub privileges for all channels and
+          configure the token with an client ID */
+        tokenParams = {
+          capability: { "*": ["publish", "subscribe"] },
+          clientId: req.cookies.username,
+        };
+      } else {
+        /* Issue a token request with sub privileges restricted to one channel
+          and configure the token without a client ID (anonymous) */
+        tokenParams = {
+          capability: { notifications: ["subscribe"] },
+        };
+      }
   ```
 
   Try running your server again with @node server.js@, then visit "http://localhost:3000/auth":http://localhost:3000/auth to see a JSON token request in the form:
@@ -507,8 +506,7 @@ blang[nodejs,android].
     "mac": "35nifY9SRZ8KRDfKOPIS1qYWGP16r2lD59zJo9TH8pA="
   }
   ```
-blang[nodejs].
-  "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-node-step4
+
 blang[android].
   "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-android-step4
 
@@ -602,24 +600,24 @@ blang[php].
   "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-php-step4
 
 h2.
-  default: Step 5 - Setting up a client to use token authentication
+  default: Step 5 - Authenticate the client with a token
   android: Step 5 – Setting up environment and client to use token authentication
   swift: Step 5 - Setup an Xcode project and prepare the client to use token authentication
 
-Now that we have a web server running and an authentication endpoint, we are ready to set up the Ably Realtime client that uses token auth.
+Now that you have a running server that exposes an endpoint for token authentication, you are ready to instantiate the Ably client library SDK.
 
 blang[java].
-  Firstly you need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the @src/main/webapp@ folder:
+  First, you need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the @src/main/webapp@ folder:
 blang[android].
-  Firstly you need to create a simple Android project that will be served by the web server. To build your own Android Project, please visit the "Android Developers":https://developer.android.com/training/basics/firstapp/creating-project.html website and get familiar with the steps necessary to set up your own application. When the project is ready, open your application's module and modify its @build.gradle@ file like this:
+  First, you need to create a simple Android project that will be served by the web server. To build your own Android Project, please visit the "Android Developers":https://developer.android.com/training/basics/firstapp/creating-project.html website and get familiar with the steps necessary to set up your own application. When the project is ready, open your application's module and modify its @build.gradle@ file like this:
 blang[nodejs].
-  Firstly you need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.js@:
+  First, you need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.js@:
 blang[ruby].
-  Firstly you need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.rb@:
+  First, you need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.rb@:
 blang[php].
-  Firstly you need to set up a simple HTML page that will be served by the web server. Replace the contents of @index.php@ with the code below:
+  First, you need to set up a simple HTML page that will be served by the web server. Replace the contents of @index.php@ with the code below:
 blang[python].
-  Firstly you need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.py@:
+  First, you need to set up a simple HTML page that will be served by the web server. Create the following HTML file named @index.html@ in the same folder as @server.py@:
 blang[nodejs,ruby,php,python,java].
   ```[html]
   <html>
@@ -694,16 +692,16 @@ blang[java].
   }
   ```
 
-  Try restarting your server again and visit "http://localhost:3000/":http://localhost:3000/ to ensure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
+  Try restarting your server again and visit "http://localhost:3000/":http://localhost:3000/ to ensure the new static home page is being served up correctly. If you can see the static page, then it's time to instantiate the Ably client library SDK using token authentication.
 
 blang[nodejs,android].
-  Now you need to serve a static home page. Replace the code that responds to the @/@ route (look for @get '/' do ... end@) with the following:
+  Now you need to serve a static home page. Replace the @/@ route handler with the following:
 
   ```[nodejs]
     app.use('/', express.static(__dirname));
   ```
 
-  Try running your server again with @node server.js@ and visit "http://localhost:3000/":http://localhost:3000/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
+  Try running your server again with @node server.js@ and visit "http://localhost:3000/":http://localhost:3000/ to make sure that the new static home page is being served up correctly. If you can see the static page, then it's time to instantiate the Ably client library SDK using token authentication.
 
 blang[ruby].
   Now you need to serve a static home page. Replace the code that responds to the @/@ route (look for @app.get('/', ...@) with the following:
@@ -714,7 +712,7 @@ blang[ruby].
     end
   ```
 
-  Try running your server again with @bundle exec ruby server.rb@ and visit "http://localhost:4567/":http://localhost:4567/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
+  Try running your server again with @bundle exec ruby server.rb@ and visit "http://localhost:4567/":http://localhost:4567/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to instantiate the Ably client library SDK using token authentication.
 
 blang[python].
   Now you need to serve a static home page. Replace the code that responds to the @/@ route (look for @index@ class) with the following:
@@ -726,10 +724,10 @@ blang[python].
             return html.read()
   ```
 
-  Try running your server again with @python server.py@ and visit "http://localhost:8080/":http://localhost:8080/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
+  Try running your server again with @python server.py@ and visit "http://localhost:8080/":http://localhost:8080/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to instantiate the Ably client library SDK using token authentication.
 
 blang[php].
-  Try running your server again with @php -S 0.0.0.0:8000@ (if it's not up already) and visit "http://localhost:8000/":http://localhost:8000/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to set up a Realtime client that uses token authentication.
+  Try running your server again with @php -S 0.0.0.0:8000@ (if it's not up already) and visit "http://localhost:8000/":http://localhost:8000/ to make sure the new static home page is being served up correctly. If you can see the static page, then it's time to instantiate the Ably client library SDK using token authentication.
 
 blang[android].
   Add the following into the @ExampleActivity#initAbly@ method:
@@ -783,10 +781,14 @@ blang[nodejs,ruby,python,java].
 
   ```[html]
     <script type="text/javascript">
-      /* Set up a Realtime client that authenticates with the local web server auth endpoint */
-      var realtime = new Ably.Realtime({ authUrl: '/auth' });
-      realtime.connection.once('connected', function() {
-        alert("We're connected using the token request from the server /auth endpoint!");
+      // Set up a realtime client that authenticates with the local server auth endpoint
+      const realtime = new Ably.Realtime({ authUrl: "/auth" });
+      realtime.connection.once("connected", () => {
+        const user = realtime.auth.tokenDetails.clientId || "anonymous";
+        const capability = realtime.auth.tokenDetails.capability;
+        alert(
+          `You are now connected to Ably \nUser: ${user}\nCapabilities: ${capability}`
+        );
       });
     </script>
   ```
@@ -805,18 +807,15 @@ blang[php].
   ```
 
 blang[php,ruby,nodejs,python,java].
-  Time for us to see what happens now. Restart the local server and refresh the page. You should receive an alert to confirm that you're connected to Ably which means your server has successfully issued a token request to the client. The client has then obtained a token from Ably with the token request, and then subsequently authenticated and finally connected.
+  Restart your local server and refresh the page. You should receive an alert to confirm that you're connected to Ably which means your server has successfully issued a token request to the client. The client then used this token request to retrieve a token which enabled it to authenticate and subsequently connect to the Ably platform.
 blang[android].
-  Time for us to see what happens now. Restart the local server and rerun your application. You should receive an alert to confirm that you're connected to Ably which means your server has successfully issued a token request to the client. The client has then obtained a token from Ably with the token request, and then subsequently authenticated and finally connected.
+  Restart your local server and rerun your application. You should receive an alert to confirm that you're connected to Ably which means your server has successfully issued a token request to the client. The client then used this token request to retrieve a token which enabled it to authenticate and subsequently connect to the Ably platform.
 
 blang[android].
   "See this step in Github":http://github.com/ably/tutorials/commit/token-auth-android-step5b
 
 blang[java].
   "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-java-step5
-
-blang[nodejs].
-  "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-node-step5
 
 blang[ruby].
   "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-ruby-step5
@@ -828,7 +827,7 @@ blang[php].
   "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-php-step5
 
 blang[swift].
-  Firstly you'll need to set up an Xcode project that will serve as your client.
+  First, you'll need to set up an Xcode project that will serve as your client.
 
   To build your own Xcode Project in Swift visit the "Apple developer website":https://developer.apple.com/library/content/documentation/IDEs/Conceptual/AppStoreDistributionTutorial/Setup/Setup.html and get familiar with steps necessary to set up your own application.
   When you set up your application delete the default @ViewController.swift@, then add a new file by going through File -> New -> File... and choose @Cocoa Touch Class@.
@@ -873,8 +872,8 @@ blang[swift].
     import Ably
   ```
 
-  Now it's time to set up a Realtime client that uses token authentication.
-  Firstly you need to create a new method that will try to connect us to Ably.
+  Now it's time to instantiate the Ably client library SDK using token authentication.
+  First, you need to create a new method that will try to connect us to Ably.
   By using @authCallback@ you don't have to worry if the user already has a clientId.
 
   ```[swift]
@@ -951,20 +950,20 @@ blang[swift].
 
   "See this step in Github":https://github.com/ably/tutorials/commit/token-auth-swift-step5b
 
-We've now covered the basics of client-server token authentication and your client has a means to renew the token whenever it needs one.
+Your client has now successfully connected to the Ably platform using token authentication. It will automatically request a new token when the existing one expires.
 
-h2. Step 6 - Authenticating logged in users
+h2. Step 6 - Authenticate logged-in users
 
-In the previous step we saw how easy it is to issue a token request from your server for clients that need to authenticate with Ably. However, the example is quite contrived in that it is unlikely you would want to issue tokens to anonymous users with a full set of capabilities. At present, the token issued allows all users to publish, subscribe, be present, retrieve stats and history across all channels.
+In the previous step you saw how easy it is to issue a token request from your server for clients that need to authenticate with Ably. However, the example is quite contrived in that it is unlikely you would want to issue tokens with a full set of capabilities to anonymous users. At present, the token issued allows all users to publish, subscribe, be present, retrieve stats and history across all channels.
 
 blang[android].
-  In this step we'll see how to issue subscribe only tokens limited to a single channel for anonymous users, and issue publish and subscribe tokens for logged in users. As the purpose of this tutorial is not to demonstrate how to build an authentication system for your mobile app, we will be implementing a trivial and clearly flawed authentication system so that we can keep superfluous unrelated code to a minimum.
+  As the purpose of this tutorial is not to demonstrate how to build a complete authentication system for your production mobile app, you will implement a very basic (and clearly flawed) authentication system. You will issue subscribe-only tokens limited to a single channel for anonymous users, and issue publish and subscribe tokens for logged-in users.
 
 blang[java,php,nodejs,python,ruby].
-  In this step we'll see how to issue subscribe only tokens limited to a single channel for anonymous users, and issue publish and subscribe tokens for logged in users. As the purpose of this tutorial is not to demonstrate how to build an authentication system for your website, we will be implementing a trivial and clearly flawed authentication system so that we can keep superfluous unrelated code to a minimum.
+  As the purpose of this tutorial is not to demonstrate how to build a complete authentication system for your production website, you will implement a very basic (and clearly flawed) authentication system. You will issue subscribe-only tokens limited to a single channel for anonymous users, and issue publish and subscribe tokens for logged-in users. 
 
 blang[android].
-  Time to get started. Firstly you will add an EditText element and a Button element into our layout, creating simple login form. Add the following into the @activity_example.xml@ file:
+  Time to get started. First, you will add an EditText element and a Button element into our layout, creating simple login form. Add the following into the @activity_example.xml@ file:
 
   ```[xml]
     <?xml version="1.0" encoding="utf-8"?>
@@ -1005,7 +1004,7 @@ blang[android].
   ```
 
 blang[nodejs,ruby,python,java].
-  Time to get started. Firstly you will add two panels, one that contains a simple login form, and the other with a logout link to the HTML page. Add the following beneath the @</h1>@ tag in your @index.html@ file:
+  Add two panels to your HTML page: one that contains a simple login form, and the other with a logout link. Place the following markup beneath the @</h1>@ tag in your @index.html@ file:
 
   ```[html]
     <div id="panel-anonymous">
@@ -1021,7 +1020,7 @@ blang[nodejs,ruby,python,java].
   ```
 
 blang[php].
-  Time to get started. Firstly you will add two panels, one that contains a simple login form, and the other with a logout link to the HTML page. Add the following beneath the @</h1>@ tag in your @index.php@ file:
+  Time to get started. First, you will add two panels, one that contains a simple login form, and the other with a logout link to the HTML page. Add the following beneath the @</h1>@ tag in your @index.php@ file:
 
   ```[html]
     <div id="panel-anonymous">
@@ -1519,7 +1518,7 @@ blang[swift].
 
   Now we will need to customize the client. If you have not previously had experience building a basic user interface in Xcode, please refer to the "Apple developer guide":https://developer.apple.com/library/content/referencelibrary/GettingStarted/DevelopiOSAppsSwift/BuildABasicUI.html#//apple_ref/doc/uid/TP40015214-CH5-SW1 on how to build a simple UI and also learn more about "adding @IBOutlets@ and @IBActions@":https://developer.apple.com/library/content/referencelibrary/GettingStarted/DevelopiOSAppsSwift/ConnectTheUIToCode.html#//apple_ref/doc/uid/TP40015214-CH22-SW1.
 
-  Firstly, add a login button and a textfield so that the user can provide their chosen username. Go to your @ExampleViewController@ and add a @UIButton@ from @Object library@. Name the action "loginAction".
+  First, add a login button and a textfield so that the user can provide their chosen username. Go to your @ExampleViewController@ and add a @UIButton@ from @Object library@. Name the action "loginAction".
 
   <a href="/images/tutorials/token-auth/tutorials-swift-binding-UI-token-auth.gif" target="_blank">
     <img src="/images/tutorials/token-auth/tutorials-swift-binding-UI-token-auth.gif" style="width: 100%" alt="Bind action">
@@ -1544,7 +1543,7 @@ blang[swift].
 
   To define the flow between the @ExampleViewController@ and the @LogoutViewController@ you will need to use segues. If you are not familiar with them, please refer to the "Apple developer guide":https://developer.apple.com/library/content/featuredarticles/ViewControllerPGforiPhoneOS/UsingSegues.html on how they work.
 
-  Firstly in your @Storyboard@ add a new "Present Modally" action segue. Name it "logoutSegue".
+  First, in your @Storyboard@, add a new "Present Modally" action segue. Name it "logoutSegue".
 
   <a href="/images/tutorials/token-auth/tutorials-swift-create-segue.gif" target="_blank">
     <img src="/images/tutorials/token-auth/tutorials-swift-create-segue.gif" style="width: 60%" alt="Create segue">
