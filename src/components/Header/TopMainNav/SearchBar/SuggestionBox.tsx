@@ -1,8 +1,9 @@
 import React, { useState, MouseEvent } from 'react';
+import cn from 'classnames';
 import { HitType } from 'src/hooks';
 import htmr from 'htmr';
 
-import { container } from './SuggestionBox.module.css';
+import { container, snapshot } from './SuggestionBox.module.css';
 
 type Props = {
   results: HitType[] | null;
@@ -51,8 +52,8 @@ export const SuggestionBox = ({ results, isActive }: Props) => {
             </a>
           ))}
       </div>
-      <div className="col-span-4 relative py-16 pl-16">
-        {capture && <img className="sticky top-16" src={capture.link} alt={capture.title} />}
+      <div className="relative col-span-4 py-16 pl-16 flex justify-center">
+        {capture && <img className={snapshot} src={capture.link} alt={capture.title} />}
       </div>
     </div>
   );
