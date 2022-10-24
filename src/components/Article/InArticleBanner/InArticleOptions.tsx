@@ -2,7 +2,7 @@ import React, { MouseEvent } from 'react';
 import { safeWindow } from 'src/utilities';
 
 const linkClickWithTracker = (tracker: () => void, destination: string) => (event: MouseEvent<HTMLAnchorElement>) => {
-  event.preventDefault;
+  event.preventDefault();
   // Registers that this button was clicked, nothing else.
   tracker();
   safeWindow.location.href = destination;

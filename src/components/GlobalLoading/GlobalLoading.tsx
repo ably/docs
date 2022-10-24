@@ -109,7 +109,7 @@ const GlobalLoading: FC = ({ children }) => {
         <Script
           id="headway-loader"
           src="//cdn.headwayapp.co/widget.js"
-          crossOrigin={'true'}
+          crossOrigin="true"
           onLoad={loadHeadway(headwayAccountId)}
         />
       ) : null}
