@@ -1,4 +1,5 @@
 import React from 'react';
+import { contactUsClickTracker, supportClickTracker } from 'src/third-party/gtm/gtm';
 import { InArticleBanner, InArticleBannerCopy, InArticleOptions } from './InArticleBanner';
 
 export const ArticleFooter = () => (
@@ -10,8 +11,10 @@ export const ArticleFooter = () => (
     <InArticleOptions
       primaryOptionLabel="Support &amp; Help"
       primaryOptionDestination="/support"
+      primaryTracker={supportClickTracker}
       secondaryOptionLabel="Contact Us"
       secondaryOptionDestination="/contact"
+      secondaryTracker={contactUsClickTracker}
     />
   </InArticleBanner>
 );
