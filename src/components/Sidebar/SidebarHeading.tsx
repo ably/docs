@@ -1,4 +1,4 @@
-import React, { ElementType, ComponentPropsWithoutRef, PropsWithChildren } from 'react';
+import React, { ElementType, ComponentPropsWithoutRef, PropsWithChildren, useCallback } from 'react';
 import cn from 'classnames';
 
 import { sidebar } from './SidebarHeading.module.css';
@@ -25,10 +25,16 @@ export const SidebarHeading = <C extends ElementType>({
   ...props
 }: Props<C>) => {
   const Component = as || 'span';
+  const scrollLinkIntoView = useCallback((node) => {
+    if (node && (window.location.pathname === props.to || window.location.pathname === href)) {
+      node.scrollIntoView();
+    }
+  }, []);
 
   return (
     <Component
       {...props}
+      ref={scrollLinkIntoView}
       href={href}
       className={cn(
         sidebar,
