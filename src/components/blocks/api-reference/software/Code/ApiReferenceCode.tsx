@@ -10,9 +10,7 @@ export const ApiReferenceCode = ({ data, attribs }: NestedHtmlComponentProps<'di
   const singleStringHasMultilineText = hasSingleString && multilineRegex.test(data?.[0].data as string);
   const hasRenderableLanguages = attribs && attribs.lang;
   const hasMultilineText = singleStringHasMultilineText || data.length > 1;
-  if (attribs?.lang === 'csharp') {
-    console.log(hasMultilineText, data);
-  }
+
   if (hasRenderableLanguages || hasMultilineText) {
     return <Code data={data} attribs={attribs} />;
   }
