@@ -3,16 +3,18 @@ import { render, screen } from '@testing-library/react';
 import { PageLanguageContext } from 'src/contexts';
 import { Pre } from './';
 
+const PRE_TEST_DATA = [{ data: [{ data: 'useVars = false;', type: 'text' }], type: 'tag', name: 'code' }];
+
 describe('<Pre />', () => {
   it('should successfully render Code elements with language', () => {
     const { container } = render(
       <Pre
-        data={[{ data: 'var useVars = false;', type: 'text' }]}
+        data={PRE_TEST_DATA}
         language="javascript"
         languages={['javascript', 'csharp']}
         altData={{
-          javascript: [{ data: 'var useVars = false;', type: 'text' }],
-          csharp: [{ data: 'bool useVars = false;', type: 'text' }],
+          javascript: PRE_TEST_DATA,
+          csharp: [{ data: [{ data: 'bool useVars = false;', type: 'text' }], type: 'tag', name: 'code' }],
         }}
       />,
     );
@@ -23,7 +25,7 @@ describe('<Pre />', () => {
     render(
       <PageLanguageContext.Provider value="javascript">
         <Pre
-          data={[{ data: 'useVars = false;', type: 'text' }]}
+          data={PRE_TEST_DATA}
           language="javascript"
           languages={['python', 'csharp']}
           altData={{
@@ -37,9 +39,7 @@ describe('<Pre />', () => {
   });
 
   it('should render code block when no languages are passed', () => {
-    const { container } = render(
-      <Pre data={[{ data: 'var useVars = false;', type: 'text' }]} language="javascript" languages={undefined} />,
-    );
+    const { container } = render(<Pre data={PRE_TEST_DATA} language="javascript" languages={undefined} />);
     expect(container.firstChild).toMatchSnapshot();
   });
 });
