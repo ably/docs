@@ -25,10 +25,16 @@ export const SidebarHeading = <C extends ElementType>({
   ...props
 }: Props<C>) => {
   const Component = as || 'span';
+  const scrollLinkIntoView = (node: HTMLElement) => {
+    if (node && (window.location.pathname === props.to || window.location.pathname === href)) {
+      node.scrollIntoView();
+    }
+  };
 
   return (
     <Component
       {...props}
+      ref={scrollLinkIntoView}
       href={href}
       className={cn(
         sidebar,
