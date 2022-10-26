@@ -19,7 +19,7 @@ import '@ably/ui/core/styles.css';
 import '../styles.css';
 import { NestedHtmlComponentProps } from 'src/components/html-component-props';
 
-const API_KEY_LENGTH = 57;
+const API_KEY_LENGTH = 5;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
 
 export const multilineRegex = /\r|\n/gm;
@@ -53,13 +53,16 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
    * Referenced on ticket:
    * https://ably.atlassian.net/browse/EDX-49
    */
-  const contentWithObfuscatedKey = useMemo(
-    () =>
-      dataContainsKey
-        ? contentWithRandomChannelName.replace(/{{API_KEY}}/g, new Array(API_KEY_LENGTH).join('*'))
-        : contentWithRandomChannelName,
-    [contentWithRandomChannelName, activeApiKey],
-  );
+  const contentWithObfuscatedKey = useMemo(() => {
+    const firstSectionApiKey = activeApiKey.value.substring(0, activeApiKey.value.indexOf(':') + 1);
+    const displayApiKey = firstSectionApiKey ? firstSectionApiKey : activeApiKey.value.substring(0, 10) + ':';
+    return dataContainsKey
+      ? contentWithRandomChannelName.replace(
+          /{{API_KEY}}/g,
+          `${displayApiKey}${new Array(API_KEY_LENGTH + 1).join('*')}`,
+        )
+      : contentWithRandomChannelName;
+  }, [contentWithRandomChannelName, activeApiKey]);
   const contentWithKey = useMemo(
     () =>
       dataContainsKey
