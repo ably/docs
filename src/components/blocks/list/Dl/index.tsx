@@ -3,6 +3,7 @@ import Html from '../../Html';
 import styled, { css } from 'styled-components';
 import { borders } from '../../../../styles';
 import { HtmlComponentProps } from 'src/components/html-component-props';
+import { DlWrapper } from './DlWrapper';
 
 const definitionListCell = css`
   border-bottom: ${borders.defaultBorder};
@@ -39,7 +40,7 @@ const StyledDl = styled.dl`
 const Dl = ({ data, attribs }: HtmlComponentProps<'dl'>) => {
   return (
     <StyledDl {...attribs}>
-      <Html data={data} />
+      <Html data={data} BlockWrapper={DlWrapper} />
     </StyledDl>
   );
 };
