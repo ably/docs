@@ -1,15 +1,16 @@
-import React, { ReactElement, useContext } from 'react';
+import React, { FunctionComponent, ReactElement, useContext } from 'react';
 import cn from 'classnames';
 import Icon from '@ably/ui/core/Icon';
 import Html from '../Html';
 import { PageLanguageContext } from 'src/contexts';
-import languageLabels, { languageSyntaxHighlighterNames } from 'src/maps/language';
+import languageLabels from 'src/maps/language';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import { HtmlComponentProps, ValidReactElement } from '../../html-component-props';
 import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
+import CodeWrapper from '../wrappers/CodeWrapper';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
@@ -67,10 +68,10 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
       <pre {...withModifiedClassname}>
         {languages ? (
           <LocalLanguageAlternatives languages={languages} data={altData}>
-            <Html data={data} />
+            <Html data={data} BlockWrapper={CodeWrapper as FunctionComponent} />
           </LocalLanguageAlternatives>
         ) : (
-          <Html data={data} />
+          <Html data={data} BlockWrapper={CodeWrapper as FunctionComponent} />
         )}
       </pre>
     </div>

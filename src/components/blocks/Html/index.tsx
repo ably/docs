@@ -5,14 +5,14 @@ import { ArticleTypeContext } from '../../../contexts/article-type-context';
 import { ARTICLE_TYPES } from '../../../../data/transform/constants';
 import { defaultBlocksFromData } from '../create-blocks/default-blocks-from-data';
 import { apiReferenceBlocksFromData } from '../create-blocks/api-reference-blocks-from-data';
-import ConditionalChildrenLanguageDisplay from '../wrappers/ConditionalChildrenLanguageDisplay';
+import { BlockWrapper as DefaultBlockWrapper } from '../wrappers/BlockWrapper';
 
 const Html = ({
   data,
-  BlockWrapper = ConditionalChildrenLanguageDisplay as FunctionComponent,
+  BlockWrapper = DefaultBlockWrapper,
 }: {
   data: HtmlComponentProps<ValidReactElement>[] | string | null;
-  BlockWrapper?: React.FunctionComponent;
+  BlockWrapper?: FunctionComponent;
 }) => {
   if (isArray(data)) {
     return (

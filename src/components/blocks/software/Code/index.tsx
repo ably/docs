@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { FunctionComponent, useMemo, useState } from 'react';
 import { every, some } from 'lodash/fp';
 
 import Html from 'src/components/blocks/Html';
@@ -14,7 +14,7 @@ import InlineCodeElement from './InlineCodeElement';
 import CodeCopyButton from './CodeCopyButton';
 import { MultilineCodeContent } from './MultilineCodeContent';
 import { getRandomChannelName } from './get-random-channel-name';
-
+import CodeWrapper from '../../wrappers/CodeWrapper';
 import '@ably/ui/core/styles.css';
 import '../styles.css';
 import { NestedHtmlComponentProps } from 'src/components/html-component-props';
@@ -111,7 +111,7 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
   }
   return (
     <InlineCodeElement {...attribs}>
-      <Html data={data} />
+      <Html data={data} BlockWrapper={CodeWrapper as FunctionComponent} />
     </InlineCodeElement>
   );
 };

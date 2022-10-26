@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { FunctionComponent } from 'react';
 import { every, some } from 'lodash/fp';
 import HtmlDataTypes from '../../../../../../data/types/html';
 import { multilineRegex, default as Code } from '../../../software/Code';
 import { NestedHtmlComponentProps } from '../../../../html-component-props';
 import { ApiReferenceInlineCodeElement } from './ApiReferenceInlineCodeElement';
 import Html from '../../../Html';
+import CodeWrapper from '../../../wrappers/CodeWrapper';
 
 export const ApiReferenceCode = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
   const isString = every((child) => child.type === HtmlDataTypes.text, data);
@@ -16,7 +17,7 @@ export const ApiReferenceCode = ({ data, attribs }: NestedHtmlComponentProps<'di
   }
   return (
     <ApiReferenceInlineCodeElement {...attribs}>
-      <Html data={data} />
+      <Html data={data} BlockWrapper={CodeWrapper as FunctionComponent} />
     </ApiReferenceInlineCodeElement>
   );
 };
