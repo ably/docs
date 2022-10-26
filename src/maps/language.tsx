@@ -21,7 +21,7 @@ const languageLabels: LanguageLabels = {
   cpp: 'C++',
   dart: 'Dart',
   swift: 'Swift',
-  objc: 'Objective C',
+  objc: 'Objective-C',
   nodejs: 'Node.js',
   json: 'JSON',
   flutter: 'Flutter',
@@ -46,7 +46,7 @@ const languageSyntaxHighlighterNames: LanguageSyntaxHighlighterNames = {
   cpp: { label: 'C++', key: 'cpp' },
   dart: { label: 'Dart', key: 'dart' },
   swift: { label: 'Swift', key: 'swift' },
-  objc: { label: 'Objective C', key: 'objectivec' },
+  objc: { label: 'Objective-C', key: 'objectivec' },
   nodejs: { label: 'Node.js', key: 'javascript' },
   json: { label: 'JSON', key: 'json' },
   // Kotlin is now preferred, however existing examples use Java & Android interchangeably.
