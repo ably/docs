@@ -7,6 +7,7 @@ import { PageLanguagesContext } from 'src/contexts';
 import { LanguageButton } from 'src/components';
 import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
 import { HtmlComponentProps, ValidReactElement } from 'src/components/html-component-props';
+import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 
 const LocalLanguageAlternatives = ({
   languages,
@@ -27,27 +28,29 @@ const LocalLanguageAlternatives = ({
     setSelectedLanguage(value);
   };
 
-  const languageItems = languages.map((lang) => {
-    // Site navigation button
-    if (pageLanguages.includes(lang)) {
+  const languageItems = languages
+    .filter((lang) => lang !== DEFAULT_LANGUAGE)
+    .map((lang) => {
+      // Site navigation button
+      if (pageLanguages.includes(lang)) {
+        return {
+          Component: LanguageButton,
+          props: { language: lang },
+          content: languageLabels[lang] ?? lang,
+        };
+      }
+      // Local button, if global language option doesn't exist
       return {
-        Component: LanguageButton,
-        props: { language: lang },
+        Component: MenuItemButton,
+        props: {
+          language: '',
+          onClick,
+          value: lang,
+          isSelected: lang === selectedLanguage,
+        },
         content: languageLabels[lang] ?? lang,
       };
-    }
-    // Local button, if global language option doesn't exist
-    return {
-      Component: MenuItemButton,
-      props: {
-        language: '',
-        onClick,
-        value: lang,
-        isSelected: lang === selectedLanguage,
-      },
-      content: languageLabels[lang] ?? lang,
-    };
-  });
+    });
 
   return (
     <>
