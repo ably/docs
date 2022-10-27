@@ -6,7 +6,6 @@ import { ApiReferenceBlockquote } from '../api-reference/external-references/Api
 import { ApiReferenceH6 } from '../api-reference/headings/ApiReferenceH6';
 import ApiReferenceDd from '../api-reference/list/ApiReferenceDd';
 import ApiReferenceDt from '../api-reference/list/ApiReferenceDt';
-import { ApiReferenceCode } from '../api-reference/software/Code/ApiReferenceCode';
 import { Button, Input, Meter, Noscript, Progress, Script, Select, Textarea } from '../complex-functionality';
 import { Article, Aside, Div, Main, Section, Span } from '../dividers';
 import { A, Address, Audio, Blockquote, Iframe, Img, Quote, Video } from '../external-references';
@@ -104,8 +103,6 @@ const ApiReferenceHtmlTypeComponentMap = Object.freeze({
   [HtmlDataTypes.blockquote]: ApiReferenceBlockquote,
   // headings
   [HtmlDataTypes.h6]: ApiReferenceH6,
-  // software-related
-  [HtmlDataTypes.code]: ApiReferenceCode,
   // lists
   [HtmlDataTypes.dd]: ApiReferenceDd,
   [HtmlDataTypes.dt]: ApiReferenceDt,
