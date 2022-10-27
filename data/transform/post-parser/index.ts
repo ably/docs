@@ -1,5 +1,6 @@
 import { compose } from 'lodash/fp';
 import { convertBlangBlocksToHtml } from './blang';
+import { detokenizeSpans } from './detokenize-spans';
 import { rootLevelTextWrapper } from './root-level-text-wrapper';
 
 /**
@@ -16,5 +17,6 @@ export const postParser = compose(
   convertExternalLinksToBlankTarget,
   convertBlangBlocksToHtml,
   addGithubLineBreaks,
+  detokenizeSpans,
   rootLevelTextWrapper,
 );

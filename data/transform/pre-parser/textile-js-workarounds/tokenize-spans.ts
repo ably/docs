@@ -4,6 +4,10 @@
 */
 import { compose } from 'lodash/fp';
 
-const tokenizeSpanStart: StringTransformation = (content) => content.replace(/<span([\s"\w])*?>/g, '{{SPAN[$1]}}');
-const tokenizeSpanEnd: StringTransformation = (content) => content.replace(/<\/\w*?span/g, '{{/SPAN}}');
+// Do not use capital letters for new tokens. textile-js will wrap them in <span class="caps"> elements.
+const tokenizeSpanStart: StringTransformation = (content) =>
+  content.replace(/<span([^>]*)>/g, (_match, p1) => {
+    return `{{span[${p1.replaceAll('"', '|')}]}}`;
+  });
+const tokenizeSpanEnd: StringTransformation = (content) => content.replace(/<\/\w*?span>/g, '{{/span}}');
 export const tokenizeSpans: StringTransformation = compose(tokenizeSpanStart, tokenizeSpanEnd);
