@@ -28,7 +28,18 @@ const StyledDl = styled.dl`
   dd {
     ${definitionListCell}
   }
-  dd > em:last-of-type {
+  dd > em:not(.italics):first-of-type {
+    background: #e1e1e1;
+    border-radius: 5px;
+    padding: 2px 5px;
+    ::before {
+      content: '(default: ';
+    }
+    ::after {
+      content: ')';
+    }
+  }
+  dd > em.italics:last-of-type {
     float: right;
     display: block;
     text-align: right;
