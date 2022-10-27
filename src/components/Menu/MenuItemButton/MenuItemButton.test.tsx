@@ -22,12 +22,12 @@ describe('<MenuItemButton />', () => {
     `);
   });
 
-  it('should render isSelected class on button', () => {
+  it('should render isActive class on button', () => {
     render(<MenuItemButton isSelected>Selected Item</MenuItemButton>);
 
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
       <button
-        class="button selected"
+        class="button isActive"
       >
         Selected Item
       </button>
