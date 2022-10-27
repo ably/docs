@@ -19,35 +19,37 @@ export const TopMainNav = () => {
   const ref = useRef(null);
   useFunctionOnOutsideClick(() => dispatch({ type: 'deactivateAll' }), ref);
   return (
-    <div ref={ref} className="fixed bg-white h-64 z-50 flex w-full border-b border-mid-grey" id="top-main-nav">
-      <HorizontalMenu variant={HorizontalMenuVariant.light}>
-        <HorizontalMenuItemGroup additionalStyles="flex-grow">
-          <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
-          <SearchBar displayMode={DisplayMode.FULL_SCREEN} />
-        </HorizontalMenuItemGroup>
-        <HorizontalMenuItemGroup>
-          {menuItems.map((buttonDropdownDataID, i) => (
-            <DropdownButtonAndMenu
-              key={i}
-              dropdownDataID={buttonDropdownDataID}
-              isOpen={topMainNavState[buttonDropdownDataID].isOpen}
-              onActivated={(id) => dispatch({ type: 'activate', dropdownId: id })}
-              onMouseOver={(dataId) => dispatch({ type: 'mouse-over', dropdownId: dataId })}
-              onMouseOut={(dataId) => dispatch({ type: 'mouse-out', dropdownId: dataId })}
-            />
-          ))}
-        </HorizontalMenuItemGroup>
-        <HorizontalMenuItemGroup>
-          <UserContext.Consumer>
-            {({ sessionState }) => (
-              <TopMainNavStateContext.Provider value={{ topMainNavState: topMainNavState, dispatch }}>
-                <TopMainNavUserMenu sessionState={sessionState} />
-                <HamburgerMenu sessionState={sessionState} />
-              </TopMainNavStateContext.Provider>
-            )}
-          </UserContext.Consumer>
-        </HorizontalMenuItemGroup>
-      </HorizontalMenu>
+    <div ref={ref} className="fixed bg-white h-64 z-50 w-full border-b border-mid-grey" id="top-main-nav">
+      <div className="flex w-full 2xl:w-4/5 h-full">
+        <HorizontalMenu variant={HorizontalMenuVariant.light}>
+          <HorizontalMenuItemGroup additionalStyles="flex-grow">
+            <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
+            <SearchBar displayMode={DisplayMode.FULL_SCREEN} />
+          </HorizontalMenuItemGroup>
+          <HorizontalMenuItemGroup>
+            {menuItems.map((buttonDropdownDataID, i) => (
+              <DropdownButtonAndMenu
+                key={i}
+                dropdownDataID={buttonDropdownDataID}
+                isOpen={topMainNavState[buttonDropdownDataID].isOpen}
+                onActivated={(id) => dispatch({ type: 'activate', dropdownId: id })}
+                onMouseOver={(dataId) => dispatch({ type: 'mouse-over', dropdownId: dataId })}
+                onMouseOut={(dataId) => dispatch({ type: 'mouse-out', dropdownId: dataId })}
+              />
+            ))}
+          </HorizontalMenuItemGroup>
+          <HorizontalMenuItemGroup>
+            <UserContext.Consumer>
+              {({ sessionState }) => (
+                <TopMainNavStateContext.Provider value={{ topMainNavState: topMainNavState, dispatch }}>
+                  <TopMainNavUserMenu sessionState={sessionState} />
+                  <HamburgerMenu sessionState={sessionState} />
+                </TopMainNavStateContext.Provider>
+              )}
+            </UserContext.Consumer>
+          </HorizontalMenuItemGroup>
+        </HorizontalMenu>
+      </div>
     </div>
   );
 };
