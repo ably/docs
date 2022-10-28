@@ -11,7 +11,7 @@ import { PageLanguageContext } from 'src/contexts';
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../data/createPages/constants';
 import { cacheVisitPreferredLanguage } from 'src/utilities';
 
-import { drodownContainer } from './LanguageNavigation.module.css';
+import { dropdownContainer } from './LanguageNavigation.module.css';
 
 export interface LanguageNavigationComponentProps {
   language: string;
@@ -26,13 +26,29 @@ export interface LanguageNavigationProps {
     props: LanguageNavigationComponentProps;
     content: string;
   }[];
+  localChangeOnly?: boolean;
+  selectedLanguage?: string;
+  onSelect?: (newValue: SingleValue<ReactSelectOption>) => void;
 }
 
-const LanguageNavigation = ({ items }: LanguageNavigationProps) => {
+const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<ReactSelectOption>) => {
+  if (newValue) {
+    const language = newValue.value;
+    const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
+    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
+    cacheVisitPreferredLanguage(isPageLanguageDefault, language, href);
+  }
+};
+
+const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect }: LanguageNavigationProps) => {
   const pageLanguage = useContext(PageLanguageContext);
-  const selectedLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
+  const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
+  const actualSelectedLanguage = selectedLanguage ?? selectedPageLanguage;
   const options = items.map((item) => ({ label: item.content, value: item.props.language }));
-  const value = options.find((option) => option.value === selectedLanguage);
+  const value = options.find((option) => option.value === actualSelectedLanguage);
+
+  const shouldUseLocalChanges = localChangeOnly && !!onSelect;
+  const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
 
   return (
     <HorizontalMenu className="justify-end md:justify-start">
@@ -41,20 +57,8 @@ const LanguageNavigation = ({ items }: LanguageNavigationProps) => {
           {content}
         </Component>
       ))}
-      <div className={`${drodownContainer} flex justify-end md:hidden py-12 pl-16 pr-40`}>
-        <Select
-          options={options}
-          value={value}
-          isSearchable={false}
-          onChange={(newValue: SingleValue<ReactSelectOption>) => {
-            if (newValue) {
-              const language = newValue.value;
-              const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
-              const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
-              cacheVisitPreferredLanguage(isPageLanguageDefault, language, href);
-            }
-          }}
-        />
+      <div className={`${dropdownContainer} flex justify-end md:hidden py-12 pl-16 pr-40`}>
+        <Select options={options} value={value} isSearchable={false} onChange={onSelectChange} />
       </div>
     </HorizontalMenu>
   );

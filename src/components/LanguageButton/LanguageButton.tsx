@@ -7,7 +7,7 @@ import { cacheVisitPreferredLanguage } from 'src/utilities';
 
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
 
-import { button, isActive } from './LanguageButton.module.css';
+import { button, isActive } from '../Menu/MenuItemButton/MenuItemButton.module.css';
 
 const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language }) => {
   const pageLanguage = useContext(PageLanguageContext);
