@@ -84,6 +84,12 @@ Documentation is included throughout this repository in the form of README.md fi
 
 We have selected folder-level README files instead of the alternative of a dedicated documentation folder because we think it enables points `1` and `4` more directly, especially with the support from GitHub. The aim is to make browsing the repository much more clear even if you have no context for the repository.
 
+## Optional Setup Steps
+
+If you would like to run linting and tests automatically before every commit and run npm install automatically after every branch checkout, run `npm run repo-githooks`. If you would like to remove this behaviour, run `npm run no-githooks`.
+
+To understand the data ingestion and parsing steps, please check the READMEs in the [/data folder](./data/README.md).
+
 ## Help and contact
 
 If you have any questions or suggestions, please [get in touch](https://ably.com/contact).
