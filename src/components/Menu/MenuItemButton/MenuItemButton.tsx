@@ -1,6 +1,6 @@
 import React, { FunctionComponent as FC, HTMLAttributes } from 'react';
 import cn from 'classnames';
-import { button, selected } from './MenuItemButton.module.css';
+import { button, isActive } from './MenuItemButton.module.css';
 
 type Props = {
   isSelected?: boolean;
@@ -9,7 +9,7 @@ type Props = {
 const MenuItemButton: FC<Props> = ({ isSelected = false, ...props }) => (
   <button
     className={cn(button, {
-      [selected]: isSelected,
+      [isActive]: isSelected,
     })}
     {...props}
   />
