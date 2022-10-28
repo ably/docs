@@ -66,7 +66,7 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
       )}
       <pre {...withModifiedClassname}>
         {languages ? (
-          <LocalLanguageAlternatives languages={languages} data={altData}>
+          <LocalLanguageAlternatives languages={languages} data={altData} localChangeOnly={shouldDisplayTip}>
             <Html data={data} />
           </LocalLanguageAlternatives>
         ) : (
