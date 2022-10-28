@@ -6,8 +6,9 @@ It is the third stage of the transformation from a _document type_ (e.g. Textile
 
 ## Compare
 
-1. Pre-parser - transforms plain text to plain text ready to be parsed
-2. Parser enhancements - transforms data with enhancements from `attributes` and document `path`
+1. [Pre-parser](../pre-parser/README.md) - transforms plain text to plain text ready to be parsed.
+2. [Parser enhancements](../parser-enhancements/README.md) - transforms data with enhancements from `attributes` and document `path`.
+3. [HTML Parser](../../html-parser/README.md) - for HTML manipulations that are too complex for string manipulation or the front-end.
 4. Component mapping - maps `{ data, type }` objects to React components based on `type`.
 5. React components - standardise the behaviour, presentation, layout and markup semantics of `data` from `{ data, type }` objects.
 
