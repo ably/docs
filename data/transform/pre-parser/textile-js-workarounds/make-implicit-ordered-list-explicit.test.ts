@@ -1,7 +1,7 @@
-const textile = require('textile-js');
-const { preParser } = require('..');
-const { postParser } = require('../../post-parser');
-const { makeImplicitOrderedListExplicit } = require('./make-implicit-ordered-list-explicit');
+import textile from 'textile-js';
+import { preParser } from '..';
+import { postParser } from '../../post-parser';
+import { makeImplicitOrderedListExplicit } from './make-implicit-ordered-list-explicit';
 
 describe('Ensure that implicit ordered lists (decimal-led lines) are converted to explicit Textile ordered lists', () => {
   it('Interprets ordered lists correctly', () => {

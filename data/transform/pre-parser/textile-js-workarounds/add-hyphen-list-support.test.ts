@@ -1,4 +1,4 @@
-const { addHyphenListSupport } = require('./add-hyphen-list-support');
+import { addHyphenListSupport } from './add-hyphen-list-support';
 
 describe('Add support for hyphen-led lists in textile-js', () => {
   it('Replaces hyphens followed by at least one space with asterisks followed by at least one space', () => {
