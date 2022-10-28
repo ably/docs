@@ -47,7 +47,8 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
   const options = items.map((item) => ({ label: item.content, value: item.props.language }));
   const value = options.find((option) => option.value === actualSelectedLanguage);
 
-  const onSelectChange = localChangeOnly && onSelect ? onSelect : changePageOnSelect(pageLanguage);
+  const shouldUseLocalChanges = localChangeOnly && !!onSelect;
+  const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
 
   return (
     <HorizontalMenu className="justify-end md:justify-start">
