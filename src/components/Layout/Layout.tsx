@@ -4,6 +4,7 @@ import { VersionMenuProps } from '../Menu/VersionMenu';
 import { LeftSideBar } from '../StaticQuerySidebar';
 import TopCodeMenu from '../Menu/TopCodeMenu';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
+import { Footer } from '../Footer';
 
 const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = ({
   languages,
@@ -25,6 +26,7 @@ const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = 
           {children}
         </main>
       </div>
+      <Footer />
     </GlobalLoading>
   );
 };
