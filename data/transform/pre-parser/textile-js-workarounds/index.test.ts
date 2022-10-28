@@ -1,6 +1,6 @@
-const textile = require('textile-js');
-const { compressMultipleNewlinesInLists, manuallyReplaceHTags } = require('.');
-const {
+import textile from 'textile-js';
+import { compressMultipleNewlinesInLists, manuallyReplaceHTags } from './';
+import {
   definitionList,
   expectedDefinitionList,
   nestedH1_6String,
@@ -10,8 +10,8 @@ const {
   spanWithHashResult,
   listDivExample,
   listDivParsedExample,
-} = require('./workarounds.raw.examples');
-const { preParser } = require('../');
+} from './workarounds.raw.examples';
+import { preParser } from '../';
 
 describe('Reads a definition string correctly', () => {
   it('A definition string is rendered into a valid HTML definition list from textile', () => {

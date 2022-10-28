@@ -1,4 +1,4 @@
-const definitionList = `h3(#connection-states). Available connection states
+export const definitionList = `h3(#connection-states). Available connection states
 
 A series of connection states is defined as follows:
 
@@ -19,7 +19,7 @@ A series of connection states is defined as follows:
 - failed := This state is entered if the client library encounters a failure condition that it cannot recover from. This may be a fatal connection error received from the Ably service (e.g. an attempt to connect with an incorrect API key), or some local terminal error (e.g. the token in use has expired and the library does not have any way to renew it).<br><br>In the failed state, no reconnection attempts are made automatically by the library, and clients may not publish messages. A new connection attempt can be triggered by an explicit call to "<span lang="default">@connect()@</span><span lang="ruby">@connect@</span><span lang="csharp">@Connect()@:#connect</span>":#connect on the @Connection@ object.
 `;
 
-const expectedDefinitionList = `<h3 id="connection-states">Available connection states</h3>
+export const expectedDefinitionList = `<h3 id="connection-states">Available connection states</h3>
 <p>A series of connection states is defined as follows:</p>
 <dl>
 <dt>initialized</dt>
@@ -40,18 +40,18 @@ const expectedDefinitionList = `<h3 id="connection-states">Available connection 
 <dd>This state is entered if the client library encounters a failure condition that it cannot recover from. This may be a fatal connection error received from the Ably service (e.g. an attempt to connect with an incorrect <span class="caps">API</span> key), or some local terminal error (e.g. the token in use has expired and the library does not have any way to renew it).<br /><br />In the failed state, no reconnection attempts are made automatically by the library, and clients may not publish messages. A new connection attempt can be triggered by an explicit call to <a href="#connect"><span lang="default"><code>connect()</code></span><span lang="ruby"><code>connect</code></span><span lang="csharp"><code>Connect()</code>:#connect</span></a> on the <code>Connection</code> object.</dd>
 </dl>`;
 
-const nestedH1_6String = `<div>
+export const nestedH1_6String = `<div>
     h1. Lorem ipsum
 vos populi vos dei
 calamitus calamitabandum
 </div>`;
 
-const nestedH1_6Html = `<div><h1>Lorem ipsum</h1>
+export const nestedH1_6Html = `<div><h1>Lorem ipsum</h1>
 vos populi vos dei
 calamitus calamitabandum
 </div>`;
 
-const nestedDiv = `h6(#unsubscribe).
+export const nestedDiv = `h6(#unsubscribe).
     default: unsubscribe
     csharp: Unsubscribe
 
@@ -116,16 +116,16 @@ h6(#history).
 default: history
 csharp: History`;
 
-const spanWithHashExample = `h6(#state).
+export const spanWithHashExample = `h6(#state).
 default: state
 csharp: State
 
 The current <span lang="java">"@io.ably.lib.realtime.ChannelState@":#channel-state @state@</span><span lang="csharp">"@IO.Ably.Realtime.ChannelState@":#channel-state @state@</span><span lang="ruby">"@Ably::Realtime::Channel::STATE@":#channel-state @state@</span><span lang="objc,swift">"@ARTRealtimeChannelState@":#channel-state</span><span lang="default">"@ChannelState@":#channel-state</span> of this @Channel@. See the supported "channel states":#channel-states for more information.`;
 
-const spanWithHashResult = `<h6 id="state"><span lang="default">state</span><span lang="csharp">State</span></h6>
+export const spanWithHashResult = `<h6 id="state"><span lang="default">state</span><span lang="csharp">State</span></h6>
 <p>The current <span lang="java"><a href="#channel-state"><code>io.ably.lib.realtime.ChannelState</code></a> <code>state</code></span><span lang="csharp"><a href="#channel-state"><code>IO.Ably.Realtime.ChannelState</code></a> <code>state</code></span><span lang="ruby"><a href="#channel-state"><code>Ably::Realtime::Channel::STATE</code></a> <code>state</code></span><span lang="objc,swift"><a href="#channel-state"><code>ARTRealtimeChannelState</code></a></span><span lang="default"><a href="#channel-state"><code>ChannelState</code></a></span> of this <code>Channel</code>. See the supported <a href="#channel-states">channel states</a> for more information.</p>`;
 
-const listDivExample = `<div lang="default">
+export const listDivExample = `<div lang="default">
 h4. Parameters
 
 - <div lang="jsall">callback</div> := is a function of the form @function(err)@ and is called once the channel attach succeeds or fails
@@ -134,7 +134,7 @@ h4. Parameters
 - <div lang="swift,objc">callback</div> := called once the channel becomes attached or if an error occurs
 </div><div lang="flutter"></div>`;
 
-const listDivParsedExample = `<div lang="default">
+export const listDivParsedExample = `<div lang="default">
 <p><h4>Parameters</h4></p>
 <dl>
   <dt><div lang="javascript,nodejs">callback</div></dt>
@@ -148,15 +148,3 @@ const listDivParsedExample = `<div lang="default">
 </dl>
 </div>
 <div lang="flutter"></div>`;
-
-module.exports = {
-  definitionList,
-  expectedDefinitionList,
-  nestedH1_6String,
-  nestedH1_6Html,
-  nestedDiv,
-  spanWithHashExample,
-  spanWithHashResult,
-  listDivExample,
-  listDivParsedExample,
-};
