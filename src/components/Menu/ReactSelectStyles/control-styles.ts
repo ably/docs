@@ -11,6 +11,7 @@ export const controlStyles: (
     ...customStyles,
     fontWeight: '500',
     boxShadow: 'none',
+    cursor: 'pointer',
     fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
     fontSize: '14px',
   });
