@@ -4,8 +4,4 @@
  * <p></p> tags
  * We achieve this by doing the wrapping ahead of time.
  */
-const fixLeadingHtmlTags = (content) => content.replace(/^(\*[^\s]+\*.*)$/gm, '<p>$1</p>');
-
-module.exports = {
-  fixLeadingHtmlTags,
-};
+export const fixLeadingHtmlTags: StringTransformation = (content) => content.replace(/^(\*[^\s]+\*.*)$/gm, '<p>$1</p>');

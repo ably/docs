@@ -1,5 +1,5 @@
-const { fixDuplicateQuoteLinks, fixHtmlElementsInLinks } = require('./fix-links');
-const textile = require('textile-js');
+import textile from 'textile-js';
+import { fixDuplicateQuoteLinks, fixHtmlElementsInLinks, fixLinkElementsInBrackets } from './fix-links';
 
 describe('Fixes duplicate quoted links for textile-js', () => {
   it('Correctly renders links with long gaps between quotes', () => {
@@ -25,6 +25,18 @@ describe('Fixes HTML elements in links for textile-js', () => {
       ),
     ).toBe(
       `<p><a href="lorem-ipsum-ad-loquitur">Lorem ipsum</a><span><a href="per-ardua-ad-astra">Alternative Lorem Ipsum</a></span></p>`,
+    );
+  });
+
+  it('Correctly renders links inside the  code block', () => {
+    expect(
+      textile(
+        fixLinkElementsInBrackets(
+          `subscribe(String[] "actions":#presence-action, listener("PresenceMessage":#presence-message))`,
+        ),
+      ),
+    ).toMatchInlineSnapshot(
+      `"<p>subscribe(String[] <a href=\\"#presence-action\\">actions</a>, listener(<a href=\\"#presence-message\\">PresenceMessage</a>)</p>"`,
     );
   });
 });
