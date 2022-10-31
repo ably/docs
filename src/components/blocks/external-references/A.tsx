@@ -7,8 +7,6 @@ import { HtmlComponentProps } from '../../html-component-props';
 
 import './styles.css';
 
-const onPageNav = /[#?]/;
-
 const StyledGatsbyLink = ({ to, children, ...props }: Omit<GatsbyLinkProps<Record<string, unknown>>, 'ref'>) => (
   <Link className="docs-link" to={to} {...props}>
     {children}
@@ -17,7 +15,7 @@ const StyledGatsbyLink = ({ to, children, ...props }: Omit<GatsbyLinkProps<Recor
 
 const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
   const rawHref = attribs?.href;
-  if (rawHref && /^(\/|#|https?:\/\/(?:www.)?ably.com\/docs).*/.test(rawHref) && !onPageNav.test(rawHref)) {
+  if (rawHref && /^(\/|https?:\/\/(?:www.)?ably.com\/docs).*/.test(rawHref)) {
     let href = rawHref;
     if (/^\/(?!docs\/).*/.test(rawHref)) {
       href = `/${DOCUMENTATION_NAME}${rawHref}`;
