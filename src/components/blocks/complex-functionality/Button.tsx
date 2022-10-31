@@ -1,5 +1,4 @@
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
-import '@ably/ui/core/styles.css';
 import PropTypes from 'prop-types';
 import { HtmlComponentProps } from 'src/components/html-component-props';
 
