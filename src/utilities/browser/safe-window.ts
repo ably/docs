@@ -3,6 +3,9 @@ import { identity } from 'lodash';
 export const safeWindow =
   typeof window === 'undefined'
     ? {
+        navigator: {
+          platform: '',
+        },
         location: {
           pathname: '',
           hash: '',
