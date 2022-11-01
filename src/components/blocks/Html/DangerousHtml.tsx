@@ -1,5 +1,5 @@
 import React from 'react';
-import DOMPurify from 'isomorphic-dompurify';
+import DOMPurify from 'dompurify';
 
 export const DangerousHtml = ({ data }: { data: string }) => (
   <div

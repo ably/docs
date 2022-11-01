@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react';
-import DOMPurify from 'isomorphic-dompurify';
+import DOMPurify from 'dompurify';
 // @ts-ignore
 import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/src/core/utils/syntax-highlighter';
 // @ts-ignore
@@ -56,12 +56,14 @@ export const MultilineCodeContent = ({
       ref={preRef}
       style={{ whiteSpace: 'pre-wrap' }}
       dangerouslySetInnerHTML={{
-        __html: DOMPurify.sanitize(highlightedContent, {
-          // The SVG and Math tags have been used in the past as attack vectors for mXSS,
-          // but if we really need them should be safe enough to enable.
-          // This is probably too cautious but we have no need for them at time of writing, so forbidding them is free.
-          FORBID_TAGS: ['svg', 'math'],
-        }),
+        __html: DOMPurify.sanitize
+          ? DOMPurify.sanitize(highlightedContent, {
+              // The SVG and Math tags have been used in the past as attack vectors for mXSS,
+              // but if we really need them should be safe enough to enable.
+              // This is probably too cautious but we have no need for them at time of writing, so forbidding them is free.
+              FORBID_TAGS: ['svg', 'math'],
+            })
+          : highlightedContent,
       }}
     />
   );
