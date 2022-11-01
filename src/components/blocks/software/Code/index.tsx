@@ -32,7 +32,6 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
 
   const isString = some((child) => child.type === HtmlDataTypes.text, data);
   const hasRenderableLanguages = isString && attribs && attribs.lang;
-  const hasMultilineText = isString && some((child) => multilineRegex.test(child.data as string), data);
 
   const dataContainsKey = attribs?.[`data-contains-${API_KEY_DATA_ATTRIBUTE}`] === 'true';
   const dataContainsRandomChannelName = attribs?.[`data-contains-${RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE}`] === 'true';
@@ -46,6 +45,7 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
     [attribs?.lang],
   );
 
+  const hasMultilineText = isString && multilineRegex.test(content);
   /**
    * Refer to Decision Record:
    * https://ably.atlassian.net/wiki/spaces/ENG/pages/2070053031/DR9+API+Keys+vs+tokens+vs+authUrls+in+docs+code+snippets#Recommendation
