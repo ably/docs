@@ -25,7 +25,7 @@ const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, exten
 const NO_LANGUAGE = 'none';
 
 const Template = ({
-  location: { search },
+  location: { search, pathname, hash },
   pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
   data: { document, versions },
 }: AblyTemplateData) => {
@@ -66,10 +66,21 @@ const Template = ({
   useEffect(() => {
     if (language === DEFAULT_LANGUAGE || !filteredLanguages.includes(language)) {
       const preferredLanguage = safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY);
+
+      if (filteredLanguages.length <= 1) {
+        if (language === DEFAULT_LANGUAGE) {
+          return;
+        }
+        const href = `${pathname}${hash}`;
+        navigate(href);
+        return;
+      }
+
       if (preferredLanguage) {
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(preferredLanguage, language);
         const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, preferredLanguage);
         navigate(href);
+        return;
       }
     } else {
       safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
