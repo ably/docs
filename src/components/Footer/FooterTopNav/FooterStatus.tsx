@@ -1,11 +1,8 @@
-import Logo from '@ably/ui/core/Logo';
 import FeaturedLink from '@ably/ui/core/FeaturedLink';
 import React from 'react';
-import { DOCUMENTATION_PATH } from '../../../data/transform/constants';
 
-export const FooterLogoAndStatus = () => (
+export const FooterStatus = () => (
   <>
-    <Logo dataId="footer-logo" href={DOCUMENTATION_PATH} />
     <div className="flex flex-row mt-24 -mb-6">
       <iframe className="w-24 h-24 mt-4" src="https://status.ably.com/embed/icon"></iframe>
       <span className="pl-8 font-medium">System status</span>
