@@ -17,6 +17,7 @@ import { getRandomChannelName } from './get-random-channel-name';
 
 import '../styles.css';
 import { NestedHtmlComponentProps } from 'src/components/html-component-props';
+import { extractCodeStringsFromContent } from './extract-code-strings-from-content';
 
 const API_KEY_LENGTH = 5;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
@@ -29,21 +30,20 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
     value: DEFAULT_API_KEY_MESSAGE,
   });
 
-  const isString = every((child) => child.type === HtmlDataTypes.text, data);
+  const isString = some((child) => child.type === HtmlDataTypes.text, data);
   const hasRenderableLanguages = isString && attribs && attribs.lang;
   const hasMultilineText = isString && some((child) => multilineRegex.test(child.data as string), data);
 
   const dataContainsKey = attribs?.[`data-contains-${API_KEY_DATA_ATTRIBUTE}`] === 'true';
   const dataContainsRandomChannelName = attribs?.[`data-contains-${RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE}`] === 'true';
 
-  const emptyContentValue = '';
-  const content = data
-    .map((child) => child.data as string | null)
-    .reduce((acc, curr) => (acc as string).concat(curr ?? ''), emptyContentValue) as string;
+  const content = extractCodeStringsFromContent(data)
+    .join('')
+    .replace(/<\/?code>/g, '@'); // Don't nest <code> inside <code> components; it's probably textile-js mis-interpreting Objective-C code.
   const contentWithRandomChannelName = useMemo(
     () =>
       dataContainsRandomChannelName ? content.replace(/{{RANDOM_CHANNEL_NAME}}/g, getRandomChannelName()) : content,
-    [],
+    [attribs?.lang],
   );
 
   /**
