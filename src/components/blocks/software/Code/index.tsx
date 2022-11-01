@@ -15,7 +15,6 @@ import CodeCopyButton from './CodeCopyButton';
 import { MultilineCodeContent } from './MultilineCodeContent';
 import { getRandomChannelName } from './get-random-channel-name';
 
-import '@ably/ui/core/styles.css';
 import '../styles.css';
 import { NestedHtmlComponentProps } from 'src/components/html-component-props';
 
