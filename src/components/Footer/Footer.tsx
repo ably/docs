@@ -37,7 +37,7 @@ export const Footer = () => {
 
   return (
     <>
-      <footer className="bg-white antialiased" data-id="footer">
+      <footer className="bg-white border-t border-mid-grey antialiased" data-id="footer">
         <FooterTopNav ablySocialLinks={ablySocialLinks} menuDataItems={menuDataItems} />
         <FooterBottomNav bottomLinks={bottomLinks} />
       </footer>
