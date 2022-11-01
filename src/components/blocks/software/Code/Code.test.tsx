@@ -25,11 +25,6 @@ const shProps = {
 };
 
 describe('<Code />', () => {
-  it('Renders Code elements with language', () => {
-    const { container } = render(<Code {...rubyProps} />);
-    expect(container).toMatchSnapshot();
-  });
-
   it('Renders Code elements without language', () => {
     const { container } = render(<Code {...shProps} attribs={{ lang: undefined }} />);
     expect(container.firstChild?.firstChild).toBeVisible();
