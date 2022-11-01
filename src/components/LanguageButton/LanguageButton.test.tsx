@@ -14,7 +14,7 @@ describe(`<LanguageButton />`, () => {
       <button
         class="button"
       >
-        JS
+        JavaScript
       </button>
     `);
   });
@@ -28,7 +28,7 @@ describe(`<LanguageButton />`, () => {
       <button
         class="button isActive"
       >
-        JS
+        JavaScript
       </button>
     `);
   });
