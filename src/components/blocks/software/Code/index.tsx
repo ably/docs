@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { every, some } from 'lodash/fp';
+import { some } from 'lodash/fp';
 
 import Html from 'src/components/blocks/Html';
 import { languageSyntaxHighlighterNames } from 'src/maps/language';
