@@ -6,6 +6,7 @@ import { addItalicisedText } from './add-italicised-text';
 import { fixLeadingHtmlTags } from './fix-leading-html-tags';
 import { addBoldText } from './add-bold-text';
 import { makeImplicitOrderedListExplicit } from './make-implicit-ordered-list-explicit';
+import { fixImgTagsWithNewlines } from './fix-html-tags-with-newlines';
 
 // textile-js, unlike RedCloth, cannot parse multiple new lines between list items
 // each list item will instead be wrapped in its own list collection
@@ -23,6 +24,7 @@ export const textileJSCompatibility = compose(
   compressMultipleNewlinesInLists,
   makeImplicitOrderedListExplicit,
   manuallyReplaceHTags,
+  fixImgTagsWithNewlines,
   fixDuplicateQuoteLinks,
   fixHtmlElementsInLinks,
   fixLinkElementsInBrackets,
