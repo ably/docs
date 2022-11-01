@@ -32,7 +32,7 @@ describe('<Code />', () => {
 
   it('Renders Code elements without language', () => {
     const { container } = render(<Code {...shProps} attribs={{ lang: undefined }} />);
-    expect(container.firstChild?.firstChild).toHaveClass('language-plaintext');
+    expect(container.firstChild?.firstChild).toBeVisible();
   });
 
   it('Updates the codeblock when language is switched', () => {
