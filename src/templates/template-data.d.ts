@@ -21,6 +21,8 @@ export type AblyDocumentData = {
 
 export type Location = {
   search: string;
+  pathname: string;
+  hash: string;
 };
 
 export type AblyPageContext = {
