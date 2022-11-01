@@ -9,7 +9,7 @@ export const FooterMenu = ({ items, label }: { items: FooterMenuItemType[]; labe
       <ul>
         {items
           ? items.map((item: FooterMenuItemType) => (
-              <li className="p-menu-row-snug" key={item.label}>
+              <li className="p-menu-row-snug pb-8" key={item.label}>
                 <a href={item.link} className="ui-footer-menu-row-link">
                   {item.label}
                 </a>
