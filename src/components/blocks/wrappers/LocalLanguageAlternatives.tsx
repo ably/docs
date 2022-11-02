@@ -5,26 +5,26 @@ import Html from '../Html';
 import { LanguageNavigation } from '../../Menu/LanguageNavigation';
 import { LanguageButton, ReactSelectOption } from 'src/components';
 import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
-import { HtmlComponentProps, ValidReactElement } from 'src/components/html-component-props';
+import { HtmlComponentProps, HtmlComponentPropsData, ValidReactElement } from 'src/components/html-component-props';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import { SingleValue } from 'react-select';
 
 const LocalLanguageAlternatives = ({
   languages,
   data,
+  initialData,
   localChangeOnly,
-  children,
 }: {
   languages: string[];
   data?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
+  initialData: HtmlComponentPropsData;
   localChangeOnly: boolean;
-  children: React.ReactNode;
 }) => {
-  const [selected, setSelected] = useState(children);
+  const [selected, setSelected] = useState(initialData);
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
 
   const setLocalSelected = (value: string) => {
-    setSelected(<Html data={data ? data[value] : ''} />);
+    setSelected(data ? data[value] : '');
     setSelectedLanguage(value);
   };
 
@@ -70,7 +70,7 @@ const LocalLanguageAlternatives = ({
         selectedLanguage={selectedLanguage}
         onSelect={onSelect}
       />
-      {selected}
+      <Html data={selected} />
     </>
   );
 };
