@@ -1,6 +1,7 @@
-import React, { useState, MouseEvent } from 'react';
-import { HitType } from 'src/hooks';
+import React, { useState } from 'react';
+import cn from 'classnames';
 import htmr from 'htmr';
+import { HitType, useKeyPress } from 'src/hooks';
 
 import { container, snapshot } from './SuggestionBox.module.css';
 
@@ -10,20 +11,37 @@ type Props = {
 };
 
 export const SuggestionBox = ({ results, isActive }: Props) => {
-  const [capture, setCapture] = useState<{ link: string; title: string } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<(HitType & { index: number }) | null>(null);
 
-  const handleOptionHover = (event: MouseEvent<HTMLAnchorElement>) => {
-    const link = event.currentTarget.getAttribute('data-capture') as string;
-    const title = event.currentTarget.getAttribute('data-title') as string;
-    if (capture?.link === link) {
+  const handleOptionHover = (hit: HitType, index: number) => {
+    if (selectedItem?.url === hit.url) {
       return;
     }
-    setCapture({ link, title });
+
+    setSelectedItem({ ...hit, index });
   };
 
-  const handleOptionHoverOut = () => {
-    setCapture(null);
+  const handleResultItemSelect = ({ key }: KeyboardEvent) => {
+    if (key === 'ArrowDown') {
+      const index = selectedItem !== null ? selectedItem.index + 1 : 0;
+      console.log(index);
+      const nextItem = results?.[index];
+      if (nextItem) {
+        handleOptionHover(nextItem, index);
+      }
+    }
+
+    if (key === 'ArrowUp') {
+      const index = selectedItem !== null ? selectedItem.index - 1 : -1;
+
+      const previousItem = results?.[index];
+      if (previousItem) {
+        handleOptionHover(previousItem, index);
+      }
+    }
   };
+
+  useKeyPress(['ArrowDown', 'ArrowUp'], handleResultItemSelect);
 
   if (!isActive || !results || results.length === 0) {
     return null;
@@ -34,25 +52,28 @@ export const SuggestionBox = ({ results, isActive }: Props) => {
       <div className="col-span-12 md:col-span-6 md:border-r border-mid-grey md:pr-16 py-16">
         <div className="font-light text-dark-grey uppercase text-menu3 px-16">Results from docs</div>
         {results &&
-          results.map(({ title, highlight, url, id, images: { capture } }) => (
-            <a
-              key={id}
-              href={url}
-              className="block p-16 hover:bg-light-grey rounded-lg break-all"
-              data-capture={capture}
-              data-title={title}
-              onMouseOver={handleOptionHover}
-              onMouseLeave={handleOptionHoverOut}
-              role="link"
-            >
-              <h4 className="text-menu2 mb-6 font-medium">{title}</h4>
-              <div className="text-menu3 font-light text-charcoal-grey">{htmr(highlight)}</div>
-              {url && <div className="text-dark-grey font-light text-menu3 mt-8">{new URL(url).hostname}</div>}
-            </a>
-          ))}
+          results.map((hit, hitIndex) => {
+            const { title, highlight, url, id } = hit;
+            return (
+              <a
+                key={id}
+                href={url}
+                className={cn('block p-16 hover:bg-light-grey rounded-lg break-all', {
+                  'bg-light-grey': hitIndex === selectedItem?.index,
+                })}
+                onMouseOver={() => handleOptionHover(hit, hitIndex)}
+                onMouseLeave={() => setSelectedItem(null)}
+                role="link"
+              >
+                <h4 className="text-menu2 mb-6 font-medium">{title}</h4>
+                <div className="text-menu3 font-light text-charcoal-grey">{htmr(highlight)}</div>
+                {url && <div className="text-dark-grey font-light text-menu3 mt-8">{new URL(url).hostname}</div>}
+              </a>
+            );
+          })}
       </div>
       <div className="hidden md:flex relative col-span-4 py-16 px-16 justify-center">
-        {capture && <img className={snapshot} src={capture.link} alt={capture.title} />}
+        {selectedItem && <img className={snapshot} src={selectedItem.images.capture} alt={selectedItem.title} />}
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
 import React, { useReducer, useRef } from 'react';
+
 import { DropdownButtonAndMenu } from './Dropdown/Button/DropdownButton';
 import { dropdownData } from './Dropdown/Button';
 import { initialState, mainNavReducer } from './main-nav-reducer';
-import { useFunctionOnOutsideClick } from '../../../hooks/useFunctionOnOutsideClick';
+import { useOnClickOutside } from 'src/hooks';
 import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo';
 import { DisplayMode, SearchBar } from './SearchBar';
 import { TopMainNavUserMenu } from './TopMainNavUser';
@@ -17,7 +18,7 @@ export const TopMainNav = () => {
   const [topMainNavState, dispatch] = useReducer(mainNavReducer, initialState);
   const menuItems: (keyof typeof dropdownData)[] = ['API References', 'Resources'];
   const ref = useRef(null);
-  useFunctionOnOutsideClick(() => dispatch({ type: 'deactivateAll' }), ref);
+  useOnClickOutside(() => dispatch({ type: 'deactivateAll' }), ref);
   return (
     <div ref={ref} className="fixed bg-white h-64 z-50 flex w-full border-b border-mid-grey" id="top-main-nav">
       <HorizontalMenu variant={HorizontalMenuVariant.light}>
