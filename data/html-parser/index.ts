@@ -44,9 +44,6 @@ export const cheerioNodeParser = (_i: number, node: cheerio.Element): ParsedNode
     pickAll(['type', 'name', 'data', 'attribs', 'children'], node),
   );
   if (!type || type === HtmlDataTypes.text) {
-    if (data.includes(`const subscriber = new Subscriber`)) {
-      console.log('javascript:', type, name, data, attribs, children);
-    }
     return {
       data,
       type: HtmlDataTypes.text,
