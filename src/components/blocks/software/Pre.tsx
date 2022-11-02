@@ -39,7 +39,7 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
             contentWithObfuscatedKey={stringToRender}
             contentWithKey={stringToRender}
             content={stringToRender}
-            displayLanguage={'plaintext'}
+            language={'plaintext'}
           />
         </div>
       </pre>
