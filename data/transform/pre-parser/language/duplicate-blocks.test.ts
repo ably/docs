@@ -5,7 +5,7 @@ const langBlockExpected = `h1[javascript](exampleClass). Some content`;
 
 describe('Given the data for a single language block, constructs a valid output', () => {
   it('Creates a valid output block', () => {
-    expect(duplicateLanguageBlock('h1', ['exampleClass'], 'Some content')('javascript')).toEqual(langBlockExpected);
+    expect(duplicateLanguageBlock('h1', 'exampleClass', 'Some content')('javascript')).toEqual(langBlockExpected);
   });
 });
 

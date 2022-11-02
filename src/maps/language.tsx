@@ -11,6 +11,7 @@ type LanguageSyntaxHighlighterNames = {
 const languageLabels: LanguageLabels = {
   javascript: 'JavaScript',
   java: 'Java',
+  kotlin: 'Kotlin',
   ruby: 'Ruby',
   python: 'Python',
   php: 'PHP',

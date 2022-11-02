@@ -1,6 +1,6 @@
-const cheerio = require('cheerio');
-const { duplicateLangAttributes } = require('./duplicate-lang-attributes');
-const { DOCUMENTATION_PATH } = require('../transform/constants');
+import cheerio from 'cheerio';
+import { duplicateLangAttributes } from './duplicate-lang-attributes';
+import { DOCUMENTATION_PATH } from '../transform/constants';
 
 const content = `<div lang='javascript,csharp,objc'>Content</div>`;
 
@@ -13,7 +13,7 @@ const nestedSpanContent = `<div lang="nodejs">
 
 describe('Duplicate language blocks with commas', () => {
   it('Duplicates language blocks with commas', () => {
-    const loadedDom = cheerio.load(content, null);
+    const loadedDom = cheerio.load(content);
     duplicateLangAttributes(loadedDom);
     expect(loadedDom.html().replace(/\s+/g, '')).toEqual(
       `<html><head></head><body>
@@ -25,7 +25,7 @@ describe('Duplicate language blocks with commas', () => {
   });
 
   it('Duplicates nested span language blocks with commas', () => {
-    const loadedDom = cheerio.load(nestedSpanContent, null);
+    const loadedDom = cheerio.load(nestedSpanContent);
     duplicateLangAttributes(loadedDom);
     expect(loadedDom.html().replace(/\s+/g, '')).toEqual(
       `<html><head></head><body><div lang="nodejs">
