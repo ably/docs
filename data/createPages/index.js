@@ -106,6 +106,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
       edge.node.parentSlug,
       edge.node.version,
     );
+
     const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
 
     const pagePath = `${DOCUMENTATION_PATH}${edge.node.slug}`;

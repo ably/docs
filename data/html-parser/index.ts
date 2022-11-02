@@ -51,7 +51,6 @@ export const cheerioNodeParser = (_i: number, node: cheerio.Element): ParsedNode
     };
   }
   const nextItems: ParsedNode[] = children.map((data, i) => cheerioNodeParser(i, data));
-
   return {
     data: nextItems,
     type: HtmlDataTypes.tag,
