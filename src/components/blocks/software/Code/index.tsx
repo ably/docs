@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { every, some } from 'lodash/fp';
+import { some } from 'lodash/fp';
 
 import Html from 'src/components/blocks/Html';
 import { languageSyntaxHighlighterNames } from 'src/maps/language';
@@ -15,9 +15,9 @@ import CodeCopyButton from './CodeCopyButton';
 import { MultilineCodeContent } from './MultilineCodeContent';
 import { getRandomChannelName } from './get-random-channel-name';
 
-import '@ably/ui/core/styles.css';
 import '../styles.css';
 import { NestedHtmlComponentProps } from 'src/components/html-component-props';
+import { extractCodeStringsFromContent } from './extract-code-strings-from-content';
 
 const API_KEY_LENGTH = 5;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
@@ -30,23 +30,22 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
     value: DEFAULT_API_KEY_MESSAGE,
   });
 
-  const isString = every((child) => child.type === HtmlDataTypes.text, data);
+  const isString = some((child) => child.type === HtmlDataTypes.text, data);
   const hasRenderableLanguages = isString && attribs && attribs.lang;
-  const hasMultilineText = isString && some((child) => multilineRegex.test(child.data as string), data);
 
   const dataContainsKey = attribs?.[`data-contains-${API_KEY_DATA_ATTRIBUTE}`] === 'true';
   const dataContainsRandomChannelName = attribs?.[`data-contains-${RANDOM_CHANNEL_NAME_DATA_ATTRIBUTE}`] === 'true';
 
-  const emptyContentValue = '';
-  const content = data
-    .map((child) => child.data as string | null)
-    .reduce((acc, curr) => (acc as string).concat(curr ?? ''), emptyContentValue) as string;
+  const content = extractCodeStringsFromContent(data)
+    .join('')
+    .replace(/<\/?code>/g, '@'); // Don't nest <code> inside <code> components; it's probably textile-js mis-interpreting Objective-C code.
   const contentWithRandomChannelName = useMemo(
     () =>
       dataContainsRandomChannelName ? content.replace(/{{RANDOM_CHANNEL_NAME}}/g, getRandomChannelName()) : content,
-    [],
+    [attribs?.lang],
   );
 
+  const hasMultilineText = isString && multilineRegex.test(content);
   /**
    * Refer to Decision Record:
    * https://ably.atlassian.net/wiki/spaces/ENG/pages/2070053031/DR9+API+Keys+vs+tokens+vs+authUrls+in+docs+code+snippets#Recommendation
