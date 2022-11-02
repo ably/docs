@@ -43,7 +43,7 @@ const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<Reac
 const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect }: LanguageNavigationProps) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
-  const actualSelectedLanguage = selectedLanguage ?? selectedPageLanguage;
+  const actualSelectedLanguage = localChangeOnly ? selectedLanguage : selectedPageLanguage;
   const options = items.map((item) => ({ label: item.content, value: item.props.language }));
   const value = options.find((option) => option.value === actualSelectedLanguage);
 
