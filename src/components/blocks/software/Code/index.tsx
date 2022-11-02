@@ -88,7 +88,7 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
                 content={contentWithRandomChannelName}
                 contentWithKey={contentWithKey}
                 contentWithObfuscatedKey={contentWithObfuscatedKey}
-                displayLanguage={displayLanguage.key}
+                language={displayLanguage.key}
               />
             )}
           </UserContext.Consumer>
