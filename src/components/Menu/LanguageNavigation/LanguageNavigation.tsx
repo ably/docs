@@ -51,13 +51,13 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
   const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
 
   return (
-    <HorizontalMenu className="justify-end md:justify-start">
+    <HorizontalMenu className="justify-end xl:justify-start h-48">
       {items.map(({ Component, props, content }, index) => (
         <Component {...props} key={index}>
           {content}
         </Component>
       ))}
-      <div className={`${dropdownContainer} flex justify-end md:hidden py-12 pl-16 pr-40`}>
+      <div className={`${dropdownContainer} flex justify-end xl:hidden py-12 pl-16 pr-40`}>
         <Select options={options} value={value} isSearchable={false} onChange={onSelectChange} />
       </div>
     </HorizontalMenu>
