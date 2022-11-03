@@ -55,7 +55,7 @@ export const RightSidebar = ({ menuData, languages, className }: RightSidebarPro
 
   const highlightedMenuItem = useGetCurrentHeader(flatTableOfContents);
 
-  if (menuLength === 0) {
+  if (menuLength <= 1) {
     return null;
   }
 
