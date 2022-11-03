@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { CardProps } from '../../HomepageContent';
 import { CardContent } from './CardContent';
 import { CardHeader } from './CardHeader';
-import { CardLink } from './CardLink';
+import FeaturedLink from '@ably/ui/core/FeaturedLink';
 
 const navigateExternal = (link: string) => () => (window.location.href = link);
 
@@ -24,7 +24,9 @@ export const BodySectionCard = ({ title, content, link, flag, callToAction }: Ca
     <CardHeader title={title} flag={flag} />
     <CardContent content={content} />
     <footer className="mt-auto">
-      <CardLink link={link} callToAction={callToAction} />
+      <FeaturedLink url={link} textSize="text-p2">
+        <span className="text-gui-default font-medium">{callToAction}</span>
+      </FeaturedLink>
     </footer>
   </Container>
 );
