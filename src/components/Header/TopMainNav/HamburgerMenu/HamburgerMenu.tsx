@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import cn from 'classnames';
 
 import { EXPAND_MENU } from 'src/components';
 import { SessionState } from '../../../../contexts/user-context';
