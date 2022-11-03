@@ -18,14 +18,19 @@ describe('<SearchBar />', () => {
 
   it('should open search box on typing in search input and close on click outside', async () => {
     const user = userEvent.setup();
-    render(<SearchBar displayMode={DisplayMode.FULL_SCREEN} />);
+    render(
+      <div>
+        <SearchBar displayMode={DisplayMode.FULL_SCREEN} />
+        <div>click me</div>
+      </div>,
+    );
 
     const searchInput = screen.getByPlaceholderText('Search');
 
     await user.type(searchInput, 'test');
     expect(screen.getByLabelText('suggestions')).toBeInTheDocument();
 
-    fireEvent.blur(searchInput);
+    await user.click(screen.getByText('click me'));
     expect(screen.queryByLabelText('suggestions')).not.toBeInTheDocument();
   });
 });
