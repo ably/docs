@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import cn from 'classnames';
 import htmr from 'htmr';
+import cn from 'classnames';
+import clamp from 'lodash/clamp';
+
 import { HitType, useKeyPress } from 'src/hooks';
 
-import { container, snapshot } from './SuggestionBox.module.css';
+import { container, snapshot, hitItem, titleStyle } from './SuggestionBox.module.css';
 
 type Props = {
   results: HitType[] | null;
@@ -11,39 +13,44 @@ type Props = {
 };
 
 export const SuggestionBox = ({ results, isActive }: Props) => {
+  const totalResults = results?.length ?? 0;
   const [selectedItem, setSelectedItem] = useState<(HitType & { index: number }) | null>(null);
 
+  const handleSelectHit = (hit: HitType & { index: number }) => {
+    setSelectedItem(hit);
+    document.getElementById(`suggestion-${hit.id}`)?.focus();
+  };
+
   const handleOptionHover = (hit: HitType, index: number) => {
-    if (selectedItem?.url === hit.url) {
+    if (selectedItem?.id === hit.id) {
       return;
     }
-
     setSelectedItem({ ...hit, index });
   };
 
   const handleResultItemSelect = ({ key }: KeyboardEvent) => {
     if (key === 'ArrowDown') {
-      const index = selectedItem !== null ? selectedItem.index + 1 : 0;
-      console.log(index);
+      const index = clamp(selectedItem !== null ? selectedItem.index + 1 : 0, 0, totalResults);
       const nextItem = results?.[index];
+
       if (nextItem) {
-        handleOptionHover(nextItem, index);
+        handleSelectHit({ ...nextItem, index });
       }
     }
 
     if (key === 'ArrowUp') {
-      const index = selectedItem !== null ? selectedItem.index - 1 : -1;
-
+      const index = clamp(selectedItem !== null ? selectedItem.index - 1 : totalResults - 1, 0, totalResults);
       const previousItem = results?.[index];
+
       if (previousItem) {
-        handleOptionHover(previousItem, index);
+        handleSelectHit({ ...previousItem, index });
       }
     }
   };
 
   useKeyPress(['ArrowDown', 'ArrowUp'], handleResultItemSelect);
 
-  if (!isActive || !results || results.length === 0) {
+  if (!isActive || !results || totalResults === 0) {
     return null;
   }
 
@@ -52,20 +59,23 @@ export const SuggestionBox = ({ results, isActive }: Props) => {
       <div className="col-span-12 md:col-span-6 md:border-r border-mid-grey md:pr-16 py-16">
         <div className="font-light text-dark-grey uppercase text-menu3 px-16">Results from docs</div>
         {results &&
-          results.map((hit, hitIndex) => {
+          results.map((hit, index) => {
             const { title, highlight, url, id } = hit;
             return (
               <a
+                id={`suggestion-${id}`}
                 key={id}
                 href={url}
-                className={cn('block p-16 hover:bg-light-grey rounded-lg break-all', {
-                  'bg-light-grey': hitIndex === selectedItem?.index,
-                })}
-                onMouseOver={() => handleOptionHover(hit, hitIndex)}
+                tabIndex={index}
+                className={cn(
+                  'block p-16 hover:bg-light-grey focus:bg-light-grey focus:outline-none rounded-lg break-all',
+                  hitItem,
+                )}
+                onMouseOver={() => handleOptionHover(hit, index)}
                 onMouseLeave={() => setSelectedItem(null)}
                 role="link"
               >
-                <h4 className="text-menu2 mb-6 font-medium">{title}</h4>
+                <h4 className={cn('text-menu2 mb-6 font-medium', titleStyle)}>{title}</h4>
                 <div className="text-menu3 font-light text-charcoal-grey">{htmr(highlight)}</div>
                 {url && <div className="text-dark-grey font-light text-menu3 mt-8">{new URL(url).hostname}</div>}
               </a>
