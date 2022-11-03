@@ -18,7 +18,7 @@ const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.menu, classN
   <menu
     role="menu"
     className={cn(
-      'flex overflow-visible m-0',
+      'flex overflow-visible  md:overflow-x-auto m-0',
       {
         'border-b border-charcoal-grey relative p-0': variant === HorizontalMenuVariant.menu,
         [end]: variant === HorizontalMenuVariant.end,
