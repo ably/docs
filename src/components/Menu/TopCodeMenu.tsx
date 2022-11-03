@@ -8,7 +8,7 @@ import VersionMenu, { VersionMenuProps } from './VersionMenu';
 const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionData: VersionMenuProps }) => {
   const pageLanguage = useContext(PageLanguageContext);
   const showVersionMenu = versionData && versionData.versions.length > 0;
-  const showLanguageSelector = languages && languages.length > 0;
+  const showLanguageSelector = languages.length > 0;
   const showCodeMenu = showLanguageSelector || showVersionMenu;
   const showDefaultLink = pageLanguage !== DEFAULT_LANGUAGE;
 
