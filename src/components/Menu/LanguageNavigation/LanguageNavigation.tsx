@@ -4,6 +4,7 @@ import {
   createLanguageHrefFromDefaults,
   getLanguageDefaults,
   HorizontalMenu,
+  HorizontalMenuVariant,
   ReactSelectOption,
   Select,
 } from 'src/components';
@@ -51,7 +52,7 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
   const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
 
   return (
-    <HorizontalMenu className="justify-end md:justify-start h-48 mr-48">
+    <HorizontalMenu className="justify-end md:justify-start h-48 mr-48" variant={HorizontalMenuVariant.scrollX}>
       {items.map(({ Component, props, content }, index) => (
         <Component {...props} key={index}>
           {content}
