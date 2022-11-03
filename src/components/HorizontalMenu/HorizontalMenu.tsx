@@ -1,11 +1,12 @@
 import React from 'react';
 import cn from 'classnames';
-import { end, light } from './HorizontalMenu.module.css';
+import { end, light, scrollX } from './HorizontalMenu.module.css';
 
 export enum HorizontalMenuVariant {
   menu = 'menu',
   light = 'light',
   end = 'end',
+  scrollX = 'scrollX',
 }
 
 interface Props {
@@ -18,11 +19,12 @@ const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.menu, classN
   <menu
     role="menu"
     className={cn(
-      'flex overflow-visible  md:overflow-x-auto m-0',
+      'flex overflow-visible   m-0',
       {
         'border-b border-charcoal-grey relative p-0': variant === HorizontalMenuVariant.menu,
         [end]: variant === HorizontalMenuVariant.end,
         [light]: variant === HorizontalMenuVariant.light,
+        [scrollX]: variant === HorizontalMenuVariant.scrollX,
       },
       className,
     )}
