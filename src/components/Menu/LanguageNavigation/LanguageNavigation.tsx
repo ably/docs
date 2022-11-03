@@ -4,6 +4,7 @@ import {
   createLanguageHrefFromDefaults,
   getLanguageDefaults,
   HorizontalMenu,
+  HorizontalMenuVariant,
   ReactSelectOption,
   Select,
 } from 'src/components';
@@ -43,7 +44,7 @@ const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<Reac
 const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect }: LanguageNavigationProps) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
-  const actualSelectedLanguage = selectedLanguage ?? selectedPageLanguage;
+  const actualSelectedLanguage = localChangeOnly ? selectedLanguage : selectedPageLanguage;
   const options = items.map((item) => ({ label: item.content, value: item.props.language }));
   const value = options.find((option) => option.value === actualSelectedLanguage);
 
@@ -51,7 +52,7 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
   const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
 
   return (
-    <HorizontalMenu className="justify-end md:justify-start">
+    <HorizontalMenu className="justify-end md:justify-start h-48 mr-48" variant={HorizontalMenuVariant.scrollX}>
       {items.map(({ Component, props, content }, index) => (
         <Component {...props} key={index}>
           {content}

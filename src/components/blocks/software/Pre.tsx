@@ -3,7 +3,7 @@ import cn from 'classnames';
 import Icon from '@ably/ui/core/Icon';
 import Html from '../Html';
 import { PageLanguageContext } from 'src/contexts';
-import languageLabels, { languageSyntaxHighlighterNames } from 'src/maps/language';
+import languageLabels from 'src/maps/language';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import { HtmlComponentProps, ValidReactElement } from '../../html-component-props';
@@ -39,7 +39,7 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
             contentWithObfuscatedKey={stringToRender}
             contentWithKey={stringToRender}
             content={stringToRender}
-            displayLanguage={'plaintext'}
+            language={'plaintext'}
           />
         </div>
       </pre>
@@ -66,9 +66,12 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
       )}
       <pre {...withModifiedClassname}>
         {languages ? (
-          <LocalLanguageAlternatives languages={languages} data={altData} localChangeOnly={shouldDisplayTip}>
-            <Html data={data} />
-          </LocalLanguageAlternatives>
+          <LocalLanguageAlternatives
+            languages={languages}
+            data={altData}
+            initialData={data}
+            localChangeOnly={shouldDisplayTip}
+          />
         ) : (
           <Html data={data} />
         )}

@@ -1,8 +1,13 @@
-import React, { useLayoutEffect, useRef } from 'react';
-import Prism from 'prismjs';
-import cn from 'classnames';
+import React, { useMemo, useRef } from 'react';
+import DOMPurify from 'dompurify';
+// @ts-ignore
+import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/src/core/utils/syntax-highlighter';
+// @ts-ignore
+import languagesRegistry from '@ably/ui/src/core/utils/syntax-highlighter-registry';
 
-import './prismjs-overwrite.css';
+import '@ably/ui/src/core/utils/syntax-highlighter.css';
+
+registerDefaultLanguages(languagesRegistry);
 
 const chooseString = (condition: boolean, firstString: string, secondString: string) =>
   condition ? firstString : secondString;
@@ -26,14 +31,14 @@ export const MultilineCodeContent = ({
   contentWithObfuscatedKey,
   contentWithKey,
   content,
-  displayLanguage,
+  language,
 }: {
   signedIn?: boolean;
   dataContainsKey: boolean;
   contentWithObfuscatedKey: string;
   contentWithKey: string;
   content: string;
-  displayLanguage: string;
+  language: string;
 }) => {
   const preRef = useRef<HTMLPreElement>(null);
   const renderedContent = conditionallyRenderContent(
@@ -44,19 +49,22 @@ export const MultilineCodeContent = ({
     contentWithObfuscatedKey,
   );
 
-  useLayoutEffect(() => {
-    Prism.hooks.add('before-highlight', function (env) {
-      env.code = env.element.textContent || '';
-    });
-
-    if (preRef.current) {
-      Prism.highlightElement(preRef.current);
-    }
-  }, [displayLanguage]);
+  const highlightedContent = useMemo(() => highlightSnippet(language, renderedContent), [language, renderedContent]);
 
   return (
-    <code ref={preRef} className={cn(`language-${displayLanguage} p-32`)} style={{ whiteSpace: 'pre-wrap' }}>
-      {renderedContent}
-    </code>
+    <code
+      ref={preRef}
+      style={{ whiteSpace: 'pre-wrap' }}
+      dangerouslySetInnerHTML={{
+        __html: DOMPurify.sanitize
+          ? DOMPurify.sanitize(highlightedContent, {
+              // The SVG and Math tags have been used in the past as attack vectors for mXSS,
+              // but if we really need them should be safe enough to enable.
+              // This is probably too cautious but we have no need for them at time of writing, so forbidding them is free.
+              FORBID_TAGS: ['svg', 'math'],
+            })
+          : highlightedContent,
+      }}
+    />
   );
 };
