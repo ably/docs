@@ -6,7 +6,8 @@ import { SidebarDataRetrieval } from '../../../StaticQuerySidebar/SidebarDataRet
 import { DisplayMode, SearchBar } from '../SearchBar';
 import { HamburgerHasFooterContext } from './hamburger-has-footer-context';
 import { HamburgerButton } from './HamburgerButton';
-import { HamburgerDropdownContainer, HamburgerDropdownFooter, HamburgerSidebarRenderer } from './HamburgerDropdown';
+import { HamburgerDropdownFooter, HamburgerSidebarRenderer } from './HamburgerDropdown';
+import { hamburgerMenu } from './HamburgerMenu.module.css';
 
 export const HamburgerMenu = ({ sessionState }: { sessionState: SessionState }) => {
   const [hasFooter, setHasFooter] = useState<boolean>(true);
@@ -16,19 +17,24 @@ export const HamburgerMenu = ({ sessionState }: { sessionState: SessionState }) 
     <div className="flex md:hidden">
       <HamburgerButton isOpen={isOpen} setIsOpen={setIsOpen} />
       {isOpen && (
-        <HamburgerDropdownContainer id="hamburger-dropdown">
+        <div
+          id="hamburger-dropdown"
+          className="fixed top-64 w-full max-w-full flex-grow right-0 bg-white shadow-container box-border"
+        >
           <HamburgerHasFooterContext.Provider
             value={{ boolean: hasFooter, dispatchBooleanChange: (boolean) => setHasFooter(boolean) }}
           >
             <SearchBar displayMode={DisplayMode.MOBILE} />
-            <SidebarDataRetrieval
-              className="flex flex-col py-12 px-8 flex-grow flex-basis mx-24"
-              expandMenu={EXPAND_MENU.COLLAPSED}
-              Component={HamburgerSidebarRenderer}
-            />
+            <div className={hamburgerMenu}>
+              <SidebarDataRetrieval
+                className="flex flex-col py-12 px-8 flex-grow flex-basis mx-24"
+                expandMenu={EXPAND_MENU.COLLAPSED}
+                Component={HamburgerSidebarRenderer}
+              />
+            </div>
             {hasFooter && <HamburgerDropdownFooter sessionState={sessionState} />}
           </HamburgerHasFooterContext.Provider>
-        </HamburgerDropdownContainer>
+        </div>
       )}
     </div>
   );
