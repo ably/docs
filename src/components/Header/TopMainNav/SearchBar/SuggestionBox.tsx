@@ -1,5 +1,4 @@
 import React, { useState, MouseEvent } from 'react';
-import cn from 'classnames';
 import { HitType } from 'src/hooks';
 import htmr from 'htmr';
 
@@ -32,14 +31,14 @@ export const SuggestionBox = ({ results, isActive }: Props) => {
 
   return (
     <div aria-label="suggestions" className={container}>
-      <div className={`col-span-6 border-r border-mid-grey pr-16 py-16`}>
+      <div className="col-span-12 md:col-span-6 md:border-r border-mid-grey md:pr-16 py-16">
         <div className="font-light text-dark-grey uppercase text-menu3 px-16">Results from docs</div>
         {results &&
           results.map(({ title, highlight, url, id, images: { capture } }) => (
             <a
               key={id}
               href={url}
-              className="block p-16 hover:bg-light-grey rounded-lg"
+              className="block p-16 hover:bg-light-grey rounded-lg break-all"
               data-capture={capture}
               data-title={title}
               onMouseOver={handleOptionHover}
@@ -52,7 +51,7 @@ export const SuggestionBox = ({ results, isActive }: Props) => {
             </a>
           ))}
       </div>
-      <div className="relative col-span-4 py-16 pl-16 flex justify-center">
+      <div className="hidden md:flex relative col-span-4 py-16 px-16 justify-center">
         {capture && <img className={snapshot} src={capture.link} alt={capture.title} />}
       </div>
     </div>
