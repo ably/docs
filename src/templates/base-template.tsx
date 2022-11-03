@@ -52,7 +52,7 @@ const Template = ({
             .filter((language) => !IGNORED_LANGUAGES.includes(language)),
     [menuLanguages],
   );
-  const languagesExist = filteredLanguages.length > 1;
+  const languagesExist = filteredLanguages.length > 0 || (versionData && versionData.versions.length > 0);
   const elements = useMemo(
     () =>
       contentOrderedList.map(
