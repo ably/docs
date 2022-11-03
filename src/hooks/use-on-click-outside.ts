@@ -2,7 +2,7 @@ import { MutableRefObject, useEffect } from 'react';
 
 export type SideEffectfulFunction = () => void;
 
-export const useFunctionOnOutsideClick = (fn: SideEffectfulFunction, ref: MutableRefObject<HTMLDivElement | null>) => {
+export const useOnClickOutside = (fn: SideEffectfulFunction, ref: MutableRefObject<HTMLDivElement | null>) => {
   useEffect(() => {
     const outsideClickEventHandler = (event: MouseEvent) => {
       const target = event.target as Node;

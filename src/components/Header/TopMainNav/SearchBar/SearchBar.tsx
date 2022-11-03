@@ -2,7 +2,7 @@ import React, { ChangeEvent, useRef, useState } from 'react';
 import useKeyboardShortcut from 'use-keyboard-shortcut';
 import Icon from '@ably/ui/core/Icon';
 
-import { useFunctionOnOutsideClick } from 'src/hooks/useFunctionOnOutsideClick';
+import { useOnClickOutside } from 'src/hooks';
 import { useSearch } from 'src/hooks';
 import { isMac } from 'src/utilities';
 
@@ -44,7 +44,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
     repeatOnHold: false,
   });
 
-  useFunctionOnOutsideClick(handleFocusEvent, searchDisplayRef);
+  useOnClickOutside(handleFocusEvent, searchDisplayRef);
 
   return (
     <SearchDisplay ref={searchDisplayRef} onClick={focusOnSearchInput} displayMode={displayMode}>
