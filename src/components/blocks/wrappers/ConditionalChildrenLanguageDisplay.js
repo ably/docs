@@ -10,6 +10,9 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
   const toFilter = [];
   Children.forEach(children, ({ props, props: { attribs = {} } }, index) => {
     if (isIrrelevantForLanguageDisplay(props.data)) {
+      if (currentGroup?.languages) {
+        currentGroup.languages.push('');
+      }
       return;
     }
     if (attribs.lang && !IGNORED_LANGUAGES_FOR_DISPLAY.includes(attribs.lang)) {
