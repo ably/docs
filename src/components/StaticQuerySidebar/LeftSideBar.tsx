@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { ArticleTypeContext } from 'src/contexts/article-type-context';
 import { Sidebar, EXPAND_MENU } from 'src/components';
 import { SidebarDataRetrieval } from './SidebarDataRetrieval';
 
@@ -9,14 +10,19 @@ export type LeftSidebarProps = {
 };
 
 const LeftSideBar = ({ className = '', languages = false }: LeftSidebarProps) => (
-  <div className="h-screen hidden md:block md:sticky top-0 z-20 bg-extra-light-grey">
-    <SidebarDataRetrieval
-      className={className}
-      languages={languages}
-      expandMenu={EXPAND_MENU.SECTION_MATCH}
-      Component={Sidebar}
-    />
-  </div>
+  <ArticleTypeContext.Consumer>
+    {(value) => (
+      <div className="h-screen hidden md:block md:sticky top-0 z-20 bg-extra-light-grey">
+        <SidebarDataRetrieval
+          className={className}
+          languages={languages}
+          expandMenu={EXPAND_MENU.SECTION_MATCH}
+          articleType={value}
+          Component={Sidebar}
+        />
+      </div>
+    )}
+  </ArticleTypeContext.Consumer>
 );
 
 LeftSideBar.propTypes = {
