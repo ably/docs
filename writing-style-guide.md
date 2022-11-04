@@ -10,7 +10,7 @@ Some of the benefits of using this style guide are:
 * More professional feel to documentation.
 * Documentation is easier to translate to multiple languages.
 
-Technical accuracy is paramount. This overrides all else. In writing developer documentation technical writers and contributors should strive for:
+Paramount is technical accuracy, which overrides all else. In writing developer documentation technical writers and contributors should strive for:
 
 * Technical accuracy
 * Clarity
