@@ -15,7 +15,7 @@ export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData) =>
     <HamburgerSidebarItem key={sidebarItemData.label} {...sidebarItemData} />
   );
 
-export const HamburgerSidebarRenderer = ({ className, data }: SidebarProps) => {
+export const HamburgerSidebarRenderer = ({ className, data, articleType }: SidebarProps) => {
   const [expandedMenu, setExpandedMenu] = useState<ExpandedMenu>([]);
   const addToExpandedMenuPath = (menuItemID: string) => setExpandedMenu(expandedMenu.concat([menuItemID]));
   const removeFromExpandedMenuPath = (menuItemID: string) => {
@@ -29,7 +29,10 @@ export const HamburgerSidebarRenderer = ({ className, data }: SidebarProps) => {
   const addOrRemoveExpandedMenuPath = (menuItemID: string) =>
     expandedMenu.includes(menuItemID) ? removeFromExpandedMenuPath(menuItemID) : addToExpandedMenuPath(menuItemID);
 
-  const dataItemsWithAdHocReplacements = useMemo(() => addAdhocSidebarItems(removeAdhocSidebarItems(data)), [data]);
+  const dataItemsWithAdHocReplacements = useMemo(
+    () => addAdhocSidebarItems(removeAdhocSidebarItems(data), articleType),
+    [data],
+  );
 
   const dataItems = useMemo(
     () => closeAndFilterSidebarItems(dataItemsWithAdHocReplacements, expandedMenu),

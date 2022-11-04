@@ -14,7 +14,7 @@ export const SidebarDataRetrieval = ({
   articleType,
   Component,
 }: LeftSidebarProps & {
-  articleType?: ArticleType;
+  articleType: ArticleType;
   expandMenu: EXPAND_MENU;
   Component: React.FunctionComponent<SidebarProps>;
 }) => {
@@ -71,13 +71,19 @@ export const SidebarDataRetrieval = ({
   `);
   let sidebarData;
   if (data.LeftSidebar || data.ApiLeftSidebar) {
-    if (articleType === ARTICLE_TYPES.apiReference) {
-      sidebarData = sidebarDataFromPageFurniture(data.ApiLeftSidebar.items);
-    } else {
-      sidebarData = sidebarDataFromPageFurniture(data.LeftSidebar.items);
-    }
+    const sideBarItems =
+      articleType === ARTICLE_TYPES.apiReference ? data.ApiLeftSidebar.items : data.LeftSidebar.items;
+    sidebarData = sidebarDataFromPageFurniture(sideBarItems);
   } else {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
   }
-  return <Component className={className} languages={languages} data={sidebarData} expandMenu={expandMenu} />;
+  return (
+    <Component
+      className={className}
+      languages={languages}
+      data={sidebarData}
+      expandMenu={expandMenu}
+      articleType={articleType}
+    />
+  );
 };
