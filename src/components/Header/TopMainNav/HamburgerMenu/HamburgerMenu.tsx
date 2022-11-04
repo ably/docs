@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import cn from 'classnames';
-
+import { ArticleTypeContext } from 'src/contexts/article-type-context';
 import { EXPAND_MENU } from 'src/components';
 import { SessionState } from '../../../../contexts/user-context';
 import { SidebarDataRetrieval } from '../../../StaticQuerySidebar/SidebarDataRetrieval';
@@ -26,13 +25,18 @@ export const HamburgerMenu = ({ sessionState }: { sessionState: SessionState }) 
             value={{ boolean: hasFooter, dispatchBooleanChange: (boolean) => setHasFooter(boolean) }}
           >
             <SearchBar displayMode={DisplayMode.MOBILE} />
-            <div className={hamburgerMenu}>
-              <SidebarDataRetrieval
-                className="flex flex-col py-12 px-8 flex-grow flex-basis mx-24"
-                expandMenu={EXPAND_MENU.COLLAPSED}
-                Component={HamburgerSidebarRenderer}
-              />
-            </div>
+            <ArticleTypeContext.Consumer>
+              {(value) => (
+                <div className={hamburgerMenu}>
+                  <SidebarDataRetrieval
+                    className="flex flex-col py-12 px-8 flex-grow flex-basis mx-24"
+                    expandMenu={EXPAND_MENU.COLLAPSED}
+                    Component={HamburgerSidebarRenderer}
+                    articleType={value}
+                  />
+                </div>
+              )}
+            </ArticleTypeContext.Consumer>
             {hasFooter && <HamburgerDropdownFooter sessionState={sessionState} />}
           </HamburgerHasFooterContext.Provider>
         </div>

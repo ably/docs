@@ -4,6 +4,8 @@ import { dropdownData } from '../../../Dropdown/Button';
 
 const ADHOC_SIDEBAR_INCLUSIONS: DropdownDataIdentifier[] = ['API References', 'Resources'];
 
+const API_ADHOC_SIDEBAR_INCLUSIONS: DropdownDataIdentifier[] = ['Resources'];
+
 const mapDropdownDataToSidebarData = (dropdownData: DropdownData): SidebarData => ({
   label: dropdownData.summaryTitle,
   link: dropdownData.summaryLink?.href ?? '',
