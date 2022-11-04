@@ -5,6 +5,7 @@ import { Flutter } from './LanguageLogos/Flutter';
 import { Go } from './LanguageLogos/Go';
 import { Java } from './LanguageLogos/Java';
 import { JavaScript } from './LanguageLogos/JavaScript';
+import { Kotlin } from './LanguageLogos/Kotlin';
 import { NodeJs } from './LanguageLogos/NodeJs';
 import { ObjC } from './LanguageLogos/ObjC';
 import { Php } from './LanguageLogos/Php';
@@ -25,6 +26,7 @@ const imageMapKeys = [
   'python',
   'ruby',
   'swift',
+  'kotlin',
 ];
 type ImageMapKey = typeof imageMapKeys[number];
 
@@ -46,4 +48,5 @@ export const imageMap: {
   python: Python,
   ruby: Ruby,
   swift: Swift,
+  kotlin: Kotlin,
 } as const;

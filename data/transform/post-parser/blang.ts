@@ -19,6 +19,6 @@ export const convertBlangBlocksToHtml: StringTransformation = (content) => {
     return `<div lang="${p1}"><!-- start ${p1} language block -->\n${p2
       .trim()
       // HACK: there is a dangling </p> tag hanging around, we need to remove it, hence `.replace()`
-      .replace(/^<\/\s*p>/, '')}</div><!-- /end ${p1} language block -->`;
+      .replace(/^<\/\s*?p>/, '')}</div><!-- /end ${p1} language block -->`;
   });
 };
