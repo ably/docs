@@ -13,7 +13,7 @@ export const TopMainNavAblyLogo = ({ href = '/' }: { href?: string }) => {
       {width > 1024 ? (
         <StaticImage src="/images/icons/ably-docs-logo.svg" />
       ) : (
-        <StaticImage className="h-32" src="/images/icons/ably-docs-logo-mobile.svg" />
+        <StaticImage width="174" height="32" src="/images/icons/ably-docs-logo-mobile.png" />
       )}
     </a>
   );
