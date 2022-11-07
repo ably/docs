@@ -1,8 +1,9 @@
-import React, { ComponentProps, ReactNode } from 'react';
+import React, { FC } from 'react';
 
 import LinkableHtmlBlock from '../../Html/LinkableHtmlBlock';
+import { HtmlAttributes } from '../../../html-component-props';
 
-const StyledApiReferenceH6 = ({ attribs, children }: { attribs: ComponentProps<'h6'>; children: ReactNode }) => {
+const StyledApiReferenceH6: FC<HtmlAttributes<'h6'>> = ({ children, ...attribs }) => {
   return (
     <h6
       {...attribs}
