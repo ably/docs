@@ -8,6 +8,10 @@ const TYPES_TO_LEVEL_MAP = {
   [HtmlDataTypes.h3]: 3,
   [HtmlDataTypes.h6]: 3,
 };
+const MAX_MENU_ITEM_FOR_H6 = 30;
+
+const cutMenuItemNameForH6 = (name) =>
+  name.length > MAX_MENU_ITEM_FOR_H6 + 3 ? name.slice(0, MAX_MENU_ITEM_FOR_H6).concat('...') : name;
 
 export const idFromName = (name) =>
   name
@@ -29,7 +33,6 @@ export const getTextFromPage = ({ data = '', attribs = {} }, text = [], language
     }
     return text;
   }
-
   text.push(data);
   return text;
 };
@@ -64,8 +67,9 @@ export const createContentMenuDataFromPage = (page, contentMenuData = [], langua
         };
       }
     }
+
     const contentMenuItem = {
-      name: menuItemName,
+      name: name === HtmlDataTypes.h6 ? cutMenuItemNameForH6(menuItemName) : menuItemName,
       id: newID,
       level: TYPES_TO_LEVEL_MAP[name],
     };
