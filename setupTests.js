@@ -1,6 +1,14 @@
 import '@testing-library/jest-dom';
 import { server } from './mocks/server';
 
+class ResizeObserver {
+  disconnect() {}
+  observe() {}
+  unobserve() {}
+}
+
+window.ResizeObserver = ResizeObserver;
+
 process.env.GATSBY_ADDSEARCH_API_KEY = 'shh-do-not-tell-to-anyone';
 
 jest.mock('@ably/ui/src/core/utils/syntax-highlighter', () => ({
