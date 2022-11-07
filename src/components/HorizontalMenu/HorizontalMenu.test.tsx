@@ -8,7 +8,7 @@ describe('<HorizontalMenu />', () => {
 
     expect(screen.getByRole('menu')).toMatchInlineSnapshot(`
       <menu
-        class="flex overflow-visible m-0 border-b border-charcoal-grey relative p-0"
+        class="flex overflow-visible m-0 pl-0 border-b border-charcoal-grey relative p-0"
         role="menu"
       >
         children go here
@@ -19,7 +19,7 @@ describe('<HorizontalMenu />', () => {
     render(<HorizontalMenu variant={HorizontalMenuVariant.light}>children go here</HorizontalMenu>);
     expect(screen.getByRole('menu')).toMatchInlineSnapshot(`
       <menu
-        class="flex overflow-visible m-0 light"
+        class="flex overflow-visible m-0 pl-0 light"
         role="menu"
       >
         children go here
@@ -30,7 +30,7 @@ describe('<HorizontalMenu />', () => {
     render(<HorizontalMenu variant={HorizontalMenuVariant.end}>children go here</HorizontalMenu>);
     expect(screen.getByRole('menu')).toMatchInlineSnapshot(`
       <menu
-        class="flex overflow-visible m-0 end"
+        class="flex overflow-visible m-0 pl-0 end"
         role="menu"
       >
         children go here
