@@ -2,10 +2,11 @@ import { isArray } from 'lodash';
 import HtmlDataTypes from '../types/html';
 import { DEFAULT_LANGUAGE } from './constants';
 
-const TYPES_TO_ADD_TO_CONTENT_MENU = [HtmlDataTypes.h2, HtmlDataTypes.h3];
+const TYPES_TO_ADD_TO_CONTENT_MENU = [HtmlDataTypes.h2, HtmlDataTypes.h3, HtmlDataTypes.h6];
 const TYPES_TO_LEVEL_MAP = {
   [HtmlDataTypes.h2]: 2,
   [HtmlDataTypes.h3]: 3,
+  [HtmlDataTypes.h6]: 4,
 };
 
 export const idFromName = (name) =>
