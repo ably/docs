@@ -1,24 +1,51 @@
-import { A } from '.';
 import React from 'react';
-import TestRenderer from 'react-test-renderer';
-import { Link } from 'gatsby';
+import { render, screen } from '@testing-library/react';
+import { A } from '.';
 
-const gatsbyRootElement = <A data={'Lorem ipsum'} attribs={{ href: 'https://www.ably.com/docs/lorem' }} />;
-const normalRootElement = <A data={'Lorem ipsum'} attribs={{ href: 'https://www.example.com' }} />;
+const gatsbyRootElement = {
+  data: 'Lorem ipsum',
+  attribs: { href: 'https://www.ably.com/docs/lorem' },
+};
+const normalRootElement = {
+  data: 'Lorem ipsum',
+  attribs: { href: 'https://www.example.com' },
+};
+const linkWithImageElement = {
+  data: [
+    {
+      attribs: {
+        alt: 'Presence representation',
+        src: '/images/diagrams/Channels-Presence.gif',
+      },
+      data: [],
+      name: 'img',
+      type: 'tag',
+    },
+  ],
+  attribs: { href: '/images/diagrams/Channels-Presence.gif', target: '_blank' },
+};
 
 describe('Different data provided to link elements results in different components', () => {
-  const gatsbyRootElementRenderer = TestRenderer.create(gatsbyRootElement);
   it('Successfully renders Gatsby links', () => {
-    expect(gatsbyRootElementRenderer.toJSON()).toMatchSnapshot();
+    render(<A {...gatsbyRootElement} />);
+
+    expect(screen.getByTestId('gatsby-link')).toBeInTheDocument();
   });
-  it('Contains a Gatsby Link', () => {
-    expect(() => gatsbyRootElementRenderer.root.findByType(Link)).not.toThrow();
-  });
-  const normalRootElementRenderer = TestRenderer.create(normalRootElement);
+
   it('Successfully renders normal links', () => {
-    expect(normalRootElementRenderer.toJSON()).toMatchSnapshot();
+    const { container } = render(<A {...normalRootElement} />);
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <a
+        class="docs-link"
+        href="https://www.example.com"
+      >
+        Lorem ipsum
+      </a>
+    `);
   });
-  it('Contains a normal Link', () => {
-    expect(() => gatsbyRootElementRenderer.root.findByType('a')).not.toThrow();
+
+  it('Successfully renders image without <a> element', () => {
+    render(<A {...linkWithImageElement} />);
+    expect(screen.getByAltText('Presence representation')).toBeInTheDocument();
   });
 });
