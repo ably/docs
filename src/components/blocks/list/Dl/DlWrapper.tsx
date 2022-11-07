@@ -11,7 +11,8 @@ export const DlWrapper: FunctionComponent<any> = ({ children }) => {
     if (attribs?.lang) {
       if (
         (language === DEFAULT_LANGUAGE && attribs?.lang === DEFAULT_PREFERRED_LANGUAGE) ||
-        attribs?.lang === language
+        attribs?.lang === language ||
+        attribs?.lang === DEFAULT_LANGUAGE
       ) {
         return child;
       }
