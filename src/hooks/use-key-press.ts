@@ -4,7 +4,6 @@ export const useKeyPress = (targetKey: string[] | string, callback: (e: Keyboard
   const handleKeyPress = useCallback(
     ({ key, ...keyboardEvent }: KeyboardEvent) => {
       const shouldTriggerCallback = Array.isArray(targetKey) ? targetKey.includes(key) : key === targetKey;
-
       if (shouldTriggerCallback) {
         callback({ key, ...keyboardEvent });
       }
