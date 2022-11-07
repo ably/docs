@@ -4,13 +4,17 @@ import { EXPAND_MENU, SidebarProps } from 'src/components';
 
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
 import { LeftSidebarProps } from './LeftSideBar';
+import { ArticleType } from '../../contexts/article-type-context';
+import { ARTICLE_TYPES } from '../../../data/transform/constants';
 
 export const SidebarDataRetrieval = ({
   className,
   languages,
   expandMenu,
+  articleType,
   Component,
 }: LeftSidebarProps & {
+  articleType: ArticleType;
   expandMenu: EXPAND_MENU;
   Component: React.FunctionComponent<SidebarProps>;
 }) => {
@@ -22,7 +26,21 @@ export const SidebarDataRetrieval = ({
       text
     }
     query {
-      pageFurnitureYaml(name: { eq: "LeftSidebarMenu" }) {
+      LeftSidebar: pageFurnitureYaml(name: { eq: "LeftSidebarMenu" }) {
+        items {
+          ...SubMenuFields
+          items {
+            ...SubMenuFields
+            items {
+              ...SubMenuFields
+              items {
+                ...SubMenuFields
+              }
+            }
+          }
+        }
+      }
+      ApiLeftSidebar: pageFurnitureYaml(name: { eq: "ApiLeftSidebarMenu" }) {
         items {
           ...SubMenuFields
           items {
@@ -52,10 +70,20 @@ export const SidebarDataRetrieval = ({
     }
   `);
   let sidebarData;
-  if (data.pageFurnitureYaml && data.pageFurnitureYaml.items) {
-    sidebarData = sidebarDataFromPageFurniture(data.pageFurnitureYaml.items);
+  if (data.LeftSidebar || data.ApiLeftSidebar) {
+    const sideBarItems =
+      articleType === ARTICLE_TYPES.apiReference ? data.ApiLeftSidebar.items : data.LeftSidebar.items;
+    sidebarData = sidebarDataFromPageFurniture(sideBarItems);
   } else {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
   }
-  return <Component className={className} languages={languages} data={sidebarData} expandMenu={expandMenu} />;
+  return (
+    <Component
+      className={className}
+      languages={languages}
+      data={sidebarData}
+      expandMenu={expandMenu}
+      articleType={articleType}
+    />
+  );
 };
