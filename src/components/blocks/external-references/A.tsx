@@ -7,6 +7,7 @@ import { HtmlComponentProps } from '../../html-component-props';
 
 import './styles.css';
 import Img from './Img';
+import { filterAttribsForReact } from 'src/react-utilities';
 
 const StyledGatsbyLink = ({ to, children, ...props }: Omit<GatsbyLinkProps<Record<string, unknown>>, 'ref'>) => (
   <Link className="docs-link" data-testid="gatsby-link" to={to} {...props}>
@@ -22,7 +23,7 @@ const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
     const imageElement = data.find((item) => item.name === 'img');
     // @ts-ignore - says src doesn't exist, but it does
     if (imageElement?.attribs?.src === rawHref && imageElement?.data) {
-      return <Img attribs={imageElement?.attribs} data={imageElement?.data} />;
+      return <Img attribs={filterAttribsForReact(imageElement?.attribs)} data={imageElement?.data} />;
     }
   }
 
