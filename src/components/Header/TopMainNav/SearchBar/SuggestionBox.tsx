@@ -42,7 +42,7 @@ export const SuggestionBox = ({ results, isActive }: Props) => {
       <div className="font-light text-dark-grey uppercase text-menu3 px-16 mb-2">Results from docs</div>
       {results &&
         results.map((hit, index) => {
-          const { title, highlight, url, id } = hit;
+          const { title, highlight, meta_description, url, id } = hit;
           const [pageTitle, ...breadcrumbs] = title.split(' / ').filter(
             (item) =>
               // We need to get rid of 'Docs' because it's redundant and
@@ -64,7 +64,9 @@ export const SuggestionBox = ({ results, isActive }: Props) => {
               role="link"
             >
               <h4 className={cn('text-menu2 mb-6 font-medium', titleStyle)}>{pageTitle}</h4>
-              <div className="text-menu3 font-light text-charcoal-grey leading-5">{htmr(highlight)}</div>
+              <div className="text-menu3 font-light text-charcoal-grey leading-5">
+                {htmr(meta_description ?? highlight)}
+              </div>
               {breadcrumbs.length > 0 && (
                 <div className="text-dark-grey font-light text-menu3 mt-8">{breadcrumbs.join(' > ').toLowerCase()}</div>
               )}
