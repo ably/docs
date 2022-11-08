@@ -51,7 +51,7 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
   const shouldUseLocalChanges = localChangeOnly && !!onSelect;
   const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
 
-  return (
+  return items.length >= 2 ? (
     <HorizontalMenu className="justify-end md:justify-start h-48 mr-48" variant={HorizontalMenuVariant.scrollX}>
       {items.map(({ Component, props, content }, index) => (
         <Component {...props} key={index}>
@@ -62,7 +62,7 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
         <Select options={options} value={value} isSearchable={false} onChange={onSelectChange} />
       </div>
     </HorizontalMenu>
-  );
+  ) : null;
 };
 
 export default LanguageNavigation;

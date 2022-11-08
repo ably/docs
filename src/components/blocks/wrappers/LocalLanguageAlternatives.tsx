@@ -40,6 +40,7 @@ const LocalLanguageAlternatives = ({
 
   const languageItems = languages
     .filter((lang) => lang !== DEFAULT_LANGUAGE)
+    .filter((lang) => lang !== '')
     .map((lang) => {
       // Site navigation button
       if (!localChangeOnly) {
