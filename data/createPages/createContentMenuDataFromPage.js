@@ -65,17 +65,12 @@ export const createContentMenuDataFromPage = (page, contentMenuData = [], langua
   if (TYPES_TO_ADD_TO_CONTENT_MENU.includes(name)) {
     const menuItemName = getTextFromPage(page, [], language).join('');
     if (isItemBeAddedInNav(menuItemName, name)) {
-      let newID = id;
-      if (!id) {
-        newID = idFromName(menuItemName);
-        if (page.attribs) {
-          page.attribs.id = newID;
-        } else {
-          page.attribs = {
-            id: newID,
-          };
-        }
-      }
+      const newID = id ?? idFromName(menuItemName);
+
+      page.attribs = {
+        ...(page.attribs || {}),
+        id: newID,
+      };
 
       const contentMenuItem = {
         name: menuItemName,
