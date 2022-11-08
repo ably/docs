@@ -62,13 +62,7 @@ export const SidebarLinkMenu = ({
         const alwaysExpanded = isArray(content) && link !== '';
 
         const labelMaybeWithLink = expandable ? (
-          <SidebarHeading
-            as={alwaysExpanded ? 'a' : 'span'}
-            href={link}
-            isActive={isActive}
-            indent={indent}
-            isExpandable={expandable}
-          >
+          <SidebarHeading as={alwaysExpanded ? 'a' : 'span'} href={link} isActive={isActive} indent={indent}>
             {label}
           </SidebarHeading>
         ) : (
