@@ -13,7 +13,7 @@ module.exports = {
   coveragePathIgnorePatterns: ['src/styles/svg'],
   testPathIgnorePatterns: [`node_modules`, `\\.cache`, `<rootDir>.*/public`],
   // NOTE: This is a workaround for compilation issues with .d.ts files
-  transformIgnorePatterns: [`node_modules/(?!(gatsby|gatsby-script|use-keyboard-shortcut)/)`],
+  transformIgnorePatterns: [`node_modules/(?!(gatsby|gatsby-script|use-keyboard-shortcut|react-medium-image-zoom)/)`],
   globals: {
     __PATH_PREFIX__: ``,
   },
