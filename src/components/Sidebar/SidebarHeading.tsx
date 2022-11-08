@@ -7,6 +7,7 @@ import { ROOT_LEVEL } from './consts';
 export type SidebarHeadingProps<C extends ElementType> = {
   as?: C;
   indent?: number;
+  isExpandable?: boolean;
   isActive?: boolean;
   href?: string;
   level?: number;
@@ -19,6 +20,7 @@ type Props<C extends ElementType> = PropsWithChildren<SidebarHeadingProps<C>> &
 export const SidebarHeading = <C extends ElementType>({
   as,
   indent = 0,
+  isExpandable = false,
   isActive = false,
   className = '',
   href,
@@ -41,7 +43,8 @@ export const SidebarHeading = <C extends ElementType>({
         sidebar,
         {
           'font-light text-cool-black': !isActive && !href,
-          'font-medium text-active-orange': isActive,
+          'font-medium': isActive || isExpandable || indent === 0,
+          'text-active-orange': isActive,
         },
         `ml-${indent}`,
         className,

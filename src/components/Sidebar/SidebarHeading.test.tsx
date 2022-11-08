@@ -20,7 +20,11 @@ describe('<SidebarHeading />', () => {
   });
 
   test('should render font in medium and cool-black when expanded', () => {
-    render(<SidebarHeading as="button">Text</SidebarHeading>);
+    render(
+      <SidebarHeading isExpandable as="button">
+        Text
+      </SidebarHeading>,
+    );
 
     expect(screen.getByRole('button')).toHaveClass('font-medium text-cool-black');
   });
