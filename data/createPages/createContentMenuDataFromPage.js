@@ -12,13 +12,11 @@ const TYPES_TO_LEVEL_MAP = {
 const httpRESTMethods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE'];
 
 const isItemBeAddedInNav = (name, header) => {
-  if (header === HtmlDataTypes.h6 && name !== '') {
-    const isRestFUL = httpRESTMethods.some((method) => name.startsWith(method));
-    if (isRestFUL && (name.includes('rest.ably.io') || name.includes('realtime.ably.io'))) {
-      return false;
-    }
-  }
-  return true;
+  const isH6 = header === HtmlDataTypes.h6 && name !== '';
+  const isRESTful = httpRESTMethods.some((method) => name.startsWith(method));
+  const isAblyRESTful = isRESTful && (name.includes('rest.ably.io') || name.includes('realtime.ably.io'));
+  const isInvalidH6 = isH6 && isAblyRESTful;
+  return !isInvalidH6;
 };
 
 export const idFromName = (name) =>
