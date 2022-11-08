@@ -8,10 +8,18 @@ const TYPES_TO_LEVEL_MAP = {
   [HtmlDataTypes.h3]: 3,
   [HtmlDataTypes.h6]: 3,
 };
-const MAX_MENU_ITEM_FOR_H6 = 30;
 
-const cutMenuItemNameForH6 = (name) =>
-  name.length > MAX_MENU_ITEM_FOR_H6 + 3 ? name.slice(0, MAX_MENU_ITEM_FOR_H6).concat('...') : name;
+const httpRESTfulMethods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE'];
+
+const isItemBeAddedInNav = (name, header) => {
+  if (header === HtmlDataTypes.h6 && name !== '') {
+    const isRestFUL = httpRESTfulMethods.some((method) => name.toUpperCase().startsWith(method));
+    if (isRestFUL && (name.includes('rest.ably.io') || name.includes('realtime.ably.io'))) {
+      return false;
+    }
+  }
+  return true;
+};
 
 export const idFromName = (name) =>
   name
@@ -56,24 +64,28 @@ export const createContentMenuDataFromPage = (page, contentMenuData = [], langua
   }
   if (TYPES_TO_ADD_TO_CONTENT_MENU.includes(name)) {
     const menuItemName = getTextFromPage(page, [], language).join('');
-    let newID = id;
-    if (!id) {
-      newID = idFromName(menuItemName);
-      if (page.attribs) {
-        page.attribs.id = newID;
-      } else {
-        page.attribs = {
-          id: newID,
-        };
+    if (isItemBeAddedInNav(menuItemName, name)) {
+      let newID = id;
+      if (!id) {
+        newID = idFromName(menuItemName);
+        if (page.attribs) {
+          page.attribs.id = newID;
+        } else {
+          page.attribs = {
+            id: newID,
+          };
+        }
       }
-    }
 
-    const contentMenuItem = {
-      name: name === HtmlDataTypes.h6 ? cutMenuItemNameForH6(menuItemName) : menuItemName,
-      id: newID,
-      level: TYPES_TO_LEVEL_MAP[name],
-    };
-    contentMenuData.push(contentMenuItem);
+      const contentMenuItem = {
+        name: menuItemName,
+        id: newID,
+        level: TYPES_TO_LEVEL_MAP[name],
+      };
+
+      contentMenuData.push(contentMenuItem);
+    }
   }
+
   return contentMenuData.filter((item) => !!item && item.name !== '');
 };
