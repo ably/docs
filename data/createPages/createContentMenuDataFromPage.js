@@ -9,11 +9,11 @@ const TYPES_TO_LEVEL_MAP = {
   [HtmlDataTypes.h6]: 3,
 };
 
-const httpRESTfulMethods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE'];
+const httpRESTMethods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE'];
 
 const isItemBeAddedInNav = (name, header) => {
   if (header === HtmlDataTypes.h6 && name !== '') {
-    const isRestFUL = httpRESTfulMethods.some((method) => name.toUpperCase().startsWith(method));
+    const isRestFUL = httpRESTMethods.some((method) => name.startsWith(method));
     if (isRestFUL && (name.includes('rest.ably.io') || name.includes('realtime.ably.io'))) {
       return false;
     }
