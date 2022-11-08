@@ -32,6 +32,10 @@ const StyledDl = styled.dl`
     background: #e1e1e1;
     border-radius: 5px;
     padding: 2px 5px;
+    display: block;
+    width: fit-content;
+    block-size: fit-content;
+    margin-bottom: 7px;
     ::before {
       content: '(default: ';
     }
