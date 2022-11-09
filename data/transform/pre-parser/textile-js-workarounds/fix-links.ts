@@ -12,6 +12,3 @@ export const fixHtmlElementsInLinks: StringTransformation = (content) =>
 // We need to remove it to retain parity.
 export const fixPunctuationInLinks: StringTransformation = (content) =>
   content.replace(/"([^"<]+)":([^)\]@,\s]+?)(\.?)([)\]@,\s])/gm, '<a href="$2">$1</a>$3$4');
-
-export const fixLinkElementsInBrackets: StringTransformation = (content) =>
-  content.replace(/"([^"]+?)":([^\s]*?)\)/gm, '<a href="$2">$1</a>');
