@@ -55,6 +55,7 @@ const InlineGridParagraph = styled.p`
   font-size: 16px;
   line-height: 23px;
   padding: 0;
+  width: 100%;
 `;
 
 // This needs to be set to a grid in order to render properly
