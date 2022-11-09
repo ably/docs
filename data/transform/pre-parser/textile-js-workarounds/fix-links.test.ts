@@ -1,5 +1,5 @@
 import textile from 'textile-js';
-import { fixDuplicateQuoteLinks, fixHtmlElementsInLinks, fixLinkElementsInBrackets } from './fix-links';
+import { fixDuplicateQuoteLinks, fixHtmlElementsInLinks, fixPunctuationInLinks } from './fix-links';
 
 describe('Fixes duplicate quoted links for textile-js', () => {
   it('Correctly renders links with long gaps between quotes', () => {
@@ -15,6 +15,16 @@ describe('Fixes duplicate quoted links for textile-js', () => {
   });
 });
 
+describe('Fixes punctuation in links for textile-js', () => {
+  it('Deliberately renders links followed by punctuation so as to remove punctuation from the link', () => {
+    expect(
+      fixPunctuationInLinks(`yes ("basic":/rest-api/#basic-authentication or "token":/rest-api#token-authentication)`),
+    ).toBe(
+      `yes (<a href="/rest-api/#basic-authentication">basic</a> or <a href="/rest-api#token-authentication">token</a>)`,
+    );
+  });
+});
+
 describe('Fixes HTML elements in links for textile-js', () => {
   it('Correctly renders links with HTML elements in the URL portion', () => {
     expect(
@@ -25,18 +35,6 @@ describe('Fixes HTML elements in links for textile-js', () => {
       ),
     ).toBe(
       `<p><a href="lorem-ipsum-ad-loquitur">Lorem ipsum</a><span><a href="per-ardua-ad-astra">Alternative Lorem Ipsum</a></span></p>`,
-    );
-  });
-
-  it('Correctly renders links inside the  code block', () => {
-    expect(
-      textile(
-        fixLinkElementsInBrackets(
-          `subscribe(String[] "actions":#presence-action, listener("PresenceMessage":#presence-message))`,
-        ),
-      ),
-    ).toMatchInlineSnapshot(
-      `"<p>subscribe(String[] <a href=\\"#presence-action\\">actions</a>, listener(<a href=\\"#presence-message\\">PresenceMessage</a>)</p>"`,
     );
   });
 });
