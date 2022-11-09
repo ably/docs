@@ -18,10 +18,4 @@ describe('<SidebarHeading />', () => {
 
     expect(screen.getByRole('button')).toHaveClass('font-medium text-active-orange');
   });
-
-  test('should render font in medium and cool-black when expanded', () => {
-    render(<SidebarHeading as="button">Text</SidebarHeading>);
-
-    expect(screen.getByRole('button')).toHaveClass('font-medium text-cool-black');
-  });
 });
