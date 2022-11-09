@@ -1,10 +1,5 @@
 import { compose } from 'lodash/fp';
-import {
-  fixDuplicateQuoteLinks,
-  fixHtmlElementsInLinks,
-  fixLinkElementsInBrackets,
-  fixPunctuationInLinks,
-} from './fix-links';
+import { fixDuplicateQuoteLinks, fixHtmlElementsInLinks, fixPunctuationInLinks } from './fix-links';
 import { fixInlineCode } from './fix-inline-code';
 import { fixTextileDefinitionLists } from './fix-textile-definition-lists';
 import { addItalicisedText } from './add-italicised-text';
@@ -33,7 +28,6 @@ export const textileJSCompatibility = compose(
   fixDuplicateQuoteLinks,
   fixPunctuationInLinks,
   fixHtmlElementsInLinks,
-  fixLinkElementsInBrackets,
   addItalicisedText,
   addBoldText,
 );
