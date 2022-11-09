@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { some } from 'lodash/fp';
+// @ts-ignore
+import languagesRegistry from '@ably/ui/src/core/utils/syntax-highlighter-registry';
 
 import Html from 'src/components/blocks/Html';
-import { languageSyntaxHighlighterNames } from 'src/maps/language';
 import UserContext, { devApiKeysPresent } from 'src/contexts/user-context';
 
 import HtmlDataTypes from '../../../../../data/types/html';
@@ -18,6 +19,7 @@ import { getRandomChannelName } from './get-random-channel-name';
 import '../styles.css';
 import { NestedHtmlComponentProps } from 'src/components/html-component-props';
 import { extractCodeStringsFromContent } from './extract-code-strings-from-content';
+import { BASH_LANGUAGE } from '../../../../../data/createPages/constants';
 
 const API_KEY_LENGTH = 5;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
@@ -71,10 +73,10 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
   );
 
   if (hasRenderableLanguages || hasMultilineText) {
-    const displayLanguage =
-      attribs?.lang && languageSyntaxHighlighterNames[attribs?.lang]
-        ? languageSyntaxHighlighterNames[attribs.lang]
-        : languageSyntaxHighlighterNames['plaintext'];
+    const languageInRegistry = (languagesRegistry as { key: string; label: string; module: unknown }[]).find(
+      (languageData) => languageData.key === attribs?.lang,
+    );
+    const displayLanguage = attribs?.lang && languageInRegistry ? languageInRegistry.key : BASH_LANGUAGE;
 
     return (
       <>
@@ -87,7 +89,7 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
                 content={contentWithRandomChannelName}
                 contentWithKey={contentWithKey}
                 contentWithObfuscatedKey={contentWithObfuscatedKey}
-                language={displayLanguage.key}
+                language={displayLanguage}
               />
             )}
           </UserContext.Consumer>
