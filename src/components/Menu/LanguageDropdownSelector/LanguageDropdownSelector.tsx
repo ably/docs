@@ -17,6 +17,7 @@ import {
   optionStyles,
 } from '../ReactSelectStyles';
 import { safeWindow } from 'src/utilities';
+import { isInImageMap } from './image-map';
 
 const makeOptionFromLang = (lang: string) => ({ label: longLanguageLabels[lang] ?? lang, value: lang });
 
@@ -32,9 +33,11 @@ export const LanguageDropdownSelector = ({
   const isSelectedLanguage = (option: ReactSelectOption) => option.value === language;
   const isNotSelectedLanguage = (option: ReactSelectOption) => option.value !== language;
   let options = languages.map(makeOptionFromLang);
+  options = options.filter(({ value }) => isInImageMap(value));
   if (!showDefaultLink) {
     options = options.filter(({ value }) => value !== DEFAULT_LANGUAGE);
   }
+
   const selectedOption = options.find(isSelectedLanguage) || makeOptionFromLang(DEFAULT_PREFERRED_LANGUAGE);
   return (
     <Select
