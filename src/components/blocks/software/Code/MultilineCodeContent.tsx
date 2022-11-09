@@ -9,6 +9,12 @@ import '@ably/ui/src/core/utils/syntax-highlighter.css';
 
 registerDefaultLanguages(languagesRegistry);
 
+const highlightedLanguagesMap: { [key: string]: string } = {
+  plaintext: 'bash',
+  sh: 'bash',
+  zsh: 'bash', // With apologies to zsh fans
+};
+
 const chooseString = (condition: boolean, firstString: string, secondString: string) =>
   condition ? firstString : secondString;
 
@@ -49,7 +55,12 @@ export const MultilineCodeContent = ({
     contentWithObfuscatedKey,
   );
 
-  const highlightedContent = useMemo(() => highlightSnippet(language, renderedContent), [language, renderedContent]);
+  const languageForHighlighting = highlightedLanguagesMap[language] ?? language;
+
+  const highlightedContent = useMemo(
+    () => highlightSnippet(languageForHighlighting, renderedContent),
+    [language, renderedContent],
+  );
 
   return (
     <code
