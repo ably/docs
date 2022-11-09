@@ -2,10 +2,21 @@ import { isArray } from 'lodash';
 import HtmlDataTypes from '../types/html';
 import { DEFAULT_LANGUAGE } from './constants';
 
-const TYPES_TO_ADD_TO_CONTENT_MENU = [HtmlDataTypes.h2, HtmlDataTypes.h3];
+const TYPES_TO_ADD_TO_CONTENT_MENU = [HtmlDataTypes.h2, HtmlDataTypes.h3, HtmlDataTypes.h6];
 const TYPES_TO_LEVEL_MAP = {
   [HtmlDataTypes.h2]: 2,
   [HtmlDataTypes.h3]: 3,
+  [HtmlDataTypes.h6]: 3,
+};
+
+const httpRESTMethods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE'];
+
+const isItemBeAddedInNav = (name, header) => {
+  const isH6 = header === HtmlDataTypes.h6 && name !== '';
+  const isRESTful = httpRESTMethods.some((method) => name.startsWith(method));
+  const isAblyRESTful = isRESTful && (name.includes('rest.ably.io') || name.includes('realtime.ably.io'));
+  const isInvalidH6 = isH6 && isAblyRESTful;
+  return !isInvalidH6;
 };
 
 export const idFromName = (name) =>
@@ -28,7 +39,6 @@ export const getTextFromPage = ({ data = '', attribs = {} }, text = [], language
     }
     return text;
   }
-
   text.push(data);
   return text;
 };
@@ -52,23 +62,23 @@ export const createContentMenuDataFromPage = (page, contentMenuData = [], langua
   }
   if (TYPES_TO_ADD_TO_CONTENT_MENU.includes(name)) {
     const menuItemName = getTextFromPage(page, [], language).join('');
-    let newID = id;
-    if (!id) {
-      newID = idFromName(menuItemName);
-      if (page.attribs) {
-        page.attribs.id = newID;
-      } else {
-        page.attribs = {
-          id: newID,
-        };
-      }
+    if (isItemBeAddedInNav(menuItemName, name)) {
+      const newID = id ?? idFromName(menuItemName);
+
+      page.attribs = {
+        ...(page.attribs || {}),
+        id: newID,
+      };
+
+      const contentMenuItem = {
+        name: menuItemName,
+        id: newID,
+        level: TYPES_TO_LEVEL_MAP[name],
+      };
+
+      contentMenuData.push(contentMenuItem);
     }
-    const contentMenuItem = {
-      name: menuItemName,
-      id: newID,
-      level: TYPES_TO_LEVEL_MAP[name],
-    };
-    contentMenuData.push(contentMenuItem);
   }
+
   return contentMenuData.filter((item) => !!item && item.name !== '');
 };

@@ -1,15 +1,19 @@
-import React, { ComponentProps, ReactNode } from 'react';
-import GenericHtmlBlock from '../../Html/GenericHtmlBlock';
+import React, { FC } from 'react';
 
-const StyledApiReferenceH6 = ({ attribs, children }: { attribs: ComponentProps<'h6'>; children: ReactNode }) => (
-  <h6
-    {...attribs}
-    className={`font-mono items-center w-min py-4 px-8 mt-10 mb-24 rounded-sm bg-api-reference-attribute-highlight border border-api-reference-attribute-border ${
-      attribs?.className ?? ''
-    } `}
-  >
-    {children}
-  </h6>
-);
+import LinkableHtmlBlock from '../../Html/LinkableHtmlBlock';
+import { HtmlAttributes } from '../../../html-component-props';
 
-export const ApiReferenceH6 = GenericHtmlBlock(StyledApiReferenceH6);
+const StyledApiReferenceH6: FC<HtmlAttributes<'h6'>> = ({ children, ...attribs }) => {
+  return (
+    <h6
+      {...attribs}
+      className={`inline-block font-mono items-center w-min py-4 px-8 my-12 rounded-sm bg-api-reference-attribute-highlight border border-api-reference-attribute-border ${
+        attribs?.className ?? ''
+      }`}
+    >
+      {children}
+    </h6>
+  );
+};
+
+export const ApiReferenceH6 = LinkableHtmlBlock(StyledApiReferenceH6, 'mb-24');
