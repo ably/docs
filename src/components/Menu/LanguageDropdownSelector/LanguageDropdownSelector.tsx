@@ -7,7 +7,11 @@ import { ReactSelectOption } from 'src/components';
 import { PREFERRED_LANGUAGE_KEY } from '../../../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common/language-defaults';
 import { navigate } from 'gatsby';
-import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../data/createPages/constants';
+import {
+  DEFAULT_LANGUAGE,
+  DEFAULT_PREFERRED_LANGUAGE,
+  IGNORED_LANGUAGES_FOR_DISPLAY,
+} from '../../../../data/createPages/constants';
 import {
   controlStyles,
   dropdownIndicatorStyles,
@@ -17,7 +21,6 @@ import {
   optionStyles,
 } from '../ReactSelectStyles';
 import { safeWindow } from 'src/utilities';
-import { isInImageMap } from './image-map';
 
 const makeOptionFromLang = (lang: string) => ({ label: longLanguageLabels[lang] ?? lang, value: lang });
 
@@ -33,7 +36,7 @@ export const LanguageDropdownSelector = ({
   const isSelectedLanguage = (option: ReactSelectOption) => option.value === language;
   const isNotSelectedLanguage = (option: ReactSelectOption) => option.value !== language;
   let options = languages.map(makeOptionFromLang);
-  options = options.filter(({ value }) => isInImageMap(value));
+  options = options.filter(({ value }) => !IGNORED_LANGUAGES_FOR_DISPLAY.includes(value));
   if (!showDefaultLink) {
     options = options.filter(({ value }) => value !== DEFAULT_LANGUAGE);
   }
