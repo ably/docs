@@ -1,17 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import Code from '.';
-
-const rubyProps = {
-  data: [
-    {
-      data: "channel = ably.channels.get('quickstart')\nchannel.publish 'greeting', 'hello!'",
-      name: 'text',
-      type: 'text',
-    },
-  ],
-  attribs: { lang: 'ruby' },
-};
 
 const shProps = {
   data: [
