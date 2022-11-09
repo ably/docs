@@ -23,6 +23,12 @@ describe('Fixes punctuation in links for textile-js', () => {
       `yes (<a href="/rest-api/#basic-authentication">basic</a> or <a href="/rest-api#token-authentication">token</a>)`,
     );
   });
+
+  it('Renders links with multiple punctuation marks correctly', () => {
+    expect(fixPunctuationInLinks(`subscribe(String name, listener("Message":#message))`)).toBe(
+      `subscribe(String name, listener(<a href="#message">Message</a>))`,
+    );
+  });
 });
 
 describe('Fixes HTML elements in links for textile-js', () => {

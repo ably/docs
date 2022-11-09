@@ -6,7 +6,7 @@ export const fixDuplicateQuoteLinks: StringTransformation = (content) => content
 
 // HTML elements immediately after links cause difficulties for the parser, appearing in links.
 export const fixHtmlElementsInLinks: StringTransformation = (content) =>
-  content.replace(/"([^"<]+)":([^<\s]+)</gm, '<a href="$2">$1</a><');
+  content.replace(/"([^"<]+)":([^<)\]@,\s]+)</gm, '<a href="$2">$1</a><');
 
 // Punctuation immediately after links is interpreted correctly by textile-js; but was not by Nanoc.
 // We need to remove it to retain parity.
