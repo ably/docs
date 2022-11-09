@@ -11,20 +11,13 @@ const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = 
   versionData,
   children,
 }) => {
-  const languageAlternativesExist = languages && languages.length > 1;
   return (
     <GlobalLoading>
       <Header />
       <div className="grid md:grid-cols-5 2xl:grid-cols-7">
         <LeftSideBar className="col-span-1 bg-extra-light-grey px-24" />
         <TopCodeMenu languages={languages} versionData={versionData} />
-        <main
-          className={`${
-            languageAlternativesExist ? 'pt-128' : 'pt-96'
-          } md:ml-24 col-span-4 grid grid-cols-4 2xl:grid-cols-7 2xl:col-span-6`}
-        >
-          {children}
-        </main>
+        <main className={`pt-128 md:ml-24 col-span-4 grid grid-cols-4 2xl:grid-cols-7 2xl:col-span-6`}>{children}</main>
       </div>
       <Footer />
     </GlobalLoading>
