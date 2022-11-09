@@ -17,7 +17,8 @@ jest.mock('@ably/ui/src/core/utils/syntax-highlighter', () => ({
 }));
 
 jest.mock('@ably/ui/src/core/utils/syntax-highlighter-registry', () => ({
-  default: jest.fn,
+  __esModule: true,
+  default: [],
 }));
 
 // Establish API mocking before all tests.
