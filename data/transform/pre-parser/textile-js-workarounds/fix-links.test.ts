@@ -26,9 +26,71 @@ describe('Fixes punctuation in links for textile-js', () => {
       fixPunctuationInLinks(
         `Ably Token issued will be "anonymous":https://faqs.ably.com/authenticated-and-identified-clients.<br>__Type: @Boolean@__`,
       ),
-    ).toMatchInlineSnapshot(
-      `"Ably Token issued will be <a href=\\"https://faqs.ably.com/authenticated-and-identified-clients\\">anonymous</a>.<br>__Type: @Boolean@__"`,
+    ).toBe(
+      `Ably Token issued will be <a href="https://faqs.ably.com/authenticated-and-identified-clients">anonymous</a>.<br>__Type: @Boolean@__`,
     );
+    expect(
+      fixPunctuationInLinks(
+        `h5. Code example
+
+        \`\`\`[curl]
+        curl "https://rest.ably.io/event-stream?channel=example&v=1.2" \
+          --user "{{API_KEY}}"
+        
+        {
+          "id":"cbfKayrzgAXDWM:1556804156735-0",
+          "event":"message",
+          "data":{
+            "id":"oZs6XaGYx8:0:0",
+            "name":"message-name",
+            "timestamp":1556804156730,
+            "encoding":"json",
+            "channel":"example",
+            "data":"{"foo":1}"
+          }
+        }
+        ⏎
+        {
+          "event":"error",
+          "data":{
+            "message":"Token expired. (See https://help.ably.io/error/40142 for help.)",
+            "code":40142,
+            "statusCode":401,
+            "href":"https://help.ably.io/error/40142"
+          }
+        }
+        \`\`\``,
+      ),
+    ).toMatchInlineSnapshot(`
+      "h5. Code example
+
+              \`\`\`[curl]
+              curl \\"https://rest.ably.io/event-stream?channel=example&v=1.2\\"           --user \\"{{API_KEY}}\\"
+              
+              {
+                \\"id\\":\\"cbfKayrzgAXDWM:1556804156735-0\\",
+                \\"event\\":\\"message\\",
+                \\"data\\":{
+                  \\"id\\":\\"oZs6XaGYx8:0:0\\",
+                  \\"name\\":\\"message-name\\",
+                  \\"timestamp\\":1556804156730,
+                  \\"encoding\\":\\"json\\",
+                  \\"channel\\":\\"example\\",
+                  \\"data\\":\\"{\\"foo\\":1}\\"
+                }
+              }
+              ⏎
+              {
+                \\"event\\":\\"error\\",
+                \\"data\\":{
+                  \\"message\\":\\"Token expired. (See https://help.ably.io/error/40142 for help.)\\",
+                  \\"code\\":40142,
+                  \\"statusCode\\":401,
+                  \\"href\\":\\"https://help.ably.io/error/40142\\"
+                }
+              }
+              \`\`\`"
+    `);
   });
 
   it('Renders links with multiple punctuation marks correctly', () => {
