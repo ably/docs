@@ -28,7 +28,7 @@ export const Sidebar = ({
   return (
     <aside className={cn(stickySidebar, className)} data-languages={languages}>
       {data.map(({ label, content }) => (
-        <div key={label} className="mb-32">
+        <div key={label} className="mb-32 px-24">
           {label && <SectionTitle className="mb-8">{label}</SectionTitle>}
           <HighlightedMenuContext.Consumer>
             {(highlightedMenuId) =>

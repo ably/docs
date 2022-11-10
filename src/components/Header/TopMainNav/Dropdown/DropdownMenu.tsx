@@ -6,6 +6,7 @@ import { ContentsContainer, DropdownContentLink } from './Contents';
 import { Summary } from './Summary';
 import { DropdownData } from './types';
 import { kebabCase } from 'lodash';
+import { Container } from 'src/components/Container';
 
 type Account = {
   links: DropdownContentLink[];
@@ -33,9 +34,9 @@ export const DropdownMenu = ({
     );
   }
   return (
-    <aside className="flex flex-wrap top-64 fixed w-full left-0" id={kebabCase(summaryTitle)}>
+    <Container as="aside" className="flex flex-wrap top-64 fixed w-full left-0 right-0" id={kebabCase(summaryTitle)}>
       <Summary titleText={summaryTitle} descriptionText={summaryDescription} summaryLink={summaryLink} />
       <ContentsContainer title={title} contents={contents} />
-    </aside>
+    </Container>
   );
 };

@@ -19,10 +19,9 @@ const mapMenuItemToSidebarItem = ({ name, id, level }: MenuData): SidebarData =>
 type RightSidebarProps = {
   menuData: MenuData[];
   languages: boolean;
-  className: string;
 };
 
-export const RightSidebar = ({ menuData, languages, className }: RightSidebarProps) => {
+export const RightSidebar = ({ menuData, languages }: RightSidebarProps) => {
   let parent;
   let previous;
   const menuLength = menuData.length;
@@ -62,13 +61,9 @@ export const RightSidebar = ({ menuData, languages, className }: RightSidebarPro
   return (
     <HighlightedMenuContext.Provider value={highlightedMenuItem}>
       <aside
-        className={cn(
-          stickySidebar,
-          {
-            [withLanguageNavBar]: languages,
-          },
-          className,
-        )}
+        className={cn(stickySidebar, {
+          [withLanguageNavBar]: languages,
+        })}
         data-languages={languages}
       >
         <SectionTitle className="py-12 px-8">On this page</SectionTitle>
