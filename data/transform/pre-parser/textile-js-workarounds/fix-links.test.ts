@@ -22,6 +22,13 @@ describe('Fixes punctuation in links for textile-js', () => {
     ).toBe(
       `yes (<a href="/rest-api/#basic-authentication">basic</a> or <a href="/rest-api#token-authentication">token</a>)`,
     );
+    expect(
+      fixPunctuationInLinks(
+        `Ably Token issued will be "anonymous":https://faqs.ably.com/authenticated-and-identified-clients.<br>__Type: @Boolean@__`,
+      ),
+    ).toMatchInlineSnapshot(
+      `"Ably Token issued will be <a href=\\"https://faqs.ably.com/authenticated-and-identified-clients\\">anonymous</a>.<br>__Type: @Boolean@__"`,
+    );
   });
 
   it('Renders links with multiple punctuation marks correctly', () => {
