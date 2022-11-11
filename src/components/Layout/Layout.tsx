@@ -11,7 +11,7 @@ const Layout: FC<{ languages: Array<string>; versionData: VersionMenuProps }> = 
   versionData,
   children,
 }) => {
-  const languageAlternativesExist = languages && languages.length > 1;
+  const languageAlternativesExist = (languages && languages.length > 1) || (versionData && versionData.versions.length);
   return (
     <GlobalLoading>
       <Header />
