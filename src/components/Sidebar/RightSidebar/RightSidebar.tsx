@@ -71,7 +71,7 @@ export const RightSidebar = ({ menuData, languages, className }: RightSidebarPro
         )}
         data-languages={languages}
       >
-        <SectionTitle className="py-12 px-8">On this page</SectionTitle>
+        <SectionTitle className="py-12 px-8 top-0 sticky bg-white">On this page</SectionTitle>
         <HighlightedMenuContext.Consumer>
           {(highlightedMenuId) => (
             <SidebarLinkMenu
