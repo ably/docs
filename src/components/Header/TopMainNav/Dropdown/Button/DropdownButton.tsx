@@ -28,18 +28,22 @@ export const DropdownButtonAndMenu = ({
   titleOverride?: string;
 }) => {
   return (
-    <div id={createDropdownButtonMenuHtmlId(dropdownDataID)} onMouseLeave={() => onMouseOut(dropdownDataID)}>
+    <div
+      id={createDropdownButtonMenuHtmlId(dropdownDataID)}
+      onMouseLeave={() => onMouseOut(dropdownDataID)}
+      className="mr-24 py-24"
+    >
       <button
         type="button"
         data-id="meganav-control"
-        className="hidden ui-meganav-link h-32 md:flex items-center group min-w-max self-end pt-22 pb-32 mx-0 px-12"
+        className="hidden md:flex items-center h-full"
         aria-expanded={isOpen}
         aria-label={`Show ${dropdownDataID}`}
         onClick={() => onActivated(dropdownDataID)}
         onMouseOver={() => onMouseOver(dropdownDataID)}
         aria-controls={dropdownDataID}
       >
-        <span className="w-full">{titleOverride || dropdownDataID}</span>
+        <span>{titleOverride || dropdownDataID}</span>
         <Icon name="icon-gui-disclosure-arrow" size="1.5rem" additionalCSS={chevronDown} />
       </button>
       {isOpen && <DropdownMenu {...dropdownData[dropdownDataID]} />}
