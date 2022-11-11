@@ -4,8 +4,6 @@ import { ArticleTypeContext } from 'src/contexts/article-type-context';
 import { Sidebar, EXPAND_MENU } from 'src/components';
 import { SidebarDataRetrieval } from './SidebarDataRetrieval';
 
-import { leftSidebar } from './LeftSideBar.module.css';
-
 export type LeftSidebarProps = {
   className?: string;
   languages?: boolean;
@@ -14,7 +12,7 @@ export type LeftSidebarProps = {
 const LeftSideBar = ({ className = '', languages = false }: LeftSidebarProps) => (
   <ArticleTypeContext.Consumer>
     {(value) => (
-      <div className={leftSidebar}>
+      <div className="bg-extra-light-grey h-screen hidden md:block md:sticky top-0 z-20 left-0 w-244">
         <SidebarDataRetrieval
           className={className}
           languages={languages}
