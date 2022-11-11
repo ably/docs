@@ -1,5 +1,6 @@
 import React from 'react';
 import cn from 'classnames';
+import { Container } from 'src/components';
 import { end, light, scrollX } from './HorizontalMenu.module.css';
 
 export enum HorizontalMenuVariant {
@@ -16,7 +17,8 @@ interface Props {
 }
 
 const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.menu, className = '' }: Props) => (
-  <menu
+  <Container
+    as="menu"
     role="menu"
     className={cn(
       'flex overflow-visible m-0 pl-0',
@@ -30,7 +32,7 @@ const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.menu, classN
     )}
   >
     {children}
-  </menu>
+  </Container>
 );
 
 export default HorizontalMenu;
