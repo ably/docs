@@ -4,7 +4,7 @@ import { ArticleTypeContext } from 'src/contexts/article-type-context';
 import { Sidebar, EXPAND_MENU } from 'src/components';
 import { SidebarDataRetrieval } from './SidebarDataRetrieval';
 
-import { leftSidebarStyles } from './LeftSideBar.module.css';
+import { leftSidebarStyles } from './LeftSideBarStyles.module.css';
 
 export type LeftSidebarProps = {
   className?: string;
