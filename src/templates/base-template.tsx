@@ -95,9 +95,9 @@ const Template = ({
           <Article>
             <RightSidebarMobile menuData={contentMenu[0]} languages={languagesExist} />
             <PageTitle>{title}</PageTitle>
-            <div className="col-span-3">{elements}</div>
+            <div>{elements}</div>
           </Article>
-          <RightSidebar className="col-span-1 px-16" languages={languagesExist} menuData={contentMenu[0]} />
+          <RightSidebar languages={languagesExist} menuData={contentMenu[0]} />
         </Layout>
       </PageLanguagesContext.Provider>
       {script && <Script src={srcFromDocsSite(`/scripts/${slug}.js`)} strategy={ScriptStrategy.idle} />}

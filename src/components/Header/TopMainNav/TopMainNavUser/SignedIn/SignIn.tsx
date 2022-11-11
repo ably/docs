@@ -6,6 +6,7 @@ import { TopMainNavStateContext } from '../../top-main-nav-state-context';
 
 export const SignedIn = ({ sessionState }: { sessionState: SessionState }) => {
   const accountName = truncate({ length: 19 }, sessionState.accountName ?? '');
+
   return sessionState.account && Object.keys(sessionState.account).length !== 0 ? (
     <menu className="hidden md:flex items-center list-none pl-0">
       <li className="ui-meganav-item relative">
