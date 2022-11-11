@@ -18,7 +18,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
   const [isInFocus, setIsInFocus] = useState(false);
 
   const {
-    state: { query, results },
+    state: { query, results, error },
     actions: { search },
   } = useSearch({
     addsearchApiKey: process.env.GATSBY_ADDSEARCH_API_KEY,
@@ -62,7 +62,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
       />
       <KeyIcon className="mr-4">{isMac ? '⌘' : '^'}</KeyIcon>
       <KeyIcon>K</KeyIcon>
-      <SuggestionBox results={results} isActive={isInFocus} />
+      <SuggestionBox results={results} error={error} query={query} isActive={isInFocus} />
     </SearchDisplay>
   );
 };
