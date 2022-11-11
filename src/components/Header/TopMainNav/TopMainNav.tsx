@@ -1,4 +1,5 @@
 import React, { useReducer, useRef } from 'react';
+import cn from 'classnames';
 
 import { DropdownButtonAndMenu } from './Dropdown/Button/DropdownButton';
 import { dropdownData } from './Dropdown/Button';
@@ -8,7 +9,6 @@ import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo'
 import { DisplayMode, SearchBar } from './SearchBar';
 import { TopMainNavUserMenu } from './TopMainNavUser';
 import UserContext from '../../../contexts/user-context';
-import { HorizontalMenuItemGroup } from '../../Menu/HorizontalMenuItemGroup';
 import { DOCUMENTATION_PATH } from '../../../../data/transform/constants';
 import { HamburgerMenu } from './HamburgerMenu';
 import { TopMainNavStateContext } from './top-main-nav-state-context';
@@ -17,16 +17,19 @@ import { HorizontalMenu, HorizontalMenuVariant } from 'src/components/Horizontal
 export const TopMainNav = () => {
   const [topMainNavState, dispatch] = useReducer(mainNavReducer, initialState);
   const menuItems: (keyof typeof dropdownData)[] = ['API References', 'Resources'];
+  const className = 'flex flex-row';
   const ref = useRef(null);
+
   useOnClickOutside(() => dispatch({ type: 'deactivateAll' }), ref);
+
   return (
     <div ref={ref} className="fixed bg-white h-64 z-50 flex w-full border-b border-mid-grey" id="top-main-nav">
       <HorizontalMenu variant={HorizontalMenuVariant.light}>
-        <HorizontalMenuItemGroup additionalStyles="flex-grow">
+        <div className={cn(className, 'flex-grow')}>
           <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
           <SearchBar displayMode={DisplayMode.FULL_SCREEN} />
-        </HorizontalMenuItemGroup>
-        <HorizontalMenuItemGroup>
+        </div>
+        <div className={className}>
           {menuItems.map((buttonDropdownDataID, i) => (
             <DropdownButtonAndMenu
               key={i}
@@ -37,8 +40,6 @@ export const TopMainNav = () => {
               onMouseOut={(dataId) => dispatch({ type: 'mouse-out', dropdownId: dataId })}
             />
           ))}
-        </HorizontalMenuItemGroup>
-        <HorizontalMenuItemGroup>
           <UserContext.Consumer>
             {({ sessionState }) => (
               <TopMainNavStateContext.Provider value={{ topMainNavState: topMainNavState, dispatch }}>
@@ -47,7 +48,7 @@ export const TopMainNav = () => {
               </TopMainNavStateContext.Provider>
             )}
           </UserContext.Consumer>
-        </HorizontalMenuItemGroup>
+        </div>
       </HorizontalMenu>
     </div>
   );
