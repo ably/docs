@@ -4,7 +4,7 @@ import { ArticleTypeContext } from 'src/contexts/article-type-context';
 import { Sidebar, EXPAND_MENU } from 'src/components';
 import { SidebarDataRetrieval } from './SidebarDataRetrieval';
 
-import { leftSidebar } from './LeftSideBar.module.css';
+import { leftSidebarStyles } from './LeftSideBar.module.css';
 
 export type LeftSidebarProps = {
   className?: string;
@@ -14,7 +14,7 @@ export type LeftSidebarProps = {
 const LeftSideBar = ({ className = '', languages = false }: LeftSidebarProps) => (
   <ArticleTypeContext.Consumer>
     {(value) => (
-      <div className={leftSidebar}>
+      <div className={leftSidebarStyles}>
         <SidebarDataRetrieval
           className={className}
           languages={languages}
