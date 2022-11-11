@@ -1,6 +1,6 @@
 import React, { FunctionComponent as FC } from 'react';
 import cn from 'classnames';
-import { Container, ContainerVariant } from 'src/components';
+import { Container } from 'src/components';
 import { Header } from '../Header';
 import { VersionMenuProps } from '../Menu/VersionMenu';
 import { LeftSideBar } from '../StaticQuerySidebar';
