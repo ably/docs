@@ -17,6 +17,7 @@ import { Code, Kbd, Output, Pre, Samp, Var } from '../software';
 import { Em, Small, Strong, Sub, Sup } from '../styles';
 import { Caption, Col, Colgroup, Table, Tbody, Td, Tfoot, Th, Thead, Tr } from '../table';
 import { Paragraph } from '../typography';
+import { ApiReferenceH5 } from '../api-reference/headings/ApiReferenceH5';
 
 export const IS_TEXT = null;
 
@@ -102,6 +103,7 @@ const ApiReferenceHtmlTypeComponentMap = Object.freeze({
   // external references
   [HtmlDataTypes.blockquote]: ApiReferenceBlockquote,
   // headings
+  [HtmlDataTypes.h5]: ApiReferenceH5,
   [HtmlDataTypes.h6]: ApiReferenceH6,
   // lists
   [HtmlDataTypes.dd]: ApiReferenceDd,
