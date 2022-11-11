@@ -23,7 +23,6 @@ window.addEventListener('load', () => {
     const logDate = new Date().toLocaleTimeString();
     const template = `\n\n[LOCAL LOG - ${logDate}] - ${msg}\n`;
     resultArea.value += template;
-    console.log(msg);
   }
 
   function logData(channelName, metrics) {
