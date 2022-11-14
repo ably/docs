@@ -122,7 +122,7 @@ csharp: State
 
 The current <span lang="java">"@io.ably.lib.realtime.ChannelState@":#channel-state @state@</span><span lang="csharp">"@IO.Ably.Realtime.ChannelState@":#channel-state @state@</span><span lang="ruby">"@Ably::Realtime::Channel::STATE@":#channel-state @state@</span><span lang="objc,swift">"@ARTRealtimeChannelState@":#channel-state</span><span lang="default">"@ChannelState@":#channel-state</span> of this @Channel@. See the supported "channel states":#channel-states for more information.`;
 
-export const spanWithHashResult = `<h6 id="state"><span lang="default">state</span><span lang="csharp">State</span></h6>
+export const spanWithHashResult = `<p><h6 id="state"><span lang="default">state</span><span lang="csharp">State</span></h6></p>
 <p>The current <span lang="java"><a href="#channel-state"><code>io.ably.lib.realtime.ChannelState</code></a> <code>state</code></span><span lang="csharp"><a href="#channel-state"><code>IO.Ably.Realtime.ChannelState</code></a> <code>state</code></span><span lang="ruby"><a href="#channel-state"><code>Ably::Realtime::Channel::STATE</code></a> <code>state</code></span><span lang="objc,swift"><a href="#channel-state"><code>ARTRealtimeChannelState</code></a></span><span lang="default"><a href="#channel-state"><code>ChannelState</code></a></span> of this <code>Channel</code>. See the supported <a href="#channel-states">channel states</a> for more information.</p>`;
 
 export const listDivExample = `<div lang="default">
