@@ -28,6 +28,7 @@ export const multilineRegex = /\r|\n/gm;
 
 const alternativeLanguageRegistry: Record<string, string> = {
   objc: 'objectivec',
+  nodejs: 'javascript',
 };
 
 const retrieveFromAlternativeLanguageRegistry = (key?: string) =>
