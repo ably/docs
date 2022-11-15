@@ -22,7 +22,8 @@ describe(
     it('Simple strings are translated into the correct <span > format', () => {
       const result = addLanguageSupportForHeadings(headingWithLanguage);
       expect(result).toBe(
-        `h3(#channel-state). <span lang='default'>ChannelState</span><span lang='objc,swift'>ARTRealtimeChannelState</span><span lang='ruby'>Channel::STATE Enum</span><span lang='java'>io.ably.lib.realtime.ChannelState Enum</span><span lang='csharp'>IO.Ably.Realtime.ChannelState Enum</span><span lang='flutter'>ably.ChannelState Enum</span>\n`,
+        `
+h3(#channel-state). <span lang='default'>ChannelState</span><span lang='objc,swift'>ARTRealtimeChannelState</span><span lang='ruby'>Channel::STATE Enum</span><span lang='java'>io.ably.lib.realtime.ChannelState Enum</span><span lang='csharp'>IO.Ably.Realtime.ChannelState Enum</span><span lang='flutter'>ably.ChannelState Enum</span>\n`,
       );
     });
   },

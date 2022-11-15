@@ -1,5 +1,16 @@
+import { postParser } from '../../../../data/transform/post-parser';
 import textile from 'textile-js';
 import { preParser } from '..';
+import { loadAndAlterHtml } from '../../../../data/html-parser';
+import { compose } from 'lodash/fp';
+
+const processTextile = compose(
+  (cheerio: cheerio.Cheerio) => cheerio.toArray(),
+  loadAndAlterHtml,
+  postParser,
+  textile,
+  preParser,
+);
 
 describe('Manual override of headings works as expected', () => {
   it('Manually overrides headings when there are classes and IDs and definition lists involved', () => {
@@ -47,5 +58,411 @@ Keepalive packets are sent as SSE comments (@:keepalive@).`),
 <h5 id="envelope-format">Envelope format</h5>
 <p>See an example of a <a href="#event-stream">plain event stream</a> below, except instead of a <span class="caps">JSON</span> object with <code>id</code>, <code>event</code>, <code>data</code> members, you get an <span class="caps">SSE</span> event.</p>
 <p>Keepalive packets are sent as <span class="caps">SSE</span> comments (<code>:keepalive</code>).</p>`);
+  });
+  it('Works for duplicated h[1-6] blocks as well', () => {
+    expect(
+      processTextile(`h4. Parameters
+
+- <div lang="jsall">event(s)</div> := the connection event(s) to subscribe to<br>__Type: @String@ or @String[]@__
+- <div lang="java">event</div> := the connection event to subscribe to<br>__Type: "@ConnectionEvent@":#connection-event__
+- <div lang="csharp">event</div> := the connection event to subscribe to<br>__Type: "@ConnectionEvent@":#connection-event__
+- <div lang="ruby">event</div> := the connection event as a Symbol such as @:connected@ or @ConnectionEvent@ object to subscribe to<br>__Type: "@ConnectionEvent@":#connection-event__
+- <div lang="swift,objc">event</div> := the connection event to subscribe to<br>__Type: "@ARTRealtimeConnectionEvent@":#connection-event__
+
+- <div lang="jsall">listener</div> := is a function of the form @function(stateChange)@ to be notified for a single occurrence of a matching event
+- <div lang="java">listener</div> := listener to be notified for a single occurrence of a matching state change<br>__Type: "@ConnectionStateListener@":#connection-state-listener__
+- <div lang="csharp">action</div> := action to be executed for matching state changes<br>__Type: "@ConnectionStateChange@":#connection-state-listener__
+- <div lang="ruby">&block</div> := listener block that is yielded to for a single occurrence of a matching event
+- <div lang="swift,objc">call</div> := called with matching events
+h6(#off).
+  default: off
+  csharp: Off
+
+There are <span lang="jsall">six</span><span lang="default">two</span> overloaded versions of this method:`),
+    ).toMatchInlineSnapshot(`
+      Array [
+        <h4>
+          Parameters
+        </h4>,
+        <dl>
+          
+      	
+          <div
+            lang="nodejs"
+          >
+            <dt>
+              <div>
+                event(s)
+              </div>
+            </dt>
+            <dd>
+              the connection event(s) to subscribe to
+              <br />
+              <em
+                class="italics"
+              >
+                Type: 
+                <code>
+                  String
+                </code>
+                 or 
+                <code>
+                  String[]
+                </code>
+              </em>
+            </dd>
+          </div>
+          <div
+            lang="javascript"
+          >
+            <dt>
+              <div>
+                event(s)
+              </div>
+            </dt>
+            <dd>
+              the connection event(s) to subscribe to
+              <br />
+              <em
+                class="italics"
+              >
+                Type: 
+                <code>
+                  String
+                </code>
+                 or 
+                <code>
+                  String[]
+                </code>
+              </em>
+            </dd>
+          </div>
+          
+      	
+          
+      	
+          <div
+            lang="java"
+          >
+            <dt>
+              <div>
+                event
+              </div>
+            </dt>
+            <dd>
+              the connection event to subscribe to
+              <br />
+              <em
+                class="italics"
+              >
+                Type: 
+                <a
+                  href="#connection-event"
+                >
+                  <code>
+                    ConnectionEvent
+                  </code>
+                </a>
+              </em>
+            </dd>
+          </div>
+          
+      	
+          
+      	
+          <div
+            lang="csharp"
+          >
+            <dt>
+              <div>
+                event
+              </div>
+            </dt>
+            <dd>
+              the connection event to subscribe to
+              <br />
+              <em
+                class="italics"
+              >
+                Type: 
+                <a
+                  href="#connection-event"
+                >
+                  <code>
+                    ConnectionEvent
+                  </code>
+                </a>
+              </em>
+            </dd>
+          </div>
+          
+      	
+          
+      	
+          <div
+            lang="ruby"
+          >
+            <dt>
+              <div>
+                event
+              </div>
+            </dt>
+            <dd>
+              the connection event as a Symbol such as 
+              <code>
+                :connected
+              </code>
+               or 
+              <code>
+                ConnectionEvent
+              </code>
+               object to subscribe to
+              <br />
+              <em
+                class="italics"
+              >
+                Type: 
+                <a
+                  href="#connection-event"
+                >
+                  <code>
+                    ConnectionEvent
+                  </code>
+                </a>
+              </em>
+            </dd>
+          </div>
+          
+      	
+          
+      	
+          <div
+            lang="objc"
+          >
+            <dt>
+              <div>
+                event
+              </div>
+            </dt>
+            <dd>
+              the connection event to subscribe to
+              <br />
+              <em
+                class="italics"
+              >
+                Type: 
+                <a
+                  href="#connection-event"
+                >
+                  <code>
+                    ARTRealtimeConnectionEvent
+                  </code>
+                </a>
+              </em>
+            </dd>
+          </div>
+          <div
+            lang="swift"
+          >
+            <dt>
+              <div>
+                event
+              </div>
+            </dt>
+            <dd>
+              the connection event to subscribe to
+              <br />
+              <em
+                class="italics"
+              >
+                Type: 
+                <a
+                  href="#connection-event"
+                >
+                  <code>
+                    ARTRealtimeConnectionEvent
+                  </code>
+                </a>
+              </em>
+            </dd>
+          </div>
+          
+      	
+          
+      	
+          <div
+            lang="nodejs"
+          >
+            <dt>
+              <div>
+                listener
+              </div>
+            </dt>
+            <dd>
+              is a function of the form 
+              <code>
+                function(stateChange)
+              </code>
+               to be notified for a single occurrence of a matching event
+            </dd>
+          </div>
+          <div
+            lang="javascript"
+          >
+            <dt>
+              <div>
+                listener
+              </div>
+            </dt>
+            <dd>
+              is a function of the form 
+              <code>
+                function(stateChange)
+              </code>
+               to be notified for a single occurrence of a matching event
+            </dd>
+          </div>
+          
+      	
+          
+      	
+          <div
+            lang="java"
+          >
+            <dt>
+              <div>
+                listener
+              </div>
+            </dt>
+            <dd>
+              listener to be notified for a single occurrence of a matching state change
+              <br />
+              <em
+                class="italics"
+              >
+                Type: 
+                <a
+                  href="#connection-state-listener"
+                >
+                  <code>
+                    ConnectionStateListener
+                  </code>
+                </a>
+              </em>
+            </dd>
+          </div>
+          
+      	
+          
+      	
+          <div
+            lang="csharp"
+          >
+            <dt>
+              <div>
+                action
+              </div>
+            </dt>
+            <dd>
+              action to be executed for matching state changes
+              <br />
+              <em
+                class="italics"
+              >
+                Type: 
+                <a
+                  href="#connection-state-listener"
+                >
+                  <code>
+                    ConnectionStateChange
+                  </code>
+                </a>
+              </em>
+            </dd>
+          </div>
+          
+      	
+          
+      	
+          <div
+            lang="ruby"
+          >
+            <dt>
+              <div>
+                &block
+              </div>
+            </dt>
+            <dd>
+              listener block that is yielded to for a single occurrence of a matching event
+            </dd>
+          </div>
+          
+      	
+          
+      	
+          <div
+            lang="objc"
+          >
+            <dt>
+              <div>
+                call
+              </div>
+            </dt>
+            <dd>
+              called with matching events
+            </dd>
+          </div>
+          <div
+            lang="swift"
+          >
+            <dt>
+              <div>
+                call
+              </div>
+            </dt>
+            <dd>
+              called with matching events
+            </dd>
+          </div>
+          
+      	
+          
+
+        </dl>,
+        <h6
+          id="off"
+        >
+          <span
+            lang="default"
+          >
+            off
+          </span>
+          <span
+            lang="csharp"
+          >
+            Off
+          </span>
+        </h6>,
+        <p>
+          There are 
+          <span
+            lang="nodejs"
+          >
+            six
+          </span>
+          <span
+            lang="javascript"
+          >
+            six
+          </span>
+          <span
+            lang="default"
+          >
+            two
+          </span>
+           overloaded versions of this method:
+        </p>,
+      ]
+    `);
   });
 });

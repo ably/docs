@@ -22,7 +22,7 @@ const DIV_DL_REGEX =
  * If a div with a lang attribute has no second portion, it is the end of the definition list; it must be left unchanged.
  * If a div has both a first & second portion, it can be adjusted to.
  */
-export const fixDivsInDefinitionLists = (content: string) =>
+export const fixDivsInDefinitionLists: StringTransformation = (content) =>
   content.replace(
     DIV_DL_REGEX,
     (match, textilePreamble, lang, maybeFirstDt, maybeFirstDd, secondLang, maybeSecondDt, maybeSecondDd) => {
