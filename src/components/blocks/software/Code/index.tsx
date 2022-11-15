@@ -26,6 +26,13 @@ export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
 
 export const multilineRegex = /\r|\n/gm;
 
+const alternativeLanguageRegistry: Record<string, string> = {
+  objc: 'objectivec',
+};
+
+const retrieveFromAlternativeLanguageRegistry = (key?: string) =>
+  key ? alternativeLanguageRegistry[key] : BASH_LANGUAGE;
+
 const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
   const [activeApiKey, setActiveApiKey] = useState({
     label: DEFAULT_API_KEY_MESSAGE,
@@ -76,7 +83,10 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
     const languageInRegistry = (languagesRegistry as { key: string; label: string; module: unknown }[]).find(
       (languageData) => languageData.key === attribs?.lang,
     );
-    const displayLanguage = attribs?.lang && languageInRegistry ? languageInRegistry.key : BASH_LANGUAGE;
+    const displayLanguage =
+      attribs?.lang && languageInRegistry
+        ? languageInRegistry.key
+        : retrieveFromAlternativeLanguageRegistry(attribs?.lang);
 
     return (
       <>
