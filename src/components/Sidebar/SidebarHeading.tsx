@@ -1,6 +1,8 @@
 import React, { ElementType, ComponentPropsWithoutRef, PropsWithChildren } from 'react';
 import cn from 'classnames';
 
+import { safeWindow } from 'src/utilities';
+
 import { sidebar } from './SidebarHeading.module.css';
 import { ROOT_LEVEL } from './consts';
 
@@ -26,8 +28,10 @@ export const SidebarHeading = <C extends ElementType>({
   ...props
 }: Props<C>) => {
   const Component = as || 'span';
+  const activeClassName = 'font-medium text-active-orange';
+
   const scrollLinkIntoView = (node: HTMLElement) => {
-    if (node && (window.location.pathname === props.to || window.location.pathname === href)) {
+    if (node && safeWindow.location.pathname === href) {
       node.scrollIntoView();
     }
   };
@@ -37,15 +41,11 @@ export const SidebarHeading = <C extends ElementType>({
       {...props}
       ref={scrollLinkIntoView}
       href={href}
-      className={cn(
-        sidebar,
-        {
-          'font-light text-cool-black': !isActive && !href,
-          'font-medium text-active-orange': isActive,
-        },
-        `ml-${indent}`,
-        className,
-      )}
+      className={cn(sidebar, `ml-${indent}`, className, {
+        'font-light text-cool-black': !isActive && !href,
+        [activeClassName]: isActive,
+      })}
+      activeClassName={activeClassName}
     />
   );
 };
