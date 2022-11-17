@@ -5,7 +5,7 @@ import { brokenBlangExample, brokenBlangTokenExpectedResult } from '../pre-parse
 import { convertBlangBlocksToHtml } from './blang';
 
 const createRelevantString = (
-  content,
+  content: string,
   { language = 'javascript', isBlang = false, outerTag = false, innerTag = false },
 ) => {
   // This could be returned by the arrow function directly, but causes havoc with linters!

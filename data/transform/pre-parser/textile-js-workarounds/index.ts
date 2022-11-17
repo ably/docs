@@ -15,7 +15,11 @@ export const compressMultipleNewlinesInLists: StringTransformation = (content) =
 
 // textile-js cannot parse h[1-6]. lines that are located inside another HTML tag, with leading spaces
 export const manuallyReplaceHTags: StringTransformation = (content) =>
-  content.replace(/^\s*h([1-6])\.\s+(.*)$/gm, '\n<h$1>$2</h$1>');
+  content.replace(
+    /^\s*h([1-6])(\(#[^)]+\))?(\([^()|#)]+\))?\.\s+(.*)$/gm,
+    (_match, p1, p2, p3, p4) =>
+      `\n<h${p1}${p2 ? ` id="${p2.replace(/[#()]/g, '')}"` : ''}${p3 ? ` id="${p3}"` : ''}>${p4}</h${p1}>`,
+  );
 
 export const textileJSCompatibility = compose(
   fixLeadingHtmlTags,

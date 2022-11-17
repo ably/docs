@@ -1,4 +1,4 @@
-import React, { Children, FunctionComponent, useContext } from 'react';
+import { Children, FunctionComponent, useContext } from 'react';
 import PageLanguageContext from '../../../../contexts/page-language-context';
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../../data/createPages/constants';
 

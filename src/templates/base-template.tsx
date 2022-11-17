@@ -62,7 +62,6 @@ const Template = ({
       ),
     [contentOrderedList, language],
   );
-
   useEffect(() => {
     if (language === DEFAULT_LANGUAGE || !filteredLanguages.includes(language)) {
       const preferredLanguage = safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY);

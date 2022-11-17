@@ -1,5 +1,10 @@
 import { compose } from 'lodash/fp';
-import { fixDivsInDefinitionLists } from './fix-divs-in-definition-lists';
+import { fixH1To6AFterDefinitionLists } from './fix-h1-6-after-definition-lists';
+import { fixIndentedDefinitionLists } from './fix-indented-definition-lists';
 import { fixNewlinesInDefinitionLists } from './fix-newlines-in-definition-lists';
 
-export const fixTextileDefinitionLists = compose(fixNewlinesInDefinitionLists, fixDivsInDefinitionLists);
+export const fixTextileDefinitionLists = compose(
+  fixH1To6AFterDefinitionLists,
+  fixNewlinesInDefinitionLists,
+  fixIndentedDefinitionLists,
+);

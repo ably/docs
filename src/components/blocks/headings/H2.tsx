@@ -4,7 +4,7 @@ import '@ably/ui/core/styles.css';
 import { HtmlAttributes } from 'src/components/html-component-props';
 
 const AblyH2: FC<HtmlAttributes<'h2'>> = ({ children, ...attribs }) => (
-  <h2 {...attribs} className="ui-text-h2">
+  <h2 {...attribs} className="ui-text-h2 mt-24">
     {children}
   </h2>
 );

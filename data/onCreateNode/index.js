@@ -30,7 +30,7 @@ const onCreateNode = async ({
         },
       };
       createNode(ErrorNode);
-      console.error(error.message);
+      console.error('Error at relative path:\n', node.relativePath ? `${node.relativePath}\n` : '\n', error.message);
     }
   }
 };
