@@ -53,7 +53,6 @@ const Template = ({
     [menuLanguages],
   );
   const languagesExist = filteredLanguages.length > 0 || (versionData && versionData.versions.length > 0);
-  console.log(contentOrderedList);
   const elements = useMemo(
     () =>
       contentOrderedList.map(
