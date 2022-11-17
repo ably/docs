@@ -59,7 +59,7 @@ export const cheerioNodeParser = (_i: number, node: cheerio.Element): ParsedNode
   };
 };
 
-const cheerioParser = (cheerioNodes: cheerio.Cheerio) => {
+export const cheerioParser = (cheerioNodes: cheerio.Cheerio) => {
   const data = cheerioNodes.map(cheerioNodeParser);
   return data.toArray();
 };

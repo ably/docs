@@ -12,10 +12,7 @@ Same as above, but registers multiple listeners, one for each event in the array
 </div>`),
     ).toMatchInlineSnapshot(`
       "
-      <div lang=\\"jsall\\"><blockquote class=\\"definition\\" id=\\"on-state-array-listener\\">
-      <p class=\\"definition\\"><span lang=\\"javascript,nodejs\\">on(String[] events, listener(<a href=\\"#channel-state-change\\">ChannelStateChange</a> stateChange))</span></p>
-      </blockquote>
-      <p>Same as above, but registers multiple listeners, one for each event in the array.</p></div>"
+      <notextile><div lang=\\"jsall\\"><blockquote class=\\"definition\\" id=\\"on-state-array-listener\\"><p class=\\"definition\\"><span lang=\\"javascript,nodejs\\">on(String[] events, listener(<a href=\\"#channel-state-change\\">ChannelStateChange</a> stateChange))</span></p></blockquote><p>Same as above, but registers multiple listeners, one for each event in the array.</p></div></notextile>"
     `);
   });
 });
