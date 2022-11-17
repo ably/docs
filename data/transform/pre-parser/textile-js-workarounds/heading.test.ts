@@ -1,16 +1,6 @@
-import { postParser } from '../../../../data/transform/post-parser';
+import { processTextile } from '../../../../data/test-utilities/process-textile';
 import textile from 'textile-js';
 import { preParser } from '..';
-import { loadAndAlterHtml } from '../../../../data/html-parser';
-import { compose } from 'lodash/fp';
-
-const processTextile = compose(
-  (cheerio: cheerio.Cheerio) => cheerio.toArray(),
-  loadAndAlterHtml,
-  postParser,
-  textile,
-  preParser,
-);
 
 describe('Manual override of headings works as expected', () => {
   it('Manually overrides headings when there are classes and IDs and definition lists involved', () => {

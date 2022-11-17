@@ -27,14 +27,6 @@ describe('Reads an h[1-6]. string correctly', () => {
   });
 });
 
-describe('Reads nested divs correctly', () => {
-  it('A nested div gets read correctly after preParse operations', () => {
-    const processedDivs = textile(preParser(nestedDiv));
-    const firstDiv = processedDivs.split('\n')[1];
-    expect(firstDiv).toBe(`<div lang="default">`);
-  });
-});
-
 describe('Reads spans with hashes correctly', () => {
   it('A span with a hash/pound/octothorpe value gets read correctly', () => {
     const processedSpan = textile(preParser(spanWithHashExample));

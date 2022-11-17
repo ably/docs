@@ -27,7 +27,6 @@ export const recursivelyProcessDivs: StringTransformation = (content) =>
 export const preParser = compose(
   // Textile compatibility must follow all other changes
   textileJSCompatibility,
-  recursivelyProcessDivs,
   // Language operations
   addLanguageSupportForHeadings,
   addLanguageSupportForBlockQuotes,
@@ -41,6 +40,8 @@ export const preParser = compose(
   addMinimizeForHeadings,
   removeNewlinesBeforeClosingTags,
   stripComments,
+  // Special textile compatibility operations
+  recursivelyProcessDivs,
   // ERB to JS
   replaceERB,
   removeExternalClassFromLinks,
