@@ -21,7 +21,7 @@ export const ExpandableAccordionHeading = ({ label, level }: AccordionHeadingPro
         {label}
         <AccordionItemState>
           {({ expanded }) => {
-            if (expanded && expanded !== isExpanded) {
+            if (expanded !== undefined && expanded !== isExpanded) {
               setIsExpanded(expanded);
             }
 

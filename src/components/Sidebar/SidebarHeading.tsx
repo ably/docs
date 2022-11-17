@@ -1,15 +1,13 @@
 import React, { ElementType, ComponentPropsWithoutRef, PropsWithChildren } from 'react';
 import cn from 'classnames';
-
+import { safeWindow } from 'src/utilities';
 import { sidebar } from './SidebarHeading.module.css';
-import { ROOT_LEVEL } from './consts';
 
 export type SidebarHeadingProps<C extends ElementType> = {
   as?: C;
   indent?: number;
   isActive?: boolean;
   href?: string;
-  level?: number;
 };
 
 type Props<C extends ElementType> = PropsWithChildren<SidebarHeadingProps<C>> &
@@ -21,13 +19,13 @@ export const SidebarHeading = <C extends ElementType>({
   indent = 0,
   isActive = false,
   className = '',
-  href,
-  level = ROOT_LEVEL,
   ...props
 }: Props<C>) => {
   const Component = as || 'span';
+  const activeClassName = 'font-medium text-active-orange';
+
   const scrollLinkIntoView = (node: HTMLElement) => {
-    if (node && (window.location.pathname === props.to || window.location.pathname === href)) {
+    if (node && (safeWindow.location.pathname === props.to || safeWindow.location.pathname === props.href)) {
       node.scrollIntoView();
     }
   };
@@ -36,16 +34,11 @@ export const SidebarHeading = <C extends ElementType>({
     <Component
       {...props}
       ref={scrollLinkIntoView}
-      href={href}
-      className={cn(
-        sidebar,
-        {
-          'font-light text-cool-black': !isActive && !href,
-          'font-medium text-active-orange': isActive,
-        },
-        `ml-${indent}`,
-        className,
-      )}
+      className={cn(sidebar, `ml-${indent}`, className, {
+        'font-light text-cool-black': !isActive,
+        [activeClassName]: isActive,
+      })}
+      activeClassName={activeClassName}
     />
   );
 };
