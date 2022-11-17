@@ -2,7 +2,7 @@ import React from 'react';
 import { FooterLogo } from './FooterTopNav/FooterLogo';
 import { FooterMenuItemType } from './FooterTopNav/FooterMenu/FooterMenu';
 import { FooterSocialMenu } from './FooterTopNav/FooterSocial/FooterSocialMenu';
-import { FooterMenuWrapper } from './FooterTopNav/FooterMenu/FooterMenuWrapper';
+import { FooterMenuContainer } from './FooterTopNav/FooterMenu/FooterMenuContainer';
 import { FooterStatus } from './FooterTopNav/FooterStatus';
 
 export const FooterTopNav = ({
@@ -18,6 +18,6 @@ export const FooterTopNav = ({
       <FooterStatus />
       <FooterSocialMenu ablySocialLinks={ablySocialLinks} />
     </div>
-    <FooterMenuWrapper menuDataItems={menuDataItems} />
+    <FooterMenuContainer menuDataItems={menuDataItems} />
   </div>
 );

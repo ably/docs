@@ -4,7 +4,6 @@ import throttle from 'lodash.throttle';
 import { SidebarData } from 'src/components';
 
 // Source: ably/voltaire: src/templates/ghost/utils/get-current-header-id.ts
-
 const TOLERANCE_THRESHOLD_IN_PIXELS = 20;
 const MILLISECOND_DELAY_ON_THROTTLE = 200;
 
@@ -27,11 +26,14 @@ export const useGetCurrentHeader = (flatTableOfContents: SidebarData[]) => {
   ) => {
     const topNav = document.getElementById('top-main-nav') as HTMLElement;
     const topNavHeight = topNav.getBoundingClientRect().height;
+    const languageNavigation = document.getElementById('top-code-menu');
+    const combinedTopNavHeight =
+      topNavHeight + (languageNavigation ? languageNavigation?.getBoundingClientRect().height : 0);
     for (const headingLine of flatTableOfContents) {
       const element = document.getElementById(headingLine.link.replaceAll('#', ''));
       if (element) {
         const rectangle = element.getBoundingClientRect();
-        if (isInView(rectangle, topNavHeight)) {
+        if (isInView(rectangle, combinedTopNavHeight)) {
           setHeadingId(headingLine.link);
           break;
         }

@@ -53,7 +53,7 @@ const headingReplacer = (matchText: string, hTag: string, anchor: string) => {
         : `<span lang='${langDefinition[1]}'>${langDefinition[2].trim()}</span>`,
     )
     .join('');
-  return `${hTag}${anchor ?? ''}. ${langSpans}\n`;
+  return `\n${hTag}${anchor ?? ''}. ${langSpans}\n`;
 };
 
 export const addLanguageSupportForHeadings = (content: string) => content.replace(HEADING_REGEX, headingReplacer);

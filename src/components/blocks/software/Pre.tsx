@@ -10,6 +10,7 @@ import { HtmlComponentProps, ValidReactElement } from '../../html-component-prop
 import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
+import { isArray } from 'lodash';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
@@ -45,6 +46,11 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
       </pre>
     );
   }
+  // This fixes an issue where paragraphs are added into <pre> elements, which resets the font stylings to black
+  // rendering the data unreadable.
+  const dataWithoutPTags = isArray(data)
+    ? data.map((child) => (child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child))
+    : data;
   return (
     <div
       className={cn('my-32', {
@@ -69,11 +75,11 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
           <LocalLanguageAlternatives
             languages={languages}
             data={altData}
-            initialData={data}
+            initialData={dataWithoutPTags}
             localChangeOnly={shouldDisplayTip}
           />
         ) : (
-          <Html data={data} />
+          <Html data={dataWithoutPTags} />
         )}
       </pre>
     </div>

@@ -1,7 +1,7 @@
 import { FooterMenu, FooterMenuItemType } from './FooterMenu';
 import React from 'react';
 
-export const FooterMenuWrapper = ({
+export const FooterMenuContainer = ({
   menuDataItems,
 }: {
   menuDataItems: { items: FooterMenuItemType[]; label: string }[];

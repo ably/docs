@@ -59,12 +59,12 @@ export const cheerioNodeParser = (_i: number, node: cheerio.Element): ParsedNode
   };
 };
 
-const cheerioParser = (cheerioNodes: cheerio.Cheerio) => {
+export const cheerioParser = (cheerioNodes: cheerio.Cheerio) => {
   const data = cheerioNodes.map(cheerioNodeParser);
   return data.toArray();
 };
 
-export const htmlParser = (content: string) => {
+export const loadAndAlterHtml = (content: string) => {
   const loadedDom = cheerio.load(content);
   liftLangAttributes(loadedDom);
   duplicateLangAttributes(loadedDom);
@@ -72,7 +72,11 @@ export const htmlParser = (content: string) => {
   addRandomChannelInfoToCodeBlock(loadedDom);
   removeParagraphsFromDefinitionListsAndMerge(loadedDom);
   removeChildrenFromPreWrappedCodeElements(loadedDom);
-  const loadedDomBodyNodes = loadedDom('body').children('*');
+  return loadedDom('body').children('*');
+};
+
+export const htmlParser = (content: string) => {
+  const loadedDomBodyNodes = loadAndAlterHtml(content);
   const parsedNodes = cheerioParser(loadedDomBodyNodes);
   return [
     {
