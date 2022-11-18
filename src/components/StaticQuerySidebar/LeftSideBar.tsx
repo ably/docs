@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { ArticleTypeContext } from 'src/contexts/article-type-context';
 import { Sidebar, EXPAND_MENU } from 'src/components';
 import { SidebarDataRetrieval } from './SidebarDataRetrieval';
@@ -24,10 +23,5 @@ const LeftSideBar = ({ className = '', languages = false }: LeftSidebarProps) =>
     )}
   </ArticleTypeContext.Consumer>
 );
-
-LeftSideBar.propTypes = {
-  className: PropTypes.string,
-  languages: PropTypes.bool,
-};
 
 export { LeftSideBar };
