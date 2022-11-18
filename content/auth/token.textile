@@ -1,0 +1,269 @@
+---
+title: "Token authentication"
+meta_description: "Token authentication allows clients to authenticate with Ably, without exposing the Ably API key and secret."
+---
+
+h2. What is token auth?
+
+Client-side devices should generally be considered untrusted, and as such, it is important that you minimize the impact of any credentials being compromised on those devices. 
+
+Token authentication achieves this by having a trusted device, such as one of your secure servers, possess an API key created through your Ably the "dashboard":https://ably.com/dashboard. 
+
+This key can then be used to create time-limited "tokens":/api/realtime-sdk/authentication#tokens, with a limited set of access rights or "capabilities":/auth/capabilities, or with specific identities using "<span lang="default">@clientId@</span><span lang="csharp">@ClientId@</span>":/auth/capabilities#identified-clients. These tokens can the be distributed to untrusted clients.
+
+Token authentication is the recommended strategy on the client-side, as it provides more fine-grained access control, and limits the risk of credentials being exposed.
+
+h2. Token types
+
+Different token-issuing mechanisms can be used with Ably. The two types are:
+
+1. Ably token
+2. JWT
+
+The default is to use "Ably Tokens":/api/realtime-sdk/authentication#tokens, which you request from Ably based on an Ably "TokenRequest":/api/realtime-sdk/authentication#token-request that you sign and issue from your secure server to clients.
+
+The other option is to use a "JSON Web Token":https://jwt.io (JWT), which you generate on your secure server and sign using your private API key. 
+
+h2. Types of token authentication mechanisms
+
+Token authentication is typically done in one of four ways:
+
+1. Ably TokenRequest is created by your servers and passed to clients
+2. Ably Token is issued by your servers and passed to clients
+3. Ably JWT is created by your servers and passed to clients
+4. Ably-compatible token is embedded in a External JWT from your server and passed to clients
+
+Each of these methods is described in more detail in the following sections.
+
+h2. Automatic refresh of tokens
+
+One of the important benefits of using an Ably Client Library SDK is that automatic refresh of tokens will be handled for you.
+
+An @authURL@ might be more relevant and recommended to be used with the web-based clients as they can easily utilize cookies and other web-only features. 
+
+However, in case of non-web clients, @authCallback@ is the recommended strategy.
+
+h2. Using token authentication
+
+Any of the following cause the library to use token authentication:
+
+* An "<span lang="default">@authUrl@</span><span lang="csharp">@AuthUrl@</span>":/api/realtime-sdk/types#client-options or "<span lang="default">@authCallback@</span><span lang="csharp">@AuthCallback@</span>":/api/realtime-sdk/types#client-options is provided that returns an Ably-compatible token or an Ably "@TokenRequest@":/api/realtime-sdk/types#token-request
+* "<span lang="default">@useTokenAuth@</span><span lang="csharp">@UseTokenAuth@</span>":/api/realtime-sdk/types#client-options is true
+* A "<span lang="default">@clientId@</span><span lang="csharp">@ClientId@</span>":/api/realtime-sdk/types#client-options is provided (only for pre-1.1 client libraries)
+* A "<span lang="default">@token@</span><span lang="csharp">@Token@</span>":/api/realtime-sdk/types#client-options or "<span lang="default">@tokenDetails@</span><span lang="csharp">@TokenDetails@</span>":/api/realtime-sdk/types#client-options property is provided
+
+Providing a literal <span lang="default">@token@</span><span lang="csharp">@Token@</span> or <span lang="default">@tokenDetails@</span><span lang="csharp">@TokenDetails@</span> is typically used for testing: since tokens are short-lived, in production you typically want to use an authentication method that allows the client library to renew the token automatically before the current token expires.
+
+h2(#token-request-process). Ably TokenRequest
+
+Using an Ably Client Library SDK, a @TokenRequest@ is "generated from your server":/api/realtime-sdk/authentication#create-token-request and returned to the client-side SDK instance. The client-side SDK instance then uses the "@TokenRequest@":/api/realtime-sdk/types#token-request to request an "Ably Token":/api/realtime-sdk/authentication#request-token from Ably, and subsequently authenticates using that "Ably Token":/api/realtime-sdk/authentication#token-details. 
+
+This is the recommended approach for client-side authentication, for the following reasons:
+
+* An Ably "@TokenRequest@":/api/realtime-sdk/types#token-request can be generated securely by your servers without communicating with Ably
+* Your secret API key is never shared with Ably or your clients
+* Ably "TokenRequests":/api/realtime-sdk/types#token-request cannot be tampered with due to being signed, must be used soon after creation and can only be used once
+
+h3. Ably TokenRequest architecture diagram
+
+The process used by client library SDKs to authenticate with Ably using @TokenRequest@s is illustrated in the following diagram:
+
+<a href="/images/diagrams/Ably-token-auth-1.gif" target="_blank">
+  <img src="/images/diagrams/Ably-token-auth-1.gif" style="width: 100%" alt="Ably TokenRequest auth process diagram">
+</a>
+
+h3. Code example - creating a token request server-side
+
+The following is an example of creating an Ably @TokenRequest@:
+
+bc[javascript]. const ably = new Ably.Rest({ key: '{{API_KEY}}' });
+ably.auth.createTokenRequest({ clientId: 'client@example.com' }, null, (err, tokenRequest) => {
+  /* tokenRequest => {
+       "capability": "{\"*\":[\"*\"]}",
+       "clientId": "client@example.com",
+       "keyName": "{{API_KEY_NAME}}",
+       "nonce": "5576521221082658",
+       "timestamp": {{MS_SINCE_EPOCH}},
+       "mac": "GZRgXssZDCegRV....EXAMPLE"
+     } */
+});
+
+Clients can pass this server-side generated @tokenRequest@ to Ably to authenticate with Ably automatically. 
+
+h3. Code example - using an @authUrl@ client-side
+
+You can specify an @authUrl@ when you create the Ably client. For example:
+
+bc[javascript]. const ablyClient = new Realtime({
+    authUrl: "/auth"
+});
+
+The client will obtain a token, JWT, or tokenRequest from the URL and use it to authenticate requests to Ably. Before token expiry, a request for a new token will be made automatically by the client to the @authUrl@.
+
+h3. Code example - using an @authCallback@ client-side
+
+You can alternatively specify an authentication callback function when you create the Ably client. Inside @authCallback@, you can make the network request to your servers to generate the @tokenRequest@. For example:
+
+bc[javascript]. const ablyClient = new Realtime({
+    authCallback: async (tokenParams, callback) => {
+        try {
+            const tokenRequest = await createTokenRequest() // Make a network request to your server
+            callback(null, tokenRequest)
+        } catch (error) {
+            callback(error, null)
+        }
+    }
+});
+
+The @tokenParams@ argument in @authCallback@ is available for convenience, allowing you to see the capabilities, @clientId@, and other details requested by the client. However, @tokenParams@ should not be trusted or used to generate the @tokenRequest@ on the server side. Instead, it is recommended that your @createTokenRequest@ API authenticates clients separately: for example, based on cookies, headers, or HTTP body.
+
+p(tip#timetip). Token requests include a timestamp. So you should ensure that the machine on which you are running your auth server has an accurate clock, for example, by using an "NTP daemon":https://en.wikipedia.org/wiki/Ntpd. If you are not able to control your machine's clock, you may wish to use the "@queryTime@ auth option":/api/rest-sdk/types#auth-options to avoid "'Timestamp not current' errors":https://faqs.ably.com/40104-timestamp-not-current.
+
+h2(#token-process). Ably Token
+
+Using an Ably Client Library SDK, an "Ably Token is requested by your servers":/api/realtime-sdk/authentication#request-token from Ably and then passed to the client-side SDK instance. The client-side SDK instance then uses that "Ably Token":/api/realtime-sdk/authentication#tokens to authenticate with Ably. This is an alternative approach for authentication that enables you to issue "Ably Tokens":/api/realtime-sdk/authentication#tokens directly as opposed to providing Ably "TokenRequests":/api/realtime-sdk/types#token-request from your servers. 
+
+The advantage for clients is it saves one round trip request as they do not need to request an "Ably Token":/api/realtime-sdk/authentication#tokens themselves. The disadvantage is that your servers must communicate with Ably each time an "Ably Token":/api/realtime-sdk/authentication#tokens is required.
+
+h3. Ably Token architecture diagram
+
+The process used by client library SDKs to authenticate with Ably using @Token@s is illustrated in the following diagram:
+
+<a href="/images/diagrams/Ably-Auth-Overview1.gif" target="_blank">
+  <img src="/images/diagrams/Ably-Auth-Overview1.gif" style="width: 100%" alt="Ably token auth process diagram">
+</a>
+
+h3. Code example - creating an Ably token server-side
+
+The following is an example of issuing an Ably Token:
+
+bc[javascript]. const ably = new Ably.Rest({ key: '{{API_KEY}}' });
+ably.auth.requestToken({ clientId: 'client@example.com' }, (err, token) => {
+  /* token => {
+       "token": "xVLyHw.Dtxd9tuz....EXAMPLE",
+       "capability": "{\"*\":[\"*\"]}"
+       "clientId": "client@example.com",
+       "expires": 1449745287315,
+       "keyName": "{{API_KEY_NAME}}",
+       "issued": 1449741687315,
+     } */
+});
+
+h2(#ably-jwt-process). Ably JWT
+
+p(tip). In most scenarios, Ably recommends you use one of the many "JWT libraries available":https://jwt.io/ when constructing your JWT.
+
+It is possible to use a "JWT":https://jwt.io as a form of token for authentication with Ably, so long as it is structured appropriately, in what will be referred to as an "Ably JWT":/api/realtime-sdk/authentication#ably-jwt. It is possible for an "Ably JWT":/api/realtime-sdk/authentication#ably-jwt to contain claims indicating its clientId, capabilities and expiry - in an analogous way to an "Ably Token":/api/realtime-sdk/authentication#tokens - and it is signed with the applicable "Ably API key's secret part":/auth/api-key.
+
+This is similar to signing an Ably "@TokenRequest@":/api/realtime-sdk/authentication#request-token, but the client does not need then to request an "Ably Token":/api/realtime-sdk/authentication#token-details, instead being able to use the "Ably JWT":/api/realtime-sdk/authentication#ably-jwt as a token in itself. "Any compliant third-party JWT library":https://jwt.io/ may be used to create the JWT without requiring the token to be issued by Ably. This can be useful for situations where an Ably client library is not available, such as an embedded device connecting to Ably via "MQTT":/mqtt.
+
+Similarly to with the "TokenRequest flow":#timetip , you should ensure that your auth server has an accurate clock, as the JWT includes absolute "issued at" and "expires at" timestamps.
+
+An example of creating an "Ably JWT":/api/realtime-sdk/authentication#ably-jwt manually can be seen below, with *SECRET* being the "secret part of your API key":/auth/api-key. In most scenarios however, we would recommend you use one of the many "JWT libraries available for simplicity":https://jwt.io/.
+
+h3. Ably JWT architecture diagram
+
+The process used by client library SDKs to authenticate with Ably using JWTs is illustrated in the following diagram:
+
+<a href="/images/diagrams/Ably-Auth-Overview2.gif" target="_blank">
+  <img src="/images/diagrams/Ably-Auth-Overview2.gif" style="width: 100%" alt="Ably JWT auth method">
+</a>
+
+h3. Code example - creating an Ably JWT
+
+The following is an example of creating an Ably JWT:
+
+```[javascript]
+  var header = {
+    "typ":"JWT",
+    "alg":"HS256",
+    "kid": "{{API_KEY_NAME}}"
+  }
+  var currentTime = Math.round(Date.now()/1000);
+  var claims = {
+    "iat": currentTime, /* current time in seconds */
+    "exp": currentTime + 3600, /* time of expiration in seconds */
+    "x-ably-capability": "{\"*\":[\"*\"]}"
+  }
+  var base64Header = btoa(header);
+  var base64Claims = btoa(claims);
+  /* Apply the hash specified in the header */
+  var signature = hash((base64Header + "." + base64Claims), "{{API_KEY_SECRET}}");
+  var ablyJwt = base64Header + "." + base64Claims + "." + signature;
+```
+
+*Note:* At present Ably does not support asymmetric signatures based on a keypair belonging to a third party. If this is something you'd be interested in, please "get in touch":https://ably.com/contact.
+
+h2(#jwt-embed-process). Ably-compatible token is embedded in a External JWT
+
+If a system has an existing "JWT":https://jwt.io/ scheme, it can be useful to embed an Ably-compatible token as a claim within it. The External JWT and embedded Ably-compatible token need to meet the following requirements:
+
+* The embedded token is an "Ably JWT":#ably-jwt-process, or an "Ably Token":/api/realtime-sdk/authentication#token-details
+* The embedded token is included under the @x-ably-token@ key in the "JOSE Header":https://tools.ietf.org/html/rfc7519
+* OR (if using JWS) the embedded token is included using the @x-ably-token@ Claim in the payload
+* The expiry time of the embedded token must not be earlier than the outer JWT’s expiry time (@exp@ Claim). Ably will reject any JWT if it is unencrypted and its @exp@ Claim is later than the expiry of the enclosed token. This helps to ensure that tokens are renewed prior to expiry
+
+h3. Ably Token embedded in JWT architecture diagram
+
+The process used by client library SDKs to authenticate with Ably using an Ably token embedded in a JWT is illustrated in the following diagram:
+
+<a href="/images/diagrams/Ably-Auth-Overview3.gif" target="_blank">
+  <img src="/images/diagrams/Ably-Auth-Overview3.gif" style="width: 100%" alt="Token embedded in a JWT auth method">
+</a>
+
+h3. Code example - creating an Ably token inside a JWT
+
+The following is an example of issuing an Ably-compatible token inside the of header of a JWT:
+
+bc[javascript]. const ably = new Ably.Rest({ key: '{{API_KEY}}' });
+ably.auth.requestToken({ clientId: 'client@example.com' }, (err, tokenDetails) => {
+  var header = {
+    "typ":"JWT",
+    "alg":"HS256",
+    "x-ably-token": tokenDetails.token
+  }
+  var claims = {
+    "exp": currentTime + 3600
+  }
+  var base64Header = btoa(header);
+  var base64Claims = btoa(claims);
+  /* Apply the hash specified in the header */
+  var signature = hash((base64Header + "." + base64Claims), SECRET);
+  var jwt = base64Header + "." + base64Claims + "." + signature;
+  /* Send jwt to client */
+});
+
+*Note:* The authenticity of the JWT *will not* be checked, due to Ably not having access to your SECRET key.
+
+h2(#jwt-claims). Using JWTs for authenticated user claims
+
+It is possible for JWTs to contain authenticated claims for users that can be used to allow or disallow certain interactions in your channels.
+
+Messages can be annotated with trusted metadata copied from the client's authentication token by Ably servers. Clients are unable to directly publish messages with user claim metadata, and claims contained within the authentication token are signed to prevent tampering. Claims can be scoped to individual channels or to namespaces of channels, see our "namespaces documentation":/general/channel-rules-namespaces/ for more information. The most specific user claim will be added to the message as part of the @extras@ object.
+
+*Note:* This does not apply to presence or metadata messages.
+
+An example use case is when using "Message Interactions":/realtime/messages#message-interactions. You might want to use trusted claims to define 'moderator' users in a chat channel who have the ability to delete any sent messages. When the moderator sends an interaction to mark messages in a channel as deleted, your application should check that user's claims to verify they are a moderator for that channel before actioning their request.
+
+To set the trusted fields you need to include @ably.channel.*@ in your JWT authentication payload, for example:
+
+```[javascript]
+const claims = {
+  "sub": "1234567890",
+  "name": "John Doe",
+  "x-ably-capability": <...>,
+  "x-ably-clientId": <...>,
+  "ably.channel.chat1": "admin", // the user is an admin for the chat1 channel
+  "ably.channel.chat:*": "moderator", // the user is a moderator in channels within the chat namespace
+  "ably.channel.*": "guest", // the user is a guest in all other channels
+}
+```
+
+The claims from the token are copied into messages, allowing them to be checked for permission:
+
+```[javascript]
+const fromModerator = (message) => {
+    const userClaim = message.extras && message.extras.userClaim;
+    return (userClaim && userClaim == 'moderator');
+}
+```
