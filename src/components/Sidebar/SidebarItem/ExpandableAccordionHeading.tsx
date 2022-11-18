@@ -4,15 +4,9 @@ import { AccordionItemButton, AccordionItemHeading, AccordionItemState } from 'r
 
 import { ROOT_LEVEL } from '../consts';
 import { ExpandableIndicator } from '../ExpandableIndicator';
+import { AccordionHeadingProps } from './accordion-heading-props';
 
 import { expanded } from './ExpandableAccordionHeading.module.css';
-
-export type AccordionHeadingProps = {
-  label: React.ReactNode;
-  level: number;
-  expandable?: boolean;
-  collapsible?: boolean;
-};
 
 export const ExpandableAccordionHeading = ({ label, level }: AccordionHeadingProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -30,6 +24,7 @@ export const ExpandableAccordionHeading = ({ label, level }: AccordionHeadingPro
             if (expanded !== undefined && expanded !== isExpanded) {
               setIsExpanded(expanded);
             }
+
             return <ExpandableIndicator expanded={expanded} />;
           }}
         </AccordionItemState>
