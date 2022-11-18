@@ -1,21 +1,15 @@
 import React, { ReactElement } from 'react';
 import { AccordionItem, AccordionItemPanel } from 'react-accessible-accordion';
-import { ExpandableAccordionHeading } from './ExpandableAccordionHeading';
+import { ExpandableAccordionHeading, AccordionHeadingProps } from './ExpandableAccordionHeading';
 import { NonExpandableHeading } from './NonExpandableHeading';
 
-type AccordionHeadingProps = {
-  label: React.ReactNode;
-  level: number;
-  expandable?: boolean;
-  collapsible?: boolean;
-};
-
-const AccordionHeading = ({ label, level, expandable = true, collapsible = true }: AccordionHeadingProps) =>
-  expandable && collapsible ? (
+const AccordionHeading = ({ label, level, expandable = true, collapsible = true }: AccordionHeadingProps) => {
+  return expandable && collapsible ? (
     <ExpandableAccordionHeading label={label} level={level} />
   ) : (
     <NonExpandableHeading label={label} level={level} />
   );
+};
 
 type SidebarItemProps = AccordionHeadingProps & {
   uuid: string;
@@ -29,9 +23,11 @@ export const SidebarItem = ({
   content,
   expandable = true,
   collapsible = true,
-}: SidebarItemProps) => (
-  <AccordionItem uuid={uuid}>
-    <AccordionHeading label={label} level={level} expandable={expandable} collapsible={collapsible} />
-    <AccordionItemPanel>{content}</AccordionItemPanel>
-  </AccordionItem>
-);
+}: SidebarItemProps) => {
+  return (
+    <AccordionItem uuid={uuid}>
+      <AccordionHeading label={label} level={level} expandable={expandable} collapsible={collapsible} />
+      <AccordionItemPanel>{content}</AccordionItemPanel>
+    </AccordionItem>
+  );
+};
