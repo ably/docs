@@ -1,6 +1,7 @@
 import readline from 'readline';
 import util from 'util';
 import fs from 'fs';
+import Turndown from 'turndown';
 import * as Diff from 'diff';
 
 import {
@@ -44,6 +45,9 @@ const rl = readline.createInterface({
 
 const question = util.promisify(rl.question).bind(rl);
 
+const turndownService = new Turndown();
+turndownService.keep(['div', 'span']);
+
 const queryUser = async (query: string, outputHandler: (answer: string) => void) => {
   rl.question(query, outputHandler);
 };
@@ -66,7 +70,7 @@ const diffText = (oldText: string, newText: string) => {
   });
 };
 
-const initialQuery = ['How would you like to debug the textile? (h)tml, (s)tep by step or (a)dvanced?'];
+const initialQuery = ['How would you like to debug the textile? (h)tml, (m)arkdown, (s)tep by step or (a)dvanced?'];
 const initialOutputHandler = [
   async (answer: string) => {
     switch (answer) {
@@ -81,6 +85,24 @@ const initialOutputHandler = [
             }
           } catch (e) {
             logArgProcessingError('argument', arg, i);
+            console.error(e);
+          }
+        });
+        process.exit();
+        break;
+      case 'm':
+        argsToRead.forEach((arg, i) => {
+          console.log('\nMarkdown mode\n');
+          try {
+            const markdown = turndownService.turndown(textileToHtml(arg));
+            if (flags.diff) {
+              diffText(arg, markdown);
+            } else {
+              console.log(`\n${markdown}\n`);
+            }
+          } catch (e) {
+            logArgProcessingError('argument', arg, i);
+            console.error(e);
           }
         });
         process.exit();
@@ -130,7 +152,7 @@ const initialOutputHandler = [
       case 'a':
         // eslint-disable-next-line no-case-declarations
         const selected = await question(
-          '\nSelecting from advanced modes, (c)heerio, (a)rray of cheerio values, (h)tml from cheerio, (f)inal objects:',
+          '\nSelecting from advanced modes, (c)heerio rendered into html, (a)rray of cheerio values, (f)inal objects:',
         );
         switch (selected) {
           // @ts-ignore
@@ -138,8 +160,9 @@ const initialOutputHandler = [
             argsToRead.forEach((arg, i) => {
               try {
                 console.log(`\n${textileToCheerio(arg)}\n`);
-              } catch {
+              } catch (e) {
                 logArgProcessingError('argument', arg, i);
+                console.error(e);
               }
             });
             break;
@@ -147,20 +170,9 @@ const initialOutputHandler = [
           case 'a':
             argsToRead.forEach((arg, i) => {
               try {
-                console.log(`\n${processTextile(arg)}\n`);
-              } catch {
-                logArgProcessingError('argument', arg, i);
-              }
-            });
-            break;
-          // @ts-ignore
-          case 'h':
-            argsToRead.forEach((arg, i) => {
-              try {
-                const cheerioArray = processTextile(arg);
-                cheerioArray.forEach((elem: cheerio.Cheerio) => {
-                  console.log(`\n${elem.html()}`);
-                });
+                console.log('\n');
+                console.log(processTextile(arg));
+                console.log('\n');
               } catch {
                 logArgProcessingError('argument', arg, i);
               }
