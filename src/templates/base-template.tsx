@@ -1,18 +1,20 @@
 import React, { useEffect, useMemo } from 'react';
 import { navigate, Script, ScriptStrategy } from 'gatsby';
-import Layout from '../components/Layout';
-import Html from '../components/blocks/Html';
-import PageLanguageContext, { PageLanguagesContext } from '../contexts/page-language-context';
-import Article from '../components/Article';
-import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
-import PageTitle from '../components/PageTitle';
-import { PREFERRED_LANGUAGE_KEY } from '../utilities/language/constants';
-import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../components/common/language-defaults';
-import { RightSidebar, RightSidebarMobile } from '../components/Sidebar/RightSidebar';
-import { DOCUMENTATION_PATH } from '../../data/transform/constants';
-import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
+
 import { Head } from 'src/components/Head';
 import { safeWindow, srcFromDocsSite } from 'src/utilities';
+import { PathnameContext, PageLanguageContext, PageLanguagesContext } from 'src/contexts';
+import { createLanguageHrefFromDefaults, getLanguageDefaults } from 'src/components/common/language-defaults';
+import { PREFERRED_LANGUAGE_KEY } from 'src/utilities/language/constants';
+import { RightSidebar, RightSidebarMobile } from 'src/components/Sidebar/RightSidebar';
+import Article from 'src/components/Article';
+import Html from 'src/components/blocks/Html';
+import Layout from 'src/components/Layout';
+import PageTitle from 'src/components/PageTitle';
+
+import { DOCUMENTATION_PATH } from '../../data/transform/constants';
+import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
+import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -89,15 +91,17 @@ const Template = ({
   return (
     <PageLanguageContext.Provider value={language}>
       <PageLanguagesContext.Provider value={languages}>
-        <Head title={title} canonical={canonical} description={description} />
-        <Layout languages={filteredLanguages} versionData={versionData}>
-          <Article>
-            <RightSidebarMobile menuData={contentMenu[0]} languages={languagesExist} />
-            <PageTitle>{title}</PageTitle>
-            <div>{elements}</div>
-          </Article>
-          <RightSidebar languages={languagesExist} menuData={contentMenu[0]} />
-        </Layout>
+        <PathnameContext.Provider value={pathname}>
+          <Head title={title} canonical={canonical} description={description} />
+          <Layout languages={filteredLanguages} versionData={versionData}>
+            <Article>
+              <RightSidebarMobile menuData={contentMenu[0]} languages={languagesExist} />
+              <PageTitle>{title}</PageTitle>
+              <div>{elements}</div>
+            </Article>
+            <RightSidebar languages={languagesExist} menuData={contentMenu[0]} />
+          </Layout>
+        </PathnameContext.Provider>
       </PageLanguagesContext.Provider>
       {script && <Script src={srcFromDocsSite(`/scripts/${slug}.js`)} strategy={ScriptStrategy.idle} />}
     </PageLanguageContext.Provider>
