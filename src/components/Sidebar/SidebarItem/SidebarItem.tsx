@@ -11,11 +11,6 @@ const AccordionHeading = ({ label, level, expandable = true, collapsible = true 
   );
 };
 
-type SidebarItemProps = AccordionHeadingProps & {
-  uuid: string;
-  content: ReactElement;
-};
-
 export const SidebarItem = ({
   uuid,
   label,
@@ -23,7 +18,10 @@ export const SidebarItem = ({
   content,
   expandable = true,
   collapsible = true,
-}: SidebarItemProps) => {
+}: AccordionHeadingProps & {
+  uuid: string;
+  content: ReactElement;
+}) => {
   return (
     <AccordionItem uuid={uuid}>
       <AccordionHeading label={label} level={level} expandable={expandable} collapsible={collapsible} />
