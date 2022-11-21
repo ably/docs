@@ -9,6 +9,9 @@ const { createLanguagePageVariants } = require('./createPageVariants');
 const { LATEST_ABLY_API_VERSION_STRING, DOCUMENTATION_PATH } = require('../transform/constants');
 const { createContentMenuDataFromPage } = require('./createContentMenuDataFromPage');
 const { DEFAULT_LANGUAGE } = require('./constants');
+const { writeRedirectToConfigFile } = require('./writeRedirectToConfigFile');
+
+const writeRedirect = writeRedirectToConfigFile('config/nginx-redirects.conf');
 
 const createPages = async ({ graphql, actions: { createPage, createRedirect } }) => {
   /**
@@ -118,6 +121,10 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
       redirectFromList.forEach((redirectFrom) => {
         const alreadyDocsPage = /^\/docs.*/.test(redirectFrom);
         const redirectFromPath = `${alreadyDocsPage ? '' : '/docs'}${redirectFrom}`;
+        const redirectFromUrl = new URL(redirectFromPath, 'https://ably.com');
+        if (!redirectFromUrl.hash) {
+          writeRedirect(redirectFromPath, pagePath);
+        }
         createRedirect({
           fromPath: redirectFromPath,
           toPath: pagePath,
