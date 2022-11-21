@@ -13,6 +13,8 @@ import {
 import { preParserSteps } from './data/cli-functionality/parser-steps/pre-parser';
 import { textileWorkaroundSteps } from './data/cli-functionality/parser-steps/textile-workarounds';
 
+process.on('exit', () => fs.rmSync('./dist', { recursive: true, force: true }));
+
 const argsToRead = process.argv
   .slice(2)
   .filter((arg) => !arg.startsWith('--'))
