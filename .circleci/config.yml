@@ -72,6 +72,33 @@ jobs:
           path: ./reports/junit
       - store_artifacts:
           path: coverage
+  build:
+    executor:
+      name: node/default
+      tag: 16.15.1
+    resource_class: medium+
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build
+          command: npm run build
+      - run:
+          name: Require redirects file to be generated
+          command: test -f config/nginx-redirects.conf
+      - run:
+          name: Install nginx & erb
+          command: |
+            sudo apt-get update -qq &&
+            sudo apt-get install --no-install-recommends -y nginx ruby
+      - run:
+          name: Test nginx configuration
+          command: |
+            PORT=3000 erb config/nginx.conf.erb > config/nginx.conf &&
+            mkdir -p logs/nginx &&
+            touch logs/nginx/access.log logs/nginx/error.log &&
+            sudo nginx -p . -c config/nginx.conf -t
 
 workflows:
   test_branch:
@@ -79,5 +106,8 @@ workflows:
     jobs:
       - install-dependencies
       - test:
+          requires:
+            - install-dependencies
+      - build:
           requires:
             - install-dependencies
