@@ -286,7 +286,14 @@ describe('Ensure that there are no missing spans', () => {
                 </code>
               </span>
               <span
-                lang="objc,swift"
+                lang="swift"
+              >
+                <code>
+                  ARTHttpPaginatedResponse
+                </code>
+              </span>
+              <span
+                lang="objc"
               >
                 <code>
                   ARTHttpPaginatedResponse
@@ -411,7 +418,14 @@ describe('Ensure that there are no missing spans', () => {
                 </code>
               </span>
               <span
-                lang="objc,swift"
+                lang="swift"
+              >
+                <code>
+                  ARTHttpPaginatedResponse
+                </code>
+              </span>
+              <span
+                lang="objc"
               >
                 <code>
                   ARTHttpPaginatedResponse
@@ -536,7 +550,14 @@ describe('Ensure that there are no missing spans', () => {
                 </code>
               </span>
               <span
-                lang="objc,swift"
+                lang="swift"
+              >
+                <code>
+                  ARTHttpPaginatedResponse
+                </code>
+              </span>
+              <span
+                lang="objc"
               >
                 <code>
                   ARTHttpPaginatedResponse
@@ -661,7 +682,14 @@ describe('Ensure that there are no missing spans', () => {
                 </code>
               </span>
               <span
-                lang="objc,swift"
+                lang="swift"
+              >
+                <code>
+                  ARTHttpPaginatedResponse
+                </code>
+              </span>
+              <span
+                lang="objc"
               >
                 <code>
                   ARTHttpPaginatedResponse
@@ -780,7 +808,14 @@ describe('Ensure that there are no missing spans', () => {
             </a>
              contains a 
             <span
-              lang="ruby,python"
+              lang="python"
+            >
+              <code>
+                status_code
+              </code>
+            </span>
+            <span
+              lang="ruby"
             >
               <code>
                 status_code
@@ -876,7 +911,14 @@ describe('Ensure that there are no missing spans', () => {
             </a>
              contains a 
             <span
-              lang="ruby,python"
+              lang="python"
+            >
+              <code>
+                status_code
+              </code>
+            </span>
+            <span
+              lang="ruby"
             >
               <code>
                 status_code
@@ -972,7 +1014,14 @@ describe('Ensure that there are no missing spans', () => {
             </a>
              contains a 
             <span
-              lang="ruby,python"
+              lang="python"
+            >
+              <code>
+                status_code
+              </code>
+            </span>
+            <span
+              lang="ruby"
             >
               <code>
                 status_code
@@ -1068,7 +1117,14 @@ describe('Ensure that there are no missing spans', () => {
             </a>
              contains a 
             <span
-              lang="ruby,python"
+              lang="python"
+            >
+              <code>
+                status_code
+              </code>
+            </span>
+            <span
+              lang="ruby"
             >
               <code>
                 status_code
