@@ -47,13 +47,14 @@ export const SuggestionBox = ({ results, isActive, error, query }: Props) => {
       {results && totalResults > 0 ? (
         results.map((hit, index) => {
           const { title, highlight, meta_description, url, id } = hit;
+          console.log(title);
           const [pageTitle, ...breadcrumbs] = title.split(' / ').filter(
             (item) =>
-              // We need to get rid of 'Docs' because it's redundant and
-              // 'Root` because there are no root section it gets redirected to '/docs/'
-              !DOCUMENTATION_PATH.toLowerCase().includes(item.trim().toLowerCase()) ||
-              item.trim().toLowerCase() === 'root',
+              // We need to get rid of 'Docs' because it's redundant
+              !DOCUMENTATION_PATH.toLowerCase().includes(item.trim().toLowerCase()),
           );
+
+          const body = meta_description ?? highlight;
 
           return (
             <a
@@ -62,15 +63,14 @@ export const SuggestionBox = ({ results, isActive, error, query }: Props) => {
               href={url}
               tabIndex={index}
               className={cn(
-                'block p-16 hover:bg-light-grey focus:bg-light-grey focus:outline-none rounded-lg break-all mb-4',
+                'block p-16 hover:bg-light-grey focus:bg-light-grey focus:outline-none rounded-lg mb-4 overflow-hidden',
+                { 'break-all': body.match(/[^\s]{109,}/) },
                 hitItem,
               )}
               role="link"
             >
               <h4 className={cn('text-menu2 mb-6 font-medium', titleStyle)}>{pageTitle}</h4>
-              <div className="text-menu3 font-light text-charcoal-grey leading-5">
-                {htmr(meta_description ?? highlight)}
-              </div>
+              <div className="text-menu3 font-light text-charcoal-grey leading-5">{htmr(body)}</div>
               {breadcrumbs.length > 0 && (
                 <div className="text-dark-grey font-light text-menu3 mt-8">{breadcrumbs.join(' > ').toLowerCase()}</div>
               )}
