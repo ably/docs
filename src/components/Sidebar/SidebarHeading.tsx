@@ -2,6 +2,7 @@ import React, { ElementType, ComponentPropsWithoutRef, PropsWithChildren } from 
 import cn from 'classnames';
 import { safeWindow } from 'src/utilities';
 import { sidebar } from './SidebarHeading.module.css';
+import { isString } from 'lodash';
 
 export type SidebarHeadingProps<C extends ElementType> = {
   as?: C;
@@ -29,16 +30,19 @@ export const SidebarHeading = <C extends ElementType>({
       node.scrollIntoView();
     }
   };
-
+  let maybeClassName = undefined;
+  if (!isString(as)) {
+    maybeClassName = activeClassName;
+  }
   return (
     <Component
       {...props}
       ref={scrollLinkIntoView}
-      className={cn(sidebar, `ml-${indent}`, className, {
+      className={cn(sidebar, `ml-${indent} break-words`, className, {
         'font-light text-cool-black': !isActive,
         [activeClassName]: isActive,
       })}
-      activeClassName={activeClassName}
+      activeClassName={maybeClassName}
     />
   );
 };

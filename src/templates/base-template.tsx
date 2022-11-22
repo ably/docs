@@ -39,6 +39,8 @@ const Template = ({
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
   const canonical = `${CANONICAL_ROOT}${slug}`;
 
+  const contentMenuFromLanguage = contentMenu[language];
+
   const versionData = {
     versions: versions.edges,
     version,
@@ -95,11 +97,11 @@ const Template = ({
           <Head title={title} canonical={canonical} description={description} />
           <Layout languages={filteredLanguages} versionData={versionData}>
             <Article>
-              <RightSidebarMobile menuData={contentMenu[0]} languages={languagesExist} />
+              <RightSidebarMobile menuData={contentMenuFromLanguage[0]} languages={languagesExist} />
               <PageTitle>{title}</PageTitle>
               <div>{elements}</div>
             </Article>
-            <RightSidebar languages={languagesExist} menuData={contentMenu[0]} />
+            <RightSidebar languages={languagesExist} menuData={contentMenuFromLanguage[0]} />
           </Layout>
         </PathnameContext.Provider>
       </PageLanguagesContext.Provider>

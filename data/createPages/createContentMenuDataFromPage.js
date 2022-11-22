@@ -11,7 +11,7 @@ const TYPES_TO_LEVEL_MAP = {
 
 const httpRESTMethods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE'];
 
-const isItemBeAddedInNav = (name, header) => {
+const shouldItemBeAddedToNav = (name, header) => {
   const isH6 = header === HtmlDataTypes.h6 && name !== '';
   const isRESTful = httpRESTMethods.some((method) => name.startsWith(method));
   const isAblyRESTful = isRESTful && (name.includes('rest.ably.io') || name.includes('realtime.ably.io'));
@@ -61,9 +61,11 @@ export const createContentMenuDataFromPage = (page, contentMenuData = [], langua
     }
   }
   if (TYPES_TO_ADD_TO_CONTENT_MENU.includes(name)) {
+    const defaultMenuItemName = getTextFromPage(page).join('');
     const menuItemName = getTextFromPage(page, [], language).join('');
-    if (isItemBeAddedInNav(menuItemName, name)) {
-      const newID = id ?? idFromName(menuItemName);
+    const menuItemNameToUse = menuItemName ? menuItemName : defaultMenuItemName;
+    if (shouldItemBeAddedToNav(menuItemNameToUse, name)) {
+      const newID = id ?? idFromName(menuItemNameToUse);
 
       page.attribs = {
         ...(page.attribs || {}),
@@ -71,7 +73,7 @@ export const createContentMenuDataFromPage = (page, contentMenuData = [], langua
       };
 
       const contentMenuItem = {
-        name: menuItemName,
+        name: menuItemNameToUse,
         id: newID,
         level: TYPES_TO_LEVEL_MAP[name],
       };
