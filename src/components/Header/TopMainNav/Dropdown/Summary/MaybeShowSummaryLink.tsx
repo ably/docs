@@ -1,14 +1,17 @@
 import React from 'react';
+import cn from 'classnames';
+import Icon from '@ably/ui/core/Icon';
+import FeaturedLink from '@ably/ui/core/FeaturedLink';
 import { DropdownContentLink } from '../Contents';
-import { SummaryLinkIcon } from './SummaryLinkIcon';
+
+import { container, arrow } from './MaybeShowSummaryLink.module.css';
 
 export const MaybeShowSummaryLink = ({ summaryLink }: { summaryLink?: DropdownContentLink }) =>
   summaryLink ? (
-    <div className="h-full px-32 pt-32 docs-link font-medium">
-      <a className="mr-4" style={{ fontSize: '0.875rem', lineHeight: '1.25rem' }} href={summaryLink.href}>
-        {summaryLink.text}
-      </a>
-      <SummaryLinkIcon />
+    <div className="h-full px-32 pt-32">
+      <FeaturedLink url={summaryLink.href}>
+        <span className="text-gui-default text-menu2 font-medium">{summaryLink.text}</span>
+      </FeaturedLink>
     </div>
   ) : (
     <div></div>

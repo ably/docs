@@ -1,6 +1,6 @@
 import React from 'react';
+import Icon from '@ably/ui/core/Icon';
 import { DropdownContentLink } from '../../../../Dropdown/Contents';
-import { SummaryLinkIcon } from '../../../../Dropdown/Summary';
 
 export const MaybeShowHamburgerSummaryLink = ({ summaryLink }: { summaryLink?: DropdownContentLink }) =>
   summaryLink ? (
@@ -8,7 +8,7 @@ export const MaybeShowHamburgerSummaryLink = ({ summaryLink }: { summaryLink?: D
       <a className="mr-4" href={summaryLink.href}>
         {summaryLink.text}
       </a>
-      <SummaryLinkIcon />
+      <Icon name="icon-gui-arrow-right" size="1rem" />
     </div>
   ) : (
     <div></div>
