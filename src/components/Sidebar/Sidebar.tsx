@@ -1,10 +1,13 @@
 import React, { ReactElement } from 'react';
 import cn from 'classnames';
+
 import { HighlightedMenuContext } from 'src/contexts/highlighted-menu-context';
+
+import { ArticleType } from '../../contexts/article-type-context';
 import { SidebarLinkMenu, SectionTitle } from './';
 import { SidebarData, EXPAND_MENU } from './types';
+
 import { stickySidebar } from './Sidebar.module.css';
-import { ArticleType } from '../../contexts/article-type-context';
 
 export type SidebarProps = {
   data: SidebarData[];
