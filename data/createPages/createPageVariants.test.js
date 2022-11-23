@@ -50,7 +50,7 @@ describe('createLanguagePageVariants successfully creates the page variants', ()
     }).not.toThrow();
   });
   it('Function returns simple list of non-default language(s)', () => {
-    expect(basicResults).toEqual(['javascript']);
+    expect(basicResults).toEqual([['javascript'], { javascript: [[], []] }]);
   });
   it('Mock createPage function was called with the relevant data', () => {
     expect(createPage.mock.calls.length).toBeGreaterThan(0);

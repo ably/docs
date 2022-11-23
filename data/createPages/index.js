@@ -100,12 +100,14 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
     const postParsedContent = postParser(textile(content));
     const contentOrderedList = htmlParser(postParsedContent);
     const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item));
-    const languages = createLanguagePageVariants(identity, documentTemplate)(
+    const [languages, contentMenuObject] = createLanguagePageVariants(identity, documentTemplate)(
       contentOrderedList,
       edge.node.slug,
       edge.node.parentSlug,
       edge.node.version,
     );
+
+    contentMenuObject[DEFAULT_LANGUAGE] = contentMenu;
 
     const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
 
@@ -135,7 +137,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
         language: DEFAULT_LANGUAGE,
         languages,
         contentOrderedList,
-        contentMenu,
+        contentMenu: contentMenuObject,
         script,
       },
     });
