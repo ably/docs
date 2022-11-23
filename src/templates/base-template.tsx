@@ -4,7 +4,11 @@ import { navigate, Script, ScriptStrategy } from 'gatsby';
 import { Head } from 'src/components/Head';
 import { safeWindow, srcFromDocsSite } from 'src/utilities';
 import { PathnameContext, PageLanguageContext, PageLanguagesContext } from 'src/contexts';
-import { createLanguageHrefFromDefaults, getLanguageDefaults } from 'src/components/common/language-defaults';
+import {
+  createLanguageHrefFromDefaults,
+  getLanguageDefaults,
+  languageIsUsable,
+} from 'src/components/common/language-defaults';
 import { PREFERRED_LANGUAGE_KEY } from 'src/utilities/language/constants';
 import { RightSidebar, RightSidebarMobile } from 'src/components/Sidebar/RightSidebar';
 import Article from 'src/components/Article';
@@ -13,7 +17,7 @@ import Layout from 'src/components/Layout';
 import PageTitle from 'src/components/PageTitle';
 
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
-import { DEFAULT_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
+import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
 
 const getMetaDataDetails = (
@@ -78,8 +82,18 @@ const Template = ({
       }
 
       if (preferredLanguage) {
-        const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(preferredLanguage, language);
-        const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, preferredLanguage);
+        /**
+         * We must select a language specified in `pageLanguages`, otherwise
+         * pages such as /docs/api/realtime-sdk/push?lang=ruby will show
+         * broken content.
+         */
+        const usableLanguage = languageIsUsable(preferredLanguage, filteredLanguages)
+          ? preferredLanguage
+          : languageIsUsable(DEFAULT_PREFERRED_LANGUAGE, filteredLanguages)
+          ? DEFAULT_PREFERRED_LANGUAGE
+          : filteredLanguages[0];
+        const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(usableLanguage, language);
+        const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, usableLanguage);
         navigate(href);
         return;
       }
