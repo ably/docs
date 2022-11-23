@@ -47,7 +47,6 @@ export const SuggestionBox = ({ results, isActive, error, query }: Props) => {
       {results && totalResults > 0 ? (
         results.map((hit, index) => {
           const { title, highlight, meta_description, url, id } = hit;
-          console.log(title);
           const [pageTitle, ...breadcrumbs] = title.split(' / ').filter(
             (item) =>
               // We need to get rid of 'Docs' because it's redundant
