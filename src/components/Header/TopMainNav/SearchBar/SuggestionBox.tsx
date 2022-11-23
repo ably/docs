@@ -47,12 +47,7 @@ export const SuggestionBox = ({ results, isActive, error, query }: Props) => {
       {results && totalResults > 0 ? (
         results.map((hit, index) => {
           const { title, highlight, meta_description, url, id } = hit;
-          const [pageTitle, ...breadcrumbs] = title.split(' / ').filter(
-            (item) =>
-              // We need to get rid of 'Docs' because it's redundant
-              !DOCUMENTATION_PATH.toLowerCase().includes(item.trim().toLowerCase()),
-          );
-
+          const [pageTitle, ...breadcrumbs] = title.split(' / ');
           const body = meta_description ?? highlight;
 
           return (
@@ -71,7 +66,16 @@ export const SuggestionBox = ({ results, isActive, error, query }: Props) => {
               <h4 className={cn('text-menu2 mb-6 font-medium', titleStyle)}>{pageTitle}</h4>
               <div className="text-menu3 font-light text-charcoal-grey leading-5">{htmr(body)}</div>
               {breadcrumbs.length > 0 && (
-                <div className="text-dark-grey font-light text-menu3 mt-8">{breadcrumbs.join(' > ').toLowerCase()}</div>
+                <div className="text-dark-grey font-light text-menu3 mt-8">
+                  {breadcrumbs
+                    .filter(
+                      (item) =>
+                        // We need to get rid of 'Docs' because it's redundant
+                        !DOCUMENTATION_PATH.toLowerCase().includes(item.trim().toLowerCase()),
+                    )
+                    .join(' > ')
+                    .toLowerCase()}
+                </div>
               )}
             </a>
           );
