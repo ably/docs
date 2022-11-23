@@ -55,7 +55,7 @@ export const MultilineCodeContent = ({
     <code
       ref={preRef}
       className="ui-text-code"
-      style={{ whiteSpace: 'pre' }}
+      style={{ whiteSpace: 'pre-wrap' }}
       dangerouslySetInnerHTML={{
         __html: DOMPurify.sanitize
           ? DOMPurify.sanitize(highlightedContent, {
