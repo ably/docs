@@ -32,7 +32,7 @@ const createLanguagePageVariants =
   (createPage, documentTemplate) =>
   (contentOrderedList, slug, parentSlug = null, version = null) => {
     const languages = getLanguagesFromContent(contentOrderedList);
-    languages.forEach((lang) => {
+    const contentMenus = languages.map((lang) => {
       const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item, [], lang));
       createPage({
         path: `${DOCUMENTATION_PATH}${slug}/language/${lang}`,
@@ -47,8 +47,10 @@ const createLanguagePageVariants =
           contentMenu: contentMenu ?? [],
         },
       });
+      return { [lang]: contentMenu };
     });
-    return languages;
+    const contentMenuObject = Object.assign({}, ...contentMenus);
+    return [languages, contentMenuObject];
   };
 
 module.exports = {

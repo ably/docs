@@ -29,7 +29,7 @@ export type AblyPageContext = {
   contentOrderedList: HtmlComponentProps[];
   languages: string[];
   version: string;
-  contentMenu: MenuData[][];
+  contentMenu: Record<string, MenuData[][]>;
   slug: string;
   script: string;
 };
