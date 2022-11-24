@@ -1,13 +1,6 @@
-import styled from 'styled-components';
+import React, { FC } from 'react';
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
-import { resetStyles } from './reset-styles';
 
-// Unset these values inherited from AblyUI/reset.css
-const StyledUl = styled.ul`
-  list-style: unset;
-  ${resetStyles}
-`;
+const Ul: FC = (props) => <ul {...props} className="ui-text-p2 pl-16 pb-32 list-disc -mt-16" />;
 
-const Ul = GenericHtmlBlock(StyledUl);
-
-export default Ul;
+export default GenericHtmlBlock(Ul);
