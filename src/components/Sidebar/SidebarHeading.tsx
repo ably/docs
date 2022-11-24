@@ -31,7 +31,7 @@ export const SidebarHeading = <C extends ElementType>({
     }
   };
   let maybeClassName = undefined;
-  if (!isString(as)) {
+  if (!isString(Component)) {
     maybeClassName = activeClassName;
   }
   return (
