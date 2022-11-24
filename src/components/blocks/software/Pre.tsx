@@ -62,7 +62,7 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
           <div className="mt-2">
             <Icon name="icon-gui-info" size="1rem" />
           </div>
-          <div className="ml-8">
+          <div className="ml-8 leading-normal">
             You’re currently reading the{' '}
             <span className="font-semibold">{languageLabels[pageLanguage] ?? pageLanguage}</span> docs but we don’t yet
             have a relevant code sample. You can explore equivalent samples below. To visit the docs for other

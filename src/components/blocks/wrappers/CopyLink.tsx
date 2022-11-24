@@ -15,10 +15,12 @@ import {
 const CopyLink = ({
   attribs,
   marginBottom = '',
+  marginTop = '',
   children,
 }: {
   attribs?: { id?: string };
   marginBottom?: string;
+  marginTop?: string;
   children: ReactNode;
 }) => {
   const [notificationIsVisible, setNotificationIsVisible] = useState(false);
@@ -37,10 +39,10 @@ const CopyLink = ({
   };
 
   return (
-    <div className={cn(container, marginBottom)}>
+    <div className={cn('copy-link-identifier', container, marginBottom)}>
       <div className={childrenContainer}>
         {children}
-        <div className={buttonContainer}>
+        <div className={cn(buttonContainer, marginTop)}>
           <div
             className={cn(notification, {
               [isVisible]: notificationIsVisible,

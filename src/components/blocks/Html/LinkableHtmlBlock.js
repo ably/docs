@@ -5,13 +5,13 @@ import CopyLink from '../wrappers/CopyLink';
 import { PageLanguageContext } from 'src/contexts';
 import { childOrSelfHasLanguageMatchingPageLanguageOrDefault } from '../wrappers/language-utilities';
 
-const LinkableHtmlBlock = (Type, marginBottom) => {
+const LinkableHtmlBlock = (Type, marginBottom, marginTop) => {
   const InnerBlock = ({ data, attribs }) => {
     const pageLanguage = useContext(PageLanguageContext);
     const shouldShowBlock = childOrSelfHasLanguageMatchingPageLanguageOrDefault(pageLanguage, data, attribs?.lang);
     if (shouldShowBlock) {
       return (
-        <CopyLink attribs={attribs} marginBottom={marginBottom}>
+        <CopyLink attribs={attribs} marginBottom={marginBottom} marginTop={marginTop}>
           <Type {...attribs}>
             <Html data={data} />
           </Type>
