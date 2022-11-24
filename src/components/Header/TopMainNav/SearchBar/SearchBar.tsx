@@ -51,7 +51,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
 
   return (
     <SearchDisplay ref={searchDisplayRef} onClick={focusOnSearchInput} displayMode={displayMode}>
-      <Icon name="icon-gui-search" size="1.5rem" />
+      <Icon name="icon-gui-search" size="24px" additionalCSS="absolute left-16 top-10" />
       <input
         type="text"
         ref={textInput}
@@ -61,7 +61,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
         onChange={handleSearch}
       />
       <KeyIcon className="mr-4">{isMac ? '⌘' : '^'}</KeyIcon>
-      <KeyIcon>K</KeyIcon>
+      <KeyIcon className="mr-16">K</KeyIcon>
       <SuggestionBox results={results} error={error} query={query} isActive={isInFocus} />
     </SearchDisplay>
   );

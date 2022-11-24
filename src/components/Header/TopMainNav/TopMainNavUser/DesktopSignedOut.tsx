@@ -9,8 +9,10 @@ export const DesktopSignedOut = () => (
     <TopMainNavLink href="/login" dataId="meganav-link">
       Login
     </TopMainNavLink>
-    <a href="/sign-up" data-id="meganav-sign-up-btn" className="ui-btn p-btn-small bg-cool-black text-white my-8">
-      Sign up free
-    </a>
+    <div className="hidden md:block">
+      <a href="/sign-up" data-id="meganav-sign-up-btn" className="ui-btn p-btn-small my-8">
+        Sign up free
+      </a>
+    </div>
   </>
 );

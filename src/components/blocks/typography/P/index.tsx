@@ -9,9 +9,11 @@ const Paragraph = ({ data, attribs }: HtmlComponentProps<'p'> & { attribs: { ['d
   const isTip = attribsContainClass('tip', attribs);
   const BaseComponent = isTip ? Tip : GenericHtmlBlock('p');
   const ParagraphComponent = PendingClassName({ data, attribs }, BaseComponent);
+
   if (attribs.className && attribs.className.includes('definition')) {
     return ParagraphComponent('font-mono font-semibold text-code');
   }
+
   switch (attribs['data-variant']) {
     case 'p1-strong':
       return ParagraphComponent('ui-text-p1 font-medium mb-32');
@@ -42,7 +44,7 @@ const Paragraph = ({ data, attribs }: HtmlComponentProps<'p'> & { attribs: { ['d
     case 'menu-label-3':
       return ParagraphComponent('ui-text-menu3 ');
     default:
-      return ParagraphComponent('ui-text-p1 mb-32');
+      return ParagraphComponent('ui-text-p2 mb-24');
   }
 };
 
