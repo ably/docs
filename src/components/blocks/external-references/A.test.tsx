@@ -4,7 +4,7 @@ import { A } from '.';
 
 const gatsbyRootElement = {
   data: 'Lorem ipsum',
-  attribs: { href: 'https://www.ably.com/docs/lorem' },
+  attribs: { href: 'https://ably.com/docs/lorem' },
 };
 const normalRootElement = {
   data: 'Lorem ipsum',
