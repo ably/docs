@@ -9,7 +9,11 @@ export const TopMainNavLink = ({
   dataId: string;
   children: React.ReactNode;
 }) => (
-  <a href={href} className="hidden md:flex items-center h-full mr-24 py-24 font-medium" data-id={dataId}>
+  <a
+    href={href}
+    className="hidden md:flex items-center h-full mr-24 py-24 font-medium hover:text-gui-hover"
+    data-id={dataId}
+  >
     {children}
   </a>
 );
