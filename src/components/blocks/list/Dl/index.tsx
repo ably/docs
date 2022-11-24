@@ -9,6 +9,7 @@ const definitionListCell = css`
   border-bottom: ${borders.defaultBorder};
   height: 100%;
   padding: 15px 20px 15px 0;
+  line-height: 1.5;
 `;
 
 const StyledDl = styled.dl`

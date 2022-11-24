@@ -25,10 +25,13 @@ export const useGetCurrentHeader = (flatTableOfContents: SidebarData[]) => {
     setHeadingId: typeof setHighlightedHeadingId,
   ) => {
     const topNav = document.getElementById('top-main-nav') as HTMLElement;
+    if (!topNav) {
+      return;
+    }
     const topNavHeight = topNav.getBoundingClientRect().height;
     const languageNavigation = document.getElementById('top-code-menu');
     const combinedTopNavHeight =
-      topNavHeight + (languageNavigation ? languageNavigation?.getBoundingClientRect().height : 0);
+      topNavHeight + (languageNavigation ? languageNavigation?.getBoundingClientRect()?.height : 0);
     for (const headingLine of flatTableOfContents) {
       const element = document.getElementById(headingLine.link.replaceAll('#', ''));
       if (element) {
