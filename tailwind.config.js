@@ -104,6 +104,8 @@ module.exports = extendConfig((ablyUIConfig) => ({
         400: '25rem',
         512: '32rem',
         780: '48.75rem',
+        680: '42.5rem',
+        820: '51.25rem',
       },
       colors: {
         ...apiReferenceSpecificColors,

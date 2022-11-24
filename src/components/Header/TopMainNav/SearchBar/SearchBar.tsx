@@ -61,7 +61,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
         onChange={handleSearch}
       />
       <KeyIcon className="mr-4">{isMac ? '⌘' : '^'}</KeyIcon>
-      <KeyIcon className="mr-16">K</KeyIcon>
+      <KeyIcon className="mr-16 pt-2">K</KeyIcon>
       <SuggestionBox results={results} error={error} query={query} isActive={isInFocus} />
     </SearchDisplay>
   );
