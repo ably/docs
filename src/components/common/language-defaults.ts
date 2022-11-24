@@ -2,6 +2,8 @@ import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 
 const isLanguageDefault = (language: string) => language === DEFAULT_LANGUAGE;
 
+export const languageIsUsable = (language: string, pageLanguages: string[]) => pageLanguages.includes(language);
+
 export const getLanguageDefaults = (
   language: string,
   pageLanguage: string,
