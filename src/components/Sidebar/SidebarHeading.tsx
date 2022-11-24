@@ -30,19 +30,20 @@ export const SidebarHeading = <C extends ElementType>({
       node.scrollIntoView();
     }
   };
-  let maybeClassName = undefined;
+  const finalProps: Omit<Props<C>, 'as' | 'indent' | 'isActive' | 'className'> & {
+    ref: (node: HTMLElement) => void;
+    className: string;
+    activeClassName?: string;
+  } = {
+    ...props,
+    ref: scrollLinkIntoView,
+    className: cn(sidebar, `ml-${indent} break-words`, className, {
+      'font-light text-cool-black': !isActive,
+      [activeClassName]: isActive,
+    }),
+  };
   if (!isString(Component)) {
-    maybeClassName = activeClassName;
+    finalProps.activeClassName = activeClassName;
   }
-  return (
-    <Component
-      {...props}
-      ref={scrollLinkIntoView}
-      className={cn(sidebar, `ml-${indent} break-words`, className, {
-        'font-light text-cool-black': !isActive,
-        [activeClassName]: isActive,
-      })}
-      activeClassName={maybeClassName}
-    />
-  );
+  return <Component {...finalProps} />;
 };
