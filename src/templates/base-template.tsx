@@ -16,8 +16,8 @@ import Html from 'src/components/blocks/Html';
 import Layout from 'src/components/Layout';
 import PageTitle from 'src/components/PageTitle';
 
-import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
+import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
 
 const getMetaDataDetails = (
@@ -26,7 +26,9 @@ const getMetaDataDetails = (
   alternative: string | string[] = '',
 ) => (document?.meta?.[prop] ? document.meta[prop] : alternative);
 
-const CANONICAL_ROOT = `https://www.ably.com${DOCUMENTATION_PATH}`;
+const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
+
+const CANONICAL_ROOT = `${ABLY_MAIN_WEBSITE}${DOCUMENTATION_PATH}`;
 const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
 const NO_LANGUAGE = 'none';
 

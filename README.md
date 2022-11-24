@@ -68,7 +68,7 @@ Note that any env variables needed to show in the browser must be prefixed with 
 
 * GATSBY_DOCS_SIGNED_IN - set to any string to force the application to behave as though you are logged in
 * GATSBY_DOCS_API_KEYS - set to any string to force the application to behave as though you have API keys available
-* GATSBY_WEBSITE_API - the URL from which basic user data and API keys can be retrieved
+* GATSBY_ABLY_MAIN_WEBSITE - the URL from which basic user data and API keys can be retrieved, and from which we can generate sitemap links and so on
 
 Place these in .env.development to run locally.
 

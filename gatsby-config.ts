@@ -1,5 +1,7 @@
+const mainWebsite = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
+
 export const siteMetadata = {
-  siteUrl: 'https://www.ably.com/docs',
+  siteUrl: `${mainWebsite}/docs`,
   title: 'Documentation | Ably Realtime',
 };
 
@@ -22,7 +24,7 @@ export const plugins = [
       excludes: ['/_*'],
       output: '/docs',
       // NOTE: these didn't work in `exclude` field, so we had to use custom regex in filterPage function
-      filterPages: ({ path }) =>
+      filterPages: ({ path }: { path: string }) =>
         // Legacy versions of pages are excluded from the sitemap (anything with a URL containing .../versions/vx.x/where x is at least one digit, e.g. v1.1, v1.2
         /\/\b(versions)\b\/(v)[0-9]./.test(path) ||
         // Urls with /docs/code-
@@ -33,7 +35,7 @@ export const plugins = [
         /\/\b(documentation)\/$/.test(path) ||
         // Exclude root domain url
         path === '/',
-      serialize: ({ path }) => ({
+      serialize: ({ path }: { path: string }) => ({
         url: path,
         changefreq: 'monthly',
       }),
