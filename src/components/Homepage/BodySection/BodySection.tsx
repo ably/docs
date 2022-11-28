@@ -16,7 +16,7 @@ export const BodySection = ({ section }: { section: Section }) => {
       {section.description ? (
         <BodySectionDescription description={section.description} />
       ) : (
-        <BodySectionDescriptionContainer></BodySectionDescriptionContainer>
+        <BodySectionDescriptionContainer />
       )}
       {cardsExist && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 col-span-6 mb-96 gap-24 mr-32">
