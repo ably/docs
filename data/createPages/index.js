@@ -1,15 +1,18 @@
 const path = require('path');
 const textile = require('textile-js');
+const { simpleSitemapAndIndex } = require('sitemap');
 const { identity } = require('lodash');
 const { safeFileExists } = require('./safeFileExists');
 const { flattenContentOrderedList, maybeRetrievePartial } = require('../transform');
 const { postParser } = require('../transform/post-parser');
 const { htmlParser } = require('../html-parser');
 const { createLanguagePageVariants } = require('./createPageVariants');
-const { LATEST_ABLY_API_VERSION_STRING, DOCUMENTATION_PATH } = require('../transform/constants');
+const { LATEST_ABLY_API_VERSION_STRING, DOCUMENTATION_PATH, DOCUMENTATION_NAME } = require('../transform/constants');
 const { createContentMenuDataFromPage } = require('./createContentMenuDataFromPage');
 const { DEFAULT_LANGUAGE } = require('./constants');
 const { writeRedirectToConfigFile } = require('./writeRedirectToConfigFile');
+
+const mainWebsite = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
 const writeRedirect = writeRedirectToConfigFile('config/nginx-redirects.conf');
 
@@ -134,12 +137,12 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
         });
       });
     }
-
+    const slug = edge.node.parentSlug ? edge.node.parentSlug : edge.node.slug;
     createPage({
       path: `${DOCUMENTATION_PATH}${edge.node.slug}`,
       component: documentTemplate,
       context: {
-        slug: edge.node.parentSlug ? edge.node.parentSlug : edge.node.slug,
+        slug,
         version: edge.node.version ?? LATEST_ABLY_API_VERSION_STRING,
         language: DEFAULT_LANGUAGE,
         languages,
@@ -148,9 +151,48 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
         script,
       },
     });
+    return slug;
   };
-  await Promise.all(documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)));
-  await Promise.all(apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate)));
+
+  const documentSlugs = await Promise.all(documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)));
+  const apiReferenceSlugs = await Promise.all(
+    apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate)),
+  );
+  const allSlugs = [...documentSlugs, ...apiReferenceSlugs]
+    .filter(
+      (slug) =>
+        !(
+          // Legacy versions of pages are excluded from the sitemap (anything with a URL containing .../versions/vx.x/where x is at least one digit, e.g. v1.1, v1.2
+          (
+            /\/\b(versions)\b\/(v)[0-9]./.test(slug) ||
+            // Urls with /docs/code-
+            /\/\b(docs)\/\b(code-)/.test(path) ||
+            // anything with a URL beginning with /docs/tutorials
+            /\/\b(docs)\b\/(tutorials)\//.test(path) ||
+            // /documentation/
+            /\/\b(documentation)\/$/.test(path) ||
+            // Exclude root domain url
+            path === '/'
+          )
+        ),
+    )
+    .map((slug) => slug.replace(/\/$/, ''));
+  const docsPrefix = `/${DOCUMENTATION_NAME}`;
+  const sitemap = await Promise.all(
+    allSlugs.map(async (slug) => ({
+      url: `${docsPrefix}/${slug}`,
+    })),
+  );
+  const sitemapPublicPath = path.posix.join('', docsPrefix);
+  const sitemapWritePath = path.join(`public`, docsPrefix);
+
+  simpleSitemapAndIndex({
+    hostname: mainWebsite,
+    publicBasePath: sitemapPublicPath,
+    destinationDir: sitemapWritePath,
+    sourceData: sitemap,
+    gzip: false,
+  });
 };
 
 module.exports = { createPages };
