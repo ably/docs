@@ -35,7 +35,7 @@ const TipTitleElement = styled.strong`
   line-height: 18px;
 `;
 
-const InlineContentContainer = styled.div`
+const InlineContentContainer = styled.p`
   grid-row: 2;
   grid-column: 1;
   margin-left: var(--spacing-16);
@@ -45,13 +45,14 @@ const InlineContentContainer = styled.div`
   margin-bottom: var(--spacing-8);
 `;
 
-const InlineGridParagraph = styled.p`
+const InlineGridParagraph = styled.div`
   display: inline-grid;
   border-radius: 0.5em;
   background-color: ${colors.containers.three};
   border-width: 1px;
   border-color: #d9d9da;
   grid-template-rows: auto auto;
+  margin-bottom: 24px;
   font-size: 16px;
   line-height: 23px;
   padding: 0;
