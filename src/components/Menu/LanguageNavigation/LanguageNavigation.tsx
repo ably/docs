@@ -48,7 +48,7 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
 
   return items.length >= 2 ? (
     <div className="border-b border-charcoal-grey w-full">
-      <menu className={horizontalNav}>
+      <menu data-testid="menu" className={horizontalNav}>
         {items.map(({ Component, props, content }, index) => (
           <Component {...props} key={index}>
             {content}
