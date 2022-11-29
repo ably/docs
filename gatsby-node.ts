@@ -1,4 +1,3 @@
 export { createPages } from './data/createPages';
-export { onCreateNode } from './data/onCreateNode';
-export { createSchemaCustomization } from './data/onCreateNode/create-graphql-schema-customization';
+export { onCreateNode, createSchemaCustomization } from './data/onCreateNode';
 export { onCreateWebpackConfig } from './gatsby-overwrite-config';
