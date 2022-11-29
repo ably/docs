@@ -18,6 +18,7 @@ const StyledDl = styled.dl`
   grid-auto-rows: minmax(min-content, max-content);
   grid-auto-flow: column;
   margin-bottom: 20px;
+  font-size: 16px;
 
   div {
     display: contents;
