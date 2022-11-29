@@ -6,4 +6,4 @@ type ParagraphComponent = ({ data, attribs }: HtmlComponentProps<'p'>) => ReactN
 export const PendingClassName =
   ({ data, attribs }: HtmlComponentProps<'p'>, Block: ParagraphComponent) =>
   (className: string) =>
-    Block({ data, attribs: { ...attribs, className: `${className} ${attribs?.className ?? ''}` } });
+    Block({ data, attribs: { ...attribs, className: `leading-relaxed ${className} ${attribs?.className ?? ''}` } });
