@@ -1,5 +1,5 @@
 import React from 'react';
-import { SessionState } from '../../../../../../contexts/user-context';
+import { SessionState } from '../../../../../contexts/user-context';
 
 export const AccountUtilityLinks = ({ sessionState }: { sessionState: SessionState }) => (
   <menu className="mb-8 mx-16 list-none">

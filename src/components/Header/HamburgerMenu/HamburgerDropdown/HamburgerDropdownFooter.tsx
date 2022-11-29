@@ -1,5 +1,5 @@
 import React from 'react';
-import { SessionState } from '../../../../../contexts/user-context';
+import { SessionState } from '../../../../contexts/user-context';
 
 export const HamburgerDropdownFooter = ({ sessionState }: { sessionState: SessionState }) => (
   <menu className="border-t border-mid-grey list-none flex flex-row justify-between mx-24 items-center pt-24 pl-0">

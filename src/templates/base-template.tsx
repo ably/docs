@@ -15,6 +15,7 @@ import Article from 'src/components/Article';
 import Html from 'src/components/blocks/Html';
 import Layout from 'src/components/Layout';
 import PageTitle from 'src/components/PageTitle';
+import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
@@ -106,13 +107,16 @@ const Template = ({
     }
   }, []);
 
+  const languageAlternativesExist = (languages && languages.length > 1) || (versionData && versionData.versions.length);
+
   return (
     <PageLanguageContext.Provider value={language}>
       <PageLanguagesContext.Provider value={languages}>
         <PathnameContext.Provider value={pathname}>
           <Head title={title} canonical={canonical} description={description} />
           <Layout languages={filteredLanguages} versionData={versionData}>
-            <Article>
+            <LeftSideBar />
+            <Article hasTopBar={languageAlternativesExist}>
               <RightSidebarMobile menuData={contentMenuFromLanguage[0]} languages={languagesExist} />
               <PageTitle>{title}</PageTitle>
               <div>{elements}</div>

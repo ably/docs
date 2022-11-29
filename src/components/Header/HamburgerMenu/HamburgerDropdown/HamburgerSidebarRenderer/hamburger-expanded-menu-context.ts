@@ -1,6 +1,6 @@
 import { identity } from 'lodash';
 import { createContext } from 'react';
-import { IdentityPlaceholderFunction } from '../../../../../../contexts/boolean-state-context';
+import { IdentityPlaceholderFunction } from '../../../../../contexts/boolean-state-context';
 
 export type ExpandedMenu = string[];
 export type DispatchExpandedMenu = (menuItemID: string) => void | IdentityPlaceholderFunction;
