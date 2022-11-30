@@ -95,12 +95,14 @@ module.exports = extendConfig((ablyUIConfig) => ({
       minWidth: {
         ...ablyUIConfig.theme.extend.minWidth,
         170: '10.625rem',
+        610: '38.125rem',
       },
       maxWidth: {
         ...ablyUIConfig.theme.extend.maxWidth,
         400: '25rem',
         512: '32rem',
         820: '51.25rem',
+        1312: '82rem',
       },
       colors: {
         ...apiReferenceSpecificColors,

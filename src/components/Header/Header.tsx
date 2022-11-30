@@ -1,5 +1,4 @@
 import React, { useReducer, useRef } from 'react';
-import cn from 'classnames';
 
 import { DropdownButtonAndMenu } from './Dropdown/Button/DropdownButton';
 import { dropdownData } from './Dropdown/Button';
@@ -17,7 +16,6 @@ import { HorizontalMenu, HorizontalMenuVariant } from 'src/components/Horizontal
 export const Header = () => {
   const [topMainNavState, dispatch] = useReducer(mainNavReducer, initialState);
   const menuItems: (keyof typeof dropdownData)[] = ['API References', 'Resources'];
-  const className = 'flex flex-row';
   const ref = useRef(null);
 
   useOnClickOutside(() => dispatch({ type: 'deactivateAll' }), ref);
@@ -29,11 +27,11 @@ export const Header = () => {
       id="top-main-nav"
     >
       <HorizontalMenu variant={HorizontalMenuVariant.light}>
-        <div className={cn(className, 'flex-grow')}>
+        <div className="flex items-center">
           <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
           <SearchBar displayMode={DisplayMode.FULL_SCREEN} />
         </div>
-        <div className={className}>
+        <div className="flex flex-row md:min-w-610">
           {menuItems.map((buttonDropdownDataID, i) => (
             <DropdownButtonAndMenu
               key={i}
