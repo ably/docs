@@ -90,14 +90,17 @@ module.exports = extendConfig((ablyUIConfig) => ({
       ...ablyUIConfig.theme.extend,
       width: {
         ...ablyUIConfig.theme.extend.width,
+        24: '1.5rem',
         160: '10rem',
       },
       minWidth: {
         ...ablyUIConfig.theme.extend.minWidth,
+        24: '1.5rem',
         170: '10.625rem',
       },
       maxWidth: {
         ...ablyUIConfig.theme.extend.maxWidth,
+        24: '1.5rem',
         400: '25rem',
         512: '32rem',
         820: '51.25rem',
