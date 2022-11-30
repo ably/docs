@@ -1,6 +1,6 @@
 import { truncate } from 'lodash/fp';
 import React from 'react';
-import { SessionState } from '../../../../../contexts/user-context';
+import { SessionState } from '../../../../contexts/user-context';
 import { DropdownButtonAndMenu } from '../../Dropdown/Button/DropdownButton';
 import { TopMainNavStateContext } from '../../top-main-nav-state-context';
 

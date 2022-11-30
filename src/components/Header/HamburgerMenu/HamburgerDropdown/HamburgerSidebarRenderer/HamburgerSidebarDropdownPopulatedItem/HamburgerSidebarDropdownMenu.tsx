@@ -1,5 +1,5 @@
 import React from 'react';
-import { DispatchBooleanChange } from '../../../../../../../contexts/boolean-state-context';
+import { DispatchBooleanChange } from '../../../../../../contexts/boolean-state-context';
 import { DropdownData } from '../../../../Dropdown';
 import { DispatchExpandedMenu } from '../hamburger-expanded-menu-context';
 import { BackButton } from './BackButton';

@@ -1,8 +1,8 @@
 import { SidebarData } from 'src/components';
 import { DropdownData, DropdownDataIdentifier } from '../../../Dropdown';
 import { dropdownData } from '../../../Dropdown/Button';
-import { ArticleType } from '../../../../../../contexts/article-type-context';
-import { ARTICLE_TYPES } from '../../../../../../../data/transform/constants';
+import { ArticleType } from '../../../../../contexts/article-type-context';
+import { ARTICLE_TYPES } from '../../../../../../data/transform/constants';
 
 const ADHOC_SIDEBAR_INCLUSIONS: DropdownDataIdentifier[] = ['API References', 'Resources'];
 

@@ -91,19 +91,16 @@ module.exports = extendConfig((ablyUIConfig) => ({
       width: {
         ...ablyUIConfig.theme.extend.width,
         160: '10rem',
-        244: '244px',
-        780: '48.75rem',
       },
       minWidth: {
         ...ablyUIConfig.theme.extend.minWidth,
         170: '10.625rem',
-        780: '48.75rem',
       },
       maxWidth: {
         ...ablyUIConfig.theme.extend.maxWidth,
         400: '25rem',
         512: '32rem',
-        780: '48.75rem',
+        820: '51.25rem',
       },
       colors: {
         ...apiReferenceSpecificColors,
@@ -119,6 +116,9 @@ module.exports = extendConfig((ablyUIConfig) => ({
         15: '15',
         16: '16',
         17: '17',
+      },
+      gridTemplateColumns: {
+        layout: '244px minmax(200px, 820px) 200px',
       },
       rotate: {
         ...ablyUIConfig.theme.extend.rotate,

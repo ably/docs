@@ -1,11 +1,11 @@
 import React from 'react';
 import { DropdownContentLink } from '../Contents';
-import '../../../../blocks/external-references/styles.css';
+import '../../../blocks/external-references/styles.css';
 import { DropdownDataIdentifier } from '../types';
 import { MaybeShowSummaryLink } from './MaybeShowSummaryLink';
 import { SummaryTitle } from './SummaryTitle';
 import { SummaryDescription } from './SummaryDescription';
-import '../../../../blocks/external-references/styles.css';
+import '../../../blocks/external-references/styles.css';
 
 export const Summary = ({
   titleText,

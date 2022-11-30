@@ -1,18 +1,13 @@
 import React, { FunctionComponent as FC, useContext } from 'react';
 import { SingleValue } from 'react-select';
-import {
-  createLanguageHrefFromDefaults,
-  getLanguageDefaults,
-  HorizontalMenu,
-  HorizontalMenuVariant,
-  ReactSelectOption,
-  Select,
-} from 'src/components';
+
+import { createLanguageHrefFromDefaults, getLanguageDefaults, ReactSelectOption, Select } from 'src/components';
 import { PageLanguageContext } from 'src/contexts';
+
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../data/createPages/constants';
 import { cacheVisitPreferredLanguage } from 'src/utilities';
 
-import { dropdownContainer } from './LanguageNavigation.module.css';
+import { dropdownContainer, horizontalNav } from './LanguageNavigation.module.css';
 
 export interface LanguageNavigationComponentProps {
   language: string;
@@ -52,16 +47,18 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
   const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
 
   return items.length >= 2 ? (
-    <HorizontalMenu className="justify-end md:justify-start h-48 mr-48" variant={HorizontalMenuVariant.scrollX}>
-      {items.map(({ Component, props, content }, index) => (
-        <Component {...props} key={index}>
-          {content}
-        </Component>
-      ))}
-      <div className={`${dropdownContainer} flex justify-end md:hidden py-12 pl-16 pr-40`}>
-        <Select options={options} value={value} isSearchable={false} onChange={onSelectChange} />
-      </div>
-    </HorizontalMenu>
+    <div className="border-b border-charcoal-grey w-full">
+      <menu data-testid="menu" className={horizontalNav}>
+        {items.map(({ Component, props, content }, index) => (
+          <Component {...props} key={index}>
+            {content}
+          </Component>
+        ))}
+        <div className={dropdownContainer}>
+          <Select options={options} value={value} isSearchable={false} onChange={onSelectChange} />
+        </div>
+      </menu>
+    </div>
   ) : null;
 };
 

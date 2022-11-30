@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ArticleTypeContext } from 'src/contexts/article-type-context';
 import { EXPAND_MENU } from 'src/components';
-import { SessionState } from '../../../../contexts/user-context';
-import { SidebarDataRetrieval } from '../../../StaticQuerySidebar/SidebarDataRetrieval';
+import { SessionState } from '../../../contexts/user-context';
+import { SidebarDataRetrieval } from '../../StaticQuerySidebar/SidebarDataRetrieval';
 import { DisplayMode, SearchBar } from '../SearchBar';
 import { HamburgerHasFooterContext } from './hamburger-has-footer-context';
 import { HamburgerButton } from './HamburgerButton';
@@ -22,7 +22,7 @@ export const HamburgerMenu = ({ sessionState }: { sessionState: SessionState }) 
           className="fixed top-64 w-full max-w-full flex-grow right-0 bg-white shadow-container box-border"
         >
           <HamburgerHasFooterContext.Provider
-            value={{ boolean: hasFooter, dispatchBooleanChange: (boolean) => setHasFooter(boolean) }}
+            value={{ boolean: hasFooter, dispatchBooleanChange: (bool: boolean) => setHasFooter(bool) }}
           >
             <SearchBar displayMode={DisplayMode.MOBILE} />
             <ArticleTypeContext.Consumer>

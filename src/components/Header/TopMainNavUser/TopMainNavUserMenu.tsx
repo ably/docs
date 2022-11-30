@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { SessionState } from '../../../../contexts/user-context';
+import { SessionState } from '../../../contexts/user-context';
 import { SignedIn } from './SignedIn';
 import { DesktopSignedOut } from './DesktopSignedOut';
 import { MobileSignedOut } from './MobileSignedOut';
