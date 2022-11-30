@@ -1,9 +1,12 @@
 import * as React from 'react';
-import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../../data/transform/constants';
-import { HomepageContent, Section } from '../components/Homepage/HomepageContent';
-import Layout from '../components/Layout';
-import { graphql } from 'gatsby';
 import { Helmet } from 'react-helmet';
+import { graphql } from 'gatsby';
+
+import Layout from 'src/components/Layout';
+import { LeftSideBar } from 'src/components/StaticQuerySidebar';
+import { HomepageContent, Section } from 'src/components/Homepage/HomepageContent';
+
+import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 
 type MetaData = {
   title: string;
@@ -37,7 +40,8 @@ const IndexPage = ({
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
-      <Layout>
+      <Layout isExtraWide>
+        <LeftSideBar />
         <HomepageContent sections={sections} />
       </Layout>
     </>

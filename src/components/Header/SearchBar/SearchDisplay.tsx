@@ -25,7 +25,7 @@ export const SearchDisplay = forwardRef(
       className={cn(
         'my-8 bg-light-grey border border-mid-grey rounded-lg hover:border-light-grey relative focus-within:bg-white focus-within:shadow-input focus-within:border-transparent focus-within:outline-gui-focus',
         {
-          'md:hidden max-w-4/5 m-24 flex transition-input': displayMode === DisplayMode.MOBILE,
+          'md:hidden m-24 flex transition-input': displayMode === DisplayMode.MOBILE,
           'hidden md:flex mx-16 items-center justify-center': displayMode === DisplayMode.FULL_SCREEN,
         },
       )}

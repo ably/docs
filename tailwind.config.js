@@ -119,6 +119,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
       },
       gridTemplateColumns: {
         layout: '244px minmax(200px, 820px) 200px',
+        'two-col-layout': '244px minmax(200px, 1000px)',
       },
       rotate: {
         ...ablyUIConfig.theme.extend.rotate,

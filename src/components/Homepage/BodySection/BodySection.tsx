@@ -7,7 +7,7 @@ import { BodySectionCard } from './Card/Card';
 export const BodySection = ({ section }: { section: Section }) => {
   const cardsExist = section.cards.length > 0;
   return (
-    <section className="grid grid-cols-6 ml-32">
+    <section className="grid grid-cols-6">
       {section.level ? (
         <section.level className={`ui-text-${section.level} mt-40 col-span-6`}>{section.title}</section.level>
       ) : (
