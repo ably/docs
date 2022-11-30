@@ -18,7 +18,7 @@ export type Section = {
 };
 
 export const HomepageContent = ({ sections }: { sections: Section[] }) => (
-  <article className="col-span-4 2xl:col-span-6 w-full">
+  <article className="col-span-4 2xl:col-span-6 w-full max-w-1000">
     {sections.map((section, index) => (
       <BodySection key={index} section={section} />
     ))}

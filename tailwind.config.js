@@ -80,6 +80,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
       300: '18.75rem',
       320: '20rem',
       420: '26.25rem',
+      '5%': '5%',
       full: '100%',
     },
     screens: {
@@ -92,11 +93,16 @@ module.exports = extendConfig((ablyUIConfig) => ({
         ...ablyUIConfig.theme.extend.width,
         24: '1.5rem',
         160: '10rem',
+        244: '244px',
+        780: '48.75rem',
+        1000: '62.5rem',
       },
       minWidth: {
         ...ablyUIConfig.theme.extend.minWidth,
         24: '1.5rem',
         170: '10.625rem',
+        780: '48.75rem',
+        1000: '62.5rem',
       },
       maxWidth: {
         ...ablyUIConfig.theme.extend.maxWidth,
@@ -104,6 +110,8 @@ module.exports = extendConfig((ablyUIConfig) => ({
         400: '25rem',
         512: '32rem',
         820: '51.25rem',
+        780: '48.75rem',
+        1000: '62.5rem',
       },
       colors: {
         ...apiReferenceSpecificColors,
