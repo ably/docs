@@ -3,7 +3,6 @@ import React from 'react';
 import { SessionState } from '../../../contexts/user-context';
 import { SignedIn } from './SignedIn';
 import { DesktopSignedOut } from './DesktopSignedOut';
-import { MobileSignedOut } from './MobileSignedOut';
 
 export const TopMainNavUserMenu = ({ sessionState }: { sessionState: SessionState }) => {
   if (sessionState) {
@@ -12,7 +11,7 @@ export const TopMainNavUserMenu = ({ sessionState }: { sessionState: SessionStat
     } else {
       return (
         <>
-          <DesktopSignedOut /> <MobileSignedOut />
+          <DesktopSignedOut />
         </>
       );
     }
