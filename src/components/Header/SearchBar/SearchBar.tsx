@@ -51,7 +51,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
 
   return (
     <SearchDisplay ref={searchDisplayRef} onClick={focusOnSearchInput} displayMode={displayMode}>
-      <Icon name="icon-gui-search" size="24px" additionalCSS="absolute left-16 top-10" />
+      <Icon name="icon-gui-search" size="24px" additionalCSS="absolute left-16 top-12 md:left-16 md:top-10" />
       <input
         type="text"
         ref={textInput}
