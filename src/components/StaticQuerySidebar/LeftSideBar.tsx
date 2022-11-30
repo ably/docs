@@ -11,15 +11,13 @@ export type LeftSidebarProps = {
 const LeftSideBar = ({ className = '', languages = false }: LeftSidebarProps) => (
   <ArticleTypeContext.Consumer>
     {(value) => (
-      <div className="bg-extra-light-grey h-screen hidden md:block md:sticky top-0 z-20 left-0">
-        <SidebarDataRetrieval
-          className={className}
-          languages={languages}
-          expandMenu={EXPAND_MENU.SECTION_MATCH}
-          articleType={value}
-          Component={Sidebar}
-        />
-      </div>
+      <SidebarDataRetrieval
+        className={className}
+        languages={languages}
+        expandMenu={EXPAND_MENU.SECTION_MATCH}
+        articleType={value}
+        Component={Sidebar}
+      />
     )}
   </ArticleTypeContext.Consumer>
 );

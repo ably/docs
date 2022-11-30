@@ -1,4 +1,4 @@
-import { DOCUMENTATION_NAME } from '../../../../../../data/transform/constants';
+import { DOCUMENTATION_NAME } from '../../../../../data/transform/constants';
 import { DropdownData } from '../types';
 
 export const APIReferencesDropdownData: DropdownData = {

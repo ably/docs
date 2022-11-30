@@ -1,4 +1,4 @@
-import { DropdownData } from '../Header/TopMainNav/Dropdown';
+import { DropdownData } from '../Header/Dropdown';
 
 export type SidebarData = {
   content?: SidebarData[];

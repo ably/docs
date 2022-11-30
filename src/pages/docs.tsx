@@ -37,14 +37,7 @@ const IndexPage = ({
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
-      <Layout
-        languages={[]}
-        versionData={{
-          version: LATEST_ABLY_API_VERSION_STRING,
-          versions: [],
-          rootVersion: LATEST_ABLY_API_VERSION_STRING,
-        }}
-      >
+      <Layout>
         <HomepageContent sections={sections} />
       </Layout>
     </>

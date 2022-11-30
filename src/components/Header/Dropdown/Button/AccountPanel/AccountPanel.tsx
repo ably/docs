@@ -1,5 +1,5 @@
 import React from 'react';
-import { SessionState } from '../../../../../../contexts/user-context';
+import { SessionState } from '../../../../../contexts/user-context';
 import { SignOutLink } from '../../../TopMainNavUser/SignedIn';
 import { DropdownContentLink } from '../../Contents';
 import { AccountOptions, AccountUtilityLinks } from '.';

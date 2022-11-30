@@ -6,7 +6,7 @@ import Icon from '@ably/ui/core/Icon';
 
 import { HitType, useKeyPress } from 'src/hooks';
 
-import { DOCUMENTATION_PATH } from '../../../../../data/transform/constants';
+import { DOCUMENTATION_PATH } from '../../../../data/transform/constants';
 import { EmptyState } from './EmptyState';
 import { container, hitItem, titleStyle } from './SuggestionBox.module.css';
 
