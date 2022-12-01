@@ -28,7 +28,9 @@ const Layout: FC<{ languages?: Array<string>; versionData?: VersionMenuProps; is
       >
         {children}
       </Container>
-      <Footer />
+      <div className="grid grid-cols-1 md:grid-cols-footer-layout">
+        <Footer />
+      </div>
     </GlobalLoading>
   );
 };
