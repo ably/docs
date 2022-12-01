@@ -92,6 +92,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
         ...ablyUIConfig.theme.extend.width,
         24: '1.5rem',
         160: '10rem',
+        244: '244px',
       },
       minWidth: {
         ...ablyUIConfig.theme.extend.minWidth,
@@ -127,6 +128,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
         layout: '244px minmax(200px, 924px) 200px',
         'large-layout': 'minmax(200px, 924px) 200px',
         'two-col-layout': '244px minmax(200px, 1104px)',
+        'footer-layout': '244px auto',
       },
       rotate: {
         ...ablyUIConfig.theme.extend.rotate,
