@@ -34,7 +34,7 @@ export const DropdownMenu = ({
     );
   }
   return (
-    <Container as="aside" className="flex flex-wrap top-64 fixed w-full left-0 right-0" id={kebabCase(summaryTitle)}>
+    <Container as="aside" className="top-64 flex flex-wrap fixed w-full left-0 right-0" id={kebabCase(summaryTitle)}>
       <Summary titleText={summaryTitle} descriptionText={summaryDescription} summaryLink={summaryLink} />
       <ContentsContainer title={title} contents={contents} />
     </Container>
