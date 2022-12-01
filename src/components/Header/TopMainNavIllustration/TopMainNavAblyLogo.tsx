@@ -1,20 +1,14 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React from 'react';
+import cn from 'classnames';
 import { StaticImage } from 'src/components/StaticImage';
-import { safeWindow } from '../../../utilities/browser/safe-window';
+
+import { width } from './TopMainNavAblyLogo.module.css';
 
 export const TopMainNavAblyLogo = ({ href = '/' }: { href?: string }) => {
-  const [width, setWidth] = useState(1920);
-  useLayoutEffect(() => {
-    safeWindow.addEventListener('resize', () => setWidth(window.innerWidth));
-    setWidth(window.innerWidth);
-  }, []);
   return (
     <a href={href} className="h-32 flex-non self-center">
-      {width > 1024 ? (
-        <StaticImage className="min-w-170" width="174" height="32" src="/images/icons/ably-docs-logo.svg" />
-      ) : (
-        <StaticImage className="min-w-170" width="174" height="32" src="/images/icons/ably-docs-logo.svg" />
-      )}
+      <StaticImage src="/images/icons/ably-docs-logo.svg" className={cn('hidden md:block', width)} />
+      <StaticImage width="174" height="32" src="/images/icons/ably-docs-logo-mobile.png" className="block md:hidden" />
     </a>
   );
 };
