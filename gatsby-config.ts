@@ -1,5 +1,6 @@
 const mainWebsite = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
+export const trailingSlash = 'never';
 export const siteMetadata = {
   siteUrl: `${mainWebsite}/docs`,
   title: 'Documentation | Ably Realtime',
