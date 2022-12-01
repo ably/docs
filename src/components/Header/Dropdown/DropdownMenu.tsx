@@ -34,9 +34,15 @@ export const DropdownMenu = ({
     );
   }
   return (
-    <Container as="aside" className="top-64 flex flex-wrap fixed w-full left-0 right-0" id={kebabCase(summaryTitle)}>
-      <Summary titleText={summaryTitle} descriptionText={summaryDescription} summaryLink={summaryLink} />
-      <ContentsContainer title={title} contents={contents} />
+    <Container
+      as="aside"
+      className="top-64 fixed w-full left-0 right-0 bg-white shadow-container"
+      id={kebabCase(summaryTitle)}
+    >
+      <div className="flex flex-wrap max-w-1312 mx-auto">
+        <Summary titleText={summaryTitle} descriptionText={summaryDescription} summaryLink={summaryLink} />
+        <ContentsContainer title={title} contents={contents} />
+      </div>
     </Container>
   );
 };
