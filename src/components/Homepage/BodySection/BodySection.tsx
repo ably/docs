@@ -19,7 +19,7 @@ export const BodySection = ({ section }: { section: Section }) => {
         <BodySectionDescriptionContainer />
       )}
       {cardsExist && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 col-span-6 mb-96 gap-24 mr-32">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 col-span-6 mb-96 gap-24 mr-32">
           {section.cards.map((card, index) => (
             <BodySectionCard
               key={index}
