@@ -7,8 +7,6 @@ import { ArticleType } from '../../contexts/article-type-context';
 import { SidebarLinkMenu, SectionTitle } from './';
 import { SidebarData, EXPAND_MENU } from './types';
 
-import { stickySidebar } from './Sidebar.module.css';
-
 export type SidebarProps = {
   data: SidebarData[];
   className?: string;
@@ -29,7 +27,13 @@ export const Sidebar = ({
   expandMenu = EXPAND_MENU.EXPANDED,
 }: SidebarProps): ReactElement => {
   return (
-    <aside className={cn(stickySidebar, className)} data-languages={languages}>
+    <aside
+      className={cn(
+        'transition-all fixed hidden h-screen md:block overflow-y-auto bg-extra-light-grey z-20 pt-24 top-64 left-0',
+        className,
+      )}
+      data-languages={languages}
+    >
       {data.map(({ label, content }) => (
         <div key={label} className="mb-32 px-24">
           {label && <SectionTitle className="mb-8">{label}</SectionTitle>}
