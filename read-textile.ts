@@ -12,6 +12,8 @@ import {
 } from './data/test-utilities/process-textile';
 import { preParserSteps } from './data/cli-functionality/parser-steps/pre-parser';
 import { textileWorkaroundSteps } from './data/cli-functionality/parser-steps/textile-workarounds';
+import { postParserSteps } from './data/cli-functionality/parser-steps/post-parser';
+import { htmlParserSteps } from './data/cli-functionality/parser-steps/html-parser';
 
 process.on('exit', () => fs.rmSync('./dist', { recursive: true, force: true }));
 
@@ -58,8 +60,7 @@ const executeSequentially = (queries: string[], outputHandlers: ((answer: string
   queries.forEach(async (query, i) => await queryUser(query, outputHandlers[i]));
 };
 
-// TODO: concat postParser, htmlParser steps.
-const steps = [...preParserSteps, ...textileWorkaroundSteps];
+const steps = [...preParserSteps, ...textileWorkaroundSteps, ...postParserSteps, ...htmlParserSteps];
 
 const logArgProcessingError = (name: string, arg: string, i: number) =>
   console.error(`\n\nError processing ${name} ${i + 1}:\n${arg}\n`);
