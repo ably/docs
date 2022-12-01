@@ -9,8 +9,6 @@ import { VersionMenuProps } from '../Menu/VersionMenu';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Footer } from '../Footer';
 
-import { container, extraWide, regular } from './Layout.module.css';
-
 const Layout: FC<{ languages?: Array<string>; versionData?: VersionMenuProps; isExtraWide?: boolean }> = ({
   languages,
   versionData,
@@ -23,9 +21,9 @@ const Layout: FC<{ languages?: Array<string>; versionData?: VersionMenuProps; is
       {languages && versionData && <TopCodeMenu languages={languages} versionData={versionData} />}
       <Container
         as="main"
-        className={cn(container, {
-          [extraWide]: isExtraWide,
-          [regular]: !isExtraWide,
+        className={cn('grid grid-cols-1 mx-auto max-w-1264', {
+          ['md:grid-cols-two-col-layout']: isExtraWide,
+          ['md:grid-cols-layout xxl:grid-cols-large-layout']: !isExtraWide,
         })}
       >
         {children}

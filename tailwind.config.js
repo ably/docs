@@ -106,6 +106,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
         512: '32rem',
         820: '51.25rem',
         1312: '82rem',
+        1264: 'calc(820px + 244px + 200px)',
       },
       colors: {
         ...apiReferenceSpecificColors,
@@ -123,8 +124,9 @@ module.exports = extendConfig((ablyUIConfig) => ({
         17: '17',
       },
       gridTemplateColumns: {
-        layout: '244px minmax(200px, 820px) 200px',
-        'two-col-layout': '244px minmax(200px, 1000px)',
+        layout: '244px minmax(200px, 924px) 200px',
+        'large-layout': 'minmax(200px, 924px) 200px',
+        'two-col-layout': '244px minmax(200px, 1104px)',
       },
       rotate: {
         ...ablyUIConfig.theme.extend.rotate,
