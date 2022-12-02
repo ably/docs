@@ -11,7 +11,7 @@ export const TopMainNavLink = ({
 }) => (
   <a
     href={href}
-    className="hidden md:flex items-center h-full mr-24 py-24 font-medium hover:text-gui-hover"
+    className="hidden md:flex items-center h-full mr-24 py-24 font-medium hover:text-gui-hover whitespace-nowrap"
     data-id={dataId}
   >
     {children}

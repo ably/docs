@@ -36,7 +36,7 @@ export const DropdownButtonAndMenu = ({
       <button
         type="button"
         data-id="meganav-control"
-        className="hidden md:flex items-center h-full focus:outline-none hover:text-gui-hover"
+        className="hidden md:flex items-center h-full min-w-100 focus:outline-none hover:text-gui-hover"
         aria-expanded={isOpen}
         aria-label={`Show ${dropdownDataID}`}
         onClick={() => onActivated(dropdownDataID)}
