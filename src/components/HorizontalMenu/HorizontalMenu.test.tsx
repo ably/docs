@@ -8,7 +8,7 @@ describe('<HorizontalMenu />', () => {
 
     expect(screen.getByRole('menu')).toMatchInlineSnapshot(`
       <menu
-        class="flex overflow-visible m-0 pl-0 border-b border-charcoal-grey relative p-0"
+        class="flex overflow-visible m-0 pl-0 menu"
         role="menu"
       >
         children go here
