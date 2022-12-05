@@ -10,10 +10,15 @@ import {
   processTextile,
   fullyParseTextile,
 } from './data/test-utilities/process-textile';
-import { preParserSteps } from './data/cli-functionality/parser-steps/pre-parser';
+import { preParserSteps, Step } from './data/cli-functionality/parser-steps/pre-parser';
 import { textileWorkaroundSteps } from './data/cli-functionality/parser-steps/textile-workarounds';
 import { postParserSteps } from './data/cli-functionality/parser-steps/post-parser';
 import { htmlParserSteps } from './data/cli-functionality/parser-steps/html-parser';
+/**
+ * Flags:
+ * --diff - output each step with the difference to the last step highlighted
+ * --diffOnly - output only the difference between each step
+ */
 
 process.on('exit', () => fs.rmSync('./dist', { recursive: true, force: true }));
 
@@ -56,6 +61,13 @@ const queryUser = async (query: string, outputHandler: (answer: string) => void)
   rl.question(query, outputHandler);
 };
 
+const logFunctionWithDescription = (step: Step) => {
+  console.log(step.fn);
+  if (step.description) {
+    console.log(`\n\x1b[33m${step.description}\x1b[0m\n`);
+  }
+};
+
 const executeSequentially = (queries: string[], outputHandlers: ((answer: string) => void)[]) => {
   queries.forEach(async (query, i) => await queryUser(query, outputHandlers[i]));
 };
@@ -73,6 +85,17 @@ const diffText = (oldText: string, newText: string) => {
   });
 };
 
+const diffOnlyText = (oldText: string, newText: string) => {
+  const diffResult = Diff.diffLines(oldText, newText);
+  diffResult.forEach((diffPart) => {
+    if (diffPart.added) {
+      console.log(`${'\x1b[32m'}${diffPart.value}\x1b[0m`);
+    } else if (diffPart.removed) {
+      console.log(`${'\x1b[31m'}${diffPart.value}\x1b[0m`);
+    }
+  });
+};
+
 const initialQuery = ['How would you like to debug the textile? (h)tml, (m)arkdown, (s)tep by step or (a)dvanced?'];
 const initialOutputHandler = [
   async (answer: string) => {
@@ -83,6 +106,8 @@ const initialOutputHandler = [
           try {
             if (flags.diff) {
               diffText(arg, textileToHtml(arg));
+            } else if (flags.diffOnly) {
+              diffOnlyText(arg, textileToHtml(arg));
             } else {
               console.log(`\n${textileToHtml(arg)}\n`);
             }
@@ -100,6 +125,8 @@ const initialOutputHandler = [
             const markdown = turndownService.turndown(textileToHtml(arg));
             if (flags.diff) {
               diffText(arg, markdown);
+            } else if (flags.diffOnly) {
+              diffOnlyText(arg, markdown);
             } else {
               console.log(`\n${markdown}\n`);
             }
@@ -122,14 +149,15 @@ const initialOutputHandler = [
           const step = steps[i];
           try {
             console.log(`\nOutput on step ${i + 1}\n`);
-            console.log(step.fn);
-            if (step.description) {
-              console.log(`\n\x1b[33m${step.description}\x1b[0m\n`);
-            }
-
+            logFunctionWithDescription(step);
             if (flags.diff) {
               const nextResult = step.fn(result);
               diffText(result, nextResult);
+              result = nextResult;
+              logFunctionWithDescription(step);
+            } else if (flags.diffOnly) {
+              const nextResult = step.fn(result);
+              diffOnlyText(result, nextResult);
               result = nextResult;
             } else {
               result = step.fn(result);
