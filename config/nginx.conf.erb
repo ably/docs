@@ -36,6 +36,18 @@ http {
   map_hash_max_size 8192;
   map_hash_bucket_size 8192;
 
+  # Be as explicit as possible with our CORS origins. We can't use the
+  # `hostnames` directive as ably.com doesn't work with it
+  map $http_origin $cors_origin {
+    https://ably.com $http_origin;
+    https://www.ably.io $http_origin;
+    https://ably-dev.com $http_origin;
+    https://ik.imagekit.io $http_origin;
+    https://ably-docs.herokuapp.com $http_origin;
+    ~*https://website-[a-z0-9\-]*\.herokuapp\.com $http_origin;
+    ~*https://ably-docs-[a-z0-9\-]*\.herokuapp\.com $http_origin;
+  }
+
   # Creates a map of redirects for us
   map $uri $redirected_url {
     default "none";
@@ -61,6 +73,39 @@ http {
 
     # Removes trailing slashes everywhere
     rewrite ^/(.*)/$ https://$host/$1 permanent;
+
+    location ~* \.json$ {
+      more_set_headers 'Access-Control-Allow-Origin: *';
+    }
+
+    # Optimize for pre-compiled assets scattered all over the place
+    location ~* \.(js|css|jpg|jpeg|gif|svg|png|woff|woff2)$ {
+      # expires 1y;
+      more_set_headers 'Cache-Control: public';
+      gzip_static on; # to serve pre-gzipped version
+
+      # Some browsers still send conditional-GET requests if there's a
+      # Last-Modified header or an ETag header even if they haven't
+      # reached the expiry date sent in the Expires header.
+      more_clear_headers 'Last-Modified';
+      more_clear_headers 'ETag';
+
+      # This sets headers for our fonts to be served from any domain, and makes
+      # CDN access seamless. The wildcard is 'acceptable', because we restrict the
+      # type to font files only.
+      location ~* \.(woff|woff2)$ {
+        more_set_headers 'Access-Control-Allow-Origin: *';
+      }
+
+      # Set explicit allowed origin for svg that are requested by methods that need
+      # explicit headers like "fetch"
+      location ~* \.svg$ {
+        more_set_headers 'Access-Control-Allow-Origin: $cors_origin';
+      }
+
+      # Stop processing here and 404 if the asset/pack doesn't exist
+      break;
+    }
 
     location / {
       try_files $uri $uri.html $uri/index.html @404;
