@@ -1,11 +1,143 @@
 version: 2.1
 
 orbs:
-  node: circleci/node@5.0.0
+  node: circleci/node@5.0.2
+
+parameters:
+  content-update:
+    type: boolean
+    default: false
+
+commands:
+  restore-npm-cache:
+    steps:
+      - restore_cache:
+          name: Restore NPM Package Cache
+          keys:
+            - npm-packages-v2-{{ .Branch }}-{{ checksum "package-lock.json" }}
+            - npm-packages-v2-{{ .Branch }}-
+            - npm-packages-v2-
+
+  save-npm-cache:
+    steps:
+      - save_cache:
+          name: Save NPM Package Cache
+          key: npm-packages-v1-{{ .Branch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.cache/npm
+
+  npm-install:
+    steps:
+      - run:
+          name: Dependencies
+          command: npm ci --prefer-offline --cache ~/.cache/npm
+
 jobs:
+  install-dependencies:
+    executor:
+      name: node/default
+      tag: 16.15.1
+    resource_class: medium+
+    steps:
+      - checkout
+      - restore-npm-cache
+      - npm-install
+      - persist_to_workspace:
+          root: .
+          paths:
+            - node_modules
+      - save-npm-cache
+
+  test:
+    executor:
+      name: node/default
+      tag: 16.15.1
+    resource_class: medium
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Run linting
+          command: npm run lint
+      - run:
+          name: Install JUnit coverage reporter
+          command: npm install jest-junit
+      - run:
+          name: Run tests
+          command: npm test -- --ci --collectCoverage=true --coverageDirectory=coverage --coverageReporters=html --runInBand --reporters=default --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: ./reports/junit/
+      - store_test_results:
+          path: ./reports/junit
+      - store_artifacts:
+          path: coverage
   build:
     executor:
       name: node/default
-      tag: 16.1.0
+      tag: 16.15.1
+    resource_class: medium+
     steps:
-      - run: node -v
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build
+          command: npm run build
+      - run:
+          name: Require redirects file to be generated
+          command: test -f config/nginx-redirects.conf
+      - run:
+          name: Install nginx & erb
+          command: |
+            sudo apt-get update -qq &&
+            sudo apt-get install --no-install-recommends -y nginx ruby
+      - run:
+          name: Test nginx configuration
+          command: |
+            PORT=3000 erb config/nginx.conf.erb > config/nginx.conf &&
+            mkdir -p logs/nginx &&
+            touch logs/nginx/access.log logs/nginx/error.log &&
+            sudo nginx -p . -c config/nginx.conf -t
+      - run:
+          name: Start nginx
+          command: |
+            mkdir -p logs/nginx &&
+            sudo ./bin/start-nginx
+          background: true
+      - run:
+          name: Wait for nginx
+          command: |
+            until $(curl --retry 10 --output /dev/null --silent --head --fail http://localhost:3001/); do
+                printf '.'
+                sleep 1
+            done
+      - run:
+          name: Smoke test quick start redirects
+          command: |
+            status=$(curl --header "x-forwarded-proto: https" \
+                          --silent --output /dev/null -w "%{http_code}" \
+                          http://localhost:3001/docs/quick-start-guide)
+            if [ ${status} -ne 200 ]; then
+              echo "Expect a 200 status code, got ${status}"
+              exit 1
+            fi
+            status=$(curl --header "x-forwarded-proto: https" \
+                          --silent --output /dev/null -w "%{http_code}" \
+                          http://localhost:3001/docs/quick-start-guide/)
+            if [ ${status} -ne 301 ]; then
+              echo "Expect a 301 status code, got ${status}"
+              exit 1
+            fi
+
+workflows:
+  test_branch:
+    unless: << pipeline.parameters.content-update >>
+    jobs:
+      - install-dependencies
+      - test:
+          requires:
+            - install-dependencies
+      - build:
+          requires:
+            - install-dependencies

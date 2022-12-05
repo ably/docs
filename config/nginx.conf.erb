@@ -5,7 +5,9 @@ daemon off;
 worker_processes <%= ENV['NGINX_WORKERS'] || 'auto' %>;
 
 events {
+  <% unless RbConfig::CONFIG['host_os'] =~ /darwin/ %>
   use epoll;
+  <% end %>
   accept_mutex on;
   worker_connections <%= ENV['NGINX_WORKER_CONNECTIONS'] || 1024 %>;
 }
@@ -22,8 +24,7 @@ http {
 
 	log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
 	access_log <%= ENV['NGINX_ACCESS_LOG_PATH'] || 'logs/nginx/access.log' %> l2met;
-	error_log <%= ENV['NGINX_ERROR_LOG_PATH'] || 'logs/nginx/error.log' %>;
-
+	error_log <%= ENV['NGINX_ERROR_LOG_PATH'] || 'logs/nginx/error.log' %> error;
 
 	include mime.types;
 	default_type application/octet-stream;
@@ -31,6 +32,17 @@ http {
 
 	# Must read the body in 5 seconds.
 	client_body_timeout <%= ENV['NGINX_CLIENT_BODY_TIMEOUT'] || 5 %>;
+
+  map_hash_max_size 8192;
+  map_hash_bucket_size 8192;
+
+  # Creates a map of redirects for us
+  map $uri $redirected_url {
+    default "none";
+    <% if File.exists?(File.dirname(__FILE__) + '/nginx-redirects.conf') %>
+    include nginx-redirects.conf;
+    <% end %>
+  }
 
 	server {
 		listen <%= ENV["PORT"] %> reuseport;
@@ -43,11 +55,34 @@ http {
     # Prevent nginx from adding the PORT to any redirects
     port_in_redirect off;
 
+    root <%= ENV['NGINX_ROOT'] || '/app/public' %>;
+
+    error_page 404 500 /404.html;
+
+    # Removes trailing slashes everywhere
+    rewrite ^/(.*)/$ https://$host/$1 permanent;
+
+    location / {
+      try_files $uri $uri.html $uri/index.html @404;
+    }
+
+    location ~ \.html$ {
+      try_files $uri =404;
+    }
+
     # Enforce HTTPS
     if ($http_x_forwarded_proto != "https") {
       return 301 https://$host$request_uri;
     }
 
-		root /app/output; # path to your app
+    # Apply our redirects
+    if ($redirected_url != "none") {
+      rewrite ^ $redirected_url permanent;
+    }
+
+    # need this b/c setting $fallback to =404 will try #{root}=404 instead of returning a 404
+    location @404 {
+      return 404;
+    }
 	}
 }
