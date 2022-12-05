@@ -22,6 +22,8 @@ export const plugins = [
   'gatsby-plugin-react-helmet',
   'gatsby-plugin-ts',
   'gatsby-plugin-root-import',
+  'gatsby-plugin-perf-budgets',
+  'gatsby-plugin-webpack-bundle-analyser-v2',
   // Images
   {
     resolve: 'gatsby-source-filesystem',
