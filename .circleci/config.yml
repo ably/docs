@@ -8,6 +8,12 @@ parameters:
     type: boolean
     default: false
 
+executors:
+  default:
+    description: Node 16.18.1
+    docker:
+      - image: cimg/node:16.18.1
+
 commands:
   restore-npm-cache:
     steps:
@@ -32,11 +38,34 @@ commands:
           name: Dependencies
           command: npm ci --prefer-offline --cache ~/.cache/npm
 
+  build-nginx:
+    steps:
+      - run:
+          name: Build nginx
+          environment:
+            STACK: heroku-22
+            ZLIB_VERSION: 1.2.13
+          command: |
+            if [ ! -x /usr/local/bin/nginx ]; then
+              mkdir buildpack
+              mkdir build-nginx
+              cd build-nginx
+              sudo apt install --no-install-recommends -y libssl-dev
+              wget https://raw.githubusercontent.com/heroku/heroku-buildpack-nginx/main/scripts/build_nginx
+              chmod +x ./build_nginx
+              ./build_nginx .
+              cd ../buildpack
+              tar -xzvf /tmp/nginx-${STACK}.tgz
+            fi
+      - persist_to_workspace:
+          root: .
+          paths:
+            - buildpack/nginx
+
 jobs:
   install-dependencies:
     executor:
-      name: node/default
-      tag: 16.15.1
+      name: default
     resource_class: medium+
     steps:
       - checkout
@@ -48,10 +77,15 @@ jobs:
             - node_modules
       - save-npm-cache
 
+  install-nginx:
+    executor:
+      name: default
+    steps:
+      - build-nginx
+
   test:
     executor:
-      name: node/default
-      tag: 16.15.1
+      name: default
     resource_class: medium
     steps:
       - checkout
@@ -74,13 +108,18 @@ jobs:
           path: coverage
   build:
     executor:
-      name: node/default
-      tag: 16.15.1
+      name: default
     resource_class: medium+
     steps:
       - checkout
       - attach_workspace:
           at: .
+      - run:
+          name: Install Ruby (erb) & nginx
+          command: |
+            sudo apt-get update -qq
+            sudo apt-get install --no-install-recommends -y ruby
+            sudo cp buildpack/nginx /usr/local/bin/nginx
       - run:
           name: Build
           command: npm run build
@@ -88,22 +127,16 @@ jobs:
           name: Require redirects file to be generated
           command: test -f config/nginx-redirects.conf
       - run:
-          name: Install nginx & erb
-          command: |
-            sudo apt-get update -qq &&
-            sudo apt-get install --no-install-recommends -y nginx ruby
-      - run:
           name: Test nginx configuration
           command: |
-            PORT=3000 erb config/nginx.conf.erb > config/nginx.conf &&
-            mkdir -p logs/nginx &&
-            touch logs/nginx/access.log logs/nginx/error.log &&
-            sudo nginx -p . -c config/nginx.conf -t
+            PORT=3000 erb config/nginx.conf.erb > config/nginx.conf
+            mkdir -p logs/nginx
+            nginx -p . -c config/nginx.conf -t
       - run:
           name: Start nginx
           command: |
-            mkdir -p logs/nginx &&
-            sudo ./bin/start-nginx
+            mkdir -p logs/nginx
+            ./bin/start-nginx
           background: true
       - run:
           name: Wait for nginx
@@ -135,9 +168,11 @@ workflows:
     unless: << pipeline.parameters.content-update >>
     jobs:
       - install-dependencies
+      - install-nginx
       - test:
           requires:
             - install-dependencies
       - build:
           requires:
             - install-dependencies
+            - install-nginx
