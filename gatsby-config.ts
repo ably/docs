@@ -1,3 +1,7 @@
+const herokuAppSite = process.env.HEROKU_APP_NAME
+  ? `http://${process.env.HEROKU_APP_NAME}.herokuapp.com`
+  : 'http://localhost:9000';
+
 const mainWebsite = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
 export const trailingSlash = 'never';
@@ -6,7 +10,7 @@ export const siteMetadata = {
   title: 'Documentation | Ably Realtime',
 };
 
-export const assetPrefix = process.env.ASSET_PREFIX ?? 'http://localhost:9000';
+export const assetPrefix = process.env.ASSET_PREFIX ?? herokuAppSite;
 
 export const plugins = [
   'gatsby-plugin-postcss',
