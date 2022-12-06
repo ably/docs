@@ -1,37 +1,66 @@
 ---
 title: MQTT
-meta_description: "Any MQTT-enabled client can communication with the Ably service through the Ably MQTT protocol adapter. This is especially useful where an Ably client library SDK is not available for your language of choice."
+meta_description: "Any MQTT-enabled client can communicate with the Ably service through the Ably MQTT protocol adapter. This is especially useful where an Ably SDK is not available for your language of choice."
+languages:
+ - javascript
+ - nodejs
 ---
 
-The Ably MQTT protocol adapter is able to translate back and forth between "MQTT":https://mqtt.org/ and Ably's own protocol, allowing for seamless integration of any systems you may have. MQTT (MQ Telemetry Transport) is a "publish/subscribe":https://ably.com/topic/pub-sub , lightweight messaging protocol designed for constrained devices and low-bandwidth networks. One of the major uses of MQTT is with IoT (Internet of Things), where these principles are key to having effective communication between various devices.
+The Ably MQTT protocol adapter is able to translate back and forth between "MQTT":https://mqtt.org/ and Ably's own protocol, allowing for seamless integration of any systems you may have. MQTT (MQ Telemetry Transport) is a "publish/subscribe":https://ably.com/topic/pub-sub, lightweight messaging protocol designed for constrained devices and low-bandwidth networks. One of the major uses of MQTT is with IoT (Internet of Things), where these principles are key to having effective communication between various devices.
 
 h2(#when-to-use). When to use the MQTT adapter
 
-The MQTT adapter is our recommended way of interacting with Ably from devices which do not have a native Ably client library, such as Arduino platforms, C/C++ applications, and so on. Anyone who has previously been using Pubnub or Pusher client libraries for this purpose may want to consider switching to MQTT. Compared to the Pubnub protocol, using MQTT will result in better performance with lower latency. Compared to the Pusher protocol, MQTT will give you connection state recovery.
+The MQTT adapter is our recommended way of interacting with Ably from devices which do not have a native Ably SDK, such as Arduino platforms, C/C++ applications, and so on. Anyone who has previously been using Pubnub or Pusher SDKs for this purpose may want to consider switching to MQTT. Compared to the Pubnub protocol, using MQTT will result in better performance with lower latency. Compared to the Pusher protocol, MQTT will give you connection state recovery.
 
-We recommend you use MQTT to interact with Ably when:
+MQTT is recommended to interact with Ably when:
 
-* Using devices which do not have a device-specific Ably Client Library SDK, such as Arduino platforms, C/C++ applications, and so on
-* If bandwidth is limited and you want to keep network traffic to a minimum
+* Bandwidth is limited and you want to keep network traffic to a minimum
 * You want to keep network traffic to a minimum.
-
-Note, we do not currently support MQTT over websockets but let us know if you are interested.
 
 h2(#limitations). Known limitations 
 
-Our MQTT adapter only supports features supported by both the MQTT protocol and the Ably platform. So:
+A protocol adapter inevitably adds some latency. Using the adapter will be a little slower than using Ably client libraries. 
+Typically the impact is in the low milliseconds.
 
-* It only supports MQTT 3.1.1 clients only. Connection attempts using earlier protocol versions will be rejected
-* Publishing supports QoS 0 or 1. Subscribing only supports QoS 0
+Behind the scenes, the adapter just uses the normal Ably service, so there is no problem with using MQTT and Ably client libraries side by side. You can mix and match as you like; for example, using MQTT on your IoT devices, but using the Ably Realtime API on your servers.
+
+While the adapter can be useful for devices which need to use MQTT, there are many benefits to using the Ably client libraries (e.g. continuity guarantees, fallback host support, history, presence) require the use of the Ably client libraries. As a result, if an Ably client library is available for your platform, we recommend you consider using it instead of the protocol adapter.
+
+Our MQTT adapter only supports features supported by both the MQTT protocol and the Ably platform:
+
+* Only supports MQTT 3.1.1 clients only, connection attempts using earlier protocol versions will be rejected
+* Publishing supports QoS 0 or 1
+* Subscribing only supports QoS 0
 * Session resumption is supported within the usual "Ably time limit of two minutes":/history-storage/storage
-* It doesn’t support any MQTT features that aren’t normally supported by Ably, such as @WILL@ messages, the @RETAIN@ flag or "wildcard channel subscriptions":/channels
-* It doesn't support any Ably features that aren't supported by the MQTT protocol, such as presence, history and push notifications (though presence may be supported soon). Of course, you can always use the Ably REST API in conjunction with the MQTT adapter to access features available over REST
+* Doesn’t support any MQTT features that aren’t normally supported by Ably, such as @WILL@ messages, the @RETAIN@ flag or "wildcard channel subscriptions":/channels
+* Doesn't support Ably features that aren't supported by the MQTT protocol, such as presence, history and push notifications, though you can use the Ably REST API in conjunction with the adapter to access features available over REST
 
 h2(#config). Configuration
 
-We recommend that you always make use of "Token Authentication over Basic Authentication":/auth when trying to connect from devices you may not trust. In addition, if you're using Basic Authentication you'll be required to use SSL to connect to our adapter to ensure the API key cannot be accessed by someone listening in.
+To use the Ably MQTT protocol adapter, you'll need to ensure you correctly configure your MQTT client as follows:
+
+* Set the host to "mqtt.ably.io"
+* Set SSL / TLS to true and the port to 8883. (If your MQTT client does not support SSL, you should instead use port 1883, but in this case Ably disallows api-key auth—see "SSL usage note":#ssl below)
+* Set the keep alive time to somewhere between 15 and 60 seconds. (60s will maximize battery life, 15s will maximize responsiveness to network issues. It must not be any higher than 60s to avoid our load balancer terminating the TCP socket for inactivity)
+* If using an API key, set the username to the part of the API key before the colon, and the password to the part after the colon
+* If using a token, set the username to the token, and leave the password blank
+
+For example, in the NodeJS "MQTT package":https://www.npmjs.com/package/mqtt, you'd need to specify the following:
+
+```[nodejs]
+var options = {
+  keepalive: 30,
+  username: '{{API_KEY_NAME}}', /* API key's name */
+  password: '{{API_KEY_SECRET}}', /* API key's secret */
+  port: 8883
+};
+
+var client = mqtt.connect('mqtts:mqtt.ably.io', options);
+```
 
 h3(#token-auth). Token Authentication
+
+Ably recommends that you always make use of "token Authentication over basic Authentication":/auth when trying to connect from devices you may not trust. In addition, if you're using Basic Authentication you'll be required to use SSL to connect to our adapter to ensure the API key cannot be accessed by someone listening in.
 
 For Token Authentication you'll be required to "create a token from your own servers":/auth/token. Once you have the token, you can simply pass it through when trying to connect to Ably as the connection's @username@, leaving the @password@ empty.
 
@@ -125,26 +154,25 @@ In the above example, @command@ will now contain the message in its original str
 
 h2(#ssl-tls). SSL/TLS
 
-We support both SSL and non-SSL connections (the latter uses a different port, see above), but strongly recommend using SSL wherever possible. If you are not using SSL, note that the same restrictions apply as if you were using an Ably client without SSL. That is, "connection attempts using Basic Authentication (i.e. an API key) are disallowed":https://faqs.ably.com/error-code-40103-invalid-use-of-basic-auth-over-non-tls-transport, and any "namespaces which you've enabled 'require TLS' on":https://faqs.ably.com/what-is-a-channel-namespace-and-how-can-i-use-them will be inaccessible. "Contact us":https://ably.com/contact if this is a problem for you.
+Ably supports both SSL and non-SSL connections (the latter uses a different port, see above), but strongly recommend using SSL wherever possible. If you are not using SSL, note that the same restrictions apply as if you were using an Ably client without SSL. That is, "connection attempts using Basic Authentication (i.e. an API key) are disallowed":/auth/basic, and any "namespaces which you've enabled 'require TLS' on":/channels will be inaccessible. "Contact us":https://ably.com/contact if this is a problem for you.
 
-To use the Ably MQTT protocol adapter, you'll need to ensure you correctly configure your MQTT client as follows:
-* Set the host to "mqtt.ably.io"
-* Set SSL / TLS to true and the port to 8883. (If your MQTT client does not support SSL, you should instead use port 1883, but in this case we disallow api-key auth—see "SSL usage note":#ssl below)
-* Set the keep alive time to somewhere between 15 and 60 seconds. (60s will maximize battery life, 15s will maximize responsiveness to network issues. It must not be any higher than 60s to avoid our load balancer terminating the TCP socket for inactivity)
-* If using an API key, set the username to the part of the API key before the colon, and the password to the part after the colon
-* If using a token, set the username to the token, and leave the password blank
+h2.(#rewind). Channel rewind
 
-For example, in the NodeJS "MQTT package":https://www.npmjs.com/package/mqtt, you'd need to specify the following:
+You can also use "channel rewind":/storage-history/history#rewind to get the get the most recent message if available:
 
 ```[nodejs]
+var mqtt = require('mqtt');
 var options = {
   keepalive: 30,
-  username: '{{API_KEY_NAME}}', /* API key's name */
-  password: '{{API_KEY_SECRET}}', /* API key's secret */
+  username: 'xVLyHw.Kv8d5g', /* API key's name */
+  password: 'mBD48R-jAbz5AHn1XJmEz5AdYoFhYLPZmantwZAx49c', /* API key's secret */
   port: 8883
 };
-
 var client = mqtt.connect('mqtts:mqtt.ably.io', options);
+client.on('connect', () => {
+  client.subscribe('[?rewind=1]wok-cup-arm');
+});
+client.on('message', (topic, message) => {
+  ...
+});
 ```
-
-This will connect using TLS through MQTT to Ably.
