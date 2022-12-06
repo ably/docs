@@ -46,7 +46,7 @@ const Template = ({
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
   const canonical = `${CANONICAL_ROOT}${slug}`;
 
-  const contentMenuFromLanguage = contentMenu[language];
+  const contentMenuFromLanguage = contentMenu[language] ?? [[]];
 
   const versionData = {
     versions: versions.edges,
