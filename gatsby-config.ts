@@ -66,12 +66,6 @@ export const plugins = [
   },
   // Meta Data & Environment variables
   {
-    resolve: `gatsby-plugin-manifest`,
-    options: {
-      icon: 'src/images/favicon.png',
-    },
-  },
-  {
     resolve: `gatsby-plugin-env-variables`,
     options: {
       allowList: ['HEROKU_APP_NAME'],
