@@ -71,7 +71,7 @@ const Template = ({
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html data={data} key={i} />,
       ),
-    [contentOrderedList, language, filteredLanguages],
+    [contentOrderedList, language, filteredLanguages, version, versions],
   );
   useEffect(() => {
     if (language === DEFAULT_LANGUAGE || !filteredLanguages.includes(language)) {
