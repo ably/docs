@@ -1,5 +1,5 @@
 const herokuAppSite = process.env.HEROKU_APP_NAME
-  ? `http://${process.env.HEROKU_APP_NAME}.herokuapp.com`
+  ? `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`
   : 'http://localhost:9000';
 
 const mainWebsite = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
