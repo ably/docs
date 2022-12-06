@@ -64,11 +64,17 @@ export const plugins = [
     },
     __key: 'yaml-page-content',
   },
-  // Meta Data
+  // Meta Data & Environment variables
   {
     resolve: `gatsby-plugin-manifest`,
     options: {
       icon: 'src/images/favicon.png',
+    },
+  },
+  {
+    resolve: `gatsby-plugin-env-variables`,
+    options: {
+      allowList: ['HEROKU_APP_NAME'],
     },
   },
   `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/
