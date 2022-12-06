@@ -6,7 +6,7 @@ _[Ably](https://ably.com) is the platform that powers synchronized digital exper
 
 This is a static site generated using [Gatsby](https://www.gatsbyjs.com/) and documentation written in:
 
-- [Textile](https://github.com/textile/textile-spec) - Held in the [./data/textile](./data/textile) folders, enhanced with certain additional features described in [./data/textile/nanoc-compatible/client-lib-development-guide/documentation-formatting-guide.textile](./data/textile/nanoc-compatible/client-lib-development-guide/documentation-formatting-guide.textile)
+- [Textile](https://github.com/textile/textile-spec) - Held in the [./content](./content) folders, enhanced with certain additional features described in [./content/client-lib-development-guide/documentation-formatting-guide.textile](./content/client-lib-development-guide/documentation-formatting-guide.textile)
 
 - <https://docs.ably.com>: A static site which always reflects the latest version of the contents of this repository, being deployed automatically when the `main` branch is updated.
 - <https://ably.com/docs>: Our official documentation, which points to a specific version of this repository. Changes in this repo are not automatically reflected in the official docs, but require intervention by the Ably website team.
@@ -23,21 +23,27 @@ If Gatsby CLI is not already installed:
 
 `npm install -g gatsby-cli`
 
-`gatsby clean && gatsby develop`
+**Editors:**
+
+`npm run edit`
+
+**Developers:**
+
+To develop locally run either:
+
+1. `npm run develop`
+2. `gatsby clean && gatsby develop`
 
 Visit `localhost:8000` for homepage.
 
 Visit `localhost:8000/docs/${relativePath}` for documentation pages, e.g. `localhost:8000/docs/client-lib-development-guide/documentation-formatting-guide`.
 
-Or:
+To build and serve locally run either:
 
-`gatsby clean && gatsby build && gatsby serve`
+1. `gatsby clean && gatsby build --prefix-paths && gatsby serve --prefix-paths`
+2. `npm run rebuild`
 
 Visit `localhost:9000` for homepage.
-
-To run with the website, run:
-
-`gatsby clean && gatsby build --prefix-paths && gatsby serve --prefix-paths`
 
 ## Redirects
 
@@ -59,6 +65,16 @@ redirect_from: /redirect-from-this-single-path/
 If a redirect is not already prepended with `/docs`, `/docs` will be prepended to the redirect source URL; if you need a redirect from the main website to a docs page, Gatsby currently cannot handle this.
 
 Otherwise, the redirect will be left intact.
+
+Redirects added in this way are also added to a file at `./config/nginx-redirects.conf`, and used to create a map of nginx redirects at build time.
+
+Other one-off instances of redirects may be added to additional config files, and imported in a similar way. See:
+
+* `./config/website-redirects.conf`
+* `./config/client-lib-development-guide-redirects.conf`
+* `./config/nginx.conf.erb`
+
+For how to create and include these redirects.
 
 ## Environment Variables
 
