@@ -1,7 +1,3 @@
-const herokuAppSite = process.env.HEROKU_APP_NAME
-  ? `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`
-  : 'http://localhost:9000';
-
 const mainWebsite = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
 export const trailingSlash = 'never';
@@ -10,7 +6,7 @@ export const siteMetadata = {
   title: 'Documentation | Ably Realtime',
 };
 
-export const assetPrefix = process.env.ASSET_PREFIX ?? herokuAppSite;
+export const assetPrefix = process.env.ASSET_PREFIX ?? 'http://localhost:9000';
 
 export const plugins = [
   'gatsby-plugin-postcss',
@@ -64,11 +60,11 @@ export const plugins = [
     },
     __key: 'yaml-page-content',
   },
-  // Meta Data & Environment variables
+  // Meta Data
   {
-    resolve: `gatsby-plugin-env-variables`,
+    resolve: `gatsby-plugin-manifest`,
     options: {
-      allowList: ['HEROKU_APP_NAME'],
+      icon: 'src/images/favicon.png',
     },
   },
   `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/
