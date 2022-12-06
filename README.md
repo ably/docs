@@ -11,8 +11,6 @@ This is a static site generated using [Gatsby](https://www.gatsbyjs.com/) and do
 - <https://docs.ably.com>: A static site which always reflects the latest version of the contents of this repository, being deployed automatically when the `main` branch is updated.
 - <https://ably.com/docs>: Our official documentation, which points to a specific version of this repository. Changes in this repo are not automatically reflected in the official docs, but require intervention by the Ably website team.
 
-**Beta** - most patterns are now established, we are approaching v1.
-
 ## Run
 
 Install node & npm.
