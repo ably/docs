@@ -94,6 +94,14 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
     }
   `);
 
+  createRedirect({
+    fromPath: '/',
+    toPath: '/docs',
+    isPermanent: true,
+    force: true,
+    redirectInBrowser: true,
+  });
+
   const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
 
   const documentCreator = (documentTemplate) => async (edge) => {
