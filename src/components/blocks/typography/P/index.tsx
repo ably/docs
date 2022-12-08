@@ -11,8 +11,8 @@ const Paragraph = ({ data, attribs = {} }: HtmlComponentProps<'p'>) => {
   }
   const paragraphClassName = 'text-p2 mb-24 leading-relaxed';
   const modifiedAttribs = { ...attribs, className: paragraphClassName };
-  if (modifiedAttribs.className.includes('definition')) {
-    modifiedAttribs.className = `${modifiedAttribs.className} font-mono font-semibold text-code leading-relaxed`;
+  if (attribs?.className?.includes('definition')) {
+    modifiedAttribs.className = `${attribs.className} font-mono font-semibold text-code leading-relaxed`;
   } else {
     modifiedAttribs.className = `${modifiedAttribs.className} ${paragraphClassName}`;
   }
