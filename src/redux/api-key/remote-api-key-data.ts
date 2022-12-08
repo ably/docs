@@ -17,11 +17,7 @@ declare global {
 }
 
 const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>) => {
-  if (payload.error) {
-    console.error(`Error retrieving data from url, ${payload.error}`);
-    return { data: null };
-  }
-  if (!payload.data || !isArray(payload.data)) {
+  if (payload.error || !payload.data || !isArray(payload.data)) {
     console.warn('No data array on API Key payload object returned from endpoint');
     const tempApiKeyResponse = await fetch(WEB_API_TEMP_KEY_ENDPOINT, { cache: DEFAULT_CACHE_STRATEGY });
     const tempApiKey = await tempApiKeyResponse.text();
