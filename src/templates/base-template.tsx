@@ -44,7 +44,7 @@ const Template = ({
   const title = getMetaDataDetails(document, 'title') as string;
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
-  const canonical = `${CANONICAL_ROOT}${slug}`;
+  const canonical = `${CANONICAL_ROOT}${slug}`.replace(/\/+$/, '');
 
   const contentMenuFromLanguage = contentMenu[language] ?? [[]];
 
