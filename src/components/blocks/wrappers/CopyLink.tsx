@@ -9,6 +9,7 @@ import {
   container,
   isHidden,
   isVisible,
+  notificationContainer,
   notification,
 } from './CopyLink.module.css';
 
@@ -43,13 +44,6 @@ const CopyLink = ({
       <div className={childrenContainer}>
         {children}
         <div className={cn(buttonContainer, marginTop)}>
-          <div
-            className={cn(notification, {
-              [isVisible]: notificationIsVisible,
-            })}
-          >
-            Copied!
-          </div>
           <button
             onClick={handleCopyLink}
             className={cn(button, {
@@ -58,6 +52,13 @@ const CopyLink = ({
           >
             <Icon name="icon-gui-link" size="1rem" />
           </button>
+        </div>
+        <div
+          className={cn(notificationContainer, {
+            [isVisible]: notificationIsVisible,
+          })}
+        >
+          Copied!
         </div>
       </div>
     </div>
