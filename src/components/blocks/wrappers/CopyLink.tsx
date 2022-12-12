@@ -10,7 +10,6 @@ import {
   isHidden,
   isVisible,
   notificationContainer,
-  notification,
 } from './CopyLink.module.css';
 
 const CopyLink = ({
