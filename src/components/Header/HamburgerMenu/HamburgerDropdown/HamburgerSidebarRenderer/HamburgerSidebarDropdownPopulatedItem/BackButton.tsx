@@ -3,7 +3,7 @@ import { StaticImage } from 'src/components/StaticImage';
 
 export const BackButton = ({ toggle }: { toggle: () => void }) => (
   <div
-    className="cursor-pointer flex items-center max-w-full mr-24 mt-16 pb-16 flex-grow justify-between text-16 focus-within:outline-none"
+    className="cursor-pointer flex items-center max-w-full mr-24 pb-16 flex-grow justify-between text-16 focus-within:outline-none"
     role="button"
     tabIndex={0}
     onClick={toggle}
