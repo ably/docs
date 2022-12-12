@@ -44,7 +44,7 @@ const Template = ({
   const title = getMetaDataDetails(document, 'title') as string;
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
-  const canonical = `${CANONICAL_ROOT}${slug}`;
+  const canonical = `${CANONICAL_ROOT}${slug}`.replace(/\/+$/, '');
 
   const contentMenuFromLanguage = contentMenu[language] ?? [[]];
 
@@ -71,7 +71,7 @@ const Template = ({
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html data={data} key={i} />,
       ),
-    [contentOrderedList, language, filteredLanguages],
+    [contentOrderedList, language, filteredLanguages, version, versions],
   );
   useEffect(() => {
     if (language === DEFAULT_LANGUAGE || !filteredLanguages.includes(language)) {

@@ -52,7 +52,7 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
   const contentWithRandomChannelName = useMemo(
     () =>
       dataContainsRandomChannelName ? content.replace(/{{RANDOM_CHANNEL_NAME}}/g, getRandomChannelName()) : content,
-    [attribs?.lang],
+    [content, dataContainsRandomChannelName, attribs?.lang],
   );
 
   const hasMultilineText = isString && multilineRegex.test(content);
@@ -71,13 +71,13 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
           `${displayApiKey}${new Array(API_KEY_LENGTH + 1).join('*')}`,
         )
       : contentWithRandomChannelName;
-  }, [contentWithRandomChannelName, activeApiKey]);
+  }, [contentWithRandomChannelName, activeApiKey, dataContainsKey]);
   const contentWithKey = useMemo(
     () =>
       dataContainsKey
         ? contentWithRandomChannelName.replace(/{{API_KEY}}/g, activeApiKey.value)
         : contentWithRandomChannelName,
-    [contentWithRandomChannelName, activeApiKey],
+    [contentWithRandomChannelName, activeApiKey, dataContainsKey],
   );
 
   if (hasRenderableLanguages || hasMultilineText) {
