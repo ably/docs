@@ -20,7 +20,7 @@ export const Summary = ({
   descriptionText: string;
   summaryLink?: DropdownContentLink;
 }) => (
-  <div className={cn('max-h-512 flex flex-col bg-extra-light-grey relative', bgEffect)}>
+  <div className={cn('max-h-512 w-1/4 flex flex-col bg-extra-light-grey relative', bgEffect)}>
     <SummaryTitle titleText={titleText} />
     <SummaryDescription descriptionText={descriptionText} />
     <MaybeShowSummaryLink summaryLink={summaryLink} />

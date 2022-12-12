@@ -1,7 +1,7 @@
 import React from 'react';
 import cn from 'classnames';
 import { Container } from 'src/components';
-import { end, light, menu, navGrid } from './HorizontalMenu.module.css';
+import { end, light, menu } from './HorizontalMenu.module.css';
 
 export enum HorizontalMenuVariant {
   menu = 'menu',
@@ -20,8 +20,7 @@ const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.menu, classN
     as="menu"
     role="menu"
     className={cn(
-      'grid gap-24 overflow-visible m-0 pl-0',
-      navGrid,
+      'flex overflow-visible m-0 pl-0',
       {
         [menu]: variant === HorizontalMenuVariant.menu,
         [end]: variant === HorizontalMenuVariant.end,

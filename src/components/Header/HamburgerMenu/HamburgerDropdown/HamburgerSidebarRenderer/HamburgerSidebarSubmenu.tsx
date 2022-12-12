@@ -50,7 +50,7 @@ export const HamburgerSidebarSubmenu = ({
       <HamburgerSidebarItemContainer>
         <LabelComponent
           ref={focusRef}
-          className="cursor-pointer max-w-full flex flex-grow justify-between text-16
+          className="cursor-pointer max-w-full mr-24 flex flex-grow justify-between text-16
                     focus-within:outline-none focus-within:text-gui-focus"
           onClick={() => handleMenuExpansion(label)}
           onKeyDown={({ key }) => key === 'Enter' && handleMenuExpansion(label)}
