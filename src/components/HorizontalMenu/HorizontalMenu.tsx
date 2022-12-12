@@ -4,7 +4,6 @@ import { Container } from 'src/components';
 import { end, light, menu, navGrid } from './HorizontalMenu.module.css';
 
 export enum HorizontalMenuVariant {
-  menu = 'menu',
   light = 'light',
   end = 'end',
 }
@@ -15,15 +14,12 @@ interface Props {
   className?: string;
 }
 
-const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.menu, className = '' }: Props) => (
+const HorizontalMenu = ({ children, variant = HorizontalMenuVariant.light, className = '' }: Props) => (
   <Container
     as="menu"
     role="menu"
     className={cn(
-      'grid gap-24 overflow-visible m-0 pl-0',
-      navGrid,
       {
-        [menu]: variant === HorizontalMenuVariant.menu,
         [end]: variant === HorizontalMenuVariant.end,
         [light]: variant === HorizontalMenuVariant.light,
       },
