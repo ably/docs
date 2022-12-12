@@ -31,12 +31,12 @@ export const DropdownButtonAndMenu = ({
     <div
       id={createDropdownButtonMenuHtmlId(dropdownDataID)}
       onMouseLeave={() => onMouseOut(dropdownDataID)}
-      className="mr-24 py-24"
+      className="mr-24"
     >
       <button
         type="button"
         data-id="meganav-control"
-        className="hidden md:flex items-center h-full min-w-100 focus:outline-none hover:text-gui-hover"
+        className="hidden md:flex items-center h-full focus:outline-none hover:text-gui-hover whitespace-nowrap"
         aria-expanded={isOpen}
         aria-label={`Show ${dropdownDataID}`}
         onClick={() => onActivated(dropdownDataID)}

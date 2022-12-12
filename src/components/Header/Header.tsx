@@ -27,11 +27,9 @@ export const Header = () => {
       id="top-main-nav"
     >
       <HorizontalMenu variant={HorizontalMenuVariant.light}>
-        <div className="flex items-center">
-          <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
-          <SearchBar displayMode={DisplayMode.FULL_SCREEN} />
-        </div>
-        <div className="flex flex-row md:min-w-610">
+        <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
+        <SearchBar displayMode={DisplayMode.FULL_SCREEN} />
+        <div className="flex flex-row justify-end col-start-3">
           {menuItems.map((buttonDropdownDataID, i) => (
             <DropdownButtonAndMenu
               key={i}
