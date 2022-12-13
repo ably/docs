@@ -1,5 +1,5 @@
-const herokuAppSite = process.env.HEROKU_APP_NAME
-  ? `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`
+const herokuAppSite = process.env.GATSBY_HEROKU_APP_NAME
+  ? `https://${process.env.GATSBY_HEROKU_APP_NAME}.herokuapp.com`
   : 'http://localhost:9000';
 
 const mainWebsite = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
@@ -12,6 +12,8 @@ export const siteMetadata = {
 
 export const assetPrefix = process.env.ASSET_PREFIX ?? herokuAppSite;
 
+export const graphqlTypegen = true;
+
 export const plugins = [
   'gatsby-plugin-postcss',
   'gatsby-plugin-styled-components',
@@ -20,10 +22,7 @@ export const plugins = [
   'gatsby-transformer-yaml',
   'gatsby-transformer-sharp',
   'gatsby-plugin-react-helmet',
-  'gatsby-plugin-ts',
   'gatsby-plugin-root-import',
-  'gatsby-plugin-perf-budgets',
-  'gatsby-plugin-webpack-bundle-analyser-v2',
   // Images
   {
     resolve: 'gatsby-source-filesystem',
@@ -71,12 +70,6 @@ export const plugins = [
     resolve: `gatsby-plugin-manifest`,
     options: {
       icon: 'src/images/favicon.png',
-    },
-  },
-  {
-    resolve: `gatsby-plugin-env-variables`,
-    options: {
-      allowList: ['HEROKU_APP_NAME'],
     },
   },
   `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/
