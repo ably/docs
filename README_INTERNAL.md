@@ -146,6 +146,5 @@ Changes to the docs repo are always visible at https://docs.ably.com, but the of
 1. Ensure that the `nanoc-toolchain` version of this repository includes the doc changes that you want to publish.
 2. Clone the [website repo](https://github.com/ably/website) and create a new feature branch.
 3. Execute `./script/bump_docs.sh` from the root folder of the website code. This script creates a commit for publishing the documentation.
-4. Ensure that you have the `nanoc-toolchain` branch checked out locally.
-5. Push your branch to the website repo and create a pull request.
-6. Edit any unnecessary information out of the description and add the website team as reviewers.
+4. Push your branch to the website repo and create a pull request.
+5. Edit any unnecessary information out of the description and add the website team as reviewers.
