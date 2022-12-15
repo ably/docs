@@ -13,7 +13,10 @@ const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionD
   const showDefaultLink = pageLanguage !== DEFAULT_LANGUAGE;
 
   return showCodeMenu ? (
-    <div id="top-code-menu" className="fixed right-0 z-10 top-64 w-full items-end border-b border-mid-grey bg-white">
+    <div
+      id="top-code-menu"
+      className="fixed right-0 z-10 top-64 w-full items-end border-b border-mid-grey bg-white px-24"
+    >
       <HorizontalMenu variant={HorizontalMenuVariant.end}>
         <VersionMenu {...versionData} />
         {showLanguageSelector ? (
