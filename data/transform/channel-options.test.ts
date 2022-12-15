@@ -40,7 +40,7 @@ describe('Test channel options rendering', () => {
 
       {{LANG_BLOCK[default]}}
 
-      - <span lang=\\"ruby\\">:cipher</span><span lang=\\"csharp,go\\">CipherParams</span><span lang=\\"javascript,nodejs,java,swift,objc\\">cipher</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See <a href=\\"/realtime/encryption#getting-started\\">an example</a><br><em class=\\"italics\\">Type: <a href=\\"/api/realtime-sdk/encryption#cipher-params\\"><code>CipherParams</code></a><span lang=\\"javascript,nodejs\\"> or an options object containing at a minimum a <code>key</code></span><span lang=\\"java\\"> or a <code>Param[]</code> list containing at a minimum a <code>key</code></span><span lang=\\"ruby\\"> or an options hash containing at a minimum a <code>key</code></span><span lang=\\"php\\"> or an Associative Array containing at a minimum a <code>key</code></span></em>
+      - <span lang="ruby">:cipher</span><span lang="csharp,go">CipherParams</span><span lang="javascript,nodejs,java,swift,objc">cipher</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See <a href="/realtime/encryption#getting-started">an example</a><br><em class="italics">Type: <a href="/api/realtime-sdk/encryption#cipher-params"><code>CipherParams</code></a><span lang="javascript,nodejs"> or an options object containing at a minimum a <code>key</code></span><span lang="java"> or a <code>Param[]</code> list containing at a minimum a <code>key</code></span><span lang="ruby"> or an options hash containing at a minimum a <code>key</code></span><span lang="php"> or an Associative Array containing at a minimum a <code>key</code></span></em>
 
       {{/LANG_BLOCK}}
 
@@ -49,8 +49,8 @@ describe('Test channel options rendering', () => {
 
       {{/LANG_BLOCK}}
 
-      - <span lang=\\"javascript,nodejs,java,swift,objc\\">params</span><span lang=\\"csharp\\">Params</span> := Optional <a href=\\"/realtime/channels/channel-parameters/overview\\">parameters</a> which specify behaviour of the channel.<br><em class=\\"italics\\">Type: <span lang='java'><code>Map<String, String></code></span><span lang=\\"javascript,nodejs,objc,csharp,swift\\"><code>JSON Object</code></span></em>
-      - <span lang=\\"javascript,nodejs,java,swift,objc\\">cipher</span><span lang=\\"csharp\\">CipherParams</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See <a href=\\"/api/realtime-sdk/encryption#getting-started\\">an example</a><br><em class=\\"italics\\">Type: <a href=\\"/api/realtime-sdk/encryption#cipher-params\\"><code>CipherParams</code></a><span lang=\\"javascript,nodejs\\"> or an options object containing at a minimum a <code>key</code></span><span lang=\\"java\\"> or a <code>Param[]</code> list containing at a minimum a <code>key</code></span><span lang=\\"ruby\\"> or an options hash containing at a minimum a <code>key</code></span><span lang=\\"php\\"> or an Associative Array containing at a minimum a <code>key</code></span></em>
+      - <span lang="javascript,nodejs,java,swift,objc">params</span><span lang="csharp">Params</span> := Optional <a href="/realtime/channels/channel-parameters/overview">parameters</a> which specify behaviour of the channel.<br><em class="italics">Type: <span lang='java'><code>Map<String, String></code></span><span lang="javascript,nodejs,objc,csharp,swift"><code>JSON Object</code></span></em>
+      - <span lang="javascript,nodejs,java,swift,objc">cipher</span><span lang="csharp">CipherParams</span> := Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See <a href="/api/realtime-sdk/encryption#getting-started">an example</a><br><em class="italics">Type: <a href="/api/realtime-sdk/encryption#cipher-params"><code>CipherParams</code></a><span lang="javascript,nodejs"> or an options object containing at a minimum a <code>key</code></span><span lang="java"> or a <code>Param[]</code> list containing at a minimum a <code>key</code></span><span lang="ruby"> or an options hash containing at a minimum a <code>key</code></span><span lang="php"> or an Associative Array containing at a minimum a <code>key</code></span></em>
 
 
       {{LANG_BLOCK[java]}}
@@ -59,7 +59,7 @@ describe('Test channel options rendering', () => {
 
       <h4>Static methods</h4>
 
-      <h6 id=\\"with-cipher-key\\">withCipherKey</h6>
+      <h6 id="with-cipher-key">withCipherKey</h6>
 
       bq(definition). static ChannelOptions.withCipherKey(Byte[] or String key)
 
@@ -71,28 +71,28 @@ describe('Test channel options rendering', () => {
 
       <h4>Returns</h4>
 
-      On success, the method returns a complete <code>ChannelOptions</code> object. Failure will raise an \\"<code>AblyException</code>\\":/api/realtime-sdk/types#ably-exception."
+      On success, the method returns a complete <code>ChannelOptions</code> object. Failure will raise an "<code>AblyException</code>":/api/realtime-sdk/types#ably-exception."
     `);
     expect(textileToHtml(dubiousBlangFixture)).toMatchInlineSnapshot(`
-      "<p><h4><span lang=\\"default\\">Properties</span><span lang=\\"java\\">Members</span><span lang=\\"ruby\\">Attributes</span></h4></p>
-      <div lang=\\"default\\"><!-- start default language block -->
+      "<p><h4><span lang="default">Properties</span><span lang="java">Members</span><span lang="ruby">Attributes</span></h4></p>
+      <div lang="default"><!-- start default language block -->
 
       <dl>
-      	<dt><span lang=\\"ruby\\">:cipher</span><span lang=\\"csharp,go\\">CipherParams</span><span lang=\\"javascript,nodejs,java,swift,objc\\">cipher</span></dt>
-      	<dd>Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See <a href=\\"/realtime/encryption#getting-started\\">an example</a><br /><em class=\\"italics\\">Type: <a href=\\"/api/realtime-sdk/encryption#cipher-params\\"><code>CipherParams</code></a><span lang=\\"javascript,nodejs\\"> or an options object containing at a minimum a <code>key</code></span><span lang=\\"java\\"> or a <code>Param[]</code> list containing at a minimum a <code>key</code></span><span lang=\\"ruby\\"> or an options hash containing at a minimum a <code>key</code></span><span lang=\\"php\\"> or an Associative Array containing at a minimum a <code>key</code></span></em></dd>
-      </dl></div><!-- /end default language block --><div lang=\\"javascript,nodejs,java,swift,objc,csharp\\"><!-- start javascript,nodejs,java,swift,objc,csharp language block -->
+      	<dt><span lang="ruby">:cipher</span><span lang="csharp,go">CipherParams</span><span lang="javascript,nodejs,java,swift,objc">cipher</span></dt>
+      	<dd>Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See <a href="/realtime/encryption#getting-started">an example</a><br /><em class="italics">Type: <a href="/api/realtime-sdk/encryption#cipher-params"><code>CipherParams</code></a><span lang="javascript,nodejs"> or an options object containing at a minimum a <code>key</code></span><span lang="java"> or a <code>Param[]</code> list containing at a minimum a <code>key</code></span><span lang="ruby"> or an options hash containing at a minimum a <code>key</code></span><span lang="php"> or an Associative Array containing at a minimum a <code>key</code></span></em></dd>
+      </dl></div><!-- /end default language block --><div lang="javascript,nodejs,java,swift,objc,csharp"><!-- start javascript,nodejs,java,swift,objc,csharp language block -->
       </div><!-- /end javascript,nodejs,java,swift,objc,csharp language block --><dl>
-      	<dt><span lang=\\"javascript,nodejs,java,swift,objc\\">params</span><span lang=\\"csharp\\">Params</span></dt>
-      	<dd>Optional <a href=\\"/realtime/channels/channel-parameters/overview\\">parameters</a> which specify behaviour of the channel.<br /><em class=\\"italics\\">Type: <span lang=\\"java\\"><code>Map&lt;String, String&gt;</code></span><span lang=\\"javascript,nodejs,objc,csharp,swift\\"><code>JSON Object</code></span></em></dd>
-      	<dt><span lang=\\"javascript,nodejs,java,swift,objc\\">cipher</span><span lang=\\"csharp\\">CipherParams</span></dt>
-      	<dd>Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See <a href=\\"/api/realtime-sdk/encryption#getting-started\\">an example</a><br /><em class=\\"italics\\">Type: <a href=\\"/api/realtime-sdk/encryption#cipher-params\\"><code>CipherParams</code></a><span lang=\\"javascript,nodejs\\"> or an options object containing at a minimum a <code>key</code></span><span lang=\\"java\\"> or a <code>Param[]</code> list containing at a minimum a <code>key</code></span><span lang=\\"ruby\\"> or an options hash containing at a minimum a <code>key</code></span><span lang=\\"php\\"> or an Associative Array containing at a minimum a <code>key</code></span></em></dd>
+      	<dt><span lang="javascript,nodejs,java,swift,objc">params</span><span lang="csharp">Params</span></dt>
+      	<dd>Optional <a href="/realtime/channels/channel-parameters/overview">parameters</a> which specify behaviour of the channel.<br /><em class="italics">Type: <span lang="java"><code>Map&lt;String, String&gt;</code></span><span lang="javascript,nodejs,objc,csharp,swift"><code>JSON Object</code></span></em></dd>
+      	<dt><span lang="javascript,nodejs,java,swift,objc">cipher</span><span lang="csharp">CipherParams</span></dt>
+      	<dd>Requests encryption for this channel when not null, and specifies encryption-related parameters (such as algorithm, chaining mode, key length and key). See <a href="/api/realtime-sdk/encryption#getting-started">an example</a><br /><em class="italics">Type: <a href="/api/realtime-sdk/encryption#cipher-params"><code>CipherParams</code></a><span lang="javascript,nodejs"> or an options object containing at a minimum a <code>key</code></span><span lang="java"> or a <code>Param[]</code> list containing at a minimum a <code>key</code></span><span lang="ruby"> or an options hash containing at a minimum a <code>key</code></span><span lang="php"> or an Associative Array containing at a minimum a <code>key</code></span></em></dd>
       </dl>
       <p></p>
-      <div lang=\\"java\\"><!-- start java language block -->
+      <div lang="java"><!-- start java language block -->
       </div><!-- /end java language block --><p><h4>Static methods</h4></p>
-      <p><h6 id=\\"with-cipher-key\\">withCipherKey</h6></p>
-      <blockquote class=\\"definition\\">
-      <p class=\\"definition\\">static ChannelOptions.withCipherKey(Byte[] or String key)</p>
+      <p><h6 id="with-cipher-key">withCipherKey</h6></p>
+      <blockquote class="definition">
+      <p class="definition">static ChannelOptions.withCipherKey(Byte[] or String key)</p>
       </blockquote>
       <p>A helper method to generate a <code>ChannelOptions</code> for the simple case where you only specify a key.</p>
       <p><h4>Parameters</h4></p>
@@ -101,7 +101,7 @@ describe('Test channel options rendering', () => {
       	<dd>A binary <code>Byte[]</code> array or a base64-encoded <code>String</code>.</dd>
       </dl>
       <h4>Returns</h4>
-      <p>On success, the method returns a complete <code>ChannelOptions</code> object. Failure will raise an <a href=\\"/api/realtime-sdk/types#ably-exception\\"><code>AblyException</code></a>.</p>"
+      <p>On success, the method returns a complete <code>ChannelOptions</code> object. Failure will raise an <a href="/api/realtime-sdk/types#ably-exception"><code>AblyException</code></a>.</p>"
     `);
   });
 });

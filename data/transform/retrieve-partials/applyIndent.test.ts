@@ -18,7 +18,7 @@ describe('Applying indentation to partials works as expected', () => {
   it('Applies indents to an example from docs', () => {
     const docsData = applyIndent(2)(docsExample).data;
     expect(docsData).toMatchInlineSnapshot(`
-      "		@HistoryRequestParams@ is a type that encapsulates the parameters for a history queries. For example usage see \\"<span lang=\\"default\\">@Channel#history@</span><span lang=\\"csharp,go\\">@Channel#History@</span>\\":/api/realtime-sdk/history#channel-history.
+      "		@HistoryRequestParams@ is a type that encapsulates the parameters for a history queries. For example usage see "<span lang="default">@Channel#history@</span><span lang="csharp,go">@Channel#History@</span>":/api/realtime-sdk/history#channel-history.
 
       		h4. Members
 
