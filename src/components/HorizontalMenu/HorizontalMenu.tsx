@@ -1,7 +1,7 @@
 import React from 'react';
 import cn from 'classnames';
 import { Container } from 'src/components';
-import { end, light, menu, navGrid } from './HorizontalMenu.module.css';
+import { end, light } from './HorizontalMenu.module.css';
 
 export enum HorizontalMenuVariant {
   light = 'light',
