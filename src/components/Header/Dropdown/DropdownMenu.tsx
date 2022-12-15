@@ -39,7 +39,7 @@ export const DropdownMenu = ({
       className="top-64 fixed w-full left-0 right-0 bg-white shadow-container"
       id={kebabCase(summaryTitle)}
     >
-      <div className="flex flex-wrap max-w-1312 mx-auto">
+      <div className="grid grid-cols-3 max-w-1312 mx-auto">
         <Summary titleText={summaryTitle} descriptionText={summaryDescription} summaryLink={summaryLink} />
         <ContentsContainer title={title} contents={contents} />
       </div>

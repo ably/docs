@@ -2,7 +2,7 @@ import React from 'react';
 import { SessionState } from '../../../../contexts/user-context';
 
 export const HamburgerDropdownFooter = ({ sessionState }: { sessionState: SessionState }) => (
-  <menu className="border-t border-mid-grey list-none flex flex-row justify-between mx-24 items-center pt-24 pl-0">
+  <menu className="border-t border-mid-grey list-none flex flex-row justify-between mx-24 items-center pt-24 pb-40 pl-0">
     <li className="min-w-max">
       <a href="/contact" className="ui-meganav-link" data-id="meganav-link">
         Contact us
