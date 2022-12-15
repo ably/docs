@@ -134,6 +134,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
         layout: '244px minmax(200px, 924px) 200px',
         'large-layout': 'minmax(200px, 924px) 200px',
         'two-col-layout': '244px minmax(200px, 1104px)',
+        'header-layout': '173px minmax(200px, 400px) 1fr',
         'footer-layout': '244px auto',
       },
       rotate: {
