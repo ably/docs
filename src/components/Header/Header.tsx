@@ -23,7 +23,7 @@ export const Header = () => {
   return (
     <header
       ref={ref}
-      className="sticky top-0 bg-white h-64 z-50 flex w-full border-b border-mid-grey"
+      className="sticky top-0 bg-white h-64 z-50 flex w-full border-b border-mid-grey px-24"
       id="top-main-nav"
     >
       <HorizontalMenu variant={HorizontalMenuVariant.light}>
