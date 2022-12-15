@@ -36,7 +36,7 @@ blang[csharp].
 describe('Ensure that there are no missing spans', () => {
   it('Ensures that there are no missing spans for any language', () => {
     expect(processTextile(missingSpansFixture)).toMatchInlineSnapshot(`
-      Array [
+      [
         <h4>
           Parameters
         </h4>,

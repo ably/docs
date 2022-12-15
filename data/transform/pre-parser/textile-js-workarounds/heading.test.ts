@@ -70,7 +70,7 @@ h6(#off).
 
 There are <span lang="jsall">six</span><span lang="default">two</span> overloaded versions of this method:`),
     ).toMatchInlineSnapshot(`
-      Array [
+      [
         <h4>
           Parameters
         </h4>,
