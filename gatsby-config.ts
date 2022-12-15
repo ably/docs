@@ -12,6 +12,8 @@ export const siteMetadata = {
 
 export const assetPrefix = process.env.ASSET_PREFIX ?? herokuAppSite;
 
+export const graphqlTypegen = true;
+
 export const plugins = [
   'gatsby-plugin-postcss',
   'gatsby-plugin-styled-components',
@@ -20,7 +22,6 @@ export const plugins = [
   'gatsby-transformer-yaml',
   'gatsby-transformer-sharp',
   'gatsby-plugin-react-helmet',
-  'gatsby-plugin-ts',
   'gatsby-plugin-root-import',
   // Images
   {
@@ -69,12 +70,6 @@ export const plugins = [
     resolve: `gatsby-plugin-manifest`,
     options: {
       icon: 'src/images/favicon.png',
-    },
-  },
-  {
-    resolve: `gatsby-plugin-env-variables`,
-    options: {
-      allowList: ['HEROKU_APP_NAME'],
     },
   },
   `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/

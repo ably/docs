@@ -6,7 +6,7 @@ export const DlWrapper: FunctionComponent<any> = ({ children }) => {
   const language = useContext(PageLanguageContext);
 
   return Children.map(children, (child) => {
-    const { attribs } = child?.props;
+    const attribs = child?.props?.attribs;
 
     if (attribs?.lang) {
       if (

@@ -171,11 +171,15 @@ const transformNanocTextiles =
     };
 
     const isVersion = /\/versions\/v[\d.]+/.test(slug);
+    const isCompare = /^compare\/.*/.test(slug);
+    const isClientLibDevelopmentGuide = /^client-lib-development-guide\/.*/.test(slug);
+
+    const doesNotNeedMeta = isVersion || isCompare || isClientLibDevelopmentGuide;
 
     if (frontmatterMeta !== NO_MATCH) {
       newNodeData.meta = prepareAllowedMetaFields(filterAllowedMetaFields(frontmatterMeta.attributes));
       if (
-        !isVersion &&
+        !doesNotNeedMeta &&
         process.env.NODE_ENV === 'development' &&
         process.env.EDITOR_WARNINGS_OFF !== 'true' &&
         !newNodeData.meta.meta_description
