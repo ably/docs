@@ -7,4 +7,7 @@ export const menuStyles: StylesConfigFunction<MenuProps<ReactSelectOption, false
 ) => ({
   ...provided,
   zIndex: 12,
+  width: 300,
+  right: 0,
+  margin: '4px 0 0',
 });

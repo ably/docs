@@ -1,6 +1,7 @@
 export * from './control-styles';
 export * from './custom-react-select-styles';
 export * from './dropdown-indicator-styles';
+export * from './group';
 export * from './group-heading-styles';
 export * from './menu-list-styles';
 export * from './menu-styles';

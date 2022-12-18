@@ -19,6 +19,7 @@ import {
   menuListStyles,
   menuStyles,
   optionStyles,
+  groupStyles,
 } from '../ReactSelectStyles';
 import { safeWindow } from 'src/utilities';
 
@@ -55,6 +56,7 @@ export const LanguageDropdownSelector = ({
         groupHeading: groupHeadingStyles,
         menu: menuStyles,
         menuList: menuListStyles,
+        group: groupStyles,
       }}
       inputId={'language-menu'}
       value={selectedOption}
