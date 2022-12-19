@@ -22,6 +22,7 @@ import {
   groupStyles,
 } from '../ReactSelectStyles';
 import { safeWindow } from 'src/utilities';
+import './styles.css';
 
 const makeOptionFromLang = (lang: string) => ({ label: longLanguageLabels[lang] ?? lang, value: lang });
 
@@ -46,7 +47,7 @@ export const LanguageDropdownSelector = ({
   return (
     <Select
       components={noIndicatorSeparator}
-      classNamePrefix="react-select"
+      classNamePrefix="language-dropdown"
       menuPosition="fixed"
       isSearchable={false}
       styles={{
@@ -54,7 +55,7 @@ export const LanguageDropdownSelector = ({
         option: optionStyles({ width: '192px' }),
         dropdownIndicator: dropdownIndicatorStyles,
         groupHeading: groupHeadingStyles,
-        menu: menuStyles,
+        menu: menuStyles({ right: 0 }),
         menuList: menuListStyles,
         group: groupStyles,
       }}

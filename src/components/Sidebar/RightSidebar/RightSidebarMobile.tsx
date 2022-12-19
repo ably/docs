@@ -45,7 +45,7 @@ export const RightSidebarMobile = ({ menuData, languages }: { menuData: MenuData
           }),
           option: optionStyles({ width: '240px', activeText: 'var(--color-active-orange)' }),
           dropdownIndicator: dropdownIndicatorStyles,
-          menu: menuStyles,
+          menu: menuStyles({}),
           singleValue: singleValueStyles,
           menuList: menuListStyles,
           valueContainer: noPaddingValueContainerStyles,
