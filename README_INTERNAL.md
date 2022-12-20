@@ -139,11 +139,11 @@ output/general/events/aws-lambda/index.html:
   [ ERROR ] internal_links - broken reference to file:///general/event
 ```
 
-## Deploying documentation changes to `ably.com/docs`
+## Deploying documentation changes on the nanoc toolchain to `ably.com/docs`
 
-Changes to the docs repo are always visible at https://docs.ably.com, but the official documentation at https://ably.com/docs consumes the docs repo via a Ruby gem which points at the `main` branch and saves the revision as a version. To include your doc changes in the website, you need to update the version of the docs repo that the gem references:
+Changes to the docs repo are always visible at https://docs.ably.com, but the official documentation at https://ably.com/docs consumes the docs repo via a Ruby gem which points at the `nanoc-toolchain` branch and saves the revision as a version. To include your doc changes in the website, you need to update the version of the docs repo that the gem references:
 
-1. Ensure that the `main` version of this repository includes the doc changes that you want to publish.
+1. Ensure that the `nanoc-toolchain` version of this repository includes the doc changes that you want to publish.
 2. Clone the [website repo](https://github.com/ably/website) and create a new feature branch.
 3. Execute `./script/bump_docs.sh` from the root folder of the website code. This script creates a commit for publishing the documentation.
 4. Push your branch to the website repo and create a pull request.

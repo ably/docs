@@ -2,7 +2,7 @@ import React from 'react';
 import { SessionState } from '../../../../../contexts/user-context';
 
 export const AccountUtilityLinks = ({ sessionState }: { sessionState: SessionState }) => (
-  <menu className="mb-8 mx-16 list-none">
+  <menu className="mb-8 list-none px-16">
     {sessionState.mySettings && (
       <li>
         <a href={sessionState.mySettings.href} className="ui-meganav-account-link">

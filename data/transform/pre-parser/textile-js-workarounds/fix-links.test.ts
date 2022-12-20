@@ -65,28 +65,28 @@ describe('Fixes punctuation in links for textile-js', () => {
       "h5. Code example
 
               \`\`\`[curl]
-              curl \\"https://rest.ably.io/event-stream?channel=example&v=1.2\\"           --user \\"{{API_KEY}}\\"
+              curl "https://rest.ably.io/event-stream?channel=example&v=1.2"           --user "{{API_KEY}}"
               
               {
-                \\"id\\":\\"cbfKayrzgAXDWM:1556804156735-0\\",
-                \\"event\\":\\"message\\",
-                \\"data\\":{
-                  \\"id\\":\\"oZs6XaGYx8:0:0\\",
-                  \\"name\\":\\"message-name\\",
-                  \\"timestamp\\":1556804156730,
-                  \\"encoding\\":\\"json\\",
-                  \\"channel\\":\\"example\\",
-                  \\"data\\":\\"{\\"foo\\":1}\\"
+                "id":"cbfKayrzgAXDWM:1556804156735-0",
+                "event":"message",
+                "data":{
+                  "id":"oZs6XaGYx8:0:0",
+                  "name":"message-name",
+                  "timestamp":1556804156730,
+                  "encoding":"json",
+                  "channel":"example",
+                  "data":"{"foo":1}"
                 }
               }
               ⏎
               {
-                \\"event\\":\\"error\\",
-                \\"data\\":{
-                  \\"message\\":\\"Token expired. (See https://help.ably.io/error/40142 for help.)\\",
-                  \\"code\\":40142,
-                  \\"statusCode\\":401,
-                  \\"href\\":\\"https://help.ably.io/error/40142\\"
+                "event":"error",
+                "data":{
+                  "message":"Token expired. (See https://help.ably.io/error/40142 for help.)",
+                  "code":40142,
+                  "statusCode":401,
+                  "href":"https://help.ably.io/error/40142"
                 }
               }
               \`\`\`"

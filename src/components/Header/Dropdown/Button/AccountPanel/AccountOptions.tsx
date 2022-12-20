@@ -2,9 +2,9 @@ import React from 'react';
 import { DropdownContentLink } from '../../Contents';
 
 export const AccountOptions = ({ links }: { links: DropdownContentLink[] }) => (
-  <>
-    <p className="ui-meganav-overline mt-16 mx-16">Your account</p>
-    <menu className="mb-16 mx-16 list-none">
+  <div className="p-16">
+    <p className="ui-meganav-overline mb-16">Your account</p>
+    <menu className="p-0 list-none">
       {links.map((item) => (
         <li key={item.href}>
           <a className="ui-meganav-account-link" href={item.href}>
@@ -13,5 +13,5 @@ export const AccountOptions = ({ links }: { links: DropdownContentLink[] }) => (
         </li>
       ))}
     </menu>
-  </>
+  </div>
 );
