@@ -39,13 +39,12 @@ export const RightSidebarMobile = ({ menuData, languages }: { menuData: MenuData
         isSearchable={false}
         styles={{
           control: controlStyles({
-            width: '240px',
             border: '0',
             boxShadow: 'none',
           }),
           option: optionStyles({ width: '240px', activeText: 'var(--color-active-orange)' }),
           dropdownIndicator: dropdownIndicatorStyles,
-          menu: menuStyles({}),
+          menu: menuStyles({ width: '240px' }),
           singleValue: singleValueStyles,
           menuList: menuListStyles,
           valueContainer: noPaddingValueContainerStyles,
