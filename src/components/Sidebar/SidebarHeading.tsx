@@ -28,6 +28,8 @@ export const SidebarHeading = <C extends ElementType>({
   const scrollLinkIntoView = (node: HTMLElement) => {
     if (node && (safeWindow.location.pathname === props.to || safeWindow.location.pathname === props.href)) {
       node.scrollIntoView();
+    } else if (node && isActive) {
+      node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     }
   };
   const finalProps: Omit<Props<C>, 'as' | 'indent' | 'isActive' | 'className'> & {
