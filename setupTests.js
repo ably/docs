@@ -9,6 +9,8 @@ class ResizeObserver {
 
 window.ResizeObserver = ResizeObserver;
 
+window.HTMLElement.prototype.scrollIntoView = jest.fn();
+
 process.env.GATSBY_ADDSEARCH_API_KEY = 'shh-do-not-tell-to-anyone';
 
 jest.mock('@ably/ui/src/core/utils/syntax-highlighter', () => ({
