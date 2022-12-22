@@ -14,6 +14,4 @@ export const controlStyles: (
     cursor: 'pointer',
     fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
     fontSize: '14px',
-    marginLeft: 24,
-    marginRight: 0,
   });
