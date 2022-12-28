@@ -29,4 +29,6 @@ export const optionStyles: (
       color: activeText ? activeText : 'var(--color-gui-hover)',
       backgroundColor: 'white',
     },
+    padding: '0 8px',
+    margin: '8px 0 0',
   });

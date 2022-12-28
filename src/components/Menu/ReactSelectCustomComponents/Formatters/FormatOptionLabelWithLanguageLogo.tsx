@@ -8,9 +8,9 @@ const returnNullIfNoLanguageAvailable = (languageOptionValue: string) =>
 export const FormatOptionLabelWithLanguageLogo = (languageOption: ReactSelectOption) => {
   const Component = returnNullIfNoLanguageAvailable(languageOption.value);
   return (
-    <div className="language-option items-center flex gap-8">
+    <div className="language-option items-center flex gap-16">
       <Component />
-      <span className="px-8">{languageOption.label}</span>
+      <span>{languageOption.label}</span>
     </div>
   );
 };

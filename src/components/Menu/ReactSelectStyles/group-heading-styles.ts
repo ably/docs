@@ -9,4 +9,5 @@ export const groupHeadingStyles: StylesConfigFunction<
   letterSpacing: '0.1em',
   color: '--var(cool-black)',
   zIndex: 12,
+  padding: 0,
 });
