@@ -5,4 +5,5 @@ export type CustomReactSelectStyles = {
   activeText?: string;
   right?: number;
   marginRight?: string;
+  marginLeft?: number;
 };

@@ -51,7 +51,7 @@ export const LanguageDropdownSelector = ({
       menuPosition="fixed"
       isSearchable={false}
       styles={{
-        control: controlStyles({ width: '192px', marginRight: '16px' }),
+        control: controlStyles({ width: '192px', marginLeft: 24 }),
         option: optionStyles({ width: '192px', marginRight: '16px' }),
         dropdownIndicator: dropdownIndicatorStyles,
         groupHeading: groupHeadingStyles,
