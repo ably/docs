@@ -2,7 +2,7 @@ import React from 'react';
 import { expectAccessibility } from 'src/utilities/test/expect-accessibility';
 import { RightSidebar } from './RightSidebar';
 
-describe('Basic accessibility test', () => {
+describe('Basic accessibility test for RightSidebar', () => {
   it('is accessible', () => {
     expectAccessibility(
       <RightSidebar
