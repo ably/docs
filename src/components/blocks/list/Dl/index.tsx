@@ -19,6 +19,7 @@ const StyledDl = styled.dl`
   grid-auto-flow: column;
   margin-bottom: 20px;
   font-size: 16px;
+  overflow-x: scroll;
 
   /**
   * This :only-child directive is present to ensure that multiple lines are not shown in the situation
