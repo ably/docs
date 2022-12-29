@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { flattenDeep } from 'lodash/fp';
 import cn from 'classnames';
 
@@ -22,6 +22,8 @@ type RightSidebarProps = {
 };
 
 export const RightSidebar = ({ menuData, languages }: RightSidebarProps) => {
+  const rightSidebarRef = useRef<HTMLBaseElement>(null);
+
   let parent;
   let previous;
   const menuLength = menuData.length;
@@ -54,6 +56,22 @@ export const RightSidebar = ({ menuData, languages }: RightSidebarProps) => {
 
   const highlightedMenuItem = useGetCurrentHeader(flatTableOfContents);
 
+  const rightSidebarHighlightedElement = document.getElementById(
+    `sidebar-heading-${highlightedMenuItem?.replaceAll('#', '')}`,
+  );
+
+  useEffect(() => {
+    if (rightSidebarHighlightedElement && rightSidebarRef?.current) {
+      if (rightSidebarHighlightedElement.offsetTop) {
+        rightSidebarRef.current.scrollTo({
+          left: 0,
+          top: rightSidebarHighlightedElement.offsetTop - 92,
+          behavior: 'smooth',
+        });
+      }
+    }
+  });
+
   if (menuLength <= 1) {
     return null;
   }
@@ -65,6 +83,7 @@ export const RightSidebar = ({ menuData, languages }: RightSidebarProps) => {
           [withLanguageNavBar]: languages,
         })}
         data-languages={languages}
+        ref={rightSidebarRef}
       >
         <SectionTitle className="py-12 px-8 pt-64 top-0 sticky bg-white">On this page</SectionTitle>
         <HighlightedMenuContext.Consumer>
