@@ -29,6 +29,9 @@ export const multilineRegex = /\r|\n/gm;
 const alternativeLanguageRegistry: Record<string, string> = {
   objc: 'objectivec',
   nodejs: 'javascript',
+  dotnet: 'cs',
+  csharp: 'cs',
+  flutter: 'dart',
 };
 
 const retrieveFromAlternativeLanguageRegistry = (key?: string) =>
