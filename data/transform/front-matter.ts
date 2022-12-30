@@ -1,4 +1,4 @@
-import fm from 'front-matter';
+import fm, { FrontMatterResult } from 'front-matter';
 import { assign, isArray, isEmpty, pick } from 'lodash';
 
 export const NO_MATCH = false;
@@ -7,9 +7,9 @@ const ALLOWED_META_FIELDS = ['title', 'meta_description', 'languages', 'redirect
 const maybeStringToStringSingletonArray = (maybeString?: string | string[]) =>
   isEmpty(maybeString) ? undefined : isArray(maybeString) ? maybeString : [maybeString];
 
-export const tryRetrieveMetaData = (metaDataString: string) => {
+export const tryRetrieveMetaData = (metaDataString: string): false | FrontMatterResult<Record<string, string>> => {
   const frontMatter = fm(metaDataString);
-  return isEmpty(frontMatter.attributes) ? NO_MATCH : frontMatter;
+  return isEmpty(frontMatter.attributes) ? NO_MATCH : (frontMatter as FrontMatterResult<Record<string, string>>);
 };
 
 export const filterAllowedMetaFields = (metaObject: Record<string, string | string[]>) =>

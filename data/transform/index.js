@@ -1,21 +1,13 @@
 const yaml = require('js-yaml');
 const { upperFirst, camelCase, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
-const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH, prepareAllowedMetaFields } = require('./front-matter');
-const DataTypes = require('../types');
+const { filterAllowedMetaFields, NO_MATCH, prepareAllowedMetaFields } = require('./front-matter');
 const { ROOT_LEVEL, MAX_LEVEL } = require('../../src/components/Sidebar/consts');
 const { preParser } = require('./pre-parser');
-const { processAfterFrontmatterExtracted } = require('./parser-enhancements');
 const { maybeRetrievePartial } = require('./retrieve-partials');
 const { flattenContentOrderedList } = require('./shared-utilities');
 const { ARTICLE_TYPES } = require('./constants');
+const { retrieveAndReplaceInlineTOC, splitDataAndMetaData } = require('./meta-data/utilities');
 
-const INLINE_TOC_REGEX = /^inline-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
-
-// Just the partial name: /<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/
-const parseNanocPartials = (contentString) =>
-  contentString.split(/(<%=\s+partial\s+partial_version\('[^')]*'\)[^%>]*%>)/);
-const tryRetrieveInlineTOC = (contentString) => contentString.match(INLINE_TOC_REGEX);
-const removeInlineTOC = (contentString) => contentString.replace(INLINE_TOC_REGEX, '');
 const processTOCItems = (tocItem) => {
   if (isEmpty(tocItem)) {
     return tocItem;
@@ -36,13 +28,7 @@ const processTOCItems = (tocItem) => {
     link: link.replace(/\s/g, '-'),
   };
 };
-const retrieveAndReplaceInlineTOC = (contentString) => ({
-  noInlineTOC: removeInlineTOC(contentString),
-  // eslint-disable-next-line no-sparse-arrays
-  inlineTOCOnly: (tryRetrieveInlineTOC(contentString) ?? [, null])[1],
-});
 
-const removeFalsy = (dataArray) => dataArray.filter((x) => !!x);
 const makeTypeFromParentType = (type) => (node) => upperFirst(camelCase(`${node.internal.type}${type}`));
 
 const createNodesFromPath =
@@ -83,17 +69,6 @@ const createNodesFromPath =
     });
   };
 
-const constructDataObjectsFromStrings = (contentStrings, frontmatterMeta) => {
-  contentStrings =
-    frontmatterMeta !== NO_MATCH && frontmatterMeta.attributes
-      ? contentStrings.map((content) => processAfterFrontmatterExtracted(content, frontmatterMeta.attributes))
-      : contentStrings;
-  const dataObjects = contentStrings.map((data, i) =>
-    i % 2 === 0 ? { data: data, type: DataTypes.Html } : { data: data, type: DataTypes.Partial },
-  );
-  return dataObjects;
-};
-
 const createInlineToc = (
   inlineTOCOnly,
   slug,
@@ -116,22 +91,6 @@ const createInlineToc = (
   });
 
   updateWithTransform({ parent: parentNode, child: inlineTOCNode });
-};
-
-const splitDataAndMetaData = (text) => {
-  const withPartials = parseNanocPartials(text);
-  const withoutFalsyValues = removeFalsy(withPartials);
-
-  const frontmatterMeta = tryRetrieveMetaData(withoutFalsyValues[0]);
-  if (frontmatterMeta !== NO_MATCH) {
-    withoutFalsyValues[0] = frontmatterMeta.body;
-  }
-
-  const asDataObjects = constructDataObjectsFromStrings(withoutFalsyValues, frontmatterMeta);
-  return {
-    data: asDataObjects,
-    frontmatterMeta,
-  };
 };
 
 // Source: https://www.gatsbyjs.com/docs/how-to/plugins-and-themes/creating-a-transformer-plugin/

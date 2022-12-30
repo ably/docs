@@ -1,3 +1,4 @@
+const { transformMarkdown } = require('data/transform/markdown/transform-markdown');
 const { transformNanocTextiles, makeTypeFromParentType, createNodesFromPath } = require('../transform');
 const { createSchemaCustomization } = require('./create-graphql-schema-customization');
 
@@ -17,6 +18,28 @@ const onCreateNode = async ({
     const content = await loadNodeContent(node);
     try {
       transformNanocTextiles(node, content, createNodeId(`${node.id} >>> HTML`), makeTypeFromParentType('Html')(node), {
+        createContentDigest,
+        createNodesFromPath: createNodesFromPath('DocumentPath', { createNode, createNodeId, createContentDigest }),
+        createNodeId,
+      })(createChildNode);
+    } catch (error) {
+      const ErrorNode = {
+        id: createNodeId(`${error.message} >>> Error`),
+        message: error.message,
+        internal: {
+          contentDigest: createContentDigest(error.message),
+          type: 'Error',
+        },
+      };
+      createNode(ErrorNode);
+      console.error('Error at relative path:\n', node.relativePath ? `${node.relativePath}\n` : '\n', error.message);
+    }
+  }
+
+  if (node.extension === 'md') {
+    const content = await loadNodeContent(node);
+    try {
+      transformMarkdown(node, content, createNodeId(`${node.id} >>> HTML`), makeTypeFromParentType('Html')(node), {
         createContentDigest,
         createNodesFromPath: createNodesFromPath('DocumentPath', { createNode, createNodeId, createContentDigest }),
         createNodeId,
