@@ -25,8 +25,11 @@ export const SidebarHeading = <C extends ElementType>({
   const Component = as || 'span';
   const activeClassName = 'font-medium text-active-orange';
 
+  const link = props.to || props.href;
+  const sidebarHeadingId = link ? `sidebar-heading-${link.replaceAll('#', '')}` : null;
+
   const scrollLinkIntoView = (node: HTMLElement) => {
-    if (node && (safeWindow.location.pathname === props.to || safeWindow.location.pathname === props.href)) {
+    if (node && safeWindow.location.pathname === link) {
       node.scrollIntoView();
     }
   };
@@ -36,6 +39,7 @@ export const SidebarHeading = <C extends ElementType>({
     activeClassName?: string;
   } = {
     ...props,
+    id: sidebarHeadingId,
     ref: scrollLinkIntoView,
     className: cn(sidebar, `ml-${indent} break-words`, className, {
       'font-light text-cool-black': !isActive,
