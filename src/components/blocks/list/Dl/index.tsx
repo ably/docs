@@ -20,6 +20,29 @@ const StyledDl = styled.dl`
   margin-bottom: 20px;
   font-size: 16px;
 
+  /**
+  * This :only-child directive is present to ensure that multiple lines are not shown in the situation
+  * where there is a <dl> inside a <div> that is selected based on language type in between two other divs, i.e.
+  * <dl>
+  *   <dt></dt>
+  *   <dd></dd>
+  * </dl>
+  * <div>
+  *   <dl>
+  *     <dt></dt>
+  *     <dd></dd>
+  *   </dl>
+  * </div>
+  * <dl>
+  *   <dt></dt>
+  *   <dd></dd>
+  * </dl>
+  */
+  :only-child {
+    margin-bottom: -1px;
+    margin-top: -21px;
+  }
+
   div {
     display: contents;
   }
