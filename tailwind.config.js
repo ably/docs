@@ -103,7 +103,6 @@ module.exports = extendConfig((ablyUIConfig) => ({
       },
       minWidth: {
         ...ablyUIConfig.theme.extend.minWidth,
-        16: '1rem',
         24: '1.5rem',
         100: '6.25rem',
         140: '8.75rem',
