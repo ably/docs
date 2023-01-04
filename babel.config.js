@@ -1,32 +1,11 @@
 module.exports = {
-  presets: ['babel-preset-gatsby', '@babel/preset-typescript'],
-  plugins: [
+  presets: [
+    'babel-preset-gatsby',
+    '@babel/preset-typescript',
     [
-      'prismjs',
+      '@babel/preset-react',
       {
-        languages: [
-          'bash',
-          'c',
-          'clike',
-          'csharp',
-          'css',
-          'dart',
-          'go',
-          'java',
-          'javascript',
-          'kotlin',
-          'jsx',
-          'objectivec',
-          'php',
-          'python',
-          'ruby',
-          'swift',
-          'tsx',
-          'typescript',
-          'yaml',
-        ],
-        theme: 'tomorrow',
-        css: true,
+        runtime: 'automatic',
       },
     ],
   ],
