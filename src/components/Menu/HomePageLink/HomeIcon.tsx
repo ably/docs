@@ -1,6 +1,6 @@
 // We are using a React Component here instead of the more efficient static image approach so we can more
 // easily/elegantly change the fill color on hover.
-// See more: https://blog.union.io/code/2017/08/10/img-svg-fill/
+// See more on the fundamental issue: https://blog.union.io/code/2017/08/10/img-svg-fill/
 export const HomeIcon = () => (
   <svg
     className="min-w-16 w-16 mr-8 fill-cool-black hover:fill-text-active-orange"
