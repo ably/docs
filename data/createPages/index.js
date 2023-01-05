@@ -1,5 +1,6 @@
 const path = require('path');
 const textile = require('textile-js');
+const MarkdownIt = require('markdown-it');
 const { simpleSitemapAndIndex } = require('sitemap');
 const { identity } = require('lodash');
 const { safeFileExists } = require('./safeFileExists');
@@ -53,6 +54,17 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
           }
         }
       }
+      allMarkdown(filter: { articleType: { eq: "document" } }) {
+        edges {
+          node {
+            slug
+            contentOrderedList {
+              data
+              type
+            }
+          }
+        }
+      }
     }
   `);
   /**
@@ -92,6 +104,17 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
           }
         }
       }
+      allMarkdown(filter: { articleType: { eq: "document" } }) {
+        edges {
+          node {
+            slug
+            contentOrderedList {
+              data
+              type
+            }
+          }
+        }
+      }
     }
   `);
 
@@ -105,7 +128,43 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
 
   const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
 
-  const documentCreator = (documentTemplate) => async (edge) => {
+  const markdownToHtml = new MarkdownIt({
+    html: true, // Enable HTML tags in source
+  });
+
+  const markdownDocumentCreator = (documentTemplate) => async (edge) => {
+    const content = flattenContentOrderedList(edge.node.contentOrderedList)
+      .map((content) => (content.data ? content.data : ''))
+      .join('\n');
+    const postParsedContent = markdownToHtml.render(content);
+    const contentOrderedList = htmlParser(postParsedContent);
+    const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item));
+    const [languages, contentMenuObject] = createLanguagePageVariants(identity, documentTemplate)(
+      contentOrderedList,
+      edge.node.slug,
+    );
+
+    contentMenuObject[DEFAULT_LANGUAGE] = contentMenu;
+
+    const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
+
+    createPage({
+      path: `${DOCUMENTATION_PATH}${edge.node.slug}`,
+      component: documentTemplate,
+      context: {
+        slug: edge.node.slug,
+        version: edge.node.version ?? LATEST_ABLY_API_VERSION_STRING,
+        language: DEFAULT_LANGUAGE,
+        languages,
+        contentOrderedList,
+        contentMenu: contentMenuObject,
+        script,
+      },
+    });
+    return edge.node.slug;
+  };
+
+  const textileDocumentCreator = (documentTemplate) => async (edge) => {
     const content = flattenContentOrderedList(
       await Promise.all(edge.node.contentOrderedList.map(retrievePartialFromGraphQL)),
     )
@@ -163,11 +222,16 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
     return slug;
   };
 
-  const documentSlugs = await Promise.all(documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)));
-  const apiReferenceSlugs = await Promise.all(
-    apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate)),
+  const markdownDocumentSlugs = await Promise.all(
+    documentResult.data.allMarkdown.edges.map(markdownDocumentCreator(documentTemplate)),
   );
-  const allSlugs = [...documentSlugs, ...apiReferenceSlugs]
+  const textileDocumentSlugs = await Promise.all(
+    documentResult.data.allFileHtml.edges.map(textileDocumentCreator(documentTemplate)),
+  );
+  const textileApiReferenceSlugs = await Promise.all(
+    apiReferenceResult.data.allFileHtml.edges.map(textileDocumentCreator(apiReferenceTemplate)),
+  );
+  const allSlugs = [...textileDocumentSlugs, ...markdownDocumentSlugs, ...textileApiReferenceSlugs]
     .filter(
       (slug) =>
         !(
