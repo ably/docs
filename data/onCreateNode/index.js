@@ -41,7 +41,7 @@ const onCreateNode = async ({
   } else if (node.extension === 'md') {
     const content = await loadNodeContent(node);
     try {
-      transformMarkdown(node, content, createNodeId(`${node.id} >>> HTML`), makeTypeFromParentType('Html')(node), {
+      transformMarkdown(node, content, createNodeId(`${node.id} >>> HTML`), {
         createContentDigest,
         createNodesFromPath: createNodesFromPath('DocumentPath', { createNode, createNodeId, createContentDigest }),
         createNodeId,
@@ -56,7 +56,7 @@ const onCreateNode = async ({
         },
       };
       createNode(ErrorNode);
-      console.error('Error at relative path:\n', node.relativePath ? `${node.relativePath}\n` : '\n', error.message);
+      console.error('Error at relative path:\n', node.relativePath ? `${node.relativePath}\n` : '\n', error.stack);
     }
   }
 };
