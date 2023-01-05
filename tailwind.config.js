@@ -84,7 +84,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
       320: '20rem',
       420: '26.25rem',
       'adapt-homepage-link-medium': 'calc(9% - 2.5rem)',
-      'adapt-homepage-link-large': 'calc(12px + 4%)',
+      'adapt-homepage-link-large': 'calc(0.75rem + 4%)',
       full: '100%',
     },
     screens: {
