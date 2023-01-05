@@ -83,7 +83,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
       300: '18.75rem',
       320: '20rem',
       420: '26.25rem',
-      'adapt-homepage-link-medium': 'calc(9% - 40px)',
+      'adapt-homepage-link-medium': 'calc(9% - 2.5rem)',
       'adapt-homepage-link-large': 'calc(12px + 4%)',
       full: '100%',
     },
