@@ -1,4 +1,4 @@
-import DataTypes from 'data/types';
+import DataTypes from '../../../data/types';
 import { FrontMatterResult } from 'front-matter';
 import { NO_MATCH, tryRetrieveMetaData } from '../front-matter';
 import { processAfterFrontmatterExtracted } from '../parser-enhancements';

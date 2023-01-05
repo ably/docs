@@ -7,6 +7,7 @@ const { maybeRetrievePartial } = require('./retrieve-partials');
 const { flattenContentOrderedList } = require('./shared-utilities');
 const { ARTICLE_TYPES } = require('./constants');
 const { retrieveAndReplaceInlineTOC, splitDataAndMetaData } = require('./meta-data/utilities');
+const { transformMarkdown } = require('./markdown/transform-markdown');
 
 const processTOCItems = (tocItem) => {
   if (isEmpty(tocItem)) {
@@ -205,6 +206,7 @@ const transformNanocTextiles =
 module.exports = {
   createNodesFromPath,
   transformNanocTextiles,
+  transformMarkdown,
   makeTypeFromParentType,
   maybeRetrievePartial,
   flattenContentOrderedList,

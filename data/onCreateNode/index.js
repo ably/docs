@@ -1,5 +1,9 @@
-const { transformMarkdown } = require('../transform/markdown/transform-markdown');
-const { transformNanocTextiles, makeTypeFromParentType, createNodesFromPath } = require('../transform');
+const {
+  transformNanocTextiles,
+  transformMarkdown,
+  makeTypeFromParentType,
+  createNodesFromPath,
+} = require('../transform');
 const { createSchemaCustomization } = require('./create-graphql-schema-customization');
 
 const onCreateNode = async ({
