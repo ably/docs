@@ -1,4 +1,3 @@
-import React from 'react';
 import ReactSelect, { Props, OptionProps } from 'react-select';
 import Icon from '@ably/ui/core/Icon';
 import { selectMenuStyles } from './styles';
@@ -21,6 +20,9 @@ const Select = ({ ...props }: Props<ReactSelectOption, false>) => {
   return (
     <ReactSelect
       {...props}
+      classNames={{
+        menu: () => `max-w-128 xs:max-w-256`,
+      }}
       components={{ Option: CustomOption }}
       styles={selectMenuStyles}
       classNamePrefix="ably-select"
