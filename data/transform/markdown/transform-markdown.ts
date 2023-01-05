@@ -1,13 +1,44 @@
 import { NodeInput } from 'gatsby';
+import { isString } from 'lodash/fp';
 import { makeTypeFromParentType } from '..';
 import { ARTICLE_TYPES } from '../constants';
 import { filterAllowedMetaFields, NO_MATCH, prepareAllowedMetaFields } from '../front-matter';
 import { splitDataAndMetaData } from '../meta-data/utilities';
 
+type CreateNodesFromPath = (path: string) => void;
+type CreateContentDigest = (content: string | Record<string, unknown> | Record<string, unknown>[]) => string;
+
+type MarkdownNodeData = {
+  articleType: string;
+  contentOrderedList: { data: string; type: string }[];
+  id: string;
+  children: [];
+  parent: string;
+  slug: string;
+  meta?: Record<string, string | string[] | undefined>;
+  parentSlug?: string;
+  version?: string;
+};
+type UpdateWithTransform = ({ parent, child }: { parent: NodeInput; child: NodeInput }) => void;
+
 export const transformMarkdown =
-  (node, content, id, { createNodesFromPath, createContentDigest, createNodeId }) =>
-  (updateWithTransform) => {
-    const slug = node.relativePath
+  (
+    node: NodeInput,
+    content: string,
+    id: string,
+    {
+      createNodesFromPath,
+      createContentDigest,
+      createNodeId,
+    }: {
+      createNodesFromPath: CreateNodesFromPath;
+      createContentDigest: CreateContentDigest;
+      createNodeId: StringTransformation;
+    },
+  ) =>
+  (updateWithTransform: UpdateWithTransform) => {
+    const relativePath = node.relativePath && isString(node.relativePath) ? node.relativePath : '';
+    const slug = relativePath
       .replace(/(.*)\.[^.]+$/, '$1')
       .replace('root/', '')
       .replace(/index$/, '');
@@ -19,22 +50,16 @@ export const transformMarkdown =
       articleType = ARTICLE_TYPES.apiReference;
     }
 
-    const newNodeData: {
-      articleType: string;
-      contentOrderedList: { data: string; type: string }[];
-      id: string;
-      children: [];
-      parent: string;
-      meta?: Record<string, string | string[] | undefined>;
-      parentSlug?: string;
-      version?: string;
-    } = {
+    const newNodeData: MarkdownNodeData = {
       articleType,
       contentOrderedList: data,
       id,
       children: [],
       parent: node.id,
+      slug,
     };
+
+    createNodesFromPath(relativePath.replace(/\.[^/.]+$/, ''));
 
     const isVersion = /\/versions\/v[\d.]+/.test(slug);
     const isCompare = /^compare\/.*/.test(slug);
@@ -51,7 +76,7 @@ export const transformMarkdown =
         !newNodeData.meta.meta_description
       ) {
         throw new Error(
-          `No meta_description for file: ${node.relativePath}\n\nPlease add a custom meta_description to the frontmatter YAML at the top of the file.\n\n`,
+          `No meta_description for file: ${relativePath}\n\nPlease add a custom meta_description to the frontmatter YAML at the top of the file.\n\n`,
         );
       }
     }
@@ -68,15 +93,12 @@ export const transformMarkdown =
       ...newNodeData,
       internal: newNodeInternals,
     };
-    if (content.id) {
-      markdownNode.internal.htmlId = content.id;
-    }
 
     // Add completely separate nodes to keep track of relevant versions
     if (isVersion) {
       const parentSlug = slug.replace(/\/versions\/v[\d.]+/, '');
       markdownNode.parentSlug = parentSlug;
-      const version = slug.match(/\/versions\/v([\d.]+)/)[1];
+      const version = slug.match(/\/versions\/v([\d.]+)/)?.[1];
       markdownNode.version = version;
       const versionNodeInternals = {
         contentDigest,

@@ -1,4 +1,4 @@
-const { transformMarkdown } = require('data/transform/markdown/transform-markdown');
+const { transformMarkdown } = require('../transform/markdown/transform-markdown');
 const { transformNanocTextiles, makeTypeFromParentType, createNodesFromPath } = require('../transform');
 const { createSchemaCustomization } = require('./create-graphql-schema-customization');
 
@@ -34,9 +34,7 @@ const onCreateNode = async ({
       createNode(ErrorNode);
       console.error('Error at relative path:\n', node.relativePath ? `${node.relativePath}\n` : '\n', error.message);
     }
-  }
-
-  if (node.extension === 'md') {
+  } else if (node.extension === 'md') {
     const content = await loadNodeContent(node);
     try {
       transformMarkdown(node, content, createNodeId(`${node.id} >>> HTML`), makeTypeFromParentType('Html')(node), {
