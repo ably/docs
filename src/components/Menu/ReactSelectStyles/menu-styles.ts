@@ -1,11 +1,12 @@
-import { MenuProps } from 'react-select';
-import { StylesConfigFunction } from 'react-select/dist/declarations/src/styles';
-import { ReactSelectOptGroup, ReactSelectOption } from 'src/components';
+import { CSSObjectWithLabel, GroupBase, MenuProps } from 'react-select';
 import { CustomReactSelectStyles } from './custom-react-select-styles';
 
 export const menuStyles: (
   customStyles: CustomReactSelectStyles,
-) => StylesConfigFunction<MenuProps<ReactSelectOption, false, ReactSelectOptGroup>> = (styles) => (provided) => ({
+) => (
+  provided: CSSObjectWithLabel,
+  props: MenuProps<{ label: string; value: string }, false, GroupBase<{ label: string; value: string }>>,
+) => CSSObjectWithLabel = (styles) => (provided) => ({
   ...provided,
   ...styles,
   zIndex: 12,

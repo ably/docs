@@ -1,10 +1,9 @@
-import { SingleValueProps } from 'react-select';
-import { StylesConfigFunction } from 'react-select/dist/declarations/src/styles';
-import { ReactSelectOptGroup, ReactSelectOption } from 'src/components';
+import { CSSObjectWithLabel, GroupBase, SingleValueProps } from 'react-select';
 
-export const singleValueStyles: StylesConfigFunction<
-  SingleValueProps<ReactSelectOption, false, ReactSelectOptGroup>
-> = (provided) => ({
+export const singleValueStyles: (
+  provided: CSSObjectWithLabel,
+  props: SingleValueProps<{ label: string; value: string }, false, GroupBase<{ label: string; value: string }>>,
+) => CSSObjectWithLabel = (provided) => ({
   ...provided,
   color: 'var(--color-active-orange)',
 });

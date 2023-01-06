@@ -1,10 +1,9 @@
-import { DropdownIndicatorProps } from 'react-select';
-import { StylesConfigFunction } from 'react-select/dist/declarations/src/styles';
-import { ReactSelectOptGroup, ReactSelectOption } from 'src/components';
+import { CSSObjectWithLabel, DropdownIndicatorProps, GroupBase } from 'react-select';
 
-export const dropdownIndicatorStyles: StylesConfigFunction<
-  DropdownIndicatorProps<ReactSelectOption, false, ReactSelectOptGroup>
-> = (provided) => ({
+export const dropdownIndicatorStyles: (
+  provided: CSSObjectWithLabel,
+  props: DropdownIndicatorProps<{ label: string; value: string }, false, GroupBase<{ label: string; value: string }>>,
+) => CSSObjectWithLabel = (provided) => ({
   ...provided,
   color: 'var(--color-cool-black)',
   '&:hover': {

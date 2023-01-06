@@ -1,10 +1,9 @@
-import { MenuListProps } from 'react-select';
-import { StylesConfigFunction } from 'react-select/dist/declarations/src/styles';
-import { ReactSelectOptGroup, ReactSelectOption } from 'src/components';
+import { CSSObjectWithLabel, GroupBase, MenuListProps } from 'react-select';
 
-export const menuListStyles: StylesConfigFunction<MenuListProps<ReactSelectOption, false, ReactSelectOptGroup>> = (
-  provided,
-) => ({
+export const menuListStyles: (
+  provided: CSSObjectWithLabel,
+  props: MenuListProps<{ label: string; value: string }, false, GroupBase<{ label: string; value: string }>>,
+) => CSSObjectWithLabel = (provided) => ({
   ...provided,
   height: 'initial',
   maxHeight: 'initial',

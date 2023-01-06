@@ -1,10 +1,9 @@
-import { GroupHeadingProps } from 'react-select';
-import { StylesConfigFunction } from 'react-select/dist/declarations/src/styles';
-import { ReactSelectOptGroup, ReactSelectOption } from 'src/components';
+import { CSSObjectWithLabel, GroupBase, GroupHeadingProps } from 'react-select';
 
-export const groupHeadingStyles: StylesConfigFunction<
-  GroupHeadingProps<ReactSelectOption, false, ReactSelectOptGroup>
-> = (provided) => ({
+export const groupHeadingStyles: (
+  provided: CSSObjectWithLabel,
+  props: GroupHeadingProps<{ label: string; value: string }, false, GroupBase<{ label: string; value: string }>>,
+) => CSSObjectWithLabel = (provided) => ({
   ...provided,
   letterSpacing: '0.1em',
   color: '--var(cool-black)',

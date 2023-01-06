@@ -1,11 +1,12 @@
-import { OptionProps } from 'react-select';
-import { StylesConfigFunction } from 'react-select/dist/declarations/src/styles';
-import { ReactSelectOptGroup, ReactSelectOption } from 'src/components';
+import { CSSObjectWithLabel, GroupBase, OptionProps } from 'react-select';
 import { CustomReactSelectStyles } from './custom-react-select-styles';
 
 export const optionStyles: (
   customStyles: CustomReactSelectStyles,
-) => StylesConfigFunction<OptionProps<ReactSelectOption, false, ReactSelectOptGroup>> =
+) => (
+  provided: CSSObjectWithLabel,
+  props: OptionProps<{ label: string; value: string }, false, GroupBase<{ label: string; value: string }>>,
+) => CSSObjectWithLabel =
   ({ width, activeText }) =>
   (provided) => ({
     ...provided,
