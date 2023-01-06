@@ -123,6 +123,11 @@ A new connection attempt can be triggered by an explicit call to <span lang="def
 
 ## Definition lists
 
-- initialized := A `Connection` object having this state has been initialized but no connection has yet been attempted.
-- connecting := A connection attempt has been initiated. The connecting state is entered as soon as the library has completed initialization, and is reentered each time connection is re-attempted following disconnection.
-- connected := A connection exists and is active.
+initialized
+: A `Connection` object having this state has been initialized but no connection has yet been attempted.
+
+connecting
+: A connection attempt has been initiated. The connecting state is entered as soon as the library has completed initialization, and is reentered each time connection is re-attempted following disconnection.
+
+connected
+: A connection exists and is active.
