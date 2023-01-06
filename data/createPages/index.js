@@ -1,6 +1,7 @@
 const path = require('path');
 const textile = require('textile-js');
 const MarkdownIt = require('markdown-it');
+const MarkdownTablePlugin = require('markdown-it-multimd-table');
 const { simpleSitemapAndIndex } = require('sitemap');
 const { identity } = require('lodash');
 const { safeFileExists } = require('./safeFileExists');
@@ -131,6 +132,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
   const markdownToHtml = new MarkdownIt({
     html: true, // Enable HTML tags in source
   });
+  markdownToHtml.use(MarkdownTablePlugin);
 
   const markdownDocumentCreator = (documentTemplate) => async (edge) => {
     const content = flattenContentOrderedList(edge.node.contentOrderedList)

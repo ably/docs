@@ -93,11 +93,13 @@ Does [this](#definition-lists) link to definition lists?
 
 ### Complex
 
-|_=. Limit |_=. Free |_=. PAYG |_=. Committed Use |
-| "Number of apps":#apps (per account) |\4=. 100 |
-| "Number of API keys":#api-keys (per account) |\4=. 100 |
-| "Number of rules":#rules (per account) |\4=. 100 |
-| "Number of namespaces":#namespaces (per account) |\4=. 100 |
+| Limit | Free | PAYG | Committed Use |
+| ----- | :----: | ---- | -------------: |
+| [Number of apps](#apps) (per account) |  100  |||
+| [Number of API keys](#api-keys) (per account) |  100  |||
+| [Number of rules](#rules) (per account) |  100  |||
+| [Number of namespaces](#namespaces) (per account) |  100  |||
+| Centering etc. will take some more work ||||
 
 ## Lists
 
