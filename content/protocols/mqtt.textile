@@ -161,8 +161,62 @@ In an MQTT connection, it is also possible to specify "channel options":/channel
 
 Currently both "rewind":/channels/options/rewind and "delta":/channels/options/delta channel options are supported.
 
+h3(#delta-mqtt). Delta with MQTT
 
-For example, to specify the @rewind@ channel option with the value @"1"@ using a querystring parameter, where it will apply to all channels:
+If subscribing to a channel in delta mode using MQTT or one of the protocol adaptors such as "SSE":/protocols/sse, then you will need to decode any received delta messages yourself. There are decoder libraries available to do this for several platforms; see the "download":LINK-ME section for details.
+
+When subscribing without an Ably library, the channel @delta@ parameter must be specified using a "qualified channel name":/channels/options. 
+
+Some transports provide raw message payloads - that is, the content of the @data@ attribute of a @Message@ - without the accompanying metadata. That means that the recipient of the message does not have access to the @extras@ or @encoding@ attributes of the message that would ordinarily be used to decode delta message payloads.
+
+Examples of such transports are MQTT, and SSE in non-enveloped mode. In order to assist applications that use these transports, the @vcdiff@ decoder libraries can check for the @vcdiff@ header at the start of the message payload as an inexact method of determining whether or not the message is a regular message or a delta. Note that, in order to rely on that check, you need to know that that header will not be present in any valid (uncompressed) message in your app. No valid JSON value, for example, will match the @vcdiff@ header check, so it is safe to perform this sniffing on JSON message payloads.
+
+Read more in the "delta section":/channels/options/delta.
+
+h4(#delta-example). Delta example
+
+```[nodejs]
+  var mqtt = require('mqtt');
+  var { VcdiffDecoder } = require('@ably/vcdiff-decoder');
+
+  var options = {
+    keepalive: 30,
+    username: '{{API_KEY_NAME}}', /* API key's name */
+    password: '{{API_KEY_SECRET}}', /* API key's secret */
+    port: 8883
+  };
+  var client = mqtt.connect('mqtts:mqtt.ably.io', options);
+  var channelName = 'sample-app-mqtt';
+  var channelDecoder = new VcdiffDecoder();
+
+  client.on('message', (_, payload) => {
+    var data = payload;
+
+    try {
+      if (VcdiffDecoder.isDelta(data)) {
+        data = channelDecoder.applyDelta(data).asUint8Array();
+      } else {
+        channelDecoder.setBase(data);
+      }
+    } catch(e) {
+      /* Delta decoder error */
+      console.log(e);
+    }
+
+    /* Process decoded data */
+    console.log(data);
+  });
+
+  client.subscribe(`[?delta=vcdiff]${channelName}`);
+```
+
+h3(#rewind-mqtt). Rewind with MQTT
+
+To use Rewind with MQTT specify the @rewind@ channel option with the value @"1"@ using a querystring parameter, where it will apply to all channels.
+
+Read more in the "Rewind section.":/channels/options/rewind.
+
+h4(#rewind-example). Rewind example
 
 ```[nodejs]
 var mqtt = require('mqtt');
