@@ -13,21 +13,17 @@ languages:
 
 ---
 
-The Ably Realtime SDK establishes and maintains a connection to the Ably service, using the most efficient transport available, typically "WebSockets":https://ably.com/topic/websockets. The Ably realtime protocol operates and multiplexes all channel traffic over that connection. Channels are separate from Connections and are used to logically separate messages into different topics, see the "channels documentation":/channels for further information.
+A connection to the Ably network can go through multiple temporary states, each of which are marked by Ably. The Ably protocol provides continuity of message delivery between the client and the service provided that a dropped connection is re-established by the client within a limited interval (typically around two minutes). After that time the connection becomes stale and the system will not attempt to recover the connection state. 
 
-h2(#connection-state-explained). Connection state explained
-
-A connection to the Ably network can go through multiple temporary states. The Ably protocol provides continuity of message delivery between the client and the service provided that a dropped connection is re-established by the client within a limited interval (typically around two minutes). After that time the connection becomes stale and the system will not attempt to recover the connection state. 
-
-The SDK is responsible for managing the connection, this includes: 
+An SDK is responsible for managing the connection, this includes: 
 
 * selecting a transport, when multiple transports are available 
 * selecting a new host to connect to when automatically falling back to an alternate datacenter if needed
 * managing continuity of operation when the connection drops
 
-When the SDK is instantiated it will establish a connection immediately, and if the connection drops at any time it will attempt to re-establish it by making repeated connection attempts every 15 seconds for up to two minutes.
+When an SDK is instantiated it will establish a connection immediately, and if the connection drops at any time it will attempt to re-establish it by making repeated connection attempts every 15 seconds for up to two minutes.
 
-If there has been no connection within two minutes the SDK falls back to a lower level of activity, attempting reconnection at 30 second intervals. As soon as a reconnection attempt has been successful, the system reverts to the more active connection behavior. You can also explicitly trigger a reconnection attempt at any time if you wish to implement a different reconnection strategy.
+If there has been no connection within two minutes an SDK falls back to a lower level of activity, attempting reconnection at 30 second intervals. As soon as a reconnection attempt has been successful, the system reverts to the more active connection behavior. You can also explicitly trigger a reconnection attempt at any time if you wish to implement a different reconnection strategy.
 
 The connection object provides methods to observe the lifecycle of the connection and to trigger state transitions.
 
@@ -35,49 +31,32 @@ h2(#connection-states). Available connection states
 
 The different connection states are:
 
-- initialized := A @Connection@ object has been initialized but not attempted yet connection.
+- initialized := A @Connection@ object has been initialized but not yet connected.
 
-- connecting := A connection attempt has been initiated, this state is entered as soon as the SDK has completed initialization, and is re-entered each time connection is re-attempted following disconnection.
+- connecting := A connection attempt has been initiated, this state is entered as soon as an SDK has completed initialization, and is re-entered each time connection is re-attempted following disconnection.
 
 - connected := A connection exists and is active.
 
-- disconnected := A temporary failure condition when no current connection exists.<br><br>The disconnected state is entered if an established connection is dropped, or if a connection attempt was unsuccessful. In the disconnected state the SDK will periodically attempt to open a new connection (approximately every 15 seconds), anticipating the connection will be re-established soon and connection and channel continuity will be possible. <br><br>In this state, developers can continue to publish messages as they are automatically placed in a local queue, sent when connection is re-established. Messages published by other clients whilst this client is disconnected will be delivered to it when reconnected if the connection was resumed within two minutes. <br><br>After two minutes have elapsed, recovery is no longer possible and the connection will move to the @suspended@ state.
+- disconnected := A temporary failure condition when no current connection exists.<br><br>The disconnected state is entered if an established connection is dropped, or if a connection attempt is unsuccessful. In the disconnected state an SDK will periodically attempt to open a new connection (approximately every 15 seconds), anticipating the connection will be re-established soon and connection and channel continuity will be possible. <br><br>In this state, developers can continue to publish messages as they are automatically placed in a local queue, sent when connection is re-established. Messages published by other clients whilst this client is disconnected will be delivered to it when reconnected if the connection was resumed within two minutes. <br><br>After two minutes have elapsed, recovery is no longer possible and the connection will move to the @suspended@ state.
 
-- suspended := A long term failure condition when no current connection exists because there is no network connectivity or available host.<br><br>The suspended state is entered after a failed connection attempt if there has then been no connection for a period of two minutes. In the suspended state, the SDK will periodically attempt to open a new connection every 30 seconds. Developers are unable to publish messages in this state. A new connection attempt can also be triggered by an explicit call to "<span lang="default">@connect()@</span><span lang="ruby">@connect@</span><span lang="csharp">@Connect()@:#connect</span>":/api/realtime-sdk/connection#connect on the @Connection@ object.<br><br>Once the connection has been re-established, channels will be automatically re-attached. The client has been disconnected for too long for them to resume from where they left off, so if it wants to catch up on messages published by other clients while it was disconnected, it needs to use the "history API":/storage-history/history.
+- suspended := A long term failure condition when no current connection exists because there is no network connectivity or available host.<br><br>The suspended state is entered after a failed connection attempt if there has then been no connection for a period of two minutes. In the suspended state, an SDK will periodically attempt to open a new connection every 30 seconds. Developers are unable to publish messages in this state. A new connection attempt can also be triggered by an explicit call to "<span lang="default">@connect()@</span><span lang="ruby">@connect@</span><span lang="csharp">@Connect()@:#connect</span>":/api/realtime-sdk/connection#connect on the @Connection@ object.<br><br>Once the connection has been re-established, channels will be automatically re-attached. The client has been disconnected for too long for them to resume from where they left off, so if it wants to catch up on messages published by other clients while it was disconnected, it needs to use the "history API":/storage-history/history.
 
 - closing := An explicit request by the developer to close the connection has been sent to the Ably service. If a reply is not received from Ably shortly, the connection will be forcibly terminated and the connection state will become @closed@.
 
-- closed := The connection has been explicitly closed by the client.<br><br>In the closed state, no reconnection attempts are made automatically by the SDK, and clients may not publish messages. No connection state is preserved by the service or by the SDK. A new connection attempt can be triggered by an explicit call to "<span lang="default">@connect()@</span><span lang="ruby">@connect@</span><span lang="csharp">@Connect()@:#connect</span>":/api/realtime-sdk/connection#connect on the @Connection@ object, which will result in a new connection.
+- closed := The connection has been explicitly closed by the client.<br><br>In the closed state, no reconnection attempts are made automatically by an SDK, and clients may not publish messages. No connection state is preserved by the service or by an SDK. A new connection attempt can be triggered by an explicit call to "<span lang="default">@connect()@</span><span lang="ruby">@connect@</span><span lang="csharp">@Connect()@:#connect</span>":/api/realtime-sdk/connection#connect on the @Connection@ object, which will result in a new connection.
 
-- failed := This state is entered if the SDK encounters a failure condition that it cannot recover from. This may be a fatal connection error received from the Ably service (e.g. an attempt to connect with an incorrect API key), or some local terminal error (e.g. the token in use has expired and the SDK does not have any way to renew it).<br><br>In the failed state, no reconnection attempts are made automatically by the SDK, and clients may not publish messages. A new connection attempt can be triggered by an explicit call to "<span lang="default">@connect()@</span><span lang="ruby">@connect@</span><span lang="csharp">@Connect()@:#connect</span>":/api/realtime-sdk/connection#connect on the @Connection@ object.
+- failed := This state is entered if an SDK encounters a failure condition that it cannot recover from. This may be a fatal connection error received from the Ably service (e.g. an attempt to connect with an incorrect API key), or some local terminal error (e.g. the token in use has expired and the SDK does not have any way to renew it).<br><br>In the failed state, no reconnection attempts are made automatically by an SDK, and clients may not publish messages. A new connection attempt can be triggered by an explicit call to "<span lang="default">@connect()@</span><span lang="ruby">@connect@</span><span lang="csharp">@Connect()@:#connect</span>":/api/realtime-sdk/connection#connect on the @Connection@ object.
 
-h3. Typical connection state sequences
 
-The SDK is initialized and initiates a successful connection:
+h3(#state-sequences). Example connection state sequences
 
-bq. initialized &rarr; connecting &rarr; connected
+There are a number of potential connection state sequences, but the most common connection sequence you will see is: @initialized@ > @connecting@ > @connected@. However, if for example there was an issue when attempting to reconnect you might see sequences similar to: @connected@ > @disconnected@ > @connecting@ > @disconnected@ > @connecting@ > @connected@.
 
-An existing connection is dropped and re-established on the first attempt:
-
-bq. connected &rarr; disconnected &rarr; connecting &rarr; connected
-
-An existing connection is dropped, and re-established after several attempts but within a two minute interval:
-
-bq. connected &rarr; disconnected &rarr; connecting &rarr; disconnected &rarr; &hellip; &rarr; connecting &rarr; connected
-
-There is no connection established after initializing the SDK:
-
-bq. initialized &rarr; connecting &rarr; disconnected &rarr; connecting &rarr; &hellip; &rarr; suspended
-
-After a period of being offline a connection is re-established:
-
-bq. suspended &rarr; connecting &rarr; suspended &rarr; &hellip; &rarr; connecting &rarr; connected
-
-h3. Listen for connection state change
+h3(#listen). Listen for connection state change
 
 The @Connection@ object is an @EventEmitter@ and emits an event whose name is the new state whenever there is a connection state change. <span lang="default">An event listener function is passed a "ConnectionStateChange":/api/realtime-sdk/connection#connection-state-change object as the first argument for state change events.</span><span lang="ruby">The event block is passed the new state and an optional "@ErrorInfo@":/api/realtime-sdk/types#error-info object</span>
 
-The @Connection@ object can also emit an event that is not a state change: an @update@ event. This happens when there's a change to connection conditions and there is no applicable status or the state doesn't change, such as when the SDK remains connected after a "reauth":/auth.
+The @Connection@ object can also emit an event that is not a state change: an @update@ event. This happens when there's a change to connection conditions and there is no applicable status or the state doesn't change, such as when an SDK remains connected after a "reauth":/auth.
 
 ```[jsall]
  realtime.connection.on('connected', (stateChange) => {
@@ -223,23 +202,32 @@ Previously registered <span lang="default">listeners</span><span lang="csharp">h
 
 h2(#connection-state-recovery). Connection state recovery
 
-CAVEAT-INPUT
-
-There are limitations to connection recovery. Once the client has been disconnected for more than two minutes, the SDK moves into the suspended state indicating that all connection state is lost. As such, all channels are automatically suspended at this point too indicating that channel continuity is not possible. Once the connection is re-established, the SDK will reattach the suspended channels automatically and emit an attached event with the resumed flag set to false. This ensures that as a developer, you can listen for attached events and check the resumed flag to see if a channel resumed fully and no messages were lost, i.e. when resumed is true, or the channel attached but could not resume, i.e. when resumed is false. If channel continuity is not possible, then typically if historical messages are important to you, you would use the history API to retrieve all older messages, with the until the Attach flag set to true.
-
 The Ably system preserves connection state to allow connections to continue transparently across brief disconnections. The connection state that is tracked includes the messages sent to the client on the connection, members present on a channel and the set of channels that the client is attached to.
 
-There are two modes of connection state recovery:
+There are two modes of connection state recovery: @resume@ and @recover@.
 
-* @resume@: this is transparent recovery of a live client instance across disconnections. Upon disconnection, the SDK will automatically re-attempt connection and, once the connection is re-established, any missed messages will be sent to the client. The developer does not need to do anything to trigger this behavior; all client channel event listeners remain attached and are called when the backlog of messages is received.
+h3(#resume). Resume
 
-* @recover@: this addresses the case in which a new SDK instance wishes to connect and recover the state of an earlier connection. This occurs typically in a browser environment when the page has been refreshed and therefore the client instance is disposed and no client state is retained. In this case any message listeners associated with channels will no longer exist so it is not possible for the SDK simply to send the message backlog on reconnection; instead the client must re-subscribe to each channel it is interested in within 15 seconds, and its message listener(s) will be called with any message backlog for that channel. If it has any members in the presence set, they will need to explicitly re-enter. If the previously attached channels are not re-attached within 15 seconds of a connection being recovered, the client will lose the ability to continue the message stream from before; any subsequent @attach()@ will result in a fresh attachment, with no backlog sent. A client requests recovery of connection state by including a recovery string in the "client options":/api/realtime-sdk#client-options when instantiating the Realtime SDK. See "connection state recover options":#connection-state-recover-options for more information.
+The @resume@ mode provides transparent recovery of a live client instance across disconnections. Upon disconnection, an SDK will automatically re-attempt connection and, once the connection is re-established, any missed messages will be sent to the client. The developer does not need to do anything to trigger this behavior; all client channel event listeners remain attached and are called when the backlog of messages is received.
 
-In either case, when a connection is resumed or recovered, the message backlog held on the server will be pushed to the client. However, any new messages published will be sent as they become available or messages could be indefinitely deferred on very heavily loaded connections. Therefore the system does not guarantee that messages received after reconnection are delivered in the same order that would have occurred if the connection had not been dropped. In the @recover@ case, in particular, the order of the message delivery depends on the timing of the re-attachment of each channel.
+CAVEAT-INPUT
+
+  There are limitations to @resume@ recovery. Once a client has been disconnected for more than two minutes, the SDK moves into the suspended state indicating that all connection state is lost. As such, all channels are automatically suspended at this point too indicating that channel continuity is not possible. Once the connection is re-established, the SDK will reattach the suspended channels automatically and emit an attached event with the resumed flag set to false. This ensures that as a developer, you can listen for attached events and check the resumed flag to see if a channel resumed fully and no messages were lost, i.e. when resumed is true, or the channel attached but could not resume. If channel continuity is not possible, then typically if historical messages are important to you, you would use the history API to retrieve all older messages, with @untilAttach@ set to true.
+
+h3(#recover). Recover
+
+The @recover@ mode addresses the case in which a new SDK instance wishes to connect and recover the state of an earlier connection. This occurs typically in a browser environment when the page has been refreshed and therefore the client instance is disposed of and no client state is retained. In this case any message listeners associated with channels will no longer exist so it is not possible for an SDK simply to send the message backlog on reconnection; instead the client must re-subscribe to each channel it is interested in within 15 seconds, and its message listener(s) will be called with any message backlog for that channel. If it has any members in the presence set, they will need to explicitly re-enter. If the previously attached channels are not re-attached within 15 seconds of a connection being recovered, the client will lose the ability to continue the message stream from before; any subsequent @attach()@ will result in a fresh attachment, with no backlog sent. A client requests recovery of connection state by including a recovery string in the "client options":/api/realtime-sdk#client-options when instantiating the Realtime SDK. See "connection state recover options":#connection-state-recover-options for more information.
+
+In either case, when a connection is resumed or recovered, the message backlog held on the server will be pushed to the client. However, any new messages published will be sent as they become available or messages could be indefinitely deferred on very heavily loaded connections. Therefore the system does not guarantee that messages received after reconnection are delivered in the same order that would have occurred if the connection had not been dropped. In the @recover@ case, in particular, the order of the message delivery depends on the timing of the reattachment of each channel.
 
 h3(#connection-state-recover-options). Connection state recover options
 
-In @recover@ mode it is necessary to request recovery mode in the "client options":/api/realtime-sdk#client-options when instantiating the SDK. Recovery requires that the SDK knows the previous connection's "<span lang="default">@recoveryKey@</span><span lang="ruby">@recovery_key@</span><span lang="csharp">@RecoveryKey@</span>":/api/realtime-sdk/connection#recovery-key value (which includes both the private unique "<span lang="default">@Connection#key@</span><span lang="csharp">@Connection#Key@</span>":/api/realtime-sdk/connection#key and the last message serial received on that connection). As the recovery key is never shared with any other clients, it allows Ably to safely resend message backlogs to the original client.
+In @recover@ mode it is necessary to request recovery mode in the "client options":/api/realtime-sdk#client-options when instantiating an SDK. Recovery requires that an SDK knows the previous connection's "<span lang="default">@recoveryKey@</span><span lang="ruby">@recovery_key@</span><span lang="csharp">@RecoveryKey@</span>":/api/realtime-sdk/connection#recovery-key value (which includes both the private unique "<span lang="default">@Connection#key@</span><span lang="csharp">@Connection#Key@</span>":/api/realtime-sdk/connection#key and the last message serial received on that connection). As the recovery key is never shared with any other clients, it allows Ably to safely resend message backlogs to the original client.
+
+CAVEAT-INPUT
+
+Connection recovery requires that the new SDK instance uses credentials that are compatible with those used for the inherited connection; this requires that the same authentication mode is used, with the same key. If token auth was used, the same token is not required, but the token used must have the same @capability@ and <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span><span lang="csharp">@ClientId@</span>. This ensures that the client recovering the connection cannot receive a backlog of messages that its new credentials are not entitled to access. Incompatible credentials will result in an unrecoverable connection error.
+
 
 blang[javascript].
   In the browser environment, if a callback is provided in the @recover@ option, when the @window.beforeunload@ event fires, the connection details, including the "@recoveryKey@":/api/realtime-sdk/connection#recovery-key, are stored in the "browser's sessionStorage":https://www.w3.org/TR/webstorage/. The provided @recover@ callback is then invoked whenever the connection state can be recovered and just before a connection is established, passing in the "@LastConnectionDetails@":/api/realtime-sdk/connection#last-connection-details. The callback is then responsible for confirming whether the connection state should be recovered or not. For example, it is common to recover connection state when the page is reloaded but not for different pages the user has navigated to. The callback allows the developer to decide if the connection should be recovered or not at the time the new connection is established by inspecting the "@LastConnectionDetails@":/api/realtime-sdk/connection#last-connection-details and evaluating that against any other application state. Below are two examples:
@@ -273,11 +261,7 @@ blang[javascript].
 
   Please note that as "@sessionStorage@":https://www.w3.org/TR/webstorage/ is used to persist the @LastConnectionDetails@ between page reloads, it is only available for pages in the same origin and top-level browsing context.
 
-  Alternatively, if it is necessary to be explicit about the connection @recoveryKey@ , the connection can be recovered by providing the last value of the connection's @recoveryKey@ value in the "client options":/api/realtime-sdk#client-options @recover@ attribute when instantiating the SDK.
-
-h3. Connection recovery constraints
-
-Connection recovery requires that the new SDK instance uses credentials that are compatible with those used for the inherited connection; this requires that the same authentication mode is used, with the same key. If token auth was used, the same token is not required, but the token used must have the same @capability@ and <span lang="default">@clientId@</span><span lang="ruby">@client_id@</span><span lang="csharp">@ClientId@</span>. This ensures that the client recovering the connection cannot receive a backlog of messages that its new credentials are not entitled to access. Incompatible credentials will result in an unrecoverable connection error.
+  Alternatively, if it is necessary to be explicit about the connection @recoveryKey@, the connection can be recovered by providing the last value of the connection's @recoveryKey@ value in the "client options":/api/realtime-sdk#client-options @recover@ attribute when instantiating an SDK.
 
 h2(#handling-failures). Handling connection failures
 
@@ -285,12 +269,12 @@ The client libraries will attempt to automatically recover from non-fatal error 
 
 h3(#fatal-errors). Fatal errors
 
-Some classes of errors are fatal. These cause the connection to move to the @FAILED@ state. The SDK will not attempt any automatic recovery actions. For example, if your token expires and the SDK has no way to get a new token (so no authUrl and authCallback), the connection will enter the @FAILED@ state
+Some classes of errors are fatal. These cause the connection to move to the @FAILED@ state. An SDK will not attempt any automatic recovery actions. For example, if your token expires and an SDK has no way to get a new token (so no authUrl and authCallback), the connection will enter the @FAILED@ state
 
-While the SDK will not automatically attempt to reconnect in the @FAILED@ state, explicit calls to "@connect()@":/api/realtime-sdk/connection#connect will make the client try again.
+While an SDK will not automatically attempt to reconnect in the @FAILED@ state, explicit calls to "@connect()@":/api/realtime-sdk/connection#connect will make the client try again.
 
 h3(#nonfatal-errors). Nonfatal errors
 
-Other classes of error are nonfatal. For example, a client may have network connectivity issues. The SDK will attempt to automatically reconnect and recover from these sort of issues, as detailed in the @DISCONNECTED@ and @SUSPENDED@ explanations in the "Available connection states":#connection-states section.
+Other classes of error are nonfatal. For example, a client may have network connectivity issues. An SDK will attempt to automatically reconnect and recover from these sort of issues, as detailed in the @DISCONNECTED@ and @SUSPENDED@ explanations in the "Available connection states":#connection-states section.
 
 If message continuity is lost in the process, e.g. because you have been disconnected from Ably for more than two minutes, the SDK will notify you through the @resumed@-flag mechanism, detailed in the "Channels and Messages":/channels/LINK-ME page.
