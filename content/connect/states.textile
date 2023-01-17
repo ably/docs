@@ -13,19 +13,17 @@ languages:
 
 ---
 
-A connection to the Ably network can go through multiple temporary states, each of which are marked by Ably. The Ably protocol provides continuity of message delivery between the client and the service provided that a dropped connection is re-established by the client within a limited interval (typically around two minutes). After that time the connection becomes stale and the system will not attempt to recover the connection state. 
+Connections to Ably will transition through multiple states throughout their lifecycle. States can be observed and triggered using methods available on the connection object.
 
-An SDK is responsible for managing the connection, this includes: 
+Although connection state is temporary, Ably provides continuity of message delivery between a client and the service provided that a dropped connection is re-established by the client within a limited interval (typically around two minutes). After that time the connection becomes stale and the system will not attempt to recover the connection state. 
+
+An Ably SDK is responsible for managing a connection. This includes: 
 
 * selecting a transport, when multiple transports are available 
 * selecting a new host to connect to when automatically falling back to an alternate datacenter if needed
 * managing continuity of operation when the connection drops
 
 When an SDK is instantiated it will establish a connection immediately, and if the connection drops at any time it will attempt to re-establish it by making repeated connection attempts every 15 seconds for up to two minutes.
-
-If there has been no connection within two minutes an SDK falls back to a lower level of activity, attempting reconnection at 30 second intervals. As soon as a reconnection attempt has been successful, the system reverts to the more active connection behavior. You can also explicitly trigger a reconnection attempt at any time if you wish to implement a different reconnection strategy.
-
-The connection object provides methods to observe the lifecycle of the connection and to trigger state transitions.
 
 h2(#connection-states). Available connection states
 
@@ -50,7 +48,27 @@ The different connection states are:
 
 h3(#state-sequences). Example connection state sequences
 
-There are a number of potential connection state sequences, but the most common connection sequence you will see is: @initialized@ > @connecting@ > @connected@. However, if for example there was an issue when attempting to reconnect you might see sequences similar to: @connected@ > @disconnected@ > @connecting@ > @disconnected@ > @connecting@ > @connected@.
+There are a number of potential connection state sequences, but some of the more common sequences are covered in this section.
+
+The SDK is initialized and initiates a successful connection:
+
+@initialized &rarr; connecting &rarr; connected@
+
+An existing connection is dropped and re-established on the first attempt:
+
+@connected &rarr; disconnected &rarr; connecting &rarr; connected@
+
+An existing connection is dropped, and re-established after several attempts but within a two minute interval:
+
+@connected &rarr; disconnected &rarr; connecting &rarr; disconnected &rarr; &hellip; &rarr; connecting &rarr; connected@
+
+There is no connection established after initializing the SDK:
+
+@initialized &rarr; connecting &rarr; disconnected &rarr; connecting &rarr; &hellip; &rarr; suspended@
+
+After a period of being offline a connection is re-established:
+
+@suspended &rarr; connecting &rarr; suspended &rarr; &hellip; &rarr; connecting &rarr; connected@
 
 h3(#listen). Listen for connection state change
 
@@ -210,9 +228,7 @@ h3(#resume). Resume
 
 The @resume@ mode provides transparent recovery of a live client instance across disconnections. Upon disconnection, an SDK will automatically re-attempt connection and, once the connection is re-established, any missed messages will be sent to the client. The developer does not need to do anything to trigger this behavior; all client channel event listeners remain attached and are called when the backlog of messages is received.
 
-CAVEAT-INPUT
-
-  There are limitations to @resume@ recovery. Once a client has been disconnected for more than two minutes, the SDK moves into the suspended state indicating that all connection state is lost. As such, all channels are automatically suspended at this point too indicating that channel continuity is not possible. Once the connection is re-established, the SDK will reattach the suspended channels automatically and emit an attached event with the resumed flag set to false. This ensures that as a developer, you can listen for attached events and check the resumed flag to see if a channel resumed fully and no messages were lost, i.e. when resumed is true, or the channel attached but could not resume. If channel continuity is not possible, then typically if historical messages are important to you, you would use the history API to retrieve all older messages, with @untilAttach@ set to true.
+There are limitations to @resume@ recovery. Once a client has been disconnected for more than two minutes, the SDK moves into the suspended state indicating that the connection state is lost. At this point all channels are automatically suspended indicating that channel continuity is not possible. Once the connection is re-established, the SDK will reattach the suspended channels automatically and emit an attached event with the resumed flag set to false. This ensures that as a developer, you can listen for attached events and check the resumed flag to see if a channel resumed fully and no messages were lost. If channel continuity is not possible and historical messages are important to you, you would use "History":/storage-history/history to retrieve all older messages, with @untilAttach@ set to true.
 
 h3(#recover). Recover
 
@@ -220,7 +236,7 @@ The @recover@ mode addresses the case in which a new SDK instance wishes to conn
 
 In either case, when a connection is resumed or recovered, the message backlog held on the server will be pushed to the client. However, any new messages published will be sent as they become available or messages could be indefinitely deferred on very heavily loaded connections. Therefore the system does not guarantee that messages received after reconnection are delivered in the same order that would have occurred if the connection had not been dropped. In the @recover@ case, in particular, the order of the message delivery depends on the timing of the reattachment of each channel.
 
-h3(#connection-state-recover-options). Connection state recover options
+h4(#connection-state-recover-options). Connection state recover options
 
 In @recover@ mode it is necessary to request recovery mode in the "client options":/api/realtime-sdk#client-options when instantiating an SDK. Recovery requires that an SDK knows the previous connection's "<span lang="default">@recoveryKey@</span><span lang="ruby">@recovery_key@</span><span lang="csharp">@RecoveryKey@</span>":/api/realtime-sdk/connection#recovery-key value (which includes both the private unique "<span lang="default">@Connection#key@</span><span lang="csharp">@Connection#Key@</span>":/api/realtime-sdk/connection#key and the last message serial received on that connection). As the recovery key is never shared with any other clients, it allows Ably to safely resend message backlogs to the original client.
 
