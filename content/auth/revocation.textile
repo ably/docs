@@ -1,0 +1,157 @@
+---
+title: Token revocation
+meta_description: "Token revocation is a mechanism that enables an app to invalidate authentication tokens."
+languages:
+  - javascript
+---
+
+Token revocation is a mechanism that enables an app to invalidate authentication tokens. This invalidation can be used to force specified clients to re-obtain a token, and subsequently enables the app to modify the rights granted to clients, or to decline to re-issue a token. 
+
+The main use case of token revocation is as a method to combat malicious clients. In cases where the client behaves safely, you don't need token revocation - your code can instruct the connection to Ably to close, or detach from a channel it shouldn't have access to. But if you want to prevent any chance of a user obtaining the token before it is disconnected, and using it in their own custom client to gain access to Ably, then token revocation can be used.
+
+Without token revocation, in order to restrict potential rogue access, you would make tokens with a short TTL (say 10 minutes) and then simply not issue a new token to a suspect client. Unfortunately, reducing the TTL increases the load on your authentication server, so token revocation can provide a more scalable solution to the issue of rogue clients. There is however a performance cost to using this feature.
+
+h2. Revocable tokens
+
+Tokens are revocable if they are created from an API key that has token revocation enabled. This sets the @revocableTokens@ attribute to @true@ for the API key.
+
+<!-- DASHBOARD-INSTRUCTION: To enable token revocation or check status for a key -->
+
+To enable token revocation for an API key:
+
+1. Sign into your "Ably dashboard":https://ably.com/accounts/any.
+2. Select the **API Keys** tab.
+3. Open the **Settings** for an existing API key or **Create a new API key**.
+4. Check the **Revocable tokens** field:
+
+<a href="/images/screenshots/token-revocation.png" target="_blank">
+  <img src="/images/screenshots/token-revocation.png" style="width: 40%" alt="Token revocation settings">
+</a>
+
+*Note:* Token revocation can only revoke tokens that were issued by an API key that had revocable tokens enabled before the token was issued.
+
+Tokens created from an API key with revocable tokens enabled are restricted to a maximum TTL of 1 hour; an attempt to create, or present, a token that is revocable, but has a TTL of longer than 1 hr, is rejected with an error.
+
+Initial connections to Ably and REST requests can incur a small latency cost when using revocable tokens.
+
+h2(#revoke). Revoke a token
+
+The Ably REST API contains the following endpoint for "revoking tokens":/api/rest-api#revoke-tokens:
+
+```
+POST /keys/<keyName>/revokeTokens
+```
+
+Where the @keyName@ is @appId.keyId@.
+
+In that request, the request body has the following form:
+
+```[json]
+{
+    targets: [ "clientId:client1@example.com", "clientId:client2@example.com" ],
+    issuedBefore: 1636556083000,
+    allowReauthMargin: true
+}
+```
+
+The request body has the following properties:
+
+- targets := An array of "target specifier":#target-specifiers strings.
+- issuedBefore := Optional number. A Unix timestamp in milliseconds where tokens issued before this time are invalidated. If @issuedBefore@ is not specified, it is set to the current time. A request with an @issuedBefore@ in the future or more than an hour in the past will be rejected.
+- allowReauthMargin := Optional boolean. The @allowReauthMargin@ boolean permits a token renewal cycle to take place without needing established connections to be dropped, by postponing enforcement to 30 seconds in the future, and sending any existing connections a hint to obtain (and upgrade the connection to use) a new token. It defaults to @false@, meaning that the effect is near-immediate.
+
+When invoking the revocation API, a client must prove possession of the key used to issue the tokens to be revoked. You can't use a key to revoke a token issued from a different key. This can be done by using basic authentication, using the API key itself.
+
+There can be a maximum of 100 target specifiers in a single request.
+
+The token revocation API is rate-limited, so there is a maximum global aggregate rate of revocation requests per app. The rate is configurable by Ably at the application level. As part of the process of enabling revocation on an app Ably will ask you what the maximum rate of token revocations on that app needs to be, and then provision that capacity. The decision is not permanent, it can be changed by Ably on request at any time.
+
+Note that revocation does not permanently forbid a client, connection, @clientId@ or channel. It invalidates token credentials issued before a certain point in time. Ultimately, the app that issues tokens is responsible for whether or not a client is able to continue to interact with the Ably service.
+
+h2(#target-specifiers). Revocation targets
+
+A revocation request must include one or more target specifiers which define the token(s) that are affected by the request. Where multiple target specifiers are included, this is equivalent to making multiple independent revocation requests, each for a single target. The tokens affected by a request are those that match at least one of the target specifiers included in the request.
+
+All target specifiers are formatted as: @key:<string>@. 
+
+By default, supported target specifiers are:
+
+* clientId
+* revocationKey
+
+The following target specifier can also be enabled for you by Ably, should your use case require it:
+
+* channel
+
+h3(#client-id). clientId 
+
+This target specifier will match tokens that have the specified @clientId@. 
+
+For example, @targets: ["clientId:client1"]@ matches tokens containing the @clientId@ of @client1@.
+
+A sample request to revoke an Ably token based on @clientId@, using the REST interface of an SDK:
+
+```[javascript]
+const Ably = require('ably');
+
+const ablyRest = new Ably.Rest({ key: '{{API_KEY}}' });
+const requestBody = { targets: ['clientId:client1@example.com'] };
+
+ablyRest.request('post', '/keys/{{API_KEY_NAME}}/revokeTokens', null, requestBody, null,
+
+  function (err, response) {
+    console.log(response);
+    if (!response.success) {
+      console.log('An error occurred; err = ' + response.errorMessage);
+    } else {
+      console.log('Success! status code was ' + response.statusCode);
+    }
+  }
+);
+```
+
+In this example, the token with the unique client ID <code>client1@example.com</code> would be revoked.
+
+h3(#revocation-key). revocationKey
+
+Designating a revocation key for a token, or a group of tokens, enables the revocation process to be used at any level of granularity, depending on the needs of the application. To designate a revocation key, include the following additional claim:
+
+- x-ably-revocation-key := a string used to identify which token(s) to revoke in the revocation request.
+
+This target specifier will match tokens that have the specified @revocationKey@. 
+
+For example: @targets: ["revocationKey:users.group1"]@ matches tokens containing the @revocationKey@ of @users.group1@.
+
+A sample request to revoke a JWT based on @revocationKey@, using the REST interface of an SDK:
+
+```[javascript]
+const Ably = require('ably');
+
+const ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
+const requestBody = { targets: ['revocationKey:users.group1@example.com'] };                                                                                                                                                                                                                                               
+ablyRest.request('post', '/keys/{{API_KEY_NAME}}/revokeTokens', null, requestBody, null,
+  function (err, response) {
+    console.log(response);
+    if (!response.success) {
+      console.log('An error occurred; err = ' + response.errorMessage);
+    } else {
+      console.log('Success! status code was ' + response.statusCode);
+    }
+  }
+);
+```
+
+In this example, all users that have been assigned the revocation key <code>users.group1@example.com</code> would have their tokens revoked.
+
+h3(#channel). channel
+
+This target specifier will match tokens that exactly match one of the resource names present in the token "capabilities":/auth/capabilities. Note that this is not the same thing as revoking all tokens that have access to the channel. 
+
+For example, a token with a capability of @{"foo:*": ["*"]}@ will be revoked by a target of @channel:foo:*@, but a revocation to @channel:*:*@ will have no effect (even though that is a superset of the capabilities of @foo:*@), and nor will @channel:foo:bar@ (even for connections using the token to attach to that particular channel). It must be the exact string used in the token capabilities (which may be inherited from key capabilities).
+
+Note that the channel target specifier can be enabled by Ably should your use case require it.
+
+h2(#errors). Revocation errors
+
+System error responses arising from the use of an invalidated token will include an Ably @ErrorInfo@ with a @code@ of 40141 and an informative error message. This includes REST API error responses, and Ably connection @disconnected@ state changes. Such a token error is non-fatal, which means that client libraries can react to that error by triggering a token renewal where the given library options allow (that is, if an @authCallback@ or @authURL@ is specified).
+ß
