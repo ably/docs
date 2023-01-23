@@ -1,0 +1,171 @@
+---
+title: Messages
+meta_description: "Messages contain data and are sent and received through channels."
+languages:
+  - csharp
+  - flutter
+  - java
+  - javascript
+  - nodejs
+  - objc
+  - php
+  - python
+  - ruby
+  - swift
+---
+
+Messages contain the data that a client is communicating, such as the contents of a chat message. Clients publish messages on "channels":/channels, and these messages are received by clients that have "subscribed":/channels#subscribe to them. This pattern is otherwise known as pub/sub, as publishers and subscribers are completely decoupled.
+
+h2(#properties). Message properties
+
+The following are the properties of a message:
+
+- name := The name of the message.
+- data := The contents of the message. Also known as the message payload. 
+- id := A unique ID assigned by Ably to each message.
+- clientId := The "ID of the client":/auth/identified-clients that published the message.
+- connectionId := The ID of the connection used to publish the message.
+- timestamp := The timestamp of when the message was received by Ably, as milliseconds since the Unix epoch.
+- extras := A JSON object of arbitrary key-value pairs that may contain metadata, and/or ancillary payloads. Valid payloads include those related to "Push Notifications":/general/push, "deltas":/channels/options/deltas and "message interactions":#interactions, and headers.
+- encoding := This is typically empty, as all messages received from Ably are automatically decoded client-side using this value. However, if the message encoding cannot be processed, this attribute contains the remaining transformations not applied to the data payload.
+
+h2(#interactions). Message interactions
+
+Message interactions enable you to interact with previously sent messages and support a wide variety of use cases. You can decide and customize what data is included in an interaction, and how this is displayed to end-users. 
+
+Message interactions can help you to implement:
+
+* Emoji reactions
+* Message updates and deletion
+* Read receipts and unread message counts
+* Quoting and replying to messages
+* Message threads
+* Media previews 
+
+Once a channel has message interactions enabled, messages received on that channel will contain a unique @timeSerial@ that can be referenced by later messages.
+
+Message interactions add a @ref@ object to message payloads that enables you to indicate what an interaction represents, and which message it is referring to. The @ref@ object contains two fields:
+
+- @type@ (String) := a constant representing the reason for the interaction.
+- @timeSerial@ (String) := a unique identifier used to reference a specific message, automatically generated when messages are sent in message interaction enabled channels.
+
+CAVEAT-INPUT
+
+If you want to limit the ability of users to use message interactions you can use "JWT authenticated user claims":/auth/capabilities#custom-restrictions.
+
+blang[java,ruby,objc,swift,csharp,flutter].  
+  Message interactions are only supported by the Ably JavaScript SDK.
+
+blang[jsall].
+  Message interactions are only supported by the Ably JavaScript SDK.
+  
+  DASHBOARD-INSTRUCTION
+
+  Enable message interactions 
+
+  To enable message interactions for a channel:
+
+  1. Login to your "Ably dashboard":https://ably.com/login.
+  2. Select the app you are working with.
+  3. Click *Settings* on the right side of the navigation bar.
+  4. Scroll down to *Channel rules* and click *Add new rule*.
+  5. Give your new rule a Namespace or provide a specific Channel ID.
+  6. Select the *Message interactions enabled* checkbox then click *Create channel rule*.
+
+  <a href="/images/realtime/message-interactions.png" target="_blank">
+    <img src="/images/realtime/message-interactions.png" style="max-width:80%" alt="Message interactions in dashboard">
+  </a>
+
+  You now have a namespace based rule you can apply to channels to enable message interactions or a specific channel with message interactions enabled.
+
+  h3(#use-interactions). Use message interactions
+
+  Once message interactions have been enabled for a channel you can start to reference the @timeSerial@ of previous messages to publish interactions. All messages sent on channels that have interactions enabled will automatically include a @timeSerial@.
+
+  To reference a previous message, include the @ref@ object inside the @extras@ object including: 
+
+  * A @type@ constant string defining the reason for interaction. Note that Ably has reserved strings beginning with @com.ably.@.
+  * The @timeserial@ string of the message to interact with.
+
+  The following is an example of sending an emoji reaction:
+
+  ```[jsall] 
+  function sendReaction(emoji) {
+    channel.publish('event_name', { body: emoji, extras: { ref: { type: "com.ably.reaction", timeserial: "1656424960320-1" } } })
+  }
+  ```
+
+  h3(#listener-interactions). Create a listener
+
+  Regular listeners will get all messages (including those containing a reference), but it is possible to filter specifically for messages with or without a reference by supplying a filter object. A @filter object@ can contain any number of the following fields:
+
+  - @refTimeserial@ (String) := filter containing a specific message timeserial (for example: @v1b25XrTDg:0@).
+  - @refType@ (String) := filter for a specific reference type (for example: @com.ably.reaction@).
+  - @isRef@ (Boolean) := filter for messages that only do or do not reference another message.
+
+  h3(#subscribe-interactions). Subscribe to interactions
+
+  Subscribing to interactions involves sending a filter object defining which interactions you're interested in.
+
+  To subscribe to all reaction interactions:
+
+  ```[jsall] 
+  channel.subscribe({
+    refType: "com.ably.reaction"
+  }, onReaction); 
+  ```
+
+  To subscribe to any interaction:
+
+  ```[jsall] 
+  channel.subscribe({
+    isRef: true
+  }, onReference); 
+  ```
+
+  To subscribe to any non-interaction:
+
+  ```[jsall] 
+  channel.subscribe({
+    isRef: false 
+  }, onRegularMessage);
+  ```
+
+  To subscribe to interactions to a specific message:
+
+  ```[jsall] 
+  channel.subscribe({
+    refTimeserial: "v1b25XrTDg:0"
+  }, onReference);
+  ```
+
+  To subscribe to a combination of filters:
+
+  ```[jsall] 
+  channel.subscribe({
+    refTimeserial: "v1b25XrTDg:0",
+    refType: "com.ably.reaction",
+  }, onReference);
+  ```
+
+  h3(#unsubscribe-interactions). Unsubscribe from interactions
+
+  Unsubscribing works similar to subscribing, you can unsubscribe by:
+
+  * Passing the filter object to "@unsubscribe()@":/api/realtime-sdk/channels#unsubscribe.
+  * Passing the filter function to "@unsubscribe()@":/api/realtime-sdk/channels#unsubscribe. 
+  * Both of the above.
+
+  For example, to unsubscribe to reaction interactions:
+
+  ```[jsall] 
+  channel.unsubscribe({
+    refType: "com.ably.reaction"
+  });
+  ```
+
+  Passing a filter object will unsubscribe every listener attached to that particular filter unless you also pass the filter function. Unsubscribing with a filter requires *exactly* the same filter object to be passed in.
+
+CAVEAT-INPUT
+
+Messages are counted in 2KiB chunks. See "what counts as a message":/https://faqs.ably.com/how-does-ably-count-messages. 
