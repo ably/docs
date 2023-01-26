@@ -1,0 +1,231 @@
+---
+title: SSE
+meta_description: "Ably provides support for Server-Sent Events (SSE). This is useful for where browser clients support SSE, and the use case does not require or support the resources used by an Ably SDK."
+languages:
+ - javascript
+---
+
+The Ably SSE and raw HTTP streaming API provides a way to get a realtime stream of events from Ably in circumstances where using a full Ably SDK, or even an "MQTT":/protocols/mqtt library, is impractical.
+
+HTTP streaming enables a request from a client to be held by a server, allowing it to push data to the client without further requests. This, much like WebSockets, helps avoid the overhead involved in normal HTTP requests. "Server-sent events":https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events (SSE) provide a thin layer on top of HTTP streaming. A common use of SSE is through the use of "the EventSource API":https://developer.mozilla.org/en-US/docs/Web/API/EventSource in all modern web browsers.
+
+It is subscribe-only: you can not interact with the channel, including to publish, enter presence, query the presence set, attach and detach from channels (without closing and re-opening the stream), or anything else.
+
+Customers who do not want to use an SDK on platforms that support SSE, and only require simple subscribe-only streams, may choose to use SSE because it's an open standard, simple, and requires no SDKs on the client-side. HTTP Streaming may be considered on platforms without an SSE client. However, where possible, it is strongly recommend to use an "Ably SDK":https://ably.com/download, as they provide "more features and higher reliability":/basics/use-ably, and the full use of our normal realtime messaging API.
+
+h2(#when-to-use). When to use the SSE adapter
+
+SSE is useful when dealing with devices with extremely limited memory, where using one of the Ably SDKs would not be possible. This is largely due to it being subscribe-only.
+
+SSE is recommended if:
+
+* Ably does not offer a native library that supports your target platform
+* Ably offers a REST-only SDK for your target platform, but you need a realtime client
+* You have stringent memory restrictions
+* You only wish to subscribe to events on channels
+
+The Ably SDKs and realtime protocol are recommended if:
+
+* You want a high quality of service and high availability even during significant events such as DNS failure or network partitions
+* You want access to features such as "publishing":/push/publish, "presence":/presence-occupancy/presence, "history":/storage-history/history, "push notifications":/push, "automatic payload encoding":/channels/options/encryption, "symmetric encryption":/channels/options/encryption
+* You want first class browser support with WebSockets
+
+h2(#config). Configuration
+
+The following code sample provides an example of how to use SSE with Ably:
+
+```[javascript](code-editor:sse/sse)
+var apiKey ='{{API_KEY}}';
+var url ='https://realtime.ably.io/event-stream?channels=myChannel&v=1.2&key=' + apiKey;
+var eventSource = new EventSource(url);
+
+eventSource.onmessage = function(event) {
+  var message = JSON.parse(event.data);
+  console.log('Message: ' + message.name + ' - ' + message.data);
+};
+```
+
+h2(#auth). Authentication
+
+It is possible to use either "basic auth":/auth/basic, with an "API key":/getting-started/setup, or "token auth":/auth/token,with a "token issued from your server":/auth/token, with SSE. It's recommended to use token auth on the client side for "security reasons":/auth, so you have control over who can connect. Basic auth, while lacking this control, is simpler (it doesn't require you to run an auth server), and you don't have to worry about the client obtaining a new token when the old one expires.
+
+If using basic auth, you can use a querystring parameter of @key@ or an @Authorization: Basic <base64-encoded key>@ header. If using token auth, you can use an @accessToken@ querystring parameter or an @Authorization: Bearer <base64-encoded token>@ header. See "REST API authentication":/auth for more information.
+
+Note that "connection state":/connect is only retained for two minutes.
+
+The SSE protocol and the EventSource API are designed so that a dropped connection is resumed transparently; the client implementation will reconnect and supply a @lastEventId@ param that ensures that the resuming connection delivers any events that have arisen since the connection was dropped. Ably uses this mechanism to reattach all channels in a new connection to the exact point that had been reached in the prior connection.
+
+When a token expires the connection will end. However, the default EventSource behavior of automated reconnection will not work, because the (expired) credentials are part of the connection URL. What is needed is for a new connection to be established, with an updated @accessToken@. The question then arises as to how to do that with continuity - that is, how to establish a new connection but supply the correct @lastEventId@ so that the new connection resumes from the point that the prior connection became disconnected.
+
+h3(#message-continuity-token-auth). Implementing message continuity with token auth
+
+Implementing transparent connection resumes when tokens need to be renewed requires a few additional steps - detecting token expiry and resuming the connection from the point of the last delivered message using the @lastEventId@ attribute.
+
+h4(#detecting-token-expiry). Detecting token expiry
+
+When a connection is closed as a result of any error (that is, it's not just a dropped connection), then the @error@ event will occur on the @EventSource@ instance, and the data attribute of the event will contain an Ably error body with the information about the nature of error. In the case of a token error - that is an error arising from a problem with the auth token - the code in the error body will indicate that. Token errors have a code in the range @40140 <= code < 40150@. In such cases, the authentication can be retried with a new @accessToken@.
+
+In the future we plan to send an event on the connection that indicates that the token will expire imminently, which will allow a new connection to be established prior to the closure of the previous connection.
+
+h4(#specifying-lasteventid). Specifying the lastEventId
+
+Each message received will have a @lastEventId@ attribute containing the last id of any message received on the connection. When constructing a new connection, this value can be specified as a @lastEvent@ param in the URL.
+
+The following is an example of implementing message continuity with token auth:
+
+```[javascript]
+let lastEvent;
+
+const connectToAbly = () => {
+  // obtain a token
+  const token = <GET-NEW-ABLY-AUTH-TOKEN>
+
+  // establish a connection with that token
+  const lastEventParam = lastEvent ? ('&lastEvent=' + lastEvent) : '';
+  eventSource = new EventSource(`https://realtime.ably.io/sse?v=1.1&accessToken=${token}&channels=${channel}${lastEventParam}`);
+
+  // handle incoming messages
+  eventSource.onmessage = msg => {
+    lastEvent = msg.lastEventId;
+    // ... normal message processing
+  }
+
+  // handle connection errors
+  eventSource.onerror = msg => {
+    const err = JSON.parse(msg.data);
+    const isTokenErr = err.code >= 40140 && err.code < 40150;
+    if(isTokenErr) {
+      eventSource.close();
+      connectToAbly();
+    } else {
+      // ... handle other types of error -- for example, retry on 5xxxx, close on 4xxxx
+    }
+  }
+}
+
+connectToAbly();
+```
+
+An important thing to note here is that the EventSource API tries to auto-reconnect and re-subscribe to the SSE endpoint when any error occurs, even the token expiry error like in this case. This means that upon manually re-subscribing to the SSE endpoint with a new token, there will be two active subscriptions to the endpoint - one with the old token which would continue to throw an error due to expired credentials and another with the new token. Hence, it is important to close the previous @EventSource@ subscription using @eventSource.close()@ before re-subscribing with the new token as shown in the snippet above.
+
+You can take a look at a "demo app":https://sse-token-auth.glitch.me and "a complete code example for implementing message continuity in an SSE subscription when using token auth":https://glitch.com/edit/#!/sse-token-auth.
+
+h2(#channel-options). Channel options
+
+In an SSE connection you can specify "channel options":/channels/options in two different ways:
+
+* with a query string in the channel name qualifier
+* as a query string in the connection URL
+
+If specified as part of the connection URL the options will apply to all channels that connection attaches to. Using a channel name qualifier enables channel options to be applied to individual channels. Setting options using a channel name qualifier can also be used to override the options set in the connection URL for specific channels.
+
+A channel name qualifier is the square brackets at the start of the channel name. To specify the channel option @foo@ with value @bar@ on channel @baz@, the qualified channel name would be @[?foo=bar]baz@. If the channel name already has a qualifier, such as @[meta]log@, then the query string follows the existing qualifier, as in @[meta?foo=bar]log@.
+
+The "rewind":/channels/options/rewind and "delta":/channels/options/delta channel options are supported with SSE.
+
+h3(#delta-sse). Delta with SSE
+
+If subscribing to a channel in delta mode using SSE then you will need to decode any received delta messages yourself.
+
+Some transports provide raw message payloads - that is, the content of the @data@ attribute of a @Message@ - without the accompanying metadata. That means that the recipient of the message does not have access to the @extras@ or @encoding@ attributes of the message that would ordinarily be used to decode delta message payloads.
+
+In order to assist applications that use these transports, @vcdiff@ decoder libraries can check for the @vcdiff@ header at the start of the message payload as an inexact method of determining whether or not the message is a regular message or a delta. Note that, in order to rely on that check, you need to know that that header will not be present in any valid (uncompressed) message in your app. No valid JSON value, for example, will match the @vcdiff@ header check, so it is safe to perform this sniffing on JSON message payloads.
+
+Read more in the "delta section":/channels/options/delta.
+
+h3(#delta-example). Delta example with SSE
+
+You can subscribe to messages in delta mode, using the SSE transport, as follows.
+
+```[javascript](code-editor:realtime/channel-deltas-sse-enveloped)
+  /* Make sure to include <script src="https://cdn.ably.com/lib/delta-codec.min-1.js"></script> in your head */
+  var key = '{{API_KEY}}';
+  var channel = '{{RANDOM_CHANNEL_NAME}}';
+  var baseUrl = 'https://realtime.ably.io/event-stream';
+  var urlParams = `?channels=${channel}&v=1.1&key=${key}&delta=vcdiff`;
+  var url = baseUrl + urlParams;
+  var eventSource = new EventSource(url);
+  var channelDecoder = new DeltaCodec.CheckedVcdiffDecoder();
+
+  eventSource.onmessage = function(event) {
+    /* event.data is JSON-encoded Ably Message
+       (see https://ably.com/docs/realtime/types#message) */
+    var message = JSON.parse(event.data);
+    var { id, extras } = message;
+    var { data } = message;
+
+    try {
+      if (extras && extras.delta) {
+        data = channelDecoder.applyBase64Delta(data, id, extras.delta.from).asUtf8String();
+      } else {
+        channelDecoder.setBase(data, id);
+      }
+    } catch(e) {
+      /* Delta decoder error */
+      console.log(e);
+    }
+
+    /* Process decoded data */
+    console.log(data);
+  };
+```
+
+h3(#delta-example-unenv). Delta example with unenveloped SSE
+
+For more information on enveloped and unenveloped SSE, please see the "SSE API":/api/sse#sse
+
+```[javascript](code-editor:realtime/channel-deltas-sse)
+  /* Make sure to include <script src="https://cdn.ably.com/lib/delta-codec.min-1.js"></script> in your head */
+  var DeltaCodec = require('@ably/delta-codec');
+
+  var key = '{{API_KEY}}';
+  var channel = 'sample-app-sse';
+  var baseUrl = 'https://realtime.ably.io/event-stream';
+  var urlParams = `?channels=${channel}&v=1.1&key=${key}&delta=vcdiff&enveloped=false`;
+  var url = baseUrl + urlParams;
+  var eventSource = new EventSource(url);
+  var channelDecoder = new DeltaCodec.VcdiffDecoder();
+
+  eventSource.onmessage = function(event) {
+      var data = event.data;
+
+      try {
+          if (DeltaCodec.VcdiffDecoder.isBase64Delta(data)) {
+              data = channelDecoder.applyBase64Delta(data).asUtf8String();
+          } else {
+              channelDecoder.setBase(data);
+          }
+      } catch(e) {
+          /* Delta decoder error */
+          console.log(e);
+      }
+
+      /* Process decoded data */
+      console.log(data);
+  };
+```
+
+h3(#rewind-sse). Rewind with SSE
+
+The @rewind@ channel option enables a client to specify where to start an attachment from. This can be a point in time in the past, or a given number of messages.
+
+Read more in the "Rewind section":/channels/options/rewind.
+
+h4(#rewind-example). Rewind example
+
+For example, to specify the @rewind@ channel option with the value @"1"@ using a querystring parameter, where it will apply to all channels:
+
+```[javascript]
+  var querystring = 'v=1.2&channels={{RANDOM_CHANNEL_NAME}}&rewind=1&key={{API_KEY}}';
+  var eventSource = new EventSource('https://realtime.ably.io/event-stream?' + querystring);
+```
+
+Or to specify the same parameter but only applying to one channel of two, using a qualified channel name:
+
+```[javascript]
+  var channelOne = encodeURIComponent('[?rewind=1]channel1');
+  var channelTwo = 'channel2';
+  var channels = channelOne + ',' + channelTwo;
+  var querystring = 'v=1.2&key={{API_KEY}}&channels=' + channels';
+  var eventSource = new EventSource('https://realtime.ably.io/event-stream?' + querystring);
+```
