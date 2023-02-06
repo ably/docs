@@ -1,0 +1,72 @@
+---
+title: Metadata REST requests
+meta_description: "Retrieve metadata about single channels, or enumerate through all active channels via REST requests."
+languages:
+  - csharp
+  - go
+  - java
+  - javascript
+  - nodejs
+  - objc
+  - php
+  - python
+  - ruby
+  - swift
+---
+
+Metadata can be retrieved by REST request for a single channel, or for all active channels in an app. The information returned includes the current state of a channel and its "occupancy":LINKME.
+
+Note that since the metadata of channels often changes frequently, Ably recommends subscribing to "realtime events":/metadata-stats/metadata/subscribe rather than polling for status updates via REST. This is because data is likely to become stale shortly after it has been received.
+
+h2(#single). Retrieve metadata of a single channel
+
+Requesting the metadata for a single channel returns a "@ChannelDetails@":/api/realtime-sdk/channel-metadata#channel-details object for the given channel. This provides details about the channel including its "occupancy":LINKME.
+
+A side effect of this request is that it will cause the channel to be activated. It is intended to be used in conjunction with the API to "enumerate":#enumerate a list of active channels in an app.
+
+Ably SDKs can query this endpoint using the generic "request()":/api/rest-sdk#request method.
+
+The following is an example curl request to retrieve metadata from a channel:
+
+```[sh] 
+curl https://rest.ably.io/channels/<channelId> \
+ -u "{{API_KEY}}"
+```
+
+CAVEAT-INPUT
+
+The @channel-metadata@ "capability":/auth/capabilities is required to retrieve the metadata of a channel.
+
+h2(#enumerate). Retrieve a list of channels
+
+Requesting a list of channels will enumerate all active channels in an application as a "PaginatedResults":/api/rest-sdk/types#paginated-result object. You can specify whether to return just a list of channel names, or a "@ChannelDetails@":/api/realtime-sdk/channel-metadata#channel-details object for each channel.
+
+The following parameters are supported:
+
+- limit := _100_ optionally specifies the maximum number of results to return. The maximum is 1000.<br>__Type: @integer@__
+- prefix := optionally limits the query to only those channels whose name starts with the given prefix<br>__Type: @string@__
+- by := _value_ optionally specifies what to return. Use @by=id@ to return just channel names. Use @by=value@ to return "@ChannelDetails@":/api/realtime-sdk/channel-metadata#channel-details. @by=value@ is the default. @by=id@ will be faster, so it is recommended to use this if you don't require the extra information provided by @ChannelDetails@.
+
+Ably SDKs can query this endpoint using the generic "request()":/api/rest-sdk#request method.
+
+The following is an example curl request to retrieve metadata from a channel:
+
+```[sh] 
+curl https://rest.ably.io/channels \
+ -u "{{API_KEY}}"
+```
+
+Note that this API is intended for occasional use only. For example, to get an initial set of active channels that will be kept up-to-date using the "@[meta]channel.lifecycle@":/metadata-stats/metadata/subscribe#channel-lifecycle metachannel. The API is heavily rate-limited and only a single in-flight call is permitted to execute at any time. Further concurrent calls will be refused with the error code @42912@.
+
+CAVEAT-INPUT
+
+The @channel-metadata@ "capability":/auth/capabilities for the wildcard resource @'*'@ is required to enumerate a list of active channels.
+
+h3(#limitations). Known limitations
+
+It is possible to enumerate all channels in an app using repeated calls to the API and following the @next@ relative link of each successive call. This is subject to several limitations:
+
+* Channels that become active, or inactive, between the first and last request in the sequence, may or may not appear in the result. The API guarantees that if a channel is continuously active from the time that the first request is made until the time that the last request completes, then it will be present in the result. Similarly, if a channel is continuously inactive between those times then it will not to be present in the result.
+* Since the state of the cluster may change between successive calls, a pagination sequence may become invalid, in which case the request will respond with the error code @40011@. In this case, it is necessary to start the enumeration again from the beginning to get a complete result. Enumerations that are satisfiable in the first response page do not have this issue.
+* The API does not guarantee that the limit will be achieved even if that would be possible. For example, if you specify a limit of 100, the API may return only 37 results together with a @next@ link to get the next page, even if you have more than 37 channels. In an extreme case, the API may return 0 results with a next link. In particular this may be the case if you have a large number of active channels but are specifying a @prefix@ that excludes a significant proportion of them.
+* The API does not guarantee that there will be no duplicated results between different pages, especially if a channel is active in multiple regions.
