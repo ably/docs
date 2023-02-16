@@ -14,35 +14,29 @@ languages:
  - csharp
 ---
 
-History refers to accessing previously sent messages, enabling you to retrieve both channel history and presence history. If "storage":/storage-history/storage is enabled messages will typically be stored for 24 for free accounts or 72 hours for paid accounts, otherwise Ably retains the last two minutes of message history.
+History is available for both realtime and REST interfaces, enabling you to retrieve previously sent messages and presence event history for channels. By default two minutes of message history is available to retrieve, but this can be extended by configuring the "storage options":/message-storage/storage for an application. It is also possible to persist messages to external storage services using "integrations":/integrations.
 
 h2(#history-rewind). History vs rewind
 
-There are two ways of accessing your channel history: history or rewind. Both history and rewind need the channel to have "persistence enabled":/storage-history/storage. 
+You can retrieve previously published messages using the history feature or using the "rewind channel option":/channels/options/rewind. There are several differences between the two features that are important to be aware of when deciding how to retrieve older messages:
 
-History is ideal for when you want to retrieve any message within your "storage time frame":/storage-history/storage other than the last published message, enabling a longer, more complete context. Rewind is useful for getting an instant update of a channel, enabling an update from either a given number of messages or a previous point in time as a time interval.
+* The number of messages that are returned varies between history and rewind. History returns up to 1000 messages. Rewind returns up to 100 messages.
+* History can be called using either the realtime or REST interface of an SDK. Rewind can only be used with the realtime interface of an SDK.
+* You can define a custom start or end time period for history. Rewind can return a specified number of messages, or a specified number of seconds/minutes, that immediately precede the moment of attachment.
+* History can be called repeatedly to return additional messages or timeframes. Rewind can be called on channel attachment.
+* Only history can return presence events. Rewind cannot return presence events.
+* If "persist last message is enabled":/storage-history/storage#persist-last-message then rewind can also return the last event published to a channel persisted for 365 days.
 
-History is useful for cases where you need to access messages published beyond the most recent, for example:
+There are also some similarities between the two:
 
-* Chat applications where a longer period of chat history should be available to new joiners
-* Seeing the history of periodically sent data, such as weather apps that enable you to see recent weather 
-* IoT devices that care about recent statuses
-
-Whereas rewind would be useful in situations similar to the above, but with a more limited scope, for example:
-
-* Realtime chat applications that only need to show the most recent context, not an entire history
-* A channel providing periodic data, such as weather apps that only provide the immediate weather
-* IoT devices that only care about the current state
-
-Rewind is also the only way return the last event published to a channel persisted for 365 days if "persist last message is enabled":/storage-history/storage#persist-last-message.
-
-Note that rewind is only available with the realtime interface.
+* If using the realtime interface you can use both history or rewind with @untilAttach@ to return "continuous history":#continuous-history.
+* Both history and rewind are limited by the "persistence":/storage-history/storage settings enabled for a channel.
 
 h2(#retrieve-channel). Retrieve channel history
 
-You can retrieve channel history by using the "@history()@":/api/realtime-sdk/history#channel-history method. 
+The Ably SDKs provide a straightforward API to retrieve paginated message event history. By default each page of history contains up to 100 messages and is ordered from most recent to oldest. You can retrieve channel history by using the "@history()@":/api/realtime-sdk/history#channel-history method. 
 
-The Ably SDKs provide a straightforward API to retrieve paginated messages or presence event history. By default each page of history contains up to 100 messages and is ordered from most recent to oldest.
+The following example retrieves the latest message sent in a channel:
 
 REALTIME-CODE
 
@@ -233,25 +227,181 @@ REST-CODE
     fmt.Println("Last published message: %s\n", page.Messages[0].Data)
 
 
-<span lang="ruby">Note that all examples on this page assume you are running them within an EventMachine reactor. Find out more in our "realtime usage documentation":/LINK-Me.</span>
+<span lang="ruby">Note that all examples on this page assume you are running them within an EventMachine reactor. Find out more in our "realtime usage documentation":/LINK-ME.</span>
 
-h4(#channel-parameters). Channel history parameters
+h3(#channel-parameters). Channel history parameters
 
-The following query parameters can be included in a call to @history()@. Note that @untilAttach@ is only available when using the realtime interface of an Ably SDK:
+The following query parameters can be included in the @options@ object when making a call to @history()@. Note that @untilAttach@ is only available when using the realtime interface of an Ably SDK:
 
 |_. Parameter |_. Description |
-| options | ensures that clients disconnected abruptly from Ably can resume their connection |
 | start | earliest time in milliseconds since the epoch for any messages retrieved |
 | end | latest time in milliseconds since the epoch for any messages retrieved |
 | direction | @forwards@ or @backwards@ |
-| limit | maximum number of messages to retrieve up to 1,000 |
-| untilAttach | when true, ensures message history is up until the point of the channel being attached. See "continuous history":#continuous-history for more info. Requires the @direction@ to be @backwards@ (the default). If the @channel@ is not attached, or if @direction@ is set to @forwards@, this option will result in an error. Realtime only. |
+| limit | maximum number of messages to retrieve, up to 1,000 |
+| untilAttach | when true, ensures message history is up until the point of the channel being attached. See "continuous history":#continuous-history for more info. Requires the @direction@ to be @backwards@ (the default). If the channel is not attached, or if @direction@ is set to @forwards@, this option will result in an error.|
+
+h3(#continuous-history). Continuous history
+
+By using "rewind":/channels/options/rewind or history's @untilAttach@, it is possible to obtain message history that is continuous with the realtime messages received on an attached channel. For example, a user joining a navigation app with traffic updates would receive the latest traffic update and be subscribed to any new traffic updates.
+
+h4(#continuous-rewind). Rewind
+
+If you wish to obtain history as part of attaching to a channel, you can use the "rewind channel parameter":/channels/options/rewind. This will act as though you had attached to a channel from a certain message or time in the past, and play through all messages since that point. Rewind can only be used when first attaching to a channel.
+
+A @rewind@ value that is a number (@n@) is a request to attach to the channel at a position of @n@ messages before the present position. @rewind@ can also be a time interval, specifying a number of seconds (@15s@) or minutes (@1m@) to replay messages from.
+
+Note that this is only available with the realtime interface.
+
+The following example will subscribe to the channel and relay the last 3 messages:
+
+```[jsall](code-editor:realtime/rewind)
+  const realtime = new Ably.Realtime('{{API_KEY}}');
+  realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', {
+    params: {rewind: '3'}
+  }).subscribe(msg => console.log("Received message: ", msg));
+```
+
+```[java]
+  final Map<String, String> params = new HashMap<>();
+  params.put("rewind", "3");
+  final ChannelOptions options = new ChannelOptions();
+  options.params = params;
+  final Channel channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}", options);
+
+  channel.subscribe(new MessageListener() {
+    @Override
+    public void onMessage(Message message) {
+      System.out.println("Received `" + message.name + "` message with data: " + message.data);
+    }
+  });
+```
+
+```[swift]
+  let options = ARTClientOptions(key: "{{API_KEY}}")
+  let client = ARTRealtime(options: options)
+  let channelOptions = ARTRealtimeChannelOptions()
+  channelOptions.params = [
+    "rewind": "3"
+  ]
+
+  let channel = client.channels.get(channelName, options: channelOptions)
+```
+
+```[csharp]
+  var clientOptions = new ClientOptions();
+  clientOptions.Key = "{{API_KEY}}";
+  clientOptions.Environment = AblyEnvironment;
+  var ably = new AblyRealtime(clientOptions);
+
+  var channelParams = new ChannelParams();
+  channelParams.Add("rewind", "3");
+  var channelOptions = new ChannelOptions();
+  channelOptions.Params = channelParams;
+  var channel = ably.Channels.Get("{{RANDOM_CHANNEL_NAME}}", channelOptions);
+
+  channel.Subscribe(message => {
+      Console.WriteLine(message.Data.ToString());
+  });
+```
+
+**Note**: You can also qualify a channel name with rewind when using the service without a library, such as with "SSE":/protocols/sse or "MQTT":/protocols/mqtt.
+
+h4(#until-attach). History with untilAttach
+
+It is possible to obtain message history that is continuous with the realtime messages received on an attached channel, in the backwards direction from the point of attachment. When a channel instance is attached, it's automatically populated by the Ably service with the serial number of the last published message on the channel. As such the serial number can be used to make a history request to the Ably service for all messages received since the channel was attached. Any new messages therefore are received in real time via the attached channel, and any historical messages are accessible via the history method.
+
+In order to benefit from this functionality, the @untilAttach@ option can be used when making history requests on attached channels. If the channel is not yet attached, this will result in an error.
+
+```[javascript](code-editor:realtime/channel-history-until-attach)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.attach(function(err) {
+    channel.history({ untilAttach: true}, function(err, resultPage) {
+      var lastMessage = resultPage.items[0];
+      alert('Last message before attach: ' + lastMessage.data);
+    });
+  });
+```
+
+```[nodejs](code-editor:realtime/channel-history-until-attach)
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.attach(function(err) {
+    channel.history({ untilAttach: true}, function(err, resultPage) {
+      var lastMessage = resultPage.items[0];
+      console.log('Last message before attach: ' + lastMessage.data);
+    });
+  });
+```
+
+```[ruby]
+  realtime = Ably::Realtime.new('{{API_KEY}}')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.attach do
+    channel.history(until_attach: true) do |result_page|
+      last_message = result_page.items.last
+      puts "Last message before attach: #{last_message.data}")
+    end
+  end
+```
+
+```[java]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.on(ChannelState.attached, new ChannelStateListener() {
+    @Override
+    public void onChannelStateChanged(ChannelStateChange stateChange, ErrorInfo reason) {
+      Param[] options = new Param[]{ new Param("untilAttach", "true") };
+      PaginatedResult<Message> resultPage = channel.history(options);
+      Message lastMessage = resultPage.items[0];
+      System.out.println("Last message before attach: " + lastMessage.data);
+    }
+  });
+  channel.attach();
+```
+
+```[csharp]
+  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
+  IRealtimeChannel channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
+  await channel.AttachAsync();
+  PaginatedResult<Message> resultPage = await channel.HistoryAsync(untilAttach: true);
+  Message lastMessage = resultPage.Items[0];
+  Console.WriteLine("Last message before attach: " + lastMessage.data);
+```
+
+```[objc]
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+ARTRealtimeChannel *channel = [realtime.channels get:@"RANDOM_CHANNEL_NAME"];
+[channel attach];
+[channel on:ARTChannelEventAttached callback:^(ARTErrorInfo *error) {
+    ARTRealtimeHistoryQuery *query = [[ARTRealtimeHistoryQuery alloc] init];
+    query.untilAttach = YES;
+    [channel history:query callback:^(ARTPaginatedResult<ARTMessage *> *resultPage, ARTErrorInfo *error) {
+        ARTMessage *lastMessage = resultPage.items[0];
+        NSLog(@"Last message: %@ - %@", lastMessage.id,lastMessage.data);
+    } error:nil];
+}];
+```
+
+```[swift]
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+channel.attach()
+channel.on(.attached) { error in
+    let query = ARTRealtimeHistoryQuery()
+    query.untilAttach = true
+    try! channel.history(query) { resultPage, error in
+        let lastMessage = resultPage!.items[0] as! ARTMessage
+        print("Last message before attach: \(lastMessage.id) - \(lastMessage.data)")
+    }
+}
+```
 
 h2(#presence-history). Retrieve presence history
 
-You can retrieve presence history by using the "@Presence@":/api/realtime-sdk/presence object to expose the "@history()@":/api/realtime-sdk/presence#history method, enabling a client to retrieve historical presence events on the channel.
+Retrieve "presence":/presence-occupancy/presence history using the "@history()@":/api/realtime-sdk/presence#history method. This enables a client to retrieve historical presence events from the channel.
 
-The following example retrieves the first two pages of historical presence events published:
+The following example retrieves a paginated list of historical presence events published:
 
 REALTIME-CODE
 
@@ -411,18 +561,15 @@ REST-CODE
     }
     ```
 
-This gets a paginated set of historical presence messages for the channel. If the channel is configured to persist messages to disk, then message history will typically be available for 24 or 72 hours. If not, messages are only retained in memory by the Ably service for two minutes. See "persistence enabled":/storage-history/storage.
+h3(#presence-parameters). Presence parameters
 
-h4(#presence-parameters). Presence parameters
-
-The following query parameters can be included in a call to @history()@"
+The following query parameters can be included in the @options@ object when making a call to @history()@. Note that @untilAttach@ is only available when using the realtime interface of an Ably SDK:
 
 |_. Parameter |_. Description |
-| options | ensures that clients disconnected abruptly from Ably can resume their connection |
-| start | beginning of time earliest time in milliseconds since the epoch for any messages retrieved |
-| end | current time latest time in milliseconds since the epoch for any messages retrieved |
-| direction | backwards forwards or backwards |
-| limit | 100 maximum number of messages to retrieve up to 1,000 |
+| start | earliest time in milliseconds since the epoch for any messages retrieved |
+| end | latest time in milliseconds since the epoch for any messages retrieved |
+| direction | forwards or backwards |
+| limit | maximum number of messages to retrieve, up to 1,000 |
 
 h2(#historical-order). Ordering of historical messages
 
@@ -436,161 +583,3 @@ There are instances where messages will not be in canonical global order:
 
 * Recent messages (less than two minutes old) are retrieved from live ephemeral storage and are still ordered by region. They only appear in the canonical global order if you enable "message persistence":/storage-history/storage, which also prevents duplication and missing messages.
 * You choose to retrieve historical messages only up to the point at which a client attaches to a channel. You would typically use this approach to bring a subscriber up to date as part of connection state recovery.
-
-
-h2(#continuous-history). Continuous history
-
-By using "rewind":/channels/options/rewind or history's @untilAttach@, it is possible to obtain message history that is continuous with the realtime messages received on an attached channel. For example, a user joining a navigation app with traffic updates would receive the latest traffic update and be subscribed to any new traffic updates.
-
-h3(#continuous-rewind). Rewind
-
-If you wish to obtain history as part of attaching to a channel, you can use the "rewind channel parameter":/channels/options/rewind. This will act as though you had attached to a channel from a certain message or time in the past, and play through all messages since that point. Rewind can only be used when first attaching to a channel.
-
-A @rewind@ value that is a number (@n@) is a request to attach to the channel at a position @n@ messages before the present position. @rewind@ can also be a time interval, specifying a number of seconds (@15s@) or minutes (@1m@) to replay messages from.
-
-Note that this is only available with the realtime interface.
-
-The following example will subscribe to the channel and relay the last 3 messages:
-
-```[jsall](code-editor:realtime/rewind)
-  const realtime = new Ably.Realtime('{{API_KEY}}');
-  realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', {
-    params: {rewind: '3'}
-  }).subscribe(msg => console.log("Received message: ", msg));
-```
-
-```[java]
-  final Map<String, String> params = new HashMap<>();
-  params.put("rewind", "3");
-  final ChannelOptions options = new ChannelOptions();
-  options.params = params;
-  final Channel channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}", options);
-
-  channel.subscribe(new MessageListener() {
-    @Override
-    public void onMessage(Message message) {
-      System.out.println("Received `" + message.name + "` message with data: " + message.data);
-    }
-  });
-```
-
-```[swift]
-  let options = ARTClientOptions(key: "{{API_KEY}}")
-  let client = ARTRealtime(options: options)
-  let channelOptions = ARTRealtimeChannelOptions()
-  channelOptions.params = [
-    "rewind": "3"
-  ]
-
-  let channel = client.channels.get(channelName, options: channelOptions)
-```
-
-```[csharp]
-  var clientOptions = new ClientOptions();
-  clientOptions.Key = "{{API_KEY}}";
-  clientOptions.Environment = AblyEnvironment;
-  var ably = new AblyRealtime(clientOptions);
-
-  var channelParams = new ChannelParams();
-  channelParams.Add("rewind", "3");
-  var channelOptions = new ChannelOptions();
-  channelOptions.Params = channelParams;
-  var channel = ably.Channels.Get("{{RANDOM_CHANNEL_NAME}}", channelOptions);
-
-  channel.Subscribe(message => {
-      Console.WriteLine(message.Data.ToString());
-  });
-```
-
-**Note**: You can also qualify a channel name with rewind when using the service without a library, such as with "SSE":/protocols/sse or "MQTT":/protocols/mqtt.
-
-h3(#until-attach). History with untilAttach
-
-It is possible to obtain message history that is continuous with the realtime messages received on an attached channel, in the backwards direction from the point of attachment. When a @Channel@ instance is attached, it's automatically populated by the Ably service with the serial number of the last published message on the channel. As such, using this serial number, the client library is able to make a history request to the Ably service for all messages received since the channel was attached. Any new messages therefore are received in real time via the attached channel, and any historical messages are accessible via the history method.
-
-In order to benefit from this functionality, the @untilAttach@ option can be used when making history requests on attached channels. If the channel is not yet attached, this will result in an error.
-
-```[javascript](code-editor:realtime/channel-history-until-attach)
-  var realtime = new Ably.Realtime('{{API_KEY}}');
-  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
-  channel.attach(function(err) {
-    channel.history({ untilAttach: true}, function(err, resultPage) {
-      var lastMessage = resultPage.items[0];
-      alert('Last message before attach: ' + lastMessage.data);
-    });
-  });
-```
-
-```[nodejs](code-editor:realtime/channel-history-until-attach)
-  var realtime = new Ably.Realtime('{{API_KEY}}');
-  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
-  channel.attach(function(err) {
-    channel.history({ untilAttach: true}, function(err, resultPage) {
-      var lastMessage = resultPage.items[0];
-      console.log('Last message before attach: ' + lastMessage.data);
-    });
-  });
-```
-
-```[ruby]
-  realtime = Ably::Realtime.new('{{API_KEY}}')
-  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
-  channel.attach do
-    channel.history(until_attach: true) do |result_page|
-      last_message = result_page.items.last
-      puts "Last message before attach: #{last_message.data}")
-    end
-  end
-```
-
-```[java]
-  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
-  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
-  channel.on(ChannelState.attached, new ChannelStateListener() {
-    @Override
-    public void onChannelStateChanged(ChannelStateChange stateChange, ErrorInfo reason) {
-      Param[] options = new Param[]{ new Param("untilAttach", "true") };
-      PaginatedResult<Message> resultPage = channel.history(options);
-      Message lastMessage = resultPage.items[0];
-      System.out.println("Last message before attach: " + lastMessage.data);
-    }
-  });
-  channel.attach();
-```
-
-```[csharp]
-  AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
-  IRealtimeChannel channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
-  await channel.AttachAsync();
-  PaginatedResult<Message> resultPage = await channel.HistoryAsync(untilAttach: true);
-  Message lastMessage = resultPage.Items[0];
-  Console.WriteLine("Last message before attach: " + lastMessage.data);
-```
-
-```[objc]
-ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
-ARTRealtimeChannel *channel = [realtime.channels get:@"RANDOM_CHANNEL_NAME"];
-[channel attach];
-[channel on:ARTChannelEventAttached callback:^(ARTErrorInfo *error) {
-    ARTRealtimeHistoryQuery *query = [[ARTRealtimeHistoryQuery alloc] init];
-    query.untilAttach = YES;
-    [channel history:query callback:^(ARTPaginatedResult<ARTMessage *> *resultPage, ARTErrorInfo *error) {
-        ARTMessage *lastMessage = resultPage.items[0];
-        NSLog(@"Last message: %@ - %@", lastMessage.id,lastMessage.data);
-    } error:nil];
-}];
-```
-
-```[swift]
-let realtime = ARTRealtime(key: "{{API_KEY}}")
-let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
-channel.attach()
-channel.on(.attached) { error in
-    let query = ARTRealtimeHistoryQuery()
-    query.untilAttach = true
-    try! channel.history(query) { resultPage, error in
-        let lastMessage = resultPage!.items[0] as! ARTMessage
-        print("Last message before attach: \(lastMessage.id) - \(lastMessage.data)")
-    }
-}
-```
