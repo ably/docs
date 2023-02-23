@@ -20,13 +20,15 @@ Other devices and services can subscribe to presence events in real time using t
 
 CAVEAT-INPUT
 
-  In order to be present on a channel, a client must "be identified by having a client ID":https://faqs.ably.com/authenticated-and-identified-clients, "have permission to be present":https://faqs.ably.com/using-capabilities-to-manage-client-access-privileges-on-channels, and be attached to the channel. For simplicity, the SDK will implicitly attach to a channel when entering or subscribing to presence events. Clients are assigned a <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> when using token authentication, "find out more about token authentication":/auth/token.
+  Clients must be "identified":/auth/identified-clients by having a @ClientId@ in order to be present on a channel. They also require the @presence@ "capability":/auth/capabilities to enter the presence set, and the @subscribe@ capability to subscribe to presence events.
 
-h2(#presence-subscribing). Subscribing to presence events 
+h2(#subscribe). Subscribe to presence events 
 
-The @Presence@ object provides a straightforward API to subscribe to presence events. 
+Subscribe to a channel's presence set in order to receive presence events, by registering a listener. Presence events are emitted whenever a member enters or leaves the presence set, or updates their member data.
 
-Here is a simple presence example using the "<span lang="default">@presence@</span><span lang="csharp">@Presence@</span>":/api/realtime-sdk/channels#presence <span lang="default">property</span><span lang="java">field</span><span lang="ruby">attribute</span> of the "@Channel@":/channels object to enter a channel and subscribe to presence events:
+Subscribing is an operation available to the realtime interface of an Ably SDK and uses the "subscribe()":/api/realtime-sdk/presence#subscribe method on the @Presence@ object of a channel.
+
+The following is an example of subscribing to presence events and entering the presence set: 
 
 ```[javascript](code-editor:realtime/presence-simple)
   const realtime = new Ably.Realtime({
@@ -110,42 +112,63 @@ Here is a simple presence example using the "<span lang="default">@presence@</sp
 
 <span lang="ruby">Note that the above example assume you are running them within an EventMachine reactor. Find out more in our "realtime usage documentation":/LINK-ME.</span>
 
-You can also use "channel mode flags":/channels/options/LINK-ME to set channel capabilities related to presence, for example providing clients the ability to be present on a channel without subscribing to presence events.
-
 CAVEAT-INPUT
 
-  It's important to note that presence subscriptions can quickly use up "account message limits":/account/LINK-ME.
+The number of clients that can be simultaneously present on a channel is "limited":/general/limits. This ensures the rate of presence messages remains supportable, as it is common for all members on a channel to change state at a similar time.
     
-  For example, imagine 200 presence subscribed clients all join and leave the presence set within a few minutes:
+As an example, consider 200 clients subscribed to presence events on a channel and all of them join and leave the presence set within a few minutes. This would result in the following messages:
 
-  * 200 presence messages published for the enter event.
-  * 200 × 200 (40,000) messages subscribed to for the enter events.
-  * 200 presence messages published for the leave event.
-  * 200 × 200 (40,000) presence messages subscribed to for the leave event.
+* 200 presence messages published for the enter event.
+* 200 × 200 (40,000) messages subscribed to for the enter events.
+* 200 presence messages published for the leave event.
+* 200 × 200 (40,000) presence messages subscribed to for the leave events.
     
-  This highlights the potential for 80,400 messages to be sent in a very short space of time on a single channel.
+This highlights the potential for 80,400 messages to be sent in a very short space of time on a single channel.
 
-  The number of presence members is a quantity-based limit. Any clients that attempt to join the presence set over the presence member limit will be rejected and the error code 91003 will be returned.
+h3(#present-no-subscribe). Be present without subscribing to presence events
 
-h2(#trigger-presence-events). Trigger presence events
+Messages are streamed to clients as soon as they "attach":/channels#attach to a channel, as long as they have the "subscribe capability":/auth/capabilities.
 
-Whenever a member enters a channels, leaves a channel, or updates "their member data":#member-data, a presence event is emitted to all presence subscribers on that channel. Subscribing to presence events makes it incredibly easy to build an app that shows, in real time, any changes to clients connected to Ably and present on a channel.
+Efficient use of capabilities can prevent clients from receiving presence events while still allowing them to enter the presence set. This is a common scenario where only a server is required to monitor the presence set. This saves clients from subscribing to a potentially high volume of unnecessary messages.
+
+One example of achieving this would be to use one channel for generic communications and another for the presence set. The following capabilities demonstrate this for clients and for servers:
+
+For clients: 
+
+```[json]
+{
+  "chatPresence": ["presence"],
+  "chat": ["publish", "history", "subscribe"],
+}
+```
+
+For servers:
+
+```[json]
+{
+  "chatPresence": ["presence", "subscribe"],
+  "chat": ["publish", "history", "subscribe"],
+}
+```
+
+Alternatively, "channel mode flags":/channels/options#modes can be used to enable clients to be present on a channel without subscribing to presence events. This also enables clients to still subscribe to regular messages on the channel.
+
+h2(#trigger-events). Trigger presence events
+
+Whenever a member enters or leaves a channel, or updates their member data, a presence event is emitted to all presence subscribers on that channel.
 
 The following presence events are emitted:
 
-- <span lang="ruby">:enter</span><span lang="python">PresenceAction.ENTER</span><span lang="java">Action.ENTER</span><span lang="csharp,go">Enter</span><span lang="default">enter</span> := A new member has entered the channel
-
-- <span lang="ruby">:leave</span><span lang="python">PresenceAction.LEAVE</span><span lang="java">Action.LEAVE</span><span lang="csharp,go">Leave</span><span lang="default">leave</span> := A member who was present has now left the channel. This may be a result of an explicit request to leave or implicitly when detaching from the channel. Alternatively, if a member's connection is abruptly disconnected and they do not resume their connection within a minute, Ably treats this as a leave event as the client is no longer present
-
-- <span lang="ruby">:update</span><span lang="python">PresenceAction.UPDATE</span><span lang="java">Action.UPDATE</span><span lang="csharp,go">Update</span><span lang="default">update</span> := An already present member has updated their "member data":#member-data. Being notified of member data updates can be very useful, for example, it can be used to update the status of a user when they are typing a message
-
-- <span lang="ruby">:present</span><span lang="python">PresenceAction.PRESENT</span><span lang="java">Action.PRESENT</span><span lang="csharp,go">Present</span><span lang="default">present</span> := When subscribing to presence events on a channel that already has members present, this event is emitted for every member already present on the channel before the subscribe listener was registered
-
-The number of clients that can be simultaneously present on a channel is limited. This also ensures the rate of presence messages remains supportable, as it is common for all members on a channel to change state at a similar time.
+- Enter := A new member has entered the channel
+- Leave := A member who was present has now left the channel. This may be a result of an explicit request to leave or implicitly when detaching from the channel. Alternatively, if a member's connection is abruptly disconnected and they do not resume their connection within a minute, Ably treats this as a leave event as the client is no longer present
+- Update := An already present member has updated their "member data":#member-data. Being notified of member data updates can be very useful, for example, it can be used to update the status of a user when they are typing a message
+- Present := When subscribing to presence events on a channel that already has members present, this event is emitted for every member already present on the channel before the subscribe listener was registered
 
 h3(#member-data). Member data
 
 In addition to the <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> for members on a channel, it is also possible to include data when entering a channel. Clients can "update":/api/realtime-sdk/presence#update their data at any point which will be broadcasted to all presence subscribers as an <span lang="ruby">@:update@</span><span lang="java">@Action.UPDATE@</span><span lang="default">@update@</span> event.
+
+The following is an example of subscribing to enter and leave events, then entering the presence set and updating a client's member data:
 
 ```[jsall]
 /* Subscribe to presence enter events */
@@ -262,11 +285,13 @@ channel.presence.enter("not moving") { error in
 }
 ```
 
-h3(#presence-multiple-client-ids). Managing multiple client IDs
+h3(multiple-client-ids). Managing multiple client IDs
 
 An Ably client instance might, if on an application server for example, publish messages and be present on channels on behalf of multiple distinct "client IDs":/api/realtime-sdk#client-id. The channel's @Presence@ object therefore also supports methods that enable presence messages to be emitted for a <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> specified at the time of the call, rather than implicitly based on the <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> "specified when the SDK is instantiated or authenticated":/api/realtime-sdk#client-id.
 
 Each unique <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> may only be present once when entering on behalf of another client as the unique identifier for each member in a presence set is the combined <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> and shared "<span lang="default">@connectionId@</span><span lang="csharp">@ConnectionId@</span><span lang="ruby">@connection_id@</span>":/api/realtime-sdk/connection#id</span>.
+
+A single <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> may be present multiple times on the same channel via different client connections. Ably considers these as different members of the presence set for the channel, however they will be differentiated by their unique connectionId. For example, if a client with ID “Sarah” is connected to a chat channel on both a desktop and a mobile device simultaneously, “Sarah” will be present twice in the presence member set with the same client ID, yet will have two unique connection IDs. A member of the presence set is therefore unique by the combination of the clientId and connectionId strings.
 
 In order to be able to publish presence changes for arbitrary client IDs, the SDK must have been instantiated either with an "API key":https://faqs.ably.com/what-is-an-app-api-key, or with a "token bound to a wildcard client ID":https://faqs.ably.com/can-a-client-emulate-any-client-id-i.e.-authenticate-using-a-wildcard-client-id.
 
@@ -377,13 +402,14 @@ rest.auth.requestToken(ARTTokenParams(clientId: "*"), withOptions: nil) { tokenD
 }
 ```
 
-h2(#retrieve-presence-members). Retrieve presence members
+h2(#retrieve-members). Retrieve presence members
 
-The @Presence@ object exposes a <span lang="default">@get@</span><span lang="csharp">@Get@</span> method enabling a client to retrieve an array of all members currently present on the channel. 
+The membership of the presence set can be retrieved by calling the "get()":/api/realtime-sdk/presence#get method on the @Presence@ object of a channel. This returns an array of all members currently present on the channel and is available using the REST and realtime interfaces of an Ably SDK.
 
-The Ably client is responsible for keeping track of the presence set from the time that the channel is attached; an up to date presence set is pushed to the client following attach and the presence set is updated on each subsequent presence event. Thus "<span lang="default">@get@</span><span lang="csharp">@Get@</span>":/api/realtime-sdk/presence#get returns the already known presence set retained in memory and does not trigger a new request to the Ably service.
+An Ably client connected using the realtime interface of an SDK is responsible for keeping track of the presence set from the time that the channel is attached. An up to date presence set is pushed to the client following a channel attachment, and the presence set is updated on each subsequent presence event. This means that "get()":/api/realtime-sdk/presence#get returns the already known presence set retained in memory and does not trigger a new request to the Ably service. 
 
-In the REST interface this method directly queries "Ably's REST presence API":/api/rest-api#presence. No presence state is cached in the SDK itself, unlike in the "realtime interface":/api/realtime.
+The REST interface of an Ably SDK queries "the REST API":/api/rest-api#presence directly. No presence state is cached in the SDK itself.
+The following is an example of retrieving the presence set for a channel:
 
 REALTIME-CODE
 
@@ -512,11 +538,13 @@ if page.hasNext() {
 }
 ```
 
-h3(#batch-presence). Batch presence
+h3(#batch). Batch presence
 
-It is common for the presence of multiple channels to be needed. If you wish to obtain the presence of multiple channels within a single operation, you can make use of the "REST batch API":/api/rest-api#batch.
+The REST interface of an SDK enables you to retrieve the presence state of multiple channels in a single request. The presence state contains details about the clients in the presence set, such as their @clientId@, member data and "presence action":/api/realtime-sdk/types#presence-action.
 
-The batch presence endpoint enables you to retrieve the presence state for multiple channels with a single request. The presence state contains details about the clients in the presence set, such as their @clientId@, member data and "presence action":/api/realtime-sdk/types#presence-action.
+A batch request has a single set of request details containing the request body, parameters and headers. These are converted into an array of requests to the underlying API. Each individual request to the underlying API is performed in parallel and may succeed or fail independently.
+
+The following is an example of a batch presence request using the "request()":/api/rest-sdk#request method to query the "batch REST API":/api/rest-api#batch-presence:
 
 ```[javascript](code-editor:rest/batch-presence)
 var ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
@@ -530,9 +558,7 @@ ablyRest.request('GET', '/presence', content, null, {}, function(err, response) 
 });
 ```
 
-Batch presence uses the "request":/api/rest-sdk#request method to query the "batch REST API":/api/rest-api#batch-presence.
-
-h4(#batch-presence-requests). Batch presence requests
+h4(#batch-requests). Batch presence requests
 
 A batch presence request contains a comma separated list of channel names with no spaces.
 
@@ -555,7 +581,11 @@ curl -X GET https://rest.ably.io/presence?channel=channel1,channel2 \
 
 h4(#batch-responses). Batch presence responses
 
-A batch presence request can succeed, fail or partially succeed. The response returned will differ depending on the outcome. Any successful requests will return details of the clients present on each channel.
+Once all requests have been completed in a batch request, a batch response is returned with three possible outcomes:
+
+- Success := If all of the individual requests were successful then an array containing the response of each query is returned in request order.
+- Failure := If the batch request itself failed before the individual requests were made, then an error response is returned with a status code and error response body. Examples of why the batch request can fail include an authorization failure or an invalid request.
+- Partial success := If one or more of the individual requests failed the response body contains an error object with the error code @40020@ and a status code of @400@. The error body contains a @batchResponse@ array of each individual response in request order. The @batchResponse@ can be inspected if there is a need to know the details of each outcome. If you only need to know whether or not the batch request was completely successful then the status code is sufficient.
 
 The examples for each possible outcome will use the following request data:
 
@@ -565,9 +595,7 @@ The examples for each possible outcome will use the following request data:
 }
 ```
 
-h5(#batch-success). Batch presence success
-
-The following is an example of a successful batch presence response. The response body contains details of each client present on the channel and the @channel@ they are present on. The status code for a successful response is always @200@:
+The following is an example of a successful batch presence response. The response body contains details of each client present on the channel and the channel they are present on. The status code for a successful response is always @200@:
 
 ```[json]
 [
@@ -592,8 +620,6 @@ The following is an example of a successful batch presence response. The respons
 ]
 ```
 
-h5(#batch-failure). Batch presence failure
-
 The following is an example of a batch presence failure response. The response body contains the details of the @error@, in this example that the token used for the request has expired. The status code is @401@:
 
 ```[json]
@@ -606,9 +632,7 @@ The following is an example of a batch presence failure response. The response b
 }
 ```
 
-h5(#batch-partial). Batch presence partial success
-
-The following is an example of a batch presence partial success response. The successful requests contain the details of each client present on the channel and the @channel@ they are present on. The failed request contains the @channel@ the request failed for and the details of the @error@, in this example that the credentials used didn't have the capability to query that channel. The status code for a partial success is always @400@:
+The following is an example of a batch presence partial success response. The successful requests contain the details of each client present on the channel, and the channel they are present on. The failed request contains the channel the request failed for and the details of the @error@, in this example that the credentials used didn't have the capability to query that channel. The status code for a partial success is always @400@:
 
 ```[json]
 {
@@ -641,9 +665,9 @@ The following is an example of a batch presence partial success response. The su
 }
 ```
 
-h4(#batch-presence-response). Handling batch presence responses
+h4(#batch-response). Handling batch presence responses
 
-Using the @request@ method with the REST interface requires handling responses for success, failure and partial success.
+Using the request() method with the REST interface of an Ably SDK requires handling responses for success, failure and partial success.
 
 A @response@ object will have @response.success@ set to true if the batch presence request was successful, and false if at least one individual presence request failed. The @response.statusCode@ will be set to 200 for success, 400 for partial success and 401 for an expected failure. @response.errorCode@ will then contain the Ably error code and @response.errorMessage@ will contain the details of the error.
 
@@ -695,13 +719,9 @@ ablyRest.request('GET', '/presence', content, null, {}, function(err, response) 
 });
 ```
 
-h2(#presence-history). Presence history
+h2(#history). Presence history
 
-"History":/storage-history/history provides access to instantaneous "live" history as well as the longer term persisted history for presence channels. If "persisted history":/storage-history/history#presence-history is enabled for the channel, then presence events will typically be stored for 24 or 72 hours. If persisted history is not enabled, Ably retains the last two minutes of presence event history in memory.
-
-Every message that is persisted to or retrieved from disk counts as an extra message towards your monthly quote. For example, in a persistence enabled channel a published message will deduct two messages from your monthly quota. If the message is later retrieved from history, another message will be deducted from your monthly quota.
-
-Presence history is useful for cases where you need to access presence events beyond the most recent, like chat applications where access logs are needed or IoT devices that care about historical connections.
+"History":/storage-history/history provides access to instantaneous "live" history as well as the longer term persisted history for presence channels. If "persisted history":/storage-history/history#presence-history is enabled for the channel, then presence events will be stored for 24 or 72 hours, depending on your account package. If persisted history is not enabled, Ably retains the last two minutes of presence event history in memory.
 
 h2(#unstable-connections). Handle unstable connections and failures
 
