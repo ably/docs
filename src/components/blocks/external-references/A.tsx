@@ -17,7 +17,7 @@ const StyledGatsbyLink = ({ to, children, ...props }: Omit<GatsbyLinkProps<Recor
 );
 
 const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
-  const rawHref = attribs?.href;
+  const { href: rawHref, ...unspecifiedAttribs } = attribs ?? {};
 
   // If there is an image inside the link with src same as href, then nuke <a> and render <img> only
   if (Array.isArray(data)) {
@@ -45,7 +45,8 @@ const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
       </StyledGatsbyLink>
     );
   }
-  return GenericHtmlBlock('a')({ data, attribs: { ...attribs, className: 'docs-link' } });
+
+  return GenericHtmlBlock('a')({ data, attribs: { href, className: 'docs-link', ...unspecifiedAttribs } });
 };
 
 export default A;
