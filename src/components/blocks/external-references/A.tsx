@@ -8,6 +8,7 @@ import { HtmlAttributes, HtmlComponentProps } from '../../html-component-props';
 import './styles.css';
 import Img from './Img';
 import { filterAttribsForReact } from 'src/react-utilities';
+import { checkLinkIsInternal } from './AElementHelpers/check-link-is-internal';
 
 const StyledGatsbyLink = ({ to, children, ...props }: Omit<GatsbyLinkProps<Record<string, unknown>>, 'ref'>) => (
   <Link className="docs-link" data-testid="gatsby-link" to={to} {...props}>
@@ -29,9 +30,7 @@ const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
     }
   }
 
-  if (rawHref && /^(\/|https?:\/\/(?:www\.)?ably.com\/docs).*/.test(rawHref)) {
-    // The regex immediately above, /^(\/|https?:\/\/(?:www\.)?ably.com\/docs).*/,
-    // only checks if something is a relative URL starting with a slash, or a domain name.
+  if (checkLinkIsInternal(rawHref)) {
     let href = rawHref;
     if (/^\/(?!docs\/).*/.test(rawHref)) {
       // If the URL does not start with 'docs' but IS a relative URL, we prepend the documentation name.
