@@ -30,15 +30,15 @@ const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
     }
   }
 
-  if (checkLinkIsInternal(rawHref)) {
-    let href = rawHref;
-    if (/^\/(?!docs\/).*/.test(rawHref)) {
-      // If the URL does not start with 'docs' but IS a relative URL, we prepend the documentation name.
-      // This is not ideal, but it's because the relative URLs in the textile have been written where it is
-      // assumed that this behaviour will be implemented.
-      href = `/${DOCUMENTATION_NAME}${rawHref}`;
-    }
+  let href = rawHref;
+  if (rawHref && /^\/(?!docs\/).*/.test(rawHref)) {
+    // If the URL does not start with 'docs' but IS a relative URL, we prepend the documentation name.
+    // This is not ideal, but it's because the relative URLs in the textile have been written where it is
+    // assumed that this behaviour will be implemented.
+    href = `/${DOCUMENTATION_NAME}${rawHref}`;
+  }
 
+  if (checkLinkIsInternal(href)) {
     return (
       <StyledGatsbyLink to={href} {...{ ...attribs }}>
         <Html data={data} />
