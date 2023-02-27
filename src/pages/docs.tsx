@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { Helmet } from 'react-helmet';
 import { graphql } from 'gatsby';
 
@@ -6,7 +5,7 @@ import Layout from 'src/components/Layout';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 import { HomepageContent, Section } from 'src/components/Homepage/HomepageContent';
 
-import { DOCUMENTATION_PATH } from '../../data/transform/constants';
+import { DOCUMENTATION_NAME } from '../../data/transform/constants';
 
 type MetaData = {
   title: string;
@@ -14,6 +13,8 @@ type MetaData = {
   image: string;
   twitter: string;
 };
+
+const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
 const IndexPage = ({
   data: {
@@ -31,8 +32,8 @@ const IndexPage = ({
         <meta property="og:title" content={openGraphTitle} />
         <meta property="twitter:title" content={openGraphTitle} />
         <meta property="og:site_name" content="Ably Realtime" />
-        <link rel="canonical" href={`${DOCUMENTATION_PATH}`} />
-        <meta property="og:url" content={`https://ably.com${DOCUMENTATION_PATH}`} />
+        <link rel="canonical" href={`/${DOCUMENTATION_NAME}`} />
+        <meta property="og:url" content={`${ABLY_MAIN_WEBSITE}/${DOCUMENTATION_NAME}`} />
         <meta name="description" content={meta.description} />
         <meta property="og:description" content={meta.description} />
         <meta name="twitter:description" content={meta.description} />
