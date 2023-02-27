@@ -1,6 +1,15 @@
 import { assert, constantFrom, property, tuple, webPath, webUrl } from 'fast-check';
 import { checkLinkIsInternal } from './check-link-is-internal';
 
+describe('Check link is internal: unit tests', () => {
+  it('Asserts that an internal link is internal', () => {
+    expect(checkLinkIsInternal('/docs/api/sse')).toBe(true);
+  });
+  it('Asserts that an control API link is not internal', () => {
+    expect(checkLinkIsInternal('/docs/api/control-api')).toBe(false);
+  });
+});
+
 const passingRelativeLinks = webPath()
   .filter((webPath) => !!webPath)
   .filter((webPath) => !webPath.includes('/api/control-api'));
@@ -15,12 +24,12 @@ const controlAPIPath = tuple(
     'https://ably.com/docs/',
     'http://ably.com/docs/',
     'https://www.ably.com/docs/',
-    'http://www.abyly.com/docs/',
+    'http://www.ably.com/docs/',
     '/',
   ),
-).map(([webPath, validInternalPrefix]) => `${validInternalPrefix}api/control-api/${webPath}`);
+).map(([webPath, validInternalPrefix]) => `${validInternalPrefix}api/control-api${webPath}`);
 
-describe('Check link is internal', () => {
+describe('Check link is internal: Property tests', () => {
   it('Always identifies web paths as internal', () => {
     assert(
       property(passingRelativeLinks, (link) => {

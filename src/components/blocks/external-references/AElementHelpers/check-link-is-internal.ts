@@ -1,4 +1,4 @@
-const DOCS_URLS_BUT_EXTERNAL = [/^(\/|https?:\/\/(?:www\.)?ably.com\/docs)(\/)*api\/control-api.*/];
+const DOCS_URLS_BUT_EXTERNAL = [/.*\/api\/control-api.*/];
 
 /**
  * This function is used to identify if a link should be handled by Gatsby
