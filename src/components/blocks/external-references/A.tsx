@@ -29,9 +29,14 @@ const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
     }
   }
 
-  if (rawHref && /^(\/|https?:\/\/(?:www.)?ably.com\/docs).*/.test(rawHref)) {
+  if (rawHref && /^(\/|https?:\/\/(?:www\.)?ably.com\/docs).*/.test(rawHref)) {
+    // The regex immediately above, /^(\/|https?:\/\/(?:www\.)?ably.com\/docs).*/,
+    // only checks if something is a relative URL starting with a slash, or a domain name.
     let href = rawHref;
     if (/^\/(?!docs\/).*/.test(rawHref)) {
+      // If the URL does not start with 'docs' but IS a relative URL, we prepend the documentation name.
+      // This is not ideal, but it's because the relative URLs in the textile have been written where it is
+      // assumed that this behaviour will be implemented.
       href = `/${DOCUMENTATION_NAME}${rawHref}`;
     }
 
