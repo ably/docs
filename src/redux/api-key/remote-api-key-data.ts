@@ -44,11 +44,15 @@ const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>)
     }),
   );
   /**
-   * Supporting ad hoc scripts; the following 3 lines can be removed when ad hoc scripts are.
+   * Supporting ad hoc scripts; the following lines can be removed when ad hoc scripts are.
    */
-  if (window.ably?.docs) {
+  if (window.ably?.docs && !window.ably.docs.DOCS_API_KEY) {
     window.ably.docs.DOCS_API_KEY = apiKeyData[0].apiKeys[0].whole_key;
+    window.ably.docs.onApiKeyRetrieved();
   }
+  /**
+   * Supporting ad hoc scripts; the preceding lines can be removed when ad hoc scripts are.
+   */
   return {
     ...payload,
     data: apiKeyData,
