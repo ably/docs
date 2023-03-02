@@ -15,6 +15,46 @@ describe('Fixes duplicate quoted links for textile-js', () => {
   });
 });
 
+describe('Does not render bits of code as links', () => {
+  it('ignores bits of code when it comes to parsing links', () => {
+    /**
+     * The broken example would look like this:
+     * "x-ably-capability": "{\<a href="[\">*\</a>"*\"]}"
+     * Ticket: https://ably.atlassian.net/browse/EDU-1319
+     **/
+    expect(
+      fixHtmlElementsInLinks(`
+    var claims = {
+      "iat": currentTime, /* current time in seconds */
+      "exp": currentTime + 3600, /* time of expiration in seconds */
+      "x-ably-capability": "{\\"*\\":[\\"*\\"]}"
+    }  
+  `),
+    ).toBe(`
+    var claims = {
+      "iat": currentTime, /* current time in seconds */
+      "exp": currentTime + 3600, /* time of expiration in seconds */
+      "x-ably-capability": "{\\"*\\":[\\"*\\"]}"
+    }  
+  `);
+    expect(
+      fixPunctuationInLinks(`
+    var claims = {
+      "iat": currentTime, /* current time in seconds */
+      "exp": currentTime + 3600, /* time of expiration in seconds */
+      "x-ably-capability": "{\\"*\\":[\\"*\\"]}"
+    }  
+  `),
+    ).toBe(`
+    var claims = {
+      "iat": currentTime, /* current time in seconds */
+      "exp": currentTime + 3600, /* time of expiration in seconds */
+      "x-ably-capability": "{\\"*\\":[\\"*\\"]}"
+    }  
+  `);
+  });
+});
+
 describe('Fixes punctuation in links for textile-js', () => {
   it('Deliberately renders links followed by punctuation so as to remove punctuation from the link', () => {
     expect(
