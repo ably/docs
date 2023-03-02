@@ -48,7 +48,11 @@ const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>)
    */
   if (window.ably?.docs && !window.ably.docs.DOCS_API_KEY) {
     window.ably.docs.DOCS_API_KEY = apiKeyData[0].apiKeys[0].whole_key;
-    window.ably.docs.onApiKeyRetrieved();
+    try {
+      window.ably.docs.onApiKeyRetrieved();
+    } catch (e) {
+      console.error(e);
+    }
   }
   /**
    * Supporting ad hoc scripts; the preceding lines can be removed when ad hoc scripts are.
