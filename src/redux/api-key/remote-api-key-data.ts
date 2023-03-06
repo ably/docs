@@ -16,11 +16,24 @@ declare global {
   }
 }
 
+const safelyInvokeApiKeyRetrievalTrigger = () => {
+  try {
+    window.ably.docs.onApiKeyRetrieved();
+  } catch (e) {
+    console.error(e);
+  }
+};
+
 const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>) => {
   if (payload.error || !payload.data || !isArray(payload.data)) {
     console.warn('No data array on API Key payload object returned from endpoint');
     const tempApiKeyResponse = await fetch(WEB_API_TEMP_KEY_ENDPOINT, { cache: DEFAULT_CACHE_STRATEGY });
     const tempApiKey = await tempApiKeyResponse.text();
+
+    if (window.ably?.docs && !window.ably.docs.DOCS_API_KEY) {
+      window.ably.docs.DOCS_API_KEY = tempApiKey;
+      safelyInvokeApiKeyRetrievalTrigger();
+    }
     return {
       data: [
         {
@@ -46,13 +59,9 @@ const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>)
   /**
    * Supporting ad hoc scripts; the following lines can be removed when ad hoc scripts are.
    */
-  if (window.ably?.docs && !window.ably.docs.DOCS_API_KEY) {
+  if (window.ably?.docs) {
     window.ably.docs.DOCS_API_KEY = apiKeyData[0].apiKeys[0].whole_key;
-    try {
-      window.ably.docs.onApiKeyRetrieved();
-    } catch (e) {
-      console.error(e);
-    }
+    safelyInvokeApiKeyRetrievalTrigger();
   }
   /**
    * Supporting ad hoc scripts; the preceding lines can be removed when ad hoc scripts are.
