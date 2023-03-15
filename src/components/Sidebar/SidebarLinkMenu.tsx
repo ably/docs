@@ -26,7 +26,7 @@ export const SidebarLinkMenu = ({
   const pathname = useContext(PathnameContext);
   const preExpanded: string[] = useMemo(() => [], []);
 
-  const linkMenu = data.map(({ label, link, level = ROOT_LEVEL, highlight = false, content }) => {
+  const linkMenu = data.map(({ label, link, level = ROOT_LEVEL, tutorial = false, content }) => {
     const uuid = encodeURIComponent(`${label}${link}`);
     const isActive = link !== '' && (highlightedMenuId === link || pathname === link);
     const autoExpandMenu = isArray(content) && link !== '' ? EXPAND_MENU.EXPANDED : expandMenu;
@@ -80,6 +80,7 @@ export const SidebarLinkMenu = ({
           indent={indent}
           indentOffset={indentOffset}
           isActive={isActive}
+          isTutorial={tutorial}
         />
       </li>
     ) : (

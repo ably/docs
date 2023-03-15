@@ -2,6 +2,7 @@ import React, { ReactElement } from 'react';
 import { AccordionItem, AccordionItemPanel } from 'react-accessible-accordion';
 import { ExpandableAccordionHeading, AccordionHeadingProps } from './ExpandableAccordionHeading';
 import { NonExpandableHeading } from './NonExpandableHeading';
+import { TutorialSidebarItem } from './TutorialSidebarItem';
 
 const AccordionHeading = ({ label, level, expandable = true, collapsible = true }: AccordionHeadingProps) => {
   return expandable && collapsible ? (
@@ -18,14 +19,28 @@ export const SidebarItem = ({
   content,
   expandable = true,
   collapsible = true,
+  isTutorial = false,
 }: AccordionHeadingProps & {
   uuid: string;
   content: ReactElement;
 }) => {
+  console.log(content);
   return (
-    <AccordionItem uuid={uuid}>
-      <AccordionHeading label={label} level={level} expandable={expandable} collapsible={collapsible} />
-      <AccordionItemPanel>{content}</AccordionItemPanel>
-    </AccordionItem>
+    <>
+      {isTutorial ? (
+        <TutorialSidebarItem label={label} content={content} />
+      ) : (
+        <AccordionItem uuid={uuid}>
+          <AccordionHeading
+            label={label}
+            level={level}
+            expandable={expandable}
+            collapsible={collapsible}
+            isTutorial={isTutorial}
+          />
+          <AccordionItemPanel>{content}</AccordionItemPanel>
+        </AccordionItem>
+      )}
+    </>
   );
 };

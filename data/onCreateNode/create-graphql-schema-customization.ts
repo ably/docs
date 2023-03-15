@@ -9,7 +9,7 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       link: String!
       name: String
       level: Int
-      highlight: Bool
+      tutorial: Boolean
       text: String
       items: [PageFurnitureYaml!]
     }

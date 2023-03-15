@@ -23,7 +23,7 @@ export const SidebarDataRetrieval = ({
       label
       link
       level
-      highlight
+      tutorial
       text
     }
     query {

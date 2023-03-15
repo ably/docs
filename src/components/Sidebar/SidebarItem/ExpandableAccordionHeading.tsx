@@ -12,6 +12,7 @@ export type AccordionHeadingProps = {
   level: number;
   expandable?: boolean;
   collapsible?: boolean;
+  isTutorial?: boolean;
 };
 
 export const ExpandableAccordionHeading = ({ label, level }: AccordionHeadingProps) => {

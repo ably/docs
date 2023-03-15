@@ -17,6 +17,7 @@ type Props = {
   expandMenu: EXPAND_MENU;
   isActive: boolean;
   indentOffset: number;
+  isTutorial: boolean;
 };
 
 export const SidebarLinkItem = ({
@@ -31,6 +32,7 @@ export const SidebarLinkItem = ({
   indent = 0,
   expandMenu = EXPAND_MENU.EXPANDED,
   isActive = false,
+  isTutorial = false,
 }: Props) => {
   const nextIndent = indentOffset > 0 ? indent : indent + INDENTATION_INCREASE;
   const nextIndentOffset = indentOffset - 1;
@@ -65,6 +67,7 @@ export const SidebarLinkItem = ({
       level={level}
       expandable={expandable}
       collapsible={collapsible}
+      isTutorial={isTutorial}
     />
   );
 };

@@ -6,7 +6,7 @@ export type SidebarData = {
   label: string;
   link: string;
   level?: number;
-  highlight?: boolean;
+  tutorial?: boolean;
   closed?: boolean;
   dropdownData?: DropdownData;
 };
