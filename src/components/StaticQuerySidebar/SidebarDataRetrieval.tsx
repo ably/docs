@@ -23,6 +23,7 @@ export const SidebarDataRetrieval = ({
       label
       link
       level
+      highlight
       text
     }
     query {
@@ -77,6 +78,7 @@ export const SidebarDataRetrieval = ({
   } else {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
   }
+  console.log(sidebarData);
   return (
     <Component
       className={className}
