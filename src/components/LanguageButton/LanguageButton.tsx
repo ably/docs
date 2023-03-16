@@ -9,7 +9,7 @@ import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
 
 import { button, isActive } from '../Menu/MenuItemButton/MenuItemButton.module.css';
 
-const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language }) => {
+const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, isSDK = false, isEnabled = true }) => {
   const pageLanguage = useContext(PageLanguageContext);
   const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(language, pageLanguage);
 
@@ -18,7 +18,16 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language }) => {
     cacheVisitPreferredLanguage(isPageLanguageDefault, language, href);
   };
 
-  return (
+  return isSDK ? (
+    <button
+      className={`font-medium font-sans  focus:outline-none px-24  ${isLanguageActive ? 'bg-charcoal-grey' : ''}
+      ${isEnabled ? 'text-mid-grey' : 'text-light-grey cursor-default'}
+      `}
+      onClick={isEnabled ? handleClick : () => null}
+    >
+      {languageLabels[language] ?? language}
+    </button>
+  ) : (
     <button
       className={cn(button, {
         [isActive]: isLanguageActive,
