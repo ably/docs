@@ -5,6 +5,7 @@ import PageLanguageContext from '../../contexts/page-language-context';
 import { HomePageLink } from './HomePageLink/HomePageLink';
 import { LanguageDropdownSelector } from './LanguageDropdownSelector/LanguageDropdownSelector';
 import VersionMenu, { VersionMenuProps } from './VersionMenu';
+import { LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
 
 const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionData: VersionMenuProps }) => {
   const pageLanguage = useContext(PageLanguageContext);
@@ -20,7 +21,10 @@ const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionD
     >
       <HorizontalMenu variant={HorizontalMenuVariant.end}>
         <HomePageLink />
-        <VersionMenu {...versionData} />
+        <div className="flex justify-end items-center col-span-1">
+          <span className="inline"> API v {LATEST_ABLY_API_VERSION_STRING}</span>
+        </div>
+
         {showLanguageSelector ? (
           <LanguageDropdownSelector language={pageLanguage} languages={languages} showDefaultLink={showDefaultLink} />
         ) : null}
