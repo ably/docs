@@ -22,7 +22,7 @@ const CodeCopyButton: FC<Props> = ({ content, language }) => {
   };
 
   return (
-    <div className="absolute top-14 right-16">
+    <div className="absolute top-72 right-16">
       <ButtonWithTooltip tooltip="Copy" notification="Copied!" onClick={handleCopy} className="text-white">
         <Icon name="icon-gui-copy" size="1rem" color="white" />
       </ButtonWithTooltip>
