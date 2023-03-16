@@ -1,4 +1,4 @@
-import React, { FunctionComponent as FC, useContext } from 'react';
+import React, { FunctionComponent as FC, useCallback, useContext, useState } from 'react';
 import { SingleValue } from 'react-select';
 
 import { createLanguageHrefFromDefaults, getLanguageDefaults, ReactSelectOption, Select } from 'src/components';
@@ -8,6 +8,7 @@ import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../data/c
 import { cacheVisitPreferredLanguage } from 'src/utilities';
 
 import { dropdownContainer, horizontalNav } from './LanguageNavigation.module.css';
+import APIKeyIndicator from '../../blocks/software/Code/ApiKeyIndicator';
 import LanguageButton from '../../LanguageButton/LanguageButton';
 import Icon from '@ably/ui/core/Icon';
 
@@ -16,6 +17,8 @@ export interface LanguageNavigationComponentProps {
   onClick?: (event: { target: { value: string } }) => void;
   value?: string;
   isSelected?: boolean;
+  isSDK?: boolean;
+  isEnabled?: boolean;
 }
 
 export interface LanguageNavigationProps {
@@ -38,13 +41,37 @@ const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<Reac
   }
 };
 
+const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
+  const [tooltipHover, setTooltipHover] = useState(false);
+  const showTooltipHover = useCallback(() => setTooltipHover(true), []);
+  const hideTooltipHover = useCallback(() => setTooltipHover(false), []);
+  return (
+    <div
+      className="flex flex-row w-full justify-start mt-2"
+      onMouseOver={showTooltipHover}
+      onMouseOut={hideTooltipHover}
+    >
+      <Icon name="icon-gui-info" size="1.25rem" color="mid-grey" additionalCSS="mt-12 ml-16" />
+      {tooltipHover ? (
+        <aside
+          className="w-240 max-w-240 absolute box-border
+          whitespace-pre-wrap bg-white shadow-tooltip rounded border border-light-grey
+          text-cool-black font-sans p-16 text-center text-p3 leading-5 cursor-default -ml-160 -mt-88"
+        >
+          {tooltip}
+        </aside>
+      ) : null}
+    </div>
+  );
+};
+
 const SDKNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect }: LanguageNavigationProps) => {
   return (
     <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 flex justify-end">
-      <menu data-testid="menu" className={horizontalNav}>
-        <LanguageButton language="Realtime" />
-        <LanguageButton language="REST" />
-        <Icon name="icon-gui-info" size="1.25rem" color="mid-grey" additionalCSS="mt-12 ml-48" />
+      <menu data-testid="menuSDK" className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-48 mr-16 my-0">
+        <LanguageButton language="Realtime" isSDK={true} isEnabled={false} />
+        <LanguageButton language="REST" isSDK={true} />
+        <SDKToolTip tooltip="Tooltips display informative text when users hover over, focus on, or tap an element." />
       </menu>
     </div>
   );
