@@ -27,8 +27,6 @@ Pusher::Client.new(
 )
 ```
 
-[View a Pusher adapter example that receives messages in your browser](<%= JsBins.url_for('adapters/pusher-pub-sub') %>)
-
 Please note:
 
 * For simplicity, the above example uses the Pusher JavaScript and Ruby libraries. All other Pusher client libraries can be instantiated in a similar fashion. See the [complete list of Pusher client libraries and their documentation](https://pusher.com/docs/channels/channels_libraries/libraries/).

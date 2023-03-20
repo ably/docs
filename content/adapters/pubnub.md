@@ -32,8 +32,6 @@ pubnub = Pubnub.new(
 )
 ```
 
-[View a Pubnub adapter example that publishes & receives messages in your browser](<%= JsBins.url_for('adapters/pubnub-pub-sub') %>)
-
 Please note:
 
 * For simplicity, the above example uses the Pubnub JavaScript library. All other Pubnub client libraries can be instantiated in a similar fashion. See the [complete list of Pubnub SDKs and their documentation](https://www.pubnub.com/docs/).
