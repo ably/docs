@@ -1,5 +1,7 @@
 export const DEFAULT_LANGUAGE = 'default';
 export const DEFAULT_PREFERRED_LANGUAGE = 'javascript';
+export const DEFAULT_PREFERRED_INTERFACE = 'rt';
+export const SDK_INTERFACES = ['rt', 'rest'];
 const TEXT_LANGUAGE = 'text';
 const HYPERTEXT_LANGUAGE = 'html';
 const YETANOTHERMARKUP_LANGUAGE = 'yaml';
