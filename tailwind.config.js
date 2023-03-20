@@ -8,6 +8,7 @@ const apiReferenceSpecificColors = {
 const highlightColors = {
   'notification-background': '#0073e6',
   'active-language-button': '#ff5416',
+  'disabled-tab-button': '#979798',
 };
 
 module.exports = extendConfig((ablyUIConfig) => ({
