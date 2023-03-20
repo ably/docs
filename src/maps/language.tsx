@@ -14,6 +14,7 @@ const languageLabels: LanguageLabels = {
   kotlin: 'Kotlin',
   ruby: 'Ruby',
   realtime_ruby: 'Ruby',
+  realtime_javascript: 'JavaScript',
   python: 'Python',
   php: 'PHP',
   shell: 'Shell',

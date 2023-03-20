@@ -77,8 +77,8 @@ const SDKNavigation = ({
   return (
     <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 flex justify-end">
       <menu data-testid="menuSDK" className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-48 mr-16 my-0">
-        <LanguageButton language='realtime' isSDK={true} isSDKSelected={SDKSelected === 'realtime'} />
-        <LanguageButton language="rest" isSDK={true} isSDKSelected={SDKSelected === 'rest'} />
+        <LanguageButton language="Realtime" isSDK={true} isSDKSelected={SDKSelected === 'realtime'} />
+        <LanguageButton language="REST" isSDK={true} isSDKSelected={SDKSelected === 'rest'} />
         <SDKToolTip tooltip="Tooltips display informative text when users hover over, focus on, or tap an element." />
       </menu>
     </div>
@@ -96,7 +96,7 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
   const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
   const selectedSDK = selectedPageLanguage.split('_', 1);
 
-  return items.length >= 2 ? (
+  return (
     <>
       <SDKNavigation
         items={items}
@@ -105,20 +105,23 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
         onSelect={onSelect}
         SDKSelected={selectedSDK[0]}
       />
-      <div className="border-b border-charcoal-grey w-full">
-        <menu data-testid="menu" className={horizontalNav}>
-          {items.map(({ Component, props, content }, index) => (
-            <Component {...props} key={index}>
-              {content}
-            </Component>
-          ))}
-          <div className={dropdownContainer}>
-            <Select options={options} value={value} isSearchable={false} onChange={onSelectChange} />
-          </div>
-        </menu>
-      </div>
+
+      {items.length >= 2 ? (
+        <div className="border-b border-charcoal-grey w-full">
+          <menu data-testid="menu" className={horizontalNav}>
+            {items.map(({ Component, props, content }, index) => (
+              <Component {...props} key={index}>
+                {content}
+              </Component>
+            ))}
+            <div className={dropdownContainer}>
+              <Select options={options} value={value} isSearchable={false} onChange={onSelectChange} />
+            </div>
+          </menu>
+        </div>
+      ) : null}
     </>
-  ) : null;
+  );
 };
 
 export default LanguageNavigation;
