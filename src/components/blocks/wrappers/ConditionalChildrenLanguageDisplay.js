@@ -58,7 +58,7 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
 
       // Able to identify which tab is selected
       const urlParams = new URLSearchParams(window.location.search);
-      const selectedInterface = urlParams.get('interface') || '';
+      const selectedInterface = urlParams.get('sdkInterface') || '';
 
       console.log('*****');
       console.log(

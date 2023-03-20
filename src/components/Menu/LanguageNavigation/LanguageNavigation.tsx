@@ -4,16 +4,20 @@ import { SingleValue } from 'react-select';
 import { createLanguageHrefFromDefaults, getLanguageDefaults, ReactSelectOption, Select } from 'src/components';
 import { PageLanguageContext } from 'src/contexts';
 
-import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../data/createPages/constants';
+import {
+  DEFAULT_LANGUAGE,
+  DEFAULT_PREFERRED_LANGUAGE,
+  DEFAULT_PREFERRED_INTERFACE,
+} from '../../../../data/createPages/constants';
 import { cacheVisitPreferredLanguage } from 'src/utilities';
 
 import { dropdownContainer, horizontalNav } from './LanguageNavigation.module.css';
-import APIKeyIndicator from '../../blocks/software/Code/ApiKeyIndicator';
 import LanguageButton from '../../LanguageButton/LanguageButton';
 import Icon from '@ably/ui/core/Icon';
 
 export interface LanguageNavigationComponentProps {
   language: string;
+  sdkInterface?: string;
   onClick?: (event: { target: { value: string } }) => void;
   value?: string;
   isSelected?: boolean;
@@ -34,14 +38,15 @@ export interface LanguageNavigationProps {
   SDKSelected?: string;
 }
 
-const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<ReactSelectOption>) => {
-  if (newValue) {
-    const language = newValue.value;
-    const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
-    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
-    cacheVisitPreferredLanguage(isPageLanguageDefault, language, href);
-  }
-};
+const changePageOnSelect =
+  (pageLanguage: string, sdkInterface: string) => (newValue: SingleValue<ReactSelectOption>) => {
+    if (newValue) {
+      const language = newValue.value;
+      const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
+      const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language, sdkInterface);
+      cacheVisitPreferredLanguage(isPageLanguageDefault, language, href, sdkInterface);
+    }
+  };
 
 const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
   const [tooltipHover, setTooltipHover] = useState(false);
@@ -67,18 +72,22 @@ const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
   );
 };
 
-const SDKNavigation = ({
-  items,
-  localChangeOnly,
-  selectedLanguage,
-  onSelect,
-  SDKSelected,
-}: LanguageNavigationProps) => {
+const SDKNavigation = ({ selectedLanguage, SDKSelected }: LanguageNavigationProps) => {
   return (
     <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 flex justify-end">
       <menu data-testid="menuSDK" className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-48 mr-16 my-0">
-        <LanguageButton language="Realtime" isSDK={true} isSDKSelected={SDKSelected === 'rt'} />
-        <LanguageButton language="REST" isSDK={true} isSDKSelected={SDKSelected === 'rest'} />
+        <LanguageButton
+          language={selectedLanguage || 'javascript'}
+          sdkInterface="rt"
+          isSDK={true}
+          isSDKSelected={SDKSelected === 'rt'}
+        />
+        <LanguageButton
+          language={selectedLanguage || 'javascript'}
+          sdkInterface="rest"
+          isSDK={true}
+          isSDKSelected={SDKSelected === 'rest'}
+        />
         <SDKToolTip tooltip="Tooltips display informative text when users hover over, focus on, or tap an element." />
       </menu>
     </div>
@@ -88,13 +97,15 @@ const SDKNavigation = ({
 const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect }: LanguageNavigationProps) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
+  const sdkInterface = DEFAULT_PREFERRED_INTERFACE;
   const actualSelectedLanguage = localChangeOnly ? selectedLanguage : selectedPageLanguage;
   const options = items.map((item) => ({ label: item.content, value: item.props.language }));
   const value = options.find((option) => option.value === actualSelectedLanguage);
 
   const shouldUseLocalChanges = localChangeOnly && !!onSelect;
-  const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
+  const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage, sdkInterface);
   const selectedSDK = selectedPageLanguage.split('_', 1);
+  console.log({ selectedSDK });
 
   return (
     <>

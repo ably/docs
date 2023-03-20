@@ -1,4 +1,4 @@
-import React, { useContext, FunctionComponent as FC } from 'react';
+import { useContext, FunctionComponent as FC } from 'react';
 import cn from 'classnames';
 import { PageLanguageContext } from 'src/contexts';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from 'src/components';
@@ -11,6 +11,7 @@ import { button, isActive } from '../Menu/MenuItemButton/MenuItemButton.module.c
 
 const LanguageButton: FC<LanguageNavigationComponentProps> = ({
   language,
+  sdkInterface = 'rt',
   isSDK = false,
   isEnabled = true,
   isSDKSelected = false,
@@ -19,13 +20,13 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({
   const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(language, pageLanguage);
 
   const handleClick = () => {
-    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
-    cacheVisitPreferredLanguage(isPageLanguageDefault, language, href);
+    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language, sdkInterface);
+    cacheVisitPreferredLanguage(isPageLanguageDefault, language, href, sdkInterface);
   };
 
   const handleClickSDK = () => {
-    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
-    cacheVisitPreferredLanguage(isPageLanguageDefault, language, href);
+    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language, sdkInterface);
+    cacheVisitPreferredLanguage(isPageLanguageDefault, language, href, sdkInterface);
   };
 
   return isSDK ? (
@@ -35,7 +36,7 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({
       `}
       onClick={isEnabled ? handleClickSDK : () => null}
     >
-      {languageLabels[language] ?? language}
+      {languageLabels[sdkInterface] ?? sdkInterface}
     </button>
   ) : (
     <button
