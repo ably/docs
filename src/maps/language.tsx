@@ -13,6 +13,7 @@ const languageLabels: LanguageLabels = {
   java: 'Java',
   kotlin: 'Kotlin',
   ruby: 'Ruby',
+  realtime_ruby: 'Ruby',
   python: 'Python',
   php: 'PHP',
   shell: 'Shell',
@@ -27,6 +28,8 @@ const languageLabels: LanguageLabels = {
   json: 'JSON',
   flutter: 'Flutter',
   android: 'Android',
+  rest: 'REST',
+  realtime: 'Realtime',
   [DEFAULT_LANGUAGE]: 'Any',
 };
 

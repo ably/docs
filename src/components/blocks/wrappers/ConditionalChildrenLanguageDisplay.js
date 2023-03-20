@@ -41,13 +41,23 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
     addToFilter(currentGroup, toFilter);
     childLanguageGroups.push({ ...currentGroup });
   }
+
   return Children.map(children, (child, index) => {
     if (toFilter[index]) {
       return null;
     }
     const relevantGroup = childLanguageGroups.find((group) => group.index === index);
+    let realtimeCode = null;
+    let RESTCode = null;
+
     if (relevantGroup && relevantGroup.data && relevantGroup.languages.length > 1) {
+      realtimeCode = Object.entries(relevantGroup.data).filter(([key]) => key.includes('realtime'));
+      // RESTCode = Object.entries(relevantGroup.data).filter(([key]) => key.includes('rest'));
       // Add here for Realtime/Rest
+      console.log('---**----')
+      console.log(realtimeCode.map(e => e.));
+      console.log('*****')
+      console.log(relevantGroup?.data);
       return React.cloneElement(child, {
         language,
         languages: relevantGroup.languages,

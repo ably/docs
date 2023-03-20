@@ -19,6 +19,7 @@ export interface LanguageNavigationComponentProps {
   isSelected?: boolean;
   isSDK?: boolean;
   isEnabled?: boolean;
+  isSDKSelected?: boolean;
 }
 
 export interface LanguageNavigationProps {
@@ -30,6 +31,7 @@ export interface LanguageNavigationProps {
   localChangeOnly?: boolean;
   selectedLanguage?: string;
   onSelect?: (newValue: SingleValue<ReactSelectOption>) => void;
+  SDKSelected?: string;
 }
 
 const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<ReactSelectOption>) => {
@@ -65,12 +67,18 @@ const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
   );
 };
 
-const SDKNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect }: LanguageNavigationProps) => {
+const SDKNavigation = ({
+  items,
+  localChangeOnly,
+  selectedLanguage,
+  onSelect,
+  SDKSelected,
+}: LanguageNavigationProps) => {
   return (
     <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 flex justify-end">
       <menu data-testid="menuSDK" className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-48 mr-16 my-0">
-        <LanguageButton language="Realtime" isSDK={true} isEnabled={false} />
-        <LanguageButton language="REST" isSDK={true} />
+        <LanguageButton language='realtime' isSDK={true} isSDKSelected={SDKSelected === 'realtime'} />
+        <LanguageButton language="rest" isSDK={true} isSDKSelected={SDKSelected === 'rest'} />
         <SDKToolTip tooltip="Tooltips display informative text when users hover over, focus on, or tap an element." />
       </menu>
     </div>
@@ -86,6 +94,7 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
 
   const shouldUseLocalChanges = localChangeOnly && !!onSelect;
   const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
+  const selectedSDK = selectedPageLanguage.split('_', 1);
 
   return items.length >= 2 ? (
     <>
@@ -94,6 +103,7 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
         localChangeOnly={localChangeOnly}
         selectedLanguage={selectedLanguage}
         onSelect={onSelect}
+        SDKSelected={selectedSDK[0]}
       />
       <div className="border-b border-charcoal-grey w-full">
         <menu data-testid="menu" className={horizontalNav}>
