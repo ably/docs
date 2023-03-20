@@ -50,7 +50,7 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
     const relevantGroup = childLanguageGroups.find((group) => group.index === index);
 
     if (relevantGroup && relevantGroup.data && relevantGroup.languages.length > 1) {
-      const realtimeCode = Object.entries(relevantGroup.data).filter(([key]) => key.includes('realtime'));
+      const realtimeCode = Object.entries(relevantGroup.data).filter(([key]) => key.includes('rt'));
       const restCode = Object.entries(relevantGroup.data).filter(([key]) => key.includes('rest'));
       // Add here for Realtime/Rest
       const realtimeCodeLanguages = realtimeCode.map((e) => e[0]);
@@ -63,7 +63,7 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
       console.log('*****');
       console.log(
         selectedInterface !== ''
-          ? selectedInterface === 'realtime'
+          ? selectedInterface === 'rt'
             ? realtimeCodeLanguages
             : restCodeLanguages
           : relevantGroup.languages,
@@ -72,7 +72,7 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
         language,
         languages:
           selectedInterface !== ''
-            ? selectedInterface === 'realtime'
+            ? selectedInterface === 'rt'
               ? realtimeCodeLanguages
               : restCodeLanguages
             : relevantGroup.languages,
