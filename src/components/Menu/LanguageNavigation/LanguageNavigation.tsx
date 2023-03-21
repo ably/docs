@@ -114,7 +114,7 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
     ? onSelect
     : changePageOnSelect(pageLanguage, DEFAULT_PREFERRED_INTERFACE);
   const selectedSDK = getSDKInterface();
-  const realtimeCode = getLanguageItemsIfHasSDKInterface(items, 'rt');
+  const realtimeCode = getLanguageItemsIfHasSDKInterface(items, 'realtime');
   const restCode = getLanguageItemsIfHasSDKInterface(items, 'rest');
 
   return (
