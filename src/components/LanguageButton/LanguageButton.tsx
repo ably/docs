@@ -1,7 +1,7 @@
 import { useContext, FunctionComponent as FC } from 'react';
 import cn from 'classnames';
 import { PageLanguageContext } from 'src/contexts';
-import { createLanguageHrefFromDefaults, getLanguageDefaults } from 'src/components';
+import { createLanguageHrefFromDefaults, getLanguageDefaults, getLanguageFiltered } from 'src/components';
 import languageLabels from 'src/maps/language';
 import { cacheVisitPreferredLanguage } from 'src/utilities';
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
@@ -16,10 +16,13 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({
   isSDKSelected = false,
 }) => {
   const pageLanguage = useContext(PageLanguageContext);
-  const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(language, pageLanguage);
+  const selectedLanguage = getLanguageFiltered(language);
+  const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(
+    selectedLanguage,
+    pageLanguage,
+  );
 
   const handleClick = () => {
-    const selectedLanguage = language.includes('_') ? language.split('_', 2)[1] : language;
     const href = createLanguageHrefFromDefaults(
       isPageLanguageDefault,
       isLanguageDefault,
