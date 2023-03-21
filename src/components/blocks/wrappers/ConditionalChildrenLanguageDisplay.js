@@ -85,7 +85,7 @@ export const getSDKInterface = () => {
       If sdkInterface is present in the URL then return the
       If not then get the PREFERRED_INTERFACE_KEY stored in the local storage
    */
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = new URLSearchParams(typeof window !== 'undefined' && window.location.search);
   const preferredSDKInterfaceStored = safeWindow.localStorage.getItem(PREFERRED_INTERFACE_KEY);
   return urlParams.get('sdkInterface') || preferredSDKInterfaceStored || PREFERRED_INTERFACE_KEY;
 };
