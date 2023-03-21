@@ -4,14 +4,13 @@ import { PageLanguageContext } from 'src/contexts';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from 'src/components';
 import languageLabels from 'src/maps/language';
 import { cacheVisitPreferredLanguage } from 'src/utilities';
-
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
-
 import { button, isActive } from '../Menu/MenuItemButton/MenuItemButton.module.css';
+import { DEFAULT_PREFERRED_INTERFACE } from '../../../data/createPages/constants';
 
 const LanguageButton: FC<LanguageNavigationComponentProps> = ({
   language,
-  sdkInterface = 'rt',
+  sdkInterface = DEFAULT_PREFERRED_INTERFACE,
   isSDK = false,
   isEnabled = true,
   isSDKSelected = false,
@@ -20,21 +19,22 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({
   const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(language, pageLanguage);
 
   const handleClick = () => {
-    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language, sdkInterface);
-    cacheVisitPreferredLanguage(isPageLanguageDefault, language, href, sdkInterface);
-  };
-
-  const handleClickSDK = () => {
-    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language, sdkInterface);
-    cacheVisitPreferredLanguage(isPageLanguageDefault, language, href, sdkInterface);
+    const selectedLanguage = language.includes('_') ? language.split('_', 2)[1] : language;
+    const href = createLanguageHrefFromDefaults(
+      isPageLanguageDefault,
+      isLanguageDefault,
+      selectedLanguage,
+      sdkInterface,
+    );
+    cacheVisitPreferredLanguage(isPageLanguageDefault, selectedLanguage, href, sdkInterface);
   };
 
   return isSDK ? (
     <button
       className={`font-medium font-sans  focus:outline-none px-24  ${isSDKSelected ? 'bg-charcoal-grey' : ''}
-      ${isEnabled ? 'text-mid-grey' : 'text-light-grey cursor-default'}
+      ${isEnabled ? 'text-mid-grey' : 'text-disabled-tab-button cursor-default'}
       `}
-      onClick={isEnabled ? handleClickSDK : () => null}
+      onClick={isEnabled ? handleClick : () => null}
     >
       {languageLabels[sdkInterface] ?? sdkInterface}
     </button>
