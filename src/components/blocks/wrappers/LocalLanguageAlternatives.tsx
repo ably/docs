@@ -3,11 +3,12 @@ import languageLabels from '../../../maps/language';
 import { MenuItemButton } from '../../Menu/MenuItemButton';
 import Html from '../Html';
 import { LanguageNavigation } from '../../Menu/LanguageNavigation';
-import { LanguageButton, ReactSelectOption } from 'src/components';
+import { getLanguageFiltered, LanguageButton, ReactSelectOption } from 'src/components';
 import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
 import { HtmlComponentProps, HtmlComponentPropsData, ValidReactElement } from 'src/components/html-component-props';
-import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
+import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_INTERFACE } from '../../../../data/createPages/constants';
 import { SingleValue } from 'react-select';
+import { getSDKInterface } from './ConditionalChildrenLanguageDisplay';
 
 const LocalLanguageAlternatives = ({
   languages,
@@ -25,7 +26,7 @@ const LocalLanguageAlternatives = ({
 
   const setLocalSelected = (value: string) => {
     setSelected(data ? data[value] : '');
-    setSelectedLanguage(value);
+    setSelectedLanguage(getLanguageFiltered(value));
   };
 
   const onClick = ({ currentTarget: { value } }: MouseEvent<HTMLButtonElement>) => {
@@ -44,20 +45,24 @@ const LocalLanguageAlternatives = ({
     .map((lang) => {
       // Site navigation button
       if (!localChangeOnly) {
+        const selectedSDK = getSDKInterface();
         return {
           Component: LanguageButton,
-          props: { language: lang },
+          props: { language: lang, sdkInterface: selectedSDK || DEFAULT_PREFERRED_INTERFACE },
           content: languageLabels[lang] ?? lang,
         };
       }
       // Local button, if global language option doesn't exist
+
+      const selectedLanguageFiltered = getLanguageFiltered(selectedLanguage);
+      const languageFiltered = getLanguageFiltered(lang);
       return {
         Component: MenuItemButton,
         props: {
           language: lang,
           onClick,
           value: lang,
-          isSelected: lang === selectedLanguage,
+          isSelected: languageFiltered === selectedLanguageFiltered,
         },
         content: languageLabels[lang] ?? lang,
       };
