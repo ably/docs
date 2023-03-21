@@ -21,4 +21,11 @@ export const createLanguageHrefFromDefaults = (
   isPageLanguageDefault: boolean,
   isLanguageDefault: boolean,
   language: string,
-): string => (isPageLanguageDefault ? `./?lang=${language}` : `./${isLanguageDefault ? '' : `?lang=${language}`}`);
+  sdkInterface?: string,
+): string => {
+  const languageParam = isPageLanguageDefault
+    ? `./?lang=${language}`
+    : `./${isLanguageDefault ? '' : `?lang=${language}`}`;
+  const sdkInterfaceParam = sdkInterface != '' ? `&sdkInterface=${sdkInterface}` : '';
+  return `${languageParam}${sdkInterfaceParam}`;
+};
