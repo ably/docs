@@ -54,10 +54,10 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
     if (relevantGroup && relevantGroup.data && relevantGroup.languages.length > 1) {
       const selectedInterface = getSDKInterface();
       /*
-        Check first if the languages consists of REST or Realtime ex: rest_ or rt_
+        Check first if the languages consists of REST or Realtime ex: rest_ or realtime_
         Then fetch only th languages if it has realtime or rest ex: rest_javascript
        */
-      const realtimeCode = Object.entries(relevantGroup.data).filter(([key]) => key.includes('rt'));
+      const realtimeCode = Object.entries(relevantGroup.data).filter(([key]) => key.includes('realtime'));
       const restCode = Object.entries(relevantGroup.data).filter(([key]) => key.includes('rest'));
       const realtimeCodeLanguages = realtimeCode.map((e) => e[0]);
       const restCodeLanguages = restCode.map((e) => e[0]);
