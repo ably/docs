@@ -56,6 +56,9 @@ const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
   const hideTooltipHover = useCallback(() => setTooltipHover(false), []);
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={tooltip}
       className="flex flex-row w-full justify-start mt-2"
       onMouseOver={showTooltipHover}
       onMouseOut={hideTooltipHover}
