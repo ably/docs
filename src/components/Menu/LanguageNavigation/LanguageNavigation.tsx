@@ -156,4 +156,4 @@ const getLanguageItemsIfHasSDKInterface = (
     content: string;
   }[],
   sdkInterface: string,
-) => items.map((languageItems) => languageItems.props.language.includes(sdkInterface));
+) => items.map((languageItem) => languageItem.props.language.includes(sdkInterface));
