@@ -1,7 +1,13 @@
 import React, { FunctionComponent as FC, useCallback, useContext, useState } from 'react';
 import { SingleValue } from 'react-select';
 
-import { createLanguageHrefFromDefaults, getLanguageDefaults, ReactSelectOption, Select } from 'src/components';
+import {
+  createLanguageHrefFromDefaults,
+  getFilteredLanguages,
+  getLanguageDefaults,
+  ReactSelectOption,
+  Select,
+} from 'src/components';
 import { PageLanguageContext } from 'src/contexts';
 
 import {
@@ -44,7 +50,10 @@ const changePageOnSelect =
   (pageLanguage: string, sdkInterface: string) => (newValue: SingleValue<ReactSelectOption>) => {
     if (newValue) {
       const language = newValue.value;
-      const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
+      const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
+        getFilteredLanguages(language),
+        pageLanguage,
+      );
       const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language, sdkInterface);
       cacheVisitPreferredLanguage(isPageLanguageDefault, language, href, sdkInterface);
     }
