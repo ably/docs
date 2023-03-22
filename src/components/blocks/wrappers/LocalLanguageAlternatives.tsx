@@ -3,7 +3,7 @@ import languageLabels from '../../../maps/language';
 import { MenuItemButton } from '../../Menu/MenuItemButton';
 import Html from '../Html';
 import { LanguageNavigation } from '../../Menu/LanguageNavigation';
-import { getLanguageFiltered, LanguageButton, ReactSelectOption } from 'src/components';
+import { getFilteredLanguages, LanguageButton, ReactSelectOption } from 'src/components';
 import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
 import { HtmlComponentProps, HtmlComponentPropsData, ValidReactElement } from 'src/components/html-component-props';
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_INTERFACE } from '../../../../data/createPages/constants';
@@ -26,7 +26,7 @@ const LocalLanguageAlternatives = ({
 
   const setLocalSelected = (value: string) => {
     setSelected(data ? data[value] : '');
-    setSelectedLanguage(getLanguageFiltered(value));
+    setSelectedLanguage(getFilteredLanguages(value));
   };
 
   const onClick = ({ currentTarget: { value } }: MouseEvent<HTMLButtonElement>) => {
@@ -54,8 +54,8 @@ const LocalLanguageAlternatives = ({
       }
       // Local button, if global language option doesn't exist
 
-      const selectedLanguageFiltered = getLanguageFiltered(selectedLanguage);
-      const languageFiltered = getLanguageFiltered(lang);
+      const selectedLanguageFiltered = getFilteredLanguages(selectedLanguage);
+      const languageFiltered = getFilteredLanguages(lang);
       return {
         Component: MenuItemButton,
         props: {
