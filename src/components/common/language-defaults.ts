@@ -34,5 +34,5 @@ export const createLanguageHrefFromDefaults = (
  Need to filter the language if the language is rest_ or realtime_ ex: rest_javascript
  it needs to return the language only without the sdk interface indicator
  */
-export const getLanguageFiltered = (language: string) =>
+export const getFilteredLanguages = (language: string) =>
   language.includes('_') ? language.split('_', 2)[1] : language;
