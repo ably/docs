@@ -35,4 +35,4 @@ export const createLanguageHrefFromDefaults = (
  it needs to return the language only without the sdk interface indicator
  */
 export const getFilteredLanguages = (language: string) =>
-  language.includes('_') ? language.split('_', 2)[1] : language;
+  language ? (language.includes('_') ? language.split('_', 2)[1] : language) : DEFAULT_LANGUAGE;

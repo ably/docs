@@ -38,6 +38,7 @@ export interface LanguageNavigationProps {
   selectedLanguage?: string;
   onSelect?: (newValue: SingleValue<ReactSelectOption>) => void;
   SDKSelected?: string;
+  allListOfLanguages?: string[];
 }
 
 const changePageOnSelect =
@@ -77,7 +78,7 @@ const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
   );
 };
 
-const SDKNavigation = ({ selectedLanguage, SDKSelected }: LanguageNavigationProps) => {
+const SDKNavigation = ({ selectedLanguage, SDKSelected, allListOfLanguages }: LanguageNavigationProps) => {
   let sdkSelectedTab = '';
   if (SDKSelected != null) {
     sdkSelectedTab = SDK_INTERFACES.includes(SDKSelected) ? SDKSelected : DEFAULT_PREFERRED_INTERFACE;
@@ -86,23 +87,37 @@ const SDKNavigation = ({ selectedLanguage, SDKSelected }: LanguageNavigationProp
   return (
     <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 flex justify-end">
       <menu data-testid="menuSDK" className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-48 mr-16 my-0">
-        {SDK_INTERFACES.map((sdkInterface) => (
-          <LanguageButton
-            key={sdkInterface}
-            language={selectedLanguage || DEFAULT_PREFERRED_LANGUAGE}
-            sdkInterface={sdkInterface || DEFAULT_PREFERRED_INTERFACE}
-            isSDK={true}
-            isSDKSelected={sdkSelectedTab === sdkInterface}
-            // isEnabled={sdkTabsActive?.includes(sdkInterface)}
-          />
-        ))}
+        {SDK_INTERFACES.map((sdkInterface) => {
+          const ifLanguagesHasSDKInterface = allListOfLanguages
+            ? allListOfLanguages.map((language) =>
+                [sdkInterface].includes(language.includes('_') ? language.split('_', 2)[0] : ''),
+              )
+            : [true];
+
+          return (
+            <LanguageButton
+              key={sdkInterface}
+              language={selectedLanguage || DEFAULT_PREFERRED_LANGUAGE}
+              sdkInterface={sdkInterface || DEFAULT_PREFERRED_INTERFACE}
+              isSDK={true}
+              isSDKSelected={sdkSelectedTab === sdkInterface}
+              isEnabled={ifLanguagesHasSDKInterface.includes(true)}
+            />
+          );
+        })}
         <SDKToolTip tooltip="Tooltips display informative text when users hover over, focus on, or tap an element." />
       </menu>
     </div>
   );
 };
 
-const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect }: LanguageNavigationProps) => {
+const LanguageNavigation = ({
+  items,
+  localChangeOnly,
+  selectedLanguage,
+  onSelect,
+  allListOfLanguages,
+}: LanguageNavigationProps) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
   const actualSelectedLanguage = localChangeOnly ? selectedLanguage : selectedPageLanguage;
@@ -117,15 +132,20 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
   const realtimeCode = getLanguageItemsIfHasSDKInterface(items, 'realtime');
   const restCode = getLanguageItemsIfHasSDKInterface(items, 'rest');
 
+  const isSDKInterFacePresent = allListOfLanguages
+    ? checkIfLanguageHasSDKInterface(allListOfLanguages, SDK_INTERFACES)
+    : [false];
+
   return (
     <>
-      {realtimeCode.includes(true) || restCode.includes(true) ? (
+      {isSDKInterFacePresent.includes(true) ? (
         <SDKNavigation
           items={items}
           localChangeOnly={localChangeOnly}
           selectedLanguage={selectedLanguage}
           onSelect={onSelect}
           SDKSelected={selectedSDK}
+          allListOfLanguages={allListOfLanguages}
         />
       ) : null}
 
@@ -157,3 +177,6 @@ const getLanguageItemsIfHasSDKInterface = (
   }[],
   sdkInterface: string,
 ) => items.map((languageItem) => languageItem.props.language.includes(sdkInterface));
+
+const checkIfLanguageHasSDKInterface = (allLanguage: string[], sdkInterfaces: string[]) =>
+  allLanguage.map((language) => sdkInterfaces.includes(language.includes('_') ? language.split('_', 2)[0] : ''));

@@ -75,6 +75,7 @@ const LocalLanguageAlternatives = ({
         localChangeOnly={localChangeOnly}
         selectedLanguage={selectedLanguage}
         onSelect={onSelect}
+        allListOfLanguages={data ? Object.entries(data).map(([key]) => key) : []}
       />
       <Html data={selected} />
     </>
