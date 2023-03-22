@@ -11,6 +11,7 @@ import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
 import { isArray } from 'lodash';
+import { getFilteredLanguages } from 'src/components/common';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
@@ -20,7 +21,8 @@ type PreProps = HtmlComponentProps<'pre'> & {
 
 const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
   const pageLanguage = useContext(PageLanguageContext);
-  const hasCode = languages?.some((lang) => lang === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
+  const hasCode =
+    languages?.some((lang) => getFilteredLanguages(lang) === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
   const shouldDisplayTip = !hasCode && languages?.length !== undefined;
   const withModifiedClassname = {
     ...attribs,
