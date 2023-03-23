@@ -10,17 +10,29 @@ import { HtmlComponentProps, ValidReactElement } from '../../html-component-prop
 import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
-import { isArray } from 'lodash';
+import { isArray, isEmpty } from 'lodash';
 import { getFilteredLanguages } from 'src/components/common';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
   languages?: string[];
   altData?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
+  isSDKInterface?: boolean;
+  realtimeAltData?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
+  restAltData?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
 };
 
-const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
+const Pre = ({
+  data,
+  languages,
+  altData,
+  isSDKInterface = false,
+  realtimeAltData,
+  restAltData,
+  attribs,
+}: PreProps): ReactElement => {
   const pageLanguage = useContext(PageLanguageContext);
+
   const hasCode =
     languages?.some((lang) => getFilteredLanguages(lang) === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
   const shouldDisplayTip = !hasCode && languages?.length !== undefined;
@@ -50,9 +62,25 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
   }
   // This fixes an issue where paragraphs are added into <pre> elements, which resets the font stylings to black
   // rendering the data unreadable.
-  const dataWithoutPTags = isArray(data)
-    ? data.map((child) => (child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child))
-    : data;
+
+  const sdkInterfaceData = !isEmpty(realtimeAltData) ? realtimeAltData : restAltData;
+
+  const dataWithoutPTags =
+    isSDKInterface && sdkInterfaceData
+      ? isArray(sdkInterfaceData)
+        ? sdkInterfaceData.map((child) =>
+            child.name === HtmlDataTypes.p
+              ? {
+                  ...child,
+                  name: HtmlDataTypes.div,
+                }
+              : child,
+          )
+        : data
+      : isArray(data)
+      ? data.map((child) => (child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child))
+      : data;
+
   return (
     <div
       className={cn('my-32', {
@@ -79,6 +107,7 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
             data={altData}
             initialData={dataWithoutPTags}
             localChangeOnly={shouldDisplayTip}
+            isSDKInterface={isSDKInterface}
           />
         ) : (
           <Html data={dataWithoutPTags} />

@@ -9,7 +9,7 @@ import { safeWindow } from 'src/utilities';
 
 describe(`<LanguageButton />`, () => {
   it('renders default state button', () => {
-    render(<LanguageButton language="javascript" />);
+    render(<LanguageButton language="javascript" selectedSDKInterfaceTab="realtime" />);
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
       <button
         class="button"
@@ -21,7 +21,7 @@ describe(`<LanguageButton />`, () => {
   it('renders active state button', () => {
     render(
       <PageLanguageContext.Provider value="javascript">
-        <LanguageButton language="javascript" />
+        <LanguageButton language="javascript" selectedSDKInterfaceTab="realtime" />
       </PageLanguageContext.Provider>,
     );
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
@@ -36,7 +36,7 @@ describe(`<LanguageButton />`, () => {
   it('changes localstorage value on click', async () => {
     render(
       <PageLanguageContext.Provider value="python">
-        <LanguageButton language="javascript" />
+        <LanguageButton selectedSDKInterfaceTab="realtime" language="javascript" />
       </PageLanguageContext.Provider>,
     );
 
