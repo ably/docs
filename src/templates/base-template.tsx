@@ -20,7 +20,6 @@ import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
-import { getSDKInterface } from '../components/blocks/wrappers/ConditionalChildrenLanguageDisplay';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -100,13 +99,8 @@ const Template = ({
           ? DEFAULT_PREFERRED_LANGUAGE
           : filteredLanguages[0];
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(usableLanguage, language);
-        const selectedSDKInterface = getSDKInterface();
-        const href = createLanguageHrefFromDefaults(
-          isPageLanguageDefault,
-          isLanguageDefault,
-          usableLanguage,
-          selectedSDKInterface,
-        );
+
+        const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, usableLanguage);
         navigate(href);
         return;
       }

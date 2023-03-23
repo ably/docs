@@ -5,7 +5,6 @@ import { longLanguageLabels } from '../../../maps/language';
 import { ReactSelectOption } from 'src/components';
 import { PREFERRED_LANGUAGE_KEY } from '../../../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common/language-defaults';
-import { getSDKInterface } from 'src/components/blocks/wrappers/ConditionalChildrenLanguageDisplay';
 
 import { navigate } from 'gatsby';
 import {
@@ -71,13 +70,7 @@ export const LanguageDropdownSelector = ({
       onChange={(newValue) => {
         const newLanguage = newValue?.value ?? DEFAULT_LANGUAGE;
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(newLanguage, language);
-        const selectedSDKInterface = getSDKInterface();
-        const href = createLanguageHrefFromDefaults(
-          isPageLanguageDefault,
-          isLanguageDefault,
-          newLanguage,
-          selectedSDKInterface,
-        );
+        const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, newLanguage);
         if (isPageLanguageDefault) {
           safeWindow.localStorage.clear();
         } else {
