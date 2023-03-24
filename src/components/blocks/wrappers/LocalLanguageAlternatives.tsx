@@ -1,4 +1,4 @@
-import React, { useState, MouseEvent, useEffect } from 'react';
+import React, { useState, MouseEvent, useEffect, Dispatch, SetStateAction } from 'react';
 import languageLabels from '../../../maps/language';
 import { MenuItemButton } from '../../Menu/MenuItemButton';
 import Html from '../Html';
@@ -16,29 +16,21 @@ const LocalLanguageAlternatives = ({
   data,
   initialData,
   localChangeOnly,
-  isSDKInterface,
+  selectedSDKInterfaceTab,
+  setSelectedSDKInterfaceTab,
 }: {
   languages: string[];
   data?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
   initialData: HtmlComponentPropsData;
   localChangeOnly: boolean;
-  isSDKInterface: boolean;
+  selectedSDKInterfaceTab: string;
+  setSelectedSDKInterfaceTab: Dispatch<SetStateAction<string>>;
 }) => {
   const [selected, setSelected] = useState(initialData);
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
   useEffect(() => {
     setSelected(initialData);
   }, [initialData]);
-
-  // if (isSDKInterface) {
-  //   if (initialData != null) {
-  //     console.log(initialData[0].attribs.lang);
-  //   }
-  // }
-  if (isSDKInterface) {
-    //   console.log(selected[0].attribs.lang);
-    //  console.log(selectedLanguage);
-  }
 
   const setLocalSelected = (value: string) => {
     setSelected(data ? data[value] : '');
@@ -55,7 +47,8 @@ const LocalLanguageAlternatives = ({
     }
   };
 
-  const sdkInterfaceLanguages = !isEmpty(languages) ? languagesSDKInterface(languages) : [];
+  /* filter only languages that are realtime or rest */
+  const sdkInterfaceLanguages = !isEmpty(languages) ? languagesSDKInterface(languages, selectedSDKInterfaceTab) : [];
   languages = !isEmpty(sdkInterfaceLanguages) ? sdkInterfaceLanguages : languages;
 
   const languageItems = languages
@@ -87,12 +80,6 @@ const LocalLanguageAlternatives = ({
       };
     });
 
-  /*
-selectedLanguage = initial language selected when the page loads
-selected = allData of selected language
-allListOfLanguages = array of all language keys
- */
-
   return (
     <>
       <LanguageNavigation
@@ -101,6 +88,8 @@ allListOfLanguages = array of all language keys
         selectedLanguage={selectedLanguage}
         onSelect={onSelect}
         allListOfLanguages={data ? Object.entries(data).map(([key]) => key) : []}
+        selectedSDKInterfaceTab={selectedSDKInterfaceTab}
+        setSelectedSDKInterfaceTab={setSelectedSDKInterfaceTab}
       />
       <Html data={selected} />
     </>
@@ -109,9 +98,9 @@ allListOfLanguages = array of all language keys
 
 export default LocalLanguageAlternatives;
 
-const languagesSDKInterface = (allLanguage: string[]) =>
+const languagesSDKInterface = (allLanguage: string[], selectedSDKInterface: string) =>
   allLanguage
-    .map((language) => (language.includes(`_`) ? language : ''))
+    .map((language) => (language.includes(`${selectedSDKInterface}_`) ? language : ''))
     .filter(function (n: string) {
       return n;
     });
