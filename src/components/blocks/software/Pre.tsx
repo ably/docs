@@ -1,11 +1,11 @@
-import React, { ReactElement, useContext } from 'react';
+import React, { ReactElement, useContext, useState } from 'react';
 import cn from 'classnames';
 import Icon from '@ably/ui/core/Icon';
 import Html from '../Html';
 import { PageLanguageContext } from 'src/contexts';
 import languageLabels from 'src/maps/language';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
-import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
+import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_INTERFACE } from '../../../../data/createPages/constants';
 import { HtmlComponentProps, ValidReactElement } from '../../html-component-props';
 import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
@@ -42,6 +42,10 @@ const Pre = ({
   };
 
   const dataTreatedAsCode = data && !isString(data) && every((element) => element.type === HtmlDataTypes.text, data);
+
+  /*  selectedInterfaceTab useState  */
+  const [selectedSDKInterfaceTab, setSelectedSDKInterfaceTab] = useState(DEFAULT_PREFERRED_INTERFACE);
+
   if (dataTreatedAsCode) {
     // We know that the first child's data is a string because we've confirmed the element type in dataTreatedAsCode
     const stringToRender = reduce((acc, curr) => acc.concat((curr.data as string) ?? ''), '', data);
@@ -63,7 +67,7 @@ const Pre = ({
   // This fixes an issue where paragraphs are added into <pre> elements, which resets the font stylings to black
   // rendering the data unreadable.
 
-  const sdkInterfaceData = !isEmpty(realtimeAltData) ? realtimeAltData : restAltData;
+  const sdkInterfaceData = selectedSDKInterfaceTab === 'realtime' ? realtimeAltData : restAltData;
 
   const dataWithoutPTags =
     isSDKInterface && sdkInterfaceData
@@ -107,7 +111,8 @@ const Pre = ({
             data={altData}
             initialData={dataWithoutPTags}
             localChangeOnly={shouldDisplayTip}
-            isSDKInterface={isSDKInterface}
+            selectedSDKInterfaceTab={selectedSDKInterfaceTab}
+            setSelectedSDKInterfaceTab={setSelectedSDKInterfaceTab}
           />
         ) : (
           <Html data={dataWithoutPTags} />

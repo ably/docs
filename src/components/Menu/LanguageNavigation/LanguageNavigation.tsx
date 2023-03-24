@@ -1,4 +1,4 @@
-import React, { FunctionComponent as FC, useContext, useState } from 'react';
+import React, { Dispatch, FunctionComponent as FC, SetStateAction, useContext, useState } from 'react';
 import { SingleValue } from 'react-select';
 import {
   createLanguageHrefFromDefaults,
@@ -39,6 +39,8 @@ export interface LanguageNavigationProps {
   onSelect?: (newValue: SingleValue<ReactSelectOption>) => void;
   SDKSelected?: string;
   allListOfLanguages?: string[];
+  selectedSDKInterfaceTab: string;
+  setSelectedSDKInterfaceTab: Dispatch<SetStateAction<string>>;
 }
 
 const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<ReactSelectOption>) => {
@@ -60,6 +62,8 @@ const LanguageNavigation = ({
   selectedLanguage,
   onSelect,
   allListOfLanguages,
+  selectedSDKInterfaceTab,
+  setSelectedSDKInterfaceTab,
 }: LanguageNavigationProps) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
@@ -72,8 +76,6 @@ const LanguageNavigation = ({
 
   // const realtimeCode = getLanguageItemsIfHasSDKInte  rface(items, 'realtime');
   // const restCode = getLanguageItemsIfHasSDKInterface(items, 'rest');
-
-  const [selectedSDKInterfaceTab, setSelectedSDKInterfaceTab] = useState(DEFAULT_PREFERRED_INTERFACE);
 
   const isSDKInterFacePresent = allListOfLanguages
     ? checkIfLanguageHasSDKInterface(allListOfLanguages, SDK_INTERFACES)
