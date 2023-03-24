@@ -50,26 +50,18 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
     const relevantGroup = childLanguageGroups.find((group) => group.index === index);
 
     if (relevantGroup && relevantGroup.data && relevantGroup.languages.length > 1) {
-      const realtimeCode = Object.entries(relevantGroup.data).filter(([key]) => key.includes('realtime'));
-      const restCode = Object.entries(relevantGroup.data).filter(([key]) => key.includes('rest'));
-      const realtimeCodeLanguages = realtimeCode
-        .map((e) => (e[0].includes(language) ? e[1] : null))
-        .filter(function (n) {
-          return n;
-        });
-      const restCodeLanguages = restCode
-        .map((e) => (e[0].includes(language) ? e[1] : null))
-        .filter(function (n) {
-          return n;
-        });
+      const allAltDataRealtime = Object.entries(relevantGroup.data).filter(([key]) => key.includes('realtime'));
+      const allAltDataRest = Object.entries(relevantGroup.data).filter(([key]) => key.includes('rest'));
+      const realtimeAltData = getCleanedSDKInterfaceAltData(allAltDataRealtime, language);
+      const restAltCode = getCleanedSDKInterfaceAltData(allAltDataRest, language);
 
       return React.cloneElement(child, {
         language,
         languages: relevantGroup.languages,
         altData: relevantGroup.data,
-        isSDKInterface: !isEmpty(realtimeCode) || !isEmpty(restCodeLanguages),
-        realtimeAltData: !isEmpty(realtimeCodeLanguages) ? realtimeCodeLanguages[0] : null,
-        restAltData: !isEmpty(restCodeLanguages) ? restCodeLanguages[0] : null,
+        isSDKInterface: !isEmpty(realtimeAltData) || !isEmpty(restAltCode),
+        realtimeAltData: !isEmpty(realtimeAltData) ? realtimeAltData[0] : null,
+        restAltData: !isEmpty(restAltCode) ? restAltCode[0] : null,
       });
     }
     return child;
@@ -77,3 +69,10 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
 };
 
 export default ConditionalChildrenLanguageDisplay;
+
+const getCleanedSDKInterfaceAltData = (sdkInterfaceSingleData, language) =>
+  sdkInterfaceSingleData
+    .map((e) => (e[0].includes(language) ? e[1] : null))
+    .filter(function (n) {
+      return n;
+    });

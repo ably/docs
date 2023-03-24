@@ -57,10 +57,13 @@ const LocalLanguageAlternatives = ({
     .map((lang) => {
       // Site navigation button
 
-      if (!localChangeOnly) {
+      const languageSelected = lang || DEFAULT_PREFERRED_LANGUAGE;
+      const filterLanguageForLangButton = languageSDKInterfaceClean(languageSelected, selectedSDKInterfaceTab);
+
+      if (!localChangeOnly && filterLanguageForLangButton != '') {
         return {
           Component: LanguageButton,
-          props: { language: lang || DEFAULT_PREFERRED_LANGUAGE },
+          props: { language: filterLanguageForLangButton },
           content: languageLabels[lang] ?? lang,
         };
       }
@@ -68,10 +71,12 @@ const LocalLanguageAlternatives = ({
 
       const selectedLanguageFiltered = getFilteredLanguages(selectedLanguage);
       const languageFiltered = getFilteredLanguages(lang);
+      const filterLanguageForMenuButton = languageSDKInterfaceClean(lang, selectedSDKInterfaceTab);
+
       return {
         Component: MenuItemButton,
         props: {
-          language: lang,
+          language: filterLanguageForMenuButton != '' ? filterLanguageForMenuButton : lang,
           onClick,
           value: lang,
           isSelected: languageFiltered === selectedLanguageFiltered,
@@ -97,6 +102,9 @@ const LocalLanguageAlternatives = ({
 };
 
 export default LocalLanguageAlternatives;
+
+const languageSDKInterfaceClean = (language: string, selectedTab: string) =>
+  language.includes(`_`) ? (language.includes(`${selectedTab}_`) ? language.split('_', 2)[1] : '') : language;
 
 const languagesSDKInterface = (allLanguage: string[], selectedSDKInterface: string) =>
   allLanguage

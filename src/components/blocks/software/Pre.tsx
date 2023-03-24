@@ -10,7 +10,7 @@ import { HtmlComponentProps, ValidReactElement } from '../../html-component-prop
 import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
-import { isArray, isEmpty } from 'lodash';
+import { isArray } from 'lodash';
 import { getFilteredLanguages } from 'src/components/common';
 
 type PreProps = HtmlComponentProps<'pre'> & {
