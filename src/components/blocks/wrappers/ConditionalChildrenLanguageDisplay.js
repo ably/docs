@@ -2,7 +2,6 @@ import React, { Children, useContext } from 'react';
 import { IGNORED_LANGUAGES_FOR_DISPLAY } from '../../../../data/createPages/constants';
 import PageLanguageContext from '../../../contexts/page-language-context';
 import { makeGroup, assignPrimary, addToFilter, isIrrelevantForLanguageDisplay } from './language-utilities';
-import { PREFERRED_INTERFACE_KEY, safeWindow } from '../../../utilities';
 import { isEmpty } from 'lodash';
 
 const ConditionalChildrenLanguageDisplay = ({ children }) => {
