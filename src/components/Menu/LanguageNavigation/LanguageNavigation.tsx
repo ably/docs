@@ -9,12 +9,7 @@ import {
 } from 'src/components';
 import { PageLanguageContext } from 'src/contexts';
 
-import {
-  DEFAULT_LANGUAGE,
-  DEFAULT_PREFERRED_LANGUAGE,
-  DEFAULT_PREFERRED_INTERFACE,
-  SDK_INTERFACES,
-} from '../../../../data/createPages/constants';
+import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, SDK_INTERFACES } from '../../../../data/createPages/constants';
 import { cacheVisitPreferredLanguage } from 'src/utilities';
 import { dropdownContainer, horizontalNav } from './LanguageNavigation.module.css';
 import SDKInterfacePanel from '../../SDKInterfacePanel/SDKInterfacePanel';
@@ -25,7 +20,6 @@ export interface LanguageNavigationComponentProps {
   onClick?: (event: { target: { value: string } }) => void;
   value?: string;
   isSelected?: boolean;
-  selectedSDKInterfaceTab: string;
 }
 
 export interface LanguageNavigationProps {
@@ -74,12 +68,18 @@ const LanguageNavigation = ({
   const shouldUseLocalChanges = localChangeOnly && !!onSelect;
   const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
 
-  // const realtimeCode = getLanguageItemsIfHasSDKInte  rface(items, 'realtime');
-  // const restCode = getLanguageItemsIfHasSDKInterface(items, 'rest');
-
   const isSDKInterFacePresent = allListOfLanguages
     ? checkIfLanguageHasSDKInterface(allListOfLanguages, SDK_INTERFACES)
     : [false];
+  const sdkInterfaceAvailable = [];
+  if (isSDKInterFacePresent && allListOfLanguages) {
+    if (isLanguageSDKInterfaceIsAvailable(allListOfLanguages, 'realtime')) {
+      sdkInterfaceAvailable.push('realtime');
+    }
+    if (isLanguageSDKInterfaceIsAvailable(allListOfLanguages, 'rest')) {
+      sdkInterfaceAvailable.push('rest');
+    }
+  }
 
   return (
     <>
@@ -87,6 +87,7 @@ const LanguageNavigation = ({
         <SDKInterfacePanel
           selectedSDKInterfaceTab={selectedSDKInterfaceTab}
           setSelectedSDKInterfaceTab={setSelectedSDKInterfaceTab}
+          sdkInterfaceAvailable={sdkInterfaceAvailable}
         />
       ) : null}
 
@@ -94,7 +95,7 @@ const LanguageNavigation = ({
         <div className="border-b border-charcoal-grey w-full">
           <menu data-testid="menu" className={horizontalNav}>
             {items.map(({ Component, props, content }, index) => (
-              <Component {...props} selectedSDKInterfaceTab={selectedSDKInterfaceTab} key={index}>
+              <Component {...props} key={index}>
                 {content}
               </Component>
             ))}
@@ -110,14 +111,8 @@ const LanguageNavigation = ({
 
 export default LanguageNavigation;
 
-// const getLanguageItemsIfHasSDKInterface = (
-//   items: {
-//     Component: FC<LanguageNavigationComponentProps>;
-//     props: LanguageNavigationComponentProps;
-//     content: string;
-//   }[],
-//   sdkInterface: string,
-// ) => items.map((languageItem) => languageItem.props.language.includes(sdkInterface));
-
 const checkIfLanguageHasSDKInterface = (allLanguage: string[], sdkInterfaces: string[]) =>
   allLanguage.map((language) => sdkInterfaces.includes(language.includes('_') ? language.split('_', 2)[0] : ''));
+
+const isLanguageSDKInterfaceIsAvailable = (allLanguage: string[], sdkInterface: string) =>
+  allLanguage.map((language) => language.includes(`${sdkInterface}_`)).includes(true);

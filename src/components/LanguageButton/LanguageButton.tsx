@@ -7,7 +7,7 @@ import { cacheVisitPreferredLanguage } from 'src/utilities';
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
 import { button, isActive } from '../Menu/MenuItemButton/MenuItemButton.module.css';
 
-const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, selectedSDKInterfaceTab }) => {
+const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language }) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedLanguage = getFilteredLanguages(language);
   const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(
@@ -20,25 +20,16 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, select
     cacheVisitPreferredLanguage(isPageLanguageDefault, selectedLanguage, href);
   };
 
-  const filterLanguage = languageSDKInterfaceClean(language, selectedSDKInterfaceTab);
-
   return (
-    <>
-      {filterLanguage != '' ? (
-        <button
-          className={cn(button, {
-            [isActive]: isLanguageActive,
-          })}
-          onClick={handleClick}
-        >
-          {languageLabels[filterLanguage] ?? filterLanguage}
-        </button>
-      ) : null}
-    </>
+    <button
+      className={cn(button, {
+        [isActive]: isLanguageActive,
+      })}
+      onClick={handleClick}
+    >
+      {languageLabels[language] ?? language}
+    </button>
   );
 };
 
 export default LanguageButton;
-
-export const languageSDKInterfaceClean = (language: string, selectedTab: string) =>
-  language.includes(`_`) ? (language.includes(`${selectedTab}_`) ? language.split('_', 2)[1] : '') : language;

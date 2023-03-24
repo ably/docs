@@ -33,24 +33,25 @@ const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
 const SDKInterfacePanel = ({
   selectedSDKInterfaceTab,
   setSelectedSDKInterfaceTab,
+  sdkInterfaceAvailable = SDK_INTERFACES,
 }: {
   selectedSDKInterfaceTab: string;
   setSelectedSDKInterfaceTab: Dispatch<SetStateAction<string>>;
+  sdkInterfaceAvailable: string[];
 }) => {
-  const isTabEnabled = true;
-
   return (
     <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 flex justify-end">
-      <menu data-testid="menuSDK" className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-48 mr-16 my-0">
-        {SDK_INTERFACES.map((sdkInterface) => (
+      <menu
+        data-testid="menuSDKInterface"
+        className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-48 mr-16 my-0"
+      >
+        {sdkInterfaceAvailable.map((sdkInterface) => (
           <button
             key={sdkInterface}
-            className={`font-medium font-sans  focus:outline-none px-24  ${
+            className={`font-medium font-sans  focus:outline-none px-24 text-mid-grey ${
               selectedSDKInterfaceTab === sdkInterface ? 'bg-charcoal-grey' : ''
-            }
-      ${isTabEnabled ? 'text-mid-grey' : 'text-disabled-tab-button cursor-default'}
-      `}
-            onClick={isTabEnabled ? () => setSelectedSDKInterfaceTab(sdkInterface) : () => null}
+            }`}
+            onClick={() => setSelectedSDKInterfaceTab(sdkInterface)}
           >
             {languageLabels[sdkInterface] ?? sdkInterface}
           </button>
