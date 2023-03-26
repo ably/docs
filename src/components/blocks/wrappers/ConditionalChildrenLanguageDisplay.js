@@ -53,17 +53,18 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
       const allAltDataRealtime = Object.entries(relevantGroup.data).filter(([key]) => key.includes('realtime'));
       const allAltDataRest = Object.entries(relevantGroup.data).filter(([key]) => key.includes('rest'));
       const realtimeAltData = getCleanedSDKInterfaceAltData(allAltDataRealtime, language);
-      const restAltCode = getCleanedSDKInterfaceAltData(allAltDataRest, language);
+      const restAltData = getCleanedSDKInterfaceAltData(allAltDataRest, language);
 
       return React.cloneElement(child, {
         language,
         languages: relevantGroup.languages,
         altData: relevantGroup.data,
-        isSDKInterface: !isEmpty(realtimeAltData) || !isEmpty(restAltCode),
-        realtimeAltData: !isEmpty(realtimeAltData) ? realtimeAltData[0] : null,
-        restAltData: !isEmpty(restAltCode) ? restAltCode[0] : null,
+        isSDKInterface: !isEmpty(realtimeAltData) || !isEmpty(restAltData),
+        realtimeAltData: !isEmpty(realtimeAltData) ? realtimeAltData[0] : [],
+        restAltData: !isEmpty(restAltData) ? restAltData[0] : [],
       });
     }
+
     return child;
   });
 };
