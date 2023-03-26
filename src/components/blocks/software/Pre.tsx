@@ -10,7 +10,7 @@ import { HtmlComponentProps, ValidReactElement } from '../../html-component-prop
 import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
-import { isArray } from 'lodash';
+import { isArray, isEmpty } from 'lodash';
 import { getFilteredLanguages } from 'src/components/common';
 
 type PreProps = HtmlComponentProps<'pre'> & {
@@ -68,6 +68,11 @@ const Pre = ({
   // rendering the data unreadable.
 
   const sdkInterfaceData = selectedSDKInterfaceTab === 'realtime' ? realtimeAltData : restAltData;
+
+  /* When pageLoad if realtime is not present then by default display Rest */
+  if (selectedSDKInterfaceTab === 'realtime' && isEmpty(realtimeAltData) && !isEmpty(restAltData)) {
+    setSelectedSDKInterfaceTab('rest');
+  }
 
   const dataWithoutPTags =
     isSDKInterface && sdkInterfaceData
