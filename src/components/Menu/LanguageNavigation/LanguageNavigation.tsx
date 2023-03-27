@@ -36,6 +36,7 @@ export interface LanguageNavigationProps {
   allListOfLanguages?: string[];
   selectedSDKInterfaceTab: string;
   setSelectedSDKInterfaceTab: Dispatch<SetStateAction<string>>;
+  setPreviousSDKInterfaceTab: Dispatch<SetStateAction<string>>;
 }
 
 const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<ReactSelectOption>) => {
@@ -59,6 +60,7 @@ const LanguageNavigation = ({
   allListOfLanguages,
   selectedSDKInterfaceTab,
   setSelectedSDKInterfaceTab,
+  setPreviousSDKInterfaceTab,
 }: LanguageNavigationProps) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
@@ -88,6 +90,7 @@ const LanguageNavigation = ({
           selectedSDKInterfaceTab={selectedSDKInterfaceTab}
           setSelectedSDKInterfaceTab={setSelectedSDKInterfaceTab}
           sdkInterfaceAvailable={sdkInterfaceAvailable}
+          setPreviousSDKInterfaceTab={setPreviousSDKInterfaceTab}
         />
       ) : null}
 
