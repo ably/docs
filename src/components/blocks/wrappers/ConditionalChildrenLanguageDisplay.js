@@ -1,5 +1,9 @@
 import React, { Children, useContext } from 'react';
-import { IGNORED_LANGUAGES_FOR_DISPLAY } from '../../../../data/createPages/constants';
+import {
+  IGNORED_LANGUAGES_FOR_DISPLAY,
+  REALTIME_SDK_INTERFACE,
+  REST_SDK_INTERFACE,
+} from '../../../../data/createPages/constants';
 import PageLanguageContext from '../../../contexts/page-language-context';
 import { makeGroup, assignPrimary, addToFilter, isIrrelevantForLanguageDisplay } from './language-utilities';
 import { isEmpty } from 'lodash';
@@ -50,8 +54,10 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
     const relevantGroup = childLanguageGroups.find((group) => group.index === index);
 
     if (relevantGroup && relevantGroup.data && relevantGroup.languages.length > 1) {
-      const allAltDataRealtime = Object.entries(relevantGroup.data).filter(([key]) => key.includes('realtime'));
-      const allAltDataRest = Object.entries(relevantGroup.data).filter(([key]) => key.includes('rest'));
+      const allAltDataRealtime = Object.entries(relevantGroup.data).filter(([key]) =>
+        key.includes(REALTIME_SDK_INTERFACE),
+      );
+      const allAltDataRest = Object.entries(relevantGroup.data).filter(([key]) => key.includes(REST_SDK_INTERFACE));
       const realtimeAltData = getCleanedSDKInterfaceAltData(allAltDataRealtime, language);
       const restAltData = getCleanedSDKInterfaceAltData(allAltDataRest, language);
 
@@ -72,8 +78,4 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
 export default ConditionalChildrenLanguageDisplay;
 
 const getCleanedSDKInterfaceAltData = (sdkInterfaceSingleData, language) =>
-  sdkInterfaceSingleData
-    .map((e) => (e[0].includes(language) ? e[1] : null))
-    .filter(function (n) {
-      return n;
-    });
+  sdkInterfaceSingleData.map((e) => (e[0].includes(language) ? e[1] : null)).filter((n) => !!n);
