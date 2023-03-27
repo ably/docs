@@ -74,18 +74,28 @@ const Pre = ({
 
   const sdkInterfaceData = selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE ? realtimeAltData : restAltData;
 
+  const newDataWithSDKOrNot = isSDKInterface && isArray(sdkInterfaceData) ? sdkInterfaceData : data;
+
   /* When pageLoad if realtime is not present then by default display Rest */
   if (selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE && isEmpty(realtimeAltData) && !isEmpty(restAltData)) {
     setSelectedSDKInterfaceTab(REST_SDK_INTERFACE);
   }
 
-  const newDataWithSDKOrNot = isSDKInterface && isArray(sdkInterfaceData) ? sdkInterfaceData : data;
-
-  const dataWithoutPTags = isArray(newDataWithSDKOrNot)
+  let dataWithoutPTags = isArray(newDataWithSDKOrNot)
     ? newDataWithSDKOrNot.map((child) =>
         child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child,
       )
     : newDataWithSDKOrNot;
+
+  /* Cleanup if the language passed has realtime or rest so it will highlight the code correctly */
+  if (isSDKInterface && dataWithoutPTags && typeof dataWithoutPTags !== 'string') {
+    dataWithoutPTags = dataWithoutPTags.map((child) => ({
+      ...child,
+      attribs: {
+        lang: cleanIfLanguageHasSDKInterface(child.attribs.lang),
+      },
+    }));
+  }
 
   return (
     <div
@@ -125,3 +135,9 @@ const Pre = ({
 };
 
 export default Pre;
+
+const cleanIfLanguageHasSDKInterface = (language: string) => {
+  return language.includes(`${REALTIME_SDK_INTERFACE}_`) || language.includes(`${REST_SDK_INTERFACE}_`)
+    ? language.split('_', 2)[1]
+    : language;
+};
