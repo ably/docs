@@ -5,7 +5,12 @@ import Html from '../Html';
 import { PageLanguageContext } from 'src/contexts';
 import languageLabels from 'src/maps/language';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
-import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_INTERFACE } from '../../../../data/createPages/constants';
+import {
+  DEFAULT_LANGUAGE,
+  DEFAULT_PREFERRED_INTERFACE,
+  REALTIME_SDK_INTERFACE,
+  REST_SDK_INTERFACE,
+} from '../../../../data/createPages/constants';
 import { HtmlComponentProps, ValidReactElement } from '../../html-component-props';
 import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
@@ -67,28 +72,20 @@ const Pre = ({
   // This fixes an issue where paragraphs are added into <pre> elements, which resets the font stylings to black
   // rendering the data unreadable.
 
-  const sdkInterfaceData = selectedSDKInterfaceTab === 'realtime' ? realtimeAltData : restAltData;
+  const sdkInterfaceData = selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE ? realtimeAltData : restAltData;
 
   /* When pageLoad if realtime is not present then by default display Rest */
-  if (selectedSDKInterfaceTab === 'realtime' && isEmpty(realtimeAltData) && !isEmpty(restAltData)) {
-    setSelectedSDKInterfaceTab('rest');
+  if (selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE && isEmpty(realtimeAltData) && !isEmpty(restAltData)) {
+    setSelectedSDKInterfaceTab(REST_SDK_INTERFACE);
   }
 
-  const dataWithoutPTags =
-    isSDKInterface && sdkInterfaceData
-      ? isArray(sdkInterfaceData)
-        ? sdkInterfaceData.map((child) =>
-            child.name === HtmlDataTypes.p
-              ? {
-                  ...child,
-                  name: HtmlDataTypes.div,
-                }
-              : child,
-          )
-        : data
-      : isArray(data)
-      ? data.map((child) => (child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child))
-      : data;
+  const newDataWithSDKOrNot = isSDKInterface && isArray(sdkInterfaceData) ? sdkInterfaceData : data;
+
+  const dataWithoutPTags = isArray(newDataWithSDKOrNot)
+    ? newDataWithSDKOrNot.map((child) =>
+        child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child,
+      )
+    : newDataWithSDKOrNot;
 
   return (
     <div

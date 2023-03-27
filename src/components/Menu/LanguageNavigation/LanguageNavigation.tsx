@@ -20,6 +20,7 @@ export interface LanguageNavigationComponentProps {
   onClick?: (event: { target: { value: string } }) => void;
   value?: string;
   isSelected?: boolean;
+  selectedSDKInterfaceTab: string;
 }
 
 export interface LanguageNavigationProps {
@@ -71,16 +72,15 @@ const LanguageNavigation = ({
   const isSDKInterFacePresent = allListOfLanguages
     ? checkIfLanguageHasSDKInterface(allListOfLanguages, SDK_INTERFACES)
     : [false];
-  const sdkInterfaceAvailable = [];
+  const sdkInterfaceAvailable: string[] = [];
   if (isSDKInterFacePresent && allListOfLanguages) {
-    if (isLanguageSDKInterfaceIsAvailable(allListOfLanguages, 'realtime')) {
-      sdkInterfaceAvailable.push('realtime');
-    }
-    if (isLanguageSDKInterfaceIsAvailable(allListOfLanguages, 'rest')) {
-      sdkInterfaceAvailable.push('rest');
-    }
+    // pass all languages for both realtime and rest
+    SDK_INTERFACES.map((sdkInterface) => {
+      if (isLanguageSDKInterfaceIsAvailable(allListOfLanguages, sdkInterface)) {
+        sdkInterfaceAvailable.push(sdkInterface);
+      }
+    });
   }
-
   return (
     <>
       {isSDKInterFacePresent.includes(true) ? (

@@ -1,7 +1,10 @@
 export const DEFAULT_LANGUAGE = 'default';
 export const DEFAULT_PREFERRED_LANGUAGE = 'javascript';
-export const DEFAULT_PREFERRED_INTERFACE = 'realtime';
-export const SDK_INTERFACES = ['realtime', 'rest'];
+
+export const REALTIME_SDK_INTERFACE = 'realtime';
+export const REST_SDK_INTERFACE = 'rest';
+export const DEFAULT_PREFERRED_INTERFACE = REALTIME_SDK_INTERFACE;
+export const SDK_INTERFACES = [REALTIME_SDK_INTERFACE, REST_SDK_INTERFACE];
 const TEXT_LANGUAGE = 'text';
 const HYPERTEXT_LANGUAGE = 'html';
 const YETANOTHERMARKUP_LANGUAGE = 'yaml';
