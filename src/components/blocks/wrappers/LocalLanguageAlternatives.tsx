@@ -18,6 +18,7 @@ const LocalLanguageAlternatives = ({
   localChangeOnly,
   selectedSDKInterfaceTab,
   setSelectedSDKInterfaceTab,
+  setPreviousSDKInterfaceTab,
 }: {
   languages: string[];
   data?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
@@ -25,6 +26,7 @@ const LocalLanguageAlternatives = ({
   localChangeOnly: boolean;
   selectedSDKInterfaceTab: string;
   setSelectedSDKInterfaceTab: Dispatch<SetStateAction<string>>;
+  setPreviousSDKInterfaceTab: Dispatch<SetStateAction<string>>;
 }) => {
   const [selected, setSelected] = useState(initialData);
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
@@ -95,6 +97,7 @@ const LocalLanguageAlternatives = ({
         allListOfLanguages={data ? Object.entries(data).map(([key]) => key) : []}
         selectedSDKInterfaceTab={selectedSDKInterfaceTab}
         setSelectedSDKInterfaceTab={setSelectedSDKInterfaceTab}
+        setPreviousSDKInterfaceTab={setPreviousSDKInterfaceTab}
       />
       <Html data={selected} />
     </>

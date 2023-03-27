@@ -50,6 +50,7 @@ const Pre = ({
 
   /*  selectedInterfaceTab useState  */
   const [selectedSDKInterfaceTab, setSelectedSDKInterfaceTab] = useState(DEFAULT_PREFERRED_INTERFACE);
+  const [previousSDKInterfaceTab, setPreviousSDKInterfaceTab] = useState('');
 
   if (dataTreatedAsCode) {
     // We know that the first child's data is a string because we've confirmed the element type in dataTreatedAsCode
@@ -72,22 +73,47 @@ const Pre = ({
   // This fixes an issue where paragraphs are added into <pre> elements, which resets the font stylings to black
   // rendering the data unreadable.
 
-  const sdkInterfaceData = selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE ? realtimeAltData : restAltData;
+  /* When pageLoad and realtime is not present, then by default display Rest */
+  if (altData) {
+    /* we need to get all the realtime data, so we can check if there is realtime languages while being in the rest tab */
+    const allRealtimeData = Object.entries(altData)
+      .map(([language]) =>
+        language && language.includes(`${REALTIME_SDK_INTERFACE}_`) ? language.split('_', 2)[1] : '',
+      )
+      .filter((n: string) => n);
 
-  const newDataWithSDKOrNot = isSDKInterface && isArray(sdkInterfaceData) ? sdkInterfaceData : data;
+    const ifDataHasRealtimeLangWithNoActiveLang = !isEmpty(allRealtimeData) && !allRealtimeData.includes(pageLanguage);
 
-  /* When pageLoad if realtime is not present then by default display Rest */
-  if (selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE && isEmpty(realtimeAltData) && !isEmpty(restAltData)) {
-    setSelectedSDKInterfaceTab(REST_SDK_INTERFACE);
+    const isNoRealtimeLangAndPrevNotRest =
+      ifDataHasRealtimeLangWithNoActiveLang && previousSDKInterfaceTab != REST_SDK_INTERFACE;
+
+    /* check is Realtime is not present at all but there are REST language when page loads first time, then the REST tab should be active */
+    if (
+      selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE &&
+      !isEmpty(altData) &&
+      isEmpty(allRealtimeData) &&
+      previousSDKInterfaceTab === ''
+    ) {
+      setSelectedSDKInterfaceTab(REST_SDK_INTERFACE);
+    }
+
+    /* check is Realtime has no language but there are REST language , then the REST tab should be active and Realtime tab can still be clicked */
+    if (selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE && !isEmpty(restAltData) && isNoRealtimeLangAndPrevNotRest) {
+      setSelectedSDKInterfaceTab(REST_SDK_INTERFACE);
+    }
   }
 
+  /* In passing HTML selected data, make sure to pass realtimeAltData or restAltData  sdkInterfaceData if present, if not just pass data */
+  const sdkInterfaceData = selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE ? realtimeAltData : restAltData;
+  const newDataWithSDKOrNot =
+    isSDKInterface && isArray(sdkInterfaceData) && !isEmpty(sdkInterfaceData) ? sdkInterfaceData : data;
   let dataWithoutPTags = isArray(newDataWithSDKOrNot)
     ? newDataWithSDKOrNot.map((child) =>
         child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child,
       )
     : newDataWithSDKOrNot;
 
-  /* Cleanup if the language passed has realtime or rest so it will highlight the code correctly */
+  /* Cleanup if the language passed has realtime or rest, so it will highlight the code correctly */
   if (isSDKInterface && dataWithoutPTags && typeof dataWithoutPTags !== 'string') {
     dataWithoutPTags = dataWithoutPTags.map((child) => ({
       ...child,
@@ -125,6 +151,7 @@ const Pre = ({
             localChangeOnly={shouldDisplayTip}
             selectedSDKInterfaceTab={selectedSDKInterfaceTab}
             setSelectedSDKInterfaceTab={setSelectedSDKInterfaceTab}
+            setPreviousSDKInterfaceTab={setPreviousSDKInterfaceTab}
           />
         ) : (
           <Html data={dataWithoutPTags} />
@@ -136,8 +163,7 @@ const Pre = ({
 
 export default Pre;
 
-const cleanIfLanguageHasSDKInterface = (language: string) => {
-  return language.includes(`${REALTIME_SDK_INTERFACE}_`) || language.includes(`${REST_SDK_INTERFACE}_`)
+const cleanIfLanguageHasSDKInterface = (language: string) =>
+  language.includes(`${REALTIME_SDK_INTERFACE}_`) || language.includes(`${REST_SDK_INTERFACE}_`)
     ? language.split('_', 2)[1]
     : language;
-};

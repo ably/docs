@@ -1,4 +1,4 @@
-import { SDK_INTERFACES } from '../../../data/createPages/constants';
+import { REALTIME_SDK_INTERFACE, REST_SDK_INTERFACE, SDK_INTERFACES } from '../../../data/createPages/constants';
 import React, { Dispatch, SetStateAction, useCallback, useState } from 'react';
 import Icon from '@ably/ui/core/Icon';
 import languageLabels from '../../maps/language';
@@ -34,11 +34,18 @@ const SDKInterfacePanel = ({
   selectedSDKInterfaceTab,
   setSelectedSDKInterfaceTab,
   sdkInterfaceAvailable = SDK_INTERFACES,
+  setPreviousSDKInterfaceTab,
 }: {
   selectedSDKInterfaceTab: string;
   setSelectedSDKInterfaceTab: Dispatch<SetStateAction<string>>;
   sdkInterfaceAvailable: string[];
+  setPreviousSDKInterfaceTab: Dispatch<SetStateAction<string>>;
 }) => {
+  const handleTabChanges = (sdkInterface: string) => {
+    setSelectedSDKInterfaceTab(sdkInterface);
+    setPreviousSDKInterfaceTab(sdkInterface === REALTIME_SDK_INTERFACE ? REST_SDK_INTERFACE : REALTIME_SDK_INTERFACE);
+  };
+
   return (
     <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 flex justify-end">
       <menu
@@ -51,7 +58,7 @@ const SDKInterfacePanel = ({
             className={`font-medium font-sans  focus:outline-none px-24 text-mid-grey ${
               selectedSDKInterfaceTab === sdkInterface ? 'bg-charcoal-grey' : ''
             }`}
-            onClick={() => setSelectedSDKInterfaceTab(sdkInterface)}
+            onClick={() => handleTabChanges(sdkInterface)}
           >
             {languageLabels[sdkInterface] ?? sdkInterface}
           </button>
