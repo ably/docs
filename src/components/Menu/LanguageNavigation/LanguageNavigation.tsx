@@ -1,6 +1,5 @@
-import React, { FunctionComponent as FC, useCallback, useContext, useState } from 'react';
+import React, { Dispatch, FunctionComponent as FC, SetStateAction, useContext, useState } from 'react';
 import { SingleValue } from 'react-select';
-
 import {
   createLanguageHrefFromDefaults,
   getFilteredLanguages,
@@ -10,18 +9,10 @@ import {
 } from 'src/components';
 import { PageLanguageContext } from 'src/contexts';
 
-import {
-  DEFAULT_LANGUAGE,
-  DEFAULT_PREFERRED_LANGUAGE,
-  DEFAULT_PREFERRED_INTERFACE,
-  SDK_INTERFACES,
-} from '../../../../data/createPages/constants';
+import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, SDK_INTERFACES } from '../../../../data/createPages/constants';
 import { cacheVisitPreferredLanguage } from 'src/utilities';
-
 import { dropdownContainer, horizontalNav } from './LanguageNavigation.module.css';
-import LanguageButton from '../../LanguageButton/LanguageButton';
-import Icon from '@ably/ui/core/Icon';
-import { getSDKInterface } from '../../blocks/wrappers/ConditionalChildrenLanguageDisplay';
+import SDKInterfacePanel from '../../SDKInterfacePanel/SDKInterfacePanel';
 
 export interface LanguageNavigationComponentProps {
   language: string;
@@ -29,9 +20,7 @@ export interface LanguageNavigationComponentProps {
   onClick?: (event: { target: { value: string } }) => void;
   value?: string;
   isSelected?: boolean;
-  isSDK?: boolean;
-  isEnabled?: boolean;
-  isSDKSelected?: boolean;
+  selectedSDKInterfaceTab: string;
 }
 
 export interface LanguageNavigationProps {
@@ -44,74 +33,35 @@ export interface LanguageNavigationProps {
   selectedLanguage?: string;
   onSelect?: (newValue: SingleValue<ReactSelectOption>) => void;
   SDKSelected?: string;
+  allListOfLanguages?: string[];
+  selectedSDKInterfaceTab: string;
+  setSelectedSDKInterfaceTab: Dispatch<SetStateAction<string>>;
+  setPreviousSDKInterfaceTab: Dispatch<SetStateAction<string>>;
 }
 
-const changePageOnSelect =
-  (pageLanguage: string, sdkInterface: string) => (newValue: SingleValue<ReactSelectOption>) => {
-    if (newValue) {
-      const language = newValue.value;
-      const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
-        getFilteredLanguages(language),
-        pageLanguage,
-      );
-      const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language, sdkInterface);
-      cacheVisitPreferredLanguage(isPageLanguageDefault, language, href, sdkInterface);
-    }
-  };
+const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<ReactSelectOption>) => {
+  if (newValue) {
+    const language = newValue.value;
+    const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
+      getFilteredLanguages(language),
+      pageLanguage,
+    );
 
-const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
-  const [tooltipHover, setTooltipHover] = useState(false);
-  const showTooltipHover = useCallback(() => setTooltipHover(true), []);
-  const hideTooltipHover = useCallback(() => setTooltipHover(false), []);
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label={tooltip}
-      className="flex flex-row w-full justify-start mt-2"
-      onMouseOver={showTooltipHover}
-      onMouseOut={hideTooltipHover}
-    >
-      <Icon name="icon-gui-info" size="1.25rem" color="mid-grey" additionalCSS="mt-12 ml-16" />
-      {tooltipHover ? (
-        <aside
-          className="w-240 max-w-240 absolute box-border
-          whitespace-pre-wrap bg-white shadow-tooltip rounded border border-light-grey
-          text-cool-black font-sans p-16 text-center text-p3 leading-5 cursor-default -ml-160 -mt-88"
-        >
-          {tooltip}
-        </aside>
-      ) : null}
-    </div>
-  );
-};
-
-const SDKNavigation = ({ selectedLanguage, SDKSelected }: LanguageNavigationProps) => {
-  let sdkSelectedTab = '';
-  if (SDKSelected != null) {
-    sdkSelectedTab = SDK_INTERFACES.includes(SDKSelected) ? SDKSelected : DEFAULT_PREFERRED_INTERFACE;
+    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
+    cacheVisitPreferredLanguage(isPageLanguageDefault, language, href);
   }
-
-  return (
-    <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 flex justify-end">
-      <menu data-testid="menuSDK" className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-48 mr-16 my-0">
-        {SDK_INTERFACES.map((sdkInterface) => (
-          <LanguageButton
-            key={sdkInterface}
-            language={selectedLanguage || DEFAULT_PREFERRED_LANGUAGE}
-            sdkInterface={sdkInterface || DEFAULT_PREFERRED_INTERFACE}
-            isSDK={true}
-            isSDKSelected={sdkSelectedTab === sdkInterface}
-            // isEnabled={sdkTabsActive?.includes(sdkInterface)}
-          />
-        ))}
-        <SDKToolTip tooltip="Tooltips display informative text when users hover over, focus on, or tap an element." />
-      </menu>
-    </div>
-  );
 };
 
-const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect }: LanguageNavigationProps) => {
+const LanguageNavigation = ({
+  items,
+  localChangeOnly,
+  selectedLanguage,
+  onSelect,
+  allListOfLanguages,
+  selectedSDKInterfaceTab,
+  setSelectedSDKInterfaceTab,
+  setPreviousSDKInterfaceTab,
+}: LanguageNavigationProps) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
   const actualSelectedLanguage = localChangeOnly ? selectedLanguage : selectedPageLanguage;
@@ -119,22 +69,28 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
   const value = options.find((option) => option.value === actualSelectedLanguage);
 
   const shouldUseLocalChanges = localChangeOnly && !!onSelect;
-  const onSelectChange = shouldUseLocalChanges
-    ? onSelect
-    : changePageOnSelect(pageLanguage, DEFAULT_PREFERRED_INTERFACE);
-  const selectedSDK = getSDKInterface();
-  const realtimeCode = getLanguageItemsIfHasSDKInterface(items, 'realtime');
-  const restCode = getLanguageItemsIfHasSDKInterface(items, 'rest');
+  const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
 
+  const isSDKInterFacePresent = allListOfLanguages
+    ? checkIfLanguageHasSDKInterface(allListOfLanguages, SDK_INTERFACES)
+    : [false];
+  const sdkInterfaceAvailable: string[] = [];
+  if (isSDKInterFacePresent && allListOfLanguages) {
+    // pass all languages for both realtime and rest
+    SDK_INTERFACES.map((sdkInterface) => {
+      if (isLanguageSDKInterfaceIsAvailable(allListOfLanguages, sdkInterface)) {
+        sdkInterfaceAvailable.push(sdkInterface);
+      }
+    });
+  }
   return (
     <>
-      {realtimeCode.includes(true) || restCode.includes(true) ? (
-        <SDKNavigation
-          items={items}
-          localChangeOnly={localChangeOnly}
-          selectedLanguage={selectedLanguage}
-          onSelect={onSelect}
-          SDKSelected={selectedSDK}
+      {isSDKInterFacePresent.includes(true) ? (
+        <SDKInterfacePanel
+          selectedSDKInterfaceTab={selectedSDKInterfaceTab}
+          setSelectedSDKInterfaceTab={setSelectedSDKInterfaceTab}
+          sdkInterfaceAvailable={sdkInterfaceAvailable}
+          setPreviousSDKInterfaceTab={setPreviousSDKInterfaceTab}
         />
       ) : null}
 
@@ -158,11 +114,8 @@ const LanguageNavigation = ({ items, localChangeOnly, selectedLanguage, onSelect
 
 export default LanguageNavigation;
 
-const getLanguageItemsIfHasSDKInterface = (
-  items: {
-    Component: FC<LanguageNavigationComponentProps>;
-    props: LanguageNavigationComponentProps;
-    content: string;
-  }[],
-  sdkInterface: string,
-) => items.map((languageItem) => languageItem.props.language.includes(sdkInterface));
+const checkIfLanguageHasSDKInterface = (allLanguage: string[], sdkInterfaces: string[]) =>
+  allLanguage.map((language) => sdkInterfaces.includes(language.includes('_') ? language.split('_', 2)[0] : ''));
+
+const isLanguageSDKInterfaceIsAvailable = (allLanguage: string[], sdkInterface: string) =>
+  allLanguage.map((language) => language.includes(`${sdkInterface}_`)).includes(true);

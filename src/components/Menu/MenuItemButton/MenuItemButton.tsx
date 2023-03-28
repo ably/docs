@@ -4,6 +4,8 @@ import { button, isActive } from './MenuItemButton.module.css';
 
 type Props = {
   isSelected?: boolean;
+  selectedSDKInterfaceTab: string;
+  language: string;
 } & HTMLAttributes<HTMLButtonElement>;
 
 const MenuItemButton: FC<Props> = ({ isSelected = false, ...props }) => (

@@ -68,13 +68,13 @@ const props = {
 
 describe('<LocalLanguageAlternatives />', () => {
   it('renders correctly', () => {
-    const { container } = render(<LocalLanguageAlternatives {...props} />);
+    const { container } = render(<LocalLanguageAlternatives isSDKInterface={false} {...props} />);
     expect(container).toMatchSnapshot();
     expect(screen.getByTestId('menu')).toBeInTheDocument();
   });
 
   it("doesn't render the menu bar when only one language", () => {
-    render(<LocalLanguageAlternatives {...props} languages={['javascript', '']} />);
+    render(<LocalLanguageAlternatives isSDKInterface={false} {...props} languages={['javascript', '']} />);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });

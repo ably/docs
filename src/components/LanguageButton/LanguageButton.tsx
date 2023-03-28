@@ -6,15 +6,8 @@ import languageLabels from 'src/maps/language';
 import { cacheVisitPreferredLanguage } from 'src/utilities';
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
 import { button, isActive } from '../Menu/MenuItemButton/MenuItemButton.module.css';
-import { DEFAULT_PREFERRED_INTERFACE } from '../../../data/createPages/constants';
 
-const LanguageButton: FC<LanguageNavigationComponentProps> = ({
-  language,
-  sdkInterface = DEFAULT_PREFERRED_INTERFACE,
-  isSDK = false,
-  isEnabled = true,
-  isSDKSelected = false,
-}) => {
+const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language }) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedLanguage = getFilteredLanguages(language);
   const { isLanguageDefault, isPageLanguageDefault, isLanguageActive } = getLanguageDefaults(
@@ -23,25 +16,11 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({
   );
 
   const handleClick = () => {
-    const href = createLanguageHrefFromDefaults(
-      isPageLanguageDefault,
-      isLanguageDefault,
-      selectedLanguage,
-      sdkInterface,
-    );
-    cacheVisitPreferredLanguage(isPageLanguageDefault, selectedLanguage, href, sdkInterface);
+    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, selectedLanguage);
+    cacheVisitPreferredLanguage(isPageLanguageDefault, selectedLanguage, href);
   };
 
-  return isSDK ? (
-    <button
-      className={`font-medium font-sans  focus:outline-none px-24  ${isSDKSelected ? 'bg-charcoal-grey' : ''}
-      ${isEnabled ? 'text-mid-grey' : 'text-disabled-tab-button cursor-default'}
-      `}
-      onClick={isEnabled ? handleClick : () => null}
-    >
-      {languageLabels[sdkInterface] ?? sdkInterface}
-    </button>
-  ) : (
+  return (
     <button
       className={cn(button, {
         [isActive]: isLanguageActive,

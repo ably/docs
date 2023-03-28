@@ -77,8 +77,8 @@ describe('createLanguageHrefFromDefaults', () => {
   it('Returns a string in the format ./?lang=my-language if the language is not DEFAULT_LANGUAGE', () => {
     assert(
       property(boolean(), constant(false), string(), (isPageLanguageDefault, isLanguageDefault, language) => {
-        expect(createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language, 'realtime')).toBe(
-          `./?lang=${language}&sdkInterface=realtime`,
+        expect(createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language)).toBe(
+          `./?lang=${language}`,
         );
       }),
     );
@@ -86,9 +86,7 @@ describe('createLanguageHrefFromDefaults', () => {
   it('Returns a string in the format ./ if the language is DEFAULT_LANGUAGE and the pageLanguage is not DEFAULT_LANGUAGE', () => {
     assert(
       property(constant(false), constant(true), string(), (isPageLanguageDefault, isLanguageDefault, language) => {
-        expect(createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language, 'realtime')).toBe(
-          './&sdkInterface=realtime',
-        );
+        expect(createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language)).toBe('./');
       }),
     );
   });

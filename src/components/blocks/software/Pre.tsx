@@ -1,26 +1,43 @@
-import React, { ReactElement, useContext } from 'react';
+import React, { ReactElement, useContext, useState } from 'react';
 import cn from 'classnames';
 import Icon from '@ably/ui/core/Icon';
 import Html from '../Html';
 import { PageLanguageContext } from 'src/contexts';
 import languageLabels from 'src/maps/language';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
-import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
+import {
+  DEFAULT_LANGUAGE,
+  DEFAULT_PREFERRED_INTERFACE,
+  REALTIME_SDK_INTERFACE,
+  REST_SDK_INTERFACE,
+} from '../../../../data/createPages/constants';
 import { HtmlComponentProps, ValidReactElement } from '../../html-component-props';
 import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
-import { isArray } from 'lodash';
+import { isArray, isEmpty } from 'lodash';
 import { getFilteredLanguages } from 'src/components/common';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
   languages?: string[];
   altData?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
+  isSDKInterface?: boolean;
+  realtimeAltData?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
+  restAltData?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
 };
 
-const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
+const Pre = ({
+  data,
+  languages,
+  altData,
+  isSDKInterface = false,
+  realtimeAltData,
+  restAltData,
+  attribs,
+}: PreProps): ReactElement => {
   const pageLanguage = useContext(PageLanguageContext);
+
   const hasCode =
     languages?.some((lang) => getFilteredLanguages(lang) === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
   const shouldDisplayTip = !hasCode && languages?.length !== undefined;
@@ -30,6 +47,11 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
   };
 
   const dataTreatedAsCode = data && !isString(data) && every((element) => element.type === HtmlDataTypes.text, data);
+
+  /*  selectedInterfaceTab useState  */
+  const [selectedSDKInterfaceTab, setSelectedSDKInterfaceTab] = useState(DEFAULT_PREFERRED_INTERFACE);
+  const [previousSDKInterfaceTab, setPreviousSDKInterfaceTab] = useState('');
+
   if (dataTreatedAsCode) {
     // We know that the first child's data is a string because we've confirmed the element type in dataTreatedAsCode
     const stringToRender = reduce((acc, curr) => acc.concat((curr.data as string) ?? ''), '', data);
@@ -50,9 +72,57 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
   }
   // This fixes an issue where paragraphs are added into <pre> elements, which resets the font stylings to black
   // rendering the data unreadable.
-  const dataWithoutPTags = isArray(data)
-    ? data.map((child) => (child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child))
-    : data;
+
+  /* When pageLoad and realtime is not present, then by default display Rest */
+  if (altData) {
+    /* we need to get all the realtime data, so we can check if there is realtime languages while being in the rest tab */
+    const allRealtimeData = Object.entries(altData)
+      .map(([language]) =>
+        language && language.includes(`${REALTIME_SDK_INTERFACE}_`) ? language.split('_', 2)[1] : '',
+      )
+      .filter((n: string) => n);
+
+    const ifDataHasRealtimeLangWithNoActiveLang = !isEmpty(allRealtimeData) && !allRealtimeData.includes(pageLanguage);
+
+    const isNoRealtimeLangAndPrevNotRest =
+      ifDataHasRealtimeLangWithNoActiveLang && previousSDKInterfaceTab != REST_SDK_INTERFACE;
+
+    /* check is Realtime is not present at all but there are REST language when page loads first time, then the REST tab should be active */
+    if (
+      selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE &&
+      !isEmpty(altData) &&
+      isEmpty(allRealtimeData) &&
+      previousSDKInterfaceTab === ''
+    ) {
+      setSelectedSDKInterfaceTab(REST_SDK_INTERFACE);
+    }
+
+    /* check is Realtime has no language but there are REST language , then the REST tab should be active and Realtime tab can still be clicked */
+    if (selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE && !isEmpty(restAltData) && isNoRealtimeLangAndPrevNotRest) {
+      setSelectedSDKInterfaceTab(REST_SDK_INTERFACE);
+    }
+  }
+
+  /* In passing HTML selected data, make sure to pass realtimeAltData or restAltData  sdkInterfaceData if present, if not just pass data */
+  const sdkInterfaceData = selectedSDKInterfaceTab === REALTIME_SDK_INTERFACE ? realtimeAltData : restAltData;
+  const newDataWithSDKOrNot =
+    isSDKInterface && isArray(sdkInterfaceData) && !isEmpty(sdkInterfaceData) ? sdkInterfaceData : data;
+  let dataWithoutPTags = isArray(newDataWithSDKOrNot)
+    ? newDataWithSDKOrNot.map((child) =>
+        child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child,
+      )
+    : newDataWithSDKOrNot;
+
+  /* Cleanup if the language passed has realtime or rest, so it will highlight the code correctly */
+  if (isSDKInterface && dataWithoutPTags && typeof dataWithoutPTags !== 'string') {
+    dataWithoutPTags = dataWithoutPTags.map((child) => ({
+      ...child,
+      attribs: {
+        lang: cleanIfLanguageHasSDKInterface(child.attribs.lang),
+      },
+    }));
+  }
+
   return (
     <div
       className={cn('my-32', {
@@ -79,6 +149,9 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
             data={altData}
             initialData={dataWithoutPTags}
             localChangeOnly={shouldDisplayTip}
+            selectedSDKInterfaceTab={selectedSDKInterfaceTab}
+            setSelectedSDKInterfaceTab={setSelectedSDKInterfaceTab}
+            setPreviousSDKInterfaceTab={setPreviousSDKInterfaceTab}
           />
         ) : (
           <Html data={dataWithoutPTags} />
@@ -89,3 +162,8 @@ const Pre = ({ data, languages, altData, attribs }: PreProps): ReactElement => {
 };
 
 export default Pre;
+
+const cleanIfLanguageHasSDKInterface = (language: string) =>
+  language.includes(`${REALTIME_SDK_INTERFACE}_`) || language.includes(`${REST_SDK_INTERFACE}_`)
+    ? language.split('_', 2)[1]
+    : language;
