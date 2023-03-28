@@ -168,7 +168,7 @@ const Pre = ({
 
 export default Pre;
 
-const cleanIfLanguageHasSDKInterface = (language: string) =>
+export const cleanIfLanguageHasSDKInterface = (language: string) =>
   language.includes(`${REALTIME_SDK_INTERFACE}_`) || language.includes(`${REST_SDK_INTERFACE}_`)
     ? language.split('_', 2)[1]
     : language;

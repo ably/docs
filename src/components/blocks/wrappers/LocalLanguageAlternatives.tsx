@@ -8,8 +8,8 @@ import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
 import { HtmlComponentProps, HtmlComponentPropsData, ValidReactElement } from 'src/components/html-component-props';
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../data/createPages/constants';
 import { SingleValue } from 'react-select';
-
-import { isEmpty } from 'lodash';
+import { isObject } from 'lodash';
+import { cleanIfLanguageHasSDKInterface } from '../software/Pre';
 
 const LocalLanguageAlternatives = ({
   languages,
@@ -35,7 +35,20 @@ const LocalLanguageAlternatives = ({
   }, [initialData]);
 
   const setLocalSelected = (value: string) => {
-    setSelected(data ? data[value] : '');
+    const selectedLocalData = data ? data[value] : '';
+    if (selectedLocalData != null && isObject(selectedLocalData[0])) {
+      /* when rest/realtime languages are passed from local they are not trimmed yet so we need to trim here */
+      const selectedLocalDataLang = selectedLocalData[0].attribs ? selectedLocalData[0].attribs.lang : '';
+      const cleanSelectedLocalData = [
+        {
+          ...selectedLocalData[0],
+          attribs: {
+            lang: selectedLocalDataLang ? cleanIfLanguageHasSDKInterface(selectedLocalDataLang) : '',
+          },
+        },
+      ];
+      setSelected(cleanSelectedLocalData);
+    }
     setSelectedLanguage(getFilteredLanguages(value));
   };
 
