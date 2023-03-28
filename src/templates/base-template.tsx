@@ -53,14 +53,15 @@ const Template = ({
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
   const canonical = `${CANONICAL_ROOT}${slug}`.replace(/\/+$/, '');
 
-  const contentMenuFromSDKInterface = !isEmpty(contentMenu[`${REALTIME_SDK_INTERFACE}_${language}`])
-    ? contentMenu[`${REALTIME_SDK_INTERFACE}_${language}`]
-    : contentMenu[`${REST_SDK_INTERFACE}_${language}`];
-  const contentMenuFromLanguageOrSDKInterface = !isEmpty(contentMenu[language])
-    ? contentMenu[language]
+  const contentMenuFromAllLanguages = contentMenu[language];
+  const contentMenuFromRealtime = contentMenu[`${REALTIME_SDK_INTERFACE}_${language}`];
+  const contentMenuFromRest = contentMenu[`${REST_SDK_INTERFACE}_${language}`];
+  const contentMenuFromSDKInterface = !isEmpty(contentMenuFromRealtime) ? contentMenuFromRealtime : contentMenuFromRest;
+  const contentMenuFromLangOrSDKInterface = !isEmpty(contentMenuFromAllLanguages)
+    ? contentMenuFromAllLanguages
     : contentMenuFromSDKInterface;
 
-  const contentMenuFromLanguage = contentMenuFromLanguageOrSDKInterface ?? [[]];
+  const contentMenuFromLanguage = contentMenuFromLangOrSDKInterface ?? [[]];
 
   const versionData = {
     versions: versions.edges,
