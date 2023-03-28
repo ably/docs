@@ -49,10 +49,6 @@ const LocalLanguageAlternatives = ({
     }
   };
 
-  /* filter only languages that are realtime or rest */
-  const sdkInterfaceLanguages = !isEmpty(languages) ? languagesSDKInterface(languages, selectedSDKInterfaceTab) : [];
-  languages = !isEmpty(sdkInterfaceLanguages) ? sdkInterfaceLanguages : languages;
-
   const languageItems = languages
     .filter((lang) => lang !== DEFAULT_LANGUAGE)
     .filter((lang) => lang !== '')
@@ -108,10 +104,3 @@ export default LocalLanguageAlternatives;
 
 const languageSDKInterfaceClean = (language: string, selectedTab: string) =>
   language.includes(`_`) ? (language.includes(`${selectedTab}_`) ? language.split('_', 2)[1] : '') : language;
-
-const languagesSDKInterface = (allLanguage: string[], selectedSDKInterface: string) =>
-  allLanguage
-    .map((language) => (language.includes(`${selectedSDKInterface}_`) ? language : ''))
-    .filter(function (n: string) {
-      return n;
-    });

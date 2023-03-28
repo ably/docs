@@ -38,6 +38,15 @@ const Pre = ({
 }: PreProps): ReactElement => {
   const pageLanguage = useContext(PageLanguageContext);
 
+  /*  selectedInterfaceTab useState  */
+  const [selectedSDKInterfaceTab, setSelectedSDKInterfaceTab] = useState(DEFAULT_PREFERRED_INTERFACE);
+  const [previousSDKInterfaceTab, setPreviousSDKInterfaceTab] = useState('');
+
+  /* only pass the languages that are SDK interface active */
+  if (isSDKInterface && languages) {
+    languages = getLanguagesSDKInterface(languages, selectedSDKInterfaceTab);
+  }
+
   const hasCode =
     languages?.some((lang) => getFilteredLanguages(lang) === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
   const shouldDisplayTip = !hasCode && languages?.length !== undefined;
@@ -47,10 +56,6 @@ const Pre = ({
   };
 
   const dataTreatedAsCode = data && !isString(data) && every((element) => element.type === HtmlDataTypes.text, data);
-
-  /*  selectedInterfaceTab useState  */
-  const [selectedSDKInterfaceTab, setSelectedSDKInterfaceTab] = useState(DEFAULT_PREFERRED_INTERFACE);
-  const [previousSDKInterfaceTab, setPreviousSDKInterfaceTab] = useState('');
 
   if (dataTreatedAsCode) {
     // We know that the first child's data is a string because we've confirmed the element type in dataTreatedAsCode
@@ -167,3 +172,10 @@ const cleanIfLanguageHasSDKInterface = (language: string) =>
   language.includes(`${REALTIME_SDK_INTERFACE}_`) || language.includes(`${REST_SDK_INTERFACE}_`)
     ? language.split('_', 2)[1]
     : language;
+
+const getLanguagesSDKInterface = (allLanguage: string[], selectedSDKInterface: string) =>
+  allLanguage
+    .map((language) => (language.includes(`${selectedSDKInterface}_`) ? language : ''))
+    .filter(function (n: string) {
+      return n;
+    });
