@@ -53,7 +53,7 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
     }
     const relevantGroup = childLanguageGroups.find((group) => group.index === index);
 
-    if (relevantGroup && relevantGroup.data && relevantGroup.languages.length > 1) {
+    if (relevantGroup && relevantGroup.data && relevantGroup.languages.length >= 1) {
       const allAltDataRealtime = Object.entries(relevantGroup.data).filter(([key]) =>
         key.includes(REALTIME_SDK_INTERFACE),
       );
@@ -65,7 +65,7 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
         language,
         languages: relevantGroup.languages,
         altData: relevantGroup.data,
-        isSDKInterface: !isEmpty(realtimeAltData) || !isEmpty(restAltData),
+        isSDKInterface: !isEmpty(allAltDataRealtime) || !isEmpty(allAltDataRest),
         realtimeAltData: !isEmpty(realtimeAltData) ? realtimeAltData[0] : [],
         restAltData: !isEmpty(restAltData) ? restAltData[0] : [],
       });
