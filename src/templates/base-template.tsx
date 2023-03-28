@@ -17,9 +17,16 @@ import Layout from 'src/components/Layout';
 import PageTitle from 'src/components/PageTitle';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 
-import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
+import {
+  DEFAULT_LANGUAGE,
+  DEFAULT_PREFERRED_LANGUAGE,
+  IGNORED_LANGUAGES,
+  REALTIME_SDK_INTERFACE,
+  REST_SDK_INTERFACE,
+} from '../../data/createPages/constants';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
+import { isEmpty } from 'lodash';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -46,7 +53,14 @@ const Template = ({
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
   const canonical = `${CANONICAL_ROOT}${slug}`.replace(/\/+$/, '');
 
-  const contentMenuFromLanguage = contentMenu[language] ?? [[]];
+  const contentMenuFromSDKInterface = !isEmpty(contentMenu[`${REALTIME_SDK_INTERFACE}_${language}`])
+    ? contentMenu[`${REALTIME_SDK_INTERFACE}_${language}`]
+    : contentMenu[`${REST_SDK_INTERFACE}_${language}`];
+  const contentMenuFromLanguageOrSDKInterface = !isEmpty(contentMenu[language])
+    ? contentMenu[language]
+    : contentMenuFromSDKInterface;
+
+  const contentMenuFromLanguage = contentMenuFromLanguageOrSDKInterface ?? [[]];
 
   const versionData = {
     versions: versions.edges,
