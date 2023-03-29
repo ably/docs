@@ -47,7 +47,7 @@ const SDKInterfacePanel = ({
   };
 
   return (
-    <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 flex justify-end">
+    <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 rounded-t-lg flex justify-end">
       <menu
         data-testid="menuSDKInterface"
         className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-48 mr-16 my-0"
