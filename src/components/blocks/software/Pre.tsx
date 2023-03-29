@@ -174,8 +174,4 @@ export const cleanIfLanguageHasSDKInterface = (language: string) =>
     : language;
 
 const getLanguagesSDKInterface = (allLanguage: string[], selectedSDKInterface: string) =>
-  allLanguage
-    .map((language) => (language.includes(`${selectedSDKInterface}_`) ? language : ''))
-    .filter(function (n: string) {
-      return n;
-    });
+  allLanguage.map((language) => (language.includes(`${selectedSDKInterface}_`) ? language : '')).filter((s) => s);
