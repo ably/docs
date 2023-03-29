@@ -5,7 +5,6 @@ import { longLanguageLabels } from '../../../maps/language';
 import { ReactSelectOption } from 'src/components';
 import { PREFERRED_LANGUAGE_KEY } from '../../../utilities/language/constants';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common/language-defaults';
-
 import { navigate } from 'gatsby';
 import {
   DEFAULT_LANGUAGE,
