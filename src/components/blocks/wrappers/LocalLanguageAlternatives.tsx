@@ -36,9 +36,9 @@ const LocalLanguageAlternatives = ({
 
   const setLocalSelected = (value: string) => {
     const selectedLocalData = data ? data[value] : '';
-    if (selectedLocalData != null && isObject(selectedLocalData[0])) {
-      /* when rest/realtime languages are passed from local they are not trimmed yet so we need to trim here */
-      const selectedLocalDataLang = selectedLocalData[0].attribs ? selectedLocalData[0].attribs.lang : '';
+    if (selectedLocalData !== null && isObject(selectedLocalData?.[0])) {
+      /* when rest/realtime languages are passed from local they are not trimmed yet, so we need to trim here */
+      const selectedLocalDataLang = selectedLocalData[0]?.attribs?.lang;
       const cleanSelectedLocalData = [
         {
           ...selectedLocalData[0],
