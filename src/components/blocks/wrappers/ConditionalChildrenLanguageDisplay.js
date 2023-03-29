@@ -58,8 +58,8 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
         key.includes(REALTIME_SDK_INTERFACE),
       );
       const allAltDataRest = Object.entries(relevantGroup.data).filter(([key]) => key.includes(REST_SDK_INTERFACE));
-      const realtimeAltData = getCleanedSDKInterfaceAltData(allAltDataRealtime, language);
-      const restAltData = getCleanedSDKInterfaceAltData(allAltDataRest, language);
+      const realtimeAltData = getCleanedSDKInterfaceAltData(allAltDataRealtime, language, REALTIME_SDK_INTERFACE);
+      const restAltData = getCleanedSDKInterfaceAltData(allAltDataRest, language, REST_SDK_INTERFACE);
 
       return React.cloneElement(child, {
         language,
@@ -77,5 +77,5 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
 
 export default ConditionalChildrenLanguageDisplay;
 
-const getCleanedSDKInterfaceAltData = (sdkInterfaceSingleData, language) =>
-  sdkInterfaceSingleData.map((e) => (e[0].includes(language) ? e[1] : null)).filter((n) => !!n);
+const getCleanedSDKInterfaceAltData = (sdkInterfaceSingleData, language, sdkInterface) =>
+  sdkInterfaceSingleData.map((e) => (e[0] === `${sdkInterface}_${language}` ? e[1] : null)).filter((n) => !!n);
