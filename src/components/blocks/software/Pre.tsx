@@ -8,6 +8,7 @@ import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import {
   DEFAULT_LANGUAGE,
   DEFAULT_PREFERRED_INTERFACE,
+  DEFAULT_PREFERRED_LANGUAGE,
   REALTIME_SDK_INTERFACE,
   REST_SDK_INTERFACE,
 } from '../../../../data/createPages/constants';
@@ -16,7 +17,7 @@ import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
 import { isArray, isEmpty } from 'lodash';
-import { getFilteredLanguages } from 'src/components/common';
+import { getTrimmedLanguage } from 'src/components/common';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
@@ -48,7 +49,7 @@ const Pre = ({
   }
 
   const hasCode =
-    languages?.some((lang) => getFilteredLanguages(lang) === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
+    languages?.some((lang) => getTrimmedLanguage(lang) === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
   const shouldDisplayTip = !hasCode && languages?.length !== undefined;
   const withModifiedClassname = {
     ...attribs,
@@ -153,10 +154,11 @@ const Pre = ({
             languages={languages}
             data={altData}
             initialData={dataWithoutPTags}
-            localChangeOnly={shouldDisplayTip}
+            isSDKInterface={isSDKInterface}
             selectedSDKInterfaceTab={selectedSDKInterfaceTab}
             setSelectedSDKInterfaceTab={setSelectedSDKInterfaceTab}
             setPreviousSDKInterfaceTab={setPreviousSDKInterfaceTab}
+            selectedPageLanguage={pageLanguage || DEFAULT_PREFERRED_LANGUAGE}
           />
         ) : (
           <Html data={dataWithoutPTags} />
