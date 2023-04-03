@@ -36,7 +36,7 @@ const LocalLanguageAlternatives = ({
     .filter((lang) => lang !== DEFAULT_LANGUAGE)
     .filter((lang) => lang !== '');
 
-  const isPreHasLanguageSelected = checkIfPreHaveLanguageSelected(
+  const hasLocalLanguageSelected = checkIfLocalLanguageSelected(
     filteredLanguagesWithoutDefault,
     selectedPageLanguage,
     selectedSDKInterfaceTab,
@@ -54,7 +54,7 @@ const LocalLanguageAlternatives = ({
         Component: LanguageButton,
         props: {
           language: filterLanguageForLangButton,
-          selectedLanguageForPre: isPreHasLanguageSelected ? selectedPageLanguage : getTrimmedLanguage(languages[0]),
+          selectedLocalLanguage: hasLocalLanguageSelected ? selectedPageLanguage : getTrimmedLanguage(languages[0]),
         },
         content: languageLabels[lang] ?? lang,
       };
@@ -80,15 +80,16 @@ export default LocalLanguageAlternatives;
 const languageSDKInterfaceClean = (language: string, selectedTab: string) =>
   language.includes(`_`) ? (language.includes(`${selectedTab}_`) ? language.split('_', 2)[1] : '') : language;
 
-/* this method helps us to determine if an array of languages has a pageSelected present, a condition added if it is an SDK Interface, so we can compare the values correctly */
-const checkIfPreHaveLanguageSelected = (
+/* this function helps us to determine if an array of languages has a pageSelected present, a condition added if it is an SDK Interface, so we can compare the values correctly */
+const checkIfLocalLanguageSelected = (
   languages: string[],
   selectedPageLanguage: string,
   selectedSDKInterfaceTab: string,
   isSDKInterface: boolean,
 ) =>
-  languages
-    .map((lang) =>
-      isSDKInterface ? lang === `${selectedSDKInterfaceTab}_${selectedPageLanguage}` : lang === selectedPageLanguage,
-    )
-    .includes(true);
+  languages.reduce((acc, lang) => {
+    const localLanguageSelected = isSDKInterface
+      ? lang === `${selectedSDKInterfaceTab}_${selectedPageLanguage}`
+      : lang === selectedPageLanguage;
+    return localLanguageSelected || acc;
+  }, false);
