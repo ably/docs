@@ -7,13 +7,16 @@ import { cacheVisitPreferredLanguage } from 'src/utilities';
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
 import { button, isActive } from '../Menu/MenuItemButton/MenuItemButton.module.css';
 
-const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, selectedLanguageForPre }) => {
+const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, selectedLocalLanguage }) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedLanguage = getTrimmedLanguage(language);
   const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(selectedLanguage, pageLanguage);
-  /* separated the isLanguageActive as we will pass a pageLanguage that is not only from the context lang, but a condition
-  where the context page lang is not present in the languages we will pass the first language of the languages */
-  const { isLanguageActive } = getLanguageDefaults(selectedLanguage, selectedLanguageForPre);
+  /*
+  separate the isLanguageActive variable because we will pass a pageLanguage value that is not always from the useContext(PageLanguageContext),
+  so if the  useContext(PageLanguageContext) is not present in the languages we will pass the first language of the languages
+   eg: selected global language: PHP but the languages are: [js, ruby]  so it will pass js now as php is not present
+   */
+  const { isLanguageActive } = getLanguageDefaults(selectedLanguage, selectedLocalLanguage);
 
   const handleClick = () => {
     const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, selectedLanguage);

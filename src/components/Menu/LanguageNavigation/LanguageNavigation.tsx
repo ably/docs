@@ -21,7 +21,7 @@ export interface LanguageNavigationComponentProps {
   value?: string;
   isSelected?: boolean;
   selectedSDKInterfaceTab?: string;
-  selectedLanguageForPre: string;
+  selectedLocalLanguage: string;
 }
 
 export interface LanguageNavigationProps {
