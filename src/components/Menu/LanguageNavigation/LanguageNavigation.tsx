@@ -2,7 +2,7 @@ import React, { Dispatch, FunctionComponent as FC, SetStateAction, useContext, u
 import { SingleValue } from 'react-select';
 import {
   createLanguageHrefFromDefaults,
-  getFilteredLanguages,
+  getTrimmedLanguage,
   getLanguageDefaults,
   ReactSelectOption,
   Select,
@@ -20,7 +20,8 @@ export interface LanguageNavigationComponentProps {
   onClick?: (event: { target: { value: string } }) => void;
   value?: string;
   isSelected?: boolean;
-  selectedSDKInterfaceTab: string;
+  selectedSDKInterfaceTab?: string;
+  selectedLocalLanguage: string;
 }
 
 export interface LanguageNavigationProps {
@@ -29,9 +30,6 @@ export interface LanguageNavigationProps {
     props: LanguageNavigationComponentProps;
     content: string;
   }[];
-  localChangeOnly?: boolean;
-  selectedLanguage?: string;
-  onSelect?: (newValue: SingleValue<ReactSelectOption>) => void;
   SDKSelected?: string;
   allListOfLanguages?: string[];
   selectedSDKInterfaceTab: string;
@@ -43,7 +41,7 @@ const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<Reac
   if (newValue) {
     const language = newValue.value;
     const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
-      getFilteredLanguages(language),
+      getTrimmedLanguage(language),
       pageLanguage,
     );
 
@@ -54,9 +52,7 @@ const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<Reac
 
 const LanguageNavigation = ({
   items,
-  localChangeOnly,
-  selectedLanguage,
-  onSelect,
+
   allListOfLanguages,
   selectedSDKInterfaceTab,
   setSelectedSDKInterfaceTab,
@@ -64,12 +60,10 @@ const LanguageNavigation = ({
 }: LanguageNavigationProps) => {
   const pageLanguage = useContext(PageLanguageContext);
   const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
-  const actualSelectedLanguage = localChangeOnly ? selectedLanguage : selectedPageLanguage;
   const options = items.map((item) => ({ label: item.content, value: item.props.language }));
-  const value = options.find((option) => option.value === actualSelectedLanguage);
+  const value = options.find((option) => option.value === selectedPageLanguage);
 
-  const shouldUseLocalChanges = localChangeOnly && !!onSelect;
-  const onSelectChange = shouldUseLocalChanges ? onSelect : changePageOnSelect(pageLanguage);
+  const onSelectChange = changePageOnSelect(pageLanguage);
 
   const isSDKInterFacePresent = allListOfLanguages
     ? checkIfLanguageHasSDKInterface(allListOfLanguages, SDK_INTERFACES)
