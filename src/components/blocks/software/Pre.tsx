@@ -115,8 +115,8 @@ const Pre = ({
     isSDKInterface && isArray(sdkInterfaceData) && !isEmpty(sdkInterfaceData) ? sdkInterfaceData : data;
   let dataWithoutPTags = isArray(newDataWithSDKOrNot)
     ? newDataWithSDKOrNot.map((child) =>
-        child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child,
-      )
+      child.name === HtmlDataTypes.p ? { ...child, name: HtmlDataTypes.div } : child,
+    )
     : newDataWithSDKOrNot;
 
   /* Cleanup if the language passed has realtime or rest, so it will highlight the code correctly */
@@ -142,10 +142,10 @@ const Pre = ({
             <Icon name="icon-gui-info" size="1rem" />
           </div>
           <div className="ml-8 leading-normal">
-            You’re currently reading the{' '}
-            <span className="font-semibold">{languageLabels[pageLanguage] ?? pageLanguage}</span> docs but we don’t yet
-            have a relevant code sample. You can explore equivalent samples below. To visit the docs for other
-            languages, select the language using the dropdown at the top of the page.
+            You’re currently viewing the{' '}
+            <span className="font-semibold">{languageLabels[pageLanguage] ?? pageLanguage}</span> docs. There either isn't a {' '}
+            {languageLabels[pageLanguage] ?? pageLanguage} code sample for this example, or this feature isn't supported in {' '}
+            {languageLabels[pageLanguage] ?? pageLanguage}. Switch language to view this example in a different language, or <a className="docs-link" href="/docs/getting-started/sdks">check which SDKs support this feature.</a>
           </div>
         </aside>
       )}
