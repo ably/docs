@@ -116,4 +116,24 @@ describe('<Pre />', () => {
     );
     expect(container.firstChild).toMatchSnapshot();
   });
+
+  it('should successfully render code elements with  only Rest languages', () => {
+    const { container } = render(
+      <Pre
+        data={PRE_REST_JS_TEST_DATA}
+        language="csharp"
+        languages={['rest_javascript', 'rest_csharp']}
+        altData={{
+          realtime_javascript: PRE_REST_JS_TEST_DATA,
+          realtime_csharp: PRE_REST_CSHARP_TEST_DATA,
+        }}
+        isSDKInterface={true}
+        restAltData={{
+          rest_javascript: PRE_REST_JS_TEST_DATA,
+          rest_csharp: PRE_REST_CSHARP_TEST_DATA,
+        }}
+      />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
 });
