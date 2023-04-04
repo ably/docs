@@ -22,6 +22,8 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, select
     const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, selectedLanguage);
     cacheVisitPreferredLanguage(isPageLanguageDefault, selectedLanguage, href);
   };
+  const langLabelAndVersion = languageLabels[language].split(' ');
+  const languageLabel = langLabelAndVersion.slice(0, -1).join(' ');
 
   return (
     <button
@@ -30,7 +32,7 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, select
       })}
       onClick={handleClick}
     >
-      {languageLabels[language] ?? language}
+      {languageLabel ?? language}
     </button>
   );
 };
