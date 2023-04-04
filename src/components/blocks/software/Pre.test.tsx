@@ -3,7 +3,35 @@ import { render, screen } from '@testing-library/react';
 import { PageLanguageContext } from 'src/contexts';
 import { Pre } from './';
 
-const PRE_TEST_DATA = [{ data: [{ data: 'useVars = false;', type: 'text' }], type: 'tag', name: 'code' }];
+const DATA_ARRAY_TEST = [{ data: 'useVars = false;', type: 'text' }];
+const PRE_TEST_SINGLE_DATA = { data: DATA_ARRAY_TEST, type: 'tag', name: 'code' };
+const PRE_TEST_DATA = [PRE_TEST_SINGLE_DATA];
+const PRE_REALTIME_JS_TEST_DATA = [
+  {
+    attribs: { lang: 'realtime_javascript' },
+    ...PRE_TEST_SINGLE_DATA,
+  },
+];
+const PRE_REST_JS_TEST_DATA = [
+  {
+    attribs: { lang: 'rest_javascript' },
+    ...PRE_TEST_SINGLE_DATA,
+  },
+];
+
+const PRE_REALTIME_CSHARP_TEST_DATA = [
+  {
+    attribs: { lang: 'realtime_csharp' },
+    ...PRE_TEST_SINGLE_DATA,
+  },
+];
+
+const PRE_REST_CSHARP_TEST_DATA = [
+  {
+    attribs: { lang: 'rest_csharp' },
+    ...PRE_TEST_SINGLE_DATA,
+  },
+];
 
 describe('<Pre />', () => {
   it('should successfully render Code elements with language', () => {
@@ -40,6 +68,52 @@ describe('<Pre />', () => {
 
   it('should render code block when no languages are passed', () => {
     const { container } = render(<Pre data={PRE_TEST_DATA} language="javascript" languages={undefined} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('should successfully render code elements with both Rest and Realtime languages', () => {
+    const { container } = render(
+      <Pre
+        data={PRE_REALTIME_JS_TEST_DATA}
+        language="javascript"
+        languages={['realtime_javascript', 'realtime_csharp', 'rest_javascript', 'rest_csharp']}
+        altData={{
+          realtime_javascript: PRE_REALTIME_JS_TEST_DATA,
+          realtime_csharp: PRE_REALTIME_CSHARP_TEST_DATA,
+          rest_javascript: PRE_REST_JS_TEST_DATA,
+          rest_csharp: PRE_REST_CSHARP_TEST_DATA,
+        }}
+        isSDKInterface={true}
+        realtimeAltData={{
+          realtime_javascript: PRE_REALTIME_JS_TEST_DATA,
+          realtime_csharp: PRE_REALTIME_CSHARP_TEST_DATA,
+        }}
+        restAltData={{
+          rest_javascript: PRE_REST_JS_TEST_DATA,
+          rest_csharp: PRE_REST_CSHARP_TEST_DATA,
+        }}
+      />,
+    );
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('should successfully render code elements with  only Realtime languages', () => {
+    const { container } = render(
+      <Pre
+        data={PRE_REALTIME_CSHARP_TEST_DATA}
+        language="csharp"
+        languages={['realtime_javascript', 'realtime_csharp']}
+        altData={{
+          realtime_javascript: PRE_REALTIME_JS_TEST_DATA,
+          realtime_csharp: PRE_REALTIME_CSHARP_TEST_DATA,
+        }}
+        isSDKInterface={true}
+        realtimeAltData={{
+          realtime_javascript: PRE_REALTIME_JS_TEST_DATA,
+          realtime_csharp: PRE_REALTIME_CSHARP_TEST_DATA,
+        }}
+      />,
+    );
     expect(container.firstChild).toMatchSnapshot();
   });
 });

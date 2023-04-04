@@ -1,4 +1,4 @@
-import React, { Dispatch, FunctionComponent as FC, SetStateAction, useContext, useState } from 'react';
+import React, { Dispatch, FunctionComponent as FC, SetStateAction, useContext } from 'react';
 import { SingleValue } from 'react-select';
 import {
   createLanguageHrefFromDefaults,
@@ -52,7 +52,6 @@ const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<Reac
 
 const LanguageNavigation = ({
   items,
-
   allListOfLanguages,
   selectedSDKInterfaceTab,
   setSelectedSDKInterfaceTab,
@@ -77,6 +76,7 @@ const LanguageNavigation = ({
       }
     });
   }
+
   return (
     <>
       {isSDKInterFacePresent.includes(true) ? (
