@@ -6,7 +6,7 @@ import { CustomReactSelectStyles } from './custom-react-select-styles';
 export const controlStyles: (
   customStyles: CustomReactSelectStyles,
 ) => StylesConfigFunction<ControlProps<ReactSelectOption, false, ReactSelectOptGroup>> =
-  (customStyles) => (provided) => ({
+  (customStyles) => (provided: Record<string, string>) => ({
     ...provided,
     ...customStyles,
     fontWeight: '500',
