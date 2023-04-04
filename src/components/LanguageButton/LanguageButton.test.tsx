@@ -46,4 +46,34 @@ describe(`<LanguageButton />`, () => {
     await userEvent.click(button);
     expect(safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY)).toBe('javascript');
   });
+
+  it('renders active button if pageLanguage is not in the languages but the language is the first language of the array', () => {
+    render(
+      <PageLanguageContext.Provider value="php">
+        <LanguageButton language="ruby" selectedSDKInterfaceTab="realtime" selectedLocalLanguage="ruby" />
+      </PageLanguageContext.Provider>,
+    );
+    expect(screen.getByRole('button')).toMatchInlineSnapshot(`
+      <button
+        class="button isActive"
+      >
+        Ruby
+      </button>
+    `);
+  });
+
+  it('renders active button if language is a sdk interface', () => {
+    render(
+      <PageLanguageContext.Provider value="java">
+        <LanguageButton language="rest_java" selectedSDKInterfaceTab="rest" selectedLocalLanguage="java" />
+      </PageLanguageContext.Provider>,
+    );
+    expect(screen.getByRole('button')).toMatchInlineSnapshot(`
+      <button
+        class="button isActive"
+      >
+        Java
+      </button>
+    `);
+  });
 });

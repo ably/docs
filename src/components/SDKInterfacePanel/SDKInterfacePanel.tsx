@@ -55,7 +55,7 @@ const SDKInterfacePanel = ({
         {sdkInterfaceAvailable.map((sdkInterface) => (
           <button
             key={sdkInterface}
-            className={`font-medium font-sans  focus:outline-none px-24 text-mid-grey ${
+            className={`font-medium font-sans focus:outline-none px-24 text-mid-grey ${
               selectedSDKInterfaceTab === sdkInterface ? 'bg-charcoal-grey' : ''
             }`}
             onClick={() => handleTabChanges(sdkInterface)}
