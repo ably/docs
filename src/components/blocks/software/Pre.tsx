@@ -124,6 +124,7 @@ const Pre = ({
     dataWithoutPTags = dataWithoutPTags.map((child) => ({
       ...child,
       attribs: {
+        ...child.attribs,
         lang: cleanIfLanguageHasSDKInterface(child.attribs.lang),
       },
     }));
