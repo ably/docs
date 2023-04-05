@@ -80,12 +80,12 @@ const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
   }
   return (
     <InlineGridParagraph className={`${attribs?.className}`}>
-      {attribs && attribs[`data-type`] === `pitfall` ? (
+      {attribs && attribs[`data-type`] === `important` ? (
         <>
           <PitfallElement>&nbsp;</PitfallElement>
           <TipTitleElement>
             <Icon name="icon-gui-warning" size="1rem" additionalCSS="mr-12" />
-            <span className="mb-48">Pitfall</span>
+            <span className="mb-48">Important</span>
           </TipTitleElement>
         </>
       ) : attribs && attribs[`data-type`] === `further-reading` ? (
