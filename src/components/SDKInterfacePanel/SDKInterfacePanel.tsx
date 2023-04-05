@@ -63,7 +63,7 @@ const SDKInterfacePanel = ({
             {languageLabels[sdkInterface] ?? sdkInterface}
           </button>
         ))}
-        <SDKToolTip tooltip="Tooltips display informative text when users hover over, focus on, or tap an element." />
+        <SDKToolTip tooltip="Ably SDKs may contain a realtime and a REST interface, each of which satisfy different use cases." />
       </menu>
     </div>
   );

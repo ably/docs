@@ -14,13 +14,13 @@ describe(`<SDKInterfacePanel />`, () => {
     render(<SDKInterfacePanel {...SDKInterfacePanelProps} />);
     expect(
       screen.getByRole('button', {
-        name: /REALTIME/i,
+        name: 'Realtime',
       }),
     ).toBeInTheDocument();
 
     expect(
       screen.getByRole('button', {
-        name: /REST/i,
+        name: 'REST',
       }),
     ).toBeInTheDocument();
   });
@@ -29,7 +29,7 @@ describe(`<SDKInterfacePanel />`, () => {
     render(<SDKInterfacePanel {...SDKInterfacePanelProps} />);
     expect(
       screen.getByRole('button', {
-        name: /REALTIME/i,
+        name: 'Realtime',
       }),
     ).toHaveClass('bg-charcoal-grey');
   });
@@ -38,12 +38,12 @@ describe(`<SDKInterfacePanel />`, () => {
     render(<SDKInterfacePanel {...SDKInterfacePanelProps} selectedSDKInterfaceTab="rest" />);
     expect(
       screen.getByRole('button', {
-        name: /REST/i,
+        name: 'REST',
       }),
     ).toHaveClass('bg-charcoal-grey');
     expect(
       screen.getByRole('button', {
-        name: /REALTIME/i,
+        name: 'Realtime',
       }),
     ).not.toHaveClass('bg-charcoal-grey');
   });
@@ -52,13 +52,13 @@ describe(`<SDKInterfacePanel />`, () => {
     render(<SDKInterfacePanel {...SDKInterfacePanelProps} sdkInterfaceAvailable={['realtime']} />);
     expect(
       screen.getByRole('button', {
-        name: /REALTIME/i,
+        name: 'Realtime',
       }),
     ).toBeInTheDocument();
 
     expect(
       screen.queryByRole('button', {
-        name: /REST/i,
+        name: 'REST',
       }),
     ).not.toBeInTheDocument();
   });
@@ -68,12 +68,12 @@ describe(`<SDKInterfacePanel />`, () => {
 
     expect(
       screen.queryByRole('button', {
-        name: /REALTIME/i,
+        name: 'Realtime',
       }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', {
-        name: /REST/i,
+        name: 'REST',
       }),
     ).toBeInTheDocument();
   });

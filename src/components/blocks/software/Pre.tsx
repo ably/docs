@@ -142,10 +142,14 @@ const Pre = ({
             <Icon name="icon-gui-info" size="1rem" />
           </div>
           <div className="ml-8 leading-normal">
-            You’re currently reading the{' '}
-            <span className="font-semibold">{languageLabels[pageLanguage] ?? pageLanguage}</span> docs but we don’t yet
-            have a relevant code sample. You can explore equivalent samples below. To visit the docs for other
-            languages, select the language using the dropdown at the top of the page.
+            You’re currently viewing the{' '}
+            <span className="font-semibold">{languageLabels[pageLanguage] ?? pageLanguage}</span> docs. There either
+            isn&apos;t a {languageLabels[pageLanguage] ?? pageLanguage} code sample for this example, or this feature
+            isn&apos;t supported in {languageLabels[pageLanguage] ?? pageLanguage}. Switch language to view this example
+            in a different language, or{' '}
+            <a className="docs-link" href="/docs/getting-started/sdks">
+              check which SDKs support this feature.
+            </a>
           </div>
         </aside>
       )}
