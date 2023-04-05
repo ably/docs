@@ -63,7 +63,9 @@ describe('<Pre />', () => {
         />
       </PageLanguageContext.Provider>,
     );
-    expect(screen.getByText('we don’t yet have a relevant code sample', { exact: false })).toBeInTheDocument();
+    expect(
+      screen.getByText("code sample for this example, or this feature isn't supported in", { exact: false }),
+    ).toBeInTheDocument();
   });
 
   it('should render code block when no languages are passed', () => {
