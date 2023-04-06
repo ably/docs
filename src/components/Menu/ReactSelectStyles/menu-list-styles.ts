@@ -3,7 +3,7 @@ import { StylesConfigFunction } from 'react-select/dist/declarations/src/styles'
 import { ReactSelectOptGroup, ReactSelectOption } from 'src/components';
 
 export const menuListStyles: StylesConfigFunction<MenuListProps<ReactSelectOption, false, ReactSelectOptGroup>> = (
-  provided,
+  provided: Record<string, string>,
 ) => ({
   ...provided,
   height: 'initial',
