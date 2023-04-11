@@ -21,10 +21,6 @@ const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionD
     >
       <HorizontalMenu variant={HorizontalMenuVariant.end}>
         <HomePageLink />
-        <div className="flex justify-end items-center col-span-1">
-          <span className="inline"> API v {LATEST_ABLY_API_VERSION_STRING}</span>
-        </div>
-
         {showLanguageSelector ? (
           <LanguageDropdownSelector language={pageLanguage} languages={languages} showDefaultLink={showDefaultLink} />
         ) : null}
