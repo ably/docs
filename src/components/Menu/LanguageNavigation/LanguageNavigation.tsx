@@ -88,7 +88,7 @@ const LanguageNavigation = ({
         />
       ) : null}
 
-      {items.length >= 2 ? (
+      {items.length >= 1 ? (
         <div className="border-b border-charcoal-grey w-full">
           <menu data-testid="menu" className={horizontalNav}>
             {items.map(({ Component, props, content }, index) => (
