@@ -3,6 +3,7 @@ declare module '@ably/ui/core/Logo' {
   export interface LogoProps {
     dataId: string;
     href: string;
+    logoUrl: string;
   }
 
   const Logo: FunctionComponent<LogoProps>;
