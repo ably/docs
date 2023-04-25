@@ -1,8 +1,7 @@
 import React from 'react';
-import Logo from '@ably/ui/core/Logo';
 
 export const FooterLogo = () => (
-  <>
-    <Logo dataId="footer-logo" href="/" />
-  </>
+  <a href="/" data-id="footer-logo" className="block" style={{ height: '2.125rem' }}>
+    <img src="/images/ably-logo.png" width="108px" alt="Ably logo" />
+  </a>
 );
