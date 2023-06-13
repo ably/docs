@@ -35,18 +35,12 @@ const createPage = jest.fn();
 const documentTemplate = 'mock-path';
 const contentOrderedList = [simpleData, simpleEmptyAttribsData];
 const slug = 'mock-slug';
-const parentSlug = 'mock-parent-slug';
 const version = LATEST_ABLY_API_VERSION_STRING;
 describe('createLanguagePageVariants successfully creates the page variants', () => {
   let basicResults;
   it('Function does not throw on simple inputs', () => {
     expect(() => {
-      basicResults = createLanguagePageVariants(createPage, documentTemplate)(
-        contentOrderedList,
-        slug,
-        parentSlug,
-        version,
-      );
+      basicResults = createLanguagePageVariants(createPage, documentTemplate)(contentOrderedList, slug, version);
     }).not.toThrow();
   });
   it('Function returns simple list of non-default language(s)', () => {
@@ -59,7 +53,7 @@ describe('createLanguagePageVariants successfully creates the page variants', ()
         path: `${DOCUMENTATION_PATH}mock-slug/language/javascript`,
         component: 'mock-path',
         context: {
-          slug: 'mock-parent-slug',
+          slug: 'mock-slug',
           version: LATEST_ABLY_API_VERSION_STRING,
           language: 'javascript',
           languages: ['javascript'],

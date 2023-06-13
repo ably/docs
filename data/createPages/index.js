@@ -41,8 +41,6 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
         edges {
           node {
             slug
-            parentSlug
-            version
             contentOrderedList {
               data
               type
@@ -80,8 +78,6 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
         edges {
           node {
             slug
-            parentSlug
-            version
             contentOrderedList {
               data
               type
@@ -118,8 +114,6 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
     const [languages, contentMenuObject] = createLanguagePageVariants(identity, documentTemplate)(
       contentOrderedList,
       edge.node.slug,
-      edge.node.parentSlug,
-      edge.node.version,
     );
 
     contentMenuObject[DEFAULT_LANGUAGE] = contentMenu;
@@ -146,7 +140,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
         });
       });
     }
-    const slug = edge.node.parentSlug ? edge.node.parentSlug : edge.node.slug;
+    const slug = edge.node.slug;
     createPage({
       path: `${DOCUMENTATION_PATH}${edge.node.slug}`,
       component: documentTemplate,
