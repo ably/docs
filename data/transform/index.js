@@ -216,8 +216,6 @@ const transformNanocTextiles =
 
     // Add completely separate nodes to keep track of relevant versions
     if (isVersion) {
-      const parentSlug = slug.replace(/\/versions\/v[\d.]+/, '');
-      htmlNode.parentSlug = parentSlug;
       const version = slug.match(/\/versions\/v([\d.]+)/)[1];
       htmlNode.version = version;
       const versionNodeInternals = {
@@ -229,7 +227,6 @@ const transformNanocTextiles =
         parent: id,
         id: createNodeId(`${id} >>> Version`),
         children: [],
-        parentSlug,
         slug,
         version,
       };

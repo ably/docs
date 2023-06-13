@@ -28,30 +28,28 @@ const getLanguagesFromContent = (contentOrderedList) => {
   return Array.from(languageSet);
 };
 
-const createLanguagePageVariants =
-  (createPage, documentTemplate) =>
-  (contentOrderedList, slug, parentSlug = null, version = null) => {
-    const languages = getLanguagesFromContent(contentOrderedList);
-    const contentMenus = languages.map((lang) => {
-      const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item, [], lang));
-      createPage({
-        path: `${DOCUMENTATION_PATH}${slug}/language/${lang}`,
-        component: documentTemplate,
-        context: {
-          // The slug is the canonical slug, not the variant path
-          slug: parentSlug ?? slug,
-          version: version ?? LATEST_ABLY_API_VERSION_STRING,
-          language: lang,
-          languages,
-          contentOrderedList,
-          contentMenu: contentMenu ?? [],
-        },
-      });
-      return { [lang]: contentMenu };
+const createLanguagePageVariants = (createPage, documentTemplate) => (contentOrderedList, slug) => {
+  const languages = getLanguagesFromContent(contentOrderedList);
+  const contentMenus = languages.map((lang) => {
+    const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item, [], lang));
+    createPage({
+      path: `${DOCUMENTATION_PATH}${slug}/language/${lang}`,
+      component: documentTemplate,
+      context: {
+        // The slug is the canonical slug, not the variant path
+        slug,
+        version: LATEST_ABLY_API_VERSION_STRING,
+        language: lang,
+        languages,
+        contentOrderedList,
+        contentMenu: contentMenu ?? [],
+      },
     });
-    const contentMenuObject = Object.assign({}, ...contentMenus);
-    return [languages, contentMenuObject];
-  };
+    return { [lang]: contentMenu };
+  });
+  const contentMenuObject = Object.assign({}, ...contentMenus);
+  return [languages, contentMenuObject];
+};
 
 module.exports = {
   addLanguagesToSet,

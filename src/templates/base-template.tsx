@@ -64,7 +64,6 @@ const Template = ({
   const contentMenuFromLanguage = contentMenuFromLangOrSDKInterface ?? [[]];
 
   const versionData = {
-    versions: versions.edges,
     version,
     rootVersion: slug,
   };
@@ -79,7 +78,7 @@ const Template = ({
     [menuLanguages],
   );
 
-  const languagesExist = filteredLanguages.length > 0 || (versionData && versionData.versions.length > 0);
+  const languagesExist = filteredLanguages.length > 0;
   const elements = useMemo(
     () =>
       contentOrderedList.map(
@@ -124,7 +123,7 @@ const Template = ({
     }
   }, []);
 
-  const languageAlternativesExist = (languages && languages.length > 1) || (versionData && versionData.versions.length);
+  const languageAlternativesExist = languages && languages.length > 1;
 
   return (
     <PageLanguageContext.Provider value={language}>

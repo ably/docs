@@ -22,15 +22,6 @@ export const query = graphql`
         redirect_from
       }
     }
-    versions: allFileHtmlVersion(filter: { parentSlug: { eq: $slug } }) {
-      edges {
-        node {
-          parentSlug
-          slug
-          version
-        }
-      }
-    }
     inlineTOC: fileInlineToc(slug: { eq: $slug }) {
       tableOfContents {
         content {
