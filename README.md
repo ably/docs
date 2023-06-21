@@ -23,6 +23,12 @@ If Gatsby CLI is not already installed:
 
 `npm install -g gatsby-cli`
 
+**Environment variables setup**
+
+If you have not yet [set up your local .env.development environment variables](#environment-variables), run:
+
+`npm run develop:env-setup`
+
 **Editors:**
 
 `npm run edit`
