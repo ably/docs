@@ -1,6 +1,4 @@
-const herokuAppSite = process.env.HEROKU_APP_NAME
-  ? `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`
-  : '';
+const herokuAppSite = process.env.HEROKU_APP_NAME ?? `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`;
 
 const mainWebsite = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
