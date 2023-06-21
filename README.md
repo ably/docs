@@ -35,19 +35,17 @@ If you have not yet [set up your local .env.development environment variables](#
 
 **Developers:**
 
-To develop locally run either:
+To develop locally run:
 
-1. `npm run develop`
-2. `gatsby clean && gatsby develop`
+`npm run develop`
 
 Visit `localhost:8000` for homepage.
 
 Visit `localhost:8000/docs/${relativePath}` for documentation pages, e.g. `localhost:8000/docs/client-lib-development-guide/documentation-formatting-guide`.
 
-To build and serve locally run either:
+To build and serve locally:
 
-1. `gatsby clean && gatsby build --prefix-paths && gatsby serve --prefix-paths`
-2. `npm run rebuild`
+`npm run rebuild`
 
 Visit `localhost:9000` for homepage.
 
