@@ -21,6 +21,7 @@ const DOCUMENTATION_LANGUAGES = [
   'curl',
   'html',
   'json',
+  'xml',
   'sh',
   'yaml',
 ];
