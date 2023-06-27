@@ -1,0 +1,805 @@
+---
+title: Presence
+meta_description: "Presence enables clients to be aware of the other clients present on a channel."
+languages:
+  - javascript
+  - nodejs
+  - php
+  - python
+  - ruby
+  - java
+  - swift
+  - objc
+  - csharp
+  - go
+redirect_from:
+  - /rest/presence
+  - /rest/versions/v1.1/presence
+  - /rest/versions/v1.0/presence
+  - /rest/versions/v0.8/presence
+  - /realtime/presence
+  - /realtime/versions/v1.1/presence
+  - /realtime/versions/v1.0/presence
+  - /realtime/versions/v0.8/presence
+  - /core-features/presence
+  - /core-features/versions/v1.1/presence
+---
+
+Presence enables clients to be aware of other clients that are currently "present" on a channel. Each member present on a channel has a unique self-assigned client identifier and system-assigned connection identifier, along with an optional payload that can be used to describe the member's status or attributes. Presence enables you to quickly build apps such as chat rooms and multiplayer games by automatically keeping track of who is present in real time across any device.
+
+Other devices and services can subscribe to presence events in real time using the realtime interface or with "integrations":/integrations. You can also request a list of clients or devices on a channel at a particular point in time with the REST interface.
+
+<aside data-type='important'>
+<p>Clients must be "identified":/auth/identified-clients by having a @ClientId@ in order to be present on a channel. They also require the @presence@ "capability":/auth/capabilities to enter the presence set, and the @subscribe@ capability to subscribe to presence events.</p>
+</aside>
+
+h2(#trigger-events). Trigger presence events
+
+Whenever a member enters or leaves a channel, or updates their member data, a presence event is emitted to all presence subscribers on that channel.
+
+The following presence events are emitted:
+
+- Enter := A new member has entered the channel
+- Leave := A member who was present has now left the channel. This may be a result of an explicit request to leave or implicitly when detaching from the channel. Alternatively, if a member's connection is abruptly disconnected and they do not resume their connection within a minute, Ably treats this as a leave event as the client is no longer present
+- Update := An already present member has updated their "member data":#member-data. Being notified of member data updates can be very useful, for example, it can be used to update the status of a user when they are typing a message
+- Present := When subscribing to presence events on a channel that already has members present, this event is emitted for every member already present on the channel before the subscribe listener was registered
+
+h3(#member-data). Member data
+
+In addition to the <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> for members on a channel, it is also possible to include data when entering a channel. Clients can "update":/api/realtime-sdk/presence#update their data at any point which will be broadcasted to all presence subscribers as an <span lang="ruby">@:update@</span><span lang="java">@Action.UPDATE@</span><span lang="default">@update@</span> event.
+
+The following is an example of subscribing to enter and leave events, then entering the presence set and updating a client's member data:
+
+```[realtime_javascript]
+/* Subscribe to presence enter events */
+channel.presence.subscribe('enter', function(member) {
+  console.log(member.data); // => not moving
+});
+
+/* Subscribe to presence update events */
+channel.presence.subscribe('update', function(member) {
+  console.log(member.data); // => travelling North
+});
+
+/* Enter this client with data and update once entered */
+channel.presence.enter('not moving', function(err) {
+  channel.presence.update('travelling North');
+});
+```
+
+```[realtime_nodejs]
+/* Subscribe to presence enter events */
+channel.presence.subscribe('enter', function(member) {
+  console.log(member.data); // => not moving
+});
+
+/* Subscribe to presence update events */
+channel.presence.subscribe('update', function(member) {
+  console.log(member.data); // => travelling North
+});
+
+/* Enter this client with data and update once entered */
+channel.presence.enter('not moving', function(err) {
+  channel.presence.update('travelling North');
+});
+```
+
+```[realtime_java]
+/* Subscribe to presence enter and update events */
+channel.presence.subscribe(new PresenceListener() {
+  @Override
+  public void onPresenceMessage(PresenceMessage member) {
+    switch (member.action) {
+      case ENTER: {
+        System.out.println(member.data); // => not moving
+        break;
+      }
+      case UPDATE: {
+        System.out.println(member.data); // => travelling North
+        break;
+      }
+    }
+  }
+});
+
+/* Enter this client with data and update once entered */
+channel.presence.enter("not moving", new CompletionListener() {
+  @Override
+  public void onSuccess() {
+    channel.presence.update("travelling North", new CompletionListener());
+  }
+});
+```
+
+```[realtime_csharp]
+/* Subscribe to presence enter and update events */
+channel.Presence.Subscribe(member =>
+{
+    switch (member.Action)
+    {
+        case PresenceAction.Enter:
+        case PresenceAction.Update:
+            {
+                Console.WriteLine(member.Data); // => travelling North
+                break;
+            }
+    }
+});
+
+/* Enter this client with data and update once entered */
+await channel.Presence.EnterAsync("not moving");
+await channel.Presence.UpdateAsync("travelling North");
+```
+
+```[realtime_ruby]
+# Subscribe to presence enter events
+channel.presence.subscribe(:enter) do |member|
+  puts member.data # => not moving
+end
+
+# Subscribe to presence update events
+channel.presence.subscribe(:update) do |member|
+  puts member.data # => travelling North
+end
+
+# Enter this client with data and update once entered
+channel.presence.enter(data: 'not moving') do
+  channel.presence.update(data: 'travelling North')
+end
+```
+
+```[realtime_objc]
+// Subscribe to presence enter events
+[channel.presence subscribe:ARTPresenceEnter callback:^(ARTPresenceMessage *member) {
+    NSLog(@"%@", member.data); // prints "not moving"
+}];
+
+// Subscribe to presence update events
+[channel.presence subscribe:ARTPresenceUpdate callback:^(ARTPresenceMessage *member) {
+    NSLog(@"%@", member.data); // prints "travelling North"
+}];
+
+// Enter this client with data and update once entered
+[channel.presence enter:@"not moving" callback:^(ARTErrorInfo *error) {
+    [channel.presence update:@"travelling North"];
+}];
+```
+
+```[realtime_swift]
+// Subscribe to presence enter events
+channel.presence.subscribe(.enter) { member in
+    print(member.data) // prints "not moving"
+}
+
+// Subscribe to presence update events
+channel.presence.subscribe(.update) { member in
+    print(member.data) // prints "travelling North"
+}
+
+// Enter this client with data and update once entered
+channel.presence.enter("not moving") { error in
+    channel.presence.update("travelling North")
+}
+```
+
+h3(multiple-client-ids). Managing multiple client IDs
+
+An Ably client instance might, if on an application server for example, publish messages and be present on channels on behalf of multiple distinct "client IDs":/api/realtime-sdk#client-id. The channel's @Presence@ object therefore also supports methods that enable presence messages to be emitted for a <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> specified at the time of the call, rather than implicitly based on the <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> "specified when the SDK is instantiated or authenticated":/api/realtime-sdk#client-id.
+
+Each unique <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> may only be present once when entering on behalf of another client as the unique identifier for each member in a presence set is the combined <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> and shared "<span lang="default">@connectionId@</span><span lang="csharp">@ConnectionId@</span><span lang="ruby">@connection_id@</span>":/api/realtime-sdk/connection#id</span>.
+
+A single <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> may be present multiple times on the same channel via different client connections. Ably considers these as different members of the presence set for the channel, however they will be differentiated by their unique connectionId. For example, if a client with ID “Sarah” is connected to a chat channel on both a desktop and a mobile device simultaneously, “Sarah” will be present twice in the presence member set with the same client ID, yet will have two unique connection IDs. A member of the presence set is therefore unique by the combination of the clientId and connectionId strings.
+
+In order to be able to publish presence changes for arbitrary client IDs, the SDK must have been instantiated either with an "API key":https://faqs.ably.com/what-is-an-app-api-key, or with a "token bound to a wildcard client ID":https://faqs.ably.com/can-a-client-emulate-any-client-id-i.e.-authenticate-using-a-wildcard-client-id.
+
+```[rest_javascript]
+const rest = new Ably.Rest({ key: '{{API_KEY}}' });
+/* request a wildcard token */
+rest.auth.requestToken({ clientId: '*' }, function(err, token) {
+  const realtime = new Ably.Realtime({ token: token });
+  const channel = realtime.channels.get('realtime-chat');
+
+  channel.presence.subscribe('enter', function(member) {
+    console.log(member.client_id + 'entered realtime-chat');
+  });
+
+  channel.presence.enterClient('Bob'); // => Bob entered realtime-chat
+  channel.presence.enterClient('Mary'); // => Mary entered realtime-chat
+});
+```
+
+```[rest_nodejs]
+const rest = new Ably.Rest({ key: '{{API_KEY}}' });
+/* request a wildcard token */
+rest.auth.requestToken({ clientId: '*' }, function(err, token) {
+  const realtime = new Ably.Realtime({ token: token });
+  const channel = realtime.channels.get('realtime-chat');
+
+  channel.presence.subscribe('enter', function(member) {
+    console.log(member.client_id + 'entered realtime-chat');
+  });
+
+  channel.presence.enterClient('Bob'); // => Bob entered realtime-chat
+  channel.presence.enterClient('Mary'); // => Mary entered realtime-chat
+});
+```
+
+```[rest_ruby]
+rest = Ably::Rest.new(key: '{{API_KEY}}')
+# request a wildcard token
+rest.auth.requestToken(clientId: '*') do |token|
+  realtime = Ably::Realtime.new(token: token)
+  channel = realtime.channels.get('realtime-chat')
+
+  channel.presence.subscribe(:enter) do |member|
+    puts "#{member.client_id} entered realtime-chat"
+  end
+
+  channel.presence.enter_client 'Bob' # => Bob entered realtime-chat
+  channel.presence.enter_client 'Mary' # => Mary entered realtime-chat
+end
+```
+
+```[rest_java]
+/* request a wildcard token */
+AblyRest rest = new AblyRest('{{API_KEY}}');
+TokenParams params = new TokenParams();
+params.clientId = "*";
+ClientOptions options = new ClientOptions();
+options.tokenDetails = rest.auth.requestToken(params, null);
+
+AblyRealtime realtime = new AblyRealtime(options);
+Channel channel = realtime.channels.get("realtime-chat");
+
+channel.presence.subscribe(new PresenceListener() {
+  @Override
+  public void onPresenceMessage(PresenceMessage member) {
+    System.out.println(member.clientId + " entered realtime-chat");
+  }
+});
+
+CompletionListener noop = new CompletionListener();
+channel.presence.enterClient("Bob", noop); /* => Bob entered realtime-chat */
+channel.presence.enterClient('Mary', noop); /* => Mary entered realtime-chat */
+```
+
+```[rest_csharp]
+/* request a wildcard token */
+AblyRest rest = new AblyRest("{{API_KEY}}");
+TokenParams tokenParams = new TokenParams() { ClientId = "*"};
+ClientOptions options = new ClientOptions();
+options.TokenDetails = await rest.Auth.RequestTokenAsync(tokenParams, null);
+
+AblyRealtime realtime = new AblyRealtime(options);
+IRealtimeChannel channel = realtime.Channels.Get("realtime-chat");
+
+channel.Presence.Subscribe(member => {
+  Console.WriteLine(member.ClientId + " entered realtime-chat");
+});
+
+await channel.Presence.EnterClientAsync("Bob", null); /* => Bob entered realtime-chat */
+await channel.Presence.EnterClientAsync("Mary", null); /* => Mary entered realtime-chat */
+```
+
+```[rest_objc]
+ARTRest* rest = [[ARTRest alloc] initWithKey:@"{{API_KEY}}"];
+// request a wildcard token
+ARTTokenParams *tokenParams = [[ARTTokenParams alloc] initWithClientId:@"*"];
+[rest.auth requestToken:tokenParams withOptions:nil callback:^(ARTTokenDetails *tokenDetails,
+                                                              NSError *error) {
+    ARTRealtime *realtime = [[ARTRealtime alloc] initWithToken:tokenDetails.token];
+    ARTRealtimeChannel *channel = [realtime.channels get:@"realtime-chat"];
+
+    [channel.presence subscribe:ARTPresenceEnter callback:^(ARTPresenceMessage *member) {
+        NSLog(@"%@ entered realtime-chat", member.clientId);
+    }];
+
+    [channel.presence enterClient:@"Bob" data:nil]; // prints 'Bob entered realtime-chat'
+    [channel.presence enterClient:@"Mary" data:nil]; // prints 'Mary entered realtime-chat'
+}];
+```
+
+```[rest_swift]
+let rest = ARTRest(key: "{{API_KEY}}")
+// request a wildcard token
+rest.auth.requestToken(ARTTokenParams(clientId: "*"), withOptions: nil) { tokenDetails, error in
+    let realtime = ARTRealtime(token: tokenDetails!.token)
+    let channel = realtime.channels.get("realtime-chat")
+
+    channel.presence.subscribe(.enter) { member in
+        print("\(member.clientId) entered realtime-chat")
+    }
+
+    channel.presence.enterClient("Bob", data: nil) // prints 'Bob entered realtime-chat'
+    channel.presence.enterClient("Mary", data: nil) // prints 'Mary entered realtime-chat'
+}
+```
+
+h2(#subscribe). Subscribe to presence events 
+
+Subscribe to a channel's presence set in order to receive presence events, by registering a listener. Presence events are emitted whenever a member enters or leaves the presence set, or updates their member data.
+
+Subscribing is an operation available to the realtime interface of an Ably SDK and uses the "subscribe()":/api/realtime-sdk/presence#subscribe method on the @Presence@ object of a channel.
+
+The following is an example of subscribing to presence events and entering the presence set: 
+
+```[realtime_javascript]
+  const realtime = new Ably.Realtime({
+    key: '{{API_KEY}}',
+    clientId: 'bob' }
+  );
+  const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.presence.subscribe('enter', function(member) {
+    alert('Member ' + member.clientId + ' entered');
+  });
+  channel.presence.enter();
+```
+
+```[realtime_nodejs]
+  const Ably = require('ably');
+  const realtime = new Ably.Realtime({
+    key: '{{API_KEY}}',
+    clientId: 'bob' }
+  );
+  const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.presence.subscribe('enter', function(member) {
+    console.log('Member ' + member.clientId + ' entered');
+  });
+  channel.presence.enter();
+```
+
+```[realtime_ruby]
+  realtime = Ably::Realtime.new(key: '{{API_KEY}}', client_id: 'bob')
+  channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  channel.presence.subscribe(:enter) do |member|
+    puts "Member #{member.client_id} entered"
+  end
+  channel.presence.enter
+```
+
+```[realtime_java]
+  ClientOptions options = new ClientOptions("{{API_KEY}}");
+  options.clientId = "bob";
+  AblyRealtime realtime = new AblyRealtime(options);
+  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+  channel.presence.subscribe(new PresenceListener() {
+    @Override
+    public void onPresenceMessage(PresenceMessage member) {
+      System.out.println("Member " + member.clientId + " : " + member.action.toString());
+    }
+  });
+  channel.presence.enter(null, new CompletionListener());
+```
+
+```[realtime_csharp]
+  ClientOptions options = new ClientOptions("{{API_KEY}}") { ClientId =  "bob"};
+  AblyRealtime realtime = new AblyRealtime(options);
+  IRealtimeChannel channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
+  channel.Presence.Subscribe(member => {
+    Console.WriteLine("Member " + member.ClientId + " : " + member.Action);
+  });
+  await channel.Presence.EnterAsync(null);
+```
+
+```[realtime_objc]
+  ARTClientOptions *options = [[ARTClientOptions alloc] initWithKey:@"{{API_KEY}}"];
+  options.clientId = @"bob";
+  ARTRealtime *realtime = [[ARTRealtime alloc] initWithOptions:options];
+  ARTRealtimeChannel *channel = [realtime.channels get:@"{{RANDOM_CHANNEL_NAME}}"];
+  [channel.presence subscribe:ARTPresenceEnter callback:^(ARTPresenceMessage *member) {
+      NSLog(@"Member %@ entered", member.clientId);
+  }];
+  [channel.presence enter:nil];
+```
+
+```[realtime_swift]
+  let options = ARTClientOptions(key: "{{API_KEY}}")
+  options.clientId = "bob"
+  let realtime = ARTRealtime(options: options)
+  let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
+  channel.presence.subscribe(.enter) { member in
+      print("Member \(member.clientId) entered")
+  }
+  channel.presence.enter(nil)
+```
+
+<aside data-type='note'>
+<p>The number of clients that can be simultaneously present on a channel is "limited":/general/limits. This ensures the rate of presence messages remains supportable, as it is common for all members on a channel to change state at a similar time.</p>
+<p>As an example, consider 200 clients subscribed to presence events on a channel and all of them join and leave the presence set within a few minutes. This would result in the following messages:</p>
+<ul><li>200 presence messages published for the enter event.</li>
+<li>200 × 200 (40,000) messages subscribed to for the enter events.</li>
+<li>200 presence messages published for the leave event.</li>
+<li>200 × 200 (40,000) presence messages subscribed to for the leave events.</li></ul>
+<p>This highlights the potential for 80,400 messages to be sent in a very short space of time on a single channel.</p>
+</aside>
+
+h3(#present-no-subscribe). Be present without subscribing to presence events
+
+Messages are streamed to clients as soon as they "attach":/channels#attach to a channel, as long as they have the "subscribe capability":/auth/capabilities.
+
+Efficient use of capabilities can prevent clients from receiving presence events while still allowing them to enter the presence set. This is a common scenario where only a server is required to monitor the presence set. This saves clients from subscribing to a potentially high volume of unnecessary messages.
+
+One example of achieving this would be to use one channel for generic communications and another for the presence set. The following capabilities demonstrate this for clients and for servers:
+
+For clients: 
+
+```[json]
+{
+  "chatPresence": ["presence"],
+  "chat": ["publish", "history", "subscribe"],
+}
+```
+
+For servers:
+
+```[json]
+{
+  "chatPresence": ["presence", "subscribe"],
+  "chat": ["publish", "history", "subscribe"],
+}
+```
+
+Alternatively, "channel mode flags":/channels/options#modes can be used to enable clients to be present on a channel without subscribing to presence events. This also enables clients to still subscribe to regular messages on the channel.
+
+h2(#retrieve-members). Retrieve presence members
+
+The membership of the presence set can be retrieved by calling the "get()":/api/realtime-sdk/presence#get method on the @Presence@ object of a channel. This returns an array of all members currently present on the channel and is available using the REST and realtime interfaces of an Ably SDK.
+
+An Ably client connected using the realtime interface of an SDK is responsible for keeping track of the presence set from the time that the channel is attached. An up to date presence set is pushed to the client following a channel attachment, and the presence set is updated on each subsequent presence event. This means that "get()":/api/realtime-sdk/presence#get returns the already known presence set retained in memory and does not trigger a new request to the Ably service. 
+
+The REST interface of an Ably SDK queries "the REST API":/api/rest-api#presence directly. No presence state is cached in the SDK itself.
+
+The following is an example of retrieving the presence set for a channel:
+
+```[realtime_javascript]
+channel.presence.get(function(err, members) {
+  console.log('There are ' + members.length + ' members on this channel');
+  console.log('The first member has client ID: ' + members[0].clientId);
+});
+```
+
+```[realtime_nodejs]
+channel.presence.get(function(err, members) {
+  console.log('There are ' + members.length + ' members on this channel');
+  console.log('The first member has client ID: ' + members[0].clientId);
+});
+```
+
+```[realtime_ruby]
+channel.presence.get do |members|
+  puts "There are #{members.size} members on this channel"
+  puts "The first member has client ID: #{members.first.client_id}"
+end
+```
+
+```[realtime_java]
+PresenceMessage[] members = channel.presence.get();
+System.out.println("There are " + members.length + " members on this channel");
+System.out.println("The first member has client ID: " + members[0].clientId);
+```
+
+```[realtime_csharp]
+IEnumerable<PresenceMessage> presence = await channel.Presence.GetAsync();
+Console.WriteLine($"There are {presence.Count()} members on this channel");
+Console.WriteLine($"The first member has client ID: {presence.First().ClientId}");
+```
+
+```[realtime_objc]
+[channel.presence get:^(NSArray<ARTPresenceMessage *> *members, ARTErrorInfo *error) {
+    NSLog(@"There are %lu members on this channel", [members count]);
+    NSLog(@"The first member has client ID: %@", members[0].clientId);
+}];
+```
+
+```[realtime_swift]
+channel.presence.get { members, error in
+    print("There are \(members.count) members on this channel")
+    print("The first member has client ID: \(members[0].clientId)")
+}
+```
+
+```[rest_javascript]
+channel.presence.get(function(err, membersPage) {
+  console.log(membersPage.items.length + ' presence members in first page');
+  if(membersPage.hasNext()) {
+    membersPage.next(function(err, nextPage) { ... });
+  }
+});
+```
+
+```[rest_nodejs]
+channel.presence.get(function(err, membersPage) {
+  console.log(membersPage.items.length + ' presence members in first page');
+  if(membersPage.hasNext()) {
+    membersPage.next(function(err, nextPage) { ... });
+  }
+});
+```
+
+```[rest_ruby]
+members_page = channel.presence.get
+puts "#{members_page.items.length} presence members in first page"
+if members_page.has_next?
+  next_page = members_page.next
+end
+```
+
+```[rest_python]
+members_page = channel.presence.get()
+print str(len(members_page.items)) + ' members present'
+if members_page.has_next():
+  next_page = members_page.next()
+```
+
+```[rest_php]
+$membersPage = $channel->presence->get();
+echo(count($membersPage->items) . ' presence members in first page');
+if ($membersPage->hasNext()) {
+  $nextPage = $membersPage.next();
+}
+```
+
+```[rest_java]
+PaginatedResult<PresenceMessage> membersPage = channel.presence.get(null);
+System.out.println(membersPage.items().length + " members in first page");
+if(membersPage.hasNext()) {
+  PaginatedResult<PresenceMessage> nextPage = membersPage.next();
+  System.out.println(nextPage.items().length + " members on 2nd page");
+}
+```
+
+```[rest_csharp]
+  PaginatedResult<PresenceMessage> membersPage = await channel.Presence.GetAsync();
+  Console.WriteLine(membersPage.Items.Count + " members in first page");
+  if(membersPage.HasNext)
+  {
+    PaginatedResult<PresenceMessage> nextPage = await membersPage.NextAsync();
+    Console.WriteLine(nextPage.Items.Count + " members on 2nd page");
+  }
+```
+
+```[rest_objc]
+[channel.presence get:^(ARTPaginatedResult<ARTPresenceMessage *> *membersPage, ARTErrorInfo *error) {
+  NSLog(@"%lu members in first page", [membersPage.items count]);
+  if (membersPage.hasNext) {
+    [membersPage next:^(ARTPaginatedResult<ARTPresenceMessage *> *nextPage, ARTErrorInfo *error) {
+      NSLog(@"%lu members on 2nd page", [nextPage.items count]);
+    }];
+  }
+}];
+```
+
+```[rest_swift]
+channel.presence.get { membersPage, error in
+  let membersPage = membersPage!
+  print("\(membersPage.items.count) in first page")
+  if membersPage.hasNext {
+    membersPage.next { nextPage, error in
+      print("\(nextPage!.items.count) members on 2nd page")
+    }
+  }
+}
+```
+
+```[rest_go]
+page, err := channel.Presence.Get(nil)
+fmt.Println("%d messages in first page\n", len(page.PresenceMessages()))
+if page.hasNext() {
+  page2, err := page.Next()
+  fmt.Println("%d messages on 2nd page!\n", len(page2.PresenceMessages()))
+}
+```
+
+h3(#batch). Batch presence
+
+It is possible to retrieve the presence state of multiple channels in a single request. The presence state contains details about the clients in the presence set, such as their @clientId@, member data and "presence action":/api/realtime-sdk/types#presence-action.
+
+A batch request has a single set of request details containing the request body, parameters and headers. These are converted into an array of requests to the underlying API. Each individual request to the underlying API is performed in parallel and may succeed or fail independently.
+
+The following is an example of a batch presence request using the "request()":/api/rest-sdk#request method to query the "batch REST API":/api/rest-api#batch-presence:
+
+```[rest_javascript]
+var ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
+var content = { "channel": "channel1,channel2" }
+ablyRest.request('GET', '/presence', content, null, {}, function(err, response) {
+  if(err) {
+    alert('An error occurred; err = ' + err.toString());
+  } else {
+    alert('Success! status code was ' + response.statusCode);
+  }
+});
+```
+
+h4(#batch-requests). Batch presence requests
+
+A batch presence request contains a comma separated list of channel names with no spaces.
+
+The following is an example of a batch presence request using the "request()":/api/rest-sdk#request method to query the "batch REST API":/api/rest-api#batch-presence:
+
+```[rest_javascript]
+var ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
+var content = { "channel": "channel1,channel2" }
+ablyRest.request('GET', '/presence', content, null, {}, function(err, response) {
+  if(err) {
+    alert('An error occurred; err = ' + err.toString());
+  } else {
+    alert('Success! status code was ' + response.statusCode);
+  }
+});
+```
+
+The following is an example curl request, querying the REST API directly: 
+
+```[sh]
+curl -X GET https://rest.ably.io/presence?channel=channel1,channel2 \
+    -u "{{API_KEY}}"
+```
+
+h4(#batch-responses). Batch presence responses
+
+Once all requests have been completed in a batch request, a batch response is returned with three possible outcomes:
+
+- Success := If all of the individual requests were successful then an array containing the response of each query is returned in request order.
+- Failure := If the batch request itself failed before the individual requests were made, then an error response is returned with a status code and error response body. Examples of why the batch request can fail include an authorization failure or an invalid request.
+- Partial success := If one or more of the individual requests failed the response body contains an error object with the error code @40020@ and a status code of @400@. The error body contains a @batchResponse@ array of each individual response in request order. The @batchResponse@ can be inspected if there is a need to know the details of each outcome. If you only need to know whether or not the batch request was completely successful then the status code is sufficient.
+
+The examples for each possible outcome will use the following request data:
+
+```[text]
+{
+  channel: 'channel0,channel1,channel2'
+}
+```
+
+The following is an example of a successful batch presence response. The response body contains details of each client present on the channel and the channel they are present on. The status code for a successful response is always @200@:
+
+```[json]
+[
+  {
+    "channel":"channel0",
+    "presence":[
+      {"clientId": "user1", "action": "1"},
+      {"clientId": "user2", "action": "1"}
+    ]
+  },
+  {
+    "channel":"channel1",
+    "presence":[]
+  },
+  {
+    "channel":"channel2",
+    "presence":[
+      {"clientId": "user2", "action": "1"},
+      {"clientId": "user3", "action": "1"}
+    ]
+  }
+]
+```
+
+The following is an example of a batch presence failure response. The response body contains the details of the @error@, in this example that the token used for the request has expired. The status code is @401@:
+
+```[json]
+{
+  "error": {
+    "message":"Token expired",
+    "statusCode":401,
+    "code":40140
+  }
+}
+```
+
+The following is an example of a batch presence partial success response. The successful requests contain the details of each client present on the channel, and the channel they are present on. The failed request contains the channel the request failed for and the details of the @error@, in this example that the credentials used didn't have the capability to query that channel. The status code for a partial success is always @400@:
+
+```[json]
+{
+  "error": {
+    "message": "Batched response includes errors",
+    "statusCode":400,
+    "code":40020
+  }
+  "batchResponse": [
+    {
+      "channel":"channel0",
+      "presence":[
+        {"clientId": "user1", "action": "1"},
+        {"clientId": "user2", "action": "1"}
+      ]
+    },
+    {
+      "channel":"channel1",
+      "presence":[]
+    },
+    {
+      "channel":"channel2",
+      "error": {
+        "message": "Given credentials do not have the required capability",
+        "statusCode": 401,
+        "code": 40160
+      }
+    }
+  ]
+}
+```
+
+h4(#batch-response). Handling batch presence responses
+
+Using the request() method with the REST interface of an Ably SDK requires handling responses for success, failure and partial success.
+
+A @response@ object will have @response.success@ set to true if the batch presence request was successful, and false if at least one individual presence request failed. The @response.statusCode@ will be set to 200 for success, 400 for partial success and 401 for an expected failure. @response.errorCode@ will then contain the Ably error code and @response.errorMessage@ will contain the details of the error.
+
+@response.items@ will contain a list of responses for each channel for which presence has been requested in a successful response. @response.items.batchResponse@ will contain a list of each channel's results, be it an error or a success for a partially successful response. The @response.errorCode@ will always be @40020@ for a partial success.
+
+The following is an example of handling the various responses:
+
+```[rest_javascript]
+var ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
+var content = { "channel": "channel1,channel2" }
+ablyRest.request('GET', '/presence', content, null, {}, function(err, response) {
+  if(err) {
+    // Throw error
+  } else {
+    if(response.success) {
+      // If complete success
+      for(i = 0; i < response.items.length; i++) {
+        // Each response item will be roughly of the style:
+        /*
+          {
+            "channel": "channel1",
+            "presence": [
+              { "action": 1, "clientId": "CLIENT1" },
+              { "action": 1, "clientId": "CLIENT2" }
+            ]
+          }
+        */
+      }
+    } else if(response.errorCode === 40020) {
+      // If partial success
+      for(i = 0; i < response.items[0].batchResponse.length; i++) {
+        // Each batchResponse item will either be the same as success if it succeeded, or:
+        /*
+          {
+            "channel": "channel1",
+            "error": {
+              "code": 40160,
+              "message": "ERROR_MESSAGE",
+              "statusCode": 401
+            }
+          }
+        */
+      }
+    } else {
+      // If failed, check why
+      console.log(response.errorCode + ', ' + response.errorMessage);
+    }
+  }
+});
+```
+
+h2(#history). Presence history
+
+"History":/storage-history/history provides access to instantaneous "live" history as well as the longer term persisted history for presence channels. If "persisted history":/storage-history/history#presence-history is enabled for the channel, then presence events will be stored for 24 or 72 hours, depending on your account package. If persisted history is not enabled, Ably retains the last two minutes of presence event history in memory.
+
+h2(#unstable-connections). Handle unstable connections and failures
+
+Any time a channel is re-attached and the presence set is re-synced, e.g. after a short disconnection, the client will check whether any members it has entered into the presence set are there. If not, it will automatically re-enter them. This means that if a channel loses continuity (for example, because a client was disconnected from Ably for more than two minutes before reconnecting), then after the channel automatically re-attaches, any presence members it had previously entered will be restored.
+
+The exception is if you use the "recover":/connect/states#recover feature to resume a previous connection with a fresh SDK instance (for example, to have continuity over a page refresh). In that case you will need to explicitly re-enter presence after you re-attach to the channel, due to the loss of SDK internal state.
+
+Clients that are part of a presence set remain present for 15 seconds after they are abruptly disconnected, for example where the internet connection suddenly drops or the client is changing networks. This delay is to avoid repeated @leave@ and @enter@ events being sent when a client is experiencing an unstable connection.
+
+The Ably SDK will attempt to "reconnect":/connect/states after a disconnect. If the connection is reestablished before 15 seconds have passed, a @leave@ event will not be sent. If the connection is reestablished after 15 seconds, a @leave@ event will be sent and the presence set will need to be rejoined.
+
+Note that the 15 second delay from being removed from the presence set is only for abrupt or unplanned disconnects. If a client calls "@leave()@":/api/realtime-sdk/presence#leave or "@close()@":/api/realtime-sdk/connection#close they immediately send a @leave@ event.
+
+The time taken before a @leave@ event is sent in the case of an abrupt disconnect can be reduced to a minimum of 1 second by setting a value for @remainPresentFor@, in milliseconds. This property is set within the @transportParams@ property of the "@clientOptions@":/api/realtime-sdk#client-options object.
+
+It is important to note that it can initially take up to 30 seconds to identify that a client has been abruptly disconnected. Shorten the amount of time taken to identify abrupt disconnects using the "@heartbeatInterval@":/connect#heartbeats property if your app needs to quickly identify presence set members being abruptly disconnected.
+
+The following example code demonstrates establishing a connection to Ably with @remainPresentFor@ set to 1 second:
+
+bc[jsall]. const ably = new Ably.Realtime(
+  {
+    key: '{{API_KEY}}',
+    transportParams: { remainPresentFor: 1000 }
+  }
+);

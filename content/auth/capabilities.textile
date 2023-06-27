@@ -1,0 +1,217 @@
+---
+title: Capabilities
+meta_description: "Capabilities define which operations can be carried out on which channels by a client."
+languages:
+  - javascript
+---
+
+API keys and Ably-compatible tokens, have a set of capabilities assigned to them that specify which operations (such as subscribe or publish) can be performed on which channels. 
+
+API keys are long-lived, secret and typically not shared with clients. API key capabilities are configured using the "dashboard":https://ably.com/dashboard, or using the "Control API":/account/control-api. 
+
+Ably-compatible tokens are designed to be shared with untrusted clients, are short-lived, and can be configured and issued programmatically. See "selecting an authentication mechanism":/auth#selecting-auth to understand why token authentication is the preferred option in most scenarios.
+
+h2(#wildcards). Resource names and wildcards
+
+Capabilities are a map from resources to a list of "operations":#capability-operations. Each resource can match a single channel, for example, @channel@, or multiple channels using wildcards (@*@). 
+
+Wildcards can only replace whole segments (segments are delimited by @:@) of the resource name. A wildcard at the end of the name can arbitrarily replace many segments. For example:
+
+* A resource of @*@ will match any channel, but not queues and metachannels.
+* A resource of @namespace:*@ will match any channel in the @namespace@ namespace, including @namespace:channel@, and @namespace:channel:other@.
+* A resource of @foo:*:baz@ will match @foo:bar:baz@, but not @foo:bar:bam:baz@.
+* A resource of @foo:*@ will match expressions such as @foo:bar@, @foo:bar:bam@, @foo:bar:bam:baz@, as the wildcard is at the end.
+* A resource of @foo*@ (without a colon) will only match the single channel literally called @foo*@.
+
+A resource can also be a queue, in which case it will start with @[queue]@, for example @[queue]appid-queuename@. This is unambiguous as channel names may not begin with a @[@. Similar wildcard rules apply, for example @[queue]*@ will match all queues.
+
+A resource can also be a metachannel, in which case it will start with @[meta]@, for example @[meta]metaname@. This is unambiguous as channel names may not begin with a @[@.  @[meta]*@ will match all metachannels. Just @*@ on its own will not: it will match all possible normal channels, but no metachannels.
+
+You can also have a resource name of @[*]*@, which will match all queues, all metachannels, and all channels.
+
+Wildcards are also supported for "operations":#capability-operations, by requesting an operations list of @['*']@.
+
+h2(#capability-operations). Capability operations
+
+The following capability operations are available for API keys and issued tokens:
+
+- subscribe := can subscribe to messages and presence state change messages on channels, and get the presence set of a channel
+- publish := can publish messages to channels
+- presence := can register presence on a channel (enter, update and leave)
+- history := can retrieve message and presence state history on channels
+- stats := can retrieve current and historical usage statistics for an app
+- push-subscribe := can subscribe devices for push notifications
+- push-admin := can manage device registrations and push subscriptions for all devices in an app
+- channel-metadata := can get metadata for a channel, and enumerate channels
+
+Although most capabilities need to be enabled for the resource you're using them with, there are exceptions. The @stats@ permission only does something when attached to the wildcard resource @'*'@, or a resource that contains that as a subset, such as @'[*]*'@, since stats are app-wide. 
+
+The @channel-metadata@ permission works both ways. When associated with a specific channel or set of channels it allows you to "query the metadata of a channel":/metadata-stats/metadata/rest to request its status. When associated with the wildcard resource @'*'@ it takes on an additional meaning: as well as allowing channel status requests for all channels, it also allows you to "enumerate all active channels":/metadata-stats/metadats/rest#enumerate.
+
+<aside data-type='note'>
+<p>"Channel mode flags":/channels/options#modes enable a client to specify a subset of the capabilities granted by their token or API key as channel options.</p>
+<p>Channel mode flags offer the ability for clients to use different capabilities for different channels, however, as they are flags and not permissions, they cannot be enforced by an authentication server. Channel mode flags also enable clients to be present on a channel without subscribing to presence events.</p>
+</aside>
+
+h2(#capabilities-key). API key capabilities
+
+An "Ably API key":/auth#api-key can have a single set of permissions, applied to any number of "channels":/channels or "queues":/general/queues.
+
+You can also choose whether to restrict the API key to only channels, only "queues":/general/queues, or to match a set of channel or queue names. If you've chosen to restrict the API key to *selected channels and queues*, you can use a comma separated list of resources the API key can access, making use of wildcards to provide access to areas of your app. It is worth noting an API key will provide the same permissions to all resources it has access to.
+
+<!-- DASHBOARD-INSTRUCTION: To enable token revocation or check status for a key -->
+To view the capabilities for an existing API key:
+
+1. Sign into your "Ably dashboard":https://ably.com/dashboard.
+2. Select the **API Keys** tab.
+3. Click the **Settings** button for the key you want to check the capabilities for.
+
+h2(#capabilities-token). Token capabilities
+
+Ably Tokens and JWTs are issued from an existing API key and their capabilities can, at most, match the capabilities of the issuing API key. 
+
+If an API key must be shared with a third party, then it is recommended that "the principle of least privilege":https://en.wikipedia.org/wiki/Principle_of_least_privilege is considered, assigning only the capabilities needed by that third party. Thus, any Ably requests authenticated using that API key or Ably-compatible tokens associated with that API key, will be restricted to the capabilities assigned to the API key.
+
+Capabilities can be set when creating a token or token request, as shown in the following example:
+
+```[javascript]
+  var tokenParams = { clientId: 'foo', capability: JSON.stringify(capability) };
+  ably.auth.createTokenRequest(tokenParams, (err, token) => {
+    // handle error or
+    // return token request
+  });
+```
+
+h3(#capability-determination). Token capability determination
+
+The capabilities for tokens are determined based on those of the issuing API key and those requested by the token.
+
+h4(#ably-token-all). Ably Token without capabilities
+
+If no capability is specified in an Ably @TokenRequest@, then the "Ably Token":/auth/token#tokens will be given the full set of capabilities assigned to the issuing key.
+
+Using the following example, an API key exists with the listed capabilities. If an Ably Token is requested without specifying any capabilities then the @TokenRequest@ is treated as requesting all capabilities, i.e. @{"[*]*":["*"]}@). This will result in the Ably Token receiving all the capabilities of the API key.
+
+```[javascript]
+// API key capabilities:
+{
+  "chat": ["publish", "subscribe", "presence"],
+  "status": ["subscribe"]
+}
+
+// Token request that doesn't specify any capabilities:
+auth.requestToken(tokenCallback)
+
+// Resulting token capabilities:
+{
+  "chat": ["publish", "subscribe", "presence"],
+  "status": ["subscribe"]
+}
+```
+
+h4(#ably-token-intersection). Ably Token with intersection of capabilities
+
+If a set of capabilities are requested, then the Ably Token will be assigned the intersection of the requested capability and the capability of the issuing key.
+
+Using the following example, an API key exists with the listed capabilities. If an "Ably Token":/auth/token#tokens is requested and specifies a set of capabilities, then the resulting token will only receive those capabilities that intersect. The capabilities of a token cannot exceed those of the issuing API key.
+
+```[javascript]
+// API key capabilities:
+{
+  "chat:*": ["publish", "subscribe", "presence"],
+  "status": ["subscribe", "history"],
+  "alerts": ["subscribe"]
+}
+
+// Token request that specifies capabilities:
+auth.requestToken({ capability: {
+  "chat:bob": ["subscribe"], // only "subscribe" intersects
+  "status": ["*"], // "*"" intersects with "subscribe"
+  "secret": ["publish", "subscribe"] // key does not have access to "secret" channel
+}}, tokenCallback)
+
+// Resulting token capabilities:
+{
+  "chat:bob": ["subscribe"],
+  "status": ["subscribe", "history"]
+}
+```
+
+h4(#ably-token-error). Ably Token with incompatible capabilities
+
+If a set of capabilities are requested, and the intersection between those and the API key's capabilities is empty, then the @TokenRequest@ will result in an error.
+
+Using the following example, an API key exists with the listed capabilities. If an "Ably Token":/auth/token#tokens is requested that specifies a set of capabilities, and there is no intersection between the capabilities of the issuing API key and requested token, then the token request will be rejected. In the following example, the callback will be returned with an error.
+
+```[javascript]
+// API key capabilities:
+{
+  "chat": ["*"]
+}
+
+// Token request that specifies capabilities:
+auth.requestToken({ capability: {
+  "status": ["*"]
+}}, tokenCallback)
+```
+
+h4(#ably-jwt). Ably JWT capability determination
+
+Capabilities are determined for "Ably JWTs":/auth/token#jwt in the following way:
+
+* The capabilities granted to an Ably JWT will be the intersection of the capabilities within the Ably JWT and the capabilities of the associated API key.
+* If the set of capabilities within the Ably JWT have no intersection with the capabilities of the API key, then an error will instead be returned.
+
+h2(#custom-restrictions). Custom restrictions on channels
+
+It is possible for JWTs to contain authenticated claims for users that can be used to allow or disallow certain interactions in your channels.
+
+Messages can be annotated with trusted metadata copied from the client's authentication token by Ably servers. Clients are unable to directly publish messages with user claim metadata, and claims contained within the authentication token are signed to prevent tampering. Claims can be scoped to individual channels or to namespaces of "channels":/channels. The most specific user claim will be added to the message as part of the @extras@ object. Note that this does not apply to presence or metadata messages.
+
+An example use case is when using "message interactions":/channels/messages#interactions. You might want to use trusted claims to define 'moderator' users in a chat channel who have the ability to delete any sent messages. When the moderator sends an interaction to mark messages in a channel as deleted, your application should check that user's claims to verify they are a moderator for that channel before actioning their request.
+
+To set the trusted fields you need to include @ably.channel.*@ in your JWT authentication payload, for example:
+
+```[javascript]
+const claims = {
+  "sub": "1234567890",
+  "name": "John Doe",
+  "x-ably-capability": <...>,
+  "x-ably-clientId": <...>,
+  "ably.channel.chat1": "admin", // the user is an admin for the chat1 channel
+  "ably.channel.chat:*": "moderator", // the user is a moderator in channels within the chat namespace
+  "ably.channel.*": "guest", // the user is a guest in all other channels
+}
+```
+
+The claims from the token are copied into messages, allowing them to be checked for permission:
+
+```[javascript]
+const fromModerator = (message) => {
+    const userClaim = message.extras && message.extras.userClaim;
+    return (userClaim && userClaim == 'moderator');
+}
+```
+
+h2(#jwt-limits). Using JWT for per connection publish rate limits
+
+JWTs may specify publish rate limits for a user on particular channels. These limits can be used to prevent any individual user from sending an excessive number of messages in a short period of time.
+
+An example use case is in a large live chat where you may wish to limit users to posting messages no more than once every 10 seconds.
+
+Rate limits can be scoped to individual channels or to "channel namespaces":/channels#namespaces. Note that the rate limit with the most specific scope will be applied to the user. 
+
+To set rate limits for individual connections, include @ably.limits.publish.perAttachment.maxRate.<resource-name>@ in your JWT authentication payload. The value of this property sets how many messages can be published per second to a channel, or namespace. For example, a value of @5@ restricts the rate to 5 messages per second. A value of @0.1@ restricts the rate to 1 message every 10 seconds.
+
+The following is an example of setting different rate limits for different channels:
+
+```[javascript]
+const claims = {
+  "sub": "1234567890",
+  "name": "John Doe",
+  "x-ably-capability": <...>,
+  "x-ably-clientId": <...>,
+  "ably.limits.publish.perAttachment.maxRate.chat1": 10, // the user can publish 10 messages per second in channel chat1
+  "ably.limits.publish.perAttachment.maxRate.chat:*": 0.1 // the user can publish a message every 10 seconds in all channels within the chat namespace
+}
+```

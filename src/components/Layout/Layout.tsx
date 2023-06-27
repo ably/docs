@@ -18,7 +18,9 @@ const Layout: FC<{ languages?: Array<string>; versionData?: VersionMenuProps; is
   return (
     <GlobalLoading>
       <Header />
-      {languages && versionData && <TopCodeMenu languages={languages} versionData={versionData} />}
+      {languages && languages.length > 0 && versionData && (
+        <TopCodeMenu languages={languages} versionData={versionData} />
+      )}
       <Container
         as="main"
         className={cn('grid grid-cols-1 mx-auto max-w-1264', {
