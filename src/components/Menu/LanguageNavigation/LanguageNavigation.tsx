@@ -97,7 +97,13 @@ const LanguageNavigation = ({
               </Component>
             ))}
             <div className={dropdownContainer}>
-              <Select options={options} value={value} isSearchable={false} onChange={onSelectChange} />
+              <Select
+                instanceId={'language-navigation'}
+                options={options}
+                value={value}
+                isSearchable={false}
+                onChange={onSelectChange}
+              />
             </div>
           </menu>
         </div>
