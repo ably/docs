@@ -26,7 +26,7 @@ const safelyInvokeApiKeyRetrievalTrigger = () => {
 
 const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>) => {
   if (payload.error || !payload.data || !isArray(payload.data)) {
-    console.warn('No data array on API Key payload object returned from endpoint');
+    console.info('No API key data found, fetching temporary key');
     const tempApiKeyResponse = await fetch(WEB_API_TEMP_KEY_ENDPOINT, { cache: DEFAULT_CACHE_STRATEGY });
     const tempApiKey = await tempApiKeyResponse.text();
 
