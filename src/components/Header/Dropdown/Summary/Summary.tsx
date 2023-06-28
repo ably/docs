@@ -7,8 +7,6 @@ import { MaybeShowSummaryLink } from './MaybeShowSummaryLink';
 import { SummaryTitle } from './SummaryTitle';
 import { SummaryDescription } from './SummaryDescription';
 
-import '../../../blocks/external-references/styles.css';
-import '../../../blocks/external-references/styles.css';
 import { bgEffect } from './Summary.module.css';
 
 export const Summary = ({
