@@ -22,7 +22,7 @@ const APIKeyMenuSelector = ({
   signedIn = false,
 }: APIKeyMenuSelectorProps) => {
   useEffect(() => {
-    if (activeApiKey.value === DEFAULT_API_KEY_MESSAGE && userApiKeys) {
+    if (activeApiKey.value === DEFAULT_API_KEY_MESSAGE && userApiKeys.length > 0) {
       const { name: label, whole_key: value } = userApiKeys[0].apiKeys[0];
       setActiveApiKey({
         label,
@@ -30,10 +30,11 @@ const APIKeyMenuSelector = ({
       });
     }
   }, [userApiKeys, activeApiKey, setActiveApiKey]);
+
   return dataContainsKey ? (
     <div className="border-t border-charcoal-grey py-14 px-16 flex items-center">
       <SmallMenuLabel>API Key:</SmallMenuLabel>
-      {signedIn && userApiKeys ? (
+      {signedIn && userApiKeys.length > 0 ? (
         <APIKeyMenu userApiKeys={userApiKeys} setActiveApiKey={setActiveApiKey} />
       ) : (
         <APIKeyIndicator tooltip={NO_API_KEY_TOOLTIP} />

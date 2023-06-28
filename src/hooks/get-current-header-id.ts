@@ -1,4 +1,4 @@
-import { useMemo, useLayoutEffect, useState } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import throttle from 'lodash.throttle';
 
 import { SidebarData } from 'src/components';
@@ -49,7 +49,7 @@ export const useGetCurrentHeader = (flatTableOfContents: SidebarData[]) => {
     [],
   );
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     window.addEventListener('scroll', () => throttledScroll(flatTableOfContents, setHighlightedHeadingId));
 
     return () =>

@@ -7,11 +7,11 @@ import SelfClosingHtmlBlock from '../Html/SelfClosingHtmlBlock';
 import 'react-medium-image-zoom/dist/styles.css';
 import { classDialog } from './Img.module.css';
 
-const Img = ({ attribs }: HtmlComponentProps<'img'>): ReactElement => {
+const Img = ({ attribs }: Pick<HtmlComponentProps<'img'>, 'attribs'>): ReactElement => {
   const rawSrc = attribs?.src;
 
   return (
-    <Zoom zoomMargin={32} classDialog={classDialog}>
+    <Zoom wrapElement="span" zoomMargin={32} classDialog={classDialog}>
       {rawSrc && /^\/images.*/.test(rawSrc) ? (
         <StaticImage src={rawSrc} {...{ ...attribs }} />
       ) : (

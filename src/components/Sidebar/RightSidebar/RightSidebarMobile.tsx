@@ -50,6 +50,7 @@ export const RightSidebarMobile = ({ menuData, languages }: { menuData: MenuData
           valueContainer: noPaddingValueContainerStyles,
         }}
         inputId={'on-page-menu'}
+        instanceId={'on-page-menu'}
         value={selectedOption}
         options={options}
         onChange={(newValue) => {

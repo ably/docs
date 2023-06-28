@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import cn from 'classnames';
 import { AccordionItemButton, AccordionItemHeading, AccordionItemState } from 'react-accessible-accordion';
 
@@ -14,6 +14,20 @@ export type AccordionHeadingProps = {
   collapsible?: boolean;
 };
 
+const Indicator = ({
+  expanded,
+  setIsExpanded,
+}: {
+  expanded?: boolean;
+  setIsExpanded: React.Dispatch<React.SetStateAction<boolean>>;
+}) => {
+  useEffect(() => {
+    setIsExpanded(!!expanded);
+  }, [expanded, setIsExpanded]);
+
+  return <ExpandableIndicator expanded={expanded} />;
+};
+
 export const ExpandableAccordionHeading = ({ label, level }: AccordionHeadingProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -26,12 +40,7 @@ export const ExpandableAccordionHeading = ({ label, level }: AccordionHeadingPro
       >
         {label}
         <AccordionItemState>
-          {({ expanded }) => {
-            if (expanded !== undefined && expanded !== isExpanded) {
-              setIsExpanded(expanded);
-            }
-            return <ExpandableIndicator expanded={expanded} />;
-          }}
+          {({ expanded }) => <Indicator expanded={expanded} isExpanded={isExpanded} setIsExpanded={setIsExpanded} />}
         </AccordionItemState>
       </AccordionItemButton>
     </AccordionItemHeading>

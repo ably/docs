@@ -59,6 +59,7 @@ export const LanguageDropdownSelector = ({
         group: groupStyles,
       }}
       inputId={'language-menu'}
+      instanceId="language-menu"
       value={selectedOption}
       options={[
         {

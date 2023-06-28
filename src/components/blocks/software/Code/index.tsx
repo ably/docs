@@ -112,7 +112,6 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
           {(value) => (
             <APIKeyMenuSelector
               dataContainsKey={dataContainsKey}
-              // @ts-ignore - fix api key type mismatch
               userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
               setActiveApiKey={setActiveApiKey}
               activeApiKey={activeApiKey}

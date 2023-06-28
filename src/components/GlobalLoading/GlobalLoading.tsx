@@ -47,7 +47,7 @@ const gtmSnippet = `(function (w, d, s, l, i) {
 
 const GlobalLoading: FC = ({ children }) => {
   const [sessionState, setSessionState] = useState<Record<string, string>>({});
-  const [apiKeys, setApiKeys] = useState({});
+  const [apiKeys, setApiKeys] = useState({ data: [] });
 
   useEffect(() => {
     const store = getRemoteDataStore();

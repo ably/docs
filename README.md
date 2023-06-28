@@ -74,9 +74,9 @@ Redirects added in this way are also added to a file at `./config/nginx-redirect
 
 Other one-off instances of redirects may be added to additional config files, and imported in a similar way. See:
 
-* `./config/website-redirects.conf`
-* `./config/client-lib-development-guide-redirects.conf`
-* `./config/nginx.conf.erb`
+- `./config/website-redirects.conf`
+- `./config/client-lib-development-guide-redirects.conf`
+- `./config/nginx.conf.erb`
 
 For how to create and include these redirects.
 
@@ -84,9 +84,9 @@ For how to create and include these redirects.
 
 Note that any env variables needed to show in the browser must be prefixed with `GATSBY_` in order to appear.
 
-* GATSBY_DOCS_SIGNED_IN - set to any string to force the application to behave as though you are logged in
-* GATSBY_DOCS_API_KEYS - set to any string to force the application to behave as though you have API keys available
-* GATSBY_ABLY_MAIN_WEBSITE - the URL from which basic user data and API keys can be retrieved, and from which we can generate sitemap links and so on
+- GATSBY_DOCS_SIGNED_IN - set to any string to force APIKeyMenuSelector & MultilineCodeContent to behave as though you are logged in
+- GATSBY_DOCS_API_KEYS - set to any string to APIKeyMenuSelector to behave as though you have API keys available
+- GATSBY_ABLY_MAIN_WEBSITE - the URL from which basic user data and API keys can be retrieved, and from which we can generate sitemap links and so on
 
 Place these in .env.development to run locally.
 

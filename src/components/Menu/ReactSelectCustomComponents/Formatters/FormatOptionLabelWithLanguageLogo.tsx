@@ -3,7 +3,7 @@ import { ReactSelectOption } from 'src/components';
 import { imageMap, isInImageMap } from '../../LanguageDropdownSelector/image-map';
 
 const returnNullIfNoLanguageAvailable = (languageOptionValue: string) =>
-  isInImageMap(languageOptionValue) && typeof window !== 'undefined' ? imageMap[languageOptionValue] : () => null;
+  isInImageMap(languageOptionValue) ? imageMap[languageOptionValue] : () => null;
 
 export const FormatOptionLabelWithLanguageLogo = (languageOption: ReactSelectOption) => {
   const Component = returnNullIfNoLanguageAvailable(languageOption.value);

@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useRef, useState } from 'react';
+import { ChangeEvent, useRef, useState, useEffect } from 'react';
 import useKeyboardShortcut from 'use-keyboard-shortcut';
 import cn from 'classnames';
 import Icon from '@ably/ui/core/Icon';
@@ -21,6 +21,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
   const textInput = useRef<null | HTMLInputElement>(null);
   const searchDisplayRef = useRef<null | HTMLDivElement>(null);
   const [isInFocus, setIsInFocus] = useState(false);
+  const [keyIcon, setKeyIcon] = useState('^');
 
   const {
     state: { query, results, error },
@@ -54,6 +55,12 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
     repeatOnHold: false,
   });
 
+  useEffect(() => {
+    if (isMac) {
+      setKeyIcon('⌘');
+    }
+  }, []);
+
   return (
     <div
       ref={searchDisplayRef}
@@ -75,7 +82,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
         <Icon name="icon-gui-search" size="24px" additionalCSS="absolute left-16 top-12" />
         {!isInFocus && (
           <div className="absolute right-16 top-12 hidden lg:flex items-center justify-end">
-            <KeyIcon className="mr-4">{isMac ? '⌘' : '^'}</KeyIcon>
+            <KeyIcon className="mr-4">{keyIcon}</KeyIcon>
             <KeyIcon className="pt-2">K</KeyIcon>
           </div>
         )}
