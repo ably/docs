@@ -1,2 +1,2 @@
 export * from './SidebarItem';
-export { AccordionHeadingProps } from './ExpandableAccordionHeading';
+export { type AccordionHeadingProps } from './ExpandableAccordionHeading';
