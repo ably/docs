@@ -1,4 +1,5 @@
 import { createContext } from 'react';
+import { type UserApiKey } from 'src/components/blocks/software/Code/ApiKeyMenu';
 
 export type Link = {
   href: string;
@@ -28,12 +29,15 @@ export type SessionState = {
 
 export type UserDetails = {
   sessionState: SessionState;
-  apiKeys: Record<string, unknown>;
+  apiKeys: {
+    data: UserApiKey[];
+  };
 };
 
 export const devApiKeysPresent = [
   {
     name: 'Default - Dev',
+    url: '',
     apiKeys: [
       {
         id: 'dev_root_id',
@@ -76,7 +80,9 @@ export const devApiKeysPresent = [
 
 const DEFAULT_USER_DETAILS: UserDetails = {
   sessionState: {},
-  apiKeys: {},
+  apiKeys: {
+    data: [],
+  },
 };
 
 const UserContext = createContext(DEFAULT_USER_DETAILS);

@@ -5,7 +5,7 @@ import { DEFAULT_API_KEY_MESSAGE } from '.';
 
 import { container } from './ApiKeyMenu.module.css';
 
-type AppApiKey = {
+export type AppApiKey = {
   name: string;
   whole_key: string;
 };
