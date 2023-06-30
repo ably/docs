@@ -999,6 +999,148 @@ channelMessageSubscription.cancel();
 <p>Calling "@subscribe()@":/api/realtime-sdk/channels#subscribe for a channel "implicitly attaches":#subscribe the client to the channel as well. It is important to note that if you call @subscribe()@ followed by @unsubscribe()@, the client remains attached to the channel.</p>
 </aside>
 
+h3(#subscription-filters). Subscription filters
+
+Subscription filters enable you to subscribe to a channel and only receive messages that satisfy a filter expression.
+
+Messages are immediately streamed to clients as soon as they "attach":#attach if they have subscribe "capabilities":/auth/capabilities for that channel. Subscription filters apply server-side filtering to messages, meaning that a client will only ever receive be sent the messages that they subscribe to.
+
+Subscription filters are currently in preview status.
+
+<aside data-type="note">
+<p>Be aware that subscription filters have an additional channel and message cost:</p>
+<ul><li>Every unique subscription filter counts as an additional channel.</li>
+<li>Each message published will count an additional time for each unique subscription filter it satisfies. A message that does not pass the filter will not be charged for.</li></ul>
+<p>Normal "limits":/general/limits still apply when using subscription filters. As such, it is not recommended to publish all data to a single channel and rely solely on subscription filters. A level of partitioning at the channel level is still required for the majority of use cases.</p>
+</aside>
+
+h4(#filter-create). Create a filter expression
+
+Filter expressions should be written using "JMESPath.":https://jmespath.org/ They can be constructed using the message name and "@message.extras.headers@":/channels/messages#properties fields.
+
+@message.extras.headers@ optionally provides ancillary metadata to a message, as Ably can't inspect message payloads themselves. Adding suitable key-value pairs to messages will enable more complicated filter expressions to be constructed resulting in more effective message filtering.
+
+The following is an example of publishing a message with additional metadata:
+
+```[realtime_javascript]
+realtime.channels.get('scoops-kiosk').publish({
+    name: 'ice-cream',
+    data: '...',
+    extras: {
+        headers: {
+            flavor: "strawberry",
+            cost: 35,
+            temp: 3
+        }
+    }
+});
+```
+
+```[rest_javascript]
+rest.channels.get('scoops-kiosk').publish({
+    name: 'ice-cream',
+    data: '...',
+    extras: {
+        headers: {
+            flavor: "strawberry",
+            cost: 35,
+            temp: 3
+        }
+    }
+});
+```
+
+Be aware that @message.extras.headers@ must be a flat object. It can't contain any further nesting or arrays.
+
+The following is an example of a filter expression subscribing to messages with the name “ice-cream”, a flavor of “strawberry” and a cost of less than 50:
+
+```[text]
+name == `"ice-cream"` && headers.flavor == `"strawberry"` && headers.cost < `50`
+```
+
+The following is an example of a filter expression subscribing to messages with a flavor of either “strawberry” or “chocolate”:
+
+```[text]
+headers.flavor == `"strawberry"` || headers.flavor == `"chocolate"`
+```
+
+h4(#filter-subscribe). Subscribe with a filter
+
+In order to use a subscribe to a channel with a filter expression, you obtain a channel instance using the @getDerived()@ method. This accepts a filter expression as a parameter. 
+
+The following is an example of subscribing to a channel using one of the previous example filters:
+
+```[realtime_javascript]
+realtime.channels.getDerived('scoops-kiosk', {
+    filter: 'name == `"ice-cream"` && headers.flavor == `"strawberry"` && headers.cost < `50`'
+}).subscribe(...);
+```
+
+<aside data-type="note">
+<p>Clients that are publishing to the same channel that they are subscribed to using a filter need to obtain a channel instance twice. Once with the filter expression using @getDerived()@ for the subscription and once using "@get()@":#create for publishing. Attempts to publish to a channel created or retrieved with a filter expression will fail.</p>
+</aside>
+
+The following example demonstrates publishing to a channel, but subscribing to only a subset of messages on it:
+
+```[realtime_javascript]
+// Connect to Ably
+const realtime = new Ably.Realtime({'{{API_KEY}}'});
+
+// Create a channel instance to publish to
+const pubChannel = realtime.channels.get('scoops-kiosk');
+
+// Create a channel instance using the filter qualifier
+const subChannel = realtime.channels.getDerived('scoops-kiosk', {
+   filter: 'name == `"ice-cream"` && headers.flavor == `"strawberry"` && headers.cost < `50`'
+});
+
+// Subscribe to the channel using the filtered subscription
+subChannel.subscribe((message) => {
+   alert('Ice cream update: ' + message.data);
+ });
+
+// Publish to the unfiltered channel instance
+pubChannel.publish({
+   name: 'ice-cream',
+   data: '...',
+   extras: {
+       headers: {
+           flavor: "strawberry",
+           cost: 35,
+           temp: 3
+       }
+   });
+});
+```
+
+h4(#filter-capabilities). Subscription filter capabilities
+
+Clients require the subscribe "capability":/auth/capabilities for one of the following resources in order to receive messages from a subscription filter:
+
+* @[filter]<channel name>@
+* @[*]<channel name>@
+* @[*]*@
+
+It is important to set the correct capabilities for clients that will be carrying out additional operations on the same channel they are subscribed to using a filter. If clients have the subscribe capability for the channel itself and attach to it, such as when entering the presence set, they will be streamed all messages.
+
+The following is an example of a request for a token with only the subscribe capability for the subscription filter, and only the publish capability for the unfiltered channel. This avoids the client from being streamed all messages, even if they attach to the unfiltered channel:
+
+```[realtime_javascript]
+auth.requestToken({ capability: {
+   "[filter]scoops-kiosk": ["subscribe"],
+   "scoops-kiosk": ["publish"]
+}}, tokenCallback);
+```
+
+h4(#filter-limitations). Subscription filter limitations
+
+The following features are not supported using subscription filters:
+
+* "Presence":/presence-occupancy/presence
+* "History":/storage-history/history
+* "Deltas":/channels/options/deltas
+* "Rewind ":/channels/options/rewind
+
 h2(#options). Channel options
 
 "Channel options":/channels/options can be used to customize the functionality of channels. This includes enabling features such as "encryption":/channels/options/encryption and "deltas":/channels/options/deltas, or for a client to retrieve messages published prior to it attaching to a channel using "rewind":/channels/options/rewind.
