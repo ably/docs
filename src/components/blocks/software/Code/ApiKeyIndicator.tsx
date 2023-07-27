@@ -21,7 +21,7 @@ const APIKeyIndicator = ({ tooltip }: ApiKeyIndicatorProps) => {
         <aside
           className="w-240 max-w-240 absolute -mt-140 box-border
           whitespace-pre-wrap bg-white shadow-tooltip rounded border border-light-grey
-          text-cool-black font-sans p-16 text-center text-p3 leading-5 cursor-default"
+          text-cool-black font-manrope p-16 text-center text-p3 leading-5 cursor-default"
         >
           {tooltip}
         </aside>

@@ -21,7 +21,7 @@ const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
         <aside
           className="w-240 max-w-240 absolute box-border
           whitespace-pre-wrap bg-white shadow-tooltip rounded border border-light-grey
-          text-cool-black font-sans p-16 text-center text-p3 leading-5 cursor-default -ml-160 -mt-88"
+          text-cool-black font-manrope p-16 text-center text-p3 leading-5 cursor-default -ml-160 -mt-88"
         >
           {tooltip}
         </aside>
@@ -55,7 +55,7 @@ const SDKInterfacePanel = ({
         {sdkInterfaceAvailable.map((sdkInterface) => (
           <button
             key={sdkInterface}
-            className={`font-medium font-sans focus:outline-none px-24 text-mid-grey ${
+            className={`font-medium font-manrope focus:outline-none px-24 text-mid-grey ${
               selectedSDKInterfaceTab === sdkInterface ? 'bg-charcoal-grey' : ''
             }`}
             onClick={() => handleTabChanges(sdkInterface)}
