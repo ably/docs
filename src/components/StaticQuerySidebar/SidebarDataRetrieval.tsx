@@ -1,7 +1,6 @@
 import React from 'react';
 import { graphql, useStaticQuery } from 'gatsby';
 import { EXPAND_MENU, SidebarProps } from 'src/components';
-
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
 import { LeftSidebarProps } from './LeftSideBar';
 import { ArticleType } from '../../contexts/article-type-context';
