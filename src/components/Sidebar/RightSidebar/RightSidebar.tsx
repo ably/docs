@@ -9,6 +9,8 @@ import { SidebarData, SectionTitle, EXPAND_MENU, SidebarLinkMenu } from 'src/com
 import { MenuData } from './menu-data';
 
 import { stickySidebar, withLanguageNavBar } from './RightSidebar.module.css';
+import { VersionMenuProps } from '../../Menu/VersionMenu';
+import TopCodeMenu from '../../Menu/TopCodeMenu';
 
 const mapMenuItemToSidebarItem = ({ name, id, level }: MenuData): SidebarData => ({
   label: name,
@@ -19,11 +21,13 @@ const mapMenuItemToSidebarItem = ({ name, id, level }: MenuData): SidebarData =>
 type RightSidebarProps = {
   menuData: MenuData[];
   languages: boolean;
+  filteredLanguages?: Array<string>;
+  versionData?: VersionMenuProps;
 };
 
 const MANUAL_SCROLL_DELAY_BEFORE_AUTOSCROLL_ACTIVE_MILLISECONDS = 2000;
 
-export const RightSidebar = ({ menuData, languages }: RightSidebarProps) => {
+export const RightSidebar = ({ menuData, languages, filteredLanguages, versionData }: RightSidebarProps) => {
   const rightSidebarRef = useRef<HTMLBaseElement>(null);
 
   const [lastManualScrollTime, setLastManualScrollTime] = useState(0);
@@ -83,6 +87,8 @@ export const RightSidebar = ({ menuData, languages }: RightSidebarProps) => {
     return null;
   }
 
+  const isLanguageMenuVisible = filteredLanguages && filteredLanguages.length > 0 && versionData;
+
   // We throttle this update as well, so in practice there will usually be between 2-4 seconds of delay before autoscroll is reactivated
   // after a manual scroll on the right sidebar
   const onWheel = throttle(MANUAL_SCROLL_DELAY_BEFORE_AUTOSCROLL_ACTIVE_MILLISECONDS, () =>
@@ -98,7 +104,14 @@ export const RightSidebar = ({ menuData, languages }: RightSidebarProps) => {
         data-languages={languages}
         ref={rightSidebarRef}
       >
-        <SectionTitle className="py-12 px-8 pt-64 top-0 sticky bg-white">On this page</SectionTitle>
+        {/* Language Menu goes here*/}
+        {filteredLanguages && filteredLanguages.length > 0 && versionData && (
+          <TopCodeMenu languages={filteredLanguages} versionData={versionData} />
+        )}
+
+        <SectionTitle className={`py-12 px-8 ${isLanguageMenuVisible ? 'pt-3' : 'pt-64'} top-0 sticky bg-white`}>
+          On this page
+        </SectionTitle>
         <HighlightedMenuContext.Consumer>
           {(highlightedMenuId) => (
             <SidebarLinkMenu

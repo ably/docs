@@ -130,14 +130,19 @@ const Template = ({
       <PageLanguagesContext.Provider value={languages}>
         <PathnameContext.Provider value={pathname}>
           <Head title={title} canonical={canonical} description={description} />
-          <Layout languages={filteredLanguages} versionData={versionData}>
+          <Layout>
             <LeftSideBar />
             <Article hasTopBar={languageAlternativesExist}>
               <RightSidebarMobile menuData={contentMenuFromLanguage[0]} languages={languagesExist} />
               <PageTitle>{title}</PageTitle>
               <div>{elements}</div>
             </Article>
-            <RightSidebar languages={languagesExist} menuData={contentMenuFromLanguage[0]} />
+            <RightSidebar
+              languages={languagesExist}
+              menuData={contentMenuFromLanguage[0]}
+              filteredLanguages={filteredLanguages}
+              versionData={versionData}
+            />
           </Layout>
         </PathnameContext.Provider>
       </PageLanguagesContext.Provider>

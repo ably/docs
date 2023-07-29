@@ -2,25 +2,14 @@ import React, { FunctionComponent as FC } from 'react';
 import cn from 'classnames';
 
 import { Container } from 'src/components';
-import TopCodeMenu from 'src/components/Menu/TopCodeMenu';
-
 import { Header } from '../Header';
-import { VersionMenuProps } from '../Menu/VersionMenu';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Footer } from '../Footer';
 
-const Layout: FC<{ languages?: Array<string>; versionData?: VersionMenuProps; isExtraWide?: boolean }> = ({
-  languages,
-  versionData,
-  children,
-  isExtraWide = false,
-}) => {
+const Layout: FC<{ isExtraWide?: boolean }> = ({ children, isExtraWide = false }) => {
   return (
     <GlobalLoading>
       <Header />
-      {languages && languages.length > 0 && versionData && (
-        <TopCodeMenu languages={languages} versionData={versionData} />
-      )}
       <Container
         as="main"
         className={cn('grid grid-cols-1 mx-auto max-w-1264', {
