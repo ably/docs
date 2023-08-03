@@ -3,8 +3,8 @@ import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicato
 import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
 import { longLanguageLabels } from '../../../maps/language';
 import { ReactSelectOption } from 'src/components';
-import { PREFERRED_LANGUAGE_KEY } from '../../../utilities/language/constants';
-import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common/language-defaults';
+import { PREFERRED_LANGUAGE_KEY } from '../../../utilities';
+import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common';
 import { navigate } from 'gatsby';
 import {
   DEFAULT_LANGUAGE,
@@ -43,6 +43,8 @@ export const LanguageDropdownSelector = ({
   }
 
   const selectedOption = options.find(isSelectedLanguage) || makeOptionFromLang(DEFAULT_PREFERRED_LANGUAGE);
+  selectedOption.label = selectedOption.label.replace(/v\d+\.\d+/, 'none');
+
   return (
     <Select
       components={noIndicatorSeparator}

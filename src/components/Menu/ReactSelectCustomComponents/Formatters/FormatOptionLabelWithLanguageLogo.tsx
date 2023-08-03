@@ -16,12 +16,14 @@ export const FormatOptionLabelWithLanguageLogo = (languageOption: ReactSelectOpt
       <Component />
       <div className="flex justify-between w-full">
         <div className="py-4">{languageLabel} </div>
-        <div
-          className="text-active-orange font-medium bg-mid-grey px-4 py-4 rounded-lg"
-          style={{ backgroundColor: '#FFEFE9' }}
-        >
-          {languageVersion}
-        </div>
+        {languageVersion !== 'none' && (
+          <div
+            className="text-active-orange font-medium bg-mid-grey px-4 py-4 rounded-lg"
+            style={{ backgroundColor: '#FFEFE9' }}
+          >
+            {languageVersion}
+          </div>
+        )}
       </div>
     </div>
   );
