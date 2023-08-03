@@ -12,7 +12,6 @@ import {
   IGNORED_LANGUAGES_FOR_DISPLAY,
 } from '../../../../data/createPages/constants';
 import {
-  controlStyles,
   dropdownIndicatorStyles,
   groupHeadingStyles,
   menuListStyles,
@@ -22,8 +21,13 @@ import {
 } from '../ReactSelectStyles';
 import { safeWindow } from 'src/utilities';
 import './styles.css';
+import { useMediaQuery } from '@react-hook/media-query';
 
 const makeOptionFromLang = (lang: string) => ({ label: longLanguageLabels[lang] ?? lang, value: lang });
+
+const useScreenSize = () => {
+  return useMediaQuery('only screen and (min-width: 1040px)');
+};
 
 export const LanguageDropdownSelector = ({
   language,
@@ -34,6 +38,7 @@ export const LanguageDropdownSelector = ({
   languages: string[];
   showDefaultLink: boolean;
 }) => {
+  const isDesktop = useScreenSize();
   const isSelectedLanguage = (option: ReactSelectOption) => option.value === language;
   const isNotSelectedLanguage = (option: ReactSelectOption) => option.value !== language;
   let options = languages.map(makeOptionFromLang);
@@ -45,6 +50,37 @@ export const LanguageDropdownSelector = ({
   const selectedOption = options.find(isSelectedLanguage) || makeOptionFromLang(DEFAULT_PREFERRED_LANGUAGE);
   selectedOption.label = selectedOption.label.replace(/v\d+\.\d+/, 'none');
 
+  const customControlStyles = (base: any) => ({
+    ...base,
+    fontWeight: '500',
+    boxShadow: 'none',
+    cursor: 'pointer',
+    fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
+    borderRadius: '0.375rem',
+    flexShrink: '0',
+  });
+
+  const mobileControlStyles = (base: any) => ({
+    ...base,
+    customControlStyles,
+    width: '160px',
+    height: '40px',
+    marginLeft: '24px',
+    fontSize: '14px',
+  });
+
+  const desktopControlStyles = (base: any) => ({
+    ...base,
+    customControlStyles,
+    width: '178px',
+    height: '48px',
+    marginRight: '14px',
+    fontSize: '16px',
+    border: '1.5px solid rgb(217, 217, 218)',
+  });
+
+  const controlStyle = isDesktop ? desktopControlStyles : mobileControlStyles;
+
   return (
     <Select
       components={noIndicatorSeparator}
@@ -52,8 +88,8 @@ export const LanguageDropdownSelector = ({
       menuPosition="fixed"
       isSearchable={false}
       styles={{
-        control: controlStyles({ width: '250px', marginLeft: 24 }),
-        option: optionStyles({ width: '280px', marginRight: '16px' }),
+        control: controlStyle,
+        option: optionStyles({ width: '250px', marginRight: '16px' }),
         dropdownIndicator: dropdownIndicatorStyles,
         groupHeading: groupHeadingStyles,
         menu: menuStyles({ right: 0, width: '300px' }),
