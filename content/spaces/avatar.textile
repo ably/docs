@@ -1,0 +1,213 @@
+---
+title: Avatar stack
+meta_description: "Avatar stacks display the online status of members in a space."
+languages:
+  - javascript
+---
+
+Avatar stacks are the most common way of showing the status of members in an application by displaying an avatar for each. This will include whether they are online, or have recently disconnected. Additional information can also be provided, such as a profile picture and email address.
+
+An avatar stack is a reflection of who is present in a space for members to see who they are collaborating with. Events are emitted whenever a member enters or leaves a space, or updates their profile data. Whilst member events are published at the space-level, such as by entering a space, or updating a member's profile data, they can be specifically subscribed to at the member-level to keep an avatar stack updated in realtime.
+
+<aside data-type='further-reading'>
+<p>Avatar stacks build upon the functionality of the "presence":/presence-occupancy/presence feature. Members are entered into the presence set when they "enter the space.":/link</p>
+</aside>
+
+The following four event types are emitted by members:
+
+- Enter := A new member has entered the space. The member has either entered explicitly by calling "@space.enter()@":/link, or has attempted to update their profile data before entering a space, which will instead emit an enter event.
+- Update := A member has updated their profile data by calling "@space.updateProfileData()@":/link.
+- Leave := A member has left the space. The member has either left explicitly by calling "@space.leave()@":/link, or has abruptly disconnected and not re-established a connection within 15 seconds.
+- Remove := A member has been removed from the members list after the "@offlineTimeout@":/link period has elapsed. This enables members to appear greyed out in the avatar stack to indicate that they recently left for the period of time between their leave and remove events.
+
+h2(#profile-data). Profile data
+
+Profile data can be set when a member first enters a space. It is optional data that can be used to associate information with a member, such as a preferred username, or profile picture that can be subsequently displayed in their avatar. Profile data can be any arbitrary JSON-serializable object.
+
+Profile data is returned in the payload of all member event types. "Updating profile data":#update-profile will emit an update event.
+
+The following is an example of setting profile data when entering a space:
+
+```[javascript]
+space.enter({
+  username: 'Claire Oranges',
+  avatar: 'https://slides-internal.com/users/coranges.png',
+});
+```
+
+h3(#update-profile). Update profile data
+
+Profile data can be updated by calling @updateProfileData()@. This will emit a member update event. If a client hasn't yet entered the space, @updateProfileData()@ will instead "enter the space":/link and emit a member enter event.
+
+The following is an example of updating profile data:
+
+```[javascript]
+space.updateProfileData({
+  username: 'Claire Lemons',
+  avatar: 'https://slides-internal.com/users/clemons.png',
+});
+```
+
+A function can be passed to @updateProfileData()@ in order to update a field based on the existing profile data:
+
+```[javascript]
+space.updateProfileData(currentProfile => {
+  return { ...currentProfile, username: 'Clara Lemons' }
+});
+```
+
+h2(#subscribe). Subscribe to member events
+
+Subscribe to member events by registering a listener. Member events are emitted whenever a member enters or leaves the space, or updates their profile data. Use the @subscribe()@ method on the @members@ object of a space to receive updates.
+
+The following is an example of subscribing to the different member event types:
+
+```[javascript]
+// Subscribe to member enters in a space
+space.members.subscribe('enter', (memberEvent) => {
+  console.log(memberEvent);
+});
+
+// Subscribe to member leaves in a space
+space.members.subscribe('leave', (memberEvent) => {
+  console.log(memberEvent);
+});
+
+// Subscribe to member removals in a space
+space.members.subscribe('remove', (memberEvent) => {
+  console.log(memberEvent);
+});
+```
+
+It’s also possible to subscribe to multiple event types with the same listener by using an array:
+
+```[javascript]
+space.members.subscribe(['enter', 'remove'], (memberEvent) => {
+  console.log(memberUpdate);
+});
+```
+
+Or subscribe to all event types:
+
+```[javascript]
+space.members.subscribe('update', (memberEvent) => {
+  console.log(memberEvent);
+});
+```
+
+The following is an example payload of a member event. The @lastEvent.name@ describes which event type a payload relates to. Payload fields are identical for each event type, with the exception of @location@, which is always @null@ for leave and remove events.
+
+```[json]
+  {
+    "clientId": "clemons#142",
+    "connectionId": "hd9743gjDc",
+    "isConnected": false,
+    "lastEvent": {
+      "name": "leave",
+      "timestamp": 1677595689759
+    },
+    "location": null,
+    "profileData": {
+      "username": "Claire Lemons",
+      "avatar": "https://slides-internal.com/users/clemons.png"
+    }
+  }
+```
+
+The following are the properties of a member event payload:
+
+|_. Property |_. Description |_. Type |
+| clientId | The "client identifier":/auth/identified-clients for the member. | String |
+| connectionId | The unique identifier of the member's "connection":/connect. | String |
+| isConnected | Whether the member is connected to Ably or not. | Boolean |
+| profileData | The optional "profile data":#profile-data associated with the member. | Object |
+| location | The current "location":/link of the member. Will be @null@ for leave and remove events. | Object |
+| lastEvent.name | The most recent event emitted by the member. | String |
+| lastEvent.timestamp | The timestamp of the most recently emitted event. | Number |
+
+h3(#unsubscribe). Unsubscribe from member events
+
+Unsubscribe from member events to remove previously registered listeners.
+
+The following is an example of removing a listener for one member event type:
+
+```[javascript]
+space.members.unsubscribe('enter', listener);
+```
+
+It's also possible to remove listeners for multiple member event types:
+
+```[javascript]
+space.members.unsubscribe(['update', 'leave'], listener);
+```
+
+Or remove all listeners:
+
+```[javascript]
+space.members.unsubscribe();
+```
+
+h2(#retrieve). Retrieve members
+
+Space membership can be retrieved in one-off calls. These are local calls and retrieve the membership retained in memory by the SDK. One-off calls to retrieve membership can be used for operations such as displaying a member's own profile data to them, or retrieving a list of all other members to use to "update their profile data":#update-profile.
+
+The following is an example of retrieving a member's own member object:
+
+```[javascript]
+const myMemberInfo = space.members.getSelf();
+```
+
+The following is an example of retrieving an array of member objects for all members other than the member themselves:
+
+```[javascript]
+const othersMemberInfo = space.members.getOthers();
+```
+
+The following is an example of retrieving an array of all member objects, including the member themselves:
+
+```[javascript]
+const allMembers = space.members.getAll();
+```
+
+h2(#examples). Example usage
+
+The following is an example of the steps involved in implementing an avatar stack.
+
+There is also a "demo slideshow application":https://space.ably.dev/ available that highlights all the features of the Spaces SDK.
+
+```[javascript]
+import Spaces from '@ably/spaces';
+import { Realtime } from 'ably';
+
+// Import your custom logic for handling avatar stacks
+import { renderAvatars } from '/src/own-logic';
+
+// Create an Ably client
+const client = new Realtime.Promise({ authUrl: '<authEndpoint>', clientId: '<clientId>' });
+
+// Initialize the Spaces SDK using the Ably client
+const spaces = new Spaces(client);
+
+// Create a new space and set the offlineTimeout period to 3 minutes
+const space = await spaces.get('demoSlideshow', { offlineTimeout: 180_000});
+
+// Enter the space to become a member, passing a nickname
+await space.enter({ name: 'Kyle' });
+
+// Listen to all member changes within the space
+space.members.subscribe('update', (member) => {
+  // Use getOthers() to filter and update the state of all avatars except the member's own
+  const otherMembers = space.members.getOthers();
+  renderAvatars(otherMembers);
+});
+
+// Listen to 'leave' events to update the avatars of those members who have left the space
+space.members.subscribe('leave', (member) => {
+  renderAvatars('memberHasLeft', member);
+});
+
+// Listen to 'remove' events to remove members from the avatar stack after the offlineTimeout has elapsed
+space.members.subscribe('remove', (member) => {
+  renderAvatars('removeMember', member);
+});
+```
