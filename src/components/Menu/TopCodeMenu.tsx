@@ -2,7 +2,6 @@ import React, { useContext } from 'react';
 import { HorizontalMenu, HorizontalMenuVariant } from 'src/components';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
 import PageLanguageContext from '../../contexts/page-language-context';
-import { HomePageLink } from './HomePageLink/HomePageLink';
 import { LanguageDropdownSelector } from './LanguageDropdownSelector/LanguageDropdownSelector';
 import { VersionMenuProps } from './VersionMenu';
 import { useMediaQuery } from '@react-hook/media-query';
@@ -28,7 +27,6 @@ const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionD
       } w-full items-end bg-white px-24`}
     >
       <HorizontalMenu variant={HorizontalMenuVariant.end}>
-        <HomePageLink />
         {showLanguageSelector ? (
           <LanguageDropdownSelector language={pageLanguage} languages={languages} showDefaultLink={showDefaultLink} />
         ) : null}
