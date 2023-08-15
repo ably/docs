@@ -15,12 +15,10 @@ const Layout: FC<{ languages?: Array<string>; versionData?: VersionMenuProps; is
   children,
   isExtraWide = false,
 }) => {
+
   return (
     <GlobalLoading>
       <Header />
-      {languages && languages.length > 0 && versionData && (
-        <TopCodeMenu languages={languages} versionData={versionData} />
-      )}
       <Container
         as="main"
         className={cn('grid grid-cols-1 mx-auto max-w-1264', {
@@ -28,6 +26,9 @@ const Layout: FC<{ languages?: Array<string>; versionData?: VersionMenuProps; is
           ['md:grid-cols-layout xxl:grid-cols-large-layout']: !isExtraWide,
         })}
       >
+        {languages &&  languages.length > 0 && versionData && (
+          <TopCodeMenu languages={languages} versionData={versionData} />
+        )}
         {children}
       </Container>
       <div className="grid grid-cols-1 md:grid-cols-footer-layout">

@@ -48,7 +48,6 @@ export const LanguageDropdownSelector = ({
   }
 
   const selectedOption = options.find(isSelectedLanguage) || makeOptionFromLang(DEFAULT_PREFERRED_LANGUAGE);
-  selectedOption.label = selectedOption.label.replace(/v\d+\.\d+/, 'none');
 
   const customControlStyles = (base: any) => ({
     ...base,
@@ -58,43 +57,49 @@ export const LanguageDropdownSelector = ({
     fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
     borderRadius: '0.375rem',
     flexShrink: '0',
+    height: '2.25rem',
+    width: '6.437rem',
   });
 
   const mobileControlStyles = (base: any) => ({
-    ...base,
-    customControlStyles,
-    width: '160px',
-    height: '40px',
-    marginLeft: '24px',
+    ...customControlStyles(base),
     fontSize: '14px',
   });
 
   const desktopControlStyles = (base: any) => ({
-    ...base,
-    customControlStyles,
-    width: '178px',
-    height: '48px',
-    marginRight: '14px',
+    ...customControlStyles(base),
+    padding: '0',
+    marginRight: '1rem',
     fontSize: '16px',
-    border: '1.5px solid rgb(217, 217, 218)',
   });
 
   const controlStyle = isDesktop ? desktopControlStyles : mobileControlStyles;
 
+  const mobileValueStyles = (base: any) => ({ ...base, padding: '0.125rem' });
+  const desktopValueStyles = (base: any) => ({ ...base, padding: '0.25rem' });
+  const valueStyle = isDesktop ? desktopValueStyles : mobileValueStyles;
+  // Need to check if JS is running in browser or non-browser env
+  // document.body is only available in browsers, will not work in Node.js for example
+  // document.body is needed for the Safari browsers to show the dropdown
+  const setMenuPortalTarget = typeof window !== 'undefined' && typeof document !== 'undefined' ? document.body : null;
+
   return (
     <Select
       components={noIndicatorSeparator}
+      menuPortalTarget={setMenuPortalTarget} //needed in Safari to stop the dropdown being partially hidden
       classNamePrefix="language-dropdown"
       menuPosition="fixed"
       isSearchable={false}
       styles={{
         control: controlStyle,
-        option: optionStyles({ width: '250px', marginRight: '16px' }),
+        option: optionStyles({ width: '15.625', marginRight: '1rem' }),
         dropdownIndicator: dropdownIndicatorStyles,
         groupHeading: groupHeadingStyles,
-        menu: menuStyles({ right: 0, width: '300px' }),
+        menu: menuStyles({ right: 0, width: '18.75rem' }),
         menuList: menuListStyles,
+        menuPortal: (base) => ({ ...base, zIndex: 9999 }), //needed in Safari to stop the dropdown being partially hidden
         group: groupStyles,
+        valueContainer: valueStyle,
       }}
       inputId={'language-menu'}
       instanceId="language-menu"
@@ -116,7 +121,13 @@ export const LanguageDropdownSelector = ({
         }
         navigate(href);
       }}
-      formatOptionLabel={FormatOptionLabelWithLanguageLogo}
+      formatOptionLabel={(option) => (
+        <FormatOptionLabelWithLanguageLogo
+          label={option.label}
+          value={option.value}
+          selectedOption={selectedOption.label}
+        />
+      )}
     />
   );
 };

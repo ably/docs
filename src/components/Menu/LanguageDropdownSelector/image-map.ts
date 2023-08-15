@@ -12,8 +12,10 @@ import { Php } from './LanguageLogos/Php';
 import { Python } from './LanguageLogos/Python';
 import { Ruby } from './LanguageLogos/Ruby';
 import { Swift } from './LanguageLogos/Swift';
+import { Android } from './LanguageLogos/Android';
 
 const imageMapKeys = [
+  'android',
   'csharp',
   'dotnet',
   'flutter',
@@ -36,6 +38,7 @@ export const isInImageMap = (maybeImageMapKey: string): maybeImageMapKey is Imag
 export const imageMap: {
   [key in ImageMapKey]: FunctionComponent;
 } = {
+  android: Android,
   csharp: CSharp,
   dotnet: DotNet,
   flutter: Flutter,
