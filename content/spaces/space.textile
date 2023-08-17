@@ -1,0 +1,242 @@
+---
+title: Space
+meta_description: "A space is a virtual area of your application in which realtime collaboration between users can take place."
+product: spaces
+languages:
+  - javascript
+---
+
+A space is a virtual area of your application in which realtime collaboration between users can take place. You can have any number of virtual spaces within an application, with a single space being anything from a web page, a sheet within a spreadsheet, an individual slide in a slideshow, or the entire slideshow itself.
+
+The following features can be implemented within a space:
+
+* "Avatar stack":/spaces/avatar
+* "Member location":/spaces/locations
+* "Live cursors":/spaces/cursors
+* "Component locking":/spaces/locking
+
+The @space@ namespace consists of a state object that represents the realtime status of all members in a given virtual space. This includes a list of which members are currently online or have recently left and each member's location within the application. The position of members' cursors are excluded from the space state due to their high frequency of updates. In the beta release, which UI components members have locked are also excluded from the space state.
+
+Space state can be "subscribed":#subscribe to in the @space@ namespace. Alternatively, subscription listeners can be registered for individual features, such as avatar stack events and member location updates. These individual subscription listeners are intended to provide flexibility when implementing collaborative features. Individual listeners are client-side filtered events, so irrespective of whether you choose to subscribe to the space state or individual listeners, each event only counts as a single message.
+
+To subscribe to any events in a space, you first need to create or retrieve a space.
+
+h2(#create). Create or retrieve a space
+
+A @space@ object is a reference to a single space and is uniquely identified by its unicode string name. A space is created, or an existing space is retrieved from the @spaces@ collection using the @get()@ method.
+
+The following restrictions apply to space names:
+
+* They are case sensitive
+* They can't start with @[@ or @:@
+* They can't be empty
+* They can't contain newline characters or wildcards
+
+The following is an example of creating a space:
+
+```[javascript]
+const space = await spaces.get('board-presentation');
+```
+
+h2(#enter). Enter a space
+
+Entering a space will register a client as a member and emit an "@enter@":/spaces/members#events event to all subscribers. Use the @enter()@ method to enter a space.
+
+Being entered into a space is required for members to:
+
+* Update their "profile data":#update-profile.
+* Set their "location":/spaces/locations.
+* Set their "cursor position":/spaces/cursors.
+
+The following is an example of entering a space:
+
+```[javascript]
+await space.enter();
+```
+
+h3(#leave). Leave a space
+
+Leaving a space will emit a "@leave@":/spaces/members#events event to all subscribers.
+
+The following is an example of explicitly leaving a space:
+
+```[javascript]
+await space.leave();
+```
+
+Members will implicitly leave a space after 15 seconds if they abruptly disconnect. If experiencing network disruption, and they reconnect within 15 seconds, then they will remain part of the space and no @leave@ event will be emitted.
+
+h2(#profile-data). Profile data
+
+Profile data can be set when "entering":#enter a space. It is optional data that can be used to associate information with a member, such as a preferred username, or profile picture that can be subsequently displayed in their avatar. Profile data can be any arbitrary JSON-serializable object.
+
+Profile data is returned in the payload of all space events.
+
+The following is an example of setting profile data when entering a space:
+
+```[javascript]
+await space.enter({
+  username: 'Claire Oranges',
+  avatar: 'https://slides-internal.com/users/coranges.png',
+});
+```
+
+h3(#update-profile). Update profile data
+
+Profile data can be updated at any point after entering a space by calling @updateProfileData()@. This will emit an @update@ event. If a client hasn't yet entered the space, @updateProfileData()@ will instead "enter the space,":#enter with the profile data, and emit an "@enter@":/spaces/members#events event.
+
+The following is an example of updating profile data:
+
+```[javascript]
+space.updateProfileData({
+  username: 'Claire Lemons',
+  avatar: 'https://slides-internal.com/users/clemons.png',
+});
+```
+
+A function can be passed to @updateProfileData()@ in order to update a field based on the existing profile data:
+
+```[javascript]
+space.updateProfileData(currentProfile => {
+  return { ...currentProfile, username: 'Clara Lemons' }
+});
+```
+
+h2(#subscribe). Subscribe to space state
+
+Subscribe to space state updates by registering a listener. Use the @subscribe()@ method on the @space@ object to receive updates.
+
+The following events will trigger a space event:
+
+* A member enters the space
+* A member leaves the space
+* A member is removed from the space state "after the offlineTimeout period":#options has elapsed
+* A member updates their profile data
+* A member sets a new location
+
+Space state contains a single object called @members@. Any events that trigger a change in space state will always return the current state of the space as an array of @member@ objects.
+
+<aside data-type='note'>
+<p>"Avatar stacks":/spaces/members and "member location":/spaces/locations events can be subscribed to on their individual namespaces; @space.members@ and @space.locations@. These events are filtered versions of space state events. Only a single "message":/channels/messages is published per event by Ably, irrespective of whether you register listeners for space state or individual namespaces. If you register listeners for both, it is still only a single message.</p>
+<p>The key difference between the subscribing to space state or to individual feature events, is that space state events return the current state of the space as an array of all members in each event payload. Individual member and location event payloads only include the relevant data for the member that triggered the event.</p>
+</aside>
+
+The following is an example of subscribing to space events:
+
+```[javascript]
+space.subscribe('update', (spaceState) => {
+  console.log(spaceState.members);
+});
+```
+
+The following is an example payload of a space event.
+
+```[json]
+[
+    {
+        "clientId": "clemons#142",
+        "connectionId": "hd9743gjDc",
+        "isConnected": false,
+        "lastEvent": {
+          "name": "leave",
+          "timestamp": 1677595689759
+        },
+        "location": null,
+        "profileData": {
+          "username": "Claire Lemons",
+          "avatar": "https://slides-internal.com/users/clemons.png"
+        }
+    },
+    {
+        "clientId": "amint#5",
+        "connectionId": "hg35a4fgjAs",
+        "isConnected": true,
+          "lastEvent": {
+          "name": "enter",
+        "timestamp": 173459567340
+        },
+        "location": null,
+        "profileData": {
+          "username": "Arit Mint",
+          "avatar": "https://slides-internal.com/users/amint.png"
+        }
+    },
+    ...
+]
+```
+
+The following are the properties of an individual @member@ within a space event payload:
+
+|_. Property |_. Description |_. Type |
+| clientId | The "client identifier":/auth/identified-clients for the member. | String |
+| connectionId | The unique identifier of the member's "connection":/connect. | String |
+| isConnected | Whether the member is connected to Ably or not. | Boolean |
+| profileData | The optional "profile data":#profile-data associated with the member. | Object |
+| location | The current "location":/spaces/locations of the member. | Object |
+| lastEvent.name | The most recent event emitted by the member. | String |
+| lastEvent.timestamp | The timestamp of the most recently emitted event. | Number |
+
+h3(#unsubscribe). Unsubscribe from space events
+
+Unsubscribe from space events to remove previously registered listeners.
+
+The following is an example of removing a listener:
+
+```[javascript]
+space.unsubscribe('update', listener);
+```
+
+h2(#retrieve). Retrieve space state
+
+The current state of the space can be retrieved in a one-off call. This will return an array of all @member@ objects currently in the space. This is a local call and retrieves the membership of the space retained in memory by the SDK.
+
+The following is an example of retrieving the current space state. Ths includes members that have recently left the space, but have not yet been removed:
+
+```[javascript]
+const spaceState = await space.getState();
+```
+
+h2(#advanced). Advanced properties
+
+The following sections are only relevant if you want to further customize a space, or understand more about the Spaces SDK. They aren't required to get up and running with the basics.
+
+h3(#options). Space options
+
+An additional set of optional properties may be passed when "creating or retrieving":#create a space to customize the behavior of different features.
+
+The following properties can be customized:
+
+|_. Property |_. Description |_. Type |
+| offlineTimeout | Number of milliseconds after a member loses connection or closes their browser window to wait before they are removed from the member list. The default is 120,000ms (2 minutes). | Number |
+| cursors | A "cursor options":/spaces/cursors#options object for customizing live cursor behavior. | Object |
+| cursors.outboundBatchInterval | The interval, in milliseconds, at which a batch of cursor positions are published. This is multiplied by the number of members in a space, minus 1. The default value is 100ms. | Number |
+| cursors.paginationLimit | The number of pages searched from history for the last published cursor position. The default is 5. | Number |
+
+The following is an example of customizing the space options when calling @spaces.get()@:
+
+```[javascript]
+const space = await spaces.get('board-presentation', {
+	offlineTimeout: 180_000,
+	cursors: { paginationLimit: 10 }
+});
+```
+
+h3(#foundations). Space foundations
+
+The Spaces SDK is built upon existing Ably functionality available in Ably's Core SDKs. Understanding which core features are used to provide the abstractions in the Spaces SDK enables you to manage space state and build additional functionality into your application.
+
+A space is created as an Ably "channel":/channels. Members "attach":/channels#attach to the channel and join its "presence set":/presence-occupancy/presence when they "enter":#enter the space. Avatar stacks, member locations and component locking are all handled on this channel.
+
+To manage the state of the space, you can monitor the "state of the underlying channel":/channels#states. The channel object can be accessed through @space.channel@.
+
+The following is an example of registering a listener to wait for a channel to become attached:
+
+```[javascript]
+space.channel.on('attached', (stateChange) => {
+  console.log(stateChange)
+});
+```
+
+<aside data-type='note'>
+<p>Due to the high frequency at which updates are streamed for cursor movements, live cursors utilizes its own "channel.":/channels</p>
+</aside>
