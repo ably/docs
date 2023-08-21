@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Select, { SingleValue } from 'react-select';
-import cn from 'classnames';
 import { flatMapDeep } from 'lodash/fp';
 
 import { noIndicatorSeparator } from 'src/components/Menu/ReactSelectCustomComponents/no-indicator-separator';
@@ -15,7 +14,6 @@ import {
 } from 'src/components/Menu/ReactSelectStyles';
 
 import { MenuData } from './menu-data';
-import { rightSidebarMobile, withLanguageNavBar } from './RightSidebar.module.css';
 
 const mapMenuDataToSelectOptions = (menuData: MenuData) => ({
   label: menuData.name,
@@ -27,11 +25,7 @@ export const RightSidebarMobile = ({ menuData, languages }: { menuData: MenuData
   const [selectedOption, setSelectedOption] = useState<SingleValue<{ label: string; value: string }>>(options[0]);
 
   return (
-    <div
-      className={cn(rightSidebarMobile, {
-        [withLanguageNavBar]: languages,
-      })}
-    >
+    <div className="md:hidden flex-grow flex flex-row items-center pl-24">
       <span className="pr-12 hidden xs:inline text-p3 sm:text-p1">On this page: </span>
       <Select
         components={noIndicatorSeparator}

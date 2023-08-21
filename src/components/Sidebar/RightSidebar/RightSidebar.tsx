@@ -8,7 +8,7 @@ import { SidebarData, SectionTitle, EXPAND_MENU, SidebarLinkMenu } from 'src/com
 
 import { MenuData } from './menu-data';
 
-import { stickySidebar, withLanguageNavBar } from './RightSidebar.module.css';
+import { stickySidebar } from './RightSidebar.module.css';
 
 const mapMenuItemToSidebarItem = ({ name, id, level }: MenuData): SidebarData => ({
   label: name,
@@ -91,14 +91,12 @@ export const RightSidebar = ({ menuData, languages }: RightSidebarProps) => {
   return (
     <HighlightedMenuContext.Provider value={highlightedMenuItem}>
       <aside
-        className={cn(stickySidebar, {
-          [withLanguageNavBar]: languages,
-        })}
+        className={cn('transition-all hidden md:block md:mr-20 w-full flex-grow', stickySidebar)}
         onWheel={onWheel}
         data-languages={languages}
         ref={rightSidebarRef}
       >
-        <SectionTitle className="py-12 px-8 pt-64 top-0 sticky bg-white">On this page</SectionTitle>
+        <SectionTitle className="py-12 px-8 bg-white">On this page</SectionTitle>
         <HighlightedMenuContext.Consumer>
           {(highlightedMenuId) => (
             <SidebarLinkMenu
