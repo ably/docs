@@ -1,5 +1,6 @@
 const DOCUMENTATION_LANGUAGES = [
   'javascript',
+  'react',
   'java',
   'android',
   'kotlin',

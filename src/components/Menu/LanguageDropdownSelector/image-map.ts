@@ -5,6 +5,7 @@ import { Flutter } from './LanguageLogos/Flutter';
 import { Go } from './LanguageLogos/Go';
 import { Java } from './LanguageLogos/Java';
 import { JavaScript } from './LanguageLogos/JavaScript';
+import { ReactJS } from './LanguageLogos/React';
 import { Kotlin } from './LanguageLogos/Kotlin';
 import { NodeJs } from './LanguageLogos/NodeJs';
 import { ObjC } from './LanguageLogos/ObjC';
@@ -16,6 +17,7 @@ import { Android } from './LanguageLogos/Android';
 
 const imageMapKeys = [
   'android',
+  'react',
   'csharp',
   'dotnet',
   'flutter',
@@ -30,7 +32,7 @@ const imageMapKeys = [
   'swift',
   'kotlin',
 ];
-type ImageMapKey = typeof imageMapKeys[number];
+type ImageMapKey = (typeof imageMapKeys)[number];
 
 export const isInImageMap = (maybeImageMapKey: string): maybeImageMapKey is ImageMapKey =>
   imageMapKeys.includes(maybeImageMapKey as ImageMapKey);
@@ -45,6 +47,7 @@ export const imageMap: {
   go: Go,
   java: Java,
   javascript: JavaScript,
+  react: ReactJS,
   nodejs: NodeJs,
   objc: ObjC,
   php: Php,
