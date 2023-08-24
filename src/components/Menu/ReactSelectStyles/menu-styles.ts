@@ -10,4 +10,5 @@ export const menuStyles: (
   ...styles,
   zIndex: 12,
   margin: '4px 0 0',
+  borderRadius: '0.5rem',
 });

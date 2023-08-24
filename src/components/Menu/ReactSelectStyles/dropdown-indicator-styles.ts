@@ -6,6 +6,7 @@ export const dropdownIndicatorStyles: StylesConfigFunction<
   DropdownIndicatorProps<ReactSelectOption, false, ReactSelectOptGroup>
 > = (provided) => ({
   ...provided,
+  padding: '4px',
   color: 'var(--color-cool-black)',
   '&:hover': {
     color: 'var(--color-gui-hover)',

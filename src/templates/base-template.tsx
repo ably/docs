@@ -10,12 +10,11 @@ import {
   languageIsUsable,
 } from 'src/components/common/language-defaults';
 import { PREFERRED_LANGUAGE_KEY } from 'src/utilities/language/constants';
-import { RightSidebar, RightSidebarMobile } from 'src/components/Sidebar/RightSidebar';
+import { RightSidebarWrapper } from 'src/components/Sidebar/RightSidebar';
 import Article from 'src/components/Article';
 import Html from 'src/components/blocks/Html';
 import Layout from 'src/components/Layout';
 import PageTitle from 'src/components/PageTitle';
-import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 
 import {
   DEFAULT_LANGUAGE,
@@ -123,21 +122,21 @@ const Template = ({
     }
   }, []);
 
-  const languageAlternativesExist = languages && languages.length > 1;
-
   return (
     <PageLanguageContext.Provider value={language}>
       <PageLanguagesContext.Provider value={languages}>
         <PathnameContext.Provider value={pathname}>
           <Head title={title} canonical={canonical} description={description} />
-          <Layout languages={filteredLanguages} versionData={versionData}>
-            <LeftSideBar />
-            <Article hasTopBar={languageAlternativesExist}>
-              <RightSidebarMobile menuData={contentMenuFromLanguage[0]} languages={languagesExist} />
+          <Layout>
+            <Article>
               <PageTitle>{title}</PageTitle>
               <div>{elements}</div>
             </Article>
-            <RightSidebar languages={languagesExist} menuData={contentMenuFromLanguage[0]} />
+            <RightSidebarWrapper
+              menuData={contentMenuFromLanguage[0]}
+              languages={filteredLanguages}
+              versionData={versionData}
+            />
           </Layout>
         </PathnameContext.Provider>
       </PageLanguagesContext.Provider>

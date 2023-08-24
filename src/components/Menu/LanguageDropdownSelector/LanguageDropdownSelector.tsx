@@ -3,8 +3,8 @@ import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicato
 import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
 import { longLanguageLabels } from '../../../maps/language';
 import { ReactSelectOption } from 'src/components';
-import { PREFERRED_LANGUAGE_KEY } from '../../../utilities/language/constants';
-import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common/language-defaults';
+import { PREFERRED_LANGUAGE_KEY } from '../../../utilities';
+import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common';
 import { navigate } from 'gatsby';
 import {
   DEFAULT_LANGUAGE,
@@ -12,7 +12,6 @@ import {
   IGNORED_LANGUAGES_FOR_DISPLAY,
 } from '../../../../data/createPages/constants';
 import {
-  controlStyles,
   dropdownIndicatorStyles,
   groupHeadingStyles,
   menuListStyles,
@@ -22,8 +21,13 @@ import {
 } from '../ReactSelectStyles';
 import { safeWindow } from 'src/utilities';
 import './styles.css';
+import { useMediaQuery } from '@react-hook/media-query';
 
 const makeOptionFromLang = (lang: string) => ({ label: longLanguageLabels[lang] ?? lang, value: lang });
+
+const useScreenSize = () => {
+  return useMediaQuery('only screen and (min-width: 1040px)');
+};
 
 export const LanguageDropdownSelector = ({
   language,
@@ -34,6 +38,7 @@ export const LanguageDropdownSelector = ({
   languages: string[];
   showDefaultLink: boolean;
 }) => {
+  const isDesktop = useScreenSize();
   const isSelectedLanguage = (option: ReactSelectOption) => option.value === language;
   const isNotSelectedLanguage = (option: ReactSelectOption) => option.value !== language;
   let options = languages.map(makeOptionFromLang);
@@ -43,20 +48,58 @@ export const LanguageDropdownSelector = ({
   }
 
   const selectedOption = options.find(isSelectedLanguage) || makeOptionFromLang(DEFAULT_PREFERRED_LANGUAGE);
+
+  const customControlStyles = (base: any) => ({
+    ...base,
+    fontWeight: '500',
+    boxShadow: 'none',
+    cursor: 'pointer',
+    fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
+    borderRadius: '0.375rem',
+    flexShrink: '0',
+    height: '2.25rem',
+    width: '6.437rem',
+  });
+
+  const mobileControlStyles = (base: any) => ({
+    ...customControlStyles(base),
+    fontSize: '14px',
+  });
+
+  const desktopControlStyles = (base: any) => ({
+    ...customControlStyles(base),
+    padding: '0',
+    marginRight: '1rem',
+    fontSize: '16px',
+  });
+
+  const controlStyle = isDesktop ? desktopControlStyles : mobileControlStyles;
+
+  const mobileValueStyles = (base: any) => ({ ...base, padding: '0.125rem' });
+  const desktopValueStyles = (base: any) => ({ ...base, padding: '0.25rem' });
+  const valueStyle = isDesktop ? desktopValueStyles : mobileValueStyles;
+  // Need to check if JS is running in browser or non-browser env
+  // document.body is only available in browsers, will not work in Node.js for example
+  // document.body is needed for the Safari browsers to show the dropdown
+  const setMenuPortalTarget = typeof window !== 'undefined' && typeof document !== 'undefined' ? document.body : null;
+
   return (
     <Select
       components={noIndicatorSeparator}
+      menuPortalTarget={setMenuPortalTarget} //needed in Safari to stop the dropdown being partially hidden
       classNamePrefix="language-dropdown"
       menuPosition="fixed"
       isSearchable={false}
       styles={{
-        control: controlStyles({ width: '250px', marginLeft: 24 }),
-        option: optionStyles({ width: '280px', marginRight: '16px' }),
+        control: controlStyle,
+        option: optionStyles({ width: '15.625', marginRight: '1rem' }),
         dropdownIndicator: dropdownIndicatorStyles,
         groupHeading: groupHeadingStyles,
-        menu: menuStyles({ right: 0, width: '300px' }),
+        menu: menuStyles({ right: 0, width: '18.75rem' }),
         menuList: menuListStyles,
+        menuPortal: (base) => ({ ...base, zIndex: 9999 }), //needed in Safari to stop the dropdown being partially hidden
         group: groupStyles,
+        valueContainer: valueStyle,
       }}
       inputId={'language-menu'}
       instanceId="language-menu"
@@ -78,7 +121,13 @@ export const LanguageDropdownSelector = ({
         }
         navigate(href);
       }}
-      formatOptionLabel={FormatOptionLabelWithLanguageLogo}
+      formatOptionLabel={(option) => (
+        <FormatOptionLabelWithLanguageLogo
+          label={option.label}
+          value={option.value}
+          selectedOption={selectedOption.label}
+        />
+      )}
     />
   );
 };

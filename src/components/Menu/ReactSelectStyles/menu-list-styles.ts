@@ -8,6 +8,6 @@ export const menuListStyles: StylesConfigFunction<MenuListProps<ReactSelectOptio
   ...provided,
   height: 'initial',
   maxHeight: 'initial',
-  boxShadow: '0px 24px 32px rgba(0, 0, 0, 0.05)',
+  boxShadow: '0 24px 80px 0 rgba(0, 0, 0, 0.10)',
   padding: 16,
 });
