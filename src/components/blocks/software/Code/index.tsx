@@ -29,7 +29,7 @@ export const multilineRegex = /\r|\n/gm;
 const alternativeLanguageRegistry: Record<string, string> = {
   objc: 'objectivec',
   nodejs: 'javascript',
-  react: 'javascript',
+  react: 'jsx',
   dotnet: 'cs',
   csharp: 'cs',
   flutter: 'dart',
