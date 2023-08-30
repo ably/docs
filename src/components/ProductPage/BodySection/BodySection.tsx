@@ -2,9 +2,11 @@ import React from 'react';
 import { SectionProps } from '../HomepageContent';
 import { BodySectionDescription } from './BodySectionDescription';
 import { FeatureCard } from './Card/FeatureCard';
+import { QuickstartCard } from './Card/QuickstartCard';
 
 const cardTypes = {
   feature: FeatureCard,
+  quickstart: QuickstartCard,
 };
 
 const betaPillStyle = {
@@ -46,7 +48,7 @@ export const BodySection = ({ section }: { section: SectionProps }) => {
           className={`grid grid-cols-1 sm:grid-cols-2 ${gridColVariants[columns]} mb-${section.bottomMargin} gap-24`}
         >
           {cards.map((card, index) => {
-            const Card = cardTypes[card.type] || BodySectionCard;
+            const Card = cardTypes[card.type];
             return <Card key={index} {...card} />;
           })}
         </div>
