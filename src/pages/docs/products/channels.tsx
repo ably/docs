@@ -58,10 +58,12 @@ export const query = graphql`
         level
         description
         columns
+        bottomMargin
         releaseStage
         callToAction {
           text
           href
+          type
         }
         cards {
           title

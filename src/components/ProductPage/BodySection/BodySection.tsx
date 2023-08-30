@@ -4,11 +4,14 @@ import { BodySectionDescription } from './BodySectionDescription';
 import { FeatureCard } from './Card/FeatureCard';
 import { QuickstartCard } from './Card/QuickstartCard';
 import { ExampleCard } from './Card/ExampleCard';
+import { TutorialCard } from './Card/TutorialCard';
+import { CallToAction } from './CallToAction';
 
 const cardTypes = {
   feature: FeatureCard,
   quickstart: QuickstartCard,
   example: ExampleCard,
+  tutorial: TutorialCard,
 };
 
 const betaPillStyle = {
@@ -55,14 +58,7 @@ export const BodySection = ({ section }: { section: SectionProps }) => {
           })}
         </div>
       )}
-      {section.callToAction ? (
-        <div className="h-full flex">
-          <a className="mr-4 docs-link font-medium" href={section.callToAction.href}>
-            {section.callToAction.text}
-          </a>
-          <Icon name="icon-gui-arrow-right" size="1rem" />
-        </div>
-      ) : null}
+      {section.callToAction ? <CallToAction callToAction={section.callToAction}></CallToAction> : null}
     </section>
   );
 };
