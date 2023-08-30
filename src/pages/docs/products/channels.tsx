@@ -68,6 +68,7 @@ export const query = graphql`
           type
           content
           image
+          link
           links {
             text
             href

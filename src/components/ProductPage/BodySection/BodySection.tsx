@@ -3,10 +3,12 @@ import { SectionProps } from '../HomepageContent';
 import { BodySectionDescription } from './BodySectionDescription';
 import { FeatureCard } from './Card/FeatureCard';
 import { QuickstartCard } from './Card/QuickstartCard';
+import { ExampleCard } from './Card/ExampleCard';
 
 const cardTypes = {
   feature: FeatureCard,
   quickstart: QuickstartCard,
+  example: ExampleCard,
 };
 
 const betaPillStyle = {

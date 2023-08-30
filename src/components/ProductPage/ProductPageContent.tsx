@@ -16,6 +16,7 @@ export type CardProps = {
   type: string;
   content: string;
   image: string;
+  link: string;
   links: LinkProps[];
 };
 
