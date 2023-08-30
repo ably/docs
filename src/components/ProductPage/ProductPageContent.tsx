@@ -9,6 +9,7 @@ export type LinkProps = {
 export type CallToActionProps = {
   text: string;
   href: string;
+  type: string;
 };
 
 export type CardProps = {
@@ -25,6 +26,7 @@ export type SectionProps = {
   level: keyof JSX.IntrinsicElements | null;
   description: string | null;
   columns: number;
+  bottomMargin: number;
   releaseStage: string;
   callToAction: CallToActionProps;
   cards: CardProps[];
