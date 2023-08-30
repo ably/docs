@@ -38,17 +38,20 @@ const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localh
 const CANONICAL_ROOT = `${ABLY_MAIN_WEBSITE}${DOCUMENTATION_PATH}`;
 const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
 const NO_LANGUAGE = 'none';
+const META_PRODUCT_FALLBACK = 'channels';
 
 const Template = ({
   location: { search, pathname, hash },
   pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
   data: { document, versions },
+  showProductNavigation = true,
 }: AblyTemplateData) => {
   const params = new URLSearchParams(search);
   const language = params.get('lang') ?? DEFAULT_LANGUAGE;
 
   const title = getMetaDataDetails(document, 'title') as string;
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
+  const product = getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as string;
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
   const canonical = `${CANONICAL_ROOT}${slug}`.replace(/\/+$/, '');
 
@@ -127,7 +130,7 @@ const Template = ({
       <PageLanguagesContext.Provider value={languages}>
         <PathnameContext.Provider value={pathname}>
           <Head title={title} canonical={canonical} description={description} />
-          <Layout>
+          <Layout showProductNavigation={showProductNavigation} currentProduct={product}>
             <Article>
               <PageTitle>{title}</PageTitle>
               <div>{elements}</div>

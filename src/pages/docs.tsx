@@ -40,7 +40,7 @@ const IndexPage = ({
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
-      <Layout isExtraWide>
+      <Layout isExtraWide currentProduct="home">
         <HomepageContent sections={sections} />
       </Layout>
     </>

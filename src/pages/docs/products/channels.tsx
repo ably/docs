@@ -42,7 +42,7 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <Layout isExtraWide>
+      <Layout isExtraWide currentProduct="channels">
         <LeftSideBar />
         <ProductPageContent sections={sections} />
       </Layout>
