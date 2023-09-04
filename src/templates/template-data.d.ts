@@ -6,6 +6,7 @@ export type AblyDocumentMeta = {
   meta_description: string;
   languages: string[];
   redirect_from: string[];
+  product?: string;
 };
 
 export type AblyDocument = {
