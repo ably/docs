@@ -40,7 +40,7 @@ const IndexPage = ({
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
-      <Layout isExtraWide currentProduct="home">
+      <Layout currentProduct="home" noSidebar>
         <HomepageContent sections={sections} />
       </Layout>
     </>
@@ -52,15 +52,22 @@ export const query = graphql`
     pageContentYaml(name: { eq: "Homepage" }) {
       sections {
         title
-        level
         description
-        defaultCallToAction
+        columns
+        bottomMargin
+        callToAction {
+          text
+          href
+        }
         cards {
           title
+          type
           content
-          link
-          flag
-          callToAction
+          image
+          callToAction {
+            text
+            href
+          }
         }
       }
       meta {
