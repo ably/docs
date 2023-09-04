@@ -10,6 +10,7 @@ type LanguageSyntaxHighlighterNames = {
 
 const languageLabels: LanguageLabels = {
   javascript: 'JavaScript v1.2',
+  react: 'React v1.2',
   realtime_javascript: 'JavaScript v1.2',
   rest_javascript: 'JavaScript v1.2',
   java: 'Java v1.2',
@@ -63,12 +64,17 @@ const languageLabels: LanguageLabels = {
   [DEFAULT_LANGUAGE]: 'Any',
 };
 
-const longLanguageLabels: LanguageLabels = { ...languageLabels, csharp: 'C# .NET v1.2', javascript: 'JavaScript v1.2' };
+const longLanguageLabels: LanguageLabels = {
+  ...languageLabels,
+  csharp: 'C# .NET v1.2',
+  javascript: 'JavaScript v1.2',
+};
 
 /**  Source: Ably Voltaire, src/components/code-block/code-block.js */
 const languageSyntaxHighlighterNames: LanguageSyntaxHighlighterNames = {
   plaintext: { label: null, key: 'plaintext' },
   javascript: { label: 'JS', key: 'javascript' },
+  react: { label: 'React', key: 'javascript' },
   java: { label: 'Java', key: 'java' },
   ruby: { label: 'Ruby', key: 'ruby' },
   python: { label: 'Python', key: 'python' },
