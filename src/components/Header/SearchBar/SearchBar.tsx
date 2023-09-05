@@ -17,11 +17,21 @@ export enum DisplayMode {
   MOBILE = 'MOBILE',
 }
 
-export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
+export const SearchBar = ({
+  displayMode,
+  displayLocation,
+  extraStyleOptions,
+}: {
+  displayMode: DisplayMode;
+  displayLocation: string;
+  extraStyleOptions: object;
+}) => {
   const textInput = useRef<null | HTMLInputElement>(null);
   const searchDisplayRef = useRef<null | HTMLDivElement>(null);
   const [isInFocus, setIsInFocus] = useState(false);
   const [keyIcon, setKeyIcon] = useState('^');
+  const extraWrapperContainerStyle = extraStyleOptions && extraStyleOptions.wrapperContainer;
+  const extraInputStyle = extraStyleOptions && extraStyleOptions.inputContainer;
 
   const {
     state: { query, results, error },
@@ -69,8 +79,13 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
         'flex md:hidden': displayMode === DisplayMode.MOBILE,
         'hidden md:flex': displayMode === DisplayMode.FULL_SCREEN,
       })}
+      style={{ ...extraWrapperContainerStyle }}
     >
-      <div className="relative w-full mx-24 mt-24 md:m-0">
+      <div
+        className={cn('relative w-full', {
+          'mx-24 mt-24 md:m-0': displayLocation !== 'homepage',
+        })}
+      >
         <input
           type="text"
           ref={textInput}
@@ -78,6 +93,7 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
           className={cn(searchInput)}
           value={query}
           onChange={handleSearch}
+          style={{ ...extraInputStyle }}
         />
         <Icon name="icon-gui-search" size="24px" additionalCSS="absolute left-16 top-12" />
         {!isInFocus && (
@@ -87,7 +103,13 @@ export const SearchBar = ({ displayMode }: { displayMode: DisplayMode }) => {
           </div>
         )}
       </div>
-      <SuggestionBox results={results} error={error} query={query} isActive={isInFocus} />
+      <SuggestionBox
+        results={results}
+        error={error}
+        query={query}
+        isActive={isInFocus}
+        displayLocation={displayLocation}
+      />
     </div>
   );
 };

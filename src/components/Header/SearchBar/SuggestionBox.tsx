@@ -14,9 +14,10 @@ type Props = {
   isActive: boolean;
   error?: { message: string } | null;
   query: string;
+  displayLocation: string;
 };
 
-export const SuggestionBox = ({ results, isActive, error, query }: Props) => {
+export const SuggestionBox = ({ results, isActive, error, query, displayLocation }: Props) => {
   const totalResults = results?.length ?? 0;
   const [selectedItem, setSelectedItem] = useState<number | null>(null);
 
@@ -40,8 +41,10 @@ export const SuggestionBox = ({ results, isActive, error, query }: Props) => {
     return null;
   }
 
+  const containerStyle = displayLocation === 'homepage' ? { maxWidth: '100%' } : null;
+
   return (
-    <div aria-label="suggestions" className={container}>
+    <div aria-label="suggestions" className={container} style={containerStyle}>
       <div className="font-light text-dark-grey uppercase text-menu3 px-16 mb-2">Results from docs</div>
       {results && totalResults > 0 ? (
         results.map((hit, index) => {
