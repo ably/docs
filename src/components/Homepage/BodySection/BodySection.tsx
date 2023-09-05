@@ -5,10 +5,12 @@ import { BodySectionDescription } from './BodySectionDescription';
 import { HeroCard } from './Card/HeroCard';
 import { CallToAction } from './CallToAction';
 import { FeatureCard } from './Card/FeatureCard';
+import { SdkCard } from './Card/SdkCard';
 
 const cardTypes = {
   hero: HeroCard,
   feature: FeatureCard,
+  sdk: SdkCard,
 };
 
 export const BodySection = ({ section }: { section: SectionProps }) => {
