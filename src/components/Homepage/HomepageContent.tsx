@@ -1,5 +1,6 @@
 import React from 'react';
 import { BodySection } from './BodySection/BodySection';
+import { LinksProps } from '../ProductPage/ProductPageContent';
 
 export type CallToActionProps = {
   text: string;
@@ -10,7 +11,7 @@ export type CardProps = {
   title: string;
   content: string;
   image: string;
-  callToAction: CallToActionProps;
+  links: LinksProps[];
 };
 
 export type SectionProps = {

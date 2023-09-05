@@ -64,7 +64,7 @@ export const query = graphql`
           type
           content
           image
-          callToAction {
+          links {
             text
             href
           }
