@@ -4,9 +4,11 @@ import { SectionProps } from '../HomepageContent';
 import { BodySectionDescription } from './BodySectionDescription';
 import { HeroCard } from './Card/HeroCard';
 import { CallToAction } from './CallToAction';
+import { FeatureCard } from './Card/FeatureCard';
 
 const cardTypes = {
   hero: HeroCard,
+  feature: FeatureCard,
 };
 
 export const BodySection = ({ section }: { section: SectionProps }) => {
@@ -26,6 +28,11 @@ export const BodySection = ({ section }: { section: SectionProps }) => {
     72: 'mb-72',
   };
 
+  const gridGapVariants = {
+    2: 'gap-32',
+    4: 'gap-24',
+  };
+
   return (
     <section className={`${sectionBottomMarginVariants[section.bottomMargin]} w-full`} style={{ maxWidth: '960px' }}>
       {section.title && <h2 className="ui-text-h2">{section.title}</h2>}
@@ -33,7 +40,7 @@ export const BodySection = ({ section }: { section: SectionProps }) => {
       {cardsExist && (
         <div
           className={cn({
-            [`grid grid-cols-1 sm:grid-cols-2 ${gridColVariants[columns]}  gap-24`]: !singleColumn,
+            [`grid grid-cols-1 ${gridColVariants[columns]} ${gridGapVariants[columns]}`]: !singleColumn,
           })}
         >
           {cards.map((card, index) => {
