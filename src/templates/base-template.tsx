@@ -45,15 +45,18 @@ const Template = ({
   pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
   data: { document, versions },
   showProductNavigation = true,
+  currentProduct,
 }: AblyTemplateData) => {
   const params = new URLSearchParams(search);
   const language = params.get('lang') ?? DEFAULT_LANGUAGE;
 
   const title = getMetaDataDetails(document, 'title') as string;
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
-  const product = getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as string;
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
   const canonical = `${CANONICAL_ROOT}${slug}`.replace(/\/+$/, '');
+
+  // when we don't get a product, peek into the metadata of the page for a default value
+  currentProduct ??= getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as string;
 
   const contentMenuFromAllLanguages = contentMenu[language];
   const contentMenuFromRealtime = contentMenu[`${REALTIME_SDK_INTERFACE}_${language}`];
@@ -130,7 +133,7 @@ const Template = ({
       <PageLanguagesContext.Provider value={languages}>
         <PathnameContext.Provider value={pathname}>
           <Head title={title} canonical={canonical} description={description} />
-          <Layout showProductNavigation={showProductNavigation} currentProduct={product}>
+          <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
             <Article>
               <PageTitle>{title}</PageTitle>
               <div>{elements}</div>
