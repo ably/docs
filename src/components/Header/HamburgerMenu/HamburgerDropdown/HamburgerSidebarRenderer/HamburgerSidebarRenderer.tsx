@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { SidebarData, SidebarProps } from 'src/components';
+import { SidebarData, SidebarName } from 'src/components';
 import { closeAndFilterSidebarItems } from './close-and-filter-sidebar-items';
 import { ExpandedMenu, HamburgerExpandedMenuContext } from './hamburger-expanded-menu-context';
 import { HamburgerSidebarItem } from '.';
@@ -8,6 +8,12 @@ import { removeAdhocSidebarItems } from './remove-adhoc-sidebar-items';
 import { HamburgerSidebarDropdownPopulatedItem } from './HamburgerSidebarDropdownPopulatedItem/HamburgerSidebarDropdownPopulatedItem';
 import { MAX_NESTING_LEVEL } from './constants';
 
+export type HamburgerMenuProps = {
+  data: SidebarData[];
+  className?: string;
+  sidebarName: SidebarName;
+};
+
 export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData) =>
   sidebarItemData.dropdownData ? (
     <HamburgerSidebarDropdownPopulatedItem key={sidebarItemData.label} {...sidebarItemData} />
@@ -15,7 +21,7 @@ export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData) =>
     <HamburgerSidebarItem key={sidebarItemData.label} {...sidebarItemData} />
   );
 
-export const HamburgerSidebarRenderer = ({ className, data, articleType }: SidebarProps) => {
+export const HamburgerSidebarRenderer = ({ className, data, sidebarName }: HamburgerMenuProps) => {
   const [expandedMenu, setExpandedMenu] = useState<ExpandedMenu>([]);
   const addToExpandedMenuPath = (menuItemID: string) => setExpandedMenu(expandedMenu.concat([menuItemID]));
   const removeFromExpandedMenuPath = (menuItemID: string) => {
@@ -30,8 +36,8 @@ export const HamburgerSidebarRenderer = ({ className, data, articleType }: Sideb
     expandedMenu.includes(menuItemID) ? removeFromExpandedMenuPath(menuItemID) : addToExpandedMenuPath(menuItemID);
 
   const dataItemsWithAdHocReplacements = useMemo(
-    () => addAdhocSidebarItems(removeAdhocSidebarItems(data), articleType),
-    [data],
+    () => addAdhocSidebarItems(removeAdhocSidebarItems(data), sidebarName),
+    [data, sidebarName],
   );
 
   const dataItems = useMemo(
