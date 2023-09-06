@@ -43,7 +43,7 @@ const IndexPage = ({
       </Helmet>
 
       <Layout isExtraWide currentProduct="spaces">
-        <LeftSideBar />
+        <LeftSideBar sidebarName="spaces" />
         <ProductPageContent sections={sections} />
       </Layout>
     </>

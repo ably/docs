@@ -15,11 +15,13 @@ const Layout: FC<{ isExtraWide?: boolean; showProductNavigation?: boolean; curre
   showProductNavigation = true,
   currentProduct = undefined,
 }) => {
+  const sidebarName = currentProduct === 'home' ? 'channels' : currentProduct;
+
   return (
     <GlobalLoading>
-      <Header />
+      <Header sidebarName={sidebarName} />
       {showProductNavigation && <ProductNavigation currentProduct={currentProduct} />}
-      <LeftSideBar />
+      <LeftSideBar sidebarName={sidebarName} />
       <Container
         as="main"
         className={cn('grid md:ml-244 2xl:mx-auto max-w-1264', {

@@ -3,19 +3,16 @@ import cn from 'classnames';
 
 import { HighlightedMenuContext } from 'src/contexts/highlighted-menu-context';
 
-import { ArticleType } from '../../contexts/article-type-context';
 import { SidebarLinkMenu, SectionTitle } from './';
 import { SidebarData, EXPAND_MENU } from './types';
 
-export type SidebarProps = {
+type SidebarProps = {
   data: SidebarData[];
   className?: string;
-  title?: string;
   indentOffset?: number;
   expandableLinkMenu?: boolean;
   languages?: boolean;
   expandMenu?: EXPAND_MENU;
-  articleType: ArticleType;
 };
 
 export const Sidebar = ({
