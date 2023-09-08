@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { ArticleTypeContext } from 'src/contexts/article-type-context';
-import { EXPAND_MENU } from 'src/components';
+import { EXPAND_MENU, SidebarName } from 'src/components';
 import { SessionState } from '../../../contexts/user-context';
 import { SidebarDataRetrieval } from '../../StaticQuerySidebar/SidebarDataRetrieval';
 import { DisplayMode, SearchBar } from '../SearchBar';
@@ -9,7 +8,15 @@ import { HamburgerButton } from './HamburgerButton';
 import { HamburgerDropdownFooter, HamburgerSidebarRenderer } from './HamburgerDropdown';
 import { hamburgerMenu } from './HamburgerMenu.module.css';
 
-export const HamburgerMenu = ({ sessionState }: { sessionState: SessionState }) => {
+export { type HamburgerMenuProps } from './HamburgerDropdown';
+
+export const HamburgerMenu = ({
+  sessionState,
+  sidebarName,
+}: {
+  sessionState: SessionState;
+  sidebarName: SidebarName;
+}) => {
   const [hasFooter, setHasFooter] = useState<boolean>(true);
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
@@ -25,18 +32,14 @@ export const HamburgerMenu = ({ sessionState }: { sessionState: SessionState }) 
             value={{ boolean: hasFooter, dispatchBooleanChange: (bool: boolean) => setHasFooter(bool) }}
           >
             <SearchBar displayMode={DisplayMode.MOBILE} />
-            <ArticleTypeContext.Consumer>
-              {(value) => (
-                <div className={hamburgerMenu}>
-                  <SidebarDataRetrieval
-                    className="flex flex-col py-12 px-8 flex-grow flex-basis mx-24"
-                    expandMenu={EXPAND_MENU.COLLAPSED}
-                    Component={HamburgerSidebarRenderer}
-                    articleType={value}
-                  />
-                </div>
-              )}
-            </ArticleTypeContext.Consumer>
+            <div className={hamburgerMenu}>
+              <SidebarDataRetrieval
+                className="flex flex-col py-12 px-8 flex-grow flex-basis mx-24"
+                expandMenu={EXPAND_MENU.COLLAPSED}
+                Component={HamburgerSidebarRenderer}
+                sidebarName={sidebarName}
+              />
+            </div>
             {hasFooter && <HamburgerDropdownFooter sessionState={sessionState} />}
           </HamburgerHasFooterContext.Provider>
         </div>

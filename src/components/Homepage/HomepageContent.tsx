@@ -1,24 +1,32 @@
 import React from 'react';
 import { BodySection } from './BodySection/BodySection';
+import { LinksProps } from '../ProductPage/ProductPageContent';
+
+export type CallToActionProps = {
+  text: string;
+  href: string;
+};
 
 export type CardProps = {
   title: string;
   content: string;
-  link: string;
-  flag: string | null;
-  callToAction: string;
+  image: string;
+  links: LinksProps[];
 };
 
-export type Section = {
+export type SectionProps = {
   title: string;
-  level: keyof JSX.IntrinsicElements | null;
+  type: string;
+  columns: number;
+  mainImage: string;
+  bottomMargin: number;
   description: string | null;
-  defaultCallToAction: string;
+  callToAction: CallToActionProps;
   cards: CardProps[];
 };
 
-export const HomepageContent = ({ sections }: { sections: Section[] }) => (
-  <article className="px-24 md:pl-40 md:pr-48 xl:pr-64 col-span-2 lg:col-start-2 2xl:col-start-1">
+export const HomepageContent = ({ sections }: { sections: SectionProps[] }) => (
+  <article className="mx-auto px-24 md:px-0" style={{ maxWidth: '960px' }}>
     {sections.map((section, index) => (
       <BodySection key={index} section={section} />
     ))}

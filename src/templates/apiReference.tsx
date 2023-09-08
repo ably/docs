@@ -7,7 +7,7 @@ import { AblyTemplateData } from './template-data';
 
 const ApiReference = (props: AblyTemplateData) => (
   <ArticleTypeContext.Provider value={ARTICLE_TYPES.apiReference}>
-    <Template {...props} />
+    <Template {...props} showProductNavigation={false} currentProduct="api-reference" />
   </ArticleTypeContext.Provider>
 );
 export default ApiReference;
@@ -20,6 +20,7 @@ export const query = graphql`
         meta_description
         languages
         redirect_from
+        product
       }
     }
     inlineTOC: fileInlineToc(slug: { eq: $slug }) {

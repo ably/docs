@@ -6,3 +6,5 @@ export * from './common';
 export * from './Sidebar';
 export * from './Footer';
 export * from './Container';
+
+export { type HamburgerMenuProps } from './Header';

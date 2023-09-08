@@ -6,6 +6,7 @@ export type AblyDocumentMeta = {
   meta_description: string;
   languages: string[];
   redirect_from: string[];
+  product?: string;
 };
 
 export type AblyDocument = {
@@ -34,8 +35,11 @@ export type AblyPageContext = {
   script: string;
 };
 
+export type ProductName = 'channels' | 'spaces' | 'api-reference' | 'home';
+
 export type AblyTemplateData = {
   data: AblyDocumentData;
   location: Location;
   pageContext: AblyPageContext;
+  currentProduct?: ProductName;
 };

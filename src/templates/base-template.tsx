@@ -38,11 +38,14 @@ const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localh
 const CANONICAL_ROOT = `${ABLY_MAIN_WEBSITE}${DOCUMENTATION_PATH}`;
 const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
 const NO_LANGUAGE = 'none';
+const META_PRODUCT_FALLBACK = 'channels';
 
 const Template = ({
   location: { search, pathname, hash },
   pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
   data: { document, versions },
+  showProductNavigation = true,
+  currentProduct,
 }: AblyTemplateData) => {
   const params = new URLSearchParams(search);
   const language = params.get('lang') ?? DEFAULT_LANGUAGE;
@@ -51,6 +54,9 @@ const Template = ({
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
   const canonical = `${CANONICAL_ROOT}${slug}`.replace(/\/+$/, '');
+
+  // when we don't get a product, peek into the metadata of the page for a default value
+  currentProduct ??= getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as string;
 
   const contentMenuFromAllLanguages = contentMenu[language];
   const contentMenuFromRealtime = contentMenu[`${REALTIME_SDK_INTERFACE}_${language}`];
@@ -127,7 +133,7 @@ const Template = ({
       <PageLanguagesContext.Provider value={languages}>
         <PathnameContext.Provider value={pathname}>
           <Head title={title} canonical={canonical} description={description} />
-          <Layout>
+          <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
             <Article>
               <PageTitle>{title}</PageTitle>
               <div>{elements}</div>

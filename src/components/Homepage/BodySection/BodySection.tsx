@@ -1,37 +1,58 @@
 import React from 'react';
-import { Section } from '../HomepageContent';
+import cn from 'classnames';
+import { SectionProps } from '../HomepageContent';
 import { BodySectionDescription } from './BodySectionDescription';
-import { BodySectionDescriptionContainer } from './BodySectionDescriptionContainer';
-import { BodySectionCard } from './Card/Card';
+import { HeroCard } from './Card/HeroCard';
+import { CallToAction } from './CallToAction';
+import { FeatureCard } from './Card/FeatureCard';
+import { SdkCard } from './Card/SdkCard';
 
-export const BodySection = ({ section }: { section: Section }) => {
-  const cardsExist = section.cards.length > 0;
+const cardTypes = {
+  hero: HeroCard,
+  feature: FeatureCard,
+  sdk: SdkCard,
+};
+
+const gridColVariants = {
+  1: 'lg:grid-cols-1',
+  2: 'sm:grid-cols-2 lg:grid-cols-2',
+  4: 'sm:grid-cols-4 lg:grid-cols-4',
+};
+
+const sectionBottomMarginVariants = {
+  48: 'mb-48',
+  72: 'mb-72',
+};
+
+const gridGapVariants = {
+  2: 'gap-32',
+  4: 'gap-24',
+};
+
+export const BodySection = ({ section }: { section: SectionProps }) => {
+  const cards = section.cards ?? [];
+  const cardsExist = cards.length > 0;
+  const columns = section.columns;
+  const singleColumn = columns == 1;
+  const bottomMargin = sectionBottomMarginVariants[section.bottomMargin];
+
   return (
-    <section className="grid grid-cols-6">
-      {section.level ? (
-        <section.level className={`ui-text-${section.level} mt-40 col-span-6`}>{section.title}</section.level>
-      ) : (
-        <h2 className="ui-text-h2 col-span-6">{section.title}</h2>
-      )}
-      {section.description ? (
-        <BodySectionDescription description={section.description} />
-      ) : (
-        <BodySectionDescriptionContainer />
-      )}
+    <section className={bottomMargin}>
+      {section.title && <h2 className="ui-text-h2">{section.title}</h2>}
+      {section.description && <BodySectionDescription description={section.description} />}
       {cardsExist && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 col-span-6 mb-96 gap-24 mr-32">
-          {section.cards.map((card, index) => (
-            <BodySectionCard
-              key={index}
-              title={card.title}
-              content={card.content}
-              link={card.link}
-              flag={card.flag}
-              callToAction={card.callToAction ?? section.defaultCallToAction}
-            />
-          ))}
+        <div
+          className={cn({
+            [`grid grid-cols-1 ${gridColVariants[columns]} ${gridGapVariants[columns]}`]: !singleColumn,
+          })}
+        >
+          {cards.map((card, index) => {
+            const Card = cardTypes[card.type];
+            return <Card key={index} {...card} />;
+          })}
         </div>
       )}
+      {section.callToAction && <CallToAction {...section.callToAction}></CallToAction>}
     </section>
   );
 };
