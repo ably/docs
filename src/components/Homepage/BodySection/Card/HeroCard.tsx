@@ -1,11 +1,11 @@
 import React from 'react';
 import { CardProps } from '../../HomePageContent';
-import { SvgObject } from '../../../SvgObject';
+import { StaticImage } from '../../../StaticImage';
 import { SearchBar } from '../../../Header/SearchBar';
 
 export const HeroCard = ({ title, content, image }: CardProps) => (
   <div className="flex flex-col items-center mt-88">
-    <SvgObject src={`/images/homepage/${image}`}></SvgObject>
+    <StaticImage src={`/images/homepage/${image}`}></StaticImage>
     <div className="text-center" style={{ marginTop: '-90px' }}>
       <h1 className="ui-text-h1">{title}</h1>
       <p style={{ fontSize: '1.5rem' }} className="font-medium text-dark-grey mt-24">
