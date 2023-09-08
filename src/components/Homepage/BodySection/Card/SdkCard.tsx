@@ -1,6 +1,6 @@
 import React from 'react';
 import { CardProps } from '../../ProductPageContent';
-import { SvgObject } from '../../../SvgObject';
+import { StaticImage } from '../../../StaticImage';
 
 const sdkLanguageStyle = {
   fontFamily: 'Jetbrains mono',
@@ -15,6 +15,6 @@ export const SdkCard = ({ title, image }: CardProps) => (
     <p className="mr-auto pb-16" style={sdkLanguageStyle}>
       {title}
     </p>
-    <SvgObject src={`/images/homepage/${image}`}></SvgObject>
+    <StaticImage src={`/images/homepage/${image}`}></StaticImage>
   </div>
 );
