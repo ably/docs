@@ -7,6 +7,6 @@ type SvgObjectProps = ComponentProps<'object'> & {
 
 export const SvgObject = ({ src, ...attribs }: SvgObjectProps) => (
   <object type="image/svg+xml" data={srcFromDocsSite(src)} {...attribs}>
-    svg-image
+    <img src={srcFromDocsSite(src)} {...attribs} />
   </object>
 );

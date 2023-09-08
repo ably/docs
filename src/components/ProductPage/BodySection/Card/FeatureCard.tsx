@@ -16,6 +16,6 @@ export const FeatureCard = ({ title, content, image, links }: CardProps) => (
         <Links links={links}></Links>
       </div>
     </div>
-    <SvgObject src={`/images/products/${image}`}></SvgObject>
+    <SvgObject src={`/images/products/${image}`} width="230"></SvgObject>
   </div>
 );
