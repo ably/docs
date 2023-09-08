@@ -1,22 +1,19 @@
 import React from 'react';
 import { graphql, useStaticQuery } from 'gatsby';
-import { EXPAND_MENU, SidebarProps } from 'src/components';
+import { EXPAND_MENU, SidebarProps, HamburgerMenuProps } from 'src/components';
 
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
 import { LeftSidebarProps } from './LeftSideBar';
-import { ArticleType } from '../../contexts/article-type-context';
-import { ARTICLE_TYPES } from '../../../data/transform/constants';
 
 export const SidebarDataRetrieval = ({
   className,
   languages,
   expandMenu,
-  articleType,
+  sidebarName,
   Component,
 }: LeftSidebarProps & {
-  articleType: ArticleType;
   expandMenu: EXPAND_MENU;
-  Component: React.FunctionComponent<SidebarProps>;
+  Component: React.FunctionComponent<SidebarProps | HamburgerMenuProps>;
 }) => {
   const data = useStaticQuery(graphql`
     fragment SubMenuFields on PageFurnitureYaml {
@@ -26,7 +23,7 @@ export const SidebarDataRetrieval = ({
       text
     }
     query {
-      LeftSidebar: pageFurnitureYaml(name: { eq: "LeftSidebarMenu" }) {
+      ChannelsLeftSidebar: pageFurnitureYaml(name: { eq: "LeftSidebarMenu" }) {
         items {
           ...SubMenuFields
           items {
@@ -41,6 +38,20 @@ export const SidebarDataRetrieval = ({
         }
       }
       ApiLeftSidebar: pageFurnitureYaml(name: { eq: "ApiLeftSidebarMenu" }) {
+        items {
+          ...SubMenuFields
+          items {
+            ...SubMenuFields
+            items {
+              ...SubMenuFields
+              items {
+                ...SubMenuFields
+              }
+            }
+          }
+        }
+      }
+      SpacesLeftSidebar: pageFurnitureYaml(name: { eq: "SpacesLeftSidebarMenu" }) {
         items {
           ...SubMenuFields
           items {
@@ -69,21 +80,28 @@ export const SidebarDataRetrieval = ({
       }
     }
   `);
+
   let sidebarData;
-  if (data.LeftSidebar || data.ApiLeftSidebar) {
+
+  if (sidebarName !== undefined && (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar)) {
     const sideBarItems =
-      articleType === ARTICLE_TYPES.apiReference ? data.ApiLeftSidebar.items : data.LeftSidebar.items;
+      sidebarName === 'api-reference'
+        ? data.ApiLeftSidebar.items
+        : sidebarName === 'spaces'
+        ? data.SpacesLeftSidebar.items
+        : data.ChannelsLeftSidebar.items;
     sidebarData = sidebarDataFromPageFurniture(sideBarItems);
   } else {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
   }
+
   return (
     <Component
       className={className}
       languages={languages}
       data={sidebarData}
       expandMenu={expandMenu}
-      articleType={articleType}
+      sidebarName={sidebarName}
     />
   );
 };

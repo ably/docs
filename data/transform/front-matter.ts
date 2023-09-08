@@ -2,7 +2,7 @@ import fm from 'front-matter';
 import { assign, isArray, isEmpty, pick } from 'lodash';
 
 export const NO_MATCH = false;
-const ALLOWED_META_FIELDS = ['title', 'meta_description', 'languages', 'redirect_from'];
+const ALLOWED_META_FIELDS = ['title', 'meta_description', 'languages', 'redirect_from', 'product'];
 
 const maybeStringToStringSingletonArray = (maybeString?: string | string[]) =>
   isEmpty(maybeString) ? undefined : isArray(maybeString) ? maybeString : [maybeString];

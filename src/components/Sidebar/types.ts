@@ -17,3 +17,5 @@ export enum EXPAND_MENU {
   EXPAND_NEXT,
   COLLAPSE_NEXT,
 }
+
+export type SidebarName = 'api-reference' | 'channels' | 'spaces';

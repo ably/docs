@@ -12,8 +12,9 @@ import { DOCUMENTATION_PATH } from '../../../data/transform/constants';
 import { HamburgerMenu } from './HamburgerMenu';
 import { TopMainNavStateContext } from './top-main-nav-state-context';
 import { HorizontalMenu, HorizontalMenuVariant } from 'src/components/HorizontalMenu';
+import { SidebarName } from '../../';
 
-export const Header = () => {
+export const Header = ({ sidebarName }: { sidebarName: SidebarName }) => {
   const [topMainNavState, dispatch] = useReducer(mainNavReducer, initialState);
   const menuItems: (keyof typeof dropdownData)[] = ['API References', 'Resources'];
   const ref = useRef(null);
@@ -44,7 +45,7 @@ export const Header = () => {
             {({ sessionState }) => (
               <TopMainNavStateContext.Provider value={{ topMainNavState: topMainNavState, dispatch }}>
                 <TopMainNavUserMenu sessionState={sessionState} />
-                <HamburgerMenu sessionState={sessionState} />
+                <HamburgerMenu sessionState={sessionState} sidebarName={sidebarName} />
               </TopMainNavStateContext.Provider>
             )}
           </UserContext.Consumer>
