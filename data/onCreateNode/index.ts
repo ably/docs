@@ -34,6 +34,45 @@ const onCreateNode = async ({
       console.error('Error at relative path:\n', node.relativePath ? `${node.relativePath}\n` : '\n', error.message);
     }
   }
+
+  if (node.sourceInstanceName === 'how-tos') {
+    // We derive the name of the how-to from the path
+    const [tutorialName, src, ...paths] = node.relativePath.split('/');
+
+    // this must be a supporting file outside of a how-to directory
+    if (tutorialName === '') {
+      return;
+    }
+
+    /*
+     * If this file is in the src directory, we create a new HowToSourceFile node
+     * associated with our tutorial
+     */
+    if (src === 'src') {
+      // skip processing directories
+      if (node.internal.type === 'Directory') {
+        return;
+      }
+
+      const srcPath = paths.join('/');
+      const content = await loadNodeContent(node);
+      const contentDigest = createContentDigest(content);
+      const type = 'HowToSourceFile';
+
+      const fields = {
+        id: createNodeId(`${node.id} >>> Sandpack`),
+        howToName: tutorialName,
+        srcPath,
+        content,
+        internal: {
+          contentDigest,
+          type,
+          mediaType: node.internal.mediaType,
+        },
+      };
+      createNode(fields);
+    }
+  }
 };
 
 module.exports = { onCreateNode, createSchemaCustomization };
