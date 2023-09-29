@@ -21,10 +21,19 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       meta_description: String
       title: String
       redirect_from: [String]
+      product: String
     }
     type FileHtml implements Node {
       contentOrderedList: [FileHtmlContentOrderedListItem]
       meta: FileHtmlMetaData
+    }
+    type HowToHtml implements Node {
+      slug: String
+      tutorial: Node
+    }
+    type HowToSourceFile implements Node {
+      howToName: String!
+      srcPath: String!
     }
     type Error implements Node {
       message: String
