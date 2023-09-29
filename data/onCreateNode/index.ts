@@ -1,5 +1,5 @@
-const { transformNanocTextiles, makeTypeFromParentType, createNodesFromPath } = require('../transform');
-const { createSchemaCustomization } = require('./create-graphql-schema-customization');
+import { transformNanocTextiles, makeTypeFromParentType, createNodesFromPath } from '../transform';
+import { createSchemaCustomization } from './create-graphql-schema-customization';
 
 const onCreateNode = async ({
   node,
