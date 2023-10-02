@@ -26,7 +26,7 @@ export const Sidebar = ({
   return (
     <aside
       className={cn(
-        'transition-all fixed hidden h-screen md:block overflow-y-auto bg-extra-light-grey z-20 pt-24 left-0 w-244',
+        'transition-all fixed hidden h-screen md:block overflow-y-auto bg-extra-light-grey z-20 pt-24 pb-128 left-0 w-244',
         className,
       )}
       data-languages={languages}
