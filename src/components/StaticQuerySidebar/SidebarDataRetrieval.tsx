@@ -1,6 +1,6 @@
-import React from 'react';
 import { graphql, useStaticQuery } from 'gatsby';
-import { EXPAND_MENU, SidebarProps, HamburgerMenuProps } from 'src/components';
+import React from 'react';
+import { EXPAND_MENU, HamburgerMenuProps, SidebarProps } from 'src/components';
 
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
 import { LeftSidebarProps } from './LeftSideBar';
