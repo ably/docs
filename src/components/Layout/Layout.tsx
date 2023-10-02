@@ -1,28 +1,34 @@
-import React, { FunctionComponent as FC } from 'react';
 import cn from 'classnames';
+import { ReactNode } from 'react';
 
 import ProductNavigation from 'src/components/ProductNavigation';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
+import { useSidebar } from 'src/contexts/SidebarContext';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Container, SidebarName } from 'src/components';
 import { Header } from '../Header';
 import { Footer } from '../Footer';
 
-const Layout: FC<{
-  showProductNavigation?: boolean;
-  children: React.ReactNode;
-  currentProduct?: string;
+interface LayoutProps {
   isExtraWide?: boolean;
+  showProductNavigation?: boolean;
+  currentProduct?: string;
   noSidebar?: boolean;
-}> = ({
-  showProductNavigation = true,
-  currentProduct = undefined,
-  isExtraWide = false,
-  noSidebar = false,
+  collapsibleSidebar?: boolean;
+  children: ReactNode;
+}
+
+const Layout: React.FC<LayoutProps> = ({
   children,
+  isExtraWide = false,
+  showProductNavigation = true,
+  currentProduct,
+  noSidebar = false,
 }) => {
   const sidebarName = currentProduct === 'home' ? 'channels' : currentProduct;
   const showSidebar = !noSidebar;
+
+  const { collapsed } = useSidebar();
 
   return (
     <GlobalLoading>
@@ -33,7 +39,9 @@ const Layout: FC<{
         as="main"
         className={
           showSidebar
-            ? cn('grid md:ml-244 2xl:mx-auto max-w-1264', {
+            ? cn('grid 2xl:mx-auto max-w-1264 transition-all', {
+                'sm:ml-244': !collapsed,
+                'sm:ml-32': collapsed,
                 'md:grid-cols-1': isExtraWide,
                 'md:grid-cols-2 md:grid-cols-layout': !isExtraWide,
               })
