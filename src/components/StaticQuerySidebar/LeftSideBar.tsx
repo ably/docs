@@ -6,9 +6,10 @@ export type LeftSidebarProps = {
   className?: string;
   languages?: boolean;
   sidebarName: SidebarName;
+  collapsible?: boolean;
 };
 
-const LeftSideBar = ({ sidebarName, className = '', languages = false, collapsed = false }: LeftSidebarProps) => {
+const LeftSideBar = ({ sidebarName, className = '', languages = false, collapsible = false }: LeftSidebarProps) => {
   return (
     <SidebarDataRetrieval
       className={className}
@@ -16,6 +17,7 @@ const LeftSideBar = ({ sidebarName, className = '', languages = false, collapsed
       expandMenu={EXPAND_MENU.SECTION_MATCH}
       sidebarName={sidebarName}
       Component={Sidebar}
+      collapsible={collapsible}
     />
   );
 };
