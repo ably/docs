@@ -11,6 +11,7 @@ export const SidebarDataRetrieval = ({
   expandMenu,
   sidebarName,
   Component,
+  collapsible,
 }: LeftSidebarProps & {
   expandMenu: EXPAND_MENU;
   Component: React.FunctionComponent<SidebarProps | HamburgerMenuProps>;
@@ -102,6 +103,7 @@ export const SidebarDataRetrieval = ({
       data={sidebarData}
       expandMenu={expandMenu}
       sidebarName={sidebarName}
+      collapsible={collapsible}
     />
   );
 };

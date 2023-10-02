@@ -35,7 +35,7 @@ const Layout: React.FC<LayoutProps> = ({
       <Header sidebarName={sidebarName} />
       {showProductNavigation && <ProductNavigation currentProduct={currentProduct} />}
 
-      {showSidebar && <LeftSideBar sidebarName={sidebarName} />}
+      {showSidebar && <LeftSideBar sidebarName={sidebarName} collapsible />}
       <Container
         as="main"
         className={
