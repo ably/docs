@@ -1,4 +1,6 @@
 import React from 'react';
+import type { GatsbyBrowser } from 'gatsby';
+
 import './src/styles/global.css';
 
 import { reducerFlashes } from '@ably/ui/core/Flash';
@@ -12,7 +14,7 @@ import {
 
 import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
 
-const onClientEntry = () => {
+const onClientEntry: GatsbyBrowser['onClientEntry'] = () => {
   const store = createRemoteDataStore({
     ...reducerBlogPosts,
     ...reducerSessionData,
@@ -26,7 +28,7 @@ const onClientEntry = () => {
 /**
  *  The 'shouldUpdateScroll' function will fire when navigating to new pages within Gatsby
  */
-const shouldUpdateScroll = ({ prevRouterProps, routerProps: { location } }) => {
+const shouldUpdateScroll: GatsbyBrowser['shouldUpdateScroll'] = ({ prevRouterProps, routerProps: { location } }) => {
   if (!prevRouterProps || !location) {
     return false;
   }
@@ -47,7 +49,7 @@ const shouldUpdateScroll = ({ prevRouterProps, routerProps: { location } }) => {
 import UserContextWrapper from 'src/contexts/user-context/wrap-with-provider';
 import { SidebarProvider } from './src/contexts/SidebarContext';
 
-export const wrapRootElement = ({ element }) => {
+export const wrapRootElement: GatsbyBrowser['wrapRootElement'] = ({ element }) => {
   return (
     <UserContextWrapper>
       <SidebarProvider>{element}</SidebarProvider>
