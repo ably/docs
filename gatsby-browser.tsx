@@ -5,6 +5,8 @@ import { reducerFlashes } from '@ably/ui/core/Flash';
 
 import { SidebarProvider } from './src/contexts/SidebarContext';
 
+import type { GatsbyBrowser } from 'gatsby';
+
 import {
   attachStoreToWindow,
   createRemoteDataStore,
@@ -14,7 +16,7 @@ import {
 
 import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
 
-const onClientEntry = () => {
+const onClientEntry: GatsbyBrowser['onClientEntry'] = () => {
   const store = createRemoteDataStore({
     ...reducerBlogPosts,
     ...reducerSessionData,
@@ -25,14 +27,14 @@ const onClientEntry = () => {
   attachStoreToWindow(store);
 };
 
-const wrapRootElement = ({ element }) => {
+const wrapRootElement: GatsbyBrowser['wrapRootElement'] = ({ element }) => {
   return <SidebarProvider>{element}</SidebarProvider>;
 };
 
 /**
  *  The 'shouldUpdateScroll' function will fire when navigating to new pages within Gatsby
  */
-const shouldUpdateScroll = ({ prevRouterProps, routerProps: { location } }) => {
+const shouldUpdateScroll: GatsbyBrowser['shouldUpdateScroll'] = ({ prevRouterProps, routerProps: { location } }) => {
   if (!prevRouterProps || !location) {
     return false;
   }
