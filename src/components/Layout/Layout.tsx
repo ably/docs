@@ -1,11 +1,11 @@
 import cn from 'classnames';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 
 import { Container } from 'src/components';
 
 import ProductNavigation from 'src/components/ProductNavigation';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
-import { useSidebar } from 'src/contexts/SidebarContext';
+import { SidebarState, useSidebar } from 'src/contexts/SidebarContext';
 import { Footer } from '../Footer';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Header } from '../Header';
@@ -15,6 +15,7 @@ interface LayoutProps {
   showProductNavigation?: boolean;
   currentProduct?: string;
   noSidebar?: boolean;
+  initialSidebarState?: SidebarState;
   children: ReactNode;
 }
 
@@ -24,11 +25,16 @@ const Layout: React.FC<LayoutProps> = ({
   showProductNavigation = true,
   currentProduct,
   noSidebar = false,
+  initialSidebarState = SidebarState.Open,
 }) => {
   const sidebarName = currentProduct === 'home' ? 'channels' : currentProduct;
   const showSidebar = !noSidebar;
 
-  const { collapsed } = useSidebar();
+  const { collapsed, setCollapsed } = useSidebar();
+
+  useEffect(() => {
+    setCollapsed(initialSidebarState === SidebarState.Collapsed);
+  }, [initialSidebarState, setCollapsed]);
 
   return (
     <GlobalLoading>
