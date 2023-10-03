@@ -35,7 +35,10 @@ const PubSubHowTo = () => {
         showProductNavigation={true}
         currentProduct="spaces"
         isExtraWide
-        initialSidebarState={SidebarState.Collapsed}
+        sidebarState={{
+          collapsible: true,
+          initialState: SidebarState.Collapsed,
+        }}
       >
         <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:pl-40 lg:pl-0">
           <div>
