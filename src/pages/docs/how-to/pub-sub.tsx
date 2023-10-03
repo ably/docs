@@ -6,6 +6,7 @@ import { graphql, useStaticQuery } from 'gatsby';
 import { Head } from 'src/components/Head';
 import Layout from 'src/components/Layout';
 import PageTitle from 'src/components/PageTitle';
+import { SidebarState } from 'src/contexts/SidebarContext';
 
 const PubSubHowTo = () => {
   const meta_description = `A fine interactve how to`;
@@ -31,7 +32,12 @@ const PubSubHowTo = () => {
     <>
       <Head title="Pub/Sub How To" description={meta_description} />
 
-      <Layout showProductNavigation={true} currentProduct="spaces" isExtraWide>
+      <Layout
+        showProductNavigation={true}
+        currentProduct="spaces"
+        isExtraWide
+        initialSidebarState={SidebarState.Collapsed}
+      >
         <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:pl-40 lg:pl-0">
           <div>
             <PageTitle>Pub/Sub How To</PageTitle>
