@@ -44,9 +44,6 @@ const IndexPage = ({
 
       <SidebarProvider>
         <Layout isExtraWide currentProduct="channels">
-          {/* <SidebarWrapper>
-          <LeftSideBar sidebarName="channels" />
-        </SidebarWrapper> */}
           <ProductPageContent sections={sections} />
         </Layout>
       </SidebarProvider>
