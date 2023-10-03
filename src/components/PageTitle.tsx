@@ -1,7 +1,11 @@
-import React, { FunctionComponent as FC } from 'react';
+import { FC, ReactNode } from 'react';
 
-const PageTitle: FC<{ children: React.ReactNode }> = ({ children }) => (
-  <h1 id="title" className="ui-text-h1 my-40 col-span-2">
+interface PageTitleProps {
+  children: ReactNode;
+}
+
+const PageTitle: FC<PageTitleProps> = ({ children }) => (
+  <h1 id="title" className="col-span-2 my-40 ui-text-h1">
     {children}
   </h1>
 );
