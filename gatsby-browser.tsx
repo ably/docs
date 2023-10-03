@@ -1,10 +1,11 @@
+import React from 'react';
 import './src/styles/global.css';
 
 import { reducerFlashes } from '@ably/ui/core/Flash';
 
 import {
-  createRemoteDataStore,
   attachStoreToWindow,
+  createRemoteDataStore,
   reducerBlogPosts,
   reducerSessionData,
 } from '@ably/ui/core/scripts';
@@ -44,6 +45,14 @@ const shouldUpdateScroll = ({ prevRouterProps, routerProps: { location } }) => {
  * Load our user state
  */
 import UserContextWrapper from 'src/contexts/user-context/wrap-with-provider';
-const wrapRootElement = UserContextWrapper;
+import { SidebarProvider } from './src/contexts/SidebarContext';
+
+export const wrapRootElement = ({ element }) => {
+  return (
+    <UserContextWrapper>
+      <SidebarProvider>{element}</SidebarProvider>
+    </UserContextWrapper>
+  );
+};
 
 export { onClientEntry, shouldUpdateScroll, wrapRootElement };
