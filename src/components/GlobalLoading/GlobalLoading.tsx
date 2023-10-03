@@ -1,13 +1,13 @@
-import { FunctionComponent as FC, ReactNode, useContext, useEffect, useState } from 'react';
+import { FunctionComponent as FC, ReactNode, useEffect, useContext } from 'react';
 // Session-related scripts
 import '@ably/ui/core/scripts';
 import { loadSprites } from '@ably/ui/core/scripts';
 import sprites from '@ably/ui/core/sprites.svg';
-import UserContext from '../../contexts/user-context';
 import { Script } from 'gatsby';
-import { loadBoomerang } from 'src/third-party/boomerang';
 import posthog from 'posthog-js';
+import { loadBoomerang } from 'src/third-party/boomerang';
 import { loadHeadway } from 'src/third-party/headway';
+import UserContext from '../../contexts/user-context';
 import { sessionTracking } from './session-tracking';
 
 const hubspotTrackingId = process.env.GATSBY_HUBSPOT_TRACKING_ID;
@@ -56,7 +56,7 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
 
   return (
     <>
-      {googleTagManagerAuthToken && googleTagManagerPreview ? (
+      {googleTagManagerAuthToken && googleTagManagerPreview && (
         <>
           <noscript>
             <iframe
@@ -73,24 +73,24 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
             }}
           />
         </>
-      ) : null}
-      {hubspotTrackingId ? <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" /> : null}
-      {boomerangEnabled ? (
+      )}
+      {hubspotTrackingId && <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" />}
+      {boomerangEnabled && (
         <Script
           id="boomerang-loader"
           src="https://s3.amazonaws.com/assets.heroku.com/boomerang/boomerang.js"
           crossOrigin={'true'}
           onLoad={loadBoomerang(sessionState.heroku)}
         />
-      ) : null}
-      {headwayAccountId && sessionState.signedIn ? (
+      )}
+      {headwayAccountId && sessionState.signedIn && (
         <Script
           id="headway-loader"
           src="//cdn.headwayapp.co/widget.js"
           crossOrigin="true"
           onLoad={loadHeadway(headwayAccountId)}
         />
-      ) : null}
+      )}
       {children}
     </>
   );
