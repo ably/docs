@@ -1,4 +1,4 @@
-import { FunctionComponent as FC, useEffect, useState } from 'react';
+import { FunctionComponent as FC, ReactNode, useEffect, useState } from 'react';
 // Session-related scripts
 import '@ably/ui/core/scripts';
 import {
@@ -48,7 +48,7 @@ const gtmSnippet = `(function (w, d, s, l, i) {
 
 const apiKeysInit = { data: [] };
 
-const GlobalLoading: FC<{ children: JSX.Element }> = ({ children }) => {
+const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
   const [sessionState, setSessionState] = useState<Record<string, string>>({});
   const [apiKeys, setApiKeys] = useState<{ data: UserApiKey[] }>(apiKeysInit);
 
