@@ -15,14 +15,30 @@ export enum SidebarState {
   Open = 'open',
 }
 
+type CollapsibleSidebarState = {
+  initialState: SidebarState;
+  collapsible: true;
+};
+
+type NonCollapsibleSidebarState = {
+  initialState?: never;
+  collapsible: false;
+};
+
+type SidebarStateProp = CollapsibleSidebarState | NonCollapsibleSidebarState;
 interface LayoutProps {
   isExtraWide?: boolean;
   showProductNavigation?: boolean;
   currentProduct?: string;
   noSidebar?: boolean;
-  initialSidebarState?: SidebarState;
+  sidebarState?: SidebarStateProp;
   children: ReactNode;
 }
+
+const defaultSidebarState = {
+  collapsible: false,
+  initialState: SidebarState.Open,
+};
 
 const Layout: React.FC<LayoutProps> = ({
   children,
@@ -30,7 +46,7 @@ const Layout: React.FC<LayoutProps> = ({
   showProductNavigation = true,
   currentProduct,
   noSidebar = false,
-  initialSidebarState = SidebarState.Open,
+  sidebarState = defaultSidebarState,
 }) => {
   const sidebarName = currentProduct === 'home' ? 'channels' : currentProduct;
   const showSidebar = !noSidebar;
@@ -38,15 +54,15 @@ const Layout: React.FC<LayoutProps> = ({
   const { collapsed, setCollapsed } = useSidebar();
 
   useEffect(() => {
-    setCollapsed(initialSidebarState === SidebarState.Collapsed);
-  }, [initialSidebarState, setCollapsed]);
+    setCollapsed(sidebarState.initialState === SidebarState.Collapsed);
+  }, [setCollapsed, sidebarState.initialState]);
 
   return (
     <GlobalLoading>
       <Header sidebarName={sidebarName} />
       {showProductNavigation && <ProductNavigation currentProduct={currentProduct} />}
 
-      {showSidebar && <LeftSideBar sidebarName={sidebarName} collapsible />}
+      {showSidebar && <LeftSideBar sidebarName={sidebarName} collapsible={sidebarState.collapsible} />}
       <Container
         as="main"
         className={
