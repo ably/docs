@@ -5,10 +5,15 @@ import { Container } from 'src/components';
 
 import ProductNavigation from 'src/components/ProductNavigation';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
-import { SidebarState, useSidebar } from 'src/contexts/SidebarContext';
+import { useSidebar } from 'src/contexts/SidebarContext';
 import { Footer } from '../Footer';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Header } from '../Header';
+
+export enum SidebarState {
+  Collapsed = 'collapsed',
+  Open = 'open',
+}
 
 interface LayoutProps {
   isExtraWide?: boolean;
