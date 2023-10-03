@@ -22,7 +22,12 @@ export const plugins = [
   'gatsby-transformer-yaml',
   'gatsby-transformer-sharp',
   'gatsby-plugin-react-helmet',
-  'gatsby-plugin-root-import',
+  {
+    resolve: 'gatsby-plugin-root-import',
+    options: {
+      HowTos: `${__dirname}/how-tos`,
+    },
+  },
   'gatsby-plugin-mdx',
   // Images
   {
