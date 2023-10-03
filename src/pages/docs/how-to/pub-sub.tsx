@@ -4,9 +4,8 @@ import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
 import HowTo from 'HowTos/pub-sub/how-to.mdx';
 import { graphql, useStaticQuery } from 'gatsby';
 import { Head } from 'src/components/Head';
-import Layout from 'src/components/Layout';
+import Layout, { SidebarState } from 'src/components/Layout';
 import PageTitle from 'src/components/PageTitle';
-import { SidebarState } from 'src/contexts/SidebarContext';
 
 const PubSubHowTo = () => {
   const meta_description = `A fine interactve how to`;
