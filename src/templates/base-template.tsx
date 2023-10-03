@@ -133,8 +133,8 @@ const Template = ({
     <PageLanguageContext.Provider value={language}>
       <PageLanguagesContext.Provider value={languages}>
         <PathnameContext.Provider value={pathname}>
+          <Head title={title} canonical={canonical} description={description} />
           <SidebarProvider>
-            <Head title={title} canonical={canonical} description={description} />
             <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
               <Article>
                 <PageTitle>{title}</PageTitle>
