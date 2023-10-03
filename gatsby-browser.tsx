@@ -25,7 +25,7 @@ const onClientEntry = () => {
   attachStoreToWindow(store);
 };
 
-export const wrapRootElement = ({ element }) => {
+const wrapRootElement = ({ element }) => {
   return <SidebarProvider>{element}</SidebarProvider>;
 };
 
@@ -47,4 +47,4 @@ const shouldUpdateScroll = ({ prevRouterProps, routerProps: { location } }) => {
   );
 };
 
-export { onClientEntry, shouldUpdateScroll };
+export { onClientEntry, shouldUpdateScroll, wrapRootElement };
