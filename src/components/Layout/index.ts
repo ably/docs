@@ -1,1 +1,1 @@
-export { default } from './Layout';
+export { SidebarState, default } from './Layout';
