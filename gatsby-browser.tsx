@@ -1,10 +1,13 @@
+import React from 'react';
 import './src/styles/global.css';
 
 import { reducerFlashes } from '@ably/ui/core/Flash';
 
+import { SidebarProvider } from './src/contexts/SidebarContext';
+
 import {
-  createRemoteDataStore,
   attachStoreToWindow,
+  createRemoteDataStore,
   reducerBlogPosts,
   reducerSessionData,
 } from '@ably/ui/core/scripts';
@@ -20,6 +23,10 @@ const onClientEntry = () => {
   });
 
   attachStoreToWindow(store);
+};
+
+export const wrapRootElement = ({ element }) => {
+  return <SidebarProvider>{element}</SidebarProvider>;
 };
 
 /**
