@@ -1,10 +1,5 @@
 import React, { ReactNode, createContext, useContext, useState } from 'react';
 
-export enum SidebarState {
-  Collapsed = 'collapsed',
-  Open = 'open',
-}
-
 interface SidebarContextProps {
   collapsed: boolean;
   setCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
