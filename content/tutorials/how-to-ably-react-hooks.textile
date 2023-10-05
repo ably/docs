@@ -13,7 +13,7 @@ group: sdk
 index: 117
 languages:
 - javascript
-last_updated: '2022-09-29T09:30:08+00:00'
+last_updated: '2023-10-04T09:30:08+00:00'
 level: easy
 libraries:
 - Ably React Hooks
@@ -29,43 +29,29 @@ meta_keywords: "react, next.js, serverless functions, serverless Ably realtime, 
 
 The problem with using the Ably client library SDKs in React projects is that the Ably libraries manage their own state and can trigger re-renders. This has historically made it difficult to decide on the best place to put Ably code in your React applications.
 
-To make this easier for developers, we have built some custom "React hooks":https://reactjs.org/docs/hooks-intro.html. This guide hows you how to use Ably React Hooks in your React projects (and projects using frameworks based on React, like Next.js).
+To make this easier for developers, Ably includes "React extensions":https://reactjs.org/docs/hooks-intro.html as part of the "Ably Javascript SDK":https://www.npmjs.com/package/ably. This guide hows you how to use Ably React extensions in your React projects (and projects using frameworks based on React, like Next.js).
 
-For more information about the rationale behind Ably React Hooks and how they work read "this article":https://ably.com/blog/ably-react-hooks-npm-package.
+For more information about the rationale behind Ably React extensions and how they work read "this article":https://ably.com/blog/ably-react-hooks-npm-package.
 
 <%= partial partial_version('tutorials/_step-1-create-app-and-api-key') %>
 
-h2. Step 2 - Install Ably React Hooks
+h2. Step 2 - Install Ably React
 
-bq. *Note*: This guide assumes that you are using @v2.0@ or later of Ably React Hooks, and a compatible version of React (@v18.1.0@ or above).
+Ably React extensions are available as part of the Ably Javascript SDK. The SDK is available as an "NPM module":https://www.npmjs.com/package/ably.
 
-Ably React Hooks are available as an "NPM module":https://www.npmjs.com/package/@ably-labs/react-hooks. The module works out of the box with the "@create-react-app@":https://reactjs.org/docs/create-a-new-react-app.html toolchain.
+bq. *Note*: This guide assumes that you are using @v1.2.44@ or later of the Ably Javascript SDK, and a compatible version of React (@v18.1.0@ or above).
 
 Install the NPM module into your project as follows:
 
 ```[sh]
-npm install --save @ably-labs/react-hooks
+npm install --save ably
 ```
 
 h2. Step 3 - Configure Ably
 
-Once you have installed the Ably React Hooks NPM module, you need to configure Ably with the API key you generated in Step 1.
+Once you have installed the Ably NPM module, your first step to using Ably is to create an authorized Ably client. To do this instantiate a new client instance and as part of the instantiation, provide a means to authorize the client. There are several ways to do this including providing a @key@ attribute, but the recommended way is to use the @authUrl@ property to provide a server-side API URL which generates and returns an authorization token.
 
-First, add a reference to the hooks in your React code:
-
-```[javascript]
-import { configureAbly } from "@ably-labs/react-hooks";
-```
-
-Then, call the @configureAbly@ function to create an instance of the Ably client library SDK:
-
-```[javascript]
-configureAbly({ key: "your-ably-api-key"});
-```
-
-@configureAbly@ matches the method signature of the Ably client library SDK and requires either a string or an @AblyClientOptions@ object.
-
-In a production application, you should use "token authentication":/auth/token to protect your API key from being compromised. One way to achieve this is to store your API key server-side in a @.env@ file and create an endpoint to handle token requests:
+First, store your Ably API key server-side in a @.env@ file and create an endpoint to handle token requests:
 
 ```[nodejs]
 import Ably from "ably/promises";
@@ -87,31 +73,57 @@ app.get("/ably/auth", (req, res) => {
 });
 ```
 
-You can then use @configureAbly@ with an @authUrl@ so that your client will request tokens automatically:
+Next, in your React component add a reference to Ably and the @AblyProvider@:
 
 ```[javascript]
-configureAbly({ authUrl: "/ably/auth" });
+import * as Ably from 'ably'
+import { AblyProvider } from 'ably/react';
+```
+
+Then, create a new instance of an Ably client and provide that to the @AblyProvider@:
+
+```[javascript]
+const client = Ably.Realtime.Promise({ authUrl: '[YOUR_ABLY_TOKEN_API_URL_PATH]'});
+
+return (
+  <AblyProvider client={ client }>
+  </AblyProvider>
+)
 ```
 
 h2. Step 4 - Subscribe to a channel
 
-To connect and subscribe to a channel, use the @useChannel@ hook:
+To connect and subscribe to a channel, use the @useChannel@ hook within a child component of @AblyProvider@:
 
 ```[javascript]
-import { configureAbly, useChannel } from "@ably-labs/react-hooks";
+import { useChannel } from "ably/react";
 
-const [channel, ably] = useChannel("channel-name", (message) => {
-    console.log(message);
-});
+function Messages() {
+  const { channel }  = useChannel("channel-name", (message) => {
+      console.log(message);
+  });
+
+  return (<></>)
+}
 ```
 
-The call to @useChannel@ returns the channel instance and also a reference to the Ably client library SDK.
+Add the new component as a child of @AblyProvider@
+
+```[javascript]
+const client = Ably.Realtime.Promise({ authUrl: '[YOUR_ABLY_TOKEN_API_URL_PATH]'});
+
+return (
+  <AblyProvider client={ client }>
+    <Messages />
+  </AblyProvider>
+)
+```
 
 You can combine @useChannel@ with a React @useState@ hook. For example, if you want to keep a list of messages in your app state and update the state when new messages arrive on the channel:
 
 ```[javascript]
 const [messages, updateMessages] = useState([]);
-const [channel] = useChannel("channel-name", (message) => {
+const {channel} = useChannel("channel-name", (message) => {
     updateMessages((prev) => [...prev, message]);
 });
 
@@ -119,29 +131,29 @@ const [channel] = useChannel("channel-name", (message) => {
 const messagePreviews = messages.map((msg, index) => <li key={index}>{msg.data.someProperty}</li>);
 ```
 
+The @useChannel@ hook supports all the same parameters that the client library SDK does. So you can also use features like "rewind":/channels/options/rewind:
+
+```[javascript]
+const {channel} = useChannel("[?rewind=100]your-channel-name", (message) => {
+    // List the last 100 messages on the channel
+    console.log(message);
+});
+```
+
 h2. Step 5 - Publish and other channel operations
 
-You can use the channel instance returned by @useChannel@ to publish a message to that channel:
+The call to @useChannel@ returns the channel instance. You can use this channel instance to publish a message to that channel:
 
 ```[javascript]
 channel.publish("test-message", { text: "message text" });
 ```
 
-Because you also have access to the Ably client library SDK from your call to @useChannel@, you can perform any other operations on the channel. For example, retrieving "channel history":/storage-history/history:
+The channel instance also supports all the same functions that the client library SDK does. So you can use features like retrieving "channel history":/storage-history/history:
 
 ```[javascript]
 const history = channel.history((err, result) => {
     const lastMessage = resultPage.items[0];
     console.log('Last message: ' + lastMessage.id + ' - ' + lastMessage.data);
-});
-```
-
-The @useChannel@ hook supports all the same parameters that the client library SDK does. So you can also use features like "rewind":/channels/channel-parameters/rewind:
-
-```[javascript]
-const [channel] = useChannel("[?rewind=100]your-channel-name", (message) => {
-    // List the last 100 messages on the channel
-    console.log(message);
 });
 ```
 
@@ -151,20 +163,20 @@ The @usePresence@ hook lets you subscribe to presence messages on a channel, so 
 
 h3. Retrieving the Presence set
 
-To use the Presence capability, you need to assign each client a unique "@clientId@":/api/realtime-sdk#client-options. In a production application, this @clientId@ should be returned by your token request endpoint (see Step 3). But you can also do this in the call to @configureAbly@:
+To use the Presence capability, you need to assign each client a unique "@clientId@":/api/realtime-sdk#client-options. In a production application, this @clientId@ should be returned by your token request endpoint (see Step 3). But you can also do this when you create your client instance:
 
 ```[javascript]
-configureAbly({ key: "your-ably-api-key", clientId: generateRandomId() });
+const client = Ably.Realtime.Promise({ authUrl: '[YOUR_ABLY_TOKEN_API_URL_PATH]', clientId: '[YOUR_CLIENT_ID]' });
 ```
 
 You can then import and use the @usePresence@ hook. It returns an array of standard Ably "@PresenceMessage@":/api/realtime-sdk/presence#presence-message objects:
 
 ```[javascript]
-import { configureAbly, useChannel, usePresence } from "@ably-labs/react-hooks";
+import { AblyProvider, useChannel, usePresence } from "ably/react";
 
 const [presenceData] = usePresence("channel-name", "optional initial state");
 
-// Convert presence data to list items to render    
+// Convert presence data to list items to render
 const members = presenceData.map((msg, index) => <li key={index}>{msg.clientId}: {msg.data}</li>);
 ```
 
@@ -219,12 +231,5 @@ h2. Next Steps
 You might find the following resources helpful:
 
 * "Introduction to React Hooks":https://reactjs.org/docs/hooks-intro.html
-* "Introduction to Ably React Hooks":https://ably.com/blog/ably-react-hooks-npm-package
-* "Ably React Hooks NPM module":https://www.npmjs.com/package/@ably-labs/react-hooks
-* "Ably React Hooks Github repo":https://github.com/ably-labs/react-hooks
 * "Build a live commenting app with Next.js and Ably React Hooks":https://ably.com/blog/liveapp-with-nextjs-prisma-planetscale
 * "Build a chat app with Next.js, Vercel, and Ably React Hooks":https://ably.com/blog/realtime-chat-app-nextjs-vercel
-
-
-
-
