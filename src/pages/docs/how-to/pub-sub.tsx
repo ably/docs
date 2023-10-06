@@ -41,7 +41,6 @@ const PubSubHowTo = () => {
                 <HowTo />
               </div>
             </div>
-
             <aside className="pt-24 pl-24">
               <SandpackProvider
                 files={files}
