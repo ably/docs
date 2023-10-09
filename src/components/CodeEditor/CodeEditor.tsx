@@ -1,5 +1,6 @@
 import React from 'react';
-import { SandpackCodeEditor, SandpackLayout, SandpackPreview, useSandpack } from '@codesandbox/sandpack-react';
+import { SandpackCodeEditor, SandpackLayout, SandpackFileExplorer, useSandpack } from '@codesandbox/sandpack-react';
+import { CodeEditorProps } from '@codesanbox/sandpack-react/types';
 import Chrome from './Chrome';
 
 const ActiveFileDisplay = () => {
@@ -9,15 +10,22 @@ const ActiveFileDisplay = () => {
   return activeFile;
 };
 
-const CodeEditor = (props) => {
+type Props = { editor: CodeEditorProps };
+
+const CodeEditor = ({ editor }: Props) => {
+  const editorProps = {
+    ...editor,
+    showTabs: false,
+  };
+
   return (
     <Chrome title={ActiveFileDisplay()}>
-      <SandpackLayout {...props}>
-        <SandpackCodeEditor {...props} />
-        <SandpackPreview {...props} />
+      <SandpackLayout className="rounded-none">
+        <SandpackFileExplorer />
+        <SandpackCodeEditor {...editorProps} />
       </SandpackLayout>
     </Chrome>
   );
 };
 
-export default CodeEditor;
+export { CodeEditor };
