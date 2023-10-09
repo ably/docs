@@ -22,7 +22,13 @@ export const plugins = [
   'gatsby-transformer-yaml',
   'gatsby-transformer-sharp',
   'gatsby-plugin-react-helmet',
-  'gatsby-plugin-root-import',
+  {
+    resolve: 'gatsby-plugin-root-import',
+    options: {
+      HowTos: `${__dirname}/how-tos`,
+    },
+  },
+  'gatsby-plugin-mdx',
   // Images
   {
     resolve: 'gatsby-source-filesystem',
@@ -65,5 +71,13 @@ export const plugins = [
     },
     __key: 'yaml-page-content',
   },
+  {
+    resolve: 'gatsby-source-filesystem',
+    options: {
+      name: 'how-tos',
+      path: './how-tos',
+    },
+  },
+  'gatsby-transformer-remark',
   `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/
 ];
