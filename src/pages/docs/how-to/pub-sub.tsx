@@ -1,13 +1,13 @@
 import React from 'react';
 import { graphql, useStaticQuery } from 'gatsby';
-import { SandpackProvider } from '@codesandbox/sandpack-react';
+import { SandpackProvider, SandpackPreview } from '@codesandbox/sandpack-react';
 import { Head } from 'src/components/Head';
 import Layout from 'src/components/Layout';
 import PageTitle from 'src/components/PageTitle';
 import HowTo from 'HowTos/pub-sub/how-to.mdx';
-import CodeEditor from 'src/components/CodeEditor/CodeEditor';
+import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
 
-const PubSubHowTo = (props) => {
+const PubSubHowTo = () => {
   const meta_description = `A fine interactve how to`;
 
   const data = useStaticQuery(graphql`
@@ -47,16 +47,22 @@ const PubSubHowTo = (props) => {
                 },
                 entry: '/index.js',
               }}
+              options={{
+                autorun: true,
+                autoReload: false,
+              }}
+              theme={sandpackTheme}
             >
               <CodeEditor
-                theme="light"
-                options={{
-                  layout: 'console',
+                editor={{
                   showLineNumbers: true,
-                  autorun: false,
-                  autoReload: false,
                 }}
               />
+
+              <div className="my-16 flex gap-16">
+                <SandpackPreview style={{ height: '370px' }} />
+                <SandpackPreview style={{ height: '370px' }} />
+              </div>
             </SandpackProvider>
           </aside>
         </article>
