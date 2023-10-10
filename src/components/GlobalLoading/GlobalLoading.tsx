@@ -111,17 +111,11 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
         <Script
           id="boomerang-loader"
           src="https://s3.amazonaws.com/assets.heroku.com/boomerang/boomerang.js"
-          crossOrigin={'true'}
           onLoad={loadBoomerang(sessionState.heroku)}
         />
       )}
       {headwayAccountId && sessionState.signedIn && (
-        <Script
-          id="headway-loader"
-          src="//cdn.headwayapp.co/widget.js"
-          crossOrigin="true"
-          onLoad={loadHeadway(headwayAccountId)}
-        />
+        <Script id="headway-loader" src="//cdn.headwayapp.co/widget.js" onLoad={loadHeadway(headwayAccountId)} />
       )}
       {children}
     </UserContext.Provider>
