@@ -4,8 +4,9 @@ import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
 import HowTo from 'HowTos/pub-sub/how-to.mdx';
 import { graphql, useStaticQuery } from 'gatsby';
 import { Head } from 'src/components/Head';
-import Layout, { SidebarState } from 'src/components/Layout';
+import Layout from 'src/components/Layout';
 import PageTitle from 'src/components/PageTitle';
+import { SidebarProvider } from 'src/contexts/SidebarContext';
 
 const PubSubHowTo = () => {
   const meta_description = `A fine interactve how to`;
@@ -31,52 +32,46 @@ const PubSubHowTo = () => {
     <>
       <Head title="Pub/Sub How To" description={meta_description} />
 
-      <Layout
-        showProductNavigation={true}
-        currentProduct="spaces"
-        isExtraWide
-        sidebarState={{
-          collapsible: true,
-          initialState: SidebarState.Collapsed,
-        }}
-      >
-        <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:pl-40 lg:pl-0">
-          <div>
-            <PageTitle>Pub/Sub How To</PageTitle>
+      <SidebarProvider initialCollapsedState={true}>
+        <Layout showProductNavigation={true} currentProduct="spaces" collapsibleSidebar={true} isExtraWide>
+          <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:pl-40 lg:pl-0">
             <div>
-              <HowTo />
-            </div>
-          </div>
-
-          <aside className="pt-24 pl-24">
-            <SandpackProvider
-              files={files}
-              customSetup={{
-                dependencies: {
-                  ably: 'latest',
-                },
-                entry: '/index.js',
-              }}
-              options={{
-                autorun: true,
-                autoReload: false,
-              }}
-              theme={sandpackTheme}
-            >
-              <CodeEditor
-                editor={{
-                  showLineNumbers: true,
-                }}
-              />
-
-              <div className="flex gap-16 my-16">
-                <SandpackPreview style={{ height: '370px' }} />
-                <SandpackPreview style={{ height: '370px' }} />
+              <PageTitle>Pub/Sub How To</PageTitle>
+              <div>
+                <HowTo />
               </div>
-            </SandpackProvider>
-          </aside>
-        </article>
-      </Layout>
+            </div>
+
+            <aside className="pt-24 pl-24">
+              <SandpackProvider
+                files={files}
+                customSetup={{
+                  dependencies: {
+                    ably: 'latest',
+                  },
+                  entry: '/index.js',
+                }}
+                options={{
+                  autorun: true,
+                  autoReload: false,
+                }}
+                theme={sandpackTheme}
+              >
+                <CodeEditor
+                  editor={{
+                    showLineNumbers: true,
+                  }}
+                />
+
+                <div className="flex gap-16 my-16">
+                  <SandpackPreview style={{ height: '370px' }} />
+                  <SandpackPreview style={{ height: '370px' }} />
+                </div>
+              </SandpackProvider>
+            </aside>
+          </article>
+        </Layout>
+      </SidebarProvider>
     </>
   );
 };

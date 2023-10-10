@@ -17,6 +17,7 @@ import { safeWindow, srcFromDocsSite } from 'src/utilities';
 import { PREFERRED_LANGUAGE_KEY } from 'src/utilities/language/constants';
 
 import { isEmpty } from 'lodash';
+import { SidebarProvider } from 'src/contexts/SidebarContext';
 import {
   DEFAULT_LANGUAGE,
   DEFAULT_PREFERRED_LANGUAGE,
@@ -134,17 +135,19 @@ const Template = ({
         <PathnameContext.Provider value={pathname}>
           <Head title={title} canonical={canonical} description={description} />
 
-          <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
-            <Article>
-              <PageTitle>{title}</PageTitle>
-              <div>{elements}</div>
-            </Article>
-            <RightSidebarWrapper
-              menuData={contentMenuFromLanguage[0]}
-              languages={filteredLanguages}
-              versionData={versionData}
-            />
-          </Layout>
+          <SidebarProvider>
+            <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
+              <Article>
+                <PageTitle>{title}</PageTitle>
+                <div>{elements}</div>
+              </Article>
+              <RightSidebarWrapper
+                menuData={contentMenuFromLanguage[0]}
+                languages={filteredLanguages}
+                versionData={versionData}
+              />
+            </Layout>
+          </SidebarProvider>
         </PathnameContext.Provider>
       </PageLanguagesContext.Provider>
       {script && <Script src={srcFromDocsSite(`/scripts/${slug}.js`)} strategy={ScriptStrategy.idle} />}

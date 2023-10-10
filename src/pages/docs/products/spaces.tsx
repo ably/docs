@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet';
 import Layout from 'src/components/Layout';
 import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
 
+import { SidebarProvider } from 'src/contexts/SidebarContext';
 import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
 
 type MetaData = {
@@ -41,9 +42,11 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <Layout isExtraWide currentProduct="spaces">
-        <ProductPageContent sections={sections} />
-      </Layout>
+      <SidebarProvider>
+        <Layout isExtraWide currentProduct="spaces">
+          <ProductPageContent sections={sections} />
+        </Layout>
+      </SidebarProvider>
     </>
   );
 };
