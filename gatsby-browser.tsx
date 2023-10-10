@@ -1,11 +1,8 @@
-import React from 'react';
 import type { GatsbyBrowser } from 'gatsby';
 
 import './src/styles/global.css';
 
 import { reducerFlashes } from '@ably/ui/core/Flash';
-
-import { SidebarProvider, urlsForCollapsedSidebar } from './src/contexts/SidebarContext';
 
 import {
   attachStoreToWindow,
@@ -25,14 +22,6 @@ const onClientEntry: GatsbyBrowser['onClientEntry'] = () => {
   });
 
   attachStoreToWindow(store);
-};
-
-const wrapPageElement: GatsbyBrowser['wrapPageElement'] = ({ element, props }) => {
-  const { location } = props;
-  const currentUrl = location ? location.pathname : '';
-  const shouldCollapse = urlsForCollapsedSidebar.some((url) => currentUrl.includes(url));
-
-  return <SidebarProvider initialCollapsedState={shouldCollapse}>{element}</SidebarProvider>;
 };
 
 /**
@@ -57,14 +46,6 @@ const shouldUpdateScroll: GatsbyBrowser['shouldUpdateScroll'] = ({ prevRouterPro
  * Load our user state
  */
 import UserContextWrapper from 'src/contexts/user-context/wrap-with-provider';
-import { SidebarProvider } from './src/contexts/SidebarContext';
-
-export const wrapRootElement: GatsbyBrowser['wrapRootElement'] = ({ element }) => {
-  return (
-    <UserContextWrapper>
-      <SidebarProvider>{element}</SidebarProvider>
-    </UserContextWrapper>
-  );
-};
+const wrapRootElement = UserContextWrapper;
 
 export { onClientEntry, shouldUpdateScroll, wrapRootElement };
