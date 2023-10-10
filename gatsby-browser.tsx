@@ -3,7 +3,7 @@ import './src/styles/global.css';
 
 import { reducerFlashes } from '@ably/ui/core/Flash';
 
-import { SidebarProvider } from './src/contexts/SidebarContext';
+import { SidebarProvider, urlsForCollapsedSidebar } from './src/contexts/SidebarContext';
 
 import type { GatsbyBrowser } from 'gatsby';
 
@@ -27,8 +27,12 @@ const onClientEntry: GatsbyBrowser['onClientEntry'] = () => {
   attachStoreToWindow(store);
 };
 
-const wrapRootElement: GatsbyBrowser['wrapRootElement'] = ({ element }) => {
-  return <SidebarProvider>{element}</SidebarProvider>;
+const wrapPageElement: GatsbyBrowser['wrapPageElement'] = ({ element, props }) => {
+  const { location } = props;
+  const currentUrl = location ? location.pathname : '';
+  const shouldCollapse = urlsForCollapsedSidebar.some((url) => currentUrl.includes(url));
+
+  return <SidebarProvider initialCollapsedState={shouldCollapse}>{element}</SidebarProvider>;
 };
 
 /**
@@ -49,4 +53,4 @@ const shouldUpdateScroll: GatsbyBrowser['shouldUpdateScroll'] = ({ prevRouterPro
   );
 };
 
-export { onClientEntry, shouldUpdateScroll, wrapRootElement };
+export { onClientEntry, shouldUpdateScroll, wrapPageElement };
