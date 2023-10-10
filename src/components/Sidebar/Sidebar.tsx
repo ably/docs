@@ -1,5 +1,5 @@
 import cn from 'classnames';
-import { ReactElement } from 'react';
+import { ReactElement, useEffect } from 'react';
 
 import { HighlightedMenuContext } from 'src/contexts/highlighted-menu-context';
 
@@ -31,6 +31,14 @@ export const Sidebar = ({
   collapsible = false,
 }: SidebarProps): ReactElement => {
   const { collapsed, setCollapsed } = useSidebar();
+
+  // if we navigate from a page where collapsible is true
+  // then collapsed could be true when we re-render
+  useEffect(() => {
+    if (!collapsible) {
+      setCollapsed(false);
+    }
+  }, [collapsible, setCollapsed]);
 
   const handleToggleSidebar = () => {
     setCollapsed((prev) => !prev);
