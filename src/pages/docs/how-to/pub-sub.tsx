@@ -48,13 +48,14 @@ const PubSubHowTo = () => {
                   dependencies: {
                     ably: 'latest',
                   },
-                  entry: '/index.js',
                 }}
                 options={{
                   autorun: true,
                   autoReload: false,
+                  externalResources: ['https://cdn.tailwindcss.com'],
                 }}
                 theme={sandpackTheme}
+                template="react-ts"
               >
                 <CodeEditor
                   editor={{
