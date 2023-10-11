@@ -1,43 +1,58 @@
-import React, { FunctionComponent as FC } from 'react';
 import cn from 'classnames';
+import { ReactNode, useEffect } from 'react';
 
 import { Container } from 'src/components';
 
-import { Header } from '../Header';
 import ProductNavigation from 'src/components/ProductNavigation';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
-import GlobalLoading from '../GlobalLoading/GlobalLoading';
+import { useSidebar } from 'src/contexts/SidebarContext';
 import { Footer } from '../Footer';
+import GlobalLoading from '../GlobalLoading/GlobalLoading';
+import { Header } from '../Header';
 
-const Layout: FC<{
+interface LayoutProps {
   isExtraWide?: boolean;
   showProductNavigation?: boolean;
   currentProduct?: string;
   noSidebar?: boolean;
-}> = ({
+  collapsibleSidebar?: boolean;
+  children: ReactNode;
+}
+
+const Layout: React.FC<LayoutProps> = ({
   children,
   isExtraWide = false,
   showProductNavigation = true,
-  currentProduct = undefined,
+  currentProduct,
   noSidebar = false,
+  collapsibleSidebar = false,
 }) => {
   const sidebarName = currentProduct === 'home' ? 'channels' : currentProduct;
   const showSidebar = !noSidebar;
+
+  const { collapsed, setCollapsed, initialCollapsedState } = useSidebar();
+
+  useEffect(() => {
+    setCollapsed(initialCollapsedState);
+  }, [initialCollapsedState, setCollapsed]);
 
   return (
     <GlobalLoading>
       <Header sidebarName={sidebarName} />
       {showProductNavigation && <ProductNavigation currentProduct={currentProduct} />}
-      {showSidebar && <LeftSideBar sidebarName={sidebarName} />}
+
+      {showSidebar && <LeftSideBar sidebarName={sidebarName} collapsible={collapsibleSidebar} />}
       <Container
         as="main"
         className={
           showSidebar
-            ? cn('grid md:ml-244 2xl:mx-auto max-w-1264', {
+            ? cn('grid 2xl:mx-auto max-w-1264 transition-all', {
+                'md:ml-32': collapsed,
+                'md:ml-244': !collapsed,
                 'md:grid-cols-1': isExtraWide,
                 'md:grid-cols-2 md:grid-cols-layout': !isExtraWide,
               })
-            : null
+            : undefined
         }
       >
         {children}

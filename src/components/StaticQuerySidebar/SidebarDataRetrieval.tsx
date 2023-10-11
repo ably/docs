@@ -1,9 +1,8 @@
-import React from 'react';
 import { graphql, useStaticQuery } from 'gatsby';
-import { EXPAND_MENU, SidebarProps, HamburgerMenuProps } from 'src/components';
+import React from 'react';
+import { EXPAND_MENU, HamburgerMenuProps, LeftSidebarProps, SidebarProps } from 'src/components';
 
 import { sidebarDataFromDocumentPaths, sidebarDataFromPageFurniture } from './data';
-import { LeftSidebarProps } from './LeftSideBar';
 
 export const SidebarDataRetrieval = ({
   className,
@@ -11,6 +10,7 @@ export const SidebarDataRetrieval = ({
   expandMenu,
   sidebarName,
   Component,
+  collapsible,
 }: LeftSidebarProps & {
   expandMenu: EXPAND_MENU;
   Component: React.FunctionComponent<SidebarProps | HamburgerMenuProps>;
@@ -102,6 +102,7 @@ export const SidebarDataRetrieval = ({
       data={sidebarData}
       expandMenu={expandMenu}
       sidebarName={sidebarName}
+      collapsible={collapsible}
     />
   );
 };

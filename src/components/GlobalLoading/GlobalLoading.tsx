@@ -1,28 +1,28 @@
-import React, { FunctionComponent as FC, useEffect, useState } from 'react';
+import { FunctionComponent as FC, ReactNode, useEffect, useState } from 'react';
 // Session-related scripts
 import '@ably/ui/core/scripts';
 import {
   connectState,
-  loadSprites,
-  selectSessionData,
   fetchSessionData,
   getRemoteDataStore,
+  loadSprites,
+  selectSessionData,
 } from '@ably/ui/core/scripts';
 import sprites from '@ably/ui/core/sprites.svg';
+import { Script } from 'gatsby';
+import posthog from 'posthog-js';
+import { type UserApiKey } from 'src/components/blocks/software/Code/ApiKeyMenu';
+import { loadBoomerang } from 'src/third-party/boomerang';
+import { loadHeadway } from 'src/third-party/headway';
 import UserContext, { UserDetails } from '../../contexts/user-context';
 import { fetchApiKeyData } from '../../redux/api-key';
-import { selectData } from '../../redux/select-data';
 import {
   API_KEYS_REDUCER_KEY,
   WEB_API_KEYS_DATA_ENDPOINT,
   WEB_API_USER_DATA_ENDPOINT,
 } from '../../redux/api-key/constants';
-import { Script } from 'gatsby';
-import { loadBoomerang } from 'src/third-party/boomerang';
-import posthog from 'posthog-js';
-import { loadHeadway } from 'src/third-party/headway';
+import { selectData } from '../../redux/select-data';
 import { sessionTracking } from './session-tracking';
-import { type UserApiKey } from 'src/components/blocks/software/Code/ApiKeyMenu';
 
 const hubspotTrackingId = process.env.GATSBY_HUBSPOT_TRACKING_ID;
 const boomerangEnabled = process.env.GATSBY_BOOMERANG_ENABLED;
@@ -48,7 +48,7 @@ const gtmSnippet = `(function (w, d, s, l, i) {
 
 const apiKeysInit = { data: [] };
 
-const GlobalLoading: FC = ({ children }) => {
+const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
   const [sessionState, setSessionState] = useState<Record<string, string>>({});
   const [apiKeys, setApiKeys] = useState<{ data: UserApiKey[] }>(apiKeysInit);
 
@@ -88,7 +88,7 @@ const GlobalLoading: FC = ({ children }) => {
   const userState: UserDetails = { sessionState, apiKeys };
   return (
     <UserContext.Provider value={userState}>
-      {googleTagManagerAuthToken && googleTagManagerPreview ? (
+      {googleTagManagerAuthToken && googleTagManagerPreview && (
         <>
           <noscript>
             <iframe
@@ -105,24 +105,18 @@ const GlobalLoading: FC = ({ children }) => {
             }}
           />
         </>
-      ) : null}
-      {hubspotTrackingId ? <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" /> : null}
-      {boomerangEnabled ? (
+      )}
+      {hubspotTrackingId && <Script src={`//js.hs-scripts.com/${hubspotTrackingId}.js`} id="hs-script-loader" />}
+      {boomerangEnabled && (
         <Script
           id="boomerang-loader"
           src="https://s3.amazonaws.com/assets.heroku.com/boomerang/boomerang.js"
-          crossOrigin={'true'}
           onLoad={loadBoomerang(sessionState.heroku)}
         />
-      ) : null}
-      {headwayAccountId && sessionState.signedIn ? (
-        <Script
-          id="headway-loader"
-          src="//cdn.headwayapp.co/widget.js"
-          crossOrigin="true"
-          onLoad={loadHeadway(headwayAccountId)}
-        />
-      ) : null}
+      )}
+      {headwayAccountId && sessionState.signedIn && (
+        <Script id="headway-loader" src="//cdn.headwayapp.co/widget.js" onLoad={loadHeadway(headwayAccountId)} />
+      )}
       {children}
     </UserContext.Provider>
   );

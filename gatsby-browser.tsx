@@ -2,16 +2,18 @@ import './src/styles/global.css';
 
 import { reducerFlashes } from '@ably/ui/core/Flash';
 
+import type { GatsbyBrowser } from 'gatsby';
+
 import {
-  createRemoteDataStore,
   attachStoreToWindow,
+  createRemoteDataStore,
   reducerBlogPosts,
   reducerSessionData,
 } from '@ably/ui/core/scripts';
 
 import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
 
-const onClientEntry = () => {
+const onClientEntry: GatsbyBrowser['onClientEntry'] = () => {
   const store = createRemoteDataStore({
     ...reducerBlogPosts,
     ...reducerSessionData,
@@ -25,7 +27,7 @@ const onClientEntry = () => {
 /**
  *  The 'shouldUpdateScroll' function will fire when navigating to new pages within Gatsby
  */
-const shouldUpdateScroll = ({ prevRouterProps, routerProps: { location } }) => {
+const shouldUpdateScroll: GatsbyBrowser['shouldUpdateScroll'] = ({ prevRouterProps, routerProps: { location } }) => {
   if (!prevRouterProps || !location) {
     return false;
   }
