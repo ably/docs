@@ -34,7 +34,7 @@ const PubSubHowTo = () => {
 
       <SidebarProvider initialCollapsedState={true}>
         <Layout showProductNavigation={true} currentProduct="channels" collapsibleSidebar={true} isExtraWide>
-          <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:pl-40 lg:pl-0">
+          <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:px-32">
             <div>
               <PageTitle>Pub/Sub How To</PageTitle>
               <div>
@@ -65,8 +65,8 @@ const PubSubHowTo = () => {
                 />
 
                 <div className="flex gap-16 my-16">
-                  <SandpackPreview style={{ height: '370px' }} />
-                  <SandpackPreview style={{ height: '370px' }} />
+                  <SandpackPreview style={{ height: '420px' }} />
+                  <SandpackPreview style={{ height: '420px' }} />
                 </div>
               </SandpackProvider>
             </aside>
