@@ -7,7 +7,7 @@ const ActiveFileDisplay = () => {
   const { sandpack } = useSandpack();
   const { activeFile } = sandpack;
 
-  return activeFile;
+  return activeFile.startsWith('/') ? activeFile.substring(1) : activeFile;
 };
 
 type Props = { editor: CodeEditorProps };
@@ -21,7 +21,7 @@ const CodeEditor = ({ editor }: Props) => {
   return (
     <Chrome title={ActiveFileDisplay()}>
       <SandpackLayout className="rounded-none">
-        <SandpackFileExplorer />
+        <SandpackFileExplorer autoHiddenFiles={true} />
         <SandpackCodeEditor {...editorProps} />
       </SandpackLayout>
     </Chrome>
