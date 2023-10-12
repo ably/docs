@@ -4,7 +4,7 @@ type ComponentProps = { title: string; children: React.ReactNode };
 
 const Chrome = ({ title, children }: ComponentProps) => {
   return (
-    <div style={{ maxWidth: '40rem', fontSize: '0.875rem' }}>
+    <div style={{ fontSize: '0.875rem' }}>
       <div
         className="flex h-40 px-16 py-4 items-center flex-shrink-0 self-stretch rounded-t-lg border-b"
         style={{ backgroundColor: '#141924', borderColor: '#2B303B' }}
