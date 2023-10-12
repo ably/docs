@@ -33,7 +33,7 @@ const PubSubHowTo = () => {
       <Head title="Pub/Sub How To" description={meta_description} />
 
       <SidebarProvider initialCollapsedState={true}>
-        <Layout showProductNavigation={true} currentProduct="spaces" collapsibleSidebar={true} isExtraWide>
+        <Layout showProductNavigation={true} currentProduct="channels" collapsibleSidebar={true} isExtraWide>
           <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:pl-40 lg:pl-0">
             <div>
               <PageTitle>Pub/Sub How To</PageTitle>
@@ -50,6 +50,7 @@ const PubSubHowTo = () => {
                   },
                 }}
                 options={{
+                  visibleFiles: ['/App.tsx', '/index.css', '/index.tsx', '/components/Card.tsx'],
                   autorun: true,
                   autoReload: false,
                   externalResources: ['https://cdn.tailwindcss.com'],
