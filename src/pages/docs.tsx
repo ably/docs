@@ -1,8 +1,8 @@
 import { graphql } from 'gatsby';
 import { Helmet } from 'react-helmet';
 
-import { HomepageContent, Section } from 'src/components/Homepage/HomepageContent';
 import Layout from 'src/components/Layout';
+import { HomepageContent, Section } from 'src/components/Homepage/HomepageContent';
 
 import { SidebarProvider } from 'src/contexts/SidebarContext';
 import { DOCUMENTATION_NAME } from '../../data/transform/constants';
