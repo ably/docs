@@ -47,7 +47,7 @@ To build and serve locally:
 
 `npm run rebuild`
 
-Visit `localhost:9000` for homepage.
+Visit `localhost:8000` for homepage.
 
 ## Redirects
 
