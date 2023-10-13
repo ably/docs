@@ -1,9 +1,9 @@
-import Card from './components/Card';
+import Scoreboard from './components/Scoreboard';
 
 function App() {
   return (
     <>
-      <Card />
+      <Scoreboard />
     </>
   )
 }
