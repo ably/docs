@@ -53,7 +53,6 @@ const PubSubHowTo = () => {
                   visibleFiles: ['/App.tsx', '/index.css', '/index.tsx', '/components/Card.tsx'],
                   autorun: true,
                   autoReload: false,
-                  externalResources: ['https://cdn.tailwindcss.com'],
                 }}
                 theme={sandpackTheme}
                 template="react-ts"
