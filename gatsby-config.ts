@@ -65,5 +65,11 @@ export const plugins = [
     },
     __key: 'yaml-page-content',
   },
+  {
+    resolve: `gatsby-plugin-sitemap`,
+    options: {
+      createLinkInHead: false,
+    },
+  },
   `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/
 ];
