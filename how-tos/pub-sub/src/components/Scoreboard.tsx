@@ -1,3 +1,6 @@
+import { useState } from 'react';
+import { subscribeToBasketball, unsubscribeFromBasketball } from '../basketballSubscriber';
+
 import lioners from '../assets/lioners.svg';
 import vortexUnited from '../assets/vortex-united.svg';
 import soccer from '../assets/soccer.svg';
@@ -10,11 +13,31 @@ import solarFlares from '../assets/solar-flares.svg';
 import tenPointsClub from '../assets/ten-points-club.svg';
 
 const Scoreboard = () => {
+  const [subscribedChannels, setSubscribedChannels] = useState([]);
+
+  const [basketballScores, setBasketballScores] = useState({});
+
+  const handleBasketballSubscribe = () => {
+    subscribeToBasketball(setSubscribedChannels, setBasketballScores);
+  };
+
+  const handleBasketballUnsubscribe = () => {
+    unsubscribeFromBasketball(setSubscribedChannels);
+  };
+
+  const isSubscribed = (channelName) => {
+    return subscribedChannels.includes(channelName);
+  };
+
   return (
     <div className="scoreboard">
       <div className="header">
         <span>Basketball</span>
-        <button className="unsubscribe">Unsubscribe</button>
+        {isSubscribed('basketball') ? (
+          <button className="unsubscribe" onClick={handleBasketballUnsubscribe}>Unsubscribe</button>
+        ) : (
+          <button className="subscribe" onClick={handleBasketballSubscribe}>Subscribe</button>
+        )}
       </div>
 
       <section className="game">
@@ -23,8 +46,7 @@ const Scoreboard = () => {
           <span>Ether Flyers</span>
         </div>
         <div className="score">
-          <span>125 - 118</span>
-          <span>51-60</span>
+          <span>{basketballScores['match-1'] || `0 - 0`}</span>
         </div>
         <div className="team">
           <img src={fireHawks}></img>
@@ -38,8 +60,7 @@ const Scoreboard = () => {
           <span>Ten Points Club</span>
         </div>
         <div className="score">
-          <span>125 - 118</span>
-          <span>51-60</span>
+          <span>{basketballScores['match-2'] || `0 - 0`}</span>
         </div>
         <div className="team">
           <img src={solarFlares}></img>
