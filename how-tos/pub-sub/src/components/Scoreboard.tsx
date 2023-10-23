@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { subscribeToBasketball, unsubscribeFromBasketball } from '../basketballSubscriber';
+import { subscribeToFootballLeague, unsubscribeFromFootballLeague } from '../footballSubscriber';
 
 import lioners from '../assets/lioners.svg';
 import vortexUnited from '../assets/vortex-united.svg';
@@ -16,13 +17,22 @@ const Scoreboard = () => {
   const [subscribedChannels, setSubscribedChannels] = useState([]);
 
   const [basketballScores, setBasketballScores] = useState({});
+  const [footballScores, setFootballScores] = useState({});
 
   const handleBasketballSubscribe = () => {
     subscribeToBasketball(setSubscribedChannels, setBasketballScores);
   };
 
+  const handleFootballSubscribe = (footballLeague) => {
+    subscribeToFootballLeague(setSubscribedChannels, setFootballScores, footballLeague);
+  };
+
   const handleBasketballUnsubscribe = () => {
     unsubscribeFromBasketball(setSubscribedChannels);
+  };
+
+  const handleFootballLeagueUnsubscribe = (footballLeague) => {
+    unsubscribeFromFootballLeague(setSubscribedChannels, footballLeague);
   };
 
   const isSubscribed = (channelName) => {
@@ -77,12 +87,20 @@ const Scoreboard = () => {
       <section className="leagues">
         <div className="league">
           <img src={football}></img>
-          <button className="subscribe">Subscribe</button>
+          {isSubscribed('greenLeague') ? (
+            <button className="unsubscribe" onClick={() => handleFootballLeagueUnsubscribe('greenLeague')}>Unsubscribe</button>
+          ) : (
+            <button className="subscribe" onClick={() => handleFootballSubscribe('greenLeague')}>Subscribe</button>
+          )}
         </div>
 
         <div className="league">
           <img src={soccer}></img>
-          <button className="unsubscribe">Unsubscribe</button>
+          {isSubscribed('blueLeague') ? (
+            <button className="unsubscribe" onClick={() => handleFootballLeagueUnsubscribe('blueLeague')}>Unsubscribe</button>
+          ) : (
+            <button className="subscribe" onClick={() => handleFootballSubscribe('blueLeague')}>Subscribe</button>
+          )}
         </div>
       </section>
 
@@ -92,7 +110,7 @@ const Scoreboard = () => {
           <span>Vortex United</span>
         </div>
         <div className="score">
-          <span>2 - 2</span>
+          <span>{footballScores['greenLeague'] || "0 - 0"}</span>
         </div>
         <div className="team">
           <img src={lioners}></img>
@@ -106,7 +124,7 @@ const Scoreboard = () => {
           <span>Enemy Titans</span>
         </div>
         <div className="score">
-          <span>1 - 0</span>
+          <span>{footballScores['blueLeague'] || "0 - 0"}</span>
         </div>
         <div className="team">
           <img src={soccerWolves}></img>
