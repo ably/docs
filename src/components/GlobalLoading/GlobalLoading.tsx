@@ -9,7 +9,7 @@ import {
   getRemoteDataStore,
 } from '@ably/ui/core/scripts';
 import sprites from '@ably/ui/core/sprites.svg';
-import UserContext, { UserDetails } from '../../contexts/user-context';
+import UserContext, { UserDetails, type UserApiKey } from '../../contexts/user-context';
 import { fetchApiKeyData } from '../../redux/api-key';
 import { selectData } from '../../redux/select-data';
 import {
@@ -22,7 +22,6 @@ import { loadBoomerang } from 'src/third-party/boomerang';
 import posthog from 'posthog-js';
 import { loadHeadway } from 'src/third-party/headway';
 import { sessionTracking } from './session-tracking';
-import { type UserApiKey } from 'src/components/blocks/software/Code/ApiKeyMenu';
 
 const hubspotTrackingId = process.env.GATSBY_HUBSPOT_TRACKING_ID;
 const boomerangEnabled = process.env.GATSBY_BOOMERANG_ENABLED;

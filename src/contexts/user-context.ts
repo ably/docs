@@ -1,5 +1,4 @@
 import { createContext } from 'react';
-import { type UserApiKey } from 'src/components/blocks/software/Code/ApiKeyMenu';
 
 export type Link = {
   href: string;
@@ -27,6 +26,17 @@ export type SessionState = {
   };
 };
 
+export type AppApiKey = {
+  name: string;
+  whole_key: string;
+};
+
+export type UserApiKey = {
+  name: string;
+  url: string;
+  apiKeys: AppApiKey[];
+};
+
 export type UserDetails = {
   sessionState: SessionState;
   apiKeys: {
@@ -34,7 +44,7 @@ export type UserDetails = {
   };
 };
 
-export const devApiKeysPresent = [
+export const devApiKeysPresent: UserApiKey = [
   {
     name: 'Default - Dev',
     url: '',
