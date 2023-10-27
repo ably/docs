@@ -1,8 +1,6 @@
-import React, { PropsWithChildren } from 'react';
 import cn from 'classnames';
 import { Link } from 'gatsby';
-
-import { Home } from './Icons';
+import { PropsWithChildren } from 'react';
 
 type ItemProps = {
   to: string;
@@ -36,13 +34,10 @@ const ProductNavigation = ({ currentProduct = 'channels' }: { currentProduct?: s
 
   return (
     <nav
-      className="sticky top-64 z-40 bg-white flex flex-row justify-start h-48 px-8 sm:px-24"
+      className="sticky z-40 flex flex-row justify-start h-48 px-8 bg-white top-64 sm:px-24"
       style={{ boxShadow: '0 1px 0 0 #E5E5E5' }}
     >
       <Item to="/docs" active={onHome}>
-        <div className="inline-block align-middle mr-8">
-          <Home active={onHome} />
-        </div>
         Home
       </Item>
       <Item to="/docs/products/channels" active={onChannels}>
