@@ -26,9 +26,19 @@ export type SessionState = {
   };
 };
 
+type WildcardCapability = Record<string, string[]>;
+
 export type AppApiKey = {
-  name: string;
+  ui_compatible_capabilities: boolean;
+  capability: WildcardCapability;
+  revocableTokens: boolean;
+  paas_linked: boolean;
+  is_webhook: boolean;
+  webhook_url: string;
   whole_key: string;
+  created: string;
+  name: string;
+  id: string;
 };
 
 export type UserApiKey = {
@@ -44,7 +54,7 @@ export type UserDetails = {
   };
 };
 
-export const devApiKeysPresent: UserApiKey = [
+export const devApiKeysPresent: UserApiKey[] = [
   {
     name: 'Default - Dev',
     url: '',
