@@ -45,11 +45,8 @@ const gtmSnippet = `(function (w, d, s, l, i) {
   f.parentNode.insertBefore(j, f);
 })(window, document, 'script', 'dataLayer', 'GTM-TZ37KKW');`;
 
-const apiKeysInit = { data: [] };
-
 const GlobalLoading: FC = ({ children }) => {
   const [sessionState, setSessionState] = useState<Record<string, string>>({});
-  const [apiKeys, setApiKeys] = useState<{ data: UserApiKey[] }>(apiKeysInit);
 
   useEffect(() => {
     const store = getRemoteDataStore();
@@ -62,16 +59,6 @@ const GlobalLoading: FC = ({ children }) => {
 
     connectState(selectSessionData, setSessionState);
     fetchSessionData(store, WEB_API_USER_DATA_ENDPOINT);
-
-    connectState(selectData(API_KEYS_REDUCER_KEY), (state: { data?: UserApiKey[] }) => {
-      if (Array.isArray(state?.data)) {
-        return setApiKeys({ data: state.data });
-      } else {
-        setApiKeys(apiKeysInit);
-      }
-    });
-
-    fetchApiKeyData(store, WEB_API_KEYS_DATA_ENDPOINT);
   }, []);
 
   useEffect(
@@ -84,7 +71,8 @@ const GlobalLoading: FC = ({ children }) => {
     [sessionState],
   );
 
-  const userState: UserDetails = { sessionState, apiKeys };
+  const userState: UserDetails = { sessionState };
+
   return (
     <UserContext.Provider value={userState}>
       {googleTagManagerAuthToken && googleTagManagerPreview ? (

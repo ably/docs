@@ -5,6 +5,7 @@ import languagesRegistry from '@ably/ui/src/core/utils/syntax-highlighter-regist
 
 import Html from 'src/components/blocks/Html';
 import UserContext, { devApiKeysPresent } from 'src/contexts/user-context';
+import { useApiKeys } from 'src/hooks/use-api-keys';
 
 import HtmlDataTypes from '../../../../../data/types/html';
 import { API_KEY_DATA_ATTRIBUTE } from '../../../../../data/html-parser/add-info-to-codeblocks/codeblock-api-key-info';
@@ -43,6 +44,9 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
     label: DEFAULT_API_KEY_MESSAGE,
     value: DEFAULT_API_KEY_MESSAGE,
   });
+
+  const { apiKeys } = useApiKeys();
+  console.log('apiKeys', apiKeys);
 
   const isString = some((child) => child.type === HtmlDataTypes.text, data);
   const hasRenderableLanguages = isString && attribs && attribs.lang;
@@ -113,7 +117,7 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
           {(value) => (
             <APIKeyMenuSelector
               dataContainsKey={dataContainsKey}
-              userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
+              userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : apiKeys.data}
               setActiveApiKey={setActiveApiKey}
               activeApiKey={activeApiKey}
               signedIn={!!value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN}
