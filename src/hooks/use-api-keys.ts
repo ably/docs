@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useSWR } from 'swr';
 
 import { connectState, getRemoteDataStore } from '@ably/ui/core/scripts';
 
 import { fetchApiKeyData } from 'src/redux/api-key';
 import { selectData } from 'src/redux/select-data';
 import { API_KEYS_REDUCER_KEY, WEB_API_KEYS_DATA_ENDPOINT } from 'src/redux/api-key/constants';
+
+const fetcher = (...args) => fetch(...args).then((res) => res.json());
 
 const apiKeysInit = { data: [] };
 
