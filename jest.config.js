@@ -1,3 +1,5 @@
+const path = require('path');
+
 module.exports = {
   transform: {
     '^.+\\.(j|t)sx?$': `<rootDir>/jest-preprocess.js`,
@@ -20,5 +22,5 @@ module.exports = {
   setupFiles: [`<rootDir>/loadershim.js`],
   coverageReporters: ['text'],
   setupFilesAfterEnv: ['<rootDir>/setupTests.js'],
-  testEnvironment: 'jsdom',
+  testEnvironment: path.join(__dirname, 'jest-environment-patched-jsdom.js'),
 };
