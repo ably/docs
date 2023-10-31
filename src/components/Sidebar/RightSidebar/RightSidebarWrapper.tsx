@@ -1,10 +1,10 @@
 import cn from 'classnames';
 import TopCodeMenu from 'src/components/Menu/TopCodeMenu';
 import { RightSidebar } from './RightSidebar';
-import { rightSidebarWrapperDesktop } from './RightSidebar.module.css';
 import { RightSidebarMobile } from './RightSidebarMobile';
 import { MenuData } from './menu-data';
 import { VersionMenuProps } from '../../Menu/VersionMenu';
+import { rightSidebarWrapperDesktop } from './RightSidebar.module.css';
 import { useMediaQuery } from '@react-hook/media-query';
 
 const useScreenSize = () => {
