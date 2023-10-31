@@ -5,7 +5,7 @@ import Ably from 'ably';
 const ABLY_API_KEY = import.meta.env.VITE_ABLY_KEY;
 
 // Define the name of the Ably channel used for football scores.
-const FOOTBALL_CHANNEL_NAME = import.meta.env.VITE_ABLY_FOOTBALL_CHANNEL_NAME;
+const FOOTBALL_CHANNEL_NAME = import.meta.env.VITE_FOOTBALL_CHANNEL_NAME;
 
 // Create an Ably client instance with the provided API key
 const client = new Ably.Realtime.Promise({
@@ -43,4 +43,3 @@ export const unsubscribeFromFootballLeague = (setSubscribedChannels, footballLea
     previousChannels.filter((channel) => channel !== footballLeague)
   );
 };
-
