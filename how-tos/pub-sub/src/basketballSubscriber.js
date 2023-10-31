@@ -2,7 +2,7 @@ import Ably from "ably";
 
 // Define the Ably API key and the Ably channel name for basketball scores
 const ABLY_API_KEY = import.meta.env.VITE_ABLY_KEY;
-const BASKETBALL_CHANNEL_NAME = import.meta.env.VITE_ABLY_BASKETBALL_CHANNEL_NAME;
+const BASKETBALL_CHANNEL_NAME = import.meta.env.VITE_BASKETBALL_CHANNEL_NAME;
 
 // Initialize the Ably client with the API key and get the basketball channel
 const client = new Ably.Realtime.Promise({

@@ -8,7 +8,7 @@ import { publishFootballScores } from './footballGame';
 const ABLY_API_KEY = import.meta.env.VITE_ABLY_KEY;
 
 // Define the name of the Ably channel used for football scores.
-export const FOOTBALL_CHANNEL_NAME = import.meta.env.VITE_ABLY_FOOTBALL_CHANNEL_NAME;
+export const FOOTBALL_CHANNEL_NAME = import.meta.env.VITE_FOOTBALL_CHANNEL_NAME;
 
 // Create an Ably client instance with the provided API key.
 const client = new Ably.Rest.Promise({
@@ -29,4 +29,3 @@ export { publishToAbly };
 
 // Start the process of publishing football scores.
 publishFootballScores();
-
