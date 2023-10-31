@@ -4,7 +4,7 @@ import { some } from 'lodash/fp';
 import languagesRegistry from '@ably/ui/src/core/utils/syntax-highlighter-registry';
 
 import Html from 'src/components/blocks/Html';
-import UserContext, { devApiKeysPresent } from 'src/contexts/user-context';
+import UserContext from 'src/contexts/user-context';
 
 import HtmlDataTypes from '../../../../../data/types/html';
 import { API_KEY_DATA_ATTRIBUTE } from '../../../../../data/html-parser/add-info-to-codeblocks/codeblock-api-key-info';
@@ -113,7 +113,7 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
           {(value) => (
             <APIKeyMenuSelector
               dataContainsKey={dataContainsKey}
-              userApiKeys={process.env.GATSBY_DOCS_API_KEYS ? devApiKeysPresent : value.apiKeys.data}
+              userApiKeys={value.apiKeys.data}
               setActiveApiKey={setActiveApiKey}
               activeApiKey={activeApiKey}
               signedIn={!!value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN}

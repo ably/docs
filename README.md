@@ -85,8 +85,9 @@ For how to create and include these redirects.
 Note that any env variables needed to show in the browser must be prefixed with `GATSBY_` in order to appear.
 
 - GATSBY_DOCS_SIGNED_IN - set to any string to force APIKeyMenuSelector & MultilineCodeContent to behave as though you are logged in
-- GATSBY_DOCS_API_KEYS - set to any string to APIKeyMenuSelector to behave as though you have API keys available
 - GATSBY_ABLY_MAIN_WEBSITE - the URL from which basic user data and API keys can be retrieved, and from which we can generate sitemap links and so on
+
+`GATSBY_ABLY_MAIN_WEBSITE` can also be changed to point to staging or a local running website instance.
 
 Place these in .env.development to run locally.
 
