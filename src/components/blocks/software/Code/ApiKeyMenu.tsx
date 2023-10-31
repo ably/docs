@@ -2,19 +2,9 @@ import React, { Dispatch, useState, SetStateAction } from 'react';
 import { SingleValue } from 'react-select';
 import { Select, ReactSelectOption } from 'src/components';
 import { DEFAULT_API_KEY_MESSAGE } from '.';
+import { type UserApiKey, type AppApiKey } from 'src/contexts/user-context';
 
 import { container } from './ApiKeyMenu.module.css';
-
-export type AppApiKey = {
-  name: string;
-  whole_key: string;
-};
-
-export type UserApiKey = {
-  name: string;
-  url: string;
-  apiKeys: AppApiKey[];
-};
 
 const errorOption = {
   label: 'No API keys found',

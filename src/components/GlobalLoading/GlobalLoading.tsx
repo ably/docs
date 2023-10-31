@@ -1,28 +1,14 @@
-import React, { FunctionComponent as FC, useEffect, useState } from 'react';
+import { FunctionComponent as FC, ReactNode, useContext, useEffect, useState } from 'react';
 // Session-related scripts
 import '@ably/ui/core/scripts';
-import {
-  connectState,
-  loadSprites,
-  selectSessionData,
-  fetchSessionData,
-  getRemoteDataStore,
-} from '@ably/ui/core/scripts';
+import { loadSprites } from '@ably/ui/core/scripts';
 import sprites from '@ably/ui/core/sprites.svg';
-import UserContext, { UserDetails } from '../../contexts/user-context';
-import { fetchApiKeyData } from '../../redux/api-key';
-import { selectData } from '../../redux/select-data';
-import {
-  API_KEYS_REDUCER_KEY,
-  WEB_API_KEYS_DATA_ENDPOINT,
-  WEB_API_USER_DATA_ENDPOINT,
-} from '../../redux/api-key/constants';
+import UserContext from '../../contexts/user-context';
 import { Script } from 'gatsby';
 import { loadBoomerang } from 'src/third-party/boomerang';
 import posthog from 'posthog-js';
 import { loadHeadway } from 'src/third-party/headway';
 import { sessionTracking } from './session-tracking';
-import { type UserApiKey } from 'src/components/blocks/software/Code/ApiKeyMenu';
 
 const hubspotTrackingId = process.env.GATSBY_HUBSPOT_TRACKING_ID;
 const boomerangEnabled = process.env.GATSBY_BOOMERANG_ENABLED;
@@ -46,33 +32,16 @@ const gtmSnippet = `(function (w, d, s, l, i) {
   f.parentNode.insertBefore(j, f);
 })(window, document, 'script', 'dataLayer', 'GTM-TZ37KKW');`;
 
-const apiKeysInit = { data: [] };
-
-const GlobalLoading: FC = ({ children }) => {
-  const [sessionState, setSessionState] = useState<Record<string, string>>({});
-  const [apiKeys, setApiKeys] = useState<{ data: UserApiKey[] }>(apiKeysInit);
+const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
+  const userContext = useContext(UserContext);
+  const sessionState = userContext.sessionState;
 
   useEffect(() => {
-    const store = getRemoteDataStore();
-
     if (posthogApiKey) {
       posthog.init(posthogApiKey, { api_host: 'https://app.posthog.com' });
     }
 
     loadSprites(sprites);
-
-    connectState(selectSessionData, setSessionState);
-    fetchSessionData(store, WEB_API_USER_DATA_ENDPOINT);
-
-    connectState(selectData(API_KEYS_REDUCER_KEY), (state: { data?: UserApiKey[] }) => {
-      if (Array.isArray(state?.data)) {
-        return setApiKeys({ data: state.data });
-      } else {
-        setApiKeys(apiKeysInit);
-      }
-    });
-
-    fetchApiKeyData(store, WEB_API_KEYS_DATA_ENDPOINT);
   }, []);
 
   useEffect(
@@ -85,9 +54,8 @@ const GlobalLoading: FC = ({ children }) => {
     [sessionState],
   );
 
-  const userState: UserDetails = { sessionState, apiKeys };
   return (
-    <UserContext.Provider value={userState}>
+    <>
       {googleTagManagerAuthToken && googleTagManagerPreview ? (
         <>
           <noscript>
@@ -124,7 +92,7 @@ const GlobalLoading: FC = ({ children }) => {
         />
       ) : null}
       {children}
-    </UserContext.Provider>
+    </>
   );
 };
 
