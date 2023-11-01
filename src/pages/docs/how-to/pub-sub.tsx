@@ -86,10 +86,9 @@ const PubSubHowTo = () => {
         <Layout showProductNavigation={true} currentProduct="channels" collapsibleSidebar={true} isExtraWide>
           <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:px-32">
             <div>
-              <PageTitle>Pub/Sub How To</PageTitle>
-              <div>
+              <MarkdownProvider>
                 <HowTo />
-              </div>
+              </MarkdownProvider>
             </div>
             <aside className="pt-24 pl-24">
               {hasApiKeys ? (
