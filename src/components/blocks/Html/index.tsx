@@ -12,7 +12,7 @@ const Html = ({
   BlockWrapper = ConditionalChildrenLanguageDisplay as FunctionComponent,
 }: {
   data: HtmlComponentProps<ValidReactElement>[] | string | null;
-  BlockWrapper?: React.FunctionComponent;
+  BlockWrapper?: React.FunctionComponent<{ children: React.ReactNode }>;
 }) => {
   if (isArray(data)) {
     return (

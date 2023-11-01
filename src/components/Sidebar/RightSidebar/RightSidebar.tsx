@@ -39,7 +39,7 @@ export const RightSidebar = ({ menuData, languages }: RightSidebarProps) => {
     };
     const [previousLevel, previousParent] = previous ? [previous.level, previous.parent] : [false, false];
     const previousItemsExist = previousLevel && previousParent;
-    if (previous && previousItemsExist && menuItem.level && menuItem.level > previousLevel) {
+    if (previous && previousItemsExist && menuItem.level && menuItem.level > Number(previousLevel)) {
       menuItem.parent = previousParent as SidebarData;
       previous.content = previous.content ? previous.content.concat([menuItem]) : [menuItem];
     } else if (parent && menuItem.level && parent.level && menuItem.level > parent.level) {

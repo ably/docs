@@ -1,5 +1,5 @@
 import React from 'react';
-import { SectionProps } from '../HomepageContent';
+import { SectionProps } from '../ProductPageContent';
 import { BodySectionDescription } from './BodySectionDescription';
 import { FeatureCard } from './Card/FeatureCard';
 import { QuickstartCard } from './Card/QuickstartCard';
@@ -27,7 +27,7 @@ export const BodySection = ({ section }: { section: SectionProps }) => {
   const cardsExist = cards.length > 0;
   const columns = section.columns;
 
-  const gridColVariants = {
+  const gridColVariants: { [key: number]: string } = {
     2: 'lg:grid-cols-2',
     5: 'lg:grid-cols-5',
     4: 'lg:grid-cols-4',
@@ -53,7 +53,7 @@ export const BodySection = ({ section }: { section: SectionProps }) => {
           className={`grid grid-cols-1 sm:grid-cols-2 ${gridColVariants[columns]} mb-${section.bottomMargin} gap-24`}
         >
           {cards.map((card, index) => {
-            const Card = cardTypes[card.type];
+            const Card = cardTypes[card.type as keyof typeof cardTypes];
             return <Card key={index} {...card} />;
           })}
         </div>

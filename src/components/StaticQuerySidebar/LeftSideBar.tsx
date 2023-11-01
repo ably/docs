@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sidebar, EXPAND_MENU } from 'src/components';
 import { SidebarDataRetrieval } from './SidebarDataRetrieval';
-import { SidebarName } from './types';
+import { SidebarName } from '../Sidebar/types';
 
 export type LeftSidebarProps = {
   className?: string;

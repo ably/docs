@@ -4,7 +4,7 @@ import TopCodeMenu from 'src/components/Menu/TopCodeMenu';
 import { RightSidebar } from './RightSidebar';
 import { RightSidebarMobile } from './RightSidebarMobile';
 import { MenuData } from './menu-data';
-import { VersionMenuProps } from './VersionMenu';
+import { VersionMenuProps } from '../../Menu/VersionMenu';
 import { rightSidebarWrapper, rightSidebarWrapperDesktop } from './RightSidebar.module.css';
 import { useMediaQuery } from '@react-hook/media-query';
 
@@ -31,9 +31,9 @@ export const RightSidebarWrapper = ({ menuData, languages, versionData }: RightS
         },
       )}
     >
-      <RightSidebarMobile menuData={menuData} languages={languagesExist} />
+      <RightSidebarMobile menuData={menuData} languages={Boolean(languagesExist)} />
       {languagesExist && versionData && <TopCodeMenu languages={languages} versionData={versionData} />}
-      <RightSidebar languages={languagesExist} menuData={menuData} />
+      <RightSidebar languages={Boolean(languagesExist)} menuData={menuData} />
     </div>
   );
 };
