@@ -21,7 +21,7 @@ export const CallToAction = ({ callToAction }: { callToAction: CallToActionProps
           style={{ padding: '0.625rem 1.25rem', borderColor: 'var(--color-mid-grey)' }}
         >
           {callToAction.text}
-          <Icon name="icon-gui-arrow-right" size="1rem" class="ml-4" />
+          <Icon name="icon-gui-arrow-right" size="1rem" additionalCSS="ml-4" />
         </Link>
       )}
     </div>

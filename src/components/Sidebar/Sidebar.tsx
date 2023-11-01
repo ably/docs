@@ -6,7 +6,7 @@ import { HighlightedMenuContext } from 'src/contexts/highlighted-menu-context';
 import { SectionTitle, SidebarLinkMenu } from './';
 import { EXPAND_MENU, SidebarData } from './types';
 
-type SidebarProps = {
+export type SidebarProps = {
   data: SidebarData[];
   className?: string;
   indentOffset?: number;

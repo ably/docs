@@ -1,25 +1,25 @@
 import React, { FunctionComponent as FC } from 'react';
 import cn from 'classnames';
 
-import { Container } from 'src/components';
-
-import { Header } from '../Header';
 import ProductNavigation from 'src/components/ProductNavigation';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
+import { Container, SidebarName } from 'src/components';
+import { Header } from '../Header';
 import { Footer } from '../Footer';
 
 const Layout: FC<{
-  isExtraWide?: boolean;
   showProductNavigation?: boolean;
+  children: React.ReactNode;
   currentProduct?: string;
+  isExtraWide?: boolean;
   noSidebar?: boolean;
 }> = ({
-  children,
-  isExtraWide = false,
   showProductNavigation = true,
   currentProduct = undefined,
+  isExtraWide = false,
   noSidebar = false,
+  children,
 }) => {
   const sidebarName = currentProduct === 'home' ? 'channels' : currentProduct;
   const showSidebar = !noSidebar;
@@ -28,7 +28,7 @@ const Layout: FC<{
     <GlobalLoading>
       <Header sidebarName={sidebarName} />
       {showProductNavigation && <ProductNavigation currentProduct={currentProduct} />}
-      {showSidebar && <LeftSideBar sidebarName={sidebarName} />}
+      {showSidebar && <LeftSideBar sidebarName={sidebarName as SidebarName} />}
       <Container
         as="main"
         className={
@@ -37,7 +37,7 @@ const Layout: FC<{
                 'md:grid-cols-1': isExtraWide,
                 'md:grid-cols-2 md:grid-cols-layout': !isExtraWide,
               })
-            : null
+            : undefined
         }
       >
         {children}
