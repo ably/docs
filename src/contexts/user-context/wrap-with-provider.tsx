@@ -9,7 +9,7 @@ import {
   WEB_API_USER_DATA_ENDPOINT,
 } from 'src/redux/api-key/constants';
 
-import UserContext, { UserDetails, type UserApiKey } from '../user-context';
+import UserContext, { UserDetails, type UserApiKey, SessionState } from '../user-context';
 
 //
 // This wrapper component is responsible for loading up our user session and
@@ -23,7 +23,7 @@ export const UserContextWrapper: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     const store = getRemoteDataStore();
 
-    connectState(selectSessionData, (session) => {
+    connectState(selectSessionData, (session: SessionState) => {
       setUserState((existing) => ({ ...existing, sessionState: session }));
     });
 
