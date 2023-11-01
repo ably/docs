@@ -33,6 +33,8 @@ const getSidebarName = (currentProduct: string): SidebarName => {
       return 'api-reference';
     case 'spaces':
       return 'spaces';
+    case 'livesync':
+      return 'livesync';
     default:
       return assertNever(currentProduct);
   }
