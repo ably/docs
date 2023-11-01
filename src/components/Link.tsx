@@ -1,8 +1,7 @@
-import React from 'react';
-import { Link as GatsbyLink } from 'gatsby';
+import { Link as GatsbyLink, GatsbyLinkProps } from 'gatsby';
 import { checkLinkIsInternal } from './blocks/external-references/AElementHelpers/check-link-is-internal';
 
-const Link = ({ children, to, ...props }: { children: React.ReactNode; to: string }) => {
+export default function Link<TState>({ children, to, ...props }: React.PropsWithoutRef<GatsbyLinkProps<TState>>) {
   const internal = checkLinkIsInternal(to);
   const onPageNav = /[#?]/;
 
@@ -19,6 +18,4 @@ const Link = ({ children, to, ...props }: { children: React.ReactNode; to: strin
       {children}
     </GatsbyLink>
   );
-};
-
-export default Link;
+}
