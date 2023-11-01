@@ -11,9 +11,9 @@ const Item = ({ to, children, active = false }: PropsWithChildren<ItemProps>) =>
   return (
     <Link
       to={to}
-      className={cn('leading-normal px-12 md:px-40 py-16 relative font-medium cursor-pointer', {
-        'text-active-orange mr-2': active,
-        'px-14': !active,
+      className={cn('leading-normal px-12 md:px-14 py-16 relative font-medium cursor-pointer', {
+        'text-active-orange md:mr-2': active,
+        'md:px-14': !active,
       })}
     >
       {children}
