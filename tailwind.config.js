@@ -95,6 +95,10 @@ module.exports = extendConfig((ablyUIConfig) => ({
     },
     extend: {
       ...ablyUIConfig.theme.extend,
+      lineHeight: {
+        ...ablyUIConfig.theme.lineHeight,
+        normal: 'var(--lh-normal)',
+      },
       width: {
         ...ablyUIConfig.theme.extend.width,
         24: '1.5rem',
