@@ -65,6 +65,20 @@ export const SidebarDataRetrieval = ({
           }
         }
       }
+      LiveSyncLeftSidebar: pageFurnitureYaml(name: { eq: "LiveSyncLeftSidebarMenu" }) {
+        items {
+          ...SubMenuFields
+          items {
+            ...SubMenuFields
+            items {
+              ...SubMenuFields
+              items {
+                ...SubMenuFields
+              }
+            }
+          }
+        }
+      }
       allDocumentPath {
         edges {
           node {
@@ -83,12 +97,14 @@ export const SidebarDataRetrieval = ({
 
   let sidebarData;
 
-  if (sidebarName !== undefined && (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar)) {
+  if (sidebarName !== undefined && (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar || data.LiveSyncLeftSidebar)) {
     const sideBarItems =
       sidebarName === 'api-reference'
         ? data.ApiLeftSidebar.items
         : sidebarName === 'spaces'
         ? data.SpacesLeftSidebar.items
+        : sidebarName === 'livesync'
+        ? data.LiveSyncLeftSidebar.items
         : data.ChannelsLeftSidebar.items;
     sidebarData = sidebarDataFromPageFurniture(sideBarItems);
   } else {
