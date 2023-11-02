@@ -1,8 +1,6 @@
-import React, { PropsWithChildren } from 'react';
 import cn from 'classnames';
 import { Link } from 'gatsby';
-
-import { Home } from './Icons';
+import { PropsWithChildren } from 'react';
 
 type ItemProps = {
   to: string;
@@ -13,10 +11,10 @@ const Item = ({ to, children, active = false }: PropsWithChildren<ItemProps>) =>
   return (
     <Link
       to={to}
-      className={cn('px-12 md:px-40 py-16 relative font-medium cursor-pointer', {
-        'text-active-orange': active,
+      className={cn('leading-normal px-12 md:px-14 py-16 relative font-medium cursor-pointer', {
+        'text-active-orange md:mr-2': active,
+        'md:px-14': !active,
       })}
-      style={{ lineHeight: 'var(--lh-normal)' }}
     >
       {children}
       {active && (
@@ -36,13 +34,10 @@ const ProductNavigation = ({ currentProduct = 'channels' }: { currentProduct?: s
 
   return (
     <nav
-      className="sticky top-64 z-40 bg-white flex flex-row justify-start h-48 px-8 sm:px-24"
+      className="sticky z-40 flex flex-row justify-start h-48 px-8 bg-white top-64 sm:px-24"
       style={{ boxShadow: '0 1px 0 0 #E5E5E5' }}
     >
       <Item to="/docs" active={onHome}>
-        <div className="inline-block align-middle mr-8">
-          <Home active={onHome} />
-        </div>
         Home
       </Item>
       <Item to="/docs/products/channels" active={onChannels}>
