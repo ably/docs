@@ -73,6 +73,17 @@ const PubSubHowTo = () => {
     const { srcPath, content } = file;
     return { ...acc, [srcPath]: content };
   }, {});
+  const visibleFiles = [
+    '/App.tsx',
+    '/index.tsx',
+    '/components/Scoreboard.tsx',
+    '/basketballGame.js',
+    '/basketballPublisher.js',
+    '/basketballSubscriber.js',
+    '/footballGame.js',
+    '/footballPublisher.js',
+    '/footballSubscriber.js',
+  ];
 
   const userData = useContext(UserContext);
   const apiKeys = userData.apiKeys.data;
@@ -100,7 +111,7 @@ const PubSubHowTo = () => {
                     },
                   }}
                   options={{
-                    visibleFiles: ['/App.tsx', '/index.css', '/index.tsx', '/components/Scoreboard.tsx'],
+                    visibleFiles: visibleFiles,
                     autorun: true,
                     autoReload: false,
                   }}
