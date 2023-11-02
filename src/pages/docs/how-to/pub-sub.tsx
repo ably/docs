@@ -1,4 +1,5 @@
-import { SandpackPreview, SandpackProvider } from '@codesandbox/sandpack-react';
+import React, { useState } from 'react';
+import { SandpackPreview, SandpackProvider, SandpackConsole } from '@codesandbox/sandpack-react';
 import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
 
 import HowTo from 'HowTos/pub-sub/how-to.mdx';
@@ -50,6 +51,28 @@ const updateAblyConnectionKey = (files: Record<string, string>, userApiKeys: Use
   }, {});
 };
 
+const chooseFileVersions = (isSolved: boolean, files: Record<string, string>) => {
+  const names = Object.keys(files);
+  const solved = names.filter((name) => name.endsWith('.complete.js'));
+  const unsolved = solved.map((name) => name.replace('.complete', ''));
+  const candidates = solved.concat(unsolved);
+
+  return names.reduce((acc, name: string) => {
+    const content = files[name];
+    if (candidates.includes(name)) {
+      if (isSolved) {
+        if (name.endsWith('.complete.js')) {
+          const newName = name.replace('.complete', '');
+          return { ...acc, [newName]: content };
+        } else {
+          return acc;
+        }
+      }
+    }
+    return { ...acc, [name]: content };
+  }, {});
+};
+
 interface HowToFile {
   srcPath: string;
   content: string;
@@ -69,10 +92,13 @@ const PubSubHowTo = () => {
     }
   `);
 
+  const [solved, setSolved] = useState(false);
+
   const files = data.files.nodes.reduce((acc: object, file: HowToFile) => {
     const { srcPath, content } = file;
     return { ...acc, [srcPath]: content };
   }, {});
+
   const visibleFiles = [
     '/App.tsx',
     '/index.tsx',
@@ -88,6 +114,8 @@ const PubSubHowTo = () => {
   const userData = useContext(UserContext);
   const apiKeys = userData.apiKeys.data;
   const hasApiKeys = apiKeys.length > 0;
+  const rewrittenFiles = updateAblyConnectionKey(files, apiKeys);
+  const runnableFiles = chooseFileVersions(solved, rewrittenFiles);
 
   return (
     <>
@@ -98,37 +126,45 @@ const PubSubHowTo = () => {
           <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:px-32">
             <div>
               <MarkdownProvider>
-                <HowTo />
+                <HowTo
+                  showSolution={() => {
+                    setSolved(true);
+                  }}
+                />
               </MarkdownProvider>
             </div>
             <aside className="pt-24 pl-24">
               {hasApiKeys ? (
-                <SandpackProvider
-                  files={updateAblyConnectionKey(files, apiKeys)}
-                  customSetup={{
-                    dependencies: {
-                      ably: 'latest',
-                    },
-                  }}
-                  options={{
-                    visibleFiles: visibleFiles,
-                    autorun: true,
-                    autoReload: false,
-                  }}
-                  theme={sandpackTheme}
-                  template="react-ts"
-                >
-                  <CodeEditor
-                    editor={{
-                      showLineNumbers: true,
+                <>
+                  <SandpackProvider
+                    files={runnableFiles}
+                    customSetup={{
+                      dependencies: {
+                        ably: 'latest',
+                      },
                     }}
-                  />
+                    options={{
+                      visibleFiles: visibleFiles,
+                      autorun: true,
+                      autoReload: false,
+                    }}
+                    theme={sandpackTheme}
+                    template="react-ts"
+                  >
+                    <CodeEditor
+                      editor={{
+                        showLineNumbers: true,
+                      }}
+                    />
 
-                  <div className="flex gap-16 my-16">
-                    <SandpackPreview style={{ height: '420px' }} />
-                    <SandpackPreview style={{ height: '420px' }} />
-                  </div>
-                </SandpackProvider>
+                    <div className="flex gap-16 my-16">
+                      <SandpackPreview style={{ height: '480px' }} />
+                      <SandpackPreview style={{ height: '480px' }} />
+                    </div>
+
+                    <SandpackConsole />
+                  </SandpackProvider>
+                </>
               ) : (
                 <b>Loading...</b>
               )}
