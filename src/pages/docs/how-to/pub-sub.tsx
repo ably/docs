@@ -22,7 +22,7 @@ const getApiKey = (userApiKeys: UserApiKey[]) => {
   return app.apiKeys[0].whole_key;
 };
 
-const ablyEnvironment = process.env.GATSBY_ABLY_ENVIRONMENT;
+const ablyEnvironment = process.env.GATSBY_ABLY_ENVIRONMENT ?? 'production';
 const basketballChannelName = getRandomChannelName();
 const footballChannelName = getRandomChannelName();
 
