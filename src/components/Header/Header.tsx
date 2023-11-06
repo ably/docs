@@ -12,7 +12,7 @@ import { DOCUMENTATION_PATH } from '../../../data/transform/constants';
 import { HamburgerMenu } from './HamburgerMenu';
 import { TopMainNavStateContext } from './top-main-nav-state-context';
 import { HorizontalMenu, HorizontalMenuVariant } from 'src/components/HorizontalMenu';
-import { SidebarName } from '../../';
+import { SidebarName } from '../Sidebar';
 
 export const Header = ({ sidebarName }: { sidebarName: SidebarName }) => {
   const [topMainNavState, dispatch] = useReducer(mainNavReducer, initialState);

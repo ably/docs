@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet';
 import Layout from 'src/components/Layout';
 import SDKsContent from 'src/components/SDKsPage';
 import { ABLY_MAIN_WEBSITE, MetaData } from 'src/pages/docs';
-import { DOCUMENTATION_NAME } from 'data/transform/constants';
+import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
 
 const SDKsIndexPage = ({
   data: {

@@ -23,8 +23,8 @@ export const SearchBar = ({
   extraStyleOptions,
 }: {
   displayMode: DisplayMode;
-  displayLocation: string;
-  extraStyleOptions: object;
+  displayLocation?: string;
+  extraStyleOptions?: object;
 }) => {
   const textInput = useRef<null | HTMLInputElement>(null);
   const searchDisplayRef = useRef<null | HTMLDivElement>(null);
@@ -108,7 +108,7 @@ export const SearchBar = ({
         error={error}
         query={query}
         isActive={isInFocus}
-        displayLocation={displayLocation}
+        displayLocation={String(displayLocation)}
       />
     </div>
   );
