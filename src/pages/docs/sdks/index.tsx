@@ -1,5 +1,6 @@
-import Layout from 'src/components/Layout';
+import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
 import SDKsContent from 'src/components/SDKsPage';
+import Layout from 'src/components/Layout';
 import { Head } from 'src/components/Head';
 
 const SDKsIndexPage = ({ location: { search } }: { location: { search: string } }) => {
@@ -11,7 +12,7 @@ const SDKsIndexPage = ({ location: { search } }: { location: { search: string } 
 
   return (
     <>
-      <Head title={meta_title} canonical="/${DOCUMENTATION_NAME}/sdks" description={meta_description} />
+      <Head title={meta_title} description={meta_description} canonical={`/${DOCUMENTATION_NAME}/sdks`} />
       <Layout noSidebar currentProduct="SDKs">
         <SDKsContent tab={tab} />
       </Layout>
