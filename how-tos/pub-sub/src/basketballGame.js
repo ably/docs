@@ -1,6 +1,9 @@
 // Import necessary functions and constants from the basketballPublisher
 import { publishToAbly } from './basketballPublisher';
 
+// Sandpack friendliness
+import { shouldRunPublisher } from './utils';
+
 // Define an array of basketball team names
 const basketballTeams = ['Ether Flyers', 'Fire Hawks', 'Ten Points Club', 'Solar Flares'];
 
@@ -70,9 +73,11 @@ async function publishBasketballGameScore(basketballGame) {
 
 // Function to initiate the score updates for all basketball games
 async function publishBasketballScores() {
-  for (const basketballGame of basketballGames) {
-    // Start publishing scores for each game
-    publishBasketballGameScore(basketballGame);
+  if (shouldRunPublisher()) {
+    for (const basketballGame of basketballGames) {
+      // Start publishing scores for each game
+      publishBasketballGameScore(basketballGame);
+    }
   }
 }
 

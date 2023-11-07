@@ -1,6 +1,9 @@
 // Import the function to publish data to Ably
 import { publishToAbly } from './footballPublisher';
 
+// Sandpack friendliness
+import { shouldRunPublisher } from './utils';
+
 // Define the interval (in milliseconds) for updating scores.
 const SCORE_UPDATE_INTERVAL = 1000;
 
@@ -72,8 +75,10 @@ async function publishFootballGameScore(footballGame) {
 
 // Async function to publish scores for all football games.
 async function publishFootballScores() {
-  for (const footballGame of footballGames) {
-    publishFootballGameScore(footballGame);
+  if (shouldRunPublisher()) {
+    for (const footballGame of footballGames) {
+      publishFootballGameScore(footballGame);
+    }
   }
 }
 

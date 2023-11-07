@@ -1,5 +1,5 @@
-import { SandpackPreview, SandpackProvider, SandpackConsole } from '@codesandbox/sandpack-react';
 import React, { useMemo, useState } from 'react';
+import { SandpackPreview, SandpackProvider } from '@codesandbox/sandpack-react';
 import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
 
 import HowTo from 'HowTos/pub-sub/how-to.mdx';
@@ -163,10 +163,8 @@ const PubSubHowTo = () => {
 
                     <div className="flex gap-16 my-16">
                       <SandpackPreview style={{ height: '480px' }} />
-                      <SandpackPreview style={{ height: '480px' }} />
+                      <SandpackPreview style={{ height: '480px' }} startRoute="/?publisher=false" />
                     </div>
-
-                    <SandpackConsole />
                   </SandpackProvider>
                 </>
               ) : (
