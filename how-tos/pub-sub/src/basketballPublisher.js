@@ -13,6 +13,7 @@ const client = new Ably.Rest.Promise({
 
 // Function to publish data to the basketball channel
 async function publishToAbly(payload) {
+  // Use Ably's publish method to send the score data to the specified league.
 }
 
 // Export the publishToAbly function for use to update a basketballGame

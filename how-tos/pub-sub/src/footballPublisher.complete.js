@@ -21,6 +21,8 @@ const footballChannel = client.channels.get(FOOTBALL_CHANNEL_NAME);
 // Async function to publish football scores to Ably.
 async function publishToAbly(footballLeague, payload) {
   // Use Ably's publish method to send the score data to the specified league.
+  console.log('Publishing message:', payload);
+  await footballChannel.publish(footballLeague, payload);
 }
 
 // Export the function for publishing football scores to Ably.
