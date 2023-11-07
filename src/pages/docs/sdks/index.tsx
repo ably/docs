@@ -1,54 +1,22 @@
-import React from 'react';
-import { graphql } from 'gatsby';
-import { Helmet } from 'react-helmet';
 import Layout from 'src/components/Layout';
 import SDKsContent from 'src/components/SDKsPage';
-import { ABLY_MAIN_WEBSITE, MetaData } from 'src/pages/docs';
-import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
+import { Head } from 'src/components/Head';
 
-const SDKsIndexPage = ({
-  data: {
-    pageContentYaml: { meta },
-  },
-}: {
-  data: { pageContentYaml: { meta: MetaData } };
-}) => {
+const SDKsIndexPage = ({ location: { search } }: { location: { search: string } }) => {
+  const meta_title = 'SDKs';
+  const meta_description = 'Placeholder';
+
+  const urlParams = new URLSearchParams(search);
+  const tab = urlParams.get('tab') ?? '';
+
   return (
     <>
-      <Helmet>
-        <meta property="og:type" content="website" />
-        <title>{meta.title}</title>
-        <meta property="og:title" content="Ably Realtime Docs" />
-        <meta property="twitter:title" content="Ably Realtime Docs" />
-        <meta property="og:site_name" content="Ably Realtime" />
-        <link rel="canonical" href={`/${DOCUMENTATION_NAME}/products/spaces`} />
-        <meta property="og:url" content={`${ABLY_MAIN_WEBSITE}/${DOCUMENTATION_NAME}/products/spaces`} />
-        <meta name="description" content={meta.description} />
-        <meta property="og:description" content={meta.description} />
-        <meta name="twitter:description" content={meta.description} />
-        <meta name="twitter:site" content={meta.twitter} />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content={meta.image} />
-      </Helmet>
-
+      <Head title={meta_title} canonical="/${DOCUMENTATION_NAME}/sdks" description={meta_description} />
       <Layout noSidebar currentProduct="SDKs">
-        <SDKsContent />
+        <SDKsContent tab={tab} />
       </Layout>
     </>
   );
 };
 
 export default SDKsIndexPage;
-
-export const query = graphql`
-  query HomePageQuery {
-    pageContentYaml {
-      meta {
-        title
-        description
-        image
-        twitter
-      }
-    }
-  }
-`;

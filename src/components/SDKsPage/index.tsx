@@ -1,25 +1,22 @@
-import React from 'react';
-import MainSection from './MainSection';
 import { StaticImage } from '../StaticImage';
+import MainSection, { Tab } from './MainSection';
+import { data } from './data';
+import { container } from './sdks.module.css';
 
-const Content = () => {
+const Content = ({ tab }: { tab: string }) => {
   return (
-    <div>
-      <div className="mx-auto mt-12" style={{ maxWidth: '960px' }}>
-        <div className="flex justify-between">
+    <>
+      <div className={`${container} mt-12`}>
+        <div className="flex justify-between py-64">
           <div className="flex flex-col justify-center">
-            <h1 className="w-full text-title font-medium">SDKs</h1>
-            <p className="ui-text-h3 text-dark-grey font-medium pt-16" style={{ maxWidth: '480px' }}>
-              Lorem ipsum dolor sit amet consectetur, adipisicing elit. Accusamus, voluptate vero?
-            </p>
+            <h1 className="w-full text-title-xl font-medium">{data.hero.title}</h1>
+            <p className="max-w-md text-h3 text-dark-grey font-medium pt-16">{data.hero.subtitle}</p>
           </div>
-          <div>
-            <StaticImage src="/images/sdks/sdk-hero.png"></StaticImage>
-          </div>
+          <StaticImage className="hidden sm:block" src="/images/sdks/sdk-hero.png"></StaticImage>
         </div>
       </div>
-      <MainSection />
-    </div>
+      <MainSection tab={tab as Tab} />
+    </>
   );
 };
 

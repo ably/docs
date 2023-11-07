@@ -1,41 +1,42 @@
 import React from 'react';
-import Card from '../Card';
-import { container, active_tab } from './sdks.module.css';
+import { container, active_tab } from '../sdks.module.css';
+import CardGrid from '../Card/CardGrid';
+import { data } from '../data';
+import { Link } from 'gatsby';
 
-const MainSection = () => {
-  const [urlParams] = React.useState(() => {
-    const queryString = typeof window !== 'undefined' ? window.location.search : '';
-    return new URLSearchParams(queryString);
-  });
-  const [activeTab, setActiveTab] = React.useState(urlParams.get('tab') !== Tab.SPACES ? Tab.CHANNELS : Tab.SPACES);
+export enum Tab {
+  CHANNELS = 'channels',
+  SPACES = 'spaces',
+}
 
-  const handleActiveTab = (value: Tab) => {
-    urlParams.set('tab', value);
-
-    setActiveTab(value);
-
-    const pageUrl = `?${urlParams.toString()}`;
-
-    window && window.history.pushState('', '', pageUrl);
-  };
+const MainSection = ({ tab }: { tab: Tab }) => {
+  const activeTab = tab !== Tab.SPACES ? Tab.CHANNELS : Tab.SPACES;
 
   return (
     <div>
       <div>
         <div className={`${container}`}>
-          <button className={`text-2xl text-medium text-primary px-8 py-16 ${active_tab}`}>Pub/Sub Channels</button>
-          <button className="text-2xl text-medium px-8 py-16">Spaces</button>
+          <Link
+            to="/docs/sdks"
+            className={`text-h3 font-normal text-primary mr-16 px-8 py-16 inline-block ${
+              activeTab === Tab.CHANNELS ? active_tab : null
+            }`}
+          >
+            Pub/Sub Channels
+          </Link>
+          <Link
+            to="/docs/sdks?tab=spaces"
+            className={`text-h3 font-normal px-8 py-16 inline-block ${activeTab === Tab.SPACES ? active_tab : null}`}
+          >
+            Spaces
+          </Link>
         </div>
         <hr />
       </div>
       <div className={`${container}`}>
-        <p className="text-p1 text-charcoal-grey font-light py-72">
-          Lorem ipsum dolor sit amet consectetur, adipisicing elit. Neque mollitia, delectus voluptatibus ratione ipsam
-          iste dolore quas quidem quod. Nemo officia sequi tempora doloribus exercitationem excepturi rem laudantium,
-          optio voluptas similique quibusdam ullam explicabo a fugiat eum impedit nesciunt modi officiis dolorem.
-        </p>
+        <p className="text-p1 text-charcoal-grey font-light py-72">{data.tabs[activeTab].text}</p>
       </div>
-      <div className={`${container}`}>{/* Cards container */}</div>
+      <CardGrid currentProduct={data.tabs[activeTab].cards} />
     </div>
   );
 };
