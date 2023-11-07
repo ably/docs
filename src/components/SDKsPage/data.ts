@@ -1,0 +1,116 @@
+export const data = {
+  hero: {
+    title: 'SDKs',
+    subtitle: 'Lorem ipsum dolor sit amet consectetur. Sed neque ultrices leo purus',
+  },
+  tabs: {
+    channels: {
+      text: 'Lorem ipsum dolor sit amet consectetur. Sed eu scelerisque tempor integer sapien nullam elit. Nunc integer egestas sollicitudin purus. Sit risus ut gravida nunc. Senectus pretium viverra neque hac. Urna diam varius sit porttitor. Commodo vestibulum sem eu a volutpat est felis suspendisse.',
+      cards: [
+        {
+          title: 'Javascript',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/js.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=javascript',
+        },
+        {
+          title: 'Java',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/java-android.svg', isWide: true },
+          githubRepoURL: 'https://github.com/ably/ably-java',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=java',
+        },
+        {
+          title: 'Python',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/python.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-python',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=python',
+        },
+        {
+          title: 'Go',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/go.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-go',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=go',
+        },
+        {
+          title: 'Flutter',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/flutter.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-flutter',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=flutter',
+        },
+        {
+          title: 'Swift',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/swift.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-cocoa',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=swift',
+        },
+        {
+          title: 'React',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/react.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=react',
+        },
+        {
+          title: 'Ruby',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/ruby.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-ruby',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=ruby',
+        },
+        {
+          title: 'PHP',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/php-laravel.svg', isWide: true },
+          githubRepoURL: 'https://github.com/ably/ably-php',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=php',
+        },
+        {
+          title: 'Node.js',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/nodejs.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=nodejs',
+        },
+        {
+          title: 'C#.NET',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/csharp.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-dotnet',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=csharp',
+        },
+        {
+          title: 'Objective C',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/objectivec.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-cocoa',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=objc',
+        },
+      ],
+    },
+    spaces: {
+      text: 'Lorem ipsum dolor sit amet consectetur. Sed eu scelerisque tempor integer sapien nullam elit. Nunc integer egestas sollicitudin purus. Sit risus ut gravida nunc. Senectus pretium viverra neque hac. Urna diam varius sit porttitor. Commodo vestibulum sem eu a volutpat est felis suspendisse.',
+      cards: [
+        {
+          title: 'Javascript',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/js.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=javascript',
+        },
+        {
+          title: 'React',
+          text: 'Lorem ipsum dolor sit amet consectetur adipisicing elit. Illo, autem assumenda.',
+          image: { src: '/images/sdks/react.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: 'https://ably.com/docs/getting-started/setup?lang=react',
+        },
+      ],
+    },
+  },
+};
