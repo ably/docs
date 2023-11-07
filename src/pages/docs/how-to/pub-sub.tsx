@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SandpackPreview, SandpackProvider, SandpackConsole } from '@codesandbox/sandpack-react';
+import React, { useMemo, useState } from 'react';
 import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
 
 import HowTo from 'HowTos/pub-sub/how-to.mdx';
@@ -94,10 +95,12 @@ const PubSubHowTo = () => {
 
   const [solved, setSolved] = useState(false);
 
-  const files = data.files.nodes.reduce((acc: object, file: HowToFile) => {
-    const { srcPath, content } = file;
-    return { ...acc, [srcPath]: content };
-  }, {});
+  const files = useMemo(() => {
+    return data.files.nodes.reduce((acc: object, file: HowToFile) => {
+      const { srcPath, content } = file;
+      return { ...acc, [srcPath]: content };
+    }, {});
+  }, [data]);
 
   const visibleFiles = [
     '/App.tsx',
@@ -114,7 +117,9 @@ const PubSubHowTo = () => {
   const userData = useContext(UserContext);
   const apiKeys = userData.apiKeys.data;
   const hasApiKeys = apiKeys.length > 0;
-  const rewrittenFiles = updateAblyConnectionKey(files, apiKeys);
+  const rewrittenFiles = useMemo(() => {
+    return updateAblyConnectionKey(files, apiKeys);
+  }, [files, apiKeys]);
   const runnableFiles = chooseFileVersions(solved, rewrittenFiles);
 
   return (
