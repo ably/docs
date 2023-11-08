@@ -1,0 +1,164 @@
+---
+title: Conversation channels
+meta_description: "Channels brings forward the capability to provide real-time communication between multiple people."
+product: chat
+languages:
+  - javascript
+---
+
+Conversation channels are the core functionality for a chat application or an application with chat features. Conversation channels are used to separate messages into separate categories. They provide a way to implement the Publish-Subscribe (Pub/Sub) architectural pattern. By using Pub/Sub, your application can have any number of users "join" a conversation by subscribing to this channel, receiving any messages that these subscribed rooms have published to them. The users are able to "send" (publish) messages to each conversation they're subscribed to. The ability to publish and recieve is completely decoupled from eachother.
+
+Clients can subscribe to conversations (channels) and publish messages using the realtime interface of an Ably SDK. The REST interface only allows clients to publish messages.
+
+h2(#namespaces). Conversation namespaces
+
+Conversation channel namespaces enable conversations to be grouped together based on a prefix that is included as part of the channel name. A colon (:) is used to delimit a chatroom namespace, and a namespace is the first segment of a channel name up until the first colon. If a channel name does not contain a colon, the namespace is the entire channel name.
+
+The following are examples of conversation channels that are all part of the 'customer' namespace:
+
+* customer
+* customer:tracking-id
+* customer:order:update
+
+Namespaces can be used to apply operations to all channels within the namespace, such as capabilities, channel rules and integration rules.
+
+<aside data-type='note'>
+<p>Restrictions for channel names and namespaces:</p>
+<ul><li>Avoid starting names with @[@ or @:@</li>
+<li>Ensure names aren't empty</li>
+<li>Exclude whitespace and wildcards, such as @*@</li>
+<li>Use the correct case, whether it be uppercase or lowercase</li></ul>
+<p>While Ably doesn't limit channel name and namespace length, be aware that the name appears in REST request URLs. Most browsers cap URLs at 2048 characters</p>
+</aside>
+
+h2(#create). Create or retrieve a conversation
+
+A conversation @Channel@ object is a reference to a single channel and is uniquely identified by its unicode string name. A channel is created, or an existing channel is retrieved from the @Channels@ collection, using the "@get()@":/api/realtime-sdk/channels#get method. You can only connect to one channel in a single operation. Wildcards are not supported.
+
+The following is an example of creating a conversation:
+
+```[realtime_javascript]
+var conversation = realtime.channels.get('conversationName');
+```
+
+```[realtime_nodejs]
+var conversation = realtime.channels.get('conversationName');
+```
+
+```[rest_javascript]
+var conversation = rest.channels.get('conversationName');
+```
+
+```[rest_nodejs]
+var conversation = rest.channels.get('conversationName');
+```
+
+
+h2(#subscribe). Subscribe to a channel
+
+Subscribe to a channel in order to receive messages being published to it, by registering a listener. Subscribing is an operation available to the realtime interface and uses the "@subscribe()@":/api/realtime-sdk/channels#subscribe method.
+
+A client can subscribe to all messages published to a channel by passing a listener function to the @subscribe()@ method. The listener is passed a "@Message@":/api/realtime-sdk/types#message object for each message received. Alternatively, a client can listen for a subset of messages based on the name of the published message.
+
+The following is an example of registering a listener for all messages:
+
+```[realtime_javascript]
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    alert('Received: ' + message.data);
+  });
+```
+
+```[realtime_nodejs]
+  var Ably = require('ably');
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.subscribe(function(message) {
+    console.log("Received: " + message.data);
+  });
+```
+
+The following is an example of registering a listener for a specific message name:
+
+```[realtime_javascript]
+channel.subscribe('myEvent', function(message) {
+  console.log('message received for event ' + message.name);
+  console.log('message data:' + message.data);
+});
+```
+
+```[realtime_nodejs]
+channel.subscribe('myEvent', function(message) {
+  console.log('message received for event ' + message.name);
+  console.log('message data:' + message.data);
+});
+```
+
+Although the "attach":#attach operation can be initiated explicitly by a client, it is more common for the client to simply subscribe, which will automatically initiate the attach, if the channel is not already attached.
+
+Normally, errors in attaching to a channel are communicated through the "attach()":/api/realtime-sdk/channels#attach callback. For implicit attaches there is no callback, so if you want to know what happens, you'll need to listen for "channel state changes":#listen-for-state. This is also true in other cases where a channel is attached or re-attached automatically, for example, following the library reconnecting after a period in the @suspended@ state.
+
+The following is an example of implicitly attaching to a channel and publishing a message:
+
+```[realtime_javascript]
+var channel = realtime.channels.get('chatroom');
+channel.subscribe('action', function(message) { // implicit attach
+  console.log('Message received '' + message.data);
+});
+channel.publish('action', 'boom!');
+```
+
+```[realtime_nodejs]
+var channel = realtime.channels.get('chatroom');
+channel.subscribe('action', function(message) { // implicit attach
+  console.log('Message received '' + message.data);
+});
+channel.publish('action', 'boom!');
+```
+
+<aside data-type='important'>
+<p>It is important to understand the difference between attaching and subscribing to a channel, and that messages are sent to clients as soon as they attach to a channel.</p>
+<p>Published messages are immediately sent to clients as soon as they "attach()":/api/realtime-sdk/channels#attach to a channel as long as they have subscribe "capabilities":/auth/capabilities for that channel. Messages are sent regardless of whether or not the client has subscribed to the channel.</p>
+<p>"Subscribing":/api/realtime-sdk/channels#subscribe to a channel registers a subscribe listener for messages received on the channel and is a client-side operation, meaning that Ably is unaware of whether or not a client is subscribed to a channel.</p>
+<p>As subscribing to a channel implicitly attaches a client, it is important to note that if a client subscribes to and then "unsubscribes":/api/realtime-sdk/channels#unsubscribe from a channel, the client remains attached. The client will continue to be sent published messages until they "detach()":/api/realtime-sdk/channels#detach from the channel.</p>
+</aside>
+
+TODO: How to publish / send a message?
+
+h2(#publish). Publish a message
+
+Use the "@publish()@":/api/realtime-sdk/channels#publish method to send messages to a channel. All clients that are "subscribed":#subscribe to that channel will receive the messages. Publishing messages is an operation available to the REST and realtime interfaces.
+
+<span lang="default"></span><span lang="python">Note that Python will currently publish over REST, even when using the "realtime interface.":/basics/use-ably#sdks</span>
+
+The following is an example of publishing a message to a channel:
+
+```[realtime_javascript]
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish('example', 'message data');
+```
+
+```[realtime_nodejs]
+  var Ably = require('ably');
+  var realtime = new Ably.Realtime('{{API_KEY}}');
+  var channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish("example", "message data");
+```
+
+```[rest_javascript]
+  var rest = new Ably.Rest('{{API_KEY}}');
+  var channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish('example', 'message data');
+```
+
+```[rest_nodejs]
+  var rest = new Ably.Rest('{{API_KEY}}');
+  var channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+  channel.publish('example', 'message data');
+```
+
+<aside data-type='note'>
+<p>A client can choose whether or not to receive messages that they publish themselves using the "@echoMessages@":/api/realtime-sdk/types#client-options property. This is set in @ClientOptions@ with a default value of @true@. Setting @echoMessages@ to @false@ will stop clients receiving the messages they publish themselves. This property is only available using the realtime interface, as it isn't possible to subscribe to messages using the REST interface.</p>
+</aside>
