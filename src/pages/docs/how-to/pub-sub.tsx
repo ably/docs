@@ -7,7 +7,7 @@ import { graphql, useStaticQuery } from 'gatsby';
 import { Head } from 'src/components/Head';
 import Layout from 'src/components/Layout';
 import { MarkdownProvider } from 'src/components/Markdown';
-import { SidebarProvider } from 'src/contexts/SidebarContext';
+import { SidebarProvider, useSidebar } from 'src/contexts/SidebarContext';
 import UserContext, { UserApiKey } from 'src/contexts/user-context';
 import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
 import { useContext } from 'react';
@@ -128,7 +128,7 @@ const PubSubHowTo = () => {
       <SidebarProvider initialCollapsedState={true}>
         <Layout showProductNavigation={true} currentProduct="channels" collapsibleSidebar={true} isExtraWide>
           <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:px-32">
-            <div>
+            <div className='max-w-md'>
               <MarkdownProvider>
                 <HowTo
                   showSolution={() => {
