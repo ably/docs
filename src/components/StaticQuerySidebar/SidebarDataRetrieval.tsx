@@ -98,7 +98,10 @@ export const SidebarDataRetrieval = ({
 
   let sidebarData;
 
-  if (sidebarName !== undefined && (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar || data.ChatLeftSidebar)) {
+  if (
+    sidebarName !== undefined &&
+    (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar || data.ChatLeftSidebar)
+  ) {
     const sideBarItems =
       sidebarName === 'api-reference'
         ? data.ApiLeftSidebar.items
