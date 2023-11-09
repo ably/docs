@@ -47,7 +47,7 @@ export const Sidebar = ({
   return (
     <aside
       className={cn(
-        'transition-all fixed hidden h-screen md:block overflow-y-auto bg-extra-light-grey z-20 left-0 w-244 pb-128',
+        'transition-all duration-300 fixed hidden h-screen md:block overflow-y-auto bg-extra-light-grey z-20 left-0 w-244 pb-128',
         { '-left-200': collapsed },
         { 'pt-24': !collapsible },
         className,
@@ -61,25 +61,24 @@ export const Sidebar = ({
           </button>
         </div>
       )}
-      {!collapsed &&
-        data.map(({ label, content }) => (
-          <div key={label} className="px-24 mb-32">
-            {label && <SectionTitle className="mb-8">{label}</SectionTitle>}
-            <HighlightedMenuContext.Consumer>
-              {(highlightedMenuId) =>
-                content && (
-                  <SidebarLinkMenu
-                    data={content}
-                    expandable={expandableLinkMenu}
-                    expandMenu={expandMenu}
-                    indentOffset={indentOffset}
-                    highlightedMenuId={highlightedMenuId}
-                  />
-                )
-              }
-            </HighlightedMenuContext.Consumer>
-          </div>
-        ))}
+      {data.map(({ label, content }) => (
+        <div key={label} className={cn("px-24 mb-32 transition-all", { "opacity-0": collapsed })}>
+          {label && <SectionTitle className="mb-8">{label}</SectionTitle>}
+          <HighlightedMenuContext.Consumer>
+            {(highlightedMenuId) =>
+              content && (
+                <SidebarLinkMenu
+                  data={content}
+                  expandable={expandableLinkMenu}
+                  expandMenu={expandMenu}
+                  indentOffset={indentOffset}
+                  highlightedMenuId={highlightedMenuId}
+                />
+              )
+            }
+          </HighlightedMenuContext.Consumer>
+        </div>
+      ))}
     </aside>
   );
 };

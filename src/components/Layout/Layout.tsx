@@ -45,11 +45,13 @@ const Layout: React.FC<LayoutProps> = ({
         as="main"
         className={
           showSidebar
-            ? cn('grid 2xl:mx-auto transition-all', {
-                'md:ml-48': collapsed,
-                'md:ml-244': !collapsed,
+            ? cn('grid', {
+                'md:ml-48': collapsibleSidebar && collapsed,
+                'md:ml-244': collapsibleSidebar && !collapsed,
                 'md:grid-cols-1': isExtraWide,
-                'max-w-1264 md:grid-cols-2 md:grid-cols-layout': !isExtraWide,
+                'md:grid-cols-2 md:grid-cols-layout': !isExtraWide,
+                'md:ml-244 2xl:mx-auto max-w-1264': !collapsibleSidebar,
+                'mx-24 transition-all': collapsibleSidebar
               })
             : undefined
         }
