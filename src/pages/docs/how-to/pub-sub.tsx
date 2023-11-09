@@ -162,8 +162,8 @@ const PubSubHowTo = () => {
                     />
 
                     <div className="flex gap-16 my-16">
-                      <SandpackPreview style={{ height: '480px' }} />
-                      <SandpackPreview style={{ height: '480px' }} startRoute="/?publisher=false" />
+                      <SandpackPreview style={{ height: '480px' }} className='rounded-lg overflow-hidden' />
+                      <SandpackPreview style={{ height: '480px' }} className='rounded-lg overflow-hidden' startRoute="/?publisher=false" />
                     </div>
                   </SandpackProvider>
                 </>

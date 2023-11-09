@@ -30,7 +30,7 @@ const Chrome = ({ title, children }: ComponentProps) => {
       </div>
       {children}
       <div
-        className="flex gap-x-4 h-40 px-16 py-12 items-center rounded-b-md border-t"
+        className="flex gap-x-4 h-40 px-16 py-12 items-center rounded-b-lg border-t"
         style={{ backgroundColor: '#202531', borderColor: '#292831' }}
       >
         <SmallMenuLabel>API Key:</SmallMenuLabel>
