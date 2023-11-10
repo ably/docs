@@ -7,7 +7,7 @@ import { graphql, useStaticQuery } from 'gatsby';
 import { Head } from 'src/components/Head';
 import Layout from 'src/components/Layout';
 import { MarkdownProvider } from 'src/components/Markdown';
-import { SidebarProvider, useSidebar } from 'src/contexts/SidebarContext';
+import { SidebarProvider } from 'src/contexts/SidebarContext';
 import UserContext, { UserApiKey } from 'src/contexts/user-context';
 import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
 import { useContext } from 'react';
@@ -127,8 +127,8 @@ const PubSubHowTo = () => {
 
       <SidebarProvider initialCollapsedState={true}>
         <Layout showProductNavigation={true} currentProduct="channels" collapsibleSidebar={true} isExtraWide>
-          <article className="grid w-full grid-cols-2 mt-72 md:mt-0 md:px-32">
-            <div className='max-w-md'>
+          <article className="grid w-full grid-cols-1 md:grid-cols-2 mt-56 md:mt-0 md:pl-24">
+            <div className='max-w-md md:pr-24 md:border-r border-mid-grey'>
               <MarkdownProvider>
                 <HowTo
                   showSolution={() => {
@@ -137,7 +137,9 @@ const PubSubHowTo = () => {
                 />
               </MarkdownProvider>
             </div>
-            <aside className="pt-24 pl-24">
+            <aside className="pt-48 md:pl-24 relative">
+              {/* 160px = 48px for aside top padding, 48px for nav bar and 64px for top header */}
+              <div className='sticky w-full pb-24' style={{ top: "160px" }}>
               {hasApiKeys ? (
                 <>
                   <SandpackProvider
@@ -161,7 +163,7 @@ const PubSubHowTo = () => {
                       }}
                     />
 
-                    <div className="flex gap-16 my-16">
+                    <div className="flex gap-16 my-16 flex-col sm:flex-row">
                       <SandpackPreview style={{ height: '480px' }} className='rounded-lg overflow-hidden' showOpenInCodeSandbox={false} showRefreshButton />
                       <SandpackPreview style={{ height: '480px' }} className='rounded-lg overflow-hidden' showOpenInCodeSandbox={false} startRoute="/?publisher=false" />
                     </div>
@@ -170,6 +172,7 @@ const PubSubHowTo = () => {
               ) : (
                 <b>Loading...</b>
               )}
+              </div>
             </aside>
           </article>
         </Layout>
