@@ -56,7 +56,7 @@ export const Sidebar = ({
     >
       {collapsible && (
         <div className="pt-12 pr-8 text-right bg-extra-light-grey w-244">
-          <button className="inline-block" onClick={handleToggleSidebar}>
+          <button className="inline-block focus:outline-none" onClick={handleToggleSidebar}>
             {collapsed ? <ExpandRightIcon /> : <ExpandLeftIcon />}
           </button>
         </div>
