@@ -22,7 +22,7 @@ const CodeEditor = ({ editor }: Props) => {
 
   return (
     <Chrome title={ActiveFileDisplay()}>
-      <SandpackLayout className="rounded-none remove-btn-focus">
+      <SandpackLayout className="rounded-none remove-btn-focus remove-border-radius">
         <SandpackFileExplorer autoHiddenFiles={true} />
         <SandpackCodeEditor {...editorProps} />
       </SandpackLayout>
