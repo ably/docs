@@ -1,6 +1,7 @@
 import React, { FC } from 'react';
 import { MDXProvider } from '@mdx-js/react';
 import Link from 'src/components/Link';
+import { CodeBlock } from './CodeBlock';
 
 const H1: FC<JSX.IntrinsicElements['h1']> = ({ children, ...props }) => (
   <h1 className="ui-text-h1 my-40" {...props}>
@@ -44,6 +45,20 @@ const Li: FC<JSX.IntrinsicElements['li']> = ({ children, ...props }) => (
   </li>
 );
 
+const Code: FC<JSX.IntrinsicElements['code']> = ({ children, ...props }) => (
+  <code className="ui-text-code-inline" {...props}>
+    {children}
+  </code>
+);
+
+const Pre: FC<JSX.IntrinsicElements['pre']> = ({ children }) => {
+  const lang = (children as React.ReactElement)?.props?.className?.replace('language-', "")
+
+  return <CodeBlock language={lang || "javascript"}>
+    {children}
+  </CodeBlock>
+};
+
 const components = {
   h1: H1,
   h2: H2,
@@ -52,6 +67,8 @@ const components = {
   a: Anchor,
   ul: Ul,
   li: Li,
+  code: Code,
+  pre: Pre
 };
 
 export const MarkdownProvider = ({ children }: { children: React.ReactNode }) => (
