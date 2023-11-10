@@ -3,6 +3,8 @@ import { SandpackCodeEditor, SandpackLayout, SandpackFileExplorer, useSandpack }
 import { CodeEditorProps } from '@codesanbox/sandpack-react/types';
 import Chrome from './Chrome';
 
+import './CodeEditor.css';
+
 const ActiveFileDisplay = () => {
   const { sandpack } = useSandpack();
   const { activeFile } = sandpack;
@@ -20,7 +22,7 @@ const CodeEditor = ({ editor }: Props) => {
 
   return (
     <Chrome title={ActiveFileDisplay()}>
-      <SandpackLayout className="rounded-none">
+      <SandpackLayout className="rounded-none remove-btn-focus">
         <SandpackFileExplorer autoHiddenFiles={true} />
         <SandpackCodeEditor {...editorProps} />
       </SandpackLayout>
