@@ -40,13 +40,17 @@ const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, exten
 const NO_LANGUAGE = 'none';
 const META_PRODUCT_FALLBACK = 'channels';
 
+interface ITemplate extends AblyTemplateData {
+  showProductNavigation: boolean;
+}
+
 const Template = ({
   location: { search, pathname, hash },
   pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
   data: { document, versions },
   showProductNavigation = true,
   currentProduct,
-}: AblyTemplateData) => {
+}: ITemplate) => {
   const params = new URLSearchParams(search);
   const language = params.get('lang') ?? DEFAULT_LANGUAGE;
 

@@ -1,0 +1,116 @@
+export const data = {
+  hero: {
+    title: 'Available SDKs',
+    subtitle: "Ably's SDKs provide a consistent and idiomatic API across a variety of supported platforms.",
+  },
+  tabs: {
+    channels: {
+      text: "Choose from the following list of SDKs to build an application using the Pub/Sub Channels product. Click 'Setup' for instructions on getting started with an SDK, or view its source repository for a full list of the platforms it supports.",
+      cards: [
+        {
+          title: 'JavaScript',
+          text: 'Ably SDK for JavaScript.',
+          image: { src: '/images/sdks/js.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: '/docs/getting-started/setup?lang=javascript',
+        },
+        {
+          title: 'React',
+          text: 'Ably React Hooks package.',
+          image: { src: '/images/sdks/react.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: '/docs/getting-started/react',
+        },
+        {
+          title: 'Java',
+          text: 'Ably SDK for Java.',
+          image: { src: '/images/sdks/java-android.svg', isWide: true },
+          githubRepoURL: 'https://github.com/ably/ably-java',
+          setupLink: '/docs/getting-started/setup?lang=java',
+        },
+        {
+          title: 'Python',
+          text: 'Ably SDK for Python.',
+          image: { src: '/images/sdks/python.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-python',
+          setupLink: '/docs/getting-started/setup?lang=python',
+        },
+        {
+          title: 'Node.js',
+          text: 'Ably SDK for Node.js.',
+          image: { src: '/images/sdks/nodejs.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: '/docs/getting-started/setup?lang=nodejs',
+        },
+        {
+          title: 'Swift',
+          text: 'Ably SDK for Swift.',
+          image: { src: '/images/sdks/swift.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-cocoa',
+          setupLink: '/docs/getting-started/setup?lang=swift',
+        },
+        {
+          title: 'Objective-C',
+          text: 'Ably SDK for Objective-C.',
+          image: { src: '/images/sdks/objectivec.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-cocoa',
+          setupLink: '/docs/getting-started/setup?lang=objc',
+        },
+        {
+          title: 'C#.NET',
+          text: 'Ably SDK for C#.NET.',
+          image: { src: '/images/sdks/csharp.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-dotnet',
+          setupLink: '/docs/getting-started/setup?lang=csharp',
+        },
+        {
+          title: 'Go',
+          text: 'Ably SDK for Go.',
+          image: { src: '/images/sdks/go.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-go',
+          setupLink: '/docs/getting-started/setup?lang=go',
+        },
+        {
+          title: 'Flutter',
+          text: 'Ably SDK for Flutter.',
+          image: { src: '/images/sdks/flutter.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-flutter',
+          setupLink: '/docs/getting-started/setup?lang=flutter',
+        },
+        {
+          title: 'Ruby',
+          text: 'Ably SDK for Ruby.',
+          image: { src: '/images/sdks/ruby.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-ruby',
+          setupLink: '/docs/getting-started/setup?lang=ruby',
+        },
+        {
+          title: 'PHP',
+          text: 'Ably SDK for PHP.',
+          image: { src: '/images/sdks/php-laravel.svg', isWide: true },
+          githubRepoURL: 'https://github.com/ably/ably-php',
+          setupLink: '/docs/getting-started/setup?lang=php',
+        },
+      ],
+    },
+    spaces: {
+      text: "Choose from the following list of SDKs to add collaborative features to an application using the Spaces product. Click 'Setup' for instructions on getting started with an SDK, or view its source repository for a full list of the platforms it supports.",
+      cards: [
+        {
+          title: 'JavaScript',
+          text: 'Ably Spaces SDK for JavaScript.',
+          image: { src: '/images/sdks/js.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/spaces',
+          setupLink: '/docs/spaces/setup',
+        },
+        {
+          title: 'React',
+          text: 'Ably Spaces React Hooks package.',
+          image: { src: '/images/sdks/react.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/spaces',
+          setupLink: '/docs/spaces/react',
+        },
+      ],
+    },
+  },
+};

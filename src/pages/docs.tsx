@@ -2,25 +2,25 @@ import { Helmet } from 'react-helmet';
 import { graphql } from 'gatsby';
 
 import Layout from 'src/components/Layout';
-import { HomepageContent, Section } from 'src/components/Homepage/HomepageContent';
+import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
 
 import { DOCUMENTATION_NAME } from '../../data/transform/constants';
 
-type MetaData = {
+export type MetaData = {
   title: string;
   description: string;
   image: string;
   twitter: string;
 };
 
-const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
+export const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
 const IndexPage = ({
   data: {
     pageContentYaml: { sections, meta },
   },
 }: {
-  data: { pageContentYaml: { sections: Section[]; meta: MetaData } };
+  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData } };
 }) => {
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
   return (

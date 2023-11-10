@@ -147,7 +147,7 @@ const Pre = ({
             docs. There either isn&apos;t a {languageLabel ?? pageLanguage} code sample for this example, or this
             feature isn&apos;t supported in {languageLabel ?? pageLanguage}. Switch language to view this example in a
             different language, or{' '}
-            <a className="docs-link" href="/docs/getting-started/sdks">
+            <a className="docs-link" href="/docs/sdks">
               check which SDKs support this feature.
             </a>
           </div>
