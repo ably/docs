@@ -16,14 +16,6 @@ export const ResourcesDropDownData: DropdownData = {
     },
     {
       link: {
-        href: '/download',
-        text: 'Download SDKs',
-        external: true,
-      },
-      description: 'Explore and download Ably Client Library SDKs and other realtime protocol libraries.',
-    },
-    {
-      link: {
         href: 'https://faqs.ably.com/',
         text: 'FAQs',
         external: true,

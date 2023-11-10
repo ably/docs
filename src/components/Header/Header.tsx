@@ -6,7 +6,7 @@ import { initialState, mainNavReducer } from './main-nav-reducer';
 import { useOnClickOutside } from 'src/hooks';
 import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo';
 import { DisplayMode, SearchBar } from './SearchBar';
-import { TopMainNavUserMenu } from './TopMainNavUser';
+import { TopMainNavUserMenu, TopMainNavLink } from './TopMainNavUser';
 import UserContext from '../../contexts/user-context';
 import { DOCUMENTATION_PATH } from '../../../data/transform/constants';
 import { HamburgerMenu } from './HamburgerMenu';
@@ -31,6 +31,9 @@ export const Header = ({ sidebarName }: { sidebarName: SidebarName }) => {
         <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
         <SearchBar displayMode={DisplayMode.FULL_SCREEN} />
         <div className="flex flex-row justify-end col-start-3">
+          <TopMainNavLink href="/docs/sdks" dataId="meganav-link">
+            SDKs
+          </TopMainNavLink>
           {menuItems.map((buttonDropdownDataID, i) => (
             <DropdownButtonAndMenu
               key={i}
