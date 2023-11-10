@@ -16,13 +16,13 @@ const H2: FC<JSX.IntrinsicElements['h2']> = ({ children, ...props }) => (
 );
 
 const H3: FC<JSX.IntrinsicElements['h3']> = ({ children, ...props }) => (
-  <h3 className="ui-text-h3 my-24" {...props}>
+  <h3 className="ui-text-h3 my-20" {...props}>
     {children}
   </h3>
 );
 
 const Paragraph: FC<JSX.IntrinsicElements['p']> = ({ children, ...props }) => (
-  <p className="text-p2 mb-24 leading-relaxed" {...props}>
+  <p className="text-p2 mb-20 leading-relaxed" {...props}>
     {children}
   </p>
 );
