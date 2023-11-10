@@ -1,6 +1,6 @@
 import React from 'react';
 import { SandpackCodeEditor, SandpackLayout, SandpackFileExplorer, useSandpack } from '@codesandbox/sandpack-react';
-import { CodeEditorProps } from '@codesanbox/sandpack-react/types';
+import { type CodeEditorProps } from '@codesandbox/sandpack-react';
 import Chrome from './Chrome';
 
 import './CodeEditor.css';
