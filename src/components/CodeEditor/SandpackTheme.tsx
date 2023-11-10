@@ -3,7 +3,7 @@ import { SandpackTheme } from '@codesandbox/sandpack-react/types';
 export const sandpackTheme: SandpackTheme = {
   colors: {
     surface1: '#03020d',
-    surface2: '#2b303b',
+    surface2: '#2B303B',
     surface3: '#202531',
     clickable: '#adb6c2',
     base: '#141924',
@@ -16,20 +16,20 @@ export const sandpackTheme: SandpackTheme = {
   syntax: {
     plain: '#FFFFFF',
     comment: {
-      color: '#667085',
+      color: '#d9d9da',
       fontStyle: 'italic',
     },
-    keyword: '#0080ff',
+    keyword: '#bb87d3',
     tag: '#4da6ff',
     punctuation: '#ffffff',
-    definition: '#b986f8',
-    property: '#2894ff',
-    static: '#FF453A',
-    string: '#ff47db',
+    definition: '#bb87d3',
+    property: '#79c0ff',
+    static: '#79c0ff',
+    string: '#b9ca4a',
   },
   font: {
-    body: '"Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"',
-    mono: '"JetBrains Mono", "Fira Mono", "DejaVu Sans Mono", Menlo, Consolas, "Liberation Mono", Monaco, "Lucida Console", monospace',
+    body: '"NEXT Book", "Arial", "Helvetica", "sans-serif"',
+    mono: '"Source Code Pro", "Courier", "monospace"',
     size: '13px',
     lineHeight: '20px',
   },
