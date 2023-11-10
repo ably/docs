@@ -14,9 +14,8 @@ const basketballChannel = client.channels.get(BASKETBALL_CHANNEL_NAME);
 
 // Function to publish data to the basketball channel
 async function publishToAbly(payload) {
-  // Use Ably's publish method to send data to the channel
-  console.log('Publishing message:', payload);
   await basketballChannel.publish('scoreUpdate', payload);
+  console.log('Publishing message:', payload);
 }
 
 // Export the publishToAbly function for use to update a basketballGame

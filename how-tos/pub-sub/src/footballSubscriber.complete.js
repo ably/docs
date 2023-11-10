@@ -17,9 +17,9 @@ const footballChannel = client.channels.get(FOOTBALL_CHANNEL_NAME);
 
 // Function to subscribe to a specific football league's updates: the variable 'footballLeague' is passed by the UI when you click the 'subscribe' button against a football league.
 export const subscribeToFootballLeague = (setSubscribedChannels, setFootballScores, footballLeague) => {
-  // Subscribe to the football channel.
+  // Subscribe to the specified channel (footballLeague).
 
-  footballChannel.subscribe(/* STEP 2: add contents here */ (/* STEP 2: and here */) => {
+  footballChannel.subscribe(footballLeague, (message) => {
     // Handle incoming messages from the football channel, which represent score updates.
     const newScoreUpdate = message.data;
 

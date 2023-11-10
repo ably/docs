@@ -10,10 +10,12 @@ const BASKETBALL_CHANNEL_NAME = import.meta.env.VITE_BASKETBALL_CHANNEL_NAME;
 const client = new Ably.Rest.Promise({
   key: ABLY_API_KEY
 });
+const basketballChannel = client.channels.get(BASKETBALL_CHANNEL_NAME);
 
 // Function to publish data to the basketball channel
 async function publishToAbly(payload) {
-  // Use Ably's publish method to send the score data to the specified league.
+  //STEP 1: replace this line
+  console.log('Publishing message:', payload);
 }
 
 // Export the publishToAbly function for use to update a basketballGame
