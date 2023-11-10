@@ -27,8 +27,8 @@ const Paragraph: FC<JSX.IntrinsicElements['p']> = ({ children, ...props }) => (
   </p>
 );
 
-const Anchor: FC<JSX.InstrinsicElements['a']> = ({ children, href, ...props }) => (
-  <Link to={href} className="docs-link" {...props}>
+const Anchor: FC<JSX.IntrinsicElements['a']> = ({ children, href, ...props }) => (
+  <Link to={href!} className="docs-link" {...props}>
     {children}
   </Link>
 );
