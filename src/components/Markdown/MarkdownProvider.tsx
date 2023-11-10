@@ -34,13 +34,13 @@ const Anchor: FC<JSX.InstrinsicElements['a']> = ({ children, href, ...props }) =
 );
 
 const Ul: FC<JSX.IntrinsicElements['ul']> = ({ children, ...props }) => (
-  <ul className="ui-text-p2 pl-16 pb-32 list-disc" {...props}>
+  <ul className="ui-unordered-list" {...props}>
     {children}
   </ul>
 );
 
 const Li: FC<JSX.IntrinsicElements['li']> = ({ children, ...props }) => (
-  <li className="ui-text-p2" {...props}>
+  <li className="ui-text-p2 mb-8" {...props}>
     {children}
   </li>
 );
