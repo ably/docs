@@ -62,7 +62,7 @@ export const Sidebar = ({
         </div>
       )}
       {data.map(({ label, content }) => (
-        <div key={label} className={cn("px-24 mb-32 transition-all", { "opacity-0": collapsed })}>
+        <div key={label} className={cn('px-24 mb-32 transition-all', { 'opacity-0': collapsed })}>
           {label && <SectionTitle className="mb-8">{label}</SectionTitle>}
           <HighlightedMenuContext.Consumer>
             {(highlightedMenuId) =>

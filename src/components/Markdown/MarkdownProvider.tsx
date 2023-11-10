@@ -52,11 +52,9 @@ const Code: FC<JSX.IntrinsicElements['code']> = ({ children, ...props }) => (
 );
 
 const Pre: FC<JSX.IntrinsicElements['pre']> = ({ children }) => {
-  const lang = (children as React.ReactElement)?.props?.className?.replace('language-', "")
+  const lang = (children as React.ReactElement)?.props?.className?.replace('language-', '');
 
-  return <CodeBlock language={lang || "javascript"}>
-    {children}
-  </CodeBlock>
+  return <CodeBlock language={lang || 'javascript'}>{children}</CodeBlock>;
 };
 
 const components = {
@@ -68,7 +66,7 @@ const components = {
   ul: Ul,
   li: Li,
   code: Code,
-  pre: Pre
+  pre: Pre,
 };
 
 export const MarkdownProvider = ({ children }: { children: React.ReactNode }) => (

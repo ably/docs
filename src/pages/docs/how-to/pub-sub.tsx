@@ -128,7 +128,7 @@ const PubSubHowTo = () => {
       <SidebarProvider initialCollapsedState={true}>
         <Layout showProductNavigation={true} currentProduct="channels" collapsibleSidebar={true} isExtraWide>
           <article className="grid w-full grid-cols-1 md:grid-cols-2 mt-56 md:mt-0 md:pl-24">
-            <div className='max-w-md md:pr-24 md:border-r border-mid-grey'>
+            <div className="max-w-md md:pr-24 md:border-r border-mid-grey">
               <MarkdownProvider>
                 <HowTo
                   showSolution={() => {
@@ -139,39 +139,49 @@ const PubSubHowTo = () => {
             </div>
             <aside className="pt-48 md:pl-24 relative">
               {/* 160px = 48px for aside top padding, 48px for nav bar and 64px for top header */}
-              <div className='sticky w-full pb-24' style={{ top: "160px" }}>
-              {hasApiKeys ? (
-                <>
-                  <SandpackProvider
-                    files={runnableFiles}
-                    customSetup={{
-                      dependencies: {
-                        ably: 'latest',
-                      },
-                    }}
-                    options={{
-                      visibleFiles: visibleFiles,
-                      autorun: true,
-                      autoReload: false,
-                    }}
-                    theme={sandpackTheme}
-                    template="react-ts"
-                  >
-                    <CodeEditor
-                      editor={{
-                        showLineNumbers: true,
+              <div className="sticky w-full pb-24" style={{ top: '160px' }}>
+                {hasApiKeys ? (
+                  <>
+                    <SandpackProvider
+                      files={runnableFiles}
+                      customSetup={{
+                        dependencies: {
+                          ably: 'latest',
+                        },
                       }}
-                    />
+                      options={{
+                        visibleFiles: visibleFiles,
+                        autorun: true,
+                        autoReload: false,
+                      }}
+                      theme={sandpackTheme}
+                      template="react-ts"
+                    >
+                      <CodeEditor
+                        editor={{
+                          showLineNumbers: true,
+                        }}
+                      />
 
-                    <div className="flex gap-16 my-16 flex-col sm:flex-row">
-                      <SandpackPreview style={{ height: '480px' }} className='rounded-lg overflow-hidden' showOpenInCodeSandbox={false} showRefreshButton />
-                      <SandpackPreview style={{ height: '480px' }} className='rounded-lg overflow-hidden' showOpenInCodeSandbox={false} startRoute="/?publisher=false" />
-                    </div>
-                  </SandpackProvider>
-                </>
-              ) : (
-                <b>Loading...</b>
-              )}
+                      <div className="flex gap-16 my-16 flex-col sm:flex-row">
+                        <SandpackPreview
+                          style={{ height: '480px' }}
+                          className="rounded-lg overflow-hidden"
+                          showOpenInCodeSandbox={false}
+                          showRefreshButton
+                        />
+                        <SandpackPreview
+                          style={{ height: '480px' }}
+                          className="rounded-lg overflow-hidden"
+                          showOpenInCodeSandbox={false}
+                          startRoute="/?publisher=false"
+                        />
+                      </div>
+                    </SandpackProvider>
+                  </>
+                ) : (
+                  <b>Loading...</b>
+                )}
               </div>
             </aside>
           </article>

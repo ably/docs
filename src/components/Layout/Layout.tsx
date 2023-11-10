@@ -51,7 +51,7 @@ const Layout: React.FC<LayoutProps> = ({
                 'md:grid-cols-1': isExtraWide,
                 'md:grid-cols-2 md:grid-cols-layout': !isExtraWide,
                 'md:ml-244 2xl:mx-auto max-w-1264': !collapsibleSidebar,
-                'mx-24 transition-all': collapsibleSidebar
+                'mx-24 transition-all': collapsibleSidebar,
               })
             : undefined
         }
