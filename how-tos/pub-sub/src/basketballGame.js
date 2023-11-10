@@ -8,7 +8,7 @@ import { shouldRunPublisher } from './utils';
 const basketballTeams = ['Ether Flyers', 'Fire Hawks', 'Ten Points Club', 'Solar Flares'];
 
 // Set the interval for score updates (in milliseconds)
-const SCORE_UPDATE_INTERVAL = 1000;
+const SCORE_UPDATE_INTERVAL = 2500;
 
 // Initialize basketball games with team information and scores
 const basketballGames = [

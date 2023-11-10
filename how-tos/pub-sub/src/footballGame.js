@@ -5,7 +5,7 @@ import { publishToAbly } from './footballPublisher';
 import { shouldRunPublisher } from './utils';
 
 // Define the interval (in milliseconds) for updating scores.
-const SCORE_UPDATE_INTERVAL = 1000;
+const SCORE_UPDATE_INTERVAL = 2500;
 
 // Define an array of football teams.
 const footballTeams = ['Vortex United', 'Lioners', 'Enemy Titans', 'Soccer Wolves'];
