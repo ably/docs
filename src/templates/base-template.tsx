@@ -1,21 +1,23 @@
-import React, { useEffect, useMemo } from 'react';
-import { navigate, Script, ScriptStrategy } from 'gatsby';
+import { Script, ScriptStrategy, navigate } from 'gatsby';
+import { useEffect, useMemo } from 'react';
 
+import Article from 'src/components/Article';
 import { Head } from 'src/components/Head';
-import { safeWindow, srcFromDocsSite } from 'src/utilities';
-import { PathnameContext, PageLanguageContext, PageLanguagesContext } from 'src/contexts';
+import Layout from 'src/components/Layout';
+import PageTitle from 'src/components/PageTitle';
+import { RightSidebarWrapper } from 'src/components/Sidebar/RightSidebar';
+import Html from 'src/components/blocks/Html';
 import {
   createLanguageHrefFromDefaults,
   getLanguageDefaults,
   languageIsUsable,
 } from 'src/components/common/language-defaults';
+import { PageLanguageContext, PageLanguagesContext, PathnameContext } from 'src/contexts';
+import { safeWindow, srcFromDocsSite } from 'src/utilities';
 import { PREFERRED_LANGUAGE_KEY } from 'src/utilities/language/constants';
-import { RightSidebarWrapper } from 'src/components/Sidebar/RightSidebar';
-import Article from 'src/components/Article';
-import Html from 'src/components/blocks/Html';
-import Layout from 'src/components/Layout';
-import PageTitle from 'src/components/PageTitle';
 
+import { isEmpty } from 'lodash';
+import { SidebarProvider } from 'src/contexts/SidebarContext';
 import {
   DEFAULT_LANGUAGE,
   DEFAULT_PREFERRED_LANGUAGE,
@@ -25,7 +27,6 @@ import {
 } from '../../data/createPages/constants';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
-import { isEmpty } from 'lodash';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -133,17 +134,20 @@ const Template = ({
       <PageLanguagesContext.Provider value={languages}>
         <PathnameContext.Provider value={pathname}>
           <Head title={title} canonical={canonical} description={description} />
-          <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
-            <Article>
-              <PageTitle>{title}</PageTitle>
-              <div>{elements}</div>
-            </Article>
-            <RightSidebarWrapper
-              menuData={contentMenuFromLanguage[0]}
-              languages={filteredLanguages}
-              versionData={versionData}
-            />
-          </Layout>
+
+          <SidebarProvider>
+            <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
+              <Article>
+                <PageTitle>{title}</PageTitle>
+                <div>{elements}</div>
+              </Article>
+              <RightSidebarWrapper
+                menuData={contentMenuFromLanguage[0]}
+                languages={filteredLanguages}
+                versionData={versionData}
+              />
+            </Layout>
+          </SidebarProvider>
         </PathnameContext.Provider>
       </PageLanguagesContext.Provider>
       {script && <Script src={srcFromDocsSite(`/scripts/${slug}.js`)} strategy={ScriptStrategy.idle} />}
