@@ -1,41 +1,57 @@
-import React, { FunctionComponent as FC } from 'react';
 import cn from 'classnames';
+import { ReactNode, useEffect } from 'react';
 
 import ProductNavigation from 'src/components/ProductNavigation';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
+import { useSidebar } from 'src/contexts/SidebarContext';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Container, SidebarName } from 'src/components';
 import { Header } from '../Header';
 import { Footer } from '../Footer';
 
-const Layout: FC<{
-  showProductNavigation?: boolean;
-  children: React.ReactNode;
-  currentProduct?: string;
+interface LayoutProps {
   isExtraWide?: boolean;
+  showProductNavigation?: boolean;
+  currentProduct?: string;
   noSidebar?: boolean;
-}> = ({
-  showProductNavigation = true,
-  currentProduct = undefined,
-  isExtraWide = false,
-  noSidebar = false,
+  collapsibleSidebar?: boolean;
+  children: ReactNode;
+}
+
+const Layout: React.FC<LayoutProps> = ({
   children,
+  isExtraWide = false,
+  showProductNavigation = true,
+  currentProduct,
+  noSidebar = false,
+  collapsibleSidebar = false,
 }) => {
   const sidebarName = currentProduct === 'home' ? 'channels' : currentProduct;
   const showSidebar = !noSidebar;
+
+  const { collapsed, setCollapsed, initialCollapsedState } = useSidebar();
+
+  useEffect(() => {
+    setCollapsed(initialCollapsedState);
+  }, [initialCollapsedState, setCollapsed]);
 
   return (
     <GlobalLoading>
       <Header sidebarName={sidebarName} />
       {showProductNavigation && <ProductNavigation currentProduct={currentProduct} />}
-      {showSidebar && <LeftSideBar sidebarName={sidebarName as SidebarName} />}
+
+      {showSidebar && <LeftSideBar sidebarName={sidebarName as SidebarName} collapsible={collapsibleSidebar} />}
       <Container
         as="main"
         className={
           showSidebar
-            ? cn('grid md:ml-244 2xl:mx-auto max-w-1264', {
+            ? cn('grid', {
+                'md:ml-48': collapsibleSidebar && collapsed,
+                'md:ml-244': collapsibleSidebar && !collapsed,
                 'md:grid-cols-1': isExtraWide,
                 'md:grid-cols-2 md:grid-cols-layout': !isExtraWide,
+                'md:ml-244 2xl:mx-auto max-w-1264': !collapsibleSidebar,
+                'mx-24 transition-all': collapsibleSidebar,
               })
             : undefined
         }
