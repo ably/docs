@@ -1,3 +1,3 @@
-import { LeftSideBar } from './LeftSideBar';
+import { LeftSideBar, LeftSidebarProps } from './LeftSideBar';
 
-export { LeftSideBar };
+export { LeftSideBar, LeftSidebarProps };

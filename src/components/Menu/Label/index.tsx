@@ -3,7 +3,7 @@ import cn from 'classnames';
 
 import { smallMenuLabel } from './Label.module.css';
 
-const MenuLabel: FC = ({ children }) => (
+const MenuLabel: FC<{ children: React.ReactNode }> = ({ children }) => (
   <li className="relative whitespace-nowrap break-all list-none pb-0 leading-loose text-white font-next-book mr-auto">
     {children}
   </li>

@@ -1,9 +1,10 @@
-import { Helmet } from 'react-helmet';
 import { graphql } from 'gatsby';
+import { Helmet } from 'react-helmet';
 
 import Layout from 'src/components/Layout';
 import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
 
+import { SidebarProvider } from 'src/contexts/SidebarContext';
 import { DOCUMENTATION_NAME } from '../../data/transform/constants';
 
 export type MetaData = {
@@ -40,9 +41,12 @@ const IndexPage = ({
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
-      <Layout currentProduct="home" noSidebar>
-        <HomepageContent sections={sections} />
-      </Layout>
+
+      <SidebarProvider>
+        <Layout currentProduct="home" noSidebar>
+          <HomepageContent sections={sections} />
+        </Layout>
+      </SidebarProvider>
     </>
   );
 };
