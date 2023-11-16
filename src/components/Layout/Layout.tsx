@@ -19,7 +19,7 @@ interface LayoutProps {
 }
 
 function assertNever(name: string): never {
-  throw new Error("Received unrecognized sidebar name: " + name);
+  throw new Error('Received unrecognized sidebar name: ' + name);
 }
 
 const getSidebarName = (currentProduct: string): SidebarName => {
@@ -35,7 +35,7 @@ const getSidebarName = (currentProduct: string): SidebarName => {
     default:
       return assertNever(currentProduct);
   }
-}
+};
 
 const Layout: React.FC<LayoutProps> = ({
   children,
@@ -51,7 +51,9 @@ const Layout: React.FC<LayoutProps> = ({
   const { collapsed, setCollapsed, initialCollapsedState } = useSidebar();
 
   useEffect(() => {
-    if (typeof initialCollapsedState === 'undefined' || !setCollapsed) return;
+    if (typeof initialCollapsedState === 'undefined' || !setCollapsed) {
+      return;
+    }
 
     setCollapsed(initialCollapsedState);
   }, [initialCollapsedState, setCollapsed]);

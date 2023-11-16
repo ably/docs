@@ -35,13 +35,17 @@ export const Sidebar = ({
   // if we navigate from a page where collapsible is true
   // then collapsed could be true when we re-render
   useEffect(() => {
-    if (!collapsible || !setCollapsed) return;
+    if (!collapsible || !setCollapsed) {
+      return;
+    }
 
     setCollapsed(false);
   }, [collapsible, setCollapsed]);
 
   const handleToggleSidebar = () => {
-    if (!setCollapsed) return;
+    if (!setCollapsed) {
+      return;
+    }
     setCollapsed((prev) => !prev);
   };
 

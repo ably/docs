@@ -6,18 +6,16 @@ interface SidebarContextProps {
   initialCollapsedState?: boolean;
 }
 
-const SidebarContext = createContext<SidebarContextProps | undefined>(undefined);
+const initialState = { collapsed: undefined, setCollapsed: undefined, initialCollapsedState: undefined };
+const SidebarContext = createContext<SidebarContextProps>(initialState);
 
 interface SidebarProviderProps {
   children: ReactNode;
   initialCollapsedState?: boolean;
 }
 
-const initialState = { collapsed: undefined, setCollapsed: undefined, initialCollapsedState: undefined };
-
 export const useSidebar = (): SidebarContextProps => {
-  const context = useContext(SidebarContext);
-  return context || initialState;
+  return useContext(SidebarContext);
 };
 
 export const SidebarProvider: React.FC<SidebarProviderProps> = ({ children, initialCollapsedState = false }) => {
