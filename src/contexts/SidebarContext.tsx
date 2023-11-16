@@ -1,9 +1,9 @@
 import React, { ReactNode, createContext, useContext, useState } from 'react';
 
 interface SidebarContextProps {
-  collapsed: boolean;
-  setCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
-  initialCollapsedState: boolean;
+  collapsed?: boolean;
+  setCollapsed?: React.Dispatch<React.SetStateAction<boolean>>;
+  initialCollapsedState?: boolean;
 }
 
 const SidebarContext = createContext<SidebarContextProps | undefined>(undefined);
@@ -13,12 +13,11 @@ interface SidebarProviderProps {
   initialCollapsedState?: boolean;
 }
 
+const initialState = { collapsed: undefined, setCollapsed: undefined, initialCollapsedState: undefined };
+
 export const useSidebar = (): SidebarContextProps => {
   const context = useContext(SidebarContext);
-  if (!context) {
-    throw new Error('useSidebar must be used within a SidebarProvider');
-  }
-  return context;
+  return context || initialState;
 };
 
 export const SidebarProvider: React.FC<SidebarProviderProps> = ({ children, initialCollapsedState = false }) => {

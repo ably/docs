@@ -51,6 +51,8 @@ const Layout: React.FC<LayoutProps> = ({
   const { collapsed, setCollapsed, initialCollapsedState } = useSidebar();
 
   useEffect(() => {
+    if (typeof initialCollapsedState === 'undefined' || !setCollapsed) return;
+
     setCollapsed(initialCollapsedState);
   }, [initialCollapsedState, setCollapsed]);
 
