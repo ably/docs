@@ -43,7 +43,7 @@ const IndexPage = ({
       </Helmet>
 
       <SidebarProvider>
-        <Layout currentProduct="home" noSidebar>
+        <Layout currentProduct="home" noSidebar showSearchBar={false}>
           <HomepageContent sections={sections} />
         </Layout>
       </SidebarProvider>
@@ -69,6 +69,10 @@ export const query = graphql`
           content
           image
           links {
+            text
+            href
+          }
+          callToAction {
             text
             href
           }

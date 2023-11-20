@@ -22,9 +22,12 @@ const gridColVariants = {
 const sectionBottomMarginVariants = {
   48: 'mb-48',
   72: 'mb-72',
+  80: 'mb-80',
+  160: 'mb-160',
 };
 
 const gridGapVariants = {
+  1: '',
   2: 'gap-32',
   4: 'gap-24',
 };
