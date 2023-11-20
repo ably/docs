@@ -10,15 +10,17 @@ export type CardProps = {
   title: string;
   content: string;
   image: string;
-  links: LinkProps[];
+  type: 'hero' | 'feature' | 'sdk';
+  links?: LinkProps[];
+  callToAction?: CallToActionProps;
 };
 
 export type SectionProps = {
   title: string;
   type: string;
-  columns: number;
+  columns: 1 | 2 | 4;
   mainImage: string;
-  bottomMargin: number;
+  bottomMargin: 48 | 72;
   description: string | null;
   callToAction: CallToActionProps;
   cards: CardProps[];

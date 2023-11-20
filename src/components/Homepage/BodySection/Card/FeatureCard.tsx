@@ -1,5 +1,4 @@
-import React from 'react';
-import { CardProps } from '../../HomepagePageContent';
+import { CardProps } from '../../HomepageContent';
 import { Links } from '../../../ProductPage/BodySection/Card/Links';
 import { StaticImage } from '../../../StaticImage';
 
