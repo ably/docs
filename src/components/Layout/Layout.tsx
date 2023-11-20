@@ -5,18 +5,37 @@ import ProductNavigation from 'src/components/ProductNavigation';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 import { useSidebar } from 'src/contexts/SidebarContext';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
-import { Container, SidebarName } from 'src/components';
+import { Container, type SidebarName } from 'src/components';
 import { Header } from '../Header';
 import { Footer } from '../Footer';
 
 interface LayoutProps {
   isExtraWide?: boolean;
   showProductNavigation?: boolean;
-  currentProduct?: string;
+  currentProduct: string;
   noSidebar?: boolean;
   collapsibleSidebar?: boolean;
   children: ReactNode;
 }
+
+function assertNever(name: string): never {
+  throw new Error('Received unrecognized sidebar name: ' + name);
+}
+
+const getSidebarName = (currentProduct: string): SidebarName => {
+  switch (currentProduct) {
+    case 'home':
+    case 'channels':
+    case 'SDKs':
+      return 'channels';
+    case 'api-reference':
+      return 'api-reference';
+    case 'spaces':
+      return 'spaces';
+    default:
+      return assertNever(currentProduct);
+  }
+};
 
 const Layout: React.FC<LayoutProps> = ({
   children,
@@ -26,12 +45,16 @@ const Layout: React.FC<LayoutProps> = ({
   noSidebar = false,
   collapsibleSidebar = false,
 }) => {
-  const sidebarName = currentProduct === 'home' ? 'channels' : currentProduct;
+  const sidebarName = getSidebarName(currentProduct);
   const showSidebar = !noSidebar;
 
   const { collapsed, setCollapsed, initialCollapsedState } = useSidebar();
 
   useEffect(() => {
+    if (typeof initialCollapsedState === 'undefined' || !setCollapsed) {
+      return;
+    }
+
     setCollapsed(initialCollapsedState);
   }, [initialCollapsedState, setCollapsed]);
 
