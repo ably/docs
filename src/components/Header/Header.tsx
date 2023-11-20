@@ -14,7 +14,13 @@ import { TopMainNavStateContext } from './top-main-nav-state-context';
 import { HorizontalMenu, HorizontalMenuVariant } from 'src/components/HorizontalMenu';
 import { SidebarName } from '../Sidebar';
 
-export const Header = ({ sidebarName }: { sidebarName: SidebarName }) => {
+export const Header = ({
+  sidebarName,
+  showSearchBar = true,
+}: {
+  sidebarName: SidebarName;
+  showSearchBar?: boolean;
+}) => {
   const [topMainNavState, dispatch] = useReducer(mainNavReducer, initialState);
   const menuItems: (keyof typeof dropdownData)[] = ['API References', 'Resources'];
   const ref = useRef(null);
@@ -29,7 +35,7 @@ export const Header = ({ sidebarName }: { sidebarName: SidebarName }) => {
     >
       <HorizontalMenu variant={HorizontalMenuVariant.light}>
         <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
-        <SearchBar displayMode={DisplayMode.FULL_SCREEN} />
+        {showSearchBar ? <SearchBar displayMode={DisplayMode.FULL_SCREEN} /> : null}
         <div className="flex flex-row justify-end col-start-3">
           <TopMainNavLink href="/docs/sdks" dataId="meganav-link">
             SDKs
