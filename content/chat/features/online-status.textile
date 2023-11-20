@@ -1,109 +1,121 @@
 ---
 title: Online status
-meta_description: "Indicate whether a subscriber is online."
+meta_description: "Indicate whether a client who specifically calls ‘enter’ on presence for that channel is online."
 product: chat
 languages:
   - javascript
 ---
 
-The online status feature within a chat application enhances the user experience by displaying the activity status of other users. This feature utilizes "Presence":/docs/presence-occupancy/presence to automatically track who is currently present in a specific channel in real-time, regardless of the device being used.
+In a variety of chat environments, ranging from in-game communication systems to workplace collaboration tools and support chat platforms, the presence of an online status indicator is a universal and essential feature. This indicator serves as a visual cue, informing participants about the current availability of others within the shared chat space. By displaying whether a user is online or offline, it enhances the overall user experience, fostering seamless communication and coordination. This page delves into the mechanics of implementing an online status feature, showing how it dynamically updates in response to users entering or leaving the chatroom.
 
-<aside data-type='important'>
-<p>Clients must be "identified":/auth/identified-clients by having a @ClientId@ in order to be present on a channel. They also require the @presence@ "capability":/auth/capabilities to enter the presence set, and the @subscribe@ capability to subscribe to presence events.</p>
-</aside>
+h2(#trigger-events). Chat participant status
 
-h2(#trigger-events). Event types
+Whenever a member enters or leaves a channel, or updates their member data, an event is emitted to all presence subscribers on that channel. Any client that uses chat participant statuses must have been "identified":/auth/identified-clients by having a @ClientId@ to be present on a channel. The client also requires the @presence@ “capability”:/auth/capabilities to enter the chat participant presence set, and the @subscribe@ capability to subscribe to chat participant events.
 
-Whenever a member enters or leaves a channel, or updates their member data, a presence event is emitted to all presence subscribers on that channel.
+h3. Enter
 
-The following presence events are emitted:
-
-- Enter := A new member has entered the channel
-- Leave := A member who was present has now left the channel. This may be a result of an explicit request to leave or implicitly when detaching from the channel. Alternatively, if a member's connection is abruptly disconnected and they do not resume their connection within a minute, Ably treats this as a leave event as the client is no longer present
-- Update := An already present member has updated their "member data":#member-data. Being notified of member data updates can be very useful, for example, it can be used to update the status of a user when they are typing a message
-- Present := When subscribing to presence events on a channel that already has members present, this event is emitted for every member already present on the channel before the subscribe listener was registered
-
-The following is an example of the three actions a client can make to update their current online status. They can either enter, update, or leave the channel presence:
+The @enter@ event is intentionally initiated by the client on behalf of the chat participant, allowing them to signify actions such as marking themselves as online upon logging into the platform. For instance, when dealing with a chat participant represented by a user object featuring a @status@ field, the @enter@ event can be triggered using the provided code snippet below. This code serves the purpose of setting the status of the chat participant to @online@, indicating their entry to the chat.
 
 ```[realtime_javascript]
-channel.presence.enter('online', (err) => {
-  console.log('member online')
-});
-
-channel.presence.update('updated', (err) => {
-  console.log('member updated')
-});
-
-channel.presence.leave('left', (err) => {
-  console.log('member left')
+channel.presence.enter((err) => {
+  user.status = “online”
 });
 ```
 
-h2(#subscribe). Subscribe to chat status events
-
-Subscribe to members' online status by registering a listener. Member events are emitted whenever a member enters or leaves the space, or updates their profile data. Use the subscribe() method on the members object of a space to receive updates.
-
-The following is an example of subscribing to the different member event types:
+When a chat participant initiates the @enter@ event, real-time notifications are dispatched to all subscribers of the associated presence channel. This functionality enables subscribers to promptly update the visual online status of the user, ensuring that everyone in the chat environment is informed of the user's current online presence.
 
 ```[realtime_javascript]
-// Subscribe to member enters a chatroom
-channel.presence.subscribe('entrance information', (memberUpdate) => {
-  console.log('Member ' + memberUpdate.clientId + ' entered chatroom')
-})
-
-// Subscribe to member profile data updates a chatroom
-channel.presence.subscribe('profile data update information', (memberUpdate) => {
-  console.log('Member ' + memberUpdate.clientId + ' updated their profile data in chatroom')
-})
-
-// Subscribe to members leaving a chatroom
-channel.presence.subscribe('member departure information', (memberUpdate) => {
-  console.log('Member ' + memberUpdate.clientId + ' left the chatroom')
+channel.presence.subscribe('enter', (member) => {
+  alert('Member ' + member.clientId + ' entered');
 });
 ```
 
-h2(#retrieve). Retrieve the status of other members
+h3. Leave
 
-The membership of the chatroom's presence set can be retrieved by calling the @get()@ method Presence object of a channel. This returns an array of all members currently present on the channel and is available using the REST and realtime interfaces of an Ably SDK.
-
-An Ably client connected using the realtime interface of an SDK is responsible for keeping track of the chatroom's presence set from the time that the channel is attached. An up to date presence set is pushed to the client following a channel attachment, and the presence set is updated on each subsequent presence event. This means that @get()@ returns the already known presence set retained in memory and does not trigger a new request to the Ably service.
-
-The REST interface of an Ably SDK queries the REST API directly. No presence state is cached in the SDK itself.
-
-The following is an example of retrieving the presence set for a channel:
+The @leave@ event is intentionally initiated by the client on behalf of the chat participant, providing a means to signify actions such as marking themselves as offline or logging out of the platform. For instance, when managing a chat participant represented by a user object featuring a @status@ field, the @leave@ event can be triggered using the provided code snippet below. This code snippet serves the purpose of setting the status of the chat participant to @offline@, indicating their departure from the chat platform.
 
 ```[realtime_javascript]
-channel.presence.get((err, members) => {
-  console.log('There are ' + members.length + ' members on this channel');
-  console.log('The first member has client ID: ' + members[0].clientId);
+channel.presence.leave((err) => {
+  user.status = “offline”
 });
 ```
 
-h2(#history). Status history
+When a chat participant triggers the @leave@ event all subscribers for this presence channel will be notified in real-time allowing them to update the visual online status of this user for everyone.
 
-"History":/storage-history/history provides access to instantaneous "live" history as well as the longer term persisted history for presence channels. If "persisted history":/storage-history/history#presence-history is enabled for the channel, then presence events will be stored for 24 or 72 hours, depending on your account package. If persisted history is not enabled, Ably retains the last two minutes of presence event history in memory.
+```[realtime_javascript]
+channel.presence.subscribe(‘leave’, (member) => {
+  alert('Member ' + member.clientId + ' left’);
+});
+```
 
-h2(#unstable-connections). Handle unstable connections and failures
+h3. Update
 
-Any time a channel is re-attached and the presence set is re-synced, e.g. after a short disconnection, the client will check whether any members it has entered into the presence set are there. If not, it will automatically re-enter them. This means that if a channel loses continuity (for example, because a client was disconnected from Ably for more than two minutes before reconnecting), then after the channel automatically re-attaches, any presence members it had previously entered will be restored.
+In certain chat instances, chat members can associate their chat participant status with a text-based status. For example, if you have a chat participant object (user) with the @statusMessage@ field, you can trigger an @update@ event using the code sample below to update this user with a new text-based string.
 
-The exception is if you use the "recover":/connect/states#recover feature to resume a previous connection with a fresh SDK instance (for example, to have continuity over a page refresh). In that case you will need to explicitly re-enter presence after you re-attach to the channel, due to the loss of SDK internal state.
+```[realtime_javascript]
+channel.presence.update('<NEW_STATUS_UPDATE>', (err) => {
+  user.statusMessage = '<NEW_STATUS_UPDATE>';
+});
+```
 
-Clients that are part of a presence set remain present for 15 seconds after they are abruptly disconnected, for example where the internet connection suddenly drops or the client is changing networks. This delay is to avoid repeated @leave@ and @enter@ events being sent when a client is experiencing an unstable connection.
+When a chat participant triggers the @update@ event all subscribers for this presence channel will be notified in real-time allowing them to update the string value of that chat participant's status of this user for everyone.
 
-The Ably SDK will attempt to "reconnect":/connect/states after a disconnect. If the connection is reestablished before 15 seconds have passed, a @leave@ event will not be sent. If the connection is reestablished after 15 seconds, a @leave@ event will be sent and the presence set will need to be rejoined.
+```[realtime_javascript]
+channel.presence.subscribe('update', (memberUpdate) => {
+  user.status =
+});
+```
 
-Note that the 15 second delay from being removed from the presence set is only for abrupt or unplanned disconnects. If a client calls "@leave()@":/api/realtime-sdk/presence#leave or "@close()@":/api/realtime-sdk/connection#close they immediately send a @leave@ event.
+h3. Other events / more information
 
-The time taken before a @leave@ event is sent in the case of an abrupt disconnect can be reduced to a minimum of 1 second by setting a value for @remainPresentFor@, in milliseconds. This property is set within the @transportParams@ property of the "@clientOptions@":/api/realtime-sdk#client-options object.
+The @present@ event is not relevant for chat participant statuses, however, if you wish to read more about other functionalities of presence, please refer to the "presence":/presence-occupancy/presence?lang=javascript#trigger-events docs page.
 
-It is important to note that it can initially take up to 30 seconds to identify that a client has been abruptly disconnected. Shorten the amount of time taken to identify abrupt disconnects using the "@heartbeatInterval@":/connect#heartbeats property if your app needs to quickly identify presence set members being abruptly disconnected.
+h2(#subscribe). Subscribe chat participants to events
 
-The following example code demonstrates establishing a connection to Ably with @remainPresentFor@ set to 1 second:
+Chat participant clients can subscribe to the presence set, enabling them to receive updates on other participants and update the UI accordingly (e.g., displaying online status icons).
+
+The message count within a presence set, like online status, can surge as the participant number grows. For instance, with 200 participants rapidly joining and leaving, the potential messages for online status alone could reach 80,400. The breakdown includes:
+
+200 chat participant messages published for the @enter@ event.
+200 × 200 (40,000) messages subscribed to for the @enter@ events.
+200 chat participant messages published for the @leave@ event.
+200 × 200 (40,000) presence messages subscribed to for the @leave@ event.
+
+For improved scalability, consider making your backend server the exclusive subscriber to chat participants' online status updates if your chat application anticipates a large number of participants. In this scenario, frontend clients can periodically request updates from the backend.
+
+h3. Channel separation
+
+Chat messages and chat participant status updates in one pub/sub channel would contain a large number of messages published. To avoid a potentially high volume of unnecessary messages, as well as the suggestion of only having your backend server being the exclusive subscriber to chat participants’ online status updates, it is also advised to have separate pub/sub channels for separate purposes. For example one for a specific chat room (e.g. general), while having a separate channel for the chat participants status (e.g. status-general) updates for that chat room. For example when issuing api keys to clients, issuing the clients the following “capabilities”:https://ably.com/docs/auth/capabilities :
+
+```
+{
+  "status-general": ["presence"],
+  "general": ["publish", "history", "subscribe"],
+}
+```
+
+Meanwhile the server can also subscribe to the chat participants channel with an api key having the following capabilities:
+
+```
+{
+  "status-general": ["presence", "subscribe"],
+  "general": ["publish", "history", "subscribe"],
+}
+```
+
+h2(#remain-present-for). Keep connected for period of time before removing chat participant
+
+Clients that are part of a chat participant presence set remain present, by default, for 15 seconds after they are abruptly disconnected. For example, when the internet connection suddenly drops or the client is changing networks. This delay is to avoid repeated @leave@ and @enter@ events being sent when a client is experiencing an unstable connection. A different disconnection timeout can be defined in the @remainPresentFor@ client configuration.
+
+Any clients that explicitly call @channel.presence.leave@ will immediately be removed from the chat participant presence set.
+
+The following example code demonstrates establishing a connection to Ably with @remainPresentFor@ set to 15 seconds:
 
 bc[jsall]. const ably = new Ably.Realtime(
   {
     key: '{{API_KEY}}',
-    transportParams: { remainPresentFor: 1000 }
+    transportParams: { remainPresentFor: 15000 }
   }
 );
+
+For more information handling unstable connections please refer to the “Presence documentation”:/docs/presence-occupancy/presence?lang=javascript#unstable-connections
