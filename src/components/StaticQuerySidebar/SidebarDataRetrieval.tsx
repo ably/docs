@@ -80,6 +80,20 @@ export const SidebarDataRetrieval = ({
           }
         }
       }
+      ChatLeftSidebar: pageFurnitureYaml(name: { eq: "ChatLeftSidebarMenu" }) {
+        items {
+          ...SubMenuFields
+          items {
+            ...SubMenuFields
+            items {
+              ...SubMenuFields
+              items {
+                ...SubMenuFields
+              }
+            }
+          }
+        }
+      }
       allDocumentPath {
         edges {
           node {
@@ -100,7 +114,7 @@ export const SidebarDataRetrieval = ({
 
   if (
     sidebarName !== undefined &&
-    (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar || data.LiveSyncLeftSidebar)
+    (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar || data.LiveSyncLeftSidebar || data.ChatLeftSidebar)
   ) {
     const sideBarItems =
       sidebarName === 'api-reference'
@@ -109,6 +123,8 @@ export const SidebarDataRetrieval = ({
         ? data.SpacesLeftSidebar.items
         : sidebarName === 'livesync'
         ? data.LiveSyncLeftSidebar.items
+        : sidebarName === 'chat'
+        ? data.ChatLeftSidebar.items
         : data.ChannelsLeftSidebar.items;
     sidebarData = sidebarDataFromPageFurniture(sideBarItems);
   } else {

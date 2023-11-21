@@ -18,4 +18,4 @@ export enum EXPAND_MENU {
   COLLAPSE_NEXT,
 }
 
-export type SidebarName = 'api-reference' | 'channels' | 'spaces' | 'livesync';
+export type SidebarName = 'api-reference' | 'channels' | 'spaces' | 'livesync' | 'chat';
