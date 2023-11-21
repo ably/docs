@@ -32,6 +32,8 @@ const getSidebarName = (currentProduct: string): SidebarName => {
       return 'api-reference';
     case 'spaces':
       return 'spaces';
+    case 'chat':
+      return 'chat';
     default:
       return assertNever(currentProduct);
   }

@@ -31,6 +31,7 @@ const ProductNavigation = ({ currentProduct = 'channels' }: { currentProduct?: s
   const onHome = currentProduct === 'home';
   const onSpaces = currentProduct === 'spaces';
   const onChannels = currentProduct === 'channels';
+  const onChat = currentProduct === 'chat';
 
   return (
     <nav
@@ -45,6 +46,9 @@ const ProductNavigation = ({ currentProduct = 'channels' }: { currentProduct?: s
       </Item>
       <Item to="/docs/products/spaces" active={onSpaces}>
         Spaces
+      </Item>
+      <Item to="/docs/products/chat" active={onChat}>
+        Chat
       </Item>
     </nav>
   );

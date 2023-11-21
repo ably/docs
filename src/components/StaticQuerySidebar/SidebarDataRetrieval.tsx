@@ -66,6 +66,20 @@ export const SidebarDataRetrieval = ({
           }
         }
       }
+      ChatLeftSidebar: pageFurnitureYaml(name: { eq: "ChatLeftSidebarMenu" }) {
+        items {
+          ...SubMenuFields
+          items {
+            ...SubMenuFields
+            items {
+              ...SubMenuFields
+              items {
+                ...SubMenuFields
+              }
+            }
+          }
+        }
+      }
       allDocumentPath {
         edges {
           node {
@@ -84,12 +98,17 @@ export const SidebarDataRetrieval = ({
 
   let sidebarData;
 
-  if (sidebarName !== undefined && (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar)) {
+  if (
+    sidebarName !== undefined &&
+    (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar || data.ChatLeftSidebar)
+  ) {
     const sideBarItems =
       sidebarName === 'api-reference'
         ? data.ApiLeftSidebar.items
         : sidebarName === 'spaces'
         ? data.SpacesLeftSidebar.items
+        : sidebarName === 'chat'
+        ? data.ChatLeftSidebar.items
         : data.ChannelsLeftSidebar.items;
     sidebarData = sidebarDataFromPageFurniture(sideBarItems);
   } else {
