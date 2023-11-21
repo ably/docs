@@ -1,0 +1,190 @@
+---
+title: SDK setup
+meta_description: "Install, authenticate and instantiate the Ably Realtime Data Models SDK."
+product: LiveSync
+---
+
+Use these instructions to install, authenticate and instantiate the Ably Realtime Data Models SDK.
+
+h2(#authenticate). Authenticate
+
+An "API key":/auth#api-keys is required to authenticate with Ably. API keys are used either to authenticate directly with Ably using "basic authentication":/auth/basic, or to generate tokens for untrusted clients using "token authentication":/auth/token.
+
+<aside data-type='important'>
+<p>The examples use "basic authentication":/auth/basic to demonstrate features for convenience. In your own applications, basic authentication should never be used on the client-side as it exposes your Ably API key. Instead use "token authentication":/auth/token. </p>
+</aside>
+
+"Sign up":https://ably.com/sign-up to Ably to create an API key in the "dashboard":https://ably.com/dashboard or use the "Control API":/account/control-api to create an API programmatically.
+
+API keys and tokens have a set of capabilities assigned to them that specify which operations, such as @subscribe@ or @publish@ can be performed on which resources. To use the Ably Realtime Data Models SDK, the API key requires the following "capabilities":/auth/capabilities#58: 
+
+* Publish
+* Subscribe
+* Presence
+* History
+
+h2(#install). Install
+
+The Realtime Data Models SDK is a JavaScript (TypeScript) library that enables you to create live and observable data models in your frontend application. These models remain synchronized with the realtime state of your database model. You can easily integrate this SDK into your project regardless of your frontend framework preference.
+
+Your backend publishes mutation events to Ably. The Realtime Data Models SDK updates your frontend app's local state. You can also pair the SDK with *Ably's Database Connector* to transmit transactional change events with your database mutations.
+
+The Realtime Data Models SDK is available as an "NPM module":#npm.
+
+h3(#npm1). Use NPM
+
+Install the Ably JavaScript SDK and the Realtime Data Models SDK:
+
+```
+npm install ably @ably-labs/models
+```
+
+
+h3(#npm-link). Use the NPM link
+
+Clone this repository and run @npm link@:
+
+```
+git clone git@github.com:ably-labs/models.git
+cd models
+npm link
+```
+
+From your project, link to the cloned project and build:
+
+```
+cd ./your/project
+npm link @ably-labs/models
+pushd ./node_modules/@ably-labs/models
+npm run build
+popd
+```
+
+You should now be able to import @@ably-labs/models@ in your project.
+
+h2(#instantiate). Instantiate
+
+To instantiate the Realtime Data Models SDK, create an "Ably client":/getting-started/setup?lang=javascript and pass it into the @ModelsClient@ constructor:
+
+```
+import ModelsClient from '@ably-labs/models';
+import { Realtime } from 'ably';
+
+const ably = new Realtime.Promise({ key: 'YOUR_ABLY_API_KEY' });
+const modelsClient = new ModelsClient({ ably });
+```
+
+h2(#create-model). Create a model
+
+A @model@ represents a live, observable data model supported by the database.
+
+To create a model, you need to:
+
+1. Define the model's data structure in the frontend application.
+2. Initialize the model.
+3. Update the model based on events from the backend.
+4. Determine how end-users can modify the model.
+
+h3(#structure). Ably Realtime Data Models structure
+
+The structure of the models data as it is used in the frontend application:
+
+```
+type Post = {
+  id: number;
+  text: string;
+  comments: string[];
+}
+```
+
+h3(#initialise). Initialise
+
+An example function used by the model to initialise with the correct data from your backend:
+
+```
+async function sync() {
+  const result = await fetch('/api/post');
+  return result.json();
+};
+```
+
+h3(#merge). Merge change event
+
+The function used by the model to merge a change event that is received and the existing model state:
+
+```
+async function merge(state: Post, event: OptimisticEvent | ConfirmedEvent) {
+  return {
+    ...state,
+    text: event.data, // replace the previous post text field with the new value
+  }
+};
+```
+
+h3(#mutate). Mutate model data
+
+A function that you can use to mutate the model data in your backend:
+
+```
+async function updatePost(mutationID: string, content: string) {
+  const result = await fetch(`/api/post`, {
+    method: 'PUT',
+    body: JSON.stringify({ mutationID, content }),
+  });
+  return result.json();
+};
+```
+
+h3(#new-model-instance). Create a new model instance
+
+Create a new model instance called @post@ by passing the sync and merge functions:
+
+```
+const model = modelsClient.models.get({
+  name: 'post',
+  channelName: 'models:posts',
+  sync: sync,
+  merge: merge,
+});
+```
+
+h3(#live-changes). Subscribe to live changes
+
+Subscribe to live changes to the model data:
+
+```
+model.subscribe((err, post) => {
+  if (err) {
+    throw err;
+  }
+  console.log('post updated:', post);
+});
+```
+
+h3(#optimistic-update). Apply an optimistic update to the model
+
+@confirmation@ is a promise that resolves when the optimistic update is confirmed by the backend. @cancel@ is a function that can be used to cancel and rollback the optimistic update.
+
+```
+const [confirmation, cancel] = await model.optimistic({
+    mutationID: 'my-mutation-id',
+    name: 'updatePost',
+    data: 'new post text',
+})
+```
+
+h3(#change-to-backend). Apply change to the backend
+
+Call your backend to apply the actual change:
+
+```
+updatePost('my-mutation-id', 'new post text')
+```
+
+h3(#confirm-changes). Confirm changes
+
+Wait for confirmation of the change from the backend:
+
+```
+await confirmation;
+```
