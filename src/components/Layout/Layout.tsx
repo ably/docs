@@ -16,6 +16,7 @@ interface LayoutProps {
   noSidebar?: boolean;
   collapsibleSidebar?: boolean;
   children: ReactNode;
+  showSearchBar?: boolean;
 }
 
 function assertNever(name: string): never {
@@ -44,6 +45,7 @@ const Layout: React.FC<LayoutProps> = ({
   currentProduct,
   noSidebar = false,
   collapsibleSidebar = false,
+  showSearchBar,
 }) => {
   const sidebarName = getSidebarName(currentProduct);
   const showSidebar = !noSidebar;
@@ -60,7 +62,7 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <GlobalLoading>
-      <Header sidebarName={sidebarName} />
+      <Header sidebarName={sidebarName} showSearchBar={showSearchBar} />
       {showProductNavigation && <ProductNavigation currentProduct={currentProduct} />}
 
       {showSidebar && <LeftSideBar sidebarName={sidebarName as SidebarName} collapsible={collapsibleSidebar} />}

@@ -22,7 +22,7 @@ export const SearchBar = ({
   displayLocation,
   extraStyleOptions,
 }: {
-  displayMode: DisplayMode;
+  displayMode?: DisplayMode;
   displayLocation?: string;
   extraStyleOptions?: object;
 }) => {
