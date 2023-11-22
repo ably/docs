@@ -18,10 +18,6 @@ export const SdkCard = ({ title, content, image, callToAction }: CardProps) => (
       ) : null}
     </div>
 
-    <StaticImage
-      src={`/images/homepage/${image}.png}`}
-      srcSet={`/images/homepage/${image}.png, /images/homepage/${image}@2x.png 2x`}
-      style={{ maxWidth: '409px' }}
-    />
+    <StaticImage src={`/images/homepage/${image}@2x.png`} style={{ maxWidth: '409px' }} />
   </div>
 );
