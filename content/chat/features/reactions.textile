@@ -5,3 +5,124 @@ product: chat
 languages:
   - javascript
 ---
+
+In most chat environments you will have encountered some form of message reactions. The ability to add a reaction such as an emoji to existing sent messages is an important piece of functionality for the users to express their opinion without replying with text to a specific message.
+
+This page delves into the mechanics of implementing a message reactions feature, showing how it dynamically updates in response to users whenever someone reacts to a message.
+
+To use message reactions, you’ll need to enable this feature as a new “Channel rule” within your application in the dashboard. The namespace for your reactions will need to be prefixed within this “Channel rule”, which would allow you to predefine reaction channel names and match them to your normal channel names. For example, if you have a channel called “general” you could have a message reaction channel called “reaction:general”.
+
+Once a channel has message interactions enabled, messages received on that channel will contain a unique @timeSerial@ that can be referenced by later messages. These message interactions also add a @ref@ object to message payloads that enables you to indicate what an interaction represents, and which message it is referring to. The @ref@ object contains two fields:
+
+- @type@ (String) := a constant representing the reason for the interaction.
+- @timeSerial@ (String) := a unique identifier used to reference a specific message, automatically generated when messages are sent in message interaction enabled channels.
+
+<aside data-type='note'>
+<p>If you want to limit the ability of users to use message interactions you can use "JWT authenticated user claims":/auth/capabilities#custom-restrictions.</p>
+</aside>
+
+Message reactions are only supported by the Ably JavaScript SDK.
+
+  <!-- DASHBOARD-INSTRUCTION: Enable message interactions -->
+  To enable message interactions for a channel:
+
+  1. Login to your "Ably dashboard":https://ably.com/login.
+  2. Select the app you are working with.
+  3. Click *Settings* on the right side of the navigation bar.
+  4. Scroll down to *Channel rules* and click *Add new rule*.
+  5. Give your new rule a Namespace or provide a specific Channel ID.
+  6. Select the *Message interactions enabled* checkbox then click *Create channel rule*.
+
+  <a href="/images/realtime/message-interactions.png" target="_blank">
+    <img src="/images/realtime/message-interactions.png" style="max-width:80%" alt="Message interactions in dashboard">
+  </a>
+
+  You now have a namespace based rule you can apply to channels to enable message interactions or a specific channel with message interactions enabled.
+
+  h3(#use-reactions). Use message reactions
+
+  Once message interactions have been enabled for a channel you can use message reactions. The @timeSerial@ of previous messages is now referenceable to publish reactions. All messages sent on channels that have interactions enabled will automatically include a @timeSerial@.
+
+  To reference a previous message, include the @ref@ object inside the @extras@ object with:
+
+  * A @type@ constant string defining the reason for reactions. Note that Ably has reserved strings beginning with @com.ably.@.
+  * The @timeserial@ string of the message to interact with.
+
+  The following is an example of sending an emoji reaction:
+
+  ```[javascript]
+  function sendReaction(emoji) {
+    channel.publish({ name: 'event_name', data: emoji, extras: { ref: { type: "com.ably.reaction", timeserial: "1656424960320-1" } } })
+  }
+  ```
+
+  ```[nodejs]
+  function sendReaction(emoji) {
+    channel.publish({ name: 'event_name', data: emoji, extras: { ref: { type: "com.ably.reaction", timeserial: "1656424960320-1" } } })
+  }
+  ```
+
+  h3(#listener-reactions). Create a listener
+
+  Regular listeners will receive all messages (including those containing a reference), but it is possible to filter specifically for messages with or without a reference by supplying a filter object. A @filter object@ can contain any number of the following fields:
+
+  - @refTimeserial@ (String) := filter containing a specific message timeserial (for example: @v1b25XrTDg:0@).
+  - @refType@ (String) := filter for a specific reference type (for example: @com.ably.reaction@).
+  - @isRef@ (Boolean) := filter for messages that only do or do not reference another message.
+
+  h3(#subscribe-reactions). Subscribe to reactions
+
+  Subscribing to reactions involves sending a filter object defining the specific interaction you're interested in.
+
+  To subscribe to all reaction interactions:
+
+  ```[realtime_javascript]
+  channel.subscribe({
+    refType: "com.ably.reaction"
+  }, onReaction);
+  ```
+
+  ```[realtime_nodejs]
+  channel.subscribe({
+    refType: "com.ably.reaction"
+  }, onReaction);
+  ```
+
+  To subscribe to reactions to a specific message:
+
+  ```[realtime_javascript]
+  channel.subscribe({
+    refType: "com.ably.reaction"
+    refTimeserial: "v1b25XrTDg:0"
+  }, onReference);
+  ```
+
+  ```[realtime_nodejs]
+  channel.subscribe({
+    refType: "com.ably.reaction"
+    refTimeserial: "v1b25XrTDg:0"
+  }, onReference);
+  ```
+
+  h3(#unsubscribe-reactions). Unsubscribe from reactions
+
+  Unsubscribing works similar to subscribing, you can unsubscribe by:
+
+  * Passing the filter object to "@unsubscribe()@":/api/realtime-sdk/channels#unsubscribe and, or
+  * Passing the filter function to "@unsubscribe()@":/api/realtime-sdk/channels#unsubscribe
+
+  For example, to unsubscribe to reactions:
+
+  ```[realtime_javascript]
+  channel.unsubscribe({
+    refType: "com.ably.reaction"
+  });
+  ```
+
+  ```[realtime_nodejs]
+  channel.unsubscribe({
+    refType: "com.ably.reaction"
+  });
+  ```
+
+  Passing a filter object will unsubscribe every listener attached to that particular filter unless you also pass the filter function. Unsubscribing with a filter requires *exactly* the same filter object to be passed in.
