@@ -1,0 +1,93 @@
+---
+title: Database Setup
+product: Livesync
+---
+
+The Database Connector requires two tables to exist in your database: an outbox table and a nodes table. For more information, see "Outbox Table":/connector/tables and "Nodes Table":/:/connector/tables.
+
+h2(#creating-tables). Creating the tables
+
+h3(#using-cli-cmd). Using the CLI Command
+
+You can use the create table command to automatically create the required tables in your database.
+
+Note: If using this command, you must configure the application to use a PostgreSQL user that has been granted @CREATE@ permissions on the desired schemas.
+
+```
+docker run -it --entrypoint="/adbc" ghcr.io/ably-labs/adbc:latest create tables
+```
+
+The table names and schemas are specified via the following configuration options:
+
+* ADBC_OUTBOX_TABLE_TABLE_SCHEMA
+* ADBC_OUTBOX_TABLE_TABLE_NAME
+* ADBC_NODES_TABLE_TABLE_SCHEMA
+* ADBC_NODES_TABLE_TABLE_NAME
+
+For more information, see "Frequently Used Configuration":/connector/configuration.
+
+h3(#using-auto-create). Using Auto-create
+
+Alternatively, you can use the @ADBC_NODES_TABLE_AUTO_CREATE@ and @ADBC_OUTBOX_TABLE_AUTO_CREATE@ configuration options to configure the Database Connector to create the tables if they don’t already exist on startup.
+
+If @ADBC_POLL_FIXED_RATE@ is set to false (which is the default), @ADBC_OUTBOX_TABLE_AUTO_CREATE@ will also create a "trigger":https://www.postgresql.org/docs/current/sql-createtrigger.html that invokes a function that uses "LISTEN/NOTIFY":https://www.postgresql.org/docs/current/sql-notify.html to notify the application when new data is inserted into the outbox table.
+
+h3(#apply-migrations-manually). Applying Migrations Manually
+
+If you want to apply migrations to your database, use the following DDL:
+
+```
+CREATE TABLE IF NOT EXISTS your_nodes_table (
+	id TEXT PRIMARY KEY,
+    expiry TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS your_outbox_table (
+	sequence_id  serial PRIMARY KEY,
+	mutation_id  TEXT NOT NULL,
+	channel      TEXT NOT NULL,
+	name         TEXT NOT NULL,
+	rejected     boolean NOT NULL DEFAULT false,
+	data         JSONB,
+	headers      JSONB,
+	locked_by    TEXT,
+	lock_expiry  TIMESTAMP WITHOUT TIME ZONE,
+	processed    BOOLEAN NOT NULL DEFAULT false
+```
+
+If you are using the default value of false for @ADBC_POLL_FIXED_RATE@, the application will use a "trigger":https://www.postgresql.org/docs/current/sql-createtrigger.html with "LISTEN/NOTIFY":https://www.postgresql.org/docs/current/sql-notify.html to only poll for records when the data in the outbox changes. To support this behaviour, create a function in the same schema as your outbox table with the same name as the outbox table with a suffix of @_notify@:
+
+```
+CREATE OR REPLACE FUNCTION YOUR_OUTBOX_TABLE_SCHEMA.YOUR_OUTBOX_TABLE_NAME_notify()
+RETURNS trigger AS $$
+BEGIN
+	PERFORM pg_notify('ably_adbc'::text, ''::text);
+	RETURN NULL;
+EXCEPTION
+	-- ensure this function can never throw an uncaught exception
+	WHEN others THEN
+		RAISE WARNING 'unexpected error in %s: %%', SQLERRM;
+		RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+Create a trigger in the same schema as your outbox table with the same name as the outbox table with a suffix of _trigger that invokes the function when new data is inserted into the outbox table:
+
+```
+CREATE TRIGGER YOUR_OUTBOX_TABLE_SCHEMA.YOUR_OUTBOX_TABLE_NAME_trigger
+AFTER INSERT ON YOUR_OUTBOX_TABLE_SCHEMA.YOUR_OUTBOX_TABLE_NAME
+FOR EACH STATEMENT EXECUTE PROCEDURE YOUR_OUTBOX_TABLE_SCHEMA.YOUR_OUTBOX_TABLE_NAME_notify();
+```
+
+For more information, see "Change Detection":/connector/tables.
+
+h2(#permissions). Permissions
+
+The Database Connector will connect to your PostgreSQL database using the connection details you specify in your configuration. The PostgreSQL user utilised used by the Database Connector requires SELECT and DELETE privileges on your outbox and nodes tables:
+
+```
+The Database Connector will connect to your PostgreSQL database using the connection details you specify in your configuration. The PostgreSQL user utilised used by the Database Connector requires SELECT and DELETE privileges on your outbox and nodes tables.
+```
+
+Additional permissions may be required when using other commands in the Database Connector utility, such as @create tables@.

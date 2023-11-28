@@ -1,0 +1,232 @@
+---
+title: Getting Started
+product: Livesync
+---
+
+The Database Connector uses the "outbox pattern":https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html to broadcast application-specific change events from your database to frontend clients via "Ably Channels":/docs/channels. 
+
+When you update the data in your database, you record a change event transactionally in a dedicated "outbox table":https://docs.google.com/document/d/19BJ4oYC3ah4wFH0VS5Qv6qHe3qmRS_PpNLSytTOi9tc/edit#heading=h.r00ywdkts746. The Database Connector detects new changes in the outbox and publishes them as messages on Ably Channels. Using the Models SDK, your client applications subscribe to these change events and update their local state with the new data.
+
+The Database Connector is currently a Docker container image that can run on your own infrastructure. If you want to use an Ably-hosted version, please "reach out":https://docs.google.com/forms/d/e/1FAIpQLSd00n1uxgXWPGvMjKwMVL1UDhFKMeh3bSrP52j9AfXifoU-Pg/viewform.
+
+You can access the Database Connector through a Docker container image, allowing you to run it on your infrastructure in close proximity to your database.
+
+```[sh]
+docker pull ghcr.io/ably-labs/adbc:latest
+```
+
+You can deploy this container image on any cloud infrastructure platform that supports running Docker container images.
+For more information on setting up the required tables in your database, see "Creating the Tables":/livesync/connector/tables.
+
+h2(#local-development). Local Development
+
+In this guide demonstrate the use of "Docker Compose":/https://docs.docker.com/compose/ to spin up a PostgreSQL database and a Database Connector instance on your local machine.
+First, create a docker-compose.yml file with the following contents:
+
+First, create a docker-compose.yml file with the following contents:
+
+```[YAML]
+version: '3'
+
+
+services:
+ adbc:
+   image: ghcr.io/ably-labs/adbc:latest
+   env_file:
+     - adbc.env # load config from env file
+
+
+   ## Uncomment below if you want to load config from your adbc.yaml file,
+   ## which takes precendence over config from the env.
+   # volumes:
+   #   - ./adbc.yaml:/adbc.yaml:ro # mount yaml config file
+
+
+   depends_on:
+     postgres:
+       condition: service_healthy
+   networks:
+     adbc_network:
+      postgres:
+   image: postgres:11-alpine
+   ports:
+     - 5432:5432
+   environment:
+     POSTGRES_USER: postgres
+     POSTGRES_PASSWORD: postgres
+     POSTGRES_DB: postgres
+   healthcheck:
+     test: ["CMD", "pg_isready", "-q", "-d", "postgres", "-U", "postgres"]
+     interval: 2s
+     retries: 30
+   networks:
+     adbc_network:
+   volumes:
+     - adbc_postgres_data:/var/lib/postgresql/data
+
+
+volumes:
+ adbc_postgres_data:
+
+
+networks:
+ adbc_network:
+```
+To configure the Database Connector, you have three options: environment variables, YAML configuration file, or via CLI flags. For more information, see "Specifying Configuration":/livesync/configuration.
+This guide configures the Database Connector using environment variables stored in a local file.
+
+This guide configures the Database Connector using environment variables stored in a local file.
+
+
+This guide configures the Database Connector using environment variables stored in a local file.
+
+1. Create a file called @adbc.env@ with the following minimal configuration:
+
+```[sh]
+ADBC_ABLY_API_KEY=YOUR_ABLY_API_KEY
+ADBC_POSTGRES_CONNECTION_URI=postgres://postgres:postgres@postgres:5432/postgres
+ADBC_OUTBOX_TABLE_AUTO_CREATE=true
+ADBC_NODES_TABLE_AUTO_CREATE=true
+```
+
+Replace _YOUR_ABLY_API_KEY_ with your Ably API key. Ensure your Ably API key has publish capabilities on all channels you intend to use.
+
+The @docker-compose.yml@ will load this configuration into the @adbc@ container as environment variables.
+
+Note: The ADBC_POSTGRES_CONNECTION_URI uses postgres as the host in order to talk to the postgres database container on the adbc_network.
+
+Note: The ADBC_OUTBOX_TABLE_AUTO_CREATE and ADBC_NODES_TABLE_AUTO_CREATE configuration options instruct the Database Connector to create the required tables in the database upon startup. For more information, see "Frequently Used Configuration":#frequently-used-configuration.
+
+2. Spin up the containers:
+
+```[sh]
+docker compose up --build
+```
+
+3. To check everything is running correctly, ping the "health endpoint:/connector/monitor" on adbc:
+
+```[sh]
+curl localhost:2259/health                                                                                                                              
+```
+
+You should now see:
+
+``` [JSON]
+{"ably":{"status":"up"},"nodes_table":{"status":"up"},"outbox_table":{"status":"up"},"postgres":{"status":"up"}}
+```
+
+Now that a PostgreSQL database and Database Connector instance are running locally, the next step is to write a record to the outbox table and confirm that it gets published over Ably:
+
+1. Open a terminal and subscribe to an Ably channel named foo using "Server-Sent Events (SSE)://docs/protocols/sse":
+
+```[sh]
+curl -s -u "YOUR_ABLY_API_KEY" "https://realtime.ably.io/sse?channel=foo&v=1.1"
+```
+
+Replace YOUR_ABLY_API_KEY with your Ably API key.
+
+2. Run the following command to add a record to the outbox table in your PostgreSQL database. Execute a SQL statement against the database using the psql tool available in the postgres container:
+
+```
+docker exec -it -u postgres adbc-postgres \
+    psql postgres://postgres:postgres@postgres:5432/postgres \
+    -c "INSERT INTO outbox (mutation_id, name, channel, data, headers) \
+       VALUES ('1', 'test', 'foo', '{}', '{}');"
+```
+
+3. The Database Connector will detect and publish the newly inserted record as a message to the Ably channel specified in the record (in this case, foo). You should receive a response similar to the following over your SSE connection to Ably. This output indicates that you have successfully received the event over Ably:
+
+```
+id: 108GsR8ewBVHhJ@1700069266489-0
+event: message
+data: {"id":"1","connectionId":"CaqkrZ2N_0","timestamp":1700069266050,"encoding":"json","extras":{"headers":{"x-ably-models-event-uuid":"1"}},"channel":"foo","data":"{}","name":"test"}
+```
+
+h2(#local-development). Local Development
+
+This guide will cover deploying a PostgreSQL database and a Database Connector instance on Railway cloud.
+
+First, sign up to Railway and create a free account. Then, install the Railway CLI and log in:
+
+```[sh]
+npm i -g @railway/cli
+railway login
+```
+
+Create a new Railway project and link it to your project directory:
+
+```[sh]
+railway init
+# Enter a project name, e.g., "adbc-test"
+
+railway link
+```
+
+Add a PostgreSQL plugin to your project:
+
+```[sh]
+railway add --plugin postgresql
+```
+
+Railway requires a Dockerfile that defines the application you want to deploy. Use the following command to create a new file called Dockerfile which creates a new image using adbc as the base:
+
+```[sh]
+echo "FROM ghcr.io/ably-labs/adbc:latest" > Dockerfile
+```
+
+Deploy your application using Railway. This process will build the adbc container image from the Dockerfile located in the project root and deploy it to your Railway project.
+
+```[sh]
+railway up --detach
+```
+
+Note that the app has not yet been configured, so although the adbc instance will be created in your Railway project, it will crash on startup. You’ll see error logs such as  ‘Error: invalid config: invalid ably config: API key not provided’. The next section will resolve this issue.
+
+To proceed, open your project in the Railway console:
+
+```[sh]
+railway open
+```
+
+Select the “adbc-test” service, then navigate to Variables -> RAW Editor. In this section, paste the following variables:
+
+```[sh]
+ADBC_ABLY_API_KEY=YOUR_ABLY_API_KEY
+ADBC_POSTGRES_CONNECTION_URI=${{Postgres.DATABASE_URL}}
+ADBC_OUTBOX_TABLE_AUTO_CREATE=true
+ADBC_NODES_TABLE_AUTO_CREATE=true
+```
+Replace YOUR_ABLY_API_KEY with your Ably API key.
+
+Note: The ADBC_POSTGRES_CONNECTION_URI uses postgres as the host in order to talk to the postgres database container on the adbc_network.
+
+Note: The ADBC_OUTBOX_TABLE_AUTO_CREATE and ADBC_NODES_TABLE_AUTO_CREATE configuration options instruct the Database Connector to create the required tables in the database upon startup. For more information, see "Frequently Used Configuration":#frequently-used-configuration.
+
+Railway will restart the “adbc-test” service with the newly applied configuration.
+
+With a PostgreSQL database and Database Connector instance running on Railway, the next step is to write a record to the outbox table and confirm it’s published over Ably:
+
+1. Open a terminal and subscribe to an Ably channel named foo using "Server-Sent Events (SSE)://docs/protocols/sse":
+
+```[sh]
+curl -s -u "YOUR_ABLY_API_KEY" "https://realtime.ably.io/sse?channel=foo&v=1.1"
+```
+Replace YOUR_ABLY_API_KEY with your Ably API key.
+
+2. Run the following command to add a record to the outbox table in your PostgreSQL database. Execute a SQL statement against the database using the Railway CLI:
+
+```[sh]
+railway connect postgres
+
+railway=# INSERT INTO outbox (mutation_id, name, channel, data, headers)
+VALUES ('1', 'test', 'foo', '{}', '{}');
+```
+
+3. The Database Connector will detect and publish the newly-inserted record as a message to the Ably channel specified in the record (in this case, foo). You should receive a response similar to the following over your SSE connection to Ably. This output indicates that you have successfully received the event over Ably:
+
+```
+id: 108GsR8ewBVHhJ@1700069266489-0
+event: message
+data: {"id":"1","connectionId":"CaqkrZ2N_0","timestamp":1700069266050,"encoding":"json","extras":{"headers":{"x-ably-models-event-uuid":"1"}},"channel":"foo","data":"{}","name":"test"}
+```
+
