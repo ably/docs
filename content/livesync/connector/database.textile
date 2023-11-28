@@ -1,0 +1,198 @@
+---
+title: Database setup
+meta_description: "The Ably Database Connector requires two tables in your database to run. See how to create each table and the privileges required to utilize them."
+product: livesync
+---
+
+The Ably Database Connector requires two tables to exist in your database, an "outbox table":#outbox and a "nodes table":#nodes.
+
+h2(#create). Create tables
+
+The required tables can be created using the "CLI":#cli or created "automatically":#auto on startup of the Database Connector.
+
+h3(#cli). Using the CLI
+
+Use the "@create tables@":#create command to automatically create the required tables in your database. This requires the application to use a PostgreSQL user that has been granted @CREATE@ permissions on the desired schemas.
+
+The following is an example command to create the required tables:
+
+```[sh]
+docker run -it --entrypoint="/adbc" ghcr.io/ably-labs/adbc:latest create tables
+```
+
+The table names and schemas are specified via the following "configuration options":/livesync/connector#options
+
+* @ADBC_OUTBOX_TABLE_TABLE_SCHEMA@
+* @ADBC_OUTBOX_TABLE_TABLE_NAME@
+* @ADBC_NODES_TABLE_TABLE_SCHEMA@
+* @ADBC_NODES_TABLE_TABLE_NAME@
+
+h3(#auto). Using auto-create
+
+Use the @ADBC_NODES_TABLE_AUTO_CREATE@ and @ADBC_OUTBOX_TABLE_AUTO_CREATE@ "configuration options":/livesync/connector#options to set the Database Connector to create the tables at startup, if they don't already exist.
+
+If @ADBC_POLL_FIXED_RATE@ is set to @false@ (which is the default value), @ADBC_OUTBOX_TABLE_AUTO_CREATE@ will also create a "trigger":https://www.postgresql.org/docs/current/sql-createtrigger.html that invokes a function that uses "LISTEN/NOTIFY":https://www.postgresql.org/docs/current/sql-notify.html to notify the application when new data is inserted into the outbox table.
+
+h3(#migrations). Apply database migrations
+
+To apply migrations to your database, use the following DDL:
+
+```[text]
+CREATE TABLE IF NOT EXISTS your_nodes_table (
+  id TEXT PRIMARY KEY,
+  expiry TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS your_outbox_table (
+	sequence_id  serial PRIMARY KEY,
+	mutation_id  TEXT NOT NULL,
+	channel      TEXT NOT NULL,
+	name         TEXT NOT NULL,
+	rejected     boolean NOT NULL DEFAULT false,
+	data         JSONB,
+	headers      JSONB,
+	locked_by    TEXT,
+	lock_expiry  TIMESTAMP WITHOUT TIME ZONE,
+	processed    BOOLEAN NOT NULL DEFAULT false
+);
+```
+
+If you are using the default value of @false@ for @ADBC_POLL_FIXED_RATE@, the application will use a "trigger":https://www.postgresql.org/docs/current/sql-createtrigger.html with "LISTEN/NOTIFY":https://www.postgresql.org/docs/current/sql-notify.html to only poll for records when the data in the outbox changes. To support this behavior, create a function in the same schema as your outbox table with the same name as the outbox table with a suffix of @_notify@. For example:
+
+```[text]
+CREATE OR REPLACE FUNCTION YOUR_OUTBOX_TABLE_SCHEMA.YOUR_OUTBOX_TABLE_NAME_notify()
+RETURNS trigger AS $$
+BEGIN
+	PERFORM pg_notify('ably_adbc'::text, ''::text);
+	RETURN NULL;
+EXCEPTION
+	-- ensure this function can never throw an uncaught exception
+	WHEN others THEN
+		RAISE WARNING 'unexpected error in %s: %%', SQLERRM;
+		RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+Create a trigger in the same schema as your outbox table with the same name as the outbox table with a suffix of @_trigger@ that invokes the function when new data is inserted into the outbox table. For example:
+
+```[text]
+CREATE TRIGGER your_outbox_table_schema.your_outbox_table_name_trigger
+AFTER INSERT ON your_outbox_table_schema.your_outbox_table_name
+FOR EACH STATEMENT EXECUTE PROCEDURE
+your_outbox_table_schema.your_outbox_table_name_notify();
+```
+
+h2(#privileges). Privileges
+
+The Database Connector only needs to interact with the "outbox":#outbox and "nodes":#nodes tables and does not rely on any other state in the database. This simplifies the security model as the Database Connector's permissions can be locked down to specific tables.
+
+The Database Connector will connect to your PostgreSQL database using the connection details specified in your configuration. The PostgreSQL user used by the Database Connector requires @SELECT@ and @DELETE@ privileges on the outbox and nodes tables.
+
+The following is an example of creating a role with the necessary privileges against each table:
+
+```[text]
+CREATE ROLE YOUR_USER LOGIN PASSWORD 'your_database' VALID UNTIL 'infinity';
+GRANT CONNECT ON DATABASE your_database to your_user_USER;
+GRANT SELECT ON your_outbox_schema.your_outbox_table to your_user;
+GRANT DELETE ON your_outbox_schema.your_outbox_table to your_user;
+GRANT SELECT ON your_nodes_schema.your_nodes_table to your_user;
+GRANT DELETE ON your_nodes_schema.your_nodes_table to your_user;
+```
+
+<aside data-type='note'>
+<p>Additional privileges may be required when using other utility commands in the Database Connector, such as @create tables@.</p>
+</aside>
+
+h2(#outbox). Outbox table
+
+The Database Connector uses the "outbox pattern":https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html to send realtime, application-defined change events via Ably's global edge messaging platform. The outbox pattern enables you to reliably publish an ordered sequence of change event messages over Ably, providing exactly-once delivery guarantees.
+
+The outbox pattern uses an outbox table that you create in your database.
+
+The Database Connector automatically observes new records written to the outbox table and publishes them as messages over Ably channels.
+
+When your backend server processes a request to update data in your database, it should write a corresponding change event to the outbox table in the same transaction as the underlying mutation:
+
+```[text]
+BEGIN;
+-- mutate your data, e.g.:
+INSERT INTO comments (comment) VALUES ('New comment!');
+-- write change event to outbox, e.g.:
+INSERT INTO outbox (mutation_id, channel, name, ...) VALUES ('my-mutation-id', 'posts:123', 'addComment', ...);
+COMMIT;
+```
+
+The Database Connector will publish the change event, written to the outbox, to the Ably channel in the exact order in which the underlying change to the data is committed to the database.
+
+The Database Connector automatically deletes records from the table when records are successfully processed.
+
+<aside data-type='note'>
+<p>The Database Connector will always keep at least one outbox record in the table, specifically the one with the largest @sequence_id@. This record is still marked as processed via a tombstone and will be deleted when subsequent records are written to the outbox. This approach ensures that the backend endpoint called by your "sync function":/livesync/models#sync can always obtain the @sequence_id@ at the time that the state is read from the database.</p>
+</aside>
+
+h3(#why). Why use an outbox pattern?
+
+Clients using the "Models SDK":/livesync/models observe changes to the database state by consuming a stream of ordered database change events. An update to the data in the database must happen atomically, with the corresponding change event broadcast to all clients, so that they see a consistent view of the data.
+
+The Database Connector uses an outbox table to capture change events like this. When you update data in the database, you write a change event record to the outbox in the same database transaction as the update. This process ensures that change event records are written atomically to the outbox with the underlying update in the correct order.
+
+The Database Connector automatically retries failed publishes and only marks records as processed in the outbox after successfully publishing them. It uses idempotent publishing to ensure that messages are delivered without duplication, exactly-once.
+
+An additional benefit of the outbox pattern is that it decouples the underlying database schema from the change event schema published over Ably. This separation lets you adapt your database schema and data models without altering the code of your subscribing applications.
+
+With explicit outbox writes, you maintain complete control over which data changes trigger publishes, enabling you to synchronize only the changes required by your application.
+
+You also have total authority over the channels to which change events are published:
+
+* You can distribute change notifications across various "channels":/channels according to the requirements of your application.
+* Channels provide a mechanism for data access control via channel "capabilities":/auth/capabilities.
+
+h3(#schema). Schema
+
+The following table describes the schema of the outbox table in your database:
+
+|_. Field |_. Type |_. Required on write? |_. Example Value |_. Description |
+| @sequence_id@ | Serial integer (primary key) | No (automatically assigned) | @1@ | Monotonically increasing identifier that determines publish order within the scope of the channel. |
+| @mutation_id@ | String | Yes | @680f3f78-21ec-49a0-be99-25f89a84f232@ | The ID of the mutation, used for correlating the outbox event with an optimistic event applied locally on the client. |
+| @channel@ | String | Yes | @documents@ | The "channel":/channels name on which to publish this change event. |
+| @name@ | String | Yes | @edit@ | The message event name to use when publishing the message. |
+| @rejected@ | Boolean | No (defaults to FALSE) | @FALSE@ | True if the event rejects a client side change, false to confirm the change. Defaults to false (confirming the change). |
+| @data@ | JSON | Yes | @{ "read": false, "data": { "timestamp": 1674744488658, "body": "Lorem ipsum" } }@ | The message payload to use when publishing the message. |
+| @headers@ | JSON | No (optional) | @{ "id": 123, "type": "document", "author": "socrates", "pages": [1, 5, 7] }@ | A set of message attributes, provided under the headers key in the message extras. These are optional properties that may contain metadata and/or ancillary payloads. |
+| @locked_by@ | String | No (implementation detail) | @0d6c0277-e88a-4dba-a854-e80a4bd75317@ | The ID of the node that has locked this record. This is an implementation detail of how the Database Connector processes records and you should not set a value for this column when inserting an outbox record. |
+| @lock_expiry@ | Timestamp | No (implementation detail) | @2023-06-12 16:24:27 @| The timestamp at which the lock will expire. This is an implementation detail of how the Database Connector processes records and you should not set a value for this column when inserting an outbox record. |
+
+h3(#change-detection). Change detection
+
+The Database Connector uses a poll-on-change strategy to query for new records to process when they are inserted into the outbox. This is the strategy used with the @ADBC_POLL_FIXED_RATE@ configuration option set to @false@. This is achieved through the use of a "trigger":https://www.postgresql.org/docs/current/sql-createtrigger.html configured on the outbox table and is the default behavior. The trigger invokes a "function":https://www.postgresql.org/docs/current/sql-createfunction.html#:~:text=Use%20CREATE%20OR%20REPLACE%20FUNCTION%20to%20change%20a%20function%20definition,the%20owner%20of%20the%20function which uses "NOTIFY":https://www.postgresql.org/docs/current/sql-notify.html to broadcast a notification to the Database Connector, which it receives using "LISTEN":https://www.postgresql.org/docs/current/sql-listen.html.
+
+Internally, the Database Connector debounces notifications within a window determined by the @ADBC_POLL_INTERVAL@ "configuration option":/livesync/connector#options.
+
+This approach avoids imposing additional load on the database due to polling when there are no new records to process.
+
+Alternatively, you can configure the Database Connector to periodically poll for new records with an interval determined by the @ADBC_POLL_INTERVAL@ configuration option by setting @ADBC_POLL_FIXED_RATE@ to @true@.
+
+h2(#nodes). Nodes table
+
+The Database Connector can operate as a cluster to provide fault tolerance. Work is automatically re-distributed across available nodes in the event of failures.
+
+To partition outbox records and process them across available Database Connector nodes, each node must know about all other available nodes in the cluster.
+
+The nodes table must also exist in your database, but as an application developer, you do not need to interact with this table directly.
+
+h3(#nodes-discovery). Node discovery
+
+Nodes discover one another using a nodes table that contains a row for each node in the cluster.
+
+When a node starts up, it generates a unique ID and is added to the nodes table. When the node shuts down, it removes itself from the table.
+
+Each node in the table includes an expiry timestamp, set to a time in the future according to the @ADBC_HEARTBEAT_TIMEOUT@ "configuration option":/livesync/connector#options. Periodically, each node sends a heartbeat to the database by updating its expiry timestamp in the nodes table. It will eventually expire if a node cannot communicate with the database. The Database Connector automatically removes expired nodes from the table.
+
+h3(#nodes-schema). Schema
+
+The following table describes the schema of the nodes table in your database:
+
+|_. Field |_. Type |_. Description |
+| @id@ | Text (primary key) | UUID for the node in the table. |
+| @expiry@ | Timestamp | Timestamp after which the node is considered no longer active. |
