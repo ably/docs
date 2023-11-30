@@ -48,6 +48,13 @@ export const APIReferencesDropdownData: DropdownData = {
       description:
         'Manage your Ably account programmatically and build web apps and command-line tools to administer your Ably realtime infrastructure.',
     },
+    {
+      link: {
+        href: `https://sdk.ably.com/builds/ably/spaces/main/typedoc/index.html`,
+        text: 'Spaces API',
+      },
+      description: 'Build collaborative environments in your application using the Spaces SDK.',
+    },
   ],
   title: 'API References Available',
 };
