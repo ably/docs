@@ -79,7 +79,7 @@ interface HowToFile {
 }
 
 const PubSubHowTo = () => {
-  const meta_description = `A fine interactve how to`;
+  const meta_description = `How to use basic publish and subscribe (pub/sub) functionality with Ably channels.`;
 
   const data = useStaticQuery(graphql`
     query {
