@@ -9,10 +9,24 @@ export const data = {
       cards: [
         {
           title: 'JavaScript',
-          text: 'Ably SDK for JavaScript.',
+          text: 'Ably SDK for JavaScript, including support for NativeScript and Cordova.',
           image: { src: '/images/sdks/js.svg', isWide: false },
           githubRepoURL: 'https://github.com/ably/ably-js',
           setupLink: '/docs/getting-started/setup?lang=javascript',
+        },
+        {
+          title: 'Java',
+          text: 'Ably SDK for Java, including support for Android, Kotlin, Clojure and Scala.',
+          image: { src: '/images/sdks/java-android.svg', isWide: true },
+          githubRepoURL: 'https://github.com/ably/ably-java',
+          setupLink: '/docs/getting-started/setup?lang=java',
+        },
+        {
+          title: 'C#.NET',
+          text: 'Ably SDK for C#.NET, including support for Unity, Xamarin and Mono.',
+          image: { src: '/images/sdks/csharp.svg', isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-dotnet',
+          setupLink: '/docs/getting-started/setup?lang=csharp',
         },
         {
           title: 'React',
@@ -20,13 +34,6 @@ export const data = {
           image: { src: '/images/sdks/react.svg', isWide: false },
           githubRepoURL: 'https://github.com/ably/ably-js',
           setupLink: '/docs/getting-started/react',
-        },
-        {
-          title: 'Java',
-          text: 'Ably SDK for Java.',
-          image: { src: '/images/sdks/java-android.svg', isWide: true },
-          githubRepoURL: 'https://github.com/ably/ably-java',
-          setupLink: '/docs/getting-started/setup?lang=java',
         },
         {
           title: 'Python',
@@ -55,13 +62,6 @@ export const data = {
           image: { src: '/images/sdks/objectivec.svg', isWide: false },
           githubRepoURL: 'https://github.com/ably/ably-cocoa',
           setupLink: '/docs/getting-started/setup?lang=objc',
-        },
-        {
-          title: 'C#.NET',
-          text: 'Ably SDK for C#.NET.',
-          image: { src: '/images/sdks/csharp.svg', isWide: false },
-          githubRepoURL: 'https://github.com/ably/ably-dotnet',
-          setupLink: '/docs/getting-started/setup?lang=csharp',
         },
         {
           title: 'Go',
