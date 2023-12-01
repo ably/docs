@@ -14,6 +14,12 @@ export type HamburgerMenuProps = {
   sidebarName: SidebarName;
 };
 
+const SDKsLinkData = {
+  link: '/docs/sdks',
+  label: 'SDKs',
+  level: 0,
+};
+
 export const dataToHamburgerSidebarItem = (sidebarItemData: SidebarData) =>
   sidebarItemData.dropdownData ? (
     <HamburgerSidebarDropdownPopulatedItem key={sidebarItemData.label} {...sidebarItemData} />
@@ -45,11 +51,14 @@ export const HamburgerSidebarRenderer = ({ className, data, sidebarName }: Hambu
     [dataItemsWithAdHocReplacements, expandedMenu],
   );
 
+  // if dataItems length is 1 it means user has entered in deeper level of list, SDKs should be only on level 0
+  const dataWithSDKsLink = dataItems.length === 1 ? dataItems : [...dataItems, SDKsLinkData];
+
   const sidebarContents =
     dataItems.length === 1 && !!dataItems[0].dropdownData ? (
       <HamburgerSidebarDropdownPopulatedItem key={0} {...dataItems[0]} />
     ) : (
-      <ol className={className}>{dataItems.map(dataToHamburgerSidebarItem)}</ol>
+      <ol className={className}>{dataWithSDKsLink.map(dataToHamburgerSidebarItem)}</ol>
     );
 
   return (
