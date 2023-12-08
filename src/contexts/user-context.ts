@@ -54,7 +54,7 @@ export type UserDetails = {
 
 const DEFAULT_USER_DETAILS: UserDetails = {
   sessionState: {},
-  apps: []
+  apps: [],
 };
 
 const UserContext = createContext(DEFAULT_USER_DETAILS);

@@ -2,6 +2,8 @@ import { Dispatch, useState, SetStateAction } from 'react';
 import { SingleValue } from 'react-select';
 import { Select, ReactSelectOption } from 'src/components';
 import { DEFAULT_API_KEY_MESSAGE } from '.';
+import { findFirstApiKey } from './util';
+
 import { type App, type AppApiKey } from 'src/contexts/user-context';
 
 import { container } from './ApiKeyMenu.module.css';
@@ -21,13 +23,13 @@ export type APIKeyMenuProps = {
 };
 
 const APIKeyMenu = ({ apps, setActiveApiKey }: APIKeyMenuProps) => {
-  const initialApiKeyOption = apps[0].apiKeys;
+  const initialApiKeyOption = findFirstApiKey(apps);
 
   const [value, setValue] = useState<ReactSelectOption>(
     initialApiKeyOption
       ? {
-          label: makeLabel(initialApiKeyOption[0]),
-          value: initialApiKeyOption[0].whole_key,
+          label: makeLabel(initialApiKeyOption),
+          value: initialApiKeyOption.whole_key,
         }
       : errorOption,
   );
