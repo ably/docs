@@ -1,8 +1,8 @@
-import React, { Dispatch, useState, SetStateAction } from 'react';
+import { Dispatch, useState, SetStateAction } from 'react';
 import { SingleValue } from 'react-select';
 import { Select, ReactSelectOption } from 'src/components';
 import { DEFAULT_API_KEY_MESSAGE } from '.';
-import { type UserApiKey, type AppApiKey } from 'src/contexts/user-context';
+import { type App, type AppApiKey } from 'src/contexts/user-context';
 
 import { container } from './ApiKeyMenu.module.css';
 
@@ -16,12 +16,12 @@ const makeLabel = (apiKey: AppApiKey) => {
 };
 
 export type APIKeyMenuProps = {
-  userApiKeys: UserApiKey[];
+  apps: App[];
   setActiveApiKey: Dispatch<SetStateAction<ReactSelectOption>>;
 };
 
-const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
-  const initialApiKeyOption = userApiKeys[0].apiKeys;
+const APIKeyMenu = ({ apps, setActiveApiKey }: APIKeyMenuProps) => {
+  const initialApiKeyOption = apps[0].apiKeys;
 
   const [value, setValue] = useState<ReactSelectOption>(
     initialApiKeyOption
@@ -32,9 +32,9 @@ const APIKeyMenu = ({ userApiKeys, setActiveApiKey }: APIKeyMenuProps) => {
       : errorOption,
   );
 
-  const options = userApiKeys.map((userApiKey) => ({
-    label: userApiKey.name,
-    options: userApiKey.apiKeys.map((appApiKey) => ({
+  const options = apps.map((app) => ({
+    label: app.name,
+    options: app.apiKeys.map((appApiKey) => ({
       label: makeLabel(appApiKey),
       value: appApiKey.whole_key,
     })),

@@ -16,26 +16,26 @@ type APIKeyMenuSelectorProps = APIKeyMenuProps & {
 
 const APIKeyMenuSelector = ({
   dataContainsKey,
-  userApiKeys,
+  apps,
   setActiveApiKey,
   activeApiKey,
   signedIn = false,
 }: APIKeyMenuSelectorProps) => {
   useEffect(() => {
-    if (activeApiKey.value === DEFAULT_API_KEY_MESSAGE && userApiKeys.length > 0) {
-      const { name: label, whole_key: value } = userApiKeys[0].apiKeys[0];
+    if (activeApiKey.value === DEFAULT_API_KEY_MESSAGE && apps.length > 0) {
+      const { name: label, whole_key: value } = apps[0].apiKeys[0];
       setActiveApiKey({
         label,
         value,
       });
     }
-  }, [userApiKeys, activeApiKey, setActiveApiKey]);
+  }, [apps, activeApiKey, setActiveApiKey]);
 
   return dataContainsKey ? (
     <div className="border-t border-charcoal-grey py-14 px-16 flex items-center">
       <SmallMenuLabel>API Key:</SmallMenuLabel>
-      {signedIn && userApiKeys.length > 0 ? (
-        <APIKeyMenu userApiKeys={userApiKeys} setActiveApiKey={setActiveApiKey} />
+      {signedIn && apps.length > 0 ? (
+        <APIKeyMenu apps={apps} setActiveApiKey={setActiveApiKey} />
       ) : (
         <APIKeyIndicator tooltip={NO_API_KEY_TOOLTIP} />
       )}

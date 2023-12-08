@@ -8,13 +8,13 @@ import { Head } from 'src/components/Head';
 import Layout from 'src/components/Layout';
 import { MarkdownProvider } from 'src/components/Markdown';
 import { SidebarProvider } from 'src/contexts/SidebarContext';
-import UserContext, { UserApiKey } from 'src/contexts/user-context';
+import UserContext, { type App } from 'src/contexts/user-context';
 import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
 import { useContext } from 'react';
 import { getRandomChannelName } from 'src/components/blocks/software/Code/get-random-channel-name';
 
-const getApiKey = (userApiKeys: UserApiKey[]) => {
-  const app = userApiKeys[0];
+const getApiKey = (apps: App[]) => {
+  const app = apps[0];
   if (!app) {
     return 'Waiting...';
   }
@@ -26,9 +26,9 @@ const ablyEnvironment = process.env.GATSBY_ABLY_ENVIRONMENT ?? 'production';
 const basketballChannelName = getRandomChannelName();
 const footballChannelName = getRandomChannelName();
 
-const updateAblyConnectionKey = (files: Record<string, string>, userApiKeys: UserApiKey[]) => {
+const updateAblyConnectionKey = (files: Record<string, string>, apps: App[]) => {
   const names = Object.keys(files);
-  const apiKey = getApiKey(userApiKeys);
+  const apiKey = getApiKey(apps);
 
   return names.reduce((acc, name: string) => {
     let content = files[name];
@@ -114,7 +114,7 @@ const PubSubHowTo = () => {
   ];
 
   const userData = useContext(UserContext);
-  const apiKeys = userData.apiKeys.data;
+  const apiKeys = userData.apps;
   const hasApiKeys = apiKeys.length > 0;
   const rewrittenFiles = useMemo(() => {
     return updateAblyConnectionKey(files, apiKeys);

@@ -41,7 +41,7 @@ export type AppApiKey = {
   id: string;
 };
 
-export type UserApiKey = {
+export type App = {
   name: string;
   url: string;
   apiKeys: AppApiKey[];
@@ -49,16 +49,12 @@ export type UserApiKey = {
 
 export type UserDetails = {
   sessionState: SessionState;
-  apiKeys: {
-    data: UserApiKey[];
-  };
+  apps: App[];
 };
 
 const DEFAULT_USER_DETAILS: UserDetails = {
   sessionState: {},
-  apiKeys: {
-    data: [],
-  },
+  apps: []
 };
 
 const UserContext = createContext(DEFAULT_USER_DETAILS);
