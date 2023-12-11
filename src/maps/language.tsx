@@ -59,6 +59,7 @@ const languageLabels: LanguageLabels = {
   html: 'HTML',
   json: 'JSON',
   xml: 'XML',
+  sql: 'SQL',
   rest: 'REST',
   realtime: 'Realtime',
   [DEFAULT_LANGUAGE]: 'Any',
@@ -90,6 +91,7 @@ const languageSyntaxHighlighterNames: LanguageSyntaxHighlighterNames = {
   nodejs: { label: 'Node.js', key: 'javascript' },
   json: { label: 'JSON', key: 'json' },
   xml: { label: 'XML', key: 'xml' },
+  sql: { label: 'SQL', key: 'sql' },
   // Kotlin is now preferred, however existing examples use Java & Android interchangeably.
   android: { label: 'Android', key: 'java' },
   // Currently the Flutter platform expects the Dart language
