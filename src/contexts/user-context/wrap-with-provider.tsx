@@ -9,7 +9,7 @@ import {
   WEB_API_USER_DATA_ENDPOINT,
 } from 'src/redux/api-key/constants';
 
-import UserContext, { UserDetails, type UserApiKey, SessionState } from '../user-context';
+import UserContext, { UserDetails, type App, SessionState } from '../user-context';
 
 //
 // This wrapper component is responsible for loading up our user session and
@@ -29,9 +29,9 @@ export const UserContextWrapper: React.FC<{ children: React.ReactNode }> = ({ ch
 
     fetchSessionData(store, WEB_API_USER_DATA_ENDPOINT);
 
-    connectState(selectData(API_KEYS_REDUCER_KEY), (state: { data?: UserApiKey[] }) => {
+    connectState(selectData(API_KEYS_REDUCER_KEY), (state: { data?: App[] }) => {
       const data = Array.isArray(state?.data) ? state.data : [];
-      setUserState((existing) => ({ ...existing, apiKeys: { data } }));
+      setUserState((existing) => ({ ...existing, apps: data }));
     });
 
     fetchApiKeyData(store, WEB_API_KEYS_DATA_ENDPOINT);

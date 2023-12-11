@@ -113,7 +113,7 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
           {(value) => (
             <APIKeyMenuSelector
               dataContainsKey={dataContainsKey}
-              userApiKeys={value.apiKeys.data}
+              apps={value.apps}
               setActiveApiKey={setActiveApiKey}
               activeApiKey={activeApiKey}
               signedIn={!!value.sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN}
