@@ -5,3 +5,99 @@ product: chat
 languages:
   - javascript
 ---
+
+Signalling when a chat participant is typing has become a standard practice in various chat applications. This subtle yet valuable layer of interactivity within a chatroom can be seamlessly implemented. The typing indicator offers real-time functionality to promptly update the status of each chat participant's typing activities.
+
+<img src="/images/products/chat/typing.png" alt="Example of a chat message input box, above this has two names of other chat participants who are currently typing.">
+
+h2(#implementation). Implementation
+
+To implement a typing indicator you would make use of the presence functionality. Each chat participant that joins a conversation would need to first subscribe to that conversation and join the presence set of that conversation. Whenever a member enters or leaves the presence set of a conversation, or updates their member data, an event is emitted to all presence subscribers on that conversation. Any client that uses chat participant statuses must "identify":/auth/identified-clients by having a @ClientId@ to be present. The client also requires the @presence@ “capability”:/auth/capabilities to enter the chat participant presence set, and the @subscribe@ capability to subscribe to chat participant events.
+
+h3(#enter). Enter
+
+The @enter@ event is intentionally initiated by the client on behalf of the chat participant, allowing them to signify actions such as marking themselves as online upon logging into the platform. For instance, when dealing with a chat participant represented by a user object featuring a @status@ field, the @enter@ event can be triggered using the provided code snippet below. This code serves the purpose of setting the status of the chat participant to @online@, indicating their entry to the conversation.
+
+```[realtime_javascript]
+    // Enter the chat participant into the presence set
+    channel.presence.enter((err) => {
+      // Custom functionality to update UI for chat participant that they are now online.
+    });
+```
+
+h3(#update). Update
+
+The chat participant status can be used as the indicator of whether they’re currently typing or not, allowing other chat participants to see a visual cue. The status field is a text based field, so the value can be whichever text value of your choosing.
+
+```[realtime_javascript]
+    // Subscribe to any presence updates for the current presence set
+    channel.presence.subscribe('update', (memberUpdate) => {
+      // Update current array of users typing to display the one for memberUpdate as typing.
+    });
+```
+
+Depending on the UI, it is recommended to display a limited number of the names of chat participants typing. If that number is exceeded, it’s common practice to instead change the visual indicator to a string such as “People are typing…”.
+
+h3(#example). Demo example
+
+Below is an example of each part required for the typing indicator to be implemented. Once the client has an authToken with a clientId associated with it, you join the predefined channel and enter the presence set for that channel.
+
+The application needs to subscribe to any updates of that presence set and would then update the visual cues displaying which chat participants are currently typing.
+
+For the chat participant, an event listener waits for a keypress before publishing an update to the presence set, updating this chat participant's status with a string indicating they're typing. A timer is set to expire in five seconds to reset this status if there has been no further keys pressed in that time.
+
+```[realtime_javascript]
+    let isTyping = false;
+    let typingInterval;
+    let usersTyping = [];
+
+    var client = new Ably.Realtime(authToken);
+    var channel = client.channels.get('CHANNEL_NAME');
+
+    // Subscribe to any presence updates for the current presence set
+    channel.presence.subscribe('update', (memberUpdate) => {
+      // find your user by their client id
+      user = '';
+      // Adding user to array of users typing
+      usersTyping.push(user);
+    });
+
+    // Enter the chat participant into the presence set
+    channel.presence.enter((err) => {
+      // Custom functionality to update UI for chat participants that they are now online.
+    });
+
+    // Listener for when chat participant presses a key on their keyboard
+    document.addEventListener('keypress', (event) => {
+      publishTyping(channel)
+    }, false);
+
+    // The chat participant has pressed a key, publish to the presence channel
+    // that they are, and initiate a timer to reset the typing indicator if no
+    // further key presses are made within 5 seconds
+    function publishTyping(channel) {
+      if (isTyping === false) {
+        channel.presence.update('is typing', (err) => {
+          isTyping = true;
+
+          typingInterval = setInterval(stopTyping(channel), 5000);
+        });
+      } else {
+        clearInterval(typingInterval);
+        typingInterval = setInterval(stopTyping(channel), 5000);
+      }
+    }
+
+    // The timer has reached the end, the chat participant hasn't pressed a key in the time
+    // frame, so publish that they've stopped and remove them from the local usersTyping array.
+    function stopTyping(channel) {
+      channel.presence.update('has stopped typing', (err) => {
+        const index = usersTyping.findIndex((userEntry) => {
+          return userEntry.clientId === user.clientId;
+        })
+
+        usersTyping.splice(index, 1);
+        isTyping = false
+      });
+    }
+```
