@@ -114,7 +114,11 @@ export const SidebarDataRetrieval = ({
 
   if (
     sidebarName !== undefined &&
-    (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar || data.LiveSyncLeftSidebar || data.ChatLeftSidebar)
+    (data.ChannelsLeftSidebar ||
+      data.ApiLeftSidebar ||
+      data.SpacesLeftSidebar ||
+      data.LiveSyncLeftSidebar ||
+      data.ChatLeftSidebar)
   ) {
     const sideBarItems =
       sidebarName === 'api-reference'
