@@ -1,0 +1,128 @@
+---
+title: Replies and Threads
+meta_description: "Implement the ability to reply to or create a thread based on any previously sent messages in your chat application."
+product: chat
+languages:
+  - javascript
+---
+
+In most chat environments you will have encountered functionality to reply to messages, or create threads on messages that have already been sent. The ability to add reply to or create a thread is an important piece of functionality for users to express their opinion on a specific message or separate a conversation from the rest of the chat.
+
+h2(#enable). Enable replies and threads
+
+To use replies and threads, you'll need to enable this feature as a new "channel rule" within your application in the dashboard. When creating a chat application, your chat will be defined by a common namespace.
+
+Namespaces enable your chat to be grouped together based on a prefix that is included as part of the channel name. Defining namespaces helps with management of channels such as defining the speed at which users can post messages, or whether users can interact with messages such as reactions, replies, or threads.
+
+The namespace for your replies and threads will need to be prefixed within this “channel rule”. Defining the namespace enables you to predefine message reply channel names and match them to your normal channel names.
+
+For example, if you have a channel called "general" under the namespace "public" ("public:general") you could have a message reply channel called "replies:public:general".
+
+  <!-- DASHBOARD-INSTRUCTION: Enable message interactions -->
+  To enable message interactions for a channel:
+
+  1. Login to your "Ably dashboard":https://ably.com/login.
+  2. Select the app you are working with.
+  3. Click *Settings* on the right side of the navigation bar.
+  4. Scroll down to *Channel rules* and click *Add new rule*.
+  5. Give your new rule a Namespace or provide a specific Channel ID.
+  6. Select the *Message interactions enabled* checkbox then click *Create channel rule*.
+
+  <a href="/images/realtime/message-interactions.png" target="_blank">
+    <img src="/images/realtime/message-interactions.png" style="max-width:80%" alt="Message interactions in dashboard">
+  </a>
+
+Once a channel has message interactions enabled, messages received on that channel will contain a unique @timeSerial@ that can be referenced by later messages. These message replies also add a @ref@ object to message payloads that enables you to indicate what an interaction represents, and which message it is referring to. The @ref@ object contains two fields:
+
+- @type@ (String) := a constant representing the reason for the interaction.
+- @timeSerial@ (String) := a unique identifier used to reference a specific message, automatically generated when messages are sent in message interaction enabled channels.
+
+<aside data-type='note'>
+<p>If you want to limit users from replying to messages or creating threads on messages to specific users, or rate-limiting their ability to only send a certain number per minute, you can use "JWT authenticated user claims":/auth/capabilities#custom-restrictions.</p>
+</aside>
+
+h3(#publish). Publish message replies or threads
+
+With message interactions enabled, each message now automatically has the @timeSerial@ attached, allowing the message to be referenceable for replies or threads. To reference a previous message, include the @ref@ object inside the @extras@ object in your payload.
+
+The @extras@ object is a JSON object of arbitrary key-value pairs that may contain metadata such as those required when publishing message replies. When referencing messages the @ref@ object needs to contain the following two key-value pairs:
+
+  * A @type@ constant string defining the reason for interacting with the message (replying), for message replies it'll be @com.ably.chat.reply@. Note that Ably has reserved strings beginning with @com.ably.@.
+  * The @timeserial@ string of the message to interact with.
+
+The following is an example of sending a message reply:
+
+```[javascript]
+function publishReply(message, timeSerial) {
+  channel.publish({
+    name: 'event_name',
+    data: message,
+    extras: {
+      ref: {
+        type: "com.ably.chat.reply",
+        timeserial: timeSerial
+      }
+    }
+  })
+}
+```
+
+h3(#subscribe). Subscribe to message replies or threads
+
+Subscribe to message replies to receive updates based on channel updates on @refType@. The subscriber for message replies is different from the subscriber for new messages because this subscriber requires a @refType@ to be defined, with the value @com.ably.chat.reply@. Any event with that @refType@ will be received with this subscriber, enabling you to update the UI where appropriate to display this message reply on the relevant message.
+
+To subscribe to message replies:
+
+```[realtime_javascript]
+  channel.subscribe({
+    refType: "com.ably.chat.reply"
+  }, onReply);
+```
+
+h4(#stop-receiving-replies). Stop receiving message replies
+
+To stop receiving new message replies, you can call the @unsubscribe@ function, passing in the relevant (@com.ably.chat.reply@) @refType@.
+
+For example, to turn off receiving replies or threads updates you unsubscribe as shown below:
+
+```[realtime_javascript]
+channel.unsubscribe({
+  refType: "com.ably.chat.reply"
+});
+```
+
+h2(#example). Example usage
+
+The following is an example of the steps involved in implementing message replies into your application.
+
+```[realtime_javascript]
+import { Realtime } from 'ably';
+
+// Import custom logic for handling adding replies to messages in your UI
+import { updateMessageReplies} from '/src/own-logic';
+
+// Create an Ably client
+var client = new Realtime.Promise({ authUrl: '<authEndpoint>', clientId: '<clientId>' });
+
+// Join or create the replies channel for the channel 'general' in the 'public' namespace
+var channel = client.channels.get('replies:public:general');
+
+// Replying to a message
+// message is the message string containing the reply
+// timeSerial is the timeSerial of the message the reply is added to
+function publishReply(message, timeserial) {
+  channel.publish('reply', {
+    body: message,
+    extras: {
+      reference: { type: "com.ably.chat.reply", timeserial },
+    },
+ });
+};
+
+// Subscribe to any replies for messages in the channel the client is a member of
+channel.subscribe({
+  refType: "com.ably.chat.reply"
+}, updateReplies);
+```
+
+
