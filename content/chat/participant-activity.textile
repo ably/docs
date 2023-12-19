@@ -1,7 +1,223 @@
 ---
 title: Participant activity
-meta_description: "Indicate whether a client who specifically calls ‘enter’ on presence for that channel is online or when they were last seen as online."
+meta_description: "Indicate whether a client who specifically calls 'enter' on presence for that channel is online or when they were last seen as online."
 product: chat
 languages:
   - javascript
 ---
+
+In a variety of chat environments, ranging from live streaming applications to workplace collaboration tools and support chat platforms, the presence of an online status indicator is a universal and essential feature. This indicator serves as a visual cue, informing participants about the current availability of others within the shared chat space. By displaying whether a user is online or offline, it enhances the overall user experience, fostering seamless communication and coordination. This page delves into the mechanics of implementing an online status feature, showing how it dynamically updates in response to users entering or leaving the chat.
+
+<img src="/images/products/chat/avatar.png" alt="Example of a row of users avatars with their images showing and at the bottom a green or grey icon showing their online status.">
+
+h2(#events). Chat participant status
+
+Whenever a member enters or leaves a channel, or updates their member data, an event is emitted to all presence subscribers on that channel.
+
+The following presence events are emitted:
+
+- Enter := A new member has entered the channel
+- Leave := A member who was present has now left the channel. This may be a result of an explicit request to leave or implicitly when detaching from the channel. Alternatively, if a member's connection is abruptly disconnected and they do not resume their connection within a minute, Ably treats this as a leave event as the client is no longer present
+- Update := An already present member has updated their "member data":#member-data. Being notified of member data updates can be very useful, for example, it can be used to update the status of a user when they are typing a message
+- Present := When subscribing to presence events on a channel that already has members present, this event is emitted for every member already present on the channel before the subscribe listener was registered
+
+Any client that uses chat participant statuses must have been "identified":/auth/identified-clients by having a @ClientId@ to be present on a channel. The client also requires the @presence@ "capability":/auth/capabilities to enter the chat participant presence set, and the @subscribe@ capability to subscribe to chat participant events.
+
+h3(#enter). Enter
+
+The @enter@ event is intentionally initiated by the client on behalf of the chat participant, allowing them to signify actions such as marking themselves as online upon logging into the platform. For instance, when dealing with a chat participant represented by a user object featuring a @status@ field, the @enter@ event can be triggered using the provided code snippet below. This code serves the purpose of setting the status of the chat participant to @online@, indicating their entry to the chat.
+
+```[realtime_javascript]
+channel.presence.enter((err) => {
+  // Custom functionality to update UI for chat participant that they are now online.
+});
+```
+
+When a chat participant initiates the @enter@ event, real-time notifications are dispatched to all subscribers of the associated presence channel. This functionality enables subscribers to promptly update the visual online status of the user, ensuring that everyone in the chat environment is informed of the user's current online presence.
+
+```[realtime_javascript]
+channel.presence.subscribe('enter', (member) => {
+  user.online = true
+  user.lastOnline = null
+});
+```
+
+h3(#leave). Leave
+
+The @leave@ event is intentionally initiated by the client on behalf of the chat participant, providing a means to signify actions such as marking themselves as offline or logging out of the platform. For instance, when managing a chat participant represented by a user object featuring a @status@ field, the @leave@ event can be triggered using the provided code snippet below. This code snippet serves the purpose of setting the status of the chat participant to @offline@, indicating their departure from the chat platform.
+
+```[realtime_javascript]
+channel.presence.leave((err) => {
+  // Custom functionality to update UI for chat participant that they are no longer online
+});
+```
+
+When a chat participant triggers the @leave@ event all subscribers for this presence channel will be notified in real-time allowing them to update the visual online status of this user for everyone.
+
+```[realtime_javascript]
+channel.presence.subscribe(‘leave’, (member) => {
+  user.online = false
+  user.lastOnline = member.timestamp
+
+  // Custom functionality to update display for chat participant that another participant is no longer online
+});
+```
+
+h3(#update). Update
+
+In certain chat instances, chat members can associate their chat participant status with a text-based status. For example, if you have a chat participant object (user) with the @statusMessage@ field, you can trigger an @update@ event using the code sample below to update this user with a new text-based string.
+
+```[realtime_javascript]
+channel.presence.update('<NEW_STATUS_UPDATE>', (err) => {
+  user.statusMessage = '<NEW_STATUS_UPDATE>';
+});
+```
+
+When a chat participant triggers the @update@ event all subscribers for this presence channel will be notified in real-time allowing them to update the string value of that chat participant's status of this user for everyone.
+
+```[realtime_javascript]
+channel.presence.subscribe('update', (memberUpdate) => {
+  user.status = memberUpdate.data
+});
+```
+
+h3(#other-events). Other events / more information
+
+The @present@ event is not relevant for chat participant statuses, however, if you wish to read more about other functionalities of presence, please refer to the "presence":/presence-occupancy/presence?lang=javascript#trigger-events docs page.
+
+h2(#subscribe). Subscribe chat participants to events
+
+Chat participant clients can subscribe to the presence set, enabling them to receive updates on other participants and update the UI accordingly (e.g., displaying online status icons).
+
+The message count within a presence set, like online status, can surge as the participant number grows. For instance, with 200 participants rapidly joining and leaving, the potential messages for online status alone could reach 80,400. The breakdown includes:
+
+200 chat participant messages published for the @enter@ event.
+200 × 200 (40,000) messages subscribed to for the @enter@ events.
+200 chat participant messages published for the @leave@ event.
+200 × 200 (40,000) presence messages subscribed to for the @leave@ event.
+
+For improved scalability, consider making your backend server the exclusive subscriber to chat participants' online status updates if your chat application anticipates a large number of participants. In this scenario, frontend clients can periodically request updates from the backend.
+
+Be present without subscribing to presence events
+
+
+h3(#batch-presence). Batch presence retrieval
+
+It is possible to reduce real time presence updates received and traffic between clients by introducing batches using the @request()@ in the REST API. Within a batch response is an array of presence states, where each presence state update contains information about the clients in the presence set, including their @clientId@, member data, and "presence action":/docs/api/realtime-sdk/types#presence-action .
+
+The following is an example of a batch presence request using the "request()":/docs/api/rest-sdk#request method to query the "batch REST API":/docs/api/rest-api#batch-presence :
+
+```[rest_javascript]
+var ablyRest = new Ably.Rest({ key: '{{API_KEY}}' })
+var content = { "channel": "channel1,channel2" }
+ablyRest.request('GET', '/presence', content, null, {}, function(err, response) {
+  If (err) {
+    alert('An error occurred; err = ' + err.toString());
+  } else {
+    alert('Success! status code was ' + response.statusCode);
+  }
+});
+```
+
+h4(#batch-responses). Batch presence responses
+
+On completion of the batch request, one of three possible responses are returned:
+
+- Success := If all of the individual requests were successful then an array containing the response of each query is returned in request order.
+- Failure := If the batch request itself failed before the individual requests were made, then an error response is returned with a status code and error response body. Examples of why the batch request can fail include an authorization failure or an invalid request.
+- Partial success := If one or more of the individual requests failed the response body contains an error object with the error code @40020@ and a status code of @400@. The error body contains a @batchResponse@ array of each individual response in request order. The @batchResponse@ can be inspected if there is a need to know the details of each outcome. If you only need to know whether or not the batch request was completely successful then the status code is sufficient.
+
+The following is an example of a successful batch presence response. The response body contains details of each client present on the channel and the channel they are present on. The status code for a successful response is always @200@:
+
+```[json]
+[
+  {
+    "channel":"channel0",
+    "presence":[
+      {"clientId": "user1", "action": "1"},
+      {"clientId": "user2", "action": "1"}
+    ]
+  },
+  {
+    "channel":"channel1",
+    "presence":[]
+  },
+  {
+    "channel":"channel2",
+    "presence":[
+      {"clientId": "user2", "action": "1"},
+      {"clientId": "user3", "action": "1"}
+    ]
+  }
+]
+```
+
+For more information making batch presence requests please refer to the "Presence documentation":/docs/presence-occupancy/presence#batch
+
+
+h3(#channel-separation). Channel separation
+
+Chat messages and chat participant status updates in one pub/sub channel would contain a large number of messages published and received. To avoid a potentially high volume of unnecessary messages, as well as the suggestion of only having your backend server being the exclusive subscriber to chat participants' online status updates, it is also advised to have separate pub/sub channels for separate purposes. One for a specific chat (e.g. general), while having a separate channel for the chat participants status (e.g. status-general) updates for that chat. For example, when issuing api keys to clients, assigning the clients the following "capabilities":https://ably.com/docs/auth/capabilities :
+
+```
+{
+  "status-general": ["presence"],
+  "general": ["publish", "history", "subscribe"],
+}
+```
+
+Meanwhile the server can also subscribe to the chat participants channel with an api key having the following capabilities:
+
+```
+{
+  "status-general": ["presence", "subscribe"],
+  "general": ["publish", "history", "subscribe"],
+}
+```
+
+h2(#last-seen). Last seen
+
+Along with determining whether a chat participant is actively online or not, another key piece of functionality in a chat application is to determine when the chat participant was last seen as online. So long as the client, the chat participant is using specifically, calls @enter@ on the presence set for that channel, you'll have a historical record of that entry and a record of when the chat participant left the presence set. Whether it was specifically calling @leave@ or they timed out due to an unstable connection.
+
+To retrieve the channel's presence history, call the channel's presence followed by its history function. Calling @history@ will retrieve up to 1000 records, starting from the latest presence entries. To find the @leave@ events for a specific chat participant, loop through each entry, first filtering out any records by the @clientId@ of your desired chat participant, and the action, which is @leave@. You then need to sort the records, finding the latest timestamp first. Below is an example of how you would implement this functionality:
+
+```[javascript]
+channel.attach(() => {
+  const presence = channel.presence;
+
+  presence.history({}, (err, resultPage) => {
+      const participantStatus = [];
+
+      if (err) {
+        console.log('Unable to get presence history; err = ' + err.message);
+      } else {
+        participantStatus = resultPage.items.filter(
+          item => item.clientId === 'PARTICIPANT_CLIENT_ID' && item.action === 'leave'
+        );
+
+        participantStatus.sort((recordA, recordB) => {
+          return recordA.timestamp > recordB.timestamp;
+        });
+      }
+  });
+});
+```
+
+h2(#remain-present-for). Keep connected for period of time before removing chat participant
+
+Clients that are part of a chat participant presence set remain present, by default, for 15 seconds after they are abruptly disconnected. For example, when the internet connection suddenly drops or the client is changing networks. This delay is to avoid repeated @leave@ and @enter@ events being sent when a client is experiencing an unstable connection. A different disconnection timeout can be defined in the @remainPresentFor@ client configuration.
+
+Any clients that explicitly call @channel.presence.leave@ will immediately be removed from the chat participant presence set.
+
+The following example code demonstrates establishing a connection to Ably with @remainPresentFor@ set to 15 seconds:
+
+```[javascript]
+const ably = new Ably.Realtime(
+  {
+    key: '{{API_KEY}}',
+    transportParams: { remainPresentFor: 15000 }
+  }
+);
+```
+
+For more information handling unstable connections please refer to the “Presence documentation”:/docs/presence-occupancy/presence?lang=javascript#unstable-connections
