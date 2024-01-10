@@ -1,12 +1,19 @@
 const herokuAppSite = process.env.HEROKU_APP_NAME
   ? `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`
   : 'http://localhost:8000';
+const stripTrailingSlash = (str: string) => (str.endsWith('/') ? str.slice(0, -1) : str);
 
-const mainWebsite = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
+const mainWebsite = stripTrailingSlash(process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000');
+
+// Set the provided asset prefix so we can fetch assets from elsewhere when specified
+export const assetPrefix = process.env.ASSET_PREFIX;
+
+// We're mounted under /docs in deployments
+export const pathPrefix = '/docs';
 
 export const trailingSlash = 'never';
 export const siteMetadata = {
-  siteUrl: `${mainWebsite}/docs`,
+  siteUrl: mainWebsite,
   title: 'Documentation | Ably Realtime',
   externalScriptsData: {
     hubspotTrackingId: process.env.HUBSPOT_TRACKING_ID,
@@ -18,8 +25,6 @@ export const siteMetadata = {
     announcementEnabled: process.env.ANNOUNCEMENT_ENABLED,
   },
 };
-
-export const assetPrefix = process.env.ASSET_PREFIX ?? herokuAppSite;
 
 export const graphqlTypegen = true;
 
