@@ -7,6 +7,7 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
     type PageFurnitureYaml implements Node {
       label: String!
       link: String!
+      external: Boolean
       name: String
       level: Int
       text: String
