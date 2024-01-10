@@ -37,7 +37,7 @@ export const Header = ({
         <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
         {showSearchBar ? <SearchBar displayMode={DisplayMode.FULL_SCREEN} /> : null}
         <div className="flex flex-row justify-end col-start-3">
-          <TopMainNavLink href="/docs/sdks" dataId="meganav-link">
+          <TopMainNavLink href="/sdks" dataId="meganav-link">
             SDKs
           </TopMainNavLink>
           {menuItems.map((buttonDropdownDataID, i) => (
