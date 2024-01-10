@@ -15,7 +15,7 @@ export type HamburgerMenuProps = {
 };
 
 const SDKsLinkData = {
-  link: '/docs/sdks',
+  link: '/sdks',
   label: 'SDKs',
   level: 0,
 };
