@@ -12,8 +12,9 @@ import {
   getLanguageDefaults,
   languageIsUsable,
 } from 'src/components/common/language-defaults';
-import { PageLanguageProvider, PathnameContext, usePageLanguage } from 'src/contexts';
-import { srcFromDocsSite } from 'src/utilities';
+import { PageLanguageContext, PageLanguagesContext, PathnameContext } from 'src/contexts';
+import { safeWindow } from 'src/utilities';
+import { PREFERRED_LANGUAGE_KEY } from 'src/utilities/language/constants';
 
 import { isEmpty } from 'lodash';
 import { SidebarProvider } from 'src/contexts/SidebarContext';
@@ -139,25 +140,28 @@ const Template = ({
   }, []);
 
   return (
-    <>
-      <PathnameContext.Provider value={pathname}>
-        <Head title={title} canonical={canonical} description={description} />
-        <SidebarProvider>
-          <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
-            <Article>
-              <PageTitle>{title}</PageTitle>
-              <div>{elements}</div>
-            </Article>
-            <RightSidebarWrapper
-              menuData={contentMenuFromLanguage[0]}
-              languages={filteredLanguages}
-              versionData={versionData}
-            />
-          </Layout>
-        </SidebarProvider>
-      </PathnameContext.Provider>
-      {script && <Script src={srcFromDocsSite(`/scripts/${slug}.js`)} strategy={ScriptStrategy.idle} />}
-    </>
+    <PageLanguageContext.Provider value={language}>
+      <PageLanguagesContext.Provider value={languages}>
+        <PathnameContext.Provider value={pathname}>
+          <Head title={title} canonical={canonical} description={description} />
+
+          <SidebarProvider>
+            <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
+              <Article>
+                <PageTitle>{title}</PageTitle>
+                <div>{elements}</div>
+              </Article>
+              <RightSidebarWrapper
+                menuData={contentMenuFromLanguage[0]}
+                languages={filteredLanguages}
+                versionData={versionData}
+              />
+            </Layout>
+          </SidebarProvider>
+        </PathnameContext.Provider>
+      </PageLanguagesContext.Provider>
+      {script && <Script src={`/scripts/${slug}.js`} strategy={ScriptStrategy.idle} />}
+    </PageLanguageContext.Provider>
   );
 };
 
