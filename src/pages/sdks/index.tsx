@@ -1,4 +1,4 @@
-import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
+import { DOCUMENTATION_NAME } from '../../../data/transform/constants';
 import SDKsContent from 'src/components/SDKsPage';
 import Layout from 'src/components/Layout';
 import { Head } from 'src/components/Head';

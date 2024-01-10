@@ -88,14 +88,6 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
     }
   `);
 
-  createRedirect({
-    fromPath: '/',
-    toPath: '/docs',
-    isPermanent: true,
-    force: true,
-    redirectInBrowser: true,
-  });
-
   const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
 
   const documentCreator = (documentTemplate) => async (edge) => {
@@ -155,7 +147,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
   };
 
   await Promise.all([
-    ...documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)), 
+    ...documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)),
     ...apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate))
   ]);
 };

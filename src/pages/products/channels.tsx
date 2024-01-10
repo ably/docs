@@ -5,7 +5,7 @@ import Layout from 'src/components/Layout';
 import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
 
 import { SidebarProvider } from 'src/contexts/SidebarContext';
-import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
+import { DOCUMENTATION_NAME } from '../../../data/transform/constants';
 
 type MetaData = {
   title: string;

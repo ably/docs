@@ -9,7 +9,7 @@ import Layout from 'src/components/Layout';
 import { MarkdownProvider } from 'src/components/Markdown';
 import { SidebarProvider } from 'src/contexts/SidebarContext';
 import UserContext, { type App } from 'src/contexts/user-context';
-import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
+import { DOCUMENTATION_NAME } from '../../../data/transform/constants';
 import { useContext } from 'react';
 import { getRandomChannelName } from 'src/components/blocks/software/Code/get-random-channel-name';
 
