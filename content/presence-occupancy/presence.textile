@@ -315,13 +315,13 @@ rest.auth.requestToken(ARTTokenParams(clientId: "*"), withOptions: nil) { tokenD
 }
 ```
 
-h2(#subscribe). Subscribe to presence events 
+h2(#subscribe). Subscribe to presence events
 
 Subscribe to a channel's presence set in order to receive presence events, by registering a listener. Presence events are emitted whenever a member enters or leaves the presence set, or updates their member data.
 
 Subscribing is an operation available to the realtime interface of an Ably SDK and uses the "subscribe()":/api/realtime-sdk/presence#subscribe method on the @Presence@ object of a channel.
 
-The following is an example of subscribing to presence events and entering the presence set: 
+The following is an example of subscribing to presence events and entering the presence set:
 
 ```[realtime_javascript]
   const realtime = new Ably.Realtime({
@@ -411,6 +411,7 @@ The following is an example of subscribing to presence events and entering the p
 <li>200 presence messages published for the leave event.</li>
 <li>200 × 200 (40,000) presence messages subscribed to for the leave events.</li></ul>
 <p>This highlights the potential for 80,400 messages to be sent in a very short space of time on a single channel.</p>
+<p>In some instances this is the behavior required of your application. In other scenarios you may prefer to only have a server subscribed to presence events and the clients are only present on the channel.</p>
 </aside>
 
 h3(#present-no-subscribe). Be present without subscribing to presence events
@@ -421,7 +422,7 @@ Efficient use of capabilities can prevent clients from receiving presence events
 
 One example of achieving this would be to use one channel for generic communications and another for the presence set. The following capabilities demonstrate this for clients and for servers:
 
-For clients: 
+For clients:
 
 ```[json]
 {
@@ -443,9 +444,9 @@ Alternatively, "channel mode flags":/channels/options#modes can be used to enabl
 
 h2(#retrieve-members). Retrieve presence members
 
-The membership of the presence set can be retrieved by calling the "get()":/api/realtime-sdk/presence#get method on the @Presence@ object of a channel. This returns an array of all members currently present on the channel and is available using the REST and realtime interfaces of an Ably SDK.
+The membership of the presence set can be retrieved by calling the "@get()@":/api/realtime-sdk/presence#get method on the @Presence@ object of a channel. This returns an array of all members currently present on the channel and is available using the REST and realtime interfaces of an Ably SDK.
 
-An Ably client connected using the realtime interface of an SDK is responsible for keeping track of the presence set from the time that the channel is attached. An up to date presence set is pushed to the client following a channel attachment, and the presence set is updated on each subsequent presence event. This means that "get()":/api/realtime-sdk/presence#get returns the already known presence set retained in memory and does not trigger a new request to the Ably service. 
+An Ably client connected using the realtime interface of an SDK is responsible for keeping track of the presence set from the time that the channel is attached. An up to date presence set is pushed to the client following a channel attachment, and the presence set is updated on each subsequent presence event. This means that "@get()@":/api/realtime-sdk/presence#get returns the already known presence set retained in memory and does not trigger a new request to the Ably service.
 
 The REST interface of an Ably SDK queries "the REST API":/api/rest-api#presence directly. No presence state is cached in the SDK itself.
 
@@ -590,6 +591,28 @@ if page.hasNext() {
 }
 ```
 
+h3(#synced). Synced presence set
+
+A common requirement of the presence set is to keep an updated list of members that are currently present on a channel in your user interface.
+
+Many developers try to build the initial list using the "@get()@":/api/realtime-sdk/presence#get method and then mutate that list whenever a new presence event arrives. Ably advises against this approach, because it's easy to quickly go wrong and end up with a list that's out of sync with the real presence set.
+
+One common error is to fail to take into account that a single @clientId@ may be present multiple times on the same channel via different "connections":/connect. As far as Ably is concerned, these are different members of the presence set as they have different @connectionId@s. For example, if a client with the ID “Sarah” is connected to a channel on both a desktop and a mobile device simultaneously, or via multiple tabs in a browser, “Sarah” will be present twice in the presence set with the same @clientID@. If "Sarah" leaves the channel on her mobile, your app sees the @leave@ event and incorrectly removes her entry from the list.
+
+Ably recommends that you instead just @get()@ the presence set afresh from the Ably SDK whenever you see a presence event and use it to rebuild the list of members in your user interface. The @get()@ operation is free and a local call to the SDK and provides you the presence set that the client has already synced with the server. The server keeps the presence set up to date and there is not cost to using this approach.
+
+The following is an example of calling the @get()@ method on presence messages:
+
+```[realtime_javascript]
+channel.presence.on((presenceMessage) => {
+    // Ignore the presence message, just rebuild your state from the get() method
+    // (including uniquifying by clientId if you only want one entry per clientId)
+    channel.presence.get((err, members) => {
+        console.log('There are ' + members.length + ' members on this channel');
+    });
+});
+```
+
 h3(#batch). Batch presence
 
 It is possible to retrieve the presence state of multiple channels in a single request. The presence state contains details about the clients in the presence set, such as their @clientId@, member data and "presence action":/api/realtime-sdk/types#presence-action.
@@ -628,7 +651,7 @@ ablyRest.request('GET', '/presence', content, null, {}, function(err, response) 
 });
 ```
 
-The following is an example curl request, querying the REST API directly: 
+The following is an example curl request, querying the REST API directly:
 
 ```[sh]
 curl -X GET https://rest.ably.io/presence?channel=channel1,channel2 \
