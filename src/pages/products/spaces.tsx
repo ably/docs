@@ -65,6 +65,7 @@ export const query = graphql`
           text
           href
           type
+          external
         }
         cards {
           title
@@ -74,6 +75,7 @@ export const query = graphql`
           links {
             text
             href
+            external
           }
         }
       }

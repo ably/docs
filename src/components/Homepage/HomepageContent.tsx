@@ -1,10 +1,5 @@
 import { BodySection } from './BodySection/BodySection';
-import { LinkProps } from '../ProductPage/ProductPageContent';
-
-export type CallToActionProps = {
-  text: string;
-  href: string;
-};
+import { LinkProps, CallToActionProps } from '../ProductPage/ProductPageContent';
 
 export type CardProps = {
   title: string;
