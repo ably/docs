@@ -32,7 +32,7 @@ describe('Different data provided to link elements results in different componen
   it('Successfully renders Gatsby links', () => {
     render(<A {...gatsbyRootElement} />);
 
-    expect(screen.getByTestId('gatsby-link')).toBeInTheDocument();
+    expect(screen.getByTestId('link-internal')).toBeInTheDocument();
   });
 
   it('Successfully renders normal links', () => {

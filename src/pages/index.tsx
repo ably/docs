@@ -1,12 +1,11 @@
-import { graphql } from 'gatsby';
+import { graphql, withPrefix } from 'gatsby';
 import { Helmet } from 'react-helmet';
 
 import Layout from 'src/components/Layout';
+import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
 
 import { SidebarProvider } from 'src/contexts/SidebarContext';
-import { DOCUMENTATION_NAME } from '../../data/transform/constants';
-import { PageLanguageProvider } from 'src/contexts';
 
 export type MetaData = {
   title: string;
@@ -27,6 +26,9 @@ const IndexPage = ({
   location: Location;
 }) => {
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
+  const { siteUrl } = useSiteMetadata();
+  const canonical = `${siteUrl}/${withPrefix('/')}`;
+
   return (
     <>
       <Helmet>
@@ -35,8 +37,8 @@ const IndexPage = ({
         <meta property="og:title" content={openGraphTitle} />
         <meta property="twitter:title" content={openGraphTitle} />
         <meta property="og:site_name" content="Ably Realtime" />
-        <link rel="canonical" href={`/${DOCUMENTATION_NAME}`} />
-        <meta property="og:url" content={`${ABLY_MAIN_WEBSITE}/${DOCUMENTATION_NAME}`} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:url" content={canonical} />
         <meta name="description" content={meta.description} />
         <meta property="og:description" content={meta.description} />
         <meta name="twitter:description" content={meta.description} />
