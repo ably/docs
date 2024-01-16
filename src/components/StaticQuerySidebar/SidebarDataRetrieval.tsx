@@ -20,6 +20,7 @@ export const SidebarDataRetrieval = ({
     fragment SubMenuFields on PageFurnitureYaml {
       label
       link
+      external
       level
       text
     }
