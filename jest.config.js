@@ -24,7 +24,7 @@ module.exports = {
     url: `http://localhost`,
     customExportConditions: [''],
   },
-  setupFiles: ['./jest.polyfills.js'],
+  setupFiles: ['./jest.polyfills.js', './loadershim.js'],
   coverageReporters: ['text'],
   setupFilesAfterEnv: ['<rootDir>/setupTests.js'],
   testEnvironment: path.join(__dirname, 'jest-environment-patched-jsdom.js'),
