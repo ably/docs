@@ -13,7 +13,7 @@ module.exports = {
   testPathIgnorePatterns: [`node_modules`, `\\.cache`, `<rootDir>.*/public`],
   // NOTE: This is a workaround for compilation issues with .d.ts files
   transformIgnorePatterns: [
-    `node_modules/(?!(gatsby|gatsby-script|use-keyboard-shortcut|react-medium-image-zoom|@react-hook/media-query)/)`,
+    `node_modules/(?!(gatsby|gatsby-script|use-keyboard-shortcut|react-medium-image-zoom|@react-hook/media-query|@mdx-js/react)/)`,
   ],
   globals: {
     __PATH_PREFIX__: ``,
