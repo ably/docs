@@ -1,4 +1,4 @@
-import React, { Dispatch, FunctionComponent as FC, SetStateAction, useContext } from 'react';
+import { Dispatch, FunctionComponent as FC, SetStateAction } from 'react';
 import { SingleValue } from 'react-select';
 import {
   createLanguageHrefFromDefaults,
@@ -7,12 +7,12 @@ import {
   ReactSelectOption,
   Select,
 } from 'src/components';
-import { PageLanguageContext } from 'src/contexts';
 
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, SDK_INTERFACES } from '../../../../data/createPages/constants';
-import { cacheVisitPreferredLanguage } from 'src/utilities';
 import { dropdownContainer, horizontalNav } from './LanguageNavigation.module.css';
 import SDKInterfacePanel from '../../SDKInterfacePanel/SDKInterfacePanel';
+import { usePageLanguage } from 'src/contexts';
+import { navigate } from 'gatsby';
 
 export interface LanguageNavigationComponentProps {
   language: string;
@@ -37,18 +37,23 @@ export interface LanguageNavigationProps {
   setPreviousSDKInterfaceTab: Dispatch<SetStateAction<string>>;
 }
 
-const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<ReactSelectOption>) => {
-  if (newValue) {
-    const language = newValue.value;
-    const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
-      getTrimmedLanguage(language),
-      pageLanguage,
-    );
+const changePageOnSelect =
+  (pageLanguage: string, cb: (arg: string) => void) => (newValue: SingleValue<ReactSelectOption>) => {
+    if (newValue) {
+      const language = newValue.value;
+      const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
+        getTrimmedLanguage(language),
+        pageLanguage,
+      );
 
-    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
-    cacheVisitPreferredLanguage(isPageLanguageDefault, language, href);
-  }
-};
+      const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
+      if (!isPageLanguageDefault) {
+        cb(language);
+      }
+
+      navigate(href);
+    }
+  };
 
 const LanguageNavigation = ({
   items,
@@ -57,12 +62,12 @@ const LanguageNavigation = ({
   setSelectedSDKInterfaceTab,
   setPreviousSDKInterfaceTab,
 }: LanguageNavigationProps) => {
-  const pageLanguage = useContext(PageLanguageContext);
+  const { currentLanguage: pageLanguage, setPreferredLanguage } = usePageLanguage();
   const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
   const options = items.map((item) => ({ label: item.content, value: item.props.language }));
   const value = options.find((option) => option.value === selectedPageLanguage);
 
-  const onSelectChange = changePageOnSelect(pageLanguage);
+  const onSelectChange = changePageOnSelect(pageLanguage, setPreferredLanguage);
 
   const isSDKInterFacePresent = allListOfLanguages
     ? checkIfLanguageHasSDKInterface(allListOfLanguages, SDK_INTERFACES)
@@ -89,7 +94,7 @@ const LanguageNavigation = ({
       ) : null}
 
       {items.length >= 1 ? (
-        <div className="border-b border-charcoal-grey w-full">
+        <div className="w-full border-b border-charcoal-grey">
           <menu data-testid="menu" className={horizontalNav}>
             {items.map(({ Component, props, content }, index) => (
               <Component {...props} key={index}>

@@ -3,7 +3,6 @@ import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicato
 import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
 import { longLanguageLabels } from '../../../maps/language';
 import { ReactSelectOption } from 'src/components';
-import { PREFERRED_LANGUAGE_KEY } from '../../../utilities';
 import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common';
 import { navigate } from 'gatsby';
 import {
@@ -19,9 +18,9 @@ import {
   optionStyles,
   groupStyles,
 } from '../ReactSelectStyles';
-import { safeWindow } from 'src/utilities';
 import './styles.css';
 import { useMediaQuery } from '@react-hook/media-query';
+import { usePageLanguage } from 'src/contexts';
 
 const makeOptionFromLang = (lang: string) => ({ label: longLanguageLabels[lang] ?? lang, value: lang });
 
@@ -46,6 +45,8 @@ export const LanguageDropdownSelector = ({
   if (!showDefaultLink) {
     options = options.filter(({ value }) => value !== DEFAULT_LANGUAGE);
   }
+
+  const { handleCurrentLanguageChange } = usePageLanguage();
 
   const selectedOption = options.find(isSelectedLanguage) || makeOptionFromLang(DEFAULT_PREFERRED_LANGUAGE);
 
@@ -114,11 +115,8 @@ export const LanguageDropdownSelector = ({
         const newLanguage = newValue?.value ?? DEFAULT_LANGUAGE;
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(newLanguage, language);
         const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, newLanguage);
-        if (isPageLanguageDefault) {
-          safeWindow.localStorage.clear();
-        } else {
-          safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, newLanguage);
-        }
+
+        handleCurrentLanguageChange(newLanguage);
         navigate(href);
       }}
       formatOptionLabel={(option) => (

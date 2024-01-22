@@ -35,7 +35,7 @@ describe(`<LanguageButton />`, () => {
     `);
   });
 
-  it('changes localstorage value on click', async () => {
+  it('changes session storage value on click', async () => {
     render(
       <PageLanguageContext.Provider value="python">
         <LanguageButton selectedSDKInterfaceTab="realtime" language="javascript" selectedLocalLanguage="javascript" />
@@ -44,7 +44,7 @@ describe(`<LanguageButton />`, () => {
 
     const button = screen.getByRole('button');
     await userEvent.click(button);
-    expect(safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY)).toBe('javascript');
+    expect(safeWindow.sessionStorage.getItem(PREFERRED_LANGUAGE_KEY)).toBe('javascript');
   });
 
   it('renders active button if pageLanguage is not in the languages but the language is the first language of the array', () => {

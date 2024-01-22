@@ -1,15 +1,16 @@
-import React, { Children, useContext } from 'react';
+import React, { Children } from 'react';
 import {
   IGNORED_LANGUAGES_FOR_DISPLAY,
   REALTIME_SDK_INTERFACE,
   REST_SDK_INTERFACE,
 } from '../../../../data/createPages/constants';
-import PageLanguageContext from '../../../contexts/page-language-context';
 import { makeGroup, assignPrimary, addToFilter, isIrrelevantForLanguageDisplay } from './language-utilities';
 import { isEmpty } from 'lodash';
+import { usePageLanguage } from 'src/contexts';
 
 const ConditionalChildrenLanguageDisplay = ({ children }) => {
-  const language = useContext(PageLanguageContext);
+  const { currentLanguage: pageLanguage } = usePageLanguage();
+
   let currentGroup = false;
   const childLanguageGroups = [];
   const toFilter = [];
@@ -30,7 +31,7 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
         currentGroup = makeGroup(attribs.lang, index, props.data);
       } else {
         currentGroup.end = index;
-        currentGroup = assignPrimary(currentGroup, attribs.lang, language, props.data, index);
+        currentGroup = assignPrimary(currentGroup, attribs.lang, pageLanguage, props.data, index);
       }
       return;
     }
@@ -58,11 +59,11 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
         key.includes(REALTIME_SDK_INTERFACE),
       );
       const allAltDataRest = Object.entries(relevantGroup.data).filter(([key]) => key.includes(REST_SDK_INTERFACE));
-      const realtimeAltData = getCleanedSDKInterfaceAltData(allAltDataRealtime, language, REALTIME_SDK_INTERFACE);
-      const restAltData = getCleanedSDKInterfaceAltData(allAltDataRest, language, REST_SDK_INTERFACE);
+      const realtimeAltData = getCleanedSDKInterfaceAltData(allAltDataRealtime, pageLanguage, REALTIME_SDK_INTERFACE);
+      const restAltData = getCleanedSDKInterfaceAltData(allAltDataRest, pageLanguage, REST_SDK_INTERFACE);
 
       return React.cloneElement(child, {
-        language,
+        pageLanguage,
         languages: relevantGroup.languages,
         altData: relevantGroup.data,
         isSDKInterface: !isEmpty(allAltDataRealtime) || !isEmpty(allAltDataRest),

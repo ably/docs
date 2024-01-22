@@ -1,8 +1,7 @@
-import React, { ReactElement, useContext, useState } from 'react';
+import { ReactElement, useState } from 'react';
 import cn from 'classnames';
 import Icon from '@ably/ui/core/Icon';
 import Html from '../Html';
-import { PageLanguageContext } from 'src/contexts';
 import languageLabels from 'src/maps/language';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import {
@@ -18,6 +17,7 @@ import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
 import { isArray, isEmpty } from 'lodash';
 import { getTrimmedLanguage } from 'src/components/common';
+import { usePageLanguage } from 'src/contexts';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
@@ -26,6 +26,21 @@ type PreProps = HtmlComponentProps<'pre'> & {
   isSDKInterface?: boolean;
   realtimeAltData?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
   restAltData?: Record<string, string | HtmlComponentProps<ValidReactElement>[] | null>;
+};
+
+const getLanguageLabel = (lang: string) => {
+  const languageLabel = languageLabels[lang];
+  let labelPart: string | string[] = '';
+
+  if (languageLabel) {
+    labelPart = languageLabel.split(' ');
+    if (Array.isArray(labelPart) && labelPart.length > 1) {
+      return labelPart.slice(0, -1).join(' ');
+    } else {
+      return labelPart;
+    }
+  }
+  return languageLabels[DEFAULT_LANGUAGE];
 };
 
 const Pre = ({
@@ -37,7 +52,7 @@ const Pre = ({
   restAltData,
   attribs,
 }: PreProps): ReactElement => {
-  const pageLanguage = useContext(PageLanguageContext);
+  const { currentLanguage: pageLanguage } = usePageLanguage();
 
   /*  selectedInterfaceTab useState  */
   const [selectedSDKInterfaceTab, setSelectedSDKInterfaceTab] = useState(DEFAULT_PREFERRED_INTERFACE);
@@ -129,8 +144,8 @@ const Pre = ({
       },
     }));
   }
-  const languageLabel = languageLabels[pageLanguage].split(' ').slice(0, -1).join(' ');
 
+  const languageLabel = getLanguageLabel(pageLanguage);
   return (
     <div
       className={cn('my-32', {

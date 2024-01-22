@@ -1,17 +1,17 @@
-import { Children, FunctionComponent, useContext } from 'react';
-import PageLanguageContext from '../../../../contexts/page-language-context';
+import { Children, FunctionComponent } from 'react';
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../../data/createPages/constants';
+import { usePageLanguage } from 'src/contexts';
 
 export const DlWrapper: FunctionComponent<any> = ({ children }) => {
-  const language = useContext(PageLanguageContext);
+  const { currentLanguage: pageLanguage } = usePageLanguage();
 
   return Children.map(children, (child) => {
     const attribs = child?.props?.attribs;
 
     if (attribs?.lang) {
       if (
-        (language === DEFAULT_LANGUAGE && attribs?.lang === DEFAULT_PREFERRED_LANGUAGE) ||
-        attribs?.lang === language ||
+        (pageLanguage === DEFAULT_LANGUAGE && attribs?.lang === DEFAULT_PREFERRED_LANGUAGE) ||
+        attribs?.lang === pageLanguage ||
         attribs?.lang === DEFAULT_LANGUAGE
       ) {
         return child;

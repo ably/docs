@@ -12,9 +12,8 @@ import {
   getLanguageDefaults,
   languageIsUsable,
 } from 'src/components/common/language-defaults';
-import { PageLanguageContext, PageLanguagesContext, PathnameContext } from 'src/contexts';
-import { safeWindow, srcFromDocsSite } from 'src/utilities';
-import { PREFERRED_LANGUAGE_KEY } from 'src/utilities/language/constants';
+import { PageLanguageProvider, PathnameContext, usePageLanguage } from 'src/contexts';
+import { srcFromDocsSite } from 'src/utilities';
 
 import { isEmpty } from 'lodash';
 import { SidebarProvider } from 'src/contexts/SidebarContext';
@@ -52,8 +51,11 @@ const Template = ({
   showProductNavigation = true,
   currentProduct,
 }: ITemplate) => {
-  const params = new URLSearchParams(search);
-  const language = params.get('lang') ?? DEFAULT_LANGUAGE;
+  const {
+    currentLanguage: currentLanguageFromContext,
+    handleCurrentLanguageChange,
+    getPreferredLanguage,
+  } = usePageLanguage();
 
   const title = getMetaDataDetails(document, 'title') as string;
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
@@ -63,9 +65,22 @@ const Template = ({
   // when we don't get a product, peek into the metadata of the page for a default value
   currentProduct ??= getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as string;
 
-  const contentMenuFromAllLanguages = contentMenu[language];
-  const contentMenuFromRealtime = contentMenu[`${REALTIME_SDK_INTERFACE}_${language}`];
-  const contentMenuFromRest = contentMenu[`${REST_SDK_INTERFACE}_${language}`];
+  const filteredLanguages = useMemo(
+    () =>
+      menuLanguages.includes(NO_LANGUAGE)
+        ? []
+        : menuLanguages
+            .filter((language) => /^[^,]+$/.test(language))
+            .filter((language) => !IGNORED_LANGUAGES.includes(language)),
+    [menuLanguages],
+  );
+
+  const pageLanguage = filteredLanguages.includes(currentLanguageFromContext)
+    ? currentLanguageFromContext
+    : DEFAULT_LANGUAGE;
+  const contentMenuFromAllLanguages = contentMenu[pageLanguage];
+  const contentMenuFromRealtime = contentMenu[`${REALTIME_SDK_INTERFACE}_${pageLanguage}`];
+  const contentMenuFromRest = contentMenu[`${REST_SDK_INTERFACE}_${pageLanguage}`];
   const contentMenuFromSDKInterface = !isEmpty(contentMenuFromRealtime) ? contentMenuFromRealtime : contentMenuFromRest;
   const contentMenuFromLangOrSDKInterface = !isEmpty(contentMenuFromAllLanguages)
     ? contentMenuFromAllLanguages
@@ -78,17 +93,6 @@ const Template = ({
     rootVersion: slug,
   };
 
-  const filteredLanguages = useMemo(
-    () =>
-      menuLanguages.includes(NO_LANGUAGE)
-        ? []
-        : menuLanguages
-            .filter((language) => /^[^,]+$/.test(language))
-            .filter((language) => !IGNORED_LANGUAGES.includes(language)),
-    [menuLanguages],
-  );
-
-  const languagesExist = filteredLanguages.length > 0;
   const elements = useMemo(
     () =>
       contentOrderedList.map(
@@ -96,14 +100,15 @@ const Template = ({
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html data={data} key={i} />,
       ),
-    [contentOrderedList, language, filteredLanguages, version, versions],
+    [contentOrderedList, currentLanguageFromContext, filteredLanguages, version, versions],
   );
+
   useEffect(() => {
-    if (language === DEFAULT_LANGUAGE || !filteredLanguages.includes(language)) {
-      const preferredLanguage = safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY);
+    if (currentLanguageFromContext === DEFAULT_LANGUAGE || !filteredLanguages.includes(currentLanguageFromContext)) {
+      const preferredLanguage = getPreferredLanguage();
 
       if (filteredLanguages.length <= 1) {
-        if (language === DEFAULT_LANGUAGE) {
+        if (pageLanguage === DEFAULT_LANGUAGE) {
           return;
         }
         const href = `${pathname}${hash}`;
@@ -120,43 +125,48 @@ const Template = ({
         const usableLanguage = languageIsUsable(preferredLanguage, filteredLanguages)
           ? preferredLanguage
           : languageIsUsable(DEFAULT_PREFERRED_LANGUAGE, filteredLanguages)
-          ? DEFAULT_PREFERRED_LANGUAGE
-          : filteredLanguages[0];
-        const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(usableLanguage, language);
+            ? DEFAULT_PREFERRED_LANGUAGE
+            : filteredLanguages[0];
+        const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(usableLanguage, pageLanguage);
 
         const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, usableLanguage);
         navigate(href);
         return;
       }
     } else {
-      safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
+      handleCurrentLanguageChange(pageLanguage);
     }
   }, []);
 
   return (
-    <PageLanguageContext.Provider value={language}>
-      <PageLanguagesContext.Provider value={languages}>
-        <PathnameContext.Provider value={pathname}>
-          <Head title={title} canonical={canonical} description={description} />
-
-          <SidebarProvider>
-            <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
-              <Article>
-                <PageTitle>{title}</PageTitle>
-                <div>{elements}</div>
-              </Article>
-              <RightSidebarWrapper
-                menuData={contentMenuFromLanguage[0]}
-                languages={filteredLanguages}
-                versionData={versionData}
-              />
-            </Layout>
-          </SidebarProvider>
-        </PathnameContext.Provider>
-      </PageLanguagesContext.Provider>
+    <>
+      <PathnameContext.Provider value={pathname}>
+        <Head title={title} canonical={canonical} description={description} />
+        <SidebarProvider>
+          <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
+            <Article>
+              <PageTitle>{title}</PageTitle>
+              <div>{elements}</div>
+            </Article>
+            <RightSidebarWrapper
+              menuData={contentMenuFromLanguage[0]}
+              languages={filteredLanguages}
+              versionData={versionData}
+            />
+          </Layout>
+        </SidebarProvider>
+      </PathnameContext.Provider>
       {script && <Script src={srcFromDocsSite(`/scripts/${slug}.js`)} strategy={ScriptStrategy.idle} />}
-    </PageLanguageContext.Provider>
+    </>
   );
 };
 
-export default Template;
+const TemplateWrapper = (props: ITemplate) => {
+  return (
+    <PageLanguageProvider search={props.location.search}>
+      <Template {...props} />
+    </PageLanguageProvider>
+  );
+};
+
+export default TemplateWrapper;
