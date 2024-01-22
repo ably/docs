@@ -40,4 +40,12 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
     }
   `;
   createTypes(typeDefs);
+
+  // Schema update for site, so we always have an assetPrefix
+  const siteType = `
+    type Site implements Node {
+      assetPrefix: String
+    }
+`;
+  createTypes(siteType);
 };
