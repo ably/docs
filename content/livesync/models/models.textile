@@ -1,14 +1,13 @@
 ---
 title: Models
-meta_description: "A model is a live, observable data model backed by your database that you can use to keep your frontend applications updated in realtime with the latest information from your database."
 product: livesync
 languages:
   - javascript
 ---
 
-A model is a single instance of a live, observable data model backed by your database. A model requires a "sync function":#sync to tell the model how to initialize with the latest data, and a "merge function":#merge to calculate the next version of the model state when change events are received from the backend database.
+Keeping your frontend applications up-to-date, a model is a single instance of a live, observable data model backed by your database. A model uses a "sync function":#sync to initialize with the latest data and a "merge function":#merge to update the it's state upon receiving change events from your backend database.
 
-You can then "subscribe":#subscribe to a model to receive updates in realtime whenever the model state changes.
+To receive notifications when there are changes in the state, "subscribe to changes.":#subscribe
 
 <aside data-type='note'>
 <p>View the "API references":https://sdk.ably.com/builds/ably-labs/models/main/typedoc/ for the Models SDK.</p>
@@ -16,9 +15,9 @@ You can then "subscribe":#subscribe to a model to receive updates in realtime wh
 
 h2(#create). Create or retrieve a model
 
-To create the model, use the @models.get()@ method on the client. If a model with the given name already exists, it will be returned.
+Create a model using the @models.get()@ method on the client. If you specify a name that already exists, it will be returned.
 
-To instantiate a model you must provide a unique name. This identifies the model on the client, and is also the name of the "channel":/channels used to subscribe to state updates from the backend.
+Instantiate a model using a unique name. A unique name identifies the model on the client and corresponds to the "channel":/channels name used to subscribe to state updates from the backend. 
 
 ```[javascript]
 const modelsClient = modelsClient.models.get({
@@ -31,9 +30,9 @@ const modelsClient = modelsClient.models.get({
 
 h2(#sync). Sync functions
 
-A sync function tells your model how to initialize with the latest data from the backend and is required when instantiating a model. It can be any function that optionally accepts some parameters and returns a promise with the latest state of your data model along with a "@sequenceID@":#sequence.
+The sync function instructs your model to initialize with the latest data from the backend and is necessary when creating a model. It can be any function that optionally accepts parameters and returns a promise with the latest state of your data model, along with a "@sequenceID@":#sequence.
 
-The following is an example of a sync function. It retrieves the latest model state from your database:
+The following is an example sync function that fetches the latest model state from your database:
 
 ```[javascript]
 async function sync(id: number, page: number) {
@@ -42,7 +41,7 @@ async function sync(id: number, page: number) {
 }
 ```
 
-The following is an example response from the sync function:
+The following example is an output from the sync function:
 
 ```[json]
 {
@@ -55,7 +54,7 @@ The following is an example response from the sync function:
 }
 ```
 
-The sync function needs to be registered when a model is "instantiated":#create, for example:
+The sync function needs to be registered when a model is "instantiated:":#create 
 
 ```[javascript]
 const modelsClient = modelsClient.models.get({
@@ -66,21 +65,21 @@ const modelsClient = modelsClient.models.get({
 });
 ```
 
-Explicitly call the sync function directly on the model in order to bootstrap its state on initial page load, for example:
+Call the sync function directly on the model to bootstrap its state during the initial page load:
 
 ```[javascript]
 await model.sync(123, 1);
 ```
 
-If calling the sync function throws an error, the Models SDK will automatically retry according to the strategy specified by the @syncOptions.retryStrategy@ defined in your "@ClientOptions@":/livesync/models#options.
+The SDK automatically attempts to re-execute the sync function in the case of an error, as specified by the @syncOptions.retryStrategy@ defined in your "@ClientOptions@":/livesync/models#options.
 
 h3(#sequence). SequenceID
 
-The @sequenceID@ enables the Models SDK to know the point in the stream of change events that corresponds to this version of the database state.
+The @sequenceID@ enables the SDK to identify the point in the stream of change events that corresponds to the current version of the database's state.
 
-Internally, the Models SDK will replay change events from the point specified by the @sequenceID@ onwards in order to bring the model state up to date with any realtime changes that occur from the time at which the state was read from the database.
+Internally, the SDK replays change events starting from the point indicated by the @sequenceID@ to update the model state with any realtime changes occurring since the state was read from the database. 
 
-Your backend endpoint called by your sync function should return the largest @sequenceID@ in the "outbox":/livesync/connector/database#outbox the time that the state is read:
+The sync function should call your backend endpoint to return the largest @sequenceID@ present in the outbox when reading the state:
 
 ```[sql]
 -- Start a database transaction
@@ -93,30 +92,26 @@ SELECT COALESCE(MAX(sequence_id), 0) FROM outbox;
 COMMIT;
 ```
 
-For this to work correctly, use a "Read Committed":https://www.postgresql.org/docs/7.2/xact-read-committed.html transaction isolation level when reading your database state. This is the default isolation level in PostgreSQL.
+Use the *read committed transaction isolation level* for the correct function, when reading the database state. "PostgreSQL uses this":https://www.postgresql.org/docs/7.2/xact-read-committed.html as default. 
 
 h3(#history). Replay from history
 
-After the Models SDK initializes the model state via the sync function, it is important to apply the exact sequence of change events from your backend from the correct point in the stream. This position is specified by the @sequenceID@ returned from your backend endpoint.
+The SDK must initialize the model's state using the sync function and then precisely apply a sequence of change events from your backend, beginning at the correct point in the stream. This starting point is the @sequenceID@ your backend endpoint returns.
 
-Internally, after calling the sync function, the SDK attaches to the "channel":/channels and "subscribes":/channels to live messages. Live messages are buffered and not yet processed. It then paginates backwards through the message history on the channel from the point of attachment using "@untilAttach@":/storage-history/history#until-attach. The number of items in each page can be configured via the @syncOptions.historyPageSize@ defined in your "@ClientOptions@":/livesync/models#options.
+After the SDK executes the sync function, it internally connects to the "channel":/channels and begins "subscribing":/channels to live, yet unprocessed, messages.  It then paginates backward through the channel's message history, starting from the attachment point, using "@untilAttach@":/storage-history/history#until-attach. The number of items on each page can be configured via the @syncOptions.historyPageSize@ defined in your "@ClientOptions@":/livesync/models#options. 
 
-When a message with the target @sequenceID@ is reached, all of the messages from that point forward are sent to the model for processing to maintain continuity with incoming live messages.
+When a message is sent to the @sequenceID@, the model processes subsequent messages to maintain continuity with live messages. If the target @sequenceID@ is unreachable, there is insufficient message history to resume from the correct point to update the model. The SDK will attempt a re-sync. It re-syncs by calling the sync function again to acquire a newer version of the model state.
 
-If the target @sequenceID@ cannot be reached, there is insufficient message history to resume from the correct point and bring the model up to date. The SDK will try to sync again with a fresher version of the model state by calling your sync function once again.
+The amount of history available to query on the channel is determined by your "message storage":/storage-history/storage configuration on the channel. This configuration must match the @syncOptions.messageRetentionPeriod@ defined in your "@ClientOptions@":/livesync/models#options. The SDK uses this configuration option as a hint as to whether to resynchronize via the sync function and skip paginating through history when messages are expected to have expired.
 
-The amount of history available to query on the channel is determined by your Ably "message storage":/storage-history/storage configuration on the channel. This configuration must match the @syncOptions.messageRetentionPeriod@ defined in your "@ClientOptions@":/livesync/models#options. The SDK uses this configuration option as a hint as to whether to resynchronize via the sync function and skip paginating through history when messages are expected to have expired.
-
-You may wish to cache the model state from the backend endpoint called by the sync function. There is a strict requirement that the model state returned by this endpoint is no older than the message retention period configured on the channel so that the model state can be brought up to date.
-
-If there are no historical messages at all on the channel, then the model state is assumed to be brand new, having not yet undergone any changes.
+To ensure the model's state is up to date, cache the state obtained from the backend endpoint used by the sync function. The model state returned from this endpoint must not exceed the message retention period set on the channel. If no previous messages exist on the channel, the model is assumed to be a new state without any modifications.
 
 h2(#merge). Merge functions
 
-A merge function tells your model how to calculate the next version of the model state when a change event is received from the backend and is required when instantiating a model. It is a function that accepts the previous model state and the change event as input and returns the next version of the model state.
+A merge function is required when you instantiate a model. The merge function instructs your model how to compute the next version of the model state upon receiving a change event from the backend. The merge function takes the previous model state and the change event as inputs and outputs the next version of the model state.
 
 
-The following is an example of a merge function. It will be invoked for all events received on the channel name specified in the model:
+The following example is a merge function, invoked for all events received on the channel name specified in the model:
 
 ```[javascript]
 async function merge(state: Post, event: OptimisticEvent | ConfirmedEvent) {
@@ -130,7 +125,7 @@ async function merge(state: Post, event: OptimisticEvent | ConfirmedEvent) {
 }
 ```
 
-The merge function needs to be registered when a model is "instantiated":#create, for example:
+The merge function needs to be registered when a model is "instantiated:":#create
 
 ```[javascript]
 const modelsClient = modelsClient.models.get({
@@ -146,24 +141,21 @@ The event passed to the merge function can be either confirmed or optimistic:
 - Confirmed := change events received from your backend. They describe the result of a change to the data which has been committed to your database.
 - "Optimistic":#optimistic := events that describe mutations that have happened locally, but have not yet been confirmed by your backend.
 
-The Models SDK may invoke the merge function with the same state and event more than once in order to rebase optimistic events on top of the new confirmed state. Therefore it is important that executing the merge function with the same inputs always produces the same output. In other words it is a pure, deterministic function that does not rely on any external state.
+The SDK might call the merge function multiple times with the same state and event; to rebase optimistic events onto the newly confirmed state. It's essential that the merge function, when executed with identical inputs, consistently produces the same output. The merge function should be pure and deterministic, not depending on any external state.
 
 h3(#buffer). Event buffer
 
-Change events from your backend are delivered to the Models SDK as messages over the "channels":/channels. By default, messages are processed by the Models SDK in the order in which they are received.
+Change events from your backend are delivered to the SDK as messages over the "channels":/channels. By default, messages are processed by the SDK in the order in which they are received.
 
-However, the Models SDK supports buffering a sliding window of change events to enable short-term reordering and de-duplication. By default this behavior is disabled. It can be enabled by setting the @eventBufferOptions.bufferMS@ "@ClientOption@":/livesync/models#options to a non-zero value.
+The SDK supports a short buffering time buffering for change events, facilitating short-term reordering and de-duplication. By default, his feature is not enabled. To activate it, set the @eventBufferOptions.bufferMS@ in the "@ClientOption@":/livesync/models#options to a non-zero value.
 
 When using the event buffer, change events are de-duplicated and ordered according to their "@message.ID@":/api/realtime-sdk/messages#id, which corresponds to the change event's "@sequenceID@":#sequence.
 
-By default, the events in the buffer are ordered numerically if the @message.ID@ can be coerced to a number.
-Otherwise, events will be ordered lexicographically by their @message.ID@.
-
-You can specify a custom ordering based on any part of the message via the @eventBufferOptions.eventOrderer@ "@ClientOption@":/livesync/models#options.
+By default, the events in the buffer are ordered numerically if the @message.ID@ can be coerced to a number. Otherwise, events will be ordered lexicographically by their @message.ID@. You can specify a custom ordering based on any part of the message via the @eventBufferOptions.eventOrderer@ "@ClientOption@":/livesync/models#options.
 
 h2(#optimistic). Optimistic updates
 
-The Models SDK supports optimistic updates, a feature that enables you to immediately render changes to your data model before the backend confirms these changes, making updates appear instantaneous.
+The Models SDK supports optimistic updates, a feature that enables you to immediately render changes to your data model before the backend confirms the changes, making updates appear instantaneous.
 
 Optimistic events are used to make local, provisional changes to your data, anticipating that your backend will eventually confirm or reject these changes. The optimistic event will be processed by your "merge function":#merge and included in the local model state optimistically.
 
@@ -178,7 +170,7 @@ The @model.optimistic()@ function returns a promise resolving to two values:
 * A confirmation promise that resolves when the backend confirms or rejects the optimistic update.
 * A function to explicitly cancel the optimistic update.
 
-The following is an example of optimistically applying changes to a model:
+The following demonstrates an optimistic update to implementing changes in the model:
 
 ```[javascript]
 // optimistically apply the changes to the model
@@ -199,13 +191,16 @@ try {
 }
 ```
 
-Be aware that updating the model state in your database happens entirely via your backend endpoint.
+<aside data-type='important'>
+<p>Be aware that updating the model state in your database happens entirely through your backend endpoint.</p>
+</aside>
+
 
 h3(#mutation). MutationID
 
-The Models SDK needs a way to know when a change event received from the backend corresponds to an optimistic event that has been applied locally.
+The SDK requires a mechanism to identify when a change event received from the backend matches an optimistic event that has already been applied locally.
 
-To do this, your clients must define a unique @mutationID@ on the optimistic event. This ID can be any string, but typically this will be a UUID generated from a library, such as "uuid":https://www.npmjs.com/package/uuid. The @mutationID@ should then be passed to your backend and included on the confirmation event it writes to the "outbox":/livesync/connector/database#outbox, for example:
+To achieve this, your clients need to assign a unique @mutationID@ to each optimistic event. This ID can be any string, though it's commonly a "UUID":https://www.npmjs.com/package/uuid. The @mutationID@ must be sent to your backend and included in the confirmation event that your backend writes to the outbox:
 
 ```[sql]
 BEGIN;
@@ -218,9 +213,11 @@ COMMIT;
 
 h4(#rejections). Rejections and timeouts
 
-If no corresponding confirmed change event is received from the backend within a certain amount of time, the Models SDK will automatically roll back the optimistic event and reject the returned confirmation promise. This timeout can be configured via the @optimisticEventOptions.timeout@ "@ClientOption@":/livesync/models#options.
+The SDK automatically rewinds the optimistic event and rejects the associated confirmation promise if the corresponding confirmed change event is not received from the backend within a specified timeframe. You can configure this timeout period using the @optimisticEventOptions.timeout@ "@ClientOption@":/livesync/models#options.
 
 You can also broadcast a rejection event from your backend in order to explicitly reject a given optimistic update. This is achieved by setting the rejected flag to true in the "outbox":/livesync/connector/database#outbox record:
+
+You can reject optimistic updates by broadcasting a rejection event from your backend. Set the rejected flag to true in the "outbox":/livesync/connector/database#outbox record:
 
 ```[sql]
 BEGIN;
@@ -233,17 +230,17 @@ COMMIT;
 
 h2(#subscribe). Subscribe to changes
 
-Subscribe to a model to get updates whenever the model state changes in realtime.
+To receive realtime notifications when there are changes in the state, you can subscribe to changes to the changes. 
 
-The following is an example of subscribing to model state changes:
+The following example subscribes to model state changes:
 
 ```[javascript]
 model.subscribe((err, post) => { /* model state updated! */ });
 ```
 
-By default, subscriptions operate on an optimistic model, meaning the callback is triggered by any change in the optimistic state or when confirmed changes occur.
+Subscriptions operate on an optimistic model by default. The callback is triggered whenever the optimistic state changes or confirmed changes occur. 
 
-If the requirement is to respond exclusively to confirmed changes, set the @optimistic@ option to @false@ in the @subscribe()@ method. For example:
+To respond solely to confirmed changes, set the @optimistic@ option to @false@ in the @subscribe()@:
 
 ```[javascript]
 model.subscribe((err, post) => { /* ... */ }, { optimistic: false });
@@ -253,14 +250,14 @@ h2(#lifecycle). Model lifecycle
 
 A model instance can be in one of the following lifecycle states:
 
-- initialized := The model has been initialized but has not yet attached to the underlying channel.
-- syncing := The model is synchronizing its state from the backend.
-- ready := The model is attached to the channel and processing realtime.
-- paused := The user has "paused":#pause-resume the model.
-- errored :=  The model has errored processing data from the sync, or from the stream.
-- disposed := The model has been "disposed":#dispose, either by the user disposing it or an unrecoverable error.
+- initialized := the model has been initialized but has not yet attached to the underlying channel.
+- syncing := the model is synchronizing its state from the backend.
+- ready := the model is attached to the channel and processing realtime.
+- paused := the user has "paused":#pause-resume the model.
+- errored :=  the model has errored processing data from the sync, or from the stream.
+- disposed := the model has been "disposed":#dispose, either by the user disposing it or an unrecoverable error.
 
-It is possible to listen for model state change events on a model instance:
+Listen for model state change events on a model instance:
 
 ```[javascript]
 model.on('paused', () => { /* model paused*/ });
@@ -270,15 +267,15 @@ model.on('disposed', () => { /* model disposed */ });
 
 h3(#pause-resume). Pausing and resuming a model
 
-You can pause a model to prevent the model from consuming realtime updates, while reserving the ability to resume it at some point in the future. This can be useful in instances such as when the UI rendering the model data is temporarily out-of-view.
+You can pause a model to prevent the model from consuming realtime updates, while reserving the ability to resume it at some point in the future. Pausing can be useful in instances such as when the UI rendering the model data is temporarily out-of-view.
 
-The following is an example of pausing a model. New events will not be processed and subscription callbacks will not be invoked:
+The following pauses the model. New events will not be processed and subscription callbacks will not be invoked:
 
 ```[javascript]
 await model.pause();
 ```
 
-The following is an example of resuming a model that was previously paused. Event processing will resume and changes will be made available to subscribers.
+The following example un-pauses the model. Event processing will resume and changes will be made available to subscribers:
 
 ```[javascript]
 await model.resume();
@@ -286,9 +283,7 @@ await model.resume();
 
 h3(#dispose). Disposing of a model
 
-When a model is no longer needed, it should be disposed of to free up resources.
-
-The following is an example of disposing of a model:
+When a model is no longer needed, disposed of it to free up resources:
 
 ```[javascript]
 await model.dispose();
