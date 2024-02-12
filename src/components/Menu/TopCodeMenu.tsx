@@ -4,7 +4,13 @@ import PageLanguageContext from '../../contexts/page-language-context';
 import { LanguageDropdownSelector } from './LanguageDropdownSelector/LanguageDropdownSelector';
 import { VersionMenuProps } from './VersionMenu';
 
-const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionData: VersionMenuProps }) => {
+const TopCodeMenu = ({
+  languages,
+  versionData,
+}: {
+  languages: string[];
+  versionData: Omit<VersionMenuProps, 'versions'>;
+}) => {
   const pageLanguage = useContext(PageLanguageContext);
   const showVersionMenu = versionData;
   const showLanguageSelector = languages.length > 0;

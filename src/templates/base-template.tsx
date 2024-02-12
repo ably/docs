@@ -26,7 +26,7 @@ import {
   REST_SDK_INTERFACE,
 } from '../../data/createPages/constants';
 import { DOCUMENTATION_PATH } from '../../data/transform/constants';
-import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
+import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -48,7 +48,7 @@ interface ITemplate extends AblyTemplateData {
 const Template = ({
   location: { search, pathname, hash },
   pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
-  data: { document, versions },
+  data: { document },
   showProductNavigation = true,
   currentProduct,
 }: ITemplate) => {
@@ -61,7 +61,7 @@ const Template = ({
   const canonical = `${CANONICAL_ROOT}${slug}`.replace(/\/+$/, '');
 
   // when we don't get a product, peek into the metadata of the page for a default value
-  currentProduct ??= getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as string;
+  currentProduct ??= getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as ProductName | undefined;
 
   const contentMenuFromAllLanguages = contentMenu[language];
   const contentMenuFromRealtime = contentMenu[`${REALTIME_SDK_INTERFACE}_${language}`];
@@ -88,7 +88,6 @@ const Template = ({
     [menuLanguages],
   );
 
-  const languagesExist = filteredLanguages.length > 0;
   const elements = useMemo(
     () =>
       contentOrderedList.map(
@@ -96,7 +95,7 @@ const Template = ({
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html data={data} key={i} />,
       ),
-    [contentOrderedList, language, filteredLanguages, version, versions],
+    [contentOrderedList],
   );
   useEffect(() => {
     if (language === DEFAULT_LANGUAGE || !filteredLanguages.includes(language)) {
@@ -120,8 +119,8 @@ const Template = ({
         const usableLanguage = languageIsUsable(preferredLanguage, filteredLanguages)
           ? preferredLanguage
           : languageIsUsable(DEFAULT_PREFERRED_LANGUAGE, filteredLanguages)
-          ? DEFAULT_PREFERRED_LANGUAGE
-          : filteredLanguages[0];
+            ? DEFAULT_PREFERRED_LANGUAGE
+            : filteredLanguages[0];
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(usableLanguage, language);
 
         const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, usableLanguage);
@@ -131,7 +130,7 @@ const Template = ({
     } else {
       safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, language);
     }
-  }, []);
+  }, [filteredLanguages, hash, language, pathname]);
 
   return (
     <PageLanguageContext.Provider value={language}>

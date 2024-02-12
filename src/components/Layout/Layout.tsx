@@ -12,7 +12,7 @@ import { Footer } from '../Footer';
 interface LayoutProps {
   isExtraWide?: boolean;
   showProductNavigation?: boolean;
-  currentProduct: string;
+  currentProduct: string | undefined;
   noSidebar?: boolean;
   collapsibleSidebar?: boolean;
   children: ReactNode;

@@ -183,7 +183,7 @@ const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10,
     }
 
     setup({ addsearchApiKey, url: new URL(window.location.href) });
-  }, [addsearchApiKey]);
+  }, [addsearchApiKey, setup]);
 
   useEffect(() => {
     if (!client) {
@@ -230,7 +230,7 @@ const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10,
         results: null,
       });
     });
-  }, [query, page, pageLength, client]);
+  }, [query, page, pageLength, client, configureClient, setLoading, setResults]);
 
   return {
     state,

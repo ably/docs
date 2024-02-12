@@ -14,7 +14,7 @@ const useScreenSize = () => {
 type RightSidebarWrapperProps = {
   menuData: MenuData[];
   languages?: string[];
-  versionData?: VersionMenuProps;
+  versionData?: Omit<VersionMenuProps, 'versions'>;
 };
 
 export const RightSidebarWrapper = ({ menuData, languages, versionData }: RightSidebarWrapperProps) => {
