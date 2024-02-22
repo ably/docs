@@ -80,6 +80,15 @@ Capabilities can be set when creating a token or token request, as shown in the 
   const tokenRequest = await ably.auth.createTokenRequest(tokenParams);
 ```
 
+```[python]
+token_params = {
+    'client_id': 'foo',
+    'capability': json.dumps(capability)
+}
+
+token_request = ably_rest.auth.create_token_request(token_params)
+```
+
 h3(#capability-determination). Token capability determination
 
 The capabilities for tokens are determined based on those of the issuing API key and those requested by the token.
@@ -105,6 +114,27 @@ Using the following example, an API key exists with the listed capabilities. If 
     'chat': ['publish', 'subscribe', 'presence'],
     'status': ['subscribe']
   }
+```
+
+```[python]
+# API key capabilities:
+# {
+#   "chat": ["publish", "subscribe", "presence"],
+#   "status": ["subscribe"]
+# }
+
+// Token request that doesn't specify any capabilities:
+token = await ably.auth.create_token_request(
+{
+    "clientId": "client@example.com",
+    'ttl': 3600 * 1000, # ms
+})
+
+# Resulting token capabilities:
+# {
+# "chat": ["publish", "subscribe", "presence"],
+# "status": ["subscribe"]
+# }
 ```
 
 h4(#ably-token-intersection). Ably Token with intersection of capabilities
@@ -135,6 +165,32 @@ Using the following example, an API key exists with the listed capabilities. If 
   }
 ```
 
+```[python]
+# API key capabilities:
+# {
+#   "chat:*": ["publish", "subscribe", "presence"],
+#   "status": ["subscribe", "history"],
+#   "alerts": ["subscribe"]
+# }
+
+# Token request that specifies capabilities:
+capabilities = {
+    "chat:bob": ["subscribe"],  # only "subscribe" intersects
+    "status": ["*"],  # "*" intersects with "subscribe"
+    "secret": ["publish", "subscribe"]  # key does not have access to "secret" channel
+}
+
+token_details = await ably_rest.auth.request_token({
+    'capability': json.dumps(capabilities)
+})
+
+# Resulting token capabilities:
+# {
+#   "chat:bob": ["subscribe"],
+#   "status": ["subscribe", "history"]
+# }
+```
+
 h4(#ably-token-error). Ably Token with incompatible capabilities
 
 If a set of capabilities are requested, and the intersection between those and the API key's capabilities is empty, then the @TokenRequest@ will result in an error.
@@ -151,6 +207,21 @@ Using the following example, an API key exists with the listed capabilities. If 
   const tokenDetails = await auth.requestToken({ capability: {
     'status': ['*']
   }});
+```
+
+```[python]
+# API key capabilities:
+# {
+#   "chat": ["*"]
+# }
+
+token_details = await ably_rest.auth.request_token({
+    'capability': json.dumps({
+        {
+            "status": ["*"]
+        }
+    })
+})
 ```
 
 h4(#ably-jwt). Ably JWT capability determination
@@ -182,6 +253,18 @@ To set the trusted fields you need to include @ably.channel.*@ in your JWT authe
   }
 ```
 
+```[python]
+claims = {
+    "sub": "1234567890",
+    "name": "John Doe",
+    "x-ably-capability": "<...>",
+    "x-ably-clientId": "<...>",
+    "ably.channel.chat1": "admin",       # the user is an admin for the chat1 channel
+    "ably.channel.chat:*": "moderator",  # the user is a moderator in channels within the chat namespace
+    "ably.channel.*": "guest"            # the user is a guest in all other channels
+}
+```
+
 The claims from the token are copied into messages, allowing them to be checked for permission:
 
 ```[javascript]
@@ -189,6 +272,12 @@ The claims from the token are copied into messages, allowing them to be checked 
     const userClaim = message.extras && message.extras.userClaim;
     return (userClaim && userClaim == 'moderator');
   }
+```
+
+```[python]
+def from_moderator(message):
+    user_claim = message.get('extras', {}).get('userClaim')
+    return user_claim == 'moderator' if user_claim else False
 ```
 
 h2(#jwt-limits). Using JWT for per connection publish rate limits
@@ -212,4 +301,15 @@ The following is an example of setting different rate limits for different chann
     'ably.limits.publish.perAttachment.maxRate.chat1': 10, // the user can publish 10 messages per second in channel chat1
     'ably.limits.publish.perAttachment.maxRate.chat:*': 0.1 // the user can publish a message every 10 seconds in all channels within the chat namespace
   }
+```
+
+```[python]
+claims = {
+    "sub": "1234567890",
+    "name": "John Doe",
+    "x-ably-capability": "<...>",
+    "x-ably-clientId": "<...>",
+    "ably.limits.publish.perAttachment.maxRate.chat1": 10,   # the user can publish 10 messages per second in channel chat1
+    "ably.limits.publish.perAttachment.maxRate.chat:*": 0.1  # the user can publish a message every 10 seconds in all channels within the chat namespace
+}
 ```
