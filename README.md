@@ -15,7 +15,16 @@ This is a static site generated using [Gatsby](https://www.gatsbyjs.com/) and do
 
 Install node & npm.
 
-If you use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to manage your Ruby runtime versions, we have included a [`.tool-versions`](.tool-versions) file. Note that if you `brew install`ed your asdf installation instead of `git clone`ing it, npm [may not be installed correctly](https://youtrack.jetbrains.com/issue/WEB-51052).
+If you use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to manage your Ruby runtime versions, we have included a [`.tool-versions`](.tool-versions) file - where the dependencies within can be installed with `asdf install` from the project root.
+
+At the time of writing, this project requires Ruby 3.0.0, which in turn requires `openssl@1.1`. Environments with different versions (i.e. `openssl@3`) may experience a failing Ruby install, in which case you can do the following (and if this fails, uninstall `@openssl@X` first):
+
+```
+brew install openssl@1.1
+RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@1.1)" asdf install ruby
+```
+
+Note that if you `brew install`ed your asdf installation instead of `git clone`ing it, npm [may not be installed correctly](https://youtrack.jetbrains.com/issue/WEB-51052).
 
 `npm i`
 
