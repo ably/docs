@@ -1,5 +1,12 @@
 import { Dispatch, FunctionComponent as FC, SetStateAction } from 'react';
+import { usePageLanguage } from 'src/contexts';
 import { SingleValue } from 'react-select';
+import { navigate } from 'gatsby';
+
+import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, SDK_INTERFACES } from '../../../../data/createPages/constants';
+import { dropdownContainer, horizontalNav } from './LanguageNavigation.module.css';
+import SDKInterfacePanel from '../../SDKInterfacePanel/SDKInterfacePanel';
+
 import {
   createLanguageHrefFromDefaults,
   getTrimmedLanguage,
@@ -7,12 +14,6 @@ import {
   ReactSelectOption,
   Select,
 } from 'src/components';
-
-import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, SDK_INTERFACES } from '../../../../data/createPages/constants';
-import { dropdownContainer, horizontalNav } from './LanguageNavigation.module.css';
-import SDKInterfacePanel from '../../SDKInterfacePanel/SDKInterfacePanel';
-import { usePageLanguage } from 'src/contexts';
-import { navigate } from 'gatsby';
 
 export interface LanguageNavigationComponentProps {
   language: string;
@@ -38,7 +39,7 @@ export interface LanguageNavigationProps {
 }
 
 const changePageOnSelect =
-  (pageLanguage: string, cb: (arg: string) => void) => (newValue: SingleValue<ReactSelectOption>) => {
+  (pageLanguage: string, callback: (arg: string) => void) => (newValue: SingleValue<ReactSelectOption>) => {
     if (newValue) {
       const language = newValue.value;
       const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
@@ -48,7 +49,7 @@ const changePageOnSelect =
 
       const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
       if (!isPageLanguageDefault) {
-        cb(language);
+        callback(language);
       }
 
       navigate(href);
@@ -94,7 +95,7 @@ const LanguageNavigation = ({
       ) : null}
 
       {items.length >= 1 ? (
-        <div className="w-full border-b border-charcoal-grey">
+        <div className="border-b border-charcoal-grey w-full">
           <menu data-testid="menu" className={horizontalNav}>
             {items.map(({ Component, props, content }, index) => (
               <Component {...props} key={index}>

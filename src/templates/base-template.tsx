@@ -125,8 +125,8 @@ const Template = ({
         const usableLanguage = languageIsUsable(preferredLanguage, filteredLanguages)
           ? preferredLanguage
           : languageIsUsable(DEFAULT_PREFERRED_LANGUAGE, filteredLanguages)
-            ? DEFAULT_PREFERRED_LANGUAGE
-            : filteredLanguages[0];
+          ? DEFAULT_PREFERRED_LANGUAGE
+          : filteredLanguages[0];
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(usableLanguage, pageLanguage);
 
         const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, usableLanguage);
