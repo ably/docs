@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { ElementType } from 'react';
 import { Link } from 'gatsby';
 import { SidebarHeading, SidebarHeadingProps } from './';
 import { checkLinkIsInternal } from '../blocks/external-references/AElementHelpers/check-link-is-internal';
@@ -10,7 +10,7 @@ type SidebarLinkProps = {
   children: React.ReactNode;
   alwaysExpanded?: boolean;
   expandable?: boolean;
-} & SidebarHeadingProps<any>;
+} & SidebarHeadingProps<ElementType>;
 
 export const SidebarLink = ({ to, alwaysExpanded = false, expandable = false, ...props }: SidebarLinkProps) => {
   if (expandable && !alwaysExpanded) {
