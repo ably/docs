@@ -1,5 +1,4 @@
-import { SetStateAction } from 'react';
-import { CSSObjectWithLabel, GroupBase, StylesConfig } from 'react-select';
+import { CSSObjectWithLabel, StylesConfig } from 'react-select';
 import { ReactSelectOption } from './types';
 
 const SELECT_HEIGHT = '24px';
