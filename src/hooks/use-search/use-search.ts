@@ -1,4 +1,4 @@
-import { Dispatch, useEffect, useReducer } from 'react';
+import { Dispatch, useEffect, useReducer, useCallback } from 'react';
 // @ts-ignore - addsearch has no types
 import AddSearchClient from 'addsearch-js-client';
 
@@ -172,10 +172,10 @@ interface UseSearchProps {
 const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10, configureClient }: UseSearchProps) => {
   const [state, dispatch] = useReducer(reducer, { ...initialState, enableParamsSync });
   const { client, query, page } = state;
-  const setup = setupAction(dispatch);
-  const setResults = setResultsAction(dispatch);
-  const search = searchAction(dispatch);
-  const setLoading = setLoadingAction(dispatch);
+  const setup = useCallback((payload: SetupActionPayload) => setupAction(dispatch)(payload), []);
+  const setResults = useCallback((payload: SetResultsPayload) => setResultsAction(dispatch)(payload), []);
+  const search = useCallback((payload: { query: string }) => searchAction(dispatch)(payload), []);
+  const setLoading = useCallback(() => setLoadingAction(dispatch), []);
 
   useEffect(() => {
     if (!addsearchApiKey) {
@@ -183,7 +183,7 @@ const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10,
     }
 
     setup({ addsearchApiKey, url: new URL(window.location.href) });
-  }, [addsearchApiKey]);
+  }, [addsearchApiKey, setup]);
 
   useEffect(() => {
     if (!client) {
@@ -230,7 +230,7 @@ const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10,
         results: null,
       });
     });
-  }, [query, page, pageLength, client]);
+  }, [query, page, pageLength, client, configureClient, setLoading, setResults]);
 
   return {
     state,
