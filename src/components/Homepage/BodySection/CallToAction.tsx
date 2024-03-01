@@ -7,7 +7,7 @@ export const CallToAction = ({ text, href }: { text: string; href: string }) => 
     <div className="flex justify-center mt-40">
       <Link to={href} className="ui-btn font-medium">
         {text}
-        <Icon name="icon-gui-arrow-right" size="1rem" class="ml-4" />
+        <Icon name="icon-gui-arrow-right" size="1rem" additionalCSS="ml-4" />
       </Link>
     </div>
   );

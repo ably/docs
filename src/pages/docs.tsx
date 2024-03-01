@@ -6,6 +6,7 @@ import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageC
 
 import { SidebarProvider } from 'src/contexts/SidebarContext';
 import { DOCUMENTATION_NAME } from '../../data/transform/constants';
+import { PageLanguageProvider } from 'src/contexts';
 
 export type MetaData = {
   title: string;
@@ -20,8 +21,10 @@ const IndexPage = ({
   data: {
     pageContentYaml: { sections, meta },
   },
+  location: { search },
 }: {
   data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData } };
+  location: Location;
 }) => {
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
   return (
@@ -42,11 +45,13 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <SidebarProvider>
-        <Layout currentProduct="home" noSidebar showSearchBar={false}>
-          <HomepageContent sections={sections} />
-        </Layout>
-      </SidebarProvider>
+      <PageLanguageProvider search={search}>
+        <SidebarProvider>
+          <Layout currentProduct="home" noSidebar showSearchBar={false}>
+            <HomepageContent sections={sections} />
+          </Layout>
+        </SidebarProvider>
+      </PageLanguageProvider>
     </>
   );
 };
