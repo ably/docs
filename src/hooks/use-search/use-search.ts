@@ -151,22 +151,19 @@ const initialState: State = {
   loading: false,
 };
 
+interface ConfigureClientData {
+  // NOTE: `client` is the AddSearchClient instance that is not typed
+  client: unknown;
+  query?: string;
+  page: State['page'];
+  pageLength: number;
+}
+
 interface UseSearchProps {
   addsearchApiKey?: string;
   enableParamsSync?: boolean;
   pageLength?: number;
-  configureClient?: ({
-    client,
-    query,
-    page,
-    pageLength,
-  }: {
-    // NOTE: `client` is the AddSearchClient instance that is not typed
-    client: any;
-    query?: string;
-    page: State['page'];
-    pageLength: number;
-  }) => void;
+  configureClient?: (data: ConfigureClientData) => void;
 }
 
 const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10, configureClient }: UseSearchProps) => {
