@@ -1,4 +1,4 @@
-import { ChangeEvent, useRef, useState, useEffect } from 'react';
+import { ChangeEvent, useRef, useState, useEffect, useCallback } from 'react';
 import useKeyboardShortcut from 'use-keyboard-shortcut';
 import cn from 'classnames';
 import Icon from '@ably/ui/core/Icon';
@@ -39,9 +39,9 @@ export const SearchBar = ({
   } = useSearch({
     addsearchApiKey: process.env.GATSBY_ADDSEARCH_API_KEY,
     enableParamsSync: true,
-    configureClient: ({ client }) => {
+    configureClient: useCallback(({ client }) => {
       client.setThrottleTime(800);
-    },
+    }, []),
   });
 
   const handleSearch = ({ target }: ChangeEvent<HTMLInputElement>) => {

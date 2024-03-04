@@ -1,4 +1,4 @@
-import { Dispatch, useEffect, useReducer } from 'react';
+import { Dispatch, useEffect, useReducer, useCallback } from 'react';
 // @ts-ignore - addsearch has no types
 import AddSearchClient from 'addsearch-js-client';
 
@@ -151,31 +151,28 @@ const initialState: State = {
   loading: false,
 };
 
+interface ConfigureClientData {
+  // NOTE: `client` is the AddSearchClient instance that is not typed
+  client: unknown;
+  query?: string;
+  page: State['page'];
+  pageLength: number;
+}
+
 interface UseSearchProps {
   addsearchApiKey?: string;
   enableParamsSync?: boolean;
   pageLength?: number;
-  configureClient?: ({
-    client,
-    query,
-    page,
-    pageLength,
-  }: {
-    // NOTE: `client` is the AddSearchClient instance that is not typed
-    client: any;
-    query?: string;
-    page: State['page'];
-    pageLength: number;
-  }) => void;
+  configureClient?: (data: ConfigureClientData) => void;
 }
 
 const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10, configureClient }: UseSearchProps) => {
   const [state, dispatch] = useReducer(reducer, { ...initialState, enableParamsSync });
   const { client, query, page } = state;
-  const setup = setupAction(dispatch);
-  const setResults = setResultsAction(dispatch);
-  const search = searchAction(dispatch);
-  const setLoading = setLoadingAction(dispatch);
+  const setup = useCallback((payload: SetupActionPayload) => setupAction(dispatch)(payload), []);
+  const setResults = useCallback((payload: SetResultsPayload) => setResultsAction(dispatch)(payload), []);
+  const search = useCallback((payload: { query: string }) => searchAction(dispatch)(payload), []);
+  const setLoading = useCallback(() => setLoadingAction(dispatch), []);
 
   useEffect(() => {
     if (!addsearchApiKey) {
@@ -183,7 +180,7 @@ const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10,
     }
 
     setup({ addsearchApiKey, url: new URL(window.location.href) });
-  }, [addsearchApiKey]);
+  }, [addsearchApiKey, setup]);
 
   useEffect(() => {
     if (!client) {
@@ -230,7 +227,7 @@ const useSearch = ({ addsearchApiKey, enableParamsSync = false, pageLength = 10,
         results: null,
       });
     });
-  }, [query, page, pageLength, client]);
+  }, [query, page, pageLength, client, configureClient, setLoading, setResults]);
 
   return {
     state,
