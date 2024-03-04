@@ -26,7 +26,6 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
             headwayAccountId
             boomerangEnabled
             announcementEnabled
-            posthogApiKey
           }
         }
       }

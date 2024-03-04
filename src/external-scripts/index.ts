@@ -7,7 +7,6 @@ import googleTagManager, {
   googleTagManagerSessionPageViews,
   googleTagManagerLoggedIn,
 } from './google-tag-manager';
-import posthogSetup, { posthogIdentifyUser, posthogSetUserEmail } from './posthog';
 
 export type TrackableSession = {
   emulatingUser?: boolean;
@@ -19,13 +18,7 @@ export type TrackableSession = {
 };
 
 // Inject scripts and run any init code
-const injectScripts = ({
-  hubspotTrackingId,
-  googleTagManagerAuthToken,
-  gtmPreview,
-  announcementEnabled,
-  posthogApiKey,
-} = {}) => {
+const injectScripts = ({ hubspotTrackingId, googleTagManagerAuthToken, gtmPreview, announcementEnabled } = {}) => {
   if (announcementEnabled) {
     announcement();
   }
@@ -37,15 +30,11 @@ const injectScripts = ({
   if (hubspotTrackingId) {
     hubspot(hubspotTrackingId);
   }
-
-  if (posthogApiKey) {
-    posthogSetup(posthogApiKey);
-  }
 };
 
 // Run signed in trackers
 const sessionTracker = (
-  { hubspotTrackingId, googleTagManagerAuthToken, gtmPreview, headwayAccountId, boomerangEnabled, posthogApiKey } = {},
+  { hubspotTrackingId, googleTagManagerAuthToken, gtmPreview, headwayAccountId, boomerangEnabled } = {},
   sessionState,
 ) => {
   if (!sessionState) {
@@ -68,14 +57,6 @@ const sessionTracker = (
 
   if (headwayAccountId && sessionState.signedIn) {
     headway(headwayAccountId);
-  }
-
-  if (posthogApiKey && sessionState?.user?.id) {
-    const {
-      user: { id, email },
-    } = sessionState;
-    posthogIdentifyUser(id);
-    posthogSetUserEmail(email);
   }
 };
 

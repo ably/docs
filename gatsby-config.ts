@@ -16,7 +16,6 @@ export const siteMetadata = {
     headwayAccountId: process.env.HEADWAY_ACCOUNT_ID,
     boomerangEnabled: process.env.BOOMERANG_ENABLED,
     announcementEnabled: process.env.ANNOUNCEMENT_ENABLED,
-    posthogApiKey: process.env.POSTHOG_API_KEY,
   },
 };
 
