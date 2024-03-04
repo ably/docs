@@ -57,6 +57,9 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       headwayAccountId: String
       boomerangEnabled: String
       announcementEnabled: String
+      oneTrustEnabled: String
+      oneTrustDomain: String
+      oneTrustTest: String
     }
 
     type SiteSiteMetadata implements Node {

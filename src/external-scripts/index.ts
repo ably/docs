@@ -7,6 +7,7 @@ import googleTagManager, {
   googleTagManagerSessionPageViews,
   googleTagManagerLoggedIn,
 } from './google-tag-manager';
+import oneTrustScript from './one-trust';
 
 export type TrackableSession = {
   emulatingUser?: boolean;
@@ -18,7 +19,19 @@ export type TrackableSession = {
 };
 
 // Inject scripts and run any init code
-const injectScripts = ({ hubspotTrackingId, googleTagManagerAuthToken, gtmPreview, announcementEnabled } = {}) => {
+const injectScripts = ({
+  hubspotTrackingId,
+  googleTagManagerAuthToken,
+  gtmPreview,
+  announcementEnabled,
+  oneTrustDomain,
+  oneTrustEnabled,
+  oneTrustTest,
+} = {}) => {
+  if (oneTrustEnabled) {
+    oneTrustScript(oneTrustDomain, oneTrustTest);
+  }
+
   if (announcementEnabled) {
     announcement();
   }

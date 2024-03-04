@@ -16,6 +16,9 @@ export const siteMetadata = {
     headwayAccountId: process.env.HEADWAY_ACCOUNT_ID,
     boomerangEnabled: process.env.BOOMERANG_ENABLED,
     announcementEnabled: process.env.ANNOUNCEMENT_ENABLED,
+    oneTrustDomain: process.env.ONE_TRUST_DOMAIN,
+    oneTrustEnabled: process.env.ONE_TRUST_ENABLED,
+    oneTrustTest: process.env.ONE_TRUST_TEST,
   },
 };
 
