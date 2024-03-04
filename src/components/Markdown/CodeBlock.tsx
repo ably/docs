@@ -10,7 +10,7 @@ registerDefaultLanguages(languagesRegistry);
 
 import { ButtonWithTooltip } from 'src/components';
 import { safeWindow } from 'src/utilities';
-import { copyCodeBlockContentTracker } from 'src/third-party/gtm/gtm';
+import { copyCodeBlockContentTracker } from 'src/external-scripts/google-tag-manager/events';
 
 export const CodeBlock: FC<{ children: React.ReactNode; language: string }> = ({
   children,

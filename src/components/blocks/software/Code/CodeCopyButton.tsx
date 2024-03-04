@@ -3,7 +3,7 @@ import Icon from '@ably/ui/core/Icon';
 import { ButtonWithTooltip } from 'src/components';
 import '@ably/ui/core/styles.css';
 import { safeWindow } from 'src/utilities';
-import { copyCodeBlockContentTracker } from 'src/third-party/gtm/gtm';
+import { copyCodeBlockContentTracker } from 'src/external-scripts/google-tag-manager/events';
 import { DEFAULT_LANGUAGE } from '../../../../../data/createPages/constants';
 
 type Props = {
