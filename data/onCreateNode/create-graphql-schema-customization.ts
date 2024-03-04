@@ -41,11 +41,30 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
   `;
   createTypes(typeDefs);
 
-  // Schema update for site, so we always have an assetPrefix
-  const siteType = `
+  // Schema update for site
+  const siteTypes = `
+    # We always want an assetPrefix
     type Site implements Node {
       assetPrefix: String
     }
-`;
-  createTypes(siteType);
+
+    # Extend site metadata with external script config
+    type ExternalScriptData implements Node {
+      hubspotTrackingId: String
+      addsearchSiteKey: String
+      googleTagManagerAuthToken: String
+      gtmPreview: String
+      headwayAccountId: String
+      boomerangEnabled: String
+      announcementEnabled: String
+      posthogApiKey: String
+    }
+
+    type SiteSiteMetadata implements Node {
+      title: String
+      siteUrl: String
+      externalScriptsData: ExternalScriptData
+    }
+  `;
+  createTypes(siteTypes);
 };

@@ -1,5 +1,7 @@
 import Cookies from 'js-cookie';
 
+import { scriptLoader } from './utils';
+
 declare global {
   type HubspotItem = string | Record<string, string>;
   interface Window {
@@ -20,6 +22,11 @@ export type HubspotUser = {
   adminUrl: string;
 };
 
+const hubspot = (hubspotTrackingId) => {
+  scriptLoader(document, `//js.hs-scripts.com/${hubspotTrackingId}.js`, { id: 'hs-script-loader' });
+  window._hsq = window._hsq || [];
+};
+
 export const hubspotIdentifyUser = ({
   emulatingUser,
   user,
@@ -32,9 +39,6 @@ export const hubspotIdentifyUser = ({
   if (!hubspot || !window) {
     return;
   }
-  if (!window._hsq) {
-    window._hsq = [];
-  }
 
   const identifyValue = Cookies.get(hubspot.identifyKey);
   const campaignEmail = Cookies.get('hubspot_campaign_email');
@@ -46,9 +50,9 @@ export const hubspotIdentifyUser = ({
         email: campaignEmail,
       },
     ]);
-    window._hsq.push(['trackPageView']);
+    _hsq.push(['trackPageView']);
 
-    Cookies.remove('hubspot_campaign_email');
+    Cookies.set('hubspot_campaign_email', undefined);
   }
 
   if (!emulatingUser && user && identifyValue !== user.id && !campaignEmail) {
@@ -69,3 +73,5 @@ export const hubspotIdentifyUser = ({
     Cookies.set(hubspot.identifyKey, user.id);
   }
 };
+
+export default hubspot;

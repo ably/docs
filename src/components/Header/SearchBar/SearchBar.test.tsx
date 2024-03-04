@@ -1,9 +1,22 @@
 import React from 'react';
+import { useStaticQuery } from 'gatsby';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DisplayMode, SearchBar } from '.';
 
 describe('<SearchBar />', () => {
+  beforeEach(() => {
+    useStaticQuery.mockReturnValue({
+      site: {
+        siteMetadata: {
+          externalScriptsData: {
+            addsearchSiteKey: 'shh-do-not-tell-to-anyone',
+          },
+        },
+      },
+    });
+  });
+
   it('should render the component', () => {
     render(<SearchBar displayMode={DisplayMode.FULL_SCREEN} />);
     expect(screen.getByPlaceholderText('Search')).toBeInTheDocument();

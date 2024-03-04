@@ -1,4 +1,5 @@
 import { ChangeEvent, useRef, useState, useEffect, useCallback } from 'react';
+import { graphql, useStaticQuery } from 'gatsby';
 import useKeyboardShortcut from 'use-keyboard-shortcut';
 import cn from 'classnames';
 import Icon from '@ably/ui/core/Icon';
@@ -34,10 +35,26 @@ export const SearchBar = ({
   const extraInputStyle = extraStyleOptions && extraStyleOptions.inputContainer;
 
   const {
+    site: {
+      siteMetadata: { externalScriptsData },
+    },
+  } = useStaticQuery(graphql`
+    query {
+      site {
+        siteMetadata {
+          externalScriptsData {
+            addsearchSiteKey
+          }
+        }
+      }
+    }
+  `);
+
+  const {
     state: { query, results, error },
     actions: { search },
   } = useSearch({
-    addsearchApiKey: process.env.GATSBY_ADDSEARCH_API_KEY,
+    addsearchApiKey: externalScriptsData.addsearchSiteKey,
     enableParamsSync: true,
     configureClient: useCallback(({ client }) => {
       client.setThrottleTime(800);
