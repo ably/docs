@@ -6,6 +6,7 @@ import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
 
 import { SidebarProvider } from 'src/contexts/SidebarContext';
+import { PageLanguageProvider } from 'src/contexts';
 
 export type MetaData = {
   title: string;
