@@ -1,5 +1,5 @@
 import React from 'react';
-import { contactUsClickTracker, supportClickTracker } from 'src/third-party/gtm/gtm';
+import { contactUsClickTracker, supportClickTracker } from 'src/external-scripts/google-tag-manager/events';
 import { InArticleBanner, InArticleBannerCopy, InArticleOptions } from './InArticleBanner';
 
 export const ArticleFooter = () => (
