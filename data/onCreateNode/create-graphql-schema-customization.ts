@@ -7,6 +7,7 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
     type PageFurnitureYaml implements Node {
       label: String!
       link: String!
+      external: Boolean
       name: String
       level: Int
       text: String
@@ -40,6 +41,28 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
     }
   `;
   createTypes(typeDefs);
+
+  // Schema update for page-content YAML files
+  const pageContentTypes = `
+    type PageContentYamlSectionsCallToAction implements Node {
+      text: String!
+      href: String!
+      external: Boolean
+      type: String!
+    }
+    type PageContentYamlSectionsCardsLinks implements Node {
+      text: String!
+      href: String!
+      external: Boolean
+    }
+    type PageContentYamlSectionsCardsCallToAction implements Node {
+      text: String!
+      href: String!
+      external: Boolean
+      type: String!
+    }
+  `;
+  createTypes(pageContentTypes);
 
   // Schema update for site
   const siteTypes = `

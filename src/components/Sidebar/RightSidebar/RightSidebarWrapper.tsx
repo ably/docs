@@ -24,7 +24,7 @@ export const RightSidebarWrapper = ({ menuData, languages, versionData }: RightS
   return (
     <div
       className={cn(
-        'fixed md:sticky top-112 left-0 right-0 bg-white flex flex-row md:flex-col justify-between md:justify-start z-1 h-72 md:h-screen',
+        'fixed md:sticky top-112 left-0 right-0 bg-white flex flex-row md:flex-col justify-between md:justify-start z-1 h-72 md:h-screen overflow-x-hidden',
         {
           [rightSidebarWrapperDesktop]: isDesktop,
         },

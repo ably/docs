@@ -1,4 +1,4 @@
-import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../transform/constants';
+import { LATEST_ABLY_API_VERSION_STRING } from '../transform/constants';
 import { DEFAULT_LANGUAGE } from './constants';
 import { addLanguagesToSet, createLanguagePageVariants } from './createPageVariants';
 
@@ -50,7 +50,7 @@ describe('createLanguagePageVariants successfully creates the page variants', ()
     expect(createPage.mock.calls.length).toBeGreaterThan(0);
     expect(createPage.mock.calls).toContainEqual([
       {
-        path: `${DOCUMENTATION_PATH}mock-slug/language/javascript`,
+        path: `/mock-slug/language/javascript`,
         component: 'mock-path',
         context: {
           slug: 'mock-slug',

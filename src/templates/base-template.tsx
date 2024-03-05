@@ -1,4 +1,4 @@
-import { Script, ScriptStrategy, navigate } from 'gatsby';
+import { Script, ScriptStrategy, navigate, withPrefix } from 'gatsby';
 import { useEffect, useMemo } from 'react';
 
 import Article from 'src/components/Article';
@@ -13,7 +13,6 @@ import {
   languageIsUsable,
 } from 'src/components/common/language-defaults';
 import { PageLanguageProvider, PathnameContext, usePageLanguage } from 'src/contexts';
-import { srcFromDocsSite } from 'src/utilities';
 
 import { isEmpty } from 'lodash';
 import { SidebarProvider } from 'src/contexts/SidebarContext';
@@ -24,8 +23,8 @@ import {
   REALTIME_SDK_INTERFACE,
   REST_SDK_INTERFACE,
 } from '../../data/createPages/constants';
-import { DOCUMENTATION_PATH } from '../../data/transform/constants';
-import { AblyDocument, AblyDocumentMeta, AblyTemplateData } from './template-data';
+import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
+import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -33,9 +32,6 @@ const getMetaDataDetails = (
   alternative: string | string[] = '',
 ) => (document?.meta?.[prop] ? document.meta[prop] : alternative);
 
-const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
-
-const CANONICAL_ROOT = `${ABLY_MAIN_WEBSITE}${DOCUMENTATION_PATH}`;
 const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
 const NO_LANGUAGE = 'none';
 const META_PRODUCT_FALLBACK = 'channels';
@@ -45,9 +41,9 @@ interface ITemplate extends AblyTemplateData {
 }
 
 const Template = ({
-  location: { search, pathname, hash },
+  location: { pathname, hash },
   pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
-  data: { document, versions },
+  data: { document },
   showProductNavigation = true,
   currentProduct,
 }: ITemplate) => {
@@ -60,10 +56,11 @@ const Template = ({
   const title = getMetaDataDetails(document, 'title') as string;
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
-  const canonical = `${CANONICAL_ROOT}${slug}`.replace(/\/+$/, '');
+  const { siteUrl } = useSiteMetadata();
+  const canonical = `${siteUrl}/${withPrefix(slug)}`.replace(/\/+$/, '');
 
   // when we don't get a product, peek into the metadata of the page for a default value
-  currentProduct ??= getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as string;
+  currentProduct ??= getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as ProductName;
 
   const filteredLanguages = useMemo(
     () =>
@@ -90,6 +87,7 @@ const Template = ({
 
   const versionData = {
     version,
+    versions: [],
     rootVersion: slug,
   };
 
@@ -100,7 +98,7 @@ const Template = ({
         // We will need a unique key if we want to alter any of these by position.
         ({ data }, i) => <Html data={data} key={i} />,
       ),
-    [contentOrderedList, currentLanguageFromContext, filteredLanguages, version, versions],
+    [contentOrderedList],
   );
 
   useEffect(() => {
@@ -136,12 +134,21 @@ const Template = ({
     } else {
       handleCurrentLanguageChange(pageLanguage);
     }
-  }, []);
+  }, [
+    currentLanguageFromContext,
+    filteredLanguages,
+    getPreferredLanguage,
+    handleCurrentLanguageChange,
+    hash,
+    pageLanguage,
+    pathname,
+  ]);
 
   return (
     <>
       <PathnameContext.Provider value={pathname}>
         <Head title={title} canonical={canonical} description={description} />
+
         <SidebarProvider>
           <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
             <Article>
@@ -156,7 +163,7 @@ const Template = ({
           </Layout>
         </SidebarProvider>
       </PathnameContext.Provider>
-      {script && <Script src={srcFromDocsSite(`/scripts/${slug}.js`)} strategy={ScriptStrategy.idle} />}
+      {script && <Script src={`/scripts/${slug}.js`} strategy={ScriptStrategy.idle} />}
     </>
   );
 };

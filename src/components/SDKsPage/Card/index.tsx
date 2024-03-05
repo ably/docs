@@ -1,4 +1,5 @@
 import Icon from '@ably/ui/core/Icon';
+import Link from 'src/components/Link';
 import { StaticImage } from 'src/components/StaticImage';
 import { btn_sdks } from '../sdks.module.css';
 
@@ -24,9 +25,9 @@ const Card = ({ githubRepoURL, setupLink, title, image, text }: CardProps) => {
       </div>
       <p className="text-p3 text-dark-grey py-16 font-light">{text}</p>
       <div className="flex flex-col justify-center gap-8">
-        <a href={setupLink} rel="noreferrer" className={`${btn_sdks} ui-btn text-btn4 gap-8`}>
+        <Link to={setupLink} rel="noreferrer" className={`${btn_sdks} ui-btn text-btn4 gap-8`}>
           Setup <Icon name="icon-gui-arrow-right" size="1rem" />
-        </a>
+        </Link>
         <a
           href={githubRepoURL}
           target="_blank"

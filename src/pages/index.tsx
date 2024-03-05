@@ -1,29 +1,35 @@
-import { graphql } from 'gatsby';
+import { graphql, withPrefix } from 'gatsby';
 import { Helmet } from 'react-helmet';
 
 import Layout from 'src/components/Layout';
-import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
+import { useSiteMetadata } from 'src/hooks/use-site-metadata';
+import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
 
 import { SidebarProvider } from 'src/contexts/SidebarContext';
-import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
+import { PageLanguageProvider } from 'src/contexts';
 
-type MetaData = {
+export type MetaData = {
   title: string;
   description: string;
   image: string;
   twitter: string;
 };
 
-const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
+export const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
 const IndexPage = ({
   data: {
     pageContentYaml: { sections, meta },
   },
+  location: { search },
 }: {
   data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData } };
+  location: Location;
 }) => {
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
+  const { siteUrl } = useSiteMetadata();
+  const canonical = `${siteUrl}/${withPrefix('/')}`;
+
   return (
     <>
       <Helmet>
@@ -32,8 +38,8 @@ const IndexPage = ({
         <meta property="og:title" content={openGraphTitle} />
         <meta property="twitter:title" content={openGraphTitle} />
         <meta property="og:site_name" content="Ably Realtime" />
-        <link rel="canonical" href={`/${DOCUMENTATION_NAME}/products/spaces`} />
-        <meta property="og:url" content={`${ABLY_MAIN_WEBSITE}/${DOCUMENTATION_NAME}/products/spaces`} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:url" content={canonical} />
         <meta name="description" content={meta.description} />
         <meta property="og:description" content={meta.description} />
         <meta name="twitter:description" content={meta.description} />
@@ -42,29 +48,29 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <SidebarProvider>
-        <Layout isExtraWide currentProduct="spaces">
-          <ProductPageContent sections={sections} />
-        </Layout>
-      </SidebarProvider>
+      <PageLanguageProvider search={search}>
+        <SidebarProvider>
+          <Layout currentProduct="home" noSidebar showSearchBar={false}>
+            <HomepageContent sections={sections} />
+          </Layout>
+        </SidebarProvider>
+      </PageLanguageProvider>
     </>
   );
 };
 
 export const query = graphql`
   query HomePageQuery {
-    pageContentYaml(name: { eq: "Spaces" }) {
+    pageContentYaml(name: { eq: "Homepage" }) {
       sections {
         title
-        level
         description
         columns
         bottomMargin
-        releaseStage
         callToAction {
           text
           href
-          type
+          external
         }
         cards {
           title
@@ -74,6 +80,12 @@ export const query = graphql`
           links {
             text
             href
+            external
+          }
+          callToAction {
+            text
+            href
+            external
           }
         }
       }

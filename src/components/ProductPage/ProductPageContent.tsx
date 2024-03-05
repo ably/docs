@@ -4,11 +4,13 @@ import { BodySection } from './BodySection/BodySection';
 export type LinkProps = {
   text: string;
   href: string;
+  external: string;
 };
 
 export type CallToActionProps = {
   text: string;
   href: string;
+  external: boolean;
   type: string;
 };
 
@@ -18,6 +20,7 @@ export type CardProps = {
   content: string;
   image: string;
   link: string;
+  external: boolean;
   links: LinkProps[];
 };
 

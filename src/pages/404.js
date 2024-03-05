@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { Link } from 'gatsby';
-import { DOCUMENTATION_NAME } from '../../data/transform/constants';
+import { Link, withPrefix } from 'gatsby';
 
 const NotFoundPage = () => {
   return (
@@ -28,7 +27,7 @@ const NotFoundPage = () => {
           </>
         ) : null}
         <br />
-        <Link to={`/${DOCUMENTATION_NAME}`}>Return to documentation home page</Link>.
+        <Link to={withPrefix(`/`)}>Return to documentation home page</Link>.
       </p>
     </main>
   );

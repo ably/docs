@@ -1,32 +1,30 @@
-import { graphql } from 'gatsby';
+import { graphql, withPrefix } from 'gatsby';
 import { Helmet } from 'react-helmet';
 
 import Layout from 'src/components/Layout';
-import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
+import { useSiteMetadata } from 'src/hooks/use-site-metadata';
+import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
 
 import { SidebarProvider } from 'src/contexts/SidebarContext';
-import { DOCUMENTATION_NAME } from '../../data/transform/constants';
-import { PageLanguageProvider } from 'src/contexts';
 
-export type MetaData = {
+type MetaData = {
   title: string;
   description: string;
   image: string;
   twitter: string;
 };
 
-export const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
-
 const IndexPage = ({
   data: {
     pageContentYaml: { sections, meta },
   },
-  location: { search },
 }: {
   data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData } };
-  location: Location;
 }) => {
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
+  const { siteUrl } = useSiteMetadata();
+  const canonical = `${siteUrl}/${withPrefix('/products/channels')}`;
+
   return (
     <>
       <Helmet>
@@ -35,8 +33,8 @@ const IndexPage = ({
         <meta property="og:title" content={openGraphTitle} />
         <meta property="twitter:title" content={openGraphTitle} />
         <meta property="og:site_name" content="Ably Realtime" />
-        <link rel="canonical" href={`/${DOCUMENTATION_NAME}`} />
-        <meta property="og:url" content={`${ABLY_MAIN_WEBSITE}/${DOCUMENTATION_NAME}`} />
+        <link rel="canonical" href={canonical} />
+        <meta property="og:url" content={canonical} />
         <meta name="description" content={meta.description} />
         <meta property="og:description" content={meta.description} />
         <meta name="twitter:description" content={meta.description} />
@@ -45,39 +43,37 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <PageLanguageProvider search={search}>
-        <SidebarProvider>
-          <Layout currentProduct="home" noSidebar showSearchBar={false}>
-            <HomepageContent sections={sections} />
-          </Layout>
-        </SidebarProvider>
-      </PageLanguageProvider>
+      <SidebarProvider>
+        <Layout isExtraWide currentProduct="channels">
+          <ProductPageContent sections={sections} />
+        </Layout>
+      </SidebarProvider>
     </>
   );
 };
 
 export const query = graphql`
   query HomePageQuery {
-    pageContentYaml(name: { eq: "Homepage" }) {
+    pageContentYaml(name: { eq: "Channels" }) {
       sections {
         title
+        level
         description
         columns
         bottomMargin
+        releaseStage
         callToAction {
           text
           href
+          type
         }
         cards {
           title
           type
           content
           image
+          link
           links {
-            text
-            href
-          }
-          callToAction {
             text
             href
           }

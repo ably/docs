@@ -6,7 +6,7 @@ const { flattenContentOrderedList, maybeRetrievePartial } = require('../transfor
 const { postParser } = require('../transform/post-parser');
 const { htmlParser } = require('../html-parser');
 const { createLanguagePageVariants } = require('./createPageVariants');
-const { LATEST_ABLY_API_VERSION_STRING, DOCUMENTATION_PATH } = require('../transform/constants');
+const { LATEST_ABLY_API_VERSION_STRING } = require('../transform/constants');
 const { createContentMenuDataFromPage } = require('./createContentMenuDataFromPage');
 const { DEFAULT_LANGUAGE } = require('./constants');
 const { writeRedirectToConfigFile } = require('./writeRedirectToConfigFile');
@@ -88,14 +88,6 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
     }
   `);
 
-  createRedirect({
-    fromPath: '/',
-    toPath: '/docs',
-    isPermanent: true,
-    force: true,
-    redirectInBrowser: true,
-  });
-
   const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
 
   const documentCreator = (documentTemplate) => async (edge) => {
@@ -117,11 +109,12 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
 
     const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
 
-    const pagePath = `${DOCUMENTATION_PATH}${edge.node.slug}`;
+    const pagePath = `/${edge.node.slug}`;
 
     const redirectFromList = edge.node.meta?.redirect_from;
     if (redirectFromList) {
       redirectFromList.forEach((redirectFrom) => {
+        // TODO: Update to use withPrefix
         const alreadyDocsPage = /^\/docs.*/.test(redirectFrom);
         const redirectFromPath = `${alreadyDocsPage ? '' : '/docs'}${redirectFrom}`;
         const redirectFromUrl = new URL(redirectFromPath, 'https://ably.com');
@@ -139,7 +132,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
     }
     const slug = edge.node.slug;
     createPage({
-      path: `${DOCUMENTATION_PATH}${edge.node.slug}`,
+      path: pagePath,
       component: documentTemplate,
       context: {
         slug,
@@ -155,8 +148,8 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
   };
 
   await Promise.all([
-    ...documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)), 
-    ...apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate))
+    ...documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)),
+    ...apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate)),
   ]);
 };
 

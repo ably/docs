@@ -17,13 +17,14 @@ module.exports = {
     `node_modules/(?!(gatsby|gatsby-script|use-keyboard-shortcut|react-medium-image-zoom|@react-hook/media-query|@mdx-js/react)/)`,
   ],
   globals: {
-    __PATH_PREFIX__: ``,
+    __PATH_PREFIX__: '/docs',
+    __BASE_PATH__: '/docs',
   },
   testEnvironmentOptions: {
     url: `http://localhost`,
     customExportConditions: [''],
   },
-  setupFiles: ['./jest.polyfills.js'],
+  setupFiles: ['./jest.polyfills.js', './loadershim.js'],
   coverageReporters: ['text'],
   setupFilesAfterEnv: ['<rootDir>/setupTests.js'],
   testEnvironment: path.join(__dirname, 'jest-environment-patched-jsdom.js'),

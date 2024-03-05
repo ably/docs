@@ -1,16 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useContext, useState } from 'react';
+import { graphql, withPrefix, useStaticQuery } from 'gatsby';
 import { SandpackPreview, SandpackProvider } from '@codesandbox/sandpack-react';
 import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
 
 import HowTo from 'HowTos/pub-sub/how-to.mdx';
-import { graphql, useStaticQuery } from 'gatsby';
 import { Head } from 'src/components/Head';
 import Layout from 'src/components/Layout';
+import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { MarkdownProvider } from 'src/components/Markdown';
 import { SidebarProvider } from 'src/contexts/SidebarContext';
 import UserContext, { type App } from 'src/contexts/user-context';
-import { DOCUMENTATION_NAME } from '../../../../data/transform/constants';
-import { useContext } from 'react';
 import { getRandomChannelName } from 'src/components/blocks/software/Code/get-random-channel-name';
 
 const getApiKey = (apps: App[]) => {
@@ -80,6 +79,8 @@ interface HowToFile {
 
 const PubSubHowTo = () => {
   const meta_description = `How to use basic publish and subscribe (pub/sub) functionality with Ably channels.`;
+  const { siteUrl } = useSiteMetadata();
+  const canonical = `${siteUrl}/${withPrefix('/how-to/pub-sub')}`;
 
   const data = useStaticQuery(graphql`
     query {
@@ -123,7 +124,7 @@ const PubSubHowTo = () => {
 
   return (
     <>
-      <Head title="Pub/Sub How To" canonical={`/${DOCUMENTATION_NAME}/how-to/pub-sub`} description={meta_description} />
+      <Head title="Pub/Sub How To" canonical={canonical} description={meta_description} />
 
       <SidebarProvider initialCollapsedState={true}>
         <Layout showProductNavigation={true} currentProduct="channels" collapsibleSidebar={true} isExtraWide>
