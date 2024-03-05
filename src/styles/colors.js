@@ -3,7 +3,6 @@
 export const primary = {
   richOrange: '#ed760a',
   brightOrange: '#f9a01b',
-  charcoalGrey: '#292831',
   white: '#fff',
   black: '#161616',
 };

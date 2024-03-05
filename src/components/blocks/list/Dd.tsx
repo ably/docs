@@ -1,10 +1,7 @@
 import GenericHtmlBlock from '../Html/GenericHtmlBlock';
-import styled from 'styled-components';
 
-const StyledDd = styled.dd`
-  font-weight: 300;
-`;
+const Dd: React.FC<{ className?: string }> = (props) => (
+  <dd {...props} className={`${props.className ? `${props.className} ` : ''}font-light`} />
+);
 
-const Dd = GenericHtmlBlock(StyledDd);
-
-export default Dd;
+export default GenericHtmlBlock(Dd);
