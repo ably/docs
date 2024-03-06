@@ -1,7 +1,8 @@
-import { StaticImage } from '../StaticImage';
 import MainSection, { Tab } from './MainSection';
 import { data } from './data';
 import { container } from './sdks.module.css';
+
+import hero from './images/sdk-hero.png';
 
 const Content = ({ tab }: { tab: string }) => {
   return (
@@ -12,7 +13,7 @@ const Content = ({ tab }: { tab: string }) => {
             <h1 className="w-full text-title-xl font-medium">{data.hero.title}</h1>
             <p className="max-w-md text-h3 text-dark-grey font-medium pt-16">{data.hero.subtitle}</p>
           </div>
-          <StaticImage className="hidden sm:block" src="/images/sdks/sdk-hero.png"></StaticImage>
+          <src className="hidden sm:block" src={hero}></src>
         </div>
       </div>
       <MainSection tab={tab as Tab} />
