@@ -107,10 +107,10 @@ export const SidebarDataRetrieval = ({
       sidebarName === 'api-reference'
         ? data.ApiLeftSidebar.items
         : sidebarName === 'spaces'
-        ? data.SpacesLeftSidebar.items
-        : sidebarName === 'livesync'
-        ? data.LiveSyncLeftSidebar.items
-        : data.ChannelsLeftSidebar.items;
+          ? data.SpacesLeftSidebar.items
+          : sidebarName === 'livesync'
+            ? data.LiveSyncLeftSidebar.items
+            : data.ChannelsLeftSidebar.items;
     sidebarData = sidebarDataFromPageFurniture(sideBarItems);
   } else {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
