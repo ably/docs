@@ -1,7 +1,7 @@
 import Icon from '@ably/ui/core/Icon';
 import { CardProps } from '../../HomepageContent';
 import Link from '../../../Link';
-import { StaticImage } from '../../../StaticImage';
+import { Image } from '../../../Image';
 
 export const SdkCard = ({ title, content, image, callToAction }: CardProps) => (
   <div className="border border-extra-light-grey rounded-lg bg-extra-light-grey flex flex-col sm:flex-row p-24 md:p-40">
@@ -19,6 +19,6 @@ export const SdkCard = ({ title, content, image, callToAction }: CardProps) => (
       ) : null}
     </div>
 
-    <StaticImage src={`/images/homepage/${image}@2x.png`} style={{ maxWidth: '409px' }} />
+    <Image image={image} style={{ maxWidth: '409px' }} />
   </div>
 );

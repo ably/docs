@@ -1,5 +1,6 @@
 import { BodySection } from './BodySection/BodySection';
 import { LinkProps, CallToActionProps } from '../ProductPage/ProductPageContent';
+import { ImageProps } from 'src/components/Image';
 
 export type CardProps = {
   title: string;
@@ -21,10 +22,10 @@ export type SectionProps = {
   cards: CardProps[];
 };
 
-export const HomepageContent = ({ sections }: { sections: SectionProps[] }) => (
+export const HomepageContent = ({ sections, images }: { sections: SectionProps[]; images: ImageProps[] }) => (
   <article className="mx-auto px-24 md:px-0" style={{ maxWidth: '960px' }}>
     {sections.map((section, index) => (
-      <BodySection key={index} section={section} />
+      <BodySection key={index} section={section} images={images} />
     ))}
   </article>
 );

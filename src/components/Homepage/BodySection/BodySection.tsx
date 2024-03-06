@@ -1,5 +1,6 @@
 import React from 'react';
 import cn from 'classnames';
+import { ImageProps } from 'src/components/Image';
 import { SectionProps } from '../HomepageContent';
 import { BodySectionDescription } from './BodySectionDescription';
 import { HeroCard } from './Card/HeroCard';
@@ -32,12 +33,24 @@ const gridGapVariants = {
   4: 'gap-24',
 };
 
-export const BodySection = ({ section }: { section: SectionProps }) => {
+const getImage = (images = [], name): { images: ImageProps[]; name: string } => {
+  const result = images.find((image) => image.base === name);
+
+  if (name && result === undefined) {
+    console.warn(`Could not find image '${name}' in list`, images);
+  }
+
+  return result;
+};
+
+export const BodySection = ({ section, images }: { section: SectionProps; images: ImageProps[] }) => {
   const cards = section.cards ?? [];
   const cardsExist = cards.length > 0;
   const columns = section.columns;
   const singleColumn = columns == 1;
   const bottomMargin = sectionBottomMarginVariants[section.bottomMargin];
+
+  console.log(images);
 
   return (
     <section className={bottomMargin}>
@@ -51,7 +64,8 @@ export const BodySection = ({ section }: { section: SectionProps }) => {
         >
           {cards.map((card, index) => {
             const Card = cardTypes[card.type];
-            return <Card key={index} {...card} />;
+            const image = getImage(images, card.image);
+            return <Card key={index} {...card} image={image} />;
           })}
         </div>
       )}

@@ -1,10 +1,10 @@
 import { CardProps } from '../../HomepageContent';
 import { Links } from '../../../ProductPage/BodySection/Card/Links';
-import { StaticImage } from '../../../StaticImage';
+import { Image } from '../../../Image';
 
 export const FeatureCard = ({ title, content, image, links }: CardProps) => (
   <div className="flex justify-between flex-col">
-    <StaticImage src={`/images/homepage/${image}`}></StaticImage>
+    <Image image={image}></Image>
     <h2 style={{ fontSize: '1.5rem' }} className="mt-24 font-medium">
       {title}
     </h2>
