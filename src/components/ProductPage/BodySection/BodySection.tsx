@@ -22,7 +22,17 @@ const betaPillStyle = {
   paddingTop: '0.313rem',
 };
 
-export const BodySection = ({ section }: { section: SectionProps }) => {
+const getImage = (images = [], name): { images: ImageProps[]; name: string } => {
+  const result = images.find((image) => image.base === name);
+
+  if (name && result === undefined) {
+    console.warn(`Could not find image '${name}' in list`, images);
+  }
+
+  return result;
+};
+
+export const BodySection = ({ section, images }: { section: SectionProps; images: ImageProps[] }) => {
   const cards = section.cards ?? [];
   const cardsExist = cards.length > 0;
   const columns = section.columns;
@@ -54,7 +64,8 @@ export const BodySection = ({ section }: { section: SectionProps }) => {
         >
           {cards.map((card, index) => {
             const Card = cardTypes[card.type as keyof typeof cardTypes];
-            return <Card key={index} {...card} />;
+            const image = getImage(images, card.image);
+            return <Card key={index} {...card} image={image} />;
           })}
         </div>
       )}

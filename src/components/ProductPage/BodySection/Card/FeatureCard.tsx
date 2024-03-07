@@ -1,7 +1,7 @@
 import React from 'react';
 import { CardProps } from '../../ProductPageContent';
 import { Links } from './Links';
-import { StaticImage } from '../../../StaticImage';
+import { Image } from '../../../Image';
 
 export const FeatureCard = ({ title, content, image, links }: CardProps) => (
   <div className="border border-extra-light-grey rounded-lg bg-extra-light-grey flex justify-between block hover:border-mid-grey hover:text-cool-black group">
@@ -16,6 +16,6 @@ export const FeatureCard = ({ title, content, image, links }: CardProps) => (
         <Links links={links}></Links>
       </div>
     </div>
-    <StaticImage src={`/images/products/${image}`}></StaticImage>
+    <Image image={image}></Image>
   </div>
 );
