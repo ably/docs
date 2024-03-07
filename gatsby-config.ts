@@ -30,7 +30,6 @@ export const graphqlTypegen = true;
 
 export const plugins = [
   'gatsby-plugin-postcss',
-  'gatsby-plugin-styled-components',
   'gatsby-plugin-image',
   'gatsby-plugin-sharp',
   'gatsby-transformer-yaml',

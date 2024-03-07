@@ -11,6 +11,11 @@ const highlightColors = {
   'disabled-tab-button': '#979798',
 };
 
+const legacyBrandColors = {
+  'brand-black': '#161616',
+  'brand-richOrange': '#ed760a',
+};
+
 module.exports = extendConfig((ablyUIConfig) => ({
   ...ablyUIConfig,
   purge: {
@@ -130,6 +135,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
       colors: {
         ...apiReferenceSpecificColors,
         ...highlightColors,
+        ...legacyBrandColors,
       },
       gridRowStart: {
         9: '9',
