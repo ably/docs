@@ -1,11 +1,10 @@
-import React from 'react';
 import { BodySection } from './BodySection/BodySection';
 import { ImageProps } from 'src/components/Image';
 
 export type LinkProps = {
   text: string;
   href: string;
-  external: string;
+  external: boolean;
 };
 
 export type CallToActionProps = {
@@ -19,7 +18,7 @@ export type CardProps = {
   title: string;
   type: string;
   content: string;
-  image: string;
+  image: ImageProps;
   link: string;
   external: boolean;
   links: LinkProps[];

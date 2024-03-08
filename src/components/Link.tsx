@@ -6,7 +6,7 @@ export default function Link<TState>({
   to,
   external,
   ...props
-}: React.PropsWithoutRef<GatsbyLinkProps<TState>>) {
+}: React.PropsWithoutRef<GatsbyLinkProps<TState>> & { external?: boolean }) {
   const isInternal = checkLinkIsInternal(to);
   const isOnPage = to?.startsWith('#');
 
@@ -14,7 +14,6 @@ export default function Link<TState>({
    *  Relevant page of documentation: https://www.gatsbyjs.com/docs/reference/built-in-components/gatsby-link/#recommendations-for-programmatic-in-app-navigation
    *  "If you need this (in-app navigation) behavior, you should either use an anchor tag or import the navigate helper from gatsby"
    */
-  /* console.log(to, isInternal, !external, !isOnPage); */
   if (isInternal && !external && !isOnPage) {
     const href = normalizeLegacyDocsLink(to);
 

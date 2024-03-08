@@ -9,7 +9,7 @@ const legacyDocsUrlPattern = /^(https?:\/\/(?:www\.)?ably.com\/docs).*/;
  * This function will drop the protocol, host & `/docs` path from legacy
  * docs links that might have been hard coded somewhere in the content
  */
-export const normalizeLegacyDocsLink = (link: string): link is string => {
+export const normalizeLegacyDocsLink = (link: string) => {
   const match = legacyDocsUrlPattern.exec(link);
 
   if (match !== null) {

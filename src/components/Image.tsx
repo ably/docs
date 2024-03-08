@@ -1,17 +1,30 @@
-import { GatsbyImage, GatsbyImageData, getImage } from 'gatsby-plugin-image';
+import { GatsbyImage, IGatsbyImageData, getImage } from 'gatsby-plugin-image';
 import { ComponentProps } from 'react';
 
-export type ImageProp = {
-  childImageSharp: GatsbyImageData;
+export type ImageProps = {
+  childImageSharp: IGatsbyImageData;
   extension: string;
   publicURL: string;
+  src?: string;
+  base?: string;
 };
 
 export type ImageComponentProps = ComponentProps<'img'> & {
-  image: ImageProp;
+  image: ImageProps;
 };
 
-export const Image = ({ image, src, ...attribs }: ImageProps) => {
+export const getImageFromList = (images: ImageProps[] = [], name?: string | ImageProps): ImageProps | undefined => {
+  const imageName = typeof name === 'string' ? name : name?.base;
+  const result = images.find((image) => image.base === imageName);
+
+  if (name && result === undefined) {
+    console.warn(`Could not find image '${name}' in list`, images);
+  }
+
+  return result;
+};
+
+export const Image = ({ image, src, ...attribs }: ImageComponentProps) => {
   if (!image) {
     return;
   }
@@ -27,8 +40,11 @@ export const Image = ({ image, src, ...attribs }: ImageProps) => {
     return <img {...attribs} src={publicURL} />;
   }
 
-  const { alt } = attribs ?? '';
-  delete attribs.alt;
+  const { alt, className } = attribs ?? {};
+  const imageAttributes = { alt: alt ?? '', className };
+  const fetchedImage = getImage(image.childImageSharp);
 
-  return <GatsbyImage image={getImage(image)} alt={alt} {...attribs} />;
+  if (fetchedImage) {
+    return <GatsbyImage image={fetchedImage} {...imageAttributes} />;
+  }
 };

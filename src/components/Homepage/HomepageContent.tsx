@@ -5,7 +5,7 @@ import { ImageProps } from 'src/components/Image';
 export type CardProps = {
   title: string;
   content: string;
-  image: string;
+  image: ImageProps;
   type: 'hero' | 'feature' | 'sdk';
   links?: LinkProps[];
   callToAction?: CallToActionProps;

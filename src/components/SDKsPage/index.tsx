@@ -13,7 +13,7 @@ const Content = ({ tab }: { tab: string }) => {
             <h1 className="w-full text-title-xl font-medium">{data.hero.title}</h1>
             <p className="max-w-md text-h3 text-dark-grey font-medium pt-16">{data.hero.subtitle}</p>
           </div>
-          <src className="hidden sm:block" src={hero}></src>
+          <img className="hidden sm:block" src={hero} />
         </div>
       </div>
       <MainSection tab={tab as Tab} />
