@@ -13,7 +13,7 @@ This is a static site generated using [Gatsby](https://www.gatsbyjs.com/) and do
 
 ## Run
 
-Install node & npm.
+Install node & yarn.
 
 If you use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to manage your Ruby runtime versions, we have included a [`.tool-versions`](.tool-versions) file - where the dependencies within can be installed with `asdf install` from the project root.
 
@@ -24,29 +24,27 @@ brew install openssl@1.1
 RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@1.1)" asdf install ruby
 ```
 
-Note that if you `brew install`ed your asdf installation instead of `git clone`ing it, npm [may not be installed correctly](https://youtrack.jetbrains.com/issue/WEB-51052).
-
-`npm i`
+`yarn`
 
 If Gatsby CLI is not already installed:
 
-`npm install -g gatsby-cli`
+`yarn global add gatsby-cli`
 
 **Environment variables setup**
 
 If you have not yet [set up your local .env.development environment variables](#environment-variables), run:
 
-`npm run develop:env-setup`
+`yarn develop:env-setup`
 
 **Editors:**
 
-`npm run edit`
+`yarn edit`
 
 **Developers:**
 
 To develop locally run:
 
-`npm run develop`
+`yarn develop`
 
 Visit `localhost:8000` for homepage.
 
@@ -54,7 +52,7 @@ Visit `localhost:8000/docs/${relativePath}` for documentation pages, e.g. `local
 
 To build and serve locally:
 
-`npm run rebuild`
+`yarn rebuild`
 
 Visit `localhost:8000` for homepage.
 
@@ -114,7 +112,7 @@ We have selected folder-level README files instead of the alternative of a dedic
 
 ## Optional Setup Steps
 
-If you would like to run linting and tests automatically before every commit and run npm install automatically after every branch checkout, run `npm run repo-githooks`. If you would like to remove this behaviour, run `npm run no-githooks`.
+If you would like to run linting and tests automatically before every commit and run yarn install automatically after every branch checkout, run `yarn repo-githooks`. If you would like to remove this behaviour, run `yarn no-githooks`.
 
 To understand the data ingestion and parsing steps, please check the READMEs in the [/data folder](./data/README.md).
 
