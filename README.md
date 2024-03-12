@@ -87,6 +87,48 @@ Other one-off instances of redirects may be added to additional config files, an
 
 For how to create and include these redirects.
 
+## Images
+
+Wherever possible, images should live in `src/images` and _not_ in `static/images`. The authors of Gatsby recommend [importing images](https://www.gatsbyjs.com/docs/how-to/images-and-media/importing-assets-into-files/) into components. The `static` folder in Gatsby is an escape hatch for the rare cases where files cannot be imported.
+
+The benefit of sticking to the Gatsby approach is that our images get processed and optimized during build time. It also allows us to serve our images over a CDN which is much better for our users.
+
+### Images in components
+
+Images in components can be imported and rendered as follows:
+
+~~~typescript
+import myImage from 'src/path/to/my-image.png';
+
+export default Component => (<img src={myImage} />);
+~~~
+
+### Images in YAML data
+
+_TBD_
+
+### Images in textfile files
+
+For rendering images in Textfile we have a special convention.
+
+Firstly, place the image file in `src/images/content`. The in the textile files reference it with a special path `@content`, for example:
+
+~~~textile
+<img src="@content/path/to/image.png" />
+~~~
+
+The above will render the image at `src/images/content/path/to/image.png`.
+
+Content images in textile is powered by `ContentImagesProvider` and `useContentImages`. Templates rendering content need to add the following to their GraphQL queries to get all the images loaded before passing it to the `ContentImagesProvider`:
+
+~~~graphql
+  images: allFile(filter: { relativeDirectory: { glob: "content/**" } }) {
+    nodes {
+      ...ContentImage
+    }
+  }
+~~~
+
 ## Environment Variables
 
 Note that any env variables needed to show in the browser must be prefixed with `GATSBY_` in order to appear.

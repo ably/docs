@@ -2,6 +2,7 @@ import { graphql, withPrefix } from 'gatsby';
 import { Helmet } from 'react-helmet';
 
 import Layout from 'src/components/Layout';
+import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
 
@@ -20,10 +21,11 @@ export const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http:/
 const IndexPage = ({
   data: {
     pageContentYaml: { sections, meta },
+    allFile: { images },
   },
   location: { search },
 }: {
-  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData } };
+  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
   location: Location;
 }) => {
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
@@ -51,7 +53,7 @@ const IndexPage = ({
       <PageLanguageProvider search={search}>
         <SidebarProvider>
           <Layout currentProduct="home" noSidebar showSearchBar={false}>
-            <HomepageContent sections={sections} />
+            <HomepageContent sections={sections} images={images} />
           </Layout>
         </SidebarProvider>
       </PageLanguageProvider>
@@ -94,6 +96,16 @@ export const query = graphql`
         description
         image
         twitter
+      }
+    }
+    allFile(filter: { relativeDirectory: { eq: "homepage" } }) {
+      images: nodes {
+        extension
+        base
+        publicURL
+        childImageSharp {
+          gatsbyImageData
+        }
       }
     }
   }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StaticImage } from 'src/components/StaticImage';
+import boldChevronLeft from 'src/images/icons/bold-chevron-left.svg';
 
 export const BackButton = ({ toggle }: { toggle: () => void }) => (
   <div
@@ -10,7 +10,7 @@ export const BackButton = ({ toggle }: { toggle: () => void }) => (
     onKeyDown={(event) => event.key === 'Enter' && toggle()}
   >
     <span className="text-gui-default align-middle pl-24">
-      <StaticImage className="pr-8 h-12" src="/images/icons/bold-chevron-left.svg" />
+      <img className="pr-8 h-12" src={boldChevronLeft} />
       Back
     </span>
   </div>

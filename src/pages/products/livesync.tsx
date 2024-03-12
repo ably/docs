@@ -2,6 +2,7 @@ import { Helmet } from 'react-helmet';
 import { graphql, withPrefix } from 'gatsby';
 
 import Layout from 'src/components/Layout';
+import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
@@ -16,9 +17,10 @@ type MetaData = {
 const IndexPage = ({
   data: {
     pageContentYaml: { sections, meta },
+    allFile: { images },
   },
 }: {
-  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData } };
+  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
 }) => {
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
   const { siteUrl } = useSiteMetadata();
@@ -44,7 +46,7 @@ const IndexPage = ({
 
       <Layout isExtraWide currentProduct="livesync">
         <LeftSideBar sidebarName="livesync" />
-        <ProductPageContent sections={sections} />
+        <ProductPageContent sections={sections} images={images} />
       </Layout>
     </>
   );
@@ -84,6 +86,17 @@ export const query = graphql`
         description
         image
         twitter
+      }
+    }
+    allFile(filter: { relativeDirectory: { eq: "products/livesync" } }) {
+      images: nodes {
+        name
+        extension
+        base
+        publicURL
+        childImageSharp {
+          gatsbyImageData
+        }
       }
     }
   }

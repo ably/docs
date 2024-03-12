@@ -1,6 +1,5 @@
-import React from 'react';
 import { CardProps } from '../../ProductPageContent';
-import { StaticImage } from '../../../StaticImage';
+import { Image } from '../../../Image';
 import Link from '../../../Link';
 
 export const ExampleCard = ({ title, image, link, external }: CardProps) => (
@@ -9,7 +8,7 @@ export const ExampleCard = ({ title, image, link, external }: CardProps) => (
     external={external}
     className="items-center border border-extra-light-grey rounded-lg bg-extra-light-grey flex flex-col h-full hover:border-mid-grey hover:text-cool-black group"
   >
-    <StaticImage src={`/images/products/${image}`} style={{ pointerEvents: 'none' }}></StaticImage>
+    <Image image={image} style={{ pointerEvents: 'none' }} />
     <p className="pb-24 ml-8" style={{ fontSize: '1rem' }}>
       {title}
     </p>

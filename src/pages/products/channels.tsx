@@ -2,6 +2,7 @@ import { graphql, withPrefix } from 'gatsby';
 import { Helmet } from 'react-helmet';
 
 import Layout from 'src/components/Layout';
+import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
 
@@ -17,9 +18,10 @@ type MetaData = {
 const IndexPage = ({
   data: {
     pageContentYaml: { sections, meta },
+    allFile: { images },
   },
 }: {
-  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData } };
+  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
 }) => {
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
   const { siteUrl } = useSiteMetadata();
@@ -45,7 +47,7 @@ const IndexPage = ({
 
       <SidebarProvider>
         <Layout isExtraWide currentProduct="channels">
-          <ProductPageContent sections={sections} />
+          <ProductPageContent sections={sections} images={images} />
         </Layout>
       </SidebarProvider>
     </>
@@ -53,7 +55,7 @@ const IndexPage = ({
 };
 
 export const query = graphql`
-  query HomePageQuery {
+  query {
     pageContentYaml(name: { eq: "Channels" }) {
       sections {
         title
@@ -84,6 +86,17 @@ export const query = graphql`
         description
         image
         twitter
+      }
+    }
+    allFile(filter: { relativeDirectory: { eq: "products/channels" } }) {
+      images: nodes {
+        name
+        extension
+        base
+        publicURL
+        childImageSharp {
+          gatsbyImageData
+        }
       }
     }
   }

@@ -1,12 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 
 import { SidebarData } from 'src/components';
-import { StaticImage } from 'src/components/StaticImage';
 
 import { MAX_NESTING_LEVEL } from './constants';
 import { DispatchExpandedMenu } from './hamburger-expanded-menu-context';
 import { HamburgerSidebarItemContainer } from '.';
 import { dataToHamburgerSidebarItem } from '.';
+
+import boldChevronLeft from 'src/images/icons/bold-chevron-left.svg';
+import chevronDown from 'src/images/icons/chevron-down.svg';
 
 const getClosedRotation = (rotation: number, isClosed: boolean) => (rotation + (isClosed ? 180 : 0)) % 360;
 
@@ -57,12 +59,10 @@ export const HamburgerSidebarSubmenu = ({
           tabIndex={0}
         >
           <span>
-            {shouldDisplayRootLevelHeaderIndicator && (
-              <StaticImage className="pr-24 h-12" src="/images/icons/bold-chevron-left.svg" />
-            )}
+            {shouldDisplayRootLevelHeaderIndicator && <img className="pr-24 h-12" src={boldChevronLeft} />}
             {label}
           </span>
-          {!isRootLevelHeader && <StaticImage className={chevronRotation} src="/images/icons/chevron-down.svg" />}
+          {!isRootLevelHeader && <img className={chevronRotation} src={chevronDown} />}
         </LabelComponent>
       </HamburgerSidebarItemContainer>
       {!closed && content ? (
