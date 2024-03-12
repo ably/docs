@@ -1,4 +1,4 @@
-const DOCS_URLS_BUT_EXTERNAL = [/.*\/api\/control-api.*/, /sdk\/.*/];
+const DOCS_URLS_BUT_EXTERNAL = [/.*\/api\/control-api.*/, /.*\/sdk\/.*/];
 
 /**
  * This regex only matches old hard-coded docs links
