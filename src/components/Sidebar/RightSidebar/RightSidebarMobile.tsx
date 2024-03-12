@@ -20,7 +20,7 @@ const mapMenuDataToSelectOptions = (menuData: MenuData) => ({
   value: `#${menuData.id}`,
 });
 
-export const RightSidebarMobile = ({ menuData, languages }: { menuData: MenuData[]; languages: boolean }) => {
+export const RightSidebarMobile = ({ menuData }: { menuData: MenuData[] }) => {
   const options = flatMapDeep(mapMenuDataToSelectOptions, menuData);
   const [selectedOption, setSelectedOption] = useState<SingleValue<{ label: string; value: string }>>(options[0]);
 

@@ -15,53 +15,18 @@ const legacyBrandColors = {
   'brand-black': '#161616',
   'brand-richOrange': '#ed760a',
 };
+const safelistStandard = ['mb-40', 'mb-32', 'mb-24', 'pt-128', 'pt-96', 'px-16', 'h-full', 'mx-8', 'transform'];
+const safelistGreedy = [/^docs-.*/, /^col-span-.*/, /^rotate-/];
 
 module.exports = extendConfig((ablyUIConfig) => ({
   ...ablyUIConfig,
-  purge: {
-    content: ['./src/**/*.{js,jsx,ts,tsx}', './node_modules/@ably/ui/**/*', ...ablyUIConfig.purge.content],
-    options: {
-      ...ablyUIConfig.purge.options,
-      safelist: {
-        ...ablyUIConfig.purge.options.safelist,
-        /**
-         * Purge exclusions must be added for all dynamic classNames.
-         * We should seek to remove these where possible, replacing with docs-* classNames or static classNames.
-         * If dynamic classNames are no longer present they can be removed here:
-         * mb-40, mb-32, mb-24 => src/components/blocks/headings/
-         * pt-128, pt-96 => src/components/Layout/index.js
-         * px-16 => src/templates/document.js := see also
-         *  - src/components/Sidebar/RightSidebar/index.js
-         *  - src/components/Sidebar/LeftSidebar/index.js
-         *  - src/components/Sidebar/index.js
-         * h-full, mx-8 => src/components/Sidebar/SidebarItem.js
-         * transform => src/components/Header/TopMainNav/HamburgerMenu/HamburgerDropdown/HamburgerSidebarRenderer/HamburgerSidebarSubmenu.tsx
-         */
-        standard: [
-          ...Object.keys(apiReferenceSpecificColors).map((c) => `bg-${c}`),
-          ...Object.keys(highlightColors).map((c) => `bg-${c}`),
-          ...ablyUIConfig.purge.options.safelist.standard,
-          'mb-40',
-          'mb-32',
-          'mb-24',
-          'pt-128',
-          'pt-96',
-          'px-16',
-          'h-full',
-          'mx-8',
-          'transform',
-        ],
-        /**
-         * Purge exclusions must be added for all dynamic classNames.
-         * We should seek to consolidate these where possible, replacing with docs-* classNames.
-         * If dynamic classNames are no longer present they can be removed here:
-         * docs-.* => Preferred prefix for custom classes throughout
-         * col-span-.*  => src/components/Article/index.js
-         * rotate- => src/components/Header/TopMainNav/HamburgerMenu/HamburgerDropdown/HamburgerSidebarRenderer/HamburgerSidebarSubmenu.tsx
-         */
-        greedy: [...ablyUIConfig.purge.options.safelist.greedy, /^docs-.*/, /^col-span-.*/, /^rotate-/],
-      },
-    },
+  content: ['./src/**/*.{js,jsx,ts,tsx}', './node_modules/@ably/ui/**/*', ...ablyUIConfig.content],
+  safelist: {
+    ...Object.keys(apiReferenceSpecificColors).map((c) => `bg-${c}`),
+    ...Object.keys(highlightColors).map((c) => `bg-${c}`),
+    ...safelistStandard,
+    ...safelistGreedy.map((regex) => ({ pattern: regex })),
+    ...ablyUIConfig.safelist,
   },
   theme: {
     ...ablyUIConfig.theme,
@@ -167,6 +132,13 @@ module.exports = extendConfig((ablyUIConfig) => ({
         ...ablyUIConfig.theme.extend.fontSize,
         16: ['16px', '18px'],
       },
+    },
+  },
+  variants: {
+    ...ablyUIConfig.variants,
+    extend: {
+      ...ablyUIConfig.variants.extend,
+      margin: ['first', 'last'],
     },
   },
 }));
