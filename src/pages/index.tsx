@@ -29,8 +29,8 @@ const IndexPage = ({
   location: Location;
 }) => {
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
-  const { siteUrl } = useSiteMetadata();
-  const canonical = `${siteUrl}/${withPrefix('/')}`;
+  const { canonicalUrl } = useSiteMetadata();
+  const canonical = canonicalUrl('/');
 
   return (
     <>

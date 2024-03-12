@@ -7,8 +7,8 @@ import { Head } from 'src/components/Head';
 const SDKsIndexPage = ({ location: { search } }: { location: { search: string } }) => {
   const meta_title = 'SDKs';
   const meta_description = '';
-  const { siteUrl } = useSiteMetadata();
-  const canonical = `${siteUrl}/${withPrefix('/sdks')}`;
+  const { canonicalUrl } = useSiteMetadata();
+  const canonical = canonicalUrl('/sdks');
 
   const urlParams = new URLSearchParams(search);
   const tab = urlParams.get('tab') ?? '';
