@@ -23,8 +23,8 @@ const IndexPage = ({
   data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
 }) => {
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
-  const { siteUrl } = useSiteMetadata();
-  const canonical = `${siteUrl}/${withPrefix('/products/livesync')}`;
+  const { canonicalUrl } = useSiteMetadata();
+  const canonical = canonicalUrl('/products/livesync');
 
   return (
     <>
