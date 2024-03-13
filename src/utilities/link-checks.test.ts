@@ -28,6 +28,12 @@ describe('checkLinkIsInternal', () => {
 
   it('returns true for relative links', () => {
     expect(checkLinkIsInternal('/')).toBeTruthy();
+    expect(checkLinkIsInternal('/api')).toBeTruthy();
+    expect(checkLinkIsInternal('/api/realtime-sdk')).toBeTruthy();
+  });
+
+  it('returns true for relative links with anchors', () => {
+    expect(checkLinkIsInternal('/api/rest-sdk/authentication#token-request')).toBeTruthy();
   });
 
   it('returns false for ably.com links outside of docs', () => {
