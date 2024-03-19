@@ -8,6 +8,7 @@ import { DropdownData, DropdownDataIdentifier } from '../types';
 import { APIReferencesDropdownData } from './api-references';
 import { kebabCase } from 'lodash';
 import '@testing-library/jest-dom/extend-expect';
+import { checkLinkIsInternal } from 'src/utilities/link-checks';
 
 const getDefinitelyOneElementByTagName = (containerElement: HTMLElement, tagName: string) => {
   const allMatchingElements = containerElement.getElementsByTagName(tagName);
@@ -28,7 +29,10 @@ const expectDropdownToShowData = (container: HTMLElement, expectedData: Dropdown
     if (resourceContent.link.external) {
       expect(aElement.getAttribute('href')).toBe(resourceContent.link.href);
     } else {
-      expect(aElement.getAttribute('href')).toBe(withPrefix(resourceContent.link.href));
+      const expected = checkLinkIsInternal(resourceContent.link.href)
+        ? withPrefix(resourceContent.link.href)
+        : resourceContent.link.href;
+      expect(aElement.getAttribute('href')).toBe(expected);
     }
   });
 
