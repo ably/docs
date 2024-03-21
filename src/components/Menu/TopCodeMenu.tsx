@@ -1,11 +1,10 @@
-import React, { useContext } from 'react';
 import { DEFAULT_LANGUAGE } from '../../../data/createPages/constants';
-import PageLanguageContext from '../../contexts/page-language-context';
+import { usePageLanguage } from '../../contexts/page-language-context';
 import { LanguageDropdownSelector } from './LanguageDropdownSelector/LanguageDropdownSelector';
 import { VersionMenuProps } from './VersionMenu';
 
 const TopCodeMenu = ({ languages, versionData }: { languages: string[]; versionData: VersionMenuProps }) => {
-  const pageLanguage = useContext(PageLanguageContext);
+  const { currentLanguage: pageLanguage } = usePageLanguage();
   const showVersionMenu = versionData;
   const showLanguageSelector = languages.length > 0;
   const showCodeMenu = showLanguageSelector || showVersionMenu;

@@ -1,11 +1,15 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PREFERRED_LANGUAGE_KEY } from 'src/utilities/language/constants';
-import PageLanguageContext from 'src/contexts/page-language-context';
 
+import { PageLanguageContext } from 'src/contexts/page-language-context';
 import LanguageButton from './LanguageButton';
-import { safeWindow } from 'src/utilities';
+
+const contextValue = {
+  handleCurrentLanguageChange: jest.fn(),
+  getPreferredLanguage: jest.fn(),
+  setPreferredLanguage: jest.fn(),
+};
 
 describe(`<LanguageButton />`, () => {
   it('renders default state button', () => {
@@ -22,7 +26,7 @@ describe(`<LanguageButton />`, () => {
   });
   it('renders active state button', () => {
     render(
-      <PageLanguageContext.Provider value="javascript">
+      <PageLanguageContext.Provider value={{ currentLanguage: 'javascript', ...contextValue }}>
         <LanguageButton language="javascript" selectedSDKInterfaceTab="realtime" selectedLocalLanguage="javascript" />
       </PageLanguageContext.Provider>,
     );
@@ -35,21 +39,22 @@ describe(`<LanguageButton />`, () => {
     `);
   });
 
-  it('changes localstorage value on click', async () => {
+  it('changes session storage value on click', async () => {
+    const setItemSpy = jest.spyOn(contextValue, 'setPreferredLanguage');
     render(
-      <PageLanguageContext.Provider value="python">
+      <PageLanguageContext.Provider value={{ currentLanguage: 'python', ...contextValue }}>
         <LanguageButton selectedSDKInterfaceTab="realtime" language="javascript" selectedLocalLanguage="javascript" />
       </PageLanguageContext.Provider>,
     );
 
     const button = screen.getByRole('button');
     await userEvent.click(button);
-    expect(safeWindow.localStorage.getItem(PREFERRED_LANGUAGE_KEY)).toBe('javascript');
+    expect(setItemSpy).toHaveBeenCalledWith('javascript');
   });
 
   it('renders active button if pageLanguage is not in the languages but the language is the first language of the array', () => {
     render(
-      <PageLanguageContext.Provider value="php">
+      <PageLanguageContext.Provider value={{ currentLanguage: 'php', ...contextValue }}>
         <LanguageButton language="ruby" selectedSDKInterfaceTab="realtime" selectedLocalLanguage="ruby" />
       </PageLanguageContext.Provider>,
     );
@@ -64,7 +69,7 @@ describe(`<LanguageButton />`, () => {
 
   it('renders active button if language is a sdk interface', () => {
     render(
-      <PageLanguageContext.Provider value="java">
+      <PageLanguageContext.Provider value={{ currentLanguage: 'java', ...contextValue }}>
         <LanguageButton language="rest_java" selectedSDKInterfaceTab="rest" selectedLocalLanguage="java" />
       </PageLanguageContext.Provider>,
     );

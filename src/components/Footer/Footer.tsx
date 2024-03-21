@@ -10,9 +10,11 @@ export const Footer = () => {
         items {
           label
           link
+          external
           items {
             label
             link
+            external
           }
         }
       }
@@ -26,6 +28,7 @@ export const Footer = () => {
         items {
           label
           link
+          external
         }
       }
     }

@@ -6,6 +6,7 @@ import { QuickstartCard } from './Card/QuickstartCard';
 import { ExampleCard } from './Card/ExampleCard';
 import { TutorialCard } from './Card/TutorialCard';
 import { CallToAction } from './CallToAction';
+import { ImageProps, getImageFromList } from 'src/components/Image';
 
 const cardTypes = {
   feature: FeatureCard,
@@ -22,7 +23,7 @@ const betaPillStyle = {
   paddingTop: '0.313rem',
 };
 
-export const BodySection = ({ section }: { section: SectionProps }) => {
+export const BodySection = ({ section, images }: { section: SectionProps; images: ImageProps[] }) => {
   const cards = section.cards ?? [];
   const cardsExist = cards.length > 0;
   const columns = section.columns;
@@ -54,7 +55,14 @@ export const BodySection = ({ section }: { section: SectionProps }) => {
         >
           {cards.map((card, index) => {
             const Card = cardTypes[card.type as keyof typeof cardTypes];
-            return <Card key={index} {...card} />;
+
+            return (
+              <Card
+                key={index}
+                {...card}
+                {...(card.type !== 'hero' && { image: getImageFromList(images, card.image) })}
+              />
+            );
           })}
         </div>
       )}

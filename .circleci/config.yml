@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  node: circleci/node@5.0.2
+  node: circleci/node@5.2.0
 
 parameters:
   content-update:
@@ -15,29 +15,6 @@ executors:
       - image: cimg/node:18.12.0
 
 commands:
-  restore-npm-cache:
-    steps:
-      - restore_cache:
-          name: Restore NPM Package Cache
-          keys:
-            - npm-packages-v2-{{ .Branch }}-{{ checksum "package-lock.json" }}
-            - npm-packages-v2-{{ .Branch }}-
-            - npm-packages-v2-
-
-  save-npm-cache:
-    steps:
-      - save_cache:
-          name: Save NPM Package Cache
-          key: npm-packages-v1-{{ .Branch }}-{{ checksum "package-lock.json" }}
-          paths:
-            - ~/.cache/npm
-
-  npm-install:
-    steps:
-      - run:
-          name: Dependencies
-          command: npm ci --prefer-offline --cache ~/.cache/npm
-
   build-nginx:
     steps:
       - run:
@@ -67,16 +44,14 @@ jobs:
   install-dependencies:
     executor:
       name: default
-    resource_class: medium+
     steps:
       - checkout
-      - restore-npm-cache
-      - npm-install
+      - node/install-packages:
+          pkg-manager: yarn
       - persist_to_workspace:
           root: .
           paths:
             - node_modules
-      - save-npm-cache
 
   install-nginx:
     executor:
@@ -87,20 +62,19 @@ jobs:
   test:
     executor:
       name: default
-    resource_class: medium
     steps:
       - checkout
       - attach_workspace:
           at: .
       - run:
           name: Run linting
-          command: npm run lint
+          command: yarn lint
       - run:
           name: Install JUnit coverage reporter
-          command: npm install jest-junit
+          command: yarn add jest-junit
       - run:
           name: Run tests
-          command: npm test -- --ci --collectCoverage=true --coverageDirectory=coverage --coverageReporters=html --runInBand --reporters=default --reporters=jest-junit
+          command: yarn test -- --ci --collectCoverage=true --coverageDirectory=coverage --coverageReporters=html --runInBand --reporters=default --reporters=jest-junit
           environment:
             JEST_JUNIT_OUTPUT_DIR: ./reports/junit/
       - store_test_results:
@@ -110,7 +84,7 @@ jobs:
   build:
     executor:
       name: default
-    resource_class: medium+
+    resource_class: large
     steps:
       - checkout
       - attach_workspace:
@@ -123,7 +97,7 @@ jobs:
             sudo cp buildpack/nginx /usr/local/bin/nginx
       - run:
           name: Build
-          command: npm run build
+          command: yarn build
       - run:
           name: Require redirects file to be generated
           command: test -f config/nginx-redirects.conf
@@ -137,7 +111,7 @@ jobs:
           name: Start nginx
           command: |
             mkdir -p logs/nginx
-            ./bin/start-nginx
+            SKIP_HTTPS=false ./bin/start-nginx
           background: true
       - run:
           name: Wait for nginx
@@ -147,11 +121,24 @@ jobs:
                 sleep 1
             done
       - run:
-          name: Smoke test quickstart redirects
+          name: Test nginx /docs rewriting
+          command: |
+            ./bin/assert-success.sh /docs
+            ./bin/assert-redirect.sh /docs/ https://localhost/docs
+            ./bin/assert-success.sh /docs/channels
+      - run:
+          name: Smoke test trailing slash redirects
           command: |
             ./bin/assert-success.sh /docs/getting-started/quickstart
             ./bin/assert-redirect.sh /docs/getting-started/quickstart/ \
                                      https://localhost/docs/getting-started/quickstart
+      - run:
+          name: Smoke test redirect_from redirects
+          command: |
+            ./bin/assert-redirect.sh /docs/how-ably-works \
+                                     http://localhost/docs/key-concepts
+            ./bin/assert-redirect.sh /docs/rest/history \
+                                     http://localhost/docs/storage-history/history
       - run:
           name: Test website redirects
           command: |

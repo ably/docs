@@ -2,7 +2,7 @@ import React from 'react';
 import { container, active_tab } from '../sdks.module.css';
 import CardGrid from '../Card/CardGrid';
 import { data } from '../data';
-import { Link } from 'gatsby';
+import Link from 'src/components/Link';
 
 export enum Tab {
   CHANNELS = 'channels',
@@ -17,7 +17,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
       <div>
         <div className={`${container}`}>
           <Link
-            to="/docs/sdks"
+            to="/sdks"
             className={`text-h3 font-normal text-primary mr-16 px-8 py-16 inline-block ${
               activeTab === Tab.CHANNELS ? active_tab : null
             }`}
@@ -25,7 +25,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
             Pub/Sub Channels
           </Link>
           <Link
-            to="/docs/sdks?tab=spaces"
+            to="/sdks?tab=spaces"
             className={`text-h3 font-normal px-8 py-16 inline-block ${activeTab === Tab.SPACES ? active_tab : null}`}
           >
             Spaces

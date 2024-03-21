@@ -1,6 +1,7 @@
 import Icon from '@ably/ui/core/Icon';
 import { CardProps } from '../../HomepageContent';
-import { StaticImage } from '../../../StaticImage';
+import Link from '../../../Link';
+import { Image } from '../../../Image';
 
 export const SdkCard = ({ title, content, image, callToAction }: CardProps) => (
   <div className="border border-extra-light-grey rounded-lg bg-extra-light-grey flex flex-col sm:flex-row p-24 md:p-40">
@@ -10,14 +11,14 @@ export const SdkCard = ({ title, content, image, callToAction }: CardProps) => (
 
       {callToAction ? (
         <div className="mt-auto mb-40 sm:mb-0">
-          <a href={callToAction.href} className="ui-btn">
+          <Link to={callToAction.href} external={callToAction.external} className="ui-btn">
             {callToAction.text}
             <Icon name="icon-gui-arrow-right" size="1.5rem" color="text-white" additionalCSS="ml-8 -mr-12" />
-          </a>
+          </Link>
         </div>
       ) : null}
     </div>
 
-    <StaticImage src={`/images/homepage/${image}@2x.png`} style={{ maxWidth: '409px' }} />
+    <Image image={image} style={{ maxWidth: '409px' }} />
   </div>
 );

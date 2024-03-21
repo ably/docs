@@ -6,15 +6,25 @@ const { flattenContentOrderedList, maybeRetrievePartial } = require('../transfor
 const { postParser } = require('../transform/post-parser');
 const { htmlParser } = require('../html-parser');
 const { createLanguagePageVariants } = require('./createPageVariants');
-const { LATEST_ABLY_API_VERSION_STRING, DOCUMENTATION_PATH } = require('../transform/constants');
+const { LATEST_ABLY_API_VERSION_STRING } = require('../transform/constants');
 const { createContentMenuDataFromPage } = require('./createContentMenuDataFromPage');
 const { DEFAULT_LANGUAGE } = require('./constants');
 const { writeRedirectToConfigFile } = require('./writeRedirectToConfigFile');
+const { pathPrefix, siteMetadata } = require('../../gatsby-config');
 
 const writeRedirect = writeRedirectToConfigFile('config/nginx-redirects.conf');
 
 const documentTemplate = path.resolve(`src/templates/document.tsx`);
 const apiReferenceTemplate = path.resolve(`src/templates/apiReference.tsx`);
+
+const siteUrl = new URL(siteMetadata.siteUrl);
+
+// Check if path is absolute and add pathPrefix in front if it's not
+const maybeAddPathPrefix = (path, pathPrefix) => {
+  const parsed = new URL(path, siteUrl.toString());
+  const isRelativeProtocol = path.startsWith(`//`);
+  return `${parsed.host != siteUrl.host || isRelativeProtocol ? `` : pathPrefix}${path}`;
+};
 
 const createPages = async ({ graphql, actions: { createPage, createRedirect } }) => {
   /**
@@ -88,14 +98,6 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
     }
   `);
 
-  createRedirect({
-    fromPath: '/',
-    toPath: '/docs',
-    isPermanent: true,
-    force: true,
-    redirectInBrowser: true,
-  });
-
   const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
 
   const documentCreator = (documentTemplate) => async (edge) => {
@@ -117,19 +119,22 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
 
     const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
 
-    const pagePath = `${DOCUMENTATION_PATH}${edge.node.slug}`;
+    const pagePath = `/${edge.node.slug}`;
 
     const redirectFromList = edge.node.meta?.redirect_from;
+
     if (redirectFromList) {
       redirectFromList.forEach((redirectFrom) => {
-        const alreadyDocsPage = /^\/docs.*/.test(redirectFrom);
-        const redirectFromPath = `${alreadyDocsPage ? '' : '/docs'}${redirectFrom}`;
-        const redirectFromUrl = new URL(redirectFromPath, 'https://ably.com');
+        const redirectFromUrl = new URL(redirectFrom, siteMetadata.siteUrl);
+
         if (!redirectFromUrl.hash) {
-          writeRedirect(redirectFromPath, pagePath);
+          // We need to be prefix aware just like Gatsby's internals so it works
+          // with nginx redirects
+          writeRedirect(maybeAddPathPrefix(redirectFrom, pathPrefix), maybeAddPathPrefix(pagePath, pathPrefix));
         }
+
         createRedirect({
-          fromPath: redirectFromPath,
+          fromPath: redirectFrom,
           toPath: pagePath,
           isPermanent: true,
           force: true,
@@ -137,9 +142,10 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
         });
       });
     }
+
     const slug = edge.node.slug;
     createPage({
-      path: `${DOCUMENTATION_PATH}${edge.node.slug}`,
+      path: pagePath,
       component: documentTemplate,
       context: {
         slug,
@@ -155,8 +161,8 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
   };
 
   await Promise.all([
-    ...documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)), 
-    ...apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate))
+    ...documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)),
+    ...apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate)),
   ]);
 };
 

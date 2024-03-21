@@ -1,4 +1,3 @@
-import { DOCUMENTATION_NAME } from '../../../../../data/transform/constants';
 import { DropdownData } from '../types';
 
 export const APIReferencesDropdownData: DropdownData = {
@@ -6,13 +5,13 @@ export const APIReferencesDropdownData: DropdownData = {
   summaryDescription:
     'Build applications with Ably using APIs that are simple to use, and that offer a consistent experience across languages.',
   summaryLink: {
-    href: `/${DOCUMENTATION_NAME}/api`,
+    href: `/api`,
     text: 'Visit API References',
   },
   contents: [
     {
       link: {
-        href: `/${DOCUMENTATION_NAME}/api/realtime-sdk`,
+        href: `/api/realtime-sdk`,
         text: 'Realtime SDK',
       },
       description:
@@ -20,7 +19,7 @@ export const APIReferencesDropdownData: DropdownData = {
     },
     {
       link: {
-        href: `/${DOCUMENTATION_NAME}/api/sse`,
+        href: `/api/sse`,
         text: 'SSE API',
       },
       description:
@@ -28,21 +27,21 @@ export const APIReferencesDropdownData: DropdownData = {
     },
     {
       link: {
-        href: `/${DOCUMENTATION_NAME}/api/rest-sdk`,
+        href: `/api/rest-sdk`,
         text: 'REST SDK',
       },
       description: 'Interact with Ably’s REST API using a simple client library SDK.',
     },
     {
       link: {
-        href: `/${DOCUMENTATION_NAME}/api/rest-api`,
+        href: `/api/rest-api`,
         text: 'REST API',
       },
       description: 'Communicate directly with the Ably service over REST without installing a client library SDK.',
     },
     {
       link: {
-        href: `/${DOCUMENTATION_NAME}/api/control-api`,
+        href: `https://ably.com/api/control-api`,
         text: 'Control API',
       },
       description:

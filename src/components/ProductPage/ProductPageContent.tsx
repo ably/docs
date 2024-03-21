@@ -1,14 +1,16 @@
-import React from 'react';
 import { BodySection } from './BodySection/BodySection';
+import { ImageProps } from 'src/components/Image';
 
 export type LinkProps = {
   text: string;
   href: string;
+  external: boolean;
 };
 
 export type CallToActionProps = {
   text: string;
   href: string;
+  external: boolean;
   type: string;
 };
 
@@ -16,8 +18,9 @@ export type CardProps = {
   title: string;
   type: string;
   content: string;
-  image: string;
+  image: ImageProps;
   link: string;
+  external: boolean;
   links: LinkProps[];
 };
 
@@ -32,10 +35,10 @@ export type SectionProps = {
   cards: CardProps[];
 };
 
-export const ProductPageContent = ({ sections }: { sections: SectionProps[] }) => (
+export const ProductPageContent = ({ sections, images }: { sections: SectionProps[]; images: ImageProps[] }) => (
   <article className="px-24 md:pl-40 md:pr-48 xl:pr-64">
     {sections.map((section, index) => (
-      <BodySection key={index} section={section} />
+      <BodySection key={index} section={section} images={images} />
     ))}
   </article>
 );

@@ -1,16 +1,17 @@
-import Select from 'react-select';
-import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicator-separator';
-import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
-import { longLanguageLabels } from '../../../maps/language';
-import { ReactSelectOption } from 'src/components';
-import { PREFERRED_LANGUAGE_KEY } from '../../../utilities';
-import { createLanguageHrefFromDefaults, getLanguageDefaults } from '../../common';
 import { navigate } from 'gatsby';
+import Select, { CSSObjectWithLabel } from 'react-select';
+import { useMediaQuery } from '@react-hook/media-query';
+import { ReactSelectOption, createLanguageHrefFromDefaults, getLanguageDefaults } from 'src/components';
+import { longLanguageLabels } from 'src/maps/language';
+import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
+import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicator-separator';
+
 import {
   DEFAULT_LANGUAGE,
   DEFAULT_PREFERRED_LANGUAGE,
   IGNORED_LANGUAGES_FOR_DISPLAY,
 } from '../../../../data/createPages/constants';
+
 import {
   dropdownIndicatorStyles,
   groupHeadingStyles,
@@ -19,9 +20,8 @@ import {
   optionStyles,
   groupStyles,
 } from '../ReactSelectStyles';
-import { safeWindow } from 'src/utilities';
 import './styles.css';
-import { useMediaQuery } from '@react-hook/media-query';
+import { usePageLanguage } from 'src/contexts';
 
 const makeOptionFromLang = (lang: string) => ({ label: longLanguageLabels[lang] ?? lang, value: lang });
 
@@ -47,26 +47,28 @@ export const LanguageDropdownSelector = ({
     options = options.filter(({ value }) => value !== DEFAULT_LANGUAGE);
   }
 
+  const { handleCurrentLanguageChange } = usePageLanguage();
+
   const selectedOption = options.find(isSelectedLanguage) || makeOptionFromLang(DEFAULT_PREFERRED_LANGUAGE);
 
-  const customControlStyles = (base: any) => ({
+  const customControlStyles = (base: CSSObjectWithLabel) => ({
     ...base,
     fontWeight: '500',
     boxShadow: 'none',
     cursor: 'pointer',
-    fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
+    fontFamily: `NEXT Book, Arial, Helvetica, sans-serif`,
     borderRadius: '0.375rem',
     flexShrink: '0',
     height: '2.25rem',
     width: '6.437rem',
   });
 
-  const mobileControlStyles = (base: any) => ({
+  const mobileControlStyles = (base: CSSObjectWithLabel) => ({
     ...customControlStyles(base),
     fontSize: '14px',
   });
 
-  const desktopControlStyles = (base: any) => ({
+  const desktopControlStyles = (base: CSSObjectWithLabel) => ({
     ...customControlStyles(base),
     padding: '0',
     marginRight: '1rem',
@@ -75,8 +77,8 @@ export const LanguageDropdownSelector = ({
 
   const controlStyle = isDesktop ? desktopControlStyles : mobileControlStyles;
 
-  const mobileValueStyles = (base: any) => ({ ...base, padding: '0.125rem' });
-  const desktopValueStyles = (base: any) => ({ ...base, padding: '0.25rem' });
+  const mobileValueStyles = (base: CSSObjectWithLabel) => ({ ...base, padding: '0.125rem' });
+  const desktopValueStyles = (base: CSSObjectWithLabel) => ({ ...base, padding: '0.25rem' });
   const valueStyle = isDesktop ? desktopValueStyles : mobileValueStyles;
   // Need to check if JS is running in browser or non-browser env
   // document.body is only available in browsers, will not work in Node.js for example
@@ -114,11 +116,8 @@ export const LanguageDropdownSelector = ({
         const newLanguage = newValue?.value ?? DEFAULT_LANGUAGE;
         const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(newLanguage, language);
         const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, newLanguage);
-        if (isPageLanguageDefault) {
-          safeWindow.localStorage.clear();
-        } else {
-          safeWindow.localStorage.setItem(PREFERRED_LANGUAGE_KEY, newLanguage);
-        }
+
+        handleCurrentLanguageChange(newLanguage);
         navigate(href);
       }}
       formatOptionLabel={(option) => (

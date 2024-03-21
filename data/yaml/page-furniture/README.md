@@ -25,6 +25,7 @@ items:
 
 * An array entry must have a ```label``` element that will be a string of text to identify a menu item
 * An array entry must have a ```link``` element that will be a link that can be accessed via. sub-menu items
+* An array entry _may_ have an ```external``` element that is `true` or `false`, which should be set to `true` if the destination page is not in the docs project
 * An array entry _may_ have a ```text``` or ```items``` element that will be the content that can be expanded or hidden in the menu
   * An array entry should not have both a ```text``` and ```items``` element. In the event that both exist, the ```items``` will be used and ```text``` ignored
 * An array entry _may_ have a ```level``` element that will be used to determine ```aria-level```

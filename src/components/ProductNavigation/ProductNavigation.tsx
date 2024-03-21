@@ -1,5 +1,5 @@
 import cn from 'classnames';
-import { Link } from 'gatsby';
+import { Link, withPrefix } from 'gatsby';
 import { PropsWithChildren } from 'react';
 
 type ItemProps = {
@@ -38,16 +38,16 @@ const ProductNavigation = ({ currentProduct = 'channels' }: { currentProduct?: s
       className="sticky z-40 flex flex-row justify-start h-48 px-8 bg-white top-64 sm:px-24"
       style={{ boxShadow: '0 1px 0 0 #E5E5E5' }}
     >
-      <Item to="/docs" active={onHome}>
+      <Item to="/" active={onHome}>
         Home
       </Item>
-      <Item to="/docs/products/channels" active={onChannels}>
+      <Item to="/products/channels" active={onChannels}>
         Pub/Sub Channels
       </Item>
-      <Item to="/docs/products/spaces" active={onSpaces}>
+      <Item to="/products/spaces" active={onSpaces}>
         Spaces
       </Item>
-      <Item to="/docs/products/livesync" active={onLiveSync}>
+      <Item to="/products/livesync" active={onLiveSync}>
         LiveSync
       </Item>
     </nav>
