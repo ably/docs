@@ -9,13 +9,15 @@ Leverage the power of Ably in your React applications using idiomatic, easy-to-u
 
 * Subscribe to messages on Ably "channels":/channels.
 * Publish messages using the channel instances provided by hooks.
-* Subscribe to "presence":/presence-occupancy/presence updates on channels.
+* Enter the "presence set":/presence-occupancy/presence on channels.
+* Subscribe to presence updates on channels.
 * Trigger presence updates.
 
 The following hooks are available:
 
 - "useChannel":#useChannel := The @useChannel@ hook subscribes to a channel and receives messages from it.
-- "usePresence":#usePresence := The @usePresence@ hook subscribes to presence events on a channel, notifying when users join or leave the channel.
+- "usePresence":#usePresence := The @usePresence@ hook enters clients into the presence set.
+- "usePresenceListener":#usePresenceListener := The @usePresenceListener@ hook subscribes to presence events on a channel.
 - "useConnectionStateListener":#useConnectionStateListener := The @useConnectionStateListener@ hook attaches a listener to be notified of connection state changes in the Ably client.
 - "useChannelStateListener":#useChannelStateListener := The @useChannelStateListener@ hook attaches a listener to be notified of channel state changes.
 - "useAbly":#useAbly := The @useAbly@ hook grants access to the Ably client instance provided by the AblyProvider context.
@@ -60,7 +62,7 @@ import { createRoot } from 'react-dom/client';
 const container = document.getElementById('root')!;
 const root = createRoot(container);
 
-const client = new Ably.Realtime.Promise({ key: '<API-key>', clientId: '<client-ID>' });
+const client = new Ably.Realtime({ key: '<API-key>', clientId: '<client-ID>' });
 
 root.render(
   <AblyProvider client={client}>
@@ -75,13 +77,49 @@ If you need to use multiple Ably clients on the same page, you can keep your cli
 
 ```[react]
 root.render(
-  <AblyProvider client={client} id={'providerOne'}>
-    <AblyProvider client={client} id={'providerTwo'}>
+  <AblyProvider client={client} ablyId={'providerOne'}>
+    <AblyProvider client={client} ablyId={'providerTwo'}>
       <App />
     </AblyProvider>
   </AblyProvider>
 );
 ```
+
+h3(#channel-provider). Channel Provider
+
+Use the @ChannelProvider@ to define the "channels":/channels you want to use in other hooks.
+
+```[react]
+  <ChannelProvider channelName="{{RANDOM_CHANNEL_NAME}}">
+    <Component />
+  </ChannelProvider>
+```
+
+You can also set "channel options":/channels/options in the @ChannelProvider@ component:
+
+The following is an example of setting the "rewind":/channels/options/rewind channel option:
+
+```[react]
+  <ChannelProvider channelName="{{RANDOM_CHANNEL_NAME}}" options={{ params: { rewind: '1' } }}>
+    <Component />
+  </ChannelProvider>
+```
+
+Use @deriveOptions@ to set a "subscription filter":/channels#subscription-filters and only receive messages that satisfy a filter expression:
+
+```[react]
+const deriveOptions = { filter: 'headers.email == `"rob.pike@domain.com"` || headers.company == `"domain"`' }
+
+return (
+  <ChannelProvider channelName="{{RANDOM_CHANNEL_NAME}}" options={{ ... }} deriveOptions={deriveOptions}>
+    <Component />
+  </ChannelProvider>
+)
+```
+
+<aside type='note'>
+<p>Be aware that you can only subscribe to channels created or retrieved from a filter expression. You cannot publish to them. Use the @publish@ function of the "@useChannel@":#useChannel hook to publish messages.</p>
+</aside>
 
 h3(#useChannel). useChannel
 
@@ -89,7 +127,7 @@ The @useChannel@ hook enables you to "subscribe to a channel":/channels#subscrib
 
 ```[react]
 const [messages, updateMessages] = useState([]);
-const { channel } = useChannel('channelName', (message) => {
+const { channel } = useChannel('{{RANDOM_CHANNEL_NAME}}', (message) => {
     updateMessages((prev) => [...prev, message]);
 });
 ```
@@ -97,24 +135,46 @@ const { channel } = useChannel('channelName', (message) => {
 You can also filter messages by providing a message name to the @useChannel@ function:
 
 ```[react]
-const { channel } = useChannel('channelName', 'messageName', (message) => {
+const { channel } = useChannel('{{RANDOM_CHANNEL_NAME}}', 'messageName', (message) => {
     console.log(message);
 });
 ```
 
-h3(#usePresence). usePresence
-
-The @usePresence@ hook enables you to "subscribe to presence":/presence-occupancy/presence#subscribe events on a channel, notifying you when a user enters or leaves the presence set or updates their member data.
+Use the @publish@ function to publish messages to the channel:
 
 ```[react]
-const { presenceData, updateStatus } = usePresence('channelName', 'initialPresenceStatus');
+const { publish } = useChannel("{{RANDOM_CHANNEL_NAME}}")
+publish("test-message", { text: "message text" });
+```
 
-// Convert presence data to list items to render
-const peers = presenceData.map((msg, index) => <li key={index}>{msg.clientId}: {msg.data}</li>);
+h3(#usePresence). usePresence
+
+The @usePresence@ hook enables you to "enter the presence set":/presence-occupancy/presence#member-data.
+
+```[react]
+const { updateStatus } = usePresence('{{RANDOM_CHANNEL_NAME}}');
+
+// Optionally pass a second argument to 'usePresence' to set a client's initial member data
+const { updateStatus } = usePresence('{{RANDOM_CHANNEL_NAME}}', 'initialStatus');
 
 // The `updateStatus` function can be used to update the presence data for the current client
 updateStatus('newStatus');
 ```
+
+h3(#usePresenceListener). usePresenceListener
+
+The @usePresenceListener@ hook enables you to "subscribe to presence":/presence-occupancy/presence#subscribe events on a channel, notifying you when a user enters or leaves the presence set, or updates their member data.
+
+```[react]
+const { presenceData } = usePresenceListener('{{RANDOM_CHANNEL_NAME}}');
+
+// Convert presence data to list items to render
+const peers = presenceData.map((msg, index) => <li key={index}>{msg.clientId}: {msg.data}</li>);
+```
+
+<aside type='note'>
+<p>Fetching presence members is executed as an effect. It will load after your component renders for the first time.</p>
+</aside>
 
 h3(#useConnectionStateListener). useConnectionStateListener
 
@@ -168,5 +228,5 @@ h2(#error-handling). Error handling
 When using Ably React Hooks, you may encounter errors. The "@useChannel@":#useChannel and "@usePresence@":#usePresence hooks return connection and channel errors, enabling you to handle them in your components.
 
 ```[react]
-const { connectionError, channelError } = useChannel('channelName', messageHandler);
+const { connectionError, channelError } = useChannel('{{RANDOM_CHANNEL_NAME}}', messageHandler);
 ```

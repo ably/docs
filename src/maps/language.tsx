@@ -9,10 +9,10 @@ type LanguageSyntaxHighlighterNames = {
 };
 
 const languageLabels: LanguageLabels = {
-  javascript: 'JavaScript v1.2',
-  react: 'React v1.2',
-  realtime_javascript: 'JavaScript v1.2',
-  rest_javascript: 'JavaScript v1.2',
+  javascript: 'JavaScript v2.0',
+  react: 'React v2.0',
+  realtime_javascript: 'JavaScript v2.0',
+  rest_javascript: 'JavaScript v2.0',
   java: 'Java v1.2',
   realtime_java: 'Java v1.2',
   rest_java: 'Java v1.2',
@@ -46,9 +46,9 @@ const languageLabels: LanguageLabels = {
   objc: 'Objective-C v1.2',
   realtime_objc: 'Objective-C v1.2',
   rest_objc: 'Objective-C v1.2',
-  nodejs: 'Node.js v1.2',
-  realtime_nodejs: 'Node.js v1.2',
-  rest_nodejs: 'Node.js v1.2',
+  nodejs: 'Node.js v2.0',
+  realtime_nodejs: 'Node.js v2.0',
+  rest_nodejs: 'Node.js v2.0',
   flutter: 'Flutter v1.2',
   realtime_flutter: 'Flutter v1.2',
   rest_flutter: 'Flutter v1.2',
@@ -68,7 +68,7 @@ const languageLabels: LanguageLabels = {
 const longLanguageLabels: LanguageLabels = {
   ...languageLabels,
   csharp: 'C# .NET v1.2',
-  javascript: 'JavaScript v1.2',
+  javascript: 'JavaScript v2.0',
 };
 
 /**  Source: Ably Voltaire, src/components/code-block/code-block.js */
