@@ -11,7 +11,7 @@ const ABLY_API_KEY = import.meta.env.VITE_ABLY_KEY;
 export const FOOTBALL_CHANNEL_NAME = import.meta.env.VITE_FOOTBALL_CHANNEL_NAME;
 
 // Create an Ably client instance with the provided API key.
-const client = new Ably.Rest.Promise({
+const client = new Ably.Rest({
   key: ABLY_API_KEY,
 });
 

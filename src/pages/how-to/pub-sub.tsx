@@ -34,8 +34,8 @@ const updateAblyConnectionKey = (files: Record<string, string>, apps: App[]) => 
 
     // Environment
     if (ablyEnvironment !== 'production') {
-      content = content.replaceAll(/new Ably\.(Realtime|Rest)\.Promise\(\{/g, (_match, type) => {
-        return `new Ably.${type}.Promise({\n  environment: '${ablyEnvironment}',`;
+      content = content.replaceAll(/new Ably\.(Realtime|Rest)\(\{/g, (_match, type) => {
+        return `new Ably.${type}({\n  environment: '${ablyEnvironment}',`;
       });
     }
 
