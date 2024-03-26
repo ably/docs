@@ -7,7 +7,7 @@ const ABLY_API_KEY = import.meta.env.VITE_ABLY_KEY;
 const BASKETBALL_CHANNEL_NAME = import.meta.env.VITE_BASKETBALL_CHANNEL_NAME;
 
 // Initialize the Ably client with the API key and get the basketball channel
-const client = new Ably.Rest.Promise({
+const client = new Ably.Rest({
   key: ABLY_API_KEY
 });
 const basketballChannel = client.channels.get(BASKETBALL_CHANNEL_NAME);
