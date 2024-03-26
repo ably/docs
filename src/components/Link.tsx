@@ -1,4 +1,5 @@
-import { Link as GatsbyLink, GatsbyLinkProps } from 'gatsby';
+import { Link as GatsbyLink, GatsbyLinkProps, navigate as GatsbyNavigate } from 'gatsby';
+import { safeWindow } from 'src/utilities';
 import { checkLinkIsInternal, normalizeLegacyDocsLink } from 'src/utilities/link-checks';
 
 export default function Link<TState>({
@@ -54,4 +55,21 @@ export default function Link<TState>({
       {children}
     </a>
   );
+}
+
+/**
+ * A thin wrapper around Gatsby's navigate that is aware of external links, and will
+ * directly manipulate the location in the event of being passed an external link
+ */
+export function navigate(to, options = {}): { to: string; options: { external?: boolean } } {
+  const { external } = options;
+  const isInternal = checkLinkIsInternal(to);
+  const isOnPage = to?.startsWith('#');
+
+  if (isInternal && !external && !isOnPage) {
+    const href = normalizeLegacyDocsLink(to);
+    return GatsbyNavigate(href, options);
+  }
+
+  safeWindow.location.assign(to);
 }

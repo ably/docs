@@ -41,7 +41,7 @@ export const APIReferencesDropdownData: DropdownData = {
     },
     {
       link: {
-        href: `https://ably.com/api/control-api`,
+        href: `/docs/api/control-api`,
         text: 'Control API',
       },
       description:

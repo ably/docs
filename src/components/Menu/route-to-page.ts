@@ -1,4 +1,4 @@
-import { navigate, withPrefix } from 'gatsby';
+import { navigate } from 'gatsby';
 import { SingleValue } from 'react-select';
 import { ReactSelectOption } from 'src/components';
 
@@ -7,5 +7,5 @@ export const routeToPage = (newValue: SingleValue<ReactSelectOption>) => {
     console.warn('No option selected from version menu');
     return;
   }
-  navigate(withPrefix(newValue.value));
+  navigate(newValue.value);
 };

@@ -7,6 +7,7 @@ export const safeWindow =
           platform: '',
         },
         location: {
+          assign: identity,
           pathname: '',
           hash: '',
           host: '',
