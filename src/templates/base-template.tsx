@@ -1,4 +1,4 @@
-import { Script, ScriptStrategy, navigate, withPrefix } from 'gatsby';
+import { Script, ScriptStrategy, navigate } from 'gatsby';
 import { useEffect, useMemo } from 'react';
 
 import Article from 'src/components/Article';
