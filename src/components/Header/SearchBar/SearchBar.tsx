@@ -13,6 +13,8 @@ import { KeyIcon } from './KeyIcon';
 
 import { searchInput } from './SearchBar.module.css';
 
+import App from './DocSearch';
+
 export enum DisplayMode {
   FULL_SCREEN = 'FULL_SCREEN',
   MOBILE = 'MOBILE',
@@ -103,15 +105,7 @@ export const SearchBar = ({
           'mx-24 mt-24 md:m-0': displayLocation !== 'homepage',
         })}
       >
-        <input
-          type="text"
-          ref={textInput}
-          placeholder="Search"
-          className={cn(searchInput)}
-          value={query}
-          onChange={handleSearch}
-          style={{ ...extraInputStyle }}
-        />
+        <App></App>
         <Icon name="icon-gui-search" size="24px" additionalCSS="absolute left-16 top-12" />
         {!isInFocus && (
           <div className="absolute right-16 top-12 hidden lg:flex items-center justify-end">
