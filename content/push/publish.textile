@@ -1,11 +1,13 @@
 ---
 title: Publish and receive
-meta_description: "Learn how to publish and manage push notifications with Ably, covering direct and channel-based methods, payload details, and subscription management."
-meta_keywords: "Push, push notifications, Apple Push Notification Service, Google Firebase Cloud Messaging Service, publishing, direct publishing, channel-based broadcasting"
+meta_description: "Learn how to publish and manage Push notifications with Ably, covering direct and channel-based methods, payload details, and subscription management."
+meta_keywords: "Push, Push notifications, Apple Push Notification Service, Google Firebase Cloud Messaging Service, publishing, direct publishing, channel-based broadcasting"
 section: general
 index: 42
 hide_from_nav: true
 languages:
+  - csharp
+  - flutter
   - javascript
   - nodejs
   - java
@@ -24,160 +26,165 @@ redirect_from:
   - /general/versions/v1.1/push/publish
 ---
 
-There are two ways to publish and receive push notifications using Ably:
+Publishing is the process that sends Push notifications from the source the client application or server to the end-user's device. Ably supports two methods of publishing: Direct publishing and Channel-based publishing.
 
-- Direct publishing:= delivers notifications directly devices or groups. You can send personalized messages or notifications based on unique identifiers like "deviceID":/push/setup#subscribing-device-id or "clientID":/push/setup#subscribing-client-id, making migration seamless for apps transitioning to Ably with existing recipients.
-- Channel-based publishing:= delivers push notifications to channel subscribers. Channel-based publishing mirrors Ablys "Pub/Sub channels":/channels, an architectural pattern that enables publishers to send messages to a channel and any channel subscribers to receive them.
+"Direct publishing":link sends notifications directly to individual devices without Channels. Each notification targets a specific device, akin to sending a personal message. This method is useful for sending personalized or specific notifications to individual users.
 
-Both approaches utilize a "push notification payload structure":#payload-structure, incorporating the notification’s content, and the data the application requires. You can customize the payload for iOS and Android platforms to enhance the user experience. 
+In "Channel-based publishing":link, Ably automatically sends Push notifications to multiple devices through Channels. Ably ensures that messages sent to a channel are delivered to all devices subscribed to it. This method is beneficial for sending the same notification to a group of devices, such as users subscribed to a particular topic or group.
 
-h2(#payload-structure). Push notification payload structure
+Both of these methods use the "Push notification payload structure":#payload-structure, which includes the notification's content and any additional data required by the application. You can customize this payload structure for iOS and Android platforms to enhance the user experience. 
 
-The push notification payload has a generic structure:
+The following is the Push notification process:
 
-```[json]
-{
-  "notification": {
-    "title": <string, title to display at the notification>,
-    "body": <string, text below title on the expanded notification>,
-    "icon": <string, platform-specific>,
-    "sound": <string, platform-specific>,
-    "collapseKey": <string, platform-specific, used to group notifications together>
-  },
-  "data": {
-    <key string>: <value string>,
-    ...
-  }
-}
-```
+<a href="/images/diagrams/push-notification-overview-1.png" target="_blank">
+  <img src="/images/diagrams/push-notification-overview-1.png" style="width: 100%" alt="Push Notifications in Ably">
+</a>
 
-Ably automatically adjusts message fields to ensure compatibility with the target push notification transport:
+h2(#channel-pub). Channel-based publishing
 
-<!--[!!Ed. note: Removed experimental component column] _=. Web (*experimental*) | @notification.title@ | @notification.body@ |@notification.icon@ |@notification.sound@ |@notification.collapseKey@ |@data@ |-->
+Channel-based publishing extends Ably's realtime messaging infrastructure to deliver notifications to devices via Channels, providing the necessary configurations and API support. Additionally, Push notifications require an extra Push notification payload to specify the notification's optional visual format and data payload.
 
-|_=. Ably field |_=. FCM |_=. APNs |
-| @notification.title@ | @notification.title@ | @aps.alert.title@ |
-| @notification.body@ | @notification.body@ | @aps.alert.body@ |
-| @notification.icon@ | @notification.icon@ | Discarded. |
-| @notification.sound@ | @notification.sound@ | @aps.alert.sound@ |
-| @notification.collapseKey@ | @collapse_key@ | @aps.thread-id@ |
-| @data@ | @data@ | Merged into root object. |
+The process of channel-based publishing is as follows:
+1. Set up one or more Push subscriptions for the channel. These subscriptions can either be by "deviceID":#device-id for individual devices or "clientId":#client-id to encompass all devices associated with that clientID.
+2. Publish a message on the channel and a Push notification payload.
 
-The following example is a push payload, in a message, published to Ably:
+Note that a device will receive a Push notification sent on a channel only if:
+1. The published message includes the extra Push notification payload.
+2. A channel rule explicitly enables Push notifications for that channel.
+3. The device is subscribed to the channel.
+4. The Push notification payload is compatible with the subscribed Push notification device.
 
-```[json]
-{
-  "notification": {
-    "collapseKey": "chat"
-  }
-}
-```
+The following is an example Push notifications sent as payloads alongside an Ably "message"::/channels/messages in the @extras@ field. The @extras@ field is an object and must contain a Push attribute object with the Push payload details:
 
-Raw format to FCM:
-
-```[json]
-{
-  "collapse_key": "chat"
-}
-```
-
-Raw format to APNs:
-
-```[json]
-{
-  "aps.thread-id": "chat"
-}
-```
-<!--[!!Ed. note: reformat code if this is to be returned to production docs.] and would be delivered in raw format to a web push target (*experimental*) as: ```[json]{  "notification": {    "collapseKey": "chat"  }}```-->
-
-You can set transport-specific attributes which will get merged into the root object resulting from generic mapping explained above only when pushing to the selected transport:
-
-You must override the generic value to the field and add specific fields that are not supported in the generic structure.
-
-Alongside @notification@ and @data@, add an object thats field is one of:
-
-* @fcm@, for "FCM":https://firebase.google.com/docs/cloud-messaging/concept-options.
-* @apns@, for "APNs":https://developer.apple.com/library/archive/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/APNSOverview.html#//apple_ref/doc/uid/TP40008194-CH8-SW1.
-
-<!--[!!Ed. note: removed as part of EDU-1155. Return if required in the future.] * @web@, for Web Notifications (*experimental*).-->
-
-The following example uses the payload structure to send a push notification:
-
-```[json]
-{
-  "notification": {
-    "title": "Hello from Ably!",
-    "body": "Example push notification from Ably."
-  },
-  "data": {
-    "foo": "bar",
-    "baz": "qux"
-  },
-  "apns": {
-    "aps": {
-      "alert": {
-        "title": "Hello to iOS from Ably!"
-      }
-    }
-  },
-  "fcm": {
-    "notification": {
-      "color": "#d3d3d3"
-    }
-  }
-}
-```
-It includes
-
-* A general notification structure with a title and body for the notification.
-* A data section containing key-value pairs for additional information.
-* An `apns` field for Apple Push Notification Service (APNS) specific settings, including an alert title for iOS devices.
-* An `fcm` field for Firebase Cloud Messaging (FCM) with notification customization options, such as color.
-
-This structure allows for targeted notifications across different platforms (iOS, Android) with custom data and appearance settings.
-
-
-h3(#apns-headers). APNs Headers
-
-When sending background notifications on iOS, include specific headers in the notification. You can do this by adding an @apns-headers@ object that contains all desired APNs headers as part of the @apns@ object:
-
-```[json]
-{
-  "data": {
-    "foo": "bar",
-    "baz": "qux"
-  },
-  "apns": {
-    "aps": {
-      "content-available": 1,
+```[jsall]
+var extras = {
+  push: {
+    notification: {
+      title: 'Hello from Ably!',
+      body: 'Example push notification from Ably.'
     },
-    "apns-headers": {
-      "apns-push-type": "background",
-      "apns-priority": "5"
+    data: {
+      foo: 'bar',
+      baz: 'qux'
+    }
+  }
+};
+
+const channel = rest.channels.get('pushenabled:foo');
+await channel.publish({ name: 'example', data: 'data', extras: extras });
+```
+
+```[objc]
+ARTMessage *message = [[ARTMessage alloc] initWithName:@"example" data:@"rest data"];
+message.extras = @{
+    @"push": @{
+        @"notification": @{
+            @"title": @"Hello from Ably!",
+            @"body": @"Example Push notification from Ably."
+        },
+        @"data": @{
+            @"foo": @"bar",
+            @"baz": @"qux"
+        }
+    }
+};
+[[rest.channels get:@"pushenabled:foo"] publish:@[message]];
+```
+
+```[swift]
+var message = ARTMessage(name: "example", data: "rest data")
+message.extras = [
+    "push": [
+        "notification": [
+            "title": "Hello from Ably!",
+            "body": "Example push notification from Ably."
+        ],
+        "data": [
+            "foo": "bar",
+            "baz": "qux"
+        ]
+    ]
+]
+rest.channels.get("pushenabled:foo").publish([message])
+```
+
+```[java]
+Message message = new Message("example", "rest data");
+message.extras = io.ably.lib.util.JsonUtils.object()
+    .add("push", io.ably.lib.util.JsonUtils.object()
+        .add("notification", io.ably.lib.util.JsonUtils.object()
+            .add("title", "Hello from Ably!")
+            .add("body", "Example Push notification from Ably."))
+        .add("data", io.ably.lib.util.JsonUtils.object()
+            .add("foo", "bar")
+            .add("baz", "qux")));
+
+rest.channels.get("pushenabled:foo").publish(message);
+```
+
+```[ruby]
+extras = {
+  push: {
+    notification: {
+      title: 'Hello from Ably!',
+      body: 'Example Push notification from Ably.'
+    },
+    data: {
+      foo: 'bar',
+      baz: 'qux'
     }
   }
 }
+
+channel = rest.channels.get('pushenabled:foo')
+channel.publish('example', 'data', extras: extras)
+```
+
+```[python]
+extras = {
+  'push': {
+    'notification': {
+      'title': 'Hello from Ably!',
+      'body': 'Example Push notification from Ably.'
+    }
+  },
+}
+
+channel = rest.channels.get('pushenabled:foo')
+channel.publish({ 'name': 'example', 'data': 'data', 'extras': extras });
+```
+
+```[php]
+$msg = new Message();
+$msg->name = 'name';
+$msg->data = 'data';
+$msg->extras = [
+  'push' => [
+    'notification' => [
+      'title' => 'Hello from Ably!',
+      'body' => 'Example Push notification from Ably.'
+    ]
+  ]
+];
+$channel = $rest->channels->get('pushenabled:foo');
+$channel->publish($msg);
 ```
 
 h2(#direct-publishing). Direct publishing
 
-Direct Push notifcation management involves individual devices handling push notification settings and subscriptions through "Ably's client SDKs":https://ably.com/docs/sdks. Devices must register with the push notification service specific to their operating system and then activate themselves for Push notifications via the Ably SDK. Devices can subscribe to their channels to receive push notifications publish over those channels. Note, direct device management limitations are device specific. You can deliver Push notifications directly to:  
+Direct publishing sends notifications directly to individual devices using the "Ably SDK"::https://ably.com/docs/sdks. This process requires devices to register with Push notification services based on their operating system and then activate Push notifications through the Ably SDK. It's important to note that the limitations of direct publishing can vary depending on the specific device. Push notifications can be delivered directly to devices identified by their unique "deviceID":#device-id, their assigned "clientId":#client-id, or their "recipient attributes":#recipient. Direct publishing is also beneficial when migrating to Ably while targeting existing Push notification devices.
 
-* Devices identified by their unique "deviceID":#device-id.
-* Devices identified by their assigned "clientId":#client-id.
-* Devices identified by their recipient attributes such as their unique @registrationToken@ in the case of FCM, or @deviceToken@ in the case of APNs.
-<!--[!!Ed. note: removed as this is experimental. Kept in case it is required in the future.] or @targetUrl@ and @encryptionKey@ in the case of a Web device (*experimental*). -->
- This is useful when migrating to Ably with existing push notification target devices.
+See "Push Notifications Admin":/api/realtime-sdk/push-admin#publish for the client library API details, and "Push publish REST API":/api/rest-api#push-publish for information on the underlying direct publishing endpoint used by the client libraries.
 
-<aside data-type='note'>
-<p>If @clientOptions@ is not configured with an @ARTPushRegistererDelegate@ through its @pushRegistererDelegate@ property, the @UIApplicationDelegate2@ is automatically utilized if it implements @ARTPushRegistererDelegate@. This fallback to @UIApplicationDelegate@ is the now deprecated method. </p>
-</aside>
+h3(#device-id). Direct publish using deviceID
 
-See "Push Admin":/api/realtime-sdk/push-admin#publish for the client library API details, and "Push publish REST API":/api/rest-api#push-publish for information on the underlying direct publishing endpoint used by the client libraries.
+Publish Push notifications using the deviceID:
 
-h3(#device-id). Publish using deviceID
+* Structure your Push notification payload according to your requirements, including fields like notification title, body, and any additional data you want to send.
+* Set the recipient of the Push notification. Specify the deviceID as the recipient.
+* Use the Ably API to publish the Push notification with the specified recipient and payload.
 
-The following example shows how to publish using the deviceID directly:
+The following example publishes a Push notification using the deviceID:
 
 ```[jsall]
 var recipient = {
@@ -186,7 +193,7 @@ var recipient = {
 var data = {
   notification: {
     title: 'Hello from Ably!',
-    body: 'Example push notification from Ably.'
+    body: 'Example Push notification from Ably.'
   }
 };
 
@@ -200,7 +207,7 @@ recipient = {
 data = {
   notification: {
     title: 'Hello from Ably!',
-    body: 'Example push notification from Ably.'
+    body: 'Example Push notification from Ably.'
   }
 }
 
@@ -230,7 +237,7 @@ message.extras = io.ably.lib.util.JsonUtils.object()
     .add("push", io.ably.lib.util.JsonUtils.object()
         .add("notification", io.ably.lib.util.JsonUtils.object()
             .add("title", "Hello from Ably!")
-            .add("body", "Example push notification from Ably."))
+            .add("body", "Example Push notification from Ably."))
         .add("data", io.ably.lib.util.JsonUtils.object()
             .add("foo", "bar")
             .add("baz", "qux")));
@@ -245,7 +252,7 @@ let recipient: [String: Any] = [
 let data: [String: Any] = [
     "notification": [
         "title": "Hello from Ably!",
-        "body": "Example push notification from Ably."
+        "body": "Example Push notification from Ably."
     ],
     "data": [
         "foo": "bar",
@@ -261,7 +268,7 @@ message = {
   'push': {
     'notification': {
       'title': 'Hello from Ably!',
-      'body': 'Example push notification from Ably.'
+      'body': 'Example Push notification from Ably.'
     }
   }
 }
@@ -274,16 +281,69 @@ $recipient = [ 'deviceId' => 'xxxxxxxxxxxx' ];
 $data = [ 'push' =>
           [ 'notification' =>
             [ 'title' => 'Hello from Ably!',
-              'body' => 'Example push notification from Ably.'
+              'body' => 'Example Push notification from Ably.'
             ]
           ]
         ];
 $rest->push->admin->publish( $recipient, $data );
 ```
 
-h3(#client-id). Publish using clientID
+```[csharp]
+var extras = new
+{
+    push = new
+    {
+        notification = new
+        {
+            title = "Hello from Ably!",
+            body = "Example Push notification from Ably."
+        },
+        data = new
+        {
+            foo = "bar",
+            baz = "qux"
+        }
+    }
+};
 
-The following example shows how to publish using the clientID directly:
+
+var channel = rest.channels.get("pushenabled:foo");
+channel.publish(new
+{
+    name = "example",
+    data = "data",
+    extras = extras
+});
+
+```
+
+```[flutter]
+var extras = {
+    'push': {
+        'notification': {
+            'title': 'Hello from Ably!',
+            'body': 'Example Push notification from Ably.'
+        },
+        'data': {
+            'foo': 'bar',
+            'baz': 'qux'
+        }
+    }
+};
+
+var channel = rest.channels.get('pushenabled:foo');
+channel.publish({'name': 'example', 'data': 'data', 'extras': extras});
+```
+
+h3(#client-id). Direct publish clientID
+
+Publish Push notifications using the clientID:
+
+* Structure your Push notification payload according to your requirements, including fields like notification title, body, and any additional data you want to send.
+* Set the recipient of the Push notification. Specify the deviceID as the recipient.
+* Use the Ably API to publish the Push notification with the specified recipient and payload.
+
+The following example publishes a Push notification using the clientID: 
 
 ```[jsall]
 var recipient = {
@@ -292,7 +352,7 @@ var recipient = {
 var notification = {
   notification: {
     title: 'Hello from Ably!',
-    body: 'Example push notification from Ably.'
+    body: 'Example Push notification from Ably.'
   }
 };
 
@@ -320,7 +380,7 @@ ARTPushRecipient *recipient = @{
 ARTJsonObject *data = @{
     @"notification": @{
         @"title": @"Hello from Ably!",
-        @"body": @"Example push notification from Ably."
+        @"body": @"Example Push notification from Ably."
     },
     @"data": @{
         @"foo": @"bar",
@@ -337,7 +397,7 @@ let recipient: [String: Any] = [
 let data: [String: Any] = [
     "notification": [
         "title": "Hello from Ably!",
-        "body": "Example push notification from Ably."
+        "body": "Example Push notification from Ably."
     ],
     "data": [
         "foo": "bar",
@@ -380,16 +440,68 @@ $recipient = [ 'clientId' => 'xxxxxxxxxxx' ];
 $data = [ 'push' =>
           [ 'notification' =>
             [ 'title' => 'Hello from Ably!',
-              'body' => 'Example push notification from Ably.'
+              'body' => 'Example Push notification from Ably.'
             ]
           ]
         ];
 $rest->push->admin->publish( $recipient, $data );
 ```
 
-h3. Publish to recipient
+```[csharp]
+var extras = new
+{
+    push = new
+    {
+        notification = new
+        {
+            title = "Hello from Ably!",
+            body = "Example Push notification from Ably."
+        },
+        data = new
+        {
+            foo = "bar",
+            baz = "qux"
+        }
+    }
+};
 
-The following example shows how to publish directly to a recipient:
+
+var channel = rest.channels.get("pushenabled:foo");
+channel.publish(new
+{
+    name = "example",
+    data = "data",
+    extras = extras
+});
+```
+
+```[flutter]
+var extras = {
+    'push': {
+        'notification': {
+            'title': 'Hello from Ably!',
+            'body': 'Example Push notification from Ably.'
+        },
+        'data': {
+            'foo': 'bar',
+            'baz': 'qux'
+        }
+    }
+};
+
+var channel = rest.channels.get('pushenabled:foo');
+channel.publish({'name': 'example', 'data': 'data', 'extras': extras});
+```
+
+h3(#recipient). Direct publish recipient attributes
+
+Publish Push notifications using the recipient attributes:
+
+* Structure your Push notification payload according to your requirements, including fields like notification title, body, and any additional data you want to send.
+* Create a recipient object containing the transport type and the corresponding attribute, such as their unique registration token for FCM or device token for APNs.
+* Use the Ably API to publish the Push notification with the specified recipient and payload.
+
+The following example publishes a Push notification using the recipient attributes:
 
 ```[ruby]
 recipient = {
@@ -399,7 +511,7 @@ recipient = {
 notification = {
   notification: {
     title: 'Hello from Ably!',
-    body: 'Example push notification from Ably.'
+    body: 'Example Push notification from Ably.'
   }
 }
 
@@ -414,7 +526,7 @@ var recipient = {
 var notification = {
   notification: {
     title: 'Hello from Ably!',
-    body: 'Example push notification from Ably.'
+    body: 'Example Push notification from Ably.'
   }
 };
 
@@ -430,7 +542,7 @@ ARTPushRecipient *recipient = @{
 ARTJsonObject *data = @{
     @"notification": @{
         @"title": @"Hello from Ably!",
-        @"body": @"Example push notification from Ably."
+        @"body": @"Example Push notification from Ably."
     },
     @"data": @{
         @"foo": @"bar",
@@ -449,7 +561,7 @@ let recipient: [String: Any] = [
 let data: [String: Any] = [
     "notification": [
         "title": "Hello from Ably!",
-        "body": "Example push notification from Ably."
+        "body": "Example Push notification from Ably."
     ],
     "data": [
         "foo": "bar",
@@ -465,7 +577,7 @@ message.extras = io.ably.lib.util.JsonUtils.object()
     .add("push", io.ably.lib.util.JsonUtils.object()
         .add("notification", io.ably.lib.util.JsonUtils.object()
             .add("title", "Hello from Ably!")
-            .add("body", "Example push notification from Ably."))
+            .add("body", "Example Push notification from Ably."))
         .add("data", io.ably.lib.util.JsonUtils.object()
             .add("foo", "bar")
             .add("baz", "qux")));
@@ -479,7 +591,7 @@ message = {
   'push': {
     'notification': {
       'title': 'Hello from Ably!',
-      'body': 'Example push notification from Ably.'
+      'body': 'Example Push notification from Ably.'
     }
   }
 }
@@ -492,207 +604,166 @@ $recipient = [  'transportType' => 'apns', 'deviceToken' => 'XXXXXXX' ];
 $data = [ 'push' =>
           [ 'notification' =>
             [ 'title' => 'Hello from Ably!',
-              'body' => 'Example push notification from Ably.'
+              'body' => 'Example Push notification from Ably.'
             ]
           ]
         ];
 $rest->push->admin->publish( $recipient, $data );
 ```
 
-h2(#channel-publishing). Channel-based publishing
-
-Ably's model intentionally mirrors the delivery of standard messages to realtime subscribers using "pub/sub channels":/channels for pushing notifications to devices over channels. For instance, publishing a standard message on an Ably channel immediately sends it to all channel subscribers. However, the process remains the same when publishing push notifications on channels, except that subscribers (devices receiving push notifications) must register in advance through our API. Additionally, the message must include an extra push notification payload specifying the push notification's optional visual format and optional data payload.
-
-To publish push notifications on a channel, the following requirements must be met: 
-
-* The *extra push notification* payload is included in the published message.
-* A "channel rule":/channels#rules is configured explicitly enabling push notifications on that channel.
-* The device subscribed to the channel.
-* The push notification payload is compatible with the subscribed push notification device.
-
-Push notifications are sent as special payloads alongside "a normal Ably message":/channels/messages in the @extras@ field. The @extras@ field is an object and must contain a @push@ attribute object with the push payload details.
-
-```[objc]
-ARTMessage *message = [[ARTMessage alloc] initWithName:@"example" data:@"rest data"];
-message.extras = @{
-    @"push": @{
-        @"notification": @{
-            @"title": @"Hello from Ably!",
-            @"body": @"Example push notification from Ably."
-        },
-        @"data": @{
-            @"foo": @"bar",
-            @"baz": @"qux"
-        }
+```[csharp]
+var recipient = new {
+    deviceId = "xxxxxxxxxxx"
+};
+var data = new {
+    notification = new {
+        title = "Hello from Ably!",
+        body = "Example Push notification from Ably."
     }
 };
-[[rest.channels get:@"pushenabled:foo"] publish:@[message]];
-```
 
-```[swift]
-var message = ARTMessage(name: "example", data: "rest data")
-message.extras = [
-    "push": [
-        "notification": [
-            "title": "Hello from Ably!",
-            "body": "Example push notification from Ably."
-        ],
-        "data": [
-            "foo": "bar",
-            "baz": "qux"
-        ]
-    ]
-]
-rest.channels.get("pushenabled:foo").publish([message])
-```
-
-```[java]
-Message message = new Message("example", "rest data");
-message.extras = io.ably.lib.util.JsonUtils.object()
-    .add("push", io.ably.lib.util.JsonUtils.object()
-        .add("notification", io.ably.lib.util.JsonUtils.object()
-            .add("title", "Hello from Ably!")
-            .add("body", "Example push notification from Ably."))
-        .add("data", io.ably.lib.util.JsonUtils.object()
-            .add("foo", "bar")
-            .add("baz", "qux")));
-
-rest.channels.get("pushenabled:foo").publish(message);
-```
-
-```[ruby]
-extras = {
-  push: {
-    notification: {
-      title: 'Hello from Ably!',
-      body: 'Example push notification from Ably.'
-    },
-    data: {
-      foo: 'bar',
-      baz: 'qux'
-    }
-  }
-}
-
-channel = rest.channels.get('pushenabled:foo')
-channel.publish('example', 'data', extras: extras)
-```
-
-```[jsall]
-var extras = {
-  push: {
-    notification: {
-      title: 'Hello from Ably!',
-      body: 'Example push notification from Ably.'
-    },
-    data: {
-      foo: 'bar',
-      baz: 'qux'
-    }
-  }
-};
-
-var channel = rest.channels.get('pushenabled:foo');
-channel.publish({ name: 'example', data: 'data', extras: extras });
-```
-
-```[python]
-extras = {
-  'push': {
-    'notification': {
-      'title': 'Hello from Ably!',
-      'body': 'Example push notification from Ably.'
-    }
-  },
-}
-
-channel = rest.channels.get('pushenabled:foo')
-channel.publish({ 'name': 'example', 'data': 'data', 'extras': extras });
-```
-
-```[php]
-$msg = new Message();
-$msg->name = 'name';
-$msg->data = 'data';
-$msg->extras = [
-  'push' => [
-    'notification' => [
-      'title' => 'Hello from Ably!',
-      'body' => 'Example push notification from Ably.'
-    ]
-  ]
-];
-$channel = $rest->channels->get('pushenabled:foo');
-$channel->publish($msg);
-```
-
-Client libraries provide a "Push Admin API":/api/realtime-sdk/push-admin that is intended to be used on a customer's servers to perform all the management tasks relating to registering devices, managing push device subscriptions and delivering push notifications directly to devices or devices associated with a client identifier.
-
-The push admin API is accessible via the @push@ attribute of the "realtime":/api/realtime-sdk/channels#properties or "rest":/api/rest-sdk/channels#properties client. For example to publish a push notification directly to a device, you would access the "@publish@":/api/realtime-sdk/push-admin#publish method as follows:
-
-```[jsall]
-var rest = new Ably.Rest({ key: apiKey });
 rest.push.admin.publish(recipient, data);
 ```
 
-```[ruby]
-rest = Ably::Rest.new(key: api_key)
-result = rest.push.admin.publish(recipient, data)
+```[flutter]
+    'deviceId': 'xxxxxxxxxxx',
+};
+var data = {
+    'notification': {
+        'title': 'Hello from Ably!',
+        'body': 'Example push notification from Ably.',
+    },
+};
+
+rest.push.admin.publish(recipient, data);
+
 ```
 
-```[python]
-rest = AblyRest('{{API_KEY}}')
-rest.push.admin.publish(recipient, data)
+h2(#payload-structure). Push notification payload structure
+
+Ensure successful delivery, customization, and compatibility across various devices and operating systems using platform-specific requirements and best practices:
+
+
+```[json]
+{
+  "notification": {
+    "title": <string, title to display at the notification>,
+    "body": <string, text below title on the expanded notification>,
+    "icon": <string, platform-specific>,
+    "sound": <string, platform-specific>,
+    "collapseKey": <string, platform-specific, used to group notifications together>
+  },
+  "data": {
+    <key string>: <value string>,
+    ...
+  }
+}
 ```
 
-```[php]
-$rest = new Ably\AblyRest('{{API_KEY}}');
-$rest->push->admin->publish( $recipient, $data );
+Ably automatically adjusts message fields to ensure compatibility with the target Push notification transport:
+
+<!--[!!Ed. note: Removed experimental component column] _=. Web (*experimental*) | @notification.title@ | @notification.body@ |@notification.icon@ |@notification.sound@ |@notification.collapseKey@ |@data@ |-->
+
+|_=. Ably field |_=. FCM |_=. APNs |
+| @notification.title@ | @notification.title@ | @aps.alert.title@ |
+| @notification.body@ | @notification.body@ | @aps.alert.body@ |
+| @notification.icon@ | @notification.icon@ | Discarded. |
+| @notification.sound@ | @notification.sound@ | @aps.alert.sound@ |
+| @notification.collapseKey@ | @collapse_key@ | @aps.thread-id@ |
+| @data@ | @data@ | Merged into root object. |
+
+You can use different payload formats for FCM and APNs when publishing messages to Ably. The following are examples push payloads in both formats:
+
+```[json]
+{
+  "notification": {
+    "collapseKey": "chat"
+  }
+}
 ```
 
-```[swift]
-let rest = ARTRest(key: "{{API_KEY}}")
-rest.push.admin.publish(recipient, data: ["data": ["foo": "bar"]])
+Raw format to FCM:
+
+```[json]
+{
+  "collapse_key": "chat"
+}
 ```
 
-```[java,android]
-AblyRest rest = new AblyRest("{{API_KEY}}");
-rest.push.admin.publishAsync(recipient, data);
+Raw format to APNs:
+
+```[json]
+{
+  "aps.thread-id": "chat"
+}
 ```
 
-```[go]
-rest := ably.NewREST(ably.WithKey("{{API_KEY}}"))
-// Go does not have access to the push admin directly, so make use of the Request method
-rest.Request('POST', '/push/publish', nil, { "recipient": recipient, "data:" data }, nil)
+
+Add FCM or APNs objects alongside the general notification and data fields to customize payloads for specific services:
+
+```[json]
+{
+  "notification": {
+    "title": "Hello from Ably!",
+    "body": "Example Push notification from Ably."
+  },
+  "data": {
+    "foo": "bar",
+    "baz": "qux"
+  },
+  "apns": {
+    "aps": {
+      "alert": {
+        "title": "Hello to iOS from Ably!"
+      }
+    }
+  },
+  "fcm": {
+    "notification": {
+      "color": "#d3d3d3"
+    }
+  }
+}
 ```
 
-```[csharp]
-Rest rest = new AblyRest("{{API_KEY}}");
-// C# .NET does not have access to the push admin directly, so make use of the Request method
-var body = JToken.Parse("{ \"recipient\": recipient, \"data\": data }");
-Rest.Request("POST", "/push/publish", null, body, null);
+This structure allows for targeted notifications with platform-specific settings and customization.
+
+
+h3(#apns-headers). APNs Headers
+
+To enable background notifications on iOS, you must include specific headers in the notification. You can specify these headers by adding an @apns-headers@ object, which should contain all the desired APNs headers, as part of the apns object. The following example shows how a background notification would appear:
+
+```[json]
+{
+  "data": {
+    "foo": "bar",
+    "baz": "qux"
+  },
+  "apns": {
+    "aps": {
+      "content-available": 1,
+    },
+    "apns-headers": {
+      "apns-push-type": "background",
+      "apns-priority": "5"
+    }
+  }
+}
 ```
-
-The "Push Admin API":/api/realtime-sdk/push-admin offers three key features:
-
-* "@publish@":/api/realtime-sdk/push-admin#publish for direct publishing to devices and groups of identified devices.
-* "@deviceRegistrations@":/api/realtime-sdk/push-admin#device-registrations for registering, updating, listing and de-registering push devices.
-* "@channelSubscriptions@":/api/realtime-sdk/push-admin#channel-subscriptions for subscribing, listing and unsubscribing individual devices or groups of identified devices to push notifications published on channels.
 
 h2(#push-admin). Push Admin API
 
-Ably's "Push Admin API":/api/realtime-sdk/push-admin is a set of functionalities designed for backend servers to manage push notification tasks comprehensively. This API includes registering devices for push notifications, managing subscriptions to specific channels, and directly sending push notifications to devices or users identified by a client identifier. The Push Admin API is accessible through Ably's realtime or REST client interfaces, allowing seamless integration into server-side applications. It enables precise control over the push notification process, from device registration and subscription management to the actual delivery of notifications, ensuring targeted and efficient communication with users across platforms.
+Ably's "Push Admin API":/api/realtime-sdk/push-admin is a set of functionalities designed for backend servers to manage Push notification tasks. It handles registering devices for Push notifications, managing subscriptions to specific Channels, and sending Push notifications directly to devices or users identified by a client identifier. Available through realtime or REST API, the Push Admin API integrates into server-side applications, offering precise control over the Push notification process.
 
-Using the "Push Admin API":/api/realtime-sdk/push-admin requires specific permissions as part of a client's credentials:
+Using the Push Admin API requires explicit permissions within a client's credentials:
 
-* Access using the @push-admin@ permission. A client whose credentials contain the @push-admin@ permission has full access to the API and can manage registrations and subscriptions for all devices. 
+* Access using the @push-admin@ permission grants full API access, enabling the management of registrations and subscriptions for all devices.
+* Access using the @push-subscribe@ permission designates a client as a Push target device. It can manage its registration and subscriptions but requires more authority over other devices' registrations or channel subscriptions.
 
-* Access using the @push-subscribe@ permission. A client with @push-subscribe@ is a push target device, and it can manage its registration and any subscription for itself; it is not able to manage push registrations or channel subscriptions for any other device. The credentials presented, as well as containing the @push-subscribe@ permission, must also authenticate the device itself.
+Each Push target device is associated with a unique deviceID and authentication credentials. Authentication can be achieved in two ways when using the Push Admin API:
 
-Every push target device has a deviceID and credentials, which are used as the basis for device authentication. When using the push admin API, a device can authenticate itself in two ways:
+* By utilizing an Ably token containing the device's deviceId.
+* By employing a standard "Ably key":/auth/basic or "Token":/auth/token, with a @deviceIdentityToken@, a credential generated during registration to assert the device's identity, included in the request header.
 
-* Using an "Ably token":/auth/token that contains its @deviceId@.
+THe sevice credential management is handled by the "Ably SDK":https://ably.com/docs/sdks, removing the need for the client application to manage device credentials unless accessing the "Push Admin API":/api/realtime-sdk/push-admin directly via HTTP.
 
-* Using a normal "Ably key":/auth/basic or "Ably Token":/auth/token but additionally including a @deviceIdentityToken@ - a credential created at registration time that is used to assert the device's identity - in a header in the request.
-
-The client library performs management of device credentials, so unless the push admin API is being accessed directly using HTTP, the client application does not need to worry about managing device credentials.
