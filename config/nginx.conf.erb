@@ -46,6 +46,7 @@ http {
     https://ably-docs.herokuapp.com $http_origin;
     ~*https://website-[a-z0-9\-]*\.herokuapp\.com $http_origin;
     ~*https://ably-docs-[a-z0-9\-]*\.herokuapp\.com $http_origin;
+    http://localhost:<%= ENV['PORT'] %> $http_origin;
   }
 
   # Creates a map of redirects for us
@@ -59,10 +60,10 @@ http {
   }
 
 	server {
-		listen <%= ENV["PORT"] %> reuseport;
-		server_name _;
-		keepalive_timeout 5;
-		client_max_body_size <%= ENV['NGINX_CLIENT_MAX_BODY_SIZE'] || 1 %>M;
+	  listen <%= ENV["PORT"] %> reuseport;
+	  server_name _;
+	  keepalive_timeout 5;
+	  client_max_body_size <%= ENV['NGINX_CLIENT_MAX_BODY_SIZE'] || 1 %>M;
 
     add_header X-Frame-Options SAMEORIGIN always;
 
@@ -73,8 +74,24 @@ http {
 
     error_page 404 500 /404.html;
 
-    # Removes trailing slashes everywhere
-    rewrite ^/(.*)/$ https://$host/$1 permanent;
+    # Removes trailing slashes everywhere (by redirecting)
+    rewrite ^/(.*)/$ <%= ENV['SKIP_HTTPS'] == 'true' ? '$scheme' : 'https' %>://$host/$1 permanent;
+
+    <% unless ENV['SKIP_HTTPS'] == 'true' %>
+    # Enforce HTTPS
+      if ($http_x_forwarded_proto != "https") {
+      return 301 https://$host$request_uri;
+    }
+    <% end %>
+
+    # Apply our redirects before rewriting
+    if ($redirected_url != "none") {
+      rewrite ^ $redirected_url permanent;
+    }
+
+    # Strip /docs from the requests (we build with --prefix-paths and our files are in public/)
+    rewrite ^/docs/(.*)$ /$1 last;
+    rewrite ^/docs$ / last;
 
     location ~* \.json$ {
       more_set_headers 'Access-Control-Allow-Origin: *';
@@ -115,16 +132,6 @@ http {
 
     location ~ \.html$ {
       try_files $uri =404;
-    }
-
-    # Enforce HTTPS
-    if ($http_x_forwarded_proto != "https") {
-      return 301 https://$host$request_uri;
-    }
-
-    # Apply our redirects
-    if ($redirected_url != "none") {
-      rewrite ^ $redirected_url permanent;
     }
 
     # need this b/c setting $fallback to =404 will try #{root}=404 instead of returning a 404

@@ -1,4 +1,5 @@
 import React, { useReducer, useRef } from 'react';
+import { withPrefix } from 'gatsby';
 
 import { DropdownButtonAndMenu } from './Dropdown/Button/DropdownButton';
 import { dropdownData } from './Dropdown/Button';
@@ -8,7 +9,6 @@ import { TopMainNavAblyLogo } from './TopMainNavIllustration/TopMainNavAblyLogo'
 import { DisplayMode, SearchBar } from './SearchBar';
 import { TopMainNavUserMenu, TopMainNavLink } from './TopMainNavUser';
 import UserContext from '../../contexts/user-context';
-import { DOCUMENTATION_PATH } from '../../../data/transform/constants';
 import { HamburgerMenu } from './HamburgerMenu';
 import { TopMainNavStateContext } from './top-main-nav-state-context';
 import { HorizontalMenu, HorizontalMenuVariant } from 'src/components/HorizontalMenu';
@@ -34,10 +34,10 @@ export const Header = ({
       id="top-main-nav"
     >
       <HorizontalMenu variant={HorizontalMenuVariant.light}>
-        <TopMainNavAblyLogo href={DOCUMENTATION_PATH} />
+        <TopMainNavAblyLogo href={withPrefix('/')} />
         {showSearchBar ? <SearchBar displayMode={DisplayMode.FULL_SCREEN} /> : null}
         <div className="flex flex-row justify-end col-start-3">
-          <TopMainNavLink href="/docs/sdks" dataId="meganav-link">
+          <TopMainNavLink href="/sdks" dataId="meganav-link">
             SDKs
           </TopMainNavLink>
           {menuItems.map((buttonDropdownDataID, i) => (

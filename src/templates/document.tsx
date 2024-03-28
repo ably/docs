@@ -2,9 +2,19 @@ import React from 'react';
 import { graphql } from 'gatsby';
 import Template from './base-template';
 import { AblyTemplateData } from './template-data';
+import { ContentImagesProvider } from 'src/contexts/content-images-context';
 
 const Document = (props: AblyTemplateData) => {
-  return <Template {...props} />;
+  const {
+    data: { images },
+  } = props ?? {};
+  const { nodes } = images ?? {};
+
+  return (
+    <ContentImagesProvider images={nodes}>
+      <Template {...props} />
+    </ContentImagesProvider>
+  );
 };
 
 export default Document;
@@ -29,6 +39,11 @@ export const query = graphql`
           }
           key
         }
+      }
+    }
+    images: allFile(filter: { relativeDirectory: { glob: "content/**" } }) {
+      nodes {
+        ...ContentImage
       }
     }
   }

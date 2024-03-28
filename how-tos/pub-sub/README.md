@@ -11,8 +11,8 @@ Try out the [live demo](https://ably.com/docs/how-to/pub-sub) of this how to.
 - Fork or clone the [Documentation](https://github.com/ably/docs).
 - Sign up for an account on [Ably](https://ably.com/sign-up?utm_source=ably-docs&utm_medium=github&utm_campaign=pub-sub) and get an API KEY.
 - Rename `.env.example` to `.env` and fill in your API KEY in the `VITE_ABLY_KEY` environment variable.
-- Run `npm` to install dependencies.
-- Run `npm run dev` and go to http://localhost:5173
+- Run `yarn` to install dependencies.
+- Run `yarn dev` and go to http://localhost:5173
 
 ## Runtime Requirements
 

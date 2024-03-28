@@ -49,8 +49,8 @@ export const SidebarLinkMenu = ({
       expandMenu === EXPAND_MENU.COLLAPSE_NEXT
         ? EXPAND_MENU.COLLAPSED
         : expandMenu === EXPAND_MENU.EXPAND_NEXT
-        ? EXPAND_MENU.EXPANDED
-        : expandMenu;
+          ? EXPAND_MENU.EXPANDED
+          : expandMenu;
 
     const alwaysExpanded = isArray(content) && link !== '';
 

@@ -1,6 +1,7 @@
 import React from 'react';
+import { withPrefix } from 'gatsby';
 import Select from 'react-select';
-import { DOCUMENTATION_PATH, LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
+import { LATEST_ABLY_API_VERSION_STRING } from '../../../data/transform/constants';
 import { Notification, NotificationVariant } from '../Notification';
 import { routeToPage } from './route-to-page';
 import { dropdownIndicatorStyles } from './ReactSelectStyles/dropdown-indicator-styles';
@@ -60,7 +61,7 @@ const VersionMenu = ({ versions, version, rootVersion }: VersionMenuProps) => {
               variant={NotificationVariant.Warning}
               message={` Version ${version}. We recommend `}
               linkText={`the latest version, ${LATEST_ABLY_API_VERSION_STRING}`}
-              href={`${DOCUMENTATION_PATH}${rootVersion}`}
+              href={withPrefix(rootVersion)}
               className="mr-12"
             />
           )}

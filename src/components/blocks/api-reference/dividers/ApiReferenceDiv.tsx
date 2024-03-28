@@ -1,6 +1,5 @@
-import React, { useContext } from 'react';
 import { matchesLanguageOrDefault } from '../../wrappers/language-utilities';
-import { PageLanguageContext } from 'src/contexts';
+import { usePageLanguage } from 'src/contexts';
 import Html from '../../Html';
 import { HtmlComponentProps, HtmlComponentPropsData } from 'src/components/html-component-props';
 import { isString } from 'lodash/fp';
@@ -18,7 +17,7 @@ const childExistsOfIgnoredType = (data: HtmlComponentPropsData) =>
     : false;
 
 const ApiReferenceDiv = ({ data, attribs }: HtmlComponentProps<'div'>) => {
-  const pageLanguage = useContext(PageLanguageContext);
+  const { currentLanguage: pageLanguage } = usePageLanguage();
   const shouldShowBlock =
     attribs?.forcedisplay || matchesLanguageOrDefault(pageLanguage, attribs?.lang) || childExistsOfIgnoredType(data);
 

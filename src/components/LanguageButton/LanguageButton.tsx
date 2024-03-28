@@ -1,14 +1,14 @@
-import { useContext, FunctionComponent as FC } from 'react';
+import { FunctionComponent as FC } from 'react';
 import cn from 'classnames';
-import { PageLanguageContext } from 'src/contexts';
 import { createLanguageHrefFromDefaults, getLanguageDefaults, getTrimmedLanguage } from 'src/components';
 import languageLabels from 'src/maps/language';
-import { cacheVisitPreferredLanguage } from 'src/utilities';
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
 import { button, isActive } from '../Menu/MenuItemButton/MenuItemButton.module.css';
+import { usePageLanguage } from 'src/contexts';
+import { navigate } from 'gatsby';
 
 const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, selectedLocalLanguage }) => {
-  const pageLanguage = useContext(PageLanguageContext);
+  const { currentLanguage: pageLanguage, setPreferredLanguage } = usePageLanguage();
   const selectedLanguage = getTrimmedLanguage(language);
   const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(selectedLanguage, pageLanguage);
   /*
@@ -20,7 +20,11 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, select
 
   const handleClick = () => {
     const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, selectedLanguage);
-    cacheVisitPreferredLanguage(isPageLanguageDefault, selectedLanguage, href);
+
+    if (!isPageLanguageDefault) {
+      setPreferredLanguage(language);
+    }
+    navigate(href);
   };
   const langLabelAndVersion = languageLabels[language].split(' ');
   const languageLabel = langLabelAndVersion.slice(0, -1).join(' ');

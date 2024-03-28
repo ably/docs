@@ -13,31 +13,38 @@ This is a static site generated using [Gatsby](https://www.gatsbyjs.com/) and do
 
 ## Run
 
-Install node & npm.
+Install node & yarn.
 
-If you use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to manage your Ruby runtime versions, we have included a [`.tool-versions`](.tool-versions) file. Note that if you `brew install`ed your asdf installation instead of `git clone`ing it, npm [may not be installed correctly](https://youtrack.jetbrains.com/issue/WEB-51052).
+If you use [ASDF](https://github.com/asdf-vm/asdf) or compatible tooling to manage your Ruby runtime versions, we have included a [`.tool-versions`](.tool-versions) file - where the dependencies within can be installed with `asdf install` from the project root.
 
-`npm i`
+At the time of writing, this project requires Ruby 3.0.0, which in turn requires `openssl@1.1`. Environments with different versions (i.e. `openssl@3`) may experience a failing Ruby install, in which case you can do the following (and if this fails, uninstall `@openssl@X` first):
+
+```
+brew install openssl@1.1
+RUBY_CONFIGURE_OPTS="--with-openssl-dir=$(brew --prefix openssl@1.1)" asdf install ruby
+```
+
+`yarn`
 
 If Gatsby CLI is not already installed:
 
-`npm install -g gatsby-cli`
+`yarn global add gatsby-cli`
 
 **Environment variables setup**
 
 If you have not yet [set up your local .env.development environment variables](#environment-variables), run:
 
-`npm run develop:env-setup`
+`yarn develop:env-setup`
 
 **Editors:**
 
-`npm run edit`
+`yarn edit`
 
 **Developers:**
 
 To develop locally run:
 
-`npm run develop`
+`yarn develop`
 
 Visit `localhost:8000` for homepage.
 
@@ -45,7 +52,7 @@ Visit `localhost:8000/docs/${relativePath}` for documentation pages, e.g. `local
 
 To build and serve locally:
 
-`npm run rebuild`
+`yarn rebuild`
 
 Visit `localhost:8000` for homepage.
 
@@ -80,6 +87,48 @@ Other one-off instances of redirects may be added to additional config files, an
 
 For how to create and include these redirects.
 
+## Images
+
+Wherever possible, images should live in `src/images` and _not_ in `static/images`. The authors of Gatsby recommend [importing images](https://www.gatsbyjs.com/docs/how-to/images-and-media/importing-assets-into-files/) into components. The `static` folder in Gatsby is an escape hatch for the rare cases where files cannot be imported.
+
+The benefit of sticking to the Gatsby approach is that our images get processed and optimized during build time. It also allows us to serve our images over a CDN which is much better for our users.
+
+### Images in components
+
+Images in components can be imported and rendered as follows:
+
+~~~typescript
+import myImage from 'src/path/to/my-image.png';
+
+export default Component => (<img src={myImage} />);
+~~~
+
+### Images in YAML data
+
+_TBD_
+
+### Images in textfile files
+
+For rendering images in Textfile we have a special convention.
+
+Firstly, place the image file in `src/images/content`. The in the textile files reference it with a special path `@content`, for example:
+
+~~~textile
+<img src="@content/path/to/image.png" />
+~~~
+
+The above will render the image at `src/images/content/path/to/image.png`.
+
+Content images in textile is powered by `ContentImagesProvider` and `useContentImages`. Templates rendering content need to add the following to their GraphQL queries to get all the images loaded before passing it to the `ContentImagesProvider`:
+
+~~~graphql
+  images: allFile(filter: { relativeDirectory: { glob: "content/**" } }) {
+    nodes {
+      ...ContentImage
+    }
+  }
+~~~
+
 ## Environment Variables
 
 Note that any env variables needed to show in the browser must be prefixed with `GATSBY_` in order to appear.
@@ -105,7 +154,7 @@ We have selected folder-level README files instead of the alternative of a dedic
 
 ## Optional Setup Steps
 
-If you would like to run linting and tests automatically before every commit and run npm install automatically after every branch checkout, run `npm run repo-githooks`. If you would like to remove this behaviour, run `npm run no-githooks`.
+If you would like to run linting and tests automatically before every commit and run yarn install automatically after every branch checkout, run `yarn repo-githooks`. If you would like to remove this behaviour, run `yarn no-githooks`.
 
 To understand the data ingestion and parsing steps, please check the READMEs in the [/data folder](./data/README.md).
 

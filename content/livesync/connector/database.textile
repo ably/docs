@@ -106,26 +106,29 @@ GRANT DELETE ON your_nodes_schema.your_nodes_table to your_user;
 
 h2(#outbox). Outbox table
 
-The Database Connector uses the "outbox pattern":https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html to send realtime, application-defined change events via Ably's global edge messaging platform. The outbox pattern enables you to reliably publish an ordered sequence of change event messages over Ably, providing exactly-once delivery guarantees.
+The Database Connector utilizes the "outbox pattern":https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html to send realtime, application-defined change events via Ably's global edge messaging platform. The outbox pattern allows for the reliable publication of an ordered sequence of change event messages over Ably, providing exactly-once delivery guarantees. This pattern involves the use of an outbox table that you create in your database.
+The Database Connector automatically monitors new records written to the outbox table and publishes them as messages over "channels":/channels.
+When your backend server processes a request to update data in your database, it should also write a corresponding change event to the outbox table within the same transaction as the underlying mutation. The Database Connector then publishes the change event, written to the outbox, to the channel in the exact order that the underlying change to the data is committed to the database. Furthermore, the Database Connector automatically deletes records from the table once the records are successfully processed.
 
-The outbox pattern uses an outbox table that you create in your database.
-
-The Database Connector automatically observes new records written to the outbox table and publishes them as messages over "channels":/channels.
-
-When your backend server processes a request to update data in your database, it should write a corresponding change event to the outbox table in the same transaction as the underlying mutation:
+This example adds a comment and logs the event in an outbox:
 
 ```[text]
 BEGIN;
 -- mutate your data, e.g.:
 INSERT INTO comments (comment) VALUES ('New comment!');
 -- write change event to outbox, e.g.:
-INSERT INTO outbox (mutation_id, channel, name, ...) VALUES ('my-mutation-id', 'posts:123', 'addComment', ...);
+INSERT INTO outbox (mutation_id, channel, name, data) VALUES ('my-mutation-id', 'posts:123', 'addComment', 'New comment!');
 COMMIT;
 ```
 
-The Database Connector will publish the change event, written to the outbox, to the channel in the exact order in which the underlying change to the data is committed to the database.
+The following describes the columns in the outbox table:
 
-The Database Connector automatically deletes records from the table when records are successfully processed.
+- @mutation_id@ := is the identifier for the mutation.
+- @channel@ := is the channel to deliver the mutation, in this case, @posts:123@.
+- @name@ := indicates a comment is added.
+- @data@ := is the actual content or details of the mutation.
+
+For more information, see "outbox table schema.":#schema
 
 <aside data-type='note'>
 <p>The Database Connector will always keep at least one outbox record in the table, specifically the one with the largest @sequence_id@. This record is still marked as processed via a tombstone and will be deleted when subsequent records are written to the outbox. This approach ensures that the backend endpoint called by your "sync function":/livesync/models#sync can always obtain the @sequence_id@ at the time that the state is read from the database.</p>

@@ -3,10 +3,10 @@ import { TopMainNavLink } from './TopMainNavLink';
 
 export const DesktopSignedOut = () => (
   <>
-    <TopMainNavLink href="/contact" dataId="meganav-link">
+    <TopMainNavLink href="https://ably.com/contact" dataId="meganav-link">
       Contact us
     </TopMainNavLink>
-    <TopMainNavLink href="/login" dataId="meganav-link">
+    <TopMainNavLink href="https://ably.com/login" dataId="meganav-link">
       Login
     </TopMainNavLink>
     <div className="hidden md:block">

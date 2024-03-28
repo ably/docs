@@ -1,13 +1,12 @@
-import React, { useContext } from 'react';
 import PropTypes from 'prop-types';
+import { usePageLanguage } from 'src/contexts';
 import Html from '.';
 import CopyLink from '../wrappers/CopyLink';
-import { PageLanguageContext } from 'src/contexts';
 import { childOrSelfHasLanguageMatchingPageLanguageOrDefault } from '../wrappers/language-utilities';
 
 const LinkableHtmlBlock = (Type, marginBottom, marginTop) => {
   const InnerBlock = ({ data, attribs }) => {
-    const pageLanguage = useContext(PageLanguageContext);
+    const { currentLanguage: pageLanguage } = usePageLanguage();
     const shouldShowBlock = childOrSelfHasLanguageMatchingPageLanguageOrDefault(pageLanguage, data, attribs?.lang);
     if (shouldShowBlock) {
       return (

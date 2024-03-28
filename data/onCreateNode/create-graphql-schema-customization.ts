@@ -7,6 +7,7 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
     type PageFurnitureYaml implements Node {
       label: String!
       link: String!
+      external: Boolean
       name: String
       level: Int
       text: String
@@ -41,11 +42,54 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
   `;
   createTypes(typeDefs);
 
-  // Schema update for site, so we always have an assetPrefix
-  const siteType = `
+  // Schema update for page-content YAML files
+  const pageContentTypes = `
+    type PageContentYamlSectionsCallToAction implements Node {
+      text: String!
+      href: String!
+      external: Boolean
+      type: String!
+    }
+    type PageContentYamlSectionsCardsLinks implements Node {
+      text: String!
+      href: String!
+      external: Boolean
+    }
+    type PageContentYamlSectionsCardsCallToAction implements Node {
+      text: String!
+      href: String!
+      external: Boolean
+      type: String!
+    }
+  `;
+  createTypes(pageContentTypes);
+
+  // Schema update for site
+  const siteTypes = `
+    # We always want an assetPrefix
     type Site implements Node {
       assetPrefix: String
     }
-`;
-  createTypes(siteType);
+
+    # Extend site metadata with external script config
+    type ExternalScriptData implements Node {
+      hubspotTrackingId: String
+      addsearchSiteKey: String
+      googleTagManagerAuthToken: String
+      gtmPreview: String
+      headwayAccountId: String
+      boomerangEnabled: String
+      announcementEnabled: String
+      oneTrustEnabled: String
+      oneTrustDomain: String
+      oneTrustTest: String
+    }
+
+    type SiteSiteMetadata implements Node {
+      title: String
+      siteUrl: String
+      externalScriptsData: ExternalScriptData
+    }
+  `;
+  createTypes(siteTypes);
 };

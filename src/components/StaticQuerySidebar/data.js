@@ -2,10 +2,11 @@ import { groupBy } from 'lodash';
 import { MAX_LEVEL, ROOT_LEVEL } from '../Sidebar/consts';
 
 const sidebarDataFromPageFurniture = (data) =>
-  data.map(({ label, link, level = ROOT_LEVEL, text = false, items = false }) => {
+  data.map(({ label, link, external, level = ROOT_LEVEL, text = false, items = false }) => {
     const result = {
       label,
       link,
+      external,
       level,
       content: items ? sidebarDataFromPageFurniture(items) : text,
     };

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
+import { withPrefix } from 'gatsby';
 import { createDropdownButtonMenuHtmlId, DropdownButtonAndMenu } from './DropdownButton';
 import { ResourcesDropDownData } from './resource-data';
 import { escape } from 'lodash/fp';
@@ -23,7 +24,12 @@ const expectDropdownToShowData = (container: HTMLElement, expectedData: Dropdown
     expect(getDefinitelyOneElementByTagName(menuItem, 'p').innerHTML).toBe(resourceContent.description);
     const aElement = getDefinitelyOneElementByTagName(menuItem, 'a');
     expect(aElement.innerHTML).toMatch(new RegExp(`^${escape(resourceContent.link.text)}?`));
-    expect(aElement.getAttribute('href')).toBe(resourceContent.link.href);
+
+    if (resourceContent.link.external) {
+      expect(aElement.getAttribute('href')).toBe(resourceContent.link.href);
+    } else {
+      expect(aElement.getAttribute('href')).toBe(withPrefix(resourceContent.link.href));
+    }
   });
 
   expect(menuItems).toHaveLength(expectedData.contents.length);

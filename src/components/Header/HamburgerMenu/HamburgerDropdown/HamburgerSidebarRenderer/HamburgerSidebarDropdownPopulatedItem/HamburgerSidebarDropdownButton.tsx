@@ -1,10 +1,11 @@
 import React from 'react';
-import { StaticImage } from 'src/components/StaticImage';
 import { DropdownData } from '../../../../Dropdown';
 import { HamburgerHasFooterContext } from '../../../hamburger-has-footer-context';
 import { DispatchExpandedMenu } from '../hamburger-expanded-menu-context';
 import { HamburgerSidebarItemContainer } from '../HamburgerSidebarItemContainer';
 import { HamburgerSidebarDropdownMenu } from './HamburgerSidebarDropdownMenu';
+
+import chevronDown from 'src/images/icons/chevron-down.svg';
 
 export const HamburgerSidebarDropdownButton = ({
   handleMenuExpansion,
@@ -32,7 +33,7 @@ export const HamburgerSidebarDropdownButton = ({
               tabIndex={0}
             >
               <span>{label}</span>
-              <StaticImage className="transform rotate-270" src="/images/icons/chevron-down.svg" />
+              <img className="transform rotate-270" src={chevronDown} />
             </h4>
           </HamburgerSidebarItemContainer>
         ) : (

@@ -56,7 +56,7 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
   const contentWithRandomChannelName = useMemo(
     () =>
       dataContainsRandomChannelName ? content.replace(/{{RANDOM_CHANNEL_NAME}}/g, getRandomChannelName()) : content,
-    [content, dataContainsRandomChannelName, attribs?.lang],
+    [content, dataContainsRandomChannelName],
   );
 
   const hasMultilineText = isString && multilineRegex.test(content);

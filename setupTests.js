@@ -9,8 +9,6 @@ class ResizeObserver {
 
 window.ResizeObserver = ResizeObserver;
 
-process.env.GATSBY_ADDSEARCH_API_KEY = 'shh-do-not-tell-to-anyone';
-
 jest.mock('@ably/ui/src/core/utils/syntax-highlighter', () => ({
   highlightSnippet: jest.fn,
   registerDefaultLanguages: jest.fn,

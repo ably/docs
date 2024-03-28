@@ -1,6 +1,6 @@
 import React, { useMemo, ReactNode } from 'react';
 
-import { SidebarItem, SidebarLink, SidebarLinkMenu, EXPAND_MENU } from './';
+import { SidebarItem, SidebarLink, SidebarLinkMenu, EXPAND_MENU, SidebarData } from './';
 import { HighlightedMenuContext } from '../../contexts/highlighted-menu-context';
 
 const INDENTATION_INCREASE = 8;
@@ -9,7 +9,7 @@ type Props = {
   uuid: string;
   label: ReactNode | string;
   link: string;
-  content: boolean | string | any[];
+  content: boolean | string | SidebarData[];
   level: number;
   expandable: boolean;
   collapsible: boolean;

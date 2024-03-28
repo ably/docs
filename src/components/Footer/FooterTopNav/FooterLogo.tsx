@@ -1,8 +1,9 @@
 import React from 'react';
-import { StaticImage } from '../../StaticImage';
+import Link from 'src/components/Link';
+import logo from './images/ably-logo.png';
 
 export const FooterLogo = () => (
-  <a href="/" data-id="footer-logo" className="block" style={{ height: '2.125rem' }}>
-    <StaticImage src="/images/ably-logo.png" width="108px" alt="Ably logo" />
-  </a>
+  <Link to="/" data-id="footer-logo" className="block" style={{ height: '2.125rem' }}>
+    <img src={logo} width="108px" alt="Ably logo" />
+  </Link>
 );

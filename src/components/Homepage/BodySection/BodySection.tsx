@@ -1,5 +1,5 @@
-import React from 'react';
 import cn from 'classnames';
+import { ImageProps, getImageFromList } from 'src/components/Image';
 import { SectionProps } from '../HomepageContent';
 import { BodySectionDescription } from './BodySectionDescription';
 import { HeroCard } from './Card/HeroCard';
@@ -32,7 +32,7 @@ const gridGapVariants = {
   4: 'gap-24',
 };
 
-export const BodySection = ({ section }: { section: SectionProps }) => {
+export const BodySection = ({ section, images }: { section: SectionProps; images: ImageProps[] }) => {
   const cards = section.cards ?? [];
   const cardsExist = cards.length > 0;
   const columns = section.columns;
@@ -51,7 +51,13 @@ export const BodySection = ({ section }: { section: SectionProps }) => {
         >
           {cards.map((card, index) => {
             const Card = cardTypes[card.type];
-            return <Card key={index} {...card} />;
+            return (
+              <Card
+                key={index}
+                {...card}
+                {...(card.type !== 'hero' && { image: getImageFromList(images, card.image) })}
+              />
+            );
           })}
         </div>
       )}

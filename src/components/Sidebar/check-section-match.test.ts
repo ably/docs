@@ -9,14 +9,14 @@ describe('Check Section Matches function', () => {
     expect(
       simpleSectionMatch({
         label: 'Test Data',
-        link: '/docs/match',
+        link: '/match',
       }),
     ).toBe(true));
   it('Does not match on a non-matching slug', () =>
     expect(
       simpleSectionMatch({
         label: 'Test Data',
-        link: '/docs/match/overly-specific-page',
+        link: '/match/overly-specific-page',
       }),
     ).toBe(false));
 
@@ -24,11 +24,11 @@ describe('Check Section Matches function', () => {
     expect(
       simpleSectionMatch({
         label: 'Test Data',
-        link: '/docs',
+        link: '/',
         content: [
           {
             label: 'Test Data Two',
-            link: '/docs/match',
+            link: '/match',
           },
         ],
       }),
@@ -37,7 +37,7 @@ describe('Check Section Matches function', () => {
 
 const sidebarDataArbitraryWithMatchingLink: Arbitrary<SidebarData> = record({
   label: string(),
-  link: constant('/docs/match'),
+  link: constant('/match'),
   level: nat(),
   content: constant(undefined),
 });
@@ -47,7 +47,7 @@ const sidebarDataArbitraryTreeWithMatchingLink = letrec((tie) => {
   return {
     node: record({
       label: string(),
-      link: string().filter((s) => s !== '/docs/match'),
+      link: string().filter((s) => s !== '/match'),
       level: nat(),
       content: oneof(
         { depthIdentifier: 'node', maxDepth: 5 },
@@ -66,7 +66,7 @@ const sidebarDataArbitraryTreeWithoutMatchingLink = letrec<{
   return {
     node: record({
       label: string(),
-      link: string().filter((s) => s !== '/docs/match'),
+      link: string().filter((s) => s !== '/match'),
       level: nat(),
       content: oneof(
         { depthIdentifier: 'node', maxDepth: 5 },

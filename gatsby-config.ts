@@ -1,22 +1,35 @@
-const herokuAppSite = process.env.HEROKU_APP_NAME
-  ? `https://${process.env.HEROKU_APP_NAME}.herokuapp.com`
-  : 'http://localhost:8000';
+const stripTrailingSlash = (str: string) => (str.endsWith('/') ? str.slice(0, -1) : str);
 
-const mainWebsite = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
+const mainWebsite = stripTrailingSlash(process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000');
+
+// Set the provided asset prefix so we can fetch assets from elsewhere when specified
+export const assetPrefix = process.env.ASSET_PREFIX;
+
+// We're mounted under /docs in deployments
+export const pathPrefix = '/docs';
 
 export const trailingSlash = 'never';
 export const siteMetadata = {
-  siteUrl: `${mainWebsite}/docs`,
+  siteUrl: mainWebsite,
   title: 'Documentation | Ably Realtime',
+  externalScriptsData: {
+    hubspotTrackingId: process.env.HUBSPOT_TRACKING_ID,
+    addsearchSiteKey: process.env.ADDSEARCH_SITE_KEY,
+    googleTagManagerAuthToken: process.env.GOOGLE_TAG_MANAGER_AUTH_TOKEN,
+    gtmPreview: process.env.GOOGLE_TAG_MANAGER_PREVIEW,
+    headwayAccountId: process.env.HEADWAY_ACCOUNT_ID,
+    boomerangEnabled: process.env.BOOMERANG_ENABLED,
+    announcementEnabled: process.env.ANNOUNCEMENT_ENABLED,
+    oneTrustDomain: process.env.ONE_TRUST_DOMAIN,
+    oneTrustEnabled: process.env.ONE_TRUST_ENABLED,
+    oneTrustTest: process.env.ONE_TRUST_TEST,
+  },
 };
-
-export const assetPrefix = process.env.ASSET_PREFIX ?? herokuAppSite;
 
 export const graphqlTypegen = true;
 
 export const plugins = [
   'gatsby-plugin-postcss',
-  'gatsby-plugin-styled-components',
   'gatsby-plugin-image',
   'gatsby-plugin-sharp',
   'gatsby-transformer-yaml',
@@ -35,6 +48,7 @@ export const plugins = [
     options: {
       name: 'images',
       path: './src/images',
+      fastHash: true,
     },
     __key: 'images',
   },
