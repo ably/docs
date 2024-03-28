@@ -1,0 +1,430 @@
+---
+title: Device setup and activation 
+meta_description: "Learn how to set up and manage device activations for push notifications with Ably, including platform installation, device registration, and handling lifecycle events."
+meta_keywords: "Push, push notifications, Apple Push Notification Service, Google Firebase Cloud Messaging Service, activate, subscribe"
+section: general
+index: 44
+hide_from_nav: true
+languages:
+  - android
+  - swift
+  - objc
+jump_to:
+  Help with:
+    - Prerequisites for push#prerequisites
+    - Platform installation#platform-install
+    - Activating push on your device#device-activation
+    - Subscribing to push notifications#subscribing
+    - API Reference#api-reference
+redirect_from:
+  - /realtime/push/activate-subscribe
+  - /general/versions/v1.1/push/activate-subscribe
+---
+
+The following is the Push notification process:
+
+<a href="@content/diagrams/push-notification-overview-1.png" target="_blank">
+  <img src="@content/diagrams/push-notification-overview-1.png" style="width: 100%" alt="Push Notifications in Ably">
+</a>
+
+h2. Configuration 
+
+Configuration is the first step in setting up Ably' push notifications service. This step requires setting up the necessary infrastructure on the device's operating system or platform, such as iOS with APNs or Android with FCM, as well as on the Ably platform. The following provides the steps involved in this process:
+
+blang[android].
+    * Go to the "Firebase Console":https://firebase.google.com/
+    * Click *Add project* and follow the steps to *Create and manage service account keys*.
+    * Download your Service account key file containing your Privacy Enhanced Mail (PEM) cert and PEM private key.
+    * In your Ably "dashboard":https://ably.com/accounts, navigate to the *Notifications tab* under your app settings.
+    * Go to *Push notifications Setup*, click *Configure Push*.
+    * Add your Privacy Enhanced Mail (PEM) cert and PEM private key.
+
+blang[swift].
+    * Go to the "Apple Developer Program":https://developer.apple.com/programs/
+    * Use the Apple Developer portal to create a *Push notification* service certificate for your app.
+    * Export the certificate as a .p12 file.
+    * In your Ably "dashboard":https://ably.com/accounts, navigate to the *Notifications tab* under your app settings.
+    * Go to *Push Notifications Setup*, click *Configure Push*.
+    * Add your .p12 file.
+
+blang[objc].
+    * Go to the "Apple Developer Program":https://developer.apple.com/programs/
+    * Use the Apple Developer portal to create a *Push notification* service certificate for your app.
+    * Export the certificate as a .p12 file.
+    * In your Ably "dashboard":https://ably.com/accounts, navigate to the *Notifications tab* under your app settings.
+    * Go to *Push Notifications Setup*, click *Configure Push*.
+    * Add your .p12 file.
+
+h3. Integrate the Ably SDK into your app
+
+The following steps guide you through the "Ably SDK":https://ably.com/docs/sdks integration process:
+
+```[android]
+// Define the custom action for push notifications
+public class AblyPushNotificationService extends FirebaseMessagingService {
+    public static final String PUSH_NOTIFICATION_ACTION = AblyPushNotificationService.class.getName() + ".PUSH_NOTIFICATION_MESSAGE";
+
+    // Handle the message delivered to the device.
+    // Implement logic here to process the incoming push notification message, such as displaying a notification
+    @Override
+    public void onMessageReceived(@NonNull RemoteMessage message) {
+        // Process the incoming message here
+    }
+
+    // Store the token in Ably
+    // Ensure Ably stays updated with the latest device registration token
+    @Override
+    public void onNewToken(@NonNull String s) {
+        super.onNewToken(s);
+        ActivationContext.getActivationContext(this).onNewRegistrationToken(RegistrationToken.Type.FCM, s);
+    }
+}
+```
+
+```[swift]
+// In your UIApplicationDelegate class:
+func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    // Provide deviceToken to Ably by calling ARTPush.didRegisterForRemoteNotifications(withDeviceToken:realtime:)
+    ARTPush.didRegisterForRemoteNotifications(withDeviceToken: deviceToken, realtime: self.getAblyRealtime())
+}
+
+func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+    // Provide error to Ably by calling ARTPush.didFailToRegisterForRemoteNotificationsWithError(_:realtime:)
+    ARTPush.didFailToRegisterForRemoteNotificationsWithError(error, realtime: self.getAblyRealtime())
+}
+
+func getAblyRealtime() -> ARTRealtime {
+    var options = ARTClientOptions()
+    // Set up options; API key or auth URL, etc.
+    return ARTRealtime(options: options)
+}
+
+```
+
+```[objc]
+// In your UIApplicationDelegate class:
+
+// This method is called when the device successfully registers for remote notifications.
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    // Call Ably's method to handle device token registration, passing the device token and Ably's realtime client.
+    [ARTPush didRegisterForRemoteNotificationsWithDeviceToken:deviceToken realtime:[self getAblyRealtime]];
+}
+
+// This method is called when the device fails to register for remote notifications.
+- (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
+    // Call Ably's method to handle the registration failure, passing the error and Ably's realtime client.
+    [ARTPush didFailToRegisterForRemoteNotificationsWithError:error realtime:[self getAblyRealtime]];
+}
+
+// Helper method to create and return an Ably realtime client.
+- (ARTRealtime *)getAblyRealtime {
+    // Create options for Ably client configuration.
+    ARTClientOptions *options = [[ARTClientOptions alloc] init];
+    // Set up options such as API key or authentication URL here.
+    
+    // Initialize and return a new instance of Ably realtime client with the configured options.
+    return [[ARTRealtime alloc] initWithOptions:options];
+}
+
+```
+
+h4. Test your Push notification configuration
+
+* Use the Ably "dashboard":https://ably.com/accounts or "API":https://ably.com/docs/api/realtime-sdk/push-admin to send a test Push notification to a registered device.
+* Ensure your application correctly receives and handles the Push notification.
+
+h2. Device activation
+
+Activating a device for Push notifications requires servel steps to register with the underlying platform's notification service _FCM or APNs_ and Ably's Push notification service. This dual registration ensures a device is securely and efficiently receive Push notifications through Ably's messaging infrastructure.
+
+The activation process, which can be initiated directly from the device or through server-side control for enhanced security, not only facilitates the generation of a unique device identifier but also authenticates the device with Ably - maintaining a secure environment for sending and receiving notifications. This approach offers flexibility, allowing you to choose between direct device registration for simplicity or server-based registration for greater control over device capabilities and security.
+
+h3. Activate from a device
+
+Activating a device directly for Push notifications with Ably requires a process where the device initiates and completes the registration with Ably's Push notification service. This method enables your application on the device to call the @push.activate@ function provided by the "Ably SDK":https://ably.com/docs/sdks. 
+
+Before you activate Push notifications, authenticate the device using the Ably service. This step secures the communication between the device and Ably. Use an API key or a token for authentication. 
+
+The following is activates Push notifications from a device:
+
+<a href="@content/diagrams/Push-device-activate.png" target="_blank">
+  <img src="@content/diagrams/Push-device-activate.png" style="width: 100%" alt="Push Notifications in Ably">
+</a>
+
+h4. Generate a Unique ID for the device
+
+The "Ably SDK":https://ably.com/docs/sdks generates a unique identifier for the device when you activate Push notifications. Ably uses this identifier to differentiate between devices and ensure message delivery to the correct recipient. The device's local storage keeps this unique identifier.
+
+h4. Activate devices for Push notifications
+
+Activate the device with the underlying operating system's Push notification service. For Android devices, this activation involves integrating with FCM to obtain a registration token. For APN to acquire a device token. These tokens are required for the Push notification services to target messages to the correct device.
+
+h4. Register device with Ably
+
+The device registers with Ably using its unique identifier and the Push notification service token (registration token for FCM or device token for APNs). During registration, the device shares platform-specific details like the operating system, form factor, and Push recipient details. This registration allows Ably to send Push notifications to the device.
+
+h4. Store the deviceID token
+
+Upon successful registration, Ably issues a DeviceIdentityToken. The device stores this token in its local storage and uses it for subsequent communications to authenticate itself with Ably. This measure ensures that only registered devices can modify or request updates to their Push notification settings.
+
+h4. Ensure persistent registration
+
+Design the device's activation for Push notifications to be persistent. Once activated using @push.activate@, the device stays registered to receive Push notifications, even if you close or restart the application. This persistence lasts until someone explicitly calls `push.deactivate` to unregister the device.
+
+h4. Confirm the idempotency of the .activate method
+
+The activation method is idempotent, meaning repeated calls on an already activated device do not retrigger the registration process. Instead, it simply invokes its callback function to signify completion. This approach avoids unnecessary network requests and streamlines application logic that may repeatedly check or trigger the activation state.
+
+The following example initializes an instance of the Ably Realtime service and then activates the Push notifications feature _for that instance_:
+
+```[android]
+AblyRealtime ably = getAblyRealtime();
+ably.setAndroidContext(context)
+ably.push.activate();
+```
+
+```[objc]
+ARTRealtime *ably = [self getAblyRealtime];
+[ably.push activate];
+```
+
+```[swift]
+let ably = self.getAblyRealtime()
+ably.push.activate()
+```
+
+h3. Activate from your server
+
+Activating devices through provides advantages based on the application's requirements, such as enhanced security and centralized control. For example:
+
+* When the server handles device registration, it keeps sensitive information and the registration process away from the client-side. This approach reduces the risk of unauthorized access or manipulation of registration details, ensuring a more secure management of Push notifications.
+* By managing device registrations on the server side, you gain centralized control over which devices can receive Push notifications. This feature proves particularly beneficial in scenarios requiring device authorization based on user roles, subscription status, or other criteria before allowing them to receive notifications.
+
+The following is activates Push notifications from your server:
+
+
+<a href="@content/diagrams/Push-server-activate.png" target="_blank">
+  <img src="@content/diagrams/Push-server-activate.png" style="width: 100%" alt="Push Notifications in Ably">
+</a>
+
+<aside data-type='note'>
+<p>Utilize the "Push Notifications Admin API":/api/realtime-sdk/push-admin on your server to register devices.</p>
+</aside>
+
+
+blang[android].
+
+    Your application must interact with the Ably SDK to configure server-side registration for Push notifications, utilizing the "@LocalBroadcastManager@":https://developer.android.com/reference/android/support/v4/content/LocalBroadcastManager for communication.
+
+    You can "@activate@":/api/realtime-sdk/push#activate or "@deactivate@":/api/realtime-sdk/push#deactivate this feature by setting the @useCustomRegisterer@ parameter to true while invoking the activate and deactivate methods:
+
+    ```[android]
+    ably.push.activate(context, true);
+    ably.push.deactivate(context, true);
+    ```
+
+    Upon activation or deactivation, the Ably SDK broadcasts signals indicating whether to register or deregister the device from your server. It uses @io.ably.broadcast.PUSH_REGISTER_DEVICE@ for registration and @io.ably.broadcast.PUSH_DEREGISTER_DEVICE@ for deregistration. To handle these broadcasts, implement a listener in your app's @AndroidManifest.xml@ and respond by sending back @PUSH_DEVICE_REGISTERED@ or @PUSH_DEVICE_DEREGISTERED@ as appropriate. 
+    
+    The following examples set up the server-side activation: 
+
+    ```[xml]
+    <receiver android:name=".MyAblyBroadcastReceiver" >
+        <intent-filter>
+        <action android:name="io.ably.broadcast.PUSH_REGISTER_DEVICE" />
+        <action android:name="io.ably.broadcast.PUSH_DEREGISTER_DEVICE" />
+        </intent-filter>
+    </receiver>
+    ```
+
+    ```[android]
+    public class MyAblyBroadcastReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            AblyRealtime ably = getAblyRealtime();
+            String action = intent.getAction();
+
+            if (action.equals("io.ably.broadcast.PUSH_REGISTER_DEVICE")) {
+                DeviceDetails device = ably.device(context);
+                boolean isNew = intent.getBooleanExtra("isNew", false);
+
+                Intent response = new Intent("io.ably.broadcast.PUSH_DEVICE_REGISTERED");
+
+                try {
+                    String deviceIdentityToken = registerThroughYourServer(device, isNew);
+                    response.putExtra("deviceIdentityToken", deviceIdentityToken);
+                } catch(AblyException e) {
+                    IntentUtils.addErrorInfo(intent, e.errorInfo);
+                }
+
+                LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(intent);
+            } else if (action.equals("io.ably.broadcast.PUSH_DEREGISTER_DEVICE")) {
+                DeviceDetails device = ably.device(context);
+
+                Intent response = new Intent("io.ably.broadcast.PUSH_DEVICE_DEREGISTERED");
+
+                try {
+                    deregisterThroughYourServer(device.id);
+                } catch(AblyException e) {
+                    IntentUtils.addErrorInfo(intent, e.errorInfo);
+                }
+
+                LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(intent);
+            }
+        }
+    }
+    ```
+    
+blang[objc,swift].
+    Your application needs to interact with the Ably SDK to set up server-side registration for Push notifications. Implement the following optional methods from @ARTPushRegistererDelegate@ in your @UIApplicationDelegate@:
+
+    ```[objc]
+    - (void)ablyPushCustomRegister:(ARTErrorInfo *)error
+                    deviceDetails:(ARTDeviceDetails *)deviceDetails
+                            callback:(void (^)(ARTDeviceIdentityTokenDetails * _Nullable, ARTErrorInfo * _Nullable))callback {
+        if (error) {
+            // Handle error.
+            callback(nil, error);
+            return;
+        }
+
+        [self registerThroughYourServer:deviceDetails callback:callback];
+    }
+
+    - (void)ablyPushCustomDeregister:(ARTErrorInfo *)error d
+                            deviceId:(ARTDeviceId *)deviceId
+                            callback:(void (^)(ARTErrorInfo * _Nullable))callback {
+        if (error) {
+            // Handle error.
+            callback(nil, error);
+            return;
+        }
+
+        [self unregisterThroughYourServer:deviceDetails callback:callback];
+    }
+    ```
+    
+    ```[swift]
+    func ablyPushCustomRegister(_ error: ARTErrorInfo?, deviceDetails: ARTDeviceDetails, callback: @escaping (ARTDeviceIdentityTokenDetails?, ARTErrorInfo?) -> Void) {
+        if let e = error {
+            // Handle error.
+            callback(nil, e)
+            return
+        }
+
+        self.registerThroughYourServer(deviceDetails: deviceDetails, callback: callback)
+    }
+
+    func ablyPushCustomDeregister(_ error: ARTErrorInfo?, deviceId: String, callback: ((ARTErrorInfo?) -> Void)? = nil) {
+        if let e = error {
+            // Handle error.
+            callback(nil, e)
+            return
+        }
+
+        self.unregisterThroughYourServer(deviceDetails: deviceDetails, callback: callback)
+    }
+    ```
+
+h2. Device activation lifecycle 
+
+You can handle the Push notification lifecycle to ensure your application correctly manages the processes of registering for, receiving, and updating the status of push notifications.
+
+Handle "@activate@":/api/realtime-sdk/push#activate and "@deactivate:@":/api/realtime-sdk/push#deactivate 
+
+* When your app attempts to activate Push notifications (by registering with FCM/APNs and then with Ably), allowing it to handle this event enables it to determine whether the activation succeeded or failed. If the activation is successful, your app can then subscribe to specific Channels for Push notifications. In case of an error, it can try to resolve the problem or notify the user as needed.
+
+* Handling deactivation, your app can ascertain if it has successfully deregistered from receiving Push notifications. This process is crucial for managing user preferences or ensuring that users do not receive notifications after they opt-out or uninstall the app.
+
+
+Handle device token updates:
+
+* FCM and APNS may periodically refresh the token used to identify the device for Push notifications. Whenever a new token is issued, your app must notify Ably of the updated token to maintain the push notification delivery. 
+
+* In cases where updating the token is unsuccessful, your application should implement strategies to resolve the issue. This could involve attempting the update again or notifying the user of the failure, ensuring that the Push notification service continues without disruption.
+
+h2. Subscibe to Channels
+
+You can subscribe to Channels to receive Push notifications. This optional step allows devices to receive Push notifications sent through Ably Channels. You can perform this process using either deviceID or clientID, offering flexibility. These options enable granular control _by subscribing to devices with specific deviceIDs_ and support for broader operations _by subscribing to all devices associated with a client ID_.
+
+h3. Subscibe to Channels using deviceID
+
+A deviceID is a unique identifier assigned to a device when it first registers with Ably. This ID ensures that Push notifications can be accurately directed to the specific device. 
+
+If your application the client has the capability to subscribe to Push notifications @push-subscribe@ capabilities, you can directly subscribe to these notifications for a device. This approach allows you to target specific devices with Push notifications, ensuring that only the intended recipients receive the messages.
+
+There are two ways to subscribe by deviceID: with and without @push-subscribe@ capabilities.
+
+h4. With push-subscribe capabilities
+
+If your application the client can subscribe to Push notifications @push-subscribe@ capabilities, you can directly subscribe to Push notifications for a device:
+
+
+```[android]
+realtime.channels.get("pushenabled:foo").push.subscribeDevice(context);
+
+// or
+
+realtime.channels.get("pushenabled:foo").push.subscribeDeviceAsync(context, new CompletionListener() {
+    @Override
+    public void onSuccess() {}
+
+    @Override
+    public void onError(ErrorInfo errorInfo) {
+        // Handle error.
+    }
+});
+```
+
+```[swift]
+realtime.channels.get("pushenabled:foo").push.subscribeDevice { error
+    // Check error.
+}
+```
+
+```[objc]
+[[realtime.channels get:@"pushenabled:foo"].push subscribeDevice:^(ARTErrorInfo *error) {
+    // Check error.
+}];
+```
+
+h4. Without push-subscribe capabilities
+
+If your client lacks push-subscribe permissions, you should communicate your client's deviceID to your server to subscribe on behalf of the device. You can locate your unique deviceID at "<span lang="objc,swift">@ARTRealtime.device.id@</span><span lang="android">@AblyRealtime.device().id@</span>":/api/realtime-sdk/push#device-details. The server must then use the "Push Notification Admin API":/general/push/admin to subscribe the device.
+
+h3. Subscibe to Channels using clientID
+
+When you register a device for Push notifications, you can link it with a @clientID@." This ID is a unique identifier representing a user or a group of devices. The @AblyRealtime.Push.activate@ method then automatically links the device with the @clientID@ from the @AblyRealtime@ instance.
+
+Once a device is associated with a client ID, you can subscribe to Push notifications for all devices linked to that client ID with a single operation. For example, if you have multiple devices (like a phone, tablet, and laptop) associated with the same client ID, you can manage their Push notification subscriptions together.
+
+Whenever you register a new device and associate it with a specific client ID, it automatically subscribes to the Channels that the client ID is subscribed to. On the other hand, if a device is disassociated from a client ID _if the user no longer uses it_, it automatically loses its subscription to the Channels associated with that client ID. 
+
+The following example subscribes an @AblyRealtime@ instance’s @clientID@ to a channel:
+
+```[android]
+realtime.channels.get("pushenabled:foo").push.subscribeClient();
+
+// or
+
+realtime.channels.get("pushenabled:foo").push.subscribeClientAsync(new CompletionListener() {
+    @Override
+    public void onSuccess() {}
+
+    @Override
+    public void onError(ErrorInfo errorInfo) {
+        // Handle error.
+    }
+});
+```
+
+```[swift]
+realtime.channels.get("pushenabled:foo").push.subscribeClient { error
+    // Check error.
+}
+```
+
+```[objc]
+[[realtime.channels get:@"pushenabled:foo"].push subscribeClient:^(ARTErrorInfo *error) {
+    // Check error.
+}];
+```
