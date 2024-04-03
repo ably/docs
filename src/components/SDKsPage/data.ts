@@ -156,6 +156,13 @@ export const data = {
           setupLink: 'https://github.com/ably/ably-js-nativescript#how-to-use-this-library',
         },
         {
+          title: 'React Native',
+          text: 'Ably SDK for React Native.',
+          image: { src: react, isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: '/getting-started/react',
+        },
+        {
           title: 'Cordova',
           text: 'Ably SDK for Cordova.',
           image: { src: cordova, isWide: false },
