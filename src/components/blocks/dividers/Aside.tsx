@@ -6,6 +6,8 @@ import HtmlDataTypes from '../../../../data/types/html';
 import {
   inlineGridParagraph,
   inlineContentContainer,
+  versioningContainer,
+  versioningTitleElement,
   pitfallElement,
   leftSideElement,
   furtherReadingElement,
@@ -14,12 +16,20 @@ import {
 } from './dividers.module.css';
 
 const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
+  const isVersioningInfo: boolean =
+    attribs && (attribs[`data-type`] === 'new' || attribs[`data-type`] === 'updated') ? true : false;
+
+  const versioningColors: { [key: string]: { bg: string; text: string } } = {
+    new: { bg: '#FFF0BA', text: '#AC8600' },
+    updated: { bg: '#FFB8F1', text: '#9C007E' },
+  };
+
   let paddingBottom: string | false = false;
-  if (isArray(data) && data[data.length - 1].name === HtmlDataTypes.ul) {
+  if ((isArray(data) && data[data.length - 1].name === HtmlDataTypes.ul) || isVersioningInfo) {
     paddingBottom = '0';
   }
   return (
-    <aside className={`${inlineGridParagraph} ${attribs?.className}`}>
+    <aside className={`${!isVersioningInfo && inlineGridParagraph} ${attribs?.className}`}>
       {attribs && attribs[`data-type`] === `important` ? (
         <>
           <span className={`${leftSideElement} ${pitfallElement}`}>&nbsp;</span>
@@ -36,6 +46,18 @@ const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
             <span className="mb-48">Further Reading</span>
           </strong>
         </>
+      ) : attribs && isVersioningInfo ? (
+        <>
+          <span
+            className={versioningTitleElement}
+            style={{
+              backgroundColor: versioningColors[attribs[`data-type`]].bg,
+              color: versioningColors[attribs[`data-type`]].text,
+            }}
+          >
+            {attribs[`data-type`]}
+          </span>
+        </>
       ) : (
         <>
           <span className={`${leftSideElement} ${noteElement}`}>&nbsp;</span>
@@ -46,7 +68,13 @@ const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
         </>
       )}
 
-      <div className={inlineContentContainer} style={{ paddingBottom: paddingBottom || '24px' }}>
+      <div
+        className={isVersioningInfo ? versioningContainer : inlineContentContainer}
+        style={{
+          paddingBottom: paddingBottom || '24px',
+          borderLeftColor: attribs && isVersioningInfo ? versioningColors[attribs[`data-type`]].bg : '',
+        }}
+      >
         <Html data={data} />
       </div>
     </aside>
