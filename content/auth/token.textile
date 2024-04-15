@@ -158,6 +158,20 @@ const ablyClient = new Realtime({
 });
 ```
 
+```[realtime_python]
+realtime = AblyRealtime(auth_callback=get_token_request)
+
+async def get_token_request(*args, **kwargs):
+    create_token_request = await get_token_request() // Implement this function to get a token request from your server
+
+    if create_token_request.status_code == 200:
+        token_request = create_token_request.json()
+
+        return token_request
+    else:
+        raise Exception(f"Failed to retrieve token request: {create_token_request.status_code} - {create_token_request.text}")
+```
+
 ```[rest_javascript]
 const rest = new Ably.Rest({
   authCallback: (tokenParams, callback) => {
@@ -172,6 +186,20 @@ const rest = new Ably.Rest({
     // implement your callback here
   },
 });
+```
+
+```[rest_python]
+rest = AblyRest(auth_callback=get_token_request)
+
+async def get_token_request(*args, **kwargs):
+    create_token_request = await get_token_request() // Implement this function to get a token request from your server
+
+    if create_token_request.status_code == 200:
+        token_request = create_token_request.json()
+
+        return token_request
+    else:
+        raise Exception(f"Failed to retrieve token request: {create_token_request.status_code} - {create_token_request.text}")
 ```
 
 The "@tokenParams@":/api/realtime-sdk/authentication#token-params argument in @authCallback@ is available for convenience, allowing you to see the capabilities, @clientId@, and other details requested by the client. However, @tokenParams@ should not be trusted or used to generate the @tokenRequest@ on the server side. Instead it is recommended that your @createTokenRequest@ API authenticates clients separately, for example based on cookies, headers, or HTTP body.
@@ -206,6 +234,13 @@ const realtime = new Ably.Realtime({
 });
 ```
 
+```[realtime_python]
+realtime = AblyRealtime(auth_url='/auth',
+                        auth_method="GET',
+                        auth_headers={'h1': 'v1'},
+                        auth_params={'param1': 'param2'})
+```
+
 ```[rest_javascript]
 const rest = new Ably.Rest({
   authUrl: "/auth",
@@ -222,6 +257,13 @@ const rest = new Ably.Rest({
   authParams: { p1: param1, b: param2},
   authHeaders: {h1: header1, h2: header2}
 });
+```
+
+```[rest_python]
+realtime = AblyRest(auth_url='/auth',
+                    auth_method="GET',
+                    auth_headers={'h1': 'v1'},
+                    auth_params={'param1': 'param2'})
 ```
 
 h2(#tokens). Ably Tokens
@@ -256,6 +298,18 @@ const ably = new Ably.Rest({ key: '{{API_KEY}}' });
 const tokenRequest = await ably.auth.createTokenRequest({ clientId: 'client@example.com' });
 ```
 
+```[python]
+ably = AblyRest('{{API_KEY}}')
+token = await ably.auth.create_token_request(
+{
+    "clientId": "client@example.com",
+    "capability": {
+        "channel1": ["publish", "subscribe],
+    },
+    'ttl': 3600 * 1000, # ms
+})
+```
+
 Clients can pass this server-side generated @TokenRequest@ to Ably to authenticate with Ably automatically.
 
 h3(#ably-token). Ably Token
@@ -275,6 +329,15 @@ The following is an example of issuing an Ably Token from a server:
 ```[javascript]
 const ably = new Ably.Rest({ key: '{{API_KEY}}' });
 const tokenDetails = await ably.auth.requestToken({ clientId: 'client@example.com' });
+```
+
+```[python]
+rest = AblyRest(key='{{API_KEY}}')
+token_request_params = {
+    'clientId': 'client@example.com',
+}
+
+token_details = await rest.auth.request_token(token_params=token_request_params)
 ```
 
 h2(#jwt). JSON Web Tokens (JWT)
@@ -319,6 +382,32 @@ The following is an example of creating an Ably JWT:
   var ablyJwt = base64Header + "." + base64Claims + "." + signature;
 ```
 
+```[python]
+import time
+import hashlib
+import base64
+import json
+
+header = {
+    "typ": "JWT",
+    "alg": "HS256",
+    "kid": "{{API_KEY_NAME}}"
+}
+claims = {
+    "iat": int(time.time()),  # current time in seconds
+    "exp": int(time.time()) + 3600,  # time of expiration in seconds
+    "x-ably-capability": "{\"*\":[\"*\"]}"
+}
+
+base64_header = base64.urlsafe_b64encode(bytes(json.dumps(header), 'utf-8')).decode('utf-8')
+base64_claims = base64.urlsafe_b64encode(bytes(json.dumps(claims), 'utf-8')).decode('utf-8')
+
+signature = hashlib.sha256((base64_header + "." + base64_claims + "{{API_KEY_SECRET}}").encode('utf-8')).digest()
+signature_base64 = base64.urlsafe_b64encode(signature).decode('utf-8')
+
+ably_jwt = base64_header + "." + base64_claims + "." + signature_base64
+```
+
 At present Ably does not support asymmetric signatures based on a key pair belonging to a third party.
 
 h3(#embedded). Embed an Ably Token in a JWT
@@ -356,6 +445,32 @@ const base64Claims = btoa(claims);
 const signature = hash((base64Header + "." + base64Claims), SECRET);
 const jwt = base64Header + "." + base64Claims + "." + signature;
 /* Send jwt to client */
+```
+
+```[python]
+rest = AblyRest(key='{{API_KEY}}')
+token_request_data = {
+    'clientId': 'client@example.com',
+}
+
+token_details = await rest.auth.request_token(token_params=token_request_data)
+
+header = {
+    "typ": "JWT",
+    "alg": "HS256",
+    "x-ably-token": token_details.token
+}
+claims = {
+    "exp": int(time.time()) + 3600
+}
+
+base64_header = base64.urlsafe_b64encode(bytes(json.dumps(header), 'utf-8')).decode('utf-8')
+base64_claims = base64.urlsafe_b64encode(bytes(json.dumps(claims), 'utf-8')).decode('utf-8')
+
+signature = hashlib.sha256((base64_header + "." + base64_claims + "{{API_KEY_SECRET}}").encode('utf-8')).digest()
+signature_base64 = base64.urlsafe_b64encode(signature).decode('utf-8')
+
+jwt_token = base64_header + "." + base64_claims + "." + signature_base64
 ```
 
 h2(#when). When to use token auth
