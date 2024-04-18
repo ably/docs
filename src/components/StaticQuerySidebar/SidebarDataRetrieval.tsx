@@ -81,6 +81,20 @@ export const SidebarDataRetrieval = ({
           }
         }
       }
+      AssetTrackingLeftSidebar: pageFurnitureYaml(name: { eq: "AssetTrackingLeftSidebarMenu" }) {
+        items {
+          ...SubMenuFields
+          items {
+            ...SubMenuFields
+            items {
+              ...SubMenuFields
+              items {
+                ...SubMenuFields
+              }
+            }
+          }
+        }
+      }
       allDocumentPath {
         edges {
           node {
@@ -101,7 +115,11 @@ export const SidebarDataRetrieval = ({
 
   if (
     sidebarName !== undefined &&
-    (data.ChannelsLeftSidebar || data.ApiLeftSidebar || data.SpacesLeftSidebar || data.LiveSyncLeftSidebar)
+    (data.ChannelsLeftSidebar ||
+      data.ApiLeftSidebar ||
+      data.SpacesLeftSidebar ||
+      data.LiveSyncLeftSidebar ||
+      data.AssetTrackingLeftSidebar)
   ) {
     const sideBarItems =
       sidebarName === 'api-reference'
@@ -110,7 +128,9 @@ export const SidebarDataRetrieval = ({
           ? data.SpacesLeftSidebar.items
           : sidebarName === 'livesync'
             ? data.LiveSyncLeftSidebar.items
-            : data.ChannelsLeftSidebar.items;
+            : sidebarName === 'asset-tracking'
+              ? data.AssetTrackingLeftSidebar.items
+              : data.ChannelsLeftSidebar.items;
     sidebarData = sidebarDataFromPageFurniture(sideBarItems);
   } else {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);

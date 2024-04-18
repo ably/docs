@@ -35,6 +35,8 @@ const getSidebarName = (currentProduct: string): SidebarName => {
       return 'spaces';
     case 'livesync':
       return 'livesync';
+    case 'asset-tracking':
+      return 'asset-tracking';
     default:
       return assertNever(currentProduct);
   }
