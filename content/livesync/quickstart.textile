@@ -5,3 +5,237 @@ product: livesync
 languages:
   - javascript
 ---
+
+This quickstart will provide you with a set of instructions to get an example running locally on your machine. Following this, we'll cover each component of LiveSync found within the code of the example.
+
+h3(#step-0). Clone the repository
+
+Clone the "live comments repository":https://github.com/ably-labs/live-comments :
+
+```[sh]
+git clone https://github.com/ably-labs/live-comments.git
+```
+
+h3(#step-1). Create an Ably account
+
+"Sign up":https://ably.com/signup for a free account to get your own API key. Ensure that your API key includes the @subscribe@ and @publish@ "capabilities":/auth/capabilities.
+
+h3(#step-2). Set up a database
+
+In general, LiveSync works with your own Postgres database, but for the purposes of the quickstart, this step will take you through setting up an example database with "Neon":https://neon.tech which is a serverless platform for Postgres databases.
+
+In Neon, create a new database, and make a note of the @Connection string@ in the Neon dashboard. This is the database URL your project's backend will connect to, as well as the Database Connector.
+
+h3(#step-3). Add the database credentials to env file
+
+Set up environment variables by copying them from the template:
+
+```[sh]
+ cp env.example env.local
+```
+
+Update your @env.local@ file with the following:
+
+```
+POSTGRES_URL="YOUR_FULL_POSTGRES_URL"
+POSTGRES_URL_NON_POOLING="YOUR_FULL_POSTGRES_URL"
+SESSION_SECRET=somesecret
+NEXT_PUBLIC_ABLY_API_KEY=YOUR_ABLY_API_KEY
+```
+
+Export the environment variables in your shell session:
+
+```[sh]
+export $(grep -s -v "^#" env.local | xargs)
+```
+
+h3(#step-4). Configure the Postgres Integration on Ably Dashboard
+
+The Database Connector watches changes in your database table using the transactional "outbox pattern":https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html and broadcasts those updates over Ably Channels. There are two ways to host the Database Connector. You can use either the Database Connector "hosted with Ably":/livesync/database-connector#hosted-with-ably or the same Database Connector but "hosted by yourself":/livesync/database-connector#self-hosted. For this quickstart we'll use the Ably hosted Database Connector. In the "Ably dashboard":https://ably.com/dashboard, choose the project you wish to use for this quickstart and open the @Integrations@ tab. Update the following options available to you:
+
+|_. Option |_. What to add |_. Example |
+| URL | Your Neon Postgres database full URL | postgresql://pguser:pgpass@pghost/pgdb?sslmode=require |
+| Outbox table schema | Schema for the "outbox table":/livesync/outbox-nodes-tables#schema. Use "public" for this quickstart. | public |
+| Outbox table name | Name for the "outbox table":/livesync/outbox-nodes-tables#outbox-table. In this quickstart it is "outbox" | outbox |
+| Nodes table schema | Schema for the "nodes table":/livesync/outbox-nodes-tables#schema. Use "public" for this quickstart. | public |
+| Nodes table name | Name for the "nodes table":/livesync/outbox-nodes-tables#nodes-table. In this quickstart it is "nodes" | nodes |
+| SSL mode | Determines the level of protection provided by the SSL connection. Use the default value (@prefer@) for this quickstart. | required |
+| SSL root certificate | Leave this empty for the quickstart. | |
+| Primary site | The primary data center in which to run the integration rule. | eu-central-1-A |
+
+h3(#step-5). Install the dependencies
+
+Install the required dependencies for the web application, including your Models SDK. Then run the @pnpm run db@ command to run the migrations, creating the database tables and populate them with some demo data:
+
+```[sh]
+pnpm install
+pnpm run db
+```
+
+h3(#step-6). Run local web server
+
+Run the web application locally by running the following command:
+
+```[sh]
+pnpm run dev
+```
+
+h3(#step-7). Try it out!
+
+Open the app "localhost:3000":http://localhost:3000 in at least two browser tabs.
+
+Navigate to a post in both tabs, then in one of the tabs try adding, editing, and removing comments, each update will be optimistically updated immediately for the tab making the change. Once the change is confirmed from the backend, all other tabs will be updated in realtime.
+
+h2(#breakdown). Understanding the implementation
+
+Each component used within this section is based on the "livecomments application":https://github.com/ably-labs/live-comments that you now have running locally.
+
+h3(#project-structure). Project structure
+
+Before breaking down LiveSync components within the example, the main files within the project are broken down below:
+
+- @app/api/@ - The backend API routes called by the frontend to read the current post, create, read, update, or delete the comments on the post.
+- @components@ - Key components for rendering the application, for example, a @new-comment@ component rendering a form with the comment fields and handling the submission of the form.
+- @lib/models/hook.ts@ - The definition of the model specified by the post id passed as an argument, syncronising the frontend model with the database and defining the merge function which is used to update an existing model when the database connector publishes a change from the database.
+- @lib/models/mutations.ts@ - Each API call to add, edit, and delete comments. Also contains the merge function called in @hook.ts@ which reads the request and calls the relevant action based on the data (ie, add, edit, or delete the comment).
+- @lib/prisma/api.ts@ - Database actions to read, list, add, edit, or delete comments. This file also contains the functionality to add the change to the outbox table.
+- @prisma/migrations/@ - Creating the @nodes@, @outbox@, @user@, @post@, and @comment@ tables.
+- @prisma/seed.ts@ - Populates the database tables with seeded data for testing with.
+
+h3(#model). The frontend model
+
+The @model@ is a data model representation of a specific part of your frontend application. In the @livecomments@ example, the "model":https://github.com/ably-labs/live-comments/blob/main/lib/models/hook.ts#L40-L46 is a specific post, defined by its unique post ID, @post:${id}@.
+
+```[javascript]
+const model: ModelType = modelsClient().models.get({
+  channelName: `post:${id}`,
+  sync: async () => getPost(id),
+  merge,
+});
+
+setModel(model);
+```
+
+h4(#sync). The sync function
+
+The sync function is used by the Models SDK to fetch the latest data from your backend to hydrate the application initially upon load. There are two objects returned within the response, these are the:
+
+- "@sequenceId@":/livesync/models#sequence-id, which is used to identify the point in the stream of change events that corresponds to the current version of the database's state.
+- the data relevant to the expected data model, in this instance it's the current state of the post defined by its @id@. In this example, the sync function called is "@getPost@":https://github.com/ably-labs/live-comments/lib/models/hook.ts#L11-L29, which is found in the @/lib/models/hook.ts@ file of the repository you cloned.
+
+```[javascript]
+export async function getPost(id: number) {
+  const response = await fetch(`/api/posts/${id}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error(
+      `GET /api/posts/:id: ${response.status} ${JSON.stringify(
+        await response.json()
+      )}`
+    );
+  }
+  const { sequenceId, data } = (await response.json()) as {
+    sequenceId: string;
+    data: PostType;
+  };
+
+  return { sequenceId, data };
+}
+```
+
+h4(#merge). The merge function
+
+When a message is received on the channel, the merge function is called to merge that new data model state into the existing model state. The merge function should return the updated model state with the new comment merged in. In this example, the "merge":https://github.com/ably-labs/live-comments/lib/models/mutations.ts#L40-L71 function uses the event name to determine whether the comment sent is a new, an updated, or a deleted comment.
+
+```[javascript]
+export function merge(existingState: PostType, event: OptimisticEvent | ConfirmedEvent): PostType {
+  const state = cloneDeep(existingState);
+
+  switch (event.name) {
+    case 'addComment':
+      const newComment = event.data! as Comment;
+      state.comments.push(newComment);
+      break;
+    case 'editComment':
+      const editComment = event.data! as Comment;
+      const editIdx = state.comments.findIndex((c) => c.id === editComment.id);
+      state.comments[editIdx] = editComment;
+      break;
+    case 'deleteComment':
+      const { id } = event.data! as { id: number };
+      const deleteIdx = state.comments.findIndex((c) => c.id === id);
+      state.comments.splice(deleteIdx, 1);
+      break;
+    default:
+      console.error('unknown event', event);
+  }
+
+  state.comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+  return state;
+}
+```
+
+h4(#subscribe). The subscribe function
+
+In the Models SDK, you subscribe to a model to receive its updated state whenever changes occur. Incoming messages on a channel trigger the merge function which integrates the message content into the existing state. With the current example, the "subscribe function":https://github.com/ably-labs/live-comments/blob/main/lib/models/hook.ts#L61-L66 updates the current state of the post with the new state.
+
+```[javascript]
+const subscribe = (err: Error | null, data?: PostType | undefined) => {
+  if (err) return console.error(err);
+  setPostData(data);
+};
+```
+
+h3(#backend). The backend
+
+There are two parts of the backend that are key for the LiveSync integration in the livecomments demo. These two are the @sync@ function and the @outbox entry@.
+
+h4(#sync-function). The sync function
+
+The sync function in the backend is an endpoint of a @GET@ request, which returns the "@sequenceId@":/livesync/models#sequence-id, used to identify the point in the stream of change events that corresponds to the current version of the database's state. This "endpoint":https://github.com/ably-labs/live-comments/app/api/posts/%5Bid%5D/route.ts#L5-L18 also returns the current state of the data relevant to the expected data model, in this instance it's the current state of the post defined by its @id@.
+
+
+```[javascript]
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    let id: number;
+    try {
+      id = Number(params.id);
+    } catch (error) {
+      return NextResponse.json({ message: 'failed to read :id url parameter', error }, { status: 400 });
+    }
+    const [data, sequenceID] = await getPost(id);
+    return NextResponse.json({ sequenceID, data });
+  } catch (error) {
+    return NextResponse.json({ message: 'failed to get post', error }, { status: 500 });
+  }
+}
+```
+
+h4(#outbox-entry). outbox entry
+
+The outbox entry is an entry of an update to one of the models within the database. In "this example":https://github.com/ably-labs/live-comments/lib/prisma/api.ts#L129-L139 it's a record of a comment being added to, updated with, or deleted from a post. When a post is added, updated, or deleted a record of this is also added to the outbox table so that the ADBC can pick this up and publish the update to the specified Pub/Sub channel.
+
+```[javascript]
+export async function withOutboxWrite(
+  op: (tx: TxClient, ...args: any[]) => Promise<Prisma.outboxCreateInput>,
+  ...args: any[]
+) {
+  return await prisma.$transaction(async (tx) => {
+    const { mutation_id, channel, name, data, headers } = await op(tx, ...args);
+    await tx.outbox.create({
+      data: { mutation_id, channel, name, data, headers },
+    });
+  });
+}
+```
+
+h2(#next-steps). Next steps
+
+This quickstart introduced the basic concepts of LiveSync and provided a quick demo to illustrate how LiveSync works. The next steps are to:
+
+* Read more about "LiveSync Models":/livesync/models.
+* Find out more about the "Database Connector":/livesync/database-connector.
