@@ -1,11 +1,9 @@
 import React, { useMemo, useRef } from 'react';
 import DOMPurify from 'dompurify';
 // @ts-ignore
-import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/src/core/utils/syntax-highlighter';
+import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/core/utils/syntax-highlighter';
 // @ts-ignore
-import languagesRegistry from '@ably/ui/src/core/utils/syntax-highlighter-registry';
-
-import '@ably/ui/src/core/utils/syntax-highlighter.css';
+import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
 
 registerDefaultLanguages(languagesRegistry);
 

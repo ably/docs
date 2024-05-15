@@ -11,8 +11,8 @@ export const FeatureCard = ({ title, content, image, links }: CardProps) => (
     <div className="py-24 pl-24">
       <div className="flex flex-col h-full">
         <div>
-          <h2 className="text-p2">{title}</h2>
-          <p className="text-p2 text-dark-grey mt-8 mb-40 leading-6">{content}</p>
+          <h2 className="font-extrabold text-2xl">{title}</h2>
+          <p className="text-base text-dark-grey mt-8 mb-40 leading-6 font-medium">{content}</p>
         </div>
         {links?.length ? <Links links={links} /> : null}
       </div>

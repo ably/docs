@@ -10,11 +10,11 @@ export const Links = ({ links }: { links?: LinkProps[] }) =>
           <div>
             {links.map(({ href, external, text }, index) => {
               return (
-                <div key={index + text} className="h-full flex">
+                <div key={index + text} className="h-full flex items-center">
                   <Link
                     to={href}
                     external={external}
-                    className="text-gui-default font-medium mr-4"
+                    className="text-gui-default font-bold mr-4"
                     target="_blank"
                     rel="noopener"
                   >

@@ -1,11 +1,12 @@
 import React, { useMemo, useContext, useState } from 'react';
 import { graphql, withPrefix, useStaticQuery } from 'gatsby';
 import { SandpackPreview, SandpackProvider } from '@codesandbox/sandpack-react';
-import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
 
 import HowTo from 'HowTos/pub-sub/how-to.mdx';
 import { Head } from 'src/components/Head';
 import Layout from 'src/components/Layout';
+import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
+
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { MarkdownProvider } from 'src/components/Markdown';
 import { SidebarProvider } from 'src/contexts/SidebarContext';

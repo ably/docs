@@ -20,7 +20,7 @@ export const MaybeShowSummaryLink = ({ summaryLink }: { summaryLink?: DropdownCo
   return (
     <div className="h-full px-32 pt-32 relative z-1">
       <FeaturedLink url={href}>
-        <span className="text-gui-default text-menu2 font-medium">{summaryLink.text}</span>
+        <span className="text-gui-default text-menu2 font-bold">{summaryLink.text}</span>
       </FeaturedLink>
     </div>
   );

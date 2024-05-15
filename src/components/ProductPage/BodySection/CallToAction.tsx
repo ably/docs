@@ -5,7 +5,7 @@ import { CallToActionProps } from '../ProductPageContent';
 
 export const CallToAction = ({ callToAction }: { callToAction: CallToActionProps }) => {
   return (
-    <div className="h-full flex">
+    <div className="h-full flex items-center">
       {callToAction.type === 'link' && (
         <div className="flex">
           <Link to={callToAction.href} external={callToAction.external} className="mr-4 docs-link font-medium">
