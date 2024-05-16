@@ -31,11 +31,9 @@ const controlAPIPath = tuple(
 
 describe('Check link is internal: Property tests', () => {
   it('Always identifies web paths as internal', () => {
-    assert(
-      property(passingRelativeLinks, (link) => {
-        expect(checkLinkIsInternal(link)).toBe(true);
-      }),
-    );
+    property(passingRelativeLinks, (link) => {
+      expect(checkLinkIsInternal(link)).toBe(true);
+    });
   });
   it('Always identifies non-Ably absolute links as not being internal', () => {
     assert(
