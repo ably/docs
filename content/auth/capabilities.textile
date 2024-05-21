@@ -89,6 +89,14 @@ token_params = {
 token_request = await ably_rest.auth.create_token_request(token_params)
 ```
 
+```[php]
+$tokenParams = [
+    'clientId' => 'client@example.com',
+    'capability' => json_encode($capability)
+];
+$tokenRequest = $rest->auth->createTokenRequest($tokenParams);
+```
+
 h3(#capability-determination). Token capability determination
 
 The capabilities for tokens are determined based on those of the issuing API key and those requested by the token.
@@ -135,6 +143,27 @@ token = await ably.auth.create_token_request(
 # "chat": ["publish", "subscribe", "presence"],
 # "status": ["subscribe"]
 # }
+```
+
+```[php]
+// API key capabilities:
+//{
+//  'chat': ['publish', 'subscribe', 'presence'],
+//  'status': ['subscribe']
+//}
+
+// Token request that doesn't specify any capabilities:
+$tokenParams = [
+    'clientId' => 'client@example.com',
+    'ttl' => 3600 * 1000, // ms
+];
+$tokenRequest = $rest->auth->requestToken($tokenParams);
+
+// Resulting token capabilities:
+//{
+//  'chat': ['publish', 'subscribe', 'presence'],
+//  'status': ['subscribe']
+//}
 ```
 
 h4(#ably-token-intersection). Ably Token with intersection of capabilities
@@ -191,6 +220,38 @@ token_details = await ably_rest.auth.request_token({
 # }
 ```
 
+```[php]
+/**
+  * API key capabilities:
+  * {
+  *   'chat:*': ['publish', 'subscribe', 'presence'],
+  *   'status': ['subscribe', 'history'],
+  *   'alerts': ['subscribe']
+  * }
+  */
+
+// Token request that specifies capabilities:
+$capabilities = [
+    'chat:bob' => ['subscribe'],  // only 'subscribe' intersects
+    'status' => ['*'],  // '*' intersects with 'subscribe'
+    'secret' => ['publish', 'subscribe']  // key does not have access to 'secret' channel
+];
+
+$tokenDetails = $rest
+    ->auth
+    ->requestToken(
+        ['capability' => json_encode($capabilities)]
+    );
+
+/**
+  * Resulting token capabilities:
+  * {
+  *   'chat:bob': ['subscribe'],
+  *   'status': ['subscribe', 'history']
+  * }
+  */
+```
+
 h4(#ably-token-error). Ably Token with incompatible capabilities
 
 If a set of capabilities are requested, and the intersection between those and the API key's capabilities is empty, then the @TokenRequest@ will result in an error.
@@ -222,6 +283,22 @@ token_details = await ably_rest.auth.request_token({
         }
     })
 })
+```
+
+```[php]
+/**
+  * API key capabilities:
+  * {
+  *   'chat': ['*']
+  * }
+  */
+
+// Token request that specifies capabilities:
+$tokenDetails = $rest
+    ->auth
+    ->requestToken(
+        ['capability' => json_encode(['status' => ['*']])]
+    );
 ```
 
 h4(#ably-jwt). Ably JWT capability determination
@@ -263,6 +340,18 @@ claims = {
     "ably.channel.chat:*": "moderator",  # the user is a moderator in channels within the chat namespace
     "ably.channel.*": "guest"            # the user is a guest in all other channels
 }
+```
+
+```[php]
+$claims = [
+    'sub' => '1234567890',
+    'name' => 'John Doe',
+    'x-ably-capability' => '<...>',
+    'x-ably-clientId' => '<...>',
+    'ably.channel.chat1' => 'admin',         // the user is an admin for the chat1 channel
+    'ably.channel.chat =>*' => 'moderator',  // the user is a moderator in channels within the chat namespace
+    'ably.channel.*' => 'guest'              // the user is a guest in all other channels
+];
 ```
 
 The claims from the token are copied into messages, allowing them to be checked for permission:
@@ -312,4 +401,15 @@ claims = {
     "ably.limits.publish.perAttachment.maxRate.chat1": 10,   # the user can publish 10 messages per second in channel chat1
     "ably.limits.publish.perAttachment.maxRate.chat:*": 0.1  # the user can publish a message every 10 seconds in all channels within the chat namespace
 }
+```
+
+```[php]
+$claims = [
+    'sub' => '1234567890',
+    'name' => 'John Doe',
+    'x-ably-capability' => '<...>',
+    'x-ably-clientId' => '<...>',
+    'ably.limits.publish.perAttachment.maxRate.chat1' => 10, // the user can publish 10 messages per second in channel chat1
+    'ably.limits.publish.perAttachment.maxRate.chat:*' => 0.1 // the user can publish a message every 10 seconds in all channels within the chat namespace
+]
 ```

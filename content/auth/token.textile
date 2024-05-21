@@ -97,7 +97,7 @@ AblyRealtime realtime = new AblyRealtime(options);
 ```
 
 ```[rest_php]
-  $rest = new Ably\AblyRest(array('authUrl' => '/auth'));
+  $rest = new Ably\AblyRest(['authUrl' => '/auth']);
 ```
 
 ```[rest_java]
@@ -202,6 +202,24 @@ async def get_token_request(*args, **kwargs):
         raise Exception(f"Failed to retrieve token request: {create_token_request.status_code} - {create_token_request.text}")
 ```
 
+```[rest_php]
+$rest = new Ably\AblyRest(
+    [
+        'authCallback' => function(Ably\Models\TokenParams $params) {
+            $curl = curl_init('/auth');
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($curl);
+            curl_close($curl);
+
+            $tokenRequestData = json_decode($response, true);
+            $tokenRequest = new Ably\Models\TokenRequest($tokenRequestData);
+
+            return $tokenRequest;
+        }
+    ]
+);
+```
+
 The "@tokenParams@":/api/realtime-sdk/authentication#token-params argument in @authCallback@ is available for convenience, allowing you to see the capabilities, @clientId@, and other details requested by the client. However, @tokenParams@ should not be trusted or used to generate the @tokenRequest@ on the server side. Instead it is recommended that your @createTokenRequest@ API authenticates clients separately, for example based on cookies, headers, or HTTP body.
 
 h2(#auth-options). AuthOptions
@@ -266,6 +284,17 @@ realtime = AblyRest(auth_url='/auth',
                     auth_params={'param1': 'param2'})
 ```
 
+```[rest_php]
+$rest = new Ably\AblyRest(
+    [
+        'authUrl' => '/auth',
+        'authMethod' => 'POST',
+        'authParams' => [ 'param1' => 'value1', 'param2' => 'value2' ],
+        'authHeaders' => [ 'h1: header1', 'h2: header3'],
+    ]
+);
+```
+
 h2(#tokens). Ably Tokens
 
 Ably Tokens can be used to authenticate with Ably in the following ways:
@@ -310,6 +339,16 @@ token = await ably.auth.create_token_request(
 })
 ```
 
+```[php]
+$rest = new Ably\AblyRest(
+    ['key' => '{{API_KEY}}']
+);
+
+$tokenRequest = $rest->auth->createTokenRequest(
+    ['clientId' => 'client@example.com']
+);
+```
+
 Clients can pass this server-side generated @TokenRequest@ to Ably to authenticate with Ably automatically.
 
 h3(#ably-token). Ably Token
@@ -338,6 +377,16 @@ token_request_params = {
 }
 
 token_details = await rest.auth.request_token(token_params=token_request_params)
+```
+
+```[php]
+$rest = new Ably\AblyRest(
+    ['key' => '{{API_KEY}}']
+);
+
+$tokenDetails = $rest->auth->requestToken(
+    ['clientId' => 'client@example.com']
+);
 ```
 
 h2(#jwt). JSON Web Tokens (JWT)
@@ -408,6 +457,29 @@ signature_base64 = base64.urlsafe_b64encode(signature).decode('utf-8')
 ably_jwt = base64_header + "." + base64_claims + "." + signature_base64
 ```
 
+```[php]
+$header = [
+    'typ' => 'JWT',
+    'alg' => 'HS256',
+    'kid' => '{{API_KEY_NAME}}'
+];
+$currentTime = time();
+$claims = [
+    'iat' => $currentTime, /* current time in seconds */
+    'exp' => $currentTime + 3600, /* time of expiration in seconds (an hour) */
+    'x-ably-capability' => '{\"*\":[\"*\"]}'
+];
+$base64Header = base64_encode(json_encode($header));
+$base64Claims = base64_encode(json_encode($claims));
+$signature = hash_hmac(
+    'sha256',
+    $base64Header . '.' . $base64Claims,
+    '{{API_KEY_SECRET}}',
+    true
+);
+$jwt = $base64Header . '.' . $base64Claims . '.' . $signature;
+```
+
 At present Ably does not support asymmetric signatures based on a key pair belonging to a third party.
 
 h3(#embedded). Embed an Ably Token in a JWT
@@ -471,6 +543,30 @@ signature = hashlib.sha256((base64_header + "." + base64_claims + "{{API_KEY_SEC
 signature_base64 = base64.urlsafe_b64encode(signature).decode('utf-8')
 
 jwt_token = base64_header + "." + base64_claims + "." + signature_base64
+```
+
+```[php]
+$rest = new Ably\AblyRest(
+    ['key' => '{{API_KEY}}']
+);
+$tokenDetails = $rest->auth->requestToken(
+    ['clientId' => 'client@example.com']
+);
+$header = [
+    'typ' => 'JWT',
+    'alg' => 'HS256',
+    'x-ably-token' => $tokenDetails->token
+];
+$currentTime = time();
+$claims = [
+    'exp' => $currentTime + 3600 /* time of expiration in seconds (an hour) */
+];
+$base64Header = base64_encode(json_encode($header));
+$base64Claims = base64_encode(json_encode($claims));
+$secret = 'YOUR_SECRET';
+$signature = hash_hmac('sha256', $base64Header . '.' . $base64Claims, $secret, true);
+$base64Signature = base64_encode($signature);
+$jwt = $base64Header . '.' . $base64Claims . '.' . $base64Signature;
 ```
 
 h2(#when). When to use token auth
