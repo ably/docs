@@ -10,7 +10,6 @@ const optionStyles = {
   color: 'var(--color-white)',
   backgroundColor: 'transparent',
   boxShadow: 'none',
-  fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
   fontSize: 14,
   fontWeight: 300,
   '&:active': {
@@ -33,7 +32,6 @@ export const selectMenuStyles: StylesConfig<ReactSelectOption, false> = {
     color: 'var(--color-white)',
     backgroundColor: 'transparent',
     boxShadow: 'none',
-    fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
     fontSize: '14px',
     lineHeight: 'var(--lh-snug)',
     height: SELECT_HEIGHT,
