@@ -13,7 +13,6 @@ export const optionStyles: (
     width,
     border: 0,
     boxShadow: 'none',
-    fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
     color: 'var(--color-cool-black)',
     backgroundColor: 'transparent',
     fontSize: '14px',
