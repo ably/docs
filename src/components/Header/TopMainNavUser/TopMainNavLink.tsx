@@ -9,12 +9,12 @@ export const TopMainNavLink = ({
 }: {
   href: string;
   dataId: string;
-  external: boolean;
+  external?: boolean;
   children: React.ReactNode;
 }) => (
   <Link
     to={href}
-    className="hidden md:flex items-center h-full mr-24 py-24 font-medium hover:text-gui-hover whitespace-nowrap"
+    className="hidden md:flex items-center h-full mr-24 py-24 font-bold hover:text-gui-hover whitespace-nowrap"
     data-id={dataId}
     external={external}
   >

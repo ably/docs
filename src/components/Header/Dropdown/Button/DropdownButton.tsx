@@ -43,7 +43,7 @@ export const DropdownButtonAndMenu = ({
         onMouseOver={() => onMouseOver(dropdownDataID)}
         aria-controls={dropdownDataID}
       >
-        <span>{titleOverride || dropdownDataID}</span>
+        <span className="font-bold">{titleOverride || dropdownDataID}</span>
         <Icon name="icon-gui-disclosure-arrow" size="1.5rem" additionalCSS={chevronDown} />
       </button>
       {isOpen && <DropdownMenu {...dropdownData[dropdownDataID]} />}

@@ -9,7 +9,7 @@ export const ExampleCard = ({ title, image, link, external }: CardProps) => (
     className="items-center border border-extra-light-grey rounded-lg bg-extra-light-grey flex flex-col h-full hover:border-mid-grey hover:text-cool-black group"
   >
     <Image image={image} style={{ pointerEvents: 'none' }} />
-    <p className="pb-24 ml-8" style={{ fontSize: '1rem' }}>
+    <p className="pb-24 ml-8 font-medium" style={{ fontSize: '1rem' }}>
       {title}
     </p>
   </Link>
