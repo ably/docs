@@ -80,6 +80,10 @@ options.AuthUrl = new Uri("/auth");
 AblyRealtime realtime = new AblyRealtime(options);
 ```
 
+```[realtime_go]
+client, err := ably.NewRealtime(ably.WithAuthURL("/auth"))
+```
+
 ```[rest_javascript]
   const rest = new Ably.Rest({ authUrl: '/auth' });
 ```
@@ -123,7 +127,7 @@ AblyRealtime realtime = new AblyRealtime(options);
 ```
 
 ```[rest_go]
-  client, err := ably.NewREST(ably.AuthWithURL("/auth"))
+  client, err := ably.NewREST(ably.WithAuthURL("/auth"))
 ```
 
 The client will obtain a token, JWT, or tokenRequest from the URL and use it to authenticate requests to Ably. Before token expiry, a request for a new token will be made automatically by the client to the @authUrl@.
@@ -170,6 +174,19 @@ async def get_token_request(*args, **kwargs):
         return token_request
     else:
         raise Exception(f"Failed to retrieve token request: {create_token_request.status_code} - {create_token_request.text}")
+```
+
+```[realtime_go]
+realtime, _ := ably.NewRealtime(
+  ably.WithAuthCallback(func(context.Context, ably.TokenParams) (ably.Tokener, error) {
+    createTokenRequest := getTokenRequest() // Implement this function to get a token request from your server
+
+    if (createTokenRequest.StatusCode == 200) {
+      return createTokenRequest
+    }
+
+    return "Failed to retrieve token request: '%v' - '%v'", createTokenRequest.StatusCode, createTokenRequest.Text
+  }))
 ```
 
 ```[rest_javascript]
@@ -220,6 +237,19 @@ $rest = new Ably\AblyRest(
 );
 ```
 
+```[rest_go]
+rest, _ := ably.NewREST(
+  ably.WithAuthCallback(func(context.Context, ably.TokenParams) (ably.Tokener, error) {
+    createTokenRequest := getTokenRequest() // Implement this function to get a token request from your server
+
+    if (createTokenRequest.StatusCode == 200) {
+      return createTokenRequest
+    }
+
+    return "Failed to retrieve token request: '%v' - '%v'", createTokenRequest.StatusCode, createTokenRequest.Text
+  }))
+```
+
 The "@tokenParams@":/api/realtime-sdk/authentication#token-params argument in @authCallback@ is available for convenience, allowing you to see the capabilities, @clientId@, and other details requested by the client. However, @tokenParams@ should not be trusted or used to generate the @tokenRequest@ on the server side. Instead it is recommended that your @createTokenRequest@ API authenticates clients separately, for example based on cookies, headers, or HTTP body.
 
 h2(#auth-options). AuthOptions
@@ -259,6 +289,24 @@ realtime = AblyRealtime(auth_url='/auth',
                         auth_params={'param1': 'param2'})
 ```
 
+```[realtime_go]
+headers := http.Header{}
+headers.Set("h1", "header1")
+headers.Set("h2", "header2")
+
+client, err := ably.NewRealtime(
+  ably.WithAuthURL("/auth"),
+  ably.WithAuthMethod("GET"),
+  ably.WithAuthHeaders(headers),
+  ably.WithAuthParams(url.Values{
+    "p1": {"param1"},
+    "p2": {"param2"},
+  }))
+if err != nil {
+  panic(err)
+}
+```
+
 ```[rest_javascript]
 const rest = new Ably.Rest({
   authUrl: "/auth",
@@ -284,15 +332,22 @@ realtime = AblyRest(auth_url='/auth',
                     auth_params={'param1': 'param2'})
 ```
 
-```[rest_php]
-$rest = new Ably\AblyRest(
-    [
-        'authUrl' => '/auth',
-        'authMethod' => 'POST',
-        'authParams' => [ 'param1' => 'value1', 'param2' => 'value2' ],
-        'authHeaders' => [ 'h1: header1', 'h2: header3'],
-    ]
-);
+```[rest_go]
+headers := http.Header{}
+headers.Set("h1", "header1")
+headers.Set("h2", "header2")
+
+client, err := ably.NewREST(
+  ably.WithAuthURL("/auth"),
+  ably.WithAuthMethod("GET"),
+  ably.WithAuthHeaders(headers),
+  ably.WithAuthParams(url.Values{
+    "p1": {"param1"},
+    "p2": {"param2"},
+  }))
+if err != nil {
+  panic(err)
+}
 ```
 
 h2(#tokens). Ably Tokens
@@ -349,6 +404,17 @@ $tokenRequest = $rest->auth->createTokenRequest(
 );
 ```
 
+```[go]
+rest, err := ably.NewREST(
+  ably.WithKey("{{API_KEY}}"))
+if err != nil {
+  log.Fatalf("Error creating Ably client: %v", err)
+}
+
+tokenParams := &ably.TokenParams{ClientID: "client@example.com"}
+tokenRequest, _ := rest.Auth.CreateTokenRequest(tokenParams)
+```
+
 Clients can pass this server-side generated @TokenRequest@ to Ably to authenticate with Ably automatically.
 
 h3(#ably-token). Ably Token
@@ -387,6 +453,17 @@ $rest = new Ably\AblyRest(
 $tokenDetails = $rest->auth->requestToken(
     ['clientId' => 'client@example.com']
 );
+```
+
+```[go]
+rest, err := ably.NewREST(
+  ably.WithKey("API_KEY"))
+if err != nil {
+  log.Fatalf("Error creating Ably client: %v", err)
+}
+
+tokenParams := &ably.TokenParams{ClientID: "client@example.com"}
+tokenRequest, _ := rest.Auth.RequestToken(context.Background(), tokenParams)
 ```
 
 h2(#jwt). JSON Web Tokens (JWT)
@@ -480,6 +557,49 @@ $signature = hash_hmac(
 $jwt = $base64Header . '.' . $base64Claims . '.' . $signature;
 ```
 
+```[go]
+	// Create JWT header
+	header := map[string]string{
+		"typ": "JWT",
+		"alg": "HS256",
+		"kid": "{{API_KEY_NAME}}",
+	}
+
+	// Get current time in seconds
+	currentTime := time.Now().Unix()
+
+	// Create JWT claims
+	claims := map[string]interface{}{
+		"iat":               currentTime,        // current time in seconds
+		"exp":               currentTime + 3600, // time of expiration in seconds
+		"x-ably-capability": "{\"*\":[\"*\"]}",
+	}
+
+	// Encode header to base64
+	headerJSON, err := json.Marshal(header)
+	if err != nil {
+		log.Fatalf("Failed to marshal header: %v", err)
+	}
+	base64Header := base64.RawURLEncoding.EncodeToString(headerJSON)
+
+	// Encode claims to base64
+	claimsJSON, err := json.Marshal(claims)
+	if err != nil {
+		log.Fatalf("Failed to marshal claims: %v", err)
+	}
+	base64Claims := base64.RawURLEncoding.EncodeToString(claimsJSON)
+
+	// Create the signature
+	dataToSign := base64Header + "." + base64Claims
+	h := hmac.New(sha256.New, []byte("{{API_KEY_SECRET}}"))
+	h.Write([]byte(dataToSign))
+	signature := base64.RawURLEncoding.EncodeToString(h.Sum(nil))
+
+	// Combine the parts to form the final JWT
+	ablyJwt := base64Header + "." + base64Claims + "." + signature
+	log.Println("Ably JWT:", ablyJwt)
+  ```
+
 At present Ably does not support asymmetric signatures based on a key pair belonging to a third party.
 
 h3(#embedded). Embed an Ably Token in a JWT
@@ -567,6 +687,63 @@ $secret = 'YOUR_SECRET';
 $signature = hash_hmac('sha256', $base64Header . '.' . $base64Claims, $secret, true);
 $base64Signature = base64_encode($signature);
 $jwt = $base64Header . '.' . $base64Claims . '.' . $base64Signature;
+```
+
+```[go]
+	rest, err := ably.NewREST(ably.WithKey("{{API_KEY}}"))
+	if err != nil {
+		log.Fatalf("Failed to create Ably REST client: %v", err)
+	}
+
+	// Request a token
+	tokenParams := &ably.TokenParams{
+		ClientID: "client@example.com",
+	}
+	tokenDetails, err := rest.Auth.RequestToken(context.Background(), tokenParams)
+	if err != nil {
+		log.Fatalf("Failed to request token: %v", err)
+	}
+
+	// Get the current time in seconds
+	currentTime := time.Now().Unix()
+
+	// Create JWT header
+	header := map[string]interface{}{
+		"typ":          "JWT",
+		"alg":          "HS256",
+		"x-ably-token": tokenDetails.Token,
+	}
+
+	// Create JWT claims
+	claims := map[string]interface{}{
+		"exp": currentTime + 3600, // time of expiration in seconds
+	}
+
+	// Encode header to base64
+	headerJSON, err := json.Marshal(header)
+	if err != nil {
+		log.Fatalf("Failed to marshal header: %v", err)
+	}
+	base64Header := base64.RawURLEncoding.EncodeToString(headerJSON)
+
+	// Encode claims to base64
+	claimsJSON, err := json.Marshal(claims)
+	if err != nil {
+		log.Fatalf("Failed to marshal claims: %v", err)
+	}
+	base64Claims := base64.RawURLEncoding.EncodeToString(claimsJSON)
+
+	// Create the signature
+	dataToSign := base64Header + "." + base64Claims
+	h := hmac.New(sha256.New, []byte("SECRET"))
+	h.Write([]byte(dataToSign))
+	signature := base64.RawURLEncoding.EncodeToString(h.Sum(nil))
+
+	// Combine the parts to form the final JWT
+	jwt := base64Header + "." + base64Claims + "." + signature
+	log.Println("JWT:", jwt)
+
+	// Send JWT to client (for demonstration, we print it here)
 ```
 
 h2(#when). When to use token auth
