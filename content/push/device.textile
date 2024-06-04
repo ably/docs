@@ -3,7 +3,8 @@ title: Configure and activate devices
 meta_description: "Learn how to set up and manage device activations for push notifications with Ably, including platform installation, device registration, and handling lifecycle events."
 meta_keywords: "Push, push notifications, Apple push notification service, Google firebase cloud messaging service, activate, subscribe"
 languages:
-  - android
+  - kotlin
+  - java
   - swift
   - objc
 redirect_from:
@@ -44,7 +45,24 @@ h3. Integrate Ably into your app
 
 The following steps guide you through the "Ably SDK":https://ably.com/docs/sdks integration process:
 
-```[android]
+```[kotlin]
+class AblyPushNotificationService : FirebaseMessagingService() {
+
+    // This method is overridden to handle any messages received while the app is in the foreground or background.
+    override fun onMessageReceived(message: RemoteMessage) {
+        // Process the incoming message here
+    }
+
+    // This method is overridden to handle token refresh, ensuring that Ably is always updated with the latest token.
+    override fun onNewToken(token: String) {
+        super.onNewToken(token)
+        // Update Ably's server with the new token
+        ActivationContext.getActivationContext(this).onNewRegistrationToken(RegistrationToken.Type.FCM, token)
+    }
+}
+```
+
+```[java]
 // Define the custom action for push notifications
 public class AblyPushNotificationService extends FirebaseMessagingService {
 
@@ -54,12 +72,12 @@ public class AblyPushNotificationService extends FirebaseMessagingService {
         // Process the incoming message here
     }
 
-    //This method is overridden to handle token refresh, ensuring that Ably is always updated with the latest token.
+    // This method is overridden to handle token refresh, ensuring that Ably is always updated with the latest token.
     @Override
     public void onNewToken(@NonNull String token) {
-        super.onNewToken(s);
+        super.onNewToken(token);
         // Update Ably's server with the new token
-        ActivationContext.getActivationContext(this).onNewRegistrationToken(RegistrationToken.Type.FCM, s);
+        ActivationContext.getActivationContext(this).onNewRegistrationToken(RegistrationToken.Type.FCM, token);
     }
 }
 ```
@@ -78,16 +96,15 @@ func application(_ application: UIApplication, didFailToRegisterForRemoteNotific
 
 // Helper function to configure and return an instance of ARTRealtime
 func getAblyRealtime() -> ARTRealtime {
-    var options = ARTClientOptions()
+    let options = ARTClientOptions()
     return ARTRealtime(options: options)
 }
-
 ```
 
 ```[objc]
 // Extend your UIApplicationDelegate to handle remote notification registration lifecycle events.
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-// This method is called when APNs has successfully registered the device for push notifications
+    // This method is called when APNs has successfully registered the device for push notifications
     [ARTPush didRegisterForRemoteNotificationsWithDeviceToken:deviceToken realtime:[self getAblyRealtime]];
 }
 
@@ -106,7 +123,6 @@ func getAblyRealtime() -> ARTRealtime {
     // Initialize and return a new instance of Ably realtime client with the configured options.
     return [[ARTRealtime alloc] initWithOptions:options];
 }
-
 ```
 
 h2. Activate devices
@@ -137,7 +153,13 @@ The following diagram demonstrates the direct activation process:
 
 The following example initializes an instance of the Ably Realtime service and then activates the push notifications feature _for that instance_:
 
-```[android]
+```[kotlin]
+val ably = getAblyRealtime()
+ably.setAndroidContext(context)
+ably.push.activate()
+```
+
+```[java]
 AblyRealtime ably = getAblyRealtime();
 ably.setAndroidContext(context);
 ably.push.activate();
@@ -185,7 +207,12 @@ Your application must interact with the Ably SDK to configure server-side regist
 
 Ensure that the @useCustomRegisterer@ parameter is set to @true@ when calling "@push.activate()@":/api/realtime-sdk/push#activate or "@push.deactivate()@":/api/realtime-sdk/push#deactivate.
 
-```[android]
+```[kotlin]
+ably.push.activate(context, true)
+ably.push.deactivate(context, true)
+```
+
+```[java]
 ably.push.activate(context, true);
 ably.push.deactivate(context, true);
 ```
@@ -203,42 +230,84 @@ The following examples set up the server-side activation:
 <receiver>
 ```
 
-```[android]
-    public class MyAblyBroadcastReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            AblyRealtime ably = getAblyRealtime();
-            String action = intent.getAction();
+```[kotlin]
+class MyAblyBroadcastReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val ably = getAblyRealtime()
+        val action = intent.action
 
-            if (action.equals("io.ably.broadcast.PUSH_REGISTER_DEVICE")) {
-                DeviceDetails device = ably.device(context);
-                boolean isNew = intent.getBooleanExtra("isNew", false);
+        when (action) {
+            "io.ably.broadcast.PUSH_REGISTER_DEVICE" -> {
+                val device = ably.device(context)
+                val isNew = intent.getBooleanExtra("isNew", false)
 
-                Intent response = new Intent("io.ably.broadcast.PUSH_DEVICE_REGISTERED");
-
-                try {
-                    String deviceIdentityToken = registerThroughYourServer(device, isNew);
-                    response.putExtra("deviceIdentityToken", deviceIdentityToken);
-                } catch(AblyException e) {
-                    IntentUtils.addErrorInfo(intent, e.errorInfo);
-                }
-
-                LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(intent);
-            } else if (action.equals("io.ably.broadcast.PUSH_DEREGISTER_DEVICE")) {
-                DeviceDetails device = ably.device(context);
-
-                Intent response = new Intent("io.ably.broadcast.PUSH_DEVICE_DEREGISTERED");
+                val response = Intent("io.ably.broadcast.PUSH_DEVICE_REGISTERED")
 
                 try {
-                    deregisterThroughYourServer(device.id);
-                } catch(AblyException e) {
-                    IntentUtils.addErrorInfo(intent, e.errorInfo);
+                    val deviceIdentityToken: String = registerThroughYourServer(device, 
+                    isNew)
+
+                    response.putExtra("deviceIdentityToken", deviceIdentityToken)
+                } catch (e: AblyException) {
+                    IntentUtils.addErrorInfo(intent, e.errorInfo)
                 }
 
-                LocalBroadcastManager.getInstance(context.getApplicationContext()).sendBroadcast(intent);
+                LocalBroadcastManager.getInstance(context.applicationContext).sendBroadcast(response)
+            }
+            "io.ably.broadcast.PUSH_DEREGISTER_DEVICE" -> {
+                val device = ably.device(context)
+
+                try {
+                    deregisterThroughYourServer(device.id)
+                } catch (e: AblyException) {
+                    IntentUtils.addErrorInfo(intent, e.errorInfo)
+                }
+
+                LocalBroadcastManager.getInstance(context.applicationContext).sendBroadcast(intent)
             }
         }
     }
+}
+```
+
+```[java]
+class MyAblyBroadcastReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val ably = getAblyRealtime()
+        val action = intent.action
+
+        when (action) {
+            "io.ably.broadcast.PUSH_REGISTER_DEVICE" -> {
+                val device = ably.device(context)
+                val isNew = intent.getBooleanExtra("isNew", false)
+
+                val response = Intent("io.ably.broadcast.PUSH_DEVICE_REGISTERED")
+
+                try {
+                    val deviceIdentityToken: String = registerThroughYourServer(device, isNew)
+                    response.putExtra("deviceIdentityToken", deviceIdentityToken)
+                } catch (e: AblyException) {
+                    IntentUtils.addErrorInfo(response, e.errorInfo)
+                }
+
+                LocalBroadcastManager.getInstance(context.applicationContext).sendBroadcast(response)
+            }
+            "io.ably.broadcast.PUSH_DEREGISTER_DEVICE" -> {
+                val device = ably.device(context)
+
+                val response = Intent("io.ably.broadcast.PUSH_DEVICE_DEREGISTERED")
+
+                try {
+                    deregisterThroughYourServer(device.id)
+                } catch (e: AblyException) {
+                    IntentUtils.addErrorInfo(response, e.errorInfo)
+                }
+
+                LocalBroadcastManager.getInstance(context.applicationContext).sendBroadcast(response)
+            }
+        }
+    }
+}
 ```
     
 h4. Activate iOS device via server
