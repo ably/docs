@@ -180,6 +180,28 @@ channel.presence.enter("not moving") { error in
 }
 ```
 
+```[realtime_go]
+/* Subscribe to presence enter events */
+channel.Presence.Subscribe(
+  context.Background(),
+  ably.PresenceActionEnter,
+  func(member *ably.PresenceMessage) {
+    log.Printf("%v", member.Data) // => not moving
+  })
+
+/* Subscribe to presence update events */
+channel.Presence.Subscribe(
+  context.Background(),
+  ably.PresenceActionUpdate,
+  func(member *ably.PresenceMessage) {
+    log.Printf("%v", member.Data) // => travelling North
+  })
+
+/* Enter this client with data and update once entered */
+channel.Presence.Enter(context.Background(), "not moving")
+channel.Presence.Update(context.Background(), "travelling North")
+```
+
 h3(multiple-client-ids). Managing multiple client IDs
 
 An Ably client instance might, if on an application server for example, publish messages and be present on channels on behalf of multiple distinct "client IDs":/api/realtime-sdk#client-id. The channel's @Presence@ object therefore also supports methods that enable presence messages to be emitted for a <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> specified at the time of the call, rather than implicitly based on the <span lang="default">"@clientId@":/api/realtime-sdk#client-id</span><span lang="ruby">"@client_id@":/api/realtime-sdk#client-id</span><span lang="csharp">"@ClientId@":/api/realtime-sdk#client-id</span> "specified when the SDK is instantiated or authenticated":/api/realtime-sdk#client-id.
@@ -311,6 +333,49 @@ rest.auth.requestToken(ARTTokenParams(clientId: "*"), withOptions: nil) { tokenD
 }
 ```
 
+```[rest_go]
+	rest, err := ably.NewREST(
+      ably.WithKey("{{API_KEY}}"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Request a wildcard token
+	tokenParams := &ably.TokenParams{ClientID: "*"}
+	tokenDetails, err := rest.Auth.RequestToken(context.Background(), tokenParams)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Initialize the Realtime client using the token
+	realtime, err := ably.NewRealtime(ably.WithToken(tokenDetails.Token))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Get the channel
+	channel := realtime.Channels.Get("realtime-chat")
+
+	// Subscribe to presence 'enter' events
+	_, err = channel.Presence.Subscribe(context.Background(), ably.PresenceActionEnter, func(msg *ably.PresenceMessage) {
+		log.Printf("%s entered realtime-chat", msg.ClientID)
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Enter clients into the channel
+	err = channel.Presence.EnterClient(context.Background(), "Bob", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = channel.Presence.EnterClient(context.Background(), "Mary", nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+```
+
 h2(#subscribe). Subscribe to presence events
 
 Subscribe to a channel's presence set in order to receive presence events, by registering a listener. Presence events are emitted whenever a member enters or leaves the presence set, or updates their member data.
@@ -396,6 +461,33 @@ The following is an example of subscribing to presence events and entering the p
       print("Member \(member.clientId) entered")
   }
   channel.presence.enter(nil)
+```
+
+```[realtime_go]
+realtime, err := ably.NewRealtime(
+  ably.WithKey("{{API_KEY}}"),
+  ably.WithClientID("bob"),
+)
+if err != nil {
+  log.Fatalf("Failed to create Ably Realtime client: %v", err)
+}
+
+channel := realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}")
+
+_, err = channel.Presence.Subscribe(
+  context.Background(),
+  ably.PresenceActionEnter,
+  func(msg *ably.PresenceMessage) {
+    log.Printf("Member %s entered\n", msg.ClientID)
+  })
+if err != nil {
+  log.Fatalf("Failed to subscribe to presence events: %v", err)
+}
+
+err = channel.Presence.Enter(context.Background(), nil)
+if err != nil {
+  log.Fatalf("Failed to enter presence: %v", err)
+}
 ```
 
 <aside data-type='note'>
@@ -499,6 +591,15 @@ Console.WriteLine($"The first member has client ID: {presence.First().ClientId}"
 channel.presence.get { members, error in
     print("There are \(members.count) members on this channel")
     print("The first member has client ID: \(members[0].clientId)")
+}
+```
+
+```[realtime_go]
+page, err := channel.Presence.Get(nil)
+fmt.Println("%d messages in first page\n", len(page.PresenceMessages()))
+if page.hasNext() {
+  page2, err := page.Next()
+  fmt.Println("%d messages on 2nd page!\n", len(page2.PresenceMessages()))
 }
 ```
 
@@ -638,6 +739,25 @@ await channel.presence.subscribe(async (presenceMessage) => {
     console.log('There are no members on this channel');
   }
 });
+```
+
+```[realtime_go]
+_, err = channel.Presence.SubscribeAll(context.Background(), func(msg *ably.PresenceMessage) {
+  presenceSet, err := channel.Presence.Get(context.Background())
+  if err != nil {
+    log.Printf("Failed to get presence set: %v", err)
+    return
+  }
+
+  if len(presenceSet) > 0 {
+    log.Printf("There are %d members on this channel\n", len(presenceSet))
+  } else {
+    log.Println("There are no members on this channel")
+  }
+})
+if err != nil {
+  log.Fatalf("Failed to subscribe to presence events: %v", err)
+}
 ```
 
 h3(#batch). Batch presence
