@@ -81,6 +81,20 @@ export const SidebarDataRetrieval = ({
           }
         }
       }
+      ChatLeftSidebar: pageFurnitureYaml(name: { eq: "ChatLeftSidebarMenu" }) {
+        items {
+          ...SubMenuFields
+          items {
+            ...SubMenuFields
+            items {
+              ...SubMenuFields
+              items {
+                ...SubMenuFields
+              }
+            }
+          }
+        }
+      }
       AssetTrackingLeftSidebar: pageFurnitureYaml(name: { eq: "AssetTrackingLeftSidebarMenu" }) {
         items {
           ...SubMenuFields
@@ -119,6 +133,7 @@ export const SidebarDataRetrieval = ({
       data.ApiLeftSidebar ||
       data.SpacesLeftSidebar ||
       data.LiveSyncLeftSidebar ||
+      data.ChatLeftSidebar ||
       data.AssetTrackingLeftSidebar)
   ) {
     const sideBarItems =
@@ -128,9 +143,11 @@ export const SidebarDataRetrieval = ({
           ? data.SpacesLeftSidebar.items
           : sidebarName === 'livesync'
             ? data.LiveSyncLeftSidebar.items
-            : sidebarName === 'asset-tracking'
-              ? data.AssetTrackingLeftSidebar.items
-              : data.ChannelsLeftSidebar.items;
+            : sidebarName === 'chat'
+              ? data.ChatLeftSidebar.items
+              : sidebarName === 'asset-tracking'
+                ? data.AssetTrackingLeftSidebar.items
+                : data.ChannelsLeftSidebar.items;
     sidebarData = sidebarDataFromPageFurniture(sideBarItems);
   } else {
     sidebarData = sidebarDataFromDocumentPaths(data.allDocumentPath.edges);
