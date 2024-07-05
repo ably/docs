@@ -3,6 +3,9 @@ title: Capabilities
 meta_description: "Capabilities define which operations can be carried out on which channels by a client."
 languages:
   - javascript
+  - python
+  - go
+  - php
 ---
 
 API keys and Ably-compatible tokens, have a set of capabilities assigned to them that specify which operations (such as subscribe or publish) can be performed on which channels.
@@ -97,6 +100,33 @@ $tokenParams = [
 $tokenRequest = $rest->auth->createTokenRequest($tokenParams);
 ```
 
+```[go]
+rest, _ := ably.NewREST(
+  ably.WithKey("xVLyHw.I2jW-g:dOTlhEt-nIubVAPMAUJnGv-_F8BZ7xNYnXdajpGaISg"))
+
+// Define the capability
+capability := map[string][]string{
+  "*": {"*"},
+}
+
+capabilityJSON, err := json.Marshal(capability)
+if err != nil {
+  log.Fatalf("Failed to marshal capability: %v", err)
+}
+
+// Define the token parameters
+tokenParams := &ably.TokenParams{
+  ClientID:   "foo",
+  Capability: string(capabilityJSON),
+}
+
+// Create a token request
+tokenRequest, err := rest.Auth.CreateTokenRequest(tokenParams)
+if err != nil {
+  log.Fatalf("Failed to create token request: %v", err)
+}
+```
+
 h3(#capability-determination). Token capability determination
 
 The capabilities for tokens are determined based on those of the issuing API key and those requested by the token.
@@ -164,6 +194,35 @@ $tokenRequest = $rest->auth->requestToken($tokenParams);
 //  'chat': ['publish', 'subscribe', 'presence'],
 //  'status': ['subscribe']
 //}
+```
+
+```[go]
+// API key capabilities:
+// {
+//   "chat": ["publish", "subscribe", "presence"],
+//   "status": ["subscribe"]
+// }
+
+rest, _ := ably.NewREST(
+  ably.WithKey("{{API_KEY}}"))
+
+// Define the token parameters
+tokenParams := &ably.TokenParams{
+  ClientID: "client@example.com",
+  TTL:      3600 * 1000, /* time of expiration in ms (an hour) */
+}
+
+// Create a token request
+tokenRequest, err := rest.Auth.CreateTokenRequest(tokenParams)
+if err != nil {
+  log.Fatalf("Failed to create token request: %v", err)
+}
+
+// Resulting token capabilities:
+// {
+// "chat": ["publish", "subscribe", "presence"],
+// "status": ["subscribe"]
+// }
 ```
 
 h4(#ably-token-intersection). Ably Token with intersection of capabilities
@@ -252,6 +311,48 @@ $tokenDetails = $rest
   */
 ```
 
+```[go]
+// API key capabilities:
+// {
+//   "chat:*": ["publish", "subscribe", "presence"],
+//   "status": ["subscribe", "history"],
+//   "alerts": ["subscribe"]
+// }
+
+// Token request that specifies capabilities:
+rest, _ := ably.NewREST(
+  ably.WithKey("{{API_KEY}}"))
+
+// Define the capabilities
+capabilities := map[string][]string{
+  "chat:bob": {"subscribe"},
+  "status":   {"*"},
+  "secret":   {"publish", "subscribe"},
+}
+
+capabilitiesJSON, err := json.Marshal(capabilities)
+if err != nil {
+  log.Fatalf("Failed to marshal capabilities: %v", err)
+}
+
+// Define the token parameters
+tokenParams := &ably.TokenParams{
+  Capability: string(capabilitiesJSON),
+}
+
+// Request a token
+tokenDetails, err := rest.Auth.RequestToken(context.Background(), tokenParams)
+if err != nil {
+  log.Fatalf("Failed to request token: %v", err)
+}
+
+// Resulting token capabilities:
+// {
+//   "chat:bob": ["subscribe"],
+//   "status": ["subscribe", "history"]
+// }
+```
+
 h4(#ably-token-error). Ably Token with incompatible capabilities
 
 If a set of capabilities are requested, and the intersection between those and the API key's capabilities is empty, then the @TokenRequest@ will result in an error.
@@ -299,6 +400,37 @@ $tokenDetails = $rest
     ->requestToken(
         ['capability' => json_encode(['status' => ['*']])]
     );
+```
+
+```[go]
+// API key capabilities:
+// {
+//   "chat": ["*"]
+// }
+
+rest, _ := ably.NewREST(
+  ably.WithKey("{{API_KEY}}"))
+
+// Define the capabilities
+capabilities := map[string][]string{
+  "status": {"*"},
+}
+
+capabilitiesJSON, err := json.Marshal(capabilities)
+if err != nil {
+  log.Fatalf("Failed to marshal capabilities: %v", err)
+}
+
+// Define the token parameters
+tokenParams := &ably.TokenParams{
+  Capability: string(capabilitiesJSON),
+}
+
+// Request a token
+tokenDetails, err := rest.Auth.RequestToken(context.Background(), tokenParams)
+if err != nil {
+  log.Fatalf("Failed to request token: %v", err)
+}
 ```
 
 h4(#ably-jwt). Ably JWT capability determination
@@ -354,6 +486,18 @@ $claims = [
 ];
 ```
 
+```[go]
+claims := map[string]interface{}{
+  "sub":                   "1234567890",
+  "name":                  "John Doe",
+  "x-ably-capability":     "<...>",
+  "x-ably-clientId":       "<...>",
+  "ably.channel.chat1":    "admin",
+  "ably.channel.chat:*":   "moderator",
+  "ably.channel.*":        "guest",
+}
+```
+
 The claims from the token are copied into messages, allowing them to be checked for permission:
 
 ```[javascript]
@@ -367,6 +511,19 @@ The claims from the token are copied into messages, allowing them to be checked 
 def from_moderator(message):
     user_claim = message.get('extras', {}).get('userClaim')
     return user_claim == 'moderator' if user_claim else False
+```
+
+```[go]
+func fromModerator(message map[string]interface{}) bool {
+	// Check if 'extras' exists and is a map
+	if extras, ok := message["extras"].(map[string]interface{}); ok {
+		// Check if 'userClaim' exists and is a string
+		if userClaim, ok := extras["userClaim"].(string); ok {
+			return userClaim == "moderator"
+		}
+	}
+	return false
+}
 ```
 
 h2(#jwt-limits). Using JWT for per connection publish rate limits
@@ -412,4 +569,15 @@ $claims = [
     'ably.limits.publish.perAttachment.maxRate.chat1' => 10, // the user can publish 10 messages per second in channel chat1
     'ably.limits.publish.perAttachment.maxRate.chat:*' => 0.1 // the user can publish a message every 10 seconds in all channels within the chat namespace
 ]
+```
+
+```[go]
+claims := map[string]interface{}{
+  "sub":                   "1234567890",
+  "name":                  "John Doe",
+  "x-ably-capability":     "<...>",
+  "x-ably-clientId":       "<...>",
+  "ably.limits.publish.perAttachment.maxRate.chat1":    10.0, // the user can publish 10 messages per second in channel chat1
+  "ably.limits.publish.perAttachment.maxRate.chat:*": 0.1, // the user can publish a message every 10 seconds in all channels within the chat namespace
+	}
 ```
