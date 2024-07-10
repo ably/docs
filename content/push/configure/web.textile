@@ -1,0 +1,153 @@
+---
+title: Configure and activate web browsers
+meta_description: "Learn how to set up and manage browser activations for push notifications with Ably, including platform installation, browser registration, and handling lifecycle events."
+meta_keywords: "Push, push notifications, Web Push, activate, subscribe"
+languages:
+  - javascript
+---
+
+To push notifications with Ably, you must first configure the browser using "Web Push":https://www.w3.org/TR/push-api/ and integrate it with Ably's infrastructure. You can then activate the push notifications service, either directly or via a server.
+
+h2(#configure). Configure web browsers
+
+Configuration is the first step in setting up push notifications with Ably. This step requires setting up the necessary infrastructure for your application.
+
+<a href="@content/diagrams/push-process-configure-highlighted-web-push.png" target="_blank">
+  <img src="@content/diagrams/push-process-configure-highlighted-web-push.png" style="width: 100%" alt="Push Notifications in Ably">
+</a>
+
+* Generate a VAPID (Voluntary Application Server Identification) Key:
+** When you first activate a web browser using the Ably JavaScript "SDK":https://ably.com/docs/getting-started/setup, Ably automatically creates a VAPID key pair for your application.
+** Ably will then use the same VAPID key pair for all subsequent activations in the same application.
+* Service Worker Setup:
+** You must host a "service worker":https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API to use to push messages.
+** Service workers operate in the background, outside of any specific page or tab context.
+** The service worker will handle all incoming push notifications as JavaScript events.
+* Implement the service worker:
+** Create a JavaScript file to act as your service worker.
+** In your service worker file, listen for push events using @addEventListener("push", callback)@.
+
+The following example shows a service worker script displaying push notifications:
+
+```[javascript]
+self.addEventListener("push", (event) => {
+  const { notification } = event.data.json();
+  self.registration.showNotification(notification.title, notification);
+});
+```
+
+h3. Install and set up your Ably SDK
+
+Use the following code to install and set up your Ably SDK:
+
+```[javascript]
+import Ably from "ably";
+import Push from "ably/push";
+
+// pass in the push plugin via client options, along with the URL of your service worker
+const client = new Ably.Realtime({
+  pushServiceWorkerUrl: '/service_worker.js',
+  plugins: { Push }
+})
+```
+
+h2. Activate browers
+
+To receive push notifications using Ably, each browser must first register with the service worker registration's push manager for web push notifications. Ably's SDK facilitates this registration process and provides a unified API to manage it.
+
+<a href="@content/diagrams/push-process-activate-highlighted-web-push.png" target="_blank">
+  <img src="@content/diagrams/push-process-activate-highlighted-web-push.png" style="width: 100%" alt="Push Notifications in Ably">
+</a>
+
+h3(#browser). Activate directly
+
+Activating a browser for push notifications is typically done directly on the browser itself. Use the "@push.activate()@":/api/realtime-sdk/push#activate method to activate push notifications from a browser. The following steps describe the direct activation process:
+
+# Authenticate the Ably client.
+# Generate a unique identifier for the browser and saves it locally.
+# Activate push notifications for the browers with the service worker registration's push manager, obtaining a unique identifier.
+# Register the browser with Ably, providing its unique identifier (@deviceId@), browser details, and push recipient information.
+# Store the browser's identity token from Ably's response locally for authentication in subsequent updates.
+
+Note that once activated, the browser remains registered even after the application is closed until the "@push.deactivate()@":/api/realtime-sdk/push#deactivate method is called. Calling activate again has no effect if the browser is already activated.
+
+The following diagram demonstrates the direct activation process:
+
+<a href="@content/diagrams/push-direct-activation-web-push.png" target="_blank">
+  <img src="@content/diagrams/push-direct-activation-web-push.png" style="width: 100%" alt="push notifications in Ably">
+</a>
+
+The following example initializes an instance of the Ably realtime service and then activates the push notifications feature _for that instance_:
+
+```[javascript]
+await ably.push.activate();
+```
+
+h4. Test your push notification activation
+
+* Use the Ably "dashboard":https://ably.com/accounts or "API":/api/realtime-sdk/push-admin to send a test push notification to a registered browser.
+* Ensure your application correctly receives and handles the push notification.
+
+h3(#server). Activate browsers via server
+
+In specific scenarios, especially where strict control over browser capabilities is essential, managing the activation of browsers for push notifications through the server is useful. This approach separates the registration with the Web Push service, which still happens on the browser. Meanwhile, your server manages the browsers registration with Ably. This setup provides a centralized and efficient process for controlling browser activation.
+
+The following steps explain the server-assisted activation process:
+
+# The browser initiates activation by registering with Web Push to obtain a unique identifier, such as VAPID key.
+# Instead of registering with Ably, the browser sends identifier to your server. Your server then uses this identifier to register the browser with Ably using Ably's Push Admin API.
+# The server stores and manages the identifier. It is responsible for updating the identifier in Ably's system whenever there are changes, which can be triggered by the browser sending a updates to the server following the Web Push service's renewal.
+
+The following diagram demonstrates the process for activating browsers from a server:
+
+<a href="@content/diagrams/push-server-side-activation-web-push.png" target="_blank">
+  <img src="@content/diagrams/push-server-side-activation-web-push.png" style="width: 100%" alt="push notifications in Ably">
+</a>
+
+<aside data-type='note'>
+<p>Utilize the "push notifications admin API":/api/realtime-sdk/push-admin on your server to register browsers.</p>
+</aside>
+
+h4. Activate browers via server
+
+The following example shows how to activate and deactivate Web Push notifications using a @registerCallback@ and @deregisterCallback@ with the @activate@ method.
+
+To activate a device:
+
+```[javascript]
+ably.push.activate(async (deviceDetails, callback) => {
+  const deviceRegistration = await registerThroughYourServer(deviceDetails);
+  callback(deviceRegistration);
+});
+```
+
+To deavtivate a device:
+
+```[javascript]
+ably.push.deactivate(async (deviceDetails, callback) => {
+  const deviceId = await deregisterThroughYourServer(deviceDetails);
+  callback(deviceId);
+});
+```
+
+h4. Test your push notification activation
+
+* Use the Ably "dashboard":https://ably.com/accounts or "API":https://ably.com/docs/api/realtime-sdk/push-admin to send a test push notification to a registered browser.
+* Ensure your application correctly receives and handles the push notification.
+
+h3. Browser activation lifecycle
+
+When the "@push.activate()@":/api/realtime-sdk/push#activate and "@push.deactivate()@":/api/realtime-sdk/push#deactivate methods are called, the browser registers Web Push.
+
+<aside data-type='note'>
+<p>The activation, deactivation, and update processes may fail. You should handle the outcomes of these operations appropriately within your push notification lifecycle methods.</p>
+</aside>
+
+
+- JavaScript :=
+* For activation, pass a @registerCallback@ to the @push.activate@ method
+
+* For deactivation, pass a @deregisterCallback@ to the @push.deactivate@ method
+
+* For failed updates, pass a @updateFailedCallback@ as the second argument to the @push.activate@ method =:
+
