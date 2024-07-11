@@ -54,6 +54,13 @@ export const APIReferencesDropdownData: DropdownData = {
       },
       description: 'Build collaborative environments in your application using the Spaces SDK.',
     },
+    {
+      link: {
+        href: `https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/index.html`,
+        text: 'Chat API',
+      },
+      description: 'Build scalable chat features into your applications using the Chat SDK.',
+    },
   ],
   title: 'API References Available',
 };
