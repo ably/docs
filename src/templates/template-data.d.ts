@@ -35,7 +35,7 @@ export type AblyPageContext = {
   script: string;
 };
 
-export type ProductName = 'channels' | 'spaces' | 'livesync' | 'asset-tracking' | 'api-reference' | 'home';
+export type ProductName = 'channels' | 'spaces' | 'livesync' | 'chat' | 'asset-tracking' | 'api-reference' | 'home';
 
 export type AblyTemplateData = {
   data: AblyDocumentData;
