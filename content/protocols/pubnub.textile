@@ -1,0 +1,109 @@
+---
+title: PubNub Adapter
+meta_description: "Use the PubNub Adapter to migrate from PubNub to Ably by only changing your API key."
+languages:
+  - javascript
+  - ruby
+---
+
+Ably enables migration from PubNub to Ably using its PubNub Adapter. The protocol adapter handles all background translation and only requires an API key change.
+
+Using an adapter introduces some latency and is slower than using an Ably SDK, however the impact is typically in the low milliseconds. Some operations are quick with PubNub, but slower or impossible with Ably, and vice versa.
+
+Many of the advantages associated with using Ably, such as the use of WebSockets rather than long polling,
+"continuity guarantees":https://ably.com/four-pillars-of-dependability, and fallback host support are only available when using an Ably SDK. If an "Ably SDK":/sdks is available in your chosen platform, it is recommended you use that, or plan to transition to it eventually.
+
+You can use PuBNub and and an Ably SDK side-by-side as they are interoperable, with the exception of a few features.
+
+h2(#features). Supported features
+
+The following PubNub features are supported using the adapter:
+
+* Publish
+* Subscribe
+* Presence
+* History
+* getState
+* setState
+* hereNow
+* Global hereNow
+
+The following PubNub features are not supported using the adapter:
+
+* PAM
+* whereNow
+* Channel groups
+* Backfill subscribes
+* Stream filters
+
+h2(#configure). Configure a PubNub SDK
+
+Initialize your PubNub SDK to connect to Ably. All of PubNub's SDKs are supported.
+
+The following is an example of initializing the PubNub SDK:
+
+```[javascript]
+const apiKey = "ablyApiKey";
+const pubnub = PubNub({
+  subscribe_key: apiKey,
+  publish_key: apiKey,
+  origin: 'pubnub.ably.io',
+  ssl: true
+});
+```
+
+```[ruby]
+api_key = "ablyApiKey"
+pubnub = Pubnub.new(
+  :subscribe_key => api_key,
+  :publish_key   => api_key,
+  :origin        => 'pubnub.ably.io',
+  :origins_pool  => ["pubnub.ably.io"],
+  :ssl           => true
+)
+```
+
+<aside data-type='note'>
+<p>PubNub uses different API keys for publishing and subscribing. Ably does not use different keys and instead manages access through API key and token "capabilities":/auth/capabilities. The adapter will use the value passed to @subscribe_key@ to create a connection to Ably. If that API key doesn't have publish capabilities, the client won't be able to publish.</p>
+</aside>
+
+|_. Option |_. Description |
+| subscribe_key | Set to your Ably API key. |
+| publish_key | Set to the same Ably API key that @subscribe_key@ is using. |
+| origin | Set the domain to Ably's adapter endpoint. |
+| ssl | Ensure the connection uses SSL. This isn't required but strongly recommended by Ably to avoid sending API keys over a plain text connection. |
+
+There are some inconsistencies between PubNub SDKs regarding how a new origin is set. Most PubNub SDKs allow you to set the origin in the constructor, however some require you to set a domain and subdomain as separate properties. Others still require an @origins_pool@ property set in addition to @origin@. Consult the PubNub documentation for whichever SDK you are using to confirm the required properties.
+
+You can also add any other PubNub options that you normally use.
+
+h2(#behavior). Adapter behavior
+
+There are certain behaviors to be aware of and how they are managed between the PubNub Adapter and Ably.
+
+h3(#publishing). Publishing and subscribing
+
+PubNub doesn't have the concept of a "message name":/api/realtime-sdk/messages#name. PubNub message content maps to Ably's "message data":/api/realtime-sdk/messages#data property. A publish using the PubNub Adapter will leave the Ably message name blank, and message name is not visible to PubNub Adapter subscribers.
+
+Each UUID, for a given API key in a given region, is treated as a separate subscriber and will count as a separate connection to Ably. This is for presence purposes.
+
+PubNub message continuity is available for 5-20 minutes for up to 100 messages. To provide compatibility, the PubNub Adapter stays connected and attached to channels for 5 minutes after the last subscribe long poll it receives. If the client doesn't connect within 5 minutes, then the adapter will disconnect from Ably. Any subsequent subscribe poll requests will be treated as a new connection.
+
+Be aware that using many UUIDs, for example using the @unique_uuid@ option to generate a new UUID on page refresh, during development may result in connection counts increasing quickly as each connection will stay alive for 5 minutes.
+
+PubNub's message continuity only provides the last 100 messages in total, across all channels a client is subscribed to. Using the PubNub Adapter clients will receive the last 100 messages for each channel that they are subscribed to. However, neither mechanism offers the ability to know whether this represents all of the messages that were missed or not. Use an Ably SDK if you need to know this information as it will notify clients and enable them to retrieve messages from "history":/storage-history/history.
+
+Ably allows commas in channel names, however PubNub uses them as delimiters and does not. Therefore, PubNub clients cannot access any Ably channels with commas in their names.
+
+h3(#presence). Presence and state
+
+PubNub's @UUID@ is mapped to Ably's "@clientId@":/api/realtime-sdk/messages#clientid. PubNub treats the same UUID as the same client. Ably treats the same @clientId@ using different connections as different members of the "presence set":/presence-occupancy/presence. The presence set will include an ID multiple times if there are multiple connections with the same @clientId@. This enables you to check which devices are present for a member. When you retrieve the state of a @clientId@, and the same @clientId@ is entered more than once, the adapter will choose only one of them and return its state.
+
+PubNub's member state is mapped to Ably's "presence data":/presence-occupancy/presence#member-data. Members can only set their own state and cannot change other members' presence data.
+
+h3(#rest). REST requests
+
+Some PubNub API requests are mapped to multiple Ably requests and will count as such for "rate limiting":/general/limits and quota purposes. For example:
+
+* A global hereNow request is mapped to a request for a list of active channels, followed by a presence request for each channel. This is a total of *n+1* requests for *n* channels.
+* A mismatch exists between how Ably and PubNub paginate history requests. For example, any PubNub history requests that would result in Ably providing a paginated result will involve two Ably API requests.
