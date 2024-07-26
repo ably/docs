@@ -85,28 +85,49 @@ await channel.presence.update('travelling North');
 
 ```[realtime_java]
 /* Subscribe to presence enter and update events */
-channel.presence.subscribe(new PresenceListener() {
-  @Override
-  public void onPresenceMessage(PresenceMessage member) {
-    switch (member.action) {
-      case ENTER: {
-        System.out.println(member.data); // => not moving
-        break;
-      }
-      case UPDATE: {
-        System.out.println(member.data); // => travelling North
-        break;
-      }
+channel.presence.subscribe(new Presence.PresenceListener() {
+    @Override
+    public void onPresenceMessage(PresenceMessage member) {
+        switch (member.action) {
+            case enter: {
+                System.out.println("ENTER: " + member.data); // => "not moving"
+                break;
+            }
+            case update: {
+                System.out.println("UPDATE: " + member.data); // => "travelling North"
+                break;
+            }
+        }
     }
-  }
 });
+
 
 /* Enter this client with data and update once entered */
 channel.presence.enter("not moving", new CompletionListener() {
-  @Override
-  public void onSuccess() {
-    channel.presence.update("travelling North", new CompletionListener());
-  }
+    @Override
+    public void onSuccess() {
+        System.out.println("Entered channel successfully with initial data");
+        try {
+            channel.presence.update("travelling North", new CompletionListener() {
+                @Override
+                public void onSuccess() {
+                    System.out.println("Updated presence data successfully");
+                }
+
+                @Override
+                public void onError(ErrorInfo errorInfo) {
+                    System.err.println("Failed to update presence data: " + errorInfo.message);
+                }
+            });
+        } catch (AblyException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void onError(ErrorInfo errorInfo) {
+        System.err.println("Failed to enter channel: " + errorInfo.message);
+    }
 });
 ```
 
@@ -282,8 +303,8 @@ end
 
 ```[rest_java]
 /* request a wildcard token */
-AblyRest rest = new AblyRest('{{API_KEY}}');
-TokenParams params = new TokenParams();
+AblyRest rest = new AblyRest("{{API_KEY}}");
+Auth.TokenParams params = new Auth.TokenParams();
 params.clientId = "*";
 ClientOptions options = new ClientOptions();
 options.tokenDetails = rest.auth.requestToken(params, null);
@@ -291,16 +312,27 @@ options.tokenDetails = rest.auth.requestToken(params, null);
 AblyRealtime realtime = new AblyRealtime(options);
 Channel channel = realtime.channels.get("realtime-chat");
 
-channel.presence.subscribe(new PresenceListener() {
-  @Override
-  public void onPresenceMessage(PresenceMessage member) {
-    System.out.println(member.clientId + " entered realtime-chat");
-  }
+channel.presence.subscribe(new Presence.PresenceListener() {
+    @Override
+    public void onPresenceMessage(PresenceMessage member) {
+        System.out.println(member.clientId + " entered realtime-chat");
+    }
 });
 
-CompletionListener noop = new CompletionListener();
-channel.presence.enterClient("Bob", noop); /* => Bob entered realtime-chat */
-channel.presence.enterClient('Mary', noop); /* => Mary entered realtime-chat */
+CompletionListener noop = new CompletionListener() {
+    @Override
+    public void onSuccess() {
+        System.out.println("Operation completed successfully.");
+    }
+
+    @Override
+    public void onError(ErrorInfo errorInfo) {
+        System.err.println("Operation failed with error: " + errorInfo.message);
+    }
+};
+
+channel.presence.enterClient("Bob", "message", noop); /* => Bob entered realtime-chat */
+channel.presence.enterClient("Mary", "message", noop); /* => Mary entered realtime-chat */
 ```
 
 ```[rest_csharp]
@@ -464,17 +496,28 @@ The following is an example of subscribing to presence events and entering the p
 ```
 
 ```[realtime_java]
-  ClientOptions options = new ClientOptions("{{API_KEY}}");
-  options.clientId = "bob";
-  AblyRealtime realtime = new AblyRealtime(options);
-  Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
-  channel.presence.subscribe(new PresenceListener() {
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+options.clientId = "bob";
+AblyRealtime realtime = new AblyRealtime(options);
+Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+channel.presence.subscribe(new Presence.PresenceListener() {
     @Override
     public void onPresenceMessage(PresenceMessage member) {
-      System.out.println("Member " + member.clientId + " : " + member.action.toString());
+        System.out.println("Member " + member.clientId + " : " + member.action.toString());
     }
-  });
-  channel.presence.enter(null, new CompletionListener());
+});
+
+channel.presence.enter("", new CompletionListener() {
+    @Override
+    public void onSuccess() {
+        System.out.println("Entered presence successfully.");
+    }
+
+    @Override
+    public void onError(ErrorInfo errorInfo) {
+        System.err.println("Failed to enter presence: " + errorInfo.message);
+    }
+});
 ```
 
 ```[realtime_csharp]
@@ -845,6 +888,26 @@ if err != nil {
 }
 ```
 
+```[realtime_java]
+channel.presence.subscribe(new Presence.PresenceListener() {
+    @Override
+    public void onPresenceMessage(PresenceMessage presenceMessage) {
+        // Ignore the presence message, just rebuild your state from the get() method
+        try {
+            PresenceMessage[] presenceSet = channel.presence.get();
+            if (presenceSet.length > 0) {
+                System.out.println("There are " + presenceSet.length + " members on this channel");
+            } else {
+                System.out.println("There are no members on this channel");
+            }
+        } catch (AblyException e) {
+            System.out.println(e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+});
+```
+
 h3(#batch). Batch presence
 
 It is possible to retrieve the presence state of multiple channels in a single request. The presence state contains details about the clients in the presence set, such as their @clientId@, member data and "presence action":/api/realtime-sdk/types#presence-action.
@@ -874,6 +937,18 @@ if (!$presenceSets->success) {
 }
 ```
 
+```[rest_java]
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+AblyRest rest = new AblyRest(options);
+Param[] params = new Param[] {
+    new Param("channels", "channel1,channel2")
+};
+
+HttpPaginatedResponse response = rest.request("GET", "/presence", params, null, null);
+
+System.out.println("Success! Status code was " + response.statusCode);
+```
+
 h4(#batch-requests). Batch presence requests
 
 A batch presence request contains a comma separated list of channel names with no spaces.
@@ -899,6 +974,18 @@ if (!$presenceSets->success) {
 } else {
     echo('Success! status code was ' . strval($presenceSets->statusCode));
 }
+```
+
+```[rest_java]
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+AblyRest rest = new AblyRest(options);
+Param[] params = new Param[] {
+    new Param("channels", "channel1,channel2")
+};
+
+HttpPaginatedResponse response = rest.request("GET", "/presence", params, null, null);
+
+System.out.println("Success! Status code was " + response.statusCode);
 ```
 
 The following is an example curl request, querying the REST API directly:
@@ -1126,4 +1213,10 @@ final clientOptions = ably.ClientOptions(
 );
 
 final realtime = ably.Realtime(options: clientOptions);
+```
+
+```[java]
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+options.transportParams = new Param[] { new Param("remainPresentFor", "1000") };
+AblyRealtime ablyRealtime = new AblyRealtime(options);
 ```
