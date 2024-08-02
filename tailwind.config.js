@@ -15,6 +15,16 @@ const legacyBrandColors = {
   'brand-black': '#161616',
   'brand-richOrange': '#ed760a',
 };
+
+// Remove this when ably-ui 14 lands, along with the Status component
+const statusColors = {
+  'status-operational': '#00e80b',
+  'status-minor': '#f8c100',
+  'status-major': '#ff723f',
+  'status-critical': '#e40000',
+  'status-unknown': '#c6ced9',
+};
+
 const safelistStandard = ['mb-40', 'mb-32', 'mb-24', 'pt-128', 'pt-96', 'px-16', 'h-full', 'mx-8', 'transform'];
 const safelistGreedy = [/^docs-.*/, /^col-span-.*/, /^rotate-/];
 
@@ -105,6 +115,7 @@ module.exports = extendConfig((ablyUIConfig) => ({
         ...apiReferenceSpecificColors,
         ...highlightColors,
         ...legacyBrandColors,
+        ...statusColors,
       },
       gridRowStart: {
         9: '9',
