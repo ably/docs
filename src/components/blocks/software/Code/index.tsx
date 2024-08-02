@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { some } from 'lodash/fp';
 // @ts-ignore
-import languagesRegistry from '@ably/ui/src/core/utils/syntax-highlighter-registry';
+import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
 
 import Html from 'src/components/blocks/Html';
 import UserContext from 'src/contexts/user-context';

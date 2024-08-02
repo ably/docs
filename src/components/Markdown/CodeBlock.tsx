@@ -1,10 +1,10 @@
 import React, { FC, useMemo } from 'react';
 import DOMPurify from 'dompurify';
 import Icon from '@ably/ui/core/Icon';
-import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/src/core/utils/syntax-highlighter';
-import languagesRegistry from '@ably/ui/src/core/utils/syntax-highlighter-registry';
+import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/core/utils/syntax-highlighter';
+import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
 
-import '@ably/ui/src/core/utils/syntax-highlighter.css';
+import '@ably/ui/core/utils/syntax-highlighter.css';
 
 registerDefaultLanguages(languagesRegistry);
 
