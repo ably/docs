@@ -10,7 +10,6 @@ import {
   addLanguageSupportForBlockQuotes,
   addLanguageSupportForHeadings,
 } from './language';
-import { removeExternalClassFromLinks } from './remove-external-class-from-links';
 import { stripComments, addMinimizeForHeadings, addMinimizedIndent } from './semantic';
 import { textileJSCompatibility } from './textile-js-workarounds';
 
@@ -44,5 +43,4 @@ export const preParser = compose(
   stripComments,
   // ERB to JS
   replaceERB,
-  removeExternalClassFromLinks,
 );

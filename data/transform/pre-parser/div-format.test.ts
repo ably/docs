@@ -12,7 +12,6 @@ import {
   duplicateLanguageBlocks,
   enforceWhiteSpaceLevelsBetweenLanguageElements,
 } from './language';
-import { removeExternalClassFromLinks } from './remove-external-class-from-links';
 import { addMinimizedIndent, addMinimizeForHeadings, stripComments } from './semantic';
 import { textileJSCompatibility } from './textile-js-workarounds';
 
@@ -83,7 +82,6 @@ describe('Ensure that divs show up correctly in all cases', () => {
       removeNewlinesBeforeClosingTags,
       // ERB to JS
       replaceERB,
-      removeExternalClassFromLinks,
     );
 
     expect(partialPreParser(misbehavingDivFixture)).toMatchInlineSnapshot(`
