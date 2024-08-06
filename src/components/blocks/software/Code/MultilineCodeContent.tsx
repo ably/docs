@@ -5,8 +5,6 @@ import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/core/utils/
 // @ts-ignore
 import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
 
-import '@ably/ui/core/utils/syntax-highlighter.css';
-
 registerDefaultLanguages(languagesRegistry);
 
 const chooseString = (condition: boolean, firstString: string, secondString: string) =>

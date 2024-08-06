@@ -16,7 +16,6 @@ import CodeCopyButton from './CodeCopyButton';
 import { MultilineCodeContent } from './MultilineCodeContent';
 import { getRandomChannelName } from './get-random-channel-name';
 
-import '../styles.css';
 import { NestedHtmlComponentProps } from 'src/components/html-component-props';
 import { extractCodeStringsFromContent } from './extract-code-strings-from-content';
 import { BASH_LANGUAGE } from '../../../../../data/createPages/constants';

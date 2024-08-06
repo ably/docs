@@ -4,8 +4,6 @@ import Icon from '@ably/ui/core/Icon';
 import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/core/utils/syntax-highlighter';
 import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
 
-import '@ably/ui/core/utils/syntax-highlighter.css';
-
 registerDefaultLanguages(languagesRegistry);
 
 import { ButtonWithTooltip } from 'src/components';
