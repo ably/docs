@@ -1,9 +1,9 @@
 import { Script, ScriptStrategy, navigate } from 'gatsby';
 import { useEffect, useMemo } from 'react';
 
-import Article from 'src/components/Article';
 import { Head } from 'src/components/Head';
 import Layout from 'src/components/Layout';
+import Article from 'src/components/Article';
 import PageTitle from 'src/components/PageTitle';
 import { RightSidebarWrapper } from 'src/components/Sidebar/RightSidebar';
 import Html from 'src/components/blocks/Html';
