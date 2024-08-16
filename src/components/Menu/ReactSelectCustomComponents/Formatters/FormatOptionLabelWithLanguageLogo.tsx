@@ -22,37 +22,19 @@ export const FormatOptionLabelWithLanguageLogo = (languageOption: ExtendedReactS
       <div className="custom-svg-wrapper" style={{ transform: 'scale(0.833)' }}>
         <Component />
       </div>
-      {selectedOption === languageLabel && (
+      <div className="flex flex-row justify-between w-full">
+        <div className="py-4">{selectedOption !== languageLabel ? languageLabel : ''}</div>
         <div
-          className="text-active-orange"
+          className="text-active-orange p-4 font-medium text-center"
           style={{
             backgroundColor: '#FFF3EF',
-            fontSize: '0.6875rem',
+            fontSize: '0.688rem',
             borderRadius: '0.1875rem',
-            fontWeight: '500',
-            padding: '0.288rem 0.25rem',
           }}
         >
           {languageVersion}
         </div>
-      )}
-
-      {selectedOption !== languageLabel && (
-        <div className="flex justify-between w-full">
-          <div className="py-4">{languageLabel}</div>
-          <div
-            className="text-active-orange p-4"
-            style={{
-              backgroundColor: '#FFF3EF',
-              fontSize: '0.6875rem',
-              borderRadius: '0.1875rem',
-              fontWeight: '500',
-            }}
-          >
-            {languageVersion}
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
