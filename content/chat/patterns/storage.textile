@@ -1,0 +1,190 @@
+---
+title: Message storage
+meta_description: "Store your messages outside of Ably."
+product: chat
+languages:
+  - javascript
+---
+
+Use of room "history":/chat/rooms/history enables you to retrieve messages stored by Ably from between 72 hours, up to 30 days. In some instances you may wish to store messages for longer than this, or you would prefer to store all messages in your own database.
+
+The motivation for storing messages externally could be for various reasons, such as:
+
+* For privacy reasons.
+* The need to analyze the historic data that users send.
+* So that messages are available for moderation, review or audit purposes.
+* When you require storage longer than 30 days.
+
+Storing message history outside of Ably can be achieved using "Ably Pub/Sub":/products/channels and its integrations.
+
+h2(#pub-sub). Ably Pub/Sub
+
+The Chat SDK is built upon the functionality provided by "Ably Pub/Sub":/products/channels. The Chat SDK is built so that you don't need to interact with some of the lower-level features provided by Pub/Sub. It is therefore possible to utilize the Pub/Sub SDK to provide functionality to your chat applications that isn't yet available as an abstraction in the Chat SDK.
+
+You need to understand that a room is based on one or more Pub/Sub "channels":/channels. The number of channels depends on the chat features enabled for that room. For storage purposes, you need to manage the channel for regular chat messages, and the channel for room reactions if you want to store those.
+
+Channel names are prefixed with your room name and suffixed with different identifiers depending on the chat feature they implement:
+
+|_. Feature |_. Channel |
+| Messages | @<roomId>::$chat::$chatMessages@ |
+| Presence | @<roomId>::$chat::$chatMessages@ |
+| History | @<roomId>::$chat::$chatMessages@ |
+| Occupancy | @<roomId>::$chat::$chatMessages@ |
+| Room reactions | @<roomId>::$chat::$reactions@ |
+| Typing indicators	| @<roomId>::$chat::$typingIndicators@ |
+
+For example, if your room name is @basketballStream@ then the associated channel names will be:
+
+|_. Feature |_. Channel |
+| Messages | @basketballStream::$chat::$chatMessages@ |
+| Presence | @basketballStream::$chat::$chatMessages@ |
+| History | @basketballStream::$chat::$chatMessages@ |
+| Occupancy | @basketballStream::$chat::$chatMessages@ |
+| Room reactions | @basketballStream::$chat::$reactions@ |
+| Typing indicators	| @basketballStream::$chat::$typingIndicators@ |
+
+h2(#integrations). Integrations
+
+You can utilize integrations such as "Webhooks":/general/webhooks, "AWS Lambdas":/general/webhooks/aws-lambda, or "Azure Functions":/general/webhooks/aws-lambda to process messages and send them outside of Ably.
+
+Integrations all work on a rule based system, where rules can be configured to run for every message published to a channel. For chat messages, you will need to utilize a function to parse the messages sent to the integration that transforms them into a format suitable to storage in your database.
+
+h3(#create-rule). Create an integration rule
+
+1. Create an integration rule in your "dashboard":https://ably.com/accounts/any for your chosen integration provider.
+2. Ensure that you set the **Source** to @Message@ which will process messages and reactions.
+3. Set the **Channel filter** to process messages from your chat room. Remember that this needs to be the underlying channel name.
+
+For example, if your chat room is called @basketballStream@ then you could use the following regular expressions:
+
+* @^basketballStream::$chat::$chatMessages@ to receive the chat room messages.
+* @^my-new-room::$chat::$reactions@ to receive room reactions.
+* @^basketballStream@ to receive both chat room messages and reactions.
+
+If you selected JSON encoding and chose to batch messages in the integration, then the following is an example of a message received:
+
+```[json]
+{
+  "items": [
+    {
+      "webhookId": "Ja-fsg",
+      "source": "channel.message",
+      "serial": "108iZpUxQBe4Vv35120919@1720954463104-0",
+      "timestamp": 1720954404104,
+      "name": "channel.message",
+      "data": {
+        "channelId": "basketballStream::$chat::$chatMessages",
+        "site": "eu-west-1-A",
+        "messages": [
+          {
+            "id": "chat:6TP2sA:basketballStream:a4534b0ab37bdd5:0",
+            "clientId": "clemons",
+            "timestamp": 1720954404104,
+            "encoding": "json",
+            "extras": {
+              "timeserial": "108iZpUxQBe4Vv35120919@1720954404104-0",
+              "headers": {}
+            },
+            "data": "{\"text\":\"What a great match\",\"metadata\":{}}",
+            "name": "message.created"
+          }
+        ]
+      }
+    }
+  ]
+}
+```
+
+h2(#process). Process and store messages
+
+The Chat SDK provides several methods to identify the entity type of an encoded message received by an integration, and subsequently decode them into chat types for storage.
+
+Use "@getEntityTypeFromEncoded()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat_js.getEntityTypeFromEncoded.html to identify the entity type and then either "@chatMessageFromEncoded()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat_js.chatMessageFromEncoded.html or "@reactionFromEncoded()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat_js.reactionFromEncoded.html to decode them.
+
+```[javascript]
+import { getEntityTypeFromEncoded, chatMessageFromEncoded, reactionFromEncoded, ChatEntityType } from '@ably/chat';
+
+integrationMessage.items.forEach((item) => {
+  item.data.messages.forEach(async (message) => {
+    // Extract the chat entity type of the encoded messages
+    const entityType = getEntityTypeFromEncoded(message);
+    switch (entityType) {
+      case ChatEntityType.ChatMessage:
+        const chatMessage = await chatMessageFromEncoded(message);
+        console.log(chatMessage)
+        break;
+      case ChatEntityType.Reaction:
+        const reaction = await reactionFromEncoded(message);
+        console.log(reaction);
+        break;
+      default:
+        console.log('Unknown entity type');
+    }
+  });
+});
+```
+
+Assuming you want to store messages with the same properties that they have in the Chat SDK, you can define the following interface:
+
+```[javascript]
+// Example type for external database store
+interface MessageToSave {
+  readonly timeserial: string;
+  readonly clientId: string;
+  readonly roomId: string;
+  readonly text: string;
+  readonly createdAt: Date;
+  readonly metadata: string,
+  readonly headers: string,
+}
+```
+
+The following is an example of decoding a message received by your integration rule, extracting only the chat message data from the integration message and then calling your own function to store the results into your database:
+
+Note that the implementation will differ slightly depending on the integration that you used.
+
+```[javascript]
+import Database from 'my-database';
+import * as Ably from 'ably';
+import { getEntityTypeFromEncoded, chatMessageFromEncoded, reactionFromEncoded, ChatEntityType } from '@ably/chat';
+
+// connection configuration
+const database = new Database();
+
+// Combined handler function to decode and process integrationMessages
+export const integrationMessageHandler = async (integrationMessage: any) => {
+
+  // Create an array to store the messages we want to save to the database.
+  const chatMessagesToSave: MessageToSave[] = [];
+
+  // Pull out the messages list from our incoming event.
+  integrationMessage.items.forEach((item) => {
+    item.data.messages.forEach(async (message) => {
+
+      // Determine the type of entity in the message.
+      const entityType = getEntityTypeFromEncoded(message);
+      switch (entityType) {
+        case ChatEntityType.ChatMessage:
+          const chatMessage = await chatMessageFromEncoded(message);
+          chatMessagesToSave.push({
+            timeserial: chatMessage.timeserial,
+            clientId: chatMessage.clientId,
+            roomId: chatMessage.roomId,
+            text: chatMessage.text,
+            createdAt: chatMessage.createdAt,
+            metadata: JSON.stringify(chatMessage.metadata),
+            headers: JSON.stringify(chatMessage.headers),
+          });
+          break;
+        case ChatEntityType.Reaction:
+          const reaction = await reactionFromEncoded(message);
+          console.log(reaction);
+          break;
+        default:
+          console.log('Unknown entity type');
+      }
+    });
+  });
+  await database.CreateMessages(chatMessagesToSave);
+};
+```
