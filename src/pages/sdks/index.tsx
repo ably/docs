@@ -5,7 +5,7 @@ import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { Head } from 'src/components/Head';
 
 const SDKsIndexPage = ({ location: { search } }: { location: { search: string } }) => {
-  const meta_title = 'SDKs';
+  const title = 'SDKs';
   const meta_description = '';
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/sdks');
@@ -15,7 +15,7 @@ const SDKsIndexPage = ({ location: { search } }: { location: { search: string } 
 
   return (
     <>
-      <Head title={meta_title} description={meta_description} canonical={canonical} />
+      <Head title={title} metaTitle={title} description={meta_description} canonical={canonical} />
       <Layout noSidebar currentProduct="SDKs">
         <SDKsContent tab={tab} />
       </Layout>

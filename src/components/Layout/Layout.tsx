@@ -27,6 +27,7 @@ const getSidebarName = (currentProduct: string): SidebarName => {
   switch (currentProduct) {
     case 'home':
     case 'channels':
+    case 'pub_sub':
     case 'SDKs':
       return 'channels';
     case 'api-reference':
