@@ -25,6 +25,7 @@ import {
 } from '../../data/createPages/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
+import { getMetaTitle } from 'src/components/common/meta-title';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -34,7 +35,7 @@ const getMetaDataDetails = (
 
 const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
 const NO_LANGUAGE = 'none';
-const META_PRODUCT_FALLBACK = 'channels';
+const META_PRODUCT_FALLBACK = 'pub_sub';
 
 interface ITemplate extends AblyTemplateData {
   showProductNavigation: boolean;
@@ -61,6 +62,7 @@ const Template = ({
 
   // when we don't get a product, peek into the metadata of the page for a default value
   currentProduct ??= getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as ProductName;
+  const metaTitle = getMetaTitle(title, currentProduct) as string;
 
   const filteredLanguages = useMemo(
     () =>
@@ -147,7 +149,7 @@ const Template = ({
   return (
     <>
       <PathnameContext.Provider value={pathname}>
-        <Head title={title} canonical={canonical} description={description} />
+        <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} />
 
         <SidebarProvider>
           <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>

@@ -37,6 +37,16 @@ export type AblyPageContext = {
 
 export type ProductName = 'channels' | 'spaces' | 'livesync' | 'chat' | 'asset-tracking' | 'api-reference' | 'home';
 
+export type ProductTitle =
+  | 'Channels'
+  | 'Spaces'
+  | 'LiveSync'
+  | 'Chat'
+  | 'Asset Tracking'
+  | 'API References'
+  | 'Home'
+  | 'Pub/Sub';
+
 export type AblyTemplateData = {
   data: AblyDocumentData;
   location: Location;
