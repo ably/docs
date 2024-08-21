@@ -10,10 +10,10 @@ export const Head = ({
   title: string;
   canonical: string;
   description: string;
-  metaTitle: string;
+  metaTitle?: string;
 }) => (
   <Helmet>
-    <title>{metaTitle}</title>
+    <title>{metaTitle || title}</title>
     <meta property="og:title" content={title} />
     <meta property="twitter:title" content={title} />
     <link rel="canonical" href={canonical} />

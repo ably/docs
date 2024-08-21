@@ -15,7 +15,7 @@ const SDKsIndexPage = ({ location: { search } }: { location: { search: string } 
 
   return (
     <>
-      <Head title={title} metaTitle={title} description={meta_description} canonical={canonical} />
+      <Head title={title} description={meta_description} canonical={canonical} />
       <Layout noSidebar currentProduct="SDKs">
         <SDKsContent tab={tab} />
       </Layout>
