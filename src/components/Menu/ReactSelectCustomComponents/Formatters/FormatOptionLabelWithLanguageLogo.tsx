@@ -23,7 +23,7 @@ export const FormatOptionLabelWithLanguageLogo = (languageOption: ExtendedReactS
         <Component />
       </div>
       <div className="flex flex-row justify-between w-full">
-        <div className="py-4">{selectedOption !== languageLabel ? languageLabel : ''}</div>
+        {selectedOption !== languageLabel ? <div className="py-4">{languageLabel}</div> : null}
         <div
           className="text-active-orange p-4 font-medium text-center"
           style={{

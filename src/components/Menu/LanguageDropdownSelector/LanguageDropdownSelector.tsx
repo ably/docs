@@ -92,6 +92,7 @@ export const LanguageDropdownSelector = ({
       classNamePrefix="language-dropdown"
       menuPosition="fixed"
       isSearchable={false}
+      isDisabled={languages.length <= 1}
       styles={{
         control: controlStyle,
         option: optionStyles({ width: '15.625', marginRight: '1rem' }),
