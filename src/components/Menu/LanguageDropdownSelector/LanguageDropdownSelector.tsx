@@ -19,6 +19,7 @@ import {
   menuStyles,
   optionStyles,
   groupStyles,
+  dropdownIndicatorDisabledStyles,
 } from '../ReactSelectStyles';
 import './styles.css';
 import { usePageLanguage } from 'src/contexts';
@@ -92,10 +93,11 @@ export const LanguageDropdownSelector = ({
       classNamePrefix="language-dropdown"
       menuPosition="fixed"
       isSearchable={false}
+      isDisabled={languages.length <= 1}
       styles={{
         control: controlStyle,
         option: optionStyles({ width: '15.625', marginRight: '1rem' }),
-        dropdownIndicator: dropdownIndicatorStyles,
+        dropdownIndicator: languages.length > 1 ? dropdownIndicatorStyles : dropdownIndicatorDisabledStyles,
         groupHeading: groupHeadingStyles,
         menu: menuStyles({ right: 0, width: '18.75rem' }),
         menuList: menuListStyles,

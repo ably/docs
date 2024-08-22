@@ -12,3 +12,11 @@ export const dropdownIndicatorStyles: StylesConfigFunction<
     color: 'var(--color-gui-hover)',
   },
 });
+
+export const dropdownIndicatorDisabledStyles: StylesConfigFunction<
+  DropdownIndicatorProps<ReactSelectOption, false, ReactSelectOptGroup>
+> = (provided) => ({
+  ...provided,
+  padding: '4px',
+  color: 'var(--color-mid-grey)',
+});
