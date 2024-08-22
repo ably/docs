@@ -12,7 +12,8 @@ const ControlApi = () => {
   const meta_title = 'Control API';
   const meta_description =
     'The Control API is a REST API that enables you to manage your Ably account programmatically. This is the Control API Reference guide.';
-  const controlAPI = 'https://raw.githubusercontent.com/ably/open-specs/main/definitions/control-v1.yaml';
+  const controlAPI =
+    process.env.REDOC_SPEC_URL || 'https://raw.githubusercontent.com/ably/open-specs/main/definitions/control-v1.yaml';
 
   return (
     <>

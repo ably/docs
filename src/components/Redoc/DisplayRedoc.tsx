@@ -44,14 +44,14 @@ export const DisplayRedoc = ({ specUrl }: { specUrl: string }) => {
       },
     },
   };
-
-  scriptLoader(document, redocDependencyScript, {
-    onload: () => {
-      // @ts-ignore
-      Redoc.init(specUrl, options, document.getElementById('redoc-container'));
-    },
-  });
-
+  if (typeof window !== 'undefined') {
+    scriptLoader(document, redocDependencyScript, {
+      onload: () => {
+        // @ts-ignore
+        Redoc.init(specUrl, options, document.getElementById('redoc-container'));
+      },
+    });
+  }
   return (
     <>
       <GoTopButton />
