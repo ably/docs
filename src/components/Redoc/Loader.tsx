@@ -55,7 +55,7 @@ export const Loader = ({ specUrl }: { specUrl: string }) => {
   return (
     <>
       <GoTopButton />
-      {/^(https):\/\/[^\s$.?#].\S*$/i.test(specUrl) ? (
+      {specUrl ? (
         <div id="redoc-container" className="redoc-content"></div>
       ) : (
         <div className="ml-24 mb-20">
