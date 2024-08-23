@@ -1,1 +1,1 @@
-export * from './DisplayRedoc';
+export * from './Loader';

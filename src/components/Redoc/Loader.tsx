@@ -1,8 +1,8 @@
 import { scriptLoader } from '../../external-scripts/utils';
-import './DisplayRedoc.css';
+import './redoc.module.css';
 import { GoTopButton } from './GoTopButton';
 
-export const DisplayRedoc = ({ specUrl }: { specUrl: string }) => {
+export const Loader = ({ specUrl }: { specUrl: string }) => {
   const redocDependencyScript = '//cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js';
   const options = {
     hideDownloadButton: true,
