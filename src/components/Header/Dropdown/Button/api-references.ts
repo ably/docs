@@ -41,7 +41,7 @@ export const APIReferencesDropdownData: DropdownData = {
     },
     {
       link: {
-        href: `/docs/api/control-api`,
+        href: `/api/control-api`,
         text: 'Control API',
       },
       description:
