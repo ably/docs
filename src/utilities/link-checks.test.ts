@@ -48,10 +48,6 @@ describe('checkLinkIsInternal', () => {
   });
 
   it('respects exclusion list for docs links', () => {
-    expect(checkLinkIsInternal('https://ably.com/docs/api/control-api')).toBeFalsy();
-    expect(checkLinkIsInternal('/api/control-api')).toBeFalsy();
-    expect(checkLinkIsInternal('/api/control-api/')).toBeFalsy();
-
     expect(checkLinkIsInternal('https://ably.com/docs/sdk/cocoa')).toBeFalsy();
     expect(checkLinkIsInternal('/docs/sdk/cocoa')).toBeFalsy();
 
