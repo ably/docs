@@ -27,7 +27,7 @@ export const data = {
   },
   tabs: {
     channels: {
-      text: "Choose from the following list of SDKs to build an application using the Pub/Sub Channels product. Click 'Setup' for instructions on getting started with an SDK, or view its source repository for a full list of the platforms it supports.",
+      text: "Choose from the following list of SDKs to build an application using the Pub/Sub product. Click 'Setup' for instructions on getting started with an SDK, or view its source repository for a full list of the platforms it supports.",
       cards: [
         {
           title: 'JavaScript',
