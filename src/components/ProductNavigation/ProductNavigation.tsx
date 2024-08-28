@@ -44,7 +44,7 @@ const ProductNavigation = ({ currentProduct = 'channels' }: { currentProduct?: s
         Home
       </Item>
       <Item to="/products/channels" active={onChannels}>
-        Pub/Sub Channels
+        Pub/Sub
       </Item>
       <Item to="/products/spaces" active={onSpaces}>
         Spaces

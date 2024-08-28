@@ -22,7 +22,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
               activeTab === Tab.CHANNELS ? active_tab : null
             }`}
           >
-            Pub/Sub Channels
+            Pub/Sub
           </Link>
           <Link
             to="/sdks?tab=spaces"
