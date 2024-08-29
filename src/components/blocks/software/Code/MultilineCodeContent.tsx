@@ -1,11 +1,9 @@
 import React, { useMemo, useRef } from 'react';
 import DOMPurify from 'dompurify';
-// @ts-ignore
-import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/src/core/utils/syntax-highlighter';
-// @ts-ignore
-import languagesRegistry from '@ably/ui/src/core/utils/syntax-highlighter-registry';
 
-import '@ably/ui/src/core/utils/syntax-highlighter.css';
+import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/core/utils/syntax-highlighter';
+
+import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
 
 registerDefaultLanguages(languagesRegistry);
 
@@ -54,7 +52,7 @@ export const MultilineCodeContent = ({
   return (
     <code
       ref={preRef}
-      className="ui-text-code"
+      className="ui-text-code text-code2"
       style={{ whiteSpace: 'pre-wrap' }}
       dangerouslySetInnerHTML={{
         __html: DOMPurify.sanitize

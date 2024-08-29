@@ -24,7 +24,7 @@ const Status = ({ statusUrl, additionalCSS }: { statusUrl: string; additionalCSS
   additionalCSS ??= '';
 
   useEffect(() => {
-    let interval;
+    let interval: string | number | NodeJS.Timeout | undefined;
 
     if (statusUrl !== '') {
       const fetchData = async () => {
@@ -61,8 +61,8 @@ const Status = ({ statusUrl, additionalCSS }: { statusUrl: string; additionalCSS
 export const FooterStatus = () => (
   <>
     <div className="flex flex-row mt-24 -mb-6">
-      <Status statusUrl="https://status.ably.com/api/v2/status.json" />
-      <span className="pl-4 font-medium">System status</span>
+      <Status statusUrl="https://status.ably.com/api/v2/status.json" additionalCSS="-mt-4" />
+      <span className="pl-4 font-bold">System status</span>
     </div>
     <FeaturedLink url="https://status.ably.com/" textSize="text-p3">
       <span className="pl-4 ml-30">More on our status site</span>

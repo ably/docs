@@ -2,7 +2,7 @@ import { EXPAND_MENU, Sidebar } from 'src/components';
 import { SidebarDataRetrieval } from './SidebarDataRetrieval';
 import { SidebarName } from '../Sidebar/types';
 
-type LeftSidebarProps = {
+export type LeftSidebarProps = {
   className?: string;
   languages?: boolean;
   sidebarName: SidebarName;
@@ -22,4 +22,4 @@ const LeftSideBar = ({ sidebarName, className = '', languages = false, collapsib
   );
 };
 
-export { LeftSideBar, LeftSidebarProps };
+export { LeftSideBar };

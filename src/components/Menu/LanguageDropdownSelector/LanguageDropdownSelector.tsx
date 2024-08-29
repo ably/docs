@@ -57,7 +57,6 @@ export const LanguageDropdownSelector = ({
     fontWeight: '500',
     boxShadow: 'none',
     cursor: 'pointer',
-    fontFamily: `NEXT Book, Arial, Helvetica, sans-serif`,
     borderRadius: '0.375rem',
     flexShrink: '0',
     height: '2.25rem',

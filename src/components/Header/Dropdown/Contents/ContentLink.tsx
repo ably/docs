@@ -6,7 +6,7 @@ import { ExternalLinkIndicator } from './ExternalLinkIndicator';
 export const ContentLink = ({ href, rel, text, external }: DropdownContentLink) => (
   // Tailwind 'text-sm' class does not apply
   <Link
-    className="font-medium flex flex-row group-hover:text-gui-default"
+    className="font-bold flex flex-row group-hover:text-gui-default"
     to={href}
     rel={rel}
     style={{ fontSize: '0.875rem', lineHeight: '0.875rem' }}

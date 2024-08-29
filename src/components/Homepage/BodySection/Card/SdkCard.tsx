@@ -6,8 +6,8 @@ import { Image } from '../../../Image';
 export const SdkCard = ({ title, content, image, callToAction }: CardProps) => (
   <div className="border border-extra-light-grey rounded-lg bg-extra-light-grey flex flex-col sm:flex-row p-24 md:p-40">
     <div className="mr-40 flex flex-col">
-      <h2 className="ui-text-h2 mb-16">{title}</h2>
-      <p className="ui-text-p1 mb-40">{content}</p>
+      <h2 className="ui-text-h2 mb-16 font-extrabold">{title}</h2>
+      <p className="ui-text-p1 mb-40 font-medium">{content}</p>
 
       {callToAction ? (
         <div className="mt-auto mb-40 sm:mb-0">

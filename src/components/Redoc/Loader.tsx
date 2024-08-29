@@ -15,12 +15,12 @@ export const Loader = ({ specUrl }: { specUrl: string }) => {
       },
       typography: {
         fontSize: '1rem',
-        fontFamily: 'NEXT Book, Arial, Helvetica, sans-serif',
-        fontWeightRegular: 300,
-        fontWeightBold: 500,
+        fontFamily: 'Manrope,ui-sans-serif,system-ui',
+        fontWeightRegular: 400,
+        fontWeightBold: 600,
         headings: {
-          fontFamily: 'NEXT Book, Arial, Helvetica, sans-serif',
-          fontWeight: 500,
+          fontFamily: 'Manrope,ui-sans-serif,system-ui',
+          fontWeight: 600,
         },
         links: {
           color: '#006EDC', // gui-default
@@ -28,9 +28,9 @@ export const Loader = ({ specUrl }: { specUrl: string }) => {
           visited: '#4887c2', // gui-visited
         },
         code: {
-          fontSize: '0.875rem',
+          fontSize: '0.81rem',
           fontWeight: 400,
-          fontFamily: 'JetBrains Mono',
+          fontFamily: 'JetBrains Mono,ui-monospace',
         },
       },
       sidebar: {

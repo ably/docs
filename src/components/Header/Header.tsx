@@ -36,9 +36,9 @@ export const Header = ({
       <HorizontalMenu variant={HorizontalMenuVariant.light}>
         <TopMainNavAblyLogo href={withPrefix('/')} />
         {showSearchBar ? <SearchBar displayMode={DisplayMode.FULL_SCREEN} /> : null}
-        <div className="flex flex-row justify-end col-start-3">
+        <div className="flex flex-row items-center justify-end col-start-3">
           <TopMainNavLink href="/sdks" dataId="meganav-link">
-            SDKs
+            <span className="font-bold">SDKs</span>
           </TopMainNavLink>
           {menuItems.map((buttonDropdownDataID, i) => (
             <DropdownButtonAndMenu

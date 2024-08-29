@@ -1,6 +1,8 @@
 import cn from 'classnames';
 import { ReactNode, useEffect } from 'react';
 
+import '../../styles/global.css';
+
 import ProductNavigation from 'src/components/ProductNavigation';
 import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 import { useSidebar } from 'src/contexts/SidebarContext';
