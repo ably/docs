@@ -1,4 +1,4 @@
-import { graphql, withPrefix } from 'gatsby';
+import { graphql } from 'gatsby';
 import { Helmet } from 'react-helmet';
 
 import Layout from 'src/components/Layout';

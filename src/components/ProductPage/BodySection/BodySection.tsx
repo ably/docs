@@ -1,11 +1,8 @@
 import React from 'react';
 import { SectionProps } from '../ProductPageContent';
 import { BodySectionDescription } from './BodySectionDescription';
-import { FeatureCard } from './Card/FeatureCard';
-import { QuickstartCard } from './Card/QuickstartCard';
-import { ExampleCard } from './Card/ExampleCard';
-import { TutorialCard } from './Card/TutorialCard';
 import { CallToAction } from './CallToAction';
+import { FeatureCard, QuickstartCard, ExampleCard, TutorialCard } from './Card';
 import { ImageProps, getImageFromList } from 'src/components/Image';
 
 const cardTypes = {
