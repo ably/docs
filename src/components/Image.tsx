@@ -26,7 +26,7 @@ export const getImageFromList = (images: ImageProps[] = [], name?: string | Imag
 
 export const Image = ({ image, src, ...attribs }: ImageComponentProps) => {
   if (!image) {
-    return;
+    return null;
   }
 
   if (src) {
@@ -47,4 +47,6 @@ export const Image = ({ image, src, ...attribs }: ImageComponentProps) => {
   if (fetchedImage) {
     return <GatsbyImage image={fetchedImage} {...imageAttributes} />;
   }
+
+  return null;
 };

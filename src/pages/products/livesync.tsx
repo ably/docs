@@ -1,5 +1,5 @@
 import { Helmet } from 'react-helmet';
-import { graphql, withPrefix } from 'gatsby';
+import { graphql } from 'gatsby';
 
 import Layout from 'src/components/Layout';
 import { ImageProps } from 'src/components/Image';
