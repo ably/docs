@@ -23,6 +23,10 @@ export const siteMetadata = {
     oneTrustDomain: process.env.ONE_TRUST_DOMAIN,
     oneTrustEnabled: process.env.ONE_TRUST_ENABLED,
     oneTrustTest: process.env.ONE_TRUST_TEST,
+    inkeepEnabled: process.env.INKEEP_CHAT_ENABLED,
+    inkeepApiKey: process.env.INKEEP_CHAT_API_KEY,
+    inkeepIntegrationId: process.env.INKEEP_CHAT_INTEGRATION_ID,
+    inkeepOrganizationId: process.env.INKEEP_CHAT_ORGANIZATION_ID,
   },
 };
 

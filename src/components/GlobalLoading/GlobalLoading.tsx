@@ -29,6 +29,10 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
             oneTrustEnabled
             oneTrustDomain
             oneTrustTest
+            inkeepEnabled
+            inkeepApiKey
+            inkeepIntegrationId
+            inkeepOrganizationId
           }
         }
       }
