@@ -17,13 +17,14 @@ describe('Utils', () => {
     });
 
     it('can replace defaults with custom attributes', () => {
-      scriptLoader(document, 'http://ga.com', { async: false, defer: false });
+      scriptLoader(document, 'http://ga.com', { async: false, defer: false, type: 'module' });
       expect(document.body).toMatchSnapshot();
 
       const script = document.querySelector('script[src="http://ga.com"]');
       expect(script).not.toBeNull();
       expect(script.async).toBeFalsy();
       expect(script.defer).toBeFalsy();
+      expect(script.type).toBe('module');
     });
 
     it('can add data attributes', () => {

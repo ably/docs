@@ -1,6 +1,7 @@
 const defaultAttrs = {
   async: true,
   defer: true,
+  type: 'text/javascript',
   data: {},
 };
 
@@ -13,7 +14,6 @@ const scriptLoader = (doc, url, customAttrs) => {
 
   Object.keys(attrs).forEach((attr) => (scriptTag[attr] = attrs[attr]));
   scriptTag.src = url;
-  scriptTag.type = 'text/javascript';
 
   Object.keys(data).forEach((attr) => (scriptTag.dataset[attr] = data[attr]));
 
