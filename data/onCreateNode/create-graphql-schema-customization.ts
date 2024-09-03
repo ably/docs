@@ -83,6 +83,10 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       oneTrustEnabled: String
       oneTrustDomain: String
       oneTrustTest: String
+      inkeepEnabled: String
+      inkeepApiKey: String
+      inkeepIntegrationId: String
+      inkeepOrganizationId: String
     }
 
     type SiteSiteMetadata implements Node {

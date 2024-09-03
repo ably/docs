@@ -22,9 +22,12 @@ export type HubspotUser = {
   adminUrl: string;
 };
 
-const hubspot = (hubspotTrackingId) => {
+const hubspot = (hubspotTrackingId, loadImmediately = true) => {
   scriptLoader(document, `//js.hs-scripts.com/${hubspotTrackingId}.js`, { id: 'hs-script-loader' });
   window._hsq = window._hsq || [];
+  window.hsConversationsSettings = {
+    loadImmediately: loadImmediately,
+  };
 };
 
 export const hubspotIdentifyUser = ({

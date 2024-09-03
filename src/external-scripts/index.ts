@@ -8,6 +8,7 @@ import googleTagManager, {
   googleTagManagerLoggedIn,
 } from './google-tag-manager';
 import oneTrustScript from './one-trust';
+import inkeepChat, { inkeepChatIdentifyUser } from './inkeep';
 
 export type TrackableSession = {
   emulatingUser?: boolean;
@@ -27,6 +28,10 @@ const injectScripts = ({
   oneTrustDomain,
   oneTrustEnabled,
   oneTrustTest,
+  inkeepEnabled,
+  inkeepApiKey,
+  inkeepIntegrationId,
+  inkeepOrganizationId,
 } = {}) => {
   if (oneTrustEnabled) {
     oneTrustScript(oneTrustDomain, oneTrustTest);
@@ -41,13 +46,25 @@ const injectScripts = ({
   }
 
   if (hubspotTrackingId) {
-    hubspot(hubspotTrackingId);
+    hubspot(hubspotTrackingId, !(inkeepEnabled === 'true'));
+  }
+
+  if (inkeepEnabled) {
+    inkeepChat(inkeepApiKey, inkeepIntegrationId, inkeepOrganizationId);
   }
 };
 
 // Run signed in trackers
 const sessionTracker = (
-  { hubspotTrackingId, googleTagManagerAuthToken, gtmPreview, headwayAccountId, boomerangEnabled } = {},
+  {
+    hubspotTrackingId,
+    googleTagManagerAuthToken,
+    gtmPreview,
+    headwayAccountId,
+    boomerangEnabled,
+    inkeepEnabled,
+    inkeepApiKey,
+  } = {},
   sessionState,
 ) => {
   if (!sessionState) {
@@ -70,6 +87,10 @@ const sessionTracker = (
 
   if (headwayAccountId && sessionState.signedIn) {
     headway(headwayAccountId);
+  }
+
+  if (inkeepEnabled && inkeepApiKey) {
+    inkeepChatIdentifyUser(sessionState);
   }
 };
 

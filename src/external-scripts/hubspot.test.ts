@@ -1,12 +1,31 @@
 import Cookies from 'js-cookie';
-import { hubspotIdentifyUser } from './hubspot';
+import hubspot, { hubspotIdentifyUser } from './hubspot';
 
 const identifyKey = 'key';
 
 describe('Hubspot', () => {
   beforeEach(() => {
     global._hsq = [];
+    global.hsConversationsSettings = {};
     Cookies.set(identifyKey, undefined);
+  });
+
+  describe('hsConversationsSettings', () => {
+    beforeEach(() => {
+      document.body.innerHTML = `<script></script>`;
+    });
+
+    it('has correct defaults', () => {
+      hubspot('trackingId');
+
+      expect(global.hsConversationsSettings).toEqual({ loadImmediately: true });
+    });
+
+    it('uses the loadImmediately parameter', () => {
+      hubspot('trackingId', false);
+
+      expect(global.hsConversationsSettings).toEqual({ loadImmediately: false });
+    });
   });
 
   describe('hubspotIdentifyUser', () => {
