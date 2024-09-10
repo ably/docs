@@ -5,13 +5,15 @@ import userEvent from '@testing-library/user-event';
 import { DisplayMode, SearchBar } from '.';
 
 describe('<SearchBar />', () => {
+  const externalScriptsData = {
+    addsearchSiteKey: 'shh-do-not-tell-to-anyone',
+  };
+
   beforeEach(() => {
     useStaticQuery.mockReturnValue({
       site: {
         siteMetadata: {
-          externalScriptsData: {
-            addsearchSiteKey: 'shh-do-not-tell-to-anyone',
-          },
+          externalScriptsData,
         },
       },
     });
@@ -45,5 +47,16 @@ describe('<SearchBar />', () => {
 
     await user.click(screen.getByText('click me'));
     expect(screen.queryByLabelText('suggestions')).not.toBeInTheDocument();
+  });
+
+  describe('when Inkeep is enabled', () => {
+    beforeEach(() => {
+      externalScriptsData.inkeepEnabled = true;
+    });
+
+    it('should render the component', () => {
+      render(<SearchBar displayMode={DisplayMode.FULL_SCREEN} />);
+      expect(document.querySelector('#inkeep-search')).toBeInTheDocument();
+    });
   });
 });

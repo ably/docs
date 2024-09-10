@@ -9,9 +9,10 @@ import { useSearch } from 'src/hooks';
 import { isMac } from 'src/utilities';
 
 import { SuggestionBox } from './SuggestionBox';
+import { InkeepSearchBar } from './InkeepSearchBar';
 import { KeyIcon } from './KeyIcon';
 
-import { searchInput } from './SearchBar.module.css';
+import { searchInput, searchInputNoPadding } from './SearchBar.module.css';
 
 export enum DisplayMode {
   FULL_SCREEN = 'FULL_SCREEN',
@@ -44,6 +45,7 @@ export const SearchBar = ({
         siteMetadata {
           externalScriptsData {
             addsearchSiteKey
+            inkeepEnabled
           }
         }
       }
@@ -103,30 +105,36 @@ export const SearchBar = ({
           'mx-24 mt-24 md:m-0': displayLocation !== 'homepage',
         })}
       >
-        <input
-          type="text"
-          ref={textInput}
-          placeholder="Search"
-          className={cn(searchInput)}
-          value={query}
-          onChange={handleSearch}
-          style={{ ...extraInputStyle }}
-        />
-        <Icon name="icon-gui-search" size="24px" additionalCSS="absolute left-16 top-12" />
-        {!isInFocus && (
-          <div className="absolute right-16 top-12 hidden lg:flex items-center justify-end">
-            <KeyIcon className="mr-4">{keyIcon}</KeyIcon>
-            <KeyIcon className="pt-2">K</KeyIcon>
-          </div>
+        {externalScriptsData.inkeepEnabled ? (
+          <InkeepSearchBar className={`${searchInput} ${searchInputNoPadding}`} extraInputStyle={extraInputStyle} />
+        ) : (
+          <>
+            <input
+              type="text"
+              ref={textInput}
+              placeholder="Search"
+              className={cn(searchInput)}
+              value={query}
+              onChange={handleSearch}
+              style={{ ...extraInputStyle }}
+            />
+            <Icon name="icon-gui-search" size="24px" additionalCSS="absolute left-16 top-12" />
+            {!isInFocus && (
+              <div className="absolute right-16 top-12 hidden lg:flex items-center justify-end">
+                <KeyIcon className="mr-4">{keyIcon}</KeyIcon>
+                <KeyIcon className="pt-2">K</KeyIcon>
+              </div>
+            )}
+            <SuggestionBox
+              results={results}
+              error={error}
+              query={query}
+              isActive={isInFocus}
+              displayLocation={String(displayLocation)}
+            />
+          </>
         )}
       </div>
-      <SuggestionBox
-        results={results}
-        error={error}
-        query={query}
-        isActive={isInFocus}
-        displayLocation={String(displayLocation)}
-      />
     </div>
   );
 };
