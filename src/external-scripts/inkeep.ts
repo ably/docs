@@ -25,44 +25,77 @@ const openHubSpotConversations = () => {
   });
 };
 
+const aiChatSettings = {
+  aiChatSettings: {
+    actionButtonLabels: {
+      getHelpButtonLabel: 'More Help',
+    },
+    chatSubjectName: 'Ably',
+    botAvatarSrcUrl: 'https://storage.googleapis.com/organization-image-assets/ably-botAvatarSrcUrl-1721406747144.png',
+    getHelpCallToActions: [
+      {
+        name: 'Chat with support',
+        url: 'https://ably.com/support',
+        icon: {
+          builtIn: 'IoHelpBuoyOutline',
+        },
+        type: 'INVOKE_CALLBACK',
+        callback: () => {
+          openHubSpotConversations();
+        },
+        shouldCloseModal: true,
+      },
+    ],
+    quickQuestions: [
+      'How do I get presence data for a specific member?',
+      "What's the difference between detach and unsubscribe?",
+      "Can I limit users' access to message interactions?",
+    ],
+  },
+};
+
 export const inkeepOnLoad = (apiKey, integrationId, organizationId) => {
-  window.inkeepWidget = Inkeep().embed({
+  window.inkeepBase = Inkeep({
+    apiKey,
+    integrationId,
+    organizationId,
+    theme: {
+      components: {
+        SearchBarTrigger: {
+          defaultProps: {
+            size: 'expand',
+            variant: 'emphasize',
+          },
+        },
+      },
+    },
+  });
+
+  window.inkeepWidget = inkeepBase.embed({
     componentType: 'ChatButton',
     properties: {
       chatButtonType: 'PILL',
       chatButtonText: 'Ask Ably',
-      baseSettings: {
-        apiKey,
-        integrationId,
-        organizationId,
+      ...aiChatSettings,
+    },
+  });
+
+  loadInkeepSearch();
+};
+
+const loadInkeepSearch = () => {
+  const searchBar = document.getElementById('inkeep-search');
+  if (!searchBar) {
+    return;
+  }
+  window.inkeepBase.embed({
+    componentType: 'SearchBar',
+    targetElement: searchBar,
+    properties: {
+      searchSettings: {
+        placeholder: 'Search',
       },
-      aiChatSettings: {
-        actionButtonLabels: {
-          getHelpButtonLabel: 'More Help',
-        },
-        chatSubjectName: 'Ably',
-        botAvatarSrcUrl:
-          'https://storage.googleapis.com/organization-image-assets/ably-botAvatarSrcUrl-1721406747144.png',
-        getHelpCallToActions: [
-          {
-            name: 'Chat with support',
-            url: 'https://ably.com/support',
-            icon: {
-              builtIn: 'IoHelpBuoyOutline',
-            },
-            type: 'INVOKE_CALLBACK',
-            callback: () => {
-              openHubSpotConversations();
-            },
-            shouldCloseModal: true,
-          },
-        ],
-        quickQuestions: [
-          'How do I get presence data for a specific member?',
-          "What's the difference between detach and unsubscribe?",
-          "Can I limit users' access to message interactions?",
-        ],
-      },
+      ...aiChatSettings,
     },
   });
 };
