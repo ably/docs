@@ -5,7 +5,7 @@ const inkeepChat = (apiKey, integrationId, organizationId) => {
     return;
   }
 
-  scriptLoader(document, 'https://unpkg.com/@inkeep/uikit-js@0.3.8/dist/embed.js', {
+  scriptLoader(document, 'https://unpkg.com/@inkeep/uikit-js@0.3.9/dist/embed.js', {
     defer: true,
     async: false,
     type: 'module',
@@ -30,6 +30,7 @@ const aiChatSettings = {
     actionButtonLabels: {
       getHelpButtonLabel: 'More Help',
     },
+    shouldShowCopyChatButton: true,
     chatSubjectName: 'Ably',
     botAvatarSrcUrl: 'https://storage.googleapis.com/organization-image-assets/ably-botAvatarSrcUrl-1721406747144.png',
     getHelpCallToActions: [
