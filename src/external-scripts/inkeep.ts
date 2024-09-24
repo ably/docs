@@ -47,9 +47,9 @@ const aiChatSettings = {
       },
     ],
     quickQuestions: [
-      'How do I get presence data for a specific member?',
-      "What's the difference between detach and unsubscribe?",
-      "Can I limit users' access to message interactions?",
+      'What is a channel?',
+      "How do I authenticate with Ably?",
+      "How to manage user status?",
     ],
   },
 };
@@ -94,6 +94,9 @@ const loadInkeepSearch = () => {
     properties: {
       searchSettings: {
         placeholder: 'Search',
+        tabSettings: {
+          rootBreadcrumbsToUseAsTabs: ['Docs', 'Blog'],
+        }
       },
       ...aiChatSettings,
     },
