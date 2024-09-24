@@ -50,7 +50,7 @@ const aiChatSettings = {
     quickQuestions: [
       'What is a channel?',
       "How do I authenticate with Ably?",
-      "How to manage user status?",
+      "How do I manage user status?",
     ],
   },
 };
