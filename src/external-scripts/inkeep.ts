@@ -5,7 +5,7 @@ const inkeepChat = (apiKey, integrationId, organizationId) => {
     return;
   }
 
-  scriptLoader(document, 'https://unpkg.com/@inkeep/uikit-js@0.3.8/dist/embed.js', {
+  scriptLoader(document, 'https://unpkg.com/@inkeep/uikit-js@0.3.9/dist/embed.js', {
     defer: true,
     async: false,
     type: 'module',
@@ -30,6 +30,7 @@ const aiChatSettings = {
     actionButtonLabels: {
       getHelpButtonLabel: 'More Help',
     },
+    shouldShowCopyChatButton: true,
     chatSubjectName: 'Ably',
     botAvatarSrcUrl: 'https://storage.googleapis.com/organization-image-assets/ably-botAvatarSrcUrl-1721406747144.png',
     getHelpCallToActions: [
@@ -46,11 +47,7 @@ const aiChatSettings = {
         shouldCloseModal: true,
       },
     ],
-    quickQuestions: [
-      'How do I get presence data for a specific member?',
-      "What's the difference between detach and unsubscribe?",
-      "Can I limit users' access to message interactions?",
-    ],
+    quickQuestions: ['What is a channel?', 'How do I authenticate with Ably?', 'How do I manage user status?'],
   },
 };
 
@@ -94,6 +91,9 @@ const loadInkeepSearch = () => {
     properties: {
       searchSettings: {
         placeholder: 'Search',
+        tabSettings: {
+          rootBreadcrumbsToUseAsTabs: ['Docs', 'Blog'],
+        },
       },
       ...aiChatSettings,
     },
