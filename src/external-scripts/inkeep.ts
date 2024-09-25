@@ -47,11 +47,7 @@ const aiChatSettings = {
         shouldCloseModal: true,
       },
     ],
-    quickQuestions: [
-      'What is a channel?',
-      "How do I authenticate with Ably?",
-      "How do I manage user status?",
-    ],
+    quickQuestions: ['What is a channel?', 'How do I authenticate with Ably?', 'How do I manage user status?'],
   },
 };
 
@@ -97,7 +93,7 @@ const loadInkeepSearch = () => {
         placeholder: 'Search',
         tabSettings: {
           rootBreadcrumbsToUseAsTabs: ['Docs', 'Blog'],
-        }
+        },
       },
       ...aiChatSettings,
     },
