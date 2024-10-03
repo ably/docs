@@ -119,4 +119,3 @@ In CodeSandbox, rename the `.env.example` file to `.env.local` and update the va
 // Javascript
 
 In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
-
