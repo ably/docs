@@ -39,13 +39,13 @@ export type ProductName = 'channels' | 'spaces' | 'livesync' | 'chat' | 'asset-t
 
 export type ProductTitle =
   | 'Channels'
-  | 'Spaces'
-  | 'LiveSync'
-  | 'Chat'
-  | 'Asset Tracking'
+  | 'Ably Spaces'
+  | 'Ably LiveSync'
+  | 'Ably Chat'
+  | 'Ably Asset Tracking'
   | 'API References'
   | 'Home'
-  | 'Pub/Sub';
+  | 'Ably Pub/Sub';
 
 export type AblyTemplateData = {
   data: AblyDocumentData;
