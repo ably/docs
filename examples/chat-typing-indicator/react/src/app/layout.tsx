@@ -3,7 +3,8 @@
 import { Inter } from "next/font/google";
 import { ChatClientProvider, ChatRoomProvider } from '@ably/chat/react';
 import { Realtime } from 'ably';
-import { ChatClient, RoomOptionsDefaults } from '@ably/chat';
+import { ChatClient, RoomOptionsDefaults, TypingOptions } from '@ably/chat';
+import { time } from "console";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -12,6 +13,10 @@ const mockName = () => mockNames[Math.floor(Math.random() * mockNames.length)];
 
 const realtimeClient = new Realtime({key: process.env.NEXT_PUBLIC_ABLY_KEY, clientId: mockName()});
 const chatClient = new ChatClient(realtimeClient);
+
+const typingOptions: TypingOptions = {
+  timeoutMs: 5000,
+};
 
 export default function RootLayout({
   children,
@@ -24,7 +29,10 @@ export default function RootLayout({
         <ChatClientProvider client={chatClient}>
           <ChatRoomProvider
             id="typing-indicator"
-            options={RoomOptionsDefaults}
+            options={{
+              ...RoomOptionsDefaults,
+              typing: typingOptions
+            }}
           >
             {children}
           </ChatRoomProvider>
