@@ -1,5 +1,4 @@
 import { useTyping, } from '@ably/chat/react';
-import { TypingEvent } from '@ably/chat';
 
 export const ChatInput = () => {
   const {start, currentlyTyping } = useTyping();
