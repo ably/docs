@@ -1,44 +1,34 @@
 import * as Ably from 'ably';
-import { ChatClient, RoomOptionsDefaults } from '@ably/chat';
+import { ChatClient, TypingOptions } from '@ably/chat';
 import { nanoid } from 'nanoid';
 
 const names = ['Bob', 'Jane', 'John', 'Sammy'];
-const clientId = names[Math.floor(Math.random() * names.length)] ?? nanoid();
 const realtimeClient = new Ably.Realtime({
-  clientId: clientId,
+  clientId: names[Math.floor(Math.random() * names.length)] ?? nanoid(),
   key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
 });
 const chatClient = new ChatClient(realtimeClient);
 
-let timer: NodeJS.Timeout | null = null;
+const typingOptions: TypingOptions = {
+  timeoutMs: 5000,
+};
 
 // Get ROOM with typing capabilities
-const room = chatClient.rooms.get('typing-indicator', { typing: RoomOptionsDefaults.typing });
+const room = chatClient.rooms.get('typing-indicator', { typing: typingOptions });
 
 // Subscribe to room for anyone typing or updates on typing
 room.typing.subscribe(async () => {
   // Get clientIds of current users typing:
-  const currentlyTypingClientIds = await room.typing.get();
-  let clientsTyping = '';
-  const clientIdsArray = Array.from(currentlyTypingClientIds).filter((id) => id !== clientId);
+  const currentlyTyping = await room.typing.get();
 
-  for (let i = 0; i < clientIdsArray.length; i++) {
-    clientsTyping += clientIdsArray[i];
-    if (i !== clientIdsArray.length - 1) {
-      clientsTyping += ' and ';
-    }
-  }
-
+  const typingClientIds = Array.from(currentlyTyping).filter((id) => id !== chatClient.clientId);
+  const clientsTyping = typingClientIds.join(' and ');
   const typingIndicator = document.getElementById('user-input-label');
 
-  if (clientIdsArray.length > 0) {
-    if (typingIndicator) {
-      typingIndicator.innerText = clientsTyping + (clientIdsArray.length === 1 ? ' is typing' : ' are typing');
-    }
-  } else {
-    if (typingIndicator) {
-      typingIndicator.innerText = '';
-    }
+  if (typingIndicator) {
+    typingIndicator.innerText = clientsTyping
+      ? `${clientsTyping} ${typingClientIds.length === 1 ? 'is' : 'are'} typing`
+      : '';
   }
 });
 
@@ -49,12 +39,4 @@ if (element) {
 
 async function startTyping() {
   await room.typing.start();
-
-  if (timer) {
-    clearTimeout(timer);
-  }
-  timer = setTimeout(async () => {
-    await room.typing.stop();
-    timer = null;
-  }, 5000);
 }
