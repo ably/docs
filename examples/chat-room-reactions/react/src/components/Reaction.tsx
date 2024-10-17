@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useRoomReactions } from '@ably/chat/react';
+import { Reaction as ReactionInterface } from '@ably/chat';
 import '../../styles/styles.css'
 
-interface ReactionInterface {
-  type: string;
-  headers: Record<string, unknown>;
-  metadata: object;
-  clientId: string;
-  createdAt: string;
-  isSelf: boolean;
-}
+// interface ReactionInterface {
+//   type: string;
+//   headers: Record<string, unknown>;
+//   metadata: object;
+//   clientId: string;
+//   createdAt: string;
+//   isSelf: boolean;
+// }
 
 export const Reaction = () => {
   const [reactions, setReactions] = useState<ReactionInterface[]>([]);
@@ -18,18 +19,13 @@ export const Reaction = () => {
 
   const { send } = useRoomReactions({
     listener: (reaction) => {
-      console.log('Received reaction: ', reaction);
-      setReactions((prevReactions: ReactionInterface[]) => [...prevReactions, {...reaction, createdAt: reaction.createdAt.toISOString()}])
+      setReactions((prevReactions: ReactionInterface[]) => [...prevReactions, {...reaction}])
 
       setTimeout(() => {
-        setReactions(prevReactions => prevReactions.filter(r => r.createdAt !== reaction.createdAt.toISOString()));      
+        setReactions(prevReactions => prevReactions.filter(r => r.createdAt !== reaction.createdAt));
       }, 4000);
     },
   });
-
-  const handleEmojiClick = (emoji: string) => {
-    send({ type: emoji });
-  }
 
   return (
     <div className="reaction-container">
@@ -43,7 +39,7 @@ export const Reaction = () => {
           <span
             key={index}
             className="emoji-btn"
-            onClick={() => handleEmojiClick(emoji)}
+            onClick={() => send({type: emoji})}
           >
             {emoji}
           </span>
