@@ -7,7 +7,7 @@ Room reactions can add value to many different chat applications. One example is
 
 Room reactions can be implemented using Ably Chat. The Chat SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting chat features. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
 
-Resources
+## Resources
 
 // React brief (Only visible if viewing the React example)
 
@@ -34,13 +34,54 @@ For further information on the typing indicator feature please refer to the [roo
 
 // End Javascript brief
 
-View on Github
-// React
-View the full source code and instructions for getting started with it in Github.
-// Javascript
-View the full source code available in the Ably docs Github repository.
+## View on Github
 
-Open in CodeSandbox
+// React
+
+The full source code and instructions for getting started with can be found in Github.
+
+Once the repository has been cloned, follow the instructions below to run the application.
+
+Rename `.env.example` to `.env.local` and fill in your Ably API KEY in the `NEXT_PUBLIC_ABLY_KEY` environment variable.
+
+Install dependencies:
+
+```bash
+yarn install
+```
+
+Run the development server:
+
+```bash
+yarn dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+// Javascript
+
+The full source code and instructions for getting started with can be found in Github.
+
+Once the repository has been cloned, follow the instructions below to run the application.
+
+Rename `.env.example` to `.env.local` and fill in your Ably API KEY in the `NEXT_PUBLIC_ABLY_KEY` environment variable.
+
+Install dependencies:
+
+```bash
+yarn install
+```
+
+Run the development server:
+
+```bash
+yarn dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Open in CodeSandbox
+
 // React
 
 In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to have your Ably API key.
@@ -48,4 +89,3 @@ In CodeSandbox, rename the `.env.example` file to `.env.local` and update the va
 // Javascript
 
 In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to have your Ably API key.
-
