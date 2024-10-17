@@ -1,18 +1,9 @@
 "use client";
 
 import { useRoom, useMessages, useChatClient } from '@ably/chat/react';
-import '../../styles/styles.css'
+import { Message } from '@ably/chat';
 import { useState } from 'react';
-
-interface Message {
-  timeserial: string;
-  clientId: string;
-  roomId: string;
-  text: string;
-  headers: object;
-  metadata: object;
-  createdAt: string;
-}
+import '../../styles/styles.css'
 
 export default function Home() {
   const { roomStatus, connectionStatus } = useRoom();
@@ -35,7 +26,7 @@ const Chat = () => {
   const { send } = useMessages({
     listener: (message) => {
       console.log('Received message: ', message);
-      setMessages((prevMessages: Message[]) => [...prevMessages, { ...message.message, createdAt: message.message.createdAt.toISOString() }]);
+      setMessages((prevMessages: Message[]) => [...prevMessages, { ...message.message }]);
     },
   });
 
@@ -44,7 +35,7 @@ const Chat = () => {
     send({ text: message });
     setMessage('');
   };
-  
+
   return (
     <div id="chat-room-reactions" className="container">
        <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
