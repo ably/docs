@@ -1,12 +1,12 @@
-# Avatar stack example in React
+# Avatar stack example
 
 This folder contains the code for the Avatar stack (React) - a demo of how you can leverage [Ably Spaces](https://github.com/ably/spaces) to show a list of currently online users.
 
 ## Getting started
 
-First, rename `.env.example` to `.env.local` and fill in your Ably API KEY in the `NEXT_PUBLIC_ABLY_KEY` environment variable.
+First, in `/examples/spaces-avatar-stack/javascript/` rename `.env.example` to `.env.local` and enter your Ably API KEY in the `NEXT_PUBLIC_ABLY_KEY` environment variable.
 
-Install dependencies:
+Change directory to `/examples/spaces-avatar-stack/javascript` and install dependencies:
 
 ```bash
 yarn install
@@ -18,5 +18,5 @@ Run the development server:
 yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open two [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
