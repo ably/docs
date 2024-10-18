@@ -1,12 +1,12 @@
-# Rooms and messages example with Ably Chat in React
+# Rooms and messages example with Ably Chat
 
-This folder contains the code for rooms and messages (React) - a demo of how you can leverage [Ably Chat](https://ably.com/docs/products/chat) to join a room to send and receive messages.
+This folder contains the code for rooms and messages (React) - a demo of how you can leverage [Ably Chat](https://ably.com/docs/products/chat?lang=react) to join a room to send and receive messages.
 
 ## Getting started
 
-First, rename `.env.example` to `.env.local` and fill in your Ably API KEY in the `NEXT_PUBLIC_ABLY_KEY` environment variable.
+First, in `/examples/chat-rooms-messages/react/` rename `.env.example` to `.env.local` and enter your Ably API KEY in the `NEXT_PUBLIC_ABLY_KEY` environment variable.
 
-Install dependencies:
+Change directory to `/examples/chat-rooms-messages/react/` and install dependencies:
 
 ```bash
 yarn install
@@ -18,5 +18,5 @@ Run the development server:
 yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open two tabs to [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
