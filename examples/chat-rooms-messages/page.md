@@ -45,7 +45,7 @@ Once you have cloned the repository:
 
 In the directory `/examples/chat-rooms-messages/react/` rename `.env.example` to `.env.local` and enter your Ably API KEY in the `NEXT_PUBLIC_ABLY_KEY` environment variable.
 
-Change directory to `/examples/chat-rooms-messages` and install dependencies:
+Change directory to `/examples/chat-rooms-messages/react` and install dependencies:
 
 ```bash
 yarn install
@@ -67,7 +67,7 @@ Once you have cloned the repository:
 
 In the directory `/examples/chat-rooms-messages/javascript/` rename `.env.example` to `.env.local` and enter your Ably API KEY in the `NEXT_PUBLIC_ABLY_KEY` environment variable.
 
-Install dependencies:
+Change directory to `/examples/chat-rooms-messages/javascript` and install dependencies:
 
 ```bash
 yarn install
