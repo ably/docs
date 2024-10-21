@@ -4,19 +4,42 @@ This folder contains the code for the Chat typing indicator (Typescript) - a dem
 
 ## Getting started
 
-First, in `/examples/chat-typing-indicator/javascript/` and enter your Ably API KEY in the `VITE_PUBLIC_ABLY_KEY` environment variable.
+1. Clone the repository
 
-Change directory to `/examples/chat-typing-indicator/javascript` and install dependencies:
+Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
-```bash
+```sh
+git clone git@github.com:ably/docs.git
+```
+
+1. Change directory
+
+```sh
+cd /examples/chat-typing-indicator/javascript/
+```
+
+3. Rename the environment file
+
+```sh
+mv .env.example .env.local
+```
+
+4. Update your API key
+
+In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key
+
+5. Install dependencies
+
+```sh
 yarn install
 ```
 
-Run the development server:
+6. Run the server
 
-```bash
-yarn dev
+```sh
+yarn run dev
 ```
 
-Open two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
+7. Try it out!
 
+Open two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
