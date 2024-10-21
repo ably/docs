@@ -40,47 +40,91 @@ Find out more about [typing indicators](https://ably.com/docs/chat/rooms/typing)
 
 // React
 
-The source code for this example can be found in [GitHub](https://github.com/ably/docs).
+## Getting started
 
-Once you have cloned the repository:
+1. Clone the repository
 
-In the directory `/examples/chat-typing-indicator/react/` rename `.env.example` to `.env.local` and enter your Ably API KEY in the `NEXT_PUBLIC_ABLY_KEY` environment variable.
+Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
-Change directory to `/examples/chat-typing-indicator/react` and install dependencies:
+```sh
+git clone git@github.com:ably/docs.git
+```
 
-```bash
+1. Change directory
+
+```sh
+cd /examples/chat-typing-indicator/react/
+```
+
+3. Rename the environment file
+
+```sh
+mv .env.example .env.local
+```
+
+4. Update your API key
+
+In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key
+
+5. Install dependencies
+
+```sh
 yarn install
 ```
 
-Run the development server:
+6. Run the server
 
-```bash
-yarn dev
+```sh
+yarn run dev
 ```
 
-Open two tabs to [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+7. Try it out!
+
+Open two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
 
 // Javascript
 
-The source code for this example can be found in [GitHub](https://github.com/ably/docs).
+## Getting started
 
-Once you have cloned the repository:
+1. Clone the repository
 
-In the directory `/examples/chat-typing-indicator/javascript` rename `.env.example` to `.env.local` and enter your Ably API KEY in the `NEXT_PUBLIC_ABLY_KEY` environment variable.
+Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
-Change directory to `/examples/chat-typing-indicator/javascript` and install dependencies:
+```sh
+git clone git@github.com:ably/docs.git
+```
 
-```bash
+1. Change directory
+
+```sh
+cd /examples/chat-typing-indicator/javascript/
+```
+
+3. Rename the environment file
+
+```sh
+mv .env.example .env.local
+```
+
+4. Update your API key
+
+In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key
+
+5. Install dependencies
+
+```sh
 yarn install
 ```
 
-Run the development server:
+6. Run the server
 
-```bash
-yarn dev
+```sh
+yarn run dev
 ```
 
-Open two tabs to [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+7. Try it out!
+
+Open two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
 
 ## Open in CodeSandbox
 
