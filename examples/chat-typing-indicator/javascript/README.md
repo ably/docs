@@ -12,7 +12,7 @@ Clone the [Ably docs](https://github.com/ably/docs) repository where this exampl
 git clone git@github.com:ably/docs.git
 ```
 
-1. Change directory
+2. Change directory
 
 ```sh
 cd /examples/chat-typing-indicator/javascript/
