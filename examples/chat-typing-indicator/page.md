@@ -14,10 +14,10 @@ Typing indicators are implemented using [Ably Chat](https://ably.com/docs/produc
 
 Use the following components to add typing indicators into a chat application:
 
-* [ChatClientProvider](https://ably.com/docs/chat/setup?lang=react#instantiate): initializes and manages a shared chat client instance, passing it down through React context to enable real-time chat functionality across the application.
-* [ChatRoomProvider](https://ably.com/docs/chat/rooms?lang=react#create): manages the state and functionality of a specific chat room, providing access to messages, participants, and real-time interactions within that room via React context.
-* [useRoom()](https://ably.com/docs/chat/rooms?lang=react#create) hook: a hook to manage the state and interaction for a chat “room”, allowing users to join, send messages, listen for messages, and use the other chat functions such as typing indicators.
-* [useTyping()](https://ably.com/docs/chat/rooms/typing?lang=react#subscribe) hook: a hook to manage and track the typing status of users within a chat room.
+* [`ChatClientProvider`](https://ably.com/docs/chat/setup?lang=react#instantiate): initializes and manages a shared chat client instance, passing it down through React context to enable realtime chat functionality across the application.
+* [`ChatRoomProvider`](https://ably.com/docs/chat/rooms?lang=react#create): manages the state and functionality of a specific chat room, providing access to messages, participants, and realtime interactions within that room via React context.
+* [`useRoom()`](https://ably.com/docs/chat/rooms?lang=react#create) hook: a hook to manage the state and interaction for a chat “room”, allowing users to join, send messages, listen for messages, and use the other chat functions such as typing indicators.
+* [`useTyping()`](https://ably.com/docs/chat/rooms/typing?lang=react#subscribe) hook: a hook to manage and track the typing status of users within a chat room.
 
 Find out more about [typing indicators](https://ably.com/docs/chat/rooms/typing).
 
@@ -40,91 +40,75 @@ Find out more about [typing indicators](https://ably.com/docs/chat/rooms/typing)
 
 // React
 
-## Getting started
-
-1. Clone the repository
-
-Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
+1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
 ```sh
 git clone git@github.com:ably/docs.git
 ```
 
-2. Change directory
+2. Change directory:
 
 ```sh
 cd /examples/chat-typing-indicator/react/
 ```
 
-3. Rename the environment file
+3. Rename the environment file:
 
 ```sh
 mv .env.example .env.local
 ```
 
-4. Update your API key
+4. In `.env.local` update the value of `NEXT_PUBLIC_ABLY_KEY` to be your Ably API key.
 
-In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key
-
-5. Install dependencies
+5. Install dependencies:
 
 ```sh
 yarn install
 ```
 
-6. Run the server
+6. Run the server:
 
 ```sh
 yarn run dev
 ```
 
-7. Try it out!
-
-Open two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
+7. Try it out by opening two tabs to http://localhost:3000/ with your browser to see the result.
 
 // Javascript
 
-## Getting started
-
-1. Clone the repository
-
-Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
+1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
 ```sh
 git clone git@github.com:ably/docs.git
 ```
 
-2. Change directory
+2. Change directory:
 
 ```sh
 cd /examples/chat-typing-indicator/javascript/
 ```
 
-3. Rename the environment file
+3. Rename the environment file:
 
 ```sh
 mv .env.example .env.local
 ```
 
-4. Update your API key
+4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
 
-In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key
-
-5. Install dependencies
+5. Install dependencies:
 
 ```sh
 yarn install
 ```
 
-6. Run the server
+6. Run the server:
 
 ```sh
 yarn run dev
 ```
 
-7. Try it out!
-
-Open two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
+7. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
 
 ## Open in CodeSandbox
 
