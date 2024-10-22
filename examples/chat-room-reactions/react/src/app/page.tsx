@@ -1,8 +1,9 @@
 "use client";
 
-import { useRoom } from '@ably/chat/react';
-import { Reaction as EmojiReaction } from "@/components/Reaction";
-import '../../styles/global.css'
+import React, { useState } from 'react';
+import { useRoom, useRoomReactions } from '@ably/chat/react';
+import { Reaction as ReactionInterface } from '@ably/chat';
+import '../../styles/styles.css'
 
 export default function Home() {
   const { roomStatus, connectionStatus } = useRoom();
@@ -19,6 +20,20 @@ export default function Home() {
 }
 
 const Chat = () => {
+  const [reactions, setReactions] = useState<ReactionInterface[]>([]);
+
+  const emojis = ['❤️', '😲', '👍', '😊'];
+
+  const { send } = useRoomReactions({
+    listener: (reaction) => {
+      setReactions((prevReactions: ReactionInterface[]) => [...prevReactions, {...reaction}])
+
+      setTimeout(() => {
+        setReactions(prevReactions => prevReactions.filter(r => r.createdAt !== reaction.createdAt));
+      }, 4000);
+    },
+  });
+
   return (
     <div id="chat-room-reactions" className="container">
        <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
@@ -28,14 +43,34 @@ const Chat = () => {
         >
         </div>
         <div className="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0">
+          <div className="emoji-selector">
+            {emojis.map((emoji, index) => (
+              <span
+                key={index}
+                className="emoji-btn"
+                onClick={() => send({type: emoji})}
+              >
+                {emoji}
+              </span>
+            ))}
+          </div>
+          <div className="absolute right-0 bottom-[100px] mb-2 mr-2">
+            <div className="reaction-container">
+              <div className="reaction-area">
+                {reactions.map((reaction, index) => (
+                  <span key={index} className="reaction">{reaction.type}</span>
+                ))}
+              </div>
+            </div>
+          </div>
           <form
             className="flex"
           >
             <input
               type="text"
               disabled={true}
-              placeholder="Type something..."
-              className="w-full focus:outline-none focus:placeholder-gray-400 text-gray-600 placeholder-gray-600 pl-2 pr-2 bg-gray-200 rounded-l-md py-1 disabled:cursor-not-allowed disabled:italic"
+              placeholder="Start typing..."
+              className="w-full focus:outline-none focus:placeholder-gray-400 text-gray-600 placeholder-gray-600 pl-2 pr-2 bg-gray-200 rounded-l-md py-1 disabled:cursor-not-allowed italic"
               autoFocus
             />
             <div className="items-center inset-y-0 flex">
@@ -56,9 +91,6 @@ const Chat = () => {
               </button>
             </div>
           </form>
-          <div className="absolute bottom-0 right-0 mb-2 mr-2">
-            <EmojiReaction />
-          </div>
         </div>
       </div>
     </div>
