@@ -4,42 +4,36 @@ This folder contains the code for room reactions (Typescript) - a demo of how yo
 
 ## Getting started
 
-1. Clone the repository
-
-Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
+1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
 ```sh
 git clone git@github.com:ably/docs.git
 ```
 
-2. Change directory
+2. Change directory:
 
 ```sh
 cd /examples/chat-room-reactions/javascript/
 ```
 
-3. Rename the environment file
+3. Rename the environment file:
 
 ```sh
 mv .env.example .env.local
 ```
 
-4. Update your API key
+1. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
 
-In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key
-
-5. Install dependencies
+2. Install dependencies:
 
 ```sh
 yarn install
 ```
 
-6. Run the server
+6. Run the server:
 
 ```sh
 yarn run dev
 ```
 
-7. Try it out!
-
-Open two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
+7. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.

@@ -4,7 +4,7 @@ import { Inter } from "next/font/google";
 import { ChatClientProvider, ChatRoomProvider } from '@ably/chat/react';
 import { Realtime } from 'ably';
 import { ChatClient, RoomOptionsDefaults } from '@ably/chat';
-import '../../styles/global.css'
+import '../../styles/styles.css'
 
 const inter = Inter({ subsets: ["latin"] });
 
