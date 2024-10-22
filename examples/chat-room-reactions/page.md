@@ -14,10 +14,10 @@ Room reactions are implemented using [Ably Chat](https://ably.com/docs/products/
 
 Use the following components to add room reactions into a chat application:
 
-* [ChatClientProvider](https://ably.com/docs/chat/setup?lang=react#instantiate): initializes and manages a shared chat client instance, passing it down through React context to enable real-time chat functionality across the application.
-* [ChatRoomProvider](https://ably.com/docs/chat/rooms?lang=react#create): manages the state and functionality of a specific chat room, providing access to messages, participants, and real-time interactions within that room via React context.
-* [useRoom()](https://ably.com/docs/chat/rooms?lang=react#create) hook: a hook to manage the state and interaction for a chat “room”, allowing users to join, send messages, listen for messages, and use the other chat functions such as typing indicators.
-* [useRoomReactions()](https://ably.com/docs/chat/rooms/reactions?lang=react#subscribe) hook: a hook to manage the reactions sent by users within a chat room.
+* [`ChatClientProvider`](https://ably.com/docs/chat/setup?lang=react#instantiate): initializes and manages a shared chat client instance, passing it down through React context to enable realtime chat functionality across the application.
+* [`ChatRoomProvider`](https://ably.com/docs/chat/rooms?lang=react#create): manages the state and functionality of a specific chat room, providing access to messages, participants, and realtime interactions within that room via React context.
+* [`useRoom()`](https://ably.com/docs/chat/rooms?lang=react#create) hook: a hook to manage the state and interaction for a chat “room”, allowing users to join, send messages, listen for messages, and use the other chat functions such as typing indicators.
+* [`useRoomReactions()`](https://ably.com/docs/chat/rooms/reactions?lang=react#subscribe) hook: a hook to manage the reactions sent by users within a chat room.
 
 Find out more about [room reactions](https://ably.com/docs/chat/rooms/reactions).
 
@@ -39,87 +39,75 @@ Find out more about [room reactions](https://ably.com/docs/chat/rooms/reactions?
 
 // React
 
-1. Clone the repository
-
-Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
+1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
 ```sh
 git clone git@github.com:ably/docs.git
 ```
 
-2. Change directory
+2. Change directory:
 
 ```sh
 cd /examples/chat-room-reactions/react/
 ```
 
-3. Rename the environment file
+3. Rename the environment file:
 
 ```sh
 mv .env.example .env.local
 ```
 
-4. Update your API key
+4. In `.env.local` update the value of `NEXT_PUBLIC_ABLY_KEY` to be your Ably API key.
 
-In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key
-
-5. Install dependencies
+5. Install dependencies:
 
 ```sh
 yarn install
 ```
 
-6. Run the server
+6. Run the server:
 
 ```sh
 yarn run dev
 ```
 
-7. Try it out!
-
-Open two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
+7. Try it out by opening two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
 
 // Javascript
 
-1. Clone the repository
-
-Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
+1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
 ```sh
 git clone git@github.com:ably/docs.git
 ```
 
-2. Change directory
+2. Change directory:
 
 ```sh
 cd /examples/chat-room-reactions/javascript/
 ```
 
-3. Rename the environment file
+3. Rename the environment file:
 
 ```sh
 mv .env.example .env.local
 ```
 
-4. Update your API key
+4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key:
 
-In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key
-
-5. Install dependencies
+5. Install dependencies:
 
 ```sh
 yarn install
 ```
 
-6. Run the server
+6. Run the server:
 
 ```sh
 yarn run dev
 ```
 
-7. Try it out!
-
-Open two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
+7. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
 
 ## Open in CodeSandbox
 
