@@ -1,6 +1,6 @@
-# Typing indicator example with Ably Chat in React
+# Room reactions example for chat applications
 
-This folder contains the code for the Chat typing indicator (React) - a demo of how you can leverage [Ably Chat](https://ably.com/docs/chat) to track people typing in an input.
+This folder contains the code for the room reactions (React) - a demo of how you can leverage [Ably Chat](https://ably.com/docs/products/chat) to send reactions to the room by the users.
 
 ## Getting started
 
@@ -13,7 +13,7 @@ git clone git@github.com:ably/docs.git
 2. Change directory:
 
 ```sh
-cd /examples/chat-typing-indicator/react/
+cd /examples/chat-room-reactions/react/
 ```
 
 3. Rename the environment file:
