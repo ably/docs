@@ -4,76 +4,35 @@ meta_description: "LiveSync enables you to synchronize changes in your database 
 product: livesync
 ---
 
-LiveSync is a powerful realtime data synchronization product designed to facilitate broadcasting realtime updates from backend databases to frontend clients at scale. Leveraging Ably Pub/Sub, LiveSync ensures that data updates are propagated reliably and in order to all connected clients in realtime.
+LiveSync is a powerful realtime data synchronization product designed to broadcast realtime updates from backend databases to frontend clients at scale. Leveraging Ably Pub/Sub, LiveSync ensures that data updates are propagated reliably and in order to all connected clients in realtime.
 
-LiveSync can be used for a variety of applications where your database is the source of truth for the application state and that state needs to be reflected in realtime on the frontend apps. LiveSync enables this data synchronisation while maintaining data integrity and low latency. Furthermore, developers can also build highly responsive and interactive applications by enabling optimistic updates, which is offered out of the box as a design pattern.
+LiveSync can be used for a variety of applications where your database is the source of truth for the application state and that state needs to be reflected in realtime on the frontend apps. LiveSync enables this data synchronisation while maintaining data integrity and low latency. Developers can build highly responsive and interactive applications by enabling optimistic updates, which is offered out of the box as a design pattern.
 
-LiveSync has three key components:
+There are two flavours of LiveSync:
 
-# a Models SDK in the frontend that facilitates optimistic updates for the publisher and helps merge the confirmed updates from the backend with the overall application state.
-# a Database Connector at the backend that can watch changes in your database table using the transactional "outbox pattern":https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html and broadcast those updates over Ably channels.
-# Pub/Sub channels that form the mechanism behind the scenes to broadcast those updates from the connector to the frontend apps.
+* *Postgres and Models SDK*: sync datamodels to frontend clients directly from your Postgres database in realtime. Comes with built in optimistic updates, and hooks for intial load of you datamodel's data.
+* *MongoDB connector*: sync "Change Events":https://www.mongodb.com/docs/v8.0/changeStreams/ produced by MongoDB to subscribing clients in realtime.
+
 
 <a href="@content/diagrams/what-is-livesync.png" target="_blank">
-  <img src="@content/diagrams/what-is-livesync.png" style="width: 100%" alt="What is LiveSync">
+<img src="@content/diagrams/what-is-livesync.png" style="width: 100%" alt="What is LiveSync">
 </a>
 
-LiveSync borrows concepts from "Event Driven Architectures":https://en.wikipedia.org/wiki/Event-driven_architecture (EDA) to offer a flexible and reliable approach to data synchronization. By being built on top of Ably "Pub/Sub":https://ably.com/solutions/channels it automatically benefits from automatic "connection recovery":https://ably.com/docs/connect/states as well as features like "rewind":https://ably.com/docs/channels/options/rewind and "history":https://ably.com/docs/storage-history/history to make sure you don't miss messages. You can also leverage the "capabilities":https://ably.com/docs/auth/capabilities on the authentication tokens to control the access to various data models. Furthermore, Ably's platform guarantees and "four pillars of dependability":https://ably.com/four-pillars-of-dependability, i.e. performance, integrity, reliability and availability, apply by default.
+LiveSync borrows concepts from "Event Driven Architectures":https://en.wikipedia.org/wiki/Event-driven_architecture (EDA) to offer a flexible and reliable approach to data synchronization. By being built on top of Ably "Pub/Sub":https://ably.com/solutions/channels it automatically benefits from automatic "connection recovery":https://ably.com/docs/connect/states as well as features like "rewind":https://ably.com/docs/channels/options/rewind and "history":https://ably.com/docs/storage-history/history to make sure you don't miss messages. You can also leverage the "capabilities":https://ably.com/docs/auth/capabilities on the authentication tokens to control the access to various data models. 
+
+Ably's platform guarantees and "four pillars of dependability":https://ably.com/four-pillars-of-dependability apply by default; performance, integrity, reliability, and availability.
 
 h2(#channel-based-broadcasting). Channel-based broadcasting
 
-Ably's "pub/sub channels":https://ably.com/docs/channels are the mechanism used by LiveSync for synchronizing data updates across frontend clients. When a message is published on a channel by the database connector, it is immediately broadcast to all subscribers of that channel.
-
-h2(#livesync-components). LiveSync components
-
-Below are the core components of LiveSync, these are split between the frontend client and the backend:
-
-h3(#frontend). Frontend
-
-Clients consume realtime updates reflecting database tables through the Models SDK:
-
-h4(#initial-load). Initial state load
-
-When a client initiates the LiveSync Models SDK, for example, when the page is loaded, it will call the @sync@ function. The @sync@ function retrieves the initial state of the model from your backend and stores it within your applications state.
-
-h4(#subscribing). Subscribing to changes
-
-In the Models SDK, you can subscribe to a model to receive its updated state whenever changes occur. This enables you to seamlessly integrate the updated model state into your user interface or react to changes in various ways.
-
-Incoming messages on a channel trigger the @merge@ function, which integrates the message content into the existing state of your application.
-
-h4(#optimistic-updates). Optimistic updates
-
-Optimistic updates enhance UI responsiveness, allowing updates to be applied optimistically in the UI before being confirmed in the database. Each optimistic update is associated with a @mutationId@, which enables tracking and matching with events received on the channel. This ID should be included in the mutation sent to your backend and recorded in the outbox table to confirm or reject the update. Unconfirmed optimistic updates will be rolled back by the Models SDK automatically.
-
-h3(#backend). Backend
-
-There are two key requirements within your backend for LiveSync:
-
-h4(#outbox-table). Database outbox table
-
-The outbox pattern essentially enables transactionally publishing to Ably channels as you make an update to your database, thus preventing a dual-write scenario and all the complexities associated with it. Automatically reacting to new records written to the outbox table, the Database Connector publishes these records to subscribed clients.
-
-h4(#sequence-id). sequenceId
-
-You will need to associate a sequence ID with your database records. This sequence ID, retrieved from your backend during the @sync@ function call enables the Models SDK to synchronize the model's state  with the correct point in the change event stream during the initial load process.
-
-h2(#use-cases). Use cases
-
-LiveSync can benefit a wide range of applications including Customer Relationship Management (CRM) applications, customer support applications, productivity or task management applications, online auctions, collaborative form editing, e-commerce systems, chat conversations, multiplayer turn-based games and realtime newsfeeds. You can enable collaboration between multiple users, while ensuring the app data is always securely stored in your own database and serves as the final source of truth.
-
-To understand this further, let's take the example of a CRM application — In a CRM app, an individual customer details page can be represented as a single data model with its own channel. When a user updates the customer's information, optimistic updates can immediately reflect the changes in the UI while the confirmation goes to a roundtrip through the database. When confirmed, the original user's UI update can be confirmed and all other clients can also see that update without needing to refresh the page.
-
-h3(#known-limitations). Known limitations
-
-LiveSync's current design might be limiting to data models based on graph data structures. As each data model is meant to work with a channel of it's own, any application changes that apply to multiple data models will need to be handled and published separately to the outbox table.
-
-LiveSync might also be limiting to use-cases requiring complex conflict resolution logic and the "last write to the database wins" strategy isn't enough. Having said that, LiveSync can be easily coupled with the component locking feature in Spaces to make sure the individual UI components can be locked thus avoiding the need to resolve conflicts. For most use-cases like collaborative form building, component locking might actually a better user experience compared to co-editing capabilities.
+Ably's "pub/sub channels":https://ably.com/docs/channels are the mechanism used by LiveSync for synchronizing data updates to subscribing clients. When a message is published on a channel by one of the database connectors, it is immediately broadcast to all subscribers of that channel.
 
 h2(#pricing). Pricing
 
-LiveSync pricing is mainly based on message consumption (alongside concurrent connections and concurrent channels). This means that each update published from the Database Connector to Ably channels is counted as a single message. The message then received by every frontend client subscribed to that channel is counted as one message. If, for example, one update is published by the Database Connector and there are three frontend clients subscribed, the one update will lead result in four messages and priced as such. Take a look at the "pricing page":https://ably.com/pricing for further information on how these parameters are charged.
+LiveSync pricing is based on message publishes and subscribes (alongside concurrent connections and concurrent channels). Each update published from the Database Connector to an Ably channel is counted as a single message. The message is then additionally counted as for each frontend client that receives that message on their channel subscription. If, for example, one update is published by the Database Connector and there are three frontend clients subscribed, you will be charged for four messages. Take a look at the "pricing page":https://ably.com/pricing for more info.
 
 h2(#development-status). Development status
 
-LiveSync is in public alpha so that you can explore its capabilities. Your "feedback":https://docs.google.com/forms/d/e/1FAIpQLSd00n1uxgXWPGvMjKwMVL1UDhFKMeh3bSrP52j9AfXifoU-Pg/viewform will help prioritize improvements and fixes for subsequent releases. The features in this release have been validated for a set of use-cases and the alpha is implemented to work under real-world situations and load, but you should use caution when deciding under what conditions to use it.
+* LiveSync Postgres connector and Models SDK is in public alpha
+* LiveSync MongoDB connector is in public beta
+
+Your "feedback":https://docs.google.com/forms/d/e/1FAIpQLSd00n1uxgXWPGvMjKwMVL1UDhFKMeh3bSrP52j9AfXifoU-Pg/viewform will help prioritize improvements and fixes for subsequent releases. The features in this release have been validated for a set of use-cases and the alpha is implemented to work under real-world situations and load, but you should use caution when deciding under what conditions to use it.

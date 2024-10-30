@@ -1,0 +1,677 @@
+---
+title: Postgres Database connector
+meta_description: "The Ably Postgres Database connector connects your database to frontend clients in realtime through Ably channels."
+product: livesync
+redirect_from:
+  - /livesync/connector
+  - /livesync/connector/monitor
+  - /livesync/database-connector
+  - /livesync/outbox-nodes-tables
+---
+
+The Postgres Database connector sends updates from your database to frontend clients through Ably "channels":/channels using the "outbox pattern":https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html. When you update data in your database, you will also need to record the changes in an outbox table as part of the same transaction, which is discussed further in the "outbox and nodes tables page":/livesync/outbox-nodes-tables. The Postgres connector detects the changes in the outbox table and publishes them as messages to specified channels. Client applications using the "Models SDK":/livesync/models subscribe to these channels to receive updates to data stored locally within models.
+
+The Postgres connector can be self-hosted using a Docker container, or hosted by Ably and interacted with via an integration rule.
+
+The Postgres connector can be used with an existing database, or a new database. It is designed to be database agnostic, however only "PostgreSQL":https://www.postgresql.org/ is currently supported.
+
+To configure the Postgres connector, you need an Ably "API key":/auth#api-keys and the connection details of your database.
+
+<a href="@content/diagrams/livesync-database-connector-usecase.png" target="_blank">
+  <img src="@content/diagrams/livesync-database-connector-usecase.png" style="width: 100%" alt="An image showing how the Postgres connector plays in the LiveSync flow">
+</a>
+
+h2(#hosted-with-ably). Ably hosted Postgres connector
+
+The hosted Postgres connector is available without the need to install a new service on your servers.
+
+h3(#configure-the-connector). Configure the Postgres connector
+
+You can configure your Postgres connector using the Postgres rule in the @Integrations@ tab of the Ably "dashboard":https://ably.com/dashboard. The following input fields are available when configuring this integration:
+
+|_. Option |_. Description |
+| URL | The URL for your Postgres database, for example @postgres://user:password&#64;example.com:5432/your-database-name@ |
+| Outbox table schema | Schema for the "outbox table":/livesync/outbox-nodes-tables#schema in your database which allows for the reliable publication of an ordered sequence of change event messages over Ably. |
+| Outbox table name | Name for the "outbox table":/livesync/outbox-nodes-tables#outbox-table. |
+| Nodes table schema | Schema for the "nodes table":/livesync/outbox-nodes-tables#schema in your database to allow for operation as a cluster to provide fault tolerance. |
+| Nodes table name | Name for the "nodes table":/livesync/outbox-nodes-tables#nodes-table. |
+| SSL mode | Determines the level of protection provided by the SSL connection. Options are: @prefer@, @require@, @verify-ca@, @verify-full@; default value is @prefer@. |
+| SSL root certificate | Optional. Specifies the SSL certificate authority (CA) certificates. Required if @SSL mode@ is @verify-ca@ or @verify-full@. |
+| Primary site | The primary data center in which to run the integration rule. |
+
+You can optionally test your Postgres connector is correctly configured using the Curl requests provided in the integration rule of your application in the Ably dashboard.
+
+h2(#self-hosted). Self-hosted Postgres connector
+
+The Postgres connector is available as a service hosted by yourself through Docker.
+
+h3(#pull-docker). Pull Docker container image
+
+The self-hosted Postgres connector is a "Docker container image":https://docs.docker.com/get-started/overview/#containers, which is compatible with any cloud infrastructure platform that can run Docker containers.
+
+The following is the command to pull the Postgres connector image:
+
+```[sh]
+docker pull ghcr.io/ably-labs/adbc:latest
+```
+
+h3(#configure-the-connector). Configure the Postgres connector
+
+The Postgres connector requires some configuration values to run. The following three options are available to override the default values of the ADBC configuration options, such as configuring the environment descriptor (development or production), or setting the log level (debug, info, warn, error, fatal, or panic):
+
+* "Environment variables":#environment-variables
+* "YAML":#yaml
+* "Command line flags":#command-line-flags
+
+h4(#environment-variables). Environment variables
+
+Specify configuration options as environment variables by using the following method:
+
+* Capitalize each option.
+* Separate each word with underscores.
+* Prefix each option with @ADBC_@ to denote a namespace and avoid conflicts with other variables.
+
+Set your Ably "API key":/auth#api-keys using an environment variable:
+
+```[sh]
+docker run -it -e ADBC_ABLY_API_KEY={{API_KEY}} ghcr.io/ably-labs/adbc:latest
+```
+
+The following is an example of reading the API key from a @.env@ file:
+
+```[sh]
+echo “ADBC_ABLY_API_KEY={{API_KEY}}”  >> adbc.env
+docker run -it --env-file=adbc.env ghcr.io/ably-labs/adbc:latest
+```
+
+h4(#yaml). YAML
+
+Specify configuration options as YAML by using the following method:
+
+* Use camel case for each option.
+* Name the file @adbc.yaml@ or @.adbc.yaml@.
+* Host it in the working directory, the @$HOME@ directory, or specify its path using @--config@.
+
+Set your Ably "API key":/auth#api-keys using a YAML file:
+
+```[yaml]
+ably:
+  apiKey: "{{API_KEY}}"
+```
+
+Ensure the YAML file is accessible to the application by mounting it inside the container:
+
+```[sh]
+docker run -it --volume "$(pwd)/adbc.yaml:/adbc.yaml:ro" ghcr.io/ably-labs/adbc:latest
+```
+
+Verify the YAML file is mounted inside the container by using the following method:
+
+```[yaml]
+version: '3'
+
+services:
+ adbc:
+   image: ghcr.io/ably-labs/adbc:latest
+   volumes:
+     - ./adbc.yaml:/adbc.yaml:ro # mount yaml config file
+```
+
+h4(#command-line-flags). Command-line flags
+
+Specify configuration options using CLI:
+
+* Use snake case for each option.
+* Prefix each with @--@.
+
+Set your Ably "API key":/auth#api-keys using CLI:
+
+```[sh]
+docker run -it ghcr.io/ably-labs/adbc:latest --ably-api-key={{API_KEY}}
+```
+
+h4(#common-config-options). Common config options
+
+Use @--help@ to view the complete set of configuration options available on the Postgres connector:
+
+```[sh]
+docker run -it --entrypoint="/adbc" ghcr.io/ably-labs/adbc:latest --help
+```
+
+The following table provides descriptions for the most commonly used configuration options:
+
+|_. Option |_. Description |
+| @ADBC_ABLY_API_KEY@ | Your Ably "API key":/auth#api-keys. |
+| @ADBC_POSTGRES_CONNECTION_URI@ | The full connection URI of your Postgres database. |
+| @ADBC_POSTGRES_HOST@ | Your Postgres database host name as an alternative to providing the @CONNECTION_URI@. |
+| @ADBC_POSTGRES_PORT@ | Your Postgres database port number as an alternative to providing the @CONNECTION_URI@. |
+| @ADBC_POSTGRES_DATABASE@ | Your Postgres database name as an alternative to providing the @CONNECTION_URI@. |
+| @ADBC_POSTGRES_USER@ | Your Postgres database user as an alternative to providing the @CONNECTION_URI@. |
+| @ADBC_POSTGRES_PASSWORD@ | Your Postgres database user password as an alternative to providing the @ADBC_POSTGRES_CONNECTION_URI@. |
+| @--config@ | Can only be specified as a CLI flag and enables you to override the path to a YAML configuration file. |
+| @ADBC_ENV@ | An environment descriptor (either development or production). @development@ pretty-prints log output with logging enabled at debug level and above. @production@ logs output in JSON format with logging enabled at info level and above. |
+| @ADBC_LOG_LEVEL@ | Specifies the log level to use (one of: debug, info, warn, error, fatal, panic) and overrides any presets from @ADBC_ENV@. |
+| @ADBC_OUTBOX_TABLE_TABLE_SCHEMA@ | Configures the database schema of the outbox table. |
+| @ADBC_OUTBOX_TABLE_TABLE_NAME@ | Configures the name of the outbox table. |
+| @ADBC_OUTBOX_TABLE_AUTO_CREATE@ | Configures the application to create the outbox table if it doesn't already exist on startup. |
+| @ADBC_NODES_TABLE_TABLE_SCHEMA@ | Configures the database schema of the nodes table. |
+| @ADBC_NODES_TABLE_TABLE_NAME@ | Configures the name of the nodes table. |
+| @ADBC_NODES_TABLE_AUTO_CREATE@ | configures the application to create the nodes table if it doesn't already exist on startup. |
+| @ADBC_HEALTH_ADDRESS@ | Configures the TCP address for the server to listen on in the form host:port. |
+| @ADBC_POLL_FIXED_RATE@ | If true, the application polls the outbox table at a fixed rate given by @ADBC_POLL_INTERVAL@ (default 1 second). If false, the application uses a "trigger":https://www.postgresql.org/docs/current/sql-createtrigger.html with "LISTEN/NOTIFY":https://www.postgresql.org/docs/current/sql-notify.html to poll for records only when the data in the outbox changes. |
+
+h3(#existing-database). Run with an existing database
+
+Use "Docker Compose":https://docs.docker.com/compose/ to use an existing "PostgreSQL":https://www.postgresql.org/ instance with the Postgres connector. By default, Docker Compose automatically generates a PostgreSQL instance for you.
+
+Docker Compose sets up and runs a local development environment. You can create and start your PostgreSQL database and an instance of the Postgres connector on your local machine.
+
+h4(#existing-setup). Setup
+
+To begin, create a @docker-compose.yml@ file with the following contents:
+
+```[yaml]
+version: '3'
+
+services:
+  adbc:
+    image: ghcr.io/ably-labs/adbc:latest
+    env_file:
+      - adbc.env # load config from env file
+    # Uncomment below if you want to load config from your adbc.yaml file,
+    # which takes precedence over config from the env.
+    # volumes:
+    #   - ./adbc.yaml:/adbc.yaml:ro # mount yaml config file
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - adbc_network
+
+  postgres:
+    image: postgres:11-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-d", "postgres", "-U", "postgres"]
+      interval: 2s
+      retries: 30
+    networks:
+      - adbc_network
+    volumes:
+      - adbc_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  adbc_postgres_data:
+
+networks:
+  adbc_network:
+```
+
+h4(#existing-config). Configuration
+
+There are three "options":/livesync/outbox-nodes-tables#database-migrations to configure the Postgres connector. The following example solely demonstrates "environment variables":#environment-variables.
+
+Create an @adbc.env@ file with, at a minimum, the following configuration options:
+
+```[sh]
+ADBC_ABLY_API_KEY={{API_KEY}}
+ADBC_POSTGRES_CONNECTION_URI=postgres://postgres:postgres@postgres:5432/postgres
+ADBC_OUTBOX_TABLE_AUTO_CREATE=true
+ADBC_NODES_TABLE_AUTO_CREATE=true
+```
+
+The @docker-compose.yml@ will load this configuration into the @adbc@ container as environment variables.
+
+<aside data-type='important'>
+<p>Ensure your API key has the @publish@ "capability":/auth/capabilities for the channels you require.
+ </p>
+</aside>
+
+Run @docker compose up@ to build and run the Docker containers:
+
+```[sh]
+docker compose up --build
+```
+
+Ping the Postgres connector "health endpoint":/livesync/database-connector#monitoring to verify everything works correctly.
+
+```[sh]
+curl localhost:2259/health
+```
+
+The response should look similar to the following:
+
+```[json]
+{"ably":{"status":"up"},"nodes_table":{"status":"up"},"outbox_table":{"status":"up"},"postgres":{"status":"up"}}
+```
+
+h4(#existing-verifying-connection). Verifying connection
+
+Verify your connection to the Ably network now you have a PostgreSQL database and Postgres connector instance running. The following examples show how to write a record to the outbox table and confirm its publication.
+
+Subscribe to a "channel":/channels named @foo@ using "Server-Sent Events:":/protocols/sse
+
+```[sh]
+curl -s -u "{{API_KEY}}" "https://realtime.ably.io/sse?channel=foo&v=1.1"
+```
+
+Add a record to the outbox table in your PostgreSQL database. Use the "psql":https://www.postgresql.org/docs/current/app-psql.html#:~:text=psql%20is%20a%20terminal%2Dbased,or%20from%20command%20line%20arguments tool in the Postgres container to execute an SQL statement against the database:
+
+```[sh]
+docker exec -it -u postgres adbc-postgres \
+    psql postgres://postgres:postgres@postgres:5432/postgres \
+    -c "INSERT INTO outbox (mutation_id, name, channel, data, headers) \
+       VALUES ('1', 'test', 'foo', '{}', '{}');"
+```
+
+<aside data-type='note'>
+<p>You have named your channel @foo@ Check for @foo@ in the output to confirm a successful connection. </p>
+</aside>
+
+The Postgres connector detects and publishes newly inserted records as messages to the specified channel in the record.
+
+You will receive a response similar to the following, indicating the successful receipt of the event over your "SSE":/protocols/sse connection to Ably:
+
+```[sh]
+id: 108GsR8ewBVHhJ@1700069266489-0
+event: message
+data: {"id":"1","connectionId":"CaqkrZ2N_0","timestamp":1700069266050,"encoding":"json","extras":{"headers":{"x-ably-models-event-uuid":"1"}},"channel":"foo","data":"{}","name":"test"}
+```
+
+h3(#new-database). Run with a new database
+
+When running the Postgres connector with a new database, you can use any Postgres provider. To enable you to get set up quickly, this documentation uses "Railway":https://railway.app/. Railway is a deployment platform where you can provision infrastructure, develop with that infrastructure locally, and then deploy to the cloud. Railway provides a PostgreSQL database service that allows you to provision and connect to a PostgreSQL database with zero configuration.
+
+h4(#new-setup). Setup
+
+Create a free Railway account, install the Railway CLI and log in:
+
+```[sh]
+npm i -g @railway/cli
+railway login
+```
+
+Create a new Railway project and link it to your project directory:
+
+```[sh]
+railway init
+# Enter a project name, e.g., "adbc-test"
+
+railway link
+```
+
+Add the PostgreSQL plugin to your project:
+
+```[sh]
+railway add --plugin postgresql
+```
+
+Create a new Dockerfile using the Postgres connector as the base image. Railway requires a Dockerfile to define the application for deployment:
+
+```[sh]
+echo "FROM ghcr.io/ably-labs/adbc:latest" > Dockerfile
+```
+
+Use @railway up@ to deploy your application. This command will build the Postgres connector container image from the Dockerfile in your project root and deploy it to your Railway project:
+
+```[sh]
+railway up --detach
+```
+
+h4(#new-config). Configuration
+
+Open your project in the Railway console. Your Postgres connector will crash until further configuration is added:
+
+```[sh]
+railway open
+```
+
+Select the @adbc-test@ service, then navigate to *Variables* -> *RAW Editor*. Paste the following variables into this section:
+
+```[sh]
+ADBC_ABLY_API_KEY={{API_KEY}}
+ADBC_POSTGRES_CONNECTION_URI=${{Postgres.DATABASE_URL}}
+ADBC_OUTBOX_TABLE_AUTO_CREATE=true
+ADBC_NODES_TABLE_AUTO_CREATE=true
+```
+
+<aside data-type='note'>
+<p>The @ADBC_POSTGRES_CONNECTION_URI@ uses Railway's "reference variables":https://docs.railway.app/develop/variables#reference-variables to connect to the PostgreSQL plugin configured on the project.</p>
+<p>The @ADBC_OUTBOX_TABLE_AUTO_CREATE@ and @ADBC_NODES_TABLE_AUTO_CREATE@ configuration options instruct the Postgres connector to "create the required tables":/livesync/outbox-nodes-tables#auto-create in the database upon startup.</p>
+</aside>
+
+Railway will restart the @adbc-test@ service with the newly applied configuration.
+
+h4(#new-verifying-connection). Verifying connection
+
+Verify your connection to the Ably network now you have a PostgreSQL database and Postgres connector instance running. The following examples show how to write a record to the outbox table and confirm its publication.
+
+Subscribe to a "channel":/channels named @foo@ using "Server-Sent Events:":/protocols/sse
+
+```[sh]
+curl -s -u "{{API_KEY}}" "https://realtime.ably.io/sse?channel=foo&v=1.1"
+```
+
+Add a record to the outbox table in your PostgreSQL database. Use the Railway CLI to execute an SQL statement against the database:
+
+```[sh]
+railway connect postgres
+
+railway=# INSERT INTO outbox (mutation_id, name, channel, data, headers)
+VALUES ('1', 'test', 'foo', '{}', '{}');
+```
+
+<aside data-type='note'>
+<p>You have named your channel @foo@ Check for @foo@ in the output to confirm a successful connection. </p>
+</aside>
+
+The Postgres connector detects and publishes newly inserted records as messages to the specified channel in the record.
+
+You will receive a response similar to the following, indicating the successful receipt of the event over your "SSE":/protocols/sse connection to Ably:
+
+```[sh]
+id: 108GsR8ewBVHhJ@1700069266489-0
+event: message
+data: {"id":"1","connectionId":"CaqkrZ2N_0","timestamp":1700069266050,"encoding":"json","extras":{"headers":{"x-ably-models-event-uuid":"1"}},"channel":"foo","data":"{}","name":"test"}
+```
+
+
+h2(#table-schema). Table Schema
+
+LiveSync requires two database tables in your database, an "outbox table":#outbox-table and a "nodes table":#nodes-table.
+
+h3(#outbox-table). Outbox table
+
+The Postgres connector utilizes the "outbox pattern":https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/transactional-outbox.html to send realtime, application-defined change events via Ably's global edge messaging platform. The outbox pattern allows for the reliable publication of an ordered sequence of change event messages over Ably, providing exactly-once delivery guarantees. This pattern involves the use of an outbox table that you create in your database.
+
+The Postgres connector automatically monitors new records written to the outbox table and publishes them as messages over "channels":/channels.
+
+When your backend server processes a request to update data in your database, it should also write a corresponding change event to the outbox table within the same transaction as the underlying mutation. The Postgres connector then publishes the change event, written to the outbox, to the channel in the exact order that the underlying change to the data is committed to the database. Furthermore, the Postgres connector automatically deletes records from the table once the records are successfully processed.
+
+This example adds a comment and logs the event to the outbox table:
+
+```[text]
+BEGIN;
+-- mutate your data, e.g.:
+INSERT INTO comments (comment) VALUES ('New comment!');
+-- write change event to outbox, e.g.:
+INSERT INTO outbox (mutation_id, channel, name, data) VALUES ('my-mutation-id', 'posts:123', 'addComment', 'New comment!');
+COMMIT;
+```
+
+The following describes the columns in the outbox table:
+
+- @mutation_id@ := is the identifier for the mutation.
+- @channel@ := is the channel to deliver the mutation, in this case, @posts:123@.
+- @name@ := indicates a comment is added.
+- @data@ := is the actual content or details of the mutation in a JSON encodable object.
+
+<aside data-type='note'>
+  <p>The Postgres connector will always keep at least one outbox record in the table, specifically the one with the latest @sequence_id@. This record is still marked as processed via a tombstone and will be deleted when subsequent records are written to the outbox. This approach ensures that the backend endpoint called by your "sync function":/livesync/models#create-sync can always obtain the @sequence_id@ at the time that the state is read from the database.</p>
+</aside>
+
+h4(#why-outbox). Why use an outbox pattern?
+
+Clients using the "Models SDK":/livesync/models observe changes to the database state by consuming a stream of ordered database change events. An update to the data in the database must happen atomically, with the corresponding change event broadcast to all clients, so that they see a consistent view of the data.
+
+The Postgres connector uses an outbox table to capture change events. When you update data in the database, you write a change event record to the outbox in the same database transaction as the update. This process ensures that change event records are written atomically to the outbox with the underlying update in the correct order.
+
+The Postgres connector automatically retries failed publishes and only marks records as processed in the outbox after successfully publishing them. It uses idempotent publishing to ensure that messages are delivered without duplication.
+
+An additional benefit of the outbox pattern is that it decouples the underlying database schema from the change event schema published over Ably. This separation lets you adapt your database schema and data models without altering the code of your subscribing applications.
+
+With explicit outbox writes, you maintain complete control over which data changes trigger publishes, enabling you to synchronize only the changes required by your application.
+
+You have complete control over the channels where change events are published:
+
+* You can distribute change notifications across various "channels":/channels according to the requirements of your application.
+* You have data access control via channel "capabilities":/auth/capabilities.
+
+h4(#schema). Schema
+
+The following table describes the schema of the outbox table in your database:
+
+|_. Field |_. Type |_. Required on write? |_. Example Value |_. Description |
+| @sequence_id@ | Serial integer (primary key) | No (automatically assigned) | @1@ | Monotonically increasing identifier that determines publish order within the scope of the channel. |
+| @mutation_id@ | String | Yes | @680f3f78-21ec-49a0-be99-25f89a84f232@ | The ID of the mutation, used for correlating the outbox event with an optimistic event applied locally on the client. |
+| @channel@ | String | Yes | @documents@ | The "channel":/channels name on which to publish this change event. |
+| @name@ | String | Yes | @edit@ | The message event name to use when publishing the message. |
+| @rejected@ | Boolean | No (defaults to FALSE) | @FALSE@ | True if the event rejects a client side change, false to confirm the change. Defaults to false (confirming the change). |
+| @data@ | JSON | Yes | @{ "read": false, "data": { "timestamp": 1674744488658, "body": "Lorem ipsum" } }@ | The message payload to use when publishing the message. |
+| @headers@ | JSON | No (optional) | @{ "id": 123, "type": "document", "author": "socrates", "pages": [1, 5, 7] }@ | A set of message attributes, provided under the headers key in the message extras. These are optional properties that may contain metadata and/or ancillary payloads. |
+| @locked_by@ | String | No (implementation detail) | @0d6c0277-e88a-4dba-a854-e80a4bd75317@ | The ID of the node that has locked this record. This is an implementation detail of how the Postgres connector processes records and you should not set a value for this column when inserting an outbox record. |
+| @lock_expiry@ | Timestamp | No (implementation detail) | @2023-06-12 16:24:27 @| The timestamp at which the lock will expire. This is an implementation detail of how the Postgres connector processes records and you should not set a value for this column when inserting an outbox record. |
+
+
+h4(#change-detection). Change detection
+
+The Postgres connector uses a poll-on-change strategy to query for new records to process when they are inserted into the outbox. This is the strategy used with the @ADBC_POLL_FIXED_RATE@ configuration option set to @false@. This is achieved through the use of a "trigger":https://www.postgresql.org/docs/current/sql-createtrigger.html configured on the outbox table and is the default behavior. The trigger invokes a "function":https://www.postgresql.org/docs/current/sql-createfunction.html#:~:text=Use%20CREATE%20OR%20REPLACE%20FUNCTION%20to%20change%20a%20function%20definition,the%20owner%20of%20the%20function which uses "NOTIFY":https://www.postgresql.org/docs/current/sql-notify.html to broadcast a notification to the Postgres connector, which it receives using "LISTEN":https://www.postgresql.org/docs/current/sql-listen.html.
+
+Internally, the Postgres connector debounces notifications within a window determined by the @ADBC_POLL_INTERVAL@ "configuration option":/livesync/database-connector#common-config-options. This approach avoids imposing additional load on the database due to polling when there are no new records to process.
+
+Alternatively, you can configure the Postgres connector to periodically poll for new records with an interval determined by the @ADBC_POLL_INTERVAL@ configuration option by setting @ADBC_POLL_FIXED_RATE@ to @true@.
+
+h3(#nodes-table). Nodes table
+
+The Postgres connector can operate as a cluster to provide fault tolerance. Work is automatically re-distributed across available nodes in the event of failures.
+
+To partition outbox records and process them across available Postgres connector nodes, each node must know about all other available nodes in the cluster. These nodes discover eachother by reading the entries in the nodes database table.
+
+The nodes table must also exist in your database, but as an application developer, you do not need to interact with this table directly.
+
+h4(#node-discovery). Node discovery
+
+Nodes discover one another using a nodes table that contains a row for each node in the cluster.
+
+When a node starts up, it generates a unique ID and is added to the nodes table. When the node shuts down, it removes itself from the table.
+
+Each node in the table includes an expiry timestamp, set to a time in the future according to the @ADBC_HEARTBEAT_TIMEOUT@ "configuration option":/livesync/database-connector#common-config-options. Periodically, each node sends a heartbeat to the database by updating its expiry timestamp in the nodes table. It will eventually expire if a node cannot communicate with the database. The Postgres connector automatically removes expired nodes from the table.
+
+h4(#schema). Schema
+
+The following table describes the schema of the nodes table in your database:
+
+|_. Field |_. Type |_. Description |
+| @id@ | Text (primary key) | UUID for the node in the table. |
+| @expiry@ | Timestamp | Timestamp after which the node is considered no longer active. |
+
+h3(#create-tables). Create the outbox and nodes tables
+
+When starting the Postgres connector, you can manually create the required tables using the "CLI":#cli, "automatically":#auto-create, or by "applying database migrations":#database-migrations.
+
+h4(#cli). Using the CLI
+
+Use the @create tables@ command to automatically create the required tables in your database. @create tables@ requires the application to use a "PostgreSQL":https://www.postgresql.org/ user that has been granted @CREATE@ permissions on the desired schemas.
+
+The following is an example command to create the required tables:
+
+```[sh]
+docker run -it --entrypoint="/adbc" ghcr.io/ably-labs/adbc:latest create tables
+```
+
+The table names and schemas are specified via the following "configuration options:":/livesync/database-connector#common-config-options
+
+* @ADBC_OUTBOX_TABLE_TABLE_SCHEMA@
+* @ADBC_OUTBOX_TABLE_TABLE_NAME@
+* @ADBC_NODES_TABLE_TABLE_SCHEMA@
+* @ADBC_NODES_TABLE_TABLE_NAME@
+
+h3(#auto-create). Using auto-create
+
+Use the @ADBC_NODES_TABLE_AUTO_CREATE@ and @ADBC_OUTBOX_TABLE_AUTO_CREATE@ "configuration options":/livesync/database-connector#common-config-options to set the Postgres connector to create the tables at startup, if they don't already exist.
+
+If @ADBC_POLL_FIXED_RATE@ is set to @false@ (which is the default value), @ADBC_OUTBOX_TABLE_AUTO_CREATE@ will also create a "trigger":https://www.postgresql.org/docs/current/sql-createtrigger.html that invokes a function that uses "LISTEN/NOTIFY":https://www.postgresql.org/docs/current/sql-notify.html to notify the application when new data is inserted into the outbox table.
+
+
+h3(#database-migrations). Apply database migrations
+
+To apply migrations to your database, use the following data definition language (DDL):
+
+```[text]
+CREATE TABLE IF NOT EXISTS your_nodes_table (
+  id TEXT PRIMARY KEY,
+  expiry TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS your_outbox_table (
+	sequence_id  serial PRIMARY KEY,
+	mutation_id  TEXT NOT NULL,
+	channel      TEXT NOT NULL,
+	name         TEXT NOT NULL,
+	rejected     boolean NOT NULL DEFAULT false,
+	data         JSONB,
+	headers      JSONB,
+	locked_by    TEXT,
+	lock_expiry  TIMESTAMP WITHOUT TIME ZONE,
+	processed    BOOLEAN NOT NULL DEFAULT false
+);
+```
+
+If you are using the default value of @false@ for @ADBC_POLL_FIXED_RATE@, the application will use a "trigger":https://www.postgresql.org/docs/current/sql-createtrigger.html with "LISTEN/NOTIFY":https://www.postgresql.org/docs/current/sql-notify.html to only poll for records when the data in the outbox changes. To support this behavior, create a function in the same schema as your outbox table with the same name as the outbox table with a suffix of @_notify@:
+
+```[text]
+CREATE OR REPLACE FUNCTION YOUR_OUTBOX_TABLE_SCHEMA.YOUR_OUTBOX_TABLE_NAME_notify()
+RETURNS trigger AS $$
+BEGIN
+	PERFORM pg_notify('ably_adbc'::text, ''::text);
+	RETURN NULL;
+EXCEPTION
+	-- ensure this function can never throw an uncaught exception
+	WHEN others THEN
+		RAISE WARNING 'unexpected error in %s: %%', SQLERRM;
+		RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+Create a trigger in the same schema as your outbox table with the same name as the outbox table with a suffix of @_trigger@ that invokes the function when new data is inserted into the outbox table. For example:
+
+```[text]
+CREATE TRIGGER your_outbox_table_name_trigger
+AFTER INSERT ON your_outbox_table_schema.your_outbox_table_name
+FOR EACH STATEMENT EXECUTE PROCEDURE
+your_outbox_table_schema.your_outbox_table_name_notify();
+```
+
+h3(#privileges). Privileges
+
+The Postgres connector only needs to interact with the "outbox":#outbox-table and "nodes":#nodes-table tables and does not rely on any other state in the database. This simplifies the security model as the Postgres connector's permissions can be locked down to specific tables.
+
+The Postgres connector will connect to your PostgreSQL database using the connection details specified in your configuration. The PostgreSQL user used by the Postgres connector requires @SELECT@ and @DELETE@ privileges on the outbox and nodes tables.
+
+The following is an example of creating a role with the necessary privileges against each table:
+
+```[text]
+CREATE ROLE YOUR_USER LOGIN PASSWORD 'your_database' VALID UNTIL 'infinity';
+GRANT CONNECT ON DATABASE your_database TO your_user;
+GRANT SELECT, UPDATE, INSERT, DELETE ON your_outbox_schema.your_outbox_table TO your_user;
+GRANT SELECT, UPDATE, INSERT, DELETE ON your_nodes_schema.your_nodes_table TO your_user;
+GRANT USAGE, SELECT ON your_outbox_table_sequence_id_seq TO your_user;
+```
+
+<aside data-type='note'>
+<p>Additional privileges may be required when using other utility commands in the Postgres connector, such as @create tables@.</p>
+</aside>
+
+h3(#designing-outbox). Designing your outbox messages
+
+When transmitting data over Ably, it is essential to convey only the changes made, known as "deltas." This approach ensures easier synchronization across all clients, as each can simply update their existing model with the new state rather than recalculating it. Initially, you may opt to include the entire model state in each message, but as the model grows, this may exceed message size limits. Therefore, using deltas is recommended, enabling frontend applications to react to specific changes efficiently.
+
+For example, in a weather application, updates to temperature might include the new value and its corresponding location:
+
+```[json]
+{"temperature": 25, "city": "London"}
+```
+
+Alternatively, standardized schemas like JSONPatch:
+
+```[json]
+[
+  {
+    "op": "replace",
+    "path": "/weather/London/temperature",
+    "value": 25
+  }
+]
+```
+
+While JSONPatch requires more effort to calculate delta events, it simplifies the merge function code, as patches can be applied automatically using libraries like "@fast-json-patch@":https://www.npmjs.com/package/fast-json-patch.
+
+h2(#monitoring). Monitoring
+
+The Postgres connector exposes an HTTP server that can be used to monitor its health and metrics.
+
+The server listens on the port defined by the @ADBC_HEALTH_ADDRESS@ "configuration option":/livesync/database-connector#configure-the-connector and defaults to port @2259@.
+
+h3(#health). Health
+
+The Postgres connector exposes an HTTP endpoint on @/health@ that returns a JSON containing the status of:
+
+* Connectivity to the Ably service.
+* Connectivity to the PostgreSQL database.
+* Access to the "nodes table":/livesync/outbox-nodes-tables#nodes-table, determined by executing @SELECT 1 FROM@ nodes.
+* Access to the "outbox table":/livesync/outbox-nodes-tables#outbox-table, determined by executing @SELECT 1 FROM@ outbox.
+
+Internally, the Postgres connector periodically refreshes the health status for each target according to the interval defined by the @ADBC_HEALTH_REFRESH_INTERVAL@ configuration option.
+
+The following is an example of a healthy response from the endpoint:
+
+```[sh]
+curl localhost:2259/health
+{
+   "ably":{
+      "status":"up"
+   },
+   "nodes_table":{
+      "status":"up"
+   },
+   "outbox_table":{
+      "status":"up"
+   },
+   "postgres":{
+      "status":"up"
+   }
+}
+```
+
+h3(#metrics). Metrics
+
+The Postgres connector exposes an HTTP endpoint on @/metrics@ that implements a "Prometheus":https://prometheus.io/docs/operating/integrations/ metrics endpoint that can be used to monitor the following metrics:
+
+|_. Metric |_. Type |_. Description |
+| @ably_pending_acks@ | "gauge":https://prometheus.io/docs/concepts/metric_types/#gauge | Number of pending messages waiting to be acknowledged by Ably. |
+| @nodes_table_entries@ | "gauge":https://prometheus.io/docs/concepts/metric_types/#gauge | Number of entries in the nodes table. |
+| @nodes_table_errors@ | "counter":https://prometheus.io/docs/concepts/metric_types/#counter | Number of errors querying the nodes table. |
+| @outbox_table_entries@ | "gauge":https://prometheus.io/docs/concepts/metric_types/#gauge | Number of entries in the outbox table. |
+| @outbox_table_errors@ | "counter":https://prometheus.io/docs/concepts/metric_types/#counter | Number of errors querying the outbox table. |
+| @promhttp_metric_handler_errors_total@ | "counter":https://prometheus.io/docs/concepts/metric_types/#counter | Total number of internal errors encountered by the promhttp metric handler. |
+
+The following is an example response from the metrics endpoint:
+
+```[sh]
+curl localhost:2259/metrics
+# HELP ably_pending_acks Number of pending messages waiting to be acknowledged by Ably
+# TYPE ably_pending_acks gauge
+ably_pending_acks 0
+# HELP nodes_table_entries Number of entries in the nodes table
+# TYPE nodes_table_entries gauge
+nodes_table_entries 1
+# HELP nodes_table_errors Number of errors querying the nodes table
+# TYPE nodes_table_errors counter
+nodes_table_errors 0
+# HELP outbox_table_entries Number of entries in the outbox table
+# TYPE outbox_table_entries gauge
+outbox_table_entries 1
+# HELP outbox_table_errors Number of errors querying the outbox table
+# TYPE outbox_table_errors counter
+outbox_table_errors 0
+# HELP promhttp_metric_handler_errors_total Total number of internal errors encountered by the promhttp metric handler.
+# TYPE promhttp_metric_handler_errors_total counter
+promhttp_metric_handler_errors_total{cause="encoding"} 0
+promhttp_metric_handler_errors_total{cause="gathering"} 0
+```
