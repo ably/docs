@@ -1,22 +1,11 @@
 import React, { useState } from 'react';
-import { EXPAND_MENU, SidebarName } from 'src/components';
 import { SessionState } from '../../../contexts/user-context';
-import { SidebarDataRetrieval } from '../../StaticQuerySidebar/SidebarDataRetrieval';
 import { DisplayMode, SearchBar } from '../SearchBar';
 import { HamburgerHasFooterContext } from './hamburger-has-footer-context';
 import { HamburgerButton } from './HamburgerButton';
-import { HamburgerDropdownFooter, HamburgerSidebarRenderer } from './HamburgerDropdown';
-import { hamburgerMenu } from './HamburgerMenu.module.css';
+import { HamburgerDropdownFooter } from './HamburgerDropdown';
 
-export { type HamburgerMenuProps } from './HamburgerDropdown';
-
-export const HamburgerMenu = ({
-  sessionState,
-  sidebarName,
-}: {
-  sessionState: SessionState;
-  sidebarName: SidebarName;
-}) => {
+export const HamburgerMenu = ({ sessionState }: { sessionState: SessionState }) => {
   const [hasFooter, setHasFooter] = useState<boolean>(true);
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
@@ -32,14 +21,6 @@ export const HamburgerMenu = ({
             value={{ boolean: hasFooter, dispatchBooleanChange: (bool: boolean) => setHasFooter(bool) }}
           >
             <SearchBar displayMode={DisplayMode.MOBILE} />
-            <div className={hamburgerMenu}>
-              <SidebarDataRetrieval
-                className="flex flex-col py-12 px-8 flex-grow flex-basis mx-24"
-                expandMenu={EXPAND_MENU.COLLAPSED}
-                Component={HamburgerSidebarRenderer}
-                sidebarName={sidebarName}
-              />
-            </div>
             {hasFooter && <HamburgerDropdownFooter sessionState={sessionState} />}
           </HamburgerHasFooterContext.Provider>
         </div>
