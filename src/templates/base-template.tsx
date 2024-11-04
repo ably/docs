@@ -5,7 +5,6 @@ import { Head } from 'src/components/Head';
 import Layout from 'src/components/Layout';
 import Article from 'src/components/Article';
 import PageTitle from 'src/components/PageTitle';
-import { RightSidebarWrapper } from 'src/components/Sidebar/RightSidebar';
 import Html from 'src/components/blocks/Html';
 import {
   createLanguageHrefFromDefaults,
@@ -14,18 +13,12 @@ import {
 } from 'src/components/common/language-defaults';
 import { PageLanguageProvider, PathnameContext, usePageLanguage } from 'src/contexts';
 
-import { isEmpty } from 'lodash';
 import { SidebarProvider } from 'src/contexts/SidebarContext';
-import {
-  DEFAULT_LANGUAGE,
-  DEFAULT_PREFERRED_LANGUAGE,
-  IGNORED_LANGUAGES,
-  REALTIME_SDK_INTERFACE,
-  REST_SDK_INTERFACE,
-} from '../../data/createPages/constants';
+import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { getMetaTitle } from 'src/components/common/meta-title';
+import { RightSidebar } from 'src/components/Sidebar/RightSidebar';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -43,7 +36,7 @@ interface ITemplate extends AblyTemplateData {
 
 const Template = ({
   location: { pathname, hash },
-  pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
+  pageContext: { contentOrderedList, languages, slug, script },
   data: { document },
   showProductNavigation = true,
   currentProduct,
@@ -77,21 +70,6 @@ const Template = ({
   const pageLanguage = filteredLanguages.includes(currentLanguageFromContext)
     ? currentLanguageFromContext
     : DEFAULT_LANGUAGE;
-  const contentMenuFromAllLanguages = contentMenu[pageLanguage];
-  const contentMenuFromRealtime = contentMenu[`${REALTIME_SDK_INTERFACE}_${pageLanguage}`];
-  const contentMenuFromRest = contentMenu[`${REST_SDK_INTERFACE}_${pageLanguage}`];
-  const contentMenuFromSDKInterface = !isEmpty(contentMenuFromRealtime) ? contentMenuFromRealtime : contentMenuFromRest;
-  const contentMenuFromLangOrSDKInterface = !isEmpty(contentMenuFromAllLanguages)
-    ? contentMenuFromAllLanguages
-    : contentMenuFromSDKInterface;
-
-  const contentMenuFromLanguage = contentMenuFromLangOrSDKInterface ?? [[]];
-
-  const versionData = {
-    version,
-    versions: [],
-    rootVersion: slug,
-  };
 
   const elements = useMemo(
     () =>
@@ -157,11 +135,7 @@ const Template = ({
               <PageTitle>{title}</PageTitle>
               <div>{elements}</div>
             </Article>
-            <RightSidebarWrapper
-              menuData={contentMenuFromLanguage[0]}
-              languages={filteredLanguages}
-              versionData={versionData}
-            />
+            <RightSidebar />
           </Layout>
         </SidebarProvider>
       </PathnameContext.Provider>
