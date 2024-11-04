@@ -4,7 +4,6 @@ import { graphql } from 'gatsby';
 import Layout from 'src/components/Layout';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
-import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
 
 type MetaData = {
@@ -45,7 +44,6 @@ const IndexPage = ({
       </Helmet>
 
       <Layout isExtraWide currentProduct="livesync">
-        <LeftSideBar sidebarName="livesync" />
         <ProductPageContent sections={sections} images={images} />
       </Layout>
     </>
