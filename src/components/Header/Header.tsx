@@ -12,15 +12,8 @@ import UserContext from '../../contexts/user-context';
 import { HamburgerMenu } from './HamburgerMenu';
 import { TopMainNavStateContext } from './top-main-nav-state-context';
 import { HorizontalMenu, HorizontalMenuVariant } from 'src/components/HorizontalMenu';
-import { SidebarName } from '../Sidebar';
 
-export const Header = ({
-  sidebarName,
-  showSearchBar = true,
-}: {
-  sidebarName: SidebarName;
-  showSearchBar?: boolean;
-}) => {
+export const Header = ({ showSearchBar = true }: { showSearchBar?: boolean }) => {
   const [topMainNavState, dispatch] = useReducer(mainNavReducer, initialState);
   const menuItems: (keyof typeof dropdownData)[] = ['API References', 'Resources'];
   const ref = useRef(null);
@@ -54,7 +47,7 @@ export const Header = ({
             {({ sessionState }) => (
               <TopMainNavStateContext.Provider value={{ topMainNavState: topMainNavState, dispatch }}>
                 <TopMainNavUserMenu sessionState={sessionState} />
-                <HamburgerMenu sessionState={sessionState} sidebarName={sidebarName} />
+                <HamburgerMenu sessionState={sessionState} />
               </TopMainNavStateContext.Provider>
             )}
           </UserContext.Consumer>
