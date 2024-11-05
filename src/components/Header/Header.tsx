@@ -36,7 +36,7 @@ export const Header = ({
       <HorizontalMenu variant={HorizontalMenuVariant.light}>
         <TopMainNavAblyLogo href={withPrefix('/')} />
         {showSearchBar ? <SearchBar displayMode={DisplayMode.FULL_SCREEN} /> : null}
-        <div className="flex flex-row items-center justify-end col-start-3">
+        <div className="flex flex-row items-center justify-end col-start-3 h-64">
           <TopMainNavLink href="/sdks" dataId="meganav-link">
             <span className="font-bold">SDKs</span>
           </TopMainNavLink>

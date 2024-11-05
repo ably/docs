@@ -35,7 +35,7 @@ describe('Different data provided to link elements results in different componen
     const { container } = render(<A {...normalRootElement} />);
     expect(container.firstChild).toMatchInlineSnapshot(`
       <a
-        class="docs-link"
+        class="ui-link"
         data-testid="link-external"
         href="https://www.example.com"
       >

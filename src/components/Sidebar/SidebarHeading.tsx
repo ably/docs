@@ -1,5 +1,5 @@
 import React, { ElementType, ComponentPropsWithoutRef, PropsWithChildren } from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import { safeWindow } from 'src/utilities';
 import { sidebar } from './SidebarHeading.module.css';
 import { isString } from 'lodash';

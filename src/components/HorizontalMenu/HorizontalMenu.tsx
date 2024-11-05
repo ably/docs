@@ -1,5 +1,5 @@
 import React from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import { Container } from 'src/components';
 import { end, light } from './HorizontalMenu.module.css';
 

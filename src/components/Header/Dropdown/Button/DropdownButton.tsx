@@ -31,7 +31,7 @@ export const DropdownButtonAndMenu = ({
     <div
       id={createDropdownButtonMenuHtmlId(dropdownDataID)}
       onMouseLeave={() => onMouseOut(dropdownDataID)}
-      className="hidden md:block mr-24"
+      className="hidden md:block mr-24 h-full"
     >
       <button
         type="button"

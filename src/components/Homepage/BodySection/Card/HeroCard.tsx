@@ -5,9 +5,7 @@ export const HeroCard = ({ title, content }: CardProps) => (
   <div className="flex flex-col items-center mt-88">
     <div className="text-center">
       <h1 className="ui-text-h1">{title}</h1>
-      <p style={{ fontSize: '1.5rem' }} className="font-medium text-dark-grey mt-24">
-        {content}
-      </p>
+      <p className="ui-text-sub-header mt-24">{content}</p>
     </div>
     <SearchBar
       displayLocation="homepage"

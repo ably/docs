@@ -28,7 +28,7 @@ _Requirements (if any)_
 ## Support, feedback and troubleshooting
 
 - [Create a GitHub Issue](https://github.com/ably/docs/issues)
-- [Join our Discord server](https://discord.gg/q89gDHZcBK)
+- [Join our Discord server](https://discord.gg/g8yqePUVDn)
 - [Follow us on Twitter](https://twitter.com/ablyrealtime)
 - [Use our SDKs](https://github.com/ably/)
 - [Visit our website](https://ably.com?utm_source=ably-docs&utm_medium=github&utm_campaign=pub-sub)

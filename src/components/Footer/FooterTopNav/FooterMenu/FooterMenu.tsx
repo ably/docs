@@ -4,7 +4,7 @@ import Link from 'src/components/Link';
 export type FooterMenuItemType = {
   label: string;
   link: string;
-  external: boolean;
+  external?: boolean;
 };
 
 export const FooterMenu = ({ items, label }: { items: FooterMenuItemType[]; label: string }) => {

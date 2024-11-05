@@ -1,5 +1,5 @@
 import React, { FunctionComponent as FC, HTMLProps } from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 
 import { smallMenuLabel } from './Label.module.css';
 

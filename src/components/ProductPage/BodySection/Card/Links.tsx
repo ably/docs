@@ -14,7 +14,7 @@ export const Links = ({ links }: { links?: LinkProps[] }) =>
                   <Link
                     to={href}
                     external={external}
-                    className="text-gui-default font-bold mr-4"
+                    className="text-gui-default font-medium mr-4"
                     target="_blank"
                     rel="noopener"
                   >

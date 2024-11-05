@@ -4,12 +4,10 @@ import { DropdownContentLink } from './types';
 import { ExternalLinkIndicator } from './ExternalLinkIndicator';
 
 export const ContentLink = ({ href, rel, text, external }: DropdownContentLink) => (
-  // Tailwind 'text-sm' class does not apply
   <Link
-    className="font-medium flex flex-row group-hover:text-gui-default"
+    className="ui-text-p2 flex flex-row items-center group-hover:text-gui-default"
     to={href}
     rel={rel}
-    style={{ fontSize: '0.875rem', lineHeight: '0.875rem' }}
     tabIndex={-1}
     external={external}
   >

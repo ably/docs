@@ -1,5 +1,5 @@
 import React from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import Html from 'src/components/blocks/Html';
 import { HtmlComponentProps } from 'src/components/html-component-props';
 import HtmlDataTypes from '../../../../data/types/html';
@@ -13,7 +13,7 @@ const Table = ({ data, attribs }: HtmlComponentProps<'table'>) => {
 
   return (
     <div className={tableContainer}>
-      <table className={cn('border-0 border-collapse mb-4 border-spacing-0 text-menu2 text-left', table)} {...attribs}>
+      <table className={cn('border-0 border-collapse mb-4 border-spacing-0 ui-text-p2 text-left', table)} {...attribs}>
         <Html data={data.filter((item) => item.type === HtmlDataTypes.tag)} />
       </table>
     </div>

@@ -1,5 +1,5 @@
 import React, { HTMLAttributes, MouseEvent, useState, useRef } from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import { button, tooltipClass, isVisible, notificationClass } from './ButtonWithTooltip.module.css';
 
 interface Props extends HTMLAttributes<HTMLButtonElement> {

@@ -1,6 +1,6 @@
 import React from 'react';
 import Icon from '@ably/ui/core/Icon';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 
 import { expendableIndicator, isExpanded } from './ExpandableIndicator.module.css';
 

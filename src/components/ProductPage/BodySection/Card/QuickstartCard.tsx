@@ -10,9 +10,9 @@ export const QuickstartCard = ({ title, content, image, links }: CardProps) => (
   >
     <div className="flex items-center">
       {image && <Image image={image} alt={title} width="32px" />}
-      <h2 className="ml-8 text-xl">{title}</h2>
+      <h2 className="ml-8 ui-text-h4">{title}</h2>
     </div>
-    <p className="text-lg text-dark-grey leading-6 mb-40 mt-12 w-3/5">{content}</p>
+    <p className="ui-text-p2 text-neutral-800 leading-6 mb-40 mt-12 w-3/5">{content}</p>
     {links && links.length >= 1 ? <Links links={links} /> : null}
   </div>
 );

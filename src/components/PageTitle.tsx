@@ -5,7 +5,7 @@ interface PageTitleProps {
 }
 
 const PageTitle: FC<PageTitleProps> = ({ children }) => (
-  <h1 id="title" className="col-span-2 my-40 ui-text-h1">
+  <h1 id="title" className="col-span-2 my-40 ui-text-title">
     {children}
   </h1>
 );

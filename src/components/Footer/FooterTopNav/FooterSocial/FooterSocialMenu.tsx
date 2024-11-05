@@ -1,8 +1,8 @@
 import React from 'react';
 import { FooterSocialMenuIcons } from './FooterSocialMenuIcons';
-import { FooterMenuItemType } from '../FooterMenu/FooterMenu';
+import { ablySocialLinks } from '../../data';
 
-export const FooterSocialMenu = ({ ablySocialLinks }: { ablySocialLinks: FooterMenuItemType[] }) => (
+export const FooterSocialMenu = () => (
   <>
     <p className="mt-24 ui-text-p3">Find us on:</p>
     <div className="pt-16 flex items-center">

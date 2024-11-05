@@ -18,9 +18,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
         <div className={`${container}`}>
           <Link
             to="/sdks"
-            className={`text-h3 font-normal text-primary mr-16 px-8 py-16 inline-block ${
-              activeTab === Tab.CHANNELS ? active_tab : null
-            }`}
+            className={`ui-text-h3 mr-16 px-8 py-16 inline-block ${activeTab === Tab.CHANNELS ? active_tab : null}`}
           >
             Pub/Sub
           </Link>
@@ -34,7 +32,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
         <hr />
       </div>
       <div className={`${container}`}>
-        <p className="text-p1 text-charcoal-grey font-light py-72">{data.tabs[activeTab].text}</p>
+        <p className="ui-text-p1 text-charcoal-grey py-72">{data.tabs[activeTab].text}</p>
       </div>
       <CardGrid currentProduct={data.tabs[activeTab].cards} />
     </div>

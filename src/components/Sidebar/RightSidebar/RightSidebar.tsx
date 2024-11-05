@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { flattenDeep, throttle } from 'lodash/fp';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 
 import { useGetCurrentHeader } from 'src/hooks/get-current-header-id';
 import { HighlightedMenuContext } from 'src/contexts/highlighted-menu-context';

@@ -1,9 +1,9 @@
 import React from 'react';
 import { SectionProps } from '../ProductPageContent';
 import { BodySectionDescription } from './BodySectionDescription';
-import { CallToAction } from './CallToAction';
 import { FeatureCard, QuickstartCard, ExampleCard, TutorialCard } from './Card';
 import { ImageProps, getImageFromList } from 'src/components/Image';
+import FeatureLink from '@ably/ui/core/FeaturedLink';
 
 const cardTypes = {
   feature: FeatureCard,
@@ -63,7 +63,11 @@ export const BodySection = ({ section, images }: { section: SectionProps; images
           })}
         </div>
       )}
-      {section.callToAction ? <CallToAction callToAction={section.callToAction}></CallToAction> : null}
+      {section.callToAction ? (
+        <FeatureLink {...section.callToAction} url={section.callToAction.href}>
+          {section.callToAction.text}
+        </FeatureLink>
+      ) : null}
     </section>
   );
 };

@@ -1,11 +1,11 @@
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import { ImageProps, getImageFromList } from 'src/components/Image';
 import { SectionProps } from '../HomepageContent';
 import { BodySectionDescription } from './BodySectionDescription';
 import { HeroCard } from './Card/HeroCard';
-import { CallToAction } from './CallToAction';
 import { FeatureCard } from './Card/FeatureCard';
 import { SdkCard } from './Card/SdkCard';
+import FeatureLink from '@ably/ui/core/FeaturedLink';
 
 const cardTypes = {
   hero: HeroCard,
@@ -61,7 +61,11 @@ export const BodySection = ({ section, images }: { section: SectionProps; images
           })}
         </div>
       )}
-      {section.callToAction && <CallToAction {...section.callToAction}></CallToAction>}
+      {section.callToAction && (
+        <FeatureLink {...section.callToAction} url={section.callToAction.href}>
+          {section.callToAction.text}
+        </FeatureLink>
+      )}
     </section>
   );
 };

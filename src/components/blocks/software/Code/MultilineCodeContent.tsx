@@ -1,8 +1,6 @@
 import React, { useMemo, useRef } from 'react';
 import DOMPurify from 'dompurify';
-// @ts-ignore
 import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/core/utils/syntax-highlighter';
-// @ts-ignore
 import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
 
 registerDefaultLanguages(languagesRegistry);
@@ -56,13 +54,13 @@ export const MultilineCodeContent = ({
       style={{ whiteSpace: 'pre-wrap' }}
       dangerouslySetInnerHTML={{
         __html: DOMPurify.sanitize
-          ? DOMPurify.sanitize(highlightedContent, {
+          ? DOMPurify.sanitize(highlightedContent ?? '', {
               // The SVG and Math tags have been used in the past as attack vectors for mXSS,
               // but if we really need them should be safe enough to enable.
               // This is probably too cautious but we have no need for them at time of writing, so forbidding them is free.
               FORBID_TAGS: ['svg', 'math'],
-            })
-          : highlightedContent,
+            }) || ''
+          : highlightedContent ?? '',
       }}
     />
   );

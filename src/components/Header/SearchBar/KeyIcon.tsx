@@ -1,5 +1,5 @@
 import React, { HTMLAttributes } from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 
 import { keyIcon } from './KeyIcon.module.css';
 

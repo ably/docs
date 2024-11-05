@@ -10,7 +10,7 @@ export const TutorialCard = ({ title, image, links }: CardProps) => (
   >
     <div className="flex mb-20">
       {image && <Image image={image} alt={title} width="32px" />}
-      <h2 className="ml-8 text-base">{title}</h2>
+      <h4 className="ml-8 ui-text-h4">{title}</h4>
     </div>
     {links?.length ? <Links links={links} /> : null}
   </div>

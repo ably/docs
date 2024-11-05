@@ -27,14 +27,14 @@ export const InArticleOptions = ({
     <a
       onClick={linkClickWithTracker(primaryTracker, primaryOptionDestination)}
       href={primaryOptionDestination}
-      className="ui-btn"
+      className="ui-button-primary"
     >
       {primaryOptionLabel}
     </a>
     <a
       onClick={linkClickWithTracker(secondaryTracker, secondaryOptionDestination)}
       href={secondaryOptionDestination}
-      className="ui-btn-secondary"
+      className="ui-button-secondary"
     >
       {secondaryOptionLabel}
     </a>

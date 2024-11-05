@@ -1,5 +1,3 @@
-declare module '@ably/ui/core/scripts';
-
 type Store = {
   getState: () => Record<
     string,

@@ -11,7 +11,6 @@ const optionStyles = {
   backgroundColor: 'transparent',
   boxShadow: 'none',
   fontSize: 14,
-  fontWeight: 300,
   '&:active': {
     backgroundColor: 'var(--color-gui-active)',
   },

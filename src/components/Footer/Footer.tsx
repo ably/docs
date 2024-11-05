@@ -18,12 +18,6 @@ export const Footer = () => {
           }
         }
       }
-      ablySocial: pageFurnitureYaml(name: { eq: "AblySocial" }) {
-        items {
-          label
-          link
-        }
-      }
       bottomMenu: pageFurnitureYaml(name: { eq: "FooterBottomMenu" }) {
         items {
           label
@@ -35,13 +29,12 @@ export const Footer = () => {
   `);
 
   const menuDataItems = data.menuData.items ?? [];
-  const ablySocialLinks = data.ablySocial.items ?? [];
   const bottomLinks = data.bottomMenu.items ?? [];
 
   return (
     <>
       <footer className="bg-white border-t border-mid-grey antialiased col-start-1 md:col-start-2" data-id="footer">
-        <FooterTopNav ablySocialLinks={ablySocialLinks} menuDataItems={menuDataItems} />
+        <FooterTopNav menuDataItems={menuDataItems} />
         <FooterBottomNav bottomLinks={bottomLinks} />
       </footer>
     </>

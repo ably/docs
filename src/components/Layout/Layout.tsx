@@ -1,4 +1,4 @@
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import { ReactNode, useEffect } from 'react';
 
 import '../../styles/global.css';
@@ -83,7 +83,7 @@ const Layout: React.FC<LayoutProps> = ({
                 'md:ml-48': collapsibleSidebar && collapsed,
                 'md:ml-244': collapsibleSidebar && !collapsed,
                 'md:grid-cols-1': isExtraWide,
-                'md:grid-cols-2 md:grid-cols-layout': !isExtraWide,
+                'md:grid-cols-layout': !isExtraWide,
                 'md:ml-244 2xl:mx-auto max-w-1264': !collapsibleSidebar,
                 'mx-24 transition-all': collapsibleSidebar,
               })

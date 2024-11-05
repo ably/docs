@@ -1,4 +1,4 @@
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import TopCodeMenu from 'src/components/Menu/TopCodeMenu';
 import { RightSidebar } from './RightSidebar';
 import { RightSidebarMobile } from './RightSidebarMobile';

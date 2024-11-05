@@ -5,32 +5,26 @@ import { HtmlComponentProps } from 'src/components/html-component-props';
 const Button = ({ data, attribs }: HtmlComponentProps<'button'>) => {
   switch (attribs?.['data-variant']) {
     case 'primary-alt':
-      return PrimaryAltButton({ data, attribs });
+      return PriorityButton({ data, attribs });
     case 'secondary':
       return SecondaryButton({ data, attribs });
     case 'primary-inverted':
-      return PrimaryButtonInverted({ data, attribs });
+      return PrimaryButton({ data, attribs });
     case 'secondary-inverted':
-      return SecondaryButtonInverted({ data, attribs });
+      return SecondaryButton({ data, attribs });
     default:
       return PrimaryButton({ data, attribs });
   }
 };
 
 const PrimaryButton = ({ data, attribs }: HtmlComponentProps<'button'>) =>
-  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn' } });
+  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-button-primary' } });
 
-const PrimaryAltButton = ({ data, attribs }: HtmlComponentProps<'button'>) =>
-  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-alt' } });
+const PriorityButton = ({ data, attribs }: HtmlComponentProps<'button'>) =>
+  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-button-priority' } });
 
 const SecondaryButton = ({ data, attribs }: HtmlComponentProps<'button'>) =>
-  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-secondary' } });
-
-const PrimaryButtonInverted = ({ data, attribs }: HtmlComponentProps<'button'>) =>
-  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-invert' } });
-
-const SecondaryButtonInverted = ({ data, attribs }: HtmlComponentProps<'button'>) =>
-  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-btn-secondary-invert' } });
+  GenericHtmlBlock('button')({ data, attribs: { ...attribs, className: 'ui-button-secondary' } });
 
 Button.propTypes = {
   data: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
