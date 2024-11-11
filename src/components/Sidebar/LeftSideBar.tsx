@@ -1,15 +1,20 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import cn from 'classnames';
 import Accordion from '@ably/ui/core/Accordion';
+import Icon from '@ably/ui/core/Icon';
 import { AccordionIcons, AccordionOptions } from '@ably/ui/core/Accordion/types';
 
-import data from './data';
+import data from './data/';
 import { NavProductKey, NavProduct, NavProductPages, NavData } from './types';
 import { determineActivePage } from './utils';
 
-const commonAccordionOptions = (openIndex?: number): { icons: AccordionIcons; options: AccordionOptions } => ({
+const commonAccordionOptions = (
+  openIndex?: number,
+  topLevel?: boolean,
+): { icons: AccordionIcons; options: AccordionOptions } => ({
   icons: { open: { name: 'icon-gui-chevron-up' }, closed: { name: 'icon-gui-chevron-down' } },
   options: {
+    autoClose: topLevel,
     headerCSS: 'h-40 text-[13px] pl-0',
     rowIconSize: '20px',
     iconSize: '20px',
@@ -43,6 +48,7 @@ const NavPage = ({
         href={page.link}
       >
         {page.name}
+        {page.external ? <Icon name="icon-gui-external-link" additionalCSS="ml-4" /> : null}
       </a>
     );
   } else {
@@ -66,12 +72,21 @@ const NavPage = ({
 };
 
 export const LeftSideBar = () => {
-  const [selectedProduct, setSelectedProduct] = useState<NavProductKey>('platform');
-  const products = Object.entries(data as NavData) as [NavProductKey, NavProduct][];
+  const [selectedProduct, setSelectedProduct] = useState<NavProductKey>();
   const activePageHierarchy = useMemo(() => determineActivePage(data, window.location.pathname) ?? [], []);
+  const products = Object.entries(data as NavData) as [NavProductKey, NavProduct][];
+
+  useEffect(() => {
+    const activeProduct = activePageHierarchy[0];
+    if (activeProduct !== undefined) {
+      setSelectedProduct(products[activeProduct][0]);
+    }
+  }, [activePageHierarchy, products]);
+
+  console.log(activePageHierarchy, selectedProduct);
 
   const constructProductNavData = useCallback(
-    (products: [NavProductKey, NavProduct][], selectedProduct: string, activePageHierarchy: number[]) =>
+    (products: [NavProductKey, NavProduct][], activePageHierarchy: number[], selectedProduct?: string) =>
       products.map(([productKey, product]) => ({
         name: product.name,
         icon: selectedProduct === productKey ? product.icon.open : product.icon.closed,
@@ -109,7 +124,7 @@ export const LeftSideBar = () => {
   );
 
   const productNavData = useMemo(
-    () => constructProductNavData(products, selectedProduct, activePageHierarchy.slice(1)),
+    () => constructProductNavData(products, activePageHierarchy.slice(1), selectedProduct),
     [constructProductNavData, products, selectedProduct, activePageHierarchy],
   );
 
@@ -118,7 +133,7 @@ export const LeftSideBar = () => {
       className="sticky w-240 ml-80 top-[112px] h-[calc(100vh-112px)] overflow-y-scroll"
       id="left-nav"
       data={productNavData}
-      {...commonAccordionOptions(activePageHierarchy[0])}
+      {...commonAccordionOptions(activePageHierarchy[0], true)}
     />
   );
 };
