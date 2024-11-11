@@ -1,4 +1,4 @@
-import { NavProduct } from '../types';
+import { NavProduct } from './types';
 
 export default {
   name: 'Spaces',
@@ -41,6 +41,18 @@ export default {
         {
           name: 'Component locking',
           link: '/spaces/locking',
+        },
+      ],
+    },
+  ],
+  api: [
+    {
+      name: 'API References',
+      pages: [
+        {
+          link: 'https://sdk.ably.com/builds/ably/spaces/main/typedoc/index.html',
+          name: 'JavaScript SDK',
+          external: true,
         },
       ],
     },

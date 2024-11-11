@@ -1,4 +1,4 @@
-import { NavProduct } from '../types';
+import { NavProduct } from './types';
 
 export default {
   name: 'Asset Tracking',
@@ -25,4 +25,5 @@ export default {
       ],
     },
   ],
+  api: [],
 } satisfies NavProduct;
