@@ -1,4 +1,4 @@
-import { NavProduct } from '../types';
+import { NavProduct } from './types';
 
 export default {
   name: 'Pub/Sub',
@@ -409,4 +409,134 @@ export default {
       ],
     },
   ],
+  api: [
+    {
+      name: 'API References',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/api',
+        },
+        {
+          name: 'Realtime SDK',
+          pages: [
+            {
+              name: 'Constructor',
+              link: '/api/realtime-sdk',
+            },
+            {
+              name: 'Connection',
+              link: '/api/realtime-sdk/connection',
+            },
+            {
+              name: 'Channels',
+              link: '/api/realtime-sdk/channels',
+            },
+            {
+              name: 'Channel Metadata',
+              link: '/api/realtime-sdk/channel-metadata',
+            },
+            {
+              name: 'Messages',
+              link: '/api/realtime-sdk/messages',
+            },
+            {
+              name: 'Presence',
+              link: '/api/realtime-sdk/presence',
+            },
+            {
+              name: 'Authentication',
+              link: '/api/realtime-sdk/authentication',
+            },
+            {
+              name: 'History',
+              link: '/api/realtime-sdk/history',
+            },
+            {
+              name: 'Push Notifications - Admin',
+              link: '/api/realtime-sdk/push-admin',
+            },
+            {
+              name: 'Push Notifications - Devices',
+              link: '/api/realtime-sdk/push',
+            },
+            {
+              name: 'Encryption',
+              link: '/api/realtime-sdk/encryption',
+            },
+            {
+              name: 'Statistics',
+              link: '/api/realtime-sdk/statistics',
+            },
+            {
+              name: 'Types',
+              link: '/api/realtime-sdk/types',
+            },
+          ],
+        },
+        {
+          name: 'REST SDK',
+          pages: [
+            {
+              name: 'Constructor',
+              link: '/api/rest-sdk',
+            },
+            {
+              name: 'Channels',
+              link: '/api/rest-sdk/channels',
+            },
+            {
+              name: 'Channel Status',
+              link: '/api/rest-sdk/channel-status',
+            },
+            {
+              name: 'Messages',
+              link: '/api/rest-sdk/messages',
+            },
+            {
+              name: 'Presence',
+              link: '/api/rest-sdk/presence',
+            },
+            {
+              name: 'Authentication',
+              link: '/api/rest-sdk/authentication',
+            },
+            {
+              name: 'History',
+              link: '/api/rest-sdk/history',
+            },
+            {
+              name: 'Push Notifications - Admin',
+              link: '/api/rest-sdk/push-admin',
+            },
+            {
+              name: 'Encryption',
+              link: '/api/rest-sdk/encryption',
+            },
+            {
+              name: 'Statistics',
+              link: '/api/rest-sdk/statistics',
+            },
+            {
+              name: 'Types',
+              link: '/api/rest-sdk/types',
+            },
+          ],
+        },
+        {
+          name: 'REST API',
+          link: '/api/rest-api',
+        },
+        {
+          name: 'SSE API',
+          link: '/api/sse',
+        },
+        {
+          name: 'Control API',
+          link: '/api/control-api',
+        },
+      ],
+    },
+  ],
+  showJumpLink: true,
 } satisfies NavProduct;
