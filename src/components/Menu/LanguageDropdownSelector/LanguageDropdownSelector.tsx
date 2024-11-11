@@ -2,7 +2,6 @@ import { navigate } from 'gatsby';
 import Select, { CSSObjectWithLabel } from 'react-select';
 import { useMediaQuery } from '@react-hook/media-query';
 import { ReactSelectOption, createLanguageHrefFromDefaults, getLanguageDefaults } from 'src/components';
-import { longLanguageLabels } from 'src/maps/language';
 import { FormatOptionLabelWithLanguageLogo } from '../ReactSelectCustomComponents/Formatters/FormatOptionLabelWithLanguageLogo';
 import { noIndicatorSeparator } from '../ReactSelectCustomComponents/no-indicator-separator';
 
@@ -23,8 +22,10 @@ import {
 } from '../ReactSelectStyles';
 import './styles.css';
 import { usePageLanguage } from 'src/contexts';
+import { languageLabel } from 'src/data/languages';
+import { LanguageKey } from 'src/data/languages/types';
 
-const makeOptionFromLang = (lang: string) => ({ label: longLanguageLabels[lang] ?? lang, value: lang });
+const makeOptionFromLang = (lang: string) => ({ label: languageLabel(lang as LanguageKey) ?? lang, value: lang });
 
 const useScreenSize = () => {
   return useMediaQuery('only screen and (min-width: 1040px)');
