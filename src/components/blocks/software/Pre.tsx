@@ -2,7 +2,6 @@ import { ReactElement, useState } from 'react';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import Html from '../Html';
-import languageLabels from 'src/maps/language';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import {
   DEFAULT_LANGUAGE,
@@ -18,6 +17,8 @@ import { MultilineCodeContent } from './Code/MultilineCodeContent';
 import { isArray, isEmpty } from 'lodash';
 import { getTrimmedLanguage } from 'src/components/common';
 import { usePageLanguage } from 'src/contexts';
+import { languageLabel } from 'src/data/languages';
+import { LanguageKey } from 'src/data/languages/types';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
@@ -29,18 +30,18 @@ type PreProps = HtmlComponentProps<'pre'> & {
 };
 
 const getLanguageLabel = (lang: string) => {
-  const languageLabel = languageLabels[lang];
+  const label = languageLabel(lang as LanguageKey);
   let labelPart: string | string[] = '';
 
-  if (languageLabel) {
-    labelPart = languageLabel.split(' ');
+  if (label) {
+    labelPart = label.split(' ');
     if (Array.isArray(labelPart) && labelPart.length > 1) {
       return labelPart.slice(0, -1).join(' ');
     } else {
       return labelPart;
     }
   }
-  return languageLabels[DEFAULT_LANGUAGE];
+  return languageLabel();
 };
 
 const Pre = ({
