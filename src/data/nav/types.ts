@@ -1,13 +1,11 @@
 import { IconName } from '@ably/ui/core/Icon/types';
 
-const navProductKeys: string[] = ['platform', 'pubsub', 'chat', 'spaces', 'liveSync', 'assetTracking'];
-
-export type NavProductKey = (typeof navProductKeys)[number];
-
 export type NavProduct = {
   name: string;
   icon: { closed: IconName; open: IconName };
   content: NavProductContent[];
+  api: NavProductContent[];
+  showJumpLink?: boolean;
 };
 
 export type NavProductPages = NavProductPage | NavProductContent;
@@ -24,5 +22,3 @@ type NavProductPage = {
   external?: boolean;
   rightNav?: boolean;
 };
-
-export type NavData = { [key in NavProductKey]: NavProduct };
