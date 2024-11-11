@@ -1,4 +1,4 @@
-import { NavProduct } from '../types';
+import { NavProduct } from './types';
 
 export default {
   name: 'Platform',
@@ -127,4 +127,5 @@ export default {
       ],
     },
   ],
+  api: [],
 } satisfies NavProduct;
