@@ -1,4 +1,4 @@
-import { NavProduct } from '../types';
+import { NavProduct } from './types';
 
 export default {
   name: 'Chat',
@@ -49,6 +49,23 @@ export default {
         {
           name: 'Room reactions',
           link: '/chat/rooms/reactions',
+        },
+      ],
+    },
+  ],
+  api: [
+    {
+      name: 'API References',
+      pages: [
+        {
+          link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat_js.html',
+          name: 'JavaScript SDK',
+          external: true,
+        },
+        {
+          link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat_react.html',
+          name: 'React SDK',
+          external: true,
         },
       ],
     },

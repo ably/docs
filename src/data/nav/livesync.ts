@@ -1,4 +1,4 @@
-import { NavProduct } from '../types';
+import { NavProduct } from './types';
 
 export default {
   name: 'LiveSync',
@@ -29,6 +29,18 @@ export default {
         {
           name: 'Outbox and nodes tables',
           link: '/livesync/outbox-nodes-tables',
+        },
+      ],
+    },
+  ],
+  api: [
+    {
+      name: 'API References',
+      pages: [
+        {
+          link: 'https://sdk.ably.com/builds/ably-labs/models/main/typedoc/index.html',
+          name: 'SDK',
+          external: true,
         },
       ],
     },
