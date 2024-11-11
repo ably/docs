@@ -1,7 +1,8 @@
 import { Link } from 'gatsby';
 import { usePageLanguage } from '../../contexts/page-language-context';
-import languageLabels from '../../maps/language';
 import { getLanguageDefaults } from '../common/language-defaults';
+import { languageLabel } from 'src/data/languages';
+import { LanguageKey } from 'src/data/languages/types';
 
 const LanguageLink = ({ language }: { language: string }) => {
   const { currentLanguage: pageLanguage } = usePageLanguage();
@@ -16,7 +17,7 @@ const LanguageLink = ({ language }: { language: string }) => {
       className="cursor-pointer relative select-none block text-brand-black hover:text-brand-richOrange active:text-brand-richOrange"
       to={href}
     >
-      {languageLabels[language] ?? language}
+      {languageLabel(language as LanguageKey) ?? language}
     </Link>
   );
 };
