@@ -1,0 +1,208 @@
+---
+title: MongoDB Connector
+meta_description: "The MongoDB connector connects to your database and publishes document changes in realtime over Ably Pub/Sub channels"
+meta_keywords: "MongoDB, MongoDB Connector, channel"
+section: general
+index: 11
+languages:
+  - none
+---
+
+Use the MongoDB database connector to distribute document changes from a MongoDB collection to end users, at scale. It enables you to distribute document state changes to large numbers of subscribing clients, in realtime, as the changes occur.
+
+By using Ably Pub/Sub channels and SDKs, clients subscribing to messages published by the MongoDB database connector benefit from features like "connection-recovery":https://ably.com/docs/connect/states, "exactly-once delivery":https://ably.com/blog/achieving-exactly-once-message-processing-with-ably and "ordering guarantees":https://faqs.ably.com/reliable-message-ordering-for-connected-clients out of the box.
+
+<a href="@content/diagrams/ably-connector-for-mongodb.png" target="_blank">
+<img src="@content/diagrams/ably-connector-for-mongodb.png" style="width: 100%" alt="What is MongoDB database connector">
+</a>
+
+h2(#how-it-works). How it works
+
+The MongoDB database connector can be enabled through an integration rule, and consumes document changes from the your MongoDB deployment via the MongoDB "Change Streams API":https://www.mongodb.com/docs/manual/changeStreams/.
+The integration rule exists as a “database connector” component that is entirely provisioned and managed by Ably. The database connector is fault tolerant by default and integration rules automatically fail-over to a new worker node in the case of failures.
+
+Whenever a change event is received over the Change Streams API it is published to an Ably channel. When configuring the rule, you can specify how change events are mapped to individual Ably channels. Clients can then subscribe to database changes by subscribing to Ably channels. Ably "Auth":https://ably.com/docs/auth and "Capabilities":https://ably.com/docs/auth/capabilities control which channels a client can interact with.
+
+
+h2(#integration-rule). Integration rule
+
+h3(#create). Creating the rule
+
+There are two ways to create a MongoDB Change Stream rule:
+
+1. Using the "Ably Dashboard":https://ably.com/dashboard.
+2. Using the "Control API":/account/control-api.
+
+To create a rule in your "dashboard":https://ably.com/dashboard
+
+1. Login and select the application you wish to use.
+2. Click the *Integrations* tab.
+3. Click the *New Integration Rule* button.
+4. Choose *MongoDB** from the list.
+
+h3(#config). Rule configuration
+
+Use the following fields to configure yor MongoDB rule:
+
+|_. Field |_. Description |
+| URL | The "connection string":https://www.mongodb.com/docs/manual/reference/connection-string/ of your MongoDB instance. (e.g. <code>mongodb://user:pass@myhost.com</code>) |
+| Watch | What the connector should watch within the database. Currently the connector only supports watching collections. |
+| Database name | The database to use. |
+| Collection name | The collection to watch. |
+| Full Document | Controls whether the full document should be included in the published change events. "@Full Document@":#full-document is not available by default in all types of change event. Possible values are @updateLookup@, @whenAvailable@, @off@. The default is @off@. |
+| Full Document before change | Controls wheter the full document before the change should be included in the change event. "@Full Document before change@":#full-document-before-change is not available on all types of change event. Possible values are @whenAvailable@ or @off@. The default is @off@. |
+| Pipeline | A MongoDB pipeline to pass to the Change Stream API. This field allows you to control which types of change events are published, and which channel the change event should be published to. The "pipeline":#pipeline *must set the @_ablyChannel@ field* on the root of the change event. It must also be a valid JSON array of "pipeline operations":https://www.mongodb.com/docs/v8.0/changeStreams/#modify-change-stream-output.  |
+| Primary site | The primary site that the connector will run in. You should choose a site that is close to your database. |
+| Provisioned capacity | The provisioned capacity of the connector. It is always set to 1. |
+
+
+h2(#pipeline). Pipeline
+
+When configuring the integration rule, you must provide a MongoDB pipeline that is passed directly to the Change Stream when opened.
+The pipeline lets you filter and modify the change events published and their structure. The pipeline must be an array of json objects using the "MongoDB Change Stream pipeline syntax.":https://www.mongodb.com/docs/v8.0/changeStreams/#modify-change-stream-output
+
+
+Example matching only certain operation types:
+
+```[json]
+[
+  {
+    "$match": {
+      "operationType": {
+        "$in": [
+          "update",
+          "insert"
+        ]
+      }
+    }
+  },
+  {
+    "$set": {
+      "_ablyChannel": "myChannelName"
+    }
+  }
+]
+```
+
+The pipeline must set the @_ablyChannel@ field on the change event.
+
+
+h2(#channel-routing). Routing change events to channels
+
+The integration rule will listen to change events from the MongoDB Change Stream and route change events to Ably channels using the @_ablyChannel@ field from the change event. You can dynamically route change events to channels using the "@Pipeline@":#pipeline field. Ably will publish each change event as an individual message to the associated channel as received from the Change Stream subscription, without modification.
+
+<aside data-type='important'>
+    You must set the @_ablyChannel@ field on the root of the change event.
+</aside>
+
+```[json]
+// Set the _ablyChannel field statically
+[{ "$set": { "_ablyChannel": "myChannelName" } }]
+
+// Set the _ablyChannel field based on a field of the fullDocument:
+[{ "$set": { "_ablyChannel": "$fullDocument.channel" } }]
+
+// Set the _ablyChannel field dynamically based on the content of the change event:
+[{
+  "$set": {
+    "_ablyChannel": {
+      "$concat": [
+        "todos:","$fullDocument.workspace_id",":user:","$fullDocument.user_id"
+      ]
+    }
+  }
+}]
+
+// Set the _ablyChannel field dynamically by coalescing fullDocument and fullDocumentBeforeChange:
+[{
+  "$set": {
+    "_ablyChannel": {
+      "$ifNull": [
+        "$fullDocument.channel","$fullDocumentBeforeChange.channel"
+      ]
+    }
+  }
+}]
+```
+
+h2(#ably-fields). _ably fields
+
+The connector looks for the following fields:
+
+|_. Field |_. Required |_. Type |_. Description |
+| @_ablyChannel@ | required | string | The Ably channel that the change event will be published to. |
+| @_ablyMsgName@ | optional | string | The message name the event will have when it is published to Ably. |
+| @_ablyMsgHeaders@ | optional | object with string keys and values | The message @extras.headers@ the event will have when it is published to Ably. |
+
+h2(#event-schema). Change event schema
+
+The change events received from MongoDB Change Stream, after the pipeline is applied, are not modified and are published as messages on the @_ablyChannel@ as-is.
+
+Refer to the "MongoDB Change Stream event schema docs":https://www.mongodb.com/docs/v8.0/reference/change-events/ for change event stream types and schema.
+
+h2(#full-document). Full Document
+
+The Full Document configuration defines if the Change Stream should include the full document. Some change event types (e.g. update) only include the updated fields, and do not include the full document by default.
+
+Access to the full document can be useful for constructing the @_ablyChannel@ field, or if the subscribing Ably clients need access to the full document with each change.
+
+The Full Document config operates as follows:
+
+|_. Option |_. Description |
+| off | There will be no "fullDocument" field on the change event |
+| updateLookup | The Change Stream will perform a query to fetch the most current majority-comitted version of the updated document from MongoDB and include it as the "fullDocument" on the change event |
+| whenAvailable | If you are using post-images via @changeStreamPreAndPostImages@ config on the watched collection, then the "fullDocument" will be included on the event from the post image of the document |
+
+h3(#full-document-before-change). Full Document before change
+
+The Full Document before change config operates as follows:
+
+|_. Option |_. Description |
+| off | There will be no "fullDocumentBeforeChange" field on the change event |
+| whenAvailable | If you are using pre-images via @changeStreamPreAndPostImages@ config on the watched collection, then the "fullDocumentBeforeChange" pre-image will be included on the change event |
+
+h3(#full-document-inclusion). Inclusion
+
+Full document inclusion for common change event types:
+
+|_. Event type |_. Description |
+| Insert | @$fullDocument@ is already present, without needing to set the Full Document configuration. @$fullDocumentBeforeChange@ is not available because the data did not exist before the insert. |
+| Update | @$fullDocument@ and @$fullDocumentBeforeChange@ can be made available via the Full Document and Full Document Before Change configuration. |
+| Delete | @$fullDocument@ is not available because the data has already been deleted, but @$fullDocumentBeforeChange@ can be included. |
+
+h2(#resume-token). Resume Token
+
+The MongoDB Change Stream connector makes use of a "Resume Token":https://www.mongodb.com/docs/v8.0/changeStreams/#resume-a-change-stream to provide continuity across connector restarts and network disconnections. The token is stored in your MongoDB instance, in the database configured for the rule, but under an Ably-specific collection called @ably@.
+
+To reduce the number of writes against your database, the connector will update the resume token on a timer interval. "Idempotent publishing":/channels#idempotency means that the connector does not need to update the token on every change event. Ably can use a slightly older Resume Token and still guarantee that we will not send duplicate messages to subscribers, because duplicate messages are filtered out by our idempotent publish checks.
+
+h2(#permissions). Permissions
+
+The MongoDB Change Stream connector needs certain permissions to open and manage the Change Stream.
+
+* "MongoDB Change Stream access control docs":https://www.mongodb.com/docs/v8.0/changeStreams/#access-control
+* "MongoDB Atlas add a custom role":https://www.mongodb.com/docs/atlas/security-add-mongodb-roles/#add-custom-roles
+* "MongoDB self-hosted user-defined roles":https://www.mongodb.com/docs/manual/core/security-user-defined-roles/
+
+|_. Database |_. Collection |_. Actions required |_. Description |
+| <your db> | @ably@ | find, update, insert | To persist Change Stream resume tokens so that continuity can be maintained on the Change Stream in the event of instance failure. |
+| <your db> | <your collection> | find, changeStream | To access the Change Stream, and to access fullDocuments when configured. |
+
+Example MongoDB privileges to open a Change Stream on the db "products" and collection "inventory":
+
+```[json]
+{
+  "privileges": [
+    // permission to access ably collection for storing resume tokens
+    {
+      "resource": { "db": "products", "collection": "ably" },
+      "actions": [ "find", "update", "insert" ]
+    },
+    // permissions to access the product.inventory Change Stream
+    {
+      "resource": { "db": "products", "collection": "inventory" },
+      "actions": [ "find", "changeStream" ]
+    }
+  ]
+}
+```
