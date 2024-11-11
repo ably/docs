@@ -1,13 +1,15 @@
-import { NavData, NavProductPages, NavProductKey } from './types';
+import { ProductData, ProductKey } from 'src/data/types';
+import { NavProductPages } from 'src/data/nav/types';
 
 // Determine the active page based on the target link
-export const determineActivePage = (data: NavData, targetLink: string): number[] | null => {
+export const determineActivePage = (data: ProductData, targetLink: string): number[] | null => {
+  const strippedTargetLink = stripTrailingSlash(targetLink);
   const determinePagePresence = (pages: NavProductPages[], path: number[]): number[] | null => {
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
 
       // If the page is a link and the link matches the target link, return the path
-      if ('link' in page && page.link === targetLink) {
+      if ('link' in page && stripTrailingSlash(page.link) === strippedTargetLink) {
         return [...path, i];
       }
 
@@ -24,8 +26,8 @@ export const determineActivePage = (data: NavData, targetLink: string): number[]
 
   // Iterate through each product and check if the target link is present in the product
   for (const key in data) {
-    if (data[key as NavProductKey].content) {
-      const result = determinePagePresence(data[key as NavProductKey].content, []);
+    if (data[key as ProductKey].nav.content) {
+      const result = determinePagePresence(data[key as ProductKey].nav.content, []);
       if (result) {
         return [Object.keys(data).indexOf(key), ...result];
       }
@@ -33,3 +35,5 @@ export const determineActivePage = (data: NavData, targetLink: string): number[]
   }
   return null;
 };
+
+export const stripTrailingSlash = (link: string) => link.replace(/\/$/, '');
