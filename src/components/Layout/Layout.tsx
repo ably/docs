@@ -3,7 +3,6 @@ import { ReactNode, useEffect } from 'react';
 
 import '../../styles/global.css';
 
-import ProductNavigation from 'src/components/ProductNavigation';
 import { LeftSideBar } from 'src/components/Sidebar/LeftSideBar';
 import { useSidebar } from 'src/contexts/SidebarContext';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
@@ -24,7 +23,6 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({
   children,
   isExtraWide = false,
-  showProductNavigation = true,
   currentProduct,
   noSidebar = false,
   collapsibleSidebar = false,
@@ -45,7 +43,6 @@ const Layout: React.FC<LayoutProps> = ({
   return (
     <GlobalLoading>
       <Header showSearchBar={showSearchBar} />
-      {showProductNavigation && <ProductNavigation currentProduct={currentProduct} />}
       <div className="flex">
         {showSidebar && <LeftSideBar />}
         <Container as="main" className="flex-1">
