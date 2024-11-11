@@ -1,6 +1,8 @@
 import { IconName } from '@ably/ui/core/Icon/types';
 
-export type NavProductKey = 'platform' | 'pubsub';
+const navProductKeys: string[] = ['platform', 'pubsub', 'chat', 'spaces', 'liveSync', 'assetTracking'];
+
+export type NavProductKey = (typeof navProductKeys)[number];
 
 export type NavProduct = {
   name: string;
