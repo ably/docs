@@ -28,4 +28,5 @@ module.exports = {
   coverageReporters: ['text'],
   setupFilesAfterEnv: ['<rootDir>/setupTests.js'],
   testEnvironment: path.join(__dirname, 'jest-environment-patched-jsdom.js'),
+  prettierPath: require.resolve('prettier-2'),
 };
