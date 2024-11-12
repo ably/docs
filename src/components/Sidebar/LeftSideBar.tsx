@@ -7,6 +7,7 @@ import { NavProduct, NavProductContent, NavProductPages } from 'src/data/nav/typ
 import { commonAccordionOptions, determineActivePage, stripTrailingSlash } from './utils';
 import data from 'src/data';
 import { ProductData, ProductKey } from 'src/data/types';
+import { safeWindow } from 'src/utilities';
 
 type ContentType = 'content' | 'api';
 
@@ -34,7 +35,8 @@ export const NavPage = ({
   type: ContentType;
 }) => {
   const { setSelectedLinkId } = useContext(LeftSidebarContext);
-  const pageActive = 'link' in page && stripTrailingSlash(page.link) === stripTrailingSlash(window.location.pathname);
+  const pageActive =
+    'link' in page && stripTrailingSlash(page.link) === stripTrailingSlash(safeWindow.location.pathname);
   const linkId = 'link' in page ? page.link : undefined;
   useEffect(() => {
     if (pageActive) {
@@ -146,7 +148,7 @@ const constructProductNavData = (
 export const LeftSideBar = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductKey>();
   const [selectedLinkId, setSelectedLinkId] = useState<string>();
-  const activePageHierarchy = useMemo(() => determineActivePage(data, window.location.pathname) ?? [], []);
+  const activePageHierarchy = useMemo(() => determineActivePage(data, safeWindow.location.pathname) ?? [], []);
   const products = Object.entries(data as ProductData).map((product) => [product[0], product[1].nav]) as [
     ProductKey,
     NavProduct,

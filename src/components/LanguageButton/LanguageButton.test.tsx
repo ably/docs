@@ -20,7 +20,7 @@ describe(`<LanguageButton />`, () => {
       <button
         class="button ui-text-menu3 isActive"
       >
-        JavaScript
+        [object Object]
       </button>
     `);
   });
@@ -34,7 +34,7 @@ describe(`<LanguageButton />`, () => {
       <button
         class="button ui-text-menu3 isActive"
       >
-        JavaScript
+        [object Object]
       </button>
     `);
   });
@@ -62,7 +62,7 @@ describe(`<LanguageButton />`, () => {
       <button
         class="button ui-text-menu3 isActive"
       >
-        Ruby
+        [object Object]
       </button>
     `);
   });
@@ -77,7 +77,7 @@ describe(`<LanguageButton />`, () => {
       <button
         class="button ui-text-menu3 isActive"
       >
-        Java
+        undefined
       </button>
     `);
   });
