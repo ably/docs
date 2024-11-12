@@ -1,3 +1,5 @@
+import { LanguageInfo } from './types';
+
 export default {
   javascript: {
     label: 'JavaScript',
@@ -79,4 +81,12 @@ export default {
     label: 'Flutter',
     syntaxHighlighterKey: 'dart',
   },
-};
+  realtime: {
+    label: 'Realtime',
+    syntaxHighlighterKey: 'javascript',
+  },
+  rest: {
+    label: 'REST',
+    syntaxHighlighterKey: 'javascript',
+  },
+} satisfies LanguageInfo;
