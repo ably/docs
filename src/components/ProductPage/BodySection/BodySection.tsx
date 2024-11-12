@@ -40,14 +40,14 @@ export const BodySection = ({ section, images }: { section: SectionProps; images
   return (
     <section className="mb-48">
       {section.releaseStage ? (
-        <h1 className={`ui-text-${section.level} mt-40 flex items-center`}>
+        <h1 className={`ui-text-${section.level} mt-32 flex items-center`}>
           {section.title}
           <span style={betaPillStyle} className="px-12 py-4 ml-12 leading-normal">
             {section.releaseStage}
           </span>
         </h1>
       ) : section.level ? (
-        <section.level className={`ui-text-${section.level} mt-40`}>{section.title}</section.level>
+        <section.level className={`ui-text-${section.level} mt-24`}>{section.title}</section.level>
       ) : (
         <h2 className="ui-text-h2">{section.title}</h2>
       )}
