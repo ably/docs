@@ -79,4 +79,12 @@ export default {
     label: 'Flutter',
     syntaxHighlighterKey: 'dart',
   },
+  realtime: {
+    label: 'Realtime',
+    syntaxHighlighterKey: 'javascript',
+  },
+  rest: {
+    label: 'REST',
+    syntaxHighlighterKey: 'javascript',
+  },
 };

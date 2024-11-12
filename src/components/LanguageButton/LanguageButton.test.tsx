@@ -20,7 +20,7 @@ describe(`<LanguageButton />`, () => {
       <button
         class="button ui-text-menu3 isActive"
       >
-        [object Object]
+        JavaScript
       </button>
     `);
   });
@@ -34,7 +34,7 @@ describe(`<LanguageButton />`, () => {
       <button
         class="button ui-text-menu3 isActive"
       >
-        [object Object]
+        JavaScript
       </button>
     `);
   });
@@ -62,7 +62,7 @@ describe(`<LanguageButton />`, () => {
       <button
         class="button ui-text-menu3 isActive"
       >
-        [object Object]
+        Ruby
       </button>
     `);
   });
@@ -76,9 +76,7 @@ describe(`<LanguageButton />`, () => {
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
       <button
         class="button ui-text-menu3 isActive"
-      >
-        undefined
-      </button>
+      />
     `);
   });
 });
