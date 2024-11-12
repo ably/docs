@@ -1,6 +1,7 @@
+import { AccordionIcons, AccordionOptions } from '@ably/ui/core/Accordion/types';
+import cn from 'classnames';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductPages } from 'src/data/nav/types';
-import { AccordionIcons, AccordionOptions } from '@ably/ui/core/Accordion/types';
 
 // Determine the active page based on the target link
 export const determineActivePage = (data: ProductData, targetLink: string): number[] | null => {
@@ -47,9 +48,17 @@ export const commonAccordionOptions = (
   icons: { open: { name: 'icon-gui-chevron-up' }, closed: { name: 'icon-gui-chevron-down' } },
   options: {
     autoClose: topLevel,
-    headerCSS: 'h-40 text-[13px] pl-0',
+    headerCSS: cn({
+      'h-40': topLevel,
+      'h-[1rem]': !topLevel,
+      'text-neutral-1000 hover:text-neutral-1300 active:text-neutral-900 !py-0 ui-menu-label-4 font-bold pl-0 transition-colors':
+        true,
+    }),
+    selectedHeaderCSS: 'text-neutral-1300 mb-8',
+    contentCSS: cn({ '[&>div]:pb-0': true, 'pt-8': !topLevel }),
     rowIconSize: '20px',
     iconSize: '20px',
     defaultOpenIndexes: openIndex !== undefined ? [openIndex] : [],
+    hideBorders: true,
   },
 });

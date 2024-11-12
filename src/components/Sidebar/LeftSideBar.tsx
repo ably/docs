@@ -8,6 +8,8 @@ import { commonAccordionOptions, determineActivePage, stripTrailingSlash } from 
 import data from 'src/data';
 import { ProductData, ProductKey } from 'src/data/types';
 
+type ContentType = 'content' | 'api';
+
 const LeftSidebarContext = createContext<{
   selectedProduct: ProductKey | undefined;
   setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>;
@@ -23,11 +25,13 @@ export const NavPage = ({
   indentLinks,
   index,
   activePageHierarchy,
+  type,
 }: {
   page: NavProductPages;
   indentLinks?: boolean;
   index: number;
   activePageHierarchy?: number[];
+  type: ContentType;
 }) => {
   const { setSelectedLinkId } = useContext(LeftSidebarContext);
   const pageActive = 'link' in page && stripTrailingSlash(page.link) === stripTrailingSlash(window.location.pathname);
@@ -44,8 +48,11 @@ export const NavPage = ({
         key={page.link}
         id={linkId}
         className={cn({
-          'block ui-text-p3 text-[13px]': true,
-          'font-semibold text-neutral-900': !pageActive,
+          'block ui-menu-label-4 focus:border-gui-blue-focus focus:border-4 transition-colors hover:text-neutral-1300 active:text-neutral-800':
+            true,
+          'font-semibold': !pageActive,
+          'text-neutral-900': !pageActive && type === 'content',
+          'text-neutral-1000': !pageActive && type === 'api',
           'font-bold text-neutral-1300': pageActive,
           'pl-12': indentLinks,
         })}
@@ -66,7 +73,13 @@ export const NavPage = ({
             name: page.name,
             content: page.pages.map((subPage) => (
               <div className="mb-8" key={subPage.name}>
-                <NavPage page={subPage} indentLinks index={index} activePageHierarchy={activePageHierarchy?.slice(1)} />
+                <NavPage
+                  page={subPage}
+                  indentLinks
+                  index={index}
+                  activePageHierarchy={activePageHierarchy?.slice(1)}
+                  type={type}
+                />
               </div>
             )),
           },
@@ -77,7 +90,11 @@ export const NavPage = ({
   }
 };
 
-const renderProductContent = (content: NavProductContent[], activePageHierarchy: number[] | undefined) =>
+const renderProductContent = (
+  content: NavProductContent[],
+  activePageHierarchy: number[] | undefined,
+  type: ContentType,
+) =>
   content.map((productContent, contentIndex) => (
     <div className="flex flex-col gap-8" key={productContent.name}>
       <div className="ui-text-overline2 text-neutral-700">{productContent.name}</div>
@@ -87,6 +104,7 @@ const renderProductContent = (content: NavProductContent[], activePageHierarchy:
           page={page}
           index={pageIndex}
           activePageHierarchy={contentIndex === activePageHierarchy?.[0] ? activePageHierarchy.slice(1) : undefined}
+          type={type}
         />
       ))}
     </div>
@@ -115,10 +133,10 @@ const constructProductNavData = (
             </a>
           ) : null}
         </div>
-        {renderProductContent(product.content, activePageHierarchy)}
+        {renderProductContent(product.content, activePageHierarchy, 'content')}
         {product.api.length > 0 ? (
-          <div className="flex flex-col gap-8 rounded-lg bg-neutral-100 border-neutral-300 p-16">
-            {renderProductContent(product.api, activePageHierarchy)}
+          <div className="flex flex-col gap-8 rounded-lg bg-neutral-100 border border-neutral-300 p-16 mb-24">
+            {renderProductContent(product.api, activePageHierarchy, 'api')}
           </div>
         ) : null}
       </div>
@@ -158,7 +176,7 @@ export const LeftSideBar = () => {
   return (
     <LeftSidebarContext.Provider value={{ selectedProduct, setSelectedProduct, setSelectedLinkId }}>
       <Accordion
-        className="sticky w-240 ml-80 pb-16 pr-16 top-[112px] h-[calc(100vh-112px)] overflow-y-scroll"
+        className="sticky w-240 ml-80 pb-16 pr-16 top-[104px] h-[calc(100vh-104px)] overflow-y-scroll"
         id="left-nav"
         data={productNavData}
         {...commonAccordionOptions(activePageHierarchy[0], true)}

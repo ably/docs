@@ -3,7 +3,7 @@ import { NavProduct } from './types';
 export default {
   name: 'Pub/Sub',
   icon: {
-    closed: 'icon-product-pub-sub-mono',
+    closed: 'icon-product-pubsub-mono',
     open: 'icon-product-pubsub',
   },
   content: [
