@@ -1,5 +1,6 @@
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductPages } from 'src/data/nav/types';
+import { AccordionIcons, AccordionOptions } from '@ably/ui/core/Accordion/types';
 
 // Determine the active page based on the target link
 export const determineActivePage = (data: ProductData, targetLink: string): number[] | null => {
@@ -27,9 +28,10 @@ export const determineActivePage = (data: ProductData, targetLink: string): numb
   // Iterate through each product and check if the target link is present in the product
   for (const key in data) {
     if (data[key as ProductKey].nav.content) {
-      const result = determinePagePresence(data[key as ProductKey].nav.content, []);
-      if (result) {
-        return [Object.keys(data).indexOf(key), ...result];
+      const contentResult = determinePagePresence(data[key as ProductKey].nav.content, []);
+      const apiResult = determinePagePresence(data[key as ProductKey].nav.api, []);
+      if (contentResult || apiResult) {
+        return [Object.keys(data).indexOf(key), ...((contentResult || apiResult) ?? [])];
       }
     }
   }
@@ -37,3 +39,17 @@ export const determineActivePage = (data: ProductData, targetLink: string): numb
 };
 
 export const stripTrailingSlash = (link: string) => link.replace(/\/$/, '');
+
+export const commonAccordionOptions = (
+  openIndex?: number,
+  topLevel?: boolean,
+): { icons: AccordionIcons; options: AccordionOptions } => ({
+  icons: { open: { name: 'icon-gui-chevron-up' }, closed: { name: 'icon-gui-chevron-down' } },
+  options: {
+    autoClose: topLevel,
+    headerCSS: 'h-40 text-[13px] pl-0',
+    rowIconSize: '20px',
+    iconSize: '20px',
+    defaultOpenIndexes: openIndex !== undefined ? [openIndex] : [],
+  },
+});

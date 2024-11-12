@@ -10,7 +10,7 @@ export type NavProduct = {
 
 export type NavProductPages = NavProductPage | NavProductContent;
 
-type NavProductContent = {
+export type NavProductContent = {
   name: string;
   pages: NavProductPages[];
 };
