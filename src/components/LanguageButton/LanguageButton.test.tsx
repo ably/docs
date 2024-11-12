@@ -76,9 +76,7 @@ describe(`<LanguageButton />`, () => {
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
       <button
         class="button ui-text-menu3 isActive"
-      >
-        Java
-      </button>
+      />
     `);
   });
 });

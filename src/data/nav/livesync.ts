@@ -1,7 +1,7 @@
 import { NavProduct } from './types';
 
 export default {
-  name: 'LiveSync',
+  name: 'Ably LiveSync',
   icon: {
     closed: 'icon-product-livesync-mono',
     open: 'icon-product-livesync',
