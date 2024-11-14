@@ -1,3 +1,9 @@
+import dotenv from 'dotenv';
+
+dotenv.config({
+  path: `.env.${process.env.NODE_ENV}`,
+});
+
 const stripTrailingSlash = (str: string) => (str.endsWith('/') ? str.slice(0, -1) : str);
 
 const mainWebsite = stripTrailingSlash(process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000');
