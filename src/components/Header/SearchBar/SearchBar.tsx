@@ -80,7 +80,7 @@ export const SearchBar = ({
   useOnClickOutside(handleFocusEvent, searchDisplayRef);
   useKeyPress(['Escape'], handleFocusEvent);
   useKeyboardShortcut(['Meta', 'K'], focusOnSearchInput, {
-    overrideSystem: true,
+    overrideSystem: !externalScriptsData.inkeepEnabled,
     repeatOnHold: false,
   });
 
