@@ -3,7 +3,7 @@ import { ReactNode, useEffect } from 'react';
 
 import '../../styles/global.css';
 
-import { LeftSideBar } from 'src/components/Sidebar/LeftSideBar';
+import { LeftSidebar } from 'src/components/Sidebar/LeftSidebar';
 import { useSidebar } from 'src/contexts/SidebarContext';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Container } from 'src/components';
@@ -44,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({
     <GlobalLoading>
       <Header showSearchBar={showSearchBar} />
       <div className="flex">
-        {showSidebar && <LeftSideBar />}
+        {showSidebar && <LeftSidebar />}
         <Container as="main" className="flex-1">
           {children}
         </Container>

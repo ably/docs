@@ -11,7 +11,7 @@ import { safeWindow } from 'src/utilities';
 
 type ContentType = 'content' | 'api';
 
-const LeftSidebarContext = createContext<{
+export const LeftSidebarContext = createContext<{
   selectedProduct: ProductKey | undefined;
   setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>;
   setSelectedLinkId: React.Dispatch<React.SetStateAction<string | undefined>>;
@@ -145,7 +145,7 @@ const constructProductNavData = (
     ),
   }));
 
-export const LeftSideBar = () => {
+export const LeftSidebar = () => {
   const [selectedProduct, setSelectedProduct] = useState<ProductKey>();
   const [selectedLinkId, setSelectedLinkId] = useState<string>();
   const activePageHierarchy = useMemo(() => determineActivePage(data, safeWindow.location.pathname) ?? [], []);
