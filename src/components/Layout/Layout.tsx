@@ -1,4 +1,3 @@
-import cn from '@ably/ui/core/utils/cn';
 import { ReactNode, useEffect } from 'react';
 
 import '../../styles/global.css';
@@ -36,19 +35,13 @@ const Layout: React.FC<LayoutProps> = ({ children, noSidebar = false, showSearch
   return (
     <GlobalLoading>
       <Header showSearchBar={showSearchBar} />
-      <div className="flex mx-80">
+      <div className="flex mx-80 gap-80">
         {showSidebar && <LeftSidebar />}
         <Container as="main" className="flex flex-1 gap-80">
           {children}
         </Container>
       </div>
-      <div
-        className={cn({
-          'grid grid-cols-1 md:grid-cols-footer-layout': showSidebar,
-        })}
-      >
-        <Footer />
-      </div>
+      <Footer />
     </GlobalLoading>
   );
 };
