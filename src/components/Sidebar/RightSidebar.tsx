@@ -40,7 +40,7 @@ export const RightSidebar = () => {
       }[],
     ) => {
       entries.forEach((entry) => {
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting && entry.target.id) {
           setActiveHeader({
             id: entry.target.id,
           });
