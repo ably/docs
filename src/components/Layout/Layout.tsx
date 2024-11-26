@@ -3,12 +3,12 @@ import { ReactNode, useEffect } from 'react';
 
 import '../../styles/global.css';
 
-import { LeftSidebar } from 'src/components/Sidebar/LeftSidebar';
 import { useSidebar } from 'src/contexts/SidebarContext';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Container } from 'src/components';
 import { Header } from '../Header';
 import { Footer } from '../Footer';
+import { LeftSidebar } from '../Sidebar/LeftSideBar';
 
 interface LayoutProps {
   isExtraWide?: boolean;
@@ -36,7 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ children, noSidebar = false, showSearch
   return (
     <GlobalLoading>
       <Header showSearchBar={showSearchBar} />
-      <div className="flex">
+      <div className="flex mx-80">
         {showSidebar && <LeftSidebar />}
         <Container as="main" className="flex flex-1 gap-80">
           {children}

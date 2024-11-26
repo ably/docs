@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import cn from 'clsx';
+import cn from '@ably/ui/core/utils/cn';
 import Accordion from '@ably/ui/core/Accordion';
 import Icon from '@ably/ui/core/Icon';
 

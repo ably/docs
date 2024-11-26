@@ -51,7 +51,7 @@ export const commonAccordionOptions = (
     headerCSS: cn({
       'h-40': topLevel,
       'h-[1rem]': !topLevel,
-      'text-neutral-1000 hover:text-neutral-1300 active:text-neutral-900 !py-0 ui-menu-label-4 font-bold pl-0 transition-colors':
+      'text-neutral-1000 hover:text-neutral-1300 active:text-neutral-900 !py-0 ui-gui-menu4 font-bold pl-0 transition-colors':
         true,
     }),
     selectedHeaderCSS: 'text-neutral-1300 mb-8',
@@ -62,3 +62,5 @@ export const commonAccordionOptions = (
     hideBorders: true,
   },
 });
+
+export const sidebarAlignmentClasses = 'sticky w-240 pb-16 pr-16 top-[104px] h-[calc(100vh-104px)] overflow-y-scroll';
