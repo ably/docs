@@ -163,7 +163,7 @@ export const LeftSidebar = () => {
 
   useEffect(() => {
     if (selectedLinkId) {
-      const element = document.getElementById(selectedLinkId);
+      const element = typeof document !== `undefined` ? document.getElementById(selectedLinkId) : null;
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }

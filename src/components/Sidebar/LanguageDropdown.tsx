@@ -42,7 +42,7 @@ export const LanguageDropdown = () => {
     version,
   }));
 
-  const queryParams = new URLSearchParams(window.location.search);
+  const queryParams = new URLSearchParams(typeof window !== `undefined` ? window.location.search : '');
   const langParam = queryParams.get('lang');
   const defaultOption = options.find((option) => option.label === langParam) || options[0];
 

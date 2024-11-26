@@ -21,7 +21,8 @@ export const RightSidebar = () => {
   const observer = useRef<IntersectionObserver>();
 
   useEffect(() => {
-    const headerElements = document.querySelector('article')?.querySelectorAll('h2, h3') ?? [];
+    const headerElements =
+      typeof document !== `undefined` ? document.querySelector('article')?.querySelectorAll('h2, h3') ?? [] : [];
     const headerData = Array.from(headerElements)
       .filter((element) => element.id)
       .map((header) => ({
@@ -64,7 +65,8 @@ export const RightSidebar = () => {
   }, []);
 
   const highlightPosition = useMemo(() => {
-    const sidebarElement = document.getElementById(`sidebar-${activeHeader?.id}`);
+    const sidebarElement =
+      typeof document !== `undefined` ? document.getElementById(`sidebar-${activeHeader?.id}`) : null;
     const sidebarParentElement = sidebarElement?.parentElement;
     const sidebarElementDimensions = sidebarElement?.getBoundingClientRect();
 
