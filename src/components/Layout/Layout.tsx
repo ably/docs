@@ -20,14 +20,7 @@ interface LayoutProps {
   showSearchBar?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({
-  children,
-  isExtraWide = false,
-  currentProduct,
-  noSidebar = false,
-  collapsibleSidebar = false,
-  showSearchBar,
-}) => {
+const Layout: React.FC<LayoutProps> = ({ children, noSidebar = false, showSearchBar }) => {
   const showSidebar = !noSidebar;
 
   const { collapsed, setCollapsed, initialCollapsedState } = useSidebar();
@@ -45,7 +38,7 @@ const Layout: React.FC<LayoutProps> = ({
       <Header showSearchBar={showSearchBar} />
       <div className="flex">
         {showSidebar && <LeftSidebar />}
-        <Container as="main" className="flex-1">
+        <Container as="main" className="flex flex-1 gap-80">
           {children}
         </Container>
       </div>

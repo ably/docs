@@ -1,10 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import cn from 'classnames';
+import cn from 'clsx';
 import Accordion from '@ably/ui/core/Accordion';
 import Icon from '@ably/ui/core/Icon';
 
 import { NavProduct, NavProductContent, NavProductPages } from 'src/data/nav/types';
-import { commonAccordionOptions, determineActivePage, stripTrailingSlash } from './utils';
+import { commonAccordionOptions, determineActivePage, sidebarAlignmentClasses, stripTrailingSlash } from './utils';
 import data from 'src/data';
 import { ProductData, ProductKey } from 'src/data/types';
 import { safeWindow } from 'src/utilities';
@@ -178,7 +178,7 @@ export const LeftSidebar = () => {
   return (
     <LeftSidebarContext.Provider value={{ selectedProduct, setSelectedProduct, setSelectedLinkId }}>
       <Accordion
-        className="sticky w-240 ml-80 pb-16 pr-16 top-[104px] h-[calc(100vh-104px)] overflow-y-scroll"
+        className={sidebarAlignmentClasses}
         id="left-nav"
         data={productNavData}
         {...commonAccordionOptions(activePageHierarchy[0], true)}
