@@ -1,49 +1,49 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
-import { useEffect, useRef, useState } from 'react';
-import Select, { components } from 'react-select';
-import { languageData } from 'src/data/languages';
-import { languageInfo } from 'src/data/languages';
+import { LanguageDropdown } from './LanguageDropdown';
 import { sidebarAlignmentClasses } from './utils';
-import cn from 'clsx';
 
-const LanguageDropdownOption = (props) => (
-  <components.Option {...props}>
-    <div>
-      <Icon name={`icon-tech-${props.data.label}`} />
-      <span>{languageInfo[props.data.label].label}</span>
-      <span className="bg-neutral-200 p-3">{props.data.version}</span>
-    </div>
-  </components.Option>
-);
-
-const LanguageDropdown = () => {
-  const activeProduct = 'pubsub';
-  const languageVersions = languageData[activeProduct];
-
-  const options = Object.entries(languageVersions).map(([lang, version]) => ({
-    label: lang,
-    value: `${lang}-${version}`,
-    version,
-  }));
-
-  return <Select options={options} components={{ Option: LanguageDropdownOption }} />;
+type SidebarHeader = {
+  id: string;
+  type: string;
+  label: string;
 };
 
+const externalLinks = [
+  { label: 'Edit on Github', icon: 'icon-social-github', link: '#' },
+  { label: 'Request changes', icon: 'icon-gui-hand', link: '#' },
+];
+
 export const RightSidebar = () => {
-  const [headers, setHeaders] = useState([]);
-  const [activeHeader, setActiveHeader] = useState(null);
-  const observer = useRef(null);
+  const [headers, setHeaders] = useState<SidebarHeader[]>([]);
+  const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>();
+  const observer = useRef<IntersectionObserver>();
 
   useEffect(() => {
-    const headerElements = document.querySelectorAll('h2, h3');
-    setHeaders(
-      Array.from(headerElements).map((header) => ({ type: header.tagName, label: header.textContent, id: header.id })),
-    );
+    const headerElements = document.querySelector('article')?.querySelectorAll('h2, h3') ?? [];
+    const headerData = Array.from(headerElements)
+      .filter((element) => element.id)
+      .map((header) => ({
+        type: header.tagName,
+        label: header.textContent ?? '',
+        id: header.id,
+        height: header.getBoundingClientRect().height,
+      }));
 
-    const handleIntersect = (entries) => {
+    setHeaders(headerData);
+
+    const handleIntersect = (
+      entries: {
+        target: Element;
+        isIntersecting: boolean;
+      }[],
+    ) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          setActiveHeader(entry.target.id);
+          setActiveHeader({
+            id: entry.target.id,
+          });
         }
       });
     };
@@ -55,39 +55,84 @@ export const RightSidebar = () => {
     });
 
     headerElements.forEach((header) => {
-      observer.current.observe(header);
+      observer.current?.observe(header);
     });
 
     return () => {
-      if (observer.current) {
-        observer.current.disconnect();
-      }
+      observer.current?.disconnect();
     };
   }, []);
+
+  const highlightPosition = useMemo(() => {
+    const sidebarElement = document.getElementById(`sidebar-${activeHeader?.id}`);
+    const sidebarParentElement = sidebarElement?.parentElement;
+    const sidebarElementDimensions = sidebarElement?.getBoundingClientRect();
+
+    if (!sidebarParentElement || !sidebarElementDimensions) {
+      return {
+        yOffset: 0,
+        height: 21,
+      };
+    }
+
+    return {
+      yOffset: Math.abs(sidebarParentElement.getBoundingClientRect().top - sidebarElementDimensions?.top),
+      height: sidebarElementDimensions?.height,
+    };
+  }, [activeHeader]);
 
   return (
     <div className={sidebarAlignmentClasses}>
       <LanguageDropdown />
-      <div>
-        <p className="ui-text-overline2 text-neutral-700">On this page</p>
-        <div>
-          {headers.map((header) => (
+      <div className="my-24">
+        <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
+        <div className="flex gap-16">
+          <div>
             <div
-              key={header.id}
-              className={cn({ 'font-bold': header.id === activeHeader }, { 'ml-8': header.type === 'H3' })}
-            >
-              {header.label}
-            </div>
-          ))}
+              className="h-[21px] w-2 -mt-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors]"
+              style={{
+                transform: `translateY(${highlightPosition.yOffset}px)`,
+                height: `${highlightPosition.height}px`,
+              }}
+            ></div>
+          </div>
+          <div className="flex flex-col gap-8">
+            {headers.map((header) => (
+              <a
+                href={`#${header.id}`}
+                key={header.id}
+                id={`sidebar-${header.id}`}
+                className={cn(
+                  'ui-gui-menu4 text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth',
+                  { 'font-bold': header.id === activeHeader?.id },
+                  { 'ml-8': header.type === 'H3' },
+                )}
+                onClick={() => setActiveHeader({ id: header.id })}
+              >
+                {header.label}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
-      <div>
-        <div>
-          <Icon name="icon-social-github" /> Edit on Github <Icon name="icon-gui-external-link" />
-        </div>
-        <div>
-          <Icon name="icon-gui-hand" /> Request changes <Icon name="icon-gui-external-link" />
-        </div>
+      <div className="p-16 bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors">
+        {externalLinks.map(({ label, icon, link }, index) => (
+          <div
+            key={label}
+            className={cn(
+              'flex items-center',
+              index === 0 ? 'pb-16 border-b border-neutral-300 dark:border-neutral-1000' : 'pt-16',
+            )}
+          >
+            <div className="flex-1 flex items-center gap-12">
+              <Icon size="20px" name={icon} color="text-neutral-900" />
+              <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400">{label}</span>
+            </div>
+            <a href={link} target="_blank" rel="noopener">
+              <Icon name="icon-gui-external-link" color="text-neutral-900" size="16px" />
+            </a>
+          </div>
+        ))}
       </div>
     </div>
   );
