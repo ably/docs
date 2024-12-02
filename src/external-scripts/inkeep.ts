@@ -92,7 +92,7 @@ const loadInkeepSearch = () => {
       searchSettings: {
         placeholder: 'Search',
         tabSettings: {
-          rootBreadcrumbsToUseAsTabs: ['Docs', 'Blog'],
+          rootBreadcrumbsToUseAsTabs: ['Docs', 'Blog', 'Ably FAQs'],
         },
       },
       ...aiChatSettings,
