@@ -68,33 +68,37 @@ export const inkeepOnLoad = (apiKey, integrationId, organizationId) => {
     },
   });
 
+  const searchSettings = {
+    placeholder: 'Search',
+    tabSettings: {
+      rootBreadcrumbsToUseAsTabs: ['Docs', 'Blog', 'Ably FAQs'],
+    },
+  };
+
   window.inkeepWidget = inkeepBase.embed({
     componentType: 'ChatButton',
     properties: {
       chatButtonType: 'PILL',
       chatButtonText: 'Ask Ably',
       ...aiChatSettings,
+      searchSettings,
     },
   });
 
-  loadInkeepSearch();
+  loadInkeepSearch(searchSettings);
 };
 
-const loadInkeepSearch = () => {
+const loadInkeepSearch = (searchSettings) => {
   const searchBar = document.getElementById('inkeep-search');
   if (!searchBar) {
     return;
   }
+
   window.inkeepBase.embed({
     componentType: 'SearchBar',
     targetElement: searchBar,
     properties: {
-      searchSettings: {
-        placeholder: 'Search',
-        tabSettings: {
-          rootBreadcrumbsToUseAsTabs: ['Docs', 'Blog'],
-        },
-      },
+      searchSettings,
       ...aiChatSettings,
     },
   });
