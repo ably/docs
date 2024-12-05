@@ -26,7 +26,7 @@ export const RightSidebarMobile = ({ menuData }: { menuData: MenuData[] }) => {
 
   return (
     <div className="md:hidden flex-grow flex flex-row items-center pl-24">
-      <span className="pr-12 hidden xs:inline text-p3 sm:text-p1">On this page: </span>
+      <span className="pr-12 hidden xs:inline ui-text-p3 sm:ui-text-p1">On this page: </span>
       <Select
         components={noIndicatorSeparator}
         classNamePrefix="react-select"

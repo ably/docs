@@ -1,7 +1,7 @@
 import { ChangeEvent, useRef, useState, useEffect, useCallback } from 'react';
 import { graphql, useStaticQuery } from 'gatsby';
 import useKeyboardShortcut from 'use-keyboard-shortcut';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 
 import { useKeyPress, useOnClickOutside } from 'src/hooks';

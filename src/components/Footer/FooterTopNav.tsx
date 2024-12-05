@@ -6,17 +6,15 @@ import { FooterMenuContainer } from './FooterTopNav/FooterMenu/FooterMenuContain
 import { FooterStatus } from './FooterTopNav/FooterStatus';
 
 export const FooterTopNav = ({
-  ablySocialLinks,
   menuDataItems,
 }: {
-  ablySocialLinks: FooterMenuItemType[];
   menuDataItems: { items: FooterMenuItemType[]; label: string }[];
 }) => (
   <div className="max-w-screen-xl mx-auto py-64 ui-grid-gap grid ui-grid-px grid-cols-6 justify-between">
     <div className="col-span-full md:col-span-2 mb-30 md:mb-0">
       <FooterLogo />
       <FooterStatus />
-      <FooterSocialMenu ablySocialLinks={ablySocialLinks} />
+      <FooterSocialMenu />
     </div>
     <FooterMenuContainer menuDataItems={menuDataItems} />
   </div>

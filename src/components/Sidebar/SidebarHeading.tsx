@@ -1,5 +1,5 @@
 import React, { ElementType, ComponentPropsWithoutRef, PropsWithChildren } from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import { safeWindow } from 'src/utilities';
 import { sidebar } from './SidebarHeading.module.css';
 import { isString } from 'lodash';
@@ -24,10 +24,8 @@ export const SidebarHeading = <C extends ElementType>({
 }: Props<C>) => {
   const Component = as || 'span';
   const activeClassName = 'font-medium text-active-orange';
-
-  const link = props.to || props.href;
+  const link = (props.to || props.href) as string;
   const sidebarHeadingId = link ? `sidebar-heading-${link.replaceAll('#', '')}` : null;
-
   const scrollLinkIntoView = (node: HTMLElement) => {
     if (node && safeWindow.location.pathname === link) {
       node.scrollIntoView();
@@ -41,8 +39,8 @@ export const SidebarHeading = <C extends ElementType>({
     ...props,
     id: sidebarHeadingId,
     ref: scrollLinkIntoView,
-    className: cn(sidebar, `ml-${indent} break-words`, className, {
-      'font-light text-cool-black': !isActive,
+    className: cn(sidebar, `ml-${indent} break-words ${indent ? 'font-medium' : 'font-semibold'}`, className, {
+      'text-cool-black': !isActive,
       [activeClassName]: isActive,
     }),
   };

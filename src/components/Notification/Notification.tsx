@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import { Link } from 'gatsby';
 import Icon from '@ably/ui/core/Icon';
 
@@ -23,7 +23,7 @@ export const Notification = ({
   return isVisible ? (
     <div
       className={cn(
-        'py-6 px-12 w-full col-span-3 hidden md:flex text-white relative items-center justify-center rounded text-menu3 text-light',
+        'py-6 px-12 w-full col-span-3 hidden md:flex text-white relative items-center justify-center rounded ui-text-menu3',
         {
           'bg-active-orange': variant === NotificationVariant.Warning,
         },

@@ -9,12 +9,12 @@ class ResizeObserver {
 
 window.ResizeObserver = ResizeObserver;
 
-jest.mock('@ably/ui/src/core/utils/syntax-highlighter', () => ({
+jest.mock('@ably/ui/core/utils/syntax-highlighter', () => ({
   highlightSnippet: jest.fn,
   registerDefaultLanguages: jest.fn,
 }));
 
-jest.mock('@ably/ui/src/core/utils/syntax-highlighter-registry', () => ({
+jest.mock('@ably/ui/core/utils/syntax-highlighter-registry', () => ({
   __esModule: true,
   default: [],
 }));

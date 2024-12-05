@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import htmr from 'htmr';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import clamp from 'lodash/clamp';
 import Icon from '@ably/ui/core/Icon';
 
@@ -44,8 +44,8 @@ export const SuggestionBox = ({ results, isActive, error, query, displayLocation
   const containerStyle = displayLocation === 'homepage' ? { maxWidth: '100%' } : null;
 
   return (
-    <div aria-label="suggestions" className={container} style={containerStyle}>
-      <div className="font-light text-dark-grey uppercase text-menu3 px-16 mb-2">Results from docs</div>
+    <div aria-label="suggestions" className={container} style={containerStyle ?? {}}>
+      <div className="uppercase ui-text-menu3 px-16 mb-2">Results from docs</div>
       {results && totalResults > 0 ? (
         results.map((hit, index) => {
           const { title, highlight, meta_description, url, id } = hit;
@@ -65,8 +65,8 @@ export const SuggestionBox = ({ results, isActive, error, query, displayLocation
               )}
               role="link"
             >
-              <h4 className={cn('text-menu2 mb-6 font-medium', titleStyle)}>{pageTitle}</h4>
-              <div className="text-menu3 font-light text-charcoal-grey leading-5">{htmr(body)}</div>
+              <h4 className={cn('ui-text-h4 mb-6', titleStyle)}>{pageTitle}</h4>
+              <div className="ui-text-menu3">{htmr(body)}</div>
             </a>
           );
         })

@@ -10,7 +10,7 @@ export const Links = ({ links }: { links?: LinkProps[] }) =>
           <div>
             {links.map(({ href, external, text }, index) => {
               return (
-                <div key={index + text} className="h-full flex">
+                <div key={index + text} className="h-full flex items-center">
                   <Link
                     to={href}
                     external={external}

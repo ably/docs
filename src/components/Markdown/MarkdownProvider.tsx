@@ -23,7 +23,7 @@ const H3: FC<JSX.IntrinsicElements['h3']> = ({ children, ...props }) => (
 );
 
 const Paragraph: FC<JSX.IntrinsicElements['p']> = ({ children, ...props }) => (
-  <p className="text-p2 mb-20 leading-relaxed" {...props}>
+  <p className="ui-text-p2 mb-20" {...props}>
     {children}
   </p>
 );
@@ -50,12 +50,12 @@ export const Anchor: FC<JSX.IntrinsicElements['a']> = ({ children, href, ...prop
   const assetPrefix = site.assetPrefix ?? '';
   const brokenAssetPrefix = assetPrefix.replace('://', ':/');
 
-  if (href.startsWith(brokenAssetPrefix)) {
+  if (href?.startsWith(brokenAssetPrefix)) {
     cleanHref = href.slice(brokenAssetPrefix.length);
   }
 
   return (
-    <Link to={cleanHref} className="docs-link" {...props}>
+    <Link to={cleanHref ?? '#'} className="ui-link" {...props}>
       {children}
     </Link>
   );

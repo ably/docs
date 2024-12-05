@@ -9,7 +9,7 @@ export const HamburgerSidebarItem = (props: SidebarData) => {
   const isBaseLevel = props.level === 0 || !props.level;
   const isOpen = !props.closed;
   const isBold = hasContent && (isBaseLevel || isOpen);
-  const className = isBold ? 'font-medium ' : 'font-light';
+  const className = isBold ? 'font-bold' : 'font-medium';
   return (
     <HamburgerExpandedMenuContext.Consumer>
       {({ expandedMenu, handleMenuExpansion }) => (

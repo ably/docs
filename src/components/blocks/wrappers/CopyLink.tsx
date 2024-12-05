@@ -1,5 +1,5 @@
 import React, { ReactNode, useState } from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 
 import {
@@ -41,7 +41,7 @@ const CopyLink = ({
   return (
     <div className={cn('copy-link-identifier', container, marginBottom)}>
       <div className={childrenContainer}>
-        {children}
+        <a href={`#${attribs.id}`}>{children}</a>
         <div className={cn(buttonContainer, marginTop)}>
           <button
             onClick={handleCopyLink}

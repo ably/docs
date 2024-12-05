@@ -1,5 +1,5 @@
 import React from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import Link from 'src/components/Link';
 
 import { width } from './TopMainNavAblyLogo.module.css';

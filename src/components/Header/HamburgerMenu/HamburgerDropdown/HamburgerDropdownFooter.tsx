@@ -9,7 +9,7 @@ export const HamburgerDropdownFooter = ({ sessionState }: { sessionState: Sessio
       </a>
     </li>
     {!sessionState.signedIn && (
-      <a href="/sign-up" data-id="meganav-sign-up-btn" className="ml-16 ui-btn p-btn-small bg-cool-black text-white">
+      <a href="/sign-up" data-id="meganav-sign-up-btn" className="ml-16 ui-button-primary">
         Sign up free
       </a>
     )}

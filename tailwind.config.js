@@ -30,18 +30,14 @@ const safelistGreedy = [/^docs-.*/, /^col-span-.*/, /^rotate-/];
 
 module.exports = extendConfig((ablyUIConfig) => ({
   ...ablyUIConfig,
-  purge: {
-    content: ['./src/**/*.{js,jsx,ts,tsx}', './node_modules/@ably/ui/**/*', ...ablyUIConfig.purge.content],
-    safelist: {
-      ...ablyUIConfig.purge.safelist,
-      standard: [
-        ...Object.keys(apiReferenceSpecificColors).map((c) => `bg-${c}`),
-        ...Object.keys(highlightColors).map((c) => `bg-${c}`),
-        ...safelistStandard,
-      ],
-      greedy: [...ablyUIConfig.purge.options.safelist.greedy, ...safelistGreedy],
-    },
-  },
+  content: ['./src/pages/*.{js,jsx,ts,tsx}', './src/components/**/*.{js,jsx,ts,tsx}', ...ablyUIConfig.content],
+  safelist: [
+    ...ablyUIConfig.safelist,
+    ...Object.keys(apiReferenceSpecificColors).map((c) => `bg-${c}`),
+    ...Object.keys(highlightColors).map((c) => `bg-${c}`),
+    ...safelistStandard,
+    ...safelistGreedy,
+  ],
   theme: {
     ...ablyUIConfig.theme,
     boxShadow: {

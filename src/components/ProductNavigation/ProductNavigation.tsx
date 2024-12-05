@@ -1,5 +1,5 @@
-import cn from 'classnames';
-import { Link, withPrefix } from 'gatsby';
+import cn from '@ably/ui/core/utils/cn';
+import { Link } from 'gatsby';
 import { PropsWithChildren } from 'react';
 
 type ItemProps = {
@@ -11,18 +11,13 @@ const Item = ({ to, children, active = false }: PropsWithChildren<ItemProps>) =>
   return (
     <Link
       to={to}
-      className={cn('leading-normal px-12 md:px-14 py-16 relative font-medium cursor-pointer', {
-        'text-active-orange md:mr-2': active,
-        'md:px-14': !active,
+      className={cn('px-12 md:px-14 py-16 relative cursor-pointer ui-text-menu3', {
+        'text-neutral-1300 md:mr-2': active,
+        'text-neutral-1000 md:px-14': !active,
       })}
     >
       {children}
-      {active && (
-        <div
-          className="absolute left-0 right-0 -bottom-1 bg-active-orange"
-          style={{ borderRadius: '0.625rem', height: '0.15625rem' }}
-        ></div>
-      )}
+      {active && <div className="absolute left-0 right-0 -bottom-1 bg-neutral-1300 rounded-lg h-2"></div>}
     </Link>
   );
 };

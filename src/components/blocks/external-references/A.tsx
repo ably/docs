@@ -2,7 +2,6 @@ import React, { ReactElement } from 'react';
 import Html from '../Html';
 import { HtmlAttributes, HtmlComponentProps } from '../../html-component-props';
 
-import './styles.css';
 import Img from './Img';
 import { filterAttribsForReact } from 'src/react-utilities';
 import Link from 'src/components/Link';
@@ -22,7 +21,7 @@ const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
   }
 
   return (
-    <Link className="docs-link" to={href} {...props}>
+    <Link className="ui-link" to={href} {...props}>
       <Html data={data} />
     </Link>
   );

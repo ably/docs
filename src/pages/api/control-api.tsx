@@ -25,7 +25,7 @@ const ControlApi = () => {
         noSidebar={true}
       >
         <div className="ml-8 mt-40 mb-24">
-          <div className=" font-light text-gui-default hover:text-gui-hover focus:text-gui-focus focus:outline-gui-focus group text-p2">
+          <div className="text-gui-default hover:text-gui-hover focus:text-gui-focus focus:outline-gui-focus group ui-text-p2">
             <Link to="/api">
               <Icon
                 name="icon-gui-disclosure-arrow"
@@ -34,7 +34,7 @@ const ControlApi = () => {
               />
               API Reference
             </Link>
-            <span className="text-p2 font-light text-cool-black ml-4"> / {meta_title}</span>
+            <span className="ui-text-p2 ml-4"> / {meta_title}</span>
           </div>
         </div>
         <Loader specUrl={controlAPI} />

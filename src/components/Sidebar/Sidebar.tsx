@@ -1,4 +1,4 @@
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import { ReactElement, useEffect } from 'react';
 
 import { HighlightedMenuContext } from 'src/contexts/highlighted-menu-context';
@@ -52,8 +52,9 @@ export const Sidebar = ({
   return (
     <aside
       className={cn(
-        'transition-all duration-300 fixed hidden h-screen md:block overflow-y-auto bg-extra-light-grey z-20 left-0 w-244 pb-128',
+        'transition-all duration-300 fixed hidden h-screen md:block overflow-y-auto bg-extra-light-grey z-20 w-244 pb-128',
         { '-left-200': collapsed },
+        { 'left-0': !collapsed },
         { 'pt-24': !collapsible },
         className,
       )}

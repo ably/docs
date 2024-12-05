@@ -1,5 +1,5 @@
 import { ReactElement, useState } from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import Html from '../Html';
 import languageLabels from 'src/maps/language';
@@ -162,7 +162,7 @@ const Pre = ({
             docs. There either isn&apos;t a {languageLabel ?? pageLanguage} code sample for this example, or this
             feature isn&apos;t supported in {languageLabel ?? pageLanguage}. Switch language to view this example in a
             different language, or{' '}
-            <a className="docs-link" href="/docs/sdks">
+            <a className="ui-link" href="/docs/sdks">
               check which SDKs support this feature.
             </a>
           </div>

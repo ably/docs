@@ -12,7 +12,6 @@ export const controlStyles: (
     fontWeight: '500',
     boxShadow: 'none',
     cursor: 'pointer',
-    fontFamily: `NEXT Book,Arial,Helvetica,sans-serif`,
     fontSize: '14px',
     borderRadius: '0.375rem',
   });

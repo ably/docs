@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import { AccordionItemButton, AccordionItemHeading, AccordionItemState } from 'react-accessible-accordion';
 
 import { ROOT_LEVEL } from '../consts';
@@ -40,7 +40,7 @@ export const ExpandableAccordionHeading = ({ label, level }: AccordionHeadingPro
       >
         {label}
         <AccordionItemState>
-          {({ expanded }) => <Indicator expanded={expanded} isExpanded={isExpanded} setIsExpanded={setIsExpanded} />}
+          {({ expanded }) => <Indicator expanded={expanded} setIsExpanded={setIsExpanded} />}
         </AccordionItemState>
       </AccordionItemButton>
     </AccordionItemHeading>

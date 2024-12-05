@@ -1,10 +1,5 @@
 import { text } from './colors';
 
-const families = {
-  museo:
-    '"Museo Sans", "Helvetica Neue", Arial, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", sans-serif',
-};
-
 const weights = {
   light: '300',
   base: '500',
@@ -68,7 +63,7 @@ const font = (key) => {
   if (!type) return '';
 
   return `
-    font-family: ${type.family || families.museo};
+    font-family: ${type.family || 'Manrope, system-ui'};
     font-size: ${type.size};
     font-weight: ${type.weight || weights.base};
     line-height: ${type.lineHeight};

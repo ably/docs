@@ -1,5 +1,5 @@
 import { FunctionComponent as FC } from 'react';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
 import { createLanguageHrefFromDefaults, getLanguageDefaults, getTrimmedLanguage } from 'src/components';
 import languageLabels from 'src/maps/language';
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
@@ -31,7 +31,7 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, select
 
   return (
     <button
-      className={cn(button, {
+      className={cn(button, 'ui-text-menu3', {
         [isActive]: isLanguageActive,
       })}
       onClick={handleClick}

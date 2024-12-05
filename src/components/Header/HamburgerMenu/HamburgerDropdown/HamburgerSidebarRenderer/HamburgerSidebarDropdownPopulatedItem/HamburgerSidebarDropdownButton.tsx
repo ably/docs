@@ -24,7 +24,7 @@ export const HamburgerSidebarDropdownButton = ({
         closed ? (
           <HamburgerSidebarItemContainer>
             <h4
-              className="cursor-pointer max-w-full flex flex-grow justify-between text-16 focus-within:outline-none focus-within:text-gui-focus"
+              className="ui-text-h4 cursor-pointer max-w-full flex flex-grow justify-between text-16 focus-within:outline-none focus-within:text-gui-focus"
               onClick={() => {
                 handleMenuExpansion(label);
                 dispatchBooleanChange(false);
