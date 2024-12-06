@@ -62,4 +62,4 @@ export const commonAccordionOptions = (openIndex?: number, topLevel?: boolean): 
 });
 
 export const sidebarAlignmentClasses =
-  'hidden md:block sticky w-240 pb-16 top-[104px] h-[calc(100vh-104px)] overflow-y-scroll';
+  'absolute right-[80px] md:right-0 md:sticky w-240 md:pb-16 top-[104px] h-[calc(100vh-104px)] overflow-y-scroll';

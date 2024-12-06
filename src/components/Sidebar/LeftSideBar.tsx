@@ -177,7 +177,7 @@ export const LeftSidebar = () => {
   return (
     <LeftSidebarContext.Provider value={{ selectedProduct, setSelectedProduct, setSelectedLinkId }}>
       <Accordion
-        className={sidebarAlignmentClasses}
+        className={cn(sidebarAlignmentClasses, 'hidden md:block')}
         id="left-nav"
         data={productNavData}
         {...commonAccordionOptions(activePageHierarchy[0], true)}
