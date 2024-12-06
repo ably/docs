@@ -1,7 +1,7 @@
 import { NavProduct } from './types';
 
 export default {
-  name: 'Pub/Sub',
+  name: 'Ably Pub/Sub',
   icon: {
     closed: 'icon-product-pubsub-mono',
     open: 'icon-product-pubsub',

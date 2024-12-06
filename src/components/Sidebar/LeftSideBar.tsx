@@ -50,8 +50,7 @@ export const NavPage = ({
         key={page.link}
         id={linkId}
         className={cn({
-          'block ui-menu-label-4 focus:border-gui-blue-focus focus:border-4 transition-colors hover:text-neutral-1300 active:text-neutral-800':
-            true,
+          'block ui-text-menu4 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base': true,
           'font-semibold': !pageActive,
           'text-neutral-900': !pageActive && type === 'content',
           'text-neutral-1000': !pageActive && type === 'api',

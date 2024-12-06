@@ -1,5 +1,5 @@
-import { AccordionIcons, AccordionOptions } from '@ably/ui/core/Accordion/types';
-import cn from 'classnames';
+import cn from '@ably/ui/core/utils/cn';
+import { AccordionProps } from '@ably/ui/core/Accordion';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductPages } from 'src/data/nav/types';
 
@@ -41,21 +41,19 @@ export const determineActivePage = (data: ProductData, targetLink: string): numb
 
 export const stripTrailingSlash = (link: string) => link.replace(/\/$/, '');
 
-export const commonAccordionOptions = (
-  openIndex?: number,
-  topLevel?: boolean,
-): { icons: AccordionIcons; options: AccordionOptions } => ({
+export const commonAccordionOptions = (openIndex?: number, topLevel?: boolean): Omit<AccordionProps, 'data'> => ({
   icons: { open: { name: 'icon-gui-chevron-up' }, closed: { name: 'icon-gui-chevron-down' } },
   options: {
     autoClose: topLevel,
-    headerCSS: cn({
-      'h-40': topLevel,
-      'h-[1rem]': !topLevel,
-      'text-neutral-1000 hover:text-neutral-1300 active:text-neutral-900 !py-0 ui-gui-menu4 font-bold pl-0 transition-colors':
-        true,
-    }),
+    headerCSS: cn(
+      'text-neutral-1000 md:text-neutral-900 hover:text-neutral-1100 active:text-neutral-1000 !py-0 pl-0 !mb-0 transition-colors',
+      {
+        'h-40 ui-text-menu1 font-bold md:ui-text-menu4': topLevel,
+        'h-[1rem] ui-text-menu2 font-semibold md:ui-text-menu4': !topLevel,
+      },
+    ),
     selectedHeaderCSS: 'text-neutral-1300 mb-8',
-    contentCSS: cn({ '[&>div]:pb-0': true, 'pt-8': !topLevel }),
+    contentCSS: cn('[&>div]:pb-0'),
     rowIconSize: '20px',
     iconSize: '20px',
     defaultOpenIndexes: openIndex !== undefined ? [openIndex] : [],
@@ -63,4 +61,5 @@ export const commonAccordionOptions = (
   },
 });
 
-export const sidebarAlignmentClasses = 'sticky w-240 pb-16 pr-16 top-[104px] h-[calc(100vh-104px)] overflow-y-scroll';
+export const sidebarAlignmentClasses =
+  'hidden md:block sticky w-240 pb-16 top-[104px] h-[calc(100vh-104px)] overflow-y-scroll';

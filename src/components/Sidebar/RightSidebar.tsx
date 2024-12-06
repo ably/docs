@@ -3,6 +3,7 @@ import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import { LanguageDropdown } from './LanguageDropdown';
 import { sidebarAlignmentClasses } from './utils';
+import { IconName } from '@ably/ui/core/Icon/types';
 
 type SidebarHeader = {
   id: string;
@@ -10,8 +11,8 @@ type SidebarHeader = {
   label: string;
 };
 
-const externalLinks = [
-  { label: 'Edit on Github', icon: 'icon-social-github', link: '#' },
+const externalLinks: { label: string; icon: IconName; link: string }[] = [
+  { label: 'Edit on GitHub', icon: 'icon-social-github', link: '#' },
   { label: 'Request changes', icon: 'icon-gui-hand', link: '#' },
 ];
 
@@ -89,7 +90,7 @@ export const RightSidebar = () => {
       <div className="my-24">
         <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
         <div className="flex gap-16">
-          <div>
+          <div className="bg-neutral-300 dark:bg-neutral-1000 rounded-full">
             <div
               className="h-[21px] w-2 -mt-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors]"
               style={{
@@ -105,7 +106,7 @@ export const RightSidebar = () => {
                 key={header.id}
                 id={`sidebar-${header.id}`}
                 className={cn(
-                  'ui-gui-menu4 text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth',
+                  'ui-text-menu4 text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth',
                   { 'font-bold': header.id === activeHeader?.id },
                   { 'ml-8': header.type === 'H3' },
                 )}
