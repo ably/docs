@@ -4,6 +4,7 @@ import Icon from '@ably/ui/core/Icon';
 import { LanguageDropdown } from './LanguageDropdown';
 import { sidebarAlignmentClasses } from './utils';
 import { IconName } from '@ably/ui/core/Icon/types';
+import { safeWindow } from 'src/utilities';
 
 type SidebarHeader = {
   id: string;
@@ -11,8 +12,14 @@ type SidebarHeader = {
   label: string;
 };
 
+const githubEditPath = 'https://github.com/ably/docs/blob/main/content';
+
 const externalLinks: { label: string; icon: IconName; link: string }[] = [
-  { label: 'Edit on GitHub', icon: 'icon-social-github', link: '#' },
+  {
+    label: 'Edit on GitHub',
+    icon: 'icon-social-github',
+    link: `${githubEditPath}${safeWindow.location.pathname}.textile`,
+  },
   { label: 'Request changes', icon: 'icon-gui-hand', link: '#' },
 ];
 
@@ -119,23 +126,22 @@ export const RightSidebar = () => {
             </div>
           </div>
         </div>
-        <div className="p-16 bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors">
+        <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors">
           {externalLinks.map(({ label, icon, link }, index) => (
-            <div
-              key={label}
-              className={cn(
-                'flex items-center',
-                index === 0 ? 'pb-16 border-b border-neutral-300 dark:border-neutral-1000' : 'pt-16',
-              )}
-            >
-              <div className="flex-1 flex items-center gap-12">
-                <Icon size="20px" name={icon} color="text-neutral-900" />
-                <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400">{label}</span>
-              </div>
-              <a href={link} target="_blank" rel="noopener">
+            <a key={label} href={link} target="_blank" rel="noopener">
+              <div
+                className={cn(
+                  'flex items-center p-16',
+                  index === 0 && 'border-b border-neutral-300 dark:border-neutral-1000',
+                )}
+              >
+                <div className="flex-1 flex items-center gap-12">
+                  <Icon size="20px" name={icon} color="text-neutral-900" />
+                  <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400">{label}</span>
+                </div>
                 <Icon name="icon-gui-external-link" color="text-neutral-900" size="16px" />
-              </a>
-            </div>
+              </div>
+            </a>
           ))}
         </div>
       </div>
