@@ -108,6 +108,7 @@ export const commonAccordionOptions = (
   currentPage: NavProductContent | null,
   openIndex: number | undefined,
   topLevel: boolean,
+  inHeader: boolean,
 ): Omit<AccordionProps, 'data'> => ({
   icons: { open: { name: 'icon-gui-chevron-up' }, closed: { name: 'icon-gui-chevron-down' } },
   options: {
@@ -115,6 +116,7 @@ export const commonAccordionOptions = (
     headerCSS: cn(
       'text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 hover:text-neutral-1100 active:text-neutral-1000 !py-0 pl-0 !mb-0 transition-colors [&_svg]:!w-24 [&_svg]:!h-24 md:[&_svg]:!w-20 md:[&_svg]:!h-20',
       {
+        'my-12': topLevel && inHeader,
         'h-40 ui-text-menu1 font-bold md:ui-text-menu4 px-16': topLevel,
         'h-[1rem] ui-text-menu2 font-semibold md:ui-text-menu4': !topLevel,
       },
@@ -122,15 +124,13 @@ export const commonAccordionOptions = (
     selectedHeaderCSS: 'text-neutral-1300 mb-8',
     contentCSS: cn('[&>div]:pb-0'),
     rowIconSize: '20px',
-    defaultOpenIndexes: openIndex !== undefined ? [openIndex] : [],
+    defaultOpenIndexes: !inHeader && openIndex !== undefined ? [openIndex] : [],
     hideBorders: true,
     fullyOpen: !topLevel && currentPage?.expand,
   },
 });
 
 export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128 top-[88px] h-[calc(100vh-88px)]';
-
-export const mobileSidebarAlignmentClasses = 'pb-64';
 
 export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link).replaceAll('/', '-')}`;
 

@@ -16,8 +16,13 @@ import {
 import { ProductKey } from 'src/data/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
+import { AccordionData } from '@ably/ui/core/Accordion/types';
 
 type ContentType = 'content' | 'api';
+
+type LeftSidebarProps = {
+  inHeader?: boolean;
+};
 
 export const NavPage = ({
   depth,
@@ -26,11 +31,13 @@ export const NavPage = ({
   type,
   indentLinks,
   activePageTree,
+  inHeader,
 }: {
   depth: number;
   page: NavProductPages;
   index: number;
   type: ContentType;
+  inHeader: boolean;
   indentLinks?: boolean;
   activePageTree?: PageTreeNode[];
 }) => {
@@ -45,7 +52,8 @@ export const NavPage = ({
         key={hierarchicalKey(page.link, depth, activePageTree)}
         id={linkId}
         className={cn({
-          'block ui-text-menu4 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base': true,
+          'block ui-text-menu2 leading-relaxed md:leading-snug md:ui-text-menu4 text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base':
+            true,
           'font-semibold': !pageActive,
           'text-neutral-900': !pageActive && type === 'content',
           'text-neutral-1000': !pageActive && type === 'api',
@@ -76,12 +84,13 @@ export const NavPage = ({
                   activePageTree={activePageTree?.slice(1)}
                   type={type}
                   depth={depth + 1}
+                  inHeader={inHeader}
                 />
               </div>
             )),
           },
         ]}
-        {...commonAccordionOptions(page, activePageTree?.[0]?.index === index ? 0 : undefined, false)}
+        {...commonAccordionOptions(page, activePageTree?.[0]?.index === index ? 0 : undefined, false, inHeader)}
       />
     );
   }
@@ -91,9 +100,10 @@ const renderProductContent = (
   content: NavProductContent[],
   activePageTree: PageTreeNode[] | undefined,
   type: ContentType,
+  inHeader: boolean,
 ) =>
   content.map((productContent, contentIndex) => (
-    <div className="flex flex-col gap-8" key={productContent.name}>
+    <div className="flex flex-col gap-[10px] md:gap-8" key={productContent.name}>
       <div className="ui-text-overline2 text-neutral-700">{productContent.name}</div>
       {productContent.pages.map((page, pageIndex) => (
         <NavPage
@@ -103,6 +113,7 @@ const renderProductContent = (
           activePageTree={contentIndex === activePageTree?.[0]?.index ? activePageTree.slice(1) : undefined}
           type={type}
           depth={0}
+          inHeader={inHeader}
         />
       ))}
     </div>
@@ -114,8 +125,9 @@ const constructProductNavData = (
   activePageTree: PageTreeNode[],
   selectedProduct: string | undefined,
   setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>,
-) =>
-  products.map(([productKey, product]) => {
+  inHeader: boolean,
+) => {
+  const navData: AccordionData[] = products.map(([productKey, product]) => {
     const apiReferencesId = `${productKey}-api-references`;
 
     return {
@@ -124,13 +136,13 @@ const constructProductNavData = (
       onClick: () => setSelectedProduct(productKey),
       content: (
         <div key={product.name} className="flex flex-col gap-20 px-16">
-          <div className="flex flex-col gap-8 mt-12">
+          <div className="flex flex-col gap-[10px] md:gap-8 mt-12">
             <p className="ui-text-overline2 text-neutral-700">{product.name}</p>
             {product.link ? (
               <Link
                 to={product.link}
                 id={composeNavLinkId(product.link)}
-                className={cn('ui-text-menu4', {
+                className={cn('ui-text-menu2 md:ui-text-menu4 leading-relaxed md:leading-snug', {
                   'font-bold': formatNavLink(product.link) === formatNavLink(location),
                 })}
               >
@@ -155,13 +167,13 @@ const constructProductNavData = (
               </a>
             ) : null}
           </div>
-          {renderProductContent(product.content, activePageTree, 'content')}
+          {renderProductContent(product.content, activePageTree, 'content', inHeader)}
           {product.api.length > 0 ? (
             <div
               id={apiReferencesId}
-              className="flex flex-col gap-8 rounded-lg bg-neutral-100 border border-neutral-300 p-16 mb-24 -mx-16"
+              className="flex flex-col gap-[10px] md:gap-8 rounded-lg bg-neutral-100 border border-neutral-300 p-16 mb-24 md:-mx-16"
             >
-              {renderProductContent(product.api, activePageTree, 'api')}
+              {renderProductContent(product.api, activePageTree, 'api', inHeader)}
             </div>
           ) : null}
         </div>
@@ -169,7 +181,10 @@ const constructProductNavData = (
     };
   });
 
-export const LeftSidebar = () => {
+  return navData;
+};
+
+export const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
   const { selectedProduct, setSelectedProduct, activePage, products } = useLayoutContext();
   const location = useLocation();
 
@@ -181,16 +196,28 @@ export const LeftSidebar = () => {
         activePage.tree.slice(1),
         selectedProduct,
         setSelectedProduct,
+        inHeader,
       ),
-    [location.pathname, products, activePage.tree, selectedProduct, setSelectedProduct],
+    [location.pathname, products, activePage.tree, selectedProduct, setSelectedProduct, inHeader],
   );
 
   return (
-    <Accordion
-      className={cn(sidebarAlignmentClasses, 'overflow-y-scroll hidden md:block')}
-      id="left-nav"
-      data={productNavData}
-      {...commonAccordionOptions(null, activePage.tree[0]?.index, true)}
-    />
+    <>
+      {inHeader ? (
+        <a
+          href="/docs"
+          aria-label="Home"
+          className="flex w-full items-center focus-base text-neutral-1000 dark:text-neutral-300 hover:text-neutral-1100 active:text-neutral-1000 transition-colors h-40 ui-text-menu1 font-bold px-16"
+        >
+          Home
+        </a>
+      ) : null}
+      <Accordion
+        className={cn(!inHeader && [sidebarAlignmentClasses, 'hidden md:block'], 'overflow-y-scroll md:pr-16')}
+        id="left-nav"
+        data={productNavData}
+        {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}
+      />
+    </>
   );
 };

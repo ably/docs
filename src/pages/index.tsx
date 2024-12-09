@@ -49,7 +49,7 @@ const IndexPage = ({
       </Helmet>
 
       <PageLanguageProvider search={search}>
-        <Layout noSidebar>
+        <Layout noSidebar hideSearchBar>
           <HomepageContent sections={sections} images={images} />
         </Layout>
       </PageLanguageProvider>
