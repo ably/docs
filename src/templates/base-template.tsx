@@ -18,7 +18,7 @@ import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from 
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { getMetaTitle } from 'src/components/common/meta-title';
-import { RightSidebar } from 'src/components/Sidebar/RightSidebar';
+import { RightSidebar } from 'src/components/Layout/RightSidebar';
 
 const getMetaDataDetails = (
   document: AblyDocument,
