@@ -7,7 +7,7 @@ import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Container } from 'src/components';
 import { Header } from '../Header';
 import { Footer } from '../Footer';
-import { LeftSidebar } from '../Sidebar/LeftSidebar';
+import { LeftSidebar } from './LeftSidebar';
 
 interface LayoutProps {
   isExtraWide?: boolean;
