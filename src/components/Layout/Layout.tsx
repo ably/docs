@@ -4,7 +4,7 @@ import '../../styles/global.css';
 
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Container } from 'src/components';
-import { Header } from '../Header';
+import Header from './Header';
 import { Footer } from '../Footer';
 import { LeftSidebar } from './LeftSidebar';
 import { RightSidebar } from './RightSidebar';
