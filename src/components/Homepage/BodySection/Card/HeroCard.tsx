@@ -1,5 +1,5 @@
 import { CardProps } from '../../HomepageContent';
-import { SearchBar } from '../../../Header/SearchBar';
+import { SearchBar } from '../../../SearchBar';
 
 export const HeroCard = ({ title, content }: CardProps) => (
   <div className="flex flex-col items-center mt-88">
