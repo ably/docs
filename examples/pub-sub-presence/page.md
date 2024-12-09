@@ -1,10 +1,10 @@
 # Presence updates with Pub/Sub
 
-Presence enable users to view who else is online within the application.
+Presence enables users to see who else is online within an application.
 
-Use presence to display which users are currently online in a channel. Users can also manually update their status, such as to set themselves as 'Away'.
+Use presence to display which users are currently online in a channel. Users can also manually update their status, such as to set themselves as 'Away', or write a custom message.
 
-Presence enables users to quickly understand the availability of others to communicate more effectively. For example, in a team chat room, users can quickly see who is available to collaborate with, and who is currently busy, on a video stream, users can see who else is currently viewing the stream.
+Presence enables users to quickly understand the availability of others to communicate more effectively. For example, on a live video stream users can see who else is currently viewing.
 
 Presence is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Ably SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting Pub/Sub features. It is built as Ably's core platform, and so it provides high performance and scaling guarantees.
 
