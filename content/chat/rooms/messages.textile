@@ -1,13 +1,14 @@
 ---
 title: Messages
-meta_description: "Send and receive messages in chat rooms."
+meta_description: "Send, update, delete, and receive messages in chat rooms."
 product: chat
 languages:
   - javascript
   - react
 ---
 
-You can send and receive messages in a chat room with any number of participants. These users subscribe to messages by registering a listener, and send messages to all users that are subscribed to receive them.
+Send, update, delete, and receive messages in a chat room with any number of participants. Users subscribe to messages by registering a listener, and send messages to all users that are subscribed to receive them.
+A user can also update or delete a message, all users that are subscribed to the room will be notified of the changes.
 
 h2(#subscribe). Subscribe to messages
 
@@ -44,28 +45,47 @@ h3(#structure). Message structure
 
 The following is the structure of a message:
 
-```[json]
+```[javascript]
 {
-  "timeserial": "e91RB0GOQBcvyJ53053074@1718191654749-0",
+  "serial": "01826232498871-001@abcdefghij:001",
   "clientId": "basketLover014",
   "roomId": "basketball-stream",
   "text": "What a shot!",
   "headers": {},
   "metadata": {},
-  "createdAt": "2024-06-12T11:37:59.988Z",
+  "createdAt": new Date("2024-06-12T11:37:59.988Z"),
+  "action": "message.create",
+  "version": "01826232498871-001@abcdefghij:001",
+  "timestamp": new Date("2024-06-12T11:37:59.988Z"),
+  "operation": {},
 }
 ```
 
 The following are the properties of a message:
 
 |_. Property |_. Description |_. Type |
-| timeserial | An Ably-generated ID used to determine the order the message was sent in. | String |
-| clientId | The client identifier of the user that sent the message. | String |
-| roomId | The name of the room the message was sent to. | String |
+| serial | An Ably-generated ID used to uniquely identify the message. By comparing it to others it provides a deterministic global ordering of messages. | String |
+| clientId | The client identifier of the user that created the message. | String |
+| roomId | The name of the room the message was created in. | String |
 | text | The message contents. | String |
 | headers | Optional headers for adding additional information to a message, such as the relative timestamp of a livestream video, or flagging a message as important. Do not use the headers for authoritative information. There is no server-side validation. When reading headers treat them like user input. | Object |
 | metadata | Optional additional metadata about the message, such as animations, effects or links to other resources such as images. This information is not read by Ably. Do not use metadata for authoritative information. There is no server-side validation. When reading metadata treat it like user input. | Object |
-| createdAt | The time the message was sent. | Date |
+| createdAt | The time the message was created. | Date |
+| action | The latest action performed on this message, such as <code>message.create</code>, <code>message.update</code> or <code>message.delete</code>.  | String |
+| version | An Ably-generated ID used to uniquely identify the version of the message. It provides a deterministic global ordering of message versions. The <code>version</code> is identical to <code>serial</code> if the action is <code>message.create</code>.  | String |
+| timestamp | The time the action was performed. It will be identical to <code>createdAt</code> if the action is a <code>message.create</code>. | Date |
+| operation | For updates and deletions, this provides additional details about the action. It may contain the following properties: | Object or undefined |
+| | clientId: The client identifier of the user associated with the action. | String or undefined |
+| | description: Optional description for the action. | String or undefined |
+| | metadata: Optional additional metadata about the action. | Object or undefined |
+
+<aside data-type="note">
+<p>Both <code>serial</code> and <code>version</code> are lexicographically sortable strings. This means they can be used to enforce a deterministic global ordering based on string comparison.</p>
+ <p><strong>Global Ordering Rules:</strong></p>
+  <p>For message <code>serial</code>: If the <code>serial</code> of one message occurs before another when lexicographically sorted, the first message is considered to have occurred globally before the other. If the <code>serial</code> values are identical, the two messages are considered to be the same message.</p>
+  <p>For <code>version</code>: When two messages share the same <code>serial</code>, their respective <code>version</code> values can be used to determine the order of actions applied to the message.</p>
+  <p>An action (such as an update) with a <code>version</code> is considered to have occurred before some other action, if the first action's <code>version</code> occurs before another when sorted lexicographically. If the <code>version</code> values are identical, the actions are considered to be the same.</p>
+</aside>
 
 h3(#unsubscribe). Unsubscribe from messages
 
@@ -126,3 +146,242 @@ const MyComponent = () => {
   );
 };
 ```
+
+h2(#update). Update a message
+
+blang[javascript].
+  Use the "@messages.update()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat_js.Messages.html#update method to update a message in a chat room. All users that are "subscribed":#subscribe to messages on that room will receive the update:
+
+blang[react].
+  Use the "@update()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat_react.UseMessagesResponse.html#update method available from the response of the @useMessages@ hook to update a message in the room:
+
+```[javascript]
+import { Message } from '@ably/chat';
+const messageToUpdate: Message
+await room.messages.update(messageToUpdate, { text: "my updated text" }, { description: "Message update by user" });
+```
+
+```[react]
+import { useMessages } from '@ably/chat/react';
+import { Message } from '@ably/chat';
+
+const MyComponent = () => {
+  const { update } = useMessages();
+  const [message, setMessage] = useState<Message>();
+
+  const handleMessageUpdate = (msg: Message) => {
+    update(msg, { text: "my updated text" }, { description: "Message update by user" })
+    .then((updatedMsg: Message) => {
+    console.log('Message updated:', updatedMsg);
+    })
+    .catch((error) => {
+      console.error('Error updating message: ', error);
+    });
+  };
+  return (
+    <div>
+      <button onClick={() => handleMessageUpdate(message)}>Update Message</button>
+    </div>
+  );
+};
+```
+
+h3(#filter-updates). Filter for updates
+
+blang[javascript].
+  Use the "@messages.subscribe()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat_js.Messages.html#subscribe method to receive messages in a room. To filter for updated messages, provide a listener that checks the @type@ property of the message event:
+
+blang[react].
+  Use the "@useMessages@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat_react.useMessages.html hook to subscribe to messages in a room. To filter for updated messages, provide a listener that checks the @type@ property of the message event:
+
+```[javascript]
+import { MessageEvents } from '@ably/chat';
+const {unsubscribe} = room.messages.subscribe((event) => {
+  switch (event.type) {
+    case MessageEvents.Created:
+      console.log('Received message: ', event.message);
+      break;
+    case MessageEvents.Updated:
+      console.log('Message updated: ', event.message);
+      break;
+    default:
+      break;
+  }
+});
+```
+
+```[react]
+import { useMessages } from '@ably/chat/react';
+import { MessageEvents } from '@ably/chat';
+
+const MyComponent = () => {
+  useMessages({
+    listener: (event) => {
+      switch (event.type) {
+        case MessageEvents.Created:
+          console.log('Received message: ', event.message);
+          break;
+        case MessageEvents.Updated:
+          console.log('Message updated: ', event.message);
+          break;
+        default:
+          break;
+      }
+    },
+  });
+
+  return <div>...</div>;
+};
+```
+
+h3(#update-structure). Message update structure
+
+The following is the structure of an updated message:
+
+```[javascript]
+{
+  "serial": "01726232498871-001@abcdefghij:001",
+  "clientId": "basketLover014",
+  "roomId": "basketball-stream",
+  "text": "What a shot! Edit: I meant to say 'What a dunk!'",
+  "headers": {},
+  "metadata": {},
+  "createdAt": new Date("2024-06-12T11:37:59.988Z")S,
+  "action": "message.update",
+  "version": "01826232498871-001@abcdefghij:001",
+  "timestamp": new Date("2024-11-21T15:49:25.425Z"),
+  "operation": {
+    "clientId": "basketLover014",
+    "description": "Message updated by client",
+    "metadata": {}
+  },
+}
+```
+
+The updated message response is identical to the structure of a message, with the following differences:
+
+|_. Property |_. Description |
+| action | Set to <code>message.update</code>. |
+| version | Set to the serial of the update action. |
+| timestamp | Set to the time the message was updated. |
+| operation | Set to the details the actioning client provided in the request. |
+
+h2(#delete). Delete a message
+
+blang[javascript].
+  Use the "@messages.delete()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat_js.Messages.html#delete method to delete a message in a chat room. All users that are "subscribed":#subscribe to messages on that room will receive the deletion:
+
+blang[react].
+  Use the "@deleteMessage()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat_react.UseMessagesResponse.html#deleteMessage method available from the response of the @useMessages@ hook to delete a message from the room:
+
+```[javascript]
+import { Message } from '@ably/chat';
+const messageToDelete: Message
+await room.messages.delete(messageToDelete, { description: 'Message deleted by user' });
+```
+
+```[react]
+import { useMessages } from '@ably/chat/react';
+import { Message } from '@ably/chat';
+
+const MyComponent = () => {
+  const { deleteMessage } = useMessages();
+  const [message, setMessage] = useState<Message>();
+
+  const handleMessageDelete = (msg: Message) => {
+    deleteMessage(msg, { description: 'Message deleted by user' })
+    .then((deletedMessage: Message) => {
+      console.log('Message deleted:', deletedMessage);
+    })
+    .catch((error) => {
+      console.error('Error deleting message: ', error);
+    });
+  };
+
+  return (
+    <div>
+      <button onClick={() => handleMessageDelete(message)}>Delete Message</button>
+    </div>
+  );
+};
+```
+
+h3(#filter-deletes). Filter for deletes
+
+blang[javascript].
+  Use the "@messages.subscribe()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat_js.Messages.html#subscribe method to receive messages in a room. To filter for deleted messages, provide a listener that checks the @type@ property of the message event:
+
+blang[react].
+  Use the "@useMessages@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat_react.useMessages.html hook to subscribe to messages in a room. To filter for deleted messages, provide a listener that checks the @type@ property of the message event:
+
+```[javascript]
+import { MessageEvents } from '@ably/chat';
+const {unsubscribe} = room.messages.subscribe((event) => {
+  switch (event.type) {
+    case MessageEvents.Created:
+      console.log('Received message: ', event.message);
+      break;
+    case MessageEvents.Deleted:
+      console.log('Message deleted: ', event.message);
+      break;
+    default:
+      break;
+  }
+});
+```
+
+```[react]
+import { useMessages } from '@ably/chat/react';
+import { MessageEvents } from '@ably/chat';
+
+const MyComponent = () => {
+  useMessages({
+    listener: (event) => {
+      switch (event.type) {
+        case MessageEvents.Created:
+          console.log('Received message: ', event.message);
+          break;
+        case MessageEvents.Deleted:
+          console.log('Message deleted: ', event.message);
+          break;
+        default:
+          break;
+      }
+    },
+  });
+
+  return <div>...</div>;
+};
+```
+
+h3(#deletion-structure). Message deletion structure
+
+The following is the structure of a deleted message:
+
+```[javascript]
+{
+  "serial": "01726232498871-001@abcdefghij:001",
+  "clientId": "basketLover014",
+  "roomId": "basketball-stream",
+  "text": "What a shot!",
+  "headers": {},
+  "metadata": {},
+  "createdAt": new Date("2024-06-12T11:37:59.988Z"),
+  "action": "message.delete",
+  "version": "01826232498871-001@abcdefghij:001",
+  "timestamp": new Date("2024-11-21T15:49:25.425Z"),
+  "operation": {
+    "clientId": "basketLover014",
+    "description": "Message deleted by client",
+    "metadata": {}
+  },
+}
+```
+
+The deleted message response is identical to the structure of a message, with the following differences:
+
+|_. Property |_. Description |
+| action | Set to <code>message.delete</code>. |
+| version | Set to the serial of the deletion action. |
+| timestamp | Set to the time the message was deleted. |
+| operation | Set to the details the actioning client provided in the request. |
