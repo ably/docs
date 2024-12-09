@@ -19,7 +19,7 @@ interface LayoutProps {
   showSearchBar?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, noSidebar = false, showSearchBar }) => {
+const Layout: React.FC<LayoutProps> = ({ children, noSidebar = false, showSearchBar = true }) => {
   const showSidebar = !noSidebar;
 
   const { collapsed, setCollapsed, initialCollapsedState } = useSidebar();
