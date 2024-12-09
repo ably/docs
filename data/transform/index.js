@@ -2,7 +2,6 @@ const yaml = require('js-yaml');
 const { upperFirst, camelCase, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
 const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH, prepareAllowedMetaFields } = require('./front-matter');
 const DataTypes = require('../types');
-const { ROOT_LEVEL, MAX_LEVEL } = require('../../src/components/Sidebar/consts');
 const { preParser } = require('./pre-parser');
 const { processAfterFrontmatterExtracted } = require('./parser-enhancements');
 const { maybeRetrievePartial } = require('./retrieve-partials');
@@ -52,10 +51,10 @@ const createNodesFromPath =
     const values = {
       link: '',
       label: '',
-      level: ROOT_LEVEL,
+      level: 0,
     };
     const breadcrumbs = pieces.map((piece, i) => {
-      values.level = values.level + i > MAX_LEVEL ? MAX_LEVEL : values.level + i;
+      values.level = values.level + i > 1 ? 1 : values.level + i;
       values.link = `${values.link}/${piece}`;
       values.label = upperFirst(piece);
       values.id = createNodeId(`${values.link} >>> Path`);
