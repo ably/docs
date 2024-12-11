@@ -60,9 +60,9 @@ const Status = ({ statusUrl, additionalCSS }: { statusUrl: string; additionalCSS
 };
 
 export const FooterStatus = () => (
-  <div className="flex flex-row mt-24 items-center gap-x-8">
+  <div className="flex flex-1 justify-end items-center gap-x-8 h-40">
     <Status statusUrl="https://status.ably.com/api/v2/status.json" />
-    <span className="ui-text-menu4 font-medium">All systems operational</span>
+    <span className="ui-text-menu4 font-medium text-neutral-900">All systems operational</span>
     <Link to="https://status.ably.com/">
       <Icon color="text-neutral-900" name="icon-gui-external-link" size="16px" />
     </Link>

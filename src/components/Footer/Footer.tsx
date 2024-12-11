@@ -10,6 +10,7 @@ type FooterMenuItemType = {
   label: string;
   link: string;
   external?: boolean;
+  position?: string;
 };
 
 export const Footer = () => {
@@ -19,7 +20,7 @@ export const Footer = () => {
         items {
           label
           link
-          external
+          position
         }
       }
     }
@@ -27,26 +28,43 @@ export const Footer = () => {
 
   const bottomLinks = data.bottomMenu.items ?? [];
 
+  const displayBottomLinks = (position: string) =>
+    bottomLinks
+      .filter((item: FooterMenuItemType) => item.position === position)
+      .map(({ link, label, external }: FooterMenuItemType) => (
+        <Link to={link} key={label} external={external} className="ui-footer-link text-neutral-900">
+          {label}
+        </Link>
+      ));
+
   return (
-    <footer className="px-20 antialiased col-start-1 md:col-start-2" data-id="footer">
-      <div className="w-full flex flex-1 justify-between">
-        <div className="pt-16 flex">
+    <footer
+      className="antialiased col-start-1 md:col-start-2 w-full max-w-1264 px-24 md:pl-40 md:pr-48 xl:pr-64 my-40"
+      data-id="footer"
+    >
+      <div className="w-full flex flex-1 justify-between items-center  py-24 border-t border-b border-t-neutral-300 border-b-neutral-300">
+        <div className="flex flex-1 items-center h-40">
+          <Link
+            className="rounded-full bg-neutral-100 text-active-orange hover:text-cool-black py-6 px-8 flex justify-center mr-24"
+            to="https://www.ably.com/"
+          >
+            <Icon name="icon-gui-ably-badge" size="1.5rem" />
+          </Link>
           {ablySocialLinks.map((social: FooterMenuItemType) => (
-            <Link className="h-24 pr-24 text-cool-black hover:text-active-orange" to={social.link} key={social.label}>
-              <Icon name={social.label as IconName} size="1.5rem" />
+            <Link
+              className="mr-20 text-neutral-1000 hover:text-active-orange flex justify-center"
+              to={social.link}
+              key={social.label}
+            >
+              <Icon name={social.label as IconName} size="1.25rem" additionalCSS="h-24" />
             </Link>
           ))}
         </div>
         <FooterStatus />
       </div>
-      <div className="max-w-screen-xl mx-auto py-40  w-full">
-        <div className="inline-flex  justify-center w-full space-x-24">
-          {bottomLinks.map(({ link, label, external }: FooterMenuItemType) => (
-            <Link to={link} key={label} external={external} className="ui-footer-link">
-              {label}
-            </Link>
-          ))}
-        </div>
+      <div className="w-full flex flex-row justify-between items-center py-24">
+        <div className="flex flex-1 w-1/2 space-x-24"> {displayBottomLinks('left')} </div>
+        <div className="flex flex-1 justify-end w-1/2 space-x-24">{displayBottomLinks('right')}</div>
       </div>
     </footer>
   );
