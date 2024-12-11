@@ -1,0 +1,67 @@
+'use client'
+
+import { useState, useEffect } from 'react';
+import * as Ably from 'ably';
+import { faker } from '@faker-js/faker';
+import { useRouter } from 'next/navigation';
+
+export default function Home() {
+  const [showAuction, setShowAuction] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (showAuction) {
+      router.push('/auction');
+    }
+  }, [router, showAuction]);
+
+  const preloadBiddingHistory = async () => {
+    let lastBidAmount = 100;
+    // Define how many bids to simulate
+    const numBids = 10;
+
+    for (let i = 0; i < numBids; i++) {
+      const clientId = faker.person.firstName();
+
+      const client = new Ably.Realtime({
+        key: process.env.NEXT_PUBLIC_ABLY_KEY,
+        clientId,
+      });
+      const channel = client.channels.get('cab-pad-sit');
+
+      const bidAmount = (lastBidAmount + Math.random() * 50).toFixed(2);
+
+      await channel.publish('bid', {
+        amount: bidAmount,
+        timestamp: new Date().toISOString(),
+      });
+
+      console.log(`Client ${clientId} placed a bid of $${bidAmount} (previous was $${lastBidAmount})`);
+      lastBidAmount = parseFloat(bidAmount);
+    }
+
+    alert('Generated a history of bids. Enter the auction to view.');
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-8 rounded-lg shadow-lg w-96">
+        <h2 className="text-2xl mb-6 text-center">Welcome to the Auction</h2>
+        <div className="flex flex-col gap-4">
+          <button
+            onClick={() => setShowAuction(true)}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Enter Auction
+          </button>
+          <button
+            onClick={() => preloadBiddingHistory()}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          >
+            Pre-load Bidding History
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
