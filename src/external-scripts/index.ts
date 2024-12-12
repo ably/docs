@@ -1,7 +1,7 @@
 import hubspot, { AblyHubspotData, hubspotIdentifyUser, HubspotUser } from './hubspot';
 import headway from './headway';
 import boomerang from './boomerang';
-import announcement from 'utilities/console-announcement';
+import announcement from '../utilities/console-announcement';
 import googleTagManager, {
   googleTagManagerCookiesAccepted,
   googleTagManagerSessionPageViews,
