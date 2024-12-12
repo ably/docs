@@ -7,6 +7,7 @@ export type ImageProps = {
   publicURL: string;
   src?: string;
   base?: string;
+  name?: string;
 };
 
 export type ImageComponentProps = ComponentProps<'img'> & {

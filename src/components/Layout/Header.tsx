@@ -72,14 +72,16 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
       // mobileNav={
       //   <TabMenu
       //     tabs={tabs}
-      //     contents={[<LeftSidebar inHeader key="nav-mobile-documentation-tab" />, null]}
+      //     contents={[<LeftSidebar inHeader key="nav-mobile-documentation-tab" />, <ExamplesList key="nav-mobile-examples-tab" />]}
       //     rootClassName="h-full overflow-y-hidden min-h-[51px] flex flex-col"
       //     contentClassName="h-full py-16 overflow-y-scroll"
       //     tabClassName="ui-text-menu2 !px-16"
       //     options={{ flexibleTabWidth: true }}
       //   />
       // }
-      // TODO: remove mt-16 from inHeader link when examples are ready to be released
+      // TODO:
+      // - remove mt-16 from inHeader link when examples are ready to be released
+      // - add ExamplesList to mobileNav when examples are ready to be released
       mobileNav={<LeftSidebar inHeader key="nav-mobile-documentation-tab" />}
       searchButton={
         <button
