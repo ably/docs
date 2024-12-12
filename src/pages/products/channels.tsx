@@ -6,8 +6,6 @@ import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
 
-import { SidebarProvider } from 'src/contexts/SidebarContext';
-
 type MetaData = {
   title: string;
   description: string;
@@ -45,11 +43,9 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <SidebarProvider>
-        <Layout isExtraWide currentProduct="channels">
-          <ProductPageContent sections={sections} images={images} />
-        </Layout>
-      </SidebarProvider>
+      <Layout>
+        <ProductPageContent sections={sections} images={images} />
+      </Layout>
     </>
   );
 };
