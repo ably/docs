@@ -13,12 +13,10 @@ import {
 } from 'src/components/common/language-defaults';
 import { PageLanguageProvider, PathnameContext, usePageLanguage } from 'src/contexts';
 
-import { SidebarProvider } from 'src/contexts/SidebarContext';
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { getMetaTitle } from 'src/components/common/meta-title';
-import { RightSidebar } from 'src/components/Layout/RightSidebar';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -38,7 +36,6 @@ const Template = ({
   location: { pathname, hash },
   pageContext: { contentOrderedList, languages, slug, script },
   data: { document },
-  showProductNavigation = true,
   currentProduct,
 }: ITemplate) => {
   const {
@@ -129,15 +126,12 @@ const Template = ({
       <PathnameContext.Provider value={pathname}>
         <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} />
 
-        <SidebarProvider>
-          <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
-            <Article>
-              <PageTitle>{title}</PageTitle>
-              <div>{elements}</div>
-            </Article>
-            <RightSidebar />
-          </Layout>
-        </SidebarProvider>
+        <Layout>
+          <Article>
+            <PageTitle>{title}</PageTitle>
+            <div>{elements}</div>
+          </Article>
+        </Layout>
       </PathnameContext.Provider>
       {script && <Script src={`/scripts/${slug}.js`} strategy={ScriptStrategy.idle} />}
     </>

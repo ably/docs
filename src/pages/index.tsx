@@ -5,8 +5,6 @@ import Layout from 'src/components/Layout';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
-
-import { SidebarProvider } from 'src/contexts/SidebarContext';
 import { PageLanguageProvider } from 'src/contexts';
 
 export type MetaData = {
@@ -51,11 +49,9 @@ const IndexPage = ({
       </Helmet>
 
       <PageLanguageProvider search={search}>
-        <SidebarProvider>
-          <Layout currentProduct="home" noSidebar showSearchBar={false}>
-            <HomepageContent sections={sections} images={images} />
-          </Layout>
-        </SidebarProvider>
+        <Layout noSidebar>
+          <HomepageContent sections={sections} images={images} />
+        </Layout>
       </PageLanguageProvider>
     </>
   );
