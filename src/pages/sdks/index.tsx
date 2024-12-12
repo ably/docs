@@ -1,4 +1,3 @@
-import { withPrefix } from 'gatsby';
 import SDKsContent from 'src/components/SDKsPage';
 import Layout from 'src/components/Layout';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
@@ -16,7 +15,7 @@ const SDKsIndexPage = ({ location: { search } }: { location: { search: string } 
   return (
     <>
       <Head title={title} description={meta_description} canonical={canonical} />
-      <Layout noSidebar currentProduct="SDKs">
+      <Layout noSidebar>
         <SDKsContent tab={tab} />
       </Layout>
     </>
