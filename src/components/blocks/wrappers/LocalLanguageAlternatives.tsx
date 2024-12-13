@@ -5,7 +5,7 @@ import { getTrimmedLanguage, LanguageButton } from 'src/components';
 import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
 import { HtmlComponentProps, HtmlComponentPropsData, ValidReactElement } from 'src/components/html-component-props';
 import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../data/createPages/constants';
-import { languageLabel } from 'src/data/languages';
+import { languageInfo, languageLabel } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
 
 const LocalLanguageAlternatives = ({
@@ -57,7 +57,7 @@ const LocalLanguageAlternatives = ({
           language: filterLanguageForLangButton,
           selectedLocalLanguage: hasLocalLanguageSelected ? selectedPageLanguage : getTrimmedLanguage(languages[0]),
         },
-        content: languageLabel(lang as LanguageKey) ?? lang,
+        content: Object.keys(languageInfo).includes(lang) ? languageLabel(lang as LanguageKey) : lang,
       };
     }
   });

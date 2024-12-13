@@ -8,6 +8,7 @@ import { languageData } from 'src/data/languages';
 import { languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
 import { useOnClickOutside } from 'src/hooks';
+import { useLayoutContext } from 'src/contexts/layout-context';
 
 type LanguageDropdownOptionProps = {
   data: {
@@ -53,8 +54,10 @@ const LanguageDropdownOption = ({ isOption, setMenuOpen, langParam, ...props }: 
 );
 
 export const LanguageDropdown = () => {
-  const activeProduct = 'pubsub';
-  const languageVersions = languageData[activeProduct];
+  const { activePageHierarchy, products } = useLayoutContext();
+
+  const activeProduct = products[activePageHierarchy[0]]?.[0];
+  const languageVersions = languageData[activeProduct ?? 'pubsub'];
   const [menuOpen, setMenuOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
 
@@ -68,7 +71,7 @@ export const LanguageDropdown = () => {
     }))
     .toSorted((a, b) => a.label.localeCompare(b.label));
 
-  const queryParams = new URLSearchParams(typeof window !== `undefined` ? window.location.search : '');
+  const queryParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const langParam = queryParams.get('lang');
   const defaultOption = options.find((option) => option.label === langParam) || options[0];
 
