@@ -10,7 +10,7 @@ export default {
     java: 1.2,
     react: 2.0,
     nodejs: 2.0,
-    objc: 1.2,
+    objectivec: 1.2,
     php: 1.1,
     python: 2.0,
     ruby: 1.2,
