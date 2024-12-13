@@ -53,7 +53,7 @@ export default {
     label: 'Swift',
     syntaxHighlighterKey: 'swift',
   },
-  objc: {
+  objectivec: {
     label: 'Objective-C',
     syntaxHighlighterKey: 'objectivec',
   },
