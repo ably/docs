@@ -9,6 +9,7 @@ import { languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
 import { useOnClickOutside } from 'src/hooks';
 import { useLayoutContext } from 'src/contexts/layout-context';
+import Link from '../Link';
 
 type LanguageDropdownOptionProps = {
   data: {
@@ -34,12 +35,12 @@ const LanguageDropdownOption = ({ isOption, setMenuOpen, langParam, ...props }: 
     <div className={cn('flex items-center gap-8', { 'flex-1': isOption })}>
       <Icon size="20px" name={`icon-tech-${props.data.label}` as IconName} />
       {isOption ? (
-        <a
+        <Link
           className="ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 transition-colors"
-          href={`?lang=${props.data.label}`}
+          to={`?lang=${props.data.label}`}
         >
           {languageInfo[props.data.label].label}
-        </a>
+        </Link>
       ) : null}
     </div>
     <Badge color="neutral" size="xs" className={cn({ 'group-hover/lang-dropdown:bg-neutral-000': isOption })}>
