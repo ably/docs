@@ -66,4 +66,4 @@ export const commonAccordionOptions = (openIndex?: number, topLevel?: boolean): 
 });
 
 export const sidebarAlignmentClasses =
-  'absolute right-48 md:right-[80px] md:right-0 md:sticky w-240 md:pb-16 top-[88px] h-[calc(100vh-88px)] overflow-y-scroll';
+  'absolute right-48 md:right-[80px] md:right-0 md:sticky w-240 md:pb-16 top-[88px] h-[calc(100vh-88px)]';
