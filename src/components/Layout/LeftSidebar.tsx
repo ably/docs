@@ -155,7 +155,7 @@ export const LeftSidebar = () => {
 
   return (
     <Accordion
-      className={cn(sidebarAlignmentClasses, 'hidden md:block md:pr-16')}
+      className={cn(sidebarAlignmentClasses, 'overflow-y-scroll hidden md:block md:pr-16')}
       id="left-nav"
       data={productNavData}
       {...commonAccordionOptions(activePageHierarchy[0], true)}
