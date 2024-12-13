@@ -27,10 +27,14 @@ export const determineActivePage = (data: ProductData, targetLink: string): numb
   };
 
   // Iterate through each product and check if the target link is present in the product
-  for (const key in data) {
-    if (data[key as ProductKey].nav.content) {
-      const contentResult = determinePagePresence(data[key as ProductKey].nav.content, []);
-      const apiResult = determinePagePresence(data[key as ProductKey].nav.api, []);
+  for (const key of Object.keys(data) as ProductKey[]) {
+    if (data[key].nav.link === strippedTargetLink) {
+      return [Object.keys(data).indexOf(key)];
+    }
+
+    if (data[key].nav.content) {
+      const contentResult = determinePagePresence(data[key].nav.content, []);
+      const apiResult = determinePagePresence(data[key].nav.api, []);
       if (contentResult || apiResult) {
         return [Object.keys(data).indexOf(key), ...((contentResult || apiResult) ?? [])];
       }
