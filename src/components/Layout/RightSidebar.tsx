@@ -101,7 +101,7 @@ export const RightSidebar = () => {
               <div className="flex gap-16">
                 <div className="bg-neutral-300 dark:bg-neutral-1000 rounded-full">
                   <div
-                    className="h-[21px] w-2 -mt-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors]"
+                    className="h-[21px] w-2 -mt-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
                     style={{
                       transform: `translateY(${highlightPosition.yOffset}px)`,
                       height: `${highlightPosition.height}px`,
