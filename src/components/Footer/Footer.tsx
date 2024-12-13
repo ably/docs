@@ -1,11 +1,11 @@
 import React from 'react';
-import { graphql, useStaticQuery } from 'gatsby';
+import Icon from '@ably/ui/core/Icon';
+import { IconName } from '@ably/ui/core/Icon/types';
 import { FooterStatus } from './FooterStatus';
 import Link from '../Link';
 import { ablySocialLinks } from './data';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
 import { ABLY_MAIN_WEBSITE } from '../../pages';
+import footerMenu from '../../data/footer/footerMenu';
 
 type FooterMenuItemType = {
   label: string;
@@ -14,19 +14,7 @@ type FooterMenuItemType = {
 };
 
 export const Footer = () => {
-  const data = useStaticQuery(graphql`
-    query FooterMenuQuery {
-      bottomMenu: pageFurnitureYaml(name: { eq: "FooterBottomMenu" }) {
-        items {
-          label
-          link
-          position
-        }
-      }
-    }
-  `);
-
-  const bottomLinks = data.bottomMenu.items ?? [];
+  const bottomLinks = footerMenu?.items || [];
 
   const displayBottomLinks = (position: string) =>
     bottomLinks
