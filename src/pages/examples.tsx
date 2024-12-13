@@ -1,9 +1,10 @@
 import React from 'react';
-import Layout from '../../components/Layout';
 import { Head } from '../components/Head';
-import { useSiteMetadata } from '../../hooks/use-site-metadata';
+import Layout from '../components/Layout';
+import { useSiteMetadata } from '../hooks/use-site-metadata';
+import ExamplesContent from '../components/Examples/ExamplesContent';
 
-const ControlApi = () => {
+const Examples = () => {
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/examples');
   const meta_title = 'Examples';
@@ -14,12 +15,14 @@ const ControlApi = () => {
       <Layout
         isExtraWide
         showProductNavigation={false}
-        currentProduct="examples"
+        currentProduct="api-reference"
         collapsibleSidebar={false}
         noSidebar={true}
-      ></Layout>
+      >
+        <ExamplesContent />
+      </Layout>
     </>
   );
 };
 
-export default ControlApi;
+export default Examples;
