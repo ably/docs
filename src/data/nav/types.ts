@@ -6,6 +6,7 @@ export type NavProduct = {
   content: NavProductContent[];
   api: NavProductContent[];
   showJumpLink?: boolean;
+  link?: string;
 };
 
 export type NavProductPages = NavProductPage | NavProductContent;
@@ -15,7 +16,7 @@ export type NavProductContent = {
   pages: NavProductPages[];
 };
 
-type NavProductPage = {
+export type NavProductPage = {
   name: string;
   link: string;
   breadcrumbs?: boolean;
