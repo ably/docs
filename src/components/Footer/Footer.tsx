@@ -39,7 +39,7 @@ export const Footer = () => {
 
   return (
     <footer
-      className="antialiased col-start-1 md:col-start-2 w-full max-w-1264 px-24 md:pl-40 md:pr-48 xl:pr-64 my-40 2xl:mx-auto"
+      className="antialiased col-start-1 md:col-start-2 w-full px-24 md:pl-40 md:pr-48 xl:pr-64 my-40 2xl:mx-auto"
       data-id="footer"
     >
       <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center  py-24 border-t border-b border-t-neutral-300 border-b-neutral-300">
