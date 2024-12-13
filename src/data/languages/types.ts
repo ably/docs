@@ -12,7 +12,7 @@ const languageKeys = [
   'cpp',
   'dart',
   'swift',
-  'objc',
+  'objectivec',
   'nodejs',
   'json',
   'xml',
