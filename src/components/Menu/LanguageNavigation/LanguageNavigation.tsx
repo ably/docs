@@ -23,6 +23,7 @@ export interface LanguageNavigationComponentProps {
   isSelected?: boolean;
   selectedSDKInterfaceTab?: string;
   selectedLocalLanguage: string;
+  children?: React.ReactNode;
 }
 
 export interface LanguageNavigationProps {

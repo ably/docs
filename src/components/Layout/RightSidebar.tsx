@@ -30,7 +30,7 @@ export const RightSidebar = () => {
 
   useEffect(() => {
     const headerElements =
-      typeof document !== `undefined` ? document.querySelector('article')?.querySelectorAll('h2, h3') ?? [] : [];
+      typeof document !== 'undefined' ? document.querySelector('article')?.querySelectorAll('h2, h3') ?? [] : [];
     const headerData = Array.from(headerElements)
       .filter((element) => element.id && element.textContent)
       .map((header) => ({
@@ -73,7 +73,7 @@ export const RightSidebar = () => {
 
   const highlightPosition = useMemo(() => {
     const sidebarElement =
-      typeof document !== `undefined` ? document.getElementById(`sidebar-${activeHeader?.id}`) : null;
+      typeof document !== 'undefined' ? document.getElementById(`sidebar-${activeHeader?.id}`) : null;
     const sidebarParentElement = sidebarElement?.parentElement;
     const sidebarElementDimensions = sidebarElement?.getBoundingClientRect();
 
@@ -95,35 +95,40 @@ export const RightSidebar = () => {
       <LanguageDropdown />
       <div className="hidden md:block">
         <div className="my-24">
-          <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
-          <div className="flex gap-16">
-            <div className="bg-neutral-300 dark:bg-neutral-1000 rounded-full">
-              <div
-                className="h-[21px] w-2 -mt-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors]"
-                style={{
-                  transform: `translateY(${highlightPosition.yOffset}px)`,
-                  height: `${highlightPosition.height}px`,
-                }}
-              ></div>
-            </div>
-            <div className="flex flex-col gap-8">
-              {headers.map((header) => (
-                <a
-                  href={`#${header.id}`}
-                  key={header.id}
-                  id={`sidebar-${header.id}`}
-                  className={cn(
-                    'ui-text-menu4 text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth',
-                    { 'font-bold': header.id === activeHeader?.id },
-                    { 'ml-8': header.type === 'H3' },
-                  )}
-                  onClick={() => setActiveHeader({ id: header.id })}
-                >
-                  {header.label}
-                </a>
-              ))}
-            </div>
-          </div>
+          {headers.length > 0 ? (
+            <>
+              <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
+              <div className="flex gap-16">
+                <div className="bg-neutral-300 dark:bg-neutral-1000 rounded-full">
+                  <div
+                    className="h-[21px] w-2 -mt-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors]"
+                    style={{
+                      transform: `translateY(${highlightPosition.yOffset}px)`,
+                      height: `${highlightPosition.height}px`,
+                    }}
+                  ></div>
+                </div>
+
+                <div className="flex flex-col gap-8">
+                  {headers.map((header) => (
+                    <a
+                      href={`#${header.id}`}
+                      key={header.id}
+                      id={`sidebar-${header.id}`}
+                      className={cn(
+                        'ui-text-menu4 text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth',
+                        { 'font-bold': header.id === activeHeader?.id },
+                        { 'ml-8': header.type === 'H3' },
+                      )}
+                      onClick={() => setActiveHeader({ id: header.id })}
+                    >
+                      {header.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
         <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors">
           {externalLinks.map(({ label, icon, link }, index) => (
