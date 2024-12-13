@@ -4,7 +4,7 @@ import { getLanguageDefaults } from '../common/language-defaults';
 import { languageLabel } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
 
-const LanguageLink = ({ language }: { language: string }) => {
+const LanguageLink = ({ language }: { language: LanguageKey }) => {
   const { currentLanguage: pageLanguage } = usePageLanguage();
 
   const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(language, pageLanguage);
@@ -17,7 +17,7 @@ const LanguageLink = ({ language }: { language: string }) => {
       className="cursor-pointer relative select-none block text-brand-black hover:text-brand-richOrange active:text-brand-richOrange"
       to={href}
     >
-      {languageLabel(language as LanguageKey) ?? language}
+      {languageLabel(language) ?? language}
     </Link>
   );
 };
