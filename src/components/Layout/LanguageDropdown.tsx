@@ -84,7 +84,7 @@ export const LanguageDropdown = () => {
         classNames={{
           control: () => '!border-none !inline-flex !cursor-pointer',
           valueContainer: () => '!p-0',
-          menu: () => 'absolute right-0 w-240',
+          menu: () => 'absolute right-0 w-240 z-10',
         }}
         styles={{
           menu: () => ({ boxShadow: 'none' }),
@@ -111,7 +111,7 @@ export const LanguageDropdown = () => {
               <p className="ui-text-code2 font-medium text-left p-8 m-8 mt-16 text-neutral-700 dark:text-neutral-600 uppercase">
                 Code Language
               </p>
-              {children}
+              <div className="overflow-y-scroll max-h-200">{children}</div>
             </div>
           ),
         }}
