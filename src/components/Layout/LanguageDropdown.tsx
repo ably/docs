@@ -77,7 +77,10 @@ export const LanguageDropdown = () => {
   const defaultOption = options.find((option) => option.label === langParam) || options[0];
 
   return (
-    <div ref={selectRef} className="absolute top-0 right-0 md:relative text-right w-full focus-base">
+    <div
+      ref={selectRef}
+      className="absolute top-0 right-0 md:relative text-right w-full focus-base group/lang-dropdown"
+    >
       <Select
         options={options}
         defaultValue={defaultOption}
@@ -102,7 +105,11 @@ export const LanguageDropdown = () => {
               className="flex items-center pl-8 text-red-orange"
               onClick={() => setMenuOpen(!props.selectProps.menuIsOpen)}
             >
-              <Icon name="icon-gui-chevron-down" size="20px" />
+              <Icon
+                name="icon-gui-chevron-down"
+                size="20px"
+                additionalCSS="text-neutral-700 group-hover/lang-dropdown:text-neutral-1300 dark:text-neutral-600 dark:group-hover/lang-dropdown:text-neutral-000 transition-colors"
+              />
             </div>
           ),
           Input: () => null,
