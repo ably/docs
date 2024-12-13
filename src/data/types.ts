@@ -11,3 +11,5 @@ export type ProductData = {
     languages?: LanguageData;
   };
 };
+
+export type SelectedLink = { path: string; product: ProductKey };

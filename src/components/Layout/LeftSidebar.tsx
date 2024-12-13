@@ -1,25 +1,16 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import cn from '@ably/ui/core/utils/cn';
 import Accordion from '@ably/ui/core/Accordion';
 import Icon from '@ably/ui/core/Icon';
 
 import { NavProduct, NavProductContent, NavProductPages } from 'src/data/nav/types';
-import { commonAccordionOptions, determineActivePage, sidebarAlignmentClasses, stripTrailingSlash } from './utils';
-import data from 'src/data';
-import { ProductData, ProductKey } from 'src/data/types';
+import { commonAccordionOptions, sidebarAlignmentClasses, stripTrailingSlash } from './utils';
+import { ProductKey } from 'src/data/types';
 import { safeWindow } from 'src/utilities';
+import Link from '../Link';
+import { useLayoutContext } from 'src/contexts/layout-context';
 
 type ContentType = 'content' | 'api';
-
-export const LeftSidebarContext = createContext<{
-  selectedProduct: ProductKey | undefined;
-  setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>;
-  setSelectedLinkId: React.Dispatch<React.SetStateAction<string | undefined>>;
-}>({
-  selectedProduct: undefined,
-  setSelectedProduct: () => undefined,
-  setSelectedLinkId: () => undefined,
-});
 
 export const NavPage = ({
   page,
@@ -34,19 +25,13 @@ export const NavPage = ({
   activePageHierarchy?: number[];
   type: ContentType;
 }) => {
-  const { setSelectedLinkId } = useContext(LeftSidebarContext);
   const pageActive =
     'link' in page && stripTrailingSlash(page.link) === stripTrailingSlash(safeWindow.location.pathname);
   const linkId = 'link' in page ? page.link : undefined;
-  useEffect(() => {
-    if (pageActive) {
-      setSelectedLinkId(linkId);
-    }
-  }, [linkId, pageActive, setSelectedLinkId]);
 
   if ('link' in page) {
     return (
-      <a
+      <Link
         key={page.link}
         id={linkId}
         className={cn({
@@ -59,11 +44,11 @@ export const NavPage = ({
         })}
         target={page.external ? '_blank' : undefined}
         rel={page.external ? 'noopener noreferrer' : undefined}
-        href={page.link}
+        to={page.link}
       >
         {page.name}
         {page.external ? <Icon name="icon-gui-external-link" additionalCSS="ml-4" /> : null}
-      </a>
+      </Link>
     );
   } else {
     return (
@@ -125,9 +110,16 @@ const constructProductNavData = (
       <div key={product.name} className="flex flex-col gap-20">
         <div className="flex flex-col gap-8 mt-12">
           <p className="ui-text-overline2 text-neutral-700">{product.name}</p>
-          <a href="#" className="ui-text-menu4">
-            About {product.name}
-          </a>
+          {product.link ? (
+            <Link
+              to={product.link}
+              className={cn('ui-text-menu4', {
+                'font-bold': stripTrailingSlash(product.link) === stripTrailingSlash(safeWindow.location.pathname),
+              })}
+            >
+              About {product.name}
+            </Link>
+          ) : null}
           {product.showJumpLink ? (
             <a href="#" className="text-gui-blue-default-light text-[11px]">
               Jump to API references
@@ -145,43 +137,28 @@ const constructProductNavData = (
   }));
 
 export const LeftSidebar = () => {
-  const [selectedProduct, setSelectedProduct] = useState<ProductKey>();
-  const [selectedLinkId, setSelectedLinkId] = useState<string>();
-  const activePageHierarchy = useMemo(() => determineActivePage(data, safeWindow.location.pathname) ?? [], []);
-  const products = Object.entries(data as ProductData).map((product) => [product[0], product[1].nav]) as [
-    ProductKey,
-    NavProduct,
-  ][];
+  const { selectedProduct, setSelectedProduct, selectedLink, activePageHierarchy, products } = useLayoutContext();
 
   useEffect(() => {
-    const activeProduct = activePageHierarchy[0];
-    if (!selectedProduct && activeProduct !== undefined) {
-      setSelectedProduct(products[activeProduct][0]);
-    }
-  }, [activePageHierarchy, products, selectedProduct]);
-
-  useEffect(() => {
-    if (selectedLinkId) {
-      const element = typeof document !== `undefined` ? document.getElementById(selectedLinkId) : null;
+    if (selectedLink?.path) {
+      const element = typeof document !== 'undefined' ? document.getElementById(selectedLink.path) : null;
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [selectedLinkId]);
+  }, [selectedLink?.path]);
 
   const productNavData = useMemo(
     () => constructProductNavData(products, activePageHierarchy.slice(1), selectedProduct, setSelectedProduct),
-    [products, activePageHierarchy, selectedProduct],
+    [products, activePageHierarchy, selectedProduct, setSelectedProduct],
   );
 
   return (
-    <LeftSidebarContext.Provider value={{ selectedProduct, setSelectedProduct, setSelectedLinkId }}>
-      <Accordion
-        className={cn(sidebarAlignmentClasses, 'hidden md:block md:pr-16')}
-        id="left-nav"
-        data={productNavData}
-        {...commonAccordionOptions(activePageHierarchy[0], true)}
-      />
-    </LeftSidebarContext.Provider>
+    <Accordion
+      className={cn(sidebarAlignmentClasses, 'hidden md:block md:pr-16')}
+      id="left-nav"
+      data={productNavData}
+      {...commonAccordionOptions(activePageHierarchy[0], true)}
+    />
   );
 };
