@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import { RightSidebar } from './RightSidebar';
 import { useLayoutContext } from 'src/contexts/layout-context';
@@ -74,5 +74,6 @@ describe('RightSidebar', () => {
     const headerLink = screen.getByRole('link', { name: 'Header 1' });
     fireEvent.click(headerLink);
     expect(headerLink).toHaveClass('font-bold');
+    cleanup();
   });
 });
