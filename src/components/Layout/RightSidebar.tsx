@@ -132,7 +132,7 @@ export const RightSidebar = () => {
         </div>
         <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors">
           {externalLinks.map(({ label, icon, link }, index) => (
-            <a key={label} href={link} target="_blank" rel="noopener">
+            <a key={label} href={link} target="_blank" rel="noopener noreferrer">
               <div
                 className={cn(
                   'flex items-center p-16',
