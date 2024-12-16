@@ -1,24 +1,33 @@
 import React from 'react';
+import { useLocation } from '@reach/router';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import { LeftSidebar } from './LeftSidebar';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { NavProduct } from 'src/data/nav/types';
 import { ProductKey } from 'src/data/types';
+import { composeNavLinkId } from './utils';
 
 jest.mock('src/contexts/layout-context', () => ({
   useLayoutContext: jest.fn(),
 }));
 
-jest.mock('src/utilities', () => ({
-  safeWindow: {
-    location: {
-      pathname: '/platform/intro',
-    },
-  },
+jest.mock('@reach/router', () => ({
+  useLocation: jest.fn(),
 }));
 
+jest.mock('../Link', () => {
+  const MockLink: React.FC<{ children: React.ReactNode; to: string }> = ({ children, to, ...props }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  );
+  MockLink.displayName = 'MockLink';
+  return MockLink;
+});
+
 const mockUseLayoutContext = useLayoutContext as jest.Mock;
+const mockUseLocation = useLocation as jest.Mock;
 
 const mockProducts: [ProductKey, NavProduct][] = [
   [
@@ -74,14 +83,12 @@ describe('LeftSidebar', () => {
     mockUseLayoutContext.mockReturnValue({
       selectedProduct: 'platform',
       setSelectedProduct: jest.fn(),
-      selectedLink: { path: '/platform/intro' },
       activePageHierarchy: [0, 1],
       products: mockProducts,
     });
 
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      value: { pathname: '/platform/intro' },
+    mockUseLocation.mockReturnValue({
+      pathname: '/platform/intro',
     });
 
     const mockIntersectionObserver = jest.fn();
@@ -128,8 +135,8 @@ describe('LeftSidebar', () => {
 
   it('scrolls to the selected link on mount', () => {
     render(<LeftSidebar />);
-    const element = document.getElementById('/platform/intro');
+    const element = document.getElementById(composeNavLinkId('/platform/intro'));
     expect(element).toBeInTheDocument();
-    expect(element?.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
+    expect(element?.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
   });
 });
