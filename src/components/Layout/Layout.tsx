@@ -22,7 +22,7 @@ const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children, noSidebar 
     <LayoutProvider>
       <GlobalLoading>
         <Header showSearchBar={showSearchBar} />
-        <div className="flex mx-80 gap-80 justify-center">
+        <div className="flex mx-24 sm:mx-32 md:mx-40 lg:mx-64 gap-80 justify-center transition-[margin]">
           {showSidebar ? <LeftSidebar /> : null}
           <Container as="main" className="flex-1">
             {children}
