@@ -43,7 +43,13 @@ export const determineActivePage = (data: ProductData, targetLink: string): numb
   return null;
 };
 
-export const stripTrailingSlash = (link: string) => link.replace(/\/$/, '');
+export const stripTrailingSlash = (link: string) => {
+  if (!link) {
+    return '';
+  }
+
+  return link.replace(/\/$/, '');
+};
 
 export const commonAccordionOptions = (openIndex?: number, topLevel?: boolean): Omit<AccordionProps, 'data'> => ({
   icons: { open: { name: 'icon-gui-chevron-up' }, closed: { name: 'icon-gui-chevron-down' } },
