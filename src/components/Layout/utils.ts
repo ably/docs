@@ -75,7 +75,6 @@ export const commonAccordionOptions = (openIndex?: number, topLevel?: boolean): 
   },
 });
 
-export const sidebarAlignmentClasses =
-  'absolute right-48 md:right-[80px] md:right-0 md:sticky w-240 md:pb-128 top-[88px] h-[calc(100vh-88px)]';
+export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128 top-[88px] h-[calc(100vh-88px)]';
 
 export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link).replaceAll('/', '-')}`;
