@@ -5,13 +5,13 @@ import { NavProductPages } from 'src/data/nav/types';
 
 // Determine the active page based on the target link
 export const determineActivePage = (data: ProductData, targetLink: string): number[] | null => {
-  const strippedTargetLink = stripTrailingSlash(targetLink);
+  const strippedTargetLink = formatNavLink(targetLink);
   const determinePagePresence = (pages: NavProductPages[], path: number[]): number[] | null => {
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
 
       // If the page is a link and the link matches the target link, return the path
-      if ('link' in page && stripTrailingSlash(page.link) === strippedTargetLink) {
+      if ('link' in page && formatNavLink(page.link) === strippedTargetLink) {
         return [...path, i];
       }
 
@@ -43,9 +43,13 @@ export const determineActivePage = (data: ProductData, targetLink: string): numb
   return null;
 };
 
-export const stripTrailingSlash = (link: string) => {
+export const formatNavLink = (link: string) => {
   if (!link) {
     return '';
+  }
+
+  if (link.startsWith('/docs')) {
+    link = link.replace('/docs', '');
   }
 
   return link.replace(/\/$/, '');
@@ -73,3 +77,5 @@ export const commonAccordionOptions = (openIndex?: number, topLevel?: boolean): 
 
 export const sidebarAlignmentClasses =
   'absolute right-48 md:right-[80px] md:right-0 md:sticky w-240 md:pb-16 top-[88px] h-[calc(100vh-88px)]';
+
+export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link).replaceAll('/', '-')}`;

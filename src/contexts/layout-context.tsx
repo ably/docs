@@ -2,7 +2,7 @@ import React, { createContext, PropsWithChildren, useContext, useMemo, useState 
 import { determineActivePage } from 'src/components/Layout/utils';
 import data from 'src/data';
 import { NavProduct } from 'src/data/nav/types';
-import { ProductData, ProductKey, SelectedLink } from 'src/data/types';
+import { ProductData, ProductKey } from 'src/data/types';
 import { safeWindow } from 'src/utilities';
 
 /**
@@ -10,8 +10,6 @@ import { safeWindow } from 'src/utilities';
  *
  * selectedProduct - The currently selected product key. This changes when you click on a product in the sidebar.
  * setSelectedProduct - Function to update the selected product key.
- * selectedLink - The currently selected link. This changes when you click on a link in the sidebar.
- * setSelectedLink - Function to update the selected link.
  * activePageHierarchy - The hierarchy of the active page in the nav (i.e. the third link of the second section would be [2,3]). This is used to determine the active link in the sidebar.
  * setActivePageHierarchy - Function to update the active page hierarchy.
  * products - List of products with their navigation data.
@@ -20,16 +18,12 @@ import { safeWindow } from 'src/utilities';
 const LayoutContext = createContext<{
   selectedProduct: ProductKey | undefined;
   setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>;
-  selectedLink: SelectedLink | undefined;
-  setSelectedLink: React.Dispatch<React.SetStateAction<SelectedLink | undefined>>;
   activePageHierarchy: number[];
   setActivePageHierarchy: React.Dispatch<React.SetStateAction<number[]>>;
   products: [ProductKey, NavProduct][];
 }>({
   selectedProduct: undefined,
   setSelectedProduct: () => undefined,
-  selectedLink: undefined,
-  setSelectedLink: () => undefined,
   activePageHierarchy: [],
   setActivePageHierarchy: () => undefined,
   products: [],
@@ -46,7 +40,6 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [selectedProduct, setSelectedProduct] = useState<ProductKey | undefined>(
     activeProduct ? products[activeProduct][0] : undefined,
   );
-  const [selectedLink, setSelectedLink] = useState<SelectedLink | undefined>(undefined);
   const [activePageHierarchy, setActivePageHierarchy] = useState<number[]>(hierarchy);
 
   return (
@@ -54,8 +47,6 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
       value={{
         selectedProduct,
         setSelectedProduct,
-        selectedLink,
-        setSelectedLink,
         activePageHierarchy,
         setActivePageHierarchy,
         products,
