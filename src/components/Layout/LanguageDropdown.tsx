@@ -31,6 +31,7 @@ const LanguageDropdownOption = ({ isOption, setMenuOpen, langParam, ...props }: 
     className={cn('group/lang-dropdown flex gap-8 items-center rounded', {
       'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 mx-8 last:mb-8': isOption,
     })}
+    role="menuitem"
   >
     <div className={cn('flex items-center gap-8', { 'flex-1': isOption })}>
       <Icon size="20px" name={`icon-tech-${props.data.label}` as IconName} />
@@ -101,20 +102,24 @@ export const LanguageDropdown = () => {
           SingleValue: (props) => <LanguageDropdownOption {...props} setMenuOpen={setMenuOpen} langParam={langParam} />,
           IndicatorSeparator: null,
           DropdownIndicator: (props) => (
-            <div
+            <button
               className="flex items-center pl-8 text-red-orange"
               onClick={() => setMenuOpen(!props.selectProps.menuIsOpen)}
+              aria-label="Toggle language dropdown"
             >
               <Icon
                 name="icon-gui-chevron-down"
                 size="20px"
                 additionalCSS="text-neutral-700 group-hover/lang-dropdown:text-neutral-1300 dark:text-neutral-600 dark:group-hover/lang-dropdown:text-neutral-000 transition-colors"
               />
-            </div>
+            </button>
           ),
           Input: () => null,
           MenuList: ({ children }) => (
-            <div className="bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft">
+            <div
+              className="bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft"
+              role="menu"
+            >
               <p className="ui-text-code2 font-medium text-left p-8 m-8 mt-16 text-neutral-700 dark:text-neutral-600 uppercase">
                 Code Language
               </p>
