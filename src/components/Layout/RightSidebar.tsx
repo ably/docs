@@ -92,7 +92,7 @@ export const RightSidebar = () => {
   }, [activeHeader]);
 
   return (
-    <div className={sidebarAlignmentClasses}>
+    <div className={cn(sidebarAlignmentClasses, 'right-48 md:right-0')}>
       <LanguageDropdown />
       <div className="hidden md:block">
         <div className="my-24">
