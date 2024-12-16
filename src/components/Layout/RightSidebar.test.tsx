@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from '@reach/router';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import { RightSidebar } from './RightSidebar';
@@ -8,12 +9,8 @@ jest.mock('src/contexts/layout-context', () => ({
   useLayoutContext: jest.fn(),
 }));
 
-jest.mock('src/utilities', () => ({
-  safeWindow: {
-    location: {
-      pathname: '/test-path',
-    },
-  },
+jest.mock('@reach/router', () => ({
+  useLocation: jest.fn(),
 }));
 
 jest.mock('./LanguageDropdown', () => ({
@@ -21,12 +18,17 @@ jest.mock('./LanguageDropdown', () => ({
 }));
 
 const mockUseLayoutContext = useLayoutContext as jest.Mock;
+const mockUseLocation = useLocation as jest.Mock;
 
 describe('RightSidebar', () => {
   beforeEach(() => {
     mockUseLayoutContext.mockReturnValue({
       activePageHierarchy: [0],
       products: [['pubsub']],
+    });
+
+    mockUseLocation.mockReturnValue({
+      pathname: '/test-path',
     });
 
     document.body.innerHTML = `
