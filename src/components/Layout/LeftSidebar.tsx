@@ -1,12 +1,12 @@
 import { useEffect, useMemo } from 'react';
+import { useLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Accordion from '@ably/ui/core/Accordion';
 import Icon from '@ably/ui/core/Icon';
 
 import { NavProduct, NavProductContent, NavProductPages } from 'src/data/nav/types';
-import { commonAccordionOptions, sidebarAlignmentClasses, stripTrailingSlash } from './utils';
+import { commonAccordionOptions, composeNavLinkId, formatNavLink, sidebarAlignmentClasses } from './utils';
 import { ProductKey } from 'src/data/types';
-import { safeWindow } from 'src/utilities';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
 
@@ -25,9 +25,9 @@ export const NavPage = ({
   activePageHierarchy?: number[];
   type: ContentType;
 }) => {
-  const pageActive =
-    'link' in page && stripTrailingSlash(page.link) === stripTrailingSlash(safeWindow.location.pathname);
-  const linkId = 'link' in page ? page.link : undefined;
+  const location = useLocation();
+  const pageActive = 'link' in page && formatNavLink(page.link) === formatNavLink(location.pathname);
+  const linkId = 'link' in page ? composeNavLinkId(page.link) : undefined;
 
   if ('link' in page) {
     return (
@@ -97,6 +97,7 @@ const renderProductContent = (
   ));
 
 const constructProductNavData = (
+  location: string,
   products: [ProductKey, NavProduct][],
   activePageHierarchy: number[],
   selectedProduct: string | undefined,
@@ -113,8 +114,9 @@ const constructProductNavData = (
           {product.link ? (
             <Link
               to={product.link}
+              id={composeNavLinkId(product.link)}
               className={cn('ui-text-menu4', {
-                'font-bold': stripTrailingSlash(product.link) === stripTrailingSlash(safeWindow.location.pathname),
+                'font-bold': formatNavLink(product.link) === formatNavLink(location),
               })}
             >
               About {product.name}
@@ -137,20 +139,27 @@ const constructProductNavData = (
   }));
 
 export const LeftSidebar = () => {
-  const { selectedProduct, setSelectedProduct, selectedLink, activePageHierarchy, products } = useLayoutContext();
+  const { selectedProduct, setSelectedProduct, activePageHierarchy, products } = useLayoutContext();
+  const location = useLocation();
 
   useEffect(() => {
-    if (selectedLink?.path) {
-      const element = typeof document !== 'undefined' ? document.getElementById(selectedLink.path) : null;
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
+    const element =
+      typeof document !== 'undefined' ? document.getElementById(composeNavLinkId(location.pathname)) : null;
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-  }, [selectedLink?.path]);
+  }, [location.pathname]);
 
   const productNavData = useMemo(
-    () => constructProductNavData(products, activePageHierarchy.slice(1), selectedProduct, setSelectedProduct),
-    [products, activePageHierarchy, selectedProduct, setSelectedProduct],
+    () =>
+      constructProductNavData(
+        location.pathname,
+        products,
+        activePageHierarchy.slice(1),
+        selectedProduct,
+        setSelectedProduct,
+      ),
+    [location.pathname, products, activePageHierarchy, selectedProduct, setSelectedProduct],
   );
 
   return (
