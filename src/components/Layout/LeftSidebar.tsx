@@ -103,40 +103,59 @@ const constructProductNavData = (
   selectedProduct: string | undefined,
   setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>,
 ) =>
-  products.map(([productKey, product]) => ({
-    name: product.name,
-    icon: selectedProduct === productKey ? product.icon.open : product.icon.closed,
-    onClick: () => setSelectedProduct(productKey),
-    content: (
-      <div key={product.name} className="flex flex-col gap-20">
-        <div className="flex flex-col gap-8 mt-12">
-          <p className="ui-text-overline2 text-neutral-700">{product.name}</p>
-          {product.link ? (
-            <Link
-              to={product.link}
-              id={composeNavLinkId(product.link)}
-              className={cn('ui-text-menu4', {
-                'font-bold': formatNavLink(product.link) === formatNavLink(location),
-              })}
+  products.map(([productKey, product]) => {
+    const apiReferencesId = `${productKey}-api-references`;
+
+    return {
+      name: product.name,
+      icon: selectedProduct === productKey ? product.icon.open : product.icon.closed,
+      onClick: () => setSelectedProduct(productKey),
+      content: (
+        <div key={product.name} className="flex flex-col gap-20">
+          <div className="flex flex-col gap-8 mt-12">
+            <p className="ui-text-overline2 text-neutral-700">{product.name}</p>
+            {product.link ? (
+              <Link
+                to={product.link}
+                id={composeNavLinkId(product.link)}
+                className={cn('ui-text-menu4', {
+                  'font-bold': formatNavLink(product.link) === formatNavLink(location),
+                })}
+              >
+                About {product.name}
+              </Link>
+            ) : null}
+            {product.showJumpLink ? (
+              <a
+                href="#"
+                className="text-gui-blue-default-light text-[11px]"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (typeof document !== 'undefined') {
+                    const element = document.getElementById(apiReferencesId);
+                    if (element) {
+                      element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                  }
+                }}
+              >
+                Jump to API references
+              </a>
+            ) : null}
+          </div>
+          {renderProductContent(product.content, activePageHierarchy, 'content')}
+          {product.api.length > 0 ? (
+            <div
+              id={apiReferencesId}
+              className="flex flex-col gap-8 rounded-lg bg-neutral-100 border border-neutral-300 p-16 mb-24"
             >
-              About {product.name}
-            </Link>
-          ) : null}
-          {product.showJumpLink ? (
-            <a href="#" className="text-gui-blue-default-light text-[11px]">
-              Jump to API references
-            </a>
+              {renderProductContent(product.api, activePageHierarchy, 'api')}
+            </div>
           ) : null}
         </div>
-        {renderProductContent(product.content, activePageHierarchy, 'content')}
-        {product.api.length > 0 ? (
-          <div className="flex flex-col gap-8 rounded-lg bg-neutral-100 border border-neutral-300 p-16 mb-24">
-            {renderProductContent(product.api, activePageHierarchy, 'api')}
-          </div>
-        ) : null}
-      </div>
-    ),
-  }));
+      ),
+    };
+  });
 
 export const LeftSidebar = () => {
   const { selectedProduct, setSelectedProduct, activePageHierarchy, products } = useLayoutContext();
