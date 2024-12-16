@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, WindowLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import { LanguageDropdown } from './LanguageDropdown';
 import { sidebarAlignmentClasses } from './utils';
 import { IconName } from '@ably/ui/core/Icon/types';
-import { safeWindow } from 'src/utilities';
 
 type SidebarHeader = {
   id: string;
@@ -14,11 +14,11 @@ type SidebarHeader = {
 
 const githubEditPath = 'https://github.com/ably/docs/blob/main/content';
 
-const externalLinks: { label: string; icon: IconName; link: string }[] = [
+const externalLinks = (location: WindowLocation): { label: string; icon: IconName; link: string }[] => [
   {
     label: 'Edit on GitHub',
     icon: 'icon-social-github',
-    link: `${githubEditPath}${safeWindow.location.pathname}.textile`,
+    link: `${githubEditPath}${location.pathname}.textile`,
   },
   { label: 'Request changes', icon: 'icon-gui-hand', link: '#' },
 ];
@@ -27,6 +27,7 @@ export const RightSidebar = () => {
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>();
   const observer = useRef<IntersectionObserver>();
+  const location = useLocation();
 
   useEffect(() => {
     const headerElements =
@@ -131,7 +132,7 @@ export const RightSidebar = () => {
           ) : null}
         </div>
         <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors">
-          {externalLinks.map(({ label, icon, link }, index) => (
+          {externalLinks(location).map(({ label, icon, link }, index) => (
             <a key={label} href={link} target="_blank" rel="noopener noreferrer">
               <div
                 className={cn(
