@@ -1,10 +1,12 @@
 import cn from '@ably/ui/core/utils/cn';
 import { AccordionProps } from '@ably/ui/core/Accordion';
 import { ProductData, ProductKey } from 'src/data/types';
-import { NavProductPages } from 'src/data/nav/types';
+import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
+
+type ActivePage = { hierarchy: number[]; page: NavProductPage };
 
 // Determine the active page based on the target link
-export const determineActivePage = (data: ProductData, targetLink: string): number[] | null => {
+export const determineActivePage = (data: ProductData, targetLink: string): ActivePage | null => {
   const strippedTargetLink = formatNavLink(targetLink);
   const determinePagePresence = (pages: NavProductPages[], path: number[]): number[] | null => {
     for (let i = 0; i < pages.length; i++) {
@@ -29,17 +31,28 @@ export const determineActivePage = (data: ProductData, targetLink: string): numb
   // Iterate through each product and check if the target link is present in the product
   for (const key of Object.keys(data) as ProductKey[]) {
     if (data[key].nav.link === strippedTargetLink) {
-      return [Object.keys(data).indexOf(key)];
+      const { name, link } = data[key].nav;
+      return { hierarchy: [Object.keys(data).indexOf(key)], page: { name, link } };
     }
 
     if (data[key].nav.content) {
       const contentResult = determinePagePresence(data[key].nav.content, []);
       const apiResult = determinePagePresence(data[key].nav.api, []);
       if (contentResult || apiResult) {
-        return [Object.keys(data).indexOf(key), ...((contentResult || apiResult) ?? [])];
+        const hierarchy = [Object.keys(data).indexOf(key), ...((contentResult || apiResult) ?? [])];
+        const page = hierarchy.slice(1).reduce<NavProductPages[]>((acc, curr) => {
+          if ('pages' in acc[curr]) {
+            return (acc[curr] as NavProductContent).pages;
+          }
+
+          return [acc[curr]];
+        }, data[key].nav.content);
+
+        return { hierarchy, page: page?.[0] as NavProductPage };
       }
     }
   }
+
   return null;
 };
 
