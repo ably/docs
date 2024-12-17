@@ -3,11 +3,29 @@ import { AccordionProps } from '@ably/ui/core/Accordion';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
 
-type ActivePage = { hierarchy: number[]; page: NavProductPage };
+type ActivePage = { tree: number[]; page: NavProductPage };
 
-// Determine the active page based on the target link
+/**
+ * Determines the active page based on the provided target link.
+ *
+ * This function iterates through the product data to find a page that matches the target link.
+ * It checks both direct links and nested pages within groups. If a match is found, it returns
+ * the index tree of the page in the navigation data and the page details.
+ *
+ * @param data - The product data containing navigation information.
+ * @param targetLink - The link to be matched against the product data.
+ * @returns The active page details including its tree and page information, or null if no match is found.
+ */
 export const determineActivePage = (data: ProductData, targetLink: string): ActivePage | null => {
   const strippedTargetLink = formatNavLink(targetLink);
+
+  /**
+   * Recursively determines the presence of a page in a list of pages.
+   *
+   * This function iterates through the list of pages and checks if the target link is present.
+   * If a match is found, it returns the index of the link in its pages array.
+   * If not, it attempts to search for the link in nested pages.
+   */
   const determinePagePresence = (pages: NavProductPages[], path: number[]): number[] | null => {
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
@@ -28,27 +46,37 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
     return null;
   };
 
-  // Iterate through each product and check if the target link is present in the product
   for (const key of Object.keys(data) as ProductKey[]) {
+    /* 
+      If the page matches a product index link, return details for the product
+    */
     if (data[key].nav.link === strippedTargetLink) {
       const { name, link } = data[key].nav;
-      return { hierarchy: [Object.keys(data).indexOf(key)], page: { name, link } };
+      return { tree: [Object.keys(data).indexOf(key)], page: { name, link } };
     }
 
+    /* 
+      If not, attempt to calculate page tree hierarchies as both content and API pages
+      and return the first valid tree result along with an object containing details
+      on the matched page
+    */
     if (data[key].nav.content) {
       const contentResult = determinePagePresence(data[key].nav.content, []);
       const apiResult = determinePagePresence(data[key].nav.api, []);
       if (contentResult || apiResult) {
-        const hierarchy = [Object.keys(data).indexOf(key), ...((contentResult || apiResult) ?? [])];
-        const page = hierarchy.slice(1).reduce<NavProductPages[]>((acc, curr) => {
-          if ('pages' in acc[curr]) {
-            return (acc[curr] as NavProductContent).pages;
-          }
+        const tree = [Object.keys(data).indexOf(key), ...((contentResult || apiResult) ?? [])];
+        const page = tree.slice(1).reduce<NavProductPages[]>(
+          (acc, curr) => {
+            if (acc[curr] && 'pages' in acc[curr]) {
+              return (acc[curr] as NavProductContent).pages;
+            }
 
-          return [acc[curr]];
-        }, data[key].nav.content);
+            return [acc[curr]];
+          },
+          data[key].nav[apiResult ? 'api' : 'content'],
+        );
 
-        return { hierarchy, page: page?.[0] as NavProductPage };
+        return { tree, page: page?.[0] as NavProductPage };
       }
     }
   }
