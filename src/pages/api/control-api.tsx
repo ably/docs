@@ -17,14 +17,8 @@ const ControlApi = () => {
   return (
     <>
       <Head title={meta_title} metaTitle={meta_title} canonical={canonical} description={meta_description} />
-      <Layout
-        isExtraWide
-        showProductNavigation={false}
-        currentProduct="api-reference"
-        collapsibleSidebar={false}
-        noSidebar={true}
-      >
-        <div className="ml-8 mt-40 mb-24">
+      <Layout noSidebar>
+        <div className="ml-8 mt-32 mb-24">
           <div className="text-gui-default hover:text-gui-hover focus:text-gui-focus focus:outline-gui-focus group ui-text-p2">
             <Link to="/api">
               <Icon
