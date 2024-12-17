@@ -83,7 +83,9 @@ describe('LeftSidebar', () => {
     mockUseLayoutContext.mockReturnValue({
       selectedProduct: 'platform',
       setSelectedProduct: jest.fn(),
-      activePageHierarchy: [0, 1],
+      activePage: {
+        tree: [0, 1],
+      },
       products: mockProducts,
     });
 
