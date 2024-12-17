@@ -19,20 +19,24 @@ const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children, noSidebar 
   const showSidebar = !noSidebar;
 
   return (
-    <LayoutProvider>
-      <GlobalLoading>
-        <Header showSearchBar={showSearchBar} />
-        <div className="flex mx-24 sm:mx-32 md:mx-40 lg:mx-64 gap-80 justify-center transition-[margin]">
-          {showSidebar ? <LeftSidebar /> : null}
-          <Container as="main" className="flex-1">
-            {children}
-          </Container>
-          {showSidebar ? <RightSidebar /> : null}
-        </div>
-        <Footer />
-      </GlobalLoading>
-    </LayoutProvider>
+    <GlobalLoading>
+      <Header showSearchBar={showSearchBar} />
+      <div className="flex mx-24 sm:mx-32 md:mx-40 lg:mx-64 gap-80 justify-center transition-[margin]">
+        {showSidebar ? <LeftSidebar /> : null}
+        <Container as="main" className="flex-1">
+          {children}
+        </Container>
+        {showSidebar ? <RightSidebar /> : null}
+      </div>
+      <Footer />
+    </GlobalLoading>
   );
 };
 
-export default Layout;
+const WrappedLayout: React.FC<PropsWithChildren<LayoutProps>> = (props) => (
+  <LayoutProvider>
+    <Layout {...props} />
+  </LayoutProvider>
+);
+
+export default WrappedLayout;
