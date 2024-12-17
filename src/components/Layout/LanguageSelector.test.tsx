@@ -35,7 +35,9 @@ const mockLanguageInfo = {
 describe('LanguageSelector', () => {
   beforeEach(() => {
     mockUseLayoutContext.mockReturnValue({
-      activePageHierarchy: [0],
+      activePage: {
+        tree: [0],
+      },
       products: [['pubsub']],
     });
 

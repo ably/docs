@@ -56,9 +56,9 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
 );
 
 export const LanguageSelector = () => {
-  const { activePageHierarchy, products } = useLayoutContext();
+  const { activePage, products } = useLayoutContext();
 
-  const activeProduct = products[activePageHierarchy[0]]?.[0];
+  const activeProduct = products[activePage.tree[0]]?.[0];
   const languageVersions = languageData[activeProduct ?? 'pubsub'];
   const [menuOpen, setMenuOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
