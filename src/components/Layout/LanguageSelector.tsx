@@ -11,7 +11,7 @@ import { useOnClickOutside } from 'src/hooks';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
 
-type LanguageDropdownOptionProps = {
+type LanguageSelectorOptionProps = {
   data: {
     label: LanguageKey;
     value: string;
@@ -25,7 +25,7 @@ type LanguageDropdownOptionProps = {
   langParam: string | null;
 };
 
-const LanguageDropdownOption = ({ isOption, setMenuOpen, langParam, ...props }: LanguageDropdownOptionProps) => (
+const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: LanguageSelectorOptionProps) => (
   <div
     onClick={() => setMenuOpen(!props.selectProps.menuIsOpen)}
     className={cn('group/lang-dropdown flex gap-8 items-center rounded', {
@@ -55,7 +55,7 @@ const LanguageDropdownOption = ({ isOption, setMenuOpen, langParam, ...props }: 
   </div>
 );
 
-export const LanguageDropdown = () => {
+export const LanguageSelector = () => {
   const { activePageHierarchy, products } = useLayoutContext();
 
   const activeProduct = products[activePageHierarchy[0]]?.[0];
@@ -65,13 +65,11 @@ export const LanguageDropdown = () => {
 
   useOnClickOutside(() => setMenuOpen(false), selectRef);
 
-  const options = Object.entries(languageVersions)
-    .map(([lang, version]) => ({
-      label: lang as LanguageKey,
-      value: `${lang}-${version}`,
-      version,
-    }))
-    .toSorted((a, b) => a.label.localeCompare(b.label));
+  const options = Object.entries(languageVersions).map(([lang, version]) => ({
+    label: lang as LanguageKey,
+    value: `${lang}-${version}`,
+    version,
+  }));
 
   const queryParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const langParam = queryParams.get('lang');
@@ -97,9 +95,9 @@ export const LanguageDropdown = () => {
         menuIsOpen={menuOpen}
         components={{
           Option: (props) => (
-            <LanguageDropdownOption {...props} setMenuOpen={setMenuOpen} langParam={langParam} isOption />
+            <LanguageSelectorOption {...props} setMenuOpen={setMenuOpen} langParam={langParam} isOption />
           ),
-          SingleValue: (props) => <LanguageDropdownOption {...props} setMenuOpen={setMenuOpen} langParam={langParam} />,
+          SingleValue: (props) => <LanguageSelectorOption {...props} setMenuOpen={setMenuOpen} langParam={langParam} />,
           IndicatorSeparator: null,
           DropdownIndicator: (props) => (
             <button

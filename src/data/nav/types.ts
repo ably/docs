@@ -21,5 +21,5 @@ export type NavProductPage = {
   link: string;
   breadcrumbs?: boolean;
   external?: boolean;
-  rightNav?: boolean;
+  showLanguageSelector?: boolean;
 };

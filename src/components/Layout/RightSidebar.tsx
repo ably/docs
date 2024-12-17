@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, WindowLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
-import { LanguageDropdown } from './LanguageDropdown';
+import { LanguageSelector } from './LanguageSelector';
 import { sidebarAlignmentClasses } from './utils';
 import { IconName } from '@ably/ui/core/Icon/types';
+import { useLayoutContext } from 'src/contexts/layout-context';
 
 type SidebarHeader = {
   id: string;
@@ -24,10 +25,12 @@ const externalLinks = (location: WindowLocation): { label: string; icon: IconNam
 ];
 
 export const RightSidebar = () => {
+  const { activePage } = useLayoutContext();
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>();
   const observer = useRef<IntersectionObserver>();
   const location = useLocation();
+  const { showLanguageSelector } = activePage ?? {};
 
   useEffect(() => {
     const headerElements =
@@ -93,7 +96,7 @@ export const RightSidebar = () => {
 
   return (
     <div className={cn(sidebarAlignmentClasses, 'right-48 md:right-0')}>
-      <LanguageDropdown />
+      {showLanguageSelector ? <LanguageSelector /> : null}
       <div className="hidden md:block">
         <div className="my-24">
           {headers.length > 0 ? (

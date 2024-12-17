@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
-import { LanguageDropdown } from './LanguageDropdown';
+import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
 
 jest.mock('src/contexts/layout-context', () => ({
@@ -32,7 +32,7 @@ const mockLanguageInfo = {
   python: { label: 'Python' },
 };
 
-describe('LanguageDropdown', () => {
+describe('LanguageSelector', () => {
   beforeEach(() => {
     mockUseLayoutContext.mockReturnValue({
       activePageHierarchy: [0],
@@ -61,26 +61,26 @@ describe('LanguageDropdown', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the LanguageDropdown component', () => {
-    render(<LanguageDropdown />);
+  it('renders the LanguageSelector component', () => {
+    render(<LanguageSelector />);
     expect(screen.getByText('icon-gui-chevron-down')).toBeInTheDocument();
   });
 
   it('opens the dropdown menu on click', () => {
-    render(<LanguageDropdown />);
+    render(<LanguageSelector />);
     fireEvent.click(screen.getByText('icon-gui-chevron-down'));
     expect(screen.getByText('Code Language')).toBeInTheDocument();
   });
 
   it('renders language options', () => {
-    render(<LanguageDropdown />);
+    render(<LanguageSelector />);
     fireEvent.click(screen.getByText('icon-gui-chevron-down'));
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
     expect(screen.getByText('Python')).toBeInTheDocument();
   });
 
   it('closes the dropdown menu on outside click', () => {
-    render(<LanguageDropdown />);
+    render(<LanguageSelector />);
     fireEvent.click(screen.getByText('icon-gui-chevron-down'));
     fireEvent.mouseDown(document);
     expect(screen.queryByText('Code Language')).not.toBeInTheDocument();
