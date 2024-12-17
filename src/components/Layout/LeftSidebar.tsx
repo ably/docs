@@ -16,13 +16,13 @@ export const NavPage = ({
   page,
   indentLinks,
   index,
-  activePageHierarchy,
+  activePageTree,
   type,
 }: {
   page: NavProductPages;
   indentLinks?: boolean;
   index: number;
-  activePageHierarchy?: number[];
+  activePageTree?: number[];
   type: ContentType;
 }) => {
   const location = useLocation();
@@ -63,24 +63,20 @@ export const NavPage = ({
                   page={subPage}
                   indentLinks
                   index={index}
-                  activePageHierarchy={activePageHierarchy?.slice(1)}
+                  activePageTree={activePageTree?.slice(1)}
                   type={type}
                 />
               </div>
             )),
           },
         ]}
-        {...commonAccordionOptions(activePageHierarchy?.[0] === index ? 0 : undefined)}
+        {...commonAccordionOptions(activePageTree?.[0] === index ? 0 : undefined)}
       />
     );
   }
 };
 
-const renderProductContent = (
-  content: NavProductContent[],
-  activePageHierarchy: number[] | undefined,
-  type: ContentType,
-) =>
+const renderProductContent = (content: NavProductContent[], activePageTree: number[] | undefined, type: ContentType) =>
   content.map((productContent, contentIndex) => (
     <div className="flex flex-col gap-8" key={productContent.name}>
       <div className="ui-text-overline2 text-neutral-700">{productContent.name}</div>
@@ -89,7 +85,7 @@ const renderProductContent = (
           key={'name' in page ? page.name : `page-group-${pageIndex}`}
           page={page}
           index={pageIndex}
-          activePageHierarchy={contentIndex === activePageHierarchy?.[0] ? activePageHierarchy.slice(1) : undefined}
+          activePageTree={contentIndex === activePageTree?.[0] ? activePageTree.slice(1) : undefined}
           type={type}
         />
       ))}
@@ -99,7 +95,7 @@ const renderProductContent = (
 const constructProductNavData = (
   location: string,
   products: [ProductKey, NavProduct][],
-  activePageHierarchy: number[],
+  activePageTree: number[],
   selectedProduct: string | undefined,
   setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>,
 ) =>
@@ -143,13 +139,13 @@ const constructProductNavData = (
               </a>
             ) : null}
           </div>
-          {renderProductContent(product.content, activePageHierarchy, 'content')}
+          {renderProductContent(product.content, activePageTree, 'content')}
           {product.api.length > 0 ? (
             <div
               id={apiReferencesId}
               className="flex flex-col gap-8 rounded-lg bg-neutral-100 border border-neutral-300 p-16 mb-24"
             >
-              {renderProductContent(product.api, activePageHierarchy, 'api')}
+              {renderProductContent(product.api, activePageTree, 'api')}
             </div>
           ) : null}
         </div>
@@ -158,7 +154,7 @@ const constructProductNavData = (
   });
 
 export const LeftSidebar = () => {
-  const { selectedProduct, setSelectedProduct, activePageHierarchy, products } = useLayoutContext();
+  const { selectedProduct, setSelectedProduct, activePage, products } = useLayoutContext();
   const location = useLocation();
 
   useEffect(() => {
@@ -174,11 +170,11 @@ export const LeftSidebar = () => {
       constructProductNavData(
         location.pathname,
         products,
-        activePageHierarchy.slice(1),
+        activePage.tree.slice(1),
         selectedProduct,
         setSelectedProduct,
       ),
-    [location.pathname, products, activePageHierarchy, selectedProduct, setSelectedProduct],
+    [location.pathname, products, activePage.tree, selectedProduct, setSelectedProduct],
   );
 
   return (
@@ -186,7 +182,7 @@ export const LeftSidebar = () => {
       className={cn(sidebarAlignmentClasses, 'overflow-y-scroll hidden md:block md:pr-16')}
       id="left-nav"
       data={productNavData}
-      {...commonAccordionOptions(activePageHierarchy[0], true)}
+      {...commonAccordionOptions(activePage.tree[0], true)}
     />
   );
 };
