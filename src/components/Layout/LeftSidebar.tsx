@@ -5,12 +5,22 @@ import Accordion from '@ably/ui/core/Accordion';
 import Icon from '@ably/ui/core/Icon';
 
 import { NavProduct, NavProductContent, NavProductPages } from 'src/data/nav/types';
-import { commonAccordionOptions, composeNavLinkId, formatNavLink, sidebarAlignmentClasses } from './utils';
+import {
+  commonAccordionOptions,
+  composeNavLinkId,
+  formatNavLink,
+  sidebarAlignmentClasses,
+  mobileSidebarAlignmentClasses,
+} from './utils';
 import { ProductKey } from 'src/data/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
 
 type ContentType = 'content' | 'api';
+
+type LeftSidebarProps = {
+  isStatic?: boolean;
+};
 
 export const NavPage = ({
   page,
@@ -35,7 +45,8 @@ export const NavPage = ({
         key={page.link}
         id={linkId}
         className={cn({
-          'block ui-text-menu4 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base': true,
+          'block ui-text-menu2 md:ui-text-menu4 text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base':
+            true,
           'font-semibold': !pageActive,
           'text-neutral-900': !pageActive && type === 'content',
           'text-neutral-1000': !pageActive && type === 'api',
@@ -114,7 +125,7 @@ const constructProductNavData = (
               <Link
                 to={product.link}
                 id={composeNavLinkId(product.link)}
-                className={cn('ui-text-menu4', {
+                className={cn('ui-text-menu2 md:ui-text-menu4', {
                   'font-bold': formatNavLink(product.link) === formatNavLink(location),
                 })}
               >
@@ -153,7 +164,7 @@ const constructProductNavData = (
     };
   });
 
-export const LeftSidebar = () => {
+export const LeftSidebar = ({ isStatic = false }: LeftSidebarProps) => {
   const { selectedProduct, setSelectedProduct, activePage, products } = useLayoutContext();
   const location = useLocation();
 
@@ -179,7 +190,10 @@ export const LeftSidebar = () => {
 
   return (
     <Accordion
-      className={cn(sidebarAlignmentClasses, 'overflow-y-scroll hidden md:block md:pr-16')}
+      className={cn(
+        isStatic ? mobileSidebarAlignmentClasses : [sidebarAlignmentClasses, 'hidden md:block'],
+        'overflow-y-scroll md:pr-16',
+      )}
       id="left-nav"
       data={productNavData}
       {...commonAccordionOptions(activePage.tree[0], true)}

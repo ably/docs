@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'src/components/Link';
-import logo from './images/ably-logo.png';
+import logo from '../../Layout/images/ably-logo.png';
 
 export const FooterLogo = () => (
   <Link to="/" data-id="footer-logo" className="block" style={{ height: '2.125rem' }}>
