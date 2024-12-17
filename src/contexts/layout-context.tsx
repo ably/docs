@@ -10,33 +10,29 @@ import { ProductData, ProductKey } from 'src/data/types';
  *
  * selectedProduct - The currently selected product key. This changes when you click on a product in the sidebar.
  * setSelectedProduct - Function to update the selected product key.
- * activePageHierarchy - The hierarchy of the active page in the nav (i.e. the third link of the second section would be [2,3]). This is used to determine the active link in the sidebar.
- * setActivePageHierarchy - Function to update the active page hierarchy.
+ * activePage - The currently active page and its tree.
  * products - List of products with their navigation data.
- * activePage - The currently active page.
  */
 
 const LayoutContext = createContext<{
   selectedProduct: ProductKey | undefined;
   setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>;
-  activePageHierarchy: number[];
+  activePage: { tree: number[]; page: NavProductPage | undefined };
   products: [ProductKey, NavProduct][];
-  activePage: NavProductPage | undefined;
 }>({
   selectedProduct: undefined,
   setSelectedProduct: () => undefined,
-  activePageHierarchy: [],
+  activePage: { tree: [], page: undefined },
   products: [],
-  activePage: undefined,
 });
 
 export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
-  const { hierarchy: activePageHierarchy, page: activePage } = useMemo(
-    () => determineActivePage(data, location.pathname) ?? { hierarchy: [], page: undefined },
+  const activePage = useMemo(
+    () => determineActivePage(data, location.pathname) ?? { tree: [], page: undefined },
     [location.pathname],
   );
-  const activeProduct = activePageHierarchy[0];
+  const activeProduct = activePage.tree[0];
   const products = useMemo(
     () =>
       Object.entries(data as ProductData).map((product) => [product[0], product[1].nav]) as [ProductKey, NavProduct][],
@@ -52,9 +48,8 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
       value={{
         selectedProduct,
         setSelectedProduct,
-        activePageHierarchy,
-        products,
         activePage,
+        products,
       }}
     >
       {children}

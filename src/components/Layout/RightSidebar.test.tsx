@@ -23,7 +23,9 @@ const mockUseLocation = useLocation as jest.Mock;
 describe('RightSidebar', () => {
   beforeEach(() => {
     mockUseLayoutContext.mockReturnValue({
-      activePageHierarchy: [0],
+      activePage: {
+        tree: [0],
+      },
       products: [['pubsub']],
     });
 
@@ -61,9 +63,11 @@ describe('RightSidebar', () => {
 
   it('renders the LanguageSelector component when showLanguageSelector is true', () => {
     mockUseLayoutContext.mockReturnValue({
-      activePageHierarchy: [0],
       activePage: {
-        showLanguageSelector: true,
+        tree: [0],
+        page: {
+          showLanguageSelector: true,
+        },
       },
       products: [['pubsub']],
     });

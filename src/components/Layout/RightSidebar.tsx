@@ -30,7 +30,7 @@ export const RightSidebar = () => {
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>();
   const observer = useRef<IntersectionObserver>();
   const location = useLocation();
-  const { showLanguageSelector } = activePage ?? {};
+  const { showLanguageSelector } = activePage?.page ?? {};
 
   useEffect(() => {
     const headerElements =
