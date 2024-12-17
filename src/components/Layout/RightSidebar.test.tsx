@@ -13,8 +13,8 @@ jest.mock('@reach/router', () => ({
   useLocation: jest.fn(),
 }));
 
-jest.mock('./LanguageDropdown', () => ({
-  LanguageDropdown: jest.fn(() => <div>LanguageDropdown</div>),
+jest.mock('./LanguageSelector', () => ({
+  LanguageSelector: jest.fn(() => <div>LanguageSelector</div>),
 }));
 
 const mockUseLayoutContext = useLayoutContext as jest.Mock;
@@ -54,9 +54,22 @@ describe('RightSidebar', () => {
     document.body.innerHTML = '';
   });
 
-  it('renders the LanguageDropdown component', () => {
+  it('does not render the LanguageSelector component when showLanguageSelector is false (default)', () => {
     render(<RightSidebar />);
-    expect(screen.getByText('LanguageDropdown')).toBeInTheDocument();
+    expect(screen.queryByText('LanguageSelector')).not.toBeInTheDocument();
+  });
+
+  it('renders the LanguageSelector component when showLanguageSelector is true', () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePageHierarchy: [0],
+      activePage: {
+        showLanguageSelector: true,
+      },
+      products: [['pubsub']],
+    });
+
+    render(<RightSidebar />);
+    expect(screen.getByText('LanguageSelector')).toBeInTheDocument();
   });
 
   it('renders headers from the article', () => {

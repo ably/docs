@@ -30,7 +30,7 @@ export default {
     syntaxHighlighterKey: 'bash',
   },
   csharp: {
-    label: 'C#',
+    label: 'C# .NET',
     syntaxHighlighterKey: 'csharp',
   },
   go: {
