@@ -6,7 +6,7 @@ Use presence to display which users are currently online in a channel. Users can
 
 Presence enables users to quickly understand the availability of others to communicate more effectively. For example, on a live video stream users can see who else is currently viewing.
 
-Presence is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Ably SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting Pub/Sub features. It is built as Ably's core platform, and so it provides high performance and scaling guarantees.
+Presence is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Ably SDK provides features such as presence, publishing and subscribing to messages within channels in a high performance and scaling capability.
 
 ## Resources
 
