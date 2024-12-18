@@ -8,7 +8,7 @@ const ExamplesFilter = () => {
   return (
     <>
       <div className="h-[34px] sm:h-[30px] w-20 absolute left-8 top-4 flex items-center justify-center select-none cursor-default">
-        <Icon name={'icon-gui-search'} size={'1rem'} />
+        <Icon name={'icon-gui-search'} size="1rem" />
       </div>
       <input
         type="search"
