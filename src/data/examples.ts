@@ -36,7 +36,7 @@ export default {
       name: 'Messages',
       description:
         'Enable users to have conversations with each other by sending and receiving messages in a chat room.',
-      image: 'example-messages',
+      image: '',
       languages: ['javascript', 'react'],
       products: ['chat'],
       useCases: ['live-chat'],
@@ -60,7 +60,7 @@ export default {
     {
       name: 'Online status',
       description: 'Online statuses enable users to view who else is online and ready to chat.',
-      image: 'example-online-status',
+      image: '',
       languages: ['javascript', 'react'],
       products: ['chat'],
       useCases: ['live-chat'],
@@ -68,7 +68,7 @@ export default {
     {
       name: 'Message history',
       description: 'Message history enables users to view messages that have been previously sent to the chat room.',
-      image: 'example-message-history',
+      image: '',
       languages: ['javascript', 'react'],
       products: ['chat'],
       useCases: ['live-chat'],
@@ -76,27 +76,27 @@ export default {
     {
       name: 'Authentication with Ably Token',
       description: 'Use an Ably token to securely authenticate users within your application.',
-      image: 'example-ably-token',
+      image: 'example-generate-token',
       languages: ['javascript', 'react'],
       products: ['pubsub'],
-      useCases: ['pub-sub'],
+      useCases: ['data-broadcast'],
     },
     {
       name: 'Channels and messages',
       description:
         'Enable users to have conversations with each other by sending and receiving messages in a chat room.',
-      image: 'example-channel-messages',
+      image: '',
       languages: ['javascript', 'react'],
       products: ['pubsub'],
-      useCases: ['pub-sub'],
+      useCases: ['data-broadcast'],
     },
     {
       name: 'History',
       description: 'History enables users to retrieve historical messages published to an application.',
-      image: 'example-history',
+      image: '',
       languages: ['javascript', 'react'],
       products: ['pubsub'],
-      useCases: ['pub-sub'],
+      useCases: ['data-broadcast'],
     },
     {
       name: 'Presence',
@@ -104,7 +104,7 @@ export default {
       image: 'example-presence',
       languages: ['javascript', 'react'],
       products: ['pubsub'],
-      useCases: ['pub-sub'],
+      useCases: ['data-broadcast'],
     },
   ],
   useCases: {
@@ -122,9 +122,6 @@ export default {
     },
     notifications: {
       label: 'Notifications',
-    },
-    'pub-sub': {
-      label: 'Pub/Sub',
     },
   },
 };
