@@ -1,30 +1,5 @@
-const languageKeys = [
-  'javascript',
-  'react',
-  'java',
-  'ruby',
-  'python',
-  'php',
-  'shell',
-  'csharp',
-  'go',
-  'html',
-  'cpp',
-  'dart',
-  'swift',
-  'objectivec',
-  'nodejs',
-  'json',
-  'xml',
-  'sql',
-  'android',
-  'flutter',
-  'realtime',
-  'rest',
-] as const;
+import languageInfo from './languageInfo';
 
-export type LanguageKey = (typeof languageKeys)[number];
+export type LanguageKey = (keyof typeof languageInfo)[number];
 
-export type LanguageData = Partial<Record<LanguageKey, number>>;
-
-export type LanguageInfo = Partial<Record<LanguageKey, { label: string; syntaxHighlighterKey: string }>>;
+export type LanguageData = Record<LanguageKey, number>;
