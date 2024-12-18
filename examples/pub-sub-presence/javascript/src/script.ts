@@ -10,12 +10,29 @@ const channel = client.channels.get('viewer-presence');
 
 async function initializePresence() {
   await channel.presence.subscribe((member) => {
-    const { action, clientId } = member;
+    const { action, clientId, data } = member;
 
-    if (action === 'enter') {
-      addPresenceEntry(clientId);
-    } else if (action === 'leave') {
-      document.getElementById(clientId)?.remove();
+    switch (action) {
+      case 'enter':
+        addPresenceEntry(clientId);
+        break;
+      case 'leave':
+        document.getElementById(clientId)?.remove();
+        break;
+      case 'update':
+        const statusElement = document.getElementById(clientId)?.lastElementChild;
+        const statusButton = document.getElementById('status-button');
+        if (statusElement) {
+          statusElement.classList.remove('bg-green-500', 'bg-amber-500');
+          if (data === 'Away') {
+            statusButton.textContent = 'Set online';
+            statusElement.classList.add('bg-amber-500');
+          } else if (data === 'Online') {
+            statusButton.textContent = 'Set away';
+            statusElement.classList.add('bg-green-500');
+          }
+        }
+        break;
     }
   });
 
@@ -26,6 +43,8 @@ async function initializePresence() {
       addPresenceEntry(member.clientId);
     });
   }
+
+  channel.presence.enter('Online');
 }
 
 async function addPresenceEntry(clientId: string) {
@@ -34,7 +53,7 @@ async function addPresenceEntry(clientId: string) {
   userItem.id = clientId;
   userItem.className = 'flex items-center justify-between p-2 border-b';
   const clientIdSpan = document.createElement('span');
-  clientIdSpan.innerText = clientId;
+  clientIdSpan.innerText = clientId + (clientId === client.auth.clientId ? ' (You)' : '');
   const statusSpan = document.createElement('span');
   statusSpan.className = 'h-3 w-3 rounded-full bg-green-500';
 
@@ -43,16 +62,10 @@ async function addPresenceEntry(clientId: string) {
   presenceList.appendChild(userItem);
 }
 
-const button = document.getElementById('toggle-presence');
+const button = document.getElementById('status-button');
 
 button?.addEventListener('click', () => {
-  if (button.textContent === 'Join') {
-    button.textContent = 'Leave';
-    channel.presence.enter();
-  } else {
-    button.textContent = 'Join';
-    channel.presence.leave();
-  }
+  channel.presence.update(button.textContent === 'Set away' ? 'Away' : 'Online');
 });
 
 initializePresence();

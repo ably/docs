@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { usePresence, usePresenceListener } from 'ably/react';
+import { useAbly, usePresence, usePresenceListener } from 'ably/react';
 
 interface Viewer {
   clientId: string;
@@ -8,6 +8,9 @@ interface Viewer {
 
 export default function Presence() {
   const [viewers, setViewers] = useState<Viewer[]>([]);
+
+  const ably = useAbly();
+  const currentClientId = ably?.auth.clientId;
 
   const { presenceData } = usePresenceListener('viewer-presence', (presence) => {
     if (presence.action === 'enter') {
@@ -35,7 +38,7 @@ export default function Presence() {
     <ul className="space-y-2">
       {viewers.map((viewer) => (
         <li key={viewer.clientId} className="flex items-center justify-between p-2 border-b">
-          <span>{viewer.clientId}</span>
+          <span>{viewer.clientId}{viewer.clientId === currentClientId ? ' (You)' : ''} </span>
           <span className={`h-3 w-3 rounded-full ${viewer.isOnline ? 'bg-green-500' : 'bg-gray-300'}`}></span>
         </li>
       ))}
