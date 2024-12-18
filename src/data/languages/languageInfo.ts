@@ -1,5 +1,3 @@
-import { LanguageInfo } from './types';
-
 export default {
   javascript: {
     label: 'JavaScript',
@@ -89,4 +87,4 @@ export default {
     label: 'REST',
     syntaxHighlighterKey: 'javascript',
   },
-} satisfies LanguageInfo;
+} as Record<string, { label: string; syntaxHighlighterKey: string }>;
