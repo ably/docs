@@ -2,8 +2,9 @@ import React from 'react';
 import { StaticImage } from 'gatsby-plugin-image';
 import ExamplesGrid from './ExamplesGrid';
 import ExamplesFilter from './ExamplesFilter';
+import { ImageProps } from '../Image';
 
-const ExamplesContent = () => {
+const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => {
   return (
     <>
       <section className="mx-auto px-24 md:px-0 max-w-[1152px] relative z-10">
@@ -19,7 +20,7 @@ const ExamplesContent = () => {
             <ExamplesFilter />
           </div>
           <div className="w-full sm:w-[80%] mt-40 sm:mt-0">
-            <ExamplesGrid />
+            <ExamplesGrid exampleImages={exampleImages} />
           </div>
         </div>
       </section>
