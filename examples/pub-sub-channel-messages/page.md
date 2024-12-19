@@ -1,12 +1,10 @@
 # Sending and receiving messages with Pub/Sub
 
-Enable users to have conversations with each other by sending and receiving messages in a chat room.
+Enable clients to send and receive messages in a channel.
 
-All applications that implement a chat component need to be able to send messages to enable communication between users. Messages are separated into different topics using rooms.
+Messaging enables instant, scalable communication through publishing and subscribing to channels. Messages represent dynamic data payloads that clients publish and subscribe to, powering collaborative applications across realtime newsfeeds, auction applications or financial websites.
 
-In customer support platforms, users join dedicated rooms to communicate with agents. In larger applications, such as social networking or team collaboration tools, users join multiple rooms to discuss different topics, fostering engagement and facilitating group discussions.
-
-Messaging is implemented using [Ably Chat](https://ably.com/docs/products/chat). The Chat SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting chat features. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
+Messaging is implemented using [Ably Pub/Sub](https://ably.com/docs/auth). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application and is powered by Ably's reliable and scalable platform.
 
 ## Resources
 
