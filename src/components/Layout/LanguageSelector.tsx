@@ -26,33 +26,31 @@ type LanguageSelectorOptionProps = {
 };
 
 const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: LanguageSelectorOptionProps) => (
-  <div
-    onClick={() => setMenuOpen(!props.selectProps.menuIsOpen)}
-    className={cn('group/lang-dropdown flex gap-8 items-center rounded', {
-      'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 mx-8 last:mb-8': isOption,
-    })}
-    role="menuitem"
+  <Link
+    className="ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 transition-colors"
+    to={`?lang=${props.data.label}`}
   >
-    <div className={cn('flex items-center gap-8', { 'flex-1': isOption })}>
-      <Icon size="20px" name={`icon-tech-${props.data.label}` as IconName} />
+    <div
+      onClick={() => setMenuOpen(!props.selectProps.menuIsOpen)}
+      className={cn('group/lang-dropdown flex gap-8 items-center rounded', {
+        'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 mx-8 last:mb-8 cursor-pointer': isOption,
+      })}
+      role="menuitem"
+    >
+      <div className={cn('flex items-center gap-8', { 'flex-1': isOption })}>
+        <Icon size="20px" name={`icon-tech-${props.data.label}` as IconName} />
+        {isOption ? languageInfo[props.data.label].label : null}
+      </div>
+      <Badge color="neutral" size="xs" className={cn({ 'group-hover/lang-dropdown:bg-neutral-000': isOption })}>
+        v{props.data.version.toFixed(1)}
+      </Badge>
       {isOption ? (
-        <Link
-          className="ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 transition-colors"
-          to={`?lang=${props.data.label}`}
-        >
-          {languageInfo[props.data.label].label}
-        </Link>
+        <div className="w-16 h-16">
+          {props.data.label === langParam ? <Icon name="icon-gui-tick" size="16px" color="text-neutral-1000" /> : null}
+        </div>
       ) : null}
     </div>
-    <Badge color="neutral" size="xs" className={cn({ 'group-hover/lang-dropdown:bg-neutral-000': isOption })}>
-      v{props.data.version.toFixed(1)}
-    </Badge>
-    {isOption ? (
-      <div className="w-16 h-16">
-        {props.data.label === langParam ? <Icon name="icon-gui-tick" size="16px" color="text-neutral-1000" /> : null}
-      </div>
-    ) : null}
-  </div>
+  </Link>
 );
 
 export const LanguageSelector = () => {
@@ -78,7 +76,7 @@ export const LanguageSelector = () => {
   return (
     <div
       ref={selectRef}
-      className="absolute top-0 right-0 md:relative text-right w-full focus-base group/lang-dropdown"
+      className="absolute top-0 right-0 md:relative w-full text-right md:text-left mb-24 focus-base group/lang-dropdown"
     >
       <Select
         options={options}
