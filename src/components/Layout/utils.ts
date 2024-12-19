@@ -96,7 +96,11 @@ export const formatNavLink = (link: string) => {
   return link.replace(/\/$/, '');
 };
 
-export const commonAccordionOptions = (openIndex?: number, topLevel?: boolean): Omit<AccordionProps, 'data'> => ({
+export const commonAccordionOptions = (
+  currentPage: NavProductContent | null,
+  openIndex: number | undefined,
+  topLevel: boolean,
+): Omit<AccordionProps, 'data'> => ({
   icons: { open: { name: 'icon-gui-chevron-up' }, closed: { name: 'icon-gui-chevron-down' } },
   options: {
     autoClose: topLevel,
@@ -112,6 +116,7 @@ export const commonAccordionOptions = (openIndex?: number, topLevel?: boolean): 
     rowIconSize: '20px',
     defaultOpenIndexes: openIndex !== undefined ? [openIndex] : [],
     hideBorders: true,
+    fullyOpen: !topLevel && currentPage?.expand,
   },
 });
 
