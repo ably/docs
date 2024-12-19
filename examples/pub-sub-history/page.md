@@ -2,11 +2,11 @@
 
 History enables users to retrieve historical messages published to an application.
 
-Use history to retrieve messages previously published to a channel within an application. Users can retrieve the history for messages such as a bidding history, or status updates.
+Use history to retrieve messages that have been previously published to a channel. Users can then start working in your application with context of what happened before they went joined, or came online. Uses include retrieving the values of bids from an auction site before placing your own, or providing the last 2 minutes worth of contextual data in a realtime dashboard.
 
-History enables users to retrieve historically published messages within an application, allowing them to understand how the current state has been achieved. For example, in an auction site the user can see the history of bids as well as a see the current active bid. Within a sports application with live statistics the user will be able to see how the game has progressed so far.
+History enables users to retrieve messages that have been previously published within an application. It enables provides users with context as to how the current state has been reached.
 
-History is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Ably SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting Pub/Sub features.
+History is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
 
 ## Resources
 
