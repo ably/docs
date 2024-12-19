@@ -51,9 +51,10 @@ export default {
     label: 'Swift',
     syntaxHighlighterKey: 'swift',
   },
-  objectivec: {
+  objc: {
     label: 'Objective-C',
-    syntaxHighlighterKey: 'objectivec',
+    syntaxHighlighterKey: 'objc',
+    alias: 'objectivec',
   },
   nodejs: {
     label: 'Node.js',
@@ -87,4 +88,4 @@ export default {
     label: 'REST',
     syntaxHighlighterKey: 'javascript',
   },
-} as Record<string, { label: string; syntaxHighlighterKey: string }>;
+} as Record<string, { label: string; syntaxHighlighterKey: string; alias?: string }>;

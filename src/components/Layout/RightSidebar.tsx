@@ -30,7 +30,7 @@ export const RightSidebar = () => {
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>();
   const observer = useRef<IntersectionObserver>();
   const location = useLocation();
-  const { hideLanguageSelector } = activePage?.page ?? {};
+  const showLanguageSelector = activePage?.languages.length > 0;
 
   useEffect(() => {
     const headerElements =
@@ -96,7 +96,7 @@ export const RightSidebar = () => {
 
   return (
     <div className={cn(sidebarAlignmentClasses, 'static md:pb-[80px] right-32 md:right-0')}>
-      {!hideLanguageSelector ? <LanguageSelector /> : null}
+      {showLanguageSelector ? <LanguageSelector /> : null}
       <div className="hidden md:flex flex-col h-full">
         {headers.length > 0 ? (
           <>
