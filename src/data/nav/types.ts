@@ -14,6 +14,7 @@ export type NavProductPages = NavProductPage | NavProductContent;
 export type NavProductContent = {
   name: string;
   pages: NavProductPages[];
+  expand?: boolean;
 };
 
 export type NavProductPage = {
