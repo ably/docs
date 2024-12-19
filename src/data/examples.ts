@@ -1,3 +1,17 @@
+export interface Example {
+  name: string;
+  description: string;
+  languages: string[];
+  products: string[];
+  useCases: string[];
+  image: string;
+}
+
+export interface Examples {
+  examples: Example[];
+  useCases: { [key: string]: { label: string } };
+}
+
 export default {
   examples: [
     {
@@ -46,7 +60,7 @@ export default {
       description: 'Use typing indicators to make users aware of who is currently typing a message.',
       image: 'example-typing-indicator',
       languages: ['javascript', 'react'],
-      products: ['chat '],
+      products: ['chat'],
       useCases: ['live-chat'],
     },
     {
@@ -54,7 +68,7 @@ export default {
       description: 'Use room reactions to enable users to express their feelings within a chat application.',
       image: 'example-room-reactions',
       languages: ['javascript', 'react'],
-      products: ['chat '],
+      products: ['chat'],
       useCases: ['live-chat'],
     },
     {
@@ -106,7 +120,7 @@ export default {
       products: ['pubsub'],
       useCases: ['data-broadcast'],
     },
-  ],
+  ] as Example[],
   useCases: {
     'live-chat': {
       label: 'Live Chat',

@@ -1,7 +1,17 @@
 import React from 'react';
 import Icon from '@ably/ui/core/Icon';
 
-const ExamplesCheckbox = ({ label, name, value }: { label: string; name: string; value: string }) => {
+const ExamplesCheckbox = ({
+  label,
+  name,
+  value,
+  selectProductOrUseCase,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  selectProductOrUseCase: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) => {
   return (
     <div className="flex items-center mb-0">
       <input
@@ -12,6 +22,7 @@ const ExamplesCheckbox = ({ label, name, value }: { label: string; name: string;
         className="ui-checkbox-input"
         value={value}
         defaultChecked={value === 'all'}
+        onChange={(e) => selectProductOrUseCase(e)}
       />
       <div data-ui-checkbox-styled="" className="ui-checkbox-styled">
         <Icon size="1rem" name="icon-gui-tick" additionalCSS="ui-checkbox-styled-tick cursor-pointer" />
