@@ -25,6 +25,7 @@ describe('RightSidebar', () => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
         tree: [0],
+        languages: [],
       },
       products: [['pubsub']],
     });
@@ -56,22 +57,19 @@ describe('RightSidebar', () => {
     document.body.innerHTML = '';
   });
 
-  it('does not render the LanguageSelector component when hideLanguageSelector is false (default)', () => {
+  it('does not render the LanguageSelector component when activePage.languages is empty', () => {
     render(<RightSidebar />);
     expect(screen.queryByText('LanguageSelector')).not.toBeInTheDocument();
   });
 
-  it('renders the LanguageSelector component when hideLanguageSelector is true', () => {
+  it('renders the LanguageSelector component when activePage.languages is not empty', () => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
         tree: [0],
-        page: {
-          hideLanguageSelector: true,
-        },
+        languages: ['javascript'],
       },
       products: [['pubsub']],
     });
-
     render(<RightSidebar />);
     expect(screen.getByText('LanguageSelector')).toBeInTheDocument();
   });
