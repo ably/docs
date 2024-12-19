@@ -87,4 +87,4 @@ export default {
     label: 'REST',
     syntaxHighlighterKey: 'javascript',
   },
-};
+} as Record<string, { label: string; syntaxHighlighterKey: string }>;
