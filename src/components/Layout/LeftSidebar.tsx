@@ -70,7 +70,7 @@ export const NavPage = ({
             )),
           },
         ]}
-        {...commonAccordionOptions(activePageTree?.[0] === index ? 0 : undefined)}
+        {...commonAccordionOptions(page, activePageTree?.[0] === index ? 0 : undefined, false)}
       />
     );
   }
@@ -182,7 +182,7 @@ export const LeftSidebar = () => {
       className={cn(sidebarAlignmentClasses, 'overflow-y-scroll hidden md:block')}
       id="left-nav"
       data={productNavData}
-      {...commonAccordionOptions(activePage.tree[0], true)}
+      {...commonAccordionOptions(null, activePage.tree[0], true)}
     />
   );
 };
