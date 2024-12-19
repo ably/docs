@@ -19,7 +19,5 @@ export type NavProductContent = {
 export type NavProductPage = {
   name: string;
   link: string;
-  breadcrumbs?: boolean;
   external?: boolean;
-  showLanguageSelector?: boolean;
 };

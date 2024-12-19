@@ -24,12 +24,14 @@ const mockLanguageData = {
   pubsub: {
     javascript: 1.0,
     python: 1.0,
+    ruby: 1.0,
   },
 };
 
 const mockLanguageInfo = {
   javascript: { label: 'JavaScript' },
   python: { label: 'Python' },
+  ruby: { label: 'Ruby' },
 };
 
 describe('LanguageSelector', () => {
@@ -37,6 +39,7 @@ describe('LanguageSelector', () => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
         tree: [0],
+        languages: ['javascript', 'python'],
       },
       products: [['pubsub']],
     });
@@ -86,5 +89,13 @@ describe('LanguageSelector', () => {
     fireEvent.click(screen.getByText('icon-gui-chevron-down'));
     fireEvent.mouseDown(document);
     expect(screen.queryByText('Code Language')).not.toBeInTheDocument();
+  });
+
+  it('filters options based on activePage.languages', () => {
+    render(<LanguageSelector />);
+    fireEvent.click(screen.getByText('icon-gui-chevron-down'));
+    expect(screen.getByText('JavaScript')).toBeInTheDocument();
+    expect(screen.getByText('Python')).toBeInTheDocument();
+    expect(screen.queryByText('Ruby')).not.toBeInTheDocument();
   });
 });
