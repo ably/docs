@@ -1,9 +1,10 @@
-import React, { createContext, PropsWithChildren, useContext, useMemo, useState } from 'react';
+import React, { createContext, PropsWithChildren, useContext, useMemo, useState, useEffect } from 'react';
 import { useLocation } from '@reach/router';
 import { determineActivePage } from 'src/components/Layout/utils';
 import data from 'src/data';
 import { NavProduct, NavProductPage } from 'src/data/nav/types';
 import { ProductData, ProductKey } from 'src/data/types';
+import { LanguageKey } from 'src/data/languages/types';
 
 /**
  * LayoutContext
@@ -17,21 +18,37 @@ import { ProductData, ProductKey } from 'src/data/types';
 const LayoutContext = createContext<{
   selectedProduct: ProductKey | undefined;
   setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>;
-  activePage: { tree: number[]; page: NavProductPage | undefined };
+  activePage: { tree: number[]; page: NavProductPage | undefined; languages: LanguageKey[] };
   products: [ProductKey, NavProduct][];
 }>({
   selectedProduct: undefined,
   setSelectedProduct: () => undefined,
-  activePage: { tree: [], page: undefined },
+  activePage: { tree: [], page: undefined, languages: [] },
   products: [],
 });
 
 export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
-  const activePage = useMemo(
-    () => determineActivePage(data, location.pathname) ?? { tree: [], page: undefined },
-    [location.pathname],
-  );
+  const [languages, setLanguages] = useState<LanguageKey[]>([]);
+
+  useEffect(() => {
+    const languagesSet = new Set<LanguageKey>();
+
+    document.querySelectorAll('.docs-language-navigation').forEach((element) => {
+      const languages = element.getAttribute('data-languages');
+      if (languages) {
+        languages.split(',').forEach((language) => languagesSet.add(language as LanguageKey));
+      }
+    });
+
+    setLanguages(Array.from(languagesSet));
+  }, [location.pathname]);
+
+  const activePage = useMemo(() => {
+    const activePageData = determineActivePage(data, location.pathname);
+    return activePageData ? { ...activePageData, languages } : { tree: [], page: undefined, languages: [] };
+  }, [location.pathname, languages]);
+
   const activeProduct = activePage.tree[0];
   const products = useMemo(
     () =>
