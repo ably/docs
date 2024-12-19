@@ -107,7 +107,7 @@ const constructProductNavData = (
       icon: selectedProduct === productKey ? product.icon.open : product.icon.closed,
       onClick: () => setSelectedProduct(productKey),
       content: (
-        <div key={product.name} className="flex flex-col gap-20">
+        <div key={product.name} className="flex flex-col gap-20 px-16">
           <div className="flex flex-col gap-8 mt-12">
             <p className="ui-text-overline2 text-neutral-700">{product.name}</p>
             {product.link ? (
@@ -143,7 +143,7 @@ const constructProductNavData = (
           {product.api.length > 0 ? (
             <div
               id={apiReferencesId}
-              className="flex flex-col gap-8 rounded-lg bg-neutral-100 border border-neutral-300 p-16 mb-24"
+              className="flex flex-col gap-8 rounded-lg bg-neutral-100 border border-neutral-300 p-16 mb-24 -mx-16"
             >
               {renderProductContent(product.api, activePageTree, 'api')}
             </div>
@@ -179,7 +179,7 @@ export const LeftSidebar = () => {
 
   return (
     <Accordion
-      className={cn(sidebarAlignmentClasses, 'overflow-y-scroll hidden md:block md:pr-16')}
+      className={cn(sidebarAlignmentClasses, 'overflow-y-scroll hidden md:block')}
       id="left-nav"
       data={productNavData}
       {...commonAccordionOptions(activePage.tree[0], true)}

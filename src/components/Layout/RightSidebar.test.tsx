@@ -56,17 +56,17 @@ describe('RightSidebar', () => {
     document.body.innerHTML = '';
   });
 
-  it('does not render the LanguageSelector component when showLanguageSelector is false (default)', () => {
+  it('does not render the LanguageSelector component when hideLanguageSelector is false (default)', () => {
     render(<RightSidebar />);
     expect(screen.queryByText('LanguageSelector')).not.toBeInTheDocument();
   });
 
-  it('renders the LanguageSelector component when showLanguageSelector is true', () => {
+  it('renders the LanguageSelector component when hideLanguageSelector is true', () => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
         tree: [0],
         page: {
-          showLanguageSelector: true,
+          hideLanguageSelector: true,
         },
       },
       products: [['pubsub']],
