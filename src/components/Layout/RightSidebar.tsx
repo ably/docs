@@ -30,11 +30,11 @@ export const RightSidebar = () => {
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>();
   const observer = useRef<IntersectionObserver>();
   const location = useLocation();
-  const { showLanguageSelector } = activePage?.page ?? {};
+  const { hideLanguageSelector } = activePage?.page ?? {};
 
   useEffect(() => {
     const headerElements =
-      typeof document !== 'undefined' ? document.querySelector('article')?.querySelectorAll('h2, h3') ?? [] : [];
+      typeof document !== 'undefined' ? document.querySelector('article')?.querySelectorAll('h2, h3, h6') ?? [] : [];
     const headerData = Array.from(headerElements)
       .filter((element) => element.id && element.textContent)
       .map((header) => ({
@@ -95,46 +95,41 @@ export const RightSidebar = () => {
   }, [activeHeader]);
 
   return (
-    <div className={cn(sidebarAlignmentClasses, 'right-48 md:right-0')}>
-      {showLanguageSelector ? <LanguageSelector /> : null}
-      <div className="hidden md:block">
-        <div className="my-24">
-          {headers.length > 0 ? (
-            <>
-              <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
-              <div className="flex gap-16">
-                <div className="bg-neutral-300 dark:bg-neutral-1000 rounded-full">
-                  <div
-                    className="h-[21px] w-2 -mt-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
-                    style={{
-                      transform: `translateY(${highlightPosition.yOffset}px)`,
-                      height: `${highlightPosition.height}px`,
-                    }}
-                  ></div>
-                </div>
-
-                <div className="flex flex-col gap-8">
-                  {headers.map((header) => (
-                    <a
-                      href={`#${header.id}`}
-                      key={header.id}
-                      id={`sidebar-${header.id}`}
-                      className={cn(
-                        'ui-text-menu4 text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth',
-                        { 'font-bold': header.id === activeHeader?.id },
-                        { 'ml-8': header.type === 'H3' },
-                      )}
-                      onClick={() => setActiveHeader({ id: header.id })}
-                    >
-                      {header.label}
-                    </a>
-                  ))}
-                </div>
+    <div className={cn(sidebarAlignmentClasses, 'static md:pb-[80px] right-32 md:right-0')}>
+      {!hideLanguageSelector ? <LanguageSelector /> : null}
+      <div className="hidden md:flex flex-col h-full">
+        {headers.length > 0 ? (
+          <>
+            <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
+            <div className="flex gap-16 overflow-y-scroll overflow-x-hidden shadow-[2px_0_var(--color-neutral-300)_inset] pl-16">
+              <div
+                className="h-[21px] -ml-16 w-2 -mt-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
+                style={{
+                  transform: `translateY(${highlightPosition.yOffset}px)`,
+                  height: `${highlightPosition.height}px`,
+                }}
+              ></div>
+              <div className="flex flex-col gap-8 w-full pr-16">
+                {headers.map((header) => (
+                  <a
+                    href={`#${header.id}`}
+                    key={header.id}
+                    id={`sidebar-${header.id}`}
+                    className={cn(
+                      'ui-text-menu4 text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth',
+                      { 'font-bold text-neutral-1300 dark:text-neutral-000': header.id === activeHeader?.id },
+                      { 'ml-8': header.type !== 'H2' },
+                    )}
+                    onClick={() => setActiveHeader({ id: header.id })}
+                  >
+                    {header.label}
+                  </a>
+                ))}
               </div>
-            </>
-          ) : null}
-        </div>
-        <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors">
+            </div>
+          </>
+        ) : null}
+        <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-24">
           {externalLinks(location).map(({ label, icon, link }, index) => (
             <a key={label} href={link} target="_blank" rel="noopener noreferrer">
               <div

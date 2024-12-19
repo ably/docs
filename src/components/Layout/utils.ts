@@ -101,21 +101,22 @@ export const commonAccordionOptions = (openIndex?: number, topLevel?: boolean): 
   options: {
     autoClose: topLevel,
     headerCSS: cn(
-      'text-neutral-1000 md:text-neutral-900 hover:text-neutral-1100 active:text-neutral-1000 !py-0 pl-0 !mb-0 transition-colors',
+      'text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 hover:text-neutral-1100 active:text-neutral-1000 !py-0 pl-0 !mb-0 transition-colors [&_svg]:!w-24 [&_svg]:!h-24 md:[&_svg]:!w-20 md:[&_svg]:!h-20',
       {
-        'h-40 ui-text-menu1 font-bold md:ui-text-menu4': topLevel,
+        'h-40 ui-text-menu1 font-bold md:ui-text-menu4 px-16': topLevel,
         'h-[1rem] ui-text-menu2 font-semibold md:ui-text-menu4': !topLevel,
       },
     ),
     selectedHeaderCSS: 'text-neutral-1300 mb-8',
     contentCSS: cn('[&>div]:pb-0'),
     rowIconSize: '20px',
-    iconSize: '20px',
     defaultOpenIndexes: openIndex !== undefined ? [openIndex] : [],
     hideBorders: true,
   },
 });
 
 export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128 top-[88px] h-[calc(100vh-88px)]';
+
+export const mobileSidebarAlignmentClasses = 'pb-64';
 
 export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link).replaceAll('/', '-')}`;
