@@ -1,10 +1,9 @@
 import { Helmet } from 'react-helmet';
-import { graphql, withPrefix } from 'gatsby';
+import { graphql } from 'gatsby';
 
 import Layout from 'src/components/Layout';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
-import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
 
 type MetaData = {
@@ -44,8 +43,7 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <Layout isExtraWide currentProduct="asset-tracking">
-        <LeftSideBar sidebarName="asset-tracking" />
+      <Layout>
         <ProductPageContent sections={sections} images={images} />
       </Layout>
     </>
