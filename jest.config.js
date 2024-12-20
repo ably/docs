@@ -12,6 +12,7 @@ module.exports = {
   },
   coveragePathIgnorePatterns: ['src/styles/svg'],
   testPathIgnorePatterns: [`node_modules`, `\\.cache`, `<rootDir>.*/public`],
+  modulePathIgnorePatterns: ['<rootDir>/examples/'],
   // NOTE: This is a workaround for compilation issues with .d.ts files
   transformIgnorePatterns: [
     `node_modules/(?!(gatsby|gatsby-script|use-keyboard-shortcut|react-medium-image-zoom|@react-hook/media-query|@mdx-js/react|@ably/ui/core)/)`,
