@@ -84,7 +84,10 @@ describe('LeftSidebar', () => {
       selectedProduct: 'platform',
       setSelectedProduct: jest.fn(),
       activePage: {
-        tree: [0, 1],
+        tree: [
+          { index: 0, page: { name: 'Link 1', link: '/link-1' } },
+          { index: 1, page: { name: 'Link 2', link: '/link-2' } },
+        ],
       },
       products: mockProducts,
     });
