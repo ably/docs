@@ -5,7 +5,13 @@ import Accordion from '@ably/ui/core/Accordion';
 import Icon from '@ably/ui/core/Icon';
 
 import { NavProduct, NavProductContent, NavProductPages } from 'src/data/nav/types';
-import { commonAccordionOptions, composeNavLinkId, formatNavLink, sidebarAlignmentClasses } from './utils';
+import {
+  commonAccordionOptions,
+  composeNavLinkId,
+  formatNavLink,
+  PageTreeNode,
+  sidebarAlignmentClasses,
+} from './utils';
 import { ProductKey } from 'src/data/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
@@ -22,7 +28,7 @@ export const NavPage = ({
   page: NavProductPages;
   indentLinks?: boolean;
   index: number;
-  activePageTree?: number[];
+  activePageTree?: PageTreeNode[];
   type: ContentType;
 }) => {
   const location = useLocation();
@@ -70,13 +76,17 @@ export const NavPage = ({
             )),
           },
         ]}
-        {...commonAccordionOptions(page, activePageTree?.[0] === index ? 0 : undefined, false)}
+        {...commonAccordionOptions(page, activePageTree?.[0]?.index === index ? 0 : undefined, false)}
       />
     );
   }
 };
 
-const renderProductContent = (content: NavProductContent[], activePageTree: number[] | undefined, type: ContentType) =>
+const renderProductContent = (
+  content: NavProductContent[],
+  activePageTree: PageTreeNode[] | undefined,
+  type: ContentType,
+) =>
   content.map((productContent, contentIndex) => (
     <div className="flex flex-col gap-8" key={productContent.name}>
       <div className="ui-text-overline2 text-neutral-700">{productContent.name}</div>
@@ -85,7 +95,7 @@ const renderProductContent = (content: NavProductContent[], activePageTree: numb
           key={'name' in page ? page.name : `page-group-${pageIndex}`}
           page={page}
           index={pageIndex}
-          activePageTree={contentIndex === activePageTree?.[0] ? activePageTree.slice(1) : undefined}
+          activePageTree={contentIndex === activePageTree?.[0]?.index ? activePageTree.slice(1) : undefined}
           type={type}
         />
       ))}
@@ -95,7 +105,7 @@ const renderProductContent = (content: NavProductContent[], activePageTree: numb
 const constructProductNavData = (
   location: string,
   products: [ProductKey, NavProduct][],
-  activePageTree: number[],
+  activePageTree: PageTreeNode[],
   selectedProduct: string | undefined,
   setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>,
 ) =>
@@ -182,7 +192,7 @@ export const LeftSidebar = () => {
       className={cn(sidebarAlignmentClasses, 'overflow-y-scroll hidden md:block')}
       id="left-nav"
       data={productNavData}
-      {...commonAccordionOptions(null, activePage.tree[0], true)}
+      {...commonAccordionOptions(null, activePage.tree[0]?.index, true)}
     />
   );
 };

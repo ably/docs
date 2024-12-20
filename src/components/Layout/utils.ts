@@ -3,7 +3,9 @@ import { AccordionProps } from '@ably/ui/core/Accordion';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
 
-type ActivePage = { tree: number[]; page: NavProductPage };
+export type PageTreeNode = { index: number; page: NavProductPage };
+
+type ActivePage = { tree: PageTreeNode[]; page: NavProductPage };
 
 /**
  * Determines the active page based on the provided target link.
@@ -26,18 +28,18 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
    * If a match is found, it returns the index of the link in its pages array.
    * If not, it attempts to search for the link in nested pages.
    */
-  const determinePagePresence = (pages: NavProductPages[], path: number[]): number[] | null => {
+  const determinePagePresence = (pages: NavProductPages[], path: PageTreeNode[]): PageTreeNode[] | null => {
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
 
       // If the page is a link and the link matches the target link, return the path
       if ('link' in page && formatNavLink(page.link) === strippedTargetLink) {
-        return [...path, i];
+        return [...path, { index: i, page: { name: page.name, link: page.link } }];
       }
 
       // If the page is a group of pages, recursively check each page
       if ('pages' in page && page.pages) {
-        const result = determinePagePresence(page.pages, [...path, i]);
+        const result = determinePagePresence(page.pages, [...path, { index: i, page: { name: page.name, link: '#' } }]);
         if (result) {
           return result;
         }
@@ -52,7 +54,7 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
     */
     if (data[key].nav.link === strippedTargetLink) {
       const { name, link } = data[key].nav;
-      return { tree: [Object.keys(data).indexOf(key)], page: { name, link } };
+      return { tree: [{ index: Object.keys(data).indexOf(key), page: { name, link } }], page: { name, link } };
     }
 
     /* 
@@ -64,14 +66,20 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
       const contentResult = determinePagePresence(data[key].nav.content, []);
       const apiResult = determinePagePresence(data[key].nav.api, []);
       if (contentResult || apiResult) {
-        const tree = [Object.keys(data).indexOf(key), ...((contentResult || apiResult) ?? [])];
+        const tree = [
+          {
+            index: Object.keys(data).indexOf(key),
+            page: { name: data[key].nav.name, link: data[key].nav.link ?? '#' },
+          },
+          ...((contentResult || apiResult) ?? []),
+        ];
         const page = tree.slice(1).reduce<NavProductPages[]>(
           (acc, curr) => {
-            if (acc[curr] && 'pages' in acc[curr]) {
-              return (acc[curr] as NavProductContent).pages;
+            if (acc[curr.index] && 'pages' in acc[curr.index]) {
+              return (acc[curr.index] as NavProductContent).pages;
             }
 
-            return [acc[curr]];
+            return [acc[curr.index]];
           },
           data[key].nav[apiResult ? 'api' : 'content'],
         );
