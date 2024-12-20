@@ -1,8 +1,8 @@
 import React, { createContext, PropsWithChildren, useContext, useMemo, useState, useEffect } from 'react';
 import { useLocation } from '@reach/router';
-import { determineActivePage } from 'src/components/Layout/utils';
+import { PageTreeNode, determineActivePage } from 'src/components/Layout/utils';
 import data from 'src/data';
-import { NavProduct, NavProductPage } from 'src/data/nav/types';
+import { NavProduct } from 'src/data/nav/types';
 import { ProductData, ProductKey } from 'src/data/types';
 import { LanguageKey } from 'src/data/languages/types';
 
@@ -11,19 +11,19 @@ import { LanguageKey } from 'src/data/languages/types';
  *
  * selectedProduct - The currently selected product key. This changes when you click on a product in the sidebar.
  * setSelectedProduct - Function to update the selected product key.
- * activePage - The currently active page and its tree.
+ * activePage - The navigation tree that leads to the current page, and a list of languages referenced on the page.
  * products - List of products with their navigation data.
  */
 
 const LayoutContext = createContext<{
   selectedProduct: ProductKey | undefined;
   setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>;
-  activePage: { tree: number[]; page: NavProductPage | undefined; languages: LanguageKey[] };
+  activePage: { tree: PageTreeNode[]; languages: LanguageKey[] };
   products: [ProductKey, NavProduct][];
 }>({
   selectedProduct: undefined,
   setSelectedProduct: () => undefined,
-  activePage: { tree: [], page: undefined, languages: [] },
+  activePage: { tree: [], languages: [] },
   products: [],
 });
 
@@ -46,10 +46,10 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   const activePage = useMemo(() => {
     const activePageData = determineActivePage(data, location.pathname);
-    return activePageData ? { ...activePageData, languages } : { tree: [], page: undefined, languages: [] };
+    return activePageData ? { ...activePageData, languages } : { tree: [], languages: [] };
   }, [location.pathname, languages]);
 
-  const activeProduct = activePage.tree[0];
+  const activeProduct = activePage.tree[0]?.index;
   const products = useMemo(
     () =>
       Object.entries(data as ProductData).map((product) => [product[0], product[1].nav]) as [ProductKey, NavProduct][],

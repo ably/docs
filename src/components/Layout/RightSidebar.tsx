@@ -95,7 +95,7 @@ export const RightSidebar = () => {
   }, [activeHeader]);
 
   return (
-    <div className={cn(sidebarAlignmentClasses, 'static md:pb-[80px] right-32 md:right-0')}>
+    <div className={cn(sidebarAlignmentClasses, 'md:pb-[80px] right-32 md:right-0')}>
       {showLanguageSelector ? <LanguageSelector /> : null}
       <div className="hidden md:flex flex-col h-full">
         {headers.length > 0 ? (
