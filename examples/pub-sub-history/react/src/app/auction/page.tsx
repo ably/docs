@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import * as Ably from 'ably';
-import { AblyProvider, ChannelProvider, useChannel } from 'ably/react';
+import { useAbly, AblyProvider, ChannelProvider, useChannel } from 'ably/react';
 import { faker } from '@faker-js/faker';
 
 interface BiddingHistory {
@@ -31,6 +31,9 @@ function AuctionRoom() {
   const [bidAmount, setBidAmount] = useState(0);
   const [biddingHistory, setBiddingHistory] = useState<BiddingHistory[]>([]);
   const [currentBid, setCurrentBid] = useState<BiddingHistory | null>(null);
+
+  const ably = useAbly();
+  const currentClientId = ably?.auth.clientId;
 
   const { channel, publish } = useChannel('cab-pad-sit', (message) => {
     if (message.name === 'bid') {
@@ -157,7 +160,7 @@ function AuctionRoom() {
             <div className="bg-gray-100 p-4 rounded-lg mb-6">
               <h2 className="text-lg font-bold mb-2">Current Bid</h2>
               <div className="flex justify-between items-center">
-                <span className="font-medium">{currentBid.clientId}</span>
+                <span className="font-medium">{currentBid.clientId}{currentBid.clientId === currentClientId ? ' (You)' : ''}</span>
                 <span className="text-gray-600">
                   {currentBid.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                 </span>
@@ -176,7 +179,23 @@ function AuctionRoom() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Bidding History</h2>
               <button
-                className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                className="
+                  bg-green-500
+                  text-white
+                  font-bold
+                  uppercase
+                  py-3
+                  px-6
+                  rounded-lg
+                  shadow-md
+                  hover:bg-green-600
+                  transition-all
+                  duration-300
+                  hover:scale-105
+                  focus:outline-none
+                  focus:ring-2
+                  focus:ring-green-400
+                  focus:ring-opacity-50"
                 onClick={() => retrieveBiddingHistory()}
               >
                 Load History
@@ -185,7 +204,7 @@ function AuctionRoom() {
             <div className="space-y-2">
               {biddingHistory.map((bid, index) => (
                 <div key={index} className="flex justify-between items-center py-2 border-b">
-                  <span className="font-medium w-1/3">{bid.clientId}</span>
+                  <span className="font-medium w-1/3">{bid.clientId}{bid.clientId === currentClientId ? ' (You)' : ''}</span>
                   <span className="text-gray-600 w-1/3 text-center">
                     {bid.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </span>

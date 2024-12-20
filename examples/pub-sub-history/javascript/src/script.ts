@@ -6,54 +6,7 @@ const preloadButton = document.getElementById('pre-load-history');
 let lastBidAmount = 100;
 const numBids = 10;
 
-preloadButton.addEventListener('click', async () => {
-  for (let i = 0; i < numBids; i++) {
-    const clientId = faker.person.firstName();
-    const client = new Ably.Realtime({
-      key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
-      clientId,
-    });
-    const channel = client.channels.get('cab-pad-sit');
-    const bidAmount = (lastBidAmount + Math.random() * 50).toFixed(2);
-
-    await channel.publish('bid', {
-      amount: bidAmount,
-      timestamp: new Date().toISOString(),
-    });
-
-    console.log(`Client ${clientId} placed a bid of $${bidAmount} (previous was $${lastBidAmount})`);
-    lastBidAmount = parseFloat(bidAmount);
-    client.close();
-  }
-  alert('Generated a history of bids. Enter the auction to view.');
-});
-
-const enterAuction = document.getElementById('enter-auction');
-const landingPage = document.getElementById('landing-page');
-const auctionRoom = document.getElementById('auction');
-
-let client;
-let channel: Ably.RealtimeChannel | null = null;
-
-async function retrieveLastBidAmount() {
-  try {
-    const resultPage = await channel.history();
-    const messages = resultPage.items;
-    const messageName = 'bid';
-    const filteredMessages = messages.filter(message => message.name === messageName);
-
-    if (filteredMessages.length > 0) {
-      return filteredMessages[0];
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Failed to retrieve message history:', error);
-    return null;
-  }
-}
-
-enterAuction.addEventListener('click', async () => {
+async function enterAuction() {
   landingPage.style.display = 'none';
   auctionRoom.style.display = 'block';
 
@@ -78,7 +31,53 @@ enterAuction.addEventListener('click', async () => {
     await addHistoryItem(message);
     await updateCurrentBid(message);
   });
+}
+
+preloadButton.addEventListener('click', async () => {
+  for (let i = 0; i < numBids; i++) {
+    const clientId = faker.person.firstName();
+    const client = new Ably.Realtime({
+      key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+      clientId,
+    });
+    const channel = client.channels.get('cab-pad-sit');
+    const bidAmount = (lastBidAmount + Math.random() * 50).toFixed(2);
+
+    await channel.publish('bid', {
+      amount: bidAmount,
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log(`Client ${clientId} placed a bid of $${bidAmount} (previous was $${lastBidAmount})`);
+    lastBidAmount = parseFloat(bidAmount);
+    client.close();
+  }
+  await enterAuction();
 });
+
+const landingPage = document.getElementById('landing-page');
+const auctionRoom = document.getElementById('auction');
+
+let client: Ably.Realtime;
+let channel: Ably.RealtimeChannel | null = null;
+
+async function retrieveLastBidAmount() {
+  try {
+    const resultPage = await channel.history();
+    const messages = resultPage.items;
+    const messageName = 'bid';
+    const filteredMessages = messages.filter(message => message.name === messageName);
+
+    if (filteredMessages.length > 0) {
+      return filteredMessages[0];
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Failed to retrieve message history:', error);
+    return null;
+  }
+}
 
 async function updateCurrentBid(message) {
   const noBidDiv = document.getElementById('no-bids');
@@ -86,7 +85,7 @@ async function updateCurrentBid(message) {
   const currentBidDiv = document.getElementById('current-bid');
   currentBidDiv.style.display = 'flex';
   const currentBidName = document.getElementById('current-bid-name');
-  currentBidName.textContent = message.clientId;
+  currentBidName.textContent = message.clientId + (message.clientId === client.auth.clientId ? ' (You)' : '');
   const currentBidAmount = document.getElementById('current-bid-amount');
   currentBidAmount.textContent = `$${Number(message.data.amount).toFixed(2)}`;
   const currentBidTime = document.getElementById('current-bid-time');
@@ -105,7 +104,7 @@ async function addHistoryItem(message) {
 
   const clientId = document.createElement('span');
   clientId.className = 'font-bold w-1/3 text-left';
-  clientId.textContent = message.clientId;
+  clientId.textContent = message.clientId + (message.clientId === client.auth.clientId ? ' (You)' : '');
   historyItem.appendChild(clientId);
 
   const timestamp = document.createElement('span');

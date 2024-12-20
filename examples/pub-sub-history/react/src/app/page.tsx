@@ -9,12 +9,6 @@ export default function Home() {
   const [showAuction, setShowAuction] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    if (showAuction) {
-      router.push('/auction');
-    }
-  }, [router, showAuction]);
-
   const preloadBiddingHistory = async () => {
     let lastBidAmount = 100;
     // Define how many bids to simulate
@@ -40,20 +34,15 @@ export default function Home() {
       lastBidAmount = parseFloat(bidAmount);
     }
 
-    alert('Generated a history of bids. Enter the auction to view.');
+    router.push('/auction');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg w-96">
         <h2 className="text-2xl mb-6 text-center">Welcome to the Auction</h2>
+        <p>Click the button below to add some historical bids.</p>
         <div className="flex flex-col gap-4">
-          <button
-            onClick={() => setShowAuction(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Enter Auction
-          </button>
           <button
             onClick={() => preloadBiddingHistory()}
             className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
