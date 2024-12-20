@@ -4,7 +4,7 @@ export default {
   name: 'Platform',
   icon: {
     closed: 'icon-product-platform-mono',
-    open: 'icon-product-platform-mono',
+    open: 'icon-product-platform',
   },
   content: [
     {
