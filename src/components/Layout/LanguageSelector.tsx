@@ -1,22 +1,24 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from '@reach/router';
+import Select from 'react-select';
 import Badge from '@ably/ui/core/Badge';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import cn from '@ably/ui/core/utils/cn';
-import { useRef, useState } from 'react';
-import Select from 'react-select';
-import { languageData } from 'src/data/languages';
-import { languageInfo } from 'src/data/languages';
+import { languageData, languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
 import { useOnClickOutside } from 'src/hooks';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
 
+type LanguageSelectorOptionData = {
+  label: LanguageKey;
+  value: string;
+  version: number;
+};
+
 type LanguageSelectorOptionProps = {
-  data: {
-    label: LanguageKey;
-    value: string;
-    version: number;
-  };
+  data: LanguageSelectorOptionData;
   isOption?: boolean;
   setMenuOpen: (menuOpen: boolean) => void;
   selectProps: {
@@ -27,11 +29,12 @@ type LanguageSelectorOptionProps = {
 
 const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: LanguageSelectorOptionProps) => {
   const lang = languageInfo[props.data.label];
+  const location = useLocation();
 
   return (
     <Link
       className="ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 transition-colors"
-      to={`?lang=${props.data.label}`}
+      to={isOption ? `${location.pathname}?lang=${props.data.label}` : '#'}
     >
       <div
         onClick={() => setMenuOpen(!props.selectProps.menuIsOpen)}
@@ -61,25 +64,34 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
 
 export const LanguageSelector = () => {
   const { activePage, products } = useLayoutContext();
-
+  const location = useLocation();
   const activeProduct = products[activePage.tree[0].index]?.[0];
   const languageVersions = languageData[activeProduct ?? 'pubsub'];
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<LanguageSelectorOptionData | null>(null);
   const selectRef = useRef<HTMLDivElement>(null);
 
   useOnClickOutside(() => setMenuOpen(false), selectRef);
 
-  const options = Object.entries(languageVersions)
-    .map(([lang, version]) => ({
-      label: lang as LanguageKey,
-      value: `${lang}-${version}`,
-      version,
-    }))
-    .filter((option) => (activePage.languages ? activePage.languages.includes(option.label) : true));
+  const options = useMemo(
+    () =>
+      Object.entries(languageVersions)
+        .map(([lang, version]) => ({
+          label: lang as LanguageKey,
+          value: `${lang}-${version}`,
+          version,
+        }))
+        .filter((option) => (activePage.languages ? activePage.languages.includes(option.label) : true)),
+    [activePage.languages, languageVersions],
+  );
 
-  const queryParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const queryParams = new URLSearchParams(location.search);
   const langParam = queryParams.get('lang');
-  const defaultOption = options.find((option) => option.label === langParam) || options[0];
+
+  useEffect(() => {
+    const defaultOption = options.find((option) => option.label === langParam) || options[0];
+    setSelectedOption(defaultOption);
+  }, [langParam, options]);
 
   return (
     <div
@@ -88,7 +100,8 @@ export const LanguageSelector = () => {
     >
       <Select
         options={options}
-        defaultValue={defaultOption}
+        value={selectedOption}
+        onChange={(option) => setSelectedOption(option)}
         classNames={{
           control: () => '!border-none !inline-flex !cursor-pointer',
           valueContainer: () => '!p-0',
