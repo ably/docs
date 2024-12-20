@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from '@reach/router';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import { LanguageSelector } from './LanguageSelector';
@@ -20,6 +21,13 @@ jest.mock('@ably/ui/core/Badge', () => ({
 
 const mockUseLayoutContext = useLayoutContext as jest.Mock;
 
+jest.mock('@reach/router', () => ({
+  ...jest.requireActual('@reach/router'),
+  useLocation: jest.fn(),
+}));
+
+const mockUseLocation = useLocation as jest.Mock;
+
 const mockLanguageData = {
   pubsub: {
     javascript: 1.0,
@@ -36,6 +44,13 @@ const mockLanguageInfo = {
 
 describe('LanguageSelector', () => {
   beforeEach(() => {
+    mockUseLocation.mockReturnValue({
+      pathname: '/some-path',
+      search: '',
+      hash: '',
+      state: null,
+    });
+
     mockUseLayoutContext.mockReturnValue({
       activePage: {
         tree: [0],
@@ -66,9 +81,10 @@ describe('LanguageSelector', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the LanguageSelector component', () => {
+  it('renders the LanguageSelector component with default language (JS)', () => {
     render(<LanguageSelector />);
     expect(screen.getByText('icon-gui-chevron-down')).toBeInTheDocument();
+    expect(screen.getByText('icon-tech-javascript')).toBeInTheDocument();
   });
 
   it('opens the dropdown menu on click', () => {
@@ -97,5 +113,30 @@ describe('LanguageSelector', () => {
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
     expect(screen.getByText('Python')).toBeInTheDocument();
     expect(screen.queryByText('Ruby')).not.toBeInTheDocument();
+  });
+
+  it('sets the default option to Python when ?lang=python is in the URL', () => {
+    mockUseLocation.mockReturnValue({
+      pathname: '/some-path',
+      search: '?lang=python',
+      hash: '',
+      state: null,
+    });
+
+    jest.spyOn(window, 'URLSearchParams').mockImplementation(
+      () =>
+        ({
+          get: jest.fn((key) => {
+            if (key === 'lang') {
+              return 'python';
+            }
+            return null;
+          }),
+        }) as unknown as URLSearchParams,
+    );
+
+    render(<LanguageSelector />);
+    expect(screen.queryByText('icon-tech-javascript')).not.toBeInTheDocument();
+    expect(screen.getByText('icon-tech-python')).toBeInTheDocument();
   });
 });
