@@ -9,6 +9,7 @@ import { Footer } from '../Footer';
 import { LeftSidebar } from './LeftSidebar';
 import { RightSidebar } from './RightSidebar';
 import { LayoutProvider } from 'src/contexts/layout-context';
+import Breadcrumbs from './Breadcrumbs';
 
 interface LayoutProps {
   noSidebar?: boolean;
@@ -24,6 +25,7 @@ const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children, noSidebar 
       <div className="flex mx-24 sm:mx-32 md:mx-40 lg:mx-64 gap-80 justify-center transition-[margin]">
         {showSidebar ? <LeftSidebar /> : null}
         <Container as="main" className="flex-1">
+          <Breadcrumbs />
           {children}
         </Container>
         {showSidebar ? <RightSidebar /> : null}
