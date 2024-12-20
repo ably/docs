@@ -36,7 +36,7 @@ export type SectionProps = {
 };
 
 export const ProductPageContent = ({ sections, images }: { sections: SectionProps[]; images: ImageProps[] }) => (
-  <article className="px-24 md:pl-40 md:pr-48 xl:pr-64">
+  <article className="px-24 md:px-0">
     {sections.map((section, index) => (
       <BodySection key={index} section={section} images={images} />
     ))}
