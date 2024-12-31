@@ -1,0 +1,744 @@
+---
+title: Outbound Webhooks overview
+meta_description: "A guide on webhook payloads, including batched, enveloped, and non-enveloped event payloads, with decoding examples and sources."
+meta_keywords: "webhooks, Ably, payloads, batched events, enveloped events, non-enveloped events, message decoding, presence events, channel lifecycle, data processing"
+languages:
+  - javascript
+  - nodejs
+  - php
+  - python
+  - ruby
+  - java
+  - swift
+  - objc
+  - csharp
+  - go
+redirect_from:
+  - /general/functions
+  - /general/events
+  - /general/webhooks
+---
+
+Outbound Webhooks allow you to configure integration rules that react to "messages being published":/channels/messages or "presence events emitted":/presence-occupancy/presence (such as members entering or leaving) on "channels":/channels. These rules can notify HTTP endpoints, serverless functions or other services for each event as they arise, or in batches.
+
+p(tip). Webhooks are rate limited and are suitable for low to medium volumes of updates. If you expect a high volume of events and messages (averaging more than 25 per second), then you should consider using our "message queues":/general/queues or "firehose":/general/firehose as they are more suitable for higher volumes.
+
+Subscribing to messages on-demand is often best done using our "realtime client libraries":/basics/use-ably or by subscribing to Ably using any of the "realtime protocols we support":https://ably.com/protocols. However, when a persistent subscription is required to push data into third party systems you can use webhooks (for HTTP requests, serverless functions, etc), "Queues":/general/queues (data is pushed into our own hosted message queues that you can subscribe to), or "Firehose":/general/firehose (stream events into third party systems such as Amazon Kinesis).
+
+If you want to be notified as events arise, trigger serverless functions, or invoke an HTTP request to an endpoint, then webhooks are the right choice. For example, if you want to send a welcome message to someone when they become present on a chat channel, you can use webhooks to trigger a serverless function immediately after they enter with using "channel lifecycles":#sources, which in turn can publish a welcome message back to that user on the chat channel.
+
+In addition, various existing systems, such as Azure Functions, Google Functions, and AWS Lambda rely on HTTP events. Webhooks enable you to integrate with "these systems":#integrations.
+
+<a href="@content/diagrams/webhooks-overview.png" target="_blank">
+  <img src="@content/diagrams/webhooks-overview.png" style="width: 100%" alt="Ably Webhooks Overview">
+</a>
+
+You can configure integration rules from the **Integrations** tab in your "dashboard":https://ably.com/dashboard on a per-app basis which can apply to one or more channels in that app.
+
+Integration rules can filter by channel naming using a regular expression, for example @^click_.*_mouse$@. This would match the string @click_@ followed by a string followed by @_mouse@, for example, @click_left_mouse@.
+
+h2(#payloads). Webhook Payloads
+
+Webhook payloads are structured data sent to your configured webhook URL whenever specific events occur from "sources":#sources in your Ably application. These payloads provide detailed information about events, such as messages, presence updates, or channel lifecycle changes. Depending on your configuration, payloads can be batched, enveloped, or non-enveloped.
+
+h3(#sources). Sources
+
+Ably currently supports the following sources for all rule types, in both single and batch mode:
+
+- channel.message := If the source @channel.message@ is selected, you receive notifications when "messages":/channels/messages are published on a channel.
+- channel.presence := If the source @channel.presence@ is selected, you receive notifications of "presence events":/presence-occupancy/presence when clients enter, update their data, or leave channels.
+- channel.lifecycle := If the source @channel.lifecycle@ is selected, you receive notifications of "channel lifecycle events":/metadata-stats/metadata/subscribe#channel-lifecycle, such as when a channel is created (following the first client attaching to this channel) or discarded (when there are no more clients attached to the channel).
+- channel.occupancy :=  If the source @channel.occupancy@ is selected, you receive notifications of "occupancy events":/presence-occupancy/occupancy, which relate to the number and type of occupants in the channel.
+
+Note that for scalability reasons, it is recommended that @channel.lifecycle@ and @channel.occupancy@ rules are used instead of @channel.message@ rules on corresponding "metachannels":/metadata-stats/metadata/subscribe.
+
+h3(#batching). Single vs Batched requests
+
+If *Single request* is chosen for a rule, then a @POST@ request will be sent to your specified endpoint/service each time an event occurs. Although this can be useful for some use-cases where the endpoint can only process one message per request, or needs the event as soon as it's available, it can result in the endpoint being overloaded with requests. To avoid this, it's possible to instead make use of *Batch request* instead, which will batch messages sent within a set time frame together.
+
+h4(#single-request). Single request details
+
+Single request is best suited for scenarios where you're wanting a 1-to-1 relationship between sent messages and events being called. If you are making use of a serverless system which is expecting a single piece of data each time, and then intends to perform some transformation/event following that, then Single request will likely work well for you. If you're using a single server, which has the potential to be overloaded by requests, and can process multiple events per payload sent, Batch request will be a better choice.
+
+h5(#single-failures). Single request failures and back off
+
+If a request is rejected with @5xx@ or times out, it will be retried twice more, once after 4s, then if that fails, again after 20s
+
+h5(#single-rate-limits). Single request rate limits
+
+* Free accounts are limited to 15 function invocations per second on single requests, whilst paid are limited to 30.
+* Webhook requests are made with a default timeout of 15s. If the request fails or times out, Ably retries the request with exponential backoff (base delay 1s, backoff factor sqrt(2), up to a max of 60s)
+* Multiple requests can be in-flight at once, up to the "max concurrency limit":https://faqs.ably.com/do-you-have-any-connection-message-rate-or-other-limits-on-accounts. If the number of in-flight requests exceeds the max concurrency limit, new messages coming in are placed in a short queue (length 10); if that queue length is exceeded, further messages are rejected
+
+h4(#batch-request). Batch request details
+
+Batch requests are useful for endpoints which have the potential to be overloaded by requests, or simply have no preference requirement for processing messages sent one-by-one. If you are using an endpoint which has either of these requirements (for example "IFTTT":/integrations/webhooks/ifttt requires one event per request), you should use Single request.
+
+Webhook batched requests are typically published at most once per second per configured webhook.
+
+h5(#batch-failures). Batch request failures and back off
+
+* If the endpoint for any of the webhook requests respond with an HTTP status code that does not indicate success i.e. @200 - 209@, then Ably will retry that failed request
+* Every retry is performed with an incrementing back off that is calculated as @delay = delay * sqrt(2)@ where delay is initially @1@. For example, if the initial webhook request fails, and subsequent for retries fail, the back off delays for each request would look as follows: @initial request > wait 1.4s > 1st retry > wait 2s > 2nd retry > wait 2.8s > 3rd retry > wait 4s > 4th retry > wait 5.6s > successful request@
+* The back off for consecutively failing requests will increase until it reaches 60s. All subsequent retries for failed requests will then be made every 60s until a request is successful
+* The queue of events is retained for 5 minutes. If an event cannot be delivered within 5 minutes, then the events are discarded to prevent the queue from growing indefinitely
+
+h5(#batch-rate-limits). Batch request rate limits
+
+* For each configured webhook, up to one request per second will be made to the configured endpoint URL
+* The first event that matches a configured webhook will trigger a webhook request immediately. Therefore, if you have a low volume of events you are listening to, in most cases your request should arrive in under a second from the time the event was generated
+* webhook requests are made with a default timeout of 15s. If the request fails or times out, Ably retries the request with exponential backoff (base delay 1s, backoff factor sqrt(2), up to a max of 60s)
+* Once a webhook request is triggered, all other events will be queued so that they can be delivered in a batch in the next request. The next webhook request will be issued within one second with the following caveats:
+** Only a limited number of http requests are in-flight at one time for each configured webhook. Therefore, if you want to be notified quickly, we recommend you accept requests quickly and defer any work to be done asynchronously
+** If there are more than 1,000 events queued for the next webhook, the oldest 1,000 events will be bundled into the next webhook and the remaining events will be delivered in the next webhook. Therefore, if your sustained rate of events is expected to be more than 1,000 per second or your servers are slow to respond, then it is possible a backlog will build up and you will not receive all events. "Get in touch if you need a higher sustained rate":https://ably.com/contact.
+
+h3(#encoding). Payload encoding
+
+The encoding of payloads sent is defined when setting up a rule in the "Integrations tab of your app":https://faqs.ably.com/how-to-set-up-a-reactor-rule. This only applies to "enveloped":#envelope messages and their structure, non-enveloped messages will remain their original format. You can have the message sent in JSON format, or as a "MessagePack":https://msgpack.org payload.
+
+* "JSON":https://www.json.org (JavaScript Object Notation): An efficient data-interchange format which is fairly standard and provides simple text based encoding.
+* "MessagePack":https://msgpack.org: An efficient binary serialization format that is similar to JSON, but smaller. This is notably useful for binary payloads, as a JSON envelope with a binary payload would need to have the payload base64-encoded
+
+h3(#envelope). Envelopes
+
+When you configure a rule using "single requests":#batching, you are given the option to envelope messages, which is enabled by default. In most cases, we believe an enveloped message provides more flexibility as it contains additional metadata in a portable format that can be useful such as the @clientId@ of the publisher, or the @channel@ name the message originated from.
+
+However, if you don't need anything besides the payload of each message, or the endpoint expects a very restricted data structure, you may choose not to envelope messages and instead have only the message payload (@data@ element) published. This has the advantage of requiring one less parsing step, however decoding of the raw payload in the published message will be your responsibility.
+
+<aside data-type='note'>
+<p>When utilizing webhook-based integrations, such as Zapier or Google Functions, only data from the @channel.message@ and @channel.presence@ sources can be received as raw payloads. @channel.lifecycle@ and @channel.occupancy@ events will always be enveloped.</p>
+</aside>
+
+h3(#envelope-examples). Enveloped event payloads
+
+Enveloped events will have the following headers:
+
+- x-ably-version := the version of the Webhook. At present this should be @1.2@
+- content-type := the type of the payload. This will be @application/json@ or @application/x-msgpack@ for "enveloped":#envelope messages
+
+Each enveloped message will have the following fields:
+
+- source := the source for the webhook, which will be one of @channel.message@, @channel.presence@, @channel.lifecycle@, or @channel.occupancy@
+- appId := the Ably app this message came from
+- channel := the Ably channel where the event occurred
+- site := the Ably datacenter which sent the message
+- timestamp := a timestamp represented as milliseconds since the epoch for the presence event
+
+In addition, it will contain another field which will contain the actual message, which is named according to the message type.
+
+h4(#envelope-example-message). Enveloped message events
+
+For @message@ events, the @messages@ array contains a raw message.
+
+The following is an example of an enveloped @message@ payload:
+
+```[json]
+{
+  "source": "channel.message",
+  "appId": "aBCdEf",
+  "channel": "channel-name",
+  "site": "eu-central-1-A",
+  "ruleId": "1-a2Bc",
+  "messages": [{
+    "id": "ABcDefgHIj:1:0",
+    "connectionId": "ABcDefgHIj",
+    "timestamp": 1123145678900,
+    "data": "some message data",
+    "name": "my message name"
+  }]
+}
+```
+
+h5(#envelope-example-message-decoding). Decoding enveloped messages
+
+Messages sent "over the realtime service":/channels are automatically decoded into "@Message@":/api/realtime-sdk/types#message objects by the Ably client library. With webhooks you need to to do this explicitly, using "@Message.fromEncodedArray@":/api/realtime-sdk/messages#message-from-encoded-array on the @messages@ array, or "@Message.fromEncoded@":/api/realtime-sdk/messages#message-from-encoded on an individual member of that array. This will transform them into an array of "@Message@":/api/realtime-sdk/types#message objects (or in the case of @fromEncoded@, an individual "@Message@":/api/realtime-sdk/types#message). This has several advantages, e.g.:
+
+* It will fully decode any @data@ (using the @encoding@) back into the same datatype that it was sent in (or an equivalent in each client library's language)
+* If you are using "encryption":/channels/options/encryption, you can pass your encryption key to the method and it will decrypt the @data@ for you
+
+We recommend you do this for all messages you receive over webhooks. For example (using ably-js):
+
+```[javascript]
+const messages = Ably.Realtime.Message.fromEncodedArray(item.messages);
+messages.forEach((message) => {
+  console.log(message.toString());
+})
+```
+
+h4(#envelope-example-presence). Enveloped presence events
+
+For @presence@ events, the @presence@ array contains a raw presence message.
+
+The following is an example of of an enveloped @message@ payload with a @presence@ array:
+
+```[json]
+{
+  "source": "channel.message",
+  "appId": "aBCdEf",
+  "channel": "channel-name",
+  "site": "eu-central-1-A",
+  "ruleId": "1-a2Bc",
+  "presence": [{
+    "id": "abCdEFgHIJ:1:0",
+    "clientId": "bob",
+    "connectionId": "Ab1CDE2FGh",
+    "timestamp": 1582270137276,
+    "data": "some data in the presence object",
+    "action": 4
+  }]
+}
+```
+
+h5(#envelope-example-presence-decoding). Decoding enveloped presence messages
+
+Presence messages sent "over the realtime service":/channels are automatically decoded into "@PresenceMessage@":/api/realtime-sdk/types#presence-message objects by the Ably client library. With webhooks you need to to do this explicitly, using "@PresenceMessage.fromEncodedArray@":/api/realtime-sdk/presence#presence-from-encoded-array on the @presence@ array, or "@PresenceMessage.fromEncoded@":/api/realtime-sdk/presence#presence-from-encoded on an individual member of that array. This will transform them into an array of "@PresenceMessage@":/api/realtime-sdk/types#presence-message objects (or in the case of @fromEncoded@, an individual "@PresenceMessage@":/api/realtime-sdk/types#presence-message). This has several advantages, e.g.:
+
+* It will decode the (numerical) action into a "@Presence action@":/api/realtime-sdk/presence#presence-action string (such as "@enter@", "@update@", or "@leave@")
+* It will fully decode any @data@ (using the @encoding@) back into the same datatype that it was sent in (or an equivalent in each client library's language)
+* If you are using "encryption":/channels/options/encryption, you can pass your encryption key to the method and it will decrypt the @data@ for you
+
+We recommend you do this for all presence messages you receive over webhooks. For example (using ably-js):
+
+```[javascript]
+const messages = Ably.Realtime.PresenceMessage.fromEncodedArray(item.messages);
+messages.forEach((message) => {
+  console.log(message.toString());
+})
+```
+
+h3(#no-envelope-examples). Non-enveloped event payloads
+
+Non-enveloped events have quite a few headers, in order to provide context to the data sent in the payload. These are:
+
+- content-type := the type of the payload. This can be either @application/json@, @text/plain@, or @application/octet-stream@, depending on if it's @JSON@, @text@, or @binary@ respectively
+- x-ably-version := the version of the Webhook. At present this should be @1.2@
+- x-ably-envelope-appid := the "app ID":/ids-and-keys/ which the message came from
+- x-ably-envelope-channel := the Ably channel which the message came from
+- x-ably-envelope-rule-id := the Ably rule ID which was activated to send this message
+- x-ably-envelope-site := the Ably datacenter which sent the message
+- x-ably-envelope-source := the "source":#sources for the webhook, which will be one of @channel.message@, @channel.presence@, @channel.lifecycle@, or @channel.occupancy@
+- x-ably-message-client-id := the client ID of the connection which sent the event
+- x-ably-message-connection-id := the connection ID responsible for the initial event
+- x-ably-message-id := the message's unique ID
+- x-ably-message-timestamp := the time the message was originally sent
+
+h4(#no-envelope-example-message). Non-enveloped message events
+
+For @message@ events, there will be the additional headers:
+
+- x-ably-message-name := The "name":/api/realtime-sdk/messages#name of the @Message@
+
+The payload will contain the "data":/api/realtime-sdk/messages#data of the @Message@.
+
+For example, if you sent the following curl message, which sends a JSON message to the channel @my_channel@:
+
+```[curl]
+curl -X POST https://rest.ably.io/channels/my_channel/messages \
+          -u "{{API_KEY}}" \
+          -H "Content-Type: application/json" \
+          --data '{ "name": "publish", "data": "example" }'
+```
+
+The @x-ably-message-name@ header would be @publish@, and the payload would be @example@.
+
+h4(#no-envelope-example-presence). Non-enveloped presence events
+
+For @Presence@ events, there will be the additional headers:
+
+- x-ably-message-action := the action performed by the event (@update@, @enter@, @leave@)
+
+The payload will contain the "data":/api/realtime-sdk/presence#presence-message of the @Presence@ message.
+
+For example, if a "client enters":/api/realtime-sdk/presence#enter a channel's presence with the following code:
+
+```[jsall]
+realtime = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  clientId: 'bob'
+});
+channel = realtime.channels.get('some_channel');
+await channel.presence.enter('some data');
+```
+
+Then the @x-ably-message-action@ would be @enter@, the @x-ably-message-client-id@ would be "bob", and the payload would be "some data".
+
+h3(#batched-events). Batched event payloads
+
+Given the various potential combinations of @enveloped@, @batched@ and message sources, it can be good to know what to expect given certain combinations of rules.
+
+Batched events will have the following headers:
+
+- content-type := the type of the payload. This will be @application/json@ or @application/x-msgpack@
+- x-ably-version := the version of the Webhook. At present this should be @1.2@
+
+Each batched message will have the following fields:
+
+- name := the event type, for example @presence.message@, @channel.message@ or @channel.closed@
+- webhookId := an internal unique ID for the configured webhook
+- source := the source for the webhook, which will be one of @channel.message@, @channel.presence@, @channel.lifecycle@, or @channel.occupancy@
+- timestamp := a timestamp represented as milliseconds since the epoch for the presence event
+- data := an object containing the data of the event defined below in "JSONPath format":https://goessner.net/articles/JsonPath/
+
+h4(#batched). Batched message events
+
+For @message@ events, @data@ will contain:
+
+- data.channelId := name of the channel that the presence event belongs to
+- data.site := an internal site identifier indicating which primary datacenter the member is present in
+- data.messages := an @Array@ of raw messages
+
+The following is an example of a batched @message@ payload:
+
+```[json]
+{
+  "items": [{
+    "webhookId": "ABcDEf",
+    "source": "channel.message",
+    "serial": "a7bcdEFghIjklm123456789:4",
+    "timestamp": 1562124922426,
+    "name": "channel.message",
+    "data": {
+      "channelId": "chat-channel-4",
+      "site": "eu-west-1-A",
+      "messages": [{
+        "id": "ABcDefgHIj:1:0",
+        "clientId": "user-3",
+        "connectionId": "ABcDefgHIj",
+        "timestamp": 1123145678900,
+        "data": "the message data",
+        "name": "a message name"
+      }]
+    }
+  }]
+}
+```
+
+h5(#batch-example-message-decoding). Decoding batched messages
+
+Messages sent "over the realtime service":/channels are automatically decoded into "@Message@":/api/realtime-sdk/types#message objects by the Ably client library. With webhooks you need to to do this explicitly, using "@Message.fromEncodedArray@":/api/realtime-sdk/messages#message-from-encoded-array on the @data.messages@ array, or "@Message.fromEncoded@":/api/realtime-sdk/messages#message-from-encoded on an individual member of that array. This will transform them into an array of "@Message@":/api/realtime-sdk/types#message objects (or in the case of @fromEncoded@, an individual "@Message@":/api/realtime-sdk/types#message). This has several advantages, e.g.:
+
+* It will fully decode any @data@ (using the @encoding@) back into the same datatype that it was sent in (or an equivalent in each client library's language)
+* If you are using "encryption":/channels/options/encryption, you can pass your encryption key to the method and it will decrypt the @data@ for you
+
+We recommend you do this for all messages you receive over webhooks. For example (using ably-js):
+
+```[javascript]
+webhookMessage.items.forEach((item) => {
+  const messages = Ably.Realtime.Message.fromEncodedArray(item.data.messages);
+  messages.forEach((message) => {
+    console.log(message.toString());
+  })
+})
+```
+
+h4(#batch-example-presence). Batched presence events
+
+For @presence@ events, @data@ will contain:
+
+- data.channelId := name of the channel that the presence event belongs to
+- data.site := an internal site identifier indicating which primary datacenter the member is present in
+- data.presence := an @Array@ of raw presence messages
+
+The following is an example of a batched @presence@ payload:
+
+```[json]
+{
+  "items": [{
+    "webhookId": "ABcDEf",
+    "source": "channel.presence",
+    "serial": "a7bcdEFghIjklm123456789:4",
+    "timestamp": 1562124922426,
+    "name": "presence.message",
+    "data": {
+      "channelId": "education-channel",
+      "site": "eu-west-1-A",
+      "presence": [{
+        "id": "ABcDefgHIj:1:0",
+        "clientId": "bob",
+        "connectionId": "ABcDefgHIj",
+        "timestamp": 1123145678900,
+        "data": "the message data",
+        "action": 4
+      }]
+    }
+  }]
+}
+```
+
+h5(#decoding). Decoding batched presence messages
+
+Presence messages sent "over the realtime service":/channels are automatically decoded into "@PresenceMessage@":/api/realtime-sdk/types#presence-message objects by the Ably client library. With webhooks you need to to do this explicitly, using "@PresenceMessage.fromEncodedArray@":/api/realtime-sdk/presence#presence-from-encoded-array on the @data.presence@ array, or "@PresenceMessage.fromEncoded@":/api/realtime-sdk/presence#presence-from-encoded on an individual member of that array. This will transform them into an array of "@PresenceMessage@":/api/realtime-sdk/types#presence-message objects (or in the case of @fromEncoded@, an individual "@PresenceMessage@":/api/realtime-sdk/types#presence-message). This has several advantages, e.g.:
+
+* It will decode the (numerical) action into a "@Presence action@":/api/realtime-sdk/presence#presence-action string (such as "@enter@", "@update@", or "@leave@")
+* It will fully decode any @data@ (using the @encoding@) back into the same datatype that it was sent in (or an equivalent in each client library's language)
+* If you are using "encryption":/channels/options/encryption, you can pass your encryption key to the method and it will decrypt the @data@ for you
+
+We recommend you do this for all presence messages you receive over webhooks. For example (using ably-js):
+
+```[javascript]
+webhookMessage.items.forEach((item) => {
+  const messages = Ably.Realtime.PresenceMessage.fromEncodedArray(item.data.messages);
+  messages.forEach((message) => {
+    console.log(message.toString());
+  })
+})
+```
+
+h4(#batch-example-lifecycle). Batched channel lifecycle events
+
+For @channel lifecycle@ events, @data@ will contain:
+
+- data.channelId := name of the channel that the presence event belongs to
+- data.status := a "@ChannelStatus@":/api/realtime-sdk/channel-metadata#channel-details object
+
+The @name@ of a @channel.lifecycle@ event will be @channel.opened@ or @channel.closed@.
+
+The following is an example of a batched @channel lifecycle@ payload:
+
+```[json]
+{
+  "items": [{
+    "webhookId": "ABcDEf",
+    "source": "channel.lifecycle",
+    "timestamp": 1562124922426,
+    "serial": "a7bcdEFghIjklm123456789:4",
+    "name": "channel.opened",
+    "data": {
+      "channelId": "chat-channel-5",
+      "name": "chat-channel-5",
+      "status": {
+        "isActive": true,
+        "occupancy": {
+          "metrics": {
+            "connections": 1,
+            "publishers": 1,
+            "subscribers": 1,
+            "presenceConnections": 1,
+            "presenceMembers": 0,
+            "presenceSubscribers": 1
+          }
+        }
+      }
+    }
+  }]
+}
+```
+
+h2(#configure). Configure a webhook
+
+Webhooks are configured from the Integrations tab in your "dashboard":https://ably.com/dashboard. The following fields are shared between each webhook:
+
+- URL := The URL of the endpoint where messages will be sent.
+- Custom headers := Optionally allows you to provide a set of headers that will be included in all HTTP POST requests. You must use format @name:value@ for each header you add, for example, @X-Custom-Header:foo@.
+- "Source":#sources := Choose which of @channel.message@, @channel.presence@, @channel.lifecycle@, or @channel.occupancy@ events on channels should activate this event rule.
+- "Request Mode":#batching := This will either be in @Single Request@ mode or @Batch Request@ mode. "Single Request":#batching will send each event separately to the endpoint specified by the rule. "Batch Request":#batching will roll up multiple events in the same request.
+- "Channel filter":#channel-filter := An optional filter on channel name, to restrict the channels the rule applies to. Use a regular expression to match multiple channels.
+- "Encoding":#encoding := The encoding to be used by this rule. This can be either JSON or "MsgPack":https://msgpack.org. Encoding only applies to "enveloped":#envelope and "batched":#batching messages.
+
+<br/>
+
+If the rule is in the *Single Request* mode, it will also have the following options:
+
+- "Enveloped":#envelope := If the rule has the Enveloped option set, then data delivered by this rule will be wrapped in an "Ably envelope":#envelope. Otherwise, the rule will send the "raw payload.":#no-envelope-examples
+
+<br/>
+
+If the rule is in the *Batch Request* mode, it will have the following additional options:
+
+- Sign with key := Ably will optionally sign the data with the specified private key. This will be included as an HTTP header @X-Ably-Signature@ in every HTTP post request issued to your server. See "webhook security":#security for more details.
+
+*Note* that various integrations have restrictions on them which will mean some of these base options are either changed or absent. You can check specific details in each "integration's page":#integrations.
+
+h3(#channel-filter). Channel filter
+
+The default behavior is for the rule to apply to all channels in your app. However, you can optionally set a filter to restrict the channels that the rule applies to. Use a regular expression to pattern-match channel names. For example, given the following channel names:
+
+```[text]
+mychannel:public
+public
+public:events
+public:events:conferences
+public:news:americas
+public:news:europe
+```
+
+* @^public.*@ - matches any channel that starts with @public@. In this example, it matches @public@, both @public:events@ channels, and both @public:news@ channels.
+* @^public$@ - matches only channels where the name starts and ends with @public@. In this example, it matches only the @public@ channel.
+* @:public$@ - matches channels that end in @:public@. In this example, it matches only the @mychannel:public@ channel.
+* @^public:events$@ - exactly matches channels that start and end with @public:events@. In this example, it matches only the @public:events@ channel, not the @public:events:conferences@ channel.
+* @^public.*europe$@ - matches any channel that starts with @public@ and ends with @europe@. In this example, it matches only @public:news:europe@.
+* @news@ - matches only the channels with @news@ as part of the name: @public:news:americas@ and @public:news:europe@.
+
+h2(#skipping). Integration skipping
+
+Integrations can be skipped on a per-message basis by privileged users. This provides a greater degree of flexibility when publishing messages to a channel. It also prevents infinite-loops occurring, where a message published back to a channel by the receiving end of an integration is then forwarded back to itself.
+
+Skipping integrations is especially useful in applications such as chat. For example, where a moderation function publishes a message instructing clients to edit or delete a given message, but does not want that message itself to be subject to moderation.
+
+<aside type="important">
+<p>Clients require the the privileged headers "capability":/auth/capabilities for their Ably key or token to skip an integration.</p>
+</aside>
+
+h3. Skip an integration
+
+Messages can be flagged to skip an integration by setting the @skipRule@ field, contained in the @privileged@ section of the "message extras":/api/rest-sdk/messages#extras.
+
+This field can be set to skip all integration rules:
+
+```[javascript]
+const rest = new Ably.Rest('{{API_KEY}}');
+const channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+await channel.publish({
+  name: 'event_name',
+  data: 'event_data',
+  extras: {
+    privileged: {
+      skipRule: '*'
+    }
+  }
+});
+```
+
+```[nodejs]
+const rest = new Ably.Rest('{{API_KEY}}');
+const channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+await channel.publish({
+  name: 'event_name',
+  data: 'event_data',
+  extras: {
+    privileged: {
+      skipRule: '*'
+    }
+  }
+});
+```
+
+```[ruby]
+  rest = Ably::Rest.new('{{API_KEY}}')
+  channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  while true
+    channel.publish 'event', 'data', extras: { { 'privileged' => { 'skipRule' => '*' } }
+  end
+```
+
+```[python]
+  rest = AblyRest('{{API_KEY}}')
+  channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  extras = {
+    "privileged": {
+      "skipRule": "*"
+    }
+  }
+
+  await channel.publish(Message(name='message', data="abc", extras=extras))
+```
+
+```[php]
+  $rest = new Ably\AblyRest('{{API_KEY}}');
+  $channel = $rest->channels->get('{{RANDOM_CHANNEL_NAME}}');
+  $channel->publish(
+    'event_name',
+    ['field' => 'value'],
+    null,
+    [
+        'privileged' => [
+            'skipRule' => '*',
+        ],
+    ]
+  );
+```
+
+```[java]
+  AblyRest rest = new AblyRest("{{API_KEY}}");
+  Channel channel = rest.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+  // Using Google gson for JSON
+  String extrasJson = "{ \"privileged\": { \"skipRule\": \"*\" } }";
+  JsonObject extras = JsonParser.parseString(extrasJson).getAsJsonObject();
+  channel.publish(
+      new Message(
+          "event_name",
+          "event_data",
+          new MessageExtras(extras)
+      )
+  );
+```
+
+```[csharp]
+  AblyRest rest = new AblyRest("{{API_KEY}}");
+  var channel = rest.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
+
+  // Using Newtonsoft for JSON
+  string extrasJson = @"{'privileged': { 'skipRule': '*' }}";
+  MessageExtras extras = new MessageExtras(extrasJson);
+  Message message = new Message("event", "data", null, extras);
+  channel.Publish(message);
+```
+
+```[objc]
+  ARTRest *rest = [[ARTRest alloc] initWithKey:@"{{API_KEY}}"];
+  ARTRestChannel *channel = [rest.channels get:@"{{RANDOM_CHANNEL_NAME}}"];
+  ARTJsonObject *extras = @{
+      @"privileged": @{@"skipRule": @"*"}
+  };
+  [channel publish:@"event" data:@"data" extras:extras];
+```
+
+```[swift]
+  let rest = ARTRest(key: "{{API_KEY}}")
+  let channel = rest.channels.get("{{RANDOM_CHANNEL_NAME}}")
+  let extras: NSDictionary = ["privileged": ["skipRule": "*"]]
+  channel.publish("event", data: "data", extras: extras as ARTJsonCompatible)
+```
+
+```[go]
+  rest, err := ably.NewREST(ably.WithKey("{{API_KEY}}"))
+  channel := rest.Channels.Get("{{RANDOM_CHANNEL_NAME}}")
+  privileged := make(map[string]string)
+  privileged["skipRule"] = "*"
+  extras := make(map[string]interface{})
+  extras["privileged"] = privileged
+  err := channel.PublishMultiple(context.Background(), []*ably.Message{
+		{Name: "event", Data: "data", Extras: extras},
+	})
+
+```
+
+It can also be set to skip only specific rules using the @ruleId@ of an integration rule. This can be found in the integrations tab of your "dashboard":https://ably.com/dashboard, from fetching a list of integration rules from the "Control API":/api/control-api or as part of the "message envelope":#envelope.
+
+```[javascript]
+const rest = new Ably.Rest('{{API_KEY}}');
+const channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+await channel.publish({
+  name: 'event_name',
+  data: 'event_data',
+  extras: {
+    privileged: { skipRule: ['rule_id_1'] }
+  }
+})
+```
+
+```[nodejs]
+const rest = new Ably.Rest('{{API_KEY}}');
+const channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}');
+await channel.publish({
+  name: 'event_name',
+  data: 'event_data',
+  extras: {
+    privileged: { skipRule: ['rule_id_1'] }
+  }
+})
+```
+
+```[ruby]
+  rest = Ably::Rest.new('{{API_KEY}}')
+  channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  while true
+    channel.publish 'event', 'data', extras: { { 'privileged' => { 'skipRule' => ['rule_id_1'] } }
+  end
+```
+
+```[python]
+  rest = AblyRest('{{API_KEY}}')
+  channel = rest.channels.get('{{RANDOM_CHANNEL_NAME}}')
+  extras = {
+    "privileged": {
+      "skipRule": ["rule_id_1"]
+    }
+  }
+
+  await channel.publish(Message(name='message', data="abc", extras=extras))
+```
+
+```[php]
+  $rest = new Ably\AblyRest('{{API_KEY}}');
+  $channel = $rest->channels->get('{{RANDOM_CHANNEL_NAME}}');
+  $channel->publish(
+    'event_name',
+    ['field' => 'value'],
+    null,
+    [
+        'privileged' => [
+            'skipRule' => ['rule_id_1'],
+        ],
+    ]
+  );
+```
+
+```[java]
+  AblyRest rest = new AblyRest("{{API_KEY}}");
+  Channel channel = rest.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+  // Using Google gson for JSON
+  String extrasJson = "{ \"privileged\": { \"skipRule\": [\"rule_id_1\"] } }";
+  JsonObject extras = JsonParser.parseString(extrasJson).getAsJsonObject();
+  channel.publish(
+      new Message(
+          "event_name",
+          "event_data",
+          new MessageExtras(extras)
+      )
+  );
+```
+
+```[csharp]
+  AblyRest rest = new AblyRest("{{API_KEY}}");
+  var channel = rest.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
+
+  // Using Newtonsoft for JSON
+  string extrasJson = @"{'privileged': { 'skipRule': ['rule_id_1'] }}";
+  MessageExtras extras = new MessageExtras(extrasJson);
+  Message message = new Message("event", "data", null, extras);
+  channel.Publish(message);
+```
+
+```[objc]
+  ARTRest *rest = [[ARTRest alloc] initWithKey:@"{{API_KEY}}"];
+  ARTRestChannel *channel = [rest.channels get:@"{{RANDOM_CHANNEL_NAME}}"];
+  ARTJsonObject *extras = @{
+      @"privileged": @{@"skipRule": @[@"rule_id_1"]}
+  };
+  [channel publish:@"event" data:@"data" extras:extras];
+```
+
+```[swift]
+  let rest = ARTRest(key: "{{API_KEY}}")
+  let channel = rest.channels.get("{{RANDOM_CHANNEL_NAME}}")
+  let extras: NSDictionary = ["privileged": ["skipRule": ["rule_id_1"]]]
+  channel.publish("event", data: "data", extras: extras as ARTJsonCompatible)
+```
+
+```[go]
+  rest, err := ably.NewREST(ably.WithKey("{{API_KEY}}"))
+  channel := rest.Channels.Get("{{RANDOM_CHANNEL_NAME}}")
+	privileged := make(map[string][]string)
+	privileged["skipRule"] = []string{"rule_id_1"}
+	extras := make(map[string]interface{})
+  extras["privileged"] = privileged
+	err := channel.PublishMultiple(context.Background(), []*ably.Message{
+		{Name: "event", Data: "data", Extras: extras},
+	})
+
+```
+
+h2(#security). Webhook security
+
+Ably advise using a secure HTTPS URL when configuring webhooks. This ensures all communication with your servers is encrypted with TLS and cannot be intercepted.
+
+In addition, Ably optionally supports signing webhook requests so you can verify their authenticity. This applies to both "single":#single-request and "batched":#batch-request webhook requests, as well as any streaming integrations that also rely on HTTP-based callbacks. The signature is sent in the @X-Ably-Signature@ in batched, and the connected key is referenced in the X-Ably-Key header.
+
+In order to verify the signature, you need to do the following:
+
+* start with the webhook request body. This will be a JSON string encoded with content-encoding @utf-8@;
+* identify the key based on the @keyId@ indicated in the @X-Ably-Key@ header;
+* calculate the HMAC of that request body with algorithm SHA-256 and the key being the corresponding @keyValue@ (the secret part of the key after the "@:@");
+* encode the resulting HMAC using RFC 3548 base 64;
+* compare that result with the signature value indicated in the @X-Ably-Signature@ header
+
+h3(#example-signature). Webhook HMAC SHA-256 signature verification example
+
+If you choose to sign your webhook requests, we recommend you try the following first:
+
+# "Set up a free RequestBin HTTP endpoint test URL":https://requestbin.com/
+# "Configure a webhook":#configure with the URL set to the RequestBin endpoint, and ensure you have chosen to "batch":/integrations/outbound-streaming/overview#batched-events messages and are using a key to sign each webhook request
+# Trigger an event using the "Dev Console":https://faqs.ably.com/do-you-have-a-debugging-or-development-console-for-testing in your app dashboard which will generate a webhook. You should then confirm that the webhook has been received in your RequestBin

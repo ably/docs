@@ -64,77 +64,90 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/general/integrations',
+          link: '/integrations',
         },
         {
-          name: 'Events',
+          name: 'Inbound integrations',
+          pages: [
+            {
+              name: 'Inbound Webhooks',
+              link: '/integrations/inbound/webhooks',
+            },
+            {
+              name: 'Kafka Connector',
+              link: '/integrations/inbound/kafka-connector',
+            },
+          ],
+        },
+        {
+          name: 'Outbound Webhooks',
           pages: [
             {
               name: 'Overview',
-              link: '/general/webhooks',
+              link: '/integrations/webhooks',
             },
             {
               name: 'AWS Lambda Functions',
-              link: '/general/webhooks/aws-lambda',
+              link: '/integrations/webhooks/lambda',
             },
             {
               name: 'Azure Functions',
-              link: '/general/webhooks/azure',
+              link: '/integrations/webhooks/azure',
             },
             {
               name: 'Google Cloud Functions',
-              link: '/general/webhooks/google-functions',
+              link: '/integrations/webhooks/gcp-function',
             },
             {
               name: 'Zapier',
-              link: '/general/webhooks/zapier',
+              link: '/integrations/webhooks/zapier',
             },
             {
               name: 'Cloudflare Workers',
-              link: '/general/webhooks/cloudflare',
+              link: '/integrations/webhooks/cloudflare',
             },
             {
               name: 'IFTTT',
-              link: '/general/webhooks/ifttt',
+              link: '/integrations/webhooks/ifttt',
             },
           ],
         },
         {
-          name: 'Message Queues',
-          link: '/general/queues',
-        },
-        {
-          name: 'Kafka Connector',
-          link: '/general/kafka-connector',
-        },
-        {
-          name: 'Firehose',
+          name: 'Outbound streaming',
           pages: [
             {
               name: 'Overview',
-              link: '/general/firehose',
+              link: '/integrations/streaming',
             },
             {
-              name: 'Kafka Rule',
-              link: '/general/firehose/kafka-rule',
+              name: 'Kafka',
+              link: '/integrations/streaming/kafka',
             },
             {
-              name: 'Kinesis Rule',
-              link: '/general/firehose/kinesis-rule',
+              name: 'Kinesis',
+              link: '/integrations/streaming/kinesis',
             },
             {
-              name: 'AMQP Rule',
-              link: '/general/firehose/amqp-rule',
+              name: 'AMQP',
+              link: '/integrations/streaming/amqp',
             },
             {
-              name: 'SQS Rule',
-              link: '/general/firehose/sqs-rule',
+              name: 'SQS',
+              link: '/integrations/streaming/sqs',
             },
             {
-              name: 'Pulsar Rule',
-              link: '/general/firehose/pulsar-rule',
+              name: 'Pulsar',
+              link: '/integrations/streaming/pulsar',
             },
           ],
+        },
+        {
+          name: 'AWS authentication',
+          link: '/integrations/aws-authentication',
+        },
+        {
+          name: 'Message Queues',
+          link: '/integrations/queues',
         },
       ],
     },
