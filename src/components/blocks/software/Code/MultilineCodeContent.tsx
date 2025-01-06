@@ -1,9 +1,12 @@
 import React, { useMemo, useRef } from 'react';
 import DOMPurify from 'dompurify';
+import { truncate } from 'lodash/fp';
 import { highlightSnippet, registerDefaultLanguages } from '@ably/ui/core/utils/syntax-highlighter';
 import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
 
 registerDefaultLanguages(languagesRegistry);
+
+const TRUNCATION_CHARACTER_THRESHOLD = 20;
 
 const chooseString = (condition: boolean, firstString: string, secondString: string) =>
   condition ? firstString : secondString;
@@ -45,7 +48,12 @@ export const MultilineCodeContent = ({
     contentWithObfuscatedKey,
   );
 
-  const highlightedContent = useMemo(() => highlightSnippet(language, renderedContent), [language, renderedContent]);
+  const truncatedContent = renderedContent.replace(
+    new RegExp(`'([a-zA-Z0-9\\p{P}]{${TRUNCATION_CHARACTER_THRESHOLD},})'`, 'gu'),
+    (_, p1) => `'${truncate({ length: TRUNCATION_CHARACTER_THRESHOLD }, p1)}'`,
+  );
+
+  const highlightedContent = useMemo(() => highlightSnippet(language, truncatedContent), [language, truncatedContent]);
 
   return (
     <code
