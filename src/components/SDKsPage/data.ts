@@ -204,5 +204,24 @@ export const data = {
         },
       ],
     },
+    chat: {
+      text: "Choose from the following list of SDKs to add chat functionality to an application using the Chat product. Click 'Setup' for instructions on getting started with Chat, or view its source repository for a full list of the platforms it supports.",
+      cards: [
+        {
+          title: 'JavaScript',
+          text: 'Ably Chat SDK for JavaScript.',
+          image: { src: js, isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-chat-js',
+          setupLink: '/chat/setup?lang=javascript',
+        },
+        {
+          title: 'React',
+          text: 'Ably Chat React Hooks package.',
+          image: { src: react, isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-chat-js',
+          setupLink: '/chat/setup?lang=react',
+        },
+      ],
+    },
   },
 };
