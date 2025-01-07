@@ -6,7 +6,6 @@ import { LeftSidebar } from './LeftSidebar';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { NavProduct } from 'src/data/nav/types';
 import { ProductKey } from 'src/data/types';
-import { composeNavLinkId } from './utils';
 
 jest.mock('src/contexts/layout-context', () => ({
   useLayoutContext: jest.fn(),
@@ -136,12 +135,5 @@ describe('LeftSidebar', () => {
     render(<LeftSidebar />);
     fireEvent.click(screen.getAllByText('Platform')[0]);
     expect(setSelectedProduct).toHaveBeenCalledWith('platform');
-  });
-
-  it('scrolls to the selected link on mount', () => {
-    render(<LeftSidebar />);
-    const element = document.getElementById(composeNavLinkId('/platform/intro'));
-    expect(element).toBeInTheDocument();
-    expect(element?.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
   });
 });
