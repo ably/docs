@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Accordion from '@ably/ui/core/Accordion';
@@ -9,6 +9,7 @@ import {
   commonAccordionOptions,
   composeNavLinkId,
   formatNavLink,
+  hierarchicalKey,
   PageTreeNode,
   sidebarAlignmentClasses,
 } from './utils';
@@ -19,26 +20,29 @@ import { useLayoutContext } from 'src/contexts/layout-context';
 type ContentType = 'content' | 'api';
 
 export const NavPage = ({
+  depth,
   page,
-  indentLinks,
   index,
-  activePageTree,
   type,
+  indentLinks,
+  activePageTree,
 }: {
+  depth: number;
   page: NavProductPages;
-  indentLinks?: boolean;
   index: number;
-  activePageTree?: PageTreeNode[];
   type: ContentType;
+  indentLinks?: boolean;
+  activePageTree?: PageTreeNode[];
 }) => {
   const location = useLocation();
   const pageActive = 'link' in page && formatNavLink(page.link) === formatNavLink(location.pathname);
   const linkId = 'link' in page ? composeNavLinkId(page.link) : undefined;
-
   if ('link' in page) {
+    const language = new URLSearchParams(location.search).get('lang');
+
     return (
       <Link
-        key={page.link}
+        key={hierarchicalKey(page.link, depth, activePageTree)}
         id={linkId}
         className={cn({
           'block ui-text-menu4 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base': true,
@@ -50,7 +54,7 @@ export const NavPage = ({
         })}
         target={page.external ? '_blank' : undefined}
         rel={page.external ? 'noopener noreferrer' : undefined}
-        to={page.link}
+        to={language ? `${page.link}?lang=${language}` : page.link}
       >
         {page.name}
         {page.external ? <Icon name="icon-gui-external-link" additionalCSS="ml-4" /> : null}
@@ -59,7 +63,7 @@ export const NavPage = ({
   } else {
     return (
       <Accordion
-        key={page.name}
+        key={hierarchicalKey(page.name, depth, activePageTree)}
         data={[
           {
             name: page.name,
@@ -71,6 +75,7 @@ export const NavPage = ({
                   index={index}
                   activePageTree={activePageTree?.slice(1)}
                   type={type}
+                  depth={depth + 1}
                 />
               </div>
             )),
@@ -97,6 +102,7 @@ const renderProductContent = (
           index={pageIndex}
           activePageTree={contentIndex === activePageTree?.[0]?.index ? activePageTree.slice(1) : undefined}
           type={type}
+          depth={0}
         />
       ))}
     </div>
@@ -166,14 +172,6 @@ const constructProductNavData = (
 export const LeftSidebar = () => {
   const { selectedProduct, setSelectedProduct, activePage, products } = useLayoutContext();
   const location = useLocation();
-
-  useEffect(() => {
-    const element =
-      typeof document !== 'undefined' ? document.getElementById(composeNavLinkId(location.pathname)) : null;
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [location.pathname]);
 
   const productNavData = useMemo(
     () =>

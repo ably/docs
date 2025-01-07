@@ -3,6 +3,7 @@ import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
 import Icon from '@ably/ui/core/Icon';
 import cn from '@ably/ui/core/utils/cn';
+import { hierarchicalKey } from './utils';
 
 const Breadcrumbs: React.FC = () => {
   const { activePage } = useLayoutContext();
@@ -21,7 +22,7 @@ const Breadcrumbs: React.FC = () => {
       </Link>
       <Icon name="icon-gui-disclosure-arrow" size="16px" />
       {activePage?.tree.map((node, index) => (
-        <React.Fragment key={node.page.link}>
+        <React.Fragment key={hierarchicalKey(node.page.link, index, activePage.tree)}>
           {index > 0 ? <Icon name="icon-gui-disclosure-arrow" size="16px" /> : null}
           <Link
             to={node.page.link}
