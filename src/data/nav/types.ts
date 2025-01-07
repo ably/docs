@@ -21,4 +21,5 @@ export type NavProductPage = {
   name: string;
   link: string;
   external?: boolean;
+  indexPage?: boolean;
 };

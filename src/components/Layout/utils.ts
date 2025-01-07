@@ -34,12 +34,12 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
 
       // If the page is a link and the link matches the target link, return the path
       if ('link' in page && formatNavLink(page.link) === strippedTargetLink) {
-        return [...path, { index: i, page: { name: page.name, link: page.link } }];
+        return [...path, { index: i, page }];
       }
 
       // If the page is a group of pages, recursively check each page
       if ('pages' in page && page.pages) {
-        const result = determinePagePresence(page.pages, [...path, { index: i, page: { name: page.name, link: '#' } }]);
+        const result = determinePagePresence(page.pages, [...path, { index: i, page: { ...page, link: '#' } }]);
         if (result) {
           return result;
         }
@@ -69,7 +69,7 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
         const tree = [
           {
             index: Object.keys(data).indexOf(key),
-            page: { name: data[key].nav.name, link: data[key].nav.link ?? '#' },
+            page: { ...data[key].nav, link: data[key].nav.link ?? '#' },
           },
           ...((contentResult || apiResult) ?? []),
         ];
@@ -133,3 +133,6 @@ export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128 top-[
 export const mobileSidebarAlignmentClasses = 'pb-64';
 
 export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link).replaceAll('/', '-')}`;
+
+export const hierarchicalKey = (id: string, depth: number, tree?: PageTreeNode[]) =>
+  [...(tree ? tree.slice(0, depth).map((node) => node.index) : []), id].join('-');

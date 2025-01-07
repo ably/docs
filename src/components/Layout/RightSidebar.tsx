@@ -3,9 +3,10 @@ import { useLocation, WindowLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import { LanguageSelector } from './LanguageSelector';
-import { sidebarAlignmentClasses } from './utils';
+import { PageTreeNode, sidebarAlignmentClasses } from './utils';
 import { IconName } from '@ably/ui/core/Icon/types';
 import { useLayoutContext } from 'src/contexts/layout-context';
+import { languageInfo } from 'src/data/languages';
 
 type SidebarHeader = {
   id: string;
@@ -13,16 +14,45 @@ type SidebarHeader = {
   label: string;
 };
 
-const githubEditPath = 'https://github.com/ably/docs/blob/main/content';
+const githubBasePath = 'https://github.com/ably/docs/blob/main/content';
+const requestBasePath = 'https://github.com/ably/docs/issues/new';
 
-const externalLinks = (location: WindowLocation): { label: string; icon: IconName; link: string }[] => [
-  {
-    label: 'Edit on GitHub',
-    icon: 'icon-social-github',
-    link: `${githubEditPath}${location.pathname}.textile`,
-  },
-  { label: 'Request changes', icon: 'icon-gui-hand', link: '#' },
-];
+const externalLinks = (
+  pageTree: PageTreeNode[],
+  location: WindowLocation,
+): { label: string; icon: IconName; link: string }[] => {
+  const currentPage = pageTree[pageTree.length - 1]?.page;
+
+  let githubEditPath = '#';
+  let requestPath = '#';
+
+  if (currentPage) {
+    const githubPathName = location.pathname.replace('docs/', '');
+    githubEditPath =
+      githubBasePath + (currentPage.indexPage ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
+
+    const language = new URLSearchParams(location.search).get('lang');
+    const requestTitle = `Change request: ${currentPage.name}`;
+    const requestBody = encodeURIComponent(`
+  Name: **${currentPage.name}**
+  Link: **[${currentPage.link}](https://ably.com/docs/${currentPage.link})**
+  ${language ? `Language: **${languageInfo[language].label}**` : ''}
+  
+  Please describe the changes you would like to make to this page:  
+`);
+
+    requestPath = `${requestBasePath}?title=${requestTitle}&body=${requestBody}`;
+  }
+
+  return [
+    {
+      label: 'Edit on GitHub',
+      icon: 'icon-social-github',
+      link: githubEditPath,
+    },
+    { label: 'Request changes', icon: 'icon-gui-hand', link: requestPath },
+  ];
+};
 
 export const RightSidebar = () => {
   const { activePage } = useLayoutContext();
@@ -31,6 +61,7 @@ export const RightSidebar = () => {
   const observer = useRef<IntersectionObserver>();
   const location = useLocation();
   const showLanguageSelector = activePage?.languages.length > 0;
+  const language = new URLSearchParams(location.search).get('lang');
 
   useEffect(() => {
     const headerElements =
@@ -73,7 +104,7 @@ export const RightSidebar = () => {
     return () => {
       observer.current?.disconnect();
     };
-  }, []);
+  }, [language]);
 
   const highlightPosition = useMemo(() => {
     const sidebarElement =
@@ -116,7 +147,7 @@ export const RightSidebar = () => {
                     key={header.id}
                     id={`sidebar-${header.id}`}
                     className={cn(
-                      'ui-text-menu4 text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth',
+                      'ui-text-menu4 text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth hover:text-neutral-1300 dark:hover:text-neutral-000',
                       { 'font-bold text-neutral-1300 dark:text-neutral-000': header.id === activeHeader?.id },
                       { 'ml-8': header.type !== 'H2' },
                     )}
@@ -130,7 +161,7 @@ export const RightSidebar = () => {
           </>
         ) : null}
         <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-24">
-          {externalLinks(location).map(({ label, icon, link }, index) => (
+          {externalLinks(activePage.tree, location).map(({ label, icon, link }, index) => (
             <a key={label} href={link} target="_blank" rel="noopener noreferrer">
               <div
                 className={cn(

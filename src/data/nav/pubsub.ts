@@ -86,6 +86,7 @@ export default {
         {
           name: 'Channels',
           link: '/channels',
+          indexPage: true,
         },
         {
           name: 'Messages',
