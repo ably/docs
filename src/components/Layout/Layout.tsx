@@ -5,7 +5,7 @@ import '../../styles/global.css';
 import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Container } from 'src/components';
 import Header from './Header';
-import { Footer } from '../Footer';
+import Footer from './Footer';
 import { LeftSidebar } from './LeftSidebar';
 import { RightSidebar } from './RightSidebar';
 import { LayoutProvider } from 'src/contexts/layout-context';
@@ -27,10 +27,10 @@ const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children, noSidebar 
         <Container as="main" className="flex-1">
           <Breadcrumbs />
           {children}
+          <Footer />
         </Container>
         {showSidebar ? <RightSidebar /> : null}
       </div>
-      <Footer />
     </GlobalLoading>
   );
 };
