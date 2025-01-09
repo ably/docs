@@ -54,7 +54,7 @@ const externalLinks = (
   ];
 };
 
-export const RightSidebar = () => {
+const RightSidebar = () => {
   const { activePage } = useLayoutContext();
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>();
@@ -182,3 +182,5 @@ export const RightSidebar = () => {
     </div>
   );
 };
+
+export default RightSidebar;

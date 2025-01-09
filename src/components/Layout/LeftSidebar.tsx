@@ -24,7 +24,7 @@ type LeftSidebarProps = {
   inHeader?: boolean;
 };
 
-export const NavPage = ({
+const NavPage = ({
   depth,
   page,
   index,
@@ -184,7 +184,7 @@ const constructProductNavData = (
   return navData;
 };
 
-export const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
+const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
   const { selectedProduct, setSelectedProduct, activePage, products } = useLayoutContext();
   const location = useLocation();
 
@@ -221,3 +221,5 @@ export const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
     </>
   );
 };
+
+export default LeftSidebar;

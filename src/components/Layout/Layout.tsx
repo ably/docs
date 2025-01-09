@@ -6,8 +6,8 @@ import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Container } from 'src/components';
 import Header from './Header';
 import Footer from './Footer';
-import { LeftSidebar } from './LeftSidebar';
-import { RightSidebar } from './RightSidebar';
+import LeftSidebar from './LeftSidebar';
+import RightSidebar from './RightSidebar';
 import { LayoutProvider } from 'src/contexts/layout-context';
 import Breadcrumbs from './Breadcrumbs';
 
