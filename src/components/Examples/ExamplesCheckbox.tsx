@@ -1,5 +1,6 @@
 import React from 'react';
 import Icon from '@ably/ui/core/Icon';
+import cn from '@ably/ui/core/utils/cn';
 
 const ExamplesCheckbox = ({
   label,
@@ -7,7 +8,6 @@ const ExamplesCheckbox = ({
   value,
   disabled = false,
   isChecked = false,
-  isDefaultChecked = false,
   selectProductOrUseCase,
 }: {
   label: string;
@@ -15,7 +15,6 @@ const ExamplesCheckbox = ({
   value: string;
   disabled?: boolean;
   isChecked?: boolean;
-  isDefaultChecked?: boolean;
   selectProductOrUseCase: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) => {
   return (
@@ -28,12 +27,18 @@ const ExamplesCheckbox = ({
         className="ui-checkbox-input"
         value={value}
         checked={isChecked}
-        defaultChecked={isDefaultChecked}
         disabled={disabled}
         onChange={(e) => selectProductOrUseCase(e)}
       />
-      <div data-ui-checkbox-styled="" className="ui-checkbox-styled">
-        <Icon size="1rem" name="icon-gui-tick" additionalCSS="ui-checkbox-styled-tick cursor-pointer" />
+      <div
+        data-ui-checkbox-styled=""
+        className={cn(['ui-checkbox-styled', disabled && '!border-neutral-800 !bg-orange-600'])}
+      >
+        <Icon
+          size="1rem"
+          name="icon-gui-tick"
+          additionalCSS={cn(['ui-checkbox-styled-tick cursor-pointer', disabled && 'text-neutral-000'])}
+        />
       </div>
       <label htmlFor={name} className="ui-text-p4 text-neutral-900">
         {label}

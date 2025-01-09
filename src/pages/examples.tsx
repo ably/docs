@@ -15,19 +15,14 @@ const Examples = ({
 }) => {
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/examples');
-  const meta_title = 'Examples';
-  const meta_description = 'Examples';
+  const meta_title = 'Ably Examples - Code Samples and Implementation Guides';
+  const meta_description =
+    'Browse our collection of code examples, implementation guides, and sample projects to help you integrate Ably into your applications.';
 
   return (
     <>
       <Head title={meta_title} metaTitle={meta_title} canonical={canonical} description={meta_description} />
-      <Layout
-        isExtraWide
-        showProductNavigation={false}
-        currentProduct="api-reference"
-        collapsibleSidebar={false}
-        noSidebar={true}
-      >
+      <Layout noSidebar={true}>
         <ExamplesContent exampleImages={images} />
       </Layout>
     </>

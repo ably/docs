@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import { StaticImage } from 'gatsby-plugin-image';
 import ExamplesGrid from './ExamplesGrid';
 import ExamplesFilter from './ExamplesFilter';
@@ -10,60 +10,49 @@ import ExamplesNoResults from './ExamplesNoResults';
 const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedUseCases, setSelectedUseCases] = useState<string[]>([]);
-  const [checkAllProducts, setCheckAllProducts] = useState(true);
-  const [checkAllUseCases, setCheckAllUseCases] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredExamples, setFilteredExamples] = useState(examples.examples);
 
-  const selectProduct = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value, checked } = e.target;
-    if (value === 'all') {
-      setCheckAllProducts(checked);
-      if (checked && selectedProducts.length > 0) {
-        setSelectedProducts([]);
-      }
-    } else {
-      if (checked) {
-        setSelectedProducts((prev) => [...prev, value].filter((v) => v !== 'all'));
-        setCheckAllProducts(false);
+  const handleSelect = useCallback(
+    (
+      e: React.ChangeEvent<HTMLInputElement>,
+      setSelected: React.Dispatch<React.SetStateAction<string[]>>,
+      selected: string[],
+    ) => {
+      const { value, checked } = e.target;
+      if (value === 'all') {
+        if (checked && selected.length > 0) {
+          setSelected([]);
+        }
       } else {
-        setSelectedProducts((prev) => prev.filter((product) => product !== value));
+        if (checked) {
+          setSelected((prev) => [...prev, value].filter((v) => v !== 'all'));
+        } else {
+          setSelected((prev) => prev.filter((item) => item !== value));
+        }
       }
-    }
-  };
+    },
+    [],
+  );
 
-  const selectUseCases = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value, checked } = e.target;
-    if (value === 'all') {
-      setCheckAllUseCases(checked);
-      if (checked && selectedUseCases.length > 0) {
-        setSelectedUseCases([]);
-      }
-    } else {
-      if (checked) {
-        setSelectedUseCases((prev) => [...prev, value].filter((v) => v !== 'all'));
-        setCheckAllUseCases(false);
-      } else {
-        setSelectedUseCases((prev) => prev.filter((product) => product !== value));
-      }
-    }
-  };
+  const selectProduct = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => handleSelect(e, setSelectedProducts, selectedProducts),
+    [handleSelect, selectedProducts],
+  );
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const selectUseCases = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => handleSelect(e, setSelectedUseCases, selectedUseCases),
+    [handleSelect, selectedUseCases],
+  );
+
+  const handleSearch = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
-  };
+  }, []);
 
   useEffect(() => {
     const filteredExamples = filterSearchExamples(examples.examples, selectedProducts, selectedUseCases, searchTerm);
     setFilteredExamples(filteredExamples);
-
-    if (selectedProducts.length === 0) {
-      setCheckAllProducts(true);
-    }
-    if (selectedUseCases.length === 0) {
-      setCheckAllUseCases(true);
-    }
-  }, [selectedProducts, selectedUseCases, checkAllProducts, checkAllUseCases, searchTerm]);
+  }, [selectedProducts, selectedUseCases, searchTerm]);
 
   return (
     <>
@@ -80,9 +69,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
             <ExamplesFilter
               selectProduct={selectProduct}
               selectUseCases={selectUseCases}
-              checkAllProducts={checkAllProducts}
               selectedProducts={selectedProducts}
-              checkAllUseCases={checkAllUseCases}
               selectedUseCases={selectedUseCases}
               handleSearch={handleSearch}
             />

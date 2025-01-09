@@ -5,7 +5,9 @@ const ExamplesNoResults = () => {
   const popularSearchTerm = ['Avatar stack', 'Live Cursors', 'Occupancy', 'Presence'];
   return (
     <div className="w-full flex flex-col justify-center items-center h-full">
-      <p className="ui-text-h2">🫣</p>
+      <p className="ui-text-h2" role="img" aria-label="Face with peeking eye">
+        🫣
+      </p>
       <p className="ui-text-p1 mt-12 text-neutral-1300 font-bold">No matching examples found</p>
       <p className="ui-text-p3 mt-24 text-neutral-1100">Try these popular search terms</p>
       <div className="flex mt-8 gap-x-6">
