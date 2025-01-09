@@ -1,4 +1,5 @@
 import React from 'react';
+import cn from '@ably/ui/core/utils/cn';
 import { container } from '../sdks.module.css';
 import CardGrid from '../Card/CardGrid';
 import { data } from '../data';
@@ -13,25 +14,37 @@ export enum Tab {
 const MainSection = ({ tab }: { tab: Tab }) => {
   const activeTab = Object.values(Tab).includes(tab as Tab) ? tab : Tab.CHANNELS;
 
+  const activeTabClasses =
+    "font-extrabold text-orange-600 after:content-[''] after:absolute after:w-full after:h-2 after:-bottom-[9px] after:left-0 after:bg-orange-600 after:rounded";
+
   return (
     <div>
       <div>
         <div className={`${container}`}>
           <Link
             to="/sdks"
-            className={`ui-text-h3 mr-16 px-8 py-16 inline-block relative ${activeTab === Tab.CHANNELS ? 'font-extrabold text-orange-600' : null}`}
+            className={cn(
+              'ui-text-h3 mr-16 px-8 py-16 inline-block relative',
+              activeTab === Tab.CHANNELS && activeTabClasses,
+            )}
           >
             Pub/Sub
           </Link>
           <Link
             to="/sdks?tab=spaces"
-            className={`ui-text-h3 mr-16 px-8 py-16 inline-block relative ${activeTab === Tab.SPACES ? 'font-extrabold text-orange-600' : null}`}
+            className={cn(
+              'ui-text-h3 mr-16 px-8 py-16 inline-block relative',
+              activeTab === Tab.SPACES && activeTabClasses,
+            )}
           >
             Spaces
           </Link>
           <Link
             to="/sdks?tab=chat"
-            className={`ui-text-h3 mr-16 px-8 py-16 inline-block relative ${activeTab === Tab.CHAT ? 'font-extrabold text-orange-600' : null}`}
+            className={cn(
+              'ui-text-h3 mr-16 px-8 py-16 inline-block relative',
+              activeTab === Tab.CHAT && activeTabClasses,
+            )}
           >
             Chat
           </Link>
