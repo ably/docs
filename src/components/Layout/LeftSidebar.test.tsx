@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocation } from '@reach/router';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
-import { LeftSidebar } from './LeftSidebar';
+import LeftSidebar from './LeftSidebar';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { NavProduct } from 'src/data/nav/types';
 import { ProductKey } from 'src/data/types';
