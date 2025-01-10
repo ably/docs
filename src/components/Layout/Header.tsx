@@ -7,8 +7,9 @@ import LinkButton from '@ably/ui/core/LinkButton';
 
 import { SearchBar } from '../SearchBar';
 import AblyLogo from './images/ably-logo.png';
-import { LeftSidebar } from './LeftSidebar';
+import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
+import { pathWithBase } from './utils';
 
 type HeaderProps = {
   hideSearchBar?: boolean;
@@ -26,7 +27,7 @@ const HeaderLinks: React.FC = () => {
     <div className="flex md:items-center flex-col md:flex-row border-t-[1px] border-neutral-300 md:border-t-0 px-12 pb-12 md:pb-0">
       <a
         className={cn(headerLinkClasses, 'flex items-center gap-4 md:mr-16 mt-8 md:mt-0')}
-        href="/docs/sdks"
+        href={pathWithBase('/sdks')}
         target="_blank"
         rel="noopener"
       >
@@ -61,14 +62,14 @@ const HeaderLinks: React.FC = () => {
 const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const tabs = ['Documentation', { label: 'Examples', disabled: true }];
+  const tabs = ['Documentation', 'Examples'];
 
   const tabLinks = (index: number) => {
     switch (index) {
       case 0:
-        return '/docs';
+        return pathWithBase('/');
       case 1:
-        return '/examples';
+        return pathWithBase('/examples');
       default:
         return '#';
     }
@@ -104,7 +105,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
         role="banner"
         className="fixed top-0 left-0 w-full z-10 bg-neutral-000 dark:bg-neutral-1300 flex px-24 md:px-64 h-64 border-b border-neutral-300"
       >
-        <a className="flex items-center focus-base rounded" href="/docs" aria-label="Home">
+        <a className="flex items-center focus-base rounded" href={pathWithBase('/')} aria-label="Home">
           <img src={AblyLogo} width="108px" alt="Ably logo" className="mr-32" />
         </a>
         <div className="flex md:hidden flex-1 items-center justify-end gap-24">
