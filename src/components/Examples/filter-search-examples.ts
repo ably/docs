@@ -15,6 +15,7 @@ export const filterSearchExamples = (
       (selectedUseCases.length === 0 || example.useCases.some((useCase) => selectedUseCases.includes(useCase))) &&
       (searchTerm === '' ||
         example.name.toLowerCase().includes(normalizedSearchTerm) ||
+        example.description.toLowerCase().includes(normalizedSearchTerm) ||
         example.products.some((product) => product.toLowerCase().includes(normalizedSearchTerm)) ||
         example.useCases.some((useCase) => useCase.toLowerCase().includes(normalizedSearchTerm))),
   );

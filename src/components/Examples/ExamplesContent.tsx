@@ -76,7 +76,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
           </div>
           <div className="w-full sm:w-[80%] mt-40 sm:mt-0">
             {filteredExamples.length > 0 ? (
-              <ExamplesGrid exampleImages={exampleImages} examples={filteredExamples} />
+              <ExamplesGrid exampleImages={exampleImages} examples={filteredExamples} searchTerm={searchTerm} />
             ) : (
               <ExamplesNoResults />
             )}

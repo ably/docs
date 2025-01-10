@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Badge from '@ably/ui/core/Badge';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
@@ -7,7 +7,15 @@ import cn from '@ably/ui/core/utils/cn';
 import { Image, ImageProps } from '../Image';
 import examplesData, { Example } from '../../data/examples';
 
-const ExamplesGrid = ({ examples, exampleImages }: { examples: Example[]; exampleImages: ImageProps[] }) => {
+const ExamplesGrid = ({
+  examples,
+  exampleImages,
+  searchTerm,
+}: {
+  examples: Example[];
+  exampleImages: ImageProps[];
+  searchTerm: string;
+}) => {
   const displayExampleImage = (exampleImages: ImageProps[], selectedImage: string, productName: string) => {
     const productImage = exampleImages.find((image) => image.name === selectedImage);
     return productImage ? <Image image={productImage} alt={productName} /> : null;
@@ -44,6 +52,8 @@ const ExamplesGrid = ({ examples, exampleImages }: { examples: Example[]; exampl
       </Badge>
     ) : null;
 
+  const searchRegex = useMemo(() => new RegExp(`(${searchTerm})`, 'gi'), [searchTerm]);
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-20 gap-y-32">
       {examples
@@ -60,7 +70,17 @@ const ExamplesGrid = ({ examples, exampleImages }: { examples: Example[]; exampl
                 </div>
               </div>
               <p className="ui-text-h4 mt-16 text-neutral-1300">{name}</p>
-              <p className="ui-text-p3 mt-8 text-neutral-900">{description}</p>
+              <p className="ui-text-p3 mt-8 text-neutral-900">
+                {description.split(searchRegex).map((part, index) =>
+                  part.toLowerCase() === searchTerm.toLowerCase() ? (
+                    <span key={index} className="bg-yellow-200">
+                      {part}
+                    </span>
+                  ) : (
+                    part
+                  ),
+                )}
+              </p>
               <div className="mt-16 flex gap-x-4">
                 {products ? products.map((product) => displayProductLabel(product as ProductName, dataProducts)) : null}
                 {useCases ? useCases.map((useCase) => displayUseCaseLabel(useCase, examplesData.useCases)) : null}
