@@ -25,7 +25,8 @@ jest.mock('../SearchBar', () => ({
 }));
 
 jest.mock('./LeftSidebar', () => ({
-  LeftSidebar: jest.fn(() => <div>LeftSidebar</div>),
+  __esModule: true,
+  default: jest.fn(() => <div>LeftSidebar</div>),
 }));
 
 describe('Header', () => {
