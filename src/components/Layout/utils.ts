@@ -137,4 +137,7 @@ export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link
 export const hierarchicalKey = (id: string, depth: number, tree?: PageTreeNode[]) =>
   [...(tree ? tree.slice(0, depth).map((node) => node.index) : []), id].join('-');
 
-export const pathWithBase = (path: string) => `${process.env.NODE_ENV === 'development' ? '/' : '/docs/'}${path}`;
+export const pathWithBase = (path: string) => {
+  const strippedPath = path.replace(/^\/+/, '');
+  return `/${process.env.NODE_ENV === 'development' ? '' : 'docs/'}${strippedPath}`;
+};
