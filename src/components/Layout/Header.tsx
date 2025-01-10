@@ -62,7 +62,7 @@ const HeaderLinks: React.FC = () => {
 const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const tabs = ['Documentation', 'Examples'];
+  const tabs = ['Documentation', { label: 'Examples', disabled: true }];
 
   const tabLinks = (index: number) => {
     switch (index) {
