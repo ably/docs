@@ -56,7 +56,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
 
   return (
     <>
-      <section className="mx-auto px-24 md:px-0 max-w-[1152px] relative z-10">
+      <section className="mx-auto px-24 md:px-0 max-w-[1152px] relative">
         <div className="w-full sm:w-1/2 max-w-[600px] pt-80 sm:pt-96">
           <h1 className="ui-text-title text-title">Examples</h1>
           <p className="ui-text-sub-header mt-16">
@@ -90,7 +90,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
         width={660}
         height={282}
         alt="Grid Pattern"
-        className="absolute z-0 right-0 top-64 hidden sm:block w-[60%] md:w-[40%]"
+        className="absolute -z-10 right-0 top-64 hidden sm:block w-[60%] md:w-[40%]"
       />
 
       <StaticImage
@@ -98,7 +98,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
         placeholder="blurred"
         width={260}
         alt="Grid Pattern"
-        className="z-0 right-0 top-64 absolute block sm:hidden"
+        className="-z-10 right-0 top-64 absolute block sm:hidden"
       />
     </>
   );

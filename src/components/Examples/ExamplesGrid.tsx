@@ -18,7 +18,7 @@ const ExamplesGrid = ({
 }) => {
   const displayExampleImage = (exampleImages: ImageProps[], selectedImage: string, productName: string) => {
     const productImage = exampleImages.find((image) => image.name === selectedImage);
-    return productImage ? <Image image={productImage} alt={productName} /> : null;
+    return productImage ? <Image image={productImage} alt={productName} className="h-full" /> : null;
   };
 
   const badgeColorForProduct = (product: ProductName) => {
@@ -61,7 +61,7 @@ const ExamplesGrid = ({
             <div className="w-full" key={`${name}-${key}`}>
               <div className="bg-neutral-100 h-256 sm:h-200 relative flex justify-center items-center">
                 {exampleImages ? displayExampleImage(exampleImages, image, name) : null}
-                <div className="flex bg-neutral-000 gap-x-6 py-6 px-8 absolute right-12 bottom-12 rounded	border border-neutral-200 z-20">
+                <div className="flex bg-neutral-000 gap-x-6 py-6 px-8 absolute right-12 bottom-12 rounded border border-neutral-200 z-10">
                   {languages
                     ? languages.map((language) => (
                         <Icon key={language} name={`icon-tech-${language}` as IconName} size="18px" />

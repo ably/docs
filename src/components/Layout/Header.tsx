@@ -10,6 +10,7 @@ import AblyLogo from './images/ably-logo.png';
 import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
 import { pathWithBase } from './utils';
+import ExamplesList from '../Examples/ExamplesList';
 
 type HeaderProps = {
   hideSearchBar?: boolean;
@@ -172,7 +173,10 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
           >
             <TabMenu
               tabs={tabs}
-              contents={[<LeftSidebar inHeader key="nav-mobile-documentation-tab" />, null]}
+              contents={[
+                <LeftSidebar inHeader key="nav-mobile-documentation-tab" />,
+                <ExamplesList key="nav-mobile-examples-tab" />,
+              ]}
               rootClassName="h-full overflow-y-hidden min-h-[51px] flex flex-col"
               contentClassName="h-full py-16 overflow-y-scroll"
               tabClassName="ui-text-menu2 !px-16"
