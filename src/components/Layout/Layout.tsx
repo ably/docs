@@ -22,7 +22,7 @@ const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children, noSidebar 
   return (
     <GlobalLoading>
       <Header hideSearchBar={hideSearchBar} />
-      <div className="flex mx-24 sm:mx-32 md:mx-40 lg:mx-64 pt-64 gap-80 justify-center transition-[margin]">
+      <div className="flex mx-24 sm:mx-32 md:mx-40 lg:mx-64 pt-64 gap-80 justify-center">
         {showSidebar ? <LeftSidebar /> : null}
         <Container as="main" className="flex-1">
           <Breadcrumbs />
