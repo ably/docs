@@ -26,8 +26,8 @@ describe('Breadcrumbs', () => {
       activePage: {
         tree: [
           { page: { name: 'Section 1', link: '/section-1' } },
-          { page: { name: 'Subsection 1', link: '/section-1/subsection-1' } },
-          { page: { name: 'Current Page', link: '#' } },
+          { page: { name: 'Subsection 1', link: '#' } },
+          { page: { name: 'Current Page', link: '/section-1/subsection-1/page-1' } },
         ],
       },
     });
@@ -37,20 +37,20 @@ describe('Breadcrumbs', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the breadcrumbs with links', () => {
+  it('renders relevant breadcrumb nodes', () => {
     render(<Breadcrumbs />);
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Section 1')).toBeInTheDocument();
-    expect(screen.getByText('Subsection 1')).toBeInTheDocument();
+    expect(screen.queryByText('Subsection 1')).not.toBeInTheDocument();
     expect(screen.getByText('Current Page')).toBeInTheDocument();
   });
 
-  it('renders the correct links', () => {
+  it('includes relevant links on the breadcrumb nodes', () => {
     render(<Breadcrumbs />);
     expect(screen.getByText('Home')).toHaveAttribute('href', '/');
     expect(screen.getByText('Section 1')).toHaveAttribute('href', '/section-1');
-    expect(screen.getByText('Subsection 1')).toHaveAttribute('href', '/section-1/subsection-1');
-    expect(screen.getByText('Current Page')).toHaveAttribute('href', '#');
+    expect(screen.queryByText('Subsection 1')).not.toBeInTheDocument();
+    expect(screen.getByText('Current Page')).toHaveAttribute('href', '/section-1/subsection-1/page-1');
   });
 
   it('disables the link for the current page', () => {
