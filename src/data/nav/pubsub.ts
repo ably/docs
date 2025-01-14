@@ -137,14 +137,14 @@ export default {
       ],
     },
     {
-      name: 'Message storage and history',
+      name: 'Message storage',
       pages: [
         {
           name: 'Message storage',
           link: '/storage-history/storage',
         },
         {
-          name: 'History',
+          name: 'Message history',
           link: '/storage-history/history',
         },
       ],
@@ -198,86 +198,7 @@ export default {
       ],
     },
     {
-      name: 'Integrations',
-      pages: [
-        {
-          name: 'Overview',
-          link: '/general/integrations',
-        },
-        {
-          name: 'Events',
-          pages: [
-            {
-              name: 'Overview',
-              link: '/general/webhooks',
-            },
-            {
-              name: 'AWS Lambda Functions',
-              link: '/general/webhooks/aws-lambda',
-            },
-            {
-              name: 'Azure Functions',
-              link: '/general/webhooks/azure',
-            },
-            {
-              name: 'Google Cloud Functions',
-              link: '/general/webhooks/google-functions',
-            },
-            {
-              name: 'Zapier',
-              link: '/general/webhooks/zapier',
-            },
-            {
-              name: 'Cloudflare Workers',
-              link: '/general/webhooks/cloudflare',
-            },
-            {
-              name: 'IFTTT',
-              link: '/general/webhooks/ifttt',
-            },
-          ],
-        },
-        {
-          name: 'Message Queues',
-          link: '/general/queues',
-        },
-        {
-          name: 'Kafka Connector',
-          link: '/general/kafka-connector',
-        },
-        {
-          name: 'Firehose',
-          pages: [
-            {
-              name: 'Overview',
-              link: '/general/firehose',
-            },
-            {
-              name: 'Kafka Rule',
-              link: '/general/firehose/kafka-rule',
-            },
-            {
-              name: 'Kinesis Rule',
-              link: '/general/firehose/kinesis-rule',
-            },
-            {
-              name: 'AMQP Rule',
-              link: '/general/firehose/amqp-rule',
-            },
-            {
-              name: 'SQS Rule',
-              link: '/general/firehose/sqs-rule',
-            },
-            {
-              name: 'Pulsar Rule',
-              link: '/general/firehose/pulsar-rule',
-            },
-          ],
-        },
-      ],
-    },
-    {
-      name: 'Other protocols',
+      name: 'Supported protocols',
       pages: [
         {
           name: 'Overview',
@@ -298,115 +219,6 @@ export default {
         {
           name: 'PubNub Adapter',
           link: '/protocols/pubnub',
-        },
-      ],
-    },
-    {
-      name: 'Ably accounts and apps',
-      pages: [
-        {
-          name: 'Account overview',
-          link: '/account',
-        },
-        { name: 'User management', link: '/account/users' },
-        { name: 'Organizations', link: '/account/organizations' },
-        { name: 'Single sign-on (SSO)', link: '/account/sso' },
-        { name: 'Two-factor authentication (2FA)', link: '/account/2fa' },
-        {
-          name: 'App management',
-          pages: [
-            {
-              name: 'Overview',
-              link: '/account/app',
-            },
-            {
-              name: 'Stats',
-              link: '/account/app/stats',
-            },
-            {
-              name: 'API keys',
-              link: '/account/app/api',
-            },
-            {
-              name: 'Queues',
-              link: '/account/app/queues',
-            },
-            {
-              name: 'Notifications',
-              link: '/account/app/notifications',
-            },
-            {
-              name: 'Dev console',
-              link: '/account/app/console',
-            },
-            {
-              name: 'Settings',
-              link: '/account/app/settings',
-            },
-          ],
-        },
-        {
-          name: 'Programmatic management with Control API',
-          link: '/account/control-api',
-        },
-      ],
-    },
-    {
-      name: 'Pricing',
-      pages: [
-        {
-          name: 'Overview',
-          link: '/pricing',
-        },
-        {
-          name: 'Package types',
-          pages: [
-            {
-              name: 'Free',
-              link: '/pricing/free',
-            },
-            {
-              name: 'Standard',
-              link: '/pricing/standard',
-            },
-            {
-              name: 'Pro',
-              link: '/pricing/pro',
-            },
-            {
-              name: 'Enterprise',
-              link: '/pricing/enterprise',
-            },
-          ],
-        },
-        {
-          name: 'Billing',
-          link: '/pricing/billing',
-        },
-        {
-          name: 'Limits',
-          link: '/pricing/limits',
-        },
-        {
-          name: 'Pricing FAQs',
-          link: '/pricing/faqs',
-        },
-      ],
-    },
-    {
-      name: 'Further Reading',
-      pages: [
-        {
-          name: 'API References',
-          link: '/api',
-        },
-        {
-          name: 'Glossary',
-          link: '/glossary',
-        },
-        {
-          name: 'Platform Customization',
-          link: '/platform-customization',
         },
       ],
     },
@@ -532,10 +344,6 @@ export default {
         {
           name: 'SSE API',
           link: '/api/sse',
-        },
-        {
-          name: 'Control API',
-          link: '/api/control-api',
         },
       ],
     },

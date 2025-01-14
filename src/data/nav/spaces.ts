@@ -9,7 +9,7 @@ export default {
   },
   content: [
     {
-      name: 'Spaces',
+      name: 'Get started',
       pages: [
         {
           name: 'What is Spaces?',
@@ -23,6 +23,11 @@ export default {
           name: 'React Hooks',
           link: '/spaces/react',
         },
+      ],
+    },
+    {
+      name: 'Space features',
+      pages: [
         {
           name: 'Space',
           link: '/spaces/space',
@@ -52,7 +57,7 @@ export default {
       pages: [
         {
           link: 'https://sdk.ably.com/builds/ably/spaces/main/typedoc/index.html',
-          name: 'JavaScript SDK',
+          name: 'JavaScript',
           external: true,
         },
       ],
