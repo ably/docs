@@ -7,52 +7,21 @@ import examples from '../../data/examples';
 import { filterSearchExamples } from './filter-search-examples';
 import ExamplesNoResults from './ExamplesNoResults';
 
+export type SelectedFilters = { products: string[]; useCases: string[] };
+
 const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => {
-  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [selectedUseCases, setSelectedUseCases] = useState<string[]>([]);
+  const [selected, setSelected] = useState<SelectedFilters>({ products: [], useCases: [] });
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredExamples, setFilteredExamples] = useState(examples.examples);
-
-  const handleSelect = useCallback(
-    (
-      e: React.ChangeEvent<HTMLInputElement>,
-      setSelected: React.Dispatch<React.SetStateAction<string[]>>,
-      selected: string[],
-    ) => {
-      const { value, checked } = e.target;
-      if (value === 'all') {
-        if (checked && selected.length > 0) {
-          setSelected([]);
-        }
-      } else {
-        if (checked) {
-          setSelected((prev) => [...prev, value].filter((v) => v !== 'all'));
-        } else {
-          setSelected((prev) => prev.filter((item) => item !== value));
-        }
-      }
-    },
-    [],
-  );
-
-  const selectProduct = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => handleSelect(e, setSelectedProducts, selectedProducts),
-    [handleSelect, selectedProducts],
-  );
-
-  const selectUseCases = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => handleSelect(e, setSelectedUseCases, selectedUseCases),
-    [handleSelect, selectedUseCases],
-  );
 
   const handleSearch = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   }, []);
 
   useEffect(() => {
-    const filteredExamples = filterSearchExamples(examples.examples, selectedProducts, selectedUseCases, searchTerm);
+    const filteredExamples = filterSearchExamples(examples.examples, selected, searchTerm);
     setFilteredExamples(filteredExamples);
-  }, [selectedProducts, selectedUseCases, searchTerm]);
+  }, [selected, searchTerm]);
 
   return (
     <>
@@ -66,13 +35,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
         </div>
         <div className="w-full my-40 sm:my-64 flex flex-col sm:flex-row gap-x-40">
           <div className="w-full sm:w-[20%] relative">
-            <ExamplesFilter
-              selectProduct={selectProduct}
-              selectUseCases={selectUseCases}
-              selectedProducts={selectedProducts}
-              selectedUseCases={selectedUseCases}
-              handleSearch={handleSearch}
-            />
+            <ExamplesFilter selected={selected} setSelected={setSelected} handleSearch={handleSearch} />
           </div>
           <div className="w-full sm:w-[80%] mt-40 sm:mt-0">
             {filteredExamples.length > 0 ? (

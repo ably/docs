@@ -1,18 +1,13 @@
 import { Example } from '../../data/examples';
-import { ProductName } from '@ably/ui/core/ProductTile/data';
+import { SelectedFilters } from './ExamplesContent';
 
-export const filterSearchExamples = (
-  examples: Example[],
-  selectedProducts: ProductName | string[],
-  selectedUseCases: string[],
-  searchTerm: string,
-) => {
+export const filterSearchExamples = (examples: Example[], selected: SelectedFilters, searchTerm: string) => {
   const normalizedSearchTerm = searchTerm.toLowerCase();
 
   return examples.filter(
     (example) =>
-      (selectedProducts.length === 0 || example.products.some((product) => selectedProducts.includes(product))) &&
-      (selectedUseCases.length === 0 || example.useCases.some((useCase) => selectedUseCases.includes(useCase))) &&
+      (selected.products.length === 0 || example.products.some((product) => selected.products.includes(product))) &&
+      (selected.useCases.length === 0 || example.useCases.some((useCase) => selected.useCases.includes(useCase))) &&
       (searchTerm === '' ||
         example.name.toLowerCase().includes(normalizedSearchTerm) ||
         example.description.toLowerCase().includes(normalizedSearchTerm) ||

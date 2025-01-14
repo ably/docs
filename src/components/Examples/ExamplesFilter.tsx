@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import Icon from '@ably/ui/core/Icon';
 import { products } from '@ably/ui/core/ProductTile/data';
@@ -8,28 +8,62 @@ import Button from '@ably/ui/core/Button';
 import cn from '@ably/ui/core/utils/cn';
 import { useOnClickOutside } from 'src/hooks';
 import Badge from '@ably/ui/core/Badge';
+import { SelectedFilters } from './ExamplesContent';
 
 const ExamplesFilter = ({
-  selectProduct,
-  selectUseCases,
+  selected,
+  setSelected,
   handleSearch,
-  selectedProducts,
-  selectedUseCases,
 }: {
-  selectProduct: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  selectUseCases: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleSearch: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  selectedProducts: string[];
-  selectedUseCases: string[];
+  selected: SelectedFilters;
+  setSelected: Dispatch<SetStateAction<SelectedFilters>>;
+  handleSearch: (e: ChangeEvent<HTMLInputElement>) => void;
 }) => {
-  const filterMenuRef = React.useRef<HTMLDivElement>(null);
-  const [expandFilterMenu, setExpandFilterMenu] = React.useState(false);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
+  const [expandFilterMenu, setExpandFilterMenu] = useState(false);
+  const [localSelected, setLocalSelected] = useState<SelectedFilters>(selected);
+
+  const handleSelect = (e: ChangeEvent<HTMLInputElement>, filterType: keyof SelectedFilters) => {
+    setLocalSelected((prevSelected) => {
+      if (e.target.value === 'all') {
+        return {
+          ...prevSelected,
+          [filterType]: [],
+        };
+      }
+
+      const newSelected = prevSelected[filterType].includes(e.target.value)
+        ? prevSelected[filterType].filter((item) => item !== e.target.value)
+        : [...prevSelected[filterType], e.target.value];
+
+      return {
+        ...prevSelected,
+        [filterType]: Array.from(new Set(newSelected)),
+      };
+    });
+  };
+
   const filters = [
-    { key: 'product', data: products, selected: selectedProducts, handleSelect: selectProduct },
-    { key: 'use-case', data: examples.useCases, selected: selectedUseCases, handleSelect: selectUseCases },
+    {
+      key: 'product',
+      data: products,
+      selected: localSelected.products,
+      handleSelect: (e: ChangeEvent<HTMLInputElement>) => handleSelect(e, 'products'),
+    },
+    {
+      key: 'use-case',
+      data: examples.useCases,
+      selected: localSelected.useCases,
+      handleSelect: (e: ChangeEvent<HTMLInputElement>) => handleSelect(e, 'useCases'),
+    },
   ];
 
-  useOnClickOutside(() => setExpandFilterMenu(false), filterMenuRef);
+  const closeFilterMenu = useCallback(() => {
+    setExpandFilterMenu(false);
+    setLocalSelected(selected);
+  }, [selected]);
+
+  useOnClickOutside(closeFilterMenu, filterMenuRef);
 
   useEffect(() => {
     const handleResize = () => {
@@ -42,10 +76,21 @@ const ExamplesFilter = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const activeFilters = React.useMemo(
-    () => selectedProducts.length + selectedUseCases.length,
-    [selectedProducts, selectedUseCases],
+  useEffect(() => {
+    if (window.innerWidth >= 1040) {
+      setSelected(localSelected);
+    }
+  }, [expandFilterMenu, localSelected, setSelected]);
+
+  const activeFilters = useMemo(
+    () => selected.products.length + selected.useCases.length,
+    [selected.products, selected.useCases],
   );
+
+  const handleApply = () => {
+    setSelected(localSelected);
+    setExpandFilterMenu(false);
+  };
 
   return (
     <>
@@ -86,7 +131,7 @@ const ExamplesFilter = ({
       >
         <div className="flex justify-between items-center sm:hidden h-64 px-16 py-8 bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-t-2xl sm:rounded-none">
           <p className="ui-text-p1 font-bold text-neutral-1300 dark:text-neutral-000">Filters</p>
-          <button onClick={() => setExpandFilterMenu(false)} aria-label="Close filter menu">
+          <button onClick={closeFilterMenu} aria-label="Close filter menu">
             <Icon name="icon-gui-close" size="24px" />
           </button>
         </div>
@@ -100,7 +145,7 @@ const ExamplesFilter = ({
                 value="all"
                 disabled={selected.length === 0}
                 isChecked={selected.length === 0}
-                selectProductOrUseCase={handleSelect}
+                handleSelect={handleSelect}
               />
               {Object.entries(data).map(([itemKey, item]) => (
                 <ExamplesCheckbox
@@ -108,7 +153,7 @@ const ExamplesFilter = ({
                   label={item.label}
                   name={`${key}-${itemKey}`}
                   value={itemKey}
-                  selectProductOrUseCase={handleSelect}
+                  handleSelect={handleSelect}
                   isChecked={selected.includes(itemKey)}
                 />
               ))}
@@ -119,19 +164,15 @@ const ExamplesFilter = ({
           <Button
             className="w-full flex-1"
             variant="primary"
-            disabled={selectedProducts.length === 0 && selectedUseCases.length === 0}
+            disabled={
+              localSelected.products.length === selected.products.length &&
+              localSelected.useCases.length === selected.useCases.length &&
+              localSelected.products.every((product) => selected.products.includes(product)) &&
+              localSelected.useCases.every((useCase) => selected.useCases.includes(useCase))
+            }
+            onClick={handleApply}
           >
             Apply
-          </Button>
-          <Button
-            variant="secondary"
-            className="w-48 h-48 p-8"
-            onClick={() => {
-              selectProduct({ target: { value: 'all', checked: true } } as React.ChangeEvent<HTMLInputElement>);
-              selectUseCases({ target: { value: 'all', checked: true } } as React.ChangeEvent<HTMLInputElement>);
-            }}
-          >
-            <Icon name="icon-gui-refresh" />
           </Button>
         </div>
       </div>

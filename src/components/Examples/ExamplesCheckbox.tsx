@@ -8,14 +8,14 @@ const ExamplesCheckbox = ({
   value,
   disabled = false,
   isChecked = false,
-  selectProductOrUseCase,
+  handleSelect,
 }: {
   label: string;
   name: string;
   value: string;
   disabled?: boolean;
   isChecked?: boolean;
-  selectProductOrUseCase: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) => {
   return (
     <div className="flex items-center mb-0">
@@ -28,7 +28,7 @@ const ExamplesCheckbox = ({
         value={value}
         checked={isChecked}
         disabled={disabled}
-        onChange={(e) => selectProductOrUseCase(e)}
+        onChange={(e) => handleSelect(e)}
       />
       <div
         data-ui-checkbox-styled=""
