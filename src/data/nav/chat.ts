@@ -15,6 +15,11 @@ export default {
           name: 'About Chat',
           link: '/products/chat',
         },
+      ],
+    },
+    {
+      name: 'Get started',
+      pages: [
         {
           name: 'SDK setup',
           link: '/chat/setup',
@@ -23,6 +28,11 @@ export default {
           name: 'Connections',
           link: '/chat/connect',
         },
+      ],
+    },
+    {
+      name: 'Room features',
+      pages: [
         {
           name: 'Rooms',
           link: '/chat/rooms',

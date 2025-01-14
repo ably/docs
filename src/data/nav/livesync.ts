@@ -2,34 +2,43 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably LiveSync',
-  link: '/products/livesync',
   icon: {
     closed: 'icon-product-livesync-mono',
     open: 'icon-product-livesync',
   },
   content: [
     {
-      name: 'LiveSync',
+      name: 'About',
       pages: [
         {
           name: 'How LiveSync works',
-          link: '/livesync/',
+          link: '/livesync',
         },
+      ],
+    },
+    {
+      name: 'MongoDB',
+      pages: [
         {
-          name: 'Quickstart',
-          link: '/livesync/quickstart',
+          name: 'MongoDB database conenctor',
+          link: '/livesync/mongodb',
+        }
+      ],
+    },
+    {
+      name: 'Postgres',
+      pages: [
+        {
+          name: 'Postgres database connector',
+          link: '/livesync/postgres',
         },
         {
           name: 'Frontend data models',
           link: '/livesync/models',
         },
         {
-          name: 'Database Connector',
-          link: '/livesync/database-connector',
-        },
-        {
-          name: 'Outbox and nodes tables',
-          link: '/livesync/outbox-nodes-tables',
+          name: 'Quickstart',
+          link: '/livesync/quickstart',
         },
       ],
     },
@@ -40,7 +49,7 @@ export default {
       pages: [
         {
           link: 'https://sdk.ably.com/builds/ably-labs/models/main/typedoc/index.html',
-          name: 'SDK',
+          name: 'JavaScript',
           external: true,
         },
       ],

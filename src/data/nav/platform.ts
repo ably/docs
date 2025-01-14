@@ -8,45 +8,57 @@ export default {
   },
   content: [
     {
+      name: 'About',
+      pages: [
+        {
+          name: 'Platform customization',
+          link: '/platform-customization',
+        },
+        {
+          name: 'Glossary',
+          link: '/glossary',
+        },
+      ],
+    },
+    {
       name: 'Pricing',
       pages: [
         {
           link: '/pricing',
-          name: 'Pricing',
+          name: 'Overview',
         },
         {
-          name: 'Hello',
+          name: 'Package types',
           pages: [
             {
               link: '/pricing/free',
-              name: 'Pricing Free',
-              external: true,
+              name: 'Free',
             },
             {
               link: '/pricing/standard',
-              name: 'Pricing Standard',
+              name: 'Standard',
             },
             {
               link: '/pricing/pro',
-              name: 'Pricing Pro',
+              name: 'Pro',
             },
             {
               link: '/pricing/enterprise',
-              name: 'Pricing Enterprise',
+              name: 'Enterprise',
             },
           ],
         },
         {
           link: '/pricing/billing',
-          name: 'Pricing Billing',
+          name: 'Billing',
         },
         {
           link: '/pricing/limits',
-          name: 'Pricing Limits',
+          name: 'Limits',
         },
         {
           link: '/pricing/faqs',
-          name: 'Pricing Faqs',
+          name: 'Pricing FAQs',
         },
       ],
     },
@@ -54,78 +66,153 @@ export default {
       name: 'Integrations',
       pages: [
         {
-          link: '/pricing',
-          name: 'Pricing',
+          name: 'Overview',
+          link: '/general/integrations',
         },
         {
-          name: 'Hello',
+          name: 'Events',
           pages: [
             {
-              link: '/pricing/standard',
-              name: 'Pricing Standard',
+              name: 'Overview',
+              link: '/general/webhooks',
             },
             {
-              link: '/pricing/pro',
-              name: 'Pricing Pro',
+              name: 'AWS Lambda Functions',
+              link: '/general/webhooks/aws-lambda',
             },
             {
-              link: '/pricing/enterprise',
-              name: 'Pricing Enterprise',
+              name: 'Azure Functions',
+              link: '/general/webhooks/azure',
+            },
+            {
+              name: 'Google Cloud Functions',
+              link: '/general/webhooks/google-functions',
+            },
+            {
+              name: 'Zapier',
+              link: '/general/webhooks/zapier',
+            },
+            {
+              name: 'Cloudflare Workers',
+              link: '/general/webhooks/cloudflare',
+            },
+            {
+              name: 'IFTTT',
+              link: '/general/webhooks/ifttt',
             },
           ],
         },
         {
-          link: '/pricing/billing',
-          name: 'Pricing Billing',
+          name: 'Message Queues',
+          link: '/general/queues',
         },
         {
-          link: '/pricing/limits',
-          name: 'Pricing Limits',
+          name: 'Kafka Connector',
+          link: '/general/kafka-connector',
         },
         {
-          link: '/pricing/faqs',
-          name: 'Pricing Faqs',
+          name: 'Firehose',
+          pages: [
+            {
+              name: 'Overview',
+              link: '/general/firehose',
+            },
+            {
+              name: 'Kafka Rule',
+              link: '/general/firehose/kafka-rule',
+            },
+            {
+              name: 'Kinesis Rule',
+              link: '/general/firehose/kinesis-rule',
+            },
+            {
+              name: 'AMQP Rule',
+              link: '/general/firehose/amqp-rule',
+            },
+            {
+              name: 'SQS Rule',
+              link: '/general/firehose/sqs-rule',
+            },
+            {
+              name: 'Pulsar Rule',
+              link: '/general/firehose/pulsar-rule',
+            },
+          ],
         },
       ],
     },
     {
-      name: 'Pricing',
+      name: 'Account management',
       pages: [
         {
-          link: '/pricing',
-          name: 'Pricing',
+          name: 'Overview',
+          link: '/account',
         },
         {
-          name: 'Hello',
+          name: 'User management',
+          link: '/account/users',
+        },
+        {
+          name: 'Organizations',
+          link: '/account/organizations',
+        },
+        {
+          name: 'Single sign-on (SSO)',
+          link: '/account/sso',
+        },
+        {
+          name: 'Two-factor authentication (2FA)',
+          link: '/account/2fa',
+        },
+        {
+          name: 'App management',
           pages: [
             {
-              link: '/pricing/standard',
-              name: 'Pricing Standard',
+              name: 'Overview',
+              link: '/account/app',
             },
             {
-              link: '/pricing/pro',
-              name: 'Pricing Pro',
+              name: 'Stats',
+              link: '/account/app/stats',
             },
             {
-              link: '/pricing/enterprise',
-              name: 'Pricing Enterprise',
+              name: 'API keys',
+              link: '/account/app/api',
+            },
+            {
+              name: 'Queues',
+              link: '/account/app/queues',
+            },
+            {
+              name: 'Notifications',
+              link: '/account/app/notifications',
+            },
+            {
+              name: 'Dev console',
+              link: '/account/app/console',
+            },
+            {
+              name: 'Settings',
+              link: '/account/app/settings',
             },
           ],
         },
         {
-          link: '/pricing/billing',
-          name: 'Pricing Billing',
-        },
-        {
-          link: '/pricing/limits',
-          name: 'Pricing Limits',
-        },
-        {
-          link: '/pricing/faqs',
-          name: 'Pricing Faqs',
+          name: 'Programmatic management using Control API',
+          link: '/account/control-api',
         },
       ],
     },
   ],
-  api: [],
+  api: [
+    {
+      name: 'API References',
+      pages: [
+        {
+          link: '/api/control-api',
+          name: 'Control API',
+        },
+      ],
+    },
+  ],
 } satisfies NavProduct;
