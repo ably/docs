@@ -221,6 +221,13 @@ export const data = {
           githubRepoURL: 'https://github.com/ably/ably-chat-js',
           setupLink: '/chat/setup?lang=react',
         },
+        {
+          title: 'Swift',
+          text: 'Ably Chat SDK for Swift.',
+          image: { src: swift, isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-chat-swift',
+          setupLink: '/chat/setup?lang=swift',
+        },
       ],
     },
   },
