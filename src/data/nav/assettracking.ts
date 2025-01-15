@@ -2,7 +2,6 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Asset Tracking',
-  link: '/products/asset-tracking',
   icon: {
     closed: 'icon-product-asset-tracking-mono',
     open: 'icon-product-asset-tracking',

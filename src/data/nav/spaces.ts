@@ -2,7 +2,6 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Spaces',
-  link: '/products/spaces',
   icon: {
     closed: 'icon-product-spaces-mono',
     open: 'icon-product-spaces',

@@ -138,17 +138,6 @@ const constructProductNavData = (
         <div key={product.name} className="flex flex-col gap-20 px-16">
           <div className="flex flex-col gap-[10px] md:gap-8 mt-12">
             <p className="ui-text-overline2 text-neutral-700">{product.name}</p>
-            {product.link ? (
-              <Link
-                to={product.link}
-                id={composeNavLinkId(product.link)}
-                className={cn('ui-text-menu2 md:ui-text-menu4 leading-relaxed md:leading-snug', {
-                  'font-bold': formatNavLink(product.link) === formatNavLink(location),
-                })}
-              >
-                About {product.name}
-              </Link>
-            ) : null}
             {product.showJumpLink ? (
               <a
                 href="#"
