@@ -4,7 +4,6 @@ import AblyHeader from '@ably/ui/core/Header';
 import { SearchBar } from '../SearchBar';
 import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
-import { pathWithBase } from './utils/nav';
 
 type HeaderProps = {
   hideSearchBar?: boolean;
@@ -24,9 +23,9 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
   // const tabLinks = (index: number) => {
   //   switch (index) {
   //     case 0:
-  //       return pathWithBase('/');
+  //       return '/docs';
   //     case 1:
-  //       return pathWithBase('/examples');
+  //       return '/docs/examples';
   //     default:
   //       return '#';
   //   }
@@ -113,12 +112,12 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
       }
       headerLinks={[
         {
-          href: pathWithBase('/sdks'),
+          href: '/docs/sdks',
           label: 'SDKs',
           external: true,
         },
         {
-          href: '/support',
+          href: '/docs/support',
           label: 'Support',
         },
       ]}

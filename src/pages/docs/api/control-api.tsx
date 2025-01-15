@@ -1,7 +1,6 @@
-import React from 'react';
-import { useSiteMetadata } from '../../hooks/use-site-metadata';
-import { Head } from '../../components/Head';
-import { Loader } from '../../components/Redoc';
+import { useSiteMetadata } from '../../../hooks/use-site-metadata';
+import { Head } from '../../../components/Head';
+import { Loader } from '../../../components/Redoc';
 import { Link, withPrefix } from 'gatsby';
 import Icon from '@ably/ui/core/Icon';
 import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
@@ -21,9 +20,9 @@ const ControlApi = () => {
       <Head title={meta_title} metaTitle={meta_title} canonical={canonical} description={meta_description} />
       <div className="ml-8 mt-32 mb-24">
         <div className="text-gui-default hover:text-gui-hover focus:text-gui-focus focus:outline-gui-focus group ui-text-p2">
-          <Link to="/api">
+          <Link to="/docs/api">
             <Icon
-              name="icon-gui-chevron-left-micro"
+              name="icon-gui-arrow-long-right-micro"
               size="1rem"
               additionalCSS="align-middle transform rotate-180 mr-4 h-16 w-16 ui-link"
             />

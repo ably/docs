@@ -81,14 +81,6 @@ export const plugins = [
   {
     resolve: 'gatsby-source-filesystem',
     options: {
-      name: 'yaml-page-content',
-      path: './data/yaml/page-content',
-    },
-    __key: 'yaml-page-content',
-  },
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
       name: 'how-tos',
       path: './how-tos',
     },

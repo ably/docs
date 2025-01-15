@@ -2,7 +2,7 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Chat',
-  link: '/chat',
+  link: '/docs/chat',
   icon: {
     closed: 'icon-product-chat-mono',
     open: 'icon-product-chat',
@@ -13,7 +13,7 @@ export default {
       pages: [
         {
           name: 'About Chat',
-          link: '/chat',
+          link: '/docs/chat',
         },
       ],
     },
@@ -22,15 +22,15 @@ export default {
       pages: [
         {
           name: 'SDK setup',
-          link: '/chat/setup',
+          link: '/docs/chat/setup',
         },
         {
           name: 'Connections',
-          link: '/chat/connect',
+          link: '/docs/chat/connect',
         },
         {
           name: 'Rooms',
-          link: '/chat/rooms',
+          link: '/docs/chat/rooms',
         },
       ],
     },
@@ -39,27 +39,27 @@ export default {
       pages: [
         {
           name: 'Messages',
-          link: '/chat/rooms/messages',
+          link: '/docs/chat/rooms/messages',
         },
         {
           name: 'Message storage and history',
-          link: '/chat/rooms/history',
+          link: '/docs/chat/rooms/history',
         },
         {
           name: 'Online status',
-          link: '/chat/rooms/presence',
+          link: '/docs/chat/rooms/presence',
         },
         {
           name: 'Occupancy',
-          link: '/chat/rooms/occupancy',
+          link: '/docs/chat/rooms/occupancy',
         },
         {
           name: 'Typing indicators',
-          link: '/chat/rooms/typing',
+          link: '/docs/chat/rooms/typing',
         },
         {
           name: 'Room reactions',
-          link: '/chat/rooms/reactions',
+          link: '/docs/chat/rooms/reactions',
         },
       ],
     },

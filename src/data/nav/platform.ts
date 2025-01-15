@@ -2,7 +2,7 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Platform',
-  link: '/platform',
+  link: '/docs/platform',
   icon: {
     closed: 'icon-product-platform-mono',
     open: 'icon-product-platform',
@@ -13,7 +13,7 @@ export default {
       pages: [
         {
           name: 'About Ably',
-          link: '/platform',
+          link: '/docs/platform',
         },
       ],
     },
@@ -21,40 +21,40 @@ export default {
       name: 'Pricing',
       pages: [
         {
-          link: '/pricing',
+          link: '/docs/pricing',
           name: 'Overview',
         },
         {
           name: 'Package types',
           pages: [
             {
-              link: '/pricing/free',
+              link: '/docs/pricing/free',
               name: 'Free',
             },
             {
-              link: '/pricing/standard',
+              link: '/docs/pricing/standard',
               name: 'Standard',
             },
             {
-              link: '/pricing/pro',
+              link: '/docs/pricing/pro',
               name: 'Pro',
             },
             {
-              link: '/pricing/enterprise',
+              link: '/docs/pricing/enterprise',
               name: 'Enterprise',
             },
           ],
         },
         {
-          link: '/pricing/billing',
+          link: '/docs/pricing/billing',
           name: 'Billing',
         },
         {
-          link: '/pricing/limits',
+          link: '/docs/pricing/limits',
           name: 'Limits',
         },
         {
-          link: '/pricing/faqs',
+          link: '/docs/pricing/faqs',
           name: 'Pricing FAQs',
         },
       ],
@@ -64,18 +64,18 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/integrations',
+          link: '/docs/integrations',
         },
         {
           name: 'Inbound integrations',
           pages: [
             {
               name: 'Inbound Webhooks',
-              link: '/integrations/inbound/webhooks',
+              link: '/docs/integrations/inbound/webhooks',
             },
             {
               name: 'Kafka Connector',
-              link: '/integrations/inbound/kafka-connector',
+              link: '/docs/integrations/inbound/kafka-connector',
             },
           ],
         },
@@ -84,31 +84,31 @@ export default {
           pages: [
             {
               name: 'Overview',
-              link: '/integrations/webhooks',
+              link: '/docs/integrations/webhooks',
             },
             {
               name: 'AWS Lambda Functions',
-              link: '/integrations/webhooks/lambda',
+              link: '/docs/integrations/webhooks/lambda',
             },
             {
               name: 'Azure Functions',
-              link: '/integrations/webhooks/azure',
+              link: '/docs/integrations/webhooks/azure',
             },
             {
               name: 'Google Cloud Functions',
-              link: '/integrations/webhooks/gcp-function',
+              link: '/docs/integrations/webhooks/gcp-function',
             },
             {
               name: 'Zapier',
-              link: '/integrations/webhooks/zapier',
+              link: '/docs/integrations/webhooks/zapier',
             },
             {
               name: 'Cloudflare Workers',
-              link: '/integrations/webhooks/cloudflare',
+              link: '/docs/integrations/webhooks/cloudflare',
             },
             {
               name: 'IFTTT',
-              link: '/integrations/webhooks/ifttt',
+              link: '/docs/integrations/webhooks/ifttt',
             },
           ],
         },
@@ -117,37 +117,37 @@ export default {
           pages: [
             {
               name: 'Overview',
-              link: '/integrations/streaming',
+              link: '/docs/integrations/streaming',
             },
             {
               name: 'Kafka',
-              link: '/integrations/streaming/kafka',
+              link: '/docs/integrations/streaming/kafka',
             },
             {
               name: 'Kinesis',
-              link: '/integrations/streaming/kinesis',
+              link: '/docs/integrations/streaming/kinesis',
             },
             {
               name: 'AMQP',
-              link: '/integrations/streaming/amqp',
+              link: '/docs/integrations/streaming/amqp',
             },
             {
               name: 'SQS',
-              link: '/integrations/streaming/sqs',
+              link: '/docs/integrations/streaming/sqs',
             },
             {
               name: 'Pulsar',
-              link: '/integrations/streaming/pulsar',
+              link: '/docs/integrations/streaming/pulsar',
             },
           ],
         },
         {
           name: 'AWS authentication',
-          link: '/integrations/aws-authentication',
+          link: '/docs/integrations/aws-authentication',
         },
         {
           name: 'Message Queues',
-          link: '/integrations/queues',
+          link: '/docs/integrations/queues',
         },
       ],
     },
@@ -156,64 +156,64 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/account',
+          link: '/docs/account',
         },
         {
           name: 'User management',
-          link: '/account/users',
+          link: '/docs/account/users',
         },
         {
           name: 'Organizations',
-          link: '/account/organizations',
+          link: '/docs/account/organizations',
         },
         {
           name: 'Single sign-on (SSO)',
-          link: '/account/sso',
+          link: '/docs/account/sso',
         },
         {
           name: 'Two-factor authentication (2FA)',
-          link: '/account/2fa',
+          link: '/docs/account/2fa',
         },
         {
           name: 'Enterprise customization',
-          link: '/platform-customization',
+          link: '/docs/platform-customization',
         },
         {
           name: 'App management',
           pages: [
             {
               name: 'Overview',
-              link: '/account/app',
+              link: '/docs/account/app',
             },
             {
               name: 'Stats',
-              link: '/account/app/stats',
+              link: '/docs/account/app/stats',
             },
             {
               name: 'API keys',
-              link: '/account/app/api',
+              link: '/docs/account/app/api',
             },
             {
               name: 'Queues',
-              link: '/account/app/queues',
+              link: '/docs/account/app/queues',
             },
             {
               name: 'Notifications',
-              link: '/account/app/notifications',
+              link: '/docs/account/app/notifications',
             },
             {
               name: 'Dev console',
-              link: '/account/app/console',
+              link: '/docs/account/app/console',
             },
             {
               name: 'Settings',
-              link: '/account/app/settings',
+              link: '/docs/account/app/settings',
             },
           ],
         },
         {
           name: 'Programmatic management using Control API',
-          link: '/account/control-api',
+          link: '/docs/account/control-api',
         },
       ],
     },
@@ -223,7 +223,7 @@ export default {
       name: 'API References',
       pages: [
         {
-          link: '/api/control-api',
+          link: '/docs/api/control-api',
           name: 'Control API',
         },
       ],

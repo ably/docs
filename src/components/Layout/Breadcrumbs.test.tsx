@@ -47,7 +47,7 @@ describe('Breadcrumbs', () => {
 
   it('includes relevant links on the breadcrumb nodes', () => {
     render(<Breadcrumbs />);
-    expect(screen.getByText('Home')).toHaveAttribute('href', '/');
+    expect(screen.getByText('Home')).toHaveAttribute('href', '/docs');
     expect(screen.getByText('Section 1')).toHaveAttribute('href', '/section-1');
     expect(screen.queryByText('Subsection 1')).not.toBeInTheDocument();
     expect(screen.getByText('Current Page')).toHaveAttribute('href', '/section-1/subsection-1/page-1');

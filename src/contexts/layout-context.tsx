@@ -1,7 +1,7 @@
 import React, { createContext, PropsWithChildren, useContext, useMemo, useState, useEffect } from 'react';
 import { useLocation } from '@reach/router';
 import { PageTreeNode, determineActivePage } from 'src/components/Layout/utils/nav';
-import data from 'src/data';
+import { productData } from 'src/data';
 import { NavProduct } from 'src/data/nav/types';
 import { ProductData, ProductKey } from 'src/data/types';
 import { LanguageKey } from 'src/data/languages/types';
@@ -55,7 +55,7 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   }, [location.pathname]);
 
   const activePage = useMemo(() => {
-    const activePageData = determineActivePage(data, location.pathname);
+    const activePageData = determineActivePage(productData, location.pathname);
     return activePageData
       ? { ...activePageData, languages: activePageData.page.languages ?? languages }
       : { tree: [], languages: [] };
@@ -63,7 +63,10 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   const products = useMemo(
     () =>
-      Object.entries(data as ProductData).map((product) => [product[0], product[1].nav]) as [ProductKey, NavProduct][],
+      Object.entries(productData satisfies ProductData).map((product) => [product[0], product[1].nav]) as [
+        ProductKey,
+        NavProduct,
+      ][],
     [],
   );
 

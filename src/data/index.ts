@@ -7,9 +7,10 @@ import {
   spacesNavData,
 } from './nav';
 import { languageData } from './languages';
-import { ProductData } from './types';
+import { PageData, ProductData } from './types';
+import homepageContentData from './content/homepage';
 
-export default {
+export const productData = {
   platform: {
     nav: platformNavData,
     languages: languageData.platform,
@@ -35,3 +36,9 @@ export default {
     languages: languageData.assetTracking,
   },
 } satisfies ProductData;
+
+export const pageData = {
+  homepage: {
+    content: homepageContentData,
+  },
+} satisfies PageData;

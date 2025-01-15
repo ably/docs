@@ -17,15 +17,6 @@ const writeRedirect = writeRedirectToConfigFile('config/nginx-redirects.conf');
 const documentTemplate = path.resolve(`src/templates/document.tsx`);
 const apiReferenceTemplate = path.resolve(`src/templates/apiReference.tsx`);
 
-const siteUrl = new URL(siteMetadata.siteUrl);
-
-// Check if path is absolute and add pathPrefix in front if it's not
-const maybeAddPathPrefix = (path, pathPrefix) => {
-  const parsed = new URL(path, siteUrl.toString());
-  const isRelativeProtocol = path.startsWith(`//`);
-  return `${parsed.host != siteUrl.host || isRelativeProtocol ? `` : pathPrefix}${path}`;
-};
-
 const createPages = async ({ graphql, actions: { createPage, createRedirect } }) => {
   /**
    * It's not ideal to have:
@@ -119,7 +110,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
 
     const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
 
-    const pagePath = `/${edge.node.slug}`;
+    const pagePath = `${pathPrefix}/${edge.node.slug}`;
 
     const redirectFromList = edge.node.meta?.redirect_from;
 
@@ -130,7 +121,7 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
         if (!redirectFromUrl.hash) {
           // We need to be prefix aware just like Gatsby's internals so it works
           // with nginx redirects
-          writeRedirect(maybeAddPathPrefix(redirectFrom, pathPrefix), maybeAddPathPrefix(pagePath, pathPrefix));
+          writeRedirect(redirectFrom, pagePath);
         }
 
         createRedirect({
@@ -159,6 +150,13 @@ const createPages = async ({ graphql, actions: { createPage, createRedirect } })
     });
     return slug;
   };
+
+  // createRedirect({
+  //   fromPath: '/',
+  //   toPath: pathPrefix,
+  //   isPermanent: true,
+  //   redirectInBrowser: true,
+  // });
 
   await Promise.all([
     ...documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)),

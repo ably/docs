@@ -53,6 +53,10 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
     /* 
       If the page matches a product index link, return details for the product
     */
+    if (!data[key].nav) {
+      continue;
+    }
+
     if (data[key].nav.link === strippedTargetLink) {
       const { name, link } = data[key].nav;
       return { tree: [{ index: Object.keys(data).indexOf(key), page: { name, link } }], page: { name, link } };
@@ -145,8 +149,3 @@ export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link
 
 export const hierarchicalKey = (id: string, depth: number, tree?: PageTreeNode[]) =>
   [...(tree ? tree.slice(0, depth).map((node) => node.index) : []), id].join('-');
-
-export const pathWithBase = (path: string) => {
-  const strippedPath = path.replace(/^\/+/, '');
-  return `/${process.env.NODE_ENV === 'development' ? '' : 'docs/'}${strippedPath}`;
-};
