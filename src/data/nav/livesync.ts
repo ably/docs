@@ -20,9 +20,9 @@ export default {
       name: 'MongoDB',
       pages: [
         {
-          name: 'MongoDB database conenctor',
+          name: 'MongoDB database connector',
           link: '/livesync/mongodb',
-        }
+        },
       ],
     },
     {
@@ -34,11 +34,11 @@ export default {
         },
         {
           name: 'Frontend data models',
-          link: '/livesync/models',
+          link: '/livesync/postgres/models',
         },
         {
           name: 'Quickstart',
-          link: '/livesync/quickstart',
+          link: '/livesync/postgres/quickstart',
         },
       ],
     },
