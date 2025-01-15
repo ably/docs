@@ -1,24 +1,14 @@
+import { ContentSection } from 'src/data/content/types';
 import { BodySection } from './BodySection/BodySection';
 import { ImageProps } from 'src/components/Image';
 
 export type CardProps = {
   title: string;
   content: string;
-  image: ImageProps;
+  image: string;
   type: 'hero' | 'feature' | 'sdk';
   links?: LinkProps[];
   callToAction?: CallToActionProps;
-};
-
-export type SectionProps = {
-  title: string;
-  type: string;
-  columns: 1 | 2 | 4;
-  mainImage: string;
-  bottomMargin: 48 | 72;
-  description: string | null;
-  callToAction: CallToActionProps;
-  cards: CardProps[];
 };
 
 export type LinkProps = {
@@ -34,7 +24,7 @@ export type CallToActionProps = {
   type: string;
 };
 
-export const HomepageContent = ({ sections, images }: { sections: SectionProps[]; images: ImageProps[] }) => (
+export const HomepageContent = ({ sections, images }: { sections: ContentSection[]; images: ImageProps[] }) => (
   <article className="mx-auto max-w-[960px]">
     {sections.map((section, index) => (
       <BodySection key={index} section={section} images={images} />

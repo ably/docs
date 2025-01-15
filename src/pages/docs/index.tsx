@@ -3,32 +3,26 @@ import { Helmet } from 'react-helmet';
 
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
-import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
+import { HomepageContent } from 'src/components/Homepage/HomepageContent';
 import { PageLanguageProvider } from 'src/contexts';
+import { pageData } from 'src/data';
 import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
-
-export type MetaData = {
-  title: string;
-  description: string;
-  image: string;
-  twitter: string;
-};
 
 export const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
 const IndexPage = ({
   data: {
-    pageContentYaml: { sections, meta },
     allFile: { images },
   },
   location: { search },
 }: {
-  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
+  data: { allFile: { images: ImageProps[] } };
   location: Location;
 }) => {
   useSetLayoutOptions({ noSidebar: true, hideSearchBar: true, template: 'index' });
 
-  const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
+  const { sections, meta } = pageData.homepage.content;
+  const openGraphTitle = meta.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/');
 
@@ -59,34 +53,6 @@ const IndexPage = ({
 
 export const query = graphql`
   query HomePageQuery {
-    pageContentYaml(name: { eq: "Homepage" }) {
-      sections {
-        columns
-        bottomMargin
-        cards {
-          title
-          type
-          content
-          image
-          links {
-            text
-            href
-            external
-          }
-          callToAction {
-            text
-            href
-            external
-          }
-        }
-      }
-      meta {
-        title
-        description
-        image
-        twitter
-      }
-    }
     allFile(filter: { relativeDirectory: { eq: "homepage" } }) {
       images: nodes {
         extension

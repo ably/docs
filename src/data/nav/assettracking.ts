@@ -2,7 +2,7 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Asset Tracking',
-  link: '/asset-tracking',
+  link: '/docs/asset-tracking',
   icon: {
     closed: 'icon-product-asset-tracking-mono',
     open: 'icon-product-asset-tracking',
@@ -13,7 +13,7 @@ export default {
       pages: [
         {
           name: 'About Asset Tracking',
-          link: '/asset-tracking',
+          link: '/docs/asset-tracking/',
         },
       ],
     },
@@ -22,11 +22,11 @@ export default {
       pages: [
         {
           name: 'Using the example apps',
-          link: '/asset-tracking/example-apps',
+          link: '/docs/asset-tracking/example-apps',
         },
         {
           name: 'Using the SDKs',
-          link: '/asset-tracking/using-the-sdks',
+          link: '/docs/asset-tracking/using-the-sdks',
         },
       ],
     },

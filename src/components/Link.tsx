@@ -1,13 +1,8 @@
 import { Link as GatsbyLink, GatsbyLinkProps, navigate as GatsbyNavigate } from 'gatsby';
 import { safeWindow } from 'src/utilities';
-import { checkLinkIsInternal, normalizeLegacyDocsLink } from 'src/utilities/link-checks';
+import { checkLinkIsInternal, localizeLink } from 'src/utilities/link-checks';
 
-export default function Link<TState>({
-  children,
-  to,
-  external,
-  ...props
-}: React.PropsWithoutRef<GatsbyLinkProps<TState>> & { external?: boolean }) {
+export default function Link<TState>({ children, to, ...props }: React.PropsWithoutRef<GatsbyLinkProps<TState>>) {
   const isInternal = checkLinkIsInternal(to);
   const isOnPage = to?.startsWith('#');
 
@@ -15,9 +10,7 @@ export default function Link<TState>({
    *  Relevant page of documentation: https://www.gatsbyjs.com/docs/reference/built-in-components/gatsby-link/#recommendations-for-programmatic-in-app-navigation
    *  "If you need this (in-app navigation) behavior, you should either use an anchor tag or import the navigate helper from gatsby"
    */
-  if (isInternal && !external && !isOnPage) {
-    const href = normalizeLegacyDocsLink(to);
-
+  if (isInternal && !isOnPage) {
     // Strip noreferrer from the rel if it is a local link
     const { rel } = props;
     if (rel !== undefined) {
@@ -33,7 +26,7 @@ export default function Link<TState>({
     }
 
     return (
-      <GatsbyLink to={href} data-testid="link-internal" {...props}>
+      <GatsbyLink to={localizeLink(to)} data-testid="link-internal" {...props}>
         {children}
       </GatsbyLink>
     );
@@ -61,15 +54,20 @@ export default function Link<TState>({
  * A thin wrapper around Gatsby's navigate that is aware of external links, and will
  * directly manipulate the location in the event of being passed an external link
  */
-export function navigate(to, options = {}): { to: string; options: { external?: boolean } } {
-  const { external } = options;
+interface NavigateOptions {
+  replace?: boolean;
+  state?: Record<string, unknown>;
+}
+
+export function navigate(to: string, options: NavigateOptions = {}): Promise<void> {
   const isInternal = checkLinkIsInternal(to);
   const isOnPage = to?.startsWith('#');
+  const formattedTo = localizeLink(to);
 
-  if (isInternal && !external && !isOnPage) {
-    const href = normalizeLegacyDocsLink(to);
-    return GatsbyNavigate(href, options);
+  if (isInternal && !isOnPage) {
+    return GatsbyNavigate(formattedTo, options);
   }
 
-  safeWindow.location.assign(to);
+  safeWindow.location.assign(formattedTo);
+  return Promise.resolve();
 }

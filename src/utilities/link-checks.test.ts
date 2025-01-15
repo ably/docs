@@ -1,25 +1,4 @@
-import { checkLinkIsInternal, normalizeLegacyDocsLink } from 'src/utilities/link-checks';
-
-describe('normalizeLegacyDocsLink', () => {
-  it('strips the protocol, host & path from old links', () => {
-    expect(normalizeLegacyDocsLink('http://ably.com/docs/a')).toBe('/a');
-    expect(normalizeLegacyDocsLink('https://ably.com/docs/b')).toBe('/b');
-    expect(normalizeLegacyDocsLink('http://www.ably.com/docs/c')).toBe('/c');
-    expect(normalizeLegacyDocsLink('https://www.ably.com/docs/d')).toBe('/d');
-  });
-
-  it('strips the path from old links', () => {
-    expect(normalizeLegacyDocsLink('/docs/a')).toBe('/a');
-  });
-
-  it('ignores other absolute links', () => {
-    expect(normalizeLegacyDocsLink('/a')).toBe('/a');
-  });
-
-  it('ignores other hosts', () => {
-    expect(normalizeLegacyDocsLink('http://example.com')).toBe('http://example.com');
-  });
-});
+import { checkLinkIsInternal } from 'src/utilities/link-checks';
 
 describe('checkLinkIsInternal', () => {
   it('returns false without a link', () => {

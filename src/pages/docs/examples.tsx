@@ -1,10 +1,10 @@
 import React from 'react';
-import { useSiteMetadata } from '../hooks/use-site-metadata';
 import { graphql, navigate } from 'gatsby';
-import { ImageProps } from '../components/Image';
-import { Head } from '../components/Head';
-import ExamplesContent from '../components/Examples/ExamplesContent';
-import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
+import { ImageProps } from '../../components/Image';
+import { Head } from '../../components/Head';
+import ExamplesContent from '../../components/Examples/ExamplesContent';
+import { useSiteMetadata } from '../../hooks/use-site-metadata';
+import { useSetLayoutOptions } from '../../hooks/use-set-layout-options';
 
 const Examples = ({
   data: {
