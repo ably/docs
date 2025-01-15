@@ -2,7 +2,6 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Pub/Sub',
-  link: '/products/channels',
   icon: {
     closed: 'icon-product-pubsub-mono',
     open: 'icon-product-pubsub',

@@ -36,7 +36,7 @@ const externalLinks = (
     const requestBody = encodeURIComponent(`
   Name: **${currentPage.name}**
   Link: **[${currentPage.link}](https://ably.com/docs/${currentPage.link})**
-  ${language ? `Language: **${languageInfo[language].label}**` : ''}
+  ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}**` : ''}
   
   Please describe the changes you would like to make to this page:  
 `);

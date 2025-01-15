@@ -80,6 +80,10 @@ export default {
     label: 'Flutter',
     syntaxHighlighterKey: 'dart',
   },
+  kotlin: {
+    label: 'Kotlin',
+    syntaxHighlighterKey: 'kotlin',
+  },
   realtime: {
     label: 'Realtime',
     syntaxHighlighterKey: 'javascript',

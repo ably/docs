@@ -2,7 +2,6 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Chat',
-  link: '/products/chat',
   icon: {
     closed: 'icon-product-chat-mono',
     open: 'icon-product-chat',
