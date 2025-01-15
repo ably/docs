@@ -1,29 +1,23 @@
-import { graphql } from 'gatsby';
 import { Helmet } from 'react-helmet';
+import { graphql } from 'gatsby';
 
 import Layout from 'src/components/Layout';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
-import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
-
-type MetaData = {
-  title: string;
-  description: string;
-  image: string;
-  twitter: string;
-};
+import { ProductPageContent } from 'src/components/ProductPage/ProductPageContent';
+import { productData } from 'src/data';
 
 const IndexPage = ({
   data: {
-    pageContentYaml: { sections, meta },
     allFile: { images },
   },
 }: {
-  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
+  data: { allFile: { images: ImageProps[] } };
 }) => {
+  const { sections, meta } = productData.chat.content;
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl('/products/channels');
+  const canonical = canonicalUrl('/products/chat');
 
   return (
     <>
@@ -51,40 +45,8 @@ const IndexPage = ({
 };
 
 export const query = graphql`
-  query {
-    pageContentYaml(name: { eq: "Channels" }) {
-      sections {
-        title
-        level
-        description
-        columns
-        bottomMargin
-        releaseStage
-        callToAction {
-          text
-          href
-          type
-        }
-        cards {
-          title
-          type
-          content
-          image
-          link
-          links {
-            text
-            href
-          }
-        }
-      }
-      meta {
-        title
-        description
-        image
-        twitter
-      }
-    }
-    allFile(filter: { relativeDirectory: { eq: "products/channels" } }) {
+  query HomePageQuery {
+    allFile(filter: { relativeDirectory: { eq: "products/chat" } }) {
       images: nodes {
         name
         extension

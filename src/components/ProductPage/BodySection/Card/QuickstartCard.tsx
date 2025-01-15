@@ -1,9 +1,9 @@
-import { CardProps } from '../../ProductPageContent';
 import { Image } from '../../../Image';
 import { Links } from './Links';
 import { navigate } from '../../../Link';
+import { ContentCardWithImage } from 'src/components/Homepage/BodySection/Card/types';
 
-export const QuickstartCard = ({ title, content, image, links }: CardProps) => (
+export const QuickstartCard = ({ title, content, image, links }: ContentCardWithImage) => (
   <div
     onClick={() => navigate(links?.[0]?.href || '#')}
     className="cursor-pointer p-24 border border-extra-light-grey rounded-lg bg-extra-light-grey flex flex-col h-full justify-between hover:border-mid-grey hover:text-cool-black group"

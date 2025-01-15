@@ -21,7 +21,7 @@ const Breadcrumbs: React.FC = () => {
 
   return (
     <nav aria-label="breadcrumb" className="flex mt-32 items-center gap-4">
-      <Link to="/" className={cn(linkStyles, 'hidden sm:block')}>
+      <Link to="/docs" className={cn(linkStyles, 'hidden sm:block')}>
         Home
       </Link>
       <Icon name="icon-gui-disclosure-arrow" size="16px" additionalCSS="rotate-180 sm:rotate-0" />

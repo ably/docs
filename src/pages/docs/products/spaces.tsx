@@ -4,31 +4,20 @@ import { Helmet } from 'react-helmet';
 import Layout from 'src/components/Layout';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
-import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
-import { PageLanguageProvider } from 'src/contexts';
-
-export type MetaData = {
-  title: string;
-  description: string;
-  image: string;
-  twitter: string;
-};
-
-export const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
+import { ProductPageContent } from 'src/components/ProductPage/ProductPageContent';
+import { productData } from 'src/data';
 
 const IndexPage = ({
   data: {
-    pageContentYaml: { sections, meta },
     allFile: { images },
   },
-  location: { search },
 }: {
-  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
-  location: Location;
+  data: { allFile: { images: ImageProps[] } };
 }) => {
+  const { sections, meta } = productData.spaces.content;
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl('/');
+  const canonical = canonicalUrl('/products/spaces');
 
   return (
     <>
@@ -48,54 +37,18 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <PageLanguageProvider search={search}>
-        <Layout noSidebar hideSearchBar>
-          <HomepageContent sections={sections} images={images} />
-        </Layout>
-      </PageLanguageProvider>
+      <Layout>
+        <ProductPageContent sections={sections} images={images} />
+      </Layout>
     </>
   );
 };
 
 export const query = graphql`
-  query HomePageQuery {
-    pageContentYaml(name: { eq: "Homepage" }) {
-      sections {
-        title
-        description
-        columns
-        bottomMargin
-        callToAction {
-          text
-          href
-          external
-        }
-        cards {
-          title
-          type
-          content
-          image
-          links {
-            text
-            href
-            external
-          }
-          callToAction {
-            text
-            href
-            external
-          }
-        }
-      }
-      meta {
-        title
-        description
-        image
-        twitter
-      }
-    }
-    allFile(filter: { relativeDirectory: { eq: "homepage" } }) {
+  query {
+    allFile(filter: { relativeDirectory: { eq: "products/spaces" } }) {
       images: nodes {
+        name
         extension
         base
         publicURL

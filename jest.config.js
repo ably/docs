@@ -17,10 +17,6 @@ module.exports = {
   transformIgnorePatterns: [
     `node_modules/(?!(gatsby|gatsby-script|use-keyboard-shortcut|react-medium-image-zoom|@react-hook/media-query|@mdx-js/react|@ably/ui/core)/)`,
   ],
-  globals: {
-    __PATH_PREFIX__: '/docs',
-    __BASE_PATH__: '/docs',
-  },
   testEnvironmentOptions: {
     url: `http://localhost`,
     customExportConditions: [''],

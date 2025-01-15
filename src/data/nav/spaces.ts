@@ -2,6 +2,7 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Spaces',
+  link: '/docs/products/spaces',
   icon: {
     closed: 'icon-product-spaces-mono',
     open: 'icon-product-spaces',
@@ -12,15 +13,15 @@ export default {
       pages: [
         {
           name: 'What is Spaces?',
-          link: '/spaces',
+          link: '/docs/spaces',
         },
         {
           name: 'SDK setup',
-          link: '/spaces/setup',
+          link: '/docs/spaces/setup',
         },
         {
           name: 'React Hooks',
-          link: '/spaces/react',
+          link: '/docs/spaces/react',
         },
       ],
     },
@@ -29,23 +30,23 @@ export default {
       pages: [
         {
           name: 'Space',
-          link: '/spaces/space',
+          link: '/docs/spaces/space',
         },
         {
           name: 'Avatar stack',
-          link: '/spaces/avatar',
+          link: '/docs/spaces/avatar',
         },
         {
           name: 'Member location',
-          link: '/spaces/locations',
+          link: '/docs/spaces/locations',
         },
         {
           name: 'Live cursors',
-          link: '/spaces/cursors',
+          link: '/docs/spaces/cursors',
         },
         {
           name: 'Component locking',
-          link: '/spaces/locking',
+          link: '/docs/spaces/locking',
         },
       ],
     },

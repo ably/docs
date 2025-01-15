@@ -1,7 +1,7 @@
-import { useSiteMetadata } from '../../hooks/use-site-metadata';
-import Layout from '../../components/Layout';
-import { Head } from '../../components/Head';
-import { Loader } from '../../components/Redoc';
+import { useSiteMetadata } from '../../../hooks/use-site-metadata';
+import Layout from '../../../components/Layout';
+import { Head } from '../../../components/Head';
+import { Loader } from '../../../components/Redoc';
 import { Link, withPrefix } from 'gatsby';
 import Icon from '@ably/ui/core/Icon';
 import React from 'react';
@@ -20,7 +20,7 @@ const ControlApi = () => {
       <Layout noSidebar>
         <div className="ml-8 mt-32 mb-24">
           <div className="text-gui-default hover:text-gui-hover focus:text-gui-focus focus:outline-gui-focus group ui-text-p2">
-            <Link to="/api">
+            <Link to="/docs/api">
               <Icon
                 name="icon-gui-disclosure-arrow"
                 size="1rem"

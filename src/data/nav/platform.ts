@@ -12,11 +12,11 @@ export default {
       pages: [
         {
           name: 'Platform customization',
-          link: '/platform-customization',
+          link: '/docs/platform-customization',
         },
         {
           name: 'Glossary',
-          link: '/glossary',
+          link: '/docs/glossary',
         },
       ],
     },
@@ -24,40 +24,40 @@ export default {
       name: 'Pricing',
       pages: [
         {
-          link: '/pricing',
+          link: '/docs/pricing',
           name: 'Overview',
         },
         {
           name: 'Package types',
           pages: [
             {
-              link: '/pricing/free',
+              link: '/docs/pricing/free',
               name: 'Free',
             },
             {
-              link: '/pricing/standard',
+              link: '/docs/pricing/standard',
               name: 'Standard',
             },
             {
-              link: '/pricing/pro',
+              link: '/docs/pricing/pro',
               name: 'Pro',
             },
             {
-              link: '/pricing/enterprise',
+              link: '/docs/pricing/enterprise',
               name: 'Enterprise',
             },
           ],
         },
         {
-          link: '/pricing/billing',
+          link: '/docs/pricing/billing',
           name: 'Billing',
         },
         {
-          link: '/pricing/limits',
+          link: '/docs/pricing/limits',
           name: 'Limits',
         },
         {
-          link: '/pricing/faqs',
+          link: '/docs/pricing/faqs',
           name: 'Pricing FAQs',
         },
       ],
@@ -67,75 +67,75 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/general/integrations',
+          link: '/docs/general/integrations',
         },
         {
           name: 'Events',
           pages: [
             {
               name: 'Overview',
-              link: '/general/webhooks',
+              link: '/docs/general/webhooks',
             },
             {
               name: 'AWS Lambda Functions',
-              link: '/general/webhooks/aws-lambda',
+              link: '/docs/general/webhooks/aws-lambda',
             },
             {
               name: 'Azure Functions',
-              link: '/general/webhooks/azure',
+              link: '/docs/general/webhooks/azure',
             },
             {
               name: 'Google Cloud Functions',
-              link: '/general/webhooks/google-functions',
+              link: '/docs/general/webhooks/google-functions',
             },
             {
               name: 'Zapier',
-              link: '/general/webhooks/zapier',
+              link: '/docs/general/webhooks/zapier',
             },
             {
               name: 'Cloudflare Workers',
-              link: '/general/webhooks/cloudflare',
+              link: '/docs/general/webhooks/cloudflare',
             },
             {
               name: 'IFTTT',
-              link: '/general/webhooks/ifttt',
+              link: '/docs/general/webhooks/ifttt',
             },
           ],
         },
         {
           name: 'Message Queues',
-          link: '/general/queues',
+          link: '/docs/general/queues',
         },
         {
           name: 'Kafka Connector',
-          link: '/general/kafka-connector',
+          link: '/docs/general/kafka-connector',
         },
         {
           name: 'Firehose',
           pages: [
             {
               name: 'Overview',
-              link: '/general/firehose',
+              link: '/docs/general/firehose',
             },
             {
               name: 'Kafka Rule',
-              link: '/general/firehose/kafka-rule',
+              link: '/docs/general/firehose/kafka-rule',
             },
             {
               name: 'Kinesis Rule',
-              link: '/general/firehose/kinesis-rule',
+              link: '/docs/general/firehose/kinesis-rule',
             },
             {
               name: 'AMQP Rule',
-              link: '/general/firehose/amqp-rule',
+              link: '/docs/general/firehose/amqp-rule',
             },
             {
               name: 'SQS Rule',
-              link: '/general/firehose/sqs-rule',
+              link: '/docs/general/firehose/sqs-rule',
             },
             {
               name: 'Pulsar Rule',
-              link: '/general/firehose/pulsar-rule',
+              link: '/docs/general/firehose/pulsar-rule',
             },
           ],
         },
@@ -146,60 +146,60 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/account',
+          link: '/docs/account',
         },
         {
           name: 'User management',
-          link: '/account/users',
+          link: '/docs/account/users',
         },
         {
           name: 'Organizations',
-          link: '/account/organizations',
+          link: '/docs/account/organizations',
         },
         {
           name: 'Single sign-on (SSO)',
-          link: '/account/sso',
+          link: '/docs/account/sso',
         },
         {
           name: 'Two-factor authentication (2FA)',
-          link: '/account/2fa',
+          link: '/docs/account/2fa',
         },
         {
           name: 'App management',
           pages: [
             {
               name: 'Overview',
-              link: '/account/app',
+              link: '/docs/account/app',
             },
             {
               name: 'Stats',
-              link: '/account/app/stats',
+              link: '/docs/account/app/stats',
             },
             {
               name: 'API keys',
-              link: '/account/app/api',
+              link: '/docs/account/app/api',
             },
             {
               name: 'Queues',
-              link: '/account/app/queues',
+              link: '/docs/account/app/queues',
             },
             {
               name: 'Notifications',
-              link: '/account/app/notifications',
+              link: '/docs/account/app/notifications',
             },
             {
               name: 'Dev console',
-              link: '/account/app/console',
+              link: '/docs/account/app/console',
             },
             {
               name: 'Settings',
-              link: '/account/app/settings',
+              link: '/docs/account/app/settings',
             },
           ],
         },
         {
           name: 'Programmatic management using Control API',
-          link: '/account/control-api',
+          link: '/docs/account/control-api',
         },
       ],
     },
@@ -209,7 +209,7 @@ export default {
       name: 'API References',
       pages: [
         {
-          link: '/api/control-api',
+          link: '/docs/api/control-api',
           name: 'Control API',
         },
       ],

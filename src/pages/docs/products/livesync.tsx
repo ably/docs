@@ -4,26 +4,20 @@ import { graphql } from 'gatsby';
 import Layout from 'src/components/Layout';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
-import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
-
-type MetaData = {
-  title: string;
-  description: string;
-  image: string;
-  twitter: string;
-};
+import { ProductPageContent } from 'src/components/ProductPage/ProductPageContent';
+import { productData } from 'src/data';
 
 const IndexPage = ({
   data: {
-    pageContentYaml: { sections, meta },
     allFile: { images },
   },
 }: {
-  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
+  data: { allFile: { images: ImageProps[] } };
 }) => {
+  const { sections, meta } = productData.liveSync.content;
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl('/products/chat');
+  const canonical = canonicalUrl('/products/livesync');
 
   return (
     <>
@@ -52,41 +46,7 @@ const IndexPage = ({
 
 export const query = graphql`
   query HomePageQuery {
-    pageContentYaml(name: { eq: "chat" }) {
-      sections {
-        title
-        level
-        description
-        columns
-        bottomMargin
-        releaseStage
-        callToAction {
-          text
-          href
-          external
-          type
-        }
-        cards {
-          title
-          type
-          content
-          image
-          link
-          links {
-            text
-            href
-            external
-          }
-        }
-      }
-      meta {
-        title
-        description
-        image
-        twitter
-      }
-    }
-    allFile(filter: { relativeDirectory: { eq: "products/chat" } }) {
+    allFile(filter: { relativeDirectory: { eq: "products/livesync" } }) {
       images: nodes {
         name
         extension
