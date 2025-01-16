@@ -132,7 +132,7 @@ const RightSidebar = () => {
         {headers.length > 0 ? (
           <>
             <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
-            <div className="flex gap-16 overflow-y-scroll overflow-x-hidden shadow-[2px_0_var(--color-neutral-300)_inset] pl-16">
+            <div className="flex gap-16 overflow-scroll shadow-[2px_0_var(--color-neutral-300)_inset] pl-16">
               <div
                 className="h-[21px] -ml-16 w-2 -mt-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
                 style={{
@@ -140,7 +140,7 @@ const RightSidebar = () => {
                   height: `${highlightPosition.height}px`,
                 }}
               ></div>
-              <div className="flex flex-col gap-8 w-full pr-16">
+              <div className="flex flex-col gap-8 w-[calc(100%-18px)] pr-16">
                 {headers.map((header) => (
                   <a
                     href={`#${header.id}`}
