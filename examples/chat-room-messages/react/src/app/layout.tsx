@@ -1,9 +1,8 @@
 "use client";
 
 import { Inter } from "next/font/google";
-import { ChatClientProvider, ChatRoomProvider } from '@ably/chat/react';
+import { ChatClient, ChatClientProvider, ChatRoomProvider, RoomOptionsDefaults } from '@ably/chat';
 import { Realtime } from 'ably';
-import { ChatClient, RoomOptionsDefaults } from '@ably/chat';
 import '../../styles/styles.css'
 
 const inter = Inter({ subsets: ["latin"] });

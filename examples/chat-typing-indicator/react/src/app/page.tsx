@@ -1,6 +1,6 @@
 "use client";
 
-import { useChatClient, useRoom, useTyping } from '@ably/chat/react';
+import { useChatClient, useRoom, useTyping } from '@ably/chat';
 import '../../styles/styles.css'
 
 const Loading = () => <div>Loading...</div>;

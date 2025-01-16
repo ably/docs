@@ -1,6 +1,6 @@
 "use client";
 
-import { useRoom, useMessages } from '@ably/chat/react';
+import { useRoom, useMessages } from '@ably/chat';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import '../../styles/styles.css'
