@@ -35,22 +35,22 @@ const ProductNavigation = ({ currentProduct = 'channels' }: { currentProduct?: s
       className="sticky z-40 flex flex-row justify-start h-48 px-8 bg-white top-64 sm:px-24"
       style={{ boxShadow: '0 1px 0 0 #E5E5E5' }}
     >
-      <Item to="/" active={onHome}>
+      <Item to="/docs" active={onHome}>
         Home
       </Item>
-      <Item to="/products/channels" active={onChannels}>
+      <Item to="/docs/products/channels" active={onChannels}>
         Pub/Sub
       </Item>
-      <Item to="/products/spaces" active={onSpaces}>
+      <Item to="/docs/products/spaces" active={onSpaces}>
         Spaces
       </Item>
-      <Item to="/products/livesync" active={onLiveSync}>
+      <Item to="/docs/products/livesync" active={onLiveSync}>
         LiveSync
       </Item>
-      <Item to="/products/chat" active={onChat}>
+      <Item to="/docs/products/chat" active={onChat}>
         Chat
       </Item>
-      <Item to="/products/asset-tracking" active={onAssetTracking}>
+      <Item to="/docs/products/asset-tracking" active={onAssetTracking}>
         Asset Tracking
       </Item>
     </nav>

@@ -1,11 +1,10 @@
-import { CardProps } from '../../ProductPageContent';
+import { ContentCardWithImage } from 'src/components/Homepage/BodySection/Card/types';
 import { Image } from '../../../Image';
 import Link from '../../../Link';
 
-export const ExampleCard = ({ title, image, link, external }: CardProps) => (
+export const ExampleCard = ({ title, image, link }: ContentCardWithImage) => (
   <Link
-    to={link}
-    external={external}
+    to={link ?? '#'}
     className="items-center border border-extra-light-grey rounded-lg bg-extra-light-grey flex flex-col h-full hover:border-mid-grey hover:text-cool-black group"
   >
     <Image image={image} className="pointer-events-none" />

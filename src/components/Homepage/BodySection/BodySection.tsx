@@ -1,11 +1,11 @@
 import cn from '@ably/ui/core/utils/cn';
 import { ImageProps, getImageFromList } from 'src/components/Image';
-import { SectionProps } from '../HomepageContent';
 import { BodySectionDescription } from './BodySectionDescription';
 import { HeroCard } from './Card/HeroCard';
 import { FeatureCard } from './Card/FeatureCard';
 import { SdkCard } from './Card/SdkCard';
 import FeatureLink from '@ably/ui/core/FeaturedLink';
+import { ContentSection } from 'src/data/content/types';
 
 const cardTypes = {
   hero: HeroCard,
@@ -32,12 +32,12 @@ const gridGapVariants = {
   4: 'gap-24',
 };
 
-export const BodySection = ({ section, images }: { section: SectionProps; images: ImageProps[] }) => {
+export const BodySection = ({ section, images }: { section: ContentSection; images: ImageProps[] }) => {
   const cards = section.cards ?? [];
   const cardsExist = cards.length > 0;
   const columns = section.columns;
   const singleColumn = columns == 1;
-  const bottomMargin = sectionBottomMarginVariants[section.bottomMargin];
+  const bottomMargin = sectionBottomMarginVariants[section.bottomMargin ?? 48];
 
   return (
     <section className={bottomMargin}>

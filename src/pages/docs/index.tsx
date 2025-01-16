@@ -1,29 +1,28 @@
-import { Helmet } from 'react-helmet';
 import { graphql } from 'gatsby';
+import { Helmet } from 'react-helmet';
 
 import Layout from 'src/components/Layout';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
-import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
+import { HomepageContent } from 'src/components/Homepage/HomepageContent';
+import { PageLanguageProvider } from 'src/contexts';
+import { pageData } from 'src/data';
 
-type MetaData = {
-  title: string;
-  description: string;
-  image: string;
-  twitter: string;
-};
+export const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
 const IndexPage = ({
   data: {
-    pageContentYaml: { sections, meta },
     allFile: { images },
   },
+  location: { search },
 }: {
-  data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
+  data: { allFile: { images: ImageProps[] } };
+  location: Location;
 }) => {
-  const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
+  const { sections, meta } = pageData.homepage.content;
+  const openGraphTitle = meta.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl('/products/asset-tracking');
+  const canonical = canonicalUrl('/');
 
   return (
     <>
@@ -43,52 +42,19 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <Layout>
-        <ProductPageContent sections={sections} images={images} />
-      </Layout>
+      <PageLanguageProvider search={search}>
+        <Layout noSidebar hideSearchBar>
+          <HomepageContent sections={sections} images={images} />
+        </Layout>
+      </PageLanguageProvider>
     </>
   );
 };
 
 export const query = graphql`
   query HomePageQuery {
-    pageContentYaml(name: { eq: "asset-tracking" }) {
-      sections {
-        title
-        level
-        description
-        columns
-        bottomMargin
-        releaseStage
-        callToAction {
-          text
-          href
-          external
-          type
-        }
-        cards {
-          title
-          type
-          content
-          image
-          link
-          links {
-            text
-            href
-            external
-          }
-        }
-      }
-      meta {
-        title
-        description
-        image
-        twitter
-      }
-    }
-    allFile(filter: { relativeDirectory: { eq: "products/asset-tracking" } }) {
+    allFile(filter: { relativeDirectory: { eq: "homepage" } }) {
       images: nodes {
-        name
         extension
         base
         publicURL

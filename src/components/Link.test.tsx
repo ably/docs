@@ -1,5 +1,4 @@
 import React from 'react';
-import { withPrefix } from 'gatsby';
 import { render } from '@testing-library/react';
 import Link from 'src/components/Link';
 
@@ -28,18 +27,6 @@ describe('<Link/>', () => {
     expect(a).toHaveTextContent('README');
   });
 
-  it('uses an anchor tag when external prop is passed', () => {
-    const { getByTestId } = render(
-      <Link to="/login" external={true}>
-        Login
-      </Link>,
-    );
-    const a = getByTestId('link-external');
-
-    expect(a).toHaveAttribute('href', '/login');
-    expect(a).toHaveTextContent('Login');
-  });
-
   it('uses an anchor tag for links with protocols', () => {
     const { queryAllByTestId } = render(
       <>
@@ -61,32 +48,24 @@ describe('<Link/>', () => {
     expect(a).toHaveTextContent('I have questions');
   });
 
-  /**
-   * The test below depend on the value of __PATH_PREFIX__ being set to '/docs'
-   * See jest.conf.js
-   */
   it('uses a Gatsby Link for internal links', () => {
-    expect(__PATH_PREFIX__).toBe('/docs');
-
     const { getByTestId } = render(
-      <Link to="/spaces" className="a-link">
+      <Link to="/docs/spaces" className="a-link">
         Spaces
       </Link>,
     );
     const a = getByTestId('link-internal');
 
-    expect(a).toHaveAttribute('href', withPrefix('/spaces'));
+    expect(a).toHaveAttribute('href', '/docs/spaces');
     expect(a).toHaveAttribute('class', 'a-link');
     expect(a).toHaveTextContent('Spaces');
   });
 
   it('uses a Gatsby Link for absolute internal links', () => {
-    expect(__PATH_PREFIX__).toBe('/docs');
-
     const { getByTestId } = render(<Link to="https://ably.com/docs/old-page">Old link</Link>);
     const a = getByTestId('link-internal');
 
-    expect(a).toHaveAttribute('href', withPrefix('/old-page'));
+    expect(a).toHaveAttribute('href', '/docs/old-page');
     expect(a).toHaveTextContent('Old link');
   });
 

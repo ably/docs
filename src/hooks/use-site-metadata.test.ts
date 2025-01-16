@@ -20,14 +20,12 @@ describe('useSiteMedata', () => {
   });
 
   it('contains a canonicalUrl helper', () => {
-    expect(__PATH_PREFIX__).toBe('/docs');
-
     const { result } = renderHook(() => useSiteMetadata());
     const {
       current: { canonicalUrl },
     } = result;
 
-    const url = canonicalUrl('/my-page');
+    const url = canonicalUrl('/docs/my-page');
     expect(url).toBe('http://example.com/docs/my-page');
   });
 });

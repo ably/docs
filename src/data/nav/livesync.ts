@@ -12,7 +12,7 @@ export default {
       pages: [
         {
           name: 'How LiveSync works',
-          link: '/livesync',
+          link: '/docs/livesync',
         },
       ],
     },
@@ -21,7 +21,7 @@ export default {
       pages: [
         {
           name: 'MongoDB database connector',
-          link: '/livesync/mongodb',
+          link: '/docs/livesync/mongodb',
         },
       ],
     },
@@ -30,15 +30,15 @@ export default {
       pages: [
         {
           name: 'Postgres database connector',
-          link: '/livesync/postgres',
+          link: '/docs/livesync/postgres',
         },
         {
           name: 'Frontend data models',
-          link: '/livesync/postgres/models',
+          link: '/docs/livesync/postgres/models',
         },
         {
           name: 'Quickstart',
-          link: '/livesync/postgres/quickstart',
+          link: '/docs/livesync/postgres/quickstart',
         },
       ],
     },

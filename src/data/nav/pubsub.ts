@@ -2,6 +2,7 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Pub/Sub',
+  link: '/docs/products/channels',
   icon: {
     closed: 'icon-product-pubsub-mono',
     open: 'icon-product-pubsub',
@@ -12,11 +13,11 @@ export default {
       pages: [
         {
           name: 'What is Ably?',
-          link: '/basics/ably',
+          link: '/docs/basics/ably',
         },
         {
           name: 'How to use Ably',
-          link: '/basics/use-ably',
+          link: '/docs/basics/use-ably',
         },
       ],
     },
@@ -25,15 +26,15 @@ export default {
       pages: [
         {
           name: 'Quickstart guide',
-          link: '/getting-started/quickstart',
+          link: '/docs/getting-started/quickstart',
         },
         {
           name: 'SDK setup',
-          link: '/getting-started/setup',
+          link: '/docs/getting-started/setup',
         },
         {
           name: 'React Hooks',
-          link: '/getting-started/react',
+          link: '/docs/getting-started/react',
         },
       ],
     },
@@ -42,27 +43,27 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/auth',
+          link: '/docs/auth',
         },
         {
           name: 'Basic auth',
-          link: '/auth/basic',
+          link: '/docs/auth/basic',
         },
         {
           name: 'Token auth',
-          link: '/auth/token',
+          link: '/docs/auth/token',
         },
         {
           name: 'Token revocation',
-          link: '/auth/revocation',
+          link: '/docs/auth/revocation',
         },
         {
           name: 'Identified clients',
-          link: '/auth/identified-clients',
+          link: '/docs/auth/identified-clients',
         },
         {
           name: 'Capabilities',
-          link: '/auth/capabilities',
+          link: '/docs/auth/capabilities',
         },
       ],
     },
@@ -71,11 +72,11 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/connect',
+          link: '/docs/connect',
         },
         {
           name: 'Connection state and recovery',
-          link: '/connect/states',
+          link: '/docs/connect/states',
         },
       ],
     },
@@ -84,37 +85,37 @@ export default {
       pages: [
         {
           name: 'Channels',
-          link: '/channels',
+          link: '/docs/channels',
           indexPage: true,
         },
         {
           name: 'Messages',
-          link: '/channels/messages',
+          link: '/docs/channels/messages',
         },
         {
           name: 'Channel options',
           pages: [
             {
               name: 'Overview',
-              link: '/channels/options',
+              link: '/docs/channels/options',
             },
             {
               name: 'Rewind',
-              link: '/channels/options/rewind',
+              link: '/docs/channels/options/rewind',
             },
             {
               name: 'Deltas',
-              link: '/channels/options/deltas',
+              link: '/docs/channels/options/deltas',
             },
             {
               name: 'Encryption',
-              link: '/channels/options/encryption',
+              link: '/docs/channels/options/encryption',
             },
           ],
         },
         {
           name: 'How-to: publish and subscribe to channels',
-          link: '/how-to/pub-sub',
+          link: '/docs/how-to/pub-sub',
         },
       ],
     },
@@ -123,15 +124,15 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/presence-occupancy',
+          link: '/docs/presence-occupancy',
         },
         {
           name: 'Presence',
-          link: '/presence-occupancy/presence',
+          link: '/docs/presence-occupancy/presence',
         },
         {
           name: 'Occupancy',
-          link: '/presence-occupancy/occupancy',
+          link: '/docs/presence-occupancy/occupancy',
         },
       ],
     },
@@ -140,11 +141,11 @@ export default {
       pages: [
         {
           name: 'Message storage',
-          link: '/storage-history/storage',
+          link: '/docs/storage-history/storage',
         },
         {
           name: 'Message history',
-          link: '/storage-history/history',
+          link: '/docs/storage-history/history',
         },
       ],
     },
@@ -153,24 +154,24 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/push',
+          link: '/docs/push',
         },
         {
           name: 'Configure and activate',
           pages: [
             {
               name: 'Devices',
-              link: '/push/configure/device',
+              link: '/docs/push/configure/device',
             },
             {
               name: 'Browsers',
-              link: '/push/configure/web',
+              link: '/docs/push/configure/web',
             },
           ],
         },
         {
           name: 'Publish',
-          link: '/push/publish',
+          link: '/docs/push/publish',
         },
       ],
     },
@@ -182,17 +183,17 @@ export default {
           pages: [
             {
               name: 'Metadata subscriptions',
-              link: '/metadata-stats/metadata/subscribe',
+              link: '/docs/metadata-stats/metadata/subscribe',
             },
             {
               name: 'Metadata REST requests',
-              link: '/metadata-stats/metadata/rest',
+              link: '/docs/metadata-stats/metadata/rest',
             },
           ],
         },
         {
           name: 'Statistics',
-          link: '/metadata-stats/stats',
+          link: '/docs/metadata-stats/stats',
         },
       ],
     },
@@ -201,23 +202,23 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/protocols',
+          link: '/docs/protocols',
         },
         {
           name: 'Server-Sent Events (SSE)',
-          link: '/protocols/sse',
+          link: '/docs/protocols/sse',
         },
         {
           name: 'MQTT',
-          link: '/protocols/mqtt',
+          link: '/docs/protocols/mqtt',
         },
         {
           name: 'Pusher Adapter',
-          link: '/protocols/pusher',
+          link: '/docs/protocols/pusher',
         },
         {
           name: 'PubNub Adapter',
-          link: '/protocols/pubnub',
+          link: '/docs/protocols/pubnub',
         },
       ],
     },
@@ -228,62 +229,62 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/api',
+          link: '/docs/api',
         },
         {
           name: 'Realtime SDK',
           pages: [
             {
               name: 'Constructor',
-              link: '/api/realtime-sdk',
+              link: '/docs/api/realtime-sdk',
             },
             {
               name: 'Connection',
-              link: '/api/realtime-sdk/connection',
+              link: '/docs/api/realtime-sdk/connection',
             },
             {
               name: 'Channels',
-              link: '/api/realtime-sdk/channels',
+              link: '/docs/api/realtime-sdk/channels',
             },
             {
               name: 'Channel Metadata',
-              link: '/api/realtime-sdk/channel-metadata',
+              link: '/docs/api/realtime-sdk/channel-metadata',
             },
             {
               name: 'Messages',
-              link: '/api/realtime-sdk/messages',
+              link: '/docs/api/realtime-sdk/messages',
             },
             {
               name: 'Presence',
-              link: '/api/realtime-sdk/presence',
+              link: '/docs/api/realtime-sdk/presence',
             },
             {
               name: 'Authentication',
-              link: '/api/realtime-sdk/authentication',
+              link: '/docs/api/realtime-sdk/authentication',
             },
             {
               name: 'History',
-              link: '/api/realtime-sdk/history',
+              link: '/docs/api/realtime-sdk/history',
             },
             {
               name: 'Push Notifications - Admin',
-              link: '/api/realtime-sdk/push-admin',
+              link: '/docs/api/realtime-sdk/push-admin',
             },
             {
               name: 'Push Notifications - Devices',
-              link: '/api/realtime-sdk/push',
+              link: '/docs/api/realtime-sdk/push',
             },
             {
               name: 'Encryption',
-              link: '/api/realtime-sdk/encryption',
+              link: '/docs/api/realtime-sdk/encryption',
             },
             {
               name: 'Statistics',
-              link: '/api/realtime-sdk/statistics',
+              link: '/docs/api/realtime-sdk/statistics',
             },
             {
               name: 'Types',
-              link: '/api/realtime-sdk/types',
+              link: '/docs/api/realtime-sdk/types',
             },
           ],
         },
@@ -292,57 +293,57 @@ export default {
           pages: [
             {
               name: 'Constructor',
-              link: '/api/rest-sdk',
+              link: '/docs/api/rest-sdk',
             },
             {
               name: 'Channels',
-              link: '/api/rest-sdk/channels',
+              link: '/docs/api/rest-sdk/channels',
             },
             {
               name: 'Channel Status',
-              link: '/api/rest-sdk/channel-status',
+              link: '/docs/api/rest-sdk/channel-status',
             },
             {
               name: 'Messages',
-              link: '/api/rest-sdk/messages',
+              link: '/docs/api/rest-sdk/messages',
             },
             {
               name: 'Presence',
-              link: '/api/rest-sdk/presence',
+              link: '/docs/api/rest-sdk/presence',
             },
             {
               name: 'Authentication',
-              link: '/api/rest-sdk/authentication',
+              link: '/docs/api/rest-sdk/authentication',
             },
             {
               name: 'History',
-              link: '/api/rest-sdk/history',
+              link: '/docs/api/rest-sdk/history',
             },
             {
               name: 'Push Notifications - Admin',
-              link: '/api/rest-sdk/push-admin',
+              link: '/docs/api/rest-sdk/push-admin',
             },
             {
               name: 'Encryption',
-              link: '/api/rest-sdk/encryption',
+              link: '/docs/api/rest-sdk/encryption',
             },
             {
               name: 'Statistics',
-              link: '/api/rest-sdk/statistics',
+              link: '/docs/api/rest-sdk/statistics',
             },
             {
               name: 'Types',
-              link: '/api/rest-sdk/types',
+              link: '/docs/api/rest-sdk/types',
             },
           ],
         },
         {
           name: 'REST API',
-          link: '/api/rest-api',
+          link: '/docs/api/rest-api',
         },
         {
           name: 'SSE API',
-          link: '/api/sse',
+          link: '/docs/api/sse',
         },
       ],
     },

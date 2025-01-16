@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useContext, useMemo } from 'react';
-import { navigate } from '@reach/router';
 import TabMenu from '@ably/ui/core/TabMenu';
 import Icon from '@ably/ui/core/Icon';
 import cn from '@ably/ui/core/utils/cn';
@@ -9,7 +8,7 @@ import { SearchBar } from '../SearchBar';
 import AblyLogo from './images/ably-logo.png';
 import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
-import { pathWithBase } from './utils';
+import Link, { navigate } from '../Link';
 
 type HeaderProps = {
   hideSearchBar?: boolean;
@@ -25,18 +24,18 @@ const HeaderLinks: React.FC = () => {
 
   return (
     <div className="flex md:items-center flex-col md:flex-row border-t-[1px] border-neutral-300 md:border-t-0 px-12 pb-12 md:pb-0">
-      <a
+      <Link
         className={cn(headerLinkClasses, 'flex items-center gap-4 md:mr-16 mt-8 md:mt-0')}
-        href={pathWithBase('/sdks')}
+        to="/docs/sdks"
         target="_blank"
         rel="noopener"
       >
         SDKs
         <Icon name="icon-gui-external-link" />
-      </a>
-      <a className={cn(headerLinkClasses, 'md:mr-16 mb-8 md:mb-0')} href="/support">
+      </Link>
+      <Link className={cn(headerLinkClasses, 'md:mr-16 mb-8 md:mb-0')} to="/support">
         Support
-      </a>
+      </Link>
       {signedIn && sessionState.account ? (
         <LinkButton
           href={sessionState.account.links?.dashboard.href}
@@ -67,9 +66,9 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
   const tabLinks = (index: number) => {
     switch (index) {
       case 0:
-        return pathWithBase('/');
+        return '/';
       case 1:
-        return pathWithBase('/examples');
+        return '/examples';
       default:
         return '#';
     }
@@ -105,9 +104,9 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
         role="banner"
         className="fixed top-0 left-0 w-full z-10 bg-neutral-000 dark:bg-neutral-1300 flex px-24 md:px-64 h-64 border-b border-neutral-300"
       >
-        <a className="flex items-center focus-base rounded" href={pathWithBase('/')} aria-label="Home">
+        <Link className="flex items-center focus-base rounded" to={'/'} aria-label="Home">
           <img src={AblyLogo} width="108px" alt="Ably logo" className="mr-32" />
-        </a>
+        </Link>
         <div className="flex md:hidden flex-1 items-center justify-end gap-24">
           <button
             className="cursor-pointer focus-base rounded"
