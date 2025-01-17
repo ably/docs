@@ -94,13 +94,7 @@ The following are the properties of a message:
 | | description: Optional description for the action. | String or undefined |
 | | metadata: Optional additional metadata about the action. | Object or undefined |
 
-<aside data-type="note">
-<p>Both @serial@ and @version@ are lexicographically sortable strings. This means they can be used to enforce a deterministic global ordering based on string comparison.</p>
- <p><strong>Global Ordering Rules:</strong></p>
-  <p>For message @serial@: If the @serial@ of one message occurs before another when lexicographically sorted, the first message is considered to have occurred globally before the other. If the @serial@ values are identical, the two messages are considered to be the same message.</p>
-  <p>For @version@: When two messages share the same @serial@, their respective @version@ values can be used to determine the order of actions applied to the message.</p>
-  <p>An action (such as an update) with a @version@ is considered to have occurred before some other action, if the first action's @version@ occurs before another when sorted lexicographically. If the @version@ values are identical, the actions are considered to be the same.</p>
-</aside>
+See "below":#global-ordering for more information on how to apply deterministic global ordering to the chat messages in your application.
 
 h3(#unsubscribe). Unsubscribe from messages
 
@@ -217,7 +211,7 @@ const MyComponent = () => {
   const handleMessageUpdate = (msg: Message) => {
     update(msg, { text: "my updated text" }, { description: "Message update by user" })
     .then((updatedMsg: Message) => {
-    console.log('Message updated:', updatedMsg);
+      console.log('Message updated:', updatedMsg);
     })
     .catch((error) => {
       console.error('Error updating message: ', error);
@@ -247,6 +241,12 @@ const {unsubscribe} = room.messages.subscribe((event) => {
       console.log('Received message: ', event.message);
       break;
     case MessageEvents.Updated:
+      const existing = myMessageList.find(event.message);
+      if (existing && event.message.versionBefore(existing)) {
+        // We've already received a more recent update, so this one can be discarded.
+        return;
+      }
+
       console.log('Message updated: ', event.message);
       break;
     default:
@@ -267,6 +267,12 @@ const MyComponent = () => {
           console.log('Received message: ', event.message);
           break;
         case MessageEvents.Updated:
+          const existing = myMessageList.find(event.message);
+          if (existing && event.message.versionBefore(existing)) {
+            // We've already received a more recent update, so this one can be discarded.
+            return;
+          }
+
           console.log('Message updated: ', event.message);
           break;
         default:
@@ -279,9 +285,7 @@ const MyComponent = () => {
 };
 ```
 
-On rare occasions updates might arrive from the server out of order (in terms of the global order in which these events occur). An example of this is when messages are transiting between regions, and latencies between nearby regions is lower than those further away. To deterministically determine whether an update should supersede the current version, simply compare the @version@ strings using the standard string comparison operators. Alternatively, the @Message@ interface provides convenience methods to compare two instances of the same base message to determine which version is newer: @versionBefore()@, @versionAfter()@, and @versionEqual()@.
-
-The same out-of-order situation can happen between updates received over realtime and HTTP responses (e.g. when updating a message). In the situation where two concurrent updates happen, both might be received via realtime before the HTTP response of the first one arrives. Always compare the message @version@ to determine which instance of a @Message@ is newer.
+See "below":#global-ordering for more information on how to deterministically apply ordering to update events in your application.
 
 h3(#update-structure). Message update structure
 
@@ -369,12 +373,19 @@ blang[react].
 
 ```[javascript]
 import { MessageEvents } from '@ably/chat';
+
 const {unsubscribe} = room.messages.subscribe((event) => {
   switch (event.type) {
     case MessageEvents.Created:
       console.log('Received message: ', event.message);
       break;
     case MessageEvents.Deleted:
+      const existing = myMessageList.find(event.message);
+      if (existing && event.message.versionBefore(existing)) {
+        // We've already received a more recent update, so this one can be discarded.
+        return;
+      }
+
       console.log('Message deleted: ', event.message);
       break;
     default:
@@ -395,6 +406,12 @@ const MyComponent = () => {
           console.log('Received message: ', event.message);
           break;
         case MessageEvents.Deleted:
+          const existing = myMessageList.find(event.message);
+          if (existing && event.message.versionBefore(existing)) {
+            // We've already received a more recent update, so this one can be discarded.
+            return;
+          }
+
           console.log('Message deleted: ', event.message);
           break;
         default:
@@ -407,11 +424,7 @@ const MyComponent = () => {
 };
 ```
 
-On rare occasions, deletes and updates might arrive over realtime out of order. Again, should two concurrent actions happen in disparate regions, you will likely receive the action processed in the region closest to you first, for example.
-
-When the second action arrives, you will need to determine the order of these actions; this is done deterministically by comparing the @version@ field of the messages, using the standard string comparison operators. For convenience, the @Message@ interface provides methods to compare two instances of the same base message to determine which action is newer: @versionBefore()@, @versionAfter()@, and @versionEqual()@.
-
-The same out-of-order situation can happen between deletions received over realtime and HTTP responses, whereby both might be received via realtime before the HTTP response of the first one arrives.
+See "below":#global-ordering for more information on how to deterministically apply ordering to delete events in your application.
 
 h3(#deletion-structure). Message deletion structure
 
@@ -444,3 +457,23 @@ The deleted message response is identical to the structure of a message, with th
 | version | Set to the serial of the deletion action. |
 | timestamp | Set to the time the message was deleted. |
 | operation | Set to the details the actioning client provided in the request. |
+
+h2(#global-ordering). Ordering chat message events
+
+Chat messages and update events are delivered in realtime to clients connected to a particular region in the order in which that region receives them. The order in which a given region receives these events may be different from the "global" order of events, i.e. the true time-based order in which events happened.
+
+Chat messages are uniquely identified by their @serial@ and may have multiple @versions@ as a result of edit and delete operations. Both @serial@ and @version@ are lexicographically sortable strings. This means they can be used to enforce a deterministic global ordering based on string comparison.
+
+h3(#ordering-new). Ordering New Messages
+
+If the @serial@ of one message occurs before another when lexicographically sorted, the first message is considered to have occurred before the other. If the @serial@ values are identical, the messages are the same message.
+
+The @Message@ object also has convenience methods "@before@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#before, "@after@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#after and "@equal@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#equal which provide the same comparison.
+
+h3(#ordering-update-delete). Ordering Updates and Deletes
+
+Applying an action to a message produces a new version, which is uniquely identified by the @version@ property. When two message instances share the same @serial@ they represent the same chat message, but they can represent different versions. Lexicographically sorting the two message instances by the @version@ property gives the global order of the message versions: the message instance with a greater @version@ is newer, the message instance with a lower @version@ is older, and if their @version@ is equal then they are the same version.
+
+The @Message@ object also has convenience methods "@versionBefore@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#versionbefore, "@versionAfter@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#versionafter and "@versionEqual@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#versionEqual which provide the same comparison.
+
+Update and Delete events provide the full message payload, so may be used to replace the entire earlier version of the message.
