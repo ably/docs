@@ -10,6 +10,13 @@ import { LanguageKey } from 'src/data/languages/types';
 import { useOnClickOutside } from 'src/hooks';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
+import {
+  componentMaxHeight,
+  HEADER_HEIGHT,
+  HEADER_BOTTOM_MARGIN,
+  LANGUAGE_SELECTOR_HEIGHT,
+  INKEEP_ASK_BUTTON_HEIGHT,
+} from './utils/heights';
 
 type LanguageSelectorOptionData = {
   label: LanguageKey;
@@ -33,13 +40,13 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
 
   return (
     <Link
-      className="ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 transition-colors"
+      className="ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300"
       to={isOption ? `${location.pathname}?lang=${props.data.label}` : '#'}
     >
       <div
         onClick={() => setMenuOpen(!props.selectProps.menuIsOpen)}
         className={cn('group/lang-dropdown flex gap-8 items-center rounded', {
-          'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 mx-8 last:mb-8 cursor-pointer': isOption,
+          'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer': isOption,
         })}
         role="menuitem"
       >
@@ -47,7 +54,11 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
           <Icon size="20px" name={`icon-tech-${lang?.alias ?? props.data.label}` as IconName} />
           {isOption ? lang?.label : null}
         </div>
-        <Badge color="neutral" size="xs" className={cn({ 'group-hover/lang-dropdown:bg-neutral-000': isOption })}>
+        <Badge
+          color="neutral"
+          size="xs"
+          className={cn('my-1', { 'group-hover/lang-dropdown:bg-neutral-000': isOption })}
+        >
           v{props.data.version.toFixed(1)}
         </Badge>
         {isOption ? (
@@ -94,20 +105,18 @@ export const LanguageSelector = () => {
   }, [langParam, options]);
 
   return (
-    <div
-      ref={selectRef}
-      className="absolute top-0 right-0 md:relative w-full text-right md:text-left mb-24 focus-base group/lang-dropdown"
-    >
+    <div ref={selectRef} className="absolute top-0 right-0 md:relative w-full text-right md:text-left mb-24 focus-base">
       <Select
         options={options}
         value={selectedOption}
         onChange={(option) => setSelectedOption(option)}
         classNames={{
-          control: () => '!border-none !inline-flex !cursor-pointer',
+          control: () => '!border-none !inline-flex !cursor-pointer group/lang-dropdown',
           valueContainer: () => '!p-0',
           menu: () => 'absolute right-0 w-240 z-10',
         }}
         styles={{
+          control: () => ({ height: LANGUAGE_SELECTOR_HEIGHT }),
           menu: () => ({ boxShadow: 'none' }),
         }}
         tabIndex={0}
@@ -125,7 +134,7 @@ export const LanguageSelector = () => {
               aria-label="Toggle language dropdown"
             >
               <Icon
-                name="icon-gui-chevron-down"
+                name="icon-gui-chevron-down-outline"
                 size="20px"
                 additionalCSS="text-neutral-700 group-hover/lang-dropdown:text-neutral-1300 dark:text-neutral-600 dark:group-hover/lang-dropdown:text-neutral-000 transition-colors"
               />
@@ -134,13 +143,19 @@ export const LanguageSelector = () => {
           Input: () => null,
           MenuList: ({ children }) => (
             <div
-              className="bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft"
+              className="overflow-y-scroll bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft p-8"
+              style={{
+                maxHeight: componentMaxHeight(
+                  HEADER_HEIGHT,
+                  HEADER_BOTTOM_MARGIN,
+                  LANGUAGE_SELECTOR_HEIGHT,
+                  INKEEP_ASK_BUTTON_HEIGHT,
+                ),
+              }}
               role="menu"
             >
-              <p className="ui-text-code2 font-medium text-left p-8 m-8 mt-16 text-neutral-700 dark:text-neutral-600 uppercase">
-                Code Language
-              </p>
-              <div className="overflow-y-scroll max-h-200">{children}</div>
+              <p className="ui-text-overline2 py-16 px-8 text-neutral-700 dark:text-neutral-600">Code Language</p>
+              {children}
             </div>
           ),
         }}
