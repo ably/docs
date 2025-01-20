@@ -16,13 +16,9 @@ import { LanguageKey } from 'src/data/languages/types';
  */
 
 const LayoutContext = createContext<{
-  selectedProduct: ProductKey | undefined;
-  setSelectedProduct: React.Dispatch<React.SetStateAction<ProductKey | undefined>>;
   activePage: { tree: PageTreeNode[]; languages: LanguageKey[] };
   products: [ProductKey, NavProduct][];
 }>({
-  selectedProduct: undefined,
-  setSelectedProduct: () => undefined,
   activePage: { tree: [], languages: [] },
   products: [],
 });
@@ -49,22 +45,15 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
     return activePageData ? { ...activePageData, languages } : { tree: [], languages: [] };
   }, [location.pathname, languages]);
 
-  const activeProduct = activePage.tree[0]?.index;
   const products = useMemo(
     () =>
       Object.entries(data as ProductData).map((product) => [product[0], product[1].nav]) as [ProductKey, NavProduct][],
     [],
   );
 
-  const [selectedProduct, setSelectedProduct] = useState<ProductKey | undefined>(
-    activeProduct ? products[activeProduct][0] : undefined,
-  );
-
   return (
     <LayoutContext.Provider
       value={{
-        selectedProduct,
-        setSelectedProduct,
         activePage,
         products,
       }}
