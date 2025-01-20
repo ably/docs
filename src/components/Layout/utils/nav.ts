@@ -114,7 +114,7 @@ export const commonAccordionOptions = (
   topLevel: boolean,
   inHeader: boolean,
 ): Omit<AccordionProps, 'data'> => ({
-  icons: { open: { name: 'icon-gui-chevron-up' }, closed: { name: 'icon-gui-chevron-down' } },
+  icons: { open: { name: 'icon-gui-chevron-up-micro' }, closed: { name: 'icon-gui-chevron-down-micro' } },
   options: {
     autoClose: topLevel,
     headerCSS: cn(
