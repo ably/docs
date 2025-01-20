@@ -134,7 +134,7 @@ export const LanguageSelector = () => {
               aria-label="Toggle language dropdown"
             >
               <Icon
-                name="icon-gui-chevron-down-outline"
+                name="icon-gui-chevron-down-micro"
                 size="20px"
                 additionalCSS="text-neutral-700 group-hover/lang-dropdown:text-neutral-1300 dark:text-neutral-600 dark:group-hover/lang-dropdown:text-neutral-000 transition-colors"
               />
