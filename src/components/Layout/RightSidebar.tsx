@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, WindowLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
-import { LanguageSelector } from './LanguageSelector';
-import { PageTreeNode, sidebarAlignmentClasses } from './utils';
 import { IconName } from '@ably/ui/core/Icon/types';
+
+import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { languageInfo } from 'src/data/languages';
+import { PageTreeNode, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
+import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
 
 type SidebarHeader = {
   id: string;
@@ -36,7 +38,7 @@ const externalLinks = (
     const requestBody = encodeURIComponent(`
   Name: **${currentPage.name}**
   Link: **[${currentPage.link}](https://ably.com/docs/${currentPage.link})**
-  ${language ? `Language: **${languageInfo[language].label}**` : ''}
+  ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}**` : ''}
   
   Please describe the changes you would like to make to this page:  
 `);
@@ -47,10 +49,10 @@ const externalLinks = (
   return [
     {
       label: 'Edit on GitHub',
-      icon: 'icon-social-github',
+      icon: 'icon-social-github-mono',
       link: githubEditPath,
     },
-    { label: 'Request changes', icon: 'icon-gui-hand', link: requestPath },
+    { label: 'Request changes', icon: 'icon-gui-hand-raised-outline', link: requestPath },
   ];
 };
 
@@ -126,13 +128,19 @@ const RightSidebar = () => {
   }, [activeHeader]);
 
   return (
-    <div className={cn(sidebarAlignmentClasses, 'md:pb-[80px] right-32 md:right-0')}>
+    <div
+      className={cn(sidebarAlignmentClasses, 'md:pb-[80px] right-32 md:right-0')}
+      style={{
+        ...sidebarAlignmentStyles,
+        height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, INKEEP_ASK_BUTTON_HEIGHT),
+      }}
+    >
       {showLanguageSelector ? <LanguageSelector /> : null}
       <div className="hidden md:flex flex-col h-full">
         {headers.length > 0 ? (
           <>
             <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
-            <div className="flex gap-16 overflow-y-scroll overflow-x-hidden shadow-[2px_0_var(--color-neutral-300)_inset] pl-16">
+            <div className="flex gap-16 overflow-scroll shadow-[0.5px_0px_var(--color-neutral-000)_inset,1.5px_0px_var(--color-neutral-300)_inset] py-2 pl-16">
               <div
                 className="h-[21px] -ml-16 w-2 -mt-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
                 style={{
@@ -140,7 +148,8 @@ const RightSidebar = () => {
                   height: `${highlightPosition.height}px`,
                 }}
               ></div>
-              <div className="flex flex-col gap-8 w-full pr-16">
+              {/* 18px derives from the 2px width of the grey tracker bar plus the 16px between it and the menu items */}
+              <div className="flex flex-col gap-8 w-[calc(100%-18px)] pr-16">
                 {headers.map((header) => (
                   <a
                     href={`#${header.id}`}
@@ -162,7 +171,7 @@ const RightSidebar = () => {
         ) : null}
         <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-24">
           {externalLinks(activePage.tree, location).map(({ label, icon, link }, index) => (
-            <a key={label} href={link} target="_blank" rel="noopener noreferrer">
+            <a key={label} href={link} target="_blank" rel="noopener noreferrer" className="group/external-link">
               <div
                 className={cn(
                   'flex items-center p-16',
@@ -170,10 +179,22 @@ const RightSidebar = () => {
                 )}
               >
                 <div className="flex-1 flex items-center gap-12">
-                  <Icon size="20px" name={icon} color="text-neutral-900" />
-                  <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400">{label}</span>
+                  <Icon
+                    size="20px"
+                    name={icon}
+                    color="text-neutral-900"
+                    additionalCSS="group-hover/external-link:text-neutral-1300 dark:group-hover/external-link:text-neutral-000 transition-colors"
+                  />
+                  <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 group-hover/external-link:text-neutral-1300 dark:group-hover/external-link:text-neutral-000 transition-colors">
+                    {label}
+                  </span>
                 </div>
-                <Icon name="icon-gui-external-link" color="text-neutral-900" size="16px" />
+                <Icon
+                  name="icon-gui-external-link"
+                  color="text-neutral-900"
+                  additionalCSS="group-hover/external-link:text-neutral-1300 dark:group-hover/external-link:text-neutral-000 transition-colors"
+                  size="16px"
+                />
               </div>
             </a>
           ))}

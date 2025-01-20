@@ -2,6 +2,7 @@ import cn from '@ably/ui/core/utils/cn';
 import { AccordionProps } from '@ably/ui/core/Accordion';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
+import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from './heights';
 
 export type PageTreeNode = { index: number; page: NavProductPage };
 
@@ -101,6 +102,9 @@ export const formatNavLink = (link: string) => {
     link = link.replace('/docs', '');
   }
 
+  // Strip out query params
+  link = link.split('?')[0];
+
   return link.replace(/\/$/, '');
 };
 
@@ -110,7 +114,7 @@ export const commonAccordionOptions = (
   topLevel: boolean,
   inHeader: boolean,
 ): Omit<AccordionProps, 'data'> => ({
-  icons: { open: { name: 'icon-gui-chevron-up' }, closed: { name: 'icon-gui-chevron-down' } },
+  icons: { open: { name: 'icon-gui-chevron-up-micro' }, closed: { name: 'icon-gui-chevron-down-micro' } },
   options: {
     autoClose: topLevel,
     headerCSS: cn(
@@ -130,7 +134,12 @@ export const commonAccordionOptions = (
   },
 });
 
-export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128 top-[88px] h-[calc(100vh-88px)]';
+export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128';
+
+export const sidebarAlignmentStyles: React.CSSProperties = {
+  top: HEADER_HEIGHT + HEADER_BOTTOM_MARGIN,
+  height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN),
+};
 
 export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link).replaceAll('/', '-')}`;
 
