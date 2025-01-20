@@ -3,7 +3,7 @@ import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
 import Icon from '@ably/ui/core/Icon';
 import cn from '@ably/ui/core/utils/cn';
-import { hierarchicalKey } from './utils';
+import { hierarchicalKey } from './utils/nav';
 
 const Breadcrumbs: React.FC = () => {
   const { activePage } = useLayoutContext();
