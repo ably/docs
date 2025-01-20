@@ -4,12 +4,13 @@ import TabMenu from '@ably/ui/core/TabMenu';
 import Icon from '@ably/ui/core/Icon';
 import cn from '@ably/ui/core/utils/cn';
 import LinkButton from '@ably/ui/core/LinkButton';
+import Logo from '@ably/ui/core/Logo';
 
 import { SearchBar } from '../SearchBar';
 import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
-import { pathWithBase } from './utils';
-import Logo from '@ably/ui/core/Logo';
+import { pathWithBase } from './utils/nav';
+import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from './utils/heights';
 
 type HeaderProps = {
   hideSearchBar?: boolean;
@@ -104,6 +105,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
       <header
         role="banner"
         className="fixed top-0 left-0 w-full z-10 bg-neutral-000 dark:bg-neutral-1300 flex px-24 md:px-64 h-64 border-b border-neutral-300 items-center"
+        style={{ height: HEADER_HEIGHT }}
       >
         <Logo additionalLinkAttrs={{ className: 'flex h-full focus-base rounded mr-32' }} />
         <div className="flex md:hidden flex-1 items-center justify-end gap-24 h-full">
@@ -164,7 +166,8 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
           />
           <div
             id="mobile-menu"
-            className="md:hidden absolute flex flex-col top-[76px] max-h-[calc(100vh-88px)] overflow-y-hidden left-0 right-0 mx-12 bg-neutral-000 dark:bg-neutral-1300 rounded-2xl ui-shadow-lg-medium z-20"
+            className="md:hidden absolute flex flex-col top-[76px] overflow-y-hidden left-0 right-0 mx-12 bg-neutral-000 dark:bg-neutral-1300 rounded-2xl ui-shadow-lg-medium z-20"
+            style={{ maxHeight: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN) }}
             ref={menuRef}
             role="navigation"
           >

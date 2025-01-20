@@ -12,7 +12,8 @@ import {
   hierarchicalKey,
   PageTreeNode,
   sidebarAlignmentClasses,
-} from './utils';
+  sidebarAlignmentStyles,
+} from './utils/nav';
 import { ProductKey } from 'src/data/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
@@ -43,8 +44,6 @@ const NavPage = ({
   const pageActive = 'link' in page && formatNavLink(page.link) === formatNavLink(location.pathname);
   const linkId = 'link' in page ? composeNavLinkId(page.link) : undefined;
   const { activePage } = useLayoutContext();
-
-  console.log(activePage.tree);
 
   if ('link' in page) {
     const language = new URLSearchParams(location.search).get('lang');
@@ -181,6 +180,7 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
           !inHeader && [sidebarAlignmentClasses, 'hidden md:block md:-mx-16'],
           'overflow-y-scroll md:pr-16',
         )}
+        style={sidebarAlignmentStyles}
         id="left-nav"
         data={productNavData}
         {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}

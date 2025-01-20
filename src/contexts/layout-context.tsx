@@ -1,6 +1,6 @@
 import React, { createContext, PropsWithChildren, useContext, useMemo, useState, useEffect } from 'react';
 import { useLocation } from '@reach/router';
-import { PageTreeNode, determineActivePage } from 'src/components/Layout/utils';
+import { PageTreeNode, determineActivePage } from 'src/components/Layout/utils/nav';
 import data from 'src/data';
 import { NavProduct } from 'src/data/nav/types';
 import { ProductData, ProductKey } from 'src/data/types';

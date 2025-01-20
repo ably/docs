@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, WindowLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
-import { LanguageSelector } from './LanguageSelector';
-import { PageTreeNode, sidebarAlignmentClasses } from './utils';
 import { IconName } from '@ably/ui/core/Icon/types';
+
+import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { languageInfo } from 'src/data/languages';
+import { PageTreeNode, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
+import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
 
 type SidebarHeader = {
   id: string;
@@ -126,7 +128,13 @@ const RightSidebar = () => {
   }, [activeHeader]);
 
   return (
-    <div className={cn(sidebarAlignmentClasses, 'md:pb-[80px] right-32 md:right-0')}>
+    <div
+      className={cn(sidebarAlignmentClasses, 'md:pb-[80px] right-32 md:right-0')}
+      style={{
+        ...sidebarAlignmentStyles,
+        height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, INKEEP_ASK_BUTTON_HEIGHT),
+      }}
+    >
       {showLanguageSelector ? <LanguageSelector /> : null}
       <div className="hidden md:flex flex-col h-full">
         {headers.length > 0 ? (
@@ -140,6 +148,7 @@ const RightSidebar = () => {
                   height: `${highlightPosition.height}px`,
                 }}
               ></div>
+              {/* 18px derives from the 2px width of the grey tracker bar plus the 16px between it and the menu items */}
               <div className="flex flex-col gap-8 w-[calc(100%-18px)] pr-16">
                 {headers.map((header) => (
                   <a
