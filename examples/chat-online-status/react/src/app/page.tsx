@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { useChatClient, useRoom, usePresenceListener, usePresence } from '@ably/chat/react';
+import { useChatClient, useRoom, usePresenceListener, usePresence } from '@ably/chat';
 import '../../styles/styles.css';
 
 interface OnlineStatus {
