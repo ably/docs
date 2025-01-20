@@ -162,7 +162,7 @@ const RightSidebar = () => {
         ) : null}
         <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-24">
           {externalLinks(activePage.tree, location).map(({ label, icon, link }, index) => (
-            <a key={label} href={link} target="_blank" rel="noopener noreferrer">
+            <a key={label} href={link} target="_blank" rel="noopener noreferrer" className="group/external-link">
               <div
                 className={cn(
                   'flex items-center p-16',
@@ -170,10 +170,22 @@ const RightSidebar = () => {
                 )}
               >
                 <div className="flex-1 flex items-center gap-12">
-                  <Icon size="20px" name={icon} color="text-neutral-900" />
-                  <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400">{label}</span>
+                  <Icon
+                    size="20px"
+                    name={icon}
+                    color="text-neutral-900"
+                    additionalCSS="group-hover/external-link:text-neutral-1300 dark:group-hover/external-link:text-neutral-000 transition-colors"
+                  />
+                  <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 group-hover/external-link:text-neutral-1300 dark:group-hover/external-link:text-neutral-000 transition-colors">
+                    {label}
+                  </span>
                 </div>
-                <Icon name="icon-gui-external-link" color="text-neutral-900" size="16px" />
+                <Icon
+                  name="icon-gui-external-link"
+                  color="text-neutral-900"
+                  additionalCSS="group-hover/external-link:text-neutral-1300 dark:group-hover/external-link:text-neutral-000 transition-colors"
+                  size="16px"
+                />
               </div>
             </a>
           ))}
