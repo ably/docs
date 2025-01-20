@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRoom, useRoomReactions } from '@ably/chat/react';
-import { Reaction as ReactionInterface } from '@ably/chat';
+import { Reaction as ReactionInterface, useRoom, useRoomReactions } from '@ably/chat';
 import '../../styles/styles.css'
 
 export default function Home() {
