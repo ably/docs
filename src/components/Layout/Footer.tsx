@@ -16,17 +16,42 @@ const rightFooterLinks = [
   { label: 'Cookies', link: '/privacy' },
 ];
 
-const socialLinks: { label: IconName; link: string }[] = [
-  { label: 'icon-social-x', link: 'https://x.com/ablyrealtime' },
-  { label: 'icon-social-linkedin', link: 'https://www.linkedin.com/company/ably-realtime' },
-  { label: 'icon-social-github', link: 'https://github.com/ably/' },
-  { label: 'icon-social-discord', link: 'https://discord.gg/g8yqePUVDn' },
-  { label: 'icon-social-stackoverflow', link: 'https://stackoverflow.com/questions/tagged/ably-realtime' },
-  { label: 'icon-social-youtube', link: 'https://www.youtube.com/c/AblyRealtime' },
+const socialLinks: { key: string; colorIcon: IconName; monoIcon: IconName; link: string }[] = [
+  { key: 'x', colorIcon: 'icon-social-x', monoIcon: 'icon-social-x-mono', link: 'https://x.com/ablyrealtime' },
+  {
+    key: 'linkedin',
+    colorIcon: 'icon-social-linkedin',
+    monoIcon: 'icon-social-linkedin-mono',
+    link: 'https://www.linkedin.com/company/ably-realtime',
+  },
+  {
+    key: 'github',
+    colorIcon: 'icon-social-github',
+    monoIcon: 'icon-social-github-mono',
+    link: 'https://github.com/ably/',
+  },
+  {
+    key: 'discord',
+    colorIcon: 'icon-social-discord',
+    monoIcon: 'icon-social-discord-mono',
+    link: 'https://discord.gg/g8yqePUVDn',
+  },
+  {
+    key: 'stackoverflow',
+    colorIcon: 'icon-social-stackoverflow',
+    monoIcon: 'icon-social-stackoverflow-mono',
+    link: 'https://stackoverflow.com/questions/tagged/ably-realtime',
+  },
+  {
+    key: 'youtube',
+    colorIcon: 'icon-social-youtube',
+    monoIcon: 'icon-social-youtube-mono',
+    link: 'https://www.youtube.com/c/AblyRealtime',
+  },
 ];
 
 const Footer: React.FC = () => (
-  <footer className="flex flex-col">
+  <footer className="flex flex-col my-40">
     <div className="border border-x-0 border-y-neutral-300 dark:border-y-neutral-1000 w-full py-24 flex lg:items-center flex-col lg:flex-row gap-24 px-24 lg:px-0">
       <div className="flex gap-24 items-center flex-1">
         <a href="/" className="bg-neutral-100 dark:bg-neutral-1200 h-40 w-40 p-8 rounded-full">
@@ -35,18 +60,19 @@ const Footer: React.FC = () => (
         <div className="flex gap-20 items-center">
           {socialLinks.map((link) => (
             <a
-              key={link.label}
+              key={link.key}
               href={link.link}
               target="_blank"
               rel="noreferrer noopener"
-              aria-label={`Visit Ably on ${link.label.replace('icon-social-', '')}`}
-              className="w-20 h-20"
+              aria-label={`Visit Ably on ${link.key}`}
+              className="w-20 h-20 group/social-icon"
             >
               <Icon
-                name={link.label}
+                name={link.monoIcon}
                 size="20px"
-                additionalCSS="text-neutral-1000 dark:text-neutral-300 hover:text-neutral-1300 dark:hover:text-neutral-000 transition-colors"
+                additionalCSS="text-neutral-1000 dark:text-neutral-300 group-hover/social-icon:hidden"
               />
+              <Icon name={link.colorIcon} size="20px" additionalCSS="hidden group-hover/social-icon:flex" />
             </a>
           ))}
         </div>
@@ -55,14 +81,14 @@ const Footer: React.FC = () => (
         <Status statusUrl={StatusUrl} showDescription />
       </div>
     </div>
-    <div className="flex justify-between w-full flex-col lg:flex-row px-24 lg:px-0 my-24 gap-24">
+    <div className="flex justify-between w-full flex-col lg:flex-row px-24 lg:px-0 mt-24 gap-24">
       {[leftFooterLinks, rightFooterLinks].map((links, index) => (
         <div key={`link-set-${index}`} className="flex gap-20">
           {links.map((link) => (
             <a
               key={link.label}
               href={link.link}
-              className="ui-text-menu4 text-neutral-900 hover:text-neutral-1300 dark:text-neutral-400 dark:hover:text-neutral-000 transition-colors"
+              className="ui-text-menu4 font-medium text-neutral-900 hover:text-neutral-1300 dark:text-neutral-400 dark:hover:text-neutral-000 transition-colors"
             >
               {link.label}
             </a>
