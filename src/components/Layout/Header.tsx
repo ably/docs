@@ -22,7 +22,7 @@ const HeaderLinks: React.FC = () => {
   const signedIn = useMemo(() => sessionState.signedIn || !!process.env.GATSBY_DOCS_SIGNED_IN, [sessionState.signedIn]);
 
   const headerLinkClasses =
-    'ui-text-menu2 md:ui-text-menu3 font-bold py-16 text-neutral-1300 dark:text-neutral-000 md:text-neutral-1000 dark:md:text-neutral-300 hover:text-neutral-1300 dark:hover:text-neutral-000 active:text-neutral-1300 dark:active:text-neutral-000 transition-colors';
+    'ui-text-menu2 md:ui-text-menu3 !font-bold py-16 text-neutral-1300 dark:text-neutral-000 md:text-neutral-1000 dark:md:text-neutral-300 hover:text-neutral-1300 dark:hover:text-neutral-000 active:text-neutral-1300 dark:active:text-neutral-000 transition-colors';
 
   return (
     <div className="flex md:items-center flex-col md:flex-row border-t-[1px] border-neutral-300 md:border-t-0 px-12 pb-12 md:pb-0">

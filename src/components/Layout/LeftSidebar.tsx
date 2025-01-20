@@ -116,7 +116,7 @@ const constructProductNavData = (
 
     return {
       name: product.name,
-      icon: activePageTree[0].page.name === product.name ? product.icon.open : product.icon.closed,
+      icon: activePageTree[0]?.page.name === product.name ? product.icon.open : product.icon.closed,
       content: (
         <div key={product.name} className="flex flex-col gap-20 px-16">
           <div className="flex flex-col gap-[10px] md:gap-8 mt-12">
