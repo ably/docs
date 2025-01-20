@@ -1,8 +1,8 @@
 # Request an Ably JWT to authenticate clients
 
-Use an Ably JWT to securely authenticate your users.
+Use a JWT (JSON Web Token) to securely authenticate your users.
 
-Ably JWT enable you to grant users access to the Ably platform. They are used to issue time-limited credentials that securely authorize users, and manage which resources each user has access to.
+Ably [JWTs](https://jwt.io/) enable you to grant users access to the Ably platform. They are used to issue time-limited credentials that securely authorize users, and manage which resources each user has access to. You can use a JWT-compliant library to create an Ably JWT without needing to request a token from Ably.
 
 Authentication is the first step for an application to communicate with Ably. The application initializes a client and calls a predefined `authUrl` endpoint on your backend server. This endpoint uses an API key to request a JWT from Ably and returns it to the requesting client. When the JWT nears expiry, the `authUrl` is automatically invoked to request a new JWT.
 
@@ -16,7 +16,7 @@ This example uses a frontend and a backend client. The frontend is a React appli
 
 The server application generates an Ably JWT using the Ably API key with the key name part of the API key as `kid` in the headers. The API secret part is used to encrypt the JWT. The Ably JWT that is returned is then used by the frontend client as authentication with Ably.
 
-Find out more about [authentication](https://ably.com/docs/auth/token?lang=javascript#standard).
+Find out more about [authentication](https://ably.com/docs/auth/token?lang=javascript#jwt).
 
 // End React brief
 
@@ -26,7 +26,7 @@ This example uses a frontend and a backend client. The frontend is a Typescript 
 
 The server application generates an Ably JWT using the Ably API key with the key name part of the API key as `kid` in the headers. The API secret part is used to encrypt the JWT. The Ably JWT that is returned is then used by the frontend client as authentication with Ably.
 
-Find out more about [authentication](https://ably.com/docs/auth/token?lang=javascript#standard).
+Find out more about [authentication](https://ably.com/docs/auth/token?lang=javascript#jwt).
 
 // End Javascript brief
 

@@ -19,8 +19,8 @@ function base64urlEncode(str: string) {
   return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-app.get('/request-token', async (_req, res) => {
-  console.log('1 - /request-token endpoint called');
+app.get('/generate-jwt', async (_req, res) => {
+  console.log('1 - /generate-jwt endpoint called');
   try {
     const header = {
       typ: 'JWT',

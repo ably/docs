@@ -14,7 +14,7 @@ function handleConnect() {
     messageOne.textContent = '✓';
 
     const realtimeClient = new Ably.Realtime({
-      authUrl: 'http://localhost:3001/request-token',
+      authUrl: 'http://localhost:3001/generate-jwt',
     });
 
     const messageTwo = document.getElementById('message-2');

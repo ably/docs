@@ -67,7 +67,7 @@ export default function Authenticated() {
         )
       );
 
-      const newClient = new Ably.Realtime({ authUrl: 'http://localhost:3001/request-token' });
+      const newClient = new Ably.Realtime({ authUrl: 'http://localhost:3001/generate-jwt' });
       setClient(newClient);
       setMessages(prevMessages =>
         prevMessages.map(msg =>
