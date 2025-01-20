@@ -54,10 +54,10 @@ const NavPage = ({
         className={cn({
           'block ui-text-menu2 leading-relaxed md:leading-snug md:ui-text-menu4 text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base':
             true,
-          'font-semibold': !pageActive,
+          '!font-semibold': !pageActive,
           'text-neutral-900': !pageActive && type === 'content',
           'text-neutral-1000': !pageActive && type === 'api',
-          'font-bold text-neutral-1300': pageActive,
+          '!font-bold text-neutral-1300': pageActive,
           'pl-12': indentLinks,
         })}
         target={page.external ? '_blank' : undefined}
@@ -202,7 +202,10 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
         </a>
       ) : null}
       <Accordion
-        className={cn(!inHeader && [sidebarAlignmentClasses, 'hidden md:block'], 'overflow-y-scroll md:pr-16')}
+        className={cn(
+          !inHeader && [sidebarAlignmentClasses, 'hidden md:block md:-mx-16'],
+          'overflow-y-scroll md:pr-16',
+        )}
         id="left-nav"
         data={productNavData}
         {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}

@@ -101,6 +101,9 @@ export const formatNavLink = (link: string) => {
     link = link.replace('/docs', '');
   }
 
+  // Strip out query params
+  link = link.split('?')[0];
+
   return link.replace(/\/$/, '');
 };
 

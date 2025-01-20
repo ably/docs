@@ -47,10 +47,10 @@ const externalLinks = (
   return [
     {
       label: 'Edit on GitHub',
-      icon: 'icon-social-github',
+      icon: 'icon-social-github-mono',
       link: githubEditPath,
     },
-    { label: 'Request changes', icon: 'icon-gui-hand', link: requestPath },
+    { label: 'Request changes', icon: 'icon-gui-hand-raised-outline', link: requestPath },
   ];
 };
 
