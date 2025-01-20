@@ -21,11 +21,18 @@ function base64urlEncode(str: string) {
 
 app.get('/generate-jwt', async (_req, res) => {
   console.log('1 - /generate-jwt endpoint called');
+
+  const ablyApiKey = process.env.ABLY_API_KEY || '';
+  const [apiKeyName, apiKeySecret] = ablyApiKey.split(':');
   try {
+    if (ablyApiKey === '') {
+      throw new Error('ABLY_API_KEY is not set');
+    }
+
     const header = {
       typ: 'JWT',
       alg: 'HS256',
-      kid: process.env.ABLY_API_KEY_NAME || '',
+      kid: apiKeyName,
     };
     const currentTime = Math.round(Date.now() / 1000);
     const claims = {
@@ -37,8 +44,9 @@ app.get('/generate-jwt', async (_req, res) => {
     const base64Claims = base64urlEncode(btoa(JSON.stringify(claims)));
 
     /* Apply the hash specified in the header */
-    const hmac = crypto.createHmac('sha256', process.env.ABLY_API_KEY_SECRET || '');
+    const hmac = crypto.createHmac('sha256', apiKeySecret);
     hmac.update(base64Header + '.' + base64Claims);
+
     const signature = base64urlEncode(hmac.digest('base64'));
     const ablyJwt = base64Header + '.' + base64Claims + '.' + signature;
 
