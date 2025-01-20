@@ -1,84 +1,46 @@
 'use client'
 
-import { useState } from 'react';
 import { Realtime } from 'ably';
-import { AblyProvider } from 'ably/react';
+import { AblyProvider, ChannelProvider, useChannel } from 'ably/react';
 import { nanoid } from 'nanoid';
+import { useState } from 'react';
+import { FaEye } from 'react-icons/fa';
 
 export default function Home() {
-  const [client, setClient] = useState<Realtime | null>(null);
-  const [connectionState, setConnectionState] = useState('Disconnected');
-
-  const connect = () => {
-    const newClient = new Realtime({
-      key: process.env.NEXT_PUBLIC_ABLY_KEY,
-      clientId: nanoid()
-    });
-
-    newClient.connection.on((stateChange) => {
-      setConnectionState(stateChange.current);
-      console.log(`Connection state changed to: ${stateChange.current}`);
-    });
-
-    setClient(newClient);
-  };
-
-  const disconnect = () => {
-    if (client) {
-      client.close();
-      setClient(null);
-      setConnectionState('Disconnected');
-    }
-  };
+  const clientId = nanoid();
+  const client = new Realtime({
+    key: process.env.NEXT_PUBLIC_ABLY_KEY,
+    clientId
+  });
 
   return (
-    <div className="flex justify-center items-center min-h-screen p-4">
-      <div className="w-1/2 h-1/2 flex flex-col items-center space-y-4">
-        <h2 className="text-xl font-bold text-center mb-4">
-          Connection State: {connectionState}
-        </h2>
-        <div className="flex justify-center space-x-2">
-          {connectionState === 'connected' ? (
-            <button
-              id="disconnect"
-              onClick={disconnect}
-              className="
-                bg-red-500
-                hover:bg-red-600
-                text-white
-                font-bold
-                py-2
-                px-4
-                rounded
-              "
-            >
-              Disconnect
-            </button>
-          ) : (
-            <button
-              id="connect"
-              onClick={connect}
-              className="
-                bg-blue-500
-                hover:bg-blue-600
-                text-white
-                font-bold
-                py-2
-                px-4
-                rounded
-              "
-            >
-              Connect
-            </button>
-          )}
-        </div>
+    <AblyProvider client={client}>
+      <ChannelProvider channelName="[meta]occupancy" options={{ params: { occupancy: 'metrics' } }}>
+        <Stream />
+      </ChannelProvider>
+    </AblyProvider>
+  );
+}
+
+function Stream() {
+  const [occupancySubscribers, setOccupancySubscribers] = useState(0);
+  const { channel } = useChannel('[meta]occupancy', (message) => {
+    console.log('occupancy: ', message.data);
+    setOccupancySubscribers(message.data.metrics.subscribers);
+  });
+
+  return (
+    <div className="flex justify-center items-center min-h-screen p-4 relative">
+      {/* Video Stream Placeholder */}
+      <div className="w-full max-w-4xl h-[600px] bg-gray-200 flex items-center justify-center">
+        <p className="text-gray-500">Live Video Stream Placeholder</p>
       </div>
 
-      {client && (
-        <AblyProvider client={client}>
-          {/* Additional components can be added here */}
-        </AblyProvider>
-      )}
+      {/* Occupancy Indicator */}
+      <div className="absolute bottom-4 right-4 flex items-center bg-black/50 text-white px-3 py-2 rounded-full">
+        <FaEye className="mr-2" />
+        <span>{occupancySubscribers}</span>
+      </div>
     </div>
   );
 }
