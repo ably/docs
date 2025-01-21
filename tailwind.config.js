@@ -143,6 +143,13 @@ module.exports = extendConfig((ablyUIConfig) => ({
         ...ablyUIConfig.theme.extend.fontSize,
         16: ['16px', '18px'],
       },
+      keyframes: {
+        ...ablyUIConfig.theme.extend.keyframes,
+        fadeInTenPercent: {
+          from: { opacity: 0 },
+          to: { opacity: 0.1 },
+        },
+      },
     },
   },
   variants: {
