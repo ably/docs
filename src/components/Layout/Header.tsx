@@ -65,6 +65,12 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const tabs = ['Documentation', { label: 'Examples', disabled: true }];
 
+  // a temporary thing to test out containerised layout
+  const [withContainer, setWithContainer] = useState(false);
+  useEffect(() => {
+    setWithContainer(localStorage.getItem('ably-docs-with-container') === 'true');
+  }, []);
+
   const tabLinks = (index: number) => {
     switch (index) {
       case 0:
@@ -104,56 +110,61 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
     <>
       <header
         role="banner"
-        className="fixed top-0 left-0 w-full z-10 bg-neutral-000 dark:bg-neutral-1300 flex px-24 md:px-64 h-64 border-b border-neutral-300 items-center"
+        className={cn(
+          'fixed top-0 left-0 w-full z-10 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300',
+          { 'px-24 md:px-64': !withContainer },
+        )}
         style={{ height: HEADER_HEIGHT }}
       >
-        <Logo additionalLinkAttrs={{ className: 'flex h-full focus-base rounded mr-32' }} />
-        <div className="flex md:hidden flex-1 items-center justify-end gap-24 h-full">
-          <button
-            className="cursor-pointer focus-base rounded"
-            aria-label="Toggle search"
-            onClick={() => {
-              const searchContainer = document.querySelector('#inkeep-search > div');
-              const searchButton = searchContainer?.shadowRoot?.querySelector('button');
+        <div className={cn('flex items-center h-full', { 'ui-standard-container mx-auto': withContainer })}>
+          <Logo additionalLinkAttrs={{ className: 'flex h-full focus-base rounded mr-32' }} />
+          <div className="flex md:hidden flex-1 items-center justify-end gap-24 h-full">
+            <button
+              className="cursor-pointer focus-base rounded"
+              aria-label="Toggle search"
+              onClick={() => {
+                const searchContainer = document.querySelector('#inkeep-search > div');
+                const searchButton = searchContainer?.shadowRoot?.querySelector('button');
 
-              if (searchButton) {
-                searchButton.click();
-              }
-            }}
-          >
-            <Icon name="icon-gui-search" size="1.5rem" />
-          </button>
-          <button
-            className="cursor-pointer focus-base rounded"
-            onClick={() => setShowMenu(!showMenu)}
-            aria-expanded={showMenu}
-            aria-controls="mobile-menu"
-            aria-label="Toggle menu"
-          >
-            <Icon name={showMenu ? 'icon-gui-close' : 'icon-gui-burger-menu'} size="1.5rem" />
-          </button>
-        </div>
-        <div className="hidden md:flex flex-1 items-center h-full">
-          <TabMenu
-            tabs={tabs}
-            tabClassName="ui-text-menu3 !px-16"
-            tabOnClick={(index) => {
-              navigate(tabLinks(index));
-            }}
-            options={{ underline: false, flexibleTabHeight: true }}
-          />
-          <div className="flex-1 flex justify-center pl-16 pr-32">
-            {!hideSearchBar ? (
-              <SearchBar
-                displayLocation="homepage"
-                extraStyleOptions={{
-                  wrapperContainer: { width: '100%', maxWidth: '280px' },
-                  inputContainer: { width: '100%', maxWidth: '280px' },
-                }}
-              />
-            ) : null}
+                if (searchButton) {
+                  searchButton.click();
+                }
+              }}
+            >
+              <Icon name="icon-gui-search" size="1.5rem" />
+            </button>
+            <button
+              className="cursor-pointer focus-base rounded"
+              onClick={() => setShowMenu(!showMenu)}
+              aria-expanded={showMenu}
+              aria-controls="mobile-menu"
+              aria-label="Toggle menu"
+            >
+              <Icon name={showMenu ? 'icon-gui-close' : 'icon-gui-burger-menu'} size="1.5rem" />
+            </button>
           </div>
-          <HeaderLinks />
+          <div className="hidden md:flex flex-1 items-center h-full">
+            <TabMenu
+              tabs={tabs}
+              tabClassName="ui-text-menu3 !px-16"
+              tabOnClick={(index) => {
+                navigate(tabLinks(index));
+              }}
+              options={{ underline: false, flexibleTabHeight: true }}
+            />
+            <div className="flex-1 flex justify-center px-16">
+              {!hideSearchBar ? (
+                <SearchBar
+                  displayLocation="homepage"
+                  extraStyleOptions={{
+                    wrapperContainer: { width: '100%', maxWidth: '280px' },
+                    inputContainer: { width: '100%', maxWidth: '280px' },
+                  }}
+                />
+              ) : null}
+            </div>
+            <HeaderLinks />
+          </div>
         </div>
       </header>
       {showMenu ? (
