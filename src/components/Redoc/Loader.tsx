@@ -2,12 +2,16 @@ import { scriptLoader } from '../../external-scripts/utils';
 import './redoc.module.css';
 import { GoTopButton } from './GoTopButton';
 
-export const Loader = ({ specUrl }: { specUrl: string }) => {
-  const redocDependencyScript = '//cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js';
+declare const Redoc: {
+  init: (specUrl: string, options: object, element: HTMLElement | null) => void;
+};
+
+export const Loader = ({ specUrl }: { specUrl?: string }) => {
+  const redocDependencyScript = 'https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js';
   const options = {
+    requiredPropsFirst: true,
     hideDownloadButton: true,
     scrollYOffset: 64,
-    /* AblyUI variables doesn't work on this theme settings  */
     theme: {
       spacing: {
         sectionHorizontal: 24,
@@ -15,11 +19,11 @@ export const Loader = ({ specUrl }: { specUrl: string }) => {
       },
       typography: {
         fontSize: '1rem',
-        fontFamily: 'NEXT Book, Arial, Helvetica, sans-serif',
+        fontFamily: 'Manrope, system-ui, sans-serif',
         fontWeightRegular: 300,
         fontWeightBold: 500,
         headings: {
-          fontFamily: 'NEXT Book, Arial, Helvetica, sans-serif',
+          fontFamily: 'Manrope, system-ui, sans-serif',
           fontWeight: 500,
         },
         links: {
@@ -44,10 +48,9 @@ export const Loader = ({ specUrl }: { specUrl: string }) => {
       },
     },
   };
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && specUrl) {
     scriptLoader(document, redocDependencyScript, {
       onload: () => {
-        // @ts-ignore
         Redoc.init(specUrl, options, document.getElementById('redoc-container'));
       },
     });
