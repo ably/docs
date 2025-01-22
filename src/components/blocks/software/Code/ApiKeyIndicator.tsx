@@ -16,7 +16,7 @@ const APIKeyIndicator = ({ tooltip }: ApiKeyIndicatorProps) => {
       <div className="docs-api-key-label" title={tooltip}>
         Demo Only
       </div>
-      <Icon additionalCSS="ml-4 cursor-help" name="icon-gui-info" size="1rem" />
+      <Icon additionalCSS="ml-4 cursor-help" name="icon-gui-information-circle-micro" size="1rem" />
       {tooltipHover ? (
         <aside
           className="w-240 max-w-240 absolute -mt-140 box-border

@@ -28,9 +28,9 @@ const ControlApi = () => {
           <div className="text-gui-default hover:text-gui-hover focus:text-gui-focus focus:outline-gui-focus group ui-text-p2">
             <Link to="/api">
               <Icon
-                name="icon-gui-disclosure-arrow"
+                name="icon-gui-chevron-left-micro"
                 size="1rem"
-                additionalCSS="align-middle transform rotate-180 mr-4 h-16 w-16 ui-link"
+                additionalCSS="align-middle mr-4 h-16 w-16 ui-link"
               />
               API Reference
             </Link>

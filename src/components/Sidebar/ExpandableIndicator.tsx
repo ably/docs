@@ -12,7 +12,7 @@ export const ExpandableIndicator = ({
   className?: string;
 }) => (
   <Icon
-    name="icon-gui-disclosure-arrow"
+    name="icon-gui-chevron-right-micro"
     size="1rem"
     additionalCSS={cn(
       expendableIndicator,

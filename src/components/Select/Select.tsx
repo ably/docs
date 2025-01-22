@@ -11,7 +11,7 @@ const CustomOption = ({ innerProps, innerRef, isSelected, label }: OptionProps<R
       className="text-cool-black rounded w-full hover:bg-light-grey cursor-pointer hover:text-gui-active p-8 flex items-center justify-between font-sans text-btn2"
     >
       {label}
-      {isSelected && <Icon name="icon-gui-tick" size="1rem" />}
+      {isSelected && <Icon name="icon-gui-check-micro" size="1rem" />}
     </div>
   );
 };

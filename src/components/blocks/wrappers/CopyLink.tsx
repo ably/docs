@@ -49,7 +49,7 @@ const CopyLink = ({
               [isHidden]: notificationIsVisible,
             })}
           >
-            <Icon name="icon-gui-link" size="1rem" />
+            <Icon name="icon-gui-link-micro" size="1rem" />
           </button>
         </div>
         <div

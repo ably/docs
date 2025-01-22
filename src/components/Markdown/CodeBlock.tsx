@@ -48,7 +48,7 @@ export const CodeBlock: FC<{ children: React.ReactNode; language: string }> = ({
       </div>
       <div className="absolute top-16 right-8">
         <ButtonWithTooltip tooltip="Copy" notification="Copied!" onClick={handleCopy} className="text-white">
-          <Icon name="icon-gui-copy" size="1rem" color="white" />
+          <Icon name="icon-gui-square-2-stack-micro" size="1rem" color="text-neutral-000" />
         </ButtonWithTooltip>
       </div>
     </pre>

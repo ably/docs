@@ -94,7 +94,7 @@ export const SuggestionBox = ({ results, isActive, error, query, displayLocation
             className="text-gui-active hover:underline"
           >
             our main site
-            <Icon name="icon-gui-external-link" size="12px" additionalCSS="inline-block ml-4" />
+            <Icon name="icon-gui-arrow-top-right-on-square-outline" size="12px" additionalCSS="inline-block ml-4" />
           </a>
           .
         </EmptyState>

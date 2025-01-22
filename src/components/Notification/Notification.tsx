@@ -38,7 +38,7 @@ export const Notification = ({
         </Link>
       </div>
       <button type="button" className="text-black ml-12 flex items-center" onClick={handleDismiss} aria-label="Close">
-        <Icon name="icon-gui-close" size="16px" />
+        <Icon name="icon-gui-x-mark-outline" size="16px" />
       </button>
     </div>
   ) : null;
