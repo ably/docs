@@ -1,9 +1,11 @@
 import React from 'react';
+import { withPrefix } from 'gatsby';
 import { SectionProps } from '../ProductPageContent';
 import { BodySectionDescription } from './BodySectionDescription';
 import { FeatureCard, QuickstartCard, ExampleCard, TutorialCard } from './Card';
 import { ImageProps, getImageFromList } from 'src/components/Image';
 import FeatureLink from '@ably/ui/core/FeaturedLink';
+import { checkLinkIsInternal, normalizeLegacyDocsLink } from 'src/utilities/link-checks';
 
 const cardTypes = {
   feature: FeatureCard,
@@ -30,6 +32,10 @@ export const BodySection = ({ section, images }: { section: SectionProps; images
     5: 'lg:grid-cols-5',
     4: 'lg:grid-cols-4',
   };
+
+  if (section.callToAction && checkLinkIsInternal(section.callToAction.href)) {
+    section.callToAction.href = withPrefix(normalizeLegacyDocsLink(section.callToAction.href));
+  }
 
   return (
     <section className="mb-48">
@@ -63,11 +69,11 @@ export const BodySection = ({ section, images }: { section: SectionProps; images
           })}
         </div>
       )}
-      {section.callToAction ? (
+      {section.callToAction && (
         <FeatureLink {...section.callToAction} url={section.callToAction.href}>
           {section.callToAction.text}
         </FeatureLink>
-      ) : null}
+      )}
     </section>
   );
 };

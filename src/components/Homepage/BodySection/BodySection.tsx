@@ -1,4 +1,5 @@
 import cn from '@ably/ui/core/utils/cn';
+import { withPrefix } from 'gatsby';
 import { ImageProps, getImageFromList } from 'src/components/Image';
 import { SectionProps } from '../HomepageContent';
 import { BodySectionDescription } from './BodySectionDescription';
@@ -6,6 +7,7 @@ import { HeroCard } from './Card/HeroCard';
 import { FeatureCard } from './Card/FeatureCard';
 import { SdkCard } from './Card/SdkCard';
 import FeatureLink from '@ably/ui/core/FeaturedLink';
+import { checkLinkIsInternal, normalizeLegacyDocsLink } from 'src/utilities/link-checks';
 
 const cardTypes = {
   hero: HeroCard,
@@ -38,6 +40,10 @@ export const BodySection = ({ section, images }: { section: SectionProps; images
   const columns = section.columns;
   const singleColumn = columns == 1;
   const bottomMargin = sectionBottomMarginVariants[section.bottomMargin];
+
+  if (section.callToAction && checkLinkIsInternal(section.callToAction.href)) {
+    section.callToAction.href = withPrefix(normalizeLegacyDocsLink(section.callToAction.href));
+  }
 
   return (
     <section className={bottomMargin}>
