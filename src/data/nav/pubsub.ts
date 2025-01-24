@@ -81,17 +81,24 @@ export default {
       ],
     },
     {
-      name: 'Pub/Sub channels',
+      name: 'Publish and subscribe',
       pages: [
         {
-          name: 'Channels',
-          link: '/channels',
+          name: 'Basic pub-sub',
+          link: '/pub-sub',
           indexPage: true,
         },
         {
-          name: 'Messages',
-          link: '/channels/messages',
+          name: 'Advanced pub-sub',
+          link: '/pub-sub/advanced',
         },
+      ],
+    },
+    {
+      name: 'Channels',
+      pages: [
+        { name: 'Channel concepts', link: '/channels' },
+        { name: 'Channel states', link: '/channels/states' },
         {
           name: 'Channel options',
           pages: [
@@ -114,8 +121,18 @@ export default {
           ],
         },
         {
-          name: 'How-to: publish and subscribe to channels',
+          name: 'Messages',
           link: '/how-to/pub-sub',
+          pages: [
+            {
+              name: 'Message concepts',
+              link: '/messages',
+            },
+            {
+              name: 'Message batching',
+              link: '/messages/batch',
+            },
+          ],
         },
       ],
     },
