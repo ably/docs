@@ -42,5 +42,5 @@ export const safeWindow =
         typeof globalThis & {
           Boomerang?: { init: (params: unknown) => void };
           Headway?: { init: (params: unknown) => void };
-          dataLayer?: Record<string, string | number>[];
+          dataLayer?: Array<Record<string, unknown>>;
         });

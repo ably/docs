@@ -11,6 +11,8 @@ import {
 
 import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
 
+import { trackPageView } from './src/external-scripts/google-tag-manager';
+
 const onClientEntry: GatsbyBrowser['onClientEntry'] = () => {
   const store = createRemoteDataStore({
     ...reducerBlogPosts,
@@ -46,4 +48,11 @@ const shouldUpdateScroll: GatsbyBrowser['shouldUpdateScroll'] = ({ prevRouterPro
 import UserContextWrapper from './src/contexts/user-context/wrap-with-provider';
 const wrapRootElement = UserContextWrapper;
 
-export { onClientEntry, shouldUpdateScroll, wrapRootElement };
+/**
+ * Keep GTM/GA updated as users navigate around the site
+ */
+const onRouteUpdate: GatsbyBrowser['onRouteUpdate'] = ({ location }) => {
+  trackPageView(location);
+};
+
+export { onClientEntry, shouldUpdateScroll, wrapRootElement, onRouteUpdate };

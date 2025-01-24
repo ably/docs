@@ -56,6 +56,16 @@ export const GoogleTagManagerFallback = ({
   );
 };
 
+export const trackPageView = (location: Location) => {
+  safeWindow.dataLayer?.push({
+    event: 'pageview',
+    page: {
+      path: location.pathname,
+      url: window.location.href,
+    },
+  });
+};
+
 const googleTagManagerSessionPageViews = ({ pageVisitCount }: { pageVisitCount?: number }) =>
   safeWindow.dataLayer?.push({ sessionPageViews: pageVisitCount ?? 0 });
 
