@@ -22,7 +22,8 @@ export type TrackableSession = {
 // Inject scripts and run any init code
 const injectScripts = ({
   hubspotTrackingId,
-  googleTagManagerAuthToken,
+  gtmContainerId,
+  gtmAuthToken,
   gtmPreview,
   announcementEnabled,
   oneTrustDomain,
@@ -41,8 +42,8 @@ const injectScripts = ({
     announcement();
   }
 
-  if (googleTagManagerAuthToken && gtmPreview) {
-    googleTagManager(googleTagManagerAuthToken, gtmPreview);
+  if (gtmContainerId) {
+    googleTagManager(gtmContainerId, gtmAuthToken, gtmPreview);
   }
 
   if (hubspotTrackingId) {
@@ -58,8 +59,7 @@ const injectScripts = ({
 const sessionTracker = (
   {
     hubspotTrackingId,
-    googleTagManagerAuthToken,
-    gtmPreview,
+    gtmContainerId,
     headwayAccountId,
     boomerangEnabled,
     inkeepEnabled,
@@ -75,7 +75,7 @@ const sessionTracker = (
     boomerang(sessionState.heroku);
   }
 
-  if (googleTagManagerAuthToken && gtmPreview) {
+  if (gtmContainerId) {
     googleTagManagerSessionPageViews(sessionState);
     googleTagManagerLoggedIn(sessionState);
     googleTagManagerCookiesAccepted(sessionState);

@@ -8,6 +8,7 @@ import sprites from '@ably/ui/core/sprites.svg';
 import UserContext from '../../contexts/user-context';
 
 import externalScriptInjector from 'src/external-scripts';
+import { GoogleTagManagerFallback } from 'src/external-scripts/google-tag-manager';
 
 const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
   const userContext = useContext(UserContext);
@@ -21,7 +22,8 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
         siteMetadata {
           externalScriptsData {
             hubspotTrackingId
-            googleTagManagerAuthToken
+            gtmContainerId
+            gtmAuthToken
             gtmPreview
             headwayAccountId
             boomerangEnabled
@@ -40,14 +42,15 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
   `);
 
   const externalScriptsData = siteMetadata.externalScriptsData || {};
-  const { googleTagManagerAuthToken, gtmPreview } = externalScriptsData;
+  const { gtmContainerId, gtmAuthToken, gtmPreview } = externalScriptsData;
   const { injectScripts, sessionTracker } = externalScriptInjector(externalScriptsData);
 
   useEffect(() => {
     injectScripts();
 
     loadSprites(sprites);
-  }, [injectScripts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     sessionTracker(sessionState);
@@ -55,17 +58,7 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
 
   return (
     <>
-      {googleTagManagerAuthToken && gtmPreview && (
-        <noscript>
-          <iframe
-            src={`https://www.googletagmanager.com/ns.html?id=GTM-TZ37KKW&gtm_auth=${googleTagManagerAuthToken}&gtm_preview=${gtmPreview}&gtm_cookies_win=x`}
-            height="0"
-            width="0"
-            style={{ display: 'none', visibility: 'hidden' }}
-          ></iframe>
-        </noscript>
-      )}
-
+      <GoogleTagManagerFallback containerId={gtmContainerId} authToken={gtmAuthToken} preview={gtmPreview} />
       {children}
     </>
   );

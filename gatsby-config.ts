@@ -21,7 +21,8 @@ export const siteMetadata = {
   externalScriptsData: {
     hubspotTrackingId: process.env.HUBSPOT_TRACKING_ID,
     addsearchSiteKey: process.env.ADDSEARCH_SITE_KEY,
-    googleTagManagerAuthToken: process.env.GOOGLE_TAG_MANAGER_AUTH_TOKEN,
+    gtmContainerId: process.env.GOOGLE_TAG_MANAGER_CONTAINER_ID,
+    gtmAuthToken: process.env.GOOGLE_TAG_MANAGER_AUTH_TOKEN,
     gtmPreview: process.env.GOOGLE_TAG_MANAGER_PREVIEW,
     headwayAccountId: process.env.HEADWAY_ACCOUNT_ID,
     boomerangEnabled: process.env.BOOMERANG_ENABLED,

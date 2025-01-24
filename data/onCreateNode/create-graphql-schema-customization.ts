@@ -75,7 +75,8 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
     type ExternalScriptData implements Node {
       hubspotTrackingId: String
       addsearchSiteKey: String
-      googleTagManagerAuthToken: String
+      gtmContainerId: String
+      gtmAuthToken: String
       gtmPreview: String
       headwayAccountId: String
       boomerangEnabled: String
