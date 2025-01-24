@@ -9,7 +9,7 @@ import { languageData, languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
 import { useOnClickOutside } from 'src/hooks';
 import { useLayoutContext } from 'src/contexts/layout-context';
-import Link from '../Link';
+import { navigate } from '../Link';
 import {
   componentMaxHeight,
   HEADER_HEIGHT,
@@ -39,37 +39,35 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
   const location = useLocation();
 
   return (
-    <Link
-      className="ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300"
-      to={isOption ? `${location.pathname}?lang=${props.data.label}` : '#'}
-    >
-      <div
-        onClick={() => setMenuOpen(!props.selectProps.menuIsOpen)}
-        className={cn('group/lang-dropdown flex gap-8 items-center rounded', {
+    <div
+      className={cn(
+        'ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 group/lang-dropdown flex gap-8 items-center rounded',
+        {
           'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer': isOption,
-        })}
-        role="menuitem"
-      >
-        <div className={cn('flex items-center gap-8', { 'flex-1': isOption })}>
-          <Icon size="20px" name={`icon-tech-${lang?.alias ?? props.data.label}` as IconName} />
-          {isOption ? lang?.label : null}
-        </div>
-        <Badge
-          color="neutral"
-          size="xs"
-          className={cn('my-1', { 'group-hover/lang-dropdown:bg-neutral-000': isOption })}
-        >
-          v{props.data.version.toFixed(1)}
-        </Badge>
-        {isOption ? (
-          <div className="w-16 h-16">
-            {props.data.label === langParam ? (
-              <Icon name="icon-gui-tick" size="16px" color="text-neutral-1000" />
-            ) : null}
-          </div>
-        ) : null}
+        },
+      )}
+      onClick={() => {
+        if (isOption) {
+          navigate(`${location.pathname}?lang=${props.data.label}`);
+        }
+
+        setMenuOpen(!props.selectProps.menuIsOpen);
+      }}
+      role="menuitem"
+    >
+      <div className={cn('flex items-center gap-8', { 'flex-1': isOption })}>
+        <Icon size="20px" name={`icon-tech-${lang?.alias ?? props.data.label}` as IconName} />
+        {isOption ? lang?.label : null}
       </div>
-    </Link>
+      <Badge color="neutral" size="xs" className={cn('my-1', { 'group-hover/lang-dropdown:bg-neutral-000': isOption })}>
+        v{props.data.version.toFixed(1)}
+      </Badge>
+      {isOption ? (
+        <div className="w-16 h-16">
+          {props.data.label === langParam ? <Icon name="icon-gui-tick" size="16px" color="text-neutral-1000" /> : null}
+        </div>
+      ) : null}
+    </div>
   );
 };
 
