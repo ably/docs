@@ -20,9 +20,8 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
       site {
         siteMetadata {
           externalScriptsData {
+            gtmContainerId
             hubspotTrackingId
-            googleTagManagerAuthToken
-            gtmPreview
             headwayAccountId
             boomerangEnabled
             announcementEnabled
@@ -40,7 +39,6 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
   `);
 
   const externalScriptsData = siteMetadata.externalScriptsData || {};
-  const { googleTagManagerAuthToken, gtmPreview } = externalScriptsData;
   const { injectScripts, sessionTracker } = externalScriptInjector(externalScriptsData);
 
   useEffect(() => {
@@ -53,22 +51,7 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
     sessionTracker(sessionState);
   }, [sessionState, sessionTracker]);
 
-  return (
-    <>
-      {googleTagManagerAuthToken && gtmPreview && (
-        <noscript>
-          <iframe
-            src={`https://www.googletagmanager.com/ns.html?id=GTM-TZ37KKW&gtm_auth=${googleTagManagerAuthToken}&gtm_preview=${gtmPreview}&gtm_cookies_win=x`}
-            height="0"
-            width="0"
-            style={{ display: 'none', visibility: 'hidden' }}
-          ></iframe>
-        </noscript>
-      )}
-
-      {children}
-    </>
-  );
+  return <>{children}</>;
 };
 
 export default GlobalLoading;

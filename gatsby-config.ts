@@ -21,8 +21,7 @@ export const siteMetadata = {
   externalScriptsData: {
     hubspotTrackingId: process.env.HUBSPOT_TRACKING_ID,
     addsearchSiteKey: process.env.ADDSEARCH_SITE_KEY,
-    googleTagManagerAuthToken: process.env.GOOGLE_TAG_MANAGER_AUTH_TOKEN,
-    gtmPreview: process.env.GOOGLE_TAG_MANAGER_PREVIEW,
+    gtmContainerId: process.env.GTM_CONTAINER_ID,
     headwayAccountId: process.env.HEADWAY_ACCOUNT_ID,
     boomerangEnabled: process.env.BOOMERANG_ENABLED,
     announcementEnabled: process.env.ANNOUNCEMENT_ENABLED,
@@ -109,5 +108,32 @@ export const plugins = [
     },
   },
   'gatsby-transformer-remark',
+  {
+    resolve: 'gatsby-plugin-google-tagmanager',
+    options: {
+      id: process.env.GTM_CONTAINER_ID,
+
+      // Include GTM in development.
+      //
+      // If you have this configured locally it probably makes sense to enable it in development
+      includeInDevelopment: !!process.env.GTM_CONTAINER_ID,
+
+      // datalayer to be set before GTM is loaded
+      // should be an object or a function that is executed in the browser
+      //
+      // Defaults to null
+      defaultDataLayer: {
+        platform: 'gatsby',
+        // prevent the initial page_view event from firing as we'll be doing it manually in
+        // GTM by listening for the gatsby-route-change events. This event is also fired when
+        // the page loads initially
+        gaPageView: false,
+      },
+
+      // Specify optional GTM environment details.
+      gtmAuth: process.env.GTM_ENVIRONMENT_AUTH,
+      gtmPreview: process.env.GTM_ENVIRONMENT_PREVIEW,
+    },
+  },
   `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/
 ];

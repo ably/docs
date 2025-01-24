@@ -2,7 +2,7 @@ import hubspot, { AblyHubspotData, hubspotIdentifyUser, HubspotUser } from './hu
 import headway from './headway';
 import boomerang from './boomerang';
 import announcement from 'utilities/console-announcement';
-import googleTagManager, {
+import {
   googleTagManagerCookiesAccepted,
   googleTagManagerSessionPageViews,
   googleTagManagerLoggedIn,
@@ -22,8 +22,6 @@ export type TrackableSession = {
 // Inject scripts and run any init code
 const injectScripts = ({
   hubspotTrackingId,
-  googleTagManagerAuthToken,
-  gtmPreview,
   announcementEnabled,
   oneTrustDomain,
   oneTrustEnabled,
@@ -41,10 +39,6 @@ const injectScripts = ({
     announcement();
   }
 
-  if (googleTagManagerAuthToken && gtmPreview) {
-    googleTagManager(googleTagManagerAuthToken, gtmPreview);
-  }
-
   if (hubspotTrackingId) {
     hubspot(hubspotTrackingId, !(inkeepEnabled === 'true'));
   }
@@ -58,8 +52,7 @@ const injectScripts = ({
 const sessionTracker = (
   {
     hubspotTrackingId,
-    googleTagManagerAuthToken,
-    gtmPreview,
+    gtmContainerId,
     headwayAccountId,
     boomerangEnabled,
     inkeepEnabled,
@@ -75,7 +68,7 @@ const sessionTracker = (
     boomerang(sessionState.heroku);
   }
 
-  if (googleTagManagerAuthToken && gtmPreview) {
+  if (gtmContainerId) {
     googleTagManagerSessionPageViews(sessionState);
     googleTagManagerLoggedIn(sessionState);
     googleTagManagerCookiesAccepted(sessionState);
