@@ -18,7 +18,7 @@ redirect_from:
 Messages contain the data that a client is communicating, such as the contents of a chat message. Clients publish messages on "channels":/channels, and these messages are received by clients that have "subscribed":/pub-sub#subscribe to them. This pattern is otherwise known as pub/sub, as publishers and subscribers are completely decoupled.
 
 <aside data-type='note'>
-<p>Messages are counted in 2KiB chunks. See "what counts as a message":https://faqs.ably.com/how-does-ably-count-messages. </p>
+<p>Messages are counted in 5KiB chunks. See "what counts as a message":https://faqs.ably.com/how-does-ably-count-messages. </p>
 </aside>
 
 h2(#properties). Message properties
@@ -31,7 +31,7 @@ The following are the properties of a message:
 - clientId := The "ID of the client":/auth/identified-clients that published the message.
 - connectionId := The ID of the connection used to publish the message.
 - timestamp := The timestamp of when the message was received by Ably, as milliseconds since the Unix epoch.
-- extras := A JSON object of arbitrary key-value pairs that may contain metadata, and/or ancillary payloads. Valid payloads include those related to "Push Notifications":/push, "deltas":/channels/options/deltas and  and headers.
+- extras := A JSON object of arbitrary key-value pairs that may contain metadata, and/or ancillary payloads. Valid payloads include those related to "Push Notifications":/push, "deltas":/channels/options/deltas and headers.
 - encoding := This is typically empty, as all messages received from Ably are automatically decoded client-side using this value. However, if the message encoding cannot be processed, this attribute contains the remaining transformations not applied to the data payload.
 
 h2(#conflation). Message conflation
@@ -70,3 +70,54 @@ Use the following steps to configure message conflation for a channel, or channe
 <aside data-type='note'>
 <p>Message conflation is mutually exclusive with "server-side batching":/messages/batch#server-side on a channel, or channel namespace.</p>
 </aside>
+
+h2(#routing). Message routing and conflation syntax
+
+Ably uses common syntax to select which messages are routed to integrations and for assessing which messages to apply conflation to. The following properties and features use this syntax:
+
+* @routingKey@ for "AMQP":/general/firehose/amqp-rule and "Kafka":/general/firehose/kafka-rule integrations
+* @partitionKey@ for "AWS Kinesis":/general/firehose/kinesis-rule integrations
+* @conflationKey@ for "message conflation":#conflation
+
+h3(#interpolation). Interpolation
+
+As part of the syntax, interpolation is available to use the properties of a message to create the routing or conflation key.
+
+The following properties can be used as variables:
+
+- @channelName@ := The name of a channel.
+- @message.name@ := The name of the message.
+- @message.id@ := The unique ID of the message.
+- @message.clientId@ := The ID of the client that published the message.
+- @message.extras.headers['<header-name>']@ := The value of the specified header in the @message.extras@ field.
+
+Interpolation uses the @#{...}@ syntax, for example @channel-name-identifier-#{channel-1}@.
+
+<aside data-type='note'>
+<p>For a Kafka rule, the @routingKey@ includes both the topic and message routing key joined by a colon, for example @topic:key@, or with interpolation @topic-#{channelName}:message-key-#{message.name}@. So either, or both, can be dynamic. This split is done after any interpolation, but since Kafka topics cannot contain a colon, this does not introduce any ambiguity.</p>
+</aside>
+
+h3(#filters). Filters
+
+Interpolation can optionally be followed by a filter using pipe syntax.
+
+The following filters are supported:
+
+- hash := Transforms the variable into a stringified 32-bit fingerprint. It takes an optional numerical argument, the base to use when stringifying, which defaults to 16.
+- moduloHash := Similar to hash, but runs the result through a modulo function before stringifying. This is useful for bucketing. It takes one mandatory argument; the number of buckets, and one optional argument; the base to use when stringifying, which defaults to 16.
+
+If using a filter, you can specify a tuple of two or more variables as the input to the filter. It should be comma-separated and delimited with parentheses.
+
+h3(#examples). Routing and conflation syntax examples
+
+The following are examples of using interpolation and filters to create a routing or conflation key:
+
+* Hashed channel name as hex: @#{channelName | hash}@
+* Hashed channel name as decimal: @#{channelName | hash(10)}@
+* @the-foo-header-is-#{ message.extras.headers['foo'] }@
+* Channel name in mod 256: @#{channelName | moduloHash(256)}@
+* Channel name in octal: @#{channelName | moduloHash(256, 8)}@
+* @message name: #{message.name}, clientId: #{message.clientId}@
+* Hexadecimal hash combining all message properties except id: @#{(message.name, message.clientId, channelName) | hash}@
+* @#{message.id}@ will be different for every message, so useful for routing to kinesis shards at random
+* @shard-#{message.id | moduloHash(4, 10)}@ will be one of "shard-0", "shard-1", "shard-2", "shard-3"
