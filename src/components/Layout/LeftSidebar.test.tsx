@@ -33,7 +33,7 @@ const mockProducts: [ProductKey, NavProduct][] = [
     'platform',
     {
       name: 'Platform',
-      icon: { open: 'icon-gui-chevron-up', closed: 'icon-gui-chevron-down' },
+      icon: { open: 'icon-gui-chevron-up-micro', closed: 'icon-gui-chevron-down-micro' },
       content: [
         {
           name: 'Overview',
@@ -80,8 +80,6 @@ const mockProducts: [ProductKey, NavProduct][] = [
 describe('LeftSidebar', () => {
   beforeEach(() => {
     mockUseLayoutContext.mockReturnValue({
-      selectedProduct: 'platform',
-      setSelectedProduct: jest.fn(),
       activePage: {
         tree: [
           { index: 0, page: { name: 'Link 1', link: '/link-1' } },
@@ -128,12 +126,5 @@ describe('LeftSidebar', () => {
     expect(screen.getByText('Getting Started')).toBeInTheDocument();
     expect(screen.getByText('API Introduction')).toBeInTheDocument();
     expect(screen.getByText('API Reference')).toBeInTheDocument();
-  });
-
-  it('calls setSelectedProduct when a product is clicked', () => {
-    const { setSelectedProduct } = mockUseLayoutContext();
-    render(<LeftSidebar />);
-    fireEvent.click(screen.getAllByText('Platform')[0]);
-    expect(setSelectedProduct).toHaveBeenCalledWith('platform');
   });
 });

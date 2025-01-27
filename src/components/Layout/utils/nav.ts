@@ -134,11 +134,11 @@ export const commonAccordionOptions = (
   },
 });
 
-export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128';
+export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128 pt-24';
 
 export const sidebarAlignmentStyles: React.CSSProperties = {
-  top: HEADER_HEIGHT + HEADER_BOTTOM_MARGIN,
-  height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN),
+  top: HEADER_HEIGHT,
+  height: componentMaxHeight(HEADER_HEIGHT),
 };
 
 export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link).replaceAll('/', '-')}`;

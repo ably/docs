@@ -9,11 +9,10 @@ import { LanguageKey } from 'src/data/languages/types';
 /**
  * LayoutContext
  *
- * selectedProduct - The currently selected product key. This changes when you click on a product in the sidebar.
- * setSelectedProduct - Function to update the selected product key.
  * activePage - The navigation tree that leads to the current page, and a list of languages referenced on the page.
  * products - List of products with their navigation data.
  * options - Object containing boolean flags for UI options.
+ * setLayoutOptions - Function to update the layout options.
  */
 
 export type LayoutOptions = { noSidebar: boolean; hideSearchBar: boolean };
