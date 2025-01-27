@@ -18,7 +18,7 @@ export default function Chat() {
     get({ limit: 10 })
       .then((result) => {
         result.items.forEach(message => {
-          const messageExists = messages.some((prevMessage) => prevMessage.timeserial === message.timeserial);
+          const messageExists = messages.some((prevMessage) => prevMessage.serial === message.serial);
 
           if (messageExists) {
             return messages;
