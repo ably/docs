@@ -91,6 +91,6 @@ describe('RightSidebar', () => {
     render(<RightSidebar />);
     const headerLink = screen.getByRole('link', { name: 'Header 1' });
     fireEvent.click(headerLink);
-    expect(headerLink).toHaveClass('font-bold');
+    expect(headerLink).toHaveClass('text-neutral-1300');
   });
 });

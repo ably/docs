@@ -83,33 +83,33 @@ describe('LanguageSelector', () => {
 
   it('renders the LanguageSelector component with default language (JS)', () => {
     render(<LanguageSelector />);
-    expect(screen.getByText('icon-gui-chevron-down')).toBeInTheDocument();
+    expect(screen.getByText('icon-gui-chevron-down-micro')).toBeInTheDocument();
     expect(screen.getByText('icon-tech-javascript')).toBeInTheDocument();
   });
 
   it('opens the dropdown menu on click', () => {
     render(<LanguageSelector />);
-    fireEvent.click(screen.getByText('icon-gui-chevron-down'));
+    fireEvent.click(screen.getByText('icon-gui-chevron-down-micro'));
     expect(screen.getByText('Code Language')).toBeInTheDocument();
   });
 
   it('renders language options', () => {
     render(<LanguageSelector />);
-    fireEvent.click(screen.getByText('icon-gui-chevron-down'));
+    fireEvent.click(screen.getByText('icon-gui-chevron-down-micro'));
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
     expect(screen.getByText('Python')).toBeInTheDocument();
   });
 
   it('closes the dropdown menu on outside click', () => {
     render(<LanguageSelector />);
-    fireEvent.click(screen.getByText('icon-gui-chevron-down'));
+    fireEvent.click(screen.getByText('icon-gui-chevron-down-micro'));
     fireEvent.mouseDown(document);
     expect(screen.queryByText('Code Language')).not.toBeInTheDocument();
   });
 
   it('filters options based on activePage.languages', () => {
     render(<LanguageSelector />);
-    fireEvent.click(screen.getByText('icon-gui-chevron-down'));
+    fireEvent.click(screen.getByText('icon-gui-chevron-down-micro'));
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
     expect(screen.getByText('Python')).toBeInTheDocument();
     expect(screen.queryByText('Ruby')).not.toBeInTheDocument();

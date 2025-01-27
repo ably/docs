@@ -118,9 +118,9 @@ export const SearchBar = ({
               onChange={handleSearch}
               style={{ ...extraInputStyle }}
             />
-            <Icon name="icon-gui-magnifying-glass-outline" size="24px" additionalCSS="absolute left-16 top-12" />
+            <Icon name="icon-gui-magnifying-glass-outline" size="24px" additionalCSS="absolute left-16 top-8" />
             {!isInFocus && (
-              <div className="absolute right-16 top-12 hidden lg:flex items-center justify-end">
+              <div className="absolute right-16 top-8 hidden lg:flex items-center justify-end">
                 <KeyIcon className="mr-4">{keyIcon}</KeyIcon>
                 <KeyIcon className="pt-2">K</KeyIcon>
               </div>

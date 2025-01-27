@@ -106,7 +106,7 @@ const RightSidebar = () => {
     return () => {
       observer.current?.disconnect();
     };
-  }, [language]);
+  }, [language, location.pathname]);
 
   const highlightPosition = useMemo(() => {
     const sidebarElement =
