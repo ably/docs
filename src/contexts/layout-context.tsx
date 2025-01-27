@@ -5,6 +5,7 @@ import data from 'src/data';
 import { NavProduct } from 'src/data/nav/types';
 import { ProductData, ProductKey } from 'src/data/types';
 import { LanguageKey } from 'src/data/languages/types';
+import { getLayoutOptions } from 'src/components/Layout/utils/options';
 
 /**
  * LayoutContext
@@ -40,7 +41,7 @@ const LayoutContext = createContext<{
 export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
   const [languages, setLanguages] = useState<LanguageKey[]>([]);
-  const [options, setOptions] = useState({ noSidebar: false, hideSearchBar: false });
+  const [options, setOptions] = useState(getLayoutOptions(location.pathname));
 
   useEffect(() => {
     const languagesSet = new Set<LanguageKey>();
