@@ -1,16 +1,22 @@
 "use client";
 
-import { useChatClient, useRoom, useTyping } from '@ably/chat';
+import { TypingEvent, useChatClient, useRoom, useTyping } from '@ably/chat';
 import '../../styles/styles.css'
 
 const Loading = () => <div>Loading...</div>;
 
 const ChatInput = () => {
-  const {start, currentlyTyping } = useTyping();
+  const {start, currentlyTyping } = useTyping({
+    listener: (typingEvent: TypingEvent) => {
+      console.log('Typing event received: ', typingEvent);
+    },
+  });
   const { clientId } = useChatClient();
 
+  console.log(currentlyTyping);
   const typingClientIds = Array.from(currentlyTyping).filter((id) => id !== clientId);
   const clientsTyping = typingClientIds.join(' and ');
+  console.log(clientsTyping);
   const typingIndicatorText = clientsTyping ? `${clientsTyping} ${typingClientIds.length === 1 ? 'is' : 'are'} typing` : '';
 
   return (
