@@ -1,9 +1,11 @@
 import SDKsContent from 'src/components/SDKsPage';
-import Layout from 'src/components/Layout';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { Head } from 'src/components/Head';
+import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
 const SDKsIndexPage = ({ location: { search } }: { location: { search: string } }) => {
+  useSetLayoutOptions({ noSidebar: true, hideSearchBar: false });
+
   const title = 'SDKs';
   const meta_description = '';
   const { canonicalUrl } = useSiteMetadata();
@@ -15,9 +17,7 @@ const SDKsIndexPage = ({ location: { search } }: { location: { search: string } 
   return (
     <>
       <Head title={title} description={meta_description} canonical={canonical} />
-      <Layout noSidebar>
-        <SDKsContent tab={tab} />
-      </Layout>
+      <SDKsContent tab={tab} />
     </>
   );
 };

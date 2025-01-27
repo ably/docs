@@ -2,7 +2,6 @@ import { Script, ScriptStrategy, navigate } from 'gatsby';
 import { useEffect, useMemo } from 'react';
 
 import { Head } from 'src/components/Head';
-import Layout from 'src/components/Layout';
 import Article from 'src/components/Article';
 import PageTitle from 'src/components/PageTitle';
 import Html from 'src/components/blocks/Html';
@@ -17,6 +16,7 @@ import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from 
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { getMetaTitle } from 'src/components/common/meta-title';
+import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -38,6 +38,8 @@ const Template = ({
   data: { document },
   currentProduct,
 }: ITemplate) => {
+  useSetLayoutOptions();
+
   const {
     currentLanguage: currentLanguageFromContext,
     handleCurrentLanguageChange,
@@ -125,13 +127,10 @@ const Template = ({
     <>
       <PathnameContext.Provider value={pathname}>
         <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} />
-
-        <Layout>
-          <Article>
-            <PageTitle>{title}</PageTitle>
-            <div>{elements}</div>
-          </Article>
-        </Layout>
+        <Article>
+          <PageTitle>{title}</PageTitle>
+          <div>{elements}</div>
+        </Article>
       </PathnameContext.Provider>
       {script && <Script src={`/scripts/${slug}.js`} strategy={ScriptStrategy.idle} />}
     </>

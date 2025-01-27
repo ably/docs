@@ -13,19 +13,35 @@ import { LanguageKey } from 'src/data/languages/types';
  * setSelectedProduct - Function to update the selected product key.
  * activePage - The navigation tree that leads to the current page, and a list of languages referenced on the page.
  * products - List of products with their navigation data.
+ * options - Object containing boolean flags for UI options.
  */
+
+export type LayoutOptions = { noSidebar: boolean; hideSearchBar: boolean };
 
 const LayoutContext = createContext<{
   activePage: { tree: PageTreeNode[]; languages: LanguageKey[] };
   products: [ProductKey, NavProduct][];
+  options: {
+    noSidebar: boolean;
+    hideSearchBar: boolean;
+  };
+  setLayoutOptions: (options: { noSidebar: boolean; hideSearchBar: boolean }) => void;
 }>({
   activePage: { tree: [], languages: [] },
   products: [],
+  options: {
+    noSidebar: false,
+    hideSearchBar: false,
+  },
+  setLayoutOptions: (options) => {
+    console.warn('setLayoutOptions called without a provider', options);
+  },
 });
 
 export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
   const [languages, setLanguages] = useState<LanguageKey[]>([]);
+  const [options, setOptions] = useState({ noSidebar: false, hideSearchBar: false });
 
   useEffect(() => {
     const languagesSet = new Set<LanguageKey>();
@@ -51,11 +67,22 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
     [],
   );
 
+  const setLayoutOptions = (newOptions: { noSidebar: boolean; hideSearchBar: boolean }) => {
+    setOptions((prevOptions) => {
+      if (prevOptions.noSidebar !== newOptions.noSidebar || prevOptions.hideSearchBar !== newOptions.hideSearchBar) {
+        return newOptions;
+      }
+      return prevOptions;
+    });
+  };
+
   return (
     <LayoutContext.Provider
       value={{
         activePage,
         products,
+        options,
+        setLayoutOptions,
       }}
     >
       {children}
