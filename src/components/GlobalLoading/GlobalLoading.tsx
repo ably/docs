@@ -44,9 +44,13 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
   const { injectScripts, sessionTracker } = externalScriptInjector(externalScriptsData);
 
   useEffect(() => {
-    injectScripts();
+    if (!document.querySelector('div[data-scripts-loaded="true"]')) {
+      injectScripts();
+    }
 
-    loadSprites(sprites);
+    if (!document.querySelector('.ably-sprites')) {
+      loadSprites(sprites);
+    }
   }, [injectScripts]);
 
   useEffect(() => {

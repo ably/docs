@@ -52,6 +52,12 @@ const injectScripts = ({
   if (inkeepEnabled) {
     inkeepChat(inkeepApiKey, inkeepIntegrationId, inkeepOrganizationId);
   }
+
+  if (!document.querySelector('div[data-scripts-loaded="true"]')) {
+    const scriptsLoadedMarker = document.createElement('div');
+    scriptsLoadedMarker.setAttribute('data-scripts-loaded', 'true');
+    document.body.appendChild(scriptsLoadedMarker);
+  }
 };
 
 // Run signed in trackers
