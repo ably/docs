@@ -104,7 +104,7 @@ const loadInkeepSearch = (searchSettings) => {
   });
 };
 
-type InkeepUser = {
+export type InkeepUser = {
   uuid: string;
 };
 

@@ -1,14 +1,14 @@
 import hubspot, { AblyHubspotData, hubspotIdentifyUser, HubspotUser } from './hubspot';
 import headway from './headway';
 import boomerang from './boomerang';
-import announcement from 'utilities/console-announcement';
-import googleTagManager, {
+import type { BoomerangParams } from './boomerang';
+import announcement from '../utilities/console-announcement';
+import {
   googleTagManagerCookiesAccepted,
   googleTagManagerSessionPageViews,
   googleTagManagerLoggedIn,
 } from './google-tag-manager';
-import oneTrustScript from './one-trust';
-import inkeepChat, { inkeepChatIdentifyUser } from './inkeep';
+import inkeepChat, { inkeepChatIdentifyUser, InkeepUser } from './inkeep';
 
 export type TrackableSession = {
   emulatingUser?: boolean;
@@ -19,30 +19,39 @@ export type TrackableSession = {
   signedIn?: unknown;
 };
 
+type ExternalScriptsData = {
+  hubspotTrackingId?: string;
+  gtmContainerId?: string;
+  announcementEnabled?: boolean;
+  headwayAccountId?: string;
+  boomerangEnabled?: boolean;
+  inkeepEnabled?: string;
+  inkeepApiKey?: string;
+  inkeepIntegrationId?: string;
+  inkeepOrganizationId?: string;
+};
+
+type SessionState = {
+  heroku?: BoomerangParams;
+  signedIn?: boolean;
+  pageVisitCount?: number;
+  cookiesAcceptedByUser?: unknown;
+  emulatingUser?: boolean;
+  user?: HubspotUser & InkeepUser;
+  hubspot?: AblyHubspotData;
+};
+
 // Inject scripts and run any init code
 const injectScripts = ({
   hubspotTrackingId,
-  googleTagManagerAuthToken,
-  gtmPreview,
   announcementEnabled,
-  oneTrustDomain,
-  oneTrustEnabled,
-  oneTrustTest,
   inkeepEnabled,
   inkeepApiKey,
   inkeepIntegrationId,
   inkeepOrganizationId,
-} = {}) => {
-  if (oneTrustEnabled) {
-    oneTrustScript(oneTrustDomain, oneTrustTest);
-  }
-
+}: ExternalScriptsData = {}) => {
   if (announcementEnabled) {
     announcement();
-  }
-
-  if (googleTagManagerAuthToken && gtmPreview) {
-    googleTagManager(googleTagManagerAuthToken, gtmPreview);
   }
 
   if (hubspotTrackingId) {
@@ -58,14 +67,13 @@ const injectScripts = ({
 const sessionTracker = (
   {
     hubspotTrackingId,
-    googleTagManagerAuthToken,
-    gtmPreview,
+    gtmContainerId,
     headwayAccountId,
     boomerangEnabled,
     inkeepEnabled,
     inkeepApiKey,
-  } = {},
-  sessionState,
+  }: ExternalScriptsData = {},
+  sessionState: SessionState,
 ) => {
   if (!sessionState) {
     return;
@@ -75,7 +83,7 @@ const sessionTracker = (
     boomerang(sessionState.heroku);
   }
 
-  if (googleTagManagerAuthToken && gtmPreview) {
+  if (gtmContainerId) {
     googleTagManagerSessionPageViews(sessionState);
     googleTagManagerLoggedIn(sessionState);
     googleTagManagerCookiesAccepted(sessionState);
@@ -90,13 +98,15 @@ const sessionTracker = (
   }
 
   if (inkeepEnabled && inkeepApiKey) {
-    inkeepChatIdentifyUser(sessionState);
+    if (sessionState.user) {
+      inkeepChatIdentifyUser({ user: sessionState.user });
+    }
   }
 };
 
-const externalScriptInjector = (externalScriptsData) => ({
+const externalScriptInjector = (externalScriptsData: ExternalScriptsData | undefined) => ({
   injectScripts: () => injectScripts(externalScriptsData),
-  sessionTracker: (sessionData) => sessionTracker(externalScriptsData, sessionData),
+  sessionTracker: (sessionData: SessionState) => sessionTracker(externalScriptsData, sessionData),
 });
 
 export default externalScriptInjector;
