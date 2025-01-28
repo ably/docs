@@ -8,7 +8,6 @@ import {
   googleTagManagerSessionPageViews,
   googleTagManagerLoggedIn,
 } from './google-tag-manager';
-import oneTrustScript from './one-trust';
 import inkeepChat, { inkeepChatIdentifyUser, InkeepUser } from './inkeep';
 
 export type TrackableSession = {
@@ -46,9 +45,6 @@ type SessionState = {
 const injectScripts = ({
   hubspotTrackingId,
   announcementEnabled,
-  oneTrustDomain,
-  oneTrustEnabled,
-  oneTrustTest,
   inkeepEnabled,
   inkeepApiKey,
   inkeepIntegrationId,
