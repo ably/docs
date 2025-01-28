@@ -161,14 +161,14 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
       {showMenu ? (
         <>
           <div
-            className="absolute inset-0 bg-neutral-1300 dark:bg-neutral-1300 animate-[fadeInTenPercent_150ms_ease-in-out_forwards]"
+            className="fixed inset-0 bg-neutral-1300 dark:bg-neutral-1300 animate-[fadeInTenPercent_150ms_ease-in-out_forwards]"
             onClick={() => setShowMenu(!showMenu)}
             onKeyDown={(e) => e.key === 'Escape' && setShowMenu(false)}
             role="presentation"
           />
           <div
             id="mobile-menu"
-            className="md:hidden absolute flex flex-col top-[76px] overflow-y-hidden left-0 right-0 mx-12 bg-neutral-000 dark:bg-neutral-1300 rounded-2xl ui-shadow-lg-medium z-20"
+            className="md:hidden fixed flex flex-col top-[76px] overflow-y-hidden left-0 right-0 mx-12 bg-neutral-000 dark:bg-neutral-1300 rounded-2xl ui-shadow-lg-medium z-20"
             style={{ maxHeight: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN) }}
             ref={menuRef}
             role="navigation"
