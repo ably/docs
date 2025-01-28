@@ -153,7 +153,7 @@ const RightSidebar = () => {
                 {headers.map((header) => (
                   <a
                     href={`#${header.id}`}
-                    key={header.id}
+                    key={[location.pathname, header.id].join('-')}
                     id={`sidebar-${header.id}`}
                     className={cn(
                       'ui-text-menu4 font-medium text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth hover:text-neutral-1300 dark:hover:text-neutral-000',
