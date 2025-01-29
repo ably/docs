@@ -11,10 +11,11 @@ const realtimeClient = new Ably.Realtime({
 let sendCount = 0;
 let chatClient: ChatClient;
 let room: Room;
+const urlParams = new URLSearchParams(window.location.search);
 
 async function initializeChat() {
   chatClient = new ChatClient(realtimeClient);
-  room = await chatClient.rooms.get('chat-room-messages', RoomOptionsDefaults);
+  room = await chatClient.rooms.get(urlParams.get('name') || 'chat-room-history', RoomOptionsDefaults);
 }
 
 initializeChat();
@@ -22,7 +23,6 @@ const landingPage = document.getElementById('landing-page');
 const chatRoom = document.getElementById('chat-room-messages');
 
 /** Check if url param `loadChat` exists and is set to true to render the chat window instead of the menu */
-const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('loadChat') === 'true') {
   landingPage.style.display = 'none';
   chatRoom.style.display = 'block';

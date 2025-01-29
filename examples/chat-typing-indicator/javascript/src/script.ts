@@ -16,8 +16,9 @@ const typingOptions: TypingOptions = {
 let room: Room;
 
 async function initializeChat() {
+  const urlParams = new URLSearchParams(window.location.search);
   // Get ROOM with typing capabilities
-  room = await chatClient.rooms.get('typing-indicator', { typing: typingOptions });
+  room = await chatClient.rooms.get(urlParams.get('name') || 'chat-typing-indicator', { typing: typingOptions });
 
   // Subscribe to room for anyone typing or updates on typing
   room.typing.subscribe(async () => {

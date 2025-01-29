@@ -3,12 +3,11 @@
 import { Inter } from "next/font/google";
 import { Realtime } from 'ably';
 import { ChatClient, ChatClientProvider, ChatRoomProvider, RoomOptionsDefaults } from '@ably/chat';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { faker } from '@faker-js/faker';
 import '../../styles/styles.css';
 
 const inter = Inter({ subsets: ["latin"] });
-const roomName = 'chat-online-status';
 
 const realtimeClient = new Realtime({key: process.env.NEXT_PUBLIC_ABLY_KEY, clientId: faker.person.firstName()});
 const chatClient = new ChatClient(realtimeClient);
@@ -18,6 +17,14 @@ export default function RootLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
+  const [roomName, setRoomName] = useState('chat-online-status');
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const name = urlParams.get('name');
+    setRoomName(name || 'chat-online-status');
+  }, []);
+
   return (
     <html lang="en">
       <body className={inter.className}>

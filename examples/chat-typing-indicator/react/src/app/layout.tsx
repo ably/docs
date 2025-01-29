@@ -3,7 +3,7 @@
 import { Inter } from "next/font/google";
 import { Realtime } from 'ably';
 import { ChatClient, ChatClientProvider, ChatRoomProvider, RoomOptionsDefaults, TypingOptions } from '@ably/chat';
-import { time } from "console";
+import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,12 +22,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [roomName, setRoomName] = useState('chat-typing-indicator');
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const name = urlParams.get('name');
+    setRoomName(name || 'chat-typing-indicator');
+  }, []);
+
+
   return (
     <html lang="en">
       <body className={inter.className}>
         <ChatClientProvider client={chatClient}>
           <ChatRoomProvider
-            id="typing-indicator"
+            id={roomName}
             options={{
               ...RoomOptionsDefaults,
               typing: typingOptions

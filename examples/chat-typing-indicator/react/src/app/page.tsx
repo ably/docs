@@ -13,10 +13,8 @@ const ChatInput = () => {
   });
   const { clientId } = useChatClient();
 
-  console.log(currentlyTyping);
   const typingClientIds = Array.from(currentlyTyping).filter((id) => id !== clientId);
   const clientsTyping = typingClientIds.join(' and ');
-  console.log(clientsTyping);
   const typingIndicatorText = clientsTyping ? `${clientsTyping} ${typingClientIds.length === 1 ? 'is' : 'are'} typing` : '';
 
   return (

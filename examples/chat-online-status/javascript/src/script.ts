@@ -9,8 +9,12 @@ const realtimeClient = new Ably.Realtime({
 const chatClient = new ChatClient(realtimeClient);
 
 async function inializeChat() {
+  const urlParams = new URLSearchParams(window.location.search);
+
   // Get ROOM with typing capabilities
-  const room = await chatClient.rooms.get('chat-online-status', { presence: RoomOptionsDefaults.presence });
+  const room = await chatClient.rooms.get(urlParams.get('name') || 'chat-online-status', {
+    presence: RoomOptionsDefaults.presence,
+  });
   const onlineStatuses = await room.presence.get();
 
   onlineStatuses.forEach(async (onlineStatus: PresenceMember) => {
