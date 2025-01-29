@@ -35,7 +35,10 @@ async function establishConnection(hasCipher = true) {
       },
     };
   }
-  const channel = client.channels.get('sax-pig-ask', options);
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const channelName = urlParams.get('name') || 'pub-sub-message-encryption';
+  const channel = client.channels.get(channelName, options);
 
   return channel;
 }

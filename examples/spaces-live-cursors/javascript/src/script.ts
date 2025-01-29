@@ -35,10 +35,14 @@ async function connect() {
     key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
   });
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const spaceName = urlParams.get('name') || 'spaces-live-cursors';
   const spaces = new Spaces(client);
-  const space = await spaces.get('live-cursors');
+  const space = await spaces.get(spaceName);
   const parentRef = document.getElementById('live-cursors');
-  if (!parentRef || !(parentRef instanceof HTMLDivElement)) return;
+  if (!parentRef || !(parentRef instanceof HTMLDivElement)) {
+    return;
+  }
 
   await space.enter({
     name: mockNames[Math.floor(Math.random() * mockNames.length)],
@@ -49,7 +53,9 @@ async function connect() {
     const members = await space.members.getAll();
     const member = members.find((member) => member.connectionId === cursorUpdate.connectionId);
 
-    if (member === null || !member) return;
+    if (member === null || !member) {
+      return;
+    }
     if (cursorUpdate.data?.['state'] === 'leave') {
       const existingCursor = document.getElementById(`member-cursor-${member.connectionId}`);
       existingCursor?.remove();

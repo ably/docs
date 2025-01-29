@@ -7,6 +7,9 @@ import type { Message } from "ably"
 import { AblyProvider, ChannelProvider, useChannel } from 'ably/react';
 import { nanoid } from 'nanoid';
 
+const urlParams = new URLSearchParams(window.location.search);
+const channelName = urlParams.get('name') || 'pub-sub-message-encryption';
+
 export default function Home() {
   const searchParams = useSearchParams();
   const isEncrypted = searchParams.get('encrypted') === 'true';
@@ -35,14 +38,14 @@ export default function Home() {
     <AblyProvider client={client}>
       {isEncrypted ? (
         <ChannelProvider
-          channelName="sax-pig-ask"
+          channelName={channelName}
           options={{ cipher: { key } }}
         >
           <DecodedMessages />
         </ChannelProvider>
       ) : (
         <ChannelProvider
-          channelName="sax-pig-ask"
+          channelName={channelName}
         >
           <EncodedMessages />
         </ChannelProvider>
@@ -55,7 +58,7 @@ function EncodedMessages() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<string[]>([]);
 
-  const { publish } = useChannel("sax-pig-ask", (message) => {
+  const { publish } = useChannel(channelName, (message) => {
     if (message.data instanceof ArrayBuffer) {
       const decoder = new TextDecoder('utf-8');
       setMessages((prevMessages: string[]) => [...prevMessages, decoder.decode(message.data as ArrayBuffer)]);
@@ -122,7 +125,7 @@ function DecodedMessages() {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
 
-  const { publish } = useChannel("sax-pig-ask", (message) => {
+  const { publish } = useChannel(channelName, (message) => {
     setMessages((prevMessages: Message[]) => [...prevMessages, message]);
   });
 

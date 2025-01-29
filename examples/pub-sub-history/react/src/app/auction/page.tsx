@@ -10,6 +10,8 @@ interface BiddingHistory {
   amount: number;
   timestamp: Date;
 }
+const urlParams = new URLSearchParams(window.location.search);
+const channelName = urlParams.get('name') || 'pub-sub-history';
 
 export default function AuctionWrapper() {
   const client = new Ably.Realtime({
@@ -19,7 +21,7 @@ export default function AuctionWrapper() {
 
   return (
     <AblyProvider client={client}>
-      <ChannelProvider channelName="cab-pad-sit">
+      <ChannelProvider channelName={channelName}>
         <AuctionRoom />
       </ChannelProvider>
     </AblyProvider>
@@ -36,7 +38,7 @@ function AuctionRoom() {
   const ably = useAbly();
   const currentClientId = ably?.auth.clientId;
 
-  const { channel, publish } = useChannel('cab-pad-sit', (message) => {
+  const { channel, publish } = useChannel(channelName, (message) => {
     if (message.name !== 'bid') return;
     if (!message.clientId || !message.data.amount || !message.data.timestamp) {
 

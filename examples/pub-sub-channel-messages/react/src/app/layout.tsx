@@ -9,6 +9,8 @@ import '../../styles/styles.css';
 const inter = Inter({ subsets: ["latin"] });
 
 const client = new Realtime({key: process.env.NEXT_PUBLIC_ABLY_KEY, clientId: nanoid()});
+const urlParams = new URLSearchParams(window.location.search);
+const channelName = urlParams.get('name') || 'pub-sub-channel-messages';
 
 export default function RootLayout({
   children,
@@ -19,7 +21,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AblyProvider client={client}>
-          <ChannelProvider channelName="cut-nil-tie">
+          <ChannelProvider channelName={channelName}>
             {children}
           </ChannelProvider>
         </AblyProvider>

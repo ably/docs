@@ -49,8 +49,10 @@ async function connect() {
     key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
   });
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const spaceName = urlParams.get('name') || 'spaces-member-location';
   const spaces = new Spaces(client);
-  space = await spaces.get('member-location');
+  space = await spaces.get(spaceName);
 
   // /** 💡 Enter the space as soon as it's available 💡 */
   await space.enter({

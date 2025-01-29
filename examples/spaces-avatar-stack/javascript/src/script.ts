@@ -15,8 +15,10 @@ async function connect() {
     key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
   });
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const spaceName = urlParams.get('name') || 'spaces-avatar-stack';
   const spaces = new Spaces(client);
-  const space = await spaces.get('avatar-stack');
+  const space = await spaces.get(spaceName);
 
   /** 💡 Add every avatar that enters 💡 */
   space.members.subscribe(['leave', 'remove'], (memberUpdate: SpaceMember) => {
@@ -58,7 +60,7 @@ async function connect() {
     });
 }
 
-function buildUserInfo(member: Member, isSelf: boolean = false): HTMLDivElement {
+function buildUserInfo(member: Member, isSelf = false): HTMLDivElement {
   const wrapper = document.createElement('div');
   wrapper.className = 'wrapper';
 
