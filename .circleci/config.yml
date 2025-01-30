@@ -14,32 +14,6 @@ executors:
     docker:
       - image: cimg/node:20.13.1
 
-commands:
-  build-nginx:
-    steps:
-      - run:
-          name: Build nginx
-          environment:
-            STACK: heroku-22
-            ZLIB_VERSION: 1.3.1
-          command: |
-            if [ ! -x /usr/local/bin/nginx ]; then
-              mkdir buildpack
-              mkdir build-nginx
-              cd build-nginx
-              sudo apt install --no-install-recommends -y libssl-dev
-              wget https://raw.githubusercontent.com/heroku/heroku-buildpack-nginx/ad3be4d23676ef6382720892257c3c01078b1bf7/scripts/build_nginx
-              sed -i.pak 's/https:\/\/ftp.exim.org/ftp:\/\/ftp.exim.org/' build_nginx
-              chmod +x ./build_nginx
-              ./build_nginx .
-              cd ../buildpack
-              tar -xzvf /tmp/nginx-${STACK}.tgz
-            fi
-      - persist_to_workspace:
-          root: .
-          paths:
-            - buildpack/nginx
-
 jobs:
   install-dependencies:
     executor:
@@ -52,12 +26,6 @@ jobs:
           root: .
           paths:
             - node_modules
-
-  install-nginx:
-    executor:
-      name: default
-    steps:
-      - build-nginx
 
   test:
     executor:
@@ -81,6 +49,7 @@ jobs:
           path: ./reports/junit
       - store_artifacts:
           path: coverage
+
   build:
     executor:
       name: default
@@ -90,26 +59,48 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-          name: Install Ruby (erb) & nginx
-          command: |
-            sudo apt-get update -qq
-            sudo apt-get install --no-install-recommends -y ruby
-            sudo cp buildpack/nginx /usr/local/bin/nginx
-      - run:
-          name: Build
+          name: Build site
           command: yarn build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - config
+            - public
+
+  test-nginx:
+    docker:
+      - image: heroku/heroku:24-build
+    environment:
+      PORT: 3001
+      STACK: heroku-24
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install Heroku nginx & ruby
+          command: |
+            mkdir -p buildpack
+            curl -sSL https://buildpack-registry.s3.amazonaws.com/buildpacks/heroku-community/nginx.tgz | tar -zx -C buildpack
+            curl -sSL -o bin/compile https://github.com/heroku/heroku-buildpack-nginx/raw/refs/heads/main/bin/compile
+            chmod +x bin/compile
+            cd buildpack
+            ../bin/compile build /tmp
+            mv build/bin/nginx ../bin/
       - run:
           name: Require redirects file to be generated
           command: test -f config/nginx-redirects.conf
       - run:
           name: Test nginx configuration
           command: |
-            PORT=3000 erb config/nginx.conf.erb > config/nginx.conf
+            export PATH="$PWD/bin:$PWD/buildpack/build/.heroku-buildpack-nginx/ruby/bin:$PATH"
+            erb config/nginx.conf.erb > config/nginx.conf
             mkdir -p logs/nginx
             nginx -p . -c config/nginx.conf -t
       - run:
           name: Start nginx
           command: |
+            export PATH="$PWD/bin:$PWD/buildpack/build/.heroku-buildpack-nginx/ruby/bin:$PATH"
             mkdir -p logs/nginx
             SKIP_HTTPS=false ./bin/start-nginx
           background: true
@@ -149,11 +140,13 @@ workflows:
     unless: << pipeline.parameters.content-update >>
     jobs:
       - install-dependencies
-      - install-nginx
       - test:
           requires:
             - install-dependencies
       - build:
           requires:
             - install-dependencies
-            - install-nginx
+      - test-nginx:
+          requires:
+            - build
+
