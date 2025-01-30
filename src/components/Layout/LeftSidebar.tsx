@@ -118,27 +118,24 @@ const constructProductNavData = (
       name: product.name,
       icon: activePageTree[0]?.page.name === product.name ? product.icon.open : product.icon.closed,
       content: (
-        <div key={product.name} className="flex flex-col gap-20 px-16">
-          <div className="flex flex-col gap-[10px] md:gap-8 mt-12">
-            <p className="ui-text-overline2 text-neutral-700">{product.name}</p>
-            {product.showJumpLink ? (
-              <a
-                href="#"
-                className="text-gui-blue-default-light text-[11px]"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (typeof document !== 'undefined') {
-                    const element = document.getElementById(apiReferencesId);
-                    if (element) {
-                      element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
+        <div key={product.name} className="flex flex-col gap-20 px-16 pt-12">
+          {product.showJumpLink ? (
+            <a
+              href="#"
+              className="text-gui-blue-default-light text-[11px]"
+              onClick={(e) => {
+                e.preventDefault();
+                if (typeof document !== 'undefined') {
+                  const element = document.getElementById(apiReferencesId);
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                   }
-                }}
-              >
-                Jump to API references
-              </a>
-            ) : null}
-          </div>
+                }
+              }}
+            >
+              Jump to API references
+            </a>
+          ) : null}
           {renderProductContent(product.content, 'content', inHeader)}
           {product.api.length > 0 ? (
             <div
