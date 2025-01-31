@@ -2,16 +2,7 @@
 title: Message concepts
 meta_description: "Messages contain data and are sent and received through channels."
 languages:
-  - csharp
-  - flutter
-  - java
   - javascript
-  - nodejs
-  - objc
-  - php
-  - python
-  - ruby
-  - swift
 redirect_from:
   - /rest/messages
   - /rest/versions/v1.1/messages
@@ -42,3 +33,40 @@ The following are the properties of a message:
 - timestamp := The timestamp of when the message was received by Ably, as milliseconds since the Unix epoch.
 - extras := A JSON object of arbitrary key-value pairs that may contain metadata, and/or ancillary payloads. Valid payloads include those related to "Push Notifications":/push, "deltas":/channels/options/deltas and  and headers.
 - encoding := This is typically empty, as all messages received from Ably are automatically decoded client-side using this value. However, if the message encoding cannot be processed, this attribute contains the remaining transformations not applied to the data payload.
+
+h2(#conflation). Message conflation
+
+Use message conflation to ensure that clients only ever receive the most up-to-date message, by removing redundant and outdated messages. Message conflation will aggregate published messages for a set period of time and evaluate all messages against a "conflation key":#routing. All but the latest message for each conflation key value will be discarded, and the resulting message, or messages, will be delivered to subscribers as a single batch once the period of time elapses.
+
+For example, messages published with the following in the @extras.headers@ field will alternate between four different values for the market:
+
+```[javascript]
+market = pickOneFrom('market-A', 'market-B', 'market-C', 'market-D')
+headers = { market };
+channel.publish({ name: 'update', data: { market, update: counter++ }, extras: { headers }});
+```
+
+If the conflation key for this channel is set to @#{message.extras.headers['market']}@ with a 200ms conflation interval, then at the end of each 200ms interval a maximum of four messages will be delivered to subscribers in a single batch.
+
+Conflation is useful in scenarios where the latest state of a message matters most. Applications in the betting or stocks industry are good examples of this, where odds and prices are changing rapidly, but end-users don't need to be overwhelmed by receiving a message with every single change. Instead they can receive only the latest update every 100ms, for example.
+
+In these instances the frequency of updates for the subscriber are of less importance than the rate at which the updates are published. It also reduces the message cost of applications by not propagating every single update to subscribers.
+
+h3(#configure-conflation). Configure message conflation
+
+When configuring message conflation, you need to set a conflation interval, in milliseconds. Messages sent to Ably during this interval are temporarily held and assessed against the "conflation key":#routing. Once the interval elapses, the latest version of each message for a unique conflation key value will be delivered to subscribers as a single batch.
+
+Use the following steps to configure message conflation for a channel, or channel namespace:
+
+# On your "dashboard":https://ably.com/accounts/any, select one of your apps.
+# Go to *Settings*.
+# Under "channel rules":/channels#rules, click *Add new rule*.
+# Enter the channel name, or channel namespace to apply message conflation to.
+# Check *Conflation enabled*.
+# Choose a conflation interval over which to aggregate messages.
+# Enter a "conflation key":#routing to assess messages against.
+# Click *Create channel rule* to save.
+
+<aside data-type='note'>
+<p>Message conflation is mutually exclusive with "server-side batching":/messages/batch#server-side on a channel, or channel namespace.</p>
+</aside>
