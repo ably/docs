@@ -34,7 +34,7 @@ const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
         <>
           <span className={`${leftSideElement} ${pitfallElement}`}>&nbsp;</span>
           <strong className={tipTitleElement}>
-            <Icon name="icon-gui-warning" size="1rem" additionalCSS="mr-12" />
+            <Icon name="icon-gui-exclamation-triangle-micro" size="1rem" additionalCSS="mr-12" />
             <span className="ui-text-p2 font-bold text-neutral-1300 mb-48">Important</span>
           </strong>
         </>
@@ -62,7 +62,7 @@ const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
         <>
           <span className={`${leftSideElement} ${noteElement}`}>&nbsp;</span>
           <strong className={tipTitleElement}>
-            <Icon name="icon-gui-document-generic" size="1rem" additionalCSS="mr-12" />
+            <Icon name="icon-gui-document-text-micro" size="1rem" additionalCSS="mr-12" />
             <span className="ui-text-p2 font-bold text-neutral-1300 mb-48">Note</span>
           </strong>
         </>

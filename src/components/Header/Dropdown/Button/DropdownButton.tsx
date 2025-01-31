@@ -44,7 +44,7 @@ export const DropdownButtonAndMenu = ({
         aria-controls={dropdownDataID}
       >
         <span className="font-bold">{titleOverride || dropdownDataID}</span>
-        <Icon name="icon-gui-disclosure-arrow" size="1.5rem" additionalCSS={chevronDown} />
+        <Icon name="icon-gui-chevron-right-micro" size="1.5rem" additionalCSS={chevronDown} />
       </button>
       {isOpen && <DropdownMenu {...dropdownData[dropdownDataID]} />}
     </div>

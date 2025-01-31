@@ -16,7 +16,12 @@ const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
       onMouseOver={showTooltipHover}
       onMouseOut={hideTooltipHover}
     >
-      <Icon name="icon-gui-info" size="1.25rem" color="text-neutral-500" additionalCSS="mt-12 ml-16" />
+      <Icon
+        name="icon-gui-information-circle-outline"
+        size="1.25rem"
+        color="text-neutral-500"
+        additionalCSS="mt-12 ml-16"
+      />
       {tooltipHover ? (
         <aside
           className="w-240 max-w-240 absolute box-border

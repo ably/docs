@@ -155,7 +155,7 @@ const Pre = ({
       {shouldDisplayTip && (
         <aside className="mb-16 flex justify-between items-start">
           <div className="mt-2">
-            <Icon name="icon-gui-info" size="1rem" />
+            <Icon name="icon-gui-information-circle-micro" size="1rem" />
           </div>
           <div className="ml-8 leading-normal">
             You&apos;re currently viewing the <span className="font-semibold">{languageLabel ?? pageLanguage}</span>{' '}

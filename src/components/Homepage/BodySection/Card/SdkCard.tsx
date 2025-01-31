@@ -13,7 +13,12 @@ export const SdkCard = ({ title, content, image, callToAction }: CardProps) => (
         <div className="mt-auto mb-40 sm:mb-0">
           <Link to={callToAction.href} external={callToAction.external} className="ui-button-primary">
             {callToAction.text}
-            <Icon name="icon-gui-arrow-right" size="1.5rem" color="text-white" additionalCSS="ml-8 -mr-12" />
+            <Icon
+              name="icon-gui-arrow-long-right-outline"
+              size="1.5rem"
+              color="text-white"
+              additionalCSS="ml-8 -mr-12"
+            />
           </Link>
         </div>
       ) : null}

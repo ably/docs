@@ -22,9 +22,9 @@ export const GoTopButton = () => {
     <div className={showGoTop ? 'block' : 'hidden'} onClick={handleScrollUp}>
       <div className="rounded text-white py-8 px-8 bg-cool-black fixed bottom-0 left-0 m-16 z-20 cursor-pointer">
         <Icon
-          name="icon-gui-link-arrow"
+          name="icon-gui-arrow-long-up-outline"
           size="1.5rem"
-          additionalCSS="block text-white transform -rotate-90 align-text-bottom w-24 h-24 m-10"
+          additionalCSS="block text-white align-text-bottom w-24 h-24 m-10"
         />
       </div>
     </div>

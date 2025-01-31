@@ -20,7 +20,7 @@ export const Links = ({ links }: { links?: LinkProps[] }) =>
                   >
                     {text}
                   </Link>
-                  <Icon name="icon-gui-arrow-right" size="1rem" />
+                  <Icon name="icon-gui-arrow-long-right-micro" size="1rem" />
                 </div>
               );
             })}
