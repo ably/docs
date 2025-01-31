@@ -24,10 +24,10 @@ const Breadcrumbs: React.FC = () => {
       <Link to="/" className={cn(linkStyles, 'hidden sm:block')}>
         Home
       </Link>
-      <Icon name="icon-gui-disclosure-arrow" size="16px" additionalCSS="rotate-180 sm:rotate-0" />
+      <Icon name="icon-gui-chevron-right-micro" size="16px" additionalCSS="rotate-180 sm:rotate-0" />
       {breadcrumbNodes.map((node, index) => (
         <React.Fragment key={hierarchicalKey(node.page.link, index, activePage.tree)}>
-          {index > 0 ? <Icon name="icon-gui-disclosure-arrow" size="16px" additionalCSS="hidden sm:flex" /> : null}
+          {index > 0 ? <Icon name="icon-gui-chevron-right-micro" size="16px" additionalCSS="hidden sm:flex" /> : null}
           <Link
             to={node.page.link}
             className={cn(linkStyles, {

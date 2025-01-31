@@ -66,7 +66,7 @@ const NavPage = ({
         to={language ? `${page.link}?lang=${language}` : page.link}
       >
         {page.name}
-        {page.external ? <Icon name="icon-gui-external-link" additionalCSS="ml-4" /> : null}
+        {page.external ? <Icon name="icon-gui-arrow-top-right-on-square-outline" additionalCSS="ml-4" /> : null}
       </Link>
     );
   } else {

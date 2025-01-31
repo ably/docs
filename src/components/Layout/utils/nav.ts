@@ -2,7 +2,7 @@ import cn from '@ably/ui/core/utils/cn';
 import { AccordionProps } from '@ably/ui/core/Accordion';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
-import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from './heights';
+import { componentMaxHeight, HEADER_HEIGHT } from './heights';
 
 export type PageTreeNode = { index: number; page: NavProductPage };
 

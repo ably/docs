@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from '@reach/router';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import LeftSidebar from './LeftSidebar';
 import { useLayoutContext } from 'src/contexts/layout-context';
@@ -60,7 +60,7 @@ const mockProducts: [ProductKey, NavProduct][] = [
     'pubsub',
     {
       name: 'Pub/Sub',
-      icon: { open: 'icon-gui-chevron-up', closed: 'icon-gui-chevron-down' },
+      icon: { open: 'icon-gui-chevron-up-outline', closed: 'icon-gui-chevron-down-outline' },
       content: [
         {
           name: 'Overview',

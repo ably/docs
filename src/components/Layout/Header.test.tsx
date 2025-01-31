@@ -40,7 +40,7 @@ describe('Header', () => {
 
   it('renders the header with logo and links', () => {
     render(<Header />);
-    expect(screen.getByAltText('Ably logo')).toBeInTheDocument();
+    expect(screen.getAllByAltText('Ably logo').length).toBeGreaterThan(0);
     expect(screen.getByText('Documentation')).toBeInTheDocument();
     expect(screen.getByText('Examples')).toBeInTheDocument();
   });
@@ -57,18 +57,18 @@ describe('Header', () => {
 
   it('toggles the mobile menu when the burger icon is clicked', () => {
     render(<Header />);
-    const burgerIcon = screen.getByText('icon-gui-burger-menu');
+    const burgerIcon = screen.getByText('icon-gui-bars-3-outline');
     fireEvent.click(burgerIcon);
-    expect(screen.getByText('icon-gui-close')).toBeInTheDocument();
+    expect(screen.getByText('icon-gui-x-mark-outline')).toBeInTheDocument();
     expect(screen.getByText('LeftSidebar')).toBeInTheDocument();
   });
 
   it('disables scrolling when the mobile menu is open', () => {
     render(<Header />);
-    const burgerIcon = screen.getByText('icon-gui-burger-menu');
+    const burgerIcon = screen.getByText('icon-gui-bars-3-outline');
     fireEvent.click(burgerIcon);
     expect(document.body).toHaveClass('overflow-hidden');
-    const closeIcon = screen.getByText('icon-gui-close');
+    const closeIcon = screen.getByText('icon-gui-x-mark-outline');
     fireEvent.click(closeIcon);
     expect(document.body).not.toHaveClass('overflow-hidden');
   });

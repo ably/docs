@@ -64,7 +64,9 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
       </Badge>
       {isOption ? (
         <div className="w-16 h-16">
-          {props.data.label === langParam ? <Icon name="icon-gui-tick" size="16px" color="text-neutral-1000" /> : null}
+          {props.data.label === langParam ? (
+            <Icon name="icon-gui-check-outline" size="16px" color="text-neutral-1000" />
+          ) : null}
         </div>
       ) : null}
     </div>
