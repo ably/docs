@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Accordion from '@ably/ui/core/Accordion';
@@ -18,6 +18,7 @@ import { ProductKey } from 'src/data/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { AccordionData } from '@ably/ui/core/Accordion/types';
+import { throttle } from 'lodash';
 
 type ContentType = 'content' | 'api';
 
@@ -155,6 +156,23 @@ const constructProductNavData = (
 
 const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
   const { activePage, products } = useLayoutContext();
+  const [hasScrollbar, setHasScrollbar] = useState(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const checkScrollbar = throttle(() => {
+      if (sidebarRef.current) {
+        setHasScrollbar(sidebarRef.current.offsetWidth > sidebarRef.current.clientWidth);
+      }
+    }, 150);
+
+    checkScrollbar();
+    window.addEventListener('resize', checkScrollbar);
+
+    return () => {
+      window.removeEventListener('resize', checkScrollbar);
+    };
+  }, []);
 
   const productNavData = useMemo(
     () => constructProductNavData(activePage.tree, products, inHeader),
@@ -173,9 +191,11 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
         </a>
       ) : null}
       <Accordion
+        ref={sidebarRef}
         className={cn(
           !inHeader && [sidebarAlignmentClasses, 'hidden md:block md:-mx-16'],
-          'overflow-y-scroll md:pr-16',
+          'overflow-y-auto',
+          hasScrollbar ? 'md:pr-8' : 'md:pr-16',
         )}
         style={sidebarAlignmentStyles}
         id="left-nav"
