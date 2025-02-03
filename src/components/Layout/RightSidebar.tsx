@@ -140,7 +140,7 @@ const RightSidebar = () => {
         {headers.length > 0 ? (
           <>
             <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
-            <div className="flex gap-16 overflow-scroll shadow-[0.5px_0px_var(--color-neutral-000)_inset,1.5px_0px_var(--color-neutral-300)_inset] py-2 pl-16">
+            <div className="flex gap-16 overflow-auto shadow-[0.5px_0px_var(--color-neutral-000)_inset,1.5px_0px_var(--color-neutral-300)_inset] py-2 pl-16">
               <div
                 className="h-[18px] -ml-16 w-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
                 style={{
@@ -190,7 +190,7 @@ const RightSidebar = () => {
                   </span>
                 </div>
                 <Icon
-                  name="icon-gui-external-link"
+                  name="icon-gui-arrow-top-right-on-square-outline"
                   color="text-neutral-900"
                   additionalCSS="group-hover/external-link:text-neutral-1300 dark:group-hover/external-link:text-neutral-000 transition-colors"
                   size="16px"
