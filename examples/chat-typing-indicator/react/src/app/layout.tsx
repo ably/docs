@@ -2,7 +2,7 @@
 
 import { Inter } from "next/font/google";
 import { Realtime } from 'ably';
-import { ChatClient, ChatClientProvider, ChatRoomProvider, RoomOptionsDefaults, TypingOptions } from '@ably/chat';
+import { ChatClient, ChatClientProvider, ChatRoomProvider, DefaultRoomOptions, TypingOptions } from '@ably/chat';
 import { time } from "console";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -29,7 +29,7 @@ export default function RootLayout({
           <ChatRoomProvider
             id="typing-indicator"
             options={{
-              ...RoomOptionsDefaults,
+              ...DefaultRoomOptions,
               typing: typingOptions
             }}
           >

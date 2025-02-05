@@ -1,5 +1,5 @@
 import * as Ably from 'ably';
-import { ChatClient, RoomOptionsDefaults } from '@ably/chat';
+import { ChatClient, DefaultRoomOptions } from '@ably/chat';
 import './styles.css'
 
 const mockNames = ['Bob', 'Jane', 'John', 'Sammy'];
@@ -9,7 +9,7 @@ const realtimeClient = new Ably.Realtime({
   key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string
 });
 const chatClient = new ChatClient(realtimeClient);
-const room = chatClient.rooms.get('chat-room-reactions', RoomOptionsDefaults);
+const room = chatClient.rooms.get('chat-room-reactions', DefaultRoomOptions);
 
 /** 💡 Add every every message published to the room 💡 */
 room.messages.subscribe((message) => {

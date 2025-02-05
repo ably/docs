@@ -1,5 +1,5 @@
 import * as Ably from 'ably';
-import { ChatClient, Message, RoomOptionsDefaults } from '@ably/chat';
+import { ChatClient, Message, DefaultRoomOptions } from '@ably/chat';
 import { faker } from '@faker-js/faker';
 import './styles.css';
 
@@ -10,7 +10,7 @@ const realtimeClient = new Ably.Realtime({
 // Number of times messages are sent to the chat room before the user enters the room.
 let sendCount = 0;
 const chatClient = new ChatClient(realtimeClient);
-const room = chatClient.rooms.get('chat-room-messages', RoomOptionsDefaults);
+const room = chatClient.rooms.get('chat-room-messages', DefaultRoomOptions);
 
 const landingPage = document.getElementById('landing-page');
 const chatRoom = document.getElementById('chat-room-messages');
