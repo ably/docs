@@ -17,9 +17,9 @@ async function inializeChat() {
   });
   const onlineStatuses = await room.presence.get();
 
-  onlineStatuses.forEach(async (onlineStatus: PresenceMember) => {
+  for (const onlineStatus of onlineStatuses) {
     await addCard(onlineStatus);
-  });
+  }
 
   /** 💡 Subscribe to the presence set of the room to see online statuses 💡 */
   room.presence.subscribe(async (event: PresenceEvent) => {
