@@ -113,8 +113,6 @@ async function addCard(onlineStatus: PresenceMember | PresenceEvent) {
   nameParentDiv.appendChild(statusDiv);
 }
 
-initializeChat()
-  .then()
-  .catch((error) => {
-    console.log('Error initializing chat', error);
-  });
+initializeChat().catch((error) => {
+  console.log('Error initializing chat', error);
+});

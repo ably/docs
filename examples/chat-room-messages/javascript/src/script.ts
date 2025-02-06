@@ -38,11 +38,9 @@ async function initializeChat() {
   await room.attach();
 }
 
-initializeChat()
-  .then()
-  .catch((error) => {
-    console.log('Error initializing chat', error);
-  });
+initializeChat().catch((error) => {
+  console.log('Error initializing chat', error);
+});
 
 function handleSubmit() {
   const form = document.querySelector('form') as HTMLFormElement;

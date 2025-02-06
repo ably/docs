@@ -46,8 +46,6 @@ async function startTyping() {
   await room.typing.start();
 }
 
-initializeChat()
-  .then()
-  .catch((error) => {
-    console.log('Error initializing chat', error);
-  });
+initializeChat().catch((error) => {
+  console.log('Error initializing chat', error);
+});

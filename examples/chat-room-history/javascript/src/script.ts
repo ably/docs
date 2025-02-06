@@ -18,11 +18,9 @@ async function initializeChat() {
   room = await chatClient.rooms.get(urlParams.get('name') || 'chat-room-history', RoomOptionsDefaults);
 }
 
-initializeChat()
-  .then()
-  .catch((error) => {
-    console.log('Error initializing chat', error);
-  });
+initializeChat().catch((error) => {
+  console.log('Error initializing chat', error);
+});
 
 const landingPage = document.getElementById('landing-page');
 const chatRoom = document.getElementById('chat-room-messages');
