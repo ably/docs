@@ -58,4 +58,8 @@ emojis.forEach((emoji) => {
   emojiSelector.appendChild(emojiSpan);
 });
 
-initializeChat();
+initializeChat()
+  .then()
+  .catch((error) => {
+    console.log('Error initializing chat', error);
+  });

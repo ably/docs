@@ -8,7 +8,7 @@ const realtimeClient = new Ably.Realtime({
 });
 const chatClient = new ChatClient(realtimeClient);
 
-async function inializeChat() {
+async function initializeChat() {
   const urlParams = new URLSearchParams(window.location.search);
 
   // Get ROOM with typing capabilities
@@ -113,4 +113,8 @@ async function addCard(onlineStatus: PresenceMember | PresenceEvent) {
   nameParentDiv.appendChild(statusDiv);
 }
 
-inializeChat();
+initializeChat()
+  .then()
+  .catch((error) => {
+    console.log('Error initializing chat', error);
+  });
