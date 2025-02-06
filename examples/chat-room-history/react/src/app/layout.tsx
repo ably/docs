@@ -22,7 +22,10 @@ export default function RootLayout({
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const name = urlParams.get('name');
-    setRoomName(name || 'chat-room-history');
+
+    if (name !== null) {
+      setRoomName(name);
+    }
   }, []);
 
   return (
