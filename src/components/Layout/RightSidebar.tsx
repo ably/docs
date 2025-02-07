@@ -150,10 +150,10 @@ const RightSidebar = () => {
               ></div>
               {/* 18px derives from the 2px width of the grey tracker bar plus the 16px between it and the menu items */}
               <div className="flex flex-col gap-8 w-[calc(100%-18px)] pr-16">
-                {headers.map((header) => (
+                {headers.map((header, index) => (
                   <a
                     href={`#${header.id}`}
-                    key={[location.pathname, header.id].join('-')}
+                    key={[location.pathname, header.id, language, index].join('-')}
                     id={`sidebar-${header.id}`}
                     className={cn(
                       'ui-text-menu4 font-medium text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth hover:text-neutral-1300 dark:hover:text-neutral-000',

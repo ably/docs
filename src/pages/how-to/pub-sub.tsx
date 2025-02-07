@@ -126,7 +126,7 @@ const PubSubHowTo = () => {
   return (
     <>
       <Head title="Pub/Sub How To" canonical={canonical} description={meta_description} />
-      <article className="grid w-full grid-cols-1 md:grid-cols-2 mt-56 md:mt-0 md:pl-24">
+      <article className="w-full mt-56 md:mt-0 md:pl-24">
         <div className="max-w-md md:pr-24 md:border-r border-mid-grey">
           <MarkdownProvider>
             <HowTo
@@ -138,7 +138,7 @@ const PubSubHowTo = () => {
         </div>
         <aside className="pt-48 md:pl-24 relative">
           {/* 160px = 48px for aside top padding, 48px for nav bar and 64px for top header */}
-          <div className="sticky w-full pb-24 overflow-scroll" style={{ top: '160px', height: 'calc(100vh - 160px)' }}>
+          <div>
             {hasApiKeys ? (
               <>
                 <SandpackProvider
