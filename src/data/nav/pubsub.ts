@@ -262,6 +262,7 @@ export default {
             {
               name: 'Channels',
               link: '/api/realtime-sdk/channels',
+              languages: ['javascript'],
             },
             {
               name: 'Channel Metadata',

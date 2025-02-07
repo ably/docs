@@ -58,7 +58,9 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   const activePage = useMemo(() => {
     const activePageData = determineActivePage(data, location.pathname);
-    return activePageData ? { ...activePageData, languages } : { tree: [], languages: [] };
+    return activePageData
+      ? { ...activePageData, languages: activePageData.page.languages ?? languages }
+      : { tree: [], languages: [] };
   }, [location.pathname, languages]);
 
   const products = useMemo(
