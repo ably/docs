@@ -159,7 +159,7 @@ function AuctionRoom() {
           </p>
           <button
             onClick={() => setShowBidDialog(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-6"
+            className="uk-btn uk-btn-md uk-btn-secondary mb-4 rounded"
           >
             Place bid
           </button>
@@ -187,21 +187,7 @@ function AuctionRoom() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Bidding history</h2>
               <button
-                className={`
-                  text-white
-                  font-bold
-                  py-3
-                  px-6
-                  rounded-lg
-                  shadow-md
-                  transition-all
-                  duration-300
-                  focus:outline-none
-                  focus:ring-2
-                  focus:ring-green-400
-                  focus:ring-opacity-50
-                  ${historyLoaded ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 hover:scale-105'}
-                `}
+                className="uk-btn uk-btn-md uk-btn-primary py-2 rounded"
                 onClick={() => retrieveBiddingHistory()}
                 disabled={historyLoaded}
               >
@@ -230,19 +216,19 @@ function AuctionRoom() {
                 type="number"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(Number(e.target.value))}
-                className="w-full border rounded p-2 mb-4"
+                className="uk-input uk-form-md mb-4"
                 placeholder="Enter bid amount"
               />
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setShowBidDialog(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  className="uk-btn uk-btn-md uk-btn-destructive py-2 rounded"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleBid}
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                  className="uk-btn uk-btn-md uk-btn-primary py-2 rounded"
                 >
                   Place bid
                 </button>
