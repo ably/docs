@@ -28,15 +28,15 @@ export default {
           name: 'Connections',
           link: '/chat/connect',
         },
+        {
+          name: 'Rooms',
+          link: '/chat/rooms',
+        },
       ],
     },
     {
       name: 'Room features',
       pages: [
-        {
-          name: 'Rooms',
-          link: '/chat/rooms',
-        },
         {
           name: 'Messages',
           link: '/chat/rooms/messages',

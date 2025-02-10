@@ -92,6 +92,10 @@ export default {
           name: 'Advanced pub-sub',
           link: '/pub-sub/advanced',
         },
+        {
+          name: 'How-to: Publish and subscribe',
+          link: '/how-to/pub-sub',
+        },
       ],
     },
     {
@@ -120,19 +124,18 @@ export default {
             },
           ],
         },
+      ],
+    },
+    {
+      name: 'Messages',
+      pages: [
         {
-          name: 'Messages',
-          link: '/how-to/pub-sub',
-          pages: [
-            {
-              name: 'Message concepts',
-              link: '/messages',
-            },
-            {
-              name: 'Message batching',
-              link: '/messages/batch',
-            },
-          ],
+          name: 'Message concepts',
+          link: '/messages',
+        },
+        {
+          name: 'Message batching',
+          link: '/messages/batch',
         },
       ],
     },
@@ -254,15 +257,17 @@ export default {
             {
               name: 'Constructor',
               link: '/api/realtime-sdk',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp', 'flutter'],
             },
             {
               name: 'Connection',
               link: '/api/realtime-sdk/connection',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp', 'flutter'],
             },
             {
               name: 'Channels',
               link: '/api/realtime-sdk/channels',
-              languages: ['javascript'],
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp', 'flutter'],
             },
             {
               name: 'Channel Metadata',
@@ -271,38 +276,47 @@ export default {
             {
               name: 'Messages',
               link: '/api/realtime-sdk/messages',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp', 'flutter'],
             },
             {
               name: 'Presence',
               link: '/api/realtime-sdk/presence',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp'],
             },
             {
               name: 'Authentication',
               link: '/api/realtime-sdk/authentication',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp'],
             },
             {
               name: 'History',
               link: '/api/realtime-sdk/history',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp'],
             },
             {
               name: 'Push Notifications - Admin',
               link: '/api/realtime-sdk/push-admin',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'python', 'android'],
             },
             {
               name: 'Push Notifications - Devices',
               link: '/api/realtime-sdk/push',
+              languages: ['swift', 'objc', 'android'],
             },
             {
               name: 'Encryption',
               link: '/api/realtime-sdk/encryption',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp'],
             },
             {
               name: 'Statistics',
               link: '/api/realtime-sdk/statistics',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp'],
             },
             {
               name: 'Types',
               link: '/api/realtime-sdk/types',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp', 'flutter', 'go'],
             },
           ],
         },
@@ -312,10 +326,36 @@ export default {
             {
               name: 'Constructor',
               link: '/api/rest-sdk',
+              languages: [
+                'javascript',
+                'nodejs',
+                'ruby',
+                'java',
+                'swift',
+                'objc',
+                'csharp',
+                'flutter',
+                'go',
+                'python',
+                'php',
+              ],
             },
             {
               name: 'Channels',
               link: '/api/rest-sdk/channels',
+              languages: [
+                'javascript',
+                'nodejs',
+                'ruby',
+                'java',
+                'swift',
+                'objc',
+                'csharp',
+                'flutter',
+                'go',
+                'python',
+                'php',
+              ],
             },
             {
               name: 'Channel Status',
@@ -324,34 +364,66 @@ export default {
             {
               name: 'Messages',
               link: '/api/rest-sdk/messages',
+              languages: [
+                'javascript',
+                'nodejs',
+                'ruby',
+                'java',
+                'swift',
+                'objc',
+                'csharp',
+                'flutter',
+                'go',
+                'python',
+                'php',
+              ],
             },
             {
               name: 'Presence',
               link: '/api/rest-sdk/presence',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp', 'go', 'python', 'php'],
             },
             {
               name: 'Authentication',
               link: '/api/rest-sdk/authentication',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp', 'go', 'python', 'php'],
             },
             {
               name: 'History',
               link: '/api/rest-sdk/history',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp', 'go', 'python', 'php'],
             },
             {
               name: 'Push Notifications - Admin',
               link: '/api/rest-sdk/push-admin',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'php', 'android'],
             },
             {
               name: 'Encryption',
               link: '/api/rest-sdk/encryption',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp', 'go', 'python', 'php'],
             },
             {
               name: 'Statistics',
               link: '/api/rest-sdk/statistics',
+              languages: ['javascript', 'nodejs', 'ruby', 'java', 'swift', 'objc', 'csharp', 'go', 'python', 'php'],
             },
             {
               name: 'Types',
               link: '/api/rest-sdk/types',
+              languages: [
+                'javascript',
+                'nodejs',
+                'ruby',
+                'java',
+                'swift',
+                'objc',
+                'csharp',
+                'flutter',
+                'go',
+                'python',
+                'php',
+              ],
             },
           ],
         },
