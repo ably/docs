@@ -1,6 +1,8 @@
 "use client";
 
 import { Inter } from "next/font/google";
+import "franken-ui/js/core.iife";
+import "franken-ui/js/icon.iife";
 import '../../styles/styles.css'
 
 const inter = Inter({ subsets: ["latin"] });
