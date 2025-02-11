@@ -87,9 +87,9 @@ describe('RightSidebar', () => {
     expect(screen.getByText('Request changes')).toBeInTheDocument();
   });
 
-  it('sets active header on click', () => {
+  it('sets active header on click', async () => {
     render(<RightSidebar />);
-    const headerLink = screen.getByRole('link', { name: 'Header 1' });
+    const headerLink = await screen.findByRole('link', { name: 'Header 1' });
     fireEvent.click(headerLink);
     expect(headerLink).toHaveClass('text-neutral-1300');
   });

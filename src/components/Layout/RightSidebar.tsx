@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, WindowLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
@@ -65,19 +65,25 @@ const RightSidebar = () => {
   const showLanguageSelector = activePage?.languages.length > 0;
   const language = new URLSearchParams(location.search).get('lang');
 
-  useEffect(() => {
-    const headerElements =
-      typeof document !== 'undefined' ? document.querySelector('article')?.querySelectorAll('h2, h3, h6') ?? [] : [];
-    const headerData = Array.from(headerElements)
-      .filter((element) => element.id && element.textContent)
-      .map((header) => ({
-        type: header.tagName,
-        label: header.textContent ?? '',
-        id: header.id,
-        height: header.getBoundingClientRect().height,
-      }));
+  useLayoutEffect(() => {
+    setTimeout(() => {
+      const headerElements =
+        typeof document !== 'undefined' ? document.querySelector('article')?.querySelectorAll('h2, h3, h6') ?? [] : [];
+      const headerData = Array.from(headerElements)
+        .filter((element) => element.id && element.textContent)
+        .map((header) => ({
+          type: header.tagName,
+          label: header.textContent ?? '',
+          id: header.id,
+          height: header.getBoundingClientRect().height,
+        }));
 
-    setHeaders(headerData);
+      setHeaders(headerData);
+
+      headerElements.forEach((header) => {
+        observer.current?.observe(header);
+      });
+    }, 100);
 
     const handleIntersect = (
       entries: {
@@ -97,10 +103,6 @@ const RightSidebar = () => {
     observer.current = new IntersectionObserver(handleIntersect, {
       root: null,
       threshold: 1,
-    });
-
-    headerElements.forEach((header) => {
-      observer.current?.observe(header);
     });
 
     return () => {
