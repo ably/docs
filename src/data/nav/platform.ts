@@ -148,6 +148,10 @@ export default {
               name: 'Pulsar',
               link: '/docs/integrations/streaming/pulsar',
             },
+            {
+              name: 'DataDog',
+              link: '/docs/integrations/streaming/datadog',
+            },
           ],
         },
         {
