@@ -1,5 +1,5 @@
 import * as Ably from 'ably';
-import { ChatClient, Message, RoomOptionsDefaults } from '@ably/chat';
+import { ChatClient, Message, Room, RoomOptionsDefaults } from '@ably/chat';
 import { faker } from '@faker-js/faker';
 import './styles.css';
 
@@ -9,14 +9,23 @@ const realtimeClient = new Ably.Realtime({
 });
 // Number of times messages are sent to the chat room before the user enters the room.
 let sendCount = 0;
-const chatClient = new ChatClient(realtimeClient);
-const room = chatClient.rooms.get('chat-room-messages', RoomOptionsDefaults);
+let chatClient: ChatClient;
+let room: Room;
+const urlParams = new URLSearchParams(window.location.search);
+
+async function initializeChat() {
+  chatClient = new ChatClient(realtimeClient);
+  room = await chatClient.rooms.get(urlParams.get('name') || 'chat-room-history', RoomOptionsDefaults);
+}
+
+initializeChat().catch((error) => {
+  console.log('Error initializing chat', error);
+});
 
 const landingPage = document.getElementById('landing-page');
 const chatRoom = document.getElementById('chat-room-messages');
 
 /** Check if url param `loadChat` exists and is set to true to render the chat window instead of the menu */
-const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('loadChat') === 'true') {
   landingPage.style.display = 'none';
   chatRoom.style.display = 'block';
@@ -72,7 +81,7 @@ const getPastMessages = async () => {
   const pastMessages = await room.messages.get({ limit: 10 });
 
   pastMessages.items.forEach((message) => {
-    const messageExists = document.getElementById(message.timeserial);
+    const messageExists = document.getElementById(message.serial);
 
     if (messageExists) {
       return null;
@@ -105,9 +114,9 @@ async function enterChat() {
 function addMessage(message: Message, position = 'after') {
   const messages = document.getElementById('messages');
 
-  /** Create message div with timeserial as the unique identifier */
+  /** Create message div with serial as the unique identifier */
   const messageDiv = document.createElement('div');
-  messageDiv.id = message.timeserial;
+  messageDiv.id = message.serial;
   messageDiv.className = 'flex items-start';
 
   if (position === 'after') {

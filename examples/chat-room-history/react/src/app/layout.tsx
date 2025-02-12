@@ -5,6 +5,7 @@ import { Realtime } from 'ably';
 import { ChatClient, ChatClientProvider, ChatRoomProvider, RoomOptionsDefaults } from '@ably/chat';
 import { faker } from '@faker-js/faker';
 import '../../styles/styles.css'
+import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,12 +17,23 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [roomName, setRoomName] = useState('chat-room-history');
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const name = urlParams.get('name');
+
+    if (name !== null) {
+      setRoomName(name);
+    }
+  }, []);
+
   return (
     <html lang="en">
       <body className={inter.className}>
         <ChatClientProvider client={chatClient}>
           <ChatRoomProvider
-            id="chat-room-messages"
+            id={roomName}
             options={RoomOptionsDefaults}
           >
             {children}

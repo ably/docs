@@ -8,15 +8,18 @@ const realtimeClient = new Ably.Realtime({
 });
 const chatClient = new ChatClient(realtimeClient);
 
-// Get ROOM with typing capabilities
-const room = chatClient.rooms.get('chat-online-status', { presence: RoomOptionsDefaults.presence });
+async function initializeChat() {
+  const urlParams = new URLSearchParams(window.location.search);
 
-async function inializeChat() {
+  // Get ROOM with typing capabilities
+  const room = await chatClient.rooms.get(urlParams.get('name') || 'chat-online-status', {
+    presence: RoomOptionsDefaults.presence,
+  });
   const onlineStatuses = await room.presence.get();
 
-  onlineStatuses.forEach(async (onlineStatus: PresenceMember) => {
+  for (const onlineStatus of onlineStatuses) {
     await addCard(onlineStatus);
-  });
+  }
 
   /** 💡 Subscribe to the presence set of the room to see online statuses 💡 */
   room.presence.subscribe(async (event: PresenceEvent) => {
@@ -110,4 +113,6 @@ async function addCard(onlineStatus: PresenceMember | PresenceEvent) {
   nameParentDiv.appendChild(statusDiv);
 }
 
-inializeChat();
+initializeChat().catch((error) => {
+  console.log('Error initializing chat', error);
+});
