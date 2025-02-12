@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, WindowLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
@@ -60,15 +60,19 @@ const RightSidebar = () => {
   const { activePage } = useLayoutContext();
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>();
-  const observer = useRef<IntersectionObserver>();
+  const intersectionObserver = useRef<IntersectionObserver>();
   const location = useLocation();
   const showLanguageSelector = activePage?.languages.length > 0;
   const language = new URLSearchParams(location.search).get('lang');
 
-  useLayoutEffect(() => {
-    setTimeout(() => {
-      const headerElements =
-        typeof document !== 'undefined' ? document.querySelector('article')?.querySelectorAll('h2, h3, h6') ?? [] : [];
+  useEffect(() => {
+    const articleElement = document.querySelector('article');
+    if (!articleElement) {
+      return;
+    }
+
+    const updateHeaders = () => {
+      const headerElements = articleElement.querySelectorAll('h2, h3, h6') ?? [];
       const headerData = Array.from(headerElements)
         .filter((element) => element.id && element.textContent)
         .map((header) => ({
@@ -81,34 +85,42 @@ const RightSidebar = () => {
       setHeaders(headerData);
 
       headerElements.forEach((header) => {
-        observer.current?.observe(header);
+        intersectionObserver.current?.observe(header);
       });
-    }, 100);
 
-    const handleIntersect = (
-      entries: {
-        target: Element;
-        isIntersecting: boolean;
-      }[],
-    ) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting && entry.target.id) {
-          setActiveHeader({
-            id: entry.target.id,
-          });
-        }
+      const handleIntersect = (
+        entries: {
+          target: Element;
+          isIntersecting: boolean;
+        }[],
+      ) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.target.id) {
+            setActiveHeader({
+              id: entry.target.id,
+            });
+          }
+        });
+      };
+
+      intersectionObserver.current = new IntersectionObserver(handleIntersect, {
+        root: null,
+        threshold: 1,
       });
+
+      return () => {
+        intersectionObserver.current?.disconnect();
+      };
     };
 
-    observer.current = new IntersectionObserver(handleIntersect, {
-      root: null,
-      threshold: 1,
-    });
+    const observer = new MutationObserver(updateHeaders);
 
-    return () => {
-      observer.current?.disconnect();
-    };
-  }, [language, location.pathname]);
+    observer.observe(articleElement, { childList: true, subtree: true });
+
+    updateHeaders();
+
+    return () => observer.disconnect();
+  }, [location.href]);
 
   const highlightPosition = useMemo(() => {
     const sidebarElement =
