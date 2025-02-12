@@ -2,7 +2,10 @@ import { ProductKey } from '../types';
 import { LanguageData } from './types';
 
 export default {
-  platform: {} as LanguageData,
+  platform: {
+    javascript: 2.6,
+    nodejs: 2.6,
+  },
   pubsub: {
     javascript: 2.6,
     nodejs: 2.6,
