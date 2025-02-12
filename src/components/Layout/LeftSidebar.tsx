@@ -8,7 +8,6 @@ import { NavProduct, NavProductContent, NavProductPages } from 'src/data/nav/typ
 import {
   commonAccordionOptions,
   composeNavLinkId,
-  formatNavLink,
   hierarchicalKey,
   PageTreeNode,
   sidebarAlignmentClasses,
@@ -29,22 +28,23 @@ type LeftSidebarProps = {
 const NavPage = ({
   depth,
   page,
-  index,
+  indices,
   type,
   indentLinks,
   inHeader,
 }: {
   depth: number;
   page: NavProductPages;
-  index: number;
+  indices: number[];
   type: ContentType;
   inHeader: boolean;
   indentLinks?: boolean;
 }) => {
   const location = useLocation();
-  const pageActive = 'link' in page && formatNavLink(page.link) === formatNavLink(location.pathname);
   const linkId = 'link' in page ? composeNavLinkId(page.link) : undefined;
   const { activePage } = useLayoutContext();
+  const treeMatch = indices.every((value, index) => value === activePage.tree[index]?.index);
+  const pageActive = 'link' in page && treeMatch;
 
   if ('link' in page) {
     const language = new URLSearchParams(location.search).get('lang');
@@ -77,30 +77,42 @@ const NavPage = ({
         data={[
           {
             name: page.name,
-            content: page.pages.map((subPage) => (
+            content: page.pages.map((subPage, subPageIndex) => (
               <div className="mb-8 first:mt-8" key={subPage.name}>
-                <NavPage page={subPage} indentLinks index={index} type={type} depth={depth + 1} inHeader={inHeader} />
+                <NavPage
+                  page={subPage}
+                  indentLinks
+                  indices={[...indices, subPageIndex]}
+                  type={type}
+                  depth={depth + 1}
+                  inHeader={inHeader}
+                />
               </div>
             )),
           },
         ]}
-        {...commonAccordionOptions(page, activePage.tree?.[0]?.index === index ? 0 : undefined, false, inHeader)}
+        {...commonAccordionOptions(page, treeMatch ? 0 : undefined, false, inHeader)}
       />
     );
   }
 };
 
-const renderProductContent = (content: NavProductContent[], type: ContentType, inHeader: boolean) =>
-  content.map((productContent) => (
+const renderProductContent = (
+  content: NavProductContent[],
+  type: ContentType,
+  inHeader: boolean,
+  productIndex: number,
+) =>
+  content.map((productContent, productContentIndex) => (
     <div className="flex flex-col gap-[10px] md:gap-8" key={productContent.name}>
       <div className="ui-text-overline2 text-neutral-700">{productContent.name}</div>
       {productContent.pages.map((page, pageIndex) => (
         <NavPage
           key={'name' in page ? page.name : `page-group-${pageIndex}`}
           page={page}
-          index={pageIndex}
+          indices={[productIndex, productContentIndex, pageIndex]}
           type={type}
-          depth={0}
+          depth={2}
           inHeader={inHeader}
         />
       ))}
@@ -112,7 +124,7 @@ const constructProductNavData = (
   products: [ProductKey, NavProduct][],
   inHeader: boolean,
 ): AccordionData[] => {
-  const navData: AccordionData[] = products.map(([productKey, product]) => {
+  const navData: AccordionData[] = products.map(([productKey, product], index) => {
     const apiReferencesId = `${productKey}-api-references`;
 
     return {
@@ -137,13 +149,13 @@ const constructProductNavData = (
               Jump to API references
             </a>
           ) : null}
-          {renderProductContent(product.content, 'content', inHeader)}
+          {renderProductContent(product.content, 'content', inHeader, index)}
           {product.api.length > 0 ? (
             <div
               id={apiReferencesId}
               className="flex flex-col gap-[10px] md:gap-8 rounded-lg bg-neutral-100 border border-neutral-300 p-16 mb-24 md:-mx-16"
             >
-              {renderProductContent(product.api, 'api', inHeader)}
+              {renderProductContent(product.api, 'api', inHeader, index)}
             </div>
           ) : null}
         </div>
