@@ -96,8 +96,15 @@ export const LanguageSelector = () => {
     [activePage.languages, languageVersions],
   );
 
-  const queryParams = new URLSearchParams(location.search);
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const langParam = queryParams.get('lang');
+
+  useEffect(() => {
+    if (langParam && !options.some((option) => option.label === langParam)) {
+      queryParams.delete('lang');
+      navigate(`${location.pathname}?${queryParams.toString()}`);
+    }
+  }, [langParam, options, location.pathname, queryParams]);
 
   useEffect(() => {
     const defaultOption = options.find((option) => option.label === langParam) || options[0];
