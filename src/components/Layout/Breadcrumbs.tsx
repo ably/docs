@@ -8,9 +8,10 @@ import { hierarchicalKey } from './utils/nav';
 const Breadcrumbs: React.FC = () => {
   const { activePage } = useLayoutContext();
 
-  const breadcrumbNodes = useMemo(() => {
-    return activePage?.tree.filter((node) => node.page.link !== '#') ?? [];
-  }, [activePage.tree]);
+  const breadcrumbNodes = useMemo(
+    () => activePage?.tree.filter((node) => node.page.link !== '#') ?? [],
+    [activePage.tree],
+  );
 
   if (breadcrumbNodes.length === 0) {
     return null;
