@@ -13,7 +13,7 @@ export default {
       pages: [
         {
           name: 'What is Asset Tracking?',
-          link: '/asset-tracking/',
+          link: '/asset-tracking',
         },
         {
           name: 'Using the example apps',
