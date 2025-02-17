@@ -12,10 +12,11 @@ let sendCount = 0;
 let chatClient: ChatClient;
 let room: Room;
 const urlParams = new URLSearchParams(window.location.search);
+const roomName = urlParams.get('name') || 'chat-room-history';
 
 async function initializeChat() {
   chatClient = new ChatClient(realtimeClient);
-  room = await chatClient.rooms.get(urlParams.get('name') || 'chat-room-history', RoomOptionsDefaults);
+  room = await chatClient.rooms.get(roomName, RoomOptionsDefaults);
 }
 
 initializeChat().catch((error) => {

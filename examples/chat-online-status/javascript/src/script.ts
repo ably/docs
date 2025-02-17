@@ -10,9 +10,10 @@ const chatClient = new ChatClient(realtimeClient);
 
 async function initializeChat() {
   const urlParams = new URLSearchParams(window.location.search);
+  const channelName = urlParams.get('name') || 'chat-online-status';
 
   // Get ROOM with typing capabilities
-  const room = await chatClient.rooms.get(urlParams.get('name') || 'chat-online-status', {
+  const room = await chatClient.rooms.get(channelName, {
     presence: RoomOptionsDefaults.presence,
   });
   const onlineStatuses = await room.presence.get();

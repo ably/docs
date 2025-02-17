@@ -1,11 +1,13 @@
 import * as Ably from 'ably';
-import type { Message } from "ably";
+import type { Message } from 'ably';
 import { faker } from '@faker-js/faker';
 import './styles.css';
 
 const preloadButton = document.getElementById('pre-load-history');
 let lastBidAmount = 100;
 const numBids = 10;
+const urlParams = new URLSearchParams(window.location.search);
+const channelName = urlParams.get('name') || 'pub-sub-history';
 
 async function enterAuction() {
   landingPage.style.display = 'none';
@@ -16,7 +18,7 @@ async function enterAuction() {
     clientId: faker.person.firstName(),
   });
 
-  channel = client.channels.get('cab-pad-sit');
+  channel = client.channels.get(channelName);
 
   const currentBid = await retrieveLastBidAmount();
   if (currentBid) {
@@ -43,7 +45,7 @@ preloadButton.addEventListener('click', async () => {
       key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
       clientId,
     });
-    const channel = client.channels.get('cab-pad-sit');
+    const channel = client.channels.get(urlParams.get('name') || 'pub-sub-history');
     const bidAmount = (lastBidAmount + Math.random() * 50).toFixed(2);
 
     await channel.publish('bid', {

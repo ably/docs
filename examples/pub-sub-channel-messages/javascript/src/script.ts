@@ -27,7 +27,10 @@ function getHeadlinesRemaining() {
 
 getHeadlinesRemaining();
 
-const channel = client.channels.get('cut-nil-tie');
+const urlParams = new URLSearchParams(window.location.search);
+
+const channelName = urlParams.get('name') || 'pub-sub-channel-messages';
+const channel = client.channels.get(channelName);
 const messagesDiv = document.getElementById('headlines');
 
 channel.subscribe((message) => {

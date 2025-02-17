@@ -6,7 +6,9 @@ const client = new Ably.Realtime({
   clientId: faker.person.firstName(),
   key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
 });
-const channel = client.channels.get('viewer-presence');
+const urlParams = new URLSearchParams(window.location.search);
+const channelName = urlParams.get('name') || 'pub-sub-presence';
+const channel = client.channels.get(channelName);
 const button = document.getElementById('status-button');
 const statusInput = document.getElementById('status-input') as HTMLInputElement;
 

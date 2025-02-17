@@ -8,6 +8,8 @@ interface Message {
   isNew: boolean;
 }
 
+const urlParams = new URLSearchParams(window.location.search);
+
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [headlines, setHeadlines] = useState([
@@ -24,7 +26,7 @@ export default function Home() {
   ]);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
 
-  const { publish } = useChannel('cut-nil-tie', (message) => {
+  const { publish } = useChannel(urlParams.get('name') || 'pub-sub-channel-messages', (message) => {
     setMessages(prev => [{ text: message.data, isNew: true }, ...prev]);
 
     setTimeout(() => {

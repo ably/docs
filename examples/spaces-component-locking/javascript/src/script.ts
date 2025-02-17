@@ -30,7 +30,9 @@ async function connect() {
   buildForm();
 
   const spaces = new Spaces(client);
-  space = await spaces.get('component-locking');
+  const urlParams = new URLSearchParams(window.location.search);
+  const spaceName = urlParams.get('name') || 'spaces-component-locking';
+  space = await spaces.get(spaceName);
 
   // /** 💡 Enter the space as soon as it's available 💡 */
   await space.enter({

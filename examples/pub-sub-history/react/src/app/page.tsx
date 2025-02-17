@@ -4,6 +4,9 @@ import * as Ably from 'ably';
 import { faker } from '@faker-js/faker';
 import { useRouter } from 'next/navigation';
 
+const urlParams = new URLSearchParams(window.location.search);
+const channelName = urlParams.get('name') || 'pub-sub-history';
+
 export default function Home() {
   const router = useRouter();
 
@@ -19,7 +22,7 @@ export default function Home() {
         key: process.env.NEXT_PUBLIC_ABLY_KEY,
         clientId,
       });
-      const channel = client.channels.get('cab-pad-sit');
+      const channel = client.channels.get(channelName);
 
       const bidAmount = (lastBidAmount + Math.random() * 50).toFixed(2);
 
@@ -32,7 +35,7 @@ export default function Home() {
       lastBidAmount = parseFloat(bidAmount);
     }
 
-    router.push('/auction');
+    router.push(`/auction?name=${encodeURIComponent(channelName)}`);
   };
 
   return (

@@ -16,7 +16,8 @@ async function initializeChat() {
   chatClient = new ChatClient(realtimeClient);
 
   const urlParams = new URLSearchParams(window.location.search);
-  room = await chatClient.rooms.get(urlParams.get('name') || 'chat-room-messages', RoomOptionsDefaults);
+  const roomName = urlParams.get('name') || 'chat-room-messages';
+  room = await chatClient.rooms.get(roomName, RoomOptionsDefaults);
 
   /** 💡 Add every every message published to the room 💡 */
   room.messages.subscribe((message) => {
