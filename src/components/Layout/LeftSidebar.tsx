@@ -197,7 +197,7 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
         <a
           href="/docs"
           aria-label="Home"
-          className="flex w-full items-center focus-base text-neutral-1000 dark:text-neutral-300 hover:text-neutral-1100 active:text-neutral-1000 transition-colors h-40 ui-text-menu1 font-bold px-16"
+          className="flex w-full items-center focus-base text-neutral-1000 dark:text-neutral-300 hover:text-neutral-1100 active:text-neutral-1000 transition-colors h-40 ui-text-menu1 font-bold px-16 mt-16"
         >
           Home
         </a>

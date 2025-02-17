@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { navigate } from '@reach/router';
-import TabMenu from '@ably/ui/core/TabMenu';
 import Icon from '@ably/ui/core/Icon';
 import AblyHeader from '@ably/ui/core/Header';
 import { SearchBar } from '../SearchBar';
@@ -14,7 +12,6 @@ type HeaderProps = {
 
 const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
   const [showMenu, setShowMenu] = useState(false);
-  const tabs = ['Documentation', { label: 'Examples', disabled: true }];
   const userContext = useContext(UserContext);
   const sessionState = {
     ...userContext.sessionState,
@@ -22,16 +19,18 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
     account: userContext.sessionState.account ?? { links: { dashboard: { href: '#' } } },
   };
 
-  const tabLinks = (index: number) => {
-    switch (index) {
-      case 0:
-        return pathWithBase('/');
-      case 1:
-        return pathWithBase('/examples');
-      default:
-        return '#';
-    }
-  };
+  // TODO: reenable when examples are ready to be released
+  // const tabs = ['Documentation', { label: 'Examples', disabled: true }];
+  // const tabLinks = (index: number) => {
+  //   switch (index) {
+  //     case 0:
+  //       return pathWithBase('/');
+  //     case 1:
+  //       return pathWithBase('/examples');
+  //     default:
+  //       return '#';
+  //   }
+  // };
 
   useEffect(() => {
     const handleResize = () => {
@@ -59,26 +58,29 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
 
   return (
     <AblyHeader
-      nav={
-        <TabMenu
-          tabs={tabs}
-          tabClassName="ui-text-menu3 !px-16"
-          tabOnClick={(index) => {
-            navigate(tabLinks(index));
-          }}
-          options={{ underline: false, flexibleTabHeight: true }}
-        />
-      }
-      mobileNav={
-        <TabMenu
-          tabs={tabs}
-          contents={[<LeftSidebar inHeader key="nav-mobile-documentation-tab" />, null]}
-          rootClassName="h-full overflow-y-hidden min-h-[51px] flex flex-col"
-          contentClassName="h-full py-16 overflow-y-scroll"
-          tabClassName="ui-text-menu2 !px-16"
-          options={{ flexibleTabWidth: true }}
-        />
-      }
+      // TODO: reenable when examples are ready to be released
+      // nav={
+      //   <TabMenu
+      //     tabs={tabs}
+      //     tabClassName="ui-text-menu3 !px-16"
+      //     tabOnClick={(index) => {
+      //       navigate(tabLinks(index));
+      //     }}
+      //     options={{ underline: false, flexibleTabHeight: true }}
+      //   />
+      // }
+      // mobileNav={
+      //   <TabMenu
+      //     tabs={tabs}
+      //     contents={[<LeftSidebar inHeader key="nav-mobile-documentation-tab" />, null]}
+      //     rootClassName="h-full overflow-y-hidden min-h-[51px] flex flex-col"
+      //     contentClassName="h-full py-16 overflow-y-scroll"
+      //     tabClassName="ui-text-menu2 !px-16"
+      //     options={{ flexibleTabWidth: true }}
+      //   />
+      // }
+      // TODO: remove mt-16 from inHeader link when examples are ready to be released
+      mobileNav={<LeftSidebar inHeader key="nav-mobile-documentation-tab" />}
       searchButton={
         <button
           className="cursor-pointer focus-base rounded"

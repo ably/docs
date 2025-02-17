@@ -41,8 +41,10 @@ describe('Header', () => {
   it('renders the header with logo and links', () => {
     render(<Header />);
     expect(screen.getAllByAltText('Ably logo').length).toBeGreaterThan(0);
-    expect(screen.getByText('Documentation')).toBeInTheDocument();
-    expect(screen.getByText('Examples')).toBeInTheDocument();
+
+    // TODO reenable when examples are ready to be released
+    // expect(screen.getByText('Documentation')).toBeInTheDocument();
+    // expect(screen.getByText('Examples')).toBeInTheDocument();
   });
 
   it('renders the search bar when hideSearchBar is false', () => {
