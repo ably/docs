@@ -102,7 +102,7 @@ export const LanguageSelector = () => {
   useEffect(() => {
     if (langParam && !options.some((option) => option.label === langParam)) {
       queryParams.delete('lang');
-      navigate(`${location.pathname}?${queryParams.toString()}`);
+      navigate(`${location.pathname}?${queryParams.toString()}`, { replace: true });
     }
   }, [langParam, options, location.pathname, queryParams]);
 
