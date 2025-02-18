@@ -30,8 +30,10 @@ const externalLinks = (
 
   if (currentPage) {
     const githubPathName = location.pathname.replace('docs/', '');
+    const githubPathSegments = githubPathName.split('/').filter((segment) => segment !== '');
     githubEditPath =
-      githubBasePath + (currentPage.indexPage ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
+      githubBasePath +
+      (githubPathSegments.length === 1 ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
 
     const language = new URLSearchParams(location.search).get('lang');
     const requestTitle = `Change request for: ${currentPage.link}`;

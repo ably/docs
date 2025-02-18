@@ -82,7 +82,6 @@ export default {
         {
           name: 'Basic pub-sub',
           link: '/pub-sub',
-          indexPage: true,
         },
         {
           name: 'Advanced pub-sub',
