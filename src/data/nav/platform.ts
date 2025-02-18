@@ -8,15 +8,11 @@ export default {
   },
   content: [
     {
-      name: 'About',
+      name: 'Introduction',
       pages: [
         {
-          name: 'Platform customization',
-          link: '/platform-customization',
-        },
-        {
-          name: 'Glossary',
-          link: '/glossary',
+          name: 'About Ably',
+          link: '/platform',
         },
       ],
     },
@@ -163,6 +159,10 @@ export default {
         {
           name: 'Two-factor authentication (2FA)',
           link: '/account/2fa',
+        },
+        {
+          name: 'Enterprise customization',
+          link: '/platform-customization',
         },
         {
           name: 'App management',
