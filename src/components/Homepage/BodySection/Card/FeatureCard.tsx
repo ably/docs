@@ -1,5 +1,5 @@
 import { CardProps } from '../../HomepageContent';
-import { Links } from '../../../ProductPage/BodySection/Card';
+import { Links } from './Links';
 import { Image } from '../../../Image';
 import { navigate } from '../../../Link';
 
