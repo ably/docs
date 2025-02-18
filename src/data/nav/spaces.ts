@@ -2,19 +2,23 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Spaces',
-  link: '/products/spaces',
   icon: {
     closed: 'icon-product-spaces-mono',
     open: 'icon-product-spaces',
   },
   content: [
     {
-      name: 'Get started',
+      name: 'Introduction',
       pages: [
         {
-          name: 'What is Spaces?',
+          name: 'About Spaces',
           link: '/spaces',
         },
+      ],
+    },
+    {
+      name: 'Get started',
+      pages: [
         {
           name: 'SDK setup',
           link: '/spaces/setup',
