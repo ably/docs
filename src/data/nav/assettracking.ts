@@ -2,19 +2,23 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Asset Tracking',
-  link: '/products/asset-tracking',
   icon: {
     closed: 'icon-product-asset-tracking-mono',
     open: 'icon-product-asset-tracking',
   },
   content: [
     {
-      name: 'Asset Tracking',
+      name: 'Introduction',
       pages: [
         {
-          name: 'What is Asset Tracking?',
+          name: 'About Asset Tracking',
           link: '/asset-tracking',
         },
+      ],
+    },
+    {
+      name: 'Track',
+      pages: [
         {
           name: 'Using the example apps',
           link: '/asset-tracking/example-apps',
@@ -26,5 +30,21 @@ export default {
       ],
     },
   ],
-  api: [],
+  api: [
+    {
+      name: 'API References',
+      pages: [
+        {
+          link: 'https://sdk.ably.com/builds/ably/ably-asset-tracking-android/main/dokka/index.html',
+          name: 'Kotlin',
+          external: true,
+        },
+        {
+          link: 'https://sdk.ably.com/builds/ably/ably-asset-tracking-swift/main/jazzy/',
+          name: 'Swift',
+          external: true,
+        },
+      ],
+    },
+  ],
 } satisfies NavProduct;
