@@ -139,6 +139,10 @@ export default {
               name: 'Pulsar',
               link: '/docs/integrations/streaming/pulsar',
             },
+            {
+              name: 'BigQuery',
+              link: '/docs/integrations/streaming/bigquery',
+            },
           ],
         },
         {
