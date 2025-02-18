@@ -2,22 +2,17 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Pub/Sub',
-  link: '/products/channels',
   icon: {
     closed: 'icon-product-pubsub-mono',
     open: 'icon-product-pubsub',
   },
   content: [
     {
-      name: 'Basics',
+      name: 'Introduction',
       pages: [
         {
-          name: 'What is Ably?',
-          link: '/basics/ably',
-        },
-        {
-          name: 'How to use Ably',
-          link: '/basics/use-ably',
+          name: 'About Pub/Sub',
+          link: '/basics',
         },
       ],
     },
