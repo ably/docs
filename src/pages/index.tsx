@@ -61,15 +61,8 @@ export const query = graphql`
   query HomePageQuery {
     pageContentYaml(name: { eq: "Homepage" }) {
       sections {
-        title
-        description
         columns
         bottomMargin
-        callToAction {
-          text
-          href
-          external
-        }
         cards {
           title
           type
