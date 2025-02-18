@@ -1,11 +1,12 @@
 import { FunctionComponent as FC } from 'react';
+import { navigate } from 'gatsby';
 import cn from '@ably/ui/core/utils/cn';
 import { createLanguageHrefFromDefaults, getLanguageDefaults, getTrimmedLanguage } from 'src/components';
-import languageLabels from 'src/maps/language';
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
 import { button, isActive } from '../Menu/MenuItemButton/MenuItemButton.module.css';
 import { usePageLanguage } from 'src/contexts';
-import { navigate } from 'gatsby';
+import { languageInfo } from 'src/data/languages';
+import { LanguageKey } from 'src/data/languages/types';
 
 const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, selectedLocalLanguage }) => {
   const { currentLanguage: pageLanguage, setPreferredLanguage } = usePageLanguage();
@@ -26,8 +27,6 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, select
     }
     navigate(href);
   };
-  const langLabelAndVersion = languageLabels[language].split(' ');
-  const languageLabel = langLabelAndVersion.slice(0, -1).join(' ');
 
   return (
     <button
@@ -36,7 +35,7 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, select
       })}
       onClick={handleClick}
     >
-      {languageLabel ?? language}
+      {languageInfo[language as LanguageKey]?.label}
     </button>
   );
 };

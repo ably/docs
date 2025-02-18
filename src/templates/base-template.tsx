@@ -2,10 +2,8 @@ import { Script, ScriptStrategy, navigate } from 'gatsby';
 import { useEffect, useMemo } from 'react';
 
 import { Head } from 'src/components/Head';
-import Layout from 'src/components/Layout';
 import Article from 'src/components/Article';
 import PageTitle from 'src/components/PageTitle';
-import { RightSidebarWrapper } from 'src/components/Sidebar/RightSidebar';
 import Html from 'src/components/blocks/Html';
 import {
   createLanguageHrefFromDefaults,
@@ -14,18 +12,11 @@ import {
 } from 'src/components/common/language-defaults';
 import { PageLanguageProvider, PathnameContext, usePageLanguage } from 'src/contexts';
 
-import { isEmpty } from 'lodash';
-import { SidebarProvider } from 'src/contexts/SidebarContext';
-import {
-  DEFAULT_LANGUAGE,
-  DEFAULT_PREFERRED_LANGUAGE,
-  IGNORED_LANGUAGES,
-  REALTIME_SDK_INTERFACE,
-  REST_SDK_INTERFACE,
-} from '../../data/createPages/constants';
+import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from '../../data/createPages/constants';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { getMetaTitle } from 'src/components/common/meta-title';
+import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -43,11 +34,12 @@ interface ITemplate extends AblyTemplateData {
 
 const Template = ({
   location: { pathname, hash },
-  pageContext: { contentOrderedList, languages, version, contentMenu, slug, script },
+  pageContext: { contentOrderedList, languages, slug, script },
   data: { document },
-  showProductNavigation = true,
   currentProduct,
 }: ITemplate) => {
+  useSetLayoutOptions();
+
   const {
     currentLanguage: currentLanguageFromContext,
     handleCurrentLanguageChange,
@@ -77,21 +69,6 @@ const Template = ({
   const pageLanguage = filteredLanguages.includes(currentLanguageFromContext)
     ? currentLanguageFromContext
     : DEFAULT_LANGUAGE;
-  const contentMenuFromAllLanguages = contentMenu[pageLanguage];
-  const contentMenuFromRealtime = contentMenu[`${REALTIME_SDK_INTERFACE}_${pageLanguage}`];
-  const contentMenuFromRest = contentMenu[`${REST_SDK_INTERFACE}_${pageLanguage}`];
-  const contentMenuFromSDKInterface = !isEmpty(contentMenuFromRealtime) ? contentMenuFromRealtime : contentMenuFromRest;
-  const contentMenuFromLangOrSDKInterface = !isEmpty(contentMenuFromAllLanguages)
-    ? contentMenuFromAllLanguages
-    : contentMenuFromSDKInterface;
-
-  const contentMenuFromLanguage = contentMenuFromLangOrSDKInterface ?? [[]];
-
-  const versionData = {
-    version,
-    versions: [],
-    rootVersion: slug,
-  };
 
   const elements = useMemo(
     () =>
@@ -150,20 +127,10 @@ const Template = ({
     <>
       <PathnameContext.Provider value={pathname}>
         <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} />
-
-        <SidebarProvider>
-          <Layout showProductNavigation={showProductNavigation} currentProduct={currentProduct}>
-            <Article>
-              <PageTitle>{title}</PageTitle>
-              <div>{elements}</div>
-            </Article>
-            <RightSidebarWrapper
-              menuData={contentMenuFromLanguage[0]}
-              languages={filteredLanguages}
-              versionData={versionData}
-            />
-          </Layout>
-        </SidebarProvider>
+        <Article>
+          <PageTitle>{title}</PageTitle>
+          <div>{elements}</div>
+        </Article>
       </PathnameContext.Provider>
       {script && <Script src={`/scripts/${slug}.js`} strategy={ScriptStrategy.idle} />}
     </>

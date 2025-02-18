@@ -14,6 +14,7 @@ import {
   ReactSelectOption,
   Select,
 } from 'src/components';
+import cn from '@ably/ui/core/utils/cn';
 
 export interface LanguageNavigationComponentProps {
   language: string;
@@ -23,6 +24,7 @@ export interface LanguageNavigationComponentProps {
   isSelected?: boolean;
   selectedSDKInterfaceTab?: string;
   selectedLocalLanguage: string;
+  children?: React.ReactNode;
 }
 
 export interface LanguageNavigationProps {
@@ -96,7 +98,11 @@ const LanguageNavigation = ({
 
       {items.length >= 1 ? (
         <div className="border-b border-charcoal-grey w-full">
-          <menu data-testid="menu" className={horizontalNav}>
+          <menu
+            className={cn(horizontalNav, 'docs-language-navigation')}
+            data-testid="menu"
+            data-languages={items.map((item) => item.props.language).join(',')}
+          >
             {items.map(({ Component, props, content }, index) => (
               <Component {...props} key={index}>
                 {content}

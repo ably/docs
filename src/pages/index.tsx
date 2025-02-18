@@ -1,13 +1,11 @@
 import { graphql } from 'gatsby';
 import { Helmet } from 'react-helmet';
 
-import Layout from 'src/components/Layout';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { HomepageContent, SectionProps } from 'src/components/Homepage/HomepageContent';
-
-import { SidebarProvider } from 'src/contexts/SidebarContext';
 import { PageLanguageProvider } from 'src/contexts';
+import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
 export type MetaData = {
   title: string;
@@ -28,6 +26,8 @@ const IndexPage = ({
   data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
   location: Location;
 }) => {
+  useSetLayoutOptions({ noSidebar: true, hideSearchBar: true });
+
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/');
@@ -51,11 +51,7 @@ const IndexPage = ({
       </Helmet>
 
       <PageLanguageProvider search={search}>
-        <SidebarProvider>
-          <Layout currentProduct="home" noSidebar showSearchBar={false}>
-            <HomepageContent sections={sections} images={images} />
-          </Layout>
-        </SidebarProvider>
+        <HomepageContent sections={sections} images={images} />
       </PageLanguageProvider>
     </>
   );

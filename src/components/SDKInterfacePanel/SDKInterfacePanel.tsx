@@ -1,7 +1,8 @@
 import { REALTIME_SDK_INTERFACE, REST_SDK_INTERFACE, SDK_INTERFACES } from '../../../data/createPages/constants';
 import React, { Dispatch, SetStateAction, useCallback, useState } from 'react';
 import Icon from '@ably/ui/core/Icon';
-import languageLabels from '../../maps/language';
+import { languageLabel } from 'src/data/languages';
+import { LanguageKey } from 'src/data/languages/types';
 
 const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
   const [tooltipHover, setTooltipHover] = useState(false);
@@ -65,7 +66,7 @@ const SDKInterfacePanel = ({
             }`}
             onClick={() => handleTabChanges(sdkInterface)}
           >
-            {languageLabels[sdkInterface] ?? sdkInterface}
+            {languageLabel(sdkInterface as LanguageKey) ?? sdkInterface}
           </button>
         ))}
         <SDKToolTip tooltip="Ably SDKs may contain a realtime and a REST interface, each of which satisfy different use cases." />

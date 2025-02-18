@@ -1,11 +1,10 @@
 import { Helmet } from 'react-helmet';
 import { graphql } from 'gatsby';
 
-import Layout from 'src/components/Layout';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
-import { LeftSideBar } from 'src/components/StaticQuerySidebar';
 import { ProductPageContent, SectionProps } from 'src/components/ProductPage/ProductPageContent';
+import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
 type MetaData = {
   title: string;
@@ -26,6 +25,8 @@ const IndexPage = ({
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/products/livesync');
 
+  useSetLayoutOptions();
+
   return (
     <>
       <Helmet>
@@ -44,10 +45,7 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <Layout isExtraWide currentProduct="livesync">
-        <LeftSideBar sidebarName="livesync" />
-        <ProductPageContent sections={sections} images={images} />
-      </Layout>
+      <ProductPageContent sections={sections} images={images} />
     </>
   );
 };

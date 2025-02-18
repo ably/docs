@@ -81,14 +81,6 @@ export const plugins = [
   {
     resolve: 'gatsby-source-filesystem',
     options: {
-      name: 'yaml-page-furniture',
-      path: './data/yaml/page-furniture',
-    },
-    __key: 'yaml-page-furniture',
-  },
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
       name: 'yaml-page-content',
       path: './data/yaml/page-content',
     },
@@ -136,4 +128,10 @@ export const plugins = [
     },
   },
   `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/
+  {
+    resolve: `gatsby-plugin-layout`,
+    options: {
+      component: `src/components/Layout/Layout.tsx`,
+    },
+  },
 ];
