@@ -1,10 +1,12 @@
 import { LayoutOptions } from 'src/contexts/layout-context';
 
 const defaultLayoutOptions: Record<string, LayoutOptions> = {
-  '/docs/': { noSidebar: true, hideSearchBar: true },
-  '/docs/api/': { noSidebar: true, hideSearchBar: false },
-  '/docs/sdks/': { noSidebar: true, hideSearchBar: false },
+  '/docs': { noSidebar: true, hideSearchBar: true, template: 'index' },
+  '/docs/api/control-api': { noSidebar: true, hideSearchBar: false, template: 'control-api' },
+  '/docs/sdks': { noSidebar: true, hideSearchBar: false, template: 'sdk' },
 };
 
-export const getLayoutOptions = (pathname: string) =>
-  defaultLayoutOptions[pathname] || { noSidebar: false, hideSearchBar: false };
+export const getLayoutOptions = (pathname: string) => {
+  const cleanPathname = pathname.replace(/\/+$/, '');
+  return defaultLayoutOptions[cleanPathname] || { noSidebar: false, hideSearchBar: false, template: 'base' };
+};
