@@ -34,13 +34,13 @@ const externalLinks = (
       githubBasePath + (currentPage.indexPage ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
 
     const language = new URLSearchParams(location.search).get('lang');
-    const requestTitle = `Change request: ${currentPage.name}`;
+    const requestTitle = `Change request for: ${currentPage.link}`;
     const requestBody = encodeURIComponent(`
-  Name: **${currentPage.name}**
-  Link: **[${currentPage.link}](https://ably.com/docs/${currentPage.link})**
-  ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}**` : ''}
-  
-  Please describe the changes you would like to make to this page:  
+  **Page name**: ${currentPage.name}
+  **URL**: [${currentPage.link}](https://ably.com/docs/${currentPage.link})
+  ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}` : ''}
+
+  **Requested change or enhancement**:
 `);
 
     requestPath = `${requestBasePath}?title=${requestTitle}&body=${requestBody}`;
