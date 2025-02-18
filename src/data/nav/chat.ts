@@ -2,18 +2,17 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Ably Chat',
-  link: '/products/chat',
   icon: {
     closed: 'icon-product-chat-mono',
     open: 'icon-product-chat',
   },
   content: [
     {
-      name: 'Chat',
+      name: 'Introduction',
       pages: [
         {
           name: 'About Chat',
-          link: '/products/chat',
+          link: '/chat',
         },
       ],
     },
