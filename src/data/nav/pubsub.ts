@@ -197,6 +197,10 @@ export default {
           name: 'Metadata',
           pages: [
             {
+              name: 'Overview',
+              link: '/metadata-stats/metadata',
+            },
+            {
               name: 'Metadata subscriptions',
               link: '/metadata-stats/metadata/subscribe',
             },
