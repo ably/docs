@@ -2,6 +2,7 @@ import { NavProduct } from './types';
 
 export default {
   name: 'Platform',
+  link: '/platform',
   icon: {
     closed: 'icon-product-platform-mono',
     open: 'icon-product-platform',
