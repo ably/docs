@@ -1,5 +1,5 @@
 import Icon from '@ably/ui/core/Icon';
-import { LinkProps } from '../../ProductPageContent';
+import { LinkProps } from '../../HomepageContent';
 import Link from '../../../Link';
 
 export const Links = ({ links }: { links?: LinkProps[] }) =>

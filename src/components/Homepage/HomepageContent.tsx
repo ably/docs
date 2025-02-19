@@ -1,5 +1,4 @@
 import { BodySection } from './BodySection/BodySection';
-import { LinkProps, CallToActionProps } from '../ProductPage/ProductPageContent';
 import { ImageProps } from 'src/components/Image';
 
 export type CardProps = {
@@ -20,6 +19,19 @@ export type SectionProps = {
   description: string | null;
   callToAction: CallToActionProps;
   cards: CardProps[];
+};
+
+export type LinkProps = {
+  text: string;
+  href: string;
+  external: boolean;
+};
+
+export type CallToActionProps = {
+  text: string;
+  href: string;
+  external: boolean;
+  type: string;
 };
 
 export const HomepageContent = ({ sections, images }: { sections: SectionProps[]; images: ImageProps[] }) => (
