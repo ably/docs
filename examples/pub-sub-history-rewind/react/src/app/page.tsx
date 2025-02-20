@@ -1,0 +1,102 @@
+'use client'
+
+import * as Ably from 'ably';
+import { faker } from '@faker-js/faker';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+
+export default function Home() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const channelName = searchParams.get('name') || 'pub-sub-history-rewind';
+
+  const preloadOddsHistory = async () => {
+    setIsLoading(true);
+    const clientId = faker.person.firstName();
+    const client = new Ably.Realtime({
+      key: process.env.NEXT_PUBLIC_ABLY_KEY,
+      clientId,
+    });
+
+    const channel = client.channels.get(channelName);
+    const homeTeam = "Royal Knights";
+    const awayTeam = "North Rangers";
+
+    let currentOdds = {
+      match: {
+        homeTeam,
+        awayTeam,
+        timestamp: new Date().toISOString(),
+        score: "0-0",
+        matchOdds: {
+          homeWin: "2.45",
+          draw: "3.25",
+          awayWin: "2.85"
+        },
+        nextGoal: {
+          [homeTeam]: "1.95",
+          [awayTeam]: "1.85",
+          "No Goal": "2.75"
+        }
+      }
+    };
+
+    for (let i = 0; i < 10; i++) {
+      const markets = ['homeWin', 'draw', 'awayWin', 'nextGoal'];
+      const numMarketsToUpdate = Math.floor(Math.random() * 2) + 1;
+      const marketsToUpdate = markets.sort(() => 0.5 - Math.random()).slice(0, numMarketsToUpdate);
+
+      marketsToUpdate.forEach(market => {
+        if (market === 'nextGoal') {
+          const team = Object.keys(currentOdds.match.nextGoal)[Math.floor(Math.random() * 3)];
+          currentOdds.match.nextGoal[team] = (parseFloat(currentOdds.match.nextGoal[team]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
+        } else {
+          currentOdds.match.matchOdds[market] = (parseFloat(currentOdds.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
+        }
+      });
+
+      currentOdds.match.timestamp = new Date().toISOString();
+      await channel.publish('odds', currentOdds);
+
+      // Show alert for each publish
+      const alert = document.createElement('div');
+      alert.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg transition-opacity duration-500';
+      alert.textContent = `Update ${i + 1}/10: New odds published`;
+      document.body.appendChild(alert);
+
+      // Remove alert after 2 seconds
+      setTimeout(() => {
+        alert.style.opacity = '0';
+        setTimeout(() => alert.remove(), 500);
+      }, 2000);
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    router.push(`/odds?name=${encodeURIComponent(channelName)}`);
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-8 rounded-lg shadow-lg w-96">
+        <h2 className="text-2xl mb-6 text-center">Live Football League Odds</h2>
+        <p>Watch real-time odds movement for today's Football League match.</p>
+        <div className="flex flex-col gap-4">
+          <button
+            onClick={() => preloadOddsHistory()}
+            disabled={isLoading}
+            className={`
+              text-white px-4 py-2 rounded
+              ${isLoading
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-green-500 hover:bg-green-600'}
+            `}
+          >
+            {isLoading ? 'Loading...' : 'Load Live Match Odds'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
