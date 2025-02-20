@@ -16,6 +16,6 @@ import { LayoutOptions, useLayoutContext } from 'src/contexts/layout-context';
 export const useSetLayoutOptions = (options?: LayoutOptions) => {
   const { setLayoutOptions } = useLayoutContext();
   useLayoutEffect(() => {
-    setLayoutOptions(options ?? { noSidebar: false, hideSearchBar: false });
+    setLayoutOptions(options ?? { noSidebar: false, hideSearchBar: false, template: 'base' });
   }, [options, setLayoutOptions]);
 };

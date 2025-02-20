@@ -26,7 +26,7 @@ const IndexPage = ({
   data: { pageContentYaml: { sections: SectionProps[]; meta: MetaData }; allFile: { images: ImageProps[] } };
   location: Location;
 }) => {
-  useSetLayoutOptions({ noSidebar: true, hideSearchBar: true });
+  useSetLayoutOptions({ noSidebar: true, hideSearchBar: true, template: 'index' });
 
   const openGraphTitle = sections[0]?.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();

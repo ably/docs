@@ -4,7 +4,7 @@ import { Head } from 'src/components/Head';
 import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
 const SDKsIndexPage = ({ location: { search } }: { location: { search: string } }) => {
-  useSetLayoutOptions({ noSidebar: true, hideSearchBar: false });
+  useSetLayoutOptions({ noSidebar: true, hideSearchBar: false, template: 'sdk' });
 
   const title = 'SDKs';
   const meta_description = '';
