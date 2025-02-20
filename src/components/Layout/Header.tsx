@@ -121,6 +121,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
         },
       ]}
       sessionState={sessionState}
+      logoHref={process.env.NODE_ENV === 'development' ? '/' : '/docs'}
     />
   );
 };

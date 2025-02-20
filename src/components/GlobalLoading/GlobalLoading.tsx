@@ -1,4 +1,4 @@
-import { FunctionComponent as FC, ReactNode, useEffect, useContext } from 'react';
+import { FC, ReactNode, useEffect, useContext, useMemo } from 'react';
 import { useStaticQuery, graphql } from 'gatsby';
 
 // Session-related scripts
@@ -9,7 +9,12 @@ import UserContext from '../../contexts/user-context';
 
 import externalScriptInjector from 'src/external-scripts';
 
-const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
+type GlobalLoadingProps = {
+  template: string;
+  children: ReactNode;
+};
+
+const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
   const userContext = useContext(UserContext);
   const sessionState = userContext.sessionState;
 
@@ -35,22 +40,26 @@ const GlobalLoading: FC<{ children: ReactNode }> = ({ children }) => {
     }
   `);
 
-  const externalScriptsData = siteMetadata.externalScriptsData || {};
-  const { injectScripts, sessionTracker } = externalScriptInjector(externalScriptsData);
+  const externalScriptsData = useMemo(() => siteMetadata.externalScriptsData || {}, [siteMetadata.externalScriptsData]);
+  const serializedData = JSON.stringify(externalScriptsData);
+  const { injectScripts, sessionTracker } = useMemo(
+    () => externalScriptInjector(externalScriptsData),
+    [externalScriptsData],
+  );
 
   useEffect(() => {
-    if (!document.querySelector('div[data-scripts-loaded="true"]')) {
-      injectScripts();
-    }
-
-    if (!document.querySelector('.ably-sprites')) {
-      loadSprites(sprites);
-    }
-  }, [injectScripts]);
+    injectScripts();
+  }, [injectScripts, serializedData, template]);
 
   useEffect(() => {
     sessionTracker(sessionState);
   }, [sessionState, sessionTracker]);
+
+  useEffect(() => {
+    if (!document.querySelector('.ably-sprites')) {
+      loadSprites(sprites);
+    }
+  }, []);
 
   return <>{children}</>;
 };

@@ -16,22 +16,20 @@ import { getLayoutOptions } from 'src/components/Layout/utils/options';
  * setLayoutOptions - Function to update the layout options.
  */
 
-export type LayoutOptions = { noSidebar: boolean; hideSearchBar: boolean };
+export type LayoutOptions = { noSidebar: boolean; hideSearchBar: boolean; template: string };
 
 const LayoutContext = createContext<{
   activePage: { tree: PageTreeNode[]; languages: LanguageKey[] };
   products: [ProductKey, NavProduct][];
-  options: {
-    noSidebar: boolean;
-    hideSearchBar: boolean;
-  };
-  setLayoutOptions: (options: { noSidebar: boolean; hideSearchBar: boolean }) => void;
+  options: LayoutOptions;
+  setLayoutOptions: (options: LayoutOptions) => void;
 }>({
   activePage: { tree: [], languages: [] },
   products: [],
   options: {
     noSidebar: false,
     hideSearchBar: false,
+    template: 'base',
   },
   setLayoutOptions: (options) => {
     console.warn('setLayoutOptions called without a provider', options);
@@ -69,9 +67,13 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
     [],
   );
 
-  const setLayoutOptions = (newOptions: { noSidebar: boolean; hideSearchBar: boolean }) => {
+  const setLayoutOptions = (newOptions: { noSidebar: boolean; hideSearchBar: boolean; template: string }) => {
     setOptions((prevOptions) => {
-      if (prevOptions.noSidebar !== newOptions.noSidebar || prevOptions.hideSearchBar !== newOptions.hideSearchBar) {
+      if (
+        prevOptions.noSidebar !== newOptions.noSidebar ||
+        prevOptions.hideSearchBar !== newOptions.hideSearchBar ||
+        prevOptions.template !== newOptions.template
+      ) {
         return newOptions;
       }
       return prevOptions;

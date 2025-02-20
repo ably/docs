@@ -17,10 +17,10 @@ interface LayoutProps {
 
 const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children }) => {
   const { options } = useLayoutContext();
-  const { hideSearchBar, noSidebar } = options;
+  const { hideSearchBar, noSidebar, template } = options;
 
   return (
-    <GlobalLoading>
+    <GlobalLoading template={template}>
       <Header hideSearchBar={hideSearchBar} />
       <div className="flex pt-64 gap-80 justify-center ui-standard-container mx-auto">
         {!noSidebar ? <LeftSidebar /> : null}
