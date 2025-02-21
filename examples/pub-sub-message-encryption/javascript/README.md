@@ -22,7 +22,7 @@ cd /examples/pub-sub-message-encryption/javascript/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 

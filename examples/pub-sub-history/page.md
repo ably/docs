@@ -57,7 +57,7 @@ cd /examples/pub-sub-history/react/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `NEXT_PUBLIC_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -93,7 +93,7 @@ cd /examples/pub-sub-history/javascript/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
