@@ -8,7 +8,7 @@ interface Message {
   isNew: boolean;
 }
 
-const urlParams = new URLSearchParams(window.location.search);
+const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);

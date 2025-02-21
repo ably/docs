@@ -13,7 +13,7 @@ git clone git@github.com:ably/docs.git
 2. Change directory:
 
 ```sh
-cd /examples/auth-request-token/javascript/
+cd /examples/
 ```
 
 3. Install dependencies:
@@ -25,13 +25,13 @@ yarn install
 4. Run the frontend client:
 
 ```sh
-yarn run dev
+yarn run auth-request-token-javascript
 ```
 
 5. In a new tab, change directory:
 
 ```sh
-cd /examples/auth-request-token/server/
+cd /examples/
 ```
 
 6. Rename the environment file:
@@ -51,7 +51,7 @@ yarn install
 9. Run the backend server:
 
 ```sh
-yarn run dev
+yarn run auth-request-token-server
 ```
 
 10. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
