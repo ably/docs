@@ -5,7 +5,7 @@ const inkeepChat = (apiKey, integrationId, organizationId) => {
     return;
   }
 
-  scriptLoader(document, 'https://unpkg.com/@inkeep/uikit-js@0.3.9/dist/embed.js', {
+  scriptLoader(document, 'https://unpkg.com/@inkeep/uikit-js@0.3.19/dist/embed.js', {
     defer: true,
     async: false,
     type: 'module',
@@ -35,6 +35,14 @@ const aiChatSettings = {
     botAvatarSrcUrl: 'https://storage.googleapis.com/organization-image-assets/ably-botAvatarSrcUrl-1721406747144.png',
     getHelpCallToActions: [
       {
+        name: 'Request a meeting',
+        url: 'https://meetings.hubspot.com/ably-sales/book-a-demo',
+
+        type: 'OPEN_LINK',
+        pinToToolbar: true,
+        shouldCloseModal: false,
+      },
+      {
         name: 'Chat with support',
         url: 'https://ably.com/support',
         icon: {
@@ -44,6 +52,7 @@ const aiChatSettings = {
         callback: () => {
           openHubSpotConversations();
         },
+        pinToToolbar: true,
         shouldCloseModal: true,
       },
     ],
