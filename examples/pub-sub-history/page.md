@@ -84,7 +84,7 @@ git clone git@github.com:ably/docs.git
 2. Change directory:
 
 ```sh
-cd /examples/pub-sub-history/javascript/
+cd /examples/
 ```
 
 3. Rename the environment file:
