@@ -7,7 +7,7 @@ export default function Home() {
   const [status, setStatus] = useState('Online');
   const ably = useAbly();
   const currentClientId = ably?.auth.clientId;
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
 
   const { presenceData } = usePresenceListener(urlParams.get('name') || 'pub-sub-presence');
   const { updateStatus } = usePresence(urlParams.get('name') || 'pub-sub-presence', 'Online');
