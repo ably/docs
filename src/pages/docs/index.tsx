@@ -4,7 +4,6 @@ import { Helmet } from 'react-helmet';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { HomepageContent } from 'src/components/Homepage/HomepageContent';
-import { PageLanguageProvider } from 'src/contexts';
 import { pageData } from 'src/data';
 
 export const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
@@ -41,9 +40,7 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <PageLanguageProvider search={search}>
-        <HomepageContent sections={sections} images={images} />
-      </PageLanguageProvider>
+      <HomepageContent sections={sections} images={images} />
     </>
   );
 };

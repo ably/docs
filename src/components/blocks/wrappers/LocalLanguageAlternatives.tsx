@@ -1,10 +1,9 @@
 import React, { useState, useEffect, Dispatch, SetStateAction } from 'react';
 import Html from '../Html';
 import { LanguageNavigation } from '../../Menu/LanguageNavigation';
-import { getTrimmedLanguage, LanguageButton } from 'src/components';
+import { LanguageButton } from 'src/components';
 import { LanguageNavigationProps } from '../../Menu/LanguageNavigation';
 import { HtmlComponentProps, HtmlComponentPropsData, ValidReactElement } from 'src/components/html-component-props';
-import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE } from '../../../../data/createPages/constants';
 import { languageInfo, languageLabel } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
 
@@ -33,9 +32,7 @@ const LocalLanguageAlternatives = ({
     setSelected(initialData);
   }, [initialData]);
 
-  const filteredLanguagesWithoutDefault = languages
-    .filter((lang) => lang !== DEFAULT_LANGUAGE)
-    .filter((lang) => lang !== '');
+  const filteredLanguagesWithoutDefault = languages.filter((lang) => lang !== '');
 
   const hasLocalLanguageSelected = checkIfLocalLanguageSelected(
     filteredLanguagesWithoutDefault,
@@ -47,7 +44,7 @@ const LocalLanguageAlternatives = ({
   const languageItems = filteredLanguagesWithoutDefault.map((lang) => {
     // Site navigation button
 
-    const languageSelected = lang || DEFAULT_PREFERRED_LANGUAGE;
+    const languageSelected = lang;
     const filterLanguageForLangButton = languageSDKInterfaceClean(languageSelected, selectedSDKInterfaceTab);
 
     if (filterLanguageForLangButton != '') {
@@ -55,7 +52,7 @@ const LocalLanguageAlternatives = ({
         Component: LanguageButton,
         props: {
           language: filterLanguageForLangButton,
-          selectedLocalLanguage: hasLocalLanguageSelected ? selectedPageLanguage : getTrimmedLanguage(languages[0]),
+          selectedLocalLanguage: selectedPageLanguage,
         },
         content: Object.keys(languageInfo).includes(lang) ? languageLabel(lang as LanguageKey) : lang,
       };

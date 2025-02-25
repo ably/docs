@@ -25,9 +25,7 @@ export const query = graphql`
       meta {
         title
         meta_description
-        languages
         redirect_from
-        product
       }
     }
     inlineTOC: fileInlineToc(slug: { eq: $slug }) {

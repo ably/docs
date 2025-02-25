@@ -6,10 +6,9 @@ import {
 } from '../../../../data/createPages/constants';
 import { makeGroup, assignPrimary, addToFilter, isIrrelevantForLanguageDisplay } from './language-utilities';
 import { isEmpty } from 'lodash';
-import { usePageLanguage } from 'src/contexts';
 
 const ConditionalChildrenLanguageDisplay = ({ children }) => {
-  const { currentLanguage: pageLanguage } = usePageLanguage();
+  const pageLanguage = 'javascript';
 
   let currentGroup = false;
   const childLanguageGroups = [];

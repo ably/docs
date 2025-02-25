@@ -1,14 +1,10 @@
 import path from 'path';
 import textile from 'textile-js';
-import { identity } from 'lodash';
 import { safeFileExists } from './safeFileExists';
 import { flattenContentOrderedList, maybeRetrievePartial } from '../transform';
 import { postParser } from '../transform/post-parser';
 import { htmlParser } from '../html-parser';
-import { createLanguagePageVariants } from './createPageVariants';
 import { LATEST_ABLY_API_VERSION_STRING } from '../transform/constants';
-import { createContentMenuDataFromPage } from './createContentMenuDataFromPage';
-import { DEFAULT_LANGUAGE } from './constants';
 import { writeRedirectToConfigFile } from './writeRedirectToConfigFile';
 import { siteMetadata } from '../../gatsby-config';
 import { GatsbyNode } from 'gatsby';
@@ -155,13 +151,6 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
 
       const postParsedContent = postParser(textile(content));
       const contentOrderedList = htmlParser(postParsedContent);
-      const contentMenu = contentOrderedList.map((item) => createContentMenuDataFromPage(item));
-      const [languages, contentMenuObject] = createLanguagePageVariants(identity, documentTemplate)(
-        contentOrderedList,
-        edge.node.slug,
-      );
-
-      contentMenuObject[DEFAULT_LANGUAGE] = contentMenu;
 
       const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
 
@@ -196,10 +185,7 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
         context: {
           slug,
           version: edge.node.version ?? LATEST_ABLY_API_VERSION_STRING,
-          language: DEFAULT_LANGUAGE,
-          languages,
           contentOrderedList,
-          contentMenu: contentMenuObject,
           script,
           layout: { sidebar: true, searchBar: true, template: 'base' },
         },

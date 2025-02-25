@@ -15,8 +15,6 @@ import HtmlDataTypes from '../../../../data/types/html';
 import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
 import { isArray, isEmpty } from 'lodash';
-import { getTrimmedLanguage } from 'src/components/common';
-import { usePageLanguage } from 'src/contexts';
 import { languageLabel } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
 
@@ -53,7 +51,7 @@ const Pre = ({
   restAltData,
   attribs,
 }: PreProps): ReactElement => {
-  const { currentLanguage: pageLanguage } = usePageLanguage();
+  const pageLanguage = 'javascript';
 
   /*  selectedInterfaceTab useState  */
   const [selectedSDKInterfaceTab, setSelectedSDKInterfaceTab] = useState(DEFAULT_PREFERRED_INTERFACE);
@@ -64,8 +62,7 @@ const Pre = ({
     languages = getLanguagesSDKInterface(languages, selectedSDKInterfaceTab);
   }
 
-  const hasCode =
-    languages?.some((lang) => getTrimmedLanguage(lang) === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
+  const hasCode = true;
   const shouldDisplayTip = !hasCode && languages?.length !== undefined;
   const withModifiedClassname = {
     ...attribs,
