@@ -11,9 +11,6 @@ const mainWebsite = stripTrailingSlash(process.env.GATSBY_ABLY_MAIN_WEBSITE ?? '
 // Set the provided asset prefix so we can fetch assets from elsewhere when specified
 export const assetPrefix = process.env.ASSET_PREFIX;
 
-// We're mounted under /docs in deployments
-export const pathPrefix = '/docs';
-
 export const trailingSlash = 'never';
 export const siteMetadata = {
   siteUrl: mainWebsite,

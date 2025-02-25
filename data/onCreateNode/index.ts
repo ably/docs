@@ -1,14 +1,14 @@
+import { GatsbyNode, Node } from 'gatsby';
 import { transformNanocTextiles, makeTypeFromParentType, createNodesFromPath } from '../transform';
-import { createSchemaCustomization } from './create-graphql-schema-customization';
 
-const onCreateNode = async ({
+export const onCreateNode: GatsbyNode['onCreateNode'] = async ({
   node,
   actions: { createNode, createParentChildLink },
   loadNodeContent,
   createNodeId,
   createContentDigest,
 }) => {
-  const createChildNode = ({ parent, child }) => {
+  const createChildNode = ({ parent, child }: { parent: Node; child: Node }) => {
     createNode(child);
     createParentChildLink({ parent, child });
   };
@@ -21,23 +21,24 @@ const onCreateNode = async ({
         createNodesFromPath: createNodesFromPath('DocumentPath', { createNode, createNodeId, createContentDigest }),
         createNodeId,
       })(createChildNode);
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const ErrorNode = {
-        id: createNodeId(`${error.message} >>> Error`),
-        message: error.message,
+        id: createNodeId(`${errorMessage} >>> Error`),
+        message: errorMessage,
         internal: {
-          contentDigest: createContentDigest(error.message),
+          contentDigest: createContentDigest(errorMessage),
           type: 'Error',
         },
       };
       createNode(ErrorNode);
-      console.error('Error at relative path:\n', node.relativePath ? `${node.relativePath}\n` : '\n', error.message);
+      console.error('Error at relative path:\n', node.relativePath ? `${node.relativePath}\n` : '\n', errorMessage);
     }
   }
 
   if (node.sourceInstanceName === 'how-tos') {
     // We derive the name of the how-to from the path
-    const [tutorialName, src, ...paths] = node.relativePath.split('/');
+    const [tutorialName, src, ...paths] = (node.relativePath as string).split('/');
 
     // this must be a supporting file outside of a how-to directory
     if (tutorialName === '') {
@@ -74,5 +75,3 @@ const onCreateNode = async ({
     }
   }
 };
-
-module.exports = { onCreateNode, createSchemaCustomization };
