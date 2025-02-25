@@ -4,7 +4,6 @@ import { Helmet } from 'react-helmet';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { HomepageContent } from 'src/components/Homepage/HomepageContent';
-import { PageLanguageProvider } from 'src/contexts';
 import { pageData } from 'src/data';
 import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
@@ -44,9 +43,7 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <PageLanguageProvider search={search}>
-        <HomepageContent sections={sections} images={images} />
-      </PageLanguageProvider>
+      <HomepageContent sections={sections} images={images} />
     </>
   );
 };

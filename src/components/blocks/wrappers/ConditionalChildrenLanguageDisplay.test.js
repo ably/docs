@@ -1,7 +1,6 @@
 import React from 'react';
 import TestRenderer from 'react-test-renderer';
 import cheerio from 'cheerio';
-import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
 import textile from 'textile-js';
 import { htmlParser } from '../../../../data/html-parser';
 import { liftLangAttributes } from '../../../../data/html-parser/lift-lang-attributes';
@@ -24,7 +23,6 @@ const twoChildrenInstance = TestRenderer.create(
       {
         name: 'span',
         data: 'content',
-        attribs: { lang: DEFAULT_LANGUAGE },
       },
       {
         name: 'span',

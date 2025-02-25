@@ -8,11 +8,9 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       type: String!
     }
     type FileHtmlMetaData {
-      languages: [String]
       meta_description: String
       title: String
       redirect_from: [String]
-      product: String
     }
     type FileHtml implements Node {
       contentOrderedList: [FileHtmlContentOrderedListItem]

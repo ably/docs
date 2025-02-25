@@ -18,7 +18,6 @@ import { getRandomChannelName } from './get-random-channel-name';
 
 import { NestedHtmlComponentProps } from 'src/components/html-component-props';
 import { extractCodeStringsFromContent } from './extract-code-strings-from-content';
-import { BASH_LANGUAGE } from '../../../../../data/createPages/constants';
 
 const API_KEY_LENGTH = 5;
 export const DEFAULT_API_KEY_MESSAGE = '<loading API key, please wait>';
@@ -34,8 +33,7 @@ const alternativeLanguageRegistry: Record<string, string> = {
   flutter: 'dart',
 };
 
-const retrieveFromAlternativeLanguageRegistry = (key?: string) =>
-  key ? alternativeLanguageRegistry[key] : BASH_LANGUAGE;
+const retrieveFromAlternativeLanguageRegistry = (key?: string) => (key ? alternativeLanguageRegistry[key] : 'bash');
 
 const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
   const [activeApiKey, setActiveApiKey] = useState({
