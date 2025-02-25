@@ -4,14 +4,14 @@ import cn from '@ably/ui/core/utils/cn';
 import { createLanguageHrefFromDefaults, getLanguageDefaults, getTrimmedLanguage } from 'src/components';
 import { LanguageNavigationComponentProps } from '../Menu/LanguageNavigation';
 import { button, isActive } from '../Menu/MenuItemButton/MenuItemButton.module.css';
-import { usePageLanguage } from 'src/contexts';
 import { languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
+import { useLayoutContext } from 'src/contexts/layout-context';
 
 const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, selectedLocalLanguage }) => {
-  const { currentLanguage: pageLanguage, setPreferredLanguage } = usePageLanguage();
+  const { activePage, setLanguage } = useLayoutContext();
   const selectedLanguage = getTrimmedLanguage(language);
-  const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(selectedLanguage, pageLanguage);
+  const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(selectedLanguage, activePage.language);
   /*
   separate the isLanguageActive variable because we will pass a pageLanguage value that is not always from the useContext(PageLanguageContext),
   so if the  useContext(PageLanguageContext) is not present in the languages we will pass the first language of the languages
@@ -23,7 +23,7 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, select
     const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, selectedLanguage);
 
     if (!isPageLanguageDefault) {
-      setPreferredLanguage(language);
+      setLanguage(language);
     }
     navigate(href);
   };

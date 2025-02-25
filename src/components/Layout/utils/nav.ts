@@ -4,10 +4,17 @@ import { HEADER_HEIGHT, componentMaxHeight } from '@ably/ui/core/utils/heights';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
 import { LanguageKey } from 'src/data/languages/types';
+import { DEFAULT_LANGUAGE } from 'src/contexts/layout-context';
 
 export type PageTreeNode = { index: number; page: NavProductPage };
 
-export type ActivePage = { tree: PageTreeNode[]; page: NavProductPage; languages: LanguageKey[] };
+export type ActivePage = {
+  tree: PageTreeNode[];
+  page: NavProductPage;
+  languages: LanguageKey[];
+  language: LanguageKey;
+  product: ProductKey | null;
+};
 
 /**
  * Determines the active page based on the provided target link.
@@ -64,6 +71,8 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
         tree: [{ index: Object.keys(data).indexOf(key), page: { name, link } }],
         page: { name, link },
         languages: [],
+        language: DEFAULT_LANGUAGE,
+        product: key,
       };
     }
 
@@ -94,7 +103,7 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
           data[key].nav[apiResult ? 'api' : 'content'],
         );
 
-        return { tree, page: page?.[0] as NavProductPage, languages: [] };
+        return { tree, page: page?.[0] as NavProductPage, languages: [], language: DEFAULT_LANGUAGE, product: key };
       }
     }
   }

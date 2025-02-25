@@ -16,9 +16,9 @@ import { isString, every, reduce } from 'lodash/fp';
 import { MultilineCodeContent } from './Code/MultilineCodeContent';
 import { isArray, isEmpty } from 'lodash';
 import { getTrimmedLanguage } from 'src/components/common';
-import { usePageLanguage } from 'src/contexts';
 import { languageLabel } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
+import { useLayoutContext } from 'src/contexts/layout-context';
 
 type PreProps = HtmlComponentProps<'pre'> & {
   language: string;
@@ -53,7 +53,10 @@ const Pre = ({
   restAltData,
   attribs,
 }: PreProps): ReactElement => {
-  const { currentLanguage: pageLanguage } = usePageLanguage();
+  const { activePage } = useLayoutContext();
+  const pageLanguage = activePage.language;
+
+  console.log('languages', languages, pageLanguage);
 
   /*  selectedInterfaceTab useState  */
   const [selectedSDKInterfaceTab, setSelectedSDKInterfaceTab] = useState(DEFAULT_PREFERRED_INTERFACE);
