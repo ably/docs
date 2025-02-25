@@ -6,7 +6,7 @@ import { componentMaxHeight, HEADER_HEIGHT } from './heights';
 
 export type PageTreeNode = { index: number; page: NavProductPage };
 
-type ActivePage = { tree: PageTreeNode[]; page: NavProductPage };
+type ActivePage = { tree: PageTreeNode[]; page: NavProductPage; product: ProductKey };
 
 /**
  * Determines the active page based on the provided target link.
@@ -59,7 +59,11 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
 
     if (data[key].nav.link === strippedTargetLink) {
       const { name, link } = data[key].nav;
-      return { tree: [{ index: Object.keys(data).indexOf(key), page: { name, link } }], page: { name, link } };
+      return {
+        tree: [{ index: Object.keys(data).indexOf(key), page: { name, link } }],
+        page: { name, link },
+        product: key,
+      };
     }
 
     /* 
@@ -89,7 +93,7 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
           data[key].nav[apiResult ? 'api' : 'content'],
         );
 
-        return { tree, page: page?.[0] as NavProductPage };
+        return { tree, page: page?.[0] as NavProductPage, product: key };
       }
     }
   }

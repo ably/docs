@@ -6,6 +6,7 @@ import { NavProduct } from 'src/data/nav/types';
 import { ProductData, ProductKey } from 'src/data/types';
 import { LanguageKey } from 'src/data/languages/types';
 import { getLayoutOptions } from 'src/components/Layout/utils/options';
+import { languageData } from 'src/data/languages';
 
 /**
  * LayoutContext
@@ -19,12 +20,22 @@ import { getLayoutOptions } from 'src/components/Layout/utils/options';
 export type LayoutOptions = { noSidebar: boolean; hideSearchBar: boolean; template: string };
 
 const LayoutContext = createContext<{
-  activePage: { tree: PageTreeNode[]; languages: LanguageKey[] };
+  activePage: {
+    tree: PageTreeNode[];
+    languages: LanguageKey[];
+    language: string | null;
+    product: ProductKey | null;
+  };
   products: [ProductKey, NavProduct][];
   options: LayoutOptions;
   setLayoutOptions: (options: LayoutOptions) => void;
 }>({
-  activePage: { tree: [], languages: [] },
+  activePage: {
+    tree: [],
+    languages: [],
+    language: null,
+    product: null,
+  },
   products: [],
   options: {
     noSidebar: false,
@@ -40,6 +51,7 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
   const [languages, setLanguages] = useState<LanguageKey[]>([]);
   const [options, setOptions] = useState(getLayoutOptions(location.pathname));
+  const [language, setLanguage] = useState<string | null>(null);
 
   useEffect(() => {
     const languagesSet = new Set<LanguageKey>();
@@ -57,9 +69,28 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const activePage = useMemo(() => {
     const activePageData = determineActivePage(productData, location.pathname);
     return activePageData
-      ? { ...activePageData, languages: activePageData.page.languages ?? languages }
-      : { tree: [], languages: [] };
-  }, [location.pathname, languages]);
+      ? {
+          ...activePageData,
+          languages: activePageData.page.languages ?? languages,
+          language,
+        }
+      : {
+          tree: [],
+          languages: [],
+          language,
+          product: null,
+        };
+  }, [location.pathname, languages, language]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+
+    if (params.get('lang')) {
+      setLanguage(params.get('lang'));
+    } else if (activePage.product) {
+      setLanguage(Object.keys(languageData[activePage.product])[0]);
+    }
+  }, [location.search, activePage.product]);
 
   const products = useMemo(
     () =>
