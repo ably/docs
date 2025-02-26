@@ -7,7 +7,7 @@ import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
 const ControlApi = () => {
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl('/api/control-api');
+  const canonical = canonicalUrl('/docs/api/control-api');
   const meta_title = 'Control API';
   const meta_description =
     'The Control API is a REST API that enables you to manage your Ably account programmatically. This is the Control API Reference guide.';

@@ -80,7 +80,7 @@ interface HowToFile {
 const PubSubHowTo = () => {
   const meta_description = `How to use basic publish and subscribe (pub/sub) functionality with Ably channels.`;
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl('/how-to/pub-sub');
+  const canonical = canonicalUrl('/docs/how-to/pub-sub');
   useSetLayoutOptions({ noSidebar: false, hideSearchBar: false, template: 'how-to' });
 
   const data = useStaticQuery(graphql`

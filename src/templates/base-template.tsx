@@ -50,7 +50,7 @@ const Template = ({
   const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
   const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl(slug);
+  const canonical = canonicalUrl(`/docs/${slug}`);
 
   // when we don't get a product, peek into the metadata of the page for a default value
   currentProduct ??= getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as ProductName;

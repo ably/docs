@@ -1,5 +1,5 @@
 import React from 'react';
-import { graphql, navigate } from 'gatsby';
+import { graphql } from 'gatsby';
 import { ImageProps } from '../../components/Image';
 import { Head } from '../../components/Head';
 import ExamplesContent from '../../components/Examples/ExamplesContent';
@@ -15,13 +15,8 @@ const Examples = ({
 }) => {
   useSetLayoutOptions({ noSidebar: true, hideSearchBar: false, template: 'examples' });
 
-  // TODO: remove when examples are ready to be released
-  React.useEffect(() => {
-    navigate(process.env.NODE_ENV === 'development' ? '/' : '/docs', { replace: true });
-  }, []);
-
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl('/examples');
+  const canonical = canonicalUrl('/docs/examples');
   const meta_title = 'Ably Examples - Code Samples and Implementation Guides';
   const meta_description =
     'Browse our collection of code examples, implementation guides, and sample projects to help you integrate Ably into your applications.';
