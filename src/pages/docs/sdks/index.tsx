@@ -9,7 +9,7 @@ const SDKsIndexPage = ({ location: { search } }: { location: { search: string } 
   const title = 'SDKs';
   const meta_description = '';
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl('/sdks');
+  const canonical = canonicalUrl('/docs/sdks');
 
   const urlParams = new URLSearchParams(search);
   const tab = urlParams.get('tab') ?? '';

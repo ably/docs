@@ -24,7 +24,7 @@ const IndexPage = ({
   const { sections, meta } = pageData.homepage.content;
   const openGraphTitle = meta.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl('/');
+  const canonical = canonicalUrl('/docs');
 
   return (
     <>
