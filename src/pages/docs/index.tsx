@@ -12,10 +12,8 @@ const IndexPage = ({
   data: {
     allFile: { images },
   },
-  location: { search },
 }: {
   data: { allFile: { images: ImageProps[] } };
-  location: Location;
 }) => {
   const { sections, meta } = pageData.homepage.content;
   const openGraphTitle = meta.title ?? 'Ably Realtime Docs';

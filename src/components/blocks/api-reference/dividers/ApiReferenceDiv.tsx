@@ -1,4 +1,3 @@
-import { matchesLanguageOrDefault } from '../../wrappers/language-utilities';
 import Html from '../../Html';
 import { HtmlComponentProps, HtmlComponentPropsData } from 'src/components/html-component-props';
 import { isString } from 'lodash/fp';

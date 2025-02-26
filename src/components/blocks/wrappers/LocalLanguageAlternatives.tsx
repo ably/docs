@@ -34,13 +34,6 @@ const LocalLanguageAlternatives = ({
 
   const filteredLanguagesWithoutDefault = languages.filter((lang) => lang !== '');
 
-  const hasLocalLanguageSelected = checkIfLocalLanguageSelected(
-    filteredLanguagesWithoutDefault,
-    selectedPageLanguage,
-    selectedSDKInterfaceTab,
-    isSDKInterface,
-  );
-
   const languageItems = filteredLanguagesWithoutDefault.map((lang) => {
     // Site navigation button
 
@@ -77,17 +70,3 @@ export default LocalLanguageAlternatives;
 
 const languageSDKInterfaceClean = (language: string, selectedTab: string) =>
   language.includes(`_`) ? (language.includes(`${selectedTab}_`) ? language.split('_', 2)[1] : '') : language;
-
-/* this function helps us to determine if an array of languages has a pageSelected present, a condition added if it is an SDK Interface, so we can compare the values correctly */
-const checkIfLocalLanguageSelected = (
-  languages: string[],
-  selectedPageLanguage: string,
-  selectedSDKInterfaceTab: string,
-  isSDKInterface: boolean,
-) =>
-  languages.reduce((acc, lang) => {
-    const localLanguageSelected = isSDKInterface
-      ? lang === `${selectedSDKInterfaceTab}_${selectedPageLanguage}`
-      : lang === selectedPageLanguage;
-    return localLanguageSelected || acc;
-  }, false);
