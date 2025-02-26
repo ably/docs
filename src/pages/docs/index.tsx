@@ -19,7 +19,7 @@ const IndexPage = ({
   data: { allFile: { images: ImageProps[] } };
   location: Location;
 }) => {
-  useSetLayoutOptions({ noSidebar: true, hideSearchBar: true, template: 'index' });
+  useSetLayoutOptions({ sidebar: false, searchBar: false, template: 'index' });
 
   const { sections, meta } = pageData.homepage.content;
   const openGraphTitle = meta.title ?? 'Ably Realtime Docs';

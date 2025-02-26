@@ -47,13 +47,13 @@ describe('Header', () => {
     // expect(screen.getByText('Examples')).toBeInTheDocument();
   });
 
-  it('renders the search bar when hideSearchBar is false', () => {
-    render(<Header hideSearchBar={false} />);
+  it('renders the search bar when searchBar is true', () => {
+    render(<Header searchBar={true} />);
     expect(screen.getByText('SearchBar')).toBeInTheDocument();
   });
 
-  it('does not render the search bar when hideSearchBar is true', () => {
-    render(<Header hideSearchBar={true} />);
+  it('does not render the search bar when searchBar is false', () => {
+    render(<Header searchBar={false} />);
     expect(screen.queryByText('SearchBar')).not.toBeInTheDocument();
   });
 

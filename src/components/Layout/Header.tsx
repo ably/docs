@@ -6,10 +6,10 @@ import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
 
 type HeaderProps = {
-  hideSearchBar?: boolean;
+  searchBar?: boolean;
 };
 
-const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
+const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
   const [showMenu, setShowMenu] = useState(false);
   const userContext = useContext(UserContext);
   const sessionState = {
@@ -100,7 +100,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
       }
       searchButtonVisibility="mobile"
       searchBar={
-        !hideSearchBar ? (
+        searchBar ? (
           <SearchBar
             displayLocation="homepage"
             extraStyleOptions={{

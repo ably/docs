@@ -16,7 +16,7 @@ import { getLayoutOptions } from 'src/components/Layout/utils/options';
  * setLayoutOptions - Function to update the layout options.
  */
 
-export type LayoutOptions = { noSidebar: boolean; hideSearchBar: boolean; template: string };
+export type LayoutOptions = { sidebar: boolean; searchBar: boolean; template: string };
 
 const LayoutContext = createContext<{
   activePage: { tree: PageTreeNode[]; languages: LanguageKey[] };
@@ -28,8 +28,8 @@ const LayoutContext = createContext<{
   activePage: { tree: [], languages: [] },
   products: [],
   options: {
-    noSidebar: false,
-    hideSearchBar: false,
+    sidebar: false,
+    searchBar: false,
     template: 'base',
   },
   setLayoutOptions: (options) => {
@@ -64,8 +64,8 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const setLayoutOptions = (newOptions: LayoutOptions) => {
     setOptions((prevOptions) => {
       if (
-        prevOptions.noSidebar !== newOptions.noSidebar ||
-        prevOptions.hideSearchBar !== newOptions.hideSearchBar ||
+        prevOptions.sidebar !== newOptions.sidebar ||
+        prevOptions.searchBar !== newOptions.searchBar ||
         prevOptions.template !== newOptions.template
       ) {
         return newOptions;

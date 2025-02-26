@@ -13,7 +13,7 @@ const Examples = ({
 }: {
   data: { allFile: { images: ImageProps[] } };
 }) => {
-  useSetLayoutOptions({ noSidebar: true, hideSearchBar: false, template: 'examples' });
+  useSetLayoutOptions({ sidebar: false, searchBar: true, template: 'examples' });
 
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/docs/examples');

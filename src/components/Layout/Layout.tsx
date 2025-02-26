@@ -11,25 +11,25 @@ import { LayoutProvider, useLayoutContext } from 'src/contexts/layout-context';
 import Breadcrumbs from './Breadcrumbs';
 
 interface LayoutProps {
-  noSidebar?: boolean;
-  hideSearchBar?: boolean;
+  sidebar?: boolean;
+  searchBar?: boolean;
 }
 
 const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children }) => {
   const { options } = useLayoutContext();
-  const { hideSearchBar, noSidebar, template } = options;
+  const { searchBar, sidebar, template } = options;
 
   return (
     <GlobalLoading template={template}>
-      <Header hideSearchBar={hideSearchBar} />
+      <Header searchBar={searchBar} />
       <div className="flex pt-64 gap-80 justify-center ui-standard-container mx-auto">
-        {!noSidebar ? <LeftSidebar /> : null}
+        {sidebar ? <LeftSidebar /> : null}
         <Container as="main" className="flex-1">
-          {!noSidebar ? <Breadcrumbs /> : null}
+          {sidebar ? <Breadcrumbs /> : null}
           {children}
           <Footer />
         </Container>
-        {!noSidebar ? <RightSidebar /> : null}
+        {sidebar ? <RightSidebar /> : null}
       </div>
     </GlobalLoading>
   );
