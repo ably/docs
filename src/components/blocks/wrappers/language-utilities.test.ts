@@ -1,6 +1,6 @@
 import { HtmlComponentPropsData } from 'src/components/html-component-props';
 import { DEFAULT_LANGUAGE } from '../../../../data/createPages/constants';
-import { assignPrimary, childMatchesLanguageOrDefault, matchesLanguageOrDefault } from './language-utilities';
+import { assignPrimary } from './language-utilities';
 
 const createLanguageGroupWithDefaults = (
   data: Record<string, Record<string, unknown>> | null = null,

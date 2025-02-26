@@ -13,10 +13,8 @@ const IndexPage = ({
   data: {
     allFile: { images },
   },
-  location: { search },
 }: {
   data: { allFile: { images: ImageProps[] } };
-  location: Location;
 }) => {
   useSetLayoutOptions({ noSidebar: true, hideSearchBar: true, template: 'index' });
 
