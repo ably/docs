@@ -158,8 +158,9 @@ function AuctionRoom() {
             A rare collector's piece from the early 20th century, featuring intricate mechanical craftsmanship.
           </p>
           <button
-            onClick={() => setShowBidDialog(true)}
             className="uk-btn uk-btn-md uk-btn-secondary mb-4 rounded"
+            type="button"
+            onClick={() => setShowBidDialog(true)}
           >
             Place bid
           </button>
@@ -209,9 +210,11 @@ function AuctionRoom() {
         </div>
 
         {showBidDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-80">
+          <div id="bid-modal" data-uk-modal>
+            <div className="uk-modal-dialog uk-modal-body">
               <h3 className="text-lg font-bold mb-4">Place your bid</h3>
+
+              {/* Bid input field */}
               <input
                 type="number"
                 value={bidAmount}
@@ -219,20 +222,16 @@ function AuctionRoom() {
                 className="uk-input uk-form-md mb-4"
                 placeholder="Enter bid amount"
               />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setShowBidDialog(false)}
-                  className="uk-btn uk-btn-md uk-btn-destructive py-2 rounded"
-                >
+
+              {/* Action buttons */}
+              <p className="uk-text-right">
+                <button className="uk-modal-close uk-btn uk-btn-default mr-2" type="button">
                   Cancel
                 </button>
-                <button
-                  onClick={handleBid}
-                  className="uk-btn uk-btn-md uk-btn-primary py-2 rounded"
-                >
+                <button onClick={handleBid} className="uk-btn uk-btn-primary" type="button">
                   Place bid
                 </button>
-              </div>
+              </p>
             </div>
           </div>
         )}
