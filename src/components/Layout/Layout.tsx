@@ -25,7 +25,7 @@ const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children }) => {
       <div className="flex pt-64 gap-80 justify-center ui-standard-container mx-auto">
         {!noSidebar ? <LeftSidebar /> : null}
         <Container as="main" className="flex-1">
-          <Breadcrumbs />
+          {!noSidebar ? <Breadcrumbs /> : null}
           {children}
           <Footer />
         </Container>

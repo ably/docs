@@ -70,7 +70,7 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
     [],
   );
 
-  const setLayoutOptions = (newOptions: { noSidebar: boolean; hideSearchBar: boolean; template: string }) => {
+  const setLayoutOptions = (newOptions: LayoutOptions) => {
     setOptions((prevOptions) => {
       if (
         prevOptions.noSidebar !== newOptions.noSidebar ||
