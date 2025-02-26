@@ -1,7 +1,7 @@
-import { CardProps } from '../../HomepageContent';
 import { SearchBar } from '../../../SearchBar';
+import { ContentCardWithoutImage } from './types';
 
-export const HeroCard = ({ title, content }: CardProps) => (
+export const HeroCard = ({ title, content }: ContentCardWithoutImage) => (
   <div className="flex flex-col items-center mt-88">
     <div className="text-center">
       <h1 className="ui-text-h1">{title}</h1>

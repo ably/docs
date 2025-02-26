@@ -1,0 +1,86 @@
+import { ContentData } from './types';
+
+export default {
+  name: 'Homepage',
+  meta: {
+    title: 'Docs | Ably Realtime',
+    description:
+      'Ably documentation for 25+ web, mobile, and IoT SDKs, quickstart guides and tutorials, and realtime concepts.',
+    image: 'https://files.ably.io/website/images/meta-tags/ably-generic%402x.jpg',
+    twitter: '@ablyrealtime',
+  },
+  sections: [
+    {
+      columns: 1,
+      bottomMargin: 48,
+      cards: [
+        {
+          title: 'Ably Documentation',
+          type: 'hero',
+          content: 'Realtime experience infrastructure that just works at any scale.',
+        },
+      ],
+    },
+    {
+      columns: 2,
+      bottomMargin: 80,
+      cards: [
+        {
+          title: 'Platform',
+          type: 'feature',
+          content: "Understand the core concepts of Ably's platform, its pricing and integrations.",
+          image: 'platform.png',
+          links: [{ text: 'Get started', href: '/docs/platform' }],
+        },
+        {
+          title: 'Pub/Sub',
+          type: 'feature',
+          content: "Quickly create realtime digital experiences with Ably's core building blocks.",
+          image: 'pub-sub.png',
+          links: [{ text: 'Get started', href: '/docs/basics' }],
+        },
+        {
+          title: 'Chat',
+          type: 'feature',
+          content: 'Quickly add chat features into any application.',
+          image: 'chat.png',
+          links: [{ text: 'Get started', href: '/docs/chat' }],
+        },
+        {
+          title: 'Spaces',
+          type: 'feature',
+          content: 'Build collaborative environments in just a few lines of code.',
+          image: 'spaces.png',
+          links: [{ text: 'Get started', href: '/docs/spaces' }],
+        },
+        {
+          title: 'LiveSync',
+          type: 'feature',
+          content: 'Seamlessly sync database changes with frontend clients.',
+          image: 'livesync.png',
+          links: [{ text: 'Get started', href: '/docs/livesync' }],
+        },
+        {
+          title: 'Asset Tracking',
+          type: 'feature',
+          content: 'Track the location of assets in realtime.',
+          image: 'asset-tracking.png',
+          links: [{ text: 'Get started', href: '/docs/asset-tracking' }],
+        },
+      ],
+    },
+    {
+      columns: 1,
+      bottomMargin: 160,
+      cards: [
+        {
+          title: 'SDKs',
+          content: 'Ably SDKs provide a consistent and idiomatic API across a variety of supported platforms.',
+          image: 'sdks@2x.png',
+          type: 'sdk',
+          callToAction: { text: 'View all SDKs', href: '/docs/sdks' },
+        },
+      ],
+    },
+  ],
+} satisfies ContentData;

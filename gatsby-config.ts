@@ -11,9 +11,6 @@ const mainWebsite = stripTrailingSlash(process.env.GATSBY_ABLY_MAIN_WEBSITE ?? '
 // Set the provided asset prefix so we can fetch assets from elsewhere when specified
 export const assetPrefix = process.env.ASSET_PREFIX;
 
-// We're mounted under /docs in deployments
-export const pathPrefix = '/docs';
-
 export const trailingSlash = 'never';
 export const siteMetadata = {
   siteUrl: mainWebsite,
@@ -77,14 +74,6 @@ export const plugins = [
       path: './content',
     },
     __key: 'textile-nanoc-compatible',
-  },
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
-      name: 'yaml-page-content',
-      path: './data/yaml/page-content',
-    },
-    __key: 'yaml-page-content',
   },
   {
     resolve: 'gatsby-source-filesystem',

@@ -14,12 +14,10 @@ describe('<StaticImage/>', () => {
     });
 
     it('prepends the asset prefix to the img src', () => {
-      expect(__PATH_PREFIX__).toBe('/docs');
-
-      const { getByTestId } = render(<StaticImage src="/images/example.png" />);
+      const { getByTestId } = render(<StaticImage src={'/images/example.png'} />);
       const img = getByTestId('static-image');
 
-      expect(img).toHaveAttribute('src', 'http://example.com/docs/images/example.png');
+      expect(img).toHaveAttribute('src', 'http://example.com/images/example.png');
     });
   });
 
@@ -33,12 +31,10 @@ describe('<StaticImage/>', () => {
     });
 
     it('does nothing to the img src', () => {
-      expect(__PATH_PREFIX__).toBe('/docs');
-
       const { getByTestId } = render(<StaticImage src="/images/example.png" />);
       const img = getByTestId('static-image');
 
-      expect(img).toHaveAttribute('src', '/docs/images/example.png');
+      expect(img).toHaveAttribute('src', '/images/example.png');
     });
   });
 });
