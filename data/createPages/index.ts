@@ -213,6 +213,14 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     redirectInBrowser: true,
   });
 
+  // TODO: remove when examples are ready to be released
+  createRedirect({
+    fromPath: '/docs/examples',
+    toPath: '/docs',
+    isPermanent: true,
+    redirectInBrowser: true,
+  });
+
   if (!documentResult.data) {
     throw new Error('Document result is undefined');
   }
