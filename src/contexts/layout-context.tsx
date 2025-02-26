@@ -1,4 +1,4 @@
-import React, { createContext, PropsWithChildren, useContext, useMemo, useState, useEffect } from 'react';
+import React, { createContext, PropsWithChildren, useContext, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
 import { PageTreeNode, determineActivePage } from 'src/components/Layout/utils/nav';
 import { productData } from 'src/data';
@@ -23,6 +23,7 @@ const LayoutContext = createContext<{
   products: [ProductKey, NavProduct][];
   options: LayoutOptions;
   setLayoutOptions: (options: LayoutOptions) => void;
+  setLanguages: (languages: LanguageKey[]) => void;
 }>({
   activePage: { tree: [], languages: [] },
   products: [],
@@ -34,25 +35,15 @@ const LayoutContext = createContext<{
   setLayoutOptions: (options) => {
     console.warn('setLayoutOptions called without a provider', options);
   },
+  setLanguages: (languages) => {
+    console.warn('setLanguages called without a provider', languages);
+  },
 });
 
 export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
   const [languages, setLanguages] = useState<LanguageKey[]>([]);
   const [options, setOptions] = useState(getLayoutOptions(location.pathname));
-
-  useEffect(() => {
-    const languagesSet = new Set<LanguageKey>();
-
-    document.querySelectorAll('.docs-language-navigation').forEach((element) => {
-      const languages = element.getAttribute('data-languages');
-      if (languages) {
-        languages.split(',').forEach((language) => languagesSet.add(language as LanguageKey));
-      }
-    });
-
-    setLanguages(Array.from(languagesSet));
-  }, [location.pathname]);
 
   const activePage = useMemo(() => {
     const activePageData = determineActivePage(productData, location.pathname);
@@ -90,6 +81,7 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
         products,
         options,
         setLayoutOptions,
+        setLanguages,
       }}
     >
       {children}
