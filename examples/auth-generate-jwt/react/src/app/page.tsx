@@ -30,7 +30,7 @@ export default function Home() {
           <p>Press the Connect button to initialize the client:</p>
           <button
             onClick={handleConnect}
-            className='px-4 py-2 text-white rounded bg-blue-500 hover:bg-blue-600'
+            className='uk-btn uk-btn-md uk-btn-secondary mb-4 rounded'
           >
             Connect
           </button>
