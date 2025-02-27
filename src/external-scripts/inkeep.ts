@@ -36,7 +36,7 @@ const aiChatSettings = {
     getHelpCallToActions: [
       {
         name: 'Request a meeting',
-        url: 'https://meetings.hubspot.com/ably-sales/book-a-demo',
+        url: 'https://meetings.hubspot.com/cameron-michie/ably-demo',
 
         type: 'OPEN_LINK',
         pinToToolbar: true,
