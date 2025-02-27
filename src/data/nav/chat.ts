@@ -1,3 +1,4 @@
+import { link } from 'fs';
 import { NavProduct } from './types';
 
 export default {
@@ -69,6 +70,23 @@ export default {
         {
           name: 'Room reactions',
           link: '/docs/chat/rooms/reactions',
+        },
+        {
+          name: 'Moderation',
+          pages: [
+            {
+              name: 'Introduction',
+              link: '/docs/chat/rooms/moderation',
+            },
+            {
+              name: 'Hive (Model Only)',
+              link: '/docs/chat/rooms/moderation/hive-model-only',
+            },
+            {
+              name: 'Hive (Dashboard)',
+              link: '/docs/chat/rooms/moderation/hive-dashboard',
+            },
+          ],
         },
       ],
     },
