@@ -13,6 +13,7 @@ export default {
     csharp: 1.2,
     flutter: 1.2,
     java: 1.2,
+    kotlin: 1.2,
     objc: 1.2,
     php: 1.1,
     python: 2.0,
