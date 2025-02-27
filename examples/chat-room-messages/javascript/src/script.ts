@@ -1,5 +1,5 @@
 import * as Ably from 'ably';
-import { ChatClient, Room, RoomOptionsDefaults } from '@ably/chat';
+import { ChatClient, Room, AllFeaturesEnabled } from '@ably/chat';
 import './styles.css';
 
 const mockNames = ['Bob', 'Jane', 'John', 'Sammy'];
@@ -17,7 +17,7 @@ async function initializeChat() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const roomName = urlParams.get('name') || 'chat-room-messages';
-  room = await chatClient.rooms.get(roomName, RoomOptionsDefaults);
+  room = await chatClient.rooms.get(roomName, AllFeaturesEnabled);
 
   /** 💡 Add every every message published to the room 💡 */
   room.messages.subscribe((message) => {
