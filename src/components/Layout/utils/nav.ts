@@ -129,7 +129,7 @@ export const commonAccordionOptions = (
         'h-[1rem] ui-text-menu2 !font-semibold md:ui-text-menu4': !topLevel,
       },
     ),
-    selectedHeaderCSS: 'text-neutral-1300 mb-8',
+    selectedHeaderCSS: '!text-neutral-1300 mb-8',
     contentCSS: cn('[&>div]:pb-0'),
     rowIconSize: '20px',
     defaultOpenIndexes: !inHeader && openIndex !== undefined ? [openIndex] : [],
