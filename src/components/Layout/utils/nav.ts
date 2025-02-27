@@ -3,10 +3,11 @@ import { AccordionProps } from '@ably/ui/core/Accordion';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
 import { componentMaxHeight, HEADER_HEIGHT } from './heights';
+import { LanguageKey } from 'src/data/languages/types';
 
 export type PageTreeNode = { index: number; page: NavProductPage };
 
-type ActivePage = { tree: PageTreeNode[]; page: NavProductPage };
+export type ActivePage = { tree: PageTreeNode[]; page: NavProductPage; languages: LanguageKey[] };
 
 /**
  * Determines the active page based on the provided target link.
@@ -59,7 +60,11 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
 
     if (data[key].nav.link === strippedTargetLink) {
       const { name, link } = data[key].nav;
-      return { tree: [{ index: Object.keys(data).indexOf(key), page: { name, link } }], page: { name, link } };
+      return {
+        tree: [{ index: Object.keys(data).indexOf(key), page: { name, link } }],
+        page: { name, link },
+        languages: [],
+      };
     }
 
     /* 
@@ -89,7 +94,7 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
           data[key].nav[apiResult ? 'api' : 'content'],
         );
 
-        return { tree, page: page?.[0] as NavProductPage };
+        return { tree, page: page?.[0] as NavProductPage, languages: [] };
       }
     }
   }
