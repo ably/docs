@@ -10,7 +10,6 @@ import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { MarkdownProvider } from 'src/components/Markdown';
 import UserContext, { type App } from 'src/contexts/user-context';
 import { getRandomChannelName } from 'src/components/blocks/software/Code/get-random-channel-name';
-import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
 const getApiKey = (apps: App[]) => {
   const app = apps[0];
@@ -81,7 +80,6 @@ const PubSubHowTo = () => {
   const meta_description = `How to use basic publish and subscribe (pub/sub) functionality with Ably channels.`;
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/docs/how-to/pub-sub');
-  useSetLayoutOptions({ noSidebar: false, hideSearchBar: false, template: 'how-to' });
 
   const data = useStaticQuery(graphql`
     query {

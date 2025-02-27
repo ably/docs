@@ -1,5 +1,5 @@
 import { Script, ScriptStrategy, navigate } from 'gatsby';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useMemo } from 'react';
 
 import { Head } from 'src/components/Head';
 import Article from 'src/components/Article';
@@ -16,7 +16,8 @@ import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from 
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { getMetaTitle } from 'src/components/common/meta-title';
-import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
+import { useLayoutContext } from 'src/contexts/layout-context';
+import { LanguageKey } from 'src/data/languages/types';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -35,10 +36,23 @@ interface ITemplate extends AblyTemplateData {
 const Template = ({
   location: { pathname, hash },
   pageContext: { contentOrderedList, languages, slug, script },
-  data: { document },
+  data: { document: ablyDocument },
   currentProduct,
 }: ITemplate) => {
-  useSetLayoutOptions();
+  const { setLanguages } = useLayoutContext();
+
+  useLayoutEffect(() => {
+    const languagesSet = new Set<LanguageKey>();
+
+    document.querySelectorAll('.docs-language-navigation').forEach((element) => {
+      const languages = element.getAttribute('data-languages');
+      if (languages) {
+        languages.split(',').forEach((language) => languagesSet.add(language as LanguageKey));
+      }
+    });
+
+    setLanguages(Array.from(languagesSet));
+  }, [setLanguages]);
 
   const {
     currentLanguage: currentLanguageFromContext,
@@ -46,14 +60,14 @@ const Template = ({
     getPreferredLanguage,
   } = usePageLanguage();
 
-  const title = getMetaDataDetails(document, 'title') as string;
-  const description = getMetaDataDetails(document, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
-  const menuLanguages = getMetaDataDetails(document, 'languages', languages) as string[];
+  const title = getMetaDataDetails(ablyDocument, 'title') as string;
+  const description = getMetaDataDetails(ablyDocument, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
+  const menuLanguages = getMetaDataDetails(ablyDocument, 'languages', languages) as string[];
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl(`/docs/${slug}`);
 
   // when we don't get a product, peek into the metadata of the page for a default value
-  currentProduct ??= getMetaDataDetails(document, 'product', META_PRODUCT_FALLBACK) as ProductName;
+  currentProduct ??= getMetaDataDetails(ablyDocument, 'product', META_PRODUCT_FALLBACK) as ProductName;
   const metaTitle = getMetaTitle(title, currentProduct) as string;
 
   const filteredLanguages = useMemo(

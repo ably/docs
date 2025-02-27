@@ -1,41 +1,43 @@
-import React, { PropsWithChildren } from 'react';
+import React from 'react';
+import { PageProps } from 'gatsby';
 
 import '../../styles/global.css';
-import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Container } from 'src/components';
-import Header from './Header';
+import { LayoutOptions } from 'data/onCreatePage';
+import { LayoutProvider } from 'src/contexts/layout-context';
+import Breadcrumbs from './Breadcrumbs';
 import Footer from './Footer';
+import GlobalLoading from '../GlobalLoading/GlobalLoading';
+import Header from './Header';
 import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
-import { LayoutProvider, useLayoutContext } from 'src/contexts/layout-context';
-import Breadcrumbs from './Breadcrumbs';
 
-interface LayoutProps {
-  noSidebar?: boolean;
-  hideSearchBar?: boolean;
-}
+type PageContextType = {
+  layout: LayoutOptions;
+};
 
-const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children }) => {
-  const { options } = useLayoutContext();
-  const { hideSearchBar, noSidebar, template } = options;
+type LayoutProps = PageProps<unknown, PageContextType>;
+
+const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
+  const { searchBar, sidebar, template } = pageContext.layout;
 
   return (
     <GlobalLoading template={template}>
-      <Header hideSearchBar={hideSearchBar} />
+      <Header searchBar={searchBar} />
       <div className="flex pt-64 gap-80 justify-center ui-standard-container mx-auto">
-        {!noSidebar ? <LeftSidebar /> : null}
+        {sidebar ? <LeftSidebar /> : null}
         <Container as="main" className="flex-1">
-          <Breadcrumbs />
+          {sidebar ? <Breadcrumbs /> : null}
           {children}
           <Footer />
         </Container>
-        {!noSidebar ? <RightSidebar /> : null}
+        {sidebar ? <RightSidebar /> : null}
       </div>
     </GlobalLoading>
   );
 };
 
-const WrappedLayout: React.FC<PropsWithChildren<LayoutProps>> = (props) => (
+const WrappedLayout: React.FC<LayoutProps> = (props) => (
   <LayoutProvider>
     <Layout {...props} />
   </LayoutProvider>

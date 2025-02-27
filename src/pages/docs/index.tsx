@@ -6,7 +6,6 @@ import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { HomepageContent } from 'src/components/Homepage/HomepageContent';
 import { PageLanguageProvider } from 'src/contexts';
 import { pageData } from 'src/data';
-import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
 export const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
 
@@ -19,8 +18,6 @@ const IndexPage = ({
   data: { allFile: { images: ImageProps[] } };
   location: Location;
 }) => {
-  useSetLayoutOptions({ noSidebar: true, hideSearchBar: true, template: 'index' });
-
   const { sections, meta } = pageData.homepage.content;
   const openGraphTitle = meta.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();

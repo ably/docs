@@ -3,7 +3,6 @@ import { Head } from '../../../components/Head';
 import { Loader } from '../../../components/Redoc';
 import { Link, withPrefix } from 'gatsby';
 import Icon from '@ably/ui/core/Icon';
-import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 
 const ControlApi = () => {
   const { canonicalUrl } = useSiteMetadata();
@@ -12,8 +11,6 @@ const ControlApi = () => {
   const meta_description =
     'The Control API is a REST API that enables you to manage your Ably account programmatically. This is the Control API Reference guide.';
   const controlAPI = withPrefix('/open-specs/control-v1.yaml');
-
-  useSetLayoutOptions({ noSidebar: true, hideSearchBar: false, template: 'control-api' });
 
   return (
     <>

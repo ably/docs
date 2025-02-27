@@ -4,7 +4,6 @@ import { ImageProps } from '../../components/Image';
 import { Head } from '../../components/Head';
 import ExamplesContent from '../../components/Examples/ExamplesContent';
 import { useSiteMetadata } from '../../hooks/use-site-metadata';
-import { useSetLayoutOptions } from '../../hooks/use-set-layout-options';
 
 const Examples = ({
   data: {
@@ -13,8 +12,6 @@ const Examples = ({
 }: {
   data: { allFile: { images: ImageProps[] } };
 }) => {
-  useSetLayoutOptions({ noSidebar: true, hideSearchBar: false, template: 'examples' });
-
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/docs/examples');
   const meta_title = 'Ably Examples - Code Samples and Implementation Guides';
