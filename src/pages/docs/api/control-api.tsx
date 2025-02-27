@@ -1,8 +1,8 @@
+import { Link, withAssetPrefix } from 'gatsby';
+import Icon from '@ably/ui/core/Icon';
 import { useSiteMetadata } from '../../../hooks/use-site-metadata';
 import { Head } from '../../../components/Head';
 import { Loader } from '../../../components/Redoc';
-import { Link, withPrefix } from 'gatsby';
-import Icon from '@ably/ui/core/Icon';
 
 const ControlApi = () => {
   const { canonicalUrl } = useSiteMetadata();
@@ -10,7 +10,7 @@ const ControlApi = () => {
   const meta_title = 'Control API';
   const meta_description =
     'The Control API is a REST API that enables you to manage your Ably account programmatically. This is the Control API Reference guide.';
-  const controlAPI = withPrefix('/open-specs/control-v1.yaml');
+  const controlAPI = withAssetPrefix('/open-specs/control-v1.yaml');
 
   return (
     <>
