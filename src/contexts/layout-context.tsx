@@ -1,6 +1,6 @@
 import React, { createContext, PropsWithChildren, useContext, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
-import { PageTreeNode, determineActivePage } from 'src/components/Layout/utils/nav';
+import { ActivePage, determineActivePage } from 'src/components/Layout/utils/nav';
 import { productData } from 'src/data';
 import { NavProduct } from 'src/data/nav/types';
 import { ProductData, ProductKey } from 'src/data/types';
@@ -14,11 +14,11 @@ import { LanguageKey } from 'src/data/languages/types';
  */
 
 const LayoutContext = createContext<{
-  activePage: { tree: PageTreeNode[]; languages: LanguageKey[] };
+  activePage: ActivePage;
   products: [ProductKey, NavProduct][];
   setLanguages: (languages: LanguageKey[]) => void;
 }>({
-  activePage: { tree: [], languages: [] },
+  activePage: { tree: [], page: { name: '', link: '' }, languages: [] },
   products: [],
   setLanguages: (languages) => {
     console.warn('setLanguages called without a provider', languages);
@@ -33,7 +33,7 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
     const activePageData = determineActivePage(productData, location.pathname);
     return activePageData
       ? { ...activePageData, languages: activePageData.page.languages ?? languages }
-      : { tree: [], languages: [] };
+      : { tree: [], page: { name: '', link: '' }, languages: [] };
   }, [location.pathname, languages]);
 
   const products = useMemo(
