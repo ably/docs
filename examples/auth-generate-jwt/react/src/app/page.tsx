@@ -30,7 +30,7 @@ export default function Home() {
           <p>Press the Connect button to initialize the client:</p>
           <button
             onClick={handleConnect}
-            className='uk-btn uk-btn-md uk-btn-secondary mb-4 rounded'
+            className='uk-btn uk-btn-md uk-btn-primary mb-4 rounded'
           >
             Connect
           </button>
