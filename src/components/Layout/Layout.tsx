@@ -1,23 +1,25 @@
-import React, { PropsWithChildren } from 'react';
+import React from 'react';
+import { PageProps } from 'gatsby';
 
 import '../../styles/global.css';
-import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import { Container } from 'src/components';
-import Header from './Header';
+import { LayoutOptions } from 'data/onCreatePage';
+import { LayoutProvider } from 'src/contexts/layout-context';
+import Breadcrumbs from './Breadcrumbs';
 import Footer from './Footer';
+import GlobalLoading from '../GlobalLoading/GlobalLoading';
+import Header from './Header';
 import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
-import { LayoutProvider, useLayoutContext } from 'src/contexts/layout-context';
-import Breadcrumbs from './Breadcrumbs';
 
-interface LayoutProps {
-  sidebar?: boolean;
-  searchBar?: boolean;
-}
+type PageContextType = {
+  layout: LayoutOptions;
+};
 
-const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children }) => {
-  const { options } = useLayoutContext();
-  const { searchBar, sidebar, template } = options;
+type LayoutProps = PageProps<unknown, PageContextType>;
+
+const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
+  const { searchBar, sidebar, template } = pageContext.layout;
 
   return (
     <GlobalLoading template={template}>
@@ -35,7 +37,7 @@ const Layout: React.FC<PropsWithChildren<LayoutProps>> = ({ children }) => {
   );
 };
 
-const WrappedLayout: React.FC<PropsWithChildren<LayoutProps>> = (props) => (
+const WrappedLayout: React.FC<LayoutProps> = (props) => (
   <LayoutProvider>
     <Layout {...props} />
   </LayoutProvider>

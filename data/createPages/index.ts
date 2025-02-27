@@ -201,6 +201,7 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
           contentOrderedList,
           contentMenu: contentMenuObject,
           script,
+          layout: { sidebar: true, searchBar: true, template: 'base' },
         },
       });
       return slug;

@@ -16,7 +16,6 @@ import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, IGNORED_LANGUAGES } from 
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { getMetaTitle } from 'src/components/common/meta-title';
-import { useSetLayoutOptions } from 'src/hooks/use-set-layout-options';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { LanguageKey } from 'src/data/languages/types';
 
@@ -41,7 +40,6 @@ const Template = ({
   currentProduct,
 }: ITemplate) => {
   const { setLanguages } = useLayoutContext();
-  useSetLayoutOptions();
 
   useLayoutEffect(() => {
     const languagesSet = new Set<LanguageKey>();

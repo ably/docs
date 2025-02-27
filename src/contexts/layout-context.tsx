@@ -5,36 +5,21 @@ import { productData } from 'src/data';
 import { NavProduct } from 'src/data/nav/types';
 import { ProductData, ProductKey } from 'src/data/types';
 import { LanguageKey } from 'src/data/languages/types';
-import { getLayoutOptions } from 'src/components/Layout/utils/options';
 
 /**
  * LayoutContext
  *
  * activePage - The navigation tree that leads to the current page, and a list of languages referenced on the page.
  * products - List of products with their navigation data.
- * options - Object containing boolean flags for UI options.
- * setLayoutOptions - Function to update the layout options.
  */
-
-export type LayoutOptions = { sidebar: boolean; searchBar: boolean; template: string };
 
 const LayoutContext = createContext<{
   activePage: { tree: PageTreeNode[]; languages: LanguageKey[] };
   products: [ProductKey, NavProduct][];
-  options: LayoutOptions;
-  setLayoutOptions: (options: LayoutOptions) => void;
   setLanguages: (languages: LanguageKey[]) => void;
 }>({
   activePage: { tree: [], languages: [] },
   products: [],
-  options: {
-    sidebar: false,
-    searchBar: false,
-    template: 'base',
-  },
-  setLayoutOptions: (options) => {
-    console.warn('setLayoutOptions called without a provider', options);
-  },
   setLanguages: (languages) => {
     console.warn('setLanguages called without a provider', languages);
   },
@@ -43,7 +28,6 @@ const LayoutContext = createContext<{
 export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
   const [languages, setLanguages] = useState<LanguageKey[]>([]);
-  const [options, setOptions] = useState(getLayoutOptions(location.pathname));
 
   const activePage = useMemo(() => {
     const activePageData = determineActivePage(productData, location.pathname);
@@ -61,26 +45,11 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
     [],
   );
 
-  const setLayoutOptions = (newOptions: LayoutOptions) => {
-    setOptions((prevOptions) => {
-      if (
-        prevOptions.sidebar !== newOptions.sidebar ||
-        prevOptions.searchBar !== newOptions.searchBar ||
-        prevOptions.template !== newOptions.template
-      ) {
-        return newOptions;
-      }
-      return prevOptions;
-    });
-  };
-
   return (
     <LayoutContext.Provider
       value={{
         activePage,
         products,
-        options,
-        setLayoutOptions,
         setLanguages,
       }}
     >
