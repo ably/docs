@@ -15,6 +15,8 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
   const sessionState = {
     ...userContext.sessionState,
     signedIn: userContext.sessionState.signedIn ?? false,
+    logOut: userContext.sessionState.logOut ?? { token: '', href: '' },
+    accountName: userContext.sessionState.accountName ?? '',
     account: userContext.sessionState.account ?? { links: { dashboard: { href: '#' } } },
   };
 
