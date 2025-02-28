@@ -44,10 +44,10 @@ const NavPage = ({
   const linkId = 'link' in page ? composeNavLinkId(page.link) : undefined;
   const { activePage } = useLayoutContext();
   const treeMatch = indices.every((value, index) => value === activePage.tree[index]?.index);
-  const pageActive = 'link' in page && treeMatch;
 
   if ('link' in page) {
     const language = new URLSearchParams(location.search).get('lang');
+    const pageActive = treeMatch && page.link === activePage.page.link;
 
     return (
       <Link

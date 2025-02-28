@@ -1,6 +1,7 @@
 import { scriptLoader } from '../../external-scripts/utils';
 import './redoc.module.css';
 import { GoTopButton } from './GoTopButton';
+import { overrideMenuItemNavigation } from './utils';
 
 export const Loader = ({ specUrl }: { specUrl: string }) => {
   const redocDependencyScript = '//cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js';
@@ -48,7 +49,7 @@ export const Loader = ({ specUrl }: { specUrl: string }) => {
     scriptLoader(document, redocDependencyScript, {
       onload: () => {
         // @ts-ignore
-        Redoc.init(specUrl, options, document.getElementById('redoc-container'));
+        Redoc.init(specUrl, options, document.getElementById('redoc-container'), overrideMenuItemNavigation);
       },
     });
   }
