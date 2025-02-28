@@ -19,7 +19,7 @@ type PageContextType = {
 type LayoutProps = PageProps<unknown, PageContextType>;
 
 const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
-  const { searchBar, sidebar, template } = pageContext.layout;
+  const { searchBar, sidebar, template } = pageContext.layout ?? {};
 
   return (
     <GlobalLoading template={template}>
