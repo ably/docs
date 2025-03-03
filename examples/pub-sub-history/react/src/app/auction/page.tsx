@@ -158,8 +158,9 @@ function AuctionRoom() {
             A rare collector's piece from the early 20th century, featuring intricate mechanical craftsmanship.
           </p>
           <button
+            className="uk-btn uk-btn-md uk-btn-secondary mb-4 rounded"
+            type="button"
             onClick={() => setShowBidDialog(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-6"
           >
             Place bid
           </button>
@@ -187,21 +188,7 @@ function AuctionRoom() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Bidding history</h2>
               <button
-                className={`
-                  text-white
-                  font-bold
-                  py-3
-                  px-6
-                  rounded-lg
-                  shadow-md
-                  transition-all
-                  duration-300
-                  focus:outline-none
-                  focus:ring-2
-                  focus:ring-green-400
-                  focus:ring-opacity-50
-                  ${historyLoaded ? 'bg-gray-500 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600 hover:scale-105'}
-                `}
+                className="uk-btn uk-btn-md uk-btn-primary py-2 rounded"
                 onClick={() => retrieveBiddingHistory()}
                 disabled={historyLoaded}
               >
@@ -223,30 +210,28 @@ function AuctionRoom() {
         </div>
 
         {showBidDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-lg shadow-xl w-80">
+          <div id="bid-modal" data-uk-modal>
+            <div className="uk-modal-dialog uk-modal-body">
               <h3 className="text-lg font-bold mb-4">Place your bid</h3>
+
+              {/* Bid input field */}
               <input
                 type="number"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(Number(e.target.value))}
-                className="w-full border rounded p-2 mb-4"
+                className="uk-input uk-form-md mb-4"
                 placeholder="Enter bid amount"
               />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setShowBidDialog(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
+
+              {/* Action buttons */}
+              <p className="uk-text-right">
+                <button className="uk-modal-close uk-btn uk-btn-default mr-2" type="button">
                   Cancel
                 </button>
-                <button
-                  onClick={handleBid}
-                  className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                >
+                <button onClick={handleBid} className="uk-btn uk-btn-primary" type="button">
                   Place bid
                 </button>
-              </div>
+              </p>
             </div>
           </div>
         )}

@@ -29,7 +29,7 @@ async function initializeChat() {
 
       if (event.clientId === realtimeClient.auth.clientId) {
         const button = document.createElement('button');
-        button.className = 'away-button w-32';
+        button.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded w-full min-w-[120px]';
         button.id = 'status-button';
         button.onclick = async () => {
           await room.presence.update({
