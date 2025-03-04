@@ -3,7 +3,7 @@ import { StaticImage } from 'gatsby-plugin-image';
 import ExamplesGrid from './ExamplesGrid';
 import ExamplesFilter from './ExamplesFilter';
 import { ImageProps } from '../Image';
-import examples from '../../data/examples';
+import { examples } from '../../data/examples/';
 import { filterSearchExamples } from './filter-search-examples';
 import ExamplesNoResults from './ExamplesNoResults';
 
@@ -12,14 +12,14 @@ export type SelectedFilters = { products: string[]; useCases: string[] };
 const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => {
   const [selected, setSelected] = useState<SelectedFilters>({ products: [], useCases: [] });
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredExamples, setFilteredExamples] = useState(examples.examples);
+  const [filteredExamples, setFilteredExamples] = useState(examples);
 
   const handleSearch = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   }, []);
 
   useEffect(() => {
-    const filteredExamples = filterSearchExamples(examples.examples, selected, searchTerm);
+    const filteredExamples = filterSearchExamples(examples, selected, searchTerm);
     setFilteredExamples(filteredExamples);
   }, [selected, searchTerm]);
 

@@ -2,7 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import ExamplesContent from './ExamplesContent';
-import examples, { Example } from '../../data/examples';
+import { examples } from '../../data/examples/';
+import { Example } from '../../data/examples/types';
 import { ImageProps } from '../Image';
 
 jest.mock('gatsby-plugin-image', () => {
@@ -40,7 +41,7 @@ describe('ExamplesContent', () => {
 
   it('renders the ExamplesGrid with filtered examples', () => {
     render(<ExamplesContent exampleImages={exampleImages} />);
-    examples.examples.forEach((example) => {
+    examples.forEach((example) => {
       expect(screen.getByText(example.name)).toBeInTheDocument();
     });
   });
