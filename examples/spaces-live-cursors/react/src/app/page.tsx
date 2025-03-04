@@ -4,7 +4,6 @@ import { YourCursor, MemberCursors } from "../components/LiveCursors";
 import { useMemo, useRef, useEffect } from "react";
 import { useMembers, useSpace } from "@ably/spaces/react";
 import type { SpaceMember } from "@ably/spaces";
-import '../../styles/styles.css'
 
 export type Member = Omit<SpaceMember, "profileData"> & {
   profileData: { userColors: { cursorColor: string; }; name: string };
@@ -17,23 +16,21 @@ export const mockNames = [
 ];
 
 export const colors = [
-  { cursorColor: "#460894" },
-  { cursorColor: "#0284CD" },
-  { cursorColor: "#2CC0FF" },
+  { cursorColor: "#6366f1" },
+  { cursorColor: "#8b5cf6" },
+  { cursorColor: "#ec4899" },
 ];
 
-/** 💡 Select a mock name to assign randomly to a new user that enters the space💡 */
+
 const mockName = () => mockNames[Math.floor(Math.random() * mockNames.length)];
 
 export default function Home() {
   const name = useMemo(mockName, []);
-  /** 💡 Select a color to assign randomly to a new user that enters the space💡 */
   const userColors = useMemo(
     () => colors[Math.floor(Math.random() * colors.length)],
     [],
   );
 
-  /** 💡 Get a handle on a space instance 💡 */
   const { space } = useSpace();
 
   useEffect(() => {
@@ -41,16 +38,17 @@ export default function Home() {
   }, [space, name, userColors]);
 
   const { self } = useMembers();
-
   const liveCursors = useRef(null);
 
   return (
     <div
       id="live-cursors"
       ref={liveCursors}
-      className='live-cursors-container'
+      className="uk-container min-h-screen flex items-center justify-center bg-gray-50 relative"
     >
-      <p style={{ maxWidth: "80%", textAlign: "center" }}>Move your cursor over the screen to see live cursors in action</p>
+      <p className="uk-text-lead text-center text-gray-700 absolute top-8 left-1/2 transform -translate-x-1/2">
+        Move your cursor over the screen to see live cursors in action
+      </p>
       <YourCursor self={self as Member | null} parentRef={liveCursors} />
       <MemberCursors />
     </div>
