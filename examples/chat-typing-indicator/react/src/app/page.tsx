@@ -23,6 +23,7 @@ const ChatInput = () => {
         <input
           type="text"
           id="user-input"
+          className="uk-input uk-width-1-1 uk-border-rounded-left"
           placeholder="Start typing..."
           onKeyDown={start}
         />
