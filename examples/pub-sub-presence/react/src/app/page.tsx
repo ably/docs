@@ -32,14 +32,14 @@ export default function Home() {
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             placeholder="Update your status"
-            className="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="uk-input uk-width-1-1 uk-border-rounded-left"
           />
           <button
             key={currentClientId}
             onClick={() => {
               updateStatus(status);
             }}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+            className="uk-btn uk-btn-primary uk-border-rounded-right whitespace-nowrap"
             disabled={!status.trim()}
           >
             Update status
