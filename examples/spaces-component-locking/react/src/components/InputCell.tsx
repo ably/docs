@@ -2,7 +2,6 @@ import React, { useCallback, useRef } from "react";
 import { useOnClickOutside } from "usehooks-ts";
 import { LockedFieldSvg } from "./LockedField";
 import type { SpaceMember } from "@ably/spaces";
-import '../../styles/styles.css';
 
 type InputCellProps = {
   value: string;
@@ -17,10 +16,6 @@ type InputCellProps = {
 
 export type Member = Omit<SpaceMember, "profileData"> & {
   profileData: { memberColor: string; memberName: string };
-};
-
-type CSSPropertiesWithVars = React.CSSProperties & {
-  "--member-bg-color": string;
 };
 
 export function InputCell({
@@ -45,24 +40,27 @@ export function InputCell({
   );
 
   useOnClickOutside(ref, onClickOutside);
-
   const readOnly = Boolean(lockHolder && !lockedByYou);
 
   return (
-    <div ref={ref} className="input-cell-container">
-      <label htmlFor={name} className="label">
+    <div ref={ref} className="flex flex-col space-y-2">
+      <label htmlFor={name} className="text-sm font-medium text-gray-700">
         {label}
       </label>
       <div
-        className="input-container"
-        style={{ "--member-bg-color": memberColor } as CSSPropertiesWithVars}
+        className="relative rounded-md border border-gray-300 shadow-sm"
+        style={{ backgroundColor: memberColor ? `${memberColor}10` : 'transparent' }}
       >
-        {memberName ? (
-          <div className="lock">
-            {memberName}
-            {!lockedByYou && <LockedFieldSvg className="text-base" />}
+        {memberName && (
+          <div className="absolute top-2 right-2 flex items-center space-x-2">
+            <span className="text-sm font-medium" style={{ color: memberColor }}>
+              {memberName}
+            </span>
+            {!lockedByYou && (
+              <LockedFieldSvg className="w-4 h-4 text-gray-500" />
+            )}
           </div>
-        ) : null}
+        )}
         <input
           id={name}
           name={name}
@@ -71,9 +69,15 @@ export function InputCell({
           onFocus={onFocus}
           disabled={readOnly}
           placeholder="Click to lock and edit me"
-          className={`input ${
-            !lockHolder ? 'regular-cell' : 'active-cell'
-          } ${!readOnly ? 'full-access' : 'read-only'}`}
+          className={`uk-input w-full p-3 rounded-md transition-colors duration-200 ${
+            !lockHolder
+              ? 'bg-white hover:bg-gray-50'
+              : 'bg-opacity-10'
+          } ${
+            !readOnly
+              ? 'cursor-text focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
+              : 'cursor-not-allowed bg-gray-50'
+          }`}
         />
       </div>
     </div>

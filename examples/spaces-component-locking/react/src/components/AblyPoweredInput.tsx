@@ -25,13 +25,11 @@ export function AblyPoweredInput({ name, label }: AblyPoweredInputProps) {
   });
 
   const lockHolder = member as Member;
-
   const locked = status === "locked";
   const lockedByYou = locked && lockHolder?.connectionId === self?.connectionId;
 
   const handleFocus = async () => {
     if (locked) return;
-
     try {
       await space?.locks.acquire(name);
     } catch {
@@ -44,21 +42,22 @@ export function AblyPoweredInput({ name, label }: AblyPoweredInputProps) {
   };
 
   return (
-    <InputCell
-      value={value}
-      label={label}
-      name={name}
-      onFocus={handleFocus}
-      onClickOutside={handleClickOutside}
-      onChange={(newValue) => {
-        setValue(newValue);
-
-        if (newValue !== value) {
-          publish("update", { text: newValue });
-        }
-      }}
-      lockedByYou={lockedByYou}
-      lockHolder={lockHolder}
-    />
+    <div className="w-full">
+      <InputCell
+        value={value}
+        label={label}
+        name={name}
+        onFocus={handleFocus}
+        onClickOutside={handleClickOutside}
+        onChange={(newValue) => {
+          setValue(newValue);
+          if (newValue !== value) {
+            publish("update", { text: newValue });
+          }
+        }}
+        lockedByYou={lockedByYou}
+        lockHolder={lockHolder}
+      />
+    </div>
   );
 }
