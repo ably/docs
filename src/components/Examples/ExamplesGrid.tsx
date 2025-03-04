@@ -5,7 +5,8 @@ import { IconName } from '@ably/ui/core/Icon/types';
 import { ProductName, products as dataProducts } from '@ably/ui/core/ProductTile/data';
 import cn from '@ably/ui/core/utils/cn';
 import { Image, ImageProps } from '../Image';
-import examplesData, { Example } from '../../data/examples';
+import { UseCase, useCases as useCasesData } from '../../data/examples/';
+import { Example } from '../../data/examples/types';
 
 const ExamplesGrid = ({
   examples = [],
@@ -49,10 +50,10 @@ const ExamplesGrid = ({
   );
 
   const displayUseCaseLabel = useCallback(
-    (useCase: string, useCases: { [key: string]: { label: string } }) =>
-      useCases ? (
+    (useCase: UseCase) =>
+      useCasesData[useCase] ? (
         <Badge key={useCase} className="uppercase">
-          {useCases[useCase].label}
+          {useCasesData[useCase].label}
         </Badge>
       ) : null,
     [],
@@ -96,7 +97,7 @@ const ExamplesGrid = ({
             <p className="ui-text-p3 mt-8 text-neutral-900">{highlightSearchTerm(description)}</p>
             <div className="mt-16 flex gap-x-4">
               {products ? products.map((product) => displayProductLabel(product as ProductName, dataProducts)) : null}
-              {useCases ? useCases.map((useCase) => displayUseCaseLabel(useCase, examplesData.useCases)) : null}
+              {useCases ? useCases.map((useCase) => displayUseCaseLabel(useCase)) : null}
             </div>
           </div>
         </div>
