@@ -13,10 +13,6 @@ const connect = () => {
     document.getElementById('status').textContent = `Connection State: ${stateChange.current}`;
     const button = document.getElementById('button-status');
     button.textContent = stateChange.current === 'connected' ? 'Disconnect' : 'Connect';
-    button.className =
-      stateChange.current === 'connected'
-        ? 'bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded'
-        : 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded';
 
     console.log(`Connection state changed to: ${stateChange.current}`);
   });

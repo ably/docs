@@ -48,15 +48,7 @@ export default function Home() {
             <button
               id="connect"
               onClick={connect}
-              className="
-                bg-blue-500
-                hover:bg-blue-600
-                text-white
-                font-bold
-                py-2
-                px-4
-                rounded
-              "
+              className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded min-w-[180px]"
             >
               Connect
             </button>
@@ -83,15 +75,7 @@ function ConnectionStateComponent({
     <button
       id="disconnect"
       onClick={onDisconnect}
-      className="
-        bg-red-500
-        hover:bg-red-600
-        text-white
-        font-bold
-        py-2
-        px-4
-        rounded
-      "
+      className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded min-w-[180px]"
     >
       Disconnect
     </button>
