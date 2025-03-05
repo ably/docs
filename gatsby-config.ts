@@ -47,7 +47,7 @@ export const plugins = [
   {
     resolve: 'gatsby-plugin-root-import',
     options: {
-      HowTos: `${__dirname}/how-tos`,
+      'how-tos': `${__dirname}/how-tos`,
     },
   },
   'gatsby-plugin-mdx',
@@ -83,6 +83,13 @@ export const plugins = [
     options: {
       name: 'how-tos',
       path: './how-tos',
+    },
+  },
+  {
+    resolve: `gatsby-source-filesystem`,
+    options: {
+      name: `examples`,
+      path: `${__dirname}/examples`,
     },
   },
   {

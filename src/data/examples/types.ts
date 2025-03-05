@@ -2,14 +2,13 @@ import { LanguageKey } from '../languages/types';
 import { UseCase } from './index';
 
 export type Example = {
+  id: string;
   name: string;
   description: string;
   products: string[];
   useCases: UseCase[];
-  image: string;
-  id: string;
   languages?: LanguageKey[];
-  layout?: 'one-ui' | 'two-ui' | 'ui-console';
+  layout?: 'single-horizontal' | 'double-horizontal' | 'single-vertical' | 'double-vertical';
   visibleFiles?: string[];
 };
 
