@@ -207,10 +207,18 @@ export default function AuctionRoom() {
               />
 
               <p className="uk-text-right">
-                <button className="uk-btn uk-btn-default uk-btn-sm mr-2 border rounded-[1998px] border-black bg-transparent text-black" type="button" uk-toggle="target: #bid-modal">
+                <button
+                  className="uk-btn uk-btn-default uk-btn-sm mr-2 border rounded-[1998px] border-black bg-transparent text-black"
+                  type="button"
+                  uk-toggle="target: #bid-modal"
+                >
                   Cancel
                 </button>
-                <button onClick={handleBid} className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 min-w-[180px]" type="button">
+                <button
+                  onClick={handleBid}
+                  className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 min-w-[180px]"
+                  type="button"
+                >
                   Place bid
                 </button>
               </p>
