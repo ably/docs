@@ -2,52 +2,15 @@ import React, { useMemo, useContext, useState } from 'react';
 import { graphql, useStaticQuery } from 'gatsby';
 import { SandpackPreview, SandpackProvider } from '@codesandbox/sandpack-react';
 
-import HowTo from 'HowTos/pub-sub/how-to.mdx';
+import HowTo from 'how-tos/pub-sub/how-to.mdx';
 import { Head } from 'src/components/Head';
 import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
 
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { MarkdownProvider } from 'src/components/Markdown';
-import UserContext, { type App } from 'src/contexts/user-context';
+import UserContext from 'src/contexts/user-context';
 import { getRandomChannelName } from 'src/components/blocks/software/Code/get-random-channel-name';
-
-const getApiKey = (apps: App[]) => {
-  const app = apps[0];
-  if (!app) {
-    return 'Waiting...';
-  }
-
-  return app.apiKeys[0].whole_key;
-};
-
-const ablyEnvironment = process.env.GATSBY_ABLY_ENVIRONMENT ?? 'production';
-const basketballChannelName = getRandomChannelName();
-const footballChannelName = getRandomChannelName();
-
-const updateAblyConnectionKey = (files: Record<string, string>, apps: App[]) => {
-  const names = Object.keys(files);
-  const apiKey = getApiKey(apps);
-
-  return names.reduce((acc, name: string) => {
-    let content = files[name];
-
-    // Environment
-    if (ablyEnvironment !== 'production') {
-      content = content.replaceAll(/new Ably\.(Realtime|Rest)\(\{/g, (_match, type) => {
-        return `new Ably.${type}({\n  environment: '${ablyEnvironment}',`;
-      });
-    }
-
-    // API Key
-    content = content.replaceAll('import.meta.env.VITE_ABLY_KEY', `"${apiKey}"`);
-
-    // Channel names
-    content = content.replaceAll('import.meta.env.VITE_BASKETBALL_CHANNEL_NAME', `"${basketballChannelName}"`);
-    content = content.replaceAll('import.meta.env.VITE_FOOTBALL_CHANNEL_NAME', `"${footballChannelName}"`);
-
-    return { ...acc, [name]: content };
-  }, {});
-};
+import { getApiKey, updateAblyConnectionKey } from 'src/utilities/update-ably-connection-keys';
 
 const chooseFileVersions = (isSolved: boolean, files: Record<string, string>) => {
   const names = Object.keys(files);
@@ -114,11 +77,13 @@ const PubSubHowTo = () => {
   ];
 
   const userData = useContext(UserContext);
-  const apiKeys = userData.apps;
-  const hasApiKeys = apiKeys.length > 0;
+  const apiKey = getApiKey(userData);
   const rewrittenFiles = useMemo(() => {
-    return updateAblyConnectionKey(files, apiKeys);
-  }, [files, apiKeys]);
+    return updateAblyConnectionKey(files, apiKey, {
+      BASKETBALL_CHANNEL_NAME: getRandomChannelName(),
+      FOOTBALL_CHANNEL_NAME: getRandomChannelName(),
+    });
+  }, [files, apiKey]);
   const runnableFiles = chooseFileVersions(solved, rewrittenFiles);
 
   return (
@@ -137,7 +102,7 @@ const PubSubHowTo = () => {
         <aside className="pt-48 md:pl-24 relative">
           {/* 160px = 48px for aside top padding, 48px for nav bar and 64px for top header */}
           <div>
-            {hasApiKeys ? (
+            {apiKey ? (
               <>
                 <SandpackProvider
                   files={runnableFiles}
