@@ -54,6 +54,13 @@ export default {
           links: [{ text: 'Get started', href: '/docs/spaces' }],
         },
         {
+          title: 'LiveObjects',
+          type: 'feature',
+          content: 'Seamlessly sync application state between clients.',
+          image: 'liveobjects.png',
+          links: [{ text: 'Get started', href: '/docs/liveobjects' }],
+        },
+        {
           title: 'LiveSync',
           type: 'feature',
           content: 'Seamlessly sync database changes with frontend clients.',
