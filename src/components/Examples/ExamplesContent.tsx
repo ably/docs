@@ -25,7 +25,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
 
   return (
     <>
-      <section className="mx-auto px-24 md:px-0 max-w-[1152px] relative">
+      <section className="mx-auto px-24 md:px-0 relative">
         <div className="w-full sm:w-1/2 max-w-[600px] pt-80 sm:pt-96">
           <h1 className="ui-text-title text-title">Examples</h1>
           <p className="ui-text-sub-header mt-16">
@@ -48,7 +48,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
       </section>
 
       <StaticImage
-        src="./images/GridPattern.png"
+        src="./images/pattern-grid.png"
         placeholder="blurred"
         width={660}
         height={282}
@@ -57,7 +57,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
       />
 
       <StaticImage
-        src="./images/GridMobile.png"
+        src="./images/mobile-grid.png"
         placeholder="blurred"
         width={260}
         alt="Grid Pattern"
