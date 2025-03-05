@@ -31,7 +31,7 @@ export default function Chat() {
         const loadButton = document.getElementById('load-past-messages');
         if (loadButton instanceof HTMLButtonElement) {
           loadButton.disabled = true;
-          loadButton.className = 'absolute top-2 left-1/2 transform -translate-x-1/2 bg-gray-300 text-white rounded-full p-2';
+          loadButton.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded absolute top-2 left-1/2 transform -translate-x-1/2 p-2';
         }
       });
   };
@@ -44,14 +44,14 @@ export default function Chat() {
 
   return (
     <div id="chat-room-messages" className="container">
-       <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
-       <div
+      <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
+        <div
           id="messages"
           className="w-96 flex flex-auto flex-col space-y-2 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
         >
           <button
             id="load-past-messages"
-            className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2"
+            className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded absolute top-2 left-1/2 transform -translate-x-1/2 p-2"
             onClick={getPastMessages}
           >
             ↑ Load previous messages
@@ -59,7 +59,7 @@ export default function Chat() {
           {messages.map((message, index) => (
             <div key={index} className="flex items-start">
               <span className={`font-bold ${message.clientId === clientId ? "text-grey-500" : "text-blue-500"} mr-2`}>
-              {message.clientId === clientId ? "You" : message.clientId}:
+                {message.clientId === clientId ? "You" : message.clientId}:
               </span>
               <span className="text-gray-700">
                 {message.text}
@@ -77,13 +77,13 @@ export default function Chat() {
               placeholder="Type something..."
               onChange={(e) => setMessage(e.target.value)}
               value={message}
-              className="w-full focus:outline-none focus:placeholder-gray-400 text-gray-600 placeholder-gray-600 placeholder:italic pl-2 pr-2 bg-gray-200 rounded-l-md py-1"
+              className="uk-input uk-width-1-1 uk-border-rounded-left"
               autoFocus
             />
-            <div className="items-center inset-y-0 flex">
+            <div className="items-center inset-y-0 flex ml-2">
               <button
                 type="submit"
-                className="inline-flex items-center justify-center rounded-r-md px-3 py-1 transition duration-500 ease-in-out text-white bg-blue-500 hover:bg-blue-400 focus:outline-none"
+                className="uk-btn uk-btn-secondary uk-border-rounded-right"
               >
                 Send
                 <svg

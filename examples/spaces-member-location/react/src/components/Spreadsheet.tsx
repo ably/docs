@@ -1,6 +1,5 @@
 import { type SpaceMember } from "@ably/spaces";
 import Cell from "./Cell";
-import '../../styles/styles.css'
 
 type Member = Omit<SpaceMember, "profileData" | "location"> & {
   profileData: {
@@ -29,26 +28,22 @@ const Spreadsheet = ({
   setLocation: (location: Member["location"]) => void;
 }) => {
   const handleClick = (row: number, col: number) => {
+    console.log('Updating location:', { row, col });
     setLocation({ row, col });
   };
 
   return (
-    <table className='sheet'>
+    <table className="uk-table uk-table-bordered uk-table-divider uk-table-middle border-collapse border-2 border-gray-300">
       <tbody>
         {cellData.map((row: string[], rowIndex: number) => (
-          <tr key={rowIndex}>
-            <td key={rowIndex} className='td'>
+          <tr key={rowIndex} className="uk-table-middle">
+            <td key={rowIndex} className="uk-text-bold uk-text-center uk-background-muted border border-gray-300 p-2">
               {rowIndex + 1}
             </td>
-
             {row.map((col, colIndex) => {
-              const cellMembers = others.filter((user) => {
-                return (
-                  user.location?.row === rowIndex &&
-                  user.location?.col === colIndex
-                );
-              });
-
+              const cellMembers = others.filter((user) =>
+                user.location?.row === rowIndex && user.location?.col === colIndex
+              );
               return (
                 <Cell
                   key={colIndex}

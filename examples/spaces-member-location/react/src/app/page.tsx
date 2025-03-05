@@ -20,12 +20,10 @@ type Member = Omit<SpaceMember, "profileData" | "location"> & {
 type UpdateLocationCallback = (location: Member["location"]) => void;
 
 export default function Home() {
-  /** 💡 Get a handle on a space instance 💡 */
   const { space } = useSpace();
   const { self, others } = useMembers();
   const { update } = useLocations();
 
-  // /** 💡 Enter the space as soon as it's available 💡 */
   useEffect(() => {
     space?.enter({
       memberName: faker.person.fullName(),
@@ -34,14 +32,11 @@ export default function Home() {
   }, [space]);
 
   return (
-    <div
-      id="member-location"
-      className='container'
-    >
+    <div id="member-location" className="uk-container uk-padding">
       <Spreadsheet
         self={self as Member}
         others={others as Member[]}
-        setLocation={update as UpdateLocationCallback}
+        setLocation={update}
       />
     </div>
   );

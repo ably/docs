@@ -1,6 +1,7 @@
 import * as Ably from 'ably';
 import type { Message } from 'ably';
 import { faker } from '@faker-js/faker';
+import UIkit from 'uikit';
 import './styles.css';
 
 const preloadButton = document.getElementById('pre-load-history');
@@ -8,33 +9,6 @@ let lastBidAmount = 100;
 const numBids = 10;
 const urlParams = new URLSearchParams(window.location.search);
 const channelName = urlParams.get('name') || 'pub-sub-history';
-
-async function enterAuction() {
-  landingPage.style.display = 'none';
-  auctionRoom.style.display = 'block';
-
-  client = new Ably.Realtime({
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
-    clientId: faker.person.firstName(),
-  });
-
-  channel = client.channels.get(channelName);
-
-  const currentBid = await retrieveLastBidAmount();
-  if (currentBid) {
-    await updateCurrentBid(currentBid);
-  }
-
-  channel.subscribe('bid', async (message) => {
-    if (!message.clientId || !message.data.amount || !message.data.timestamp) {
-      console.log('Missing required fields');
-      return;
-    }
-
-    await addHistoryItem(message);
-    await updateCurrentBid(message);
-  });
-}
 
 preloadButton.addEventListener('click', async () => {
   preloadButton.disabled = true;
@@ -65,6 +39,33 @@ const auctionRoom = document.getElementById('auction');
 
 let client: Ably.Realtime;
 let channel: Ably.RealtimeChannel | null = null;
+
+async function enterAuction() {
+  landingPage.style.display = 'none';
+  auctionRoom.style.display = 'block';
+
+  client = new Ably.Realtime({
+    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+    clientId: faker.person.firstName(),
+  });
+
+  channel = client.channels.get(channelName);
+
+  const currentBid = await retrieveLastBidAmount();
+  if (currentBid) {
+    await updateCurrentBid(currentBid);
+  }
+
+  channel.subscribe('bid', async (message) => {
+    if (!message.clientId || !message.data.amount || !message.data.timestamp) {
+      console.log('Missing required fields');
+      return;
+    }
+
+    await addHistoryItem(message);
+    await updateCurrentBid(message);
+  });
+}
 
 async function retrieveLastBidAmount() {
   try {
@@ -105,7 +106,7 @@ async function addHistoryItem(message: Message, position = 'prepend') {
   const history = document.getElementById('history');
   const historyItem = document.createElement('div');
   historyItem.id = `history-item-${message.id}`;
-  historyItem.className = 'flex items-center justify-between';
+  historyItem.className = 'flex items-center justify-between py-2 border-b';
 
   if (position === 'prepend') {
     history.prepend(historyItem);
@@ -114,12 +115,12 @@ async function addHistoryItem(message: Message, position = 'prepend') {
   }
 
   const clientId = document.createElement('span');
-  clientId.className = 'font-bold w-1/3 text-left';
+  clientId.className = 'font-medium w-1/3 text-left';
   clientId.textContent = message.clientId + (message.clientId === client.auth.clientId ? ' (You)' : '');
   historyItem.appendChild(clientId);
 
   const timestamp = document.createElement('span');
-  timestamp.className = 'text-gray-500 w-1/3 text-center';
+  timestamp.className = 'text-gray-600 w-1/3 text-center';
   timestamp.textContent = new Date(message.data.timestamp).toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
@@ -128,7 +129,7 @@ async function addHistoryItem(message: Message, position = 'prepend') {
   historyItem.appendChild(timestamp);
 
   const amount = document.createElement('span');
-  amount.className = 'text-gray-700 w-1/3 text-right';
+  amount.className = 'font-bold w-1/3 text-right';
   amount.textContent = `$${Number(message.data.amount).toFixed(2)}`;
   historyItem.appendChild(amount);
 }
@@ -137,8 +138,8 @@ const loadHistoryButton = document.getElementById('load-history') as HTMLButtonE
 
 async function addHistory() {
   loadHistoryButton.disabled = true;
-  loadHistoryButton.className =
-    'bg-gray-500 text-white font-bold uppercase py-3 px-6 rounded-lg shadow-md transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50 cursor-not-allowed';
+  loadHistoryButton.className = 'uk-btn uk-btn-md uk-btn-default py-2 rounded cursor-not-allowed';
+
   const resultPage = await channel.history();
   const messages = resultPage.items;
   const filteredMessages = messages.filter((message) => message.name === 'bid');
@@ -155,10 +156,7 @@ async function addHistory() {
     }))
     .filter((newBid) => {
       const itemExists = document.getElementById(`history-item-${newBid.id}`);
-
-      if (!itemExists) {
-        return true;
-      }
+      return !itemExists;
     });
 
   history.forEach((bid) => {
@@ -169,17 +167,16 @@ async function addHistory() {
 loadHistoryButton.addEventListener('click', addHistory);
 
 const placeBidButton = document.getElementById('place-bid');
-const bidDialog = document.getElementById('bid-dialog');
 const cancelButton = document.getElementById('cancel-bid');
 const placeButton = document.getElementById('place-bid-dialog');
 const bidInput = document.getElementById('bid-amount') as HTMLInputElement;
 
 placeBidButton.addEventListener('click', () => {
-  bidDialog.style.display = 'flex';
+  UIkit.modal(document.getElementById('bid-modal')).show();
 });
 
 cancelButton.addEventListener('click', () => {
-  bidDialog.style.display = 'none';
+  UIkit.modal('#bid-modal').hide();
   bidInput.value = '';
 });
 
@@ -197,6 +194,6 @@ placeButton.addEventListener('click', async () => {
     channel.publish('bid', { amount: bidAmount, timestamp: new Date().toISOString() });
   }
 
-  bidDialog.style.display = 'none';
+  UIkit.modal('#bid-modal').hide();
   bidInput.value = '';
 });
