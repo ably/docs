@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react';
 import * as Ably from 'ably';
 import { useAbly, AblyProvider, ChannelProvider, useChannel } from 'ably/react';
 import { faker } from '@faker-js/faker';
+import UIkit from 'uikit';
 
 interface BiddingHistory {
   clientId: string;
   amount: number;
   timestamp: Date;
 }
-const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
+
+const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
 const channelName = urlParams.get('name') || 'pub-sub-history';
 
 export default function AuctionWrapper() {
@@ -29,7 +31,6 @@ export default function AuctionWrapper() {
 }
 
 function AuctionRoom() {
-  const [showBidDialog, setShowBidDialog] = useState(false);
   const [bidAmount, setBidAmount] = useState('');
   const [biddingHistory, setBiddingHistory] = useState<BiddingHistory[]>([]);
   const [currentBid, setCurrentBid] = useState<BiddingHistory | null>(null);
@@ -41,7 +42,6 @@ function AuctionRoom() {
   const { channel, publish } = useChannel(channelName, (message) => {
     if (message.name !== 'bid') return;
     if (!message.clientId || !message.data.amount || !message.data.timestamp) {
-
       console.log('Missing required fields');
       return;
     }
@@ -107,9 +107,9 @@ function AuctionRoom() {
       return;
     }
 
-    publish("bid", { amount: bidAmount.toFixed(2), timestamp: new Date()});
-    setShowBidDialog(false);
+    publish("bid", { amount: bidAmount.toFixed(2), timestamp: new Date() });
     setBidAmount(0);
+    UIkit.modal('#bid-modal').hide();
   };
 
   const retrieveBiddingHistory = async () => {
@@ -122,6 +122,7 @@ function AuctionRoom() {
     } catch (error) {
       console.error('Failed to load bidding history:', error);
     }
+
     const filteredMessages = messages.filter(message => message.name === 'bid');
 
     const history = filteredMessages.slice(0, 10)
@@ -160,7 +161,7 @@ function AuctionRoom() {
           <button
             className="uk-btn uk-btn-md uk-btn-secondary mb-4 rounded"
             type="button"
-            onClick={() => setShowBidDialog(true)}
+            onClick={() => UIkit.modal('#bid-modal').show()}
           >
             Place bid
           </button>
@@ -183,7 +184,6 @@ function AuctionRoom() {
             </div>
           )}
 
-          {/* Bidding History Section */}
           <div className="mt-8 border-t pt-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Bidding history</h2>
@@ -209,32 +209,28 @@ function AuctionRoom() {
           </div>
         </div>
 
-        {showBidDialog && (
-          <div id="bid-modal" data-uk-modal>
-            <div className="uk-modal-dialog uk-modal-body">
-              <h3 className="text-lg font-bold mb-4">Place your bid</h3>
+        <div id="bid-modal" className="uk-modal">
+          <div className="uk-modal-dialog uk-modal-body">
+            <h3 className="text-lg font-bold mb-4">Place your bid</h3>
 
-              {/* Bid input field */}
-              <input
-                type="number"
-                value={bidAmount}
-                onChange={(e) => setBidAmount(Number(e.target.value))}
-                className="uk-input uk-form-md mb-4"
-                placeholder="Enter bid amount"
-              />
+            <input
+              type="number"
+              value={bidAmount}
+              onChange={(e) => setBidAmount(Number(e.target.value))}
+              className="uk-input uk-form-md mb-4"
+              placeholder="Enter bid amount"
+            />
 
-              {/* Action buttons */}
-              <p className="uk-text-right">
-                <button className="uk-modal-close uk-btn uk-btn-default mr-2" type="button">
-                  Cancel
-                </button>
-                <button onClick={handleBid} className="uk-btn uk-btn-primary" type="button">
-                  Place bid
-                </button>
-              </p>
-            </div>
+            <p className="uk-text-right">
+              <button className="uk-btn uk-btn-default mr-2" type="button" uk-toggle="target: #bid-modal">
+                Cancel
+              </button>
+              <button onClick={handleBid} className="uk-btn uk-btn-primary" type="button">
+                Place bid
+              </button>
+            </p>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
