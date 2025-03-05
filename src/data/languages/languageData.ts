@@ -31,6 +31,9 @@ export default {
     javascript: 0.4,
     react: 0.4,
   },
+  liveObjects: {
+    javascript: 2.6,
+  },
   liveSync: {
     javascript: 0.4,
   },
