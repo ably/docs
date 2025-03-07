@@ -16,7 +16,7 @@ To run the docs site locally, follow these steps:
 
 3. Run `yarn install` to install all dependencies.
 
-4. If this is the first time running the site, run `yarn run develop:env-setup` to setup your [environment variables](#environment-variables). Visit `localhost:8000` to view the site.
+4. If this is the first time running the site, run `yarn run develop:env-setup` to setup your environment variables. Visit `localhost:8000` to view the site.
 
 5. Run `yarn run develop` and visit `localhost:8000` to view the site.
 
@@ -27,3 +27,14 @@ View the [contribution guide](CONTRIBUTING.md) for information on how to write c
 ## Support
 
 If you have any questions or suggestions, please [raise an issue](https://github.com/ably/docs/issues).
+
+## Website Proxy
+The Website app forwards requests to `/docs` to the `docs.ably.com` site.
+
+Asset prefixing is applied only during the app build process and is not available in the dev version.
+
+To ensure proper setup in your local:
+1. Set the `ASSET_PREFIX=http://localhost:9000` variable in your environment.
+2. Add `DOCS_BASE_URL=http://localhost:9000` to your `.env` file in the root of the Website app.
+3. Ensure that `.env.production` exists in the app root for the Yarn build to function correctly.
+4. You should be able to view the content and toggle between signed in and signed-out states.
