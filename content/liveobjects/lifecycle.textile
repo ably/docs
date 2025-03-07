@@ -1,0 +1,66 @@
+---
+title: Lifecycle Events
+meta_description: "Understand lifecycle events for LiveObjects, LiveMap and LiveCounter to track synchronization events and object deletions."
+product: liveobjects
+languages:
+  - javascript
+---
+
+LiveObjects emit lifecycle events that allow you to track object creation, updates, and deletions. These events help maintain application state consistency and enable realtime UI updates when LiveObjects change. Lifecycle events can be used to observe changes in LiveMap and LiveCounter instances, ensuring that applications remain synchronized across clients.
+
+h2(#synchronization). LiveObjects synchronization events
+
+LiveObjects emit synchronization events that indicate when the local state on the client is being synchronized with the Ably service. These events can be useful for displaying loading indicators, preventing user interactions during synchronization, or triggering application logic when data is first loaded.
+
+* **syncing** - Emitted when the local copy of LiveObjects on a channel begins synchronizing with the Ably service.
+* **synced** - Emitted when the local copy of LiveObjects on a channel has been synchronized with the Ably service.
+
+blang[javascript].
+
+  ```[javascript]
+  channel.objects.on('syncing', () => {
+    console.log('Objects are syncing...');
+    // Show a loading indicator and disable edits in the application
+  });
+
+  channel.objects.on('synced', () => {
+    console.log('Objects have been synced.');
+    // Hide loading indicator
+  });
+  ```
+
+<aside data-type='important'>
+<p>
+  LiveObjects synchronization events do not replace "connection":/docs/connect/states or "channel":/docs/channel/states states. You should still monitor these states and handle "connection":/docs/connect/states#handling-failures and "channel":/docs/channel/states#failure failures to ensure your application behaves as expected. LiveObjects synchronization events specifically inform you about the progress of LiveObjects data synchronization and should be used alongside other state management mechanisms.
+</p>
+</aside>
+
+h2(#objects-lifecycle). LiveMap/LiveCounter lifecycle events
+
+Lifecycle events allow you to monitor changes in a LiveObject's lifecycle, such as when it is deleted. Understanding the conditions under which each event is emitted and managing these changes properly ensures that your application behaves as expected.
+
+h3(#objects-deleted). @deleted@ event
+
+Live Objects that were created on a channel but became orphaned - either because they were never assigned to the LiveObjects state tree or because their reference was removed using "LiveMap.remove()":/docs/liveobjects/map#remove and never reassigned - will eventually be garbage collected by the Ably system, typically after 24+ hours. When this happens, a "deleted" event is broadcast for the affected object. Once deleted, an object can no longer be interacted with, and any operations performed on it will result in an error.
+
+While the LiveObjects feature internally manages object deletions and removes them from its internal state, your application may still hold references to these deleted objects in separate data structures. The @deleted@ event provides a way to react accordingly by removing references to deleted objects and preventing potential errors.
+
+In most cases, subscribing to @deleted@ events is unnecessary. Your application should have already reacted to object removal when a corresponding @LiveMap.remove()@ operation was received. However, if your application stores references to LiveObjects separately from the LiveObjects state and does not properly clear them when objects are orphaned, it can cause errors when those objects are eventually deleted. In such cases, subscribing to @deleted@ events helps ensure that those references are cleaned up and runtime errors are avoided.
+
+<aside data-type='note'>
+<p>
+  The "root object":/docs/liveobjects/setup#root cannot be deleted, so there is no need to subscribe to this event on the root object.
+</p>
+</aside>
+
+blang[javascript].
+
+  ```[javascript]
+  const { off } = counter.on('deleted', () => {
+    console.log('LiveCounter has been deleted.');
+    // Remove references to this object from your application
+    // as it can no longer be interacted with
+  });
+  ```
+
+Read more about subscribing to object lifecycle events for a "LiveCounter":/docs/liveobjects/counter#subscribe-lifecycle and "LiveMap":/docs/liveobjects/map#subscribe-lifecycle.
