@@ -46,8 +46,7 @@ const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
     }
   `);
 
-  const externalScriptsData = useMemo(() => siteMetadata.externalScriptsData || {}, [siteMetadata.externalScriptsData]);
-  const serializedData = JSON.stringify(externalScriptsData);
+  const { externalScriptsData } = siteMetadata;
   const { injectScripts, sessionTracker } = useMemo(
     () => externalScriptInjector(externalScriptsData),
     [externalScriptsData],
@@ -55,7 +54,7 @@ const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
 
   useEffect(() => {
     injectScripts();
-  }, [injectScripts, serializedData, template]);
+  }, [injectScripts, template]);
 
   useEffect(() => {
     sessionTracker(sessionState);
