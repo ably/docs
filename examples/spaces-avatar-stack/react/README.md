@@ -1,6 +1,6 @@
 # Display active users avatars in an application
 
-This folder contains the code for the avatar stack (React) - a demo of how you can leverage [Ably Spaces](https://github.com/ably/spaces) to show a list of currently online users.
+This folder contains the code for the avatar stack (React) - a demo of how you can leverage [Ably Spaces](https://github.com/ably/>
 
 ## Getting started
 

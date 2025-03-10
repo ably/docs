@@ -1,23 +1,17 @@
-import { FunctionComponent, useState } from "react";
-import { type SpaceMember } from "@ably/spaces";
-import "../../styles/styles.css";
+import { FunctionComponent, useState } from 'react';
+import { type SpaceMember } from '@ably/spaces';
 
-type Member = Omit<SpaceMember, "profileData"> & {
+type Member = Omit<SpaceMember, 'profileData'> & {
   profileData: { memberColor: string; name: string };
 };
 
-const UserInfo: FunctionComponent<{ user: Member; isSelf?: boolean }> = ({
-  user,
-  isSelf,
-}) => {
+const UserInfo: FunctionComponent<{ user: Member; isSelf?: boolean }> = ({ user, isSelf }) => {
   const initials = user.profileData.name
-    .split(" ")
+    .split(' ')
     .map((word: string) => word.charAt(0))
-    .join("");
+    .join('');
 
-  const name = isSelf
-    ? `${user.profileData.name} (You)`
-    : user.profileData.name;
+  const name = isSelf ? `${user.profileData.name} (You)` : user.profileData.name;
 
   return (
     <div className="wrapper">
@@ -28,10 +22,7 @@ const UserInfo: FunctionComponent<{ user: Member; isSelf?: boolean }> = ({
         className="user-info-container"
         id="avatar"
       >
-        <p
-          style={{ color: "#fff" }}
-          className="small-text"
-        >
+        <p style={{ color: '#fff' }} className="small-text">
           {initials}
         </p>
       </div>
@@ -43,13 +34,13 @@ const UserInfo: FunctionComponent<{ user: Member; isSelf?: boolean }> = ({
   );
 };
 
-export function Avatar({ user, isSelf }: { user: Member, isSelf: boolean }) {
+export function Avatar({ user, isSelf }: { user: Member; isSelf: boolean }) {
   const [hover, setHover] = useState(false);
 
   const userInitials = user.profileData.name
-    .split(" ")
+    .split(' ')
     .map((word: string) => word.charAt(0))
-    .join("");
+    .join('');
 
   return (
     <div className="avatar-container">
@@ -57,13 +48,13 @@ export function Avatar({ user, isSelf }: { user: Member, isSelf: boolean }) {
         key={user.clientId}
         className="avatar"
         style={{
-          backgroundColor: user.profileData.memberColor
+          backgroundColor: user.profileData.memberColor,
         }}
         onMouseOver={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         id="avatar"
       >
-        <p className={"text-white name-others"}>{userInitials}</p>
+        <p className={'text-white name-others'}>{userInitials}</p>
       </div>
       <div className="popup">
         <UserInfo user={user} isSelf={isSelf} />
