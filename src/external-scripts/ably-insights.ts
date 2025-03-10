@@ -16,17 +16,17 @@ interface Organization {
 }
 
 export interface SessionData {
-  user: User;
-  account: Account;
-  organization: Organization;
+  user?: User;
+  account?: Account;
+  organization?: Organization;
 }
 
 export const identifyUser = (sessionData: SessionData): void => {
   const { user, account, organization } = sessionData;
 
   identify({
-    userId: user.id,
-    accountId: account.id,
+    userId: user?.id,
+    accountId: account?.id,
     organisationId: organization?.id,
     // Leaving out PII
     email: '', // user.email,
