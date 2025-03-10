@@ -29,6 +29,12 @@ export const siteMetadata = {
     inkeepApiKey: process.env.INKEEP_CHAT_API_KEY,
     inkeepIntegrationId: process.env.INKEEP_CHAT_INTEGRATION_ID,
     inkeepOrganizationId: process.env.INKEEP_CHAT_ORGANIZATION_ID,
+    insightsEnabled: !!process.env.INSIGHTS_ENABLED,
+    insightsDebug: process.env.INSIGHTS_DEBUG === 'true',
+    mixpanelApiKey: process.env.MIXPANEL_API_KEY,
+    mixpanelAutoCapture: !!process.env.MIXPANEL_AUTO_CAPTURE,
+    posthogApiKey: process.env.POSTHOG_API_KEY,
+    posthogHost: process.env.POSTHOG_API_HOST || 'https://insights.ably.com',
   },
 };
 

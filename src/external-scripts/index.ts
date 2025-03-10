@@ -9,6 +9,7 @@ import {
   googleTagManagerLoggedIn,
 } from './google-tag-manager';
 import inkeepChat, { inkeepChatIdentifyUser, InkeepUser } from './inkeep';
+import { identifyUser, SessionData } from './ably-insights';
 
 export type TrackableSession = {
   emulatingUser?: boolean;
@@ -29,6 +30,7 @@ type ExternalScriptsData = {
   inkeepApiKey?: string;
   inkeepIntegrationId?: string;
   inkeepOrganizationId?: string;
+  insightsEnabled?: boolean;
 };
 
 type SessionState = {
@@ -39,7 +41,7 @@ type SessionState = {
   emulatingUser?: boolean;
   user?: HubspotUser & InkeepUser;
   hubspot?: AblyHubspotData;
-};
+} & SessionData;
 
 // Inject scripts and run any init code
 const injectScripts = ({
@@ -78,6 +80,7 @@ const sessionTracker = (
     boomerangEnabled,
     inkeepEnabled,
     inkeepApiKey,
+    insightsEnabled,
   }: ExternalScriptsData = {},
   sessionState: SessionState,
 ) => {
@@ -107,6 +110,10 @@ const sessionTracker = (
     if (sessionState.user) {
       inkeepChatIdentifyUser({ user: sessionState.user });
     }
+  }
+
+  if (insightsEnabled && sessionState.signedIn) {
+    identifyUser(sessionState);
   }
 };
 

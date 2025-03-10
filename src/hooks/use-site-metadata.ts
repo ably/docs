@@ -13,6 +13,24 @@ export const useSiteMetadata = () => {
         siteMetadata {
           title
           siteUrl
+          externalScriptsData {
+            hubspotTrackingId
+            addsearchSiteKey
+            gtmContainerId
+            headwayAccountId
+            boomerangEnabled
+            announcementEnabled
+            inkeepEnabled
+            inkeepApiKey
+            inkeepIntegrationId
+            inkeepOrganizationId
+            insightsEnabled
+            insightsDebug
+            mixpanelApiKey
+            mixpanelAutoCapture
+            posthogApiKey
+            posthogHost
+          }
         }
       }
     }

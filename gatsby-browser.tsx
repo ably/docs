@@ -1,7 +1,8 @@
+import React, { useEffect, useRef } from 'react';
 import type { GatsbyBrowser } from 'gatsby';
 
 import { reducerFlashes } from '@ably/ui/core/Flash';
-
+import { initInsights, trackPageView, setupObserver } from '@ably/ui/core/insights';
 import {
   attachStoreToWindow,
   createRemoteDataStore,
@@ -10,8 +11,12 @@ import {
 } from '@ably/ui/core/scripts';
 
 import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
+import UserContextWrapper from './src/contexts/user-context/wrap-with-provider';
+import { useSiteMetadata } from './src/hooks/use-site-metadata';
 
 const onClientEntry: GatsbyBrowser['onClientEntry'] = () => {
+  setupObserver();
+
   const store = createRemoteDataStore({
     ...reducerBlogPosts,
     ...reducerSessionData,
@@ -40,10 +45,40 @@ const shouldUpdateScroll: GatsbyBrowser['shouldUpdateScroll'] = ({ prevRouterPro
   );
 };
 
-/**
- * Load our user state
- */
-import UserContextWrapper from './src/contexts/user-context/wrap-with-provider';
-const wrapRootElement = UserContextWrapper;
+const InsightsWrapper = ({ children }) => {
+  // Use a ref to track if we've already initialized
+  const initialized = useRef(false);
+  const { externalScriptsData } = useSiteMetadata();
 
-export { onClientEntry, shouldUpdateScroll, wrapRootElement };
+  useEffect(() => {
+    // Initialize insights only once
+    if (!initialized.current) {
+      initialized.current = true;
+
+      initInsights({
+        debug: externalScriptsData.insightsDebug,
+        mixpanelToken: externalScriptsData.mixpanelApiKey,
+        mixpanelAutoCapture: externalScriptsData.mixpanelAutoCapture,
+        posthogApiKey: externalScriptsData.posthogApiKey,
+        posthogApiHost: externalScriptsData.posthogHost,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return children;
+};
+
+export const wrapRootElement = ({ element }) => {
+  return (
+    <InsightsWrapper>
+      <UserContextWrapper element={element} />
+    </InsightsWrapper>
+  );
+};
+
+export const onRouteUpdate = () => {
+  trackPageView();
+};
+
+export { onClientEntry, shouldUpdateScroll };

@@ -34,6 +34,12 @@ const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
             inkeepApiKey
             inkeepIntegrationId
             inkeepOrganizationId
+            insightsEnabled
+            insightsDebug
+            mixpanelApiKey
+            mixpanelAutoCapture
+            posthogApiKey
+            posthogHost
           }
         }
       }
