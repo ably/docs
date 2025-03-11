@@ -13,7 +13,7 @@ git clone git@github.com:ably/docs.git
 2. Change directory:
 
 ```sh
-cd /examples/chat-typing-indicator/javascript/
+cd /examples/
 ```
 
 3. Rename the environment file:
@@ -33,7 +33,7 @@ yarn install
 6. Run the server:
 
 ```sh
-yarn run dev
+yarn run chat-typing-indicator-javascript
 ```
 
 1. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.

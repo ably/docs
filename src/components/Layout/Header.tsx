@@ -4,18 +4,19 @@ import AblyHeader from '@ably/ui/core/Header';
 import { SearchBar } from '../SearchBar';
 import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
-import { pathWithBase } from './utils/nav';
 
 type HeaderProps = {
-  hideSearchBar?: boolean;
+  searchBar?: boolean;
 };
 
-const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
+const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
   const [showMenu, setShowMenu] = useState(false);
   const userContext = useContext(UserContext);
   const sessionState = {
     ...userContext.sessionState,
     signedIn: userContext.sessionState.signedIn ?? false,
+    logOut: userContext.sessionState.logOut ?? { token: '', href: '' },
+    accountName: userContext.sessionState.accountName ?? '',
     account: userContext.sessionState.account ?? { links: { dashboard: { href: '#' } } },
   };
 
@@ -24,9 +25,9 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
   // const tabLinks = (index: number) => {
   //   switch (index) {
   //     case 0:
-  //       return pathWithBase('/');
+  //       return '/docs';
   //     case 1:
-  //       return pathWithBase('/examples');
+  //       return '/docs/examples';
   //     default:
   //       return '#';
   //   }
@@ -101,7 +102,7 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
       }
       searchButtonVisibility="mobile"
       searchBar={
-        !hideSearchBar ? (
+        searchBar ? (
           <SearchBar
             displayLocation="homepage"
             extraStyleOptions={{
@@ -113,17 +114,17 @@ const Header: React.FC<HeaderProps> = ({ hideSearchBar = false }) => {
       }
       headerLinks={[
         {
-          href: pathWithBase('/sdks'),
+          href: '/docs/sdks',
           label: 'SDKs',
           external: true,
         },
         {
-          href: '/support',
+          href: '/docs/support',
           label: 'Support',
         },
       ]}
       sessionState={sessionState}
-      logoHref={process.env.NODE_ENV === 'development' ? '/' : '/docs'}
+      logoHref="/docs"
     />
   );
 };

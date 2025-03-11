@@ -13,7 +13,7 @@ git clone git@github.com:ably/docs.git
 2. Change directory:
 
 ```sh
-cd /examples/spaces-member-location/react/
+cd /examples/
 ```
 
 3. Rename the environment file:
@@ -33,7 +33,7 @@ yarn install
 6. Run the server:
 
 ```sh
-yarn run dev
+yarn run spaces-member-location-react
 ```
 
 7. Try it out by opening two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.

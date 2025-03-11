@@ -10,7 +10,7 @@ interface BiddingHistory {
   amount: number;
   timestamp: Date;
 }
-const urlParams = new URLSearchParams(window.location.search);
+const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
 const channelName = urlParams.get('name') || 'pub-sub-history';
 
 export default function AuctionWrapper() {

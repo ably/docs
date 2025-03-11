@@ -7,7 +7,7 @@ import type { Message } from "ably"
 import { AblyProvider, ChannelProvider, useChannel } from 'ably/react';
 import { nanoid } from 'nanoid';
 
-const urlParams = new URLSearchParams(window.location.search);
+const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
 const channelName = urlParams.get('name') || 'pub-sub-message-encryption';
 
 export default function Home() {

@@ -1,9 +1,10 @@
 import express from 'express';
+import path from 'path';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import crypto from 'crypto';
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env.local') });
 
 const app = express();
 const port = 3001;
@@ -22,11 +23,11 @@ function base64urlEncode(str: string) {
 app.get('/generate-jwt', async (_req, res) => {
   console.log('1 - /generate-jwt endpoint called');
 
-  const ablyApiKey = process.env.ABLY_API_KEY || '';
+  const ablyApiKey = process.env.VITE_PUBLIC_ABLY_KEY || '';
   const [apiKeyName, apiKeySecret] = ablyApiKey.split(':');
   try {
     if (ablyApiKey === '') {
-      throw new Error('ABLY_API_KEY is not set');
+      throw new Error('VITE_PUBLIC_ABLY_KEY is not set');
     }
 
     const header = {

@@ -39,7 +39,7 @@ const externalLinks = (
     const requestTitle = `Change request for: ${currentPage.link}`;
     const requestBody = encodeURIComponent(`
   **Page name**: ${currentPage.name}
-  **URL**: [${currentPage.link}](https://ably.com/docs/${currentPage.link})
+  **URL**: [${currentPage.link}](https://ably.com${currentPage.link})
   ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}` : ''}
 
   **Requested change or enhancement**:

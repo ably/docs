@@ -44,7 +44,7 @@ git clone git@github.com:ably/docs.git
 2. Change directory:
 
 ```sh
-cd /examples/pub-sub-occupancy/react/
+cd /examples/
 ```
 
 3. Rename the environment file:
@@ -53,7 +53,7 @@ cd /examples/pub-sub-occupancy/react/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_API_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `NEXT_PUBLIC_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -64,7 +64,7 @@ yarn install
 6. Run the server:
 
 ```sh
-yarn run dev
+yarn run pub-sub-occupancy-react
 ```
 
 7. Try it out by opening a tab to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
@@ -80,7 +80,7 @@ git clone git@github.com:ably/docs.git
 2. Change directory:
 
 ```sh
-cd /examples/pub-sub-occupancy/javascript/
+cd /examples/
 ```
 
 3. Rename the environment file:
@@ -100,7 +100,7 @@ yarn install
 6. Run the server:
 
 ```sh
-yarn run dev
+yarn run pub-sub-occupancy-javascript
 ```
 
 7. Try it out by opening a tab to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.

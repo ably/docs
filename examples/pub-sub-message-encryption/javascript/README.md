@@ -13,7 +13,7 @@ git clone git@github.com:ably/docs.git
 2. Change directory:
 
 ```sh
-cd /examples/pub-sub-message-encryption/javascript/
+cd /examples/
 ```
 
 3. Rename the environment file:
@@ -33,7 +33,7 @@ yarn install
 6. Run the server:
 
 ```sh
-yarn run dev
+yarn run pub-sub-message-encryption-javascript
 ```
 
 7. Try it out by opening two tabs to [http://localhost:5173/?encrypted=true](http://localhost:5173/?encrypted=true) and [http://localhost:5173/?encrypted=false](http://localhost:5173/?encrypted=false) with your browser to see the result.

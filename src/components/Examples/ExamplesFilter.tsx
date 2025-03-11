@@ -2,13 +2,13 @@ import React, { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, u
 import ReactDOM from 'react-dom';
 import Icon from '@ably/ui/core/Icon';
 import { products } from '@ably/ui/core/ProductTile/data';
-import ExamplesCheckbox from './ExamplesCheckbox';
-import examples from '../../data/examples';
 import Button from '@ably/ui/core/Button';
 import cn from '@ably/ui/core/utils/cn';
-import { useOnClickOutside } from 'src/hooks';
 import Badge from '@ably/ui/core/Badge';
+import ExamplesCheckbox from './ExamplesCheckbox';
 import { SelectedFilters } from './ExamplesContent';
+import { useOnClickOutside } from 'src/hooks';
+import examples from '../../data/examples';
 
 const ExamplesFilter = ({
   selected,

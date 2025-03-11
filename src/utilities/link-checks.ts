@@ -6,24 +6,6 @@ const DOCS_URLS_BUT_EXTERNAL = [/.*\/sdk\/.*/, /^\/tutorials\/?.*/];
 const legacyDocsUrlPattern = /^(https?:\/\/(?:www\.)?ably.com\/docs).*/;
 
 /**
- * This function will drop the protocol, host & `/docs` path from legacy
- * docs links that might have been hard coded somewhere in the content
- */
-export const normalizeLegacyDocsLink = (link: string) => {
-  const match = legacyDocsUrlPattern.exec(link);
-
-  if (match !== null) {
-    return link.replace(match[1], '');
-  }
-
-  if (link.startsWith('/docs/')) {
-    return link.replace('/docs/', '/');
-  }
-
-  return link;
-};
-
-/**
  * This function is used to identify if a link should be handled by Gatsby
  * as though part of a SPA (which will involve pre-fetching the link in question)
  * or should be treated as a normal ahref.
@@ -59,3 +41,14 @@ export const checkLinkIsInternal = (link?: string): link is string => {
 
 export const isExternalLink = (link: string): link is string =>
   link.startsWith('https://') || link.startsWith('http://') || link.includes('://');
+
+export const localizeLink = (link: string) => {
+  if (!link) {
+    return '';
+  }
+
+  const domainPattern = /^(https|http)?:\/\/[^/]+/;
+  link = link.replace(domainPattern, '');
+
+  return link;
+};

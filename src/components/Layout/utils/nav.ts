@@ -3,10 +3,11 @@ import { AccordionProps } from '@ably/ui/core/Accordion';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
 import { componentMaxHeight, HEADER_HEIGHT } from './heights';
+import { LanguageKey } from 'src/data/languages/types';
 
 export type PageTreeNode = { index: number; page: NavProductPage };
 
-type ActivePage = { tree: PageTreeNode[]; page: NavProductPage };
+export type ActivePage = { tree: PageTreeNode[]; page: NavProductPage; languages: LanguageKey[] };
 
 /**
  * Determines the active page based on the provided target link.
@@ -53,9 +54,17 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
     /* 
       If the page matches a product index link, return details for the product
     */
+    if (!data[key].nav) {
+      continue;
+    }
+
     if (data[key].nav.link === strippedTargetLink) {
       const { name, link } = data[key].nav;
-      return { tree: [{ index: Object.keys(data).indexOf(key), page: { name, link } }], page: { name, link } };
+      return {
+        tree: [{ index: Object.keys(data).indexOf(key), page: { name, link } }],
+        page: { name, link },
+        languages: [],
+      };
     }
 
     /* 
@@ -85,7 +94,7 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
           data[key].nav[apiResult ? 'api' : 'content'],
         );
 
-        return { tree, page: page?.[0] as NavProductPage };
+        return { tree, page: page?.[0] as NavProductPage, languages: [] };
       }
     }
   }
@@ -125,7 +134,7 @@ export const commonAccordionOptions = (
         'h-[1rem] ui-text-menu2 !font-semibold md:ui-text-menu4': !topLevel,
       },
     ),
-    selectedHeaderCSS: 'text-neutral-1300 mb-8',
+    selectedHeaderCSS: '!text-neutral-1300 mb-8',
     contentCSS: cn('[&>div]:pb-0'),
     rowIconSize: '20px',
     defaultOpenIndexes: !inHeader && openIndex !== undefined ? [openIndex] : [],
@@ -145,8 +154,3 @@ export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link
 
 export const hierarchicalKey = (id: string, depth: number, tree?: PageTreeNode[]) =>
   [...(tree ? tree.slice(0, depth).map((node) => node.index) : []), id].join('-');
-
-export const pathWithBase = (path: string) => {
-  const strippedPath = path.replace(/^\/+/, '');
-  return `/${process.env.NODE_ENV === 'development' ? '' : 'docs/'}${strippedPath}`;
-};

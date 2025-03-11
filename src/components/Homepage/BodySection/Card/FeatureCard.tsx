@@ -1,9 +1,9 @@
-import { CardProps } from '../../HomepageContent';
 import { Links } from './Links';
 import { Image } from '../../../Image';
 import { navigate } from '../../../Link';
+import { ContentCardWithImage } from './types';
 
-export const FeatureCard = ({ title, content, image, links }: CardProps) => (
+export const FeatureCard = ({ title, content, image, links }: ContentCardWithImage) => (
   <button
     onClick={() => navigate(links?.[0]?.href || '#')}
     className="flex justify-between flex-col w-full text-left hover:bg-neutral-50 transition-colors focus:outline-none"

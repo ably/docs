@@ -1,9 +1,10 @@
 import express from 'express';
+import path from 'path';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import Ably from 'ably';
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: path.resolve(__dirname, '../../../.env.local') });
 
 const app = express();
 const port = 3001;
@@ -15,7 +16,7 @@ app.use(
   }),
 );
 
-const ably = new Ably.Rest(process.env.ABLY_API_KEY || '');
+const ably = new Ably.Rest(process.env.VITE_PUBLIC_ABLY_KEY || '');
 
 app.get('/request-token', async (_req, res) => {
   console.log('1 - /request-token endpoint called');

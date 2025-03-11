@@ -22,7 +22,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
       <div>
         <div className={`${container}`}>
           <Link
-            to="/sdks"
+            to="/docs/sdks"
             className={cn(
               'ui-text-h3 mr-16 px-8 py-16 inline-block relative',
               activeTab === Tab.CHANNELS && activeTabClasses,
@@ -31,7 +31,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
             Pub/Sub
           </Link>
           <Link
-            to="/sdks?tab=spaces"
+            to="/docs/sdks?tab=spaces"
             className={cn(
               'ui-text-h3 mr-16 px-8 py-16 inline-block relative',
               activeTab === Tab.SPACES && activeTabClasses,
@@ -40,7 +40,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
             Spaces
           </Link>
           <Link
-            to="/sdks?tab=chat"
+            to="/docs/sdks?tab=chat"
             className={cn(
               'ui-text-h3 mr-16 px-8 py-16 inline-block relative',
               activeTab === Tab.CHAT && activeTabClasses,

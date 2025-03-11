@@ -49,7 +49,7 @@ git clone git@github.com:ably/docs.git
 2. Change directory:
 
 ```sh
-cd /examples/chat-online-status/react/
+cd /examples/
 ```
 
 3. Rename the environment file:
@@ -69,7 +69,7 @@ yarn install
 6. Run the server:
 
 ```sh
-yarn run dev
+yarn run chat-online-status-react
 ```
 
 7. Try it out by opening two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
@@ -85,7 +85,7 @@ git clone git@github.com:ably/docs.git
 2. Change directory:
 
 ```sh
-cd /examples/chat-online-status/javascript/
+cd /examples/
 ```
 
 3. Rename the environment file:
@@ -105,7 +105,7 @@ yarn install
 6. Run the server:
 
 ```sh
-yarn run dev
+yarn run chat-online-status-javascript
 ```
 
 7. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
