@@ -260,7 +260,7 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
       const filesForLanguage = relatedFiles.reduce<Record<string, string>>((acc, file) => {
         if (file.language === language && language === 'react' && file.projectRelativePath.startsWith('src/')) {
           acc[file.projectRelativePath.replace('src/', '')] = file.content;
-        } else if (file.language === language && language === 'javascript') {
+        } else if (file.language === language) {
           acc[file.projectRelativePath] = file.content;
         }
         return acc;
@@ -275,7 +275,6 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     const example = {
       ...exampleDatum,
       files: languageFiles,
-      content: relatedFiles.find((node) => node.extension === 'md')?.content,
     };
 
     createPage({
