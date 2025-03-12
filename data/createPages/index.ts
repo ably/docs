@@ -275,7 +275,7 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     const example = {
       ...exampleDatum,
       files: languageFiles,
-      content: relatedFiles.find((node) => node.extension === 'md')?.content,
+      content: relatedFiles.find((node) => node.projectRelativePath === 'page.md')?.content,
     };
 
     createPage({

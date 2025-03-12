@@ -89,7 +89,7 @@ export const onCreateNode: GatsbyNode['onCreateNode'] = async ({
         extension,
         project,
         language,
-        projectRelativePath: (relativePath as string).replace(`${project}/${language}/`, ''),
+        projectRelativePath: (relativePath as string).replace(language ? `${project}/${language}/` : `${project}/`, ''),
         content,
         internal: {
           contentDigest,
