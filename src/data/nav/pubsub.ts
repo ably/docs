@@ -35,6 +35,35 @@ export default {
       ],
     },
     {
+      name: 'Old- Authentication',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/old-auth',
+        },
+        {
+          name: 'Basic auth',
+          link: '/docs/old-auth/basic',
+        },
+        {
+          name: 'Token auth',
+          link: '/docs/old-auth/token',
+        },
+        {
+          name: 'Token revocation',
+          link: '/docs/old-auth/revocation',
+        },
+        {
+          name: 'Identified clients',
+          link: '/docs/old-auth/identified-clients',
+        },
+        {
+          name: 'Capabilities',
+          link: '/docs/old-auth/capabilities',
+        },
+      ],
+    },
+    {
       name: 'Authentication',
       pages: [
         {
@@ -42,24 +71,16 @@ export default {
           link: '/docs/auth',
         },
         {
-          name: 'Basic auth',
-          link: '/docs/auth/basic',
+          name: 'Authentication',
+          link: '/docs/auth/authentication',
         },
         {
-          name: 'Token auth',
-          link: '/docs/auth/token',
+          name: 'Permissions',
+          link: '/docs/auth/permissions',
         },
         {
           name: 'Token revocation',
-          link: '/docs/auth/revocation',
-        },
-        {
-          name: 'Identified clients',
-          link: '/docs/auth/identified-clients',
-        },
-        {
-          name: 'Capabilities',
-          link: '/docs/auth/capabilities',
+          link: '/docs/auth/token-revocation',
         },
       ],
     },
