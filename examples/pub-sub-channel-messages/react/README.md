@@ -6,18 +6,18 @@ Messaging enables instant, scalable communication through publishing and subscri
 
 Channels are used to separate messages into different topics. They are the building block of creating a realtime application using the publish-subscribe pattern. Channels are also the unit of security and scalability. Whilst billions of messages may be delivered by Ably, clients receive only the messages on the channels they subscribe to.
 
-Messaging is implemented using [Ably Pub/Sub](https://ably.com/docs/channels/messages). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application and is powered by Ably's reliable and scalable platform.
+Messaging is implemented using [Ably Pub/Sub](/docs/channels/messages). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application and is powered by Ably's reliable and scalable platform.
 
 ## Resources
 
 Use the following components to send and receive messages in a pub/sub application:
 
-* [`AblyProvider`](https://ably.com/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
-* [`ChannelProvider`](https://ably.com/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, members, and realtime interactions within that channel via React context.
-* [`useChannel()`](https://ably.com/docs/getting-started/react#useChannel) hook: a hook to manage the state and interaction for a channel, allowing users to join, send messages, and listen for messages.
-* [`publish()`](https://ably.com/docs/getting-started/react#useChannel) function: a function to publish messages to the specified channel.
+* [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+* [`ChannelProvider`](/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, members, and realtime interactions within that channel via React context.
+* [`useChannel()`](/docs/getting-started/react#useChannel) hook: a hook to manage the state and interaction for a channel, allowing users to join, send messages, and listen for messages.
+* [`publish()`](/docs/getting-started/react#useChannel) function: a function to publish messages to the specified channel.
 
-Find out more about [channels](https://ably.com/docs/channels) and [messages](https://ably.com/docs/channels/messages).
+Find out more about [channels](/docs/channels) and [messages](/docs/channels/messages).
 
 ## Getting started
 

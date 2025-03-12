@@ -6,18 +6,18 @@ Use presence to display which users are currently 'present' on a channel. Users 
 
 Presence enables users to quickly understand the availability of others to communicate more effectively. For example, on a live video stream users can see who else is currently viewing.
 
-Presence is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
+Presence is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
 
 ## Resources
 
 Use the following methods to send and receive messages in a pub/sub application:
 
-* [`channel.get()`](https://ably.com/docs/channels#create) - creates a new or retrieves an existing `channel`.
-* [`channel.presence.subscribe()`](https://ably.com/docs/channels#subscribe) - subscribes to presence events within a specific channel by registering a listener. Presence events are emitted when a user enters or leaves a presence set, or updates their status within the presence set.
-* [`channel.presence.get()`](https://ably.com/docs/presence-occupancy/presence#retrieve-members) - Retrieves a list of the users currently within that presence set.
-* [`channel.presence.enter()`, `channel.presence.leave()`, `channel.presence.update()`](https://ably.com/docs/presence-occupancy/presence#trigger-events) - Emits a presence event when a user enters or leaves a presence set, or updates their status within the the presence set.
+* [`channel.get()`](/docs/channels#create) - creates a new or retrieves an existing `channel`.
+* [`channel.presence.subscribe()`](/docs/channels#subscribe) - subscribes to presence events within a specific channel by registering a listener. Presence events are emitted when a user enters or leaves a presence set, or updates their status within the presence set.
+* [`channel.presence.get()`](/docs/presence-occupancy/presence#retrieve-members) - Retrieves a list of the users currently within that presence set.
+* [`channel.presence.enter()`, `channel.presence.leave()`, `channel.presence.update()`](/docs/presence-occupancy/presence#trigger-events) - Emits a presence event when a user enters or leaves a presence set, or updates their status within the the presence set.
 
-Find out more about [presence](https://ably.com/docs/presence-occupancy/presence).
+Find out more about [presence](/docs/presence-occupancy/presence).
 
 ## Getting started
 

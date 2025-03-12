@@ -6,15 +6,15 @@ Ably Tokens enable you to grant users access to the Ably platform. They are used
 
 Authentication is the first step for an application to communicate with Ably. The application initializes a client and calls a predefined `authUrl` endpoint on your backend server. This endpoint uses an API key to request a token from Ably and returns it to the requesting client. When the token nears expiry, the `authUrl` is automatically invoked to request a new token.
 
-Authentication is implemented using [Ably Pub/Sub](https://ably.com/docs/auth). The Pub/Sub SDK provides the authentication mechanism that is utilized by all Ably products. It provides a set of flexible APIs capable of building any realtime application and is powered by Ably's reliable and scalable platform.
+Authentication is implemented using [Ably Pub/Sub](/docs/auth). The Pub/Sub SDK provides the authentication mechanism that is utilized by all Ably products. It provides a set of flexible APIs capable of building any realtime application and is powered by Ably's reliable and scalable platform.
 
 ## Resources
 
 This example uses a frontend and a backend client. The frontend is a React application and the backend is an Express Node.js application. Both of these applications use Ably Pub/Sub.
 
-The server application calls [`auth.requestToken();`](https://ably.com/docs/auth/token#ably-token) to request a token from Ably in order to pass it to the client to be used as authentication. The client calls the server's publicly exposed endpoint `/request-token` to request this token.
+The server application calls [`auth.requestToken();`](/docs/auth/token#ably-token) to request a token from Ably in order to pass it to the client to be used as authentication. The client calls the server's publicly exposed endpoint `/request-token` to request this token.
 
-Find out more about [authentication](https://ably.com/docs/auth).
+Find out more about [authentication](/docs/auth).
 
 ## Getting started
 
