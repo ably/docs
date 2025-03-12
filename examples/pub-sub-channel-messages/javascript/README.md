@@ -6,17 +6,17 @@ Messaging enables instant, scalable communication through publishing and subscri
 
 Channels are used to separate messages into different topics. They are the building block of creating a realtime application using the publish-subscribe pattern. Channels are also the unit of security and scalability. Whilst billions of messages may be delivered by Ably, clients receive only the messages on the channels they subscribe to.
 
-Messaging is implemented using [Ably Pub/Sub](https://ably.com/docs/channels/messages). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application and is powered by Ably's reliable and scalable platform.
+Messaging is implemented using [Ably Pub/Sub](/docs/channels/messages). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application and is powered by Ably's reliable and scalable platform.
 
 ## Resources
 
 Use the following methods to send and receive messages in a pub/sub application:
 
-* [`channel.get()`](https://ably.com/docs/channels#create) - creates a new or retrieves an existing `channel`.
-* [`channel.subscribe()`](https://ably.com/docs/channels#subscribe) - subscribes to channel messages events by registering a listener. Message events are emitted when a user publishes a message.
-* [`channel.publish`](https://ably.com/docs/channels#publish) - Emits a message event when the user publishes a message to the channel.
+* [`channel.get()`](/docs/channels#create) - creates a new or retrieves an existing `channel`.
+* [`channel.subscribe()`](/docs/channels#subscribe) - subscribes to channel messages events by registering a listener. Message events are emitted when a user publishes a message.
+* [`channel.publish`](/docs/channels#publish) - Emits a message event when the user publishes a message to the channel.
 
-Find out more about [channels](https://ably.com/docs/channels) and [messages](https://ably.com/docs/channels/messages).
+Find out more about [channels](/docs/channels) and [messages](/docs/channels/messages).
 
 ## Getting started
 

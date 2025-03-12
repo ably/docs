@@ -6,17 +6,17 @@ Use online status to display which users are currently online in a chat room. Us
 
 Online statuses enable users to quickly understand the availability of others to communicate more effectively. For example, in a team chat room, users can quickly see who is available to collaborate with, and who is currently busy, in a meeting, or away from their desks.
 
-Online statuses are implemented using [Ably Chat](https://ably.com/docs/products/chat). The Chat SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting chat features. It is built on top of Ably's core platform, and so it provides the same performance guarantees and scaling potential.
+Online statuses are implemented using [Ably Chat](/docs/products/chat). The Chat SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting chat features. It is built on top of Ably's core platform, and so it provides the same performance guarantees and scaling potential.
 
 ## Resources
 
 Use the following methods to add an online status implementation into a chat application:
 
-* [`rooms.get()`](https://ably.com/docs/chat/rooms?lang=javascript#create) - creates a new or retrieves an existing `room`.
-* [`rooms.presence.subscribe()`](https://ably.com/docs/chat/rooms/presence?lang=javascript#subscribe) - subscribes to users' presence status events by registering a listener. Presence events are emitted when a user chooses a enter or leave the presence set or update their user data.
-* [`room.presence.enter`, `room.presence.update`, `room.presence.leave`](https://ably.com/docs/chat/rooms/presence?lang=javascript#set) - Emits a presence event when the user enters or leaves a presence set, or updates their user data.
+* [`rooms.get()`](/docs/chat/rooms?lang=javascript#create) - creates a new or retrieves an existing `room`.
+* [`rooms.presence.subscribe()`](/docs/chat/rooms/presence?lang=javascript#subscribe) - subscribes to users' presence status events by registering a listener. Presence events are emitted when a user chooses a enter or leave the presence set or update their user data.
+* [`room.presence.enter`, `room.presence.update`, `room.presence.leave`](/docs/chat/rooms/presence?lang=javascript#set) - Emits a presence event when the user enters or leaves a presence set, or updates their user data.
 
-Find out more about [online status](https://ably.com/docs/chat/rooms/presence?lang=javascript).
+Find out more about [online status](/docs/chat/rooms/presence?lang=javascript).
 
 ## Getting started
 

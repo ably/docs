@@ -6,21 +6,21 @@ Manage concurrent access to shared resources within your application and prevent
 
 Component locking enhances applications where multiple users can edit the same fields, such as spreadsheets, slide shows and forms. It is a key component in maintaining data integrity and preventing conflicting changes.
 
-Component locking is implemented using [Ably Spaces](https://ably.com/docs/products/spaces). The Spaces SDK contains a set of purpose-built APIs that abstract away the complexities involved in managing the state of components accessibility in a collaborative application. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
+Component locking is implemented using [Ably Spaces](/docs/products/spaces). The Spaces SDK contains a set of purpose-built APIs that abstract away the complexities involved in managing the state of components accessibility in a collaborative application. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
 
 ## Resources
 
 Use the following components to add component locking into an application:
 
-* [`SpacesProvider`](https://ably.com/docs/spaces/react#spaces-provider): initializes and manages a shared space client instance, passing it down through React context to enable realtime spaces functionality across the application.
-* [`SpaceProvider`](https://ably.com/docs/spaces/react#spaces-provider): manages the state and functionality of a specific space, providing access to realtime interactions within that space via React context.
-* [`useSpace()`](https://ably.com/docs/spaces/react#useSpace) hook: a hook to subscribe to the current Space, receive Space state events, and get the current Space instance.
-* [`useMembers()`](https://ably.com/docs/spaces/react#useMembers) hook: a hook to build component locking. It retrieves members of the space, including members that have left the space, but have not yet been removed.
-* [`space.locks.acquire()`](https://ably.com/docs/spaces/locking#acquire): a method to attempt to acquire a lock with a given unique ID.
+* [`SpacesProvider`](/docs/spaces/react#spaces-provider): initializes and manages a shared space client instance, passing it down through React context to enable realtime spaces functionality across the application.
+* [`SpaceProvider`](/docs/spaces/react#spaces-provider): manages the state and functionality of a specific space, providing access to realtime interactions within that space via React context.
+* [`useSpace()`](/docs/spaces/react#useSpace) hook: a hook to subscribe to the current Space, receive Space state events, and get the current Space instance.
+* [`useMembers()`](/docs/spaces/react#useMembers) hook: a hook to build component locking. It retrieves members of the space, including members that have left the space, but have not yet been removed.
+* [`space.locks.acquire()`](/docs/spaces/locking#acquire): a method to attempt to acquire a lock with a given unique ID.
 
-This example also uses the [`ChannelProvider`](https://ably.com/docs/getting-started/react#channel-provider) and  [`useChannel()`](https://ably.com/docs/getting-started/react#useChannel) hook from the core Pub/Sub product in order to publish and subscribe to the changing values of each component.
+This example also uses the [`ChannelProvider`](/docs/getting-started/react#channel-provider) and  [`useChannel()`](/docs/getting-started/react#useChannel) hook from the core Pub/Sub product in order to publish and subscribe to the changing values of each component.
 
-Find out more about [component locking](https://ably.com/docs/spaces/locking).
+Find out more about [component locking](/docs/spaces/locking).
 
 ## Getting started
 

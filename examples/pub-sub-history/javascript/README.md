@@ -6,17 +6,17 @@ Use history to retrieve messages that have been previously published to a channe
 
 History enables users to retrieve messages that have been previously published within an application. It enables provides users with context as to how the current state has been reached.
 
-History is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
+History is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
 
 ## Resources
 
 Use the following methods to retrieve message history in a pub/sub application:
 
-* [`channel.get()`](https://ably.com/docs/channels#create) - creates a new or retrieves an existing `channel`.
-* [`channel.subscribe()`](https://ably.com/docs/channels#subscribe) - subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message.
-* [`channel.history()`](https://ably.com/docs/storage-history/history#retrieve-channel): retrieve paginated message event history.
+* [`channel.get()`](/docs/channels#create) - creates a new or retrieves an existing `channel`.
+* [`channel.subscribe()`](/docs/channels#subscribe) - subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message.
+* [`channel.history()`](/docs/storage-history/history#retrieve-channel): retrieve paginated message event history.
 
-Find out more about [history](https://ably.com/docs/storage-history/history).
+Find out more about [history](/docs/storage-history/history).
 
 ## Getting started
 

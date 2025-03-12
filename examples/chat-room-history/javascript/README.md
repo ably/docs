@@ -4,17 +4,17 @@ Message history enables users to view messages that have been previously sent to
 
 Message history enable users to catch up on any conversations they missed. For example, in a live stream, users can read conversations that happened before they joined. In team chats, users can view previous discussions and decisions, for context, before replying.
 
-Message history is available in [Ably Chat](https://ably.com/docs/products/chat). The Chat SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting chat features. It is built on top of Ably's core platform, and so it provides the same performance guarantees and scaling potential.
+Message history is available in [Ably Chat](/docs/products/chat). The Chat SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting chat features. It is built on top of Ably's core platform, and so it provides the same performance guarantees and scaling potential.
 
 ## Resources
 
 Use the following methods to add message history into a chat application:
 
-* [`rooms.get()`](https://ably.com/docs/chat/rooms?lang=javascript#create) - creates a new or retrieves an existing `room`.
-* [`rooms.messages.subscribe()`](https://ably.com/docs/chat/rooms/history?lang=javascript#subscribe) - subscribes to a room, retrieving previously sent messages while listening for future messages.
-* [`room.messages.get`](https://ably.com/docs/chat/rooms/history?lang=javascript#get) - retrieve messages that have been previously sent to a room.
+* [`rooms.get()`](/docs/chat/rooms?lang=javascript#create) - creates a new or retrieves an existing `room`.
+* [`rooms.messages.subscribe()`](/docs/chat/rooms/history?lang=javascript#subscribe) - subscribes to a room, retrieving previously sent messages while listening for future messages.
+* [`room.messages.get`](/docs/chat/rooms/history?lang=javascript#get) - retrieve messages that have been previously sent to a room.
 
-Find out more about [message history](https://ably.com/docs/chat/rooms/history?lang=javascript).
+Find out more about [message history](/docs/chat/rooms/history?lang=javascript).
 
 ## Getting started
 

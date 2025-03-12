@@ -4,19 +4,19 @@ Track the location of other users within an application.
 
 Track and display the location of users within an application, such as which form field they have selected, the cell they're currently editing in a spreadsheet, or the slide they're viewing on a slide deck.
 
-Member locations are implemented using [Ably Spaces](https://ably.com/docs/products/spaces). The Spaces SDK contains a set of purpose-built APIs that abstract away the complexities involved in managing the locations of participants focus in a collaborative application. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
+Member locations are implemented using [Ably Spaces](/docs/products/spaces). The Spaces SDK contains a set of purpose-built APIs that abstract away the complexities involved in managing the locations of participants focus in a collaborative application. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
 
 ## Resources
 
 Use the following components to add member location into an application:
 
-* [`spaces.get()`](https://ably.com/docs/spaces/space#create) - creates a new or retrieves an existing `space`.
-* [`space.locations.subscribe()`](https://ably.com/docs/spaces/locations#subscribe) - subscribes to location on the document by registering a listener.
-* [`space.enter()`](https://ably.com/docs/spaces/space#enter) - Entering a space will register a client as a member and emit an `enter` event to all subscribers.
-* [`space.locations.set()`](https://ably.com/docs/spaces/locations#set): a method to emit a location event in realtime that the member has changed their location.
-* [`space.locations.getSelf()` and `space.locations.getOthers()`](https://ably.com/docs/spaces/locations#retrieve): a method to retrieve the locations of members currently within the space.
+* [`spaces.get()`](/docs/spaces/space#create) - creates a new or retrieves an existing `space`.
+* [`space.locations.subscribe()`](/docs/spaces/locations#subscribe) - subscribes to location on the document by registering a listener.
+* [`space.enter()`](/docs/spaces/space#enter) - Entering a space will register a client as a member and emit an `enter` event to all subscribers.
+* [`space.locations.set()`](/docs/spaces/locations#set): a method to emit a location event in realtime that the member has changed their location.
+* [`space.locations.getSelf()` and `space.locations.getOthers()`](/docs/spaces/locations#retrieve): a method to retrieve the locations of members currently within the space.
 
-Find out more about [member location](https://ably.com/docs/spaces/locations).
+Find out more about [member location](/docs/spaces/locations).
 
 ## Getting started
 

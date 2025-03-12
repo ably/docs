@@ -6,17 +6,17 @@ All applications that implement a chat component need to be able to send message
 
 In customer support platforms, users join dedicated rooms to communicate with agents. In larger applications, such as social networking or team collaboration tools, users join multiple rooms to discuss different topics, fostering engagement and facilitating group discussions.
 
-Messaging is implemented using [Ably Chat](https://ably.com/docs/products/chat). The Chat SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting chat features. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
+Messaging is implemented using [Ably Chat](/docs/products/chat). The Chat SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting chat features. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
 
 ## Resources
 
 Use the following methods to send and receive messages into a chat application:
 
-* [`rooms.get()`](https://ably.com/docs/chat/rooms?lang=javascript#create) - creates a new or retrieves an existing `room`.
-* [`rooms.messages.subscribe()`](https://ably.com/docs/chat/rooms/messages?lang=javascript#subscribe) - subscribes to room messages events by registering a listener. Message events are emitted when a user sends a message.
-* [`room.messages.send`](https://ably.com/docs/chat/rooms/messages?lang=javascript#send) - Emits a message event when the user sends a message to the room.
+* [`rooms.get()`](/docs/chat/rooms?lang=javascript#create) - creates a new or retrieves an existing `room`.
+* [`rooms.messages.subscribe()`](/docs/chat/rooms/messages?lang=javascript#subscribe) - subscribes to room messages events by registering a listener. Message events are emitted when a user sends a message.
+* [`room.messages.send`](/docs/chat/rooms/messages?lang=javascript#send) - Emits a message event when the user sends a message to the room.
 
-Find out more about [rooms](https://ably.com/docs/chat/rooms?lang=javascript) and [messages](https://ably.com/docs/chat/rooms/messages?lang=javascript).
+Find out more about [rooms](/docs/chat/rooms?lang=javascript) and [messages](/docs/chat/rooms/messages?lang=javascript).
 
 ## Getting started
 

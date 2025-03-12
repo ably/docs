@@ -6,18 +6,18 @@ Use presence to display which users are currently 'present' on a channel. Users 
 
 Presence enables users to quickly understand the availability of others to communicate more effectively. For example, on a live video stream users can see who else is currently viewing.
 
-Presence is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
+Presence is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
 
 ## Resources
 
 Use the following components to send and receive messages in a pub/sub application:
 
-* [`AblyProvider`](https://ably.com/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
-* [`ChannelProvider`](https://ably.com/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, presence, and realtime interactions within that channel via React context.
-* [`usePresenceListener()`](https://ably.com/docs/getting-started/react#useChannel) hook: a hook to subscribe to presence events on a channel, notifying users when other users enter or leave a presence set, or updates their member data.
-* [`usePresence()`](https://ably.com/docs/getting-started/react#usePresenceListener) hook: a hook enabling users to enter the presence set.
+* [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+* [`ChannelProvider`](/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, presence, and realtime interactions within that channel via React context.
+* [`usePresenceListener()`](/docs/getting-started/react#useChannel) hook: a hook to subscribe to presence events on a channel, notifying users when other users enter or leave a presence set, or updates their member data.
+* [`usePresence()`](/docs/getting-started/react#usePresenceListener) hook: a hook enabling users to enter the presence set.
 
-Find out more about [presence](https://ably.com/docs/presence-occupancy/presence).
+Find out more about [presence](/docs/presence-occupancy/presence).
 
 ## Getting started
 

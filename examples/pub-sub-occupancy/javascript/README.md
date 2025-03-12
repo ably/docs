@@ -4,16 +4,16 @@ Occupancy enables you to retrieve high level metrics about the clients attached 
 
 Use occupancy to retrieve high level metrics about the clients attached to a channel, such as the number of connections currently attached, or the number of connections attached that are permitted to publish and subscribe to the channel.
 
-Occupancy is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
+Occupancy is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
 
 ## Resources
 
 Use the following components to access occupancy in a pub/sub application:
 
-* [`channel.get()`](https://ably.com/docs/channels#create) - creates a new or retrieves an existing `channel`. By using channel options to enable occupancy, the channel will automatically update occupancy information.
-* [`channel.subscribe()`](https://ably.com/docs/channels#subscribe) - subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message. Whenever the occupancy is updated, the `useChannel()` hook will update the occupancy information.
+* [`channel.get()`](/docs/channels#create) - creates a new or retrieves an existing `channel`. By using channel options to enable occupancy, the channel will automatically update occupancy information.
+* [`channel.subscribe()`](/docs/channels#subscribe) - subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message. Whenever the occupancy is updated, the `useChannel()` hook will update the occupancy information.
 
-Find out more about [occupancy](https://ably.com/docs/presence-occupancy/occupancy).
+Find out more about [occupancy](/docs/presence-occupancy/occupancy).
 
 ## Getting started
 
