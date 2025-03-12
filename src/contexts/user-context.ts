@@ -1,22 +1,43 @@
 import { createContext } from 'react';
+import type { BoomerangParams } from '../external-scripts/boomerang';
+import type { AblyHubspotData, HubspotUser } from '../external-scripts/hubspot';
+import type { InkeepUser } from '../external-scripts/inkeep';
+import type { SessionData } from '../external-scripts/ably-insights';
 
 export type Link = {
   href: string;
   text: string;
 };
 
+type User = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  id: string;
+  uuid: string;
+};
+
 type Account = {
+  id: string;
+  name: string;
   links: {
     dashboard: Link;
     [key: string]: Link;
   };
 };
 
+type Organization = {
+  id: string;
+  name: string;
+};
+
 export type SessionState = {
   signedIn?: boolean;
   accountName?: string;
   preferredEmail?: string;
+  user?: User & HubspotUser & InkeepUser;
   account?: Account;
+  organization?: Organization;
   mySettings?: Link;
   myAccessTokens?: Link;
   logOut?: {
@@ -24,7 +45,12 @@ export type SessionState = {
     href: string;
     text: string;
   };
-};
+  heroku?: BoomerangParams;
+  pageVisitCount?: number;
+  cookiesAcceptedByUser?: unknown;
+  emulatingUser?: boolean;
+  hubspot?: AblyHubspotData;
+} & SessionData;
 
 type WildcardCapability = Record<string, string[]>;
 

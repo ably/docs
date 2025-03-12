@@ -54,6 +54,12 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       inkeepApiKey: String
       inkeepIntegrationId: String
       inkeepOrganizationId: String
+      insightsEnabled: Boolean
+      insightsDebug: Boolean
+      mixpanelApiKey: String
+      mixpanelAutoCapture: Boolean
+      posthogApiKey: String
+      posthogApiHost: String
     }
 
     type SiteSiteMetadata implements Node {

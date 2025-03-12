@@ -1,14 +1,15 @@
 import hubspot, { AblyHubspotData, hubspotIdentifyUser, HubspotUser } from './hubspot';
 import headway from './headway';
 import boomerang from './boomerang';
-import type { BoomerangParams } from './boomerang';
 import announcement from '../utilities/console-announcement';
 import {
   googleTagManagerCookiesAccepted,
   googleTagManagerSessionPageViews,
   googleTagManagerLoggedIn,
 } from './google-tag-manager';
-import inkeepChat, { inkeepChatIdentifyUser, InkeepUser } from './inkeep';
+import inkeepChat, { inkeepChatIdentifyUser } from './inkeep';
+import type { SessionState } from '../contexts/user-context';
+import { identifyUser } from './ably-insights';
 
 export type TrackableSession = {
   emulatingUser?: boolean;
@@ -29,16 +30,7 @@ type ExternalScriptsData = {
   inkeepApiKey?: string;
   inkeepIntegrationId?: string;
   inkeepOrganizationId?: string;
-};
-
-type SessionState = {
-  heroku?: BoomerangParams;
-  signedIn?: boolean;
-  pageVisitCount?: number;
-  cookiesAcceptedByUser?: unknown;
-  emulatingUser?: boolean;
-  user?: HubspotUser & InkeepUser;
-  hubspot?: AblyHubspotData;
+  insightsEnabled?: boolean;
 };
 
 // Inject scripts and run any init code
@@ -78,6 +70,7 @@ const sessionTracker = (
     boomerangEnabled,
     inkeepEnabled,
     inkeepApiKey,
+    insightsEnabled,
   }: ExternalScriptsData = {},
   sessionState: SessionState,
 ) => {
@@ -107,6 +100,10 @@ const sessionTracker = (
     if (sessionState.user) {
       inkeepChatIdentifyUser({ user: sessionState.user });
     }
+  }
+
+  if (insightsEnabled && sessionState.signedIn) {
+    identifyUser(sessionState);
   }
 };
 

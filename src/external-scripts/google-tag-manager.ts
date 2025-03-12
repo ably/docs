@@ -8,21 +8,3 @@ export const googleTagManagerLoggedIn = ({ signedIn }: { signedIn?: unknown }) =
 
 export const googleTagManagerCookiesAccepted = ({ cookiesAcceptedByUser }: { cookiesAcceptedByUser?: unknown }) =>
   !!cookiesAcceptedByUser && safeWindow.dataLayer?.push({ cookiesAccepted: 'true' });
-
-declare global {
-  interface Window {
-    dataLayer: any[];
-  }
-}
-
-export const trackPageView = ({ location }: { location: Location }) => {
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({
-    event: 'pageview',
-    page: {
-      path: location.pathname,
-      url: window.location.href,
-      title: document.title,
-    },
-  });
-};
