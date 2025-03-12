@@ -119,7 +119,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
           external: true,
         },
         {
-          href: '/docs/support',
+          href: '/support',
           label: 'Support',
         },
       ]}
