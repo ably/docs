@@ -82,21 +82,25 @@ export const onCreateNode: GatsbyNode['onCreateNode'] = async ({
     const { relativePath, extension, id } = node;
     const [project, potentialLanguage] = (relativePath as string).split('/');
     const language =
-      potentialLanguage && ['react', 'javascript'].includes(potentialLanguage) ? potentialLanguage : null;
-    if (project && (language || node.extension === 'md')) {
-      const fields = {
-        id: createNodeId(`${id} >>> Example`),
-        extension,
-        project,
-        language,
-        projectRelativePath: (relativePath as string).replace(`${project}/${language}/`, ''),
-        content,
-        internal: {
-          contentDigest,
-          type,
-        },
-      };
-      createNode(fields);
+      potentialLanguage && ['react', 'javascript', 'server'].includes(potentialLanguage) ? potentialLanguage : null;
+
+    if (!project || !language) {
+      console.error('No project/language found for example file - excluding', node.relativePath);
+      return;
     }
+
+    const fields = {
+      id: createNodeId(`${id} >>> Example`),
+      extension,
+      project,
+      language,
+      projectRelativePath: (relativePath as string).replace(`${project}/${language}/`, ''),
+      content,
+      internal: {
+        contentDigest,
+        type,
+      },
+    };
+    createNode(fields);
   }
 };
