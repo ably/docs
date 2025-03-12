@@ -1,6 +1,23 @@
 # Display active users avatars in an application
 
-This folder contains the code for the avatar stack (React) - a demo of how you can leverage [Ably Spaces](https://github.com/ably/spaces) to show a list of currently online users.
+Display the online status of users by displaying an avatar for each of them.
+
+Display the status of users within an application with an avatar stack to provide a visual rendering of which users are in the shared workspace.
+
+Avatar stacks are utilized in applications such as online whiteboards, slide shows, spreadsheets and documents to let others know who is currently active in the application.
+
+Avatar stack are implemented using [Ably Spaces](https://ably.com/docs/products/spaces). The Spaces SDK contains a set of purpose-built APIs that abstract away the complexities involved in managing the state of participants in a collaborative application. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
+
+## Resources
+
+Use the following components to add avatar stack into an application:
+
+* [`SpacesProvider`](https://ably.com/docs/spaces/react#spaces-provider): initializes and manages a shared space client instance, passing it down through React context to enable realtime spaces functionality across the application.
+* [`SpaceProvider`](https://ably.com/docs/spaces/react#spaces-provider): manages the state and functionality of a specific space, providing access to realtime interactions within that space via React context.
+* [`useSpace()`](https://ably.com/docs/spaces/react#useSpace) hook: a hook to subscribe to the current Space, receive Space state events, and get the current Space instance.
+* [`useMembers()`](https://ably.com/docs/spaces/react#useMembers) hook: a hook to build avatar stacks. It retrieves members of the space, including members that have left the space, but have not yet been removed.
+
+Find out more about [avatar stack](https://ably.com/docs/spaces/avatar).
 
 ## Getting started
 
@@ -37,3 +54,7 @@ yarn run spaces-avatar-stack-react
 ```
 
 7. Try it out by opening two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
+
+## Open in CodeSandbox
+
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.

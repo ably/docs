@@ -1,6 +1,20 @@
 # Occupancy with Pub/Sub
 
-This folder contains the code for occupancy (React) - a demo of how you can leverage [Ably Pub/Sub](https://ably.com/docs/presence-occupancy/occupancy)'s occupancy to retrieve high level metrics about the clients attached to a channel.
+Occupancy enables you to retrieve high level metrics about the clients attached to a channel.
+
+Use occupancy to retrieve high level metrics about the clients attached to a channel, such as the number of connections currently attached, or the number of connections attached that are permitted to publish and subscribe to the channel.
+
+Occupancy is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
+
+## Resources
+
+Use the following components to access occupancy in a pub/sub application:
+
+* [`AblyProvider`](https://ably.com/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+* [`ChannelProvider`](https://ably.com/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, history, presence, and realtime interactions within that channel via React context. By using channel options to enable occupancy, the channel will automatically update occupancy information.
+* [`useChannel()`](https://ably.com/docs/getting-started/react#useChannel) hook: a hook enabling users to subscribe to a channel and receive its messages. Whenever the occupancy is updated, the `useChannel()` hook will update the occupancy information.
+
+Find out more about [occupancy](https://ably.com/docs/presence-occupancy/occupancy).
 
 ## Getting started
 
@@ -38,3 +52,7 @@ yarn run pub-sub-occupancy-react
 
 7. Try it out by opening a tab to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
 ****
+
+## Open in CodeSandbox
+
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.
