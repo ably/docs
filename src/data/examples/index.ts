@@ -122,6 +122,7 @@ export const examples: Example[] = [
     image: 'example-spaces-avatars',
     products: ['spaces'],
     useCases: ['collaboration'],
+    layout: 'two-ui',
   },
   {
     id: 'spaces-component-locking',
