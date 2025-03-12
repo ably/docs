@@ -2,7 +2,7 @@
 
 import { Inter } from "next/font/google";
 import { Realtime } from 'ably';
-import { ChatClient, ChatClientProvider, ChatRoomProvider, RoomOptionsDefaults, TypingOptions } from '@ably/chat';
+import { ChatClient, ChatClientProvider, ChatRoomProvider, AllFeaturesEnabled, TypingOptions } from '@ably/chat';
 import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -41,7 +41,7 @@ export default function RootLayout({
           <ChatRoomProvider
             id={roomName}
             options={{
-              ...RoomOptionsDefaults,
+              ...AllFeaturesEnabled,
               typing: typingOptions
             }}
           >
