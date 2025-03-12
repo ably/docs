@@ -1,6 +1,23 @@
 # Presence updates with Pub/Sub
 
-This folder contains the code for presence (React) - a demo of how you can leverage [Ably Pub/Sub](https://ably.com/docs/products/channels) to enter a presence set and view other users' statuses within the set.
+Presence enables users to see who else is online within an application.
+
+Use presence to display which users are currently 'present' on a channel. Users can also manually update their status, such as to set themselves as 'Away', or write a custom message.
+
+Presence enables users to quickly understand the availability of others to communicate more effectively. For example, on a live video stream users can see who else is currently viewing.
+
+Presence is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
+
+## Resources
+
+Use the following components to send and receive messages in a pub/sub application:
+
+* [`AblyProvider`](https://ably.com/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+* [`ChannelProvider`](https://ably.com/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, presence, and realtime interactions within that channel via React context.
+* [`usePresenceListener()`](https://ably.com/docs/getting-started/react#useChannel) hook: a hook to subscribe to presence events on a channel, notifying users when other users enter or leave a presence set, or updates their member data.
+* [`usePresence()`](https://ably.com/docs/getting-started/react#usePresenceListener) hook: a hook enabling users to enter the presence set.
+
+Find out more about [presence](https://ably.com/docs/presence-occupancy/presence).
 
 ## Getting started
 
@@ -37,3 +54,7 @@ yarn run pub-sub-presence-react
 ```
 
 7. Try it out by opening two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
+
+## Open in CodeSandbox
+
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.

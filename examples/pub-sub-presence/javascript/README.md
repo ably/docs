@@ -1,6 +1,23 @@
 # Presence updates with Pub/Sub
 
-This folder contains the code for presence (Typescript) - a demo of how you can leverage [Ably Pub/Sub](https://ably.com/docs/products/channels) to enter a presence set and view other users' statuses within the set.
+Presence enables users to see who else is online within an application.
+
+Use presence to display which users are currently 'present' on a channel. Users can also manually update their status, such as to set themselves as 'Away', or write a custom message.
+
+Presence enables users to quickly understand the availability of others to communicate more effectively. For example, on a live video stream users can see who else is currently viewing.
+
+Presence is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
+
+## Resources
+
+Use the following methods to send and receive messages in a pub/sub application:
+
+* [`channel.get()`](https://ably.com/docs/channels#create) - creates a new or retrieves an existing `channel`.
+* [`channel.presence.subscribe()`](https://ably.com/docs/channels#subscribe) - subscribes to presence events within a specific channel by registering a listener. Presence events are emitted when a user enters or leaves a presence set, or updates their status within the presence set.
+* [`channel.presence.get()`](https://ably.com/docs/presence-occupancy/presence#retrieve-members) - Retrieves a list of the users currently within that presence set.
+* [`channel.presence.enter()`, `channel.presence.leave()`, `channel.presence.update()`](https://ably.com/docs/presence-occupancy/presence#trigger-events) - Emits a presence event when a user enters or leaves a presence set, or updates their status within the the presence set.
+
+Find out more about [presence](https://ably.com/docs/presence-occupancy/presence).
 
 ## Getting started
 
@@ -37,3 +54,7 @@ yarn run pub-sub-presence-javascript
 ```
 
 7. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
+
+## Open in CodeSandbox
+
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.

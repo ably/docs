@@ -1,6 +1,24 @@
-# Online status example with Ably Chat in React
+# Online status for chat applications
 
-This folder contains the code for the Chat online status (React) - a demo of how you can leverage [Ably Chat](https://ably.com/docs/chat) to show the active status of each user in the presence set
+Online statuses enable users to view who else is online and ready to chat.
+
+Use online status to display which users are currently online in a chat room. Users can also manually update their status, such as to set themselves as 'Away'.
+
+Online statuses enable users to quickly understand the availability of others to communicate more effectively. For example, in a team chat room, users can quickly see who is available to collaborate with, and who is currently busy, in a meeting, or away from their desks.
+
+Online statuses are implemented using [Ably Chat](https://ably.com/docs/products/chat). The Chat SDK contains a set of purpose-built APIs that abstract away the complexities involved in architecting chat features. It is built on top of Ably's core platform, and so it provides the same performance guarantees and scaling potential.
+
+## Resources
+
+Use the following components to add an online status implementation into a chat application:
+
+* [`ChatClientProvider`](https://ably.com/docs/chat/setup?lang=react#instantiate): initializes and manages a shared chat client instance, passing it down through React context to enable real-time chat functionality across the application.
+* [`ChatRoomProvider`](https://ably.com/docs/chat/rooms?lang=react#create): manages the state and functionality of a specific chat room, providing access to messages, participants, and real-time interactions within that room via React context.
+* [`useRoom()`](https://ably.com/docs/chat/rooms?lang=react#create) hook: a hook to manage the state and interaction for a chat “room”, allowing users to join, send messages, listen for messages, and use the other chat functions such as typing indicators.
+* [`usePresence()`](https://ably.com/docs/chat/rooms/presence?lang=react#set) hook: a hook to manage the status updates made by users within a chat room.
+* [`usePresenceListener()`](https://ably.com/docs/chat/rooms/presence?lang=react#subscribe) hook: a hook to manage the status updates made by users within a chat room.
+
+Find out more about [online status](https://ably.com/docs/chat/rooms/presence?lang=react).
 
 ## Getting started
 
@@ -37,3 +55,7 @@ yarn run chat-online-status-react
 ```
 
 7. Try it out by opening two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
+
+## Open in CodeSandbox
+
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.

@@ -1,6 +1,23 @@
-# Retrieve message history with Pub/Sub
+# Message history with Pub/Sub
 
-This folder contains the code for message history (React) - a demo of how you can leverage [Ably Pub/Sub](https://ably.com/docs/products/channels)'s channels to retrieve previously published messages within that channel.
+History enables users to retrieve historical messages published to an application.
+
+Use history to retrieve messages that have been previously published to a channel. Users can then start working in your application with context of what happened before they went joined, or came online. Uses include retrieving the values of bids from an auction site before placing your own, or providing the last 2 minutes worth of contextual data in a realtime dashboard.
+
+History enables users to retrieve messages that have been previously published within an application. It enables provides users with context as to how the current state has been reached.
+
+History is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
+
+## Resources
+
+Use the following components to retrieve message history in a pub/sub application:
+
+* [`AblyProvider`](https://ably.com/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+* [`ChannelProvider`](https://ably.com/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, history, presence, and realtime interactions within that channel via React context.
+* [`useChannel()`](https://ably.com/docs/getting-started/react#useChannel) hook: a hook enabling users to subscribe to a channel and receive its messages.
+* [`channel.history()`](https://ably.com/docs/storage-history/history#retrieve-channel): retrieve paginated message event history.
+
+Find out more about [history](https://ably.com/docs/storage-history/history).
 
 ## Getting started
 
@@ -37,3 +54,7 @@ yarn run pub-sub-history-react
 ```
 
 7. Try it out by opening a tab to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
+
+## Open in CodeSandbox
+
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.

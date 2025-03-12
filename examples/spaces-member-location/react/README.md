@@ -1,6 +1,22 @@
-# Member location example
+# Member locations for applications
 
-This folder contains the code for the member location (React) - a demo of how you can leverage [Ably Spaces](https://github.com/ably/spaces) to track where members are in on a page.
+Track the location of other users within an application.
+
+Track and display the location of users within an application, such as which form field they have selected, the cell they're currently editing in a spreadsheet, or the slide they're viewing on a slide deck.
+
+Member locations are implemented using [Ably Spaces](https://ably.com/docs/products/spaces). The Spaces SDK contains a set of purpose-built APIs that abstract away the complexities involved in managing the locations of participants focus in a collaborative application. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
+
+## Resources
+
+Use the following components to add member location into an application:
+
+* [`SpacesProvider`](https://ably.com/docs/spaces/react#spaces-provider): initializes and manages a shared space client instance, passing it down through React context to enable realtime spaces functionality across the application.
+* [`SpaceProvider`](https://ably.com/docs/spaces/react#spaces-provider): manages the state and functionality of a specific space, providing access to realtime interactions within that space via React context.
+* [`useSpace()`](https://ably.com/docs/spaces/react#useSpace) hook: a hook to subscribe to the current Space, receive Space state events, and get the current Space instance.
+* [`useMembers()`](https://ably.com/docs/spaces/react#useMembers) hook: a hook to build member location. It retrieves members of the space, including members that have left the space, but have not yet been removed.
+* [`useLocations()`](https://ably.com/docs/spaces/react#useLocations) hook: a hook to subscribe to location events. Location events are emitted whenever a member changes location. Also used to publish the `update` of the location of the member.
+
+Find out more about [member location](https://ably.com/docs/spaces/locations).
 
 ## Getting started
 
@@ -37,3 +53,7 @@ yarn run spaces-member-location-react
 ```
 
 7. Try it out by opening two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
+
+## Open in CodeSandbox
+
+In CodeSandbox, rename the `.env.example` file to `.env.local` and enter the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.
