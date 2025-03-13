@@ -10,7 +10,7 @@ Connection states is implemented using [Ably Pub/Sub](/docs/auth). The Pub/Sub S
 
 Use the following components to manage the connection state in a pub/sub application:
 
-* [`client.connection.on()`](/docs/connect/states#listen) - subscribes to the connection state events of your client by registering a listener.
+* [`client.connection.on()`](/docs/connect/states#listen): subscribes to the connection state events of your client by registering a listener.
 
 Find out more about [connection states](/docs/connect/states).
 

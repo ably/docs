@@ -10,9 +10,9 @@ Message history is available in [Ably Chat](/docs/products/chat). The Chat SDK c
 
 Use the following methods to add message history into a chat application:
 
-* [`rooms.get()`](/docs/chat/rooms?lang=javascript#create) - creates a new or retrieves an existing `room`.
-* [`rooms.messages.subscribe()`](/docs/chat/rooms/history?lang=javascript#subscribe) - subscribes to a room, retrieving previously sent messages while listening for future messages.
-* [`room.messages.get`](/docs/chat/rooms/history?lang=javascript#get) - retrieve messages that have been previously sent to a room.
+* [`rooms.get()`](/docs/chat/rooms?lang=javascript#create): creates a new or retrieves an existing `room`.
+* [`rooms.messages.subscribe()`](/docs/chat/rooms/history?lang=javascript#subscribe): subscribes to a room, retrieving previously sent messages while listening for future messages.
+* [`room.messages.get`](/docs/chat/rooms/history?lang=javascript#get): retrieve messages that have been previously sent to a room.
 
 Find out more about [message history](/docs/chat/rooms/history?lang=javascript).
 

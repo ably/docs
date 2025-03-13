@@ -12,10 +12,10 @@ Typing indicators are implemented using [Ably Chat](/docs/products/chat). The Ch
 
 Use the following methods to add typing indicators into a chat application:
 
-* [`rooms.get()`](/docs/chat/rooms?lang=javascript#create) - creates a new or retrieves an existing `room`.
-* [`rooms.typing.subscribe()`](/docs/chat/rooms/typing#subscribe) - subscribes to typing events by registering a listener. Typing events are emitted when a user starts typing, or when they stop typing.
-* [`room.typing.get()`](/docs/chat/rooms/typing?lang=javascript#retrieve) - Retrieve list of users currently typing by their clientId.
-* [`room.typing.start()`](/docs/chat/rooms/typing?lang=javascript#set) - Emit a typing event that the user is currently typing, initialising the timeout which will call `room.typing.stop()` if no further events are emitted by the user.
+* [`rooms.get()`](/docs/chat/rooms?lang=javascript#create): creates a new or retrieves an existing `room`.
+* [`rooms.typing.subscribe()`](/docs/chat/rooms/typing#subscribe): subscribes to typing events by registering a listener. Typing events are emitted when a user starts typing, or when they stop typing.
+* [`room.typing.get()`](/docs/chat/rooms/typing?lang=javascript#retrieve): retrieves the list of users currently typing by their clientId.
+* [`room.typing.start()`](/docs/chat/rooms/typing?lang=javascript#set): emits a typing event that the user is currently typing, initialising the timeout which will call `room.typing.stop()` if no further events are emitted by the user.
 
 Find out more about [typing indicators](/docs/chat/rooms/typing).
 

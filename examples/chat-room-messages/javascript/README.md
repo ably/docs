@@ -12,9 +12,9 @@ Messaging is implemented using [Ably Chat](/docs/products/chat). The Chat SDK co
 
 Use the following methods to send and receive messages into a chat application:
 
-* [`rooms.get()`](/docs/chat/rooms?lang=javascript#create) - creates a new or retrieves an existing `room`.
-* [`rooms.messages.subscribe()`](/docs/chat/rooms/messages?lang=javascript#subscribe) - subscribes to room messages events by registering a listener. Message events are emitted when a user sends a message.
-* [`room.messages.send`](/docs/chat/rooms/messages?lang=javascript#send) - Emits a message event when the user sends a message to the room.
+* [`rooms.get()`](/docs/chat/rooms?lang=javascript#create): creates a new or retrieves an existing `room`.
+* [`rooms.messages.subscribe()`](/docs/chat/rooms/messages?lang=javascript#subscribe): subscribes to room messages events by registering a listener. Message events are emitted when a user sends a message.
+* [`room.messages.send`](/docs/chat/rooms/messages?lang=javascript#send): Emits a message event when the user sends a message to the room.
 
 Find out more about [rooms](/docs/chat/rooms?lang=javascript) and [messages](/docs/chat/rooms/messages?lang=javascript).
 

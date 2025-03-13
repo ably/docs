@@ -10,8 +10,8 @@ Channel states is implemented using [Ably Pub/Sub](/docs/). The Pub/Sub SDK prov
 
 Use the following components to manage the channel state in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create) - creates a new or retrieves an existing `channel`.
-* [`channel.on()`](/docs/channels/states?lang=javascript) - subscribes to the channel state events of your client by registering a listener.
+* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
+* [`channel.on()`](/docs/channels/states?lang=javascript): subscribes to the channel state events of your client by registering a listener.
 
 Find out more about [channel states](/docs/channels/states).
 

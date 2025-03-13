@@ -12,10 +12,10 @@ Presence is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/S
 
 Use the following methods to send and receive messages in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create) - creates a new or retrieves an existing `channel`.
-* [`channel.presence.subscribe()`](/docs/channels#subscribe) - subscribes to presence events within a specific channel by registering a listener. Presence events are emitted when a user enters or leaves a presence set, or updates their status within the presence set.
-* [`channel.presence.get()`](/docs/presence-occupancy/presence#retrieve-members) - Retrieves a list of the users currently within that presence set.
-* [`channel.presence.enter()`, `channel.presence.leave()`, `channel.presence.update()`](/docs/presence-occupancy/presence#trigger-events) - Emits a presence event when a user enters or leaves a presence set, or updates their status within the the presence set.
+* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
+* [`channel.presence.subscribe()`](/docs/channels#subscribe): subscribes to presence events within a specific channel by registering a listener. Presence events are emitted when a user enters or leaves a presence set, or updates their status within the presence set.
+* [`channel.presence.get()`](/docs/presence-occupancy/presence#retrieve-members): retrieves a list of the users currently within that presence set.
+* [`channel.presence.enter()`, `channel.presence.leave()`, `channel.presence.update()`](/docs/presence-occupancy/presence#trigger-events): emits a presence event when a user enters or leaves a presence set, or updates their status within the the presence set.
 
 Find out more about [presence](/docs/presence-occupancy/presence).
 

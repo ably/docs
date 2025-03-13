@@ -12,8 +12,8 @@ History is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/Su
 
 Use the following methods to retrieve message history in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create) - creates a new or retrieves an existing `channel`.
-* [`channel.subscribe()`](/docs/channels#subscribe) - subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message.
+* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
+* [`channel.subscribe()`](/docs/channels#subscribe): subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message.
 * [`channel.history()`](/docs/storage-history/history#retrieve-channel): retrieve paginated message event history.
 
 Find out more about [history](/docs/storage-history/history).

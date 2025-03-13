@@ -12,9 +12,9 @@ Message encryption is implemented using [Ably Pub/Sub](/docs/auth). The Pub/Sub 
 
 Use the following methods to send and receive messages in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create) - creates a new or retrieves an existing `channel`. Options are optional with `channel.get()`, options such as `cipher` to enable encryption.
-* [`channel.subscribe()`](/docs/channels#subscribe) - subscribes to channel messages events by registering a listener. Message events are emitted when a user publishes a message.
-* [`channel.publish`](/docs/channels#publish) - Emits a message event when the user publishes a message to the channel.
+* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`. Options are optional with `channel.get()`, options such as `cipher` to enable encryption.
+* [`channel.subscribe()`](/docs/channels#subscribe): subscribes to channel messages events by registering a listener. Message events are emitted when a user publishes a message.
+* [`channel.publish`](/docs/channels#publish): emits a message event when the user publishes a message to the channel.
 
 Find out more about [channels](/docs/channels), [messages](/docs/channels/messages), and [encryption](/docs/channels/options/encryption).
 

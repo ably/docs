@@ -18,7 +18,7 @@ Find out more about [authentication](https://ably.com/docs/auth/token?lang=javas
 
 ## Getting started
 
-. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
+1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
 ```sh
 git clone git@github.com:ably/docs.git
