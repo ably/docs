@@ -12,10 +12,10 @@ Avatar stack are implemented using [Ably Spaces](/docs/products/spaces). The Spa
 
 Use the following methods to add avatar stack into an application:
 
-* [`spaces.get()`](/docs/spaces/space#create) - creates a new or retrieves an existing `space`.
-* [`space.member.subscribe()`](/docs/spaces/avatar#subscribe) - subscribes to members' online status and profile updates by registering a listener.
-* [`space.enter()`](/docs/spaces/space#enter) - Entering a space will register a client as a member and emit an `enter` event to all subscribers.
-* [`space.members.getSelf()` and `space.members.getOthers()`](/docs/spaces/avatar#retrieve) - Retrieve list of users currently active in the Space or have recently left but not yet been removed.
+* [`spaces.get()`](/docs/spaces/space#create): creates a new or retrieves an existing `space`.
+* [`space.member.subscribe()`](/docs/spaces/avatar#subscribe): subscribes to members' online status and profile updates by registering a listener.
+* [`space.enter()`](/docs/spaces/space#enter): entering a space will register a client as a member and emit an `enter` event to all subscribers.
+* [`space.members.getSelf()` and `space.members.getOthers()`](/docs/spaces/avatar#retrieve): retrieves the list of users currently active in the Space or have recently left but not yet been removed.
 
 Find out more about [avatar stack](/docs/spaces/avatar).
 

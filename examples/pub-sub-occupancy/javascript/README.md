@@ -10,8 +10,8 @@ Occupancy is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/
 
 Use the following components to access occupancy in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create) - creates a new or retrieves an existing `channel`. By using channel options to enable occupancy, the channel will automatically update occupancy information.
-* [`channel.subscribe()`](/docs/channels#subscribe) - subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message. Whenever the occupancy is updated, the `useChannel()` hook will update the occupancy information.
+* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`. By using channel options to enable occupancy, the channel will automatically update occupancy information.
+* [`channel.subscribe()`](/docs/channels#subscribe): subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message. Whenever the occupancy is updated, the `useChannel()` hook will update the occupancy information.
 
 Find out more about [occupancy](/docs/presence-occupancy/occupancy).
 

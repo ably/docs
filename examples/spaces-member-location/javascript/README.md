@@ -10,9 +10,9 @@ Member locations are implemented using [Ably Spaces](/docs/products/spaces). The
 
 Use the following components to add member location into an application:
 
-* [`spaces.get()`](/docs/spaces/space#create) - creates a new or retrieves an existing `space`.
-* [`space.locations.subscribe()`](/docs/spaces/locations#subscribe) - subscribes to location on the document by registering a listener.
-* [`space.enter()`](/docs/spaces/space#enter) - Entering a space will register a client as a member and emit an `enter` event to all subscribers.
+* [`spaces.get()`](/docs/spaces/space#create): creates a new or retrieves an existing `space`.
+* [`space.locations.subscribe()`](/docs/spaces/locations#subscribe): subscribes to location on the document by registering a listener.
+* [`space.enter()`](/docs/spaces/space#enter): entering a space will register a client as a member and emit an `enter` event to all subscribers.
 * [`space.locations.set()`](/docs/spaces/locations#set): a method to emit a location event in realtime that the member has changed their location.
 * [`space.locations.getSelf()` and `space.locations.getOthers()`](/docs/spaces/locations#retrieve): a method to retrieve the locations of members currently within the space.
 
