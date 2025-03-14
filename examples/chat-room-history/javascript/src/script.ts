@@ -61,7 +61,7 @@ document.getElementById('send-message').addEventListener('click', () => {
     const enterChatButton = document.getElementById('enter-chat') as HTMLButtonElement;
     if (enterChatButton) {
       enterChatButton.disabled = false;
-      enterChatButton.className = 'text-white px-4 py-2 rounded bg-green-500 hover:bg-green-600';
+      enterChatButton.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded';
     }
   }
 
@@ -96,7 +96,8 @@ const getPastMessages = async () => {
   const loadButton = document.getElementById('load-past-messages');
   if (loadButton instanceof HTMLButtonElement) {
     loadButton.disabled = true;
-    loadButton.className = 'absolute top-2 left-1/2 transform -translate-x-1/2 bg-gray-300 text-white rounded-full p-2';
+    loadButton.className =
+      'uk-btn uk-btn-md uk-btn-primary mb-4 rounded absolute top-2 left-1/2 transform -translate-x-1/2 p-2';
   }
 };
 

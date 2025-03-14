@@ -12,10 +12,9 @@ interface CursorPosition {
   top: number;
   state: string;
 }
-const mockNames = ['Chris Evans', 'Scarlett Johansson', 'Robert Downey Jr.'];
-const colors: string[] = ['#9951F5', '#f1c232', '#f44336'];
 
-connect();
+const mockNames = ['Chris Evans', 'Scarlett Johansson', 'Robert Downey Jr.'];
+const colors: string[] = ['#6366f1', '#8b5cf6', '#ec4899'];
 
 function trackCursor(parentRef: HTMLDivElement, updatePosition: (position: CursorPosition) => void) {
   return (event: MouseEvent) => {
@@ -40,9 +39,8 @@ async function connect() {
   const spaces = new Spaces(client);
   const space = await spaces.get(spaceName);
   const parentRef = document.getElementById('live-cursors');
-  if (!parentRef || !(parentRef instanceof HTMLDivElement)) {
-    return;
-  }
+
+  if (!parentRef || !(parentRef instanceof HTMLDivElement)) return;
 
   await space.enter({
     name: mockNames[Math.floor(Math.random() * mockNames.length)],
@@ -53,18 +51,14 @@ async function connect() {
     const members = await space.members.getAll();
     const member = members.find((member) => member.connectionId === cursorUpdate.connectionId);
 
-    if (member === null || !member) {
-      return;
-    }
-    if (cursorUpdate.data?.['state'] === 'leave') {
-      const existingCursor = document.getElementById(`member-cursor-${member.connectionId}`);
-      existingCursor?.remove();
+    if (!member) return;
 
+    if (cursorUpdate.data?.['state'] === 'leave') {
+      document.getElementById(`member-cursor-${member.connectionId}`)?.remove();
       return;
     }
 
     const existingCursor = document.getElementById(`member-cursor-${member.connectionId}`);
-
     if (existingCursor) {
       existingCursor.style.left = `${cursorUpdate.position.x}px`;
       existingCursor.style.top = `${cursorUpdate.position.y}px`;
@@ -72,28 +66,27 @@ async function connect() {
     }
 
     const cursorColor = member?.profileData?.['userColors'] as { cursorColor: string } | undefined;
-    const cursorContainer = document.getElementById('live-cursors');
     const memberCursorContainer = document.createElement('div');
-    memberCursorContainer.setAttribute('key', member.connectionId);
     memberCursorContainer.setAttribute('id', `member-cursor-${member.connectionId}`);
-    memberCursorContainer.className = 'cursor';
+    memberCursorContainer.className = 'uk-position-absolute uk-animation-fade pointer-events-none cursor';
     memberCursorContainer.style.left = `${cursorUpdate.position.x}px`;
     memberCursorContainer.style.top = `${cursorUpdate.position.y}px`;
     memberCursorContainer.innerHTML = createCursorSvg(cursorColor?.cursorColor || '').outerHTML;
 
     const cursorNameContainer = document.createElement('div');
-    cursorNameContainer.className = 'cursor-name member-cursor';
+    cursorNameContainer.className = 'uk-badge uk-position-relative text-white transform translate-x-4 -translate-y-1 px-3 py-2';
     cursorNameContainer.style.backgroundColor = cursorColor?.cursorColor || '';
     cursorNameContainer.textContent = member?.profileData?.['name'] || '';
+
     memberCursorContainer.appendChild(cursorNameContainer);
-    cursorContainer?.appendChild(memberCursorContainer);
+    parentRef.appendChild(memberCursorContainer);
   });
 
   const updateCursorPosition = async (position: CursorPosition) => {
     await space.cursors.set({ position: { x: position.left, y: position.top } });
   };
 
-  const handleMouseLeave = async (event: MouseEvent) => {
+  const handleMouseLeave = async () => {
     await space.cursors.set({
       position: { x: 0, y: 0 },
       data: { state: 'leave' },
@@ -104,3 +97,5 @@ async function connect() {
   parentRef.addEventListener('mousemove', handleCursorMove);
   parentRef.addEventListener('mouseleave', handleMouseLeave);
 }
+
+connect();

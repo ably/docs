@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useCursors } from "@ably/spaces/react";
 
-// 💡 This hook is used to get the cursor position of the user and update the cursor position in the space
 const useTrackCursor = (
   setCursorPosition: ({
     left,
@@ -15,27 +14,19 @@ const useTrackCursor = (
   parentRef: React.RefObject<HTMLDivElement>,
 ) => {
   const { set } = useCursors();
-  let handleSelfCursorMove: (
-    event: React.MouseEvent<HTMLElement, MouseEvent>,
-  ) => void = () => {};
 
   useEffect(() => {
     if (!set) return;
     const container = document.querySelector("#live-cursors")! as HTMLElement;
 
-    // 💡 This function is used to update the cursor position in the space
     const handleSelfCursorMove = (e: MouseEvent) => {
       if (!document.hasFocus()) return;
 
-      const liveCursorsDiv = parentRef.current;
-      const bounds = liveCursorsDiv?.getBoundingClientRect();
+      const bounds = container.getBoundingClientRect();
       if (!bounds) return;
-      let relativeLeftPosition = e.clientX - bounds.left;
-      let relativeTopPosition = e.clientY - bounds.top;
-      if (e.clientX < bounds.left) relativeLeftPosition = -100;
-      if (e.clientX > bounds.right) relativeLeftPosition = bounds.right;
-      if (e.clientY < bounds.top) relativeTopPosition = -100;
-      if (e.clientY > bounds.bottom) relativeTopPosition = bounds.bottom;
+
+      const relativeLeftPosition = e.clientX - bounds.left;
+      const relativeTopPosition = e.clientY - bounds.top;
 
       setCursorPosition({
         left: relativeLeftPosition,
@@ -49,7 +40,7 @@ const useTrackCursor = (
       });
     };
 
-    const handleSelfCursorLeave = (e: MouseEvent) => {
+    const handleSelfCursorLeave = () => {
       setCursorPosition({
         left: 0,
         top: 0,
@@ -69,9 +60,9 @@ const useTrackCursor = (
       container.removeEventListener("mousemove", handleSelfCursorMove);
       container.removeEventListener("mouseleave", handleSelfCursorLeave);
     };
-  }, [set]);
+  }, [set, parentRef]);
 
-  return handleSelfCursorMove;
+  return () => {};
 };
 
 export default useTrackCursor;

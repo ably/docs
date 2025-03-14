@@ -5,7 +5,18 @@ import { Realtime } from 'ably';
 import { ChatClient, ChatClientProvider, ChatRoomProvider, AllFeaturesEnabled } from '@ably/chat';
 import { ReactNode, useEffect, useState } from 'react';
 import { faker } from '@faker-js/faker';
+import dynamic from 'next/dynamic';
 import '../../styles/styles.css';
+
+// @ts-ignore
+dynamic(() => import('franken-ui/js/core.iife'), {
+  ssr: false,
+});
+
+// @ts-ignore
+dynamic(() => import('franken-ui/js/icon.iife'), {
+  ssr: false,
+});
 
 const inter = Inter({ subsets: ["latin"] });
 
