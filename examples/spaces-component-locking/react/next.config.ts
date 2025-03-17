@@ -1,14 +1,8 @@
-import type { NextConfig } from "next";
-import dotenv from 'dotenv';
-import path from 'path';
+import baseConfig from '../../next.config';
+import type { NextConfig } from 'next';
 
-dotenv.config({ path: path.resolve(process.cwd(), '../../.env.local') });
-
-const nextConfig: NextConfig = {
-  reactStrictMode: true,
-  env: {
-    NEXT_PUBLIC_ABLY_KEY: process.env.NEXT_PUBLIC_ABLY_KEY,
-  },
+const config: NextConfig = {
+  ...baseConfig,
 };
 
-export default nextConfig;
+export default config;
