@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { navigate } from 'gatsby';
 import Badge from '@ably/ui/core/Badge';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
@@ -78,8 +79,12 @@ const ExamplesGrid = ({
 
   return (
     <div className="grid grid-cols-[repeat(auto-fill,_minmax(260px,_1fr))] gap-x-20 gap-y-32">
-      {examples.map(({ name, description, languages, products, useCases, image }, key) => (
-        <div className="w-full relative overflow-hidden group/examples-index-card" key={`${name}-${key}`}>
+      {examples.map(({ id, name, description, languages, products, useCases, image }, key) => (
+        <div
+          onClick={() => navigate(`/docs/examples/${id}`)}
+          className="w-full relative overflow-hidden group/examples-index-card cursor-pointer"
+          key={`${name}-${key}`}
+        >
           <div className="z-0 bg-neutral-100 overflow-hidden h-256 sm:h-200 relative flex justify-center items-center ">
             <div className="group-hover/examples-index-card:scale-105 transition-transform">
               {exampleImages ? displayExampleImage(exampleImages, image, name) : null}
