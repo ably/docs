@@ -6,7 +6,7 @@ import { IconName } from '@ably/ui/core/Icon/types';
 import { ProductName, products as dataProducts } from '@ably/ui/core/ProductTile/data';
 import cn from '@ably/ui/core/utils/cn';
 import { Image, ImageProps } from '../Image';
-import { UseCase, useCases as useCasesData } from '../../data/examples/';
+import { DEFAULT_EXAMPLE_LANGUAGES, UseCase, useCases as useCasesData } from '../../data/examples/';
 import { Example } from '../../data/examples/types';
 
 const ExamplesGrid = ({
@@ -90,11 +90,9 @@ const ExamplesGrid = ({
               {exampleImages ? displayExampleImage(exampleImages, image, name) : null}
             </div>
             <div className="flex bg-neutral-000 gap-x-6 py-6 px-8 absolute right-12 bottom-12 rounded border border-neutral-200 z-10">
-              {languages
-                ? languages.map((language) => (
-                    <Icon key={language} name={`icon-tech-${language}` as IconName} size="18px" />
-                  ))
-                : null}
+              {(languages ?? DEFAULT_EXAMPLE_LANGUAGES).map((language) => (
+                <Icon key={language} name={`icon-tech-${language}` as IconName} size="18px" />
+              ))}
             </div>
           </div>
           <div className="z-10 pt-16">
