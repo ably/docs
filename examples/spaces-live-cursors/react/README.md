@@ -1,6 +1,24 @@
 # Tracking users' cursors in an application
 
-This folder contains the code for live cursors (React) - a demo of how you can leverage [Ably Spaces](https://github.com/ably/spaces) to track other member's cursors in realtime on a page.
+Label and track the cursors of users in an application.
+
+Track and display the position of users' cursors within an application to provide visual cues of other users' activities and areas of focus in shared workspaces.
+
+Live cursors are utilized in applications such as online whiteboards to enable users to see where others are pointing or what they are drawing. They are also used in slideshow applications to enable users to see which slide each member is interacting with.
+
+Live cursors are implemented using [Ably Spaces](/docs/products/spaces). The Spaces SDK contains a set of purpose-built APIs that abstract away the complexities involved in managing the state of participants in a collaborative application. It is built on top of Ably's core platform, and so it provides the same performance and scaling guarantees.
+
+## Resources
+
+Use the following components to add live cursors into an application:
+
+* [`SpacesProvider`](/docs/spaces/react#spaces-provider): initializes and manages a shared space client instance, passing it down through React context to enable realtime spaces functionality across the application.
+* [`SpaceProvider`](/docs/spaces/react#spaces-provider): manages the state and functionality of a specific space, providing access to realtime interactions within that space via React context.
+* [`useSpace()`](/docs/spaces/react#useSpace) hook: a hook to subscribe to the current Space, receive Space state events, and get the current Space instance.
+* [`useMembers()`](/docs/spaces/react#useMembers) hook: a hook to build live cursors. It retrieves members of the space, including members that have left the space, but have not yet been removed.
+* [`useCursors()`](/docs/spaces/react#useCursors) hook: a hook to track a member's cursor position and provide a view of all members' cursors within a space.
+
+Find out more about [live cursors](/docs/spaces/cursors).
 
 ## Getting started
 
@@ -37,3 +55,7 @@ yarn run spaces-live-cursors-react
 ```
 
 7. Try it out by opening two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
+
+## Open in CodeSandbox
+
+In CodeSandbox, rename the `.env.example` file to `.env.local` and enter the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.
