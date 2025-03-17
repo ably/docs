@@ -106,7 +106,8 @@ blang[react].
 blang[javascript,kotlin].
   ```[javascript]
   // Initial subscription
-  const { unsubscribe } = room.typing.subscribe((event) => {
+  import { TypingEvent } from '@ably/chat';
+  const { unsubscribe } = room.typing.subscribe((event: TypingEvent) => {
     console.log('Typing event received: ', event);
   });
 
@@ -136,16 +137,6 @@ blang[javascript,swift,kotlin].
 
 blang[react].
   Use the "@start()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-react.UseTypingResponse.html#start method available from the response of the @useTyping@ hook to emit an event when a user has started typing.
-
-There is a timeout associated with start events. On first calling `start()`, this timer is set, subsequent calls to `start()` before the timer expires will result in a no-op. The length of this timeout is customizable using the @heartbeatThrottleMs@ parameter that can be configured in the @RoomOptions@ that you set when you "create a room":/docs/chat/rooms#create. The default is 10000ms.
-
-Consequently, if you want to keep the typing indicator active, you should call `start()` with each key press to ensure a new typing event is emitted after the timeout has expired.
-
-For a client receiving typing events, the typing indicator they have received will remain active for the duration of the timeout, plus a predefined grace period of 2000ms. If a new typing event is received for the same user before the grace period has expired, the typing indicator will be reset to the full duration of the timeout. For example, if the timeout is 15000ms, the typing indicator will remain active for 12000ms.
-
-<aside data-type='note'>
-<p>It is important for all clients in a room to have the same timeout value set, otherwise the typing indicators may not be displayed correctly.</p>
-</aside>
 
 ```[javascript]
 await room.typing.start();
@@ -214,6 +205,42 @@ try await room.typing.stop()
 room.typing.stop()
 ```
 
+h3(#frequency). Typing Event Frequency
+
+The Typing feature includes a configurable timer that controls how often typing events are sent to the server. This timer is reset each time a new typing event is sent, it works as follows:
+- On the **first call** to @start()@, the timer is set and an event is sent to the server.
+- **Subsequent calls** before the timer expires result in a no-op.
+- After the timer expires, a new typing event is sent and the timer is reset.
+- If @stop()@ is called, the timer is reset and a @typing.stopped@ event is sent to the server.
+
+You can configure the length of this timer using the @heartbeatThrottleMs@ parameter in @RoomOptions@ (default: **10,000ms**).
+It is recommended that you call @start()@ with every keypress, and the SDK will handle when and if to send a typing indicator to the server.
+
+h3(#emulating-heartbeats). Emulating User Behavior
+
+If needed, you can emulate user behavior (e.g., in chatbots) by setting a timeout to call @start()@ at intervals equal to the @heartbeatThrottleMs@ plus a small delay, e.g. 200ms. This will ensure the typing indicator remains active.
+
+h3(#grace-period). Grace Period for Typing Events
+
+For the recipient of typing events:
+- The typing indicator remains active for the **duration** defined by the @heartbeatThrottleMs@ parameter, plus a predefined **2000ms grace period**.
+- Receiving a new typing event before the grace period ends will reset the timeout.
+- If the grace period ends without receiving a new typing event, the SDK will emit a @typing.stopped@ event for that client to any subscribed listeners.
+
+**For example:** With the @heartbeatThrottleMs@ set to **10,000ms**, the typing indicator remains active for **12,000ms**. If no new typing event is received within this time, the SDK will emit a @typing.stopped@ event.
+
+h3(#adjusting-timeout). Adjusting the Event Frequency
+
+You can adjust the @heartbeatThrottleMs@ parameter to balance responsiveness and resource costs:
+- **Increase responsiveness**: Lower the value → More typing events are sent to the server → Higher cost as more messages are sent.
+- **Save resource costs**: Raise the value → Fewer typing events are sent to the server → Lower responsiveness, but less cost as fewer messages are sent overall.
+
+This balance allows you to optimize cost and responsiveness based on your applications needs.
+
+<aside data-type='note'>
+<p>All clients in a room must have the same timeout value configured. If not, typing indicators might not display correctly.</p>
+</aside>
+
 h2(#retrieve). Retrieve a list of users that are currently typing
 
 blang[javascript,swift,kotlin].
@@ -224,7 +251,7 @@ blang[javascript,swift,kotlin].
   ```
 
   ```[swift]
-  let currentlyTypingClientIds = try room.typing.get()
+  let currentlyTypingClientIds = try await room.typing.get()
   ```
 
   ```[kotlin]
