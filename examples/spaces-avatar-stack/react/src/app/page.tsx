@@ -12,8 +12,10 @@ export type Member = Omit<SpaceMember, "profileData"> & {
 };
 
 export default function Home() {
+  /** 💡 Get a handle on a space instance 💡 */
   const { space } = useSpace();
 
+  /** 💡 Enter the space as soon as it's available 💡 */
   useEffect(() => {
     space?.enter({
       name: faker.person.firstName() + ' ' + faker.person.lastName(),
@@ -25,18 +27,21 @@ export default function Home() {
     };
   }, [space]);
 
+  /** 💡 Get everybody in the space including the local member 💡 */
   const { others, self } = useMembers();
   const hasMoreUsers = others.length > 3;
 
   return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="flex items-center space-x-[-8px]">
+        {/** 💡 Add your avatar to the stack.💡 */}
         {self && (
           <div className="relative" key={self.clientId}>
             <Avatar user={self as Member} isSelf={true} />
           </div>
         )}
 
+        {/** 💡 Stack of first 4 user avatars excluding yourself.💡 */}
         {others.slice(0, 4).map((other) => {
           return (
             <div className="relative z-10" key={other.clientId}>

@@ -20,6 +20,7 @@ async function connect() {
   const spaces = new Spaces(client);
   const space = await spaces.get(spaceName);
 
+  /** 💡 Add every avatar that enters 💡 */
   space.members.subscribe(['leave', 'remove'], (memberUpdate: SpaceMember) => {
     const avatar = document.querySelector(`[data-member-id="${memberUpdate.clientId}"]`);
     if (avatar) {
@@ -38,6 +39,7 @@ async function connect() {
     renderAvatar(member, true);
   });
 
+  /** 💡 Enter the space as soon as it's available 💡 */
   space
     .enter({
       name: faker.person.firstName() + ' ' + faker.person.lastName(),
@@ -45,11 +47,11 @@ async function connect() {
     })
     .then(async () => {
       const otherMembers = await space.members.getOthers();
-      // Only render the first 4 other members
+      /** 💡 Get first four except the local member in the space 💡 */
       otherMembers.slice(0, 4).forEach((member) => {
         renderAvatar(member as Member);
       });
-      // If there are more than 4 others, show the counter
+      /** 💡 Get a count of the number exceeding four and display as a single tally 💡 */
       if (otherMembers.length > 4) {
         renderExceedingCounter(otherMembers);
       }

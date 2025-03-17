@@ -104,6 +104,7 @@ async function connect() {
   const spaceName = urlParams.get('name') || 'spaces-component-locking';
   space = await spaces.get(spaceName);
 
+  /** 💡 Enter the space as soon as it's available 💡 */
   await space.enter({
     memberName: faker.person.fullName(),
     memberColor: faker.color.rgb({ format: 'hex', casing: 'lower' }),
@@ -119,7 +120,9 @@ async function connect() {
     });
   }
 
+  /** 💡 Subscribe to all component updates 💡 */
   space.locks.subscribe('update', async (componentUpdate) => {
+    /** 💡 Update form on each components update 💡 */
     await updateComponent(componentUpdate);
   });
 }

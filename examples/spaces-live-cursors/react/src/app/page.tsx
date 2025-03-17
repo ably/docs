@@ -21,16 +21,18 @@ export const colors = [
   { cursorColor: "#ec4899" },
 ];
 
-
+/** 💡 Select a mock name to assign randomly to a new user that enters the space💡 */
 const mockName = () => mockNames[Math.floor(Math.random() * mockNames.length)];
 
 export default function Home() {
   const name = useMemo(mockName, []);
+  /** 💡 Select a color to assign randomly to a new user that enters the space💡 */
   const userColors = useMemo(
     () => colors[Math.floor(Math.random() * colors.length)],
     [],
   );
 
+  /** 💡 Get a handle on a space instance 💡 */
   const { space } = useSpace();
 
   useEffect(() => {

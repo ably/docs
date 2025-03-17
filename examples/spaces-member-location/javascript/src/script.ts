@@ -54,15 +54,19 @@ async function connect() {
   const spaces = new Spaces(client);
   space = await spaces.get(spaceName);
 
+  /** 💡 Enter the space as soon as it's available 💡 */
   await space.enter({
     memberName: faker.person.fullName(),
     memberColor: faker.color.rgb({ format: 'hex', casing: 'lower' }),
   });
 
+  /** 💡 Subscribe to all locations updates 💡 */
   space.locations.subscribe('update', async () => {
+    /** 💡 Update spreadsheet on each locations update 💡 */
     await refreshSpreadsheet();
   });
 
+  /** 💡 Render initial spreadsheet page load 💡 */
   await refreshSpreadsheet();
 }
 
@@ -141,6 +145,7 @@ async function refreshSpreadsheet() {
   const spreadsheetElement = document.getElementById('sheet-body');
 
   if (spreadsheetElement) {
+    // Clear the existing content before appending the new spreadsheet
     spreadsheetElement.innerHTML = '';
     spreadsheetElement.appendChild(spreadsheet);
   }

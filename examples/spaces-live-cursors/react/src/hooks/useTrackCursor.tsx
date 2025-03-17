@@ -61,8 +61,6 @@ const useTrackCursor = (
       container.removeEventListener("mouseleave", handleSelfCursorLeave);
     };
   }, [set, parentRef]);
-
-  return () => {};
 };
 
 export default useTrackCursor;

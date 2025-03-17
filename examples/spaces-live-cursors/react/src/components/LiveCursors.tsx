@@ -8,6 +8,7 @@ export type Member = Omit<SpaceMember, "profileData"> & {
   profileData: { userColors: { cursorColor: string; }; name: string };
 };
 
+// 💡 This component is used to render the cursor of the user
 const YourCursor = ({
   self,
   parentRef,
@@ -47,6 +48,7 @@ const YourCursor = ({
   );
 };
 
+// 💡 This component is used to render the cursors of other users in the space
 const MemberCursors = () => {
   const { cursors } = useCursors({ returnCursors: true });
 

@@ -28,7 +28,6 @@ const Spreadsheet = ({
   setLocation: (location: Member["location"]) => void;
 }) => {
   const handleClick = (row: number, col: number) => {
-    console.log('Updating location:', { row, col });
     setLocation({ row, col });
   };
 

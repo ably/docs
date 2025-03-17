@@ -18,8 +18,10 @@ const entries = [
 ];
 
 export default function Home() {
+  /** 💡 Get a handle on a space instance 💡 */
   const { space } = useSpace();
 
+  /** 💡 Enter the space as soon as it's available 💡 */
   useEffect(() => {
     space?.enter({
       memberName: faker.person.fullName(),
