@@ -5,9 +5,9 @@ import UserContext from 'src/contexts/user-context';
 import { getApiKey } from 'src/utilities/update-ably-connection-keys';
 import Icon from '@ably/ui/core/Icon';
 import ExamplesRenderer from 'src/components/Examples/ExamplesRenderer';
-import Button from '@ably/ui/core/Button';
 import { Link } from 'gatsby';
 import { LanguageKey } from 'src/data/languages/types';
+import LinkButton from '@ably/ui/core/LinkButton';
 
 const MarkdownOverrides = {
   h1: {
@@ -117,12 +117,17 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
           </div>
         ) : null}
         <div className="flex flex-col gap-8 w-full md:w-[260px] order-1 md:order-2 md:sticky md:top-80 self-start">
-          <Button variant="secondary" rightIcon="icon-social-github">
+          <LinkButton
+            href={`https://github.com/ably/docs/tree/main/examples/${example.id}/${activeLanguage}`}
+            target="_blank"
+            variant="secondary"
+            rightIcon="icon-social-github"
+          >
             View on GitHub
-          </Button>
-          <Button variant="secondary" rightIcon="icon-gui-code-bracket-outline">
+          </LinkButton>
+          <LinkButton href={'#'} variant="secondary" rightIcon="icon-gui-code-bracket-outline">
             View on CodeSandbox
-          </Button>
+          </LinkButton>
         </div>
       </div>
     </>
