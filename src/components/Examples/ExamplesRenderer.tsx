@@ -87,7 +87,7 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
         }}
         theme={githubLight}
         template={determineSandpackTemplate(activeLanguage as LanguageKey)}
-        className="flex flex-col md:flex-row gap-16 [&>div:first-child]:flex-1"
+        className="!flex flex-col md:flex-row gap-16 [&>div:first-child]:flex-1"
       >
         <CodeEditor
           theme="light"
