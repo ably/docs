@@ -25,7 +25,7 @@ export default function Home() {
   const { self, others } = useMembers();
   const { update } = useLocations();
 
-  // /** 💡 Enter the space as soon as it's available 💡 */
+  /** 💡 Enter the space as soon as it's available 💡 */
   useEffect(() => {
     space?.enter({
       memberName: faker.person.fullName(),
@@ -34,14 +34,11 @@ export default function Home() {
   }, [space]);
 
   return (
-    <div
-      id="member-location"
-      className='container'
-    >
+    <div id="member-location" className="uk-container uk-padding">
       <Spreadsheet
         self={self as Member}
         others={others as Member[]}
-        setLocation={update as UpdateLocationCallback}
+        setLocation={update}
       />
     </div>
   );

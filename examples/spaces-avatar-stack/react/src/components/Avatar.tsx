@@ -20,26 +20,26 @@ const UserInfo: FunctionComponent<{ user: Member; isSelf?: boolean }> = ({
     : user.profileData.name;
 
   return (
-    <div className="wrapper">
-      <div
-        style={{
-          backgroundColor: user.profileData.memberColor,
-        }}
-        className="user-info-container"
-        id="avatar"
-      >
-        <p
-          style={{ color: "#fff" }}
-          className="small-text"
+  <div className="absolute left-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-[200px]">
+    <div className="uk-card uk-card-default uk-card-body p-2 rounded shadow-lg bg-white">
+      <div className="flex items-center space-x-2">
+        <div
+          style={{
+            backgroundColor: user.profileData.memberColor,
+          }}
+          className="rounded-full w-[40px] h-[40px] flex items-center justify-center"
         >
-          {initials}
-        </p>
-      </div>
+          <p className="text-white text-sm font-medium">
+            {initials}
+          </p>
+        </div>
 
-      <div id="user-list" className="user-list">
-        <p className="name">{name}</p>
+        <div className="flex flex-col">
+          <p className="text-sm font-medium">{name}</p>
+        </div>
       </div>
     </div>
+  </div>
   );
 };
 
@@ -52,21 +52,36 @@ export function Avatar({ user, isSelf }: { user: Member, isSelf: boolean }) {
     .join("");
 
   return (
-    <div className="avatar-container">
+    <div className="relative group">
       <div
         key={user.clientId}
-        className="avatar"
+        className="rounded-full w-10 h-10 flex items-center justify-center cursor-pointer"
         style={{
           backgroundColor: user.profileData.memberColor
         }}
         onMouseOver={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
-        id="avatar"
       >
-        <p className={"text-white name-others"}>{userInitials}</p>
+        <p className="text-white text-sm font-medium">{userInitials}</p>
       </div>
-      <div className="popup">
-        <UserInfo user={user} isSelf={isSelf} />
+
+      {/* Single popup container */}
+      <div className="absolute left-0 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 w-[200px]">
+        <div className="uk-card uk-card-default uk-card-body p-2 rounded shadow-lg bg-white">
+          <div className="flex items-center space-x-2">
+            <div
+              style={{
+                backgroundColor: user.profileData.memberColor,
+              }}
+              className="rounded-full w-[40px] h-[40px] flex items-center justify-center"
+            >
+              <p className="text-white text-sm font-medium">{userInitials}</p>
+            </div>
+            <div className="flex flex-col">
+              <p className="text-sm font-medium">{user.profileData.name}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

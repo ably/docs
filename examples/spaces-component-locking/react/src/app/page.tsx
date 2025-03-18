@@ -6,7 +6,6 @@ import type { SpaceMember } from "@ably/spaces";
 import { AblyPoweredInput } from "@/components/AblyPoweredInput";
 import { ChannelProvider } from "ably/react";
 import { faker } from '@faker-js/faker';
-import '../../styles/styles.css';
 
 export type Member = Omit<SpaceMember, "profileData"> & {
   profileData: { memberColor: string; memberName: string };
@@ -31,11 +30,8 @@ export default function Home() {
   }, [space]);
 
   return (
-    <div
-      id="component-locking"
-      className="container"
-    >
-      <div className="inner">
+    <div className="min-h-screen flex items-center justify-center p-8">
+      <div className="flex flex-col space-y-4 w-full max-w-md">
         {entries.map((entry) => {
           return (
             <ChannelProvider

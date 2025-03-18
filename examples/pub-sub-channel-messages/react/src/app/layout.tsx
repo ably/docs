@@ -5,6 +5,17 @@ import { Realtime } from 'ably';
 import { AblyProvider, ChannelProvider } from 'ably/react';
 import { nanoid } from 'nanoid';
 import '../../styles/styles.css';
+import dynamic from 'next/dynamic';
+
+// @ts-ignore
+dynamic(() => import('franken-ui/js/core.iife'), {
+  ssr: false,
+});
+
+// @ts-ignore
+dynamic(() => import('franken-ui/js/icon.iife'), {
+  ssr: false,
+});
 
 const inter = Inter({ subsets: ["latin"] });
 

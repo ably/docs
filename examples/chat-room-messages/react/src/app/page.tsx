@@ -62,13 +62,13 @@ const Chat = () => {
               placeholder="Type something..."
               onChange={(e) => setMessage(e.target.value)}
               value={message}
-              className="w-full focus:outline-none focus:placeholder-gray-400 text-gray-600 placeholder-gray-600 pl-2 pr-2 bg-gray-200 rounded-l-md py-1 italic"
+              className="uk-input uk-width-1-1 uk-border-rounded-left"
               autoFocus
             />
-            <div className="items-center inset-y-0 flex">
+            <div className="items-center inset-y-0 flex ml-2">
               <button
                 type="submit"
-                className="inline-flex items-center justify-center rounded-r-md px-3 py-1 transition duration-500 ease-in-out text-white bg-blue-500 hover:bg-blue-400 focus:outline-none"
+                className="uk-btn uk-btn-primary uk-border-rounded-right"
               >
                 Send
                 <svg

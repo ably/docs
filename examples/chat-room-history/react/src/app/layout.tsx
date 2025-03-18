@@ -6,6 +6,17 @@ import { ChatClient, ChatClientProvider, ChatRoomProvider, AllFeaturesEnabled } 
 import { faker } from '@faker-js/faker';
 import '../../styles/styles.css'
 import { useEffect, useState } from "react";
+import dynamic from 'next/dynamic';
+
+// @ts-ignore
+dynamic(() => import('franken-ui/js/core.iife'), {
+  ssr: false,
+});
+
+// @ts-ignore
+dynamic(() => import('franken-ui/js/icon.iife'), {
+  ssr: false,
+});
 
 const inter = Inter({ subsets: ["latin"] });
 

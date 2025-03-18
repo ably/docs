@@ -54,34 +54,35 @@ async function connect() {
   const spaces = new Spaces(client);
   space = await spaces.get(spaceName);
 
-  // /** 💡 Enter the space as soon as it's available 💡 */
+  /** 💡 Enter the space as soon as it's available 💡 */
   await space.enter({
     memberName: faker.person.fullName(),
     memberColor: faker.color.rgb({ format: 'hex', casing: 'lower' }),
   });
 
-  // /** 💡 Subscribe to all locations updates 💡 */
+  /** 💡 Subscribe to all locations updates 💡 */
   space.locations.subscribe('update', async () => {
-    // /** 💡 Update spreadsheet on each locations update 💡 */
+    /** 💡 Update spreadsheet on each locations update 💡 */
     await refreshSpreadsheet();
   });
 
-  // /** 💡 Render initial spreadsheet page load 💡 */
+  /** 💡 Render initial spreadsheet page load 💡 */
   await refreshSpreadsheet();
 }
+
 const getMemberProperty = (cellMembers: Member[], property: 'memberColor' | 'memberName'): string | null => {
   if (cellMembers.length > 0 && cellMembers[0]?.profileData && property in cellMembers[0].profileData) {
     return cellMembers[0].profileData[property];
   }
   return null;
 };
+
 function handleClick(row: number, col: number) {
   setLocation({ row, col });
 }
 
 function buildCell(value: string, rowIndex: number, colIndex: number, cellMembers: Member[], self: Member) {
   const selfInCell = self.location?.row === rowIndex && self.location?.col === colIndex;
-
   const labelColor = selfInCell ? self.profileData.memberColor : getMemberProperty(cellMembers, 'memberColor');
   const memberName = selfInCell ? 'You' : getMemberProperty(cellMembers, 'memberName');
   const additionalCellMembers = cellMembers.length + (selfInCell ? 0 : -1);
@@ -90,24 +91,21 @@ function buildCell(value: string, rowIndex: number, colIndex: number, cellMember
   const cellTd = document.createElement('td');
   cellTd.setAttribute('key', `${rowIndex}-${colIndex}`);
 
-  cellTd.style.setProperty('--info-bg-color', labelColor || '');
-  cellTd.style.setProperty('--member-color', self?.profileData.memberColor || '');
-  cellTd.style.setProperty('--cell-member-color', cellMembers[0]?.profileData.memberColor || '');
-  cellTd.style.backgroundColor = selfInCell ? 'white' : '#EDF1F6';
-
-  let className = 'cell';
-  if (cellMembers.length > 0 && !selfInCell) className += ' cell-members';
-  if (!selfInCell && cellMembers.length === 0) className += ' rest';
-  if (selfInCell) className += ' cell-self';
-  cellTd.className = className;
+  cellTd.className = `uk-table-middle border border-gray-300 p-2 cursor-pointer transition-colors relative
+    ${selfInCell ? 'bg-white' : 'bg-gray-50'}
+    ${cellMembers.length > 0 && !selfInCell ? 'uk-box-shadow-small' : ''}
+    hover:bg-gray-100`;
 
   cellTd.addEventListener('click', () => handleClick(rowIndex, colIndex));
-
-  if (memberName) {
-    cellTd.setAttribute('data-name-content', memberName ? cellLabel || '' : '');
-  }
-
   cellTd.textContent = value;
+
+  if (memberName || cellMembers.length > 0) {
+    const nameLabel = document.createElement('div');
+    nameLabel.className = 'absolute top-0 right-0 px-2 py-1 text-white text-sm rounded-bl';
+    nameLabel.style.backgroundColor = labelColor || 'gray';
+    nameLabel.textContent = cellLabel || '';
+    cellTd.appendChild(nameLabel);
+  }
 
   return cellTd;
 }
@@ -117,11 +115,10 @@ async function buildSpreadsheet(otherMembers: Member[], self: Member) {
 
   for (const [rowIndex, row] of cellData.entries()) {
     const sheetRow = document.createElement('tr');
-    sheetRow.setAttribute('key', rowIndex.toString());
+    sheetRow.className = 'uk-table-middle';
 
     const sheetTd = document.createElement('td');
-    sheetTd.className = 'td';
-    sheetTd.setAttribute('key', rowIndex.toString());
+    sheetTd.className = 'uk-text-bold uk-text-center uk-background-muted border border-gray-300 p-2';
     sheetTd.textContent = (rowIndex + 1).toString();
     sheetRow.appendChild(sheetTd);
 

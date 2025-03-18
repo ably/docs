@@ -44,7 +44,7 @@ export default function Home() {
         <div className="flex justify-center items-center">
           <button
             onClick={handleDetach}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded mb-4"
+            className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded"
           >
             Click to detach
           </button>
@@ -53,7 +53,7 @@ export default function Home() {
         <div className="flex justify-center items-center">
           <button
             onClick={handleAttach}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
+            className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded"
           >
             Click to attach
           </button>

@@ -6,6 +6,17 @@ import { AblyProvider, ChannelProvider } from 'ably/react';
 import { nanoid } from 'nanoid';
 import '../../styles/styles.css';
 import { useEffect, useState } from "react";
+import dynamic from 'next/dynamic';
+
+// @ts-ignore
+dynamic(() => import('franken-ui/js/core.iife'), {
+  ssr: false,
+});
+
+// @ts-ignore
+dynamic(() => import('franken-ui/js/icon.iife'), {
+  ssr: false,
+});
 
 const inter = Inter({ subsets: ["latin"] });
 const client = new Realtime({key: process.env.NEXT_PUBLIC_ABLY_KEY, clientId: nanoid()});

@@ -20,7 +20,7 @@ export default function Home() {
     space?.enter({
       name: faker.person.firstName() + ' ' + faker.person.lastName(),
       memberColor: faker.color.rgb({ format: 'hex', casing: 'lower' }),
-     });
+    });
 
     return () => {
       space?.leave();
@@ -32,33 +32,29 @@ export default function Home() {
   const hasMoreUsers = others.length > 3;
 
   return (
-    <div className="avatar-stack-container">
-      <div className="avatars">
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center space-x-[-8px]">
         {/** 💡 Add your avatar to the stack.💡 */}
         {self && (
-          <div className="self-avatar" key={self.clientId}>
+          <div className="relative" key={self.clientId}>
             <Avatar user={self as Member} isSelf={true} />
           </div>
         )}
 
         {/** 💡 Stack of first 4 user avatars excluding yourself.💡 */}
-        {others.slice(0, 4).map(( other ) => {
+        {others.slice(0, 4).map((other) => {
           return (
-            <div className="other-avatar" key={other.clientId}>
+            <div className="relative z-10" key={other.clientId}>
               <Avatar user={other as Member} isSelf={false} />
             </div>
           );
         })}
 
-        {hasMoreUsers &&
-          <div className="avatar"
-            style={{
-              backgroundColor: '#595959'
-            }}
-          >
-            <p className="text-white name-others">+{others.length-4}</p>
+        {hasMoreUsers && (
+          <div className="rounded-full w-10 h-10 flex items-center justify-center bg-gray-600 relative z-20">
+            <p className="text-white text-sm">+{others.length-4}</p>
           </div>
-        }
+        )}
       </div>
     </div>
   );

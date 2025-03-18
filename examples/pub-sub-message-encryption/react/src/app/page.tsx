@@ -79,31 +79,21 @@ function EncodedMessages() {
       <div className="w-1/2 h-1/2 flex flex-col space-y-4">
         <h2 className="text-xl font-bold text-center mb-4">Client without an encryption key</h2>
         <div className="flex space-x-2">
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Enter your message"
-            className="
-              w-full
-              px-4
-              py-2
-              border
-              border-gray-300
-              rounded-md
-              focus:outline-none
-              focus:ring-2
-              focus:ring-blue-500
-            "
-          />
-          <button
-            id="publish-button"
-            onClick={publishMessage}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
-            disabled={!message.trim()}
-          >
-            Publish
-          </button>
+        <input
+          type="text"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Enter your message"
+          className="uk-input uk-width-1-1 uk-border-rounded-left h-10"
+        />
+        <button
+          id="publish-button"
+          onClick={publishMessage}
+          className="uk-btn uk-btn-primary rounded h-10"
+          disabled={!message.trim()}
+        >
+          Publish
+        </button>
         </div>
 
         <div className="h-full border rounded-lg overflow-y-auto bg-white shadow-lg">
@@ -146,30 +136,12 @@ function DecodedMessages() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Enter your message"
-            className="
-              flex-grow
-              px-4
-              py-2
-              border
-              border-gray-300
-              rounded-md
-              focus:outline-none
-              focus:ring-2
-              focus:ring-blue-500
-            "
+            className="uk-input uk-width-1-1 uk-border-rounded-left h-10"
           />
           <button
             id="publish-button"
             onClick={publishMessage}
-            className="
-              bg-blue-500
-              hover:bg-blue-600
-              text-white
-              font-bold
-              py-2
-              px-4
-              rounded
-            "
+            className="uk-btn uk-btn-primary rounded h-10"
             disabled={!message.trim()}
           >
             Publish

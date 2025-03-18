@@ -3,7 +3,6 @@ import type { SpaceMember, CursorUpdate } from "@ably/spaces";
 import { useCursors } from "@ably/spaces/react";
 import CursorSvg from "./CursorSvg";
 import useTrackCursor from "../hooks/useTrackCursor";
-import '../../styles/styles.css'
 
 export type Member = Omit<SpaceMember, "profileData"> & {
   profileData: { userColors: { cursorColor: string; }; name: string };
@@ -22,7 +21,9 @@ const YourCursor = ({
     top: number;
     state: string;
   } | null>(null);
-  const handleSelfCursorMove = useTrackCursor(setCursorPosition, parentRef);
+
+  useTrackCursor(setCursorPosition, parentRef);
+
   if (!self) return null;
   if (!cursorPosition || cursorPosition.state === "leave") return null;
 
@@ -30,8 +31,7 @@ const YourCursor = ({
 
   return (
     <div
-      className="cursor"
-      onMouseMove={(e) => handleSelfCursorMove(e)}
+      className="uk-position-absolute uk-animation-fade pointer-events-none"
       style={{
         top: `${cursorPosition?.top || 0}px`,
         left: `${cursorPosition?.left || 0}px`,
@@ -40,7 +40,7 @@ const YourCursor = ({
       <CursorSvg cursorColor={cursorColor} />
       <div
         style={{ backgroundColor: cursorColor }}
-        className="cursor-name"
+        className="uk-badge uk-position-relative text-white transform translate-x-4 -translate-y-1 px-3 py-2"
       >
         You
       </div>
@@ -59,11 +59,12 @@ const MemberCursors = () => {
         const member = data.member as Member;
         if (cursorUpdate.data?.state === "leave") return;
         const { cursorColor } = member.profileData.userColors;
+
         return (
           <div
             key={member.connectionId}
             id={`member-cursor-${member.connectionId}`}
-            className="cursor"
+            className="uk-position-absolute uk-animation-fade pointer-events-none"
             style={{
               left: `${cursorUpdate.position.x}px`,
               top: `${cursorUpdate.position.y}px`,
@@ -72,7 +73,7 @@ const MemberCursors = () => {
             <CursorSvg cursorColor={cursorColor} />
             <div
               style={{ backgroundColor: cursorColor }}
-              className="cursor-name member-cursor"
+              className="uk-badge uk-position-relative text-white transform translate-x-4 -translate-y-1 px-3 py-2"
             >
               {member.profileData.name}
             </div>

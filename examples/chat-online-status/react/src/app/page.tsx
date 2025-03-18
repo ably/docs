@@ -57,11 +57,11 @@ const Online = () => {
           .map(userStatus => (
             <button
               key={clientId}
-              className="away-button w-32"
+              className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded w-full min-w-[120px]"
               onClick={async () =>
-                await update({
-                  status: (userStatus.data as OnlineStatus)?.status === 'Away' ? 'Online' : 'Away'
-                })
+              await update({
+              status: (userStatus.data as OnlineStatus)?.status === 'Away' ? 'Online' : 'Away'
+              })
               }
             >
               {(userStatus.data as OnlineStatus)?.status === 'Away' ? 'Show online' : 'Set away'}

@@ -40,13 +40,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-96">
-        <h2 className="text-2xl mb-6 text-center">Welcome to the auction</h2>
+      <div className="bg-white p-8 rounded-lg shadow-lg w-96 text-center">
+        <h2 className="text-2xl mb-6">Welcome to the auction</h2>
         <p>Click the button below to add some historical bids.</p>
-        <div className="flex flex-col gap-4">
+        <div className="inline-flex flex-col gap-4 items-center">
           <button
             onClick={() => preloadBiddingHistory()}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            className="uk-btn uk-btn-lg uk-btn-primary"
           >
             Pre-load bidding history
           </button>
