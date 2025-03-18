@@ -80,7 +80,7 @@ export default {
         },
         {
           link: '/docs/api/chat-rest',
-          name: 'Chat REST API',
+          name: 'REST API',
         },
       ],
     },
