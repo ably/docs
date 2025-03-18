@@ -1,11 +1,13 @@
 import React, { useCallback } from 'react';
+import { navigate } from 'gatsby';
 import Badge from '@ably/ui/core/Badge';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import { ProductName, products as dataProducts } from '@ably/ui/core/ProductTile/data';
 import cn from '@ably/ui/core/utils/cn';
 import { Image, ImageProps } from '../Image';
-import examplesData, { Example } from '../../data/examples';
+import { DEFAULT_EXAMPLE_LANGUAGES, UseCase, useCases as useCasesData } from '../../data/examples/';
+import { Example } from '../../data/examples/types';
 
 const ExamplesGrid = ({
   examples = [],
@@ -16,9 +18,9 @@ const ExamplesGrid = ({
   exampleImages: ImageProps[];
   searchTerm: string;
 }) => {
-  const displayExampleImage = useCallback((exampleImages: ImageProps[], selectedImage: string, productName: string) => {
-    const productImage = exampleImages.find((image) => image.name === selectedImage);
-    return productImage ? <Image image={productImage} alt={productName} className="h-full" /> : null;
+  const displayExampleImage = useCallback((exampleImages: ImageProps[], id: string, name: string) => {
+    const productImage = exampleImages.find((image) => image.name === id);
+    return productImage ? <Image image={productImage} alt={name} className="h-full" /> : null;
   }, []);
 
   const badgeColorForProduct = useCallback((product: ProductName) => {
@@ -49,10 +51,10 @@ const ExamplesGrid = ({
   );
 
   const displayUseCaseLabel = useCallback(
-    (useCase: string, useCases: { [key: string]: { label: string } }) =>
-      useCases ? (
+    (useCase: UseCase) =>
+      useCasesData[useCase] ? (
         <Badge key={useCase} className="uppercase">
-          {useCases[useCase].label}
+          {useCasesData[useCase].label}
         </Badge>
       ) : null,
     [],
@@ -77,18 +79,20 @@ const ExamplesGrid = ({
 
   return (
     <div className="grid grid-cols-[repeat(auto-fill,_minmax(260px,_1fr))] gap-x-20 gap-y-32">
-      {examples.map(({ name, description, languages, products, useCases, image }, key) => (
-        <div className="w-full relative overflow-hidden group/examples-index-card" key={`${name}-${key}`}>
+      {examples.map(({ id, name, description, languages, products, useCases }, key) => (
+        <div
+          onClick={() => navigate(`/docs/examples/${id}`)}
+          className="w-full relative overflow-hidden group/examples-index-card cursor-pointer"
+          key={`${name}-${key}`}
+        >
           <div className="z-0 bg-neutral-100 overflow-hidden h-256 sm:h-200 relative flex justify-center items-center ">
             <div className="group-hover/examples-index-card:scale-105 transition-transform">
-              {exampleImages ? displayExampleImage(exampleImages, image, name) : null}
+              {exampleImages ? displayExampleImage(exampleImages, id, name) : null}
             </div>
             <div className="flex bg-neutral-000 gap-x-6 py-6 px-8 absolute right-12 bottom-12 rounded border border-neutral-200 z-10">
-              {languages
-                ? languages.map((language) => (
-                    <Icon key={language} name={`icon-tech-${language}` as IconName} size="18px" />
-                  ))
-                : null}
+              {(languages ?? DEFAULT_EXAMPLE_LANGUAGES).map((language) => (
+                <Icon key={language} name={`icon-tech-${language}` as IconName} size="18px" />
+              ))}
             </div>
           </div>
           <div className="z-10 pt-16">
@@ -96,7 +100,7 @@ const ExamplesGrid = ({
             <p className="ui-text-p3 mt-8 text-neutral-900">{highlightSearchTerm(description)}</p>
             <div className="mt-16 flex gap-x-4">
               {products ? products.map((product) => displayProductLabel(product as ProductName, dataProducts)) : null}
-              {useCases ? useCases.map((useCase) => displayUseCaseLabel(useCase, examplesData.useCases)) : null}
+              {useCases ? useCases.map((useCase) => displayUseCaseLabel(useCase)) : null}
             </div>
           </div>
         </div>

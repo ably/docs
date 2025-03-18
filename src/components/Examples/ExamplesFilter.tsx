@@ -8,7 +8,7 @@ import Badge from '@ably/ui/core/Badge';
 import ExamplesCheckbox from './ExamplesCheckbox';
 import { SelectedFilters } from './ExamplesContent';
 import { useOnClickOutside } from 'src/hooks';
-import examples from '../../data/examples';
+import { useCases } from '../../data/examples/';
 
 const ExamplesFilter = ({
   selected,
@@ -53,7 +53,7 @@ const ExamplesFilter = ({
       },
       {
         key: 'use-case',
-        data: examples.useCases,
+        data: useCases,
         selected: localSelected.useCases,
         handleSelect: (e: ChangeEvent<HTMLInputElement>) => handleSelect(e, 'useCases'),
       },

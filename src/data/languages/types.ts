@@ -1,5 +1,29 @@
-import languageInfo from './languageInfo';
+export const languageKeys = [
+  'javascript',
+  'react',
+  'java',
+  'ruby',
+  'python',
+  'php',
+  'shell',
+  'csharp',
+  'go',
+  'html',
+  'cpp',
+  'dart',
+  'swift',
+  'objc',
+  'nodejs',
+  'json',
+  'xml',
+  'sql',
+  'android',
+  'flutter',
+  'kotlin',
+  'realtime',
+  'rest',
+] as const;
 
-export type LanguageKey = (keyof typeof languageInfo)[number];
+export type LanguageKey = (typeof languageKeys)[number];
 
 export type LanguageData = Record<LanguageKey, number>;
