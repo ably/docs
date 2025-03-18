@@ -48,7 +48,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
       </section>
 
       <StaticImage
-        src="./images/GridPattern.png"
+        src="./images/pattern-grid.png"
         placeholder="blurred"
         width={660}
         height={282}
@@ -57,7 +57,7 @@ const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => 
       />
 
       <StaticImage
-        src="./images/GridMobile.png"
+        src="./images/mobile-grid.png"
         placeholder="blurred"
         width={260}
         alt="Grid Pattern"

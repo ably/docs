@@ -7,6 +7,7 @@ import { ExampleFiles, ExampleWithContent } from 'src/data/examples/types';
 import { updateAblyConnectionKey } from 'src/utilities/update-ably-connection-keys';
 import { IconName } from '@ably/ui/core/Icon/types';
 import SegmentedControl from '@ably/ui/core/SegmentedControl';
+import dotGrid from './images/dot-grid.svg';
 
 type ExamplesRendererProps = {
   example: ExampleWithContent;
@@ -113,6 +114,10 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
           {example.layout === 'ui-console' && <SandpackConsole className="flex-1" />}
         </div>
       </SandpackProvider>
+      <div
+        style={{ backgroundImage: `url(${dotGrid})` }}
+        className="absolute -z-10 top-[410px] left-0 w-full h-[360px] hidden sm:block"
+      />
     </div>
   );
 };

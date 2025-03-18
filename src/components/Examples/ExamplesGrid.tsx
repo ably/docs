@@ -18,9 +18,9 @@ const ExamplesGrid = ({
   exampleImages: ImageProps[];
   searchTerm: string;
 }) => {
-  const displayExampleImage = useCallback((exampleImages: ImageProps[], selectedImage: string, productName: string) => {
-    const productImage = exampleImages.find((image) => image.name === selectedImage);
-    return productImage ? <Image image={productImage} alt={productName} className="h-full" /> : null;
+  const displayExampleImage = useCallback((exampleImages: ImageProps[], id: string, name: string) => {
+    const productImage = exampleImages.find((image) => image.name === id);
+    return productImage ? <Image image={productImage} alt={name} className="h-full" /> : null;
   }, []);
 
   const badgeColorForProduct = useCallback((product: ProductName) => {
@@ -79,7 +79,7 @@ const ExamplesGrid = ({
 
   return (
     <div className="grid grid-cols-[repeat(auto-fill,_minmax(260px,_1fr))] gap-x-20 gap-y-32">
-      {examples.map(({ id, name, description, languages, products, useCases, image }, key) => (
+      {examples.map(({ id, name, description, languages, products, useCases }, key) => (
         <div
           onClick={() => navigate(`/docs/examples/${id}`)}
           className="w-full relative overflow-hidden group/examples-index-card cursor-pointer"
@@ -87,7 +87,7 @@ const ExamplesGrid = ({
         >
           <div className="z-0 bg-neutral-100 overflow-hidden h-256 sm:h-200 relative flex justify-center items-center ">
             <div className="group-hover/examples-index-card:scale-105 transition-transform">
-              {exampleImages ? displayExampleImage(exampleImages, image, name) : null}
+              {exampleImages ? displayExampleImage(exampleImages, id, name) : null}
             </div>
             <div className="flex bg-neutral-000 gap-x-6 py-6 px-8 absolute right-12 bottom-12 rounded border border-neutral-200 z-10">
               {(languages ?? DEFAULT_EXAMPLE_LANGUAGES).map((language) => (
