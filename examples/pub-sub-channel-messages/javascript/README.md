@@ -12,9 +12,9 @@ Messaging is implemented using [Ably Pub/Sub](/docs/channels/messages). The Pub/
 
 Use the following methods to send and receive messages in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
-* [`channel.subscribe()`](/docs/channels#subscribe): subscribes to channel messages events by registering a listener. Message events are emitted when a user publishes a message.
-* [`channel.publish`](/docs/channels#publish): emits a message event when the user publishes a message to the channel.
+- [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
+- [`channel.subscribe()`](/docs/channels#subscribe): subscribes to channel messages events by registering a listener. Message events are emitted when a user publishes a message.
+- [`channel.publish`](/docs/channels#publish): emits a message event when the user publishes a message to the channel.
 
 Find out more about [channels](/docs/channels) and [messages](/docs/channels/messages).
 
@@ -38,7 +38,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -56,4 +56,4 @@ yarn run pub-sub-channel-messages-javascript
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

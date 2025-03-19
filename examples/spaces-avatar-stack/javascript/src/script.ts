@@ -12,7 +12,7 @@ connect();
 async function connect() {
   const client = new Realtime({
     clientId: nanoid(),
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+    key: import.meta.env.VITE_ABLY_KEY as string,
   });
 
   const urlParams = new URLSearchParams(window.location.search);

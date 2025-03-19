@@ -16,7 +16,7 @@ app.use(
   }),
 );
 
-const ably = new Ably.Rest(process.env.VITE_PUBLIC_ABLY_KEY || '');
+const ably = new Ably.Rest(process.env.VITE_ABLY_KEY || '');
 
 app.get('/request-token', async (_req, res) => {
   console.log('1 - /request-token endpoint called');

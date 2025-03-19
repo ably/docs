@@ -16,7 +16,7 @@ preloadButton.addEventListener('click', async () => {
   for (let i = 0; i < numBids; i++) {
     const clientId = faker.person.firstName();
     const client = new Ably.Realtime({
-      key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+      key: import.meta.env.VITE_ABLY_KEY as string,
       clientId,
     });
     const channel = client.channels.get(urlParams.get('name') || 'pub-sub-history');
@@ -45,7 +45,7 @@ async function enterAuction() {
   auctionRoom.style.display = 'block';
 
   client = new Ably.Realtime({
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+    key: import.meta.env.VITE_ABLY_KEY as string,
     clientId: faker.person.firstName(),
   });
 

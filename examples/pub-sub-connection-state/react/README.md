@@ -10,7 +10,7 @@ Connection states is implemented using [Ably Pub/Sub](/docs/auth). The Pub/Sub S
 
 Use the following components to manage the connection state in a pub/sub application:
 
-* [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+- [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
 
 Find out more about [connection states](/docs/connect/states).
 
@@ -34,7 +34,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `NEXT_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -52,4 +52,4 @@ yarn run pub-sub-connection-state-react
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

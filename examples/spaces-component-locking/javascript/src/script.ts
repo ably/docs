@@ -22,7 +22,7 @@ const entries: Entry[] = [
 
 const client = new Realtime({
   clientId: nanoid(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 
 const handleFocus = async (event: FocusEvent) => {
@@ -69,7 +69,8 @@ function buildForm() {
 
     const formInput = document.createElement('input');
     formInput.id = entry.name;
-    formInput.className = 'uk-input w-full p-3 rounded-md transition-colors duration-200 bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
+    formInput.className =
+      'uk-input w-full p-3 rounded-md transition-colors duration-200 bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500';
     formInput.placeholder = 'Click to lock and edit me';
     formInput.name = entry.name;
     formInput.onfocus = handleFocus;

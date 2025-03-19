@@ -12,10 +12,10 @@ Avatar stack are implemented using [Ably Spaces](/docs/products/spaces). The Spa
 
 Use the following components to add avatar stack into an application:
 
-* [`SpacesProvider`](/docs/spaces/react#spaces-provider): initializes and manages a shared space client instance, passing it down through React context to enable realtime spaces functionality across the application.
-* [`SpaceProvider`](/docs/spaces/react#spaces-provider): manages the state and functionality of a specific space, providing access to realtime interactions within that space via React context.
-* [`useSpace()`](/docs/spaces/react#useSpace) hook: a hook to subscribe to the current Space, receive Space state events, and get the current Space instance.
-* [`useMembers()`](/docs/spaces/react#useMembers) hook: a hook to build avatar stacks. It retrieves members of the space, including members that have left the space, but have not yet been removed.
+- [`SpacesProvider`](/docs/spaces/react#spaces-provider): initializes and manages a shared space client instance, passing it down through React context to enable realtime spaces functionality across the application.
+- [`SpaceProvider`](/docs/spaces/react#spaces-provider): manages the state and functionality of a specific space, providing access to realtime interactions within that space via React context.
+- [`useSpace()`](/docs/spaces/react#useSpace) hook: a hook to subscribe to the current Space, receive Space state events, and get the current Space instance.
+- [`useMembers()`](/docs/spaces/react#useMembers) hook: a hook to build avatar stacks. It retrieves members of the space, including members that have left the space, but have not yet been removed.
 
 Find out more about [avatar stack](/docs/spaces/avatar).
 
@@ -39,7 +39,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `NEXT_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -57,4 +57,4 @@ yarn run spaces-avatar-stack-react
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

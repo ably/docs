@@ -10,9 +10,9 @@ Occupancy is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/
 
 Use the following components to access occupancy in a pub/sub application:
 
-* [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
-* [`ChannelProvider`](/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, history, presence, and realtime interactions within that channel via React context. By using channel options to enable occupancy, the channel will automatically update occupancy information.
-* [`useChannel()`](/docs/getting-started/react#useChannel) hook: a hook enabling users to subscribe to a channel and receive its messages. Whenever the occupancy is updated, the `useChannel()` hook will update the occupancy information.
+- [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+- [`ChannelProvider`](/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, history, presence, and realtime interactions within that channel via React context. By using channel options to enable occupancy, the channel will automatically update occupancy information.
+- [`useChannel()`](/docs/getting-started/react#useChannel) hook: a hook enabling users to subscribe to a channel and receive its messages. Whenever the occupancy is updated, the `useChannel()` hook will update the occupancy information.
 
 Find out more about [occupancy](/docs/presence-occupancy/occupancy).
 
@@ -36,7 +36,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `NEXT_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -51,8 +51,9 @@ yarn run pub-sub-occupancy-react
 ```
 
 7. Try it out by opening a tab to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
-****
+
+---
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

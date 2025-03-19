@@ -5,7 +5,7 @@ let client: Ably.Realtime | null = null;
 
 const connect = () => {
   const newClient = new Ably.Realtime({
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+    key: import.meta.env.VITE_ABLY_KEY as string,
     clientId: nanoid(),
   });
 

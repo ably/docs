@@ -31,7 +31,7 @@ function trackCursor(parentRef: HTMLDivElement, updatePosition: (position: Curso
 async function connect() {
   const client = new Realtime({
     clientId: nanoid(),
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+    key: import.meta.env.VITE_ABLY_KEY as string,
   });
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -74,7 +74,8 @@ async function connect() {
     memberCursorContainer.innerHTML = createCursorSvg(cursorColor?.cursorColor || '').outerHTML;
 
     const cursorNameContainer = document.createElement('div');
-    cursorNameContainer.className = 'uk-badge uk-position-relative text-white transform translate-x-4 -translate-y-1 px-3 py-2';
+    cursorNameContainer.className =
+      'uk-badge uk-position-relative text-white transform translate-x-4 -translate-y-1 px-3 py-2';
     cursorNameContainer.style.backgroundColor = cursorColor?.cursorColor || '';
     cursorNameContainer.textContent = member?.profileData?.['name'] || '';
 

@@ -4,7 +4,7 @@ import './styles.css';
 
 const client = new Ably.Realtime({
   clientId: nanoid(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 
 let headlines = [

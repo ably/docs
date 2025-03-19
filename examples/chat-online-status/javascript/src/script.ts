@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
 
 const realtimeClient = new Ably.Realtime({
   clientId: faker.person.firstName(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 const chatClient = new ChatClient(realtimeClient);
 

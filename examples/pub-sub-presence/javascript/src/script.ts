@@ -4,7 +4,7 @@ import './styles.css';
 
 const client = new Ably.Realtime({
   clientId: faker.person.firstName(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 const urlParams = new URLSearchParams(window.location.search);
 const channelName = urlParams.get('name') || 'pub-sub-presence';
