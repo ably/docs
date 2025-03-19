@@ -13,6 +13,7 @@ import {
 import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
 import UserContextWrapper from './src/contexts/user-context/wrap-with-provider';
 import { useSiteMetadata } from './src/hooks/use-site-metadata';
+import { MDXProvider } from '@mdx-js/react';
 
 const onClientEntry: GatsbyBrowser['onClientEntry'] = () => {
   setupObserver();
@@ -74,6 +75,20 @@ export const wrapRootElement = ({ element }) => {
     <InsightsWrapper>
       <UserContextWrapper element={element} />
     </InsightsWrapper>
+  );
+};
+
+export const wrapPageElement = ({ element, props }: { element: React.ReactNode }) => {
+  return (
+    <MDXProvider
+      components={{
+        h1: (props: any) => <h1 className="text-4xl font-bold mb-4" {...props} />,
+        h2: (props: any) => <h2 className="text-2xl font-semibold mb-3" {...props} />,
+      }}
+    >
+      <div className="max-w-md md:pr-24 md:border-r border-mid-grey">{JSON.stringify(props)}</div>
+      {element}
+    </MDXProvider>
   );
 };
 

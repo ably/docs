@@ -1,6 +1,5 @@
 import React from 'react';
 import { getSandpackCssText } from '@codesandbox/sandpack-react';
-
 const onRenderBody = ({ setHeadComponents }: { setHeadComponents: (components: React.ReactNode[]) => void }) => {
   const inlineScripts: React.ReactNode[] = [];
 
