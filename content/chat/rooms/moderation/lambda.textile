@@ -1,0 +1,91 @@
+---
+title: AWS Lambda
+meta_description: "Detect and remove unwanted content in a Chat Room using AWS Lambda."
+product: chat
+languages:
+  - javascript
+  - react
+  - swift
+  - kotlin
+---
+
+The AWS Lambda rule is a powerful way to bring your own moderation solution to Ably Chat. It allows you to run custom moderation logic or integrate with your preferred moderation provider by configuring an AWS Lambda function that will be invoked before messages are published to a chat room.
+
+This rule is particularly useful when you want to:
+* Integrate with a custom moderation service
+* Implement your own moderation logic
+* Use a moderation provider that isn't directly supported by Ably
+
+h2(#fields). Rule fields
+
+- AWS region := The region where your Lambda function is deployed.
+- Function name := The name of your AWS Lambda function.
+- AWS authentication scheme := The authentication method to use. Either @AWS Credentials@ or @ARN of an assumable role@. See the "Ably AWS authentication documentation":https://ably.com/docs/integrations/webhooks/lambda#aws-authentication.
+- Retry timeout := Maximum duration (in milliseconds) that an attempt to invoke the rule may take (including any retries).
+- Max retries := Maximum number of retries after the first attempt at invoking the rule.
+- Failed action := The action to take in the event that a rule fails to invoke. Options are reject the request or publish anyway.
+- Room filter (optional) := A regular expression to match to specific chat rooms.
+
+h2(#lambda_setup). Lambda Function Setup
+
+To use the AWS Lambda rule, you need to create a Lambda function that adheres to the following API contract:
+
+h3(#request). Request Format
+
+<pre><code class="json">{
+  "source": "string",
+  "appId": "string",
+  "roomId": "string",
+  "site": "string",
+  "ruleId": "string",
+  "message": {
+    "roomId": "string",
+    "clientId": "string",
+    "text": "string",
+    "metadata": {
+      "key": "any"
+    },
+    "headers": {
+      "key": "string"
+    }
+  }
+}</code></pre>
+
+h3(#response). Response Format
+
+Your Lambda function must return a response in the following format:
+
+<pre><code class="json">{
+  "statusCode": "integer",
+  "body": "{\"action\": \"accept|reject\", \"rejectionReason\": {\"key\": \"any\"}}"
+}</code></pre>
+
+* @statusCode@: The HTTP status code of the response
+* @body@: A JSON string containing the moderation decision
+  * @action@: Must be either @accept@ or @reject@
+  * @rejectionReason@: Optional. If provided with @action: "reject"@, it can contain any information about why the message was rejected. This information may be sent back to clients.
+
+h2(#rejections). Handling rejections
+
+Since the invocation of the Lambda function is synchronous relative to the publish operation, any rejection by the moderation function will result in the publish attempt being refused immediately. The rejection will use error code @42213@.
+
+h2(#best_practices). Best Practices
+
+When implementing your Lambda function, consider the following:
+
+* Keep your function execution time as low as possible to minimize latency
+* Implement proper error handling and logging
+* Consider implementing rate limiting if you're using a third-party moderation service
+* Use appropriate IAM roles and permissions for your Lambda function
+* Consider implementing caching for frequently occurring content
+
+h3(#error_handling). Error Handling
+
+The Lambda function can return two types of errors:
+
+* Retriable errors: HTTP status codes 429 (Too Many Requests) and 500-599 (Server Errors)
+* Non-retriable errors: All other HTTP status codes
+
+When a retriable error occurs, Ably will retry the invocation according to the configured retry settings. For non-retriable errors, the publish attempt will be refused immediately with the error.
+
+For more information on AWS Lambda integration with Ably, please refer to the "Ably AWS Lambda documentation":https://ably.com/docs/integrations/webhooks/lambda.
