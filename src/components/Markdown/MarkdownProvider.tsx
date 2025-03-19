@@ -89,7 +89,7 @@ const Pre: FC<JSX.IntrinsicElements['pre']> = ({ children }) => {
   );
 };
 
-const components = {
+const defaultComponents = {
   h1: H1,
   h2: H2,
   h3: H3,
@@ -101,6 +101,11 @@ const components = {
   pre: Pre,
 };
 
-export const MarkdownProvider = ({ children }: { children: React.ReactNode }) => (
-  <MDXProvider components={components}>{children}</MDXProvider>
-);
+export const MarkdownProvider = ({
+  children,
+  components,
+}: {
+  children: React.ReactNode;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  components: Record<string, React.FC<any>>;
+}) => <MDXProvider components={{ ...defaultComponents, ...components }}>{children}</MDXProvider>;
