@@ -70,6 +70,25 @@ interface ApiReferenceQueryResult {
   };
 }
 
+interface MdxEdge {
+  node: {
+    id: string;
+    frontmatter: {
+      slug: string;
+      title: string;
+    };
+    internal: {
+      contentFilePath: string;
+    };
+  };
+}
+
+interface MdxQueryResult {
+  allMdx: {
+    edges: MdxEdge[];
+  };
+}
+
 export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions: { createPage, createRedirect } }) => {
   /**
    * It's not ideal to have:
@@ -104,6 +123,26 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
       }
     }
   `);
+
+  const mdxResult = await graphql<MdxQueryResult>(`
+    query {
+      allMdx {
+        edges {
+          node {
+            id
+            frontmatter {
+              slug
+              title
+            }
+            internal {
+              contentFilePath
+            }
+          }
+        }
+      }
+    }
+  `);
+
   /**
    * We could log here, the reason we don't right now is that the error should already have been caught and logged.
    * Because Gatsby spawns a bunch of async processes during the onCreateNode step, though, and errors don't prevent
@@ -207,6 +246,30 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
       return slug;
     };
 
+  const mdxCreator = async (edge: MdxEdge): Promise<string> => {
+    const slug = edge.node.frontmatter.slug;
+
+    if (!slug) {
+      return slug;
+    }
+
+    const mdxWrapper = path.resolve('src/components/Layout/MDXWrapper.tsx');
+
+    console.log('cat', edge.node.frontmatter);
+
+    createPage({
+      path: slug,
+      component: `${mdxWrapper}?__contentFilePath=${edge.node.internal.contentFilePath}`,
+      context: {
+        slug,
+        title: edge.node.frontmatter.title,
+        layout: { sidebar: true, searchBar: true, template: 'base' },
+      },
+    });
+
+    return slug;
+  };
+
   createRedirect({
     fromPath: '/',
     toPath: '/docs',
@@ -230,8 +293,11 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     throw new Error('API reference result is undefined');
   }
 
+  console.log('lucie', mdxResult.data);
+
   await Promise.all([
     ...documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)),
     ...apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate)),
+    ...(mdxResult.data?.allMdx.edges.map(mdxCreator) ?? []),
   ]);
 };
