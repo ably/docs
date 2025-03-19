@@ -12,10 +12,10 @@ Avatar stack are implemented using [Ably Spaces](/docs/products/spaces). The Spa
 
 Use the following methods to add avatar stack into an application:
 
-* [`spaces.get()`](/docs/spaces/space#create): creates a new or retrieves an existing `space`.
-* [`space.member.subscribe()`](/docs/spaces/avatar#subscribe): subscribes to members' online status and profile updates by registering a listener.
-* [`space.enter()`](/docs/spaces/space#enter): entering a space will register a client as a member and emit an `enter` event to all subscribers.
-* [`space.members.getSelf()` and `space.members.getOthers()`](/docs/spaces/avatar#retrieve): retrieves the list of users currently active in the Space or have recently left but not yet been removed.
+- [`spaces.get()`](/docs/spaces/space#create): creates a new or retrieves an existing `space`.
+- [`space.member.subscribe()`](/docs/spaces/avatar#subscribe): subscribes to members' online status and profile updates by registering a listener.
+- [`space.enter()`](/docs/spaces/space#enter): entering a space will register a client as a member and emit an `enter` event to all subscribers.
+- [`space.members.getSelf()` and `space.members.getOthers()`](/docs/spaces/avatar#retrieve): retrieves the list of users currently active in the Space or have recently left but not yet been removed.
 
 Find out more about [avatar stack](/docs/spaces/avatar).
 
@@ -39,7 +39,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -57,4 +57,4 @@ yarn run spaces-avatar-stack-javascript
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

@@ -12,10 +12,10 @@ Presence is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/S
 
 Use the following methods to send and receive messages in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
-* [`channel.presence.subscribe()`](/docs/channels#subscribe): subscribes to presence events within a specific channel by registering a listener. Presence events are emitted when a user enters or leaves a presence set, or updates their status within the presence set.
-* [`channel.presence.get()`](/docs/presence-occupancy/presence#retrieve-members): retrieves a list of the users currently within that presence set.
-* [`channel.presence.enter()`, `channel.presence.leave()`, `channel.presence.update()`](/docs/presence-occupancy/presence#trigger-events): emits a presence event when a user enters or leaves a presence set, or updates their status within the the presence set.
+- [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
+- [`channel.presence.subscribe()`](/docs/channels#subscribe): subscribes to presence events within a specific channel by registering a listener. Presence events are emitted when a user enters or leaves a presence set, or updates their status within the presence set.
+- [`channel.presence.get()`](/docs/presence-occupancy/presence#retrieve-members): retrieves a list of the users currently within that presence set.
+- [`channel.presence.enter()`, `channel.presence.leave()`, `channel.presence.update()`](/docs/presence-occupancy/presence#trigger-events): emits a presence event when a user enters or leaves a presence set, or updates their status within the the presence set.
 
 Find out more about [presence](/docs/presence-occupancy/presence).
 
@@ -39,7 +39,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -57,4 +57,4 @@ yarn run pub-sub-presence-javascript
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.
