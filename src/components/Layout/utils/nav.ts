@@ -131,7 +131,7 @@ export const commonAccordionOptions = (
       {
         'my-12': topLevel && inHeader,
         'h-40 ui-text-menu1 !font-bold md:ui-text-menu4 px-16': topLevel,
-        'h-[1rem] ui-text-menu2 !font-semibold md:ui-text-menu4': !topLevel,
+        'min-h-[1.625em] md:min-h-[1.375em] ui-text-menu2 !font-semibold md:ui-text-menu4': !topLevel,
       },
     ),
     selectedHeaderCSS: '!text-neutral-1300 mb-8',
