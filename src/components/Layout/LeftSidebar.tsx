@@ -130,6 +130,26 @@ const constructProductNavData = (
     return {
       name: product.name,
       icon: activePageTree[0]?.page.name === product.name ? product.icon.open : product.icon.closed,
+      onClick: () => {
+        // When a product is clicked, find and scroll to any open accordion element
+        if (typeof document !== 'undefined') {
+          // Use setTimeout to ensure the DOM has updated after the click and animation has completed
+          setTimeout(() => {
+            const targetAccordion = window.innerWidth >= 1040 ? 'left-nav' : 'mobile-nav';
+            const menuContainer = document.getElementById(targetAccordion);
+            const openAccordion: HTMLElement | null = menuContainer
+              ? menuContainer.querySelector('[data-state="open"] > button')
+              : null;
+
+            if (openAccordion) {
+              menuContainer?.scrollTo({
+                top: openAccordion.offsetTop,
+                behavior: 'smooth',
+              });
+            }
+          }, 200);
+        }
+      },
       content: (
         <div key={product.name} className="flex flex-col gap-20 px-16 pt-12">
           {product.showJumpLink ? (
@@ -212,7 +232,7 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
         hasScrollbar ? 'md:pr-8' : 'md:pr-16',
       )}
       style={sidebarAlignmentStyles}
-      id="left-nav"
+      id={inHeader ? 'mobile-nav' : 'left-nav'}
       data={productNavData}
       {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}
     />
