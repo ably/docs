@@ -29,6 +29,14 @@ jest.mock('./LeftSidebar', () => ({
   default: jest.fn(() => <div>LeftSidebar</div>),
 }));
 
+jest.mock('@reach/router', () => ({
+  useLocation: jest.fn(),
+}));
+
+jest.mock('./LanguageSelector', () => ({
+  LanguageSelector: jest.fn(() => <div>LanguageSelector</div>),
+}));
+
 describe('Header', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
