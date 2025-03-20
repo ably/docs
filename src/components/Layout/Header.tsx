@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useContext } from 'react';
 import Icon from '@ably/ui/core/Icon';
 import AblyHeader from '@ably/ui/core/Header';
 import { SearchBar } from '../SearchBar';
@@ -10,7 +10,6 @@ type HeaderProps = {
 };
 
 const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
-  const [showMenu, setShowMenu] = useState(false);
   const userContext = useContext(UserContext);
   const sessionState = {
     ...userContext.sessionState,
@@ -32,30 +31,6 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
   //       return '#';
   //   }
   // };
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1040) {
-        setShowMenu(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (showMenu) {
-      document.body.classList.add('overflow-hidden');
-    } else {
-      document.body.classList.remove('overflow-hidden');
-    }
-
-    // Cleanup on unmount
-    return () => {
-      document.body.classList.remove('overflow-hidden');
-    };
-  }, [showMenu]);
 
   return (
     <AblyHeader
