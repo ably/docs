@@ -24,7 +24,7 @@ const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
   return (
     <GlobalLoading template={template}>
       <Header searchBar={searchBar} />
-      <div className="flex pt-64 gap-80 justify-center ui-standard-container mx-auto">
+      <div className="flex pt-64 md:gap-48 lg:gap-64 xl:gap-80 justify-center ui-standard-container mx-auto">
         {sidebar ? <LeftSidebar /> : null}
         <Container as="main" className="flex-1">
           {sidebar ? <Breadcrumbs /> : null}
