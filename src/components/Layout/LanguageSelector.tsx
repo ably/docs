@@ -5,18 +5,13 @@ import Badge from '@ably/ui/core/Badge';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import cn from '@ably/ui/core/utils/cn';
+import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from '@ably/ui/core/utils/heights';
 import { languageData, languageInfo } from 'src/data/languages';
 import { LanguageKey } from 'src/data/languages/types';
 import { useOnClickOutside } from 'src/hooks';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { navigate } from '../Link';
-import {
-  componentMaxHeight,
-  HEADER_HEIGHT,
-  HEADER_BOTTOM_MARGIN,
-  LANGUAGE_SELECTOR_HEIGHT,
-  INKEEP_ASK_BUTTON_HEIGHT,
-} from './utils/heights';
+import { LANGUAGE_SELECTOR_HEIGHT, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
 
 type LanguageSelectorOptionData = {
   label: LanguageKey;
