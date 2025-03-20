@@ -1,5 +1,4 @@
 import { createContext } from 'react';
-import type { BoomerangParams } from '../external-scripts/boomerang';
 import type { AblyHubspotData, HubspotUser } from '../external-scripts/hubspot';
 import type { InkeepUser } from '../external-scripts/inkeep';
 import type { SessionData } from '../external-scripts/ably-insights';
@@ -45,7 +44,6 @@ export type SessionState = {
     href: string;
     text: string;
   };
-  heroku?: BoomerangParams;
   pageVisitCount?: number;
   cookiesAcceptedByUser?: unknown;
   emulatingUser?: boolean;

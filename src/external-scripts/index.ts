@@ -1,6 +1,5 @@
 import hubspot, { AblyHubspotData, hubspotIdentifyUser, HubspotUser } from './hubspot';
 import headway from './headway';
-import boomerang from './boomerang';
 import announcement from '../utilities/console-announcement';
 import {
   googleTagManagerCookiesAccepted,
@@ -25,7 +24,6 @@ type ExternalScriptsData = {
   gtmContainerId?: string;
   announcementEnabled?: boolean;
   headwayAccountId?: string;
-  boomerangEnabled?: boolean;
   inkeepEnabled?: string;
   inkeepApiKey?: string;
   inkeepIntegrationId?: string;
@@ -67,7 +65,6 @@ const sessionTracker = (
     hubspotTrackingId,
     gtmContainerId,
     headwayAccountId,
-    boomerangEnabled,
     inkeepEnabled,
     inkeepApiKey,
     insightsEnabled,
@@ -76,10 +73,6 @@ const sessionTracker = (
 ) => {
   if (!sessionState) {
     return;
-  }
-
-  if (boomerangEnabled && sessionState.heroku) {
-    boomerang(sessionState.heroku);
   }
 
   if (gtmContainerId) {

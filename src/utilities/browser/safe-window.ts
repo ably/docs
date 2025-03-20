@@ -34,13 +34,11 @@ export const safeWindow =
           clear: identity,
         },
         addEventListener: identity,
-        Boomerang: null,
         Headway: null,
         dataLayer: null,
       }
     : (window as Window &
         typeof globalThis & {
-          Boomerang?: { init: (params: unknown) => void };
           Headway?: { init: (params: unknown) => void };
           dataLayer?: Record<string, string | number>[];
         });
