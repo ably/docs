@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { useLocation } from '@reach/router';
+import { navigate, useLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Accordion from '@ably/ui/core/Accordion';
 import Icon from '@ably/ui/core/Icon';
@@ -163,6 +163,18 @@ const constructProductNavData = (
     };
   });
 
+  // Add a Home entry at the start of navData if inHeader is true
+  if (inHeader) {
+    navData.unshift({
+      name: 'Home',
+      content: null,
+      onClick: () => {
+        navigate('/docs');
+      },
+      interactive: false,
+    });
+  }
+
   return navData;
 };
 
@@ -192,29 +204,18 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
   );
 
   return (
-    <>
-      {inHeader ? (
-        <a
-          href="/docs"
-          aria-label="Home"
-          className="flex w-full items-center focus-base text-neutral-1000 dark:text-neutral-300 hover:text-neutral-1100 active:text-neutral-1000 transition-colors h-40 ui-text-menu1 font-bold px-16 mt-16"
-        >
-          Home
-        </a>
-      ) : null}
-      <Accordion
-        ref={sidebarRef}
-        className={cn(
-          !inHeader && [sidebarAlignmentClasses, 'hidden md:block md:-mx-16'],
-          'overflow-y-auto',
-          hasScrollbar ? 'md:pr-8' : 'md:pr-16',
-        )}
-        style={sidebarAlignmentStyles}
-        id="left-nav"
-        data={productNavData}
-        {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}
-      />
-    </>
+    <Accordion
+      ref={sidebarRef}
+      className={cn(
+        !inHeader && [sidebarAlignmentClasses, 'hidden md:block md:-mx-16'],
+        'overflow-y-auto',
+        hasScrollbar ? 'md:pr-8' : 'md:pr-16',
+      )}
+      style={sidebarAlignmentStyles}
+      id="left-nav"
+      data={productNavData}
+      {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}
+    />
   );
 };
 
