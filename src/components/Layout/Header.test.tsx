@@ -100,7 +100,11 @@ describe('Header', () => {
         value={{
           sessionState: {
             signedIn: true,
-            account: { links: { dashboard: { href: '/dashboard', text: 'Dashboard' } } },
+            account: {
+              id: 'test-id',
+              name: 'Test Account',
+              links: { dashboard: { href: '/dashboard', text: 'Dashboard' } },
+            },
           },
           apps: [],
         }}
