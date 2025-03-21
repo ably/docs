@@ -1,0 +1,109 @@
+---
+title: Google BigQuery
+meta_description: "Stream realtime event data from Ably into Google BigQuery using the Firehose BigQuery rule. Configure, and analyze your data efficiently."
+---
+
+Stream events published to Ably directly into a "table":https://cloud.google.com/bigquery/docs/tables in "BigQuery":https://cloud.google.com/bigquery for analytical or archival purposes. General use cases include:
+
+* Realtime analytics on message data.
+* Centralized storage for raw event data, enabling downstream processing.
+* Historical auditing of messages.
+
+To stream data from Ably into BigQuery, you need to create a BigQuery "rule":#rule.
+
+<aside data-type='note'>
+<p>Ably's BigQuery integration for "Firehose":/docs/integrations/streaming is in alpha status.</p>
+</aside>
+
+h2(#rule). Create a BigQuery rule
+
+A rule defines what data gets sent, where it goes, and how it's authenticated. For example, you can improve query performance by configuring a rule to stream data from a specific channel and write them into a "partitioned":https://cloud.google.com/bigquery/docs/partitioned-tables table.
+
+h3(#dashboard). Create a rule using the Ably dashboard
+
+The following steps to create a BigQuery rule using the Ably dashboard:
+
+* Log in to the "Ably dashboard":https://ably.com/accounts/any and select the application you want to stream data from.
+* Navigate to the *Integrations* tab.
+* Click *New integration rule*.
+* Select *Firehose*.
+* Choose *BigQuery* from the list of available Firehose integrations.
+* "Configure":#configure the rule settings. Then, click *Create*.
+
+h3(#api-rule). Create a rule using the ABly Control API
+
+The following steps to create a BigQuery rule using the Control API:
+
+* Using the required "rules":/docs/control-api#examples-rules to specify the following parameters:
+** @ruleType@: Set this to "bigquery" to define the rule as a BigQuery integration.
+** destinationTable: Specify the BigQuery table where the data will be stored.
+** @serviceAccountCredentials@: Provide the necessary GCP service account JSON key to authenticate and authorize data insertion.
+** @channelFilter@ (optional): Use a regular expression to apply the rule to specific channels.
+** @format@ (optional): Define the data format based on how you want messages to be structured.
+* Make an HTTP request to the Control API to create the rule.
+
+h2(#configure). Configure BigQuery
+
+Using the Google Cloud "Console":https://cloud.google.com/bigquery/docs/bigquery-web-ui, configure the required BigQuery resources, permissions, and authentication to allow Ably to write data securely to BigQuery.
+
+The following steps configure BigQuery using the Google Cloud Console:
+
+* Create or select a *BigQuery dataset* in the Google Cloud Console.
+* Create a *BigQuery table* in that dataset.
+** Use the "JSON schema":#schema.
+** For large datasets, partition the table by ingestion time, with daily partitioning recommended for optimal performance.
+
+The following steps set up permissions and authentication using the Google Cloud Console:
+
+* Create a Google Cloud Platform (GCP) "service account":https://cloud.google.com/iam/docs/service-accounts-create with the minimal required BigQuery permissions.
+* Grant the service account table-level access control to allow access to the specific table.
+** @bigquery.tables.get@: to read table metadata.
+** @bigquery.tables.updateData@: to insert records.
+* Generate and securely store the *JSON key file* for the service account.
+** Ably requires this key file to authenticate and write data to your table.
+
+h3(#settings). BigQuery configuration options
+
+The following explains the BigQuery configuration options:
+
+|_. Section |_. Purpose |
+| *Source* | Defines the type of event(s) for delivery. |
+| *Channel filter* | A regular expression to filter which channels to capture. Only events on channels matching this regex are streamed into BigQuery. |
+| *Table* | The full destination table path in BigQuery, typically in the format @project_id.dataset_id.table_id@. |
+| *Service account Key* | A JSON key file Ably uses to authenticate with Google Cloud. You must upload or provide the contents of this key file. |
+| *Partitioning* | _(Optional)_ The table must be created with the desired partitioning settings in BigQuery before making the rule in Ably. |
+| *Advanced settings* | Any additional configuration or custom fields relevant to your BigQuery setup (for future enhancements). |
+
+h2(#schema). JSON Schema
+
+To store and structure message data in BigQuery, you need a schema that defines the expected fields to help ensure consistency. The following is an example JSON schema for a BigQuery table:
+
+```[json]
+{
+“name”: “id”,
+“type”: “STRING”,
+“mode”: “REQUIRED”,
+“description”: “Unique ID assigned by Ably to this message. Can optionally be assigned by the client.”
+}
+```
+
+h2(#queries). Direct queries
+
+In Ably-managed BigQuery tables, message payloads are stored in the data column as raw JSON. You can extract fields using the following query. The following example query converts the @data@ column from @BYTES@ to @STRING@, parses it into a JSON object, and filters results by their channel name:
+
+```[sql]
+SELECT
+PARSE_JSON(CAST(data AS STRING)) AS parsed_payload
+FROM project_id.dataset_id.table_id
+WHERE channel = “my-channel”
+```
+
+h2(#etl). Extract, Transform, Load (ETL)
+
+ETL is recommended for large-scale analytics to structure, deduplicate, and optimize data for querying. Since parsing JSON at query time can be costly for large datasets, pre-process and store structured fields in a secondary table instead. Convert raw data (JSON or BYTES), remove duplicates, and write it into an optimized table for better performance:
+
+* Convert data from raw (BYTES/JSON) into structured columns for example geospatial data fields or numeric data types, for detailed analysis.
+* Write transformed records to a new optimized table tailored for query performance.
+* Deduplicate records using the unique ID field to ensure data integrity.
+* Automate the process using BigQuery scheduled queries or an external workflow to run transformations at regular intervals.
+
