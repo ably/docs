@@ -19,44 +19,43 @@ redirect_from:
   - /docs/general/webhooks
 ---
 
-Outbound Webhooks allow you to configure integration rules that react to "messages being published":/docs/pub-sub or "presence events emitted":/docs/presence-occupancy/presence (such as members entering or leaving) on "channels":/docs/channels. These rules can notify HTTP endpoints, serverless functions or other services for each event as they arise, or in batches.
+Outbound Webhooks allow you to send realtime notifications to HTTP endpoints when events are triggered, for example when messages are "published":/docs/pub-sub#publish or "presence":/docs/presence-occupancy/presence#trigger-events events occur on Ably "channels":/docs/channels. Webhooks can be used to:
 
-p(tip). Webhooks are rate limited and are suitable for low to medium volumes of updates. If you expect a high volume of events and messages (averaging more than 25 per second), then you should consider using our "message queues":/docs/integrations/queues or "firehose":/docs/general/firehose as they are more suitable for higher volumes.
+* Trigger serverless functions.
+* Notify third-party services.
+* Deliver event data in batches or as individual messages.
 
-Subscribing to messages on-demand is often best done using our "realtime client libraries":/docs/basics/use-ably or by subscribing to Ably using any of the "realtime protocols we support":https://ably.com/protocols. However, when a persistent subscription is required to push data into third party systems you can use webhooks (for HTTP requests, serverless functions, etc), "Queues":/docs/integrations/queues (data is pushed into our own hosted message queues that you can subscribe to), or "Firehose":/docs/general/firehose (stream events into third party systems such as Amazon Kinesis).
-
-If you want to be notified as events arise, trigger serverless functions, or invoke an HTTP request to an endpoint, then webhooks are the right choice. For example, if you want to send a welcome message to someone when they become present on a chat channel, you can use webhooks to trigger a serverless function immediately after they enter with using "channel lifecycles":#sources, which in turn can publish a welcome message back to that user on the chat channel.
-
-In addition, various existing systems, such as Azure Functions, Google Functions, and AWS Lambda rely on HTTP events. Webhooks enable you to integrate with "these systems":#integrations.
+Webhooks are "rate-limited":/docs/pricing/limits#integration and best suited for low to medium traffic. If you need to process more than 25 events per second, consider using "Message Queues":/docs/integrations/queues or "Firehose":/docs/integrations/streaming instead.
 
 <a href="@content/diagrams/webhooks-overview.png" target="_blank">
   <img src="@content/diagrams/webhooks-overview.png" style="width: 100%" alt="Ably Webhooks Overview">
 </a>
 
-You can configure integration rules from the **Integrations** tab in your "dashboard":https://ably.com/dashboard on a per-app basis which can apply to one or more channels in that app.
-
-Integration rules can filter by channel naming using a regular expression, for example @^click_.*_mouse$@. This would match the string @click_@ followed by a string followed by @_mouse@, for example, @click_left_mouse@.
-
 h2(#payloads). Webhook Payloads
 
-Webhook payloads are structured data sent to your configured webhook URL whenever specific events occur from "sources":#sources in your Ably application. These payloads provide detailed information about events, such as messages, presence updates, or channel lifecycle changes. Depending on your configuration, payloads can be batched, enveloped, or non-enveloped.
+Webhook payloads contain structured event data from your Ably app:
 
-h3(#sources). Sources
+# "Single request":#single - one request per event.
+# "Batched request":#batched - multiple events grouped in one request.
+# "Enveloped":#enveloped - extra metadata.
+# "Non-enveloped":#non-enveloped: - just raw event data.
 
-Ably currently supports the following sources for all rule types, in both single and batch mode:
+h3(#sources). Sources of Webhook events
 
-- channel.message := If the source @channel.message@ is selected, you receive notifications when "messages":/docs/messages are published on a channel.
-- channel.presence := If the source @channel.presence@ is selected, you receive notifications of "presence events":/docs/presence-occupancy/presence when clients enter, update their data, or leave channels.
-- channel.lifecycle := If the source @channel.lifecycle@ is selected, you receive notifications of "channel lifecycle events":/docs/metadata-stats/metadata/subscribe#channel-lifecycle, such as when a channel is created (following the first client attaching to this channel) or discarded (when there are no more clients attached to the channel).
-- channel.occupancy :=  If the source @channel.occupancy@ is selected, you receive notifications of "occupancy events":/docs/presence-occupancy/occupancy, which relate to the number and type of occupants in the channel.
+You can configure webhooks to listen for the following event types:
 
-Note that for scalability reasons, it is recommended that @channel.lifecycle@ and @channel.occupancy@ rules are used instead of @channel.message@ rules on corresponding "metachannels":/docs/metadata-stats/metadata/subscribe.
+- @channel.lifecycle@ := Triggered when a channel is created or discarded. Note, the channel is created in the Ably service when the client "subscribes":/docs/getting-started/quickstart?#step-3 to it.
+- @channel.message@ := Triggered when "messages":/docs/messages are published.
+- @channel.occupancy@ := Triggered when the number of users in a channel "changes":/docs/channels/options#subscribe-occupancy.
+- @channel.presence@ := Triggered when users enter, leave, or update their "presence":/docs/presence-occupancy/presence.
 
-h3(#batching). Single vs Batched requests
+Use "metachannels":/docs/metadata-stats/metadata/subscribe#metachannels with @channel.lifecycle@ and @channel.occupancy@ for high traffic channels. This reduces event volume and improves scalability compared to just the @channel.message@ "webhook payload":#payloads.
+
+h3(#vs). Single vs Batched requests
 
 If *Single request* is chosen for a rule, then a @POST@ request will be sent to your specified endpoint/service each time an event occurs. Although this can be useful for some use-cases where the endpoint can only process one message per request, or needs the event as soon as it's available, it can result in the endpoint being overloaded with requests. To avoid this, it's possible to instead make use of *Batch request* instead, which will batch messages sent within a set time frame together.
 
-h4(#single-request). Single request details
+h4(#single). Single request details
 
 Single request is best suited for scenarios where you're wanting a 1-to-1 relationship between sent messages and events being called. If you are making use of a serverless system which is expecting a single piece of data each time, and then intends to perform some transformation/event following that, then Single request will likely work well for you. If you're using a single server, which has the potential to be overloaded by requests, and can process multiple events per payload sent, Batch request will be a better choice.
 
@@ -70,7 +69,7 @@ h5(#single-rate-limits). Single request rate limits
 * Webhook requests are made with a default timeout of 15s. If the request fails or times out, Ably retries the request with exponential backoff (base delay 1s, backoff factor sqrt(2), up to a max of 60s)
 * Multiple requests can be in-flight at once, up to the "max concurrency limit":https://faqs.ably.com/do-you-have-any-connection-message-rate-or-other-limits-on-accounts. If the number of in-flight requests exceeds the max concurrency limit, new messages coming in are placed in a short queue (length 10); if that queue length is exceeded, further messages are rejected
 
-h4(#batch-request). Batch request details
+h4(#batched). Batch request details
 
 Batch requests are useful for endpoints which have the potential to be overloaded by requests, or simply have no preference requirement for processing messages sent one-by-one. If you are using an endpoint which has either of these requirements (for example "IFTTT":/docs/integrations/webhooks/ifttt requires one event per request), you should use Single request.
 
@@ -99,7 +98,7 @@ The encoding of payloads sent is defined when setting up a rule in the "Integrat
 * "JSON":https://www.json.org (JavaScript Object Notation): An efficient data-interchange format which is fairly standard and provides simple text based encoding.
 * "MessagePack":https://msgpack.org: An efficient binary serialization format that is similar to JSON, but smaller. This is notably useful for binary payloads, as a JSON envelope with a binary payload would need to have the payload base64-encoded
 
-h3(#envelope). Envelopes
+h3(#enveloped). Enveloped
 
 When you configure a rule using "single requests":#batching, you are given the option to envelope messages, which is enabled by default. In most cases, we believe an enveloped message provides more flexibility as it contains additional metadata in a portable format that can be useful such as the @clientId@ of the publisher, or the @channel@ name the message originated from.
 
