@@ -28,7 +28,6 @@ const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
             gtmContainerId
             hubspotTrackingId
             headwayAccountId
-            boomerangEnabled
             announcementEnabled
             inkeepEnabled
             inkeepApiKey

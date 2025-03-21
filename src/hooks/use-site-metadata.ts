@@ -18,7 +18,6 @@ export const useSiteMetadata = () => {
             addsearchSiteKey
             gtmContainerId
             headwayAccountId
-            boomerangEnabled
             announcementEnabled
             inkeepEnabled
             inkeepApiKey

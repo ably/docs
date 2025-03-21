@@ -20,7 +20,6 @@ export const siteMetadata = {
     addsearchSiteKey: process.env.ADDSEARCH_SITE_KEY,
     gtmContainerId: process.env.GTM_CONTAINER_ID,
     headwayAccountId: process.env.HEADWAY_ACCOUNT_ID,
-    boomerangEnabled: process.env.BOOMERANG_ENABLED,
     announcementEnabled: process.env.ANNOUNCEMENT_ENABLED,
     oneTrustDomain: process.env.ONE_TRUST_DOMAIN,
     oneTrustEnabled: process.env.ONE_TRUST_ENABLED,

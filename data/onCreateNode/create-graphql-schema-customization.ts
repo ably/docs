@@ -45,7 +45,6 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       addsearchSiteKey: String
       gtmContainerId: String
       headwayAccountId: String
-      boomerangEnabled: String
       announcementEnabled: String
       oneTrustEnabled: String
       oneTrustDomain: String
