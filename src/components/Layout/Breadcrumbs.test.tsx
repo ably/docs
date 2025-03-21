@@ -58,4 +58,29 @@ describe('Breadcrumbs', () => {
     expect(screen.getByText('Current Page')).toHaveClass('text-gui-unavailable');
     expect(screen.getByText('Current Page')).toHaveClass('pointer-events-none');
   });
+
+  it('removes duplicate links from breadcrumb nodes', () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        tree: [
+          { page: { name: 'Section 1', link: '/section-1' } },
+          { page: { name: 'Duplicate Section', link: '/section-1' } },
+          { page: { name: 'Current Page', link: '/section-1/page-1' } },
+        ],
+      },
+    });
+
+    render(<Breadcrumbs />);
+
+    // Should only show one instance of the duplicate link
+    const section1Links = screen.getAllByText('Section 1');
+    expect(section1Links).toHaveLength(1);
+
+    // Should not render the duplicate with different text
+    expect(screen.queryByText('Duplicate Section')).not.toBeInTheDocument();
+
+    // Should still render other breadcrumb elements
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Current Page')).toBeInTheDocument();
+  });
 });
