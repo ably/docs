@@ -2,7 +2,7 @@
 
 Enable clients to update and synchronize key/value data across in an application in realtime.
 
-LiveMap provides a simple way to manage shared key/value state in realtime applications. It allows you to store primitive values and other Live Objects, enabling a composable state.
+LiveMap provides a simple way to manage shared key/value state in realtime applications. It allows you to store primitive values and other objects, enabling a composable state.
 
 LiveMaps can be used to store both predefined and dynamic datasets that need to be updated in realtime. They are ideal for scenarios such as collaborative task management, live leaderboards, multiplayer game state, shared settings, or live dashboards.
 
@@ -12,14 +12,14 @@ LiveMaps are implemented using [Ably LiveObjects](https://ably.com/docs/liveobje
 
 Use the following methods to interact with a LiveMap in your application:
 
-* [`liveObjects.getRoot()`](https://ably.com/docs/liveobjects) - retrieves the root object that serves as the starting point for storing and organizing LiveObjects state.
-* [`liveObjects.createMap()`](https://ably.com/docs/liveobjects) - creates a new LiveMap instance.
+* [`objects.getRoot()`](https://ably.com/docs/liveobjects) - retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
+* [`objects.createMap()`](https://ably.com/docs/liveobjects) - creates a new LiveMap instance.
 * [`liveMap.get(key)`](https://ably.com/docs/liveobjects/livemap) - returns the current value associated with a given key in the map.
 * [`liveMap.set(key, value)`](https://ably.com/docs/liveobjects/livemap) - sends the operation message to the Ably system to assign a value to a key in the map.
 * [`liveMap.remove(key)`](https://ably.com/docs/liveobjects/livemap) - sends the operation message to the Ably system to remove a key from the map.
 * [`liveMap.subscribe()`](https://ably.com/docs/liveobjects/livemap) - subscribes to LiveMap updates by registering a listener.
 
-Find out more about [LiveMaps](https://ably.com/docs/liveobjects/livemap).
+Find out more about [LiveMap](https://ably.com/docs/liveobjects/livemap).
 
 ## Getting started
 
