@@ -12,14 +12,14 @@ LiveCounters are implemented using [Ably LiveObjects](https://ably.com/docs/live
 
 Use the following methods to interact with a LiveCounter in your application:
 
-* [`liveObjects.getRoot()`](https://ably.com/docs/liveobjects) - retrieves the root object that serves as the starting point for storing and organizing LiveObjects state.
-* [`liveObjects.createCounter()`](https://ably.com/docs/liveobjects) - creates a new LiveCounter instance.
+* [`objects.getRoot()`](https://ably.com/docs/liveobjects) - retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
+* [`objects.createCounter()`](https://ably.com/docs/liveobjects) - creates a new LiveCounter instance.
 * [`liveCounter.value()`](https://ably.com/docs/liveobjects/livecounter) - returns the current value of a counter.
 * [`liveCounter.increment()`](https://ably.com/docs/liveobjects/livecounter) - sends the operation message to the Ably system to increase the counter value.
 * [`liveCounter.decrement()`](https://ably.com/docs/liveobjects/livecounter) - sends the operation message to the Ably system to decrease the counter value.
 * [`liveCounter.subscribe()`](https://ably.com/docs/liveobjects/livecounter) - subscribes to LiveCounter updates by registering a listener.
 
-Find out more about [LiveCounters](https://ably.com/docs/liveobjects/livecounter).
+Find out more about [LiveCounter](https://ably.com/docs/liveobjects/livecounter).
 
 ## Getting started
 

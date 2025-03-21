@@ -1,5 +1,5 @@
 import { DefaultRoot, LiveMap, Realtime } from 'ably';
-import LiveObjects from 'ably/liveobjects';
+import Objects from 'ably/objects';
 import { nanoid } from 'nanoid';
 import { Tasks } from './ably.config';
 import './styles.css';
@@ -8,13 +8,13 @@ const client = new Realtime({
   clientId: nanoid(),
   key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
   environment: 'sandbox',
-  plugins: { LiveObjects },
+  plugins: { Objects },
 });
 
 const urlParams = new URLSearchParams(window.location.search);
 
-const channelName = urlParams.get('name') || 'liveobjects-live-map';
-const channel = client.channels.get(channelName, { modes: ['STATE_PUBLISH', 'STATE_SUBSCRIBE'] });
+const channelName = urlParams.get('name') || 'objects-live-map';
+const channel = client.channels.get(channelName, { modes: ['OBJECT_PUBLISH', 'OBJECT_SUBSCRIBE'] });
 
 const taskInput = document.getElementById('task-input') as HTMLInputElement;
 const addTaskButton = document.getElementById('add-task');
@@ -24,8 +24,8 @@ const removeAllTasksDiv = document.getElementById('remove-tasks');
 async function main() {
   await channel.attach();
 
-  const liveObjects = channel.liveObjects;
-  const root = await liveObjects.getRoot();
+  const objects = channel.objects;
+  const root = await objects.getRoot();
 
   await initTasks(root);
   addEventListenersToButtons(root);
@@ -45,7 +45,7 @@ async function initTasks(root: LiveMap<DefaultRoot>) {
     return;
   }
 
-  await root.set('tasks', await channel.liveObjects.createMap());
+  await root.set('tasks', await channel.objects.createMap());
 }
 
 function subscribeToTasksUpdates(tasks: Tasks) {
@@ -122,7 +122,7 @@ function addEventListenersToButtons(root: LiveMap<DefaultRoot>) {
   });
 
   removeAllTasksDiv.addEventListener('click', async () => {
-    await root.set('tasks', await channel.liveObjects.createMap());
+    await root.set('tasks', await channel.objects.createMap());
   });
 }
 

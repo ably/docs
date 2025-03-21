@@ -1,5 +1,5 @@
 import { DefaultRoot, LiveCounter, LiveMap, Realtime } from 'ably';
-import LiveObjects from 'ably/liveobjects';
+import Objects from 'ably/objects';
 import { nanoid } from 'nanoid';
 import './styles.css';
 
@@ -13,12 +13,12 @@ const client = new Realtime({
   clientId: nanoid(),
   key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
   environment: 'sandbox',
-  plugins: { LiveObjects },
+  plugins: { Objects },
 });
 
 const urlParams = new URLSearchParams(window.location.search);
 
-const channelName = urlParams.get('name') || 'liveobjects-live-counter';
+const channelName = urlParams.get('name') || 'objects-live-counter';
 const channel = client.channels.get(channelName, { modes: ['STATE_PUBLISH', 'STATE_SUBSCRIBE'] });
 
 const colorCountDivs: Record<Color, HTMLElement> = {
@@ -31,8 +31,8 @@ const countersReset = document.getElementById('reset');
 async function main() {
   await channel.attach();
 
-  const liveObjects = channel.liveObjects;
-  const root = await liveObjects.getRoot();
+  const objects = channel.objects;
+  const root = await objects.getRoot();
 
   await initCounters(root);
   addEventListenersToButtons(root);
@@ -62,7 +62,7 @@ async function initCounters(root: LiveMap<DefaultRoot>) {
         return;
       }
 
-      await root.set(color, await channel.liveObjects.createCounter());
+      await root.set(color, await channel.objects.createCounter());
     }),
   );
 }
@@ -83,7 +83,7 @@ function addEventListenersToButtons(root: LiveMap<DefaultRoot>) {
   });
 
   countersReset.addEventListener('click', () => {
-    Object.values(Color).forEach(async (color) => root.set(color, await channel.liveObjects.createCounter()));
+    Object.values(Color).forEach(async (color) => root.set(color, await channel.objects.createCounter()));
   });
 }
 
