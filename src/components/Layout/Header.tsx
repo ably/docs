@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useContext } from 'react';
+import { useLocation } from '@reach/router';
 import Icon from '@ably/ui/core/Icon';
 import AblyHeader from '@ably/ui/core/Header';
 import { SearchBar } from '../SearchBar';
@@ -10,7 +11,7 @@ type HeaderProps = {
 };
 
 const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
-  const [showMenu, setShowMenu] = useState(false);
+  const location = useLocation();
   const userContext = useContext(UserContext);
   const sessionState = {
     ...userContext.sessionState,
@@ -32,30 +33,6 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
   //       return '#';
   //   }
   // };
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1040) {
-        setShowMenu(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (showMenu) {
-      document.body.classList.add('overflow-hidden');
-    } else {
-      document.body.classList.remove('overflow-hidden');
-    }
-
-    // Cleanup on unmount
-    return () => {
-      document.body.classList.remove('overflow-hidden');
-    };
-  }, [showMenu]);
 
   return (
     <AblyHeader
@@ -86,7 +63,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
       mobileNav={<LeftSidebar inHeader key="nav-mobile-documentation-tab" />}
       searchButton={
         <button
-          className="cursor-pointer focus-base rounded"
+          className="cursor-pointer focus-base rounded px-0 pt-4 text-neutral-1300 dark:text-neutral-000"
           aria-label="Toggle search"
           onClick={() => {
             const searchContainer = document.querySelector('#inkeep-search > div');
@@ -125,6 +102,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
       ]}
       sessionState={sessionState}
       logoHref="/docs"
+      location={location}
     />
   );
 };

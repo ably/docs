@@ -3,15 +3,22 @@ import { useLayoutContext } from 'src/contexts/layout-context';
 import Link from '../Link';
 import Icon from '@ably/ui/core/Icon';
 import cn from '@ably/ui/core/utils/cn';
-import { hierarchicalKey } from './utils/nav';
+import { hierarchicalKey, PageTreeNode } from './utils/nav';
 
 const Breadcrumbs: React.FC = () => {
   const { activePage } = useLayoutContext();
 
-  const breadcrumbNodes = useMemo(
-    () => activePage?.tree.filter((node) => node.page.link !== '#') ?? [],
-    [activePage.tree],
-  );
+  const breadcrumbNodes = useMemo(() => {
+    const filteredNodes = activePage?.tree.filter((node) => node.page.link !== '#') ?? [];
+    const uniqueNodes = filteredNodes.reduce((acc: PageTreeNode[], current) => {
+      const isDuplicate = acc.some((item) => item.page.link === current.page.link);
+      if (!isDuplicate) {
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+    return uniqueNodes;
+  }, [activePage?.tree]);
 
   if (breadcrumbNodes.length === 0) {
     return null;

@@ -29,7 +29,7 @@ export const CodeBlock: FC<{ children: React.ReactNode; language: string }> = ({
   };
 
   return (
-    <pre className="bg-cool-black text-white p-0 rounded-lg relative">
+    <pre className="bg-cool-black text-white p-0 rounded-lg relative max-w-[calc(100vw-48px)] sm:max-w-full">
       <div className="overflow-auto relative p-16 pr-32">
         <code
           className="ui-text-code"

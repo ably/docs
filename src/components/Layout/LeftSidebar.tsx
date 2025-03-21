@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { useLocation } from '@reach/router';
+import { navigate, useLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Accordion from '@ably/ui/core/Accordion';
 import Icon from '@ably/ui/core/Icon';
@@ -130,6 +130,26 @@ const constructProductNavData = (
     return {
       name: product.name,
       icon: activePageTree[0]?.page.name === product.name ? product.icon.open : product.icon.closed,
+      onClick: () => {
+        // When a product is clicked, find and scroll to any open accordion element
+        if (typeof document !== 'undefined') {
+          // Use setTimeout to ensure the DOM has updated after the click and animation has completed
+          setTimeout(() => {
+            const targetAccordion = window.innerWidth >= 1040 ? 'left-nav' : 'mobile-nav';
+            const menuContainer = document.getElementById(targetAccordion);
+            const openAccordion: HTMLElement | null = menuContainer
+              ? menuContainer.querySelector('[data-state="open"] > button')
+              : null;
+
+            if (openAccordion) {
+              menuContainer?.scrollTo({
+                top: openAccordion.offsetTop,
+                behavior: 'smooth',
+              });
+            }
+          }, 200);
+        }
+      },
       content: (
         <div key={product.name} className="flex flex-col gap-20 px-16 pt-12">
           {product.showJumpLink ? (
@@ -163,6 +183,18 @@ const constructProductNavData = (
     };
   });
 
+  // Add a Home entry at the start of navData if inHeader is true
+  if (inHeader) {
+    navData.unshift({
+      name: 'Home',
+      content: null,
+      onClick: () => {
+        navigate('/docs');
+      },
+      interactive: false,
+    });
+  }
+
   return navData;
 };
 
@@ -192,29 +224,18 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
   );
 
   return (
-    <>
-      {inHeader ? (
-        <a
-          href="/docs"
-          aria-label="Home"
-          className="flex w-full items-center focus-base text-neutral-1000 dark:text-neutral-300 hover:text-neutral-1100 active:text-neutral-1000 transition-colors h-40 ui-text-menu1 font-bold px-16 mt-16"
-        >
-          Home
-        </a>
-      ) : null}
-      <Accordion
-        ref={sidebarRef}
-        className={cn(
-          !inHeader && [sidebarAlignmentClasses, 'hidden md:block md:-mx-16'],
-          'overflow-y-auto',
-          hasScrollbar ? 'md:pr-8' : 'md:pr-16',
-        )}
-        style={sidebarAlignmentStyles}
-        id="left-nav"
-        data={productNavData}
-        {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}
-      />
-    </>
+    <Accordion
+      ref={sidebarRef}
+      className={cn(
+        !inHeader && [sidebarAlignmentClasses, 'hidden md:block md:-mx-16'],
+        'overflow-y-auto',
+        hasScrollbar ? 'md:pr-8' : 'md:pr-16',
+      )}
+      style={sidebarAlignmentStyles}
+      id={inHeader ? 'mobile-nav' : 'left-nav'}
+      data={productNavData}
+      {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}
+    />
   );
 };
 

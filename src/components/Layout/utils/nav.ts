@@ -1,8 +1,8 @@
 import cn from '@ably/ui/core/utils/cn';
 import { AccordionProps } from '@ably/ui/core/Accordion';
+import { HEADER_HEIGHT, componentMaxHeight } from '@ably/ui/core/utils/heights';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
-import { componentMaxHeight, HEADER_HEIGHT } from './heights';
 import { LanguageKey } from 'src/data/languages/types';
 
 export type PageTreeNode = { index: number; page: NavProductPage };
@@ -131,7 +131,7 @@ export const commonAccordionOptions = (
       {
         'my-12': topLevel && inHeader,
         'h-40 ui-text-menu1 !font-bold md:ui-text-menu4 px-16': topLevel,
-        'h-[1rem] ui-text-menu2 !font-semibold md:ui-text-menu4': !topLevel,
+        'min-h-[1.625em] md:min-h-[1.375em] ui-text-menu2 !font-semibold md:ui-text-menu4': !topLevel,
       },
     ),
     selectedHeaderCSS: '!text-neutral-1300 mb-8',

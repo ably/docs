@@ -4,7 +4,7 @@ import { GoTopButton } from './GoTopButton';
 import { overrideMenuItemNavigation } from './utils';
 
 export const Loader = ({ specUrl }: { specUrl: string }) => {
-  const redocDependencyScript = '//cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js';
+  const redocDependencyScript = '//cdn.redoc.ly/redoc/v2.4.0/bundles/redoc.standalone.js';
   const options = {
     hideDownloadButton: true,
     scrollYOffset: 64,

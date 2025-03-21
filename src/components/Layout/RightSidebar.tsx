@@ -3,12 +3,13 @@ import { useLocation, WindowLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
+import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/ui/core/utils/heights';
 
 import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { languageInfo } from 'src/data/languages';
 import { PageTreeNode, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
-import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
+import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
 
 type SidebarHeader = {
   id: string;

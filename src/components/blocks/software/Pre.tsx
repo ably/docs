@@ -64,12 +64,14 @@ const Pre = ({
     languages = getLanguagesSDKInterface(languages, selectedSDKInterfaceTab);
   }
 
+  const codeClassName = 'bg-cool-black text-white p-0 rounded-lg relative max-w-[calc(100vw-48px)] sm:max-w-full';
+
   const hasCode =
     languages?.some((lang) => getTrimmedLanguage(lang) === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
   const shouldDisplayTip = !hasCode && languages?.length !== undefined;
   const withModifiedClassname = {
     ...attribs,
-    className: `bg-cool-black text-white p-0 rounded-lg relative`,
+    className: codeClassName,
   };
 
   const dataTreatedAsCode = data && !isString(data) && every((element) => element.type === HtmlDataTypes.text, data);
@@ -79,7 +81,7 @@ const Pre = ({
     const stringToRender = reduce((acc, curr) => acc.concat((curr.data as string) ?? ''), '', data);
 
     return (
-      <pre {...attribs} className="bg-cool-black text-white p-0 rounded-lg relative overflow-hidden">
+      <pre {...attribs} className={codeClassName}>
         <div className="overflow-auto relative p-16">
           <MultilineCodeContent
             dataContainsKey={false}
