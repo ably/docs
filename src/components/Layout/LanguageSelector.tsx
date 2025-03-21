@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, MouseEvent, TouchEvent } from 'react';
 import { useLocation } from '@reach/router';
 import Select from 'react-select';
 import Badge from '@ably/ui/core/Badge';
@@ -33,6 +33,16 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
   const lang = languageInfo[props.data.label];
   const location = useLocation();
 
+  const handleClick = (e: MouseEvent<HTMLDivElement> | TouchEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    if (isOption) {
+      navigate(`${location.pathname}?lang=${props.data.label}`);
+    }
+
+    setMenuOpen(!props.selectProps.menuIsOpen);
+  };
+
   return (
     <div
       className={cn(
@@ -41,13 +51,8 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
           'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer': isOption,
         },
       )}
-      onClick={() => {
-        if (isOption) {
-          navigate(`${location.pathname}?lang=${props.data.label}`);
-        }
-
-        setMenuOpen(!props.selectProps.menuIsOpen);
-      }}
+      onClick={handleClick}
+      onTouchEnd={handleClick}
       role="menuitem"
     >
       <div className={cn('flex items-center gap-8', { 'flex-1': isOption })}>
@@ -106,8 +111,16 @@ export const LanguageSelector = () => {
     setSelectedOption(defaultOption);
   }, [langParam, options]);
 
+  const handleClick = (e: MouseEvent<HTMLButtonElement> | TouchEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setMenuOpen(!menuOpen);
+  };
+
   return (
-    <div ref={selectRef} className="absolute top-0 right-0 md:relative w-full text-right md:text-left mb-24 focus-base">
+    <div
+      ref={selectRef}
+      className="md:relative w-full text-right md:text-left mb-24 focus-base -mt-4 md:mt-0 -mr-4 md:mr-0"
+    >
       <Select
         options={options}
         value={selectedOption}
@@ -129,10 +142,12 @@ export const LanguageSelector = () => {
           ),
           SingleValue: (props) => <LanguageSelectorOption {...props} setMenuOpen={setMenuOpen} langParam={langParam} />,
           IndicatorSeparator: null,
-          DropdownIndicator: (props) => (
+          DropdownIndicator: () => (
             <button
-              className="flex items-center pl-8 text-red-orange"
-              onClick={() => setMenuOpen(!props.selectProps.menuIsOpen)}
+              role="button"
+              className="flex items-center pl-8 text-red-orange cursor-pointer"
+              onClick={handleClick}
+              onTouchEnd={handleClick}
               aria-label="Toggle language dropdown"
             >
               <Icon
@@ -156,7 +171,9 @@ export const LanguageSelector = () => {
               }}
               role="menu"
             >
-              <p className="ui-text-overline2 py-16 px-8 text-neutral-700 dark:text-neutral-600">Code Language</p>
+              <p className="ui-text-overline2 text-left py-16 px-8 text-neutral-700 dark:text-neutral-600">
+                Code Language
+              </p>
               {children}
             </div>
           ),
