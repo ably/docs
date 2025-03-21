@@ -89,8 +89,8 @@ function createTaskDiv(task: { id: string; title: string }, tasks: Tasks) {
   const taskDiv = parser.parseFromString(
     `<div class="flex justify-between items-center rounded space-x-4 task" data-task-id="${id}">
         <span class="flex-grow">${title}</span>
-        <button class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded update-task">Edit</button>
-        <button class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded remove-task">Remove</button>
+        <button class="uk-btn uk-btn-primary uk-border-rounded-right update-task">Edit</button>
+        <button class="uk-btn uk-btn-secondary uk-border-rounded-right remove-task">Remove</button>
     </div>`,
     'text/html',
   ).body.firstChild as HTMLElement;
