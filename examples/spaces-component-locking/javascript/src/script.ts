@@ -2,7 +2,8 @@ import Spaces, { Space, Lock, type SpaceMember } from '@ably/spaces';
 import { Realtime } from 'ably';
 import { nanoid } from 'nanoid';
 import { createLockedFieldSvg } from './LockedField';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 
 type Member = Omit<SpaceMember, 'profileData'> & {
   profileData: { memberColor: string; memberName: string };
@@ -107,8 +108,8 @@ async function connect() {
 
   /** 💡 Enter the space as soon as it's available 💡 */
   await space.enter({
-    memberName: faker.person.fullName(),
-    memberColor: faker.color.rgb({ format: 'hex', casing: 'lower' }),
+    memberName: `${minifaker.firstName()} ${minifaker.lastName()}`,
+    memberColor: minifaker.color(),
   });
 
   buildForm();

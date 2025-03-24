@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useLocations, useMembers, useSpace, SpaceProvider, SpacesProvider } from '@ably/spaces/react';
 import { type SpaceMember } from '@ably/spaces';
 import Spreadsheet from './components/Spreadsheet';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 import Spaces from '@ably/spaces';
 import { Realtime } from 'ably';
 import { nanoid } from 'nanoid';
@@ -33,8 +34,8 @@ function MemberLocationDemo() {
   /** 💡 Enter the space as soon as it's available 💡 */
   useEffect(() => {
     space?.enter({
-      memberName: faker.person.fullName(),
-      memberColor: faker.color.rgb({ format: 'hex', casing: 'lower' }),
+      memberName: minifaker.fullName(),
+      memberColor: minifaker.color(),
     });
   }, [space]);
 

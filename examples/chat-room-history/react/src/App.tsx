@@ -1,10 +1,11 @@
 import { useRoom, useMessages, ChatClient, ChatClientProvider, ChatRoomProvider, AllFeaturesEnabled } from '@ably/chat';
 import { Realtime } from 'ably';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 import { useEffect, useState } from 'react';
 import '../../../styles.css';
 
-const realtimeClient = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: faker.person.firstName() });
+const realtimeClient = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: minifaker.firstName() });
 const chatClient = new ChatClient(realtimeClient);
 
 function ChatRoomHistoryDemo() {

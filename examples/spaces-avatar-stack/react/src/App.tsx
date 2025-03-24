@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useMembers, useSpace, SpaceProvider, SpacesProvider } from '@ably/spaces/react';
 import { type SpaceMember } from '@ably/spaces';
 import { Avatar } from './components/Avatar';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 import Spaces from '@ably/spaces';
 import { Realtime } from 'ably';
 import { nanoid } from 'nanoid';
@@ -20,8 +21,8 @@ function AvatarStack() {
 
   useEffect(() => {
     space?.enter({
-      name: faker.person.firstName() + ' ' + faker.person.lastName(),
-      memberColor: faker.color.rgb({ format: 'hex', casing: 'lower' }),
+      name: minifaker.firstName() + ' ' + minifaker.lastName(),
+      memberColor: minifaker.color(),
     });
 
     return () => {

@@ -1,7 +1,8 @@
 import Spaces, { type SpaceMember } from '@ably/spaces';
 import { Realtime } from 'ably';
 import { nanoid } from 'nanoid';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 
 export type Member = Omit<SpaceMember, 'profileData'> & {
   profileData: { memberColor: string; name: string };
@@ -42,8 +43,8 @@ async function connect() {
   /** 💡 Enter the space as soon as it's available 💡 */
   space
     .enter({
-      name: faker.person.firstName() + ' ' + faker.person.lastName(),
-      memberColor: faker.color.rgb({ format: 'hex', casing: 'lower' }),
+      name: `${minifaker.firstName()} ${minifaker.lastName()}`,
+      memberColor: minifaker.color(),
     })
     .then(async () => {
       const otherMembers = await space.members.getOthers();

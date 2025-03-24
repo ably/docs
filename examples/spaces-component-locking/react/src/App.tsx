@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AblyProvider, ChannelProvider } from 'ably/react';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 import { nanoid } from 'nanoid';
 import { Realtime } from 'ably';
 import { SpaceProvider, SpacesProvider, useSpace } from '@ably/spaces/react';
@@ -29,8 +30,8 @@ function ComponentLocking() {
   /** 💡 Enter the space as soon as it's available 💡 */
   useEffect(() => {
     space?.enter({
-      memberName: faker.person.fullName(),
-      memberColor: faker.color.rgb({ format: 'hex', casing: 'lower' }),
+      memberName: minifaker.fullName(),
+      memberColor: minifaker.color(),
     });
   }, [space]);
 

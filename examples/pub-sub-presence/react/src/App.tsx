@@ -1,10 +1,11 @@
 import { Realtime } from 'ably';
 import { AblyProvider, ChannelProvider, useAbly, usePresence, usePresenceListener } from 'ably/react';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 import { useState } from 'react';
 import '../../../styles.css';
 
-const client = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: faker.person.firstName() });
+const client = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: minifaker.firstName() });
 const urlParams = new URLSearchParams(window.location.search);
 const channelName = urlParams.get('name') || 'pub-sub-presence';
 
