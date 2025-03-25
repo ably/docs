@@ -1,6 +1,7 @@
 import {
   assetTrackingNavData,
   chatNavData,
+  liveObjectsNavData,
   liveSyncNavData,
   platformNavData,
   pubsubNavData,
@@ -26,6 +27,10 @@ export const productData = {
   spaces: {
     nav: spacesNavData,
     languages: languageData.spaces,
+  },
+  liveObjects: {
+    nav: liveObjectsNavData,
+    languages: languageData.liveObjects,
   },
   liveSync: {
     nav: liveSyncNavData,
