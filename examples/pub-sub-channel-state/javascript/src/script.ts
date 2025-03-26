@@ -9,7 +9,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const connect = () => {
   // Initialises a new client instance with the Ably key and client ID.
   const newClient = new Ably.Realtime({
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+    key: import.meta.env.VITE_ABLY_KEY as string,
     clientId: nanoid(),
   });
 

@@ -12,10 +12,10 @@ Messaging is implemented using [Ably Chat](/docs/products/chat). The Chat SDK co
 
 Use the following components to send and receive messages into a chat application:
 
-* [`ChatClientProvider`](/docs/chat/setup?lang=react#instantiate): initializes and manages a shared chat client instance, passing it down through React context to enable realtime chat functionality across the application.
-* [`ChatRoomProvider`](/docs/chat/rooms?lang=react#create): manages the state and functionality of a specific chat room, providing access to messages, participants, and realtime interactions within that room via React context.
-* [`useRoom()`](/docs/chat/rooms?lang=react#create) hook: a hook to manage the state and interaction for a chat “room”, allowing users to join, send messages, listen for messages, and use the other chat functions such as typing indicators.
-* [`useMessages()`](/docs/chat/rooms/messages?lang=react#subscribe) hook: a hook to manage and track the messages sent by users within a chat room.
+- [`ChatClientProvider`](/docs/chat/setup?lang=react#instantiate): initializes and manages a shared chat client instance, passing it down through React context to enable realtime chat functionality across the application.
+- [`ChatRoomProvider`](/docs/chat/rooms?lang=react#create): manages the state and functionality of a specific chat room, providing access to messages, participants, and realtime interactions within that room via React context.
+- [`useRoom()`](/docs/chat/rooms?lang=react#create) hook: a hook to manage the state and interaction for a chat “room”, allowing users to join, send messages, listen for messages, and use the other chat functions such as typing indicators.
+- [`useMessages()`](/docs/chat/rooms/messages?lang=react#subscribe) hook: a hook to manage and track the messages sent by users within a chat room.
 
 Find out more about [rooms](/docs/chat/rooms?lang=react) and [messages](/docs/chat/rooms/messages?lang=react).
 
@@ -39,7 +39,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `NEXT_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -57,4 +57,4 @@ yarn run chat-room-messages-react
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

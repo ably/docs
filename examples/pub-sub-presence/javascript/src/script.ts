@@ -1,10 +1,11 @@
 import * as Ably from 'ably';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 import './styles.css';
 
 const client = new Ably.Realtime({
-  clientId: faker.person.firstName(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  clientId: `${minifaker.firstName()} ${minifaker.lastName()}`,
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 const urlParams = new URLSearchParams(window.location.search);
 const channelName = urlParams.get('name') || 'pub-sub-presence';
