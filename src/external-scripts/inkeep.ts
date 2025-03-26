@@ -1,19 +1,49 @@
 import { scriptLoader } from './utils';
 
-const inkeepChat = (apiKey, integrationId, organizationId) => {
-  if (!(apiKey && integrationId && organizationId)) {
+const inkeepChat = (apiKey: string) => {
+  if (!apiKey) {
     return;
   }
 
-  scriptLoader(document, 'https://unpkg.com/@inkeep/uikit-js@0.3.19/dist/embed.js', {
+  scriptLoader(document, 'https://unpkg.com/@inkeep/cxkit-js@0.5.36/dist/embed.js', {
     defer: true,
     async: false,
     type: 'module',
+    crossOrigin: 'anonymous',
     onload: () => {
-      inkeepOnLoad(apiKey, integrationId, organizationId);
+      inkeepOnLoad(apiKey);
     },
   });
 };
+
+declare global {
+  interface Window {
+    HubSpotConversations?: {
+      widget: {
+        load: () => void;
+        open: () => void;
+        remove: () => void;
+      };
+      on: (event: string, callback: () => void) => void;
+      off: (event: string, callback: (() => void) | null) => void;
+    };
+    inkeepWidgetConfig?: object;
+    inkeepWidget?: {
+      update: (config: object) => void;
+    };
+    Inkeep: {
+      ChatButton: (config: object) => {
+        update: (config: object) => void;
+      };
+      SearchBar: (
+        element: string,
+        config: object,
+      ) => {
+        update: (config: object) => void;
+      };
+    };
+  }
+}
 
 const openHubSpotConversations = () => {
   window.HubSpotConversations?.widget.load();
@@ -26,89 +56,124 @@ const openHubSpotConversations = () => {
 };
 
 const aiChatSettings = {
-  aiChatSettings: {
-    actionButtonLabels: {
-      getHelpButtonLabel: 'More Help',
-    },
-    shouldShowCopyChatButton: true,
-    chatSubjectName: 'Ably',
-    botAvatarSrcUrl: 'https://storage.googleapis.com/organization-image-assets/ably-botAvatarSrcUrl-1721406747144.png',
-    getHelpCallToActions: [
-      {
-        name: 'Request a meeting',
+  organizationDisplayName: 'Ably',
+  aiAssistantAvatar: 'https://storage.googleapis.com/organization-image-assets/ably-botAvatarSrcUrl-1721406747144.png',
+  getHelpOptions: [
+    {
+      name: 'Request a meeting',
+      action: {
+        type: 'open_link',
         url: 'https://meetings.hubspot.com/cameron-michie/ably-demo',
-
-        type: 'OPEN_LINK',
-        pinToToolbar: true,
-        shouldCloseModal: false,
       },
-      {
-        name: 'Chat with support',
-        url: 'https://ably.com/support',
-        icon: {
-          builtIn: 'IoHelpBuoyOutline',
-        },
-        type: 'INVOKE_CALLBACK',
+      isPinnedToToolbar: true,
+    },
+    {
+      name: 'Chat with support',
+      action: {
+        type: 'invoke_callback',
         callback: () => {
           openHubSpotConversations();
         },
-        pinToToolbar: true,
         shouldCloseModal: true,
       },
-    ],
-    quickQuestions: ['What is a channel?', 'How do I authenticate with Ably?', 'How do I manage user status?'],
-  },
+      isPinnedToToolbar: true,
+    },
+  ],
+  exampleQuestions: ['What is a channel?', 'How do I authenticate with Ably?', 'How to manage user status?'],
+  shouldShowCopyChatButton: true,
 };
 
-export const inkeepOnLoad = (apiKey, integrationId, organizationId) => {
-  window.inkeepBase = Inkeep({
-    apiKey,
-    integrationId,
-    organizationId,
-    theme: {
-      components: {
-        SearchBarTrigger: {
-          defaultProps: {
-            size: 'expand',
-            variant: 'emphasize',
-          },
-        },
-      },
-    },
-  });
+interface SourceItem {
+  id?: string;
+  title: string | undefined;
+  url: string;
+  description: string | undefined;
+  breadcrumbs: string[];
+  type: string;
+  contentType?: string;
+  tag?: string;
+  tabs?: string[];
+}
 
-  const searchSettings = {
-    placeholder: 'Search',
-    tabSettings: {
-      rootBreadcrumbsToUseAsTabs: ['Docs', 'Blog', 'Ably FAQs'],
-    },
+const transformSource = (source: SourceItem) => {
+  const { url, breadcrumbs } = source;
+  if (!url) {
+    return source;
+  }
+  try {
+    const { pathname } = new URL(url);
+    const urlPatterns = [
+      { pattern: '/docs', tabName: 'Docs' },
+      { pattern: '/blog', tabName: 'Blog' },
+      { pattern: 'faqs.ably.com', tabName: 'FAQs' },
+    ];
+
+    const matchingPattern = urlPatterns.find(({ pattern }) => pathname.startsWith(pattern) || url.includes(pattern));
+
+    if (matchingPattern) {
+      const { tabName } = matchingPattern;
+      return {
+        ...source,
+        tabs: [
+          [
+            tabName,
+            {
+              breadcrumbs: breadcrumbs[0] === tabName ? breadcrumbs.slice(1) : breadcrumbs,
+            },
+          ],
+        ],
+      };
+    }
+    return source;
+  } catch (error) {
+    return source;
+  }
+};
+
+const prefilledSearchText = () => {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return new URLSearchParams(window.location.search).get('q') || '';
+};
+
+const searchSettings = {
+  defaultQuery: prefilledSearchText(),
+  placeholder: 'Search',
+  tabs: ['All', 'Docs', 'Blog', 'FAQs', 'GitHub'],
+};
+
+export const inkeepOnLoad = (apiKey: string) => {
+  const baseSettings = {
+    apiKey,
+    transformSource,
   };
 
-  window.inkeepWidget = inkeepBase.embed({
-    componentType: 'ChatButton',
-    properties: {
-      chatButtonType: 'PILL',
-      chatButtonText: 'Ask Ably',
-      ...aiChatSettings,
-      searchSettings,
-    },
+  const config = {
+    baseSettings,
+    label: 'Ask Ably',
+    aiChatSettings,
+    searchSettings,
+  };
+
+  window.inkeepWidget = window.Inkeep.ChatButton({
+    ...config,
   });
 
-  loadInkeepSearch(searchSettings);
+  loadInkeepSearch(config);
 };
 
-const loadInkeepSearch = (searchSettings) => {
+const loadInkeepSearch = (config: object) => {
   const searchBar = document.getElementById('inkeep-search');
   if (!searchBar) {
     return;
   }
 
-  window.inkeepBase.embed({
-    componentType: 'SearchBar',
-    targetElement: searchBar,
-    properties: {
-      searchSettings,
-      ...aiChatSettings,
+  window.Inkeep.SearchBar(`#${searchBar.id}`, {
+    ...config,
+    modalSettings: {
+      defaultView: 'SEARCH',
     },
   });
 };
@@ -122,9 +187,11 @@ export const inkeepChatIdentifyUser = ({ user }: { user?: InkeepUser }) => {
     return;
   }
 
-  window.inkeepWidget.render({
+  window.inkeepWidget.update({
     baseSettings: {
-      userId: user.uuid,
+      userProperties: {
+        id: user.uuid,
+      },
     },
   });
 };
