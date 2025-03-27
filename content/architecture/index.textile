@@ -57,3 +57,52 @@ The key to our horizontal scalability is intelligent load distribution that effi
 
 * In the frontend layer, new instances join the load balancer pool and begin handling their share of incoming connections and REST requests.
 * In the core layer, we employ consistent hashing to distribute channels across core processes - each core maintains a set of pseudorandomly-generated hashes that determine channel placement. As the cluster scales, channels automatically relocate to maintain even load distribution.
+
+h3. Frontend Layer
+
+Our frontend infrastructure consists of several components that handle individual requests and connections from realtime subscribers. Each component scales independently according to demand, ensuring requests are processed in the optimal location based on client location and system state.
+
+h4. DNS and TLS Termination
+
+We leverage Amazon's Network Load Balancers (NLB) for TLS termination and initial load balancing. Amazon's Route53 powers our latency-based routing with health checks for each region, automatically removing unavailable regions from DNS to prevent traffic routing to compromised infrastructure.
+
+For enhanced performance and security, we employ CloudFront for traffic acceleration and DDoS protection. CloudFlare serves as an alternate DNS provider for our fallback endpoints, which our client libraries use to route around regional issues - including DNS problems - ensuring consistent connectivity.
+
+h4. Intelligent Routing
+
+Our custom routing layer provides intelligent routing through deep integration with our application architecture. The routing layer is cluster-aware and implements sophisticated retry strategies, enables zero-downtime deployments and distributes instrumentation across our cluster.
+
+h4. Request Handling
+
+Nodes in the frontend layer processes all incoming REST and realtime requests. They participate in the active service discovery mechanism between all nodes, maintaining real-time awareness of channel locations across the cluster, even as channels migrate during scaling events. Message fan-out is achieved by frontend nodes efficiently processing published messages and distributing them to all subscribed clients. The frontend layer also handles authentication, enforces rate limits, and provides DDoS protection.
+
+h4. Protocol Adapters
+
+Our protocol adapters enable interoperability with multiple industry protocols. These adapters translate between external protocols and Ably's internal protocols in both directions. Currently, we support the MQTT standard as well as proprietary protocols like PubNub and Pusher. Our architecture allows for straightforward integration of additional protocols as needed.
+
+h3. Core Layer
+
+Our core infrastrucure handles all messages as they transit through the system. It is designed to scale elastically according to demand while managing all associated channel and system state.
+
+h4. Resource Placement
+
+Ably uses consistent hashing to distribute resources such as channels, app and accounts across available core compute capacity.
+
+Each compute instance within the core layer has a set of pseudo-randomly generated hashes which determines which resources are located at that instance. As the cluster scales, channels relocate to maintain an even load distribution. Any number of channels can exist as long as sufficient compute capacity is available. Whether handling many lightly-loaded channels or heavily-loaded ones, our scaling and placement strategies ensure capacity is added as required and load is effectively distributed.
+
+When a core node fails, the system detects the failure through a cluster-wide gossip protocol, and it's resources are automatically redistributed to healthy nodes. 
+
+h4. Message Processing
+
+Nodes in the core layer are responsible for all channel message processing and persistence and apply operations such as delta computation, batching and integration rule invocation. They also aggregate and persist account and app statistics and enforce limits. Nodes in the core layer communicate cross-regionally to facilitate inter-data-center message transit.
+
+h4. Message Persistence
+
+Messages are persisted in multiple locations to ensure that message availability and continuity are maintained even during individual node or data center failures.
+
+Once a message is acknowledged, it is stored in multiple physical locations, providing statistical guarantees of 99.999999% (8 nines) for message availability and survivability. This redundancy enables Ably to maintain its quality of service guarantees even during infrastructure failures.
+
+Messages are stored in two ways:
+
+* **Ephemeral Storage**: Messages are held for 2 minutes in an in-memory database (Redis). This data is distributed according to our consistent hashing mechanism and relocated when channels move between nodes. This short-term storage enables low-latency message delivery and retrieval and supports features like connection recovery.
+* **Persisted Storage**: Messages can optionally be stored persistently on disk if longer term retention is required. We use a globally distributed and clustered database (Cassandra) for this purpose, deployed across multiple data centers with message data replicated to three regions to ensure integrity and availability even if a region fails.
