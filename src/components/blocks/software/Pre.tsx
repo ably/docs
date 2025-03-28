@@ -56,8 +56,6 @@ const Pre = ({
   const { activePage } = useLayoutContext();
   const pageLanguage = activePage.language;
 
-  console.log('languages', languages, pageLanguage);
-
   /*  selectedInterfaceTab useState  */
   const [selectedSDKInterfaceTab, setSelectedSDKInterfaceTab] = useState(DEFAULT_PREFERRED_INTERFACE);
   const [previousSDKInterfaceTab, setPreviousSDKInterfaceTab] = useState('');

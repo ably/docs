@@ -17,7 +17,7 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, select
   so if the  useContext(PageLanguageContext) is not present in the languages we will pass the first language of the languages
    eg: selected global language: PHP but the languages are: [js, ruby]  so it will pass js now as php is not present
    */
-  const { isLanguageActive } = getLanguageDefaults(selectedLanguage, selectedLocalLanguage);
+  const isLanguageActive = activePage.language === selectedLanguage;
 
   const handleClick = () => {
     const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, selectedLanguage);
