@@ -86,6 +86,10 @@ export default {
               name: 'Hive (Dashboard)',
               link: '/docs/chat/rooms/moderation/hive-dashboard',
             },
+            {
+              name: 'AWS Lambda',
+              link: '/docs/chat/rooms/moderation/lambda',
+            },
           ],
         },
       ],
