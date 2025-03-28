@@ -4,4 +4,69 @@ meta_description: "Detect and remove unwanted content in a Chat Room using a cus
 product: chat
 ---
 
-Content here.
+There may be situations where you have trained your own model, or you want to apply proprietary logic using your own infrastructure, whilst performing moderation.
+
+Ably provides simple APIs to allow your moderation logic to prevent harmful content from being present in your chat room.
+
+h2(#beforepublish). Before publish
+
+Before publish moderation is where your moderation logic is invoked before the message is published to your chat room. This has the benefit of preventing harmful content from ever entering your chat room, at the cost of some latency in invoking your moderation logic as part of the publish path.
+
+h3(#configuration). Configuration
+
+To fine-tune how Ably handles messages according to your use-case, you can configure before publish rule behaviour using the following fields.
+
+- Retry timeout := Maximum duration (in milliseconds) that an attempt to invoke the rule may take (including any retries).
+- Max retries := Maximum number of retries after the first attempt at invoking the rule.
+- Failed action := The action to take in the event that a rule fails to invoke. Options are reject the request or publish anyway.
+- Too many requests action := The action to take if your endpoint returns @429 Too Many Requests@, which may happen if your endpoint is overloaded. The options are to fail moderation, or retry.
+- Room filter (optional) := A regular expression to match to specific chat rooms.
+
+h3(#api). The API
+
+Ably provides a simple API for integrations to moderate chat messages. There are some nuances for particular transports, which can be seen on the individual transports page.
+
+h4(#request). Request format
+
+The request has the following JSON format.
+
+<pre><code class="json">{
+  "source": "string",
+  "appId": "string",
+  "roomId": "string",
+  "site": "string",
+  "ruleId": "string",
+  "message": {
+    "roomId": "string",
+    "clientId": "string",
+    "text": "string",
+    "metadata": {
+      "key": "any"
+    },
+    "headers": {
+      "key": "string"
+    }
+  }
+}</code></pre>
+
+h4(#response). Response format
+
+<pre><code class="json">{
+  "action": "accept|reject",
+  "rejectionReason": {
+    "key": "any
+  }
+}</code></pre>
+
+* @action@: Must be either @accept@ or @reject@. @accept@ means that the message will be published to the chat room, @reject@ means it will be rejected.
+* @rejectionReason@: Optional. If provided with @action: "reject"@, it can contain any information about why the message was rejected. This information may be sent back to clients.
+
+h2(#response). Error handling
+
+If moderation was performed as expected, regardless of the outcome, your endpoint MUST return a status code of @200@. For other codes, Ably will take the following action:
+
+- 4xx (excluding 429) := Ably will not retry moderation. The message will be handled according to your rule configuration.
+- 429 := Ably will only retry if your rule configuration permits retries in the @429 Too Many Requests@ case.
+- 5xx := Ably will retry moderation with backoff, until it either succeeds, or the retry window is exceeded.
+
+If, by the end of the retry window, Ably has not been able to get a definitive moderation answer from your endpoint, the action we take next will depend on your rule configuration. If you have elected to publish the message anyway, we will do so. You can always remove harmful content in hindsight using human moderators or community reporting schemes. Alternatively, you may have elected to reject the message. If this is the case, Ably will not publish the message.
