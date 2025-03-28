@@ -100,13 +100,6 @@ export const LanguageSelector = () => {
   const langParam = queryParams.get('lang');
 
   useEffect(() => {
-    if (langParam && !options.some((option) => option.label === langParam)) {
-      queryParams.delete('lang');
-      navigate(`${location.pathname}?${queryParams.toString()}`, { replace: true });
-    }
-  }, [langParam, options, location.pathname, queryParams]);
-
-  useEffect(() => {
     const defaultOption = options.find((option) => option.label === langParam) || options[0];
     setSelectedOption(defaultOption);
   }, [langParam, options]);

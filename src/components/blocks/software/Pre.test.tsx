@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { PageLanguageContext } from 'src/contexts';
 import { Pre } from './';
+import { LayoutProvider } from 'src/contexts/layout-context';
 
 const DATA_ARRAY_TEST = [{ data: 'useVars = false;', type: 'text' }];
 const PRE_TEST_SINGLE_DATA = { data: DATA_ARRAY_TEST, type: 'tag', name: 'code' };
@@ -33,6 +33,13 @@ const PRE_REST_CSHARP_TEST_DATA = [
   },
 ];
 
+jest.mock('@reach/router', () => ({
+  useLocation: () => ({
+    pathname: '/test-path',
+    search: '?lang=javascript',
+  }),
+}));
+
 describe('<Pre />', () => {
   it('should successfully render Code elements with language', () => {
     const { container } = render(
@@ -51,7 +58,7 @@ describe('<Pre />', () => {
 
   it('should render tip wrapper if language is unavailable', () => {
     render(
-      <PageLanguageContext.Provider value="javascript">
+      <LayoutProvider>
         <Pre
           data={PRE_TEST_DATA}
           language="javascript"
@@ -61,7 +68,7 @@ describe('<Pre />', () => {
             csharp: [{ data: 'bool useVars = false;', type: 'text' }],
           }}
         />
-      </PageLanguageContext.Provider>,
+      </LayoutProvider>,
     );
     expect(
       screen.getByText("code sample for this example, or this feature isn't supported in", { exact: false }),

@@ -1,13 +1,17 @@
 import PropTypes from 'prop-types';
-import { usePageLanguage } from 'src/contexts';
 import Html from '.';
 import CopyLink from '../wrappers/CopyLink';
 import { childOrSelfHasLanguageMatchingPageLanguageOrDefault } from '../wrappers/language-utilities';
+import { useLayoutContext } from 'src/contexts/layout-context';
 
 const LinkableHtmlBlock = (Type, marginBottom, marginTop) => {
   const InnerBlock = ({ data, attribs }) => {
-    const { currentLanguage: pageLanguage } = usePageLanguage();
-    const shouldShowBlock = childOrSelfHasLanguageMatchingPageLanguageOrDefault(pageLanguage, data, attribs?.lang);
+    const { activePage } = useLayoutContext();
+    const shouldShowBlock = childOrSelfHasLanguageMatchingPageLanguageOrDefault(
+      activePage.language,
+      data,
+      attribs?.lang,
+    );
     if (shouldShowBlock) {
       return (
         <CopyLink attribs={attribs} marginBottom={marginBottom} marginTop={marginTop}>
