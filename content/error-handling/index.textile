@@ -1,0 +1,130 @@
+---
+title: Error handling
+meta_description: "Error handling in Ably supported apps, including troubleshooting techniques, logging options, and tools for debugging."
+---
+
+Errors can occur in various scenarios when using Ably, such as "invalid inputs":/error-handling/error-codes#errors in requests, authentication issues, or connection problems caused by network disruptions. Proper error handling is essential for building a reliable application and troubleshooting.
+
+* Set up a custom log handler to capture and manage errors in a way that suits your requirements.
+* Meta channels allow you to monitor errors that might not otherwise be visible to clients, providing additional insights into issues.
+* The Dev console in your Ably "dashboard":https://ably.com/accounts/any is a quick and easy way to inspect errors and events, especially during development or debugging.
+
+Common errors in Ably-supported apps usually arise from:
+
+- *Authentication issues* := Invalid or expired tokens, incorrect API keys.
+- *Permission errors* := Missing or insufficient capabilities for publishing or subscribing.
+- *Channel attachment failures* := Incorrect channel names, network connectivity problems, or unauthorized access.
+
+h2.(#format) Error format
+
+All errors returned by Ably are standardized and use the @ErrorInfo@ object:
+
+```[text]
+{
+  code: 40005,
+  statusCode: 400,
+  cause: Authentication,
+  nonfatal: false,
+  href: 'https://help.ably.io/error/40005'
+}
+```
+
+The following explains each property of an @ErrorInfo@ object:
+
+- *code* := Ably-specific numeric code indicating the error type.
+- *statusCode* := An HTTP status code providing broader context, such as 400 for a bad request.
+- *cause* := A brief description of the issue.
+- *nonfatal* := A boolean indicating whether the error is critical.
+- *Href* := A direct link to Ably's documentation or for quick troubleshooting references.
+
+h2(#logging). Logging
+
+Most Ably SDKs allow you to customize the function that handles logging. This function is usually set in the options when configuring a client, such as the @ClientOptions@ object for Pub/Sub.
+
+Two separate properties can be set:
+
+- *logHandler* :=  Provide a custom function for each line of log output.
+- *logLevel* := The verbosity of the logging output, from silent to trace. In some SDKs this is numeric, and in others string.
+
+The following example configures the Ably client to log only error messages (level 1) and processes them with the function @logWriteFun()@:
+
+```[text]
+const ablyClient = new AblyClient(ably, {
+  logHandler: logWriteFunc,
+  logLevel: 1 // Errors only
+});
+```
+
+The following is an example log entry:
+
+```[text]
+LOG [Level 1]: Ably: ConnectionManager.failQueuedMessages(): failing 1 queued messages, err = [_ErrorInfo: Application Ptz0jg disabled.
+(See https://help.ably.io/error/40300 for help.); statusCode=403; code=40300]
+```
+
+h2(#meta). [meta]log channels
+
+Errors are not published in the meta channels when the client can be directly notified. For example, if a client publishes a message but exceeds a channel rate limit, the @publish()@ method uses an error callback to notify the client.
+
+There are two @metachannels@ related to logging:
+
+- @Meta[log]@ := Publishes errors that aren't visible to clients, except those related to push notifications.
+
+- @Meta[log:push]@ := Similar to @[meta]log@, but only publishes errors related to the delivery of push notifications.
+
+The following example subscribes to the @[meta]log@ channel:
+
+```[text]
+const channel = realtime.channels.get('[meta]log');
+channel.subscribe((msg) => {
+  console.log(msg);
+});
+```
+
+The following is an example event published to the @[meta]log@ channel as an @ErrorInfo@ object:
+
+```[text]
+{
+  code: 40005,
+  statusCode: 400,
+  cause: Authentication,
+  nonfatal: false,
+  href: 'https://help.ably.io/error/40005'
+}
+```
+
+h2(#console). Dev console
+
+The Dev console, accessible from your Ably dashboard, is essential for inspecting and debugging realtime errors. It visually displays all events in your application, making it particularly valuable during early-stage development or low-traffic periods when event tracking is simpler:
+
+* View all events in your application for detailed insights.
+* Test publishing and subscribing to channels to identify and resolve issues with these functions.
+
+h3(#connections). Connections
+
+Monitor state changes for example; connecting, connected, closed to identify authentication or network issues. Regularly review logs to ensure consistency and address potential problems:
+
+* Verify channels pause and resume as expected, with active and functioning subscriptions.
+* Simulate disconnection events and validate reconnection logic to ensure seamless recovery.
+* Align timestamps with reported issues to trace root causes and spot patterns.
+
+h3(#channels). Channels
+
+Address common issues such as attachment failures and undelivered messages:
+
+* Confirm the channel name and client initialization are correct. Ensure API key permissions allow the operation.
+* Verify the channel is attached and message data meets API requirements.
+* Check the @clientId@ configuration and validate the API integration using REST API commands.
+
+h2(#support). Support tickets
+
+If the provided information does not resolve your issue, contact Ably "support":https://ably.com/support. When contacting, include details such as your app ID, the error code, and any relevant logs to help troubleshoot. Include as much of the following information as possible:
+
+* Provide timestamps in UTC format.
+* Include complete SDK logs from the time of the failure. Ensure these logs show activity before and after the timeout, as SDKs retry failed requests by default.
+* Specify which endpoints were accessed. Mention if you use custom client options, the environment setting, and the failing SDK operation.
+* State the SDK/s you use, including the platform and versions.
+* Include any stack traces related to the error.
+* Indicate whether the issue occurs consistently or was a one-time event.
+* Provide details to confirm whether the issue was related to your network or Ably's availability. For example, note whether other internet operations were succeeding simultaneously.
+* Include the @appID@ associated with the request.
