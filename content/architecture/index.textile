@@ -1,0 +1,111 @@
+---
+title: Architecture overview
+meta_description: "Learn more about Ably's platform architecture."
+meta_keywords: "architecture"
+---
+
+Ably's platform architecture is built to deliver dependable realtime experiences at global scale. As the definitive realtime experience platform, we serve billions of devices monthly with unmatched reliability and performance.
+
+h3. At a Glance 
+
+Our globally distributed, multi-region infrastructure forms the foundation of our platform, allowing us to maintain exceptional performance, while serving massive scale and providing industry-leading quality of service guarantees.
+
+We characterise our system across "4 pillars of dependability":https://ably.com/four-pillars-of-dependability :
+
+* **Performance**: We focus on predictability of latencies to provide certainty in uncertain operating conditions.
+** <50ms global median latency
+** 19M+ concurrent connections
+* **Reliability**: Ably is designed to preserve continuity of service by providing sufficient redundancy at a regional and global level.
+** 5+ years since last outage
+** 99.999999% message survivability
+* **Scale**: Our service is elastic, highly-available and built to handle extreme scale and large numbers of concurrent connections.
+** 1B+ connected devices per month
+** 2T+ API operations per month
+* **Network**: We operate a truly distributed global edge network that delivers a globally consistent experience to users.
+** 635 points of presence
+** 11 globally distributed regions
+
+h3. Design Objectives
+
+Ably's platform is a global service that supports all of our realtime messaging and associated services. It is architected to achieve horizontal scalability with "no effective ceiling":https://ably.com/blog/ablys-four-pillars-no-scale-ceiling on application scale, while maintaining consistent latency, message integrity, and system reliability across our global network.
+
+The platform has been designed with the following primary objectives in mind:
+
+* **Horizontal scalability**: As more nodes are added, load is automatically redistributed across the cluster so that global capacity increases linearly with the number of instances we run.
+* **No single point of congestion**: As the system scales, there is no single point of congestion for any data path, and data within the system is routed peer-to-peer, ensuring no single component becomes overloaded as traffic scales for an individual app or across the cluster.
+* **Fault tolerance**: Faults in the system are expected, and the system must have redundancy at every layer in the stack to ensure availability and reliability.
+* **Autonomy**: Each component in the system should be able to operate fully without reliance on a global controller. For example, two isolated data centers should continue to service realtime requests while isolated.
+* **Consistent low latencies**: Within data centers, we aim for latencies to be in the low 10s of milliseconds and less than 100ms globally. Consistently achieving low latencies requires careful consideration of the placement of data and services across the system as well as prioritisation of the computation performed by each service.
+* **Quality of service**: We intentionally design for high QoS targets to enable sophisticated realtime applications that would be impossible on platforms with weaker guarantees.
+
+h3. Cluster Architecture
+
+Ably's platform runs on AWS EC2 infrastructure with a globally distributed architecture. Our "clusters":/docs/platform-customization#dedicated-and-isolated-clusters typically span multiple regions, usually between two and ten. This multi-region approach maximizes availability and is a critical aspect of providing a fault tolerant service.
+
+Each regional deployment operates independently, handling its own subscriber connections, REST traffic, channel management and message routing. When activity occurs on a channel across multiple regions, messages flow peer-to-peer between regions directly, eliminating central bottlenecks and single points of failure.
+
+Our architecture consists of three primary layers:
+
+* **Gossip Layer**: Distributes network topology information and facilitates service discovery.
+* **Frontend Layer**: Handles REST requests and maintains realtime connections (such as WebSocket, Comet and SSE).
+* **Core Layer**: Performs all central message processing for channels.
+
+Each component scales independently in each region based on demand. We continuously monitor CPU, memory, and other key metrics, triggering autoscaling based on aggregated performance indicators.
+
+The key to our horizontal scalability is intelligent load distribution that efficiently utilizes new capacity as it becomes available:
+
+* In the frontend layer, new instances join the load balancer pool and begin handling their share of incoming connections and REST requests.
+* In the core layer, we employ consistent hashing to distribute channels across core processes - each core maintains a set of pseudorandomly-generated hashes that determine channel placement. As the cluster scales, channels automatically relocate to maintain even load distribution.
+
+h3. Gossip Layer
+
+Every cluster we operate includes a network of gossip nodes, spanning all regions, that participate in a (Scuttlebutt-inspired) gossip protocol to facilitate service discovery and even distribution of work across the cluster. Other nodes in the cluster communicate with the gossip layer to broadcast and receive information about the state of the cluster. As nodes are added and removed, or fail abruptly, the gossip layer ensures a single consistent view of the network is shared by all. The gossip layer also allows node health to be consistently determined system-wide without the need for any single coordinator.
+
+h3. Frontend Layer
+
+Our frontend infrastructure consists of several components that handle individual requests and connections from realtime subscribers. Each component scales independently according to demand, ensuring requests are processed in the optimal location based on client location and system state.
+
+h4. DNS and TLS Termination
+
+We leverage Amazon's Network Load Balancers (NLB) for TLS termination and initial load balancing. Amazon's Route53 powers our latency-based routing with health checks for each region, automatically removing unavailable regions from DNS to prevent traffic routing to compromised infrastructure.
+
+For enhanced performance and security, we employ CloudFront for traffic acceleration and DDoS protection. CloudFlare serves as an alternate DNS provider for our fallback endpoints, which our client libraries use to route around regional issues - including DNS problems - ensuring consistent connectivity.
+
+h4. Intelligent Routing
+
+Our custom routing layer provides intelligent routing through deep integration with our application architecture. The routing layer is cluster-aware and implements sophisticated retry strategies, enables zero-downtime deployments and distributes instrumentation across our cluster.
+
+h4. Request Handling
+
+Nodes in the frontend layer process all incoming REST and realtime requests. They participate in the active service discovery mechanism between all nodes, maintaining real-time awareness of channel locations across the cluster, even as channels migrate during scaling events. Message fan-out is achieved by frontend nodes efficiently processing published messages and distributing them to all subscribed clients. The frontend layer also handles authentication, enforces rate limits, and provides DDoS protection.
+
+h4. Protocol Adapters
+
+Our "protocol adapters":/docs/protocols enable interoperability with multiple industry protocols. These adapters translate between external protocols and Ably's internal protocols in both directions. We support the MQTT standard as well as proprietary protocols like PubNub and Pusher.
+
+h3. Core Layer
+
+Our core infrastrucure handles all messages as they transit through the system. It is designed to scale elastically according to demand while managing all associated channel and system state.
+
+h4. Resource Placement
+
+Ably uses "consistent hashing":https://ably.com/blog/implementing-efficient-consistent-hashing to distribute resources such as channels, apps and accounts across available core compute capacity.
+
+Each compute instance within the core layer has a set of pseudo-randomly generated hashes which determines which resources are located at that instance. As the cluster scales, channels relocate to maintain an even load distribution. Any number of channels can exist as long as sufficient compute capacity is available. Whether handling many lightly-loaded channels or heavily-loaded ones, our scaling and placement strategies ensure capacity is added as required and load is effectively distributed.
+
+When a core node fails, the system detects the failure through the cluster-wide gossip protocol, and it's resources are automatically redistributed to healthy nodes. 
+
+h4. Message Processing
+
+Nodes in the core layer are responsible for all channel message processing and persistence and apply operations such as "delta":/docs/channels/options/deltas computation, "batching":/docs/messages/batch and "integration rule":/docs/integrations invocation. They also aggregate and persist account and app "statistics":/docs/metadata-stats/stats and enforce "limits":/docs/pricing/limits. Nodes in the core layer communicate cross-regionally to facilitate inter-data-center message transit.
+
+h4. Message Persistence
+
+Messages are persisted in multiple locations to ensure that message availability and continuity are maintained even during individual node or data center failures.
+
+Once a message is acknowledged, it is stored in multiple physical locations, providing statistical guarantees of 99.999999% (8 nines) for message availability and survivability. This redundancy enables Ably to maintain its quality of service guarantees even during infrastructure failures.
+
+Messages are stored in two ways:
+
+* **Ephemeral Storage**: Messages are held for 2 minutes in an in-memory database (Redis). This data is distributed according to our consistent hashing mechanism and relocated when channels move between nodes. This short-term storage enables low-latency message delivery and retrieval and supports features like "connection recovery":/docs/connect/states.
+* **Persisted Storage**: Messages can optionally be stored persistently on disk if longer term retention is required. We use a globally distributed and clustered database (Cassandra) for this purpose, deployed across multiple data centers with message data replicated to three regions to ensure integrity and availability even if a region fails.
