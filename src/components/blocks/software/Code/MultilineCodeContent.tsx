@@ -7,6 +7,7 @@ import languagesRegistry from '@ably/ui/core/utils/syntax-highlighter-registry';
 registerDefaultLanguages(languagesRegistry);
 
 const TRUNCATION_CHARACTER_THRESHOLD = 20;
+const truncationRegex = new RegExp(`^[A-Za-z0-9_-]{6}.[A-Za-z0-9_-]{6}:[A-Za-z0-9_-]{43}$`, 'gu');
 
 const chooseString = (condition: boolean, firstString: string, secondString: string) =>
   condition ? firstString : secondString;
@@ -48,8 +49,8 @@ export const MultilineCodeContent = ({
     contentWithObfuscatedKey,
   );
 
-  const truncatedContent = renderedContent.replace(
-    new RegExp(`'([a-zA-Z0-9\\p{P}]{${TRUNCATION_CHARACTER_THRESHOLD},})'`, 'gu'),
+  const truncatedContent = renderedContent.replaceAll(
+    truncationRegex,
     (_, p1) => `'${truncate({ length: TRUNCATION_CHARACTER_THRESHOLD }, p1)}'`,
   );
 
