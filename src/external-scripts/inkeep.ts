@@ -40,6 +40,7 @@ declare global {
         config: object,
       ) => {
         update: (config: object) => void;
+        remount: () => void;
       };
     };
   }
@@ -175,7 +176,7 @@ const loadInkeepSearch = (config: object) => {
     modalSettings: {
       defaultView: 'SEARCH',
     },
-  });
+  }).remount();
 };
 
 export type InkeepUser = {
