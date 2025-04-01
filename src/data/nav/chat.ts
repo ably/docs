@@ -85,20 +85,15 @@ export default {
           ],
         },
         {
-          name: 'Bring Your Own',
+          name: 'Custom',
           pages: [
             {
               name: 'API Overview',
-              link: '/docs/chat/moderation/byo',
+              link: '/docs/chat/moderation/custom',
             },
             {
-              name: 'Transports',
-              pages: [
-                {
-                  name: 'AWS Lambda',
-                  link: '/docs/chat/moderation/byo/transports/lambda',
-                },
-              ],
+              name: 'AWS Lambda',
+              link: '/docs/chat/moderation/custom/transports/lambda',
             },
           ],
         },
