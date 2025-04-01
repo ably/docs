@@ -49,8 +49,9 @@ Ably's platform runs on AWS EC2 infrastructure with a globally distributed archi
 
 Each regional deployment operates independently, handling its own subscriber connections, REST traffic, channel management and message routing. When activity occurs on a channel across multiple regions, messages flow peer-to-peer between regions directly, eliminating central bottlenecks and single points of failure.
 
-Our architecture consists of three primary layers:
+Our architecture consists of four primary layers:
 
+* **Routing Layer**: Provides intelligent, latency optimised routing for robust end client connectivity.
 * **Gossip Layer**: Distributes network topology information and facilitates service discovery.
 * **Frontend Layer**: Handles REST requests and maintains realtime connections (such as WebSocket, Comet and SSE).
 * **Core Layer**: Performs all central message processing for channels.
@@ -62,6 +63,38 @@ The key to our horizontal scalability is intelligent load distribution that effi
 * In the frontend layer, new instances join the load balancer pool and begin handling their share of incoming connections and REST requests.
 * In the core layer, we employ consistent hashing to distribute channels across core processes - each core maintains a set of pseudorandomly-generated hashes that determine channel placement. As the cluster scales, channels automatically relocate to maintain even load distribution.
 
+h3. Routing Layer
+
+Our latency-optimised routing infrastructure provides multiple layers of resilience to ensure reliable connectivity even during partial system failures.
+
+h4. Intelligent Routing
+
+Our custom routing layer provides sophisticated traffic management through deep integration with our application architecture.
+
+The routing layer is cluster-aware and implements advanced retry strategies, enables zero-downtime deployments, and distributes instrumentation across our cluster.
+
+This intelligent routing ensures traffic is directed optimally even as the system scales or during partial failures.
+
+h4. DNS and Edge Protection
+
+We use latency-based routing to ensure clients are consistently routed to their closest datacenter.
+
+We employ multiple DNS providers and global load balancing strategies for resilient connectivity, allowing client libraries to route around regional issues and ensuring consistent connectivity.
+
+Our routing layer automatically removes unhealthy regions from DNS resolution and offers advanced DDoS protection at the edge.
+
+h4. Connection Management
+
+Our SDKs implement sophisticated connection management with automatic failover capabilities.
+
+Clients seamlessly handle transient disconnections and the system preserves message continuity if the connection is re-established within two minutes.
+
+Clients automatically select the best available transport (such as WebSocket or Comet) and seamlessly migrate connections across transports to provide the best possible service.
+
+Re-connection attempts cycle through up to 6 globally distributed endpoints. Clients automatically attempt to reconnect via alternative endpoints if a connection attempt fails.
+
+Progressive connection timeout strategies ensure rapid recovery from transient issues, while continuous connection quality monitoring triggers proactive reconnection when performance degrades.
+
 h3. Gossip Layer
 
 Every cluster we operate includes a network of gossip nodes, spanning all regions, that participate in a (Scuttlebutt-inspired) gossip protocol to facilitate service discovery and even distribution of work across the cluster. Other nodes in the cluster communicate with the gossip layer to broadcast and receive information about the state of the cluster. As nodes are added and removed, or fail abruptly, the gossip layer ensures a single consistent view of the network is shared by all. The gossip layer also allows node health to be consistently determined system-wide without the need for any single coordinator.
@@ -70,19 +103,9 @@ h3. Frontend Layer
 
 Our frontend infrastructure consists of several components that handle individual requests and connections from realtime subscribers. Each component scales independently according to demand, ensuring requests are processed in the optimal location based on client location and system state.
 
-h4. DNS and TLS Termination
-
-We leverage Amazon's Network Load Balancers (NLB) for TLS termination and initial load balancing. Amazon's Route53 powers our latency-based routing with health checks for each region, automatically removing unavailable regions from DNS to prevent traffic routing to compromised infrastructure.
-
-For enhanced performance and security, we employ CloudFront for traffic acceleration and DDoS protection. CloudFlare serves as an alternate DNS provider for our fallback endpoints, which our client libraries use to route around regional issues - including DNS problems - ensuring consistent connectivity.
-
-h4. Intelligent Routing
-
-Our custom routing layer provides intelligent routing through deep integration with our application architecture. The routing layer is cluster-aware and implements sophisticated retry strategies, enables zero-downtime deployments and distributes instrumentation across our cluster.
-
 h4. Request Handling
 
-Nodes in the frontend layer process all incoming REST and realtime requests. They participate in the active service discovery mechanism between all nodes, maintaining real-time awareness of channel locations across the cluster, even as channels migrate during scaling events. Message fan-out is achieved by frontend nodes efficiently processing published messages and distributing them to all subscribed clients. The frontend layer also handles authentication, enforces rate limits, and provides DDoS protection.
+Nodes in the frontend layer process all incoming REST and realtime requests. They participate in the active service discovery mechanism between all nodes, maintaining real-time awareness of channel locations across the cluster, even as channels migrate during scaling events. Message fan-out is achieved by frontend nodes efficiently processing published messages and distributing them to all subscribed clients. The frontend layer also handles authentication, enforces rate limits, and provides additional DDoS protection.
 
 h4. Protocol Adapters
 
