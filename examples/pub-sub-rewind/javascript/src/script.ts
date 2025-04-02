@@ -14,9 +14,6 @@ interface MatchOdds {
       draw: string;
       awayWin: string;
     };
-    nextGoal: {
-      [key: string]: string;
-    };
   };
 }
 
@@ -30,11 +27,6 @@ let matchData: MatchOdds | null = {
       homeWin: '2.45',
       draw: '3.25',
       awayWin: '2.85',
-    },
-    nextGoal: {
-      'Royal Knights': '1.95',
-      'North Rangers': '1.85',
-      'No Goal': '2.75',
     },
   },
 };
@@ -78,17 +70,12 @@ preloadButton.addEventListener('click', async () => {
   const channel = client.channels.get(channelName);
 
   for (let i = 0; i < 10; i++) {
-    const markets = ['homeWin', 'draw', 'awayWin', 'nextGoal'];
+    const markets = ['homeWin', 'draw', 'awayWin'];
     const numMarketsToUpdate = Math.floor(Math.random() * 2) + 1;
     const marketsToUpdate = markets.sort(() => 0.5 - Math.random()).slice(0, numMarketsToUpdate);
 
     marketsToUpdate.forEach((market) => {
-      if (market === 'nextGoal') {
-        const team = Object.keys(matchData.match.nextGoal)[Math.floor(Math.random() * 3)];
-        matchData.match.nextGoal[team] = (parseFloat(matchData.match.nextGoal[team]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
-      } else {
-        matchData.match.matchOdds[market] = (parseFloat(matchData.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
-      }
+      matchData.match.matchOdds[market] = (parseFloat(matchData.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
     });
 
     matchData.match.timestamp = new Date().toISOString();
@@ -122,12 +109,6 @@ async function updateCurrentOdds(message: Message) {
   currentAway.textContent = message.data.match.matchOdds.awayWin;
   const currentDraw = document.getElementById('current-draw');
   currentDraw.textContent = message.data.match.matchOdds.draw;
-  const nextGoalHome = document.getElementById('next-goal-home');
-  nextGoalHome.textContent = message.data.match.nextGoal[message.data.match.homeTeam];
-  const nextGoalAway = document.getElementById('next-goal-away');
-  nextGoalAway.textContent = message.data.match.nextGoal[message.data.match.awayTeam];
-  const nextGoalNoGoal = document.getElementById('next-goal-none');
-  nextGoalNoGoal.textContent = message.data.match.nextGoal['No Goal'];
 }
 
 async function addHistoryItem(message: Message, position = 'prepend') {
@@ -185,19 +166,14 @@ async function updateRandomOdds() {
       };
     });
 
-    const markets = ['homeWin', 'draw', 'awayWin', 'nextGoal'];
+    const markets = ['homeWin', 'draw', 'awayWin'];
     const numMarketsToUpdate = Math.floor(Math.random() * 3) + 1;
     const marketsToUpdate = markets.sort(() => 0.5 - Math.random()).slice(0, numMarketsToUpdate);
 
     const newOdds = { ...matchData };
 
     marketsToUpdate.forEach((market) => {
-      if (market === 'nextGoal') {
-        const team = Object.keys(newOdds.match.nextGoal)[Math.floor(Math.random() * 3)];
-        newOdds.match.nextGoal[team] = (parseFloat(newOdds.match.nextGoal[team]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
-      } else {
-        newOdds.match.matchOdds[market] = (parseFloat(newOdds.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
-      }
+      newOdds.match.matchOdds[market] = (parseFloat(newOdds.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
     });
 
     newOdds.match.timestamp = new Date().toISOString();
