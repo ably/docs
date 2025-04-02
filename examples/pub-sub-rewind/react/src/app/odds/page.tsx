@@ -17,9 +17,6 @@ interface MatchOdds {
       draw: string;
       awayWin: string;
     };
-    nextGoal: {
-      [key: string]: string;
-    };
   };
 }
 
@@ -66,19 +63,14 @@ function LiveMatch({ channelName }: { channelName: string }) {
           return () => clearTimeout(timeoutId);
         });
 
-        const markets = ['homeWin', 'draw', 'awayWin', 'nextGoal'];
+        const markets = ['homeWin', 'draw', 'awayWin'];
         const numMarketsToUpdate = Math.floor(Math.random() * 3) + 1;
         const marketsToUpdate = markets.sort(() => 0.5 - Math.random()).slice(0, numMarketsToUpdate);
 
         const newOdds = { ...matchData };
 
         marketsToUpdate.forEach(market => {
-          if (market === 'nextGoal') {
-            const team = Object.keys(newOdds.match.nextGoal)[Math.floor(Math.random() * 3)];
-            newOdds.match.nextGoal[team] = (parseFloat(newOdds.match.nextGoal[team]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
-          } else {
-            newOdds.match.matchOdds[market] = (parseFloat(newOdds.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
-          }
+          newOdds.match.matchOdds[market] = (parseFloat(newOdds.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
         });
 
         newOdds.match.timestamp = new Date().toISOString();
@@ -96,19 +88,19 @@ function LiveMatch({ channelName }: { channelName: string }) {
   }, [matchData, channel]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-100 p-4">
+      <div className="max-w-sm mx-auto">
         {matchData && (
           <>
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-              <div className="flex justify-between items-center text-2xl font-bold">
+            <div className="bg-white rounded shadow p-3 mb-4">
+              <div className="flex justify-between items-center text-sm font-semibold">
                 <span>
                   <span className="hidden sm:inline">{matchData.match.homeTeam}</span>
                   <span className="sm:hidden">
                     {matchData.match.homeTeam.split(' ').map(word => word[0]).join(' ')}
                   </span>
                 </span>
-                <span className="bg-gray-800 text-white px-4 py-2 rounded">
+                <span className="bg-gray-800 text-white px-2 py-1 rounded text-xs">
                   {matchData.match.score}
                 </span>
                 <span>
@@ -120,45 +112,33 @@ function LiveMatch({ channelName }: { channelName: string }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-6 mb-8">
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-lg font-semibold mb-2">Home Win</h3>
-                <p className="text-3xl font-bold text-green-600">
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="bg-white rounded shadow p-2">
+                <h3 className="text-xs font-medium mb-1">Home Win</h3>
+                <p className="text-lg font-bold text-green-600">
                   {matchData.match.matchOdds.homeWin}
                 </p>
               </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-lg font-semibold mb-2">Draw</h3>
-                <p className="text-3xl font-bold text-blue-600">
+              <div className="bg-white rounded shadow p-2">
+                <h3 className="text-xs font-medium mb-1">Draw</h3>
+                <p className="text-lg font-bold text-blue-600">
                   {matchData.match.matchOdds.draw}
                 </p>
               </div>
-              <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-lg font-semibold mb-2">Away Win</h3>
-                <p className="text-3xl font-bold text-red-600">
+              <div className="bg-white rounded shadow p-2">
+                <h3 className="text-xs font-medium mb-1">Away Win</h3>
+                <p className="text-lg font-bold text-red-600">
                   {matchData.match.matchOdds.awayWin}
                 </p>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-              <h2 className="text-xl font-bold mb-4">Next Goal</h2>
-              <div className="grid grid-cols-3 gap-4">
-                {Object.entries(matchData.match.nextGoal).map(([team, odds]) => (
-                  <div key={team} className="bg-gray-50 p-4 rounded">
-                    <h3 className="font-medium mb-2">{team}</h3>
-                    <p className="text-2xl font-bold">{odds}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-bold mb-4">Odds Movement History</h2>
-              <div className="space-y-4">
+            <div className="bg-white rounded shadow p-3">
+              <h2 className="text-sm font-bold mb-2">Odds Movement History</h2>
+              <div className="space-y-2">
                 {oddsHistory.map((odds, index) => (
-                  <div key={index} className="border-b pb-2">
-                    <div className="flex justify-between text-sm text-gray-600">
+                  <div key={index} className="border-b pb-1">
+                    <div className="flex justify-between text-xs text-gray-600">
                       <span>Home: {odds.match.matchOdds.homeWin}</span>
                       <span>Draw: {odds.match.matchOdds.draw}</span>
                       <span>Away: {odds.match.matchOdds.awayWin}</span>

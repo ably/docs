@@ -35,26 +35,16 @@ export default function Home() {
           draw: "3.25",
           awayWin: "2.85"
         },
-        nextGoal: {
-          [homeTeam]: "1.95",
-          [awayTeam]: "1.85",
-          "No Goal": "2.75"
-        }
       }
     };
 
     for (let i = 0; i < 10; i++) {
-      const markets = ['homeWin', 'draw', 'awayWin', 'nextGoal'];
+      const markets = ['homeWin', 'draw', 'awayWin'];
       const numMarketsToUpdate = Math.floor(Math.random() * 2) + 1;
       const marketsToUpdate = markets.sort(() => 0.5 - Math.random()).slice(0, numMarketsToUpdate);
 
       marketsToUpdate.forEach(market => {
-        if (market === 'nextGoal') {
-          const team = Object.keys(currentOdds.match.nextGoal)[Math.floor(Math.random() * 3)];
-          currentOdds.match.nextGoal[team] = (parseFloat(currentOdds.match.nextGoal[team]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
-        } else {
-          currentOdds.match.matchOdds[market] = (parseFloat(currentOdds.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
-        }
+        currentOdds.match.matchOdds[market] = (parseFloat(currentOdds.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
       });
 
       currentOdds.match.timestamp = new Date().toISOString();
