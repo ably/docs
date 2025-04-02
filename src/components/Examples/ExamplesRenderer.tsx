@@ -68,7 +68,9 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
             ably: '^2.5.0',
             nanoid: '^5.0.7',
             minifaker: '1.34.1',
-            ...(activeLanguage === 'react' ? { react: '^18', 'react-dom': '^18', 'react-icons': '^5.4.0' } : {}),
+            react: '^18',
+            'react-dom': '^18',
+            'react-icons': '^5.4.0',
           },
           devDependencies: {
             typescript: '^4.0.0',
@@ -84,6 +86,7 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
             'sp-editor': 'sm:!h-[400px]',
             'sp-preview': '!h-[233px]',
           },
+          externalResources: ['https://unpkg.com/@tailwindcss/ui/dist/tailwind-ui.min.css'],
         }}
         theme={githubLight}
         template={determineSandpackTemplate(activeLanguage as LanguageKey)}
