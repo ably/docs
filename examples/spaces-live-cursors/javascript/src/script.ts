@@ -40,18 +40,23 @@ async function connect() {
   const space = await spaces.get(spaceName);
   const parentRef = document.getElementById('live-cursors');
 
-  if (!parentRef || !(parentRef instanceof HTMLDivElement)) return;
+  if (!parentRef || !(parentRef instanceof HTMLDivElement)) {
+    return;
+  }
 
-  await space.enter({
-    name: mockNames[Math.floor(Math.random() * mockNames.length)],
-    userColors: { cursorColor: colors[Math.floor(Math.random() * colors.length)] },
-  });
+  parentRef.style.cursor = 'default';
 
   space.cursors.subscribe('update', async (cursorUpdate) => {
     const members = await space.members.getAll();
     const member = members.find((member) => member.connectionId === cursorUpdate.connectionId);
 
-    if (!member) return;
+    if (!member) {
+      return;
+    }
+
+    if (client.connection.id === cursorUpdate.connectionId) {
+      return;
+    }
 
     if (cursorUpdate.data?.['state'] === 'leave') {
       document.getElementById(`member-cursor-${member.connectionId}`)?.remove();
@@ -81,6 +86,14 @@ async function connect() {
 
     memberCursorContainer.appendChild(cursorNameContainer);
     parentRef.appendChild(memberCursorContainer);
+  });
+
+  const mockName = mockNames[Math.floor(Math.random() * mockNames.length)];
+  const userColor = { cursorColor: colors[Math.floor(Math.random() * colors.length)] };
+
+  await space.enter({
+    name: mockName,
+    userColors: userColor,
   });
 
   const updateCursorPosition = async (position: CursorPosition) => {
