@@ -7,6 +7,7 @@ describe('getMetaTitle', () => {
       ['spaces', 'Ably Spaces', 'Setup'],
       ['livesync', 'Ably LiveSync', 'Begin'],
       ['chat', 'Ably Chat', 'Emojis'],
+      ['liveobjects', 'Ably LiveObjects', 'Setup'],
       ['asset-tracking', 'Ably Asset Tracking', 'Examples'],
       ['api-reference', 'API References', 'Setup'],
       ['pub_sub', 'Ably Pub/Sub', 'Authentication'],

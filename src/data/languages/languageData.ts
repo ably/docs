@@ -3,13 +3,13 @@ import { LanguageData } from './types';
 
 export default {
   platform: {
-    javascript: 2.6,
-    nodejs: 2.6,
+    javascript: 2.7,
+    nodejs: 2.7,
   },
   pubsub: {
-    javascript: 2.6,
-    nodejs: 2.6,
-    react: 2.6,
+    javascript: 2.7,
+    nodejs: 2.7,
+    react: 2.7,
     csharp: 1.2,
     flutter: 1.2,
     java: 1.2,
@@ -30,6 +30,9 @@ export default {
   spaces: {
     javascript: 0.4,
     react: 0.4,
+  },
+  liveObjects: {
+    javascript: 2.7,
   },
   liveSync: {
     javascript: 0.4,
