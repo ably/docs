@@ -1,0 +1,435 @@
+---
+title: REST API Reference
+meta_description: "Ably provides the raw REST API for interacting with the LiveObjects stored on a channel."
+meta_keywords: "REST API, REST, LiveObjects, objects"
+section: api
+index: 100
+---
+
+h2(#fetching-objects). Fetching objects
+
+There are three APIs for fetching objects stored on a channel:
+
+1. List - returns a list of objects.
+2. Object - returns the objects in a tree starting from the given object.
+3. Compact - returns the objects in a compact tree format.
+
+h3(#list-objects). List objects
+
+Use the list endpoint to fetch a list of objects stored on the channel.
+
+h6. GET rest.ably.io/channels/<channelId>/objects
+
+Returns the IDs of the live objects store on the channel.
+
+bc(json). [
+  "root",
+  "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000",
+  "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+]
+
+To include values, set the @values=true@ query parameter.
+
+h6. GET rest.ably.io/channels/<channelId>/objects?values=true
+
+bc(json). [
+  {
+    "objectId": "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000",
+    "map": {
+      "entries": {
+        "myMapKey": { "data": { "string": "my map value" } },
+        "myObjectRef": { "data": { "objectId": "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000" } }
+      }
+    }
+  },
+  {
+    "objectId": "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000",
+    "counter": { "data": { "number": 5 } }
+  }
+]
+
+h3(#data-values). Data values
+
+In the list API, data values represent a concrete piece of data (a number, a string, etc) or a reference to another object. The key in the data value indicates the type that you can expect to receive in the value.
+
+bc(json). { "data": { "number" : 4 }}
+{ "data": { "string" : "Ably Pub/Sub" }}
+{ "data": { "boolean" : true }}
+{ "data": { "bytes": "TGl2ZU9iamVjdHMgaXMgYXdlc29tZQo=", "encoding": "base64" }}
+{ "data": { "objectId": "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000" }}
+
+Maps are made of entries, which are a user-defined key (e.g. "myMapKey") and a data value. Counters are data values containing a number.
+
+h3(#query-params). Query parameters
+
+|_. Param |_. Description |
+|values|@true@ or @false@, default is @false@. Include the values in the response. Setting this to @false@ returns a list objectIds only. |
+|limit |Set the number of objects to be returned in each page. |
+|cursor | The cursor used for "pagination.":/docs/api/rest-api#pagination |
+|metadata| @true@ or @false@, default is @false@. Include "object metadata":#metadata in the response. |
+
+h3(#get-object). Get an object
+
+Use the object API to fetch a live object stored on the channel in a tree structure.
+
+h6. GET rest.ably.io/channels/<channelId>/objects/<objectId>
+
+bc(json). {
+  "objectId": "root",
+  "map": {
+    "entries": {
+      "myMapKey": { "data": { "string": "my map value" }},
+      "myObjectRef": {
+        "data": { "objectId": "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000" }
+      }
+    }
+  }
+}
+
+To replace the object references with the actual values (inlined), set the @children=true@ query parameter. This query param causes the content of the objects to be included in the tree response, instead of just the objectIds.
+
+h6. GET rest.ably.io/channels/<channelId>/objects/<objectId>?children=true
+
+bc(json). {
+  "objectId": "root",
+  "map": {
+    "entries": {
+      "myMapKey": { "data": { "string": "my map value" }},
+      "myObjectRef": {
+        "data": {
+          "objectId": "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000",
+          "counter": { "data": { "number": 5 }}
+        }
+      }
+    }
+  }
+}
+
+Use @root@ as the objectId in the URL to get the full object tree, or any other objectId to fetch a subset of the tree.
+
+The traverse API also supports requesting metadata with @metadata=true@ query param.
+
+You can limit the number of objects included in the response using the @limit@ query param.
+
+h3(#get-compact-object). Get a compact object
+
+The compact API returns a tree structure of the objects in a concise format that's easier to unmarshal into data types that represent your state. To fetch the full object tree, use the objectId @root@.
+
+h6. GET rest.ably.io/channels/<channelId>/objects/<objectId>/compact
+
+bc(json). {
+  "myMapKey": "my map value",
+  "myCounter": 5
+  "myNestedMap": {
+    "nestedKey": "nested value"
+  }
+}
+
+
+Map keys will be inlined as json object keys, maps will be json objects, and counters will be inlined directly with the counter value.
+
+You can limit the number of objects included in the response using the @limit@ query param.
+
+Note, cyclic and diamond references will be included as objectId references rather than including a single object in the response more than once. The compact API response schema does not distinguish between a string value and an objectId.
+
+h3(#metadata). Metadata
+
+Object metadata describes the internal details of an object. There are two metadata fields that are common to all objects:
+
+|_. Field |_. Description |
+| Tombstone | true or false, indicates if the object has been deleted. Objects will exist as tombstones for a short while to ensure they remain deleted and are not accidentally created by a lagging live objects client. |
+|SiteTimeserials |a map of sites, and the last operation applied to this object from that site. |
+
+Maps have additional metadata attached to their map entries.
+
+|_. Field |_. Description |
+| MapSemantics | Indicates the conflict resolution method used in this map. |
+| Timeserial | The last operation applied to this map key, used to preserve the map semantics.|
+| Tombstone | true or false, indicates if the map entry has been deleted. Tombstoned map values are not included in the responses by default or when using the @metadata=false@ query param. |
+
+Example object with metadata included:
+
+bc(json). {
+  "objectId": "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000",
+  "map": {
+    "mapSemantics": "LWW",
+    "entries": {
+      "myMapKey": {
+        "timeserial": "...",
+        "tombstone": false,
+        "data": { "string": "my map value" }
+      },
+      "myObjectRef": {
+        "timeserial": "...",
+        "tombstone": true,
+        "data": { "objectId": "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000" }
+      }
+    }
+  }
+}
+
+h3(#tombstones). Tombstones
+
+Tombstones are used on objects and on map entires to indicate that the object or map entry has been deleted. This protects against lagging live objects clients from re-introducing a deleted value by accident.
+
+Tombstone objects are not included by default, but can be enabled using @metadata=true@ query param.
+
+Tombstone map entry keys are included by default, but the values are not. The key will be present in the entries object but with a null value e.g. @myKey: null@. Tombstoned map entry values can be included using the @metadata=true@ flag.
+
+h3(#cyclic-and-diamond-references). Cyclic and diamond references
+
+In the List, Get object, and Get compact object APIs objects will only be included in the response once. For cyclic or diamond references, the later references to any object that was already included will have an objectIds only. The reference will be included even if you request the data to be inlined using query params, as objects will only appear in the response once.
+
+
+h2(#issuing-operations). Issuing operations
+
+h6. POST rest.ably.io/channels/<channelId>/objects
+
+h3(#maps). Map operations
+
+h4(#map-create). Create a map
+
+bc(json). {
+  "operation": "MAP_CREATE",
+  "data": {
+    "myMapKey": {"string": "myMapValue"},
+    "myOtherKey": {"boolean": true}
+  }
+}
+
+The @data@ field is made up of your map keys, and a "data" value [^link to above]. You do not have to set a value on the map when you create it.
+
+You do not have to provide an objectId when you create a map. The server will assign the correct objectId and return it in the response:
+
+bc(json). {
+  "channel": "<channelId>",
+  "objectIds": ["map:Pm/NQtjxtARMnLFMUiw8U+eeiayy0kClduUZlH0ag30@1742555472000"]
+}
+
+You can create an objectId and provide it in the create request. The server will validate the objectId is the correct format. See the "ObjectId":#object-id-format format section.
+
+bc(json). {
+  "operation": "MAP_CREATE",
+  "objectId": "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_-yXQE@1742207566771",
+  "nonce": "myNonce",
+  "data": {"myMapKey":{"string":"myMapValue"}}
+}
+
+h4(#map-set). Set a value on a map
+
+To set a value on a map, you need to provide the objectId of the map you wish to set the key and value on. The data value consists of a @key@ and @value@. Like before the @value@ carries an object that indicates the type of the value being set.
+
+bc(json). {
+  "operation": "MAP_SET",
+  "objectId": "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_@1742207566771",
+  "data": {"key":"foo", "value":{"string":"bar"}}
+}
+
+h4(#map-remove). Remove a value from a map
+
+To remove a key and value from a map, provide the objectId of the map you wish to modify, and the key to remove.
+
+bc(json). {
+  "operation": "MAP_REMOVE",
+  "objectId": "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_@1742207566771",
+  "data": {"key":"myMapKey"}
+}
+
+h3(#counters). Counter operations
+
+h4(#counter-create). Create a counter
+
+The counter create takes a @data@ value with a @number@ field. This number is the initial value that the counter will be initialised to.
+
+bc(json). {
+  "operation": "COUNTER_CREATE",
+  "data": { "number": 3.1415926 }
+}
+
+
+You can create a counter with an objectId, rather than relying on the server to assign the objectId.
+
+Response:
+
+bc(json). {
+  "channel": "<channelId>",
+  "objectIds": ["counter:u41d1-DfkEt1AtbyJUSUJn3qAFblVVGmx5Dpg-ToCeI@1734628392000"]
+}
+
+h4(#counter-create). Increment a counter
+
+To increment a counter, you must provide the objectId of the counter that you are going to increment. You can increment by a negative value.
+
+bc(json). {
+  "operation": "COUNTER_INC",
+  "objectId": "counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlgICjkk@1734628392000",
+  "data": {"number": 2}
+}
+
+h3(#remove-object). Remove an object
+
+There is no explicit delete operation for objects. Objects that are reachable from the root map are kept, any object that is not reachable from the root map is elligible for periodic garbage collection.
+
+To remove an object, update the object tree to remove any reference to that objectId, and the object will be elligible for garbage collection.
+
+h2(#object-id-format). ObjectId format
+
+An objectId is made of the following components:
+
+bc. objectType:base64hash@millisecondTimestamp
+// Example:
+counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlgICjkk@1734628392000
+
+The object types are @map@ or @counter@.
+
+The millisecond timestamp is "now". There is a small leeway to compensate for server clocks being out of sync. You can fetch the ably server time using "@rest.ably.io/time@":/docs/api/rest-api#time.
+
+The base64 raw url encoding hash is made of @initialValue:nonce@. The initial value is the raw bytes taken from the @data@ field on create operations. The @nonce@ is any random string.
+
+Examples:
+
+|_. Initial value |_. Nonce |_. Result hash |
+|@{"value":3.1415926539}@ | @nonce@ | @u41d1-DfkEt1AtbyJUSUJn3qAFblVVGmx5Dpg-ToCeI@ |
+|@{"foo":{"string":"bar"}}@ | @nonce@ | @ME2yWbb_6sK5AlwxklHA8mTBPxPZx9iyW2Zk6rKJfRs@ |
+|@{"myMapKey":{"string":"myMapValue"}}@ | @myNonce@ |@99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_-yXQE@ |
+
+Note: the initial value is space and case sensitive.
+
+The Operations API accepts the "data" field as either a json object, or as a string with an encoding field. For example, this request passes the data field for a counter as a string with json encoding.
+
+bc(json). {
+  "operation": "COUNTER_CREATE",
+  "data": "{ \"number\": 3.1415926 }",
+  "encoding": "json"
+}
+
+h2(#batch-operations). Batch operations
+
+You can pass a list of operations to the operations endpoint.
+
+h6. POST rest.ably.io/channels/<channelId>/objects
+
+bc(json). [
+  {
+    "operation": "MAP_SET"
+    "objectId": "map:cwhvmsq21tXtFDS02TQqPdIhGGezcSc8UsBYeUGygng@1636022994797",
+    "data": {"key": "isActive", "value": { "boolean": true }}
+  },
+  {
+    "operation": "COUNTER_INC"
+    "objectId": "counter:DXr2i8FHRGkLrHPccWhXKDj1VUX2s7ACvmTrNEguJXo@1742481614000",
+    "data": {"number": 1}
+  }
+]
+
+The response is the same as the single operation endpoint:
+
+bc(json). {
+  "channel": "<channelId>",
+  "objectIds": [
+    "map:cwhvmsq21tXtFDS02TQqPdIhGGezcSc8UsBYeUGygng@1636022994797",
+    "counter:DXr2i8FHRGkLrHPccWhXKDj1VUX2s7ACvmTrNEguJXo@1742481614000"
+  ]
+}
+
+It map be useful to generate an objectId client-side, so that you can create an object and modify it in the same batch operation. For example; create a map and set values on it in the same operation.
+
+Batches of operations issued in the REST API will remain a batch, and will be passed to clients as a batch. Other operations issued against that object will not be interleaved between operations within the same batch.
+
+h2(#path-operations). Path operations
+
+h6. POST rest.ably.io/channels/<channelId>/objects
+
+Use path operations to issue operations against objects based on their referenced location in the tree of objects stored on the channel.
+Paths must start with a key in the 'root' map, and then reference keys in nested maps, until the target location.
+
+For example, increment the @likes@ counter in the @reactions@ map by 3.
+
+bc(json). {
+  "path": "reactions.likes",
+  "operation": "COUNTER_INC",
+  "data": { "number": 3 }
+}
+
+Example object tree this path could match:
+
+bc(json). {
+  "reactions": {
+    "likes": <some counter value>
+  }
+}
+
+Here, the root map contains a @reactions@ key, which has a map value. The @reactions@ map contains a single key @likes@, which has a counter value. So incrementing @reactions.likes@ will increment the @likes@ counter in the @reactions@ map.
+
+Response:
+
+bc(json). {
+  "channel": "<channelId>",
+  "objectIds": ["<objectId>"]
+}
+
+You can create an object, like a map or a counter, and assign it to a path in a single operation. For example, the following operation will create a counter in the @reactions@ map under the key @likes@.
+
+bc(json). {
+  "path": "reactions.likes",
+  "operation": "COUNTER_CREATE"
+}
+
+When creating operations with a path, all of objects up to the last path component must exist. In the example above, the @reactions@ map must already exist on the root map for us to set a counter in it under the @likes@ key.
+Create operations cannot: overwrite other objects that already exist, or use wildcards.
+
+h3(#wildcards). Wildcard paths
+
+You can issue a single operation against multiple objects at once using the wildcard @*@. For example, increment all @reactions@ counters by 1.
+
+bc(json). {
+  "path": "reactions.*",
+  "operation": "COUNTER_INC",
+  "data": { "number": 1 }
+}
+
+Wildcards can be included at the end or in the middle of paths and will match exactly one level in the object tree. For example, this path increments all objects reachable from the root map that have a @likes@ counter:
+
+bc(json). {
+  "path": "*.likes",
+  "operation": "COUNTER_INC",
+  "data": { "number": 1 }
+}
+
+If your map keys (that make up the path) already contain a @.@, you can escape the path using a @\.@
+
+For example, increment the counter stored at the @foo.bar@ key on the root map:
+
+bc(json). {
+  "path": "foo\.bar",
+  "operation": "COUNTER_INC",
+  "data": { "number": 1 }
+}
+
+h2(#idempotent-operations). Idempotent operations
+
+All operations support an @id@ field. Operations are deduplicated using "idempotent publishing":/docs/pub-sub/advanced#idempotency based on the operation's "id" field.
+
+bc(json). {
+  "id": "myIdempotencyKey",
+  "operation": "MAP_SET"
+  "objectId": "map:cwhvmsq21tXtFDS02TQqPdIhGGezcSc8UsBYeUGygng@1636022994797",
+  "data": {"key": "isActive", "value": { "boolean": true }}
+}
+
+Batches of operations can be made idempotent using a compound key based on the format @<baseId>:<index>@. The index is the order of the operation in the batch. The base of the @id@ must be the same across all operations in the batch.
+
+bc(json). [
+  {
+    "id": "myIdempotencyKey:0",
+    "operation": "MAP_SET"
+    "objectId": "map:cwhvmsq21tXtFDS02TQqPdIhGGezcSc8UsBYeUGygng@1636022994797",
+    "data": {"key": "isActive", "value": { "boolean": true }}
+  },
+  {
+    "id": "myIdempotencyKey:1",
+    "operation": "COUNTER_INC"
+    "objectId": "counter:DXr2i8FHRGkLrHPccWhXKDj1VUX2s7ACvmTrNEguJXo@1742481614000",
+    "data": {"number": 1}
+  }
+]
