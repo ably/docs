@@ -57,7 +57,7 @@ export const examples: Example[] = [
     description: 'Monitor and react to channel state changes.',
     products: ['pubsub'],
     useCases: ['messaging'],
-    layout: 'two-ui',
+    layout: 'one-ui',
   },
   {
     id: 'pub-sub-connection-state',
@@ -65,7 +65,7 @@ export const examples: Example[] = [
     description: 'Handle connection state changes in pub/sub applications.',
     products: ['pubsub'],
     useCases: ['messaging'],
-    layout: 'two-ui',
+    layout: 'one-ui',
   },
   {
     id: 'pub-sub-history',
@@ -81,7 +81,7 @@ export const examples: Example[] = [
     description: 'Implement end-to-end encryption for pub/sub messages.',
     products: ['pubsub'],
     useCases: ['messaging'],
-    layout: 'two-ui',
+    layout: 'one-ui',
   },
   {
     id: 'pub-sub-occupancy',
