@@ -82,9 +82,11 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
           autorun: true,
           autoReload: true,
           classes: {
-            'sp-file-explorer': 'sm:!h-[400px]',
+            'sp-layout':
+              'max-w-[calc(100vw-48px)] sm:max-w-[calc(100vw-48px-350px)] md:max-w-[calc(1040px-48px-350px)] lg:max-w-[calc(1280px-48px-350px)] xl:max-w-[calc(1440px-48px-350px)]',
+            'sp-file-explorer': 'sm:!w-[172px] sm:!h-[400px] !flex-none sm:!min-w-[auto]',
             'sp-editor': 'sm:!h-[400px]',
-            'sp-preview': '!h-[233px]',
+            'sp-preview': '!w-[350px] !h-[233px]',
           },
           externalResources: ['https://unpkg.com/@tailwindcss/ui/dist/tailwind-ui.min.css'],
         }}
@@ -95,7 +97,7 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
         <CodeEditor
           theme="light"
           editor={{
-            className: 'max-w-[400px] sm:max-w-[2000px]',
+            className: '',
             showLineNumbers: true,
           }}
         />
