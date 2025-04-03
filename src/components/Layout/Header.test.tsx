@@ -50,9 +50,8 @@ describe('Header', () => {
     render(<Header />);
     expect(screen.getAllByAltText('Ably logo').length).toBeGreaterThan(0);
 
-    // TODO reenable when examples are ready to be released
-    // expect(screen.getByText('Documentation')).toBeInTheDocument();
-    // expect(screen.getByText('Examples')).toBeInTheDocument();
+    expect(screen.getByText('Documentation')).toBeInTheDocument();
+    expect(screen.getByText('Examples')).toBeInTheDocument();
   });
 
   it('renders the search bar when searchBar is true', () => {
