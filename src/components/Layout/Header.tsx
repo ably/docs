@@ -1,10 +1,12 @@
 import React, { useContext } from 'react';
-import { useLocation } from '@reach/router';
+import { navigate, useLocation } from '@reach/router';
 import Icon from '@ably/ui/core/Icon';
 import AblyHeader from '@ably/ui/core/Header';
 import { SearchBar } from '../SearchBar';
 import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
+import ExamplesList from '../Examples/ExamplesList';
+import TabMenu from '@ably/ui/core/TabMenu';
 
 type HeaderProps = {
   searchBar?: boolean;
@@ -21,46 +23,43 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
     account: userContext.sessionState.account ?? { links: { dashboard: { href: '#' } } },
   };
 
-  // TODO: reenable when examples are ready to be released
-  // const tabs = ['Documentation', { label: 'Examples', disabled: true }];
-  // const tabLinks = (index: number) => {
-  //   switch (index) {
-  //     case 0:
-  //       return '/docs';
-  //     case 1:
-  //       return '/docs/examples';
-  //     default:
-  //       return '#';
-  //   }
-  // };
+  const tabs = ['Documentation', 'Examples'];
+  const tabLinks = (index: number) => {
+    switch (index) {
+      case 0:
+        return '/docs';
+      case 1:
+        return '/docs/examples';
+      default:
+        return '#';
+    }
+  };
 
   return (
     <AblyHeader
-      // TODO: reenable when examples are ready to be released
-      // nav={
-      //   <TabMenu
-      //     tabs={tabs}
-      //     tabClassName="ui-text-label3 !px-16"
-      //     tabOnClick={(index) => {
-      //       navigate(tabLinks(index));
-      //     }}
-      //     options={{ underline: false, flexibleTabHeight: true }}
-      //   />
-      // }
-      // mobileNav={
-      //   <TabMenu
-      //     tabs={tabs}
-      //     contents={[<LeftSidebar inHeader key="nav-mobile-documentation-tab" />, <ExamplesList key="nav-mobile-examples-tab" />]}
-      //     rootClassName="h-full overflow-y-hidden min-h-[51px] flex flex-col"
-      //     contentClassName="h-full py-16 overflow-y-scroll"
-      //     tabClassName="ui-text-label2 !px-16"
-      //     options={{ flexibleTabWidth: true }}
-      //   />
-      // }
-      // TODO:
-      // - remove mt-16 from inHeader link when examples are ready to be released
-      // - add ExamplesList to mobileNav when examples are ready to be released
-      mobileNav={<LeftSidebar inHeader key="nav-mobile-documentation-tab" />}
+      nav={
+        <TabMenu
+          tabs={tabs}
+          tabClassName="ui-text-menu3 !px-16"
+          tabOnClick={(index) => {
+            navigate(tabLinks(index));
+          }}
+          options={{ underline: false, flexibleTabHeight: true }}
+        />
+      }
+      mobileNav={
+        <TabMenu
+          tabs={tabs}
+          contents={[
+            <LeftSidebar inHeader key="nav-mobile-documentation-tab" />,
+            <ExamplesList key="nav-mobile-examples-tab" />,
+          ]}
+          rootClassName="h-full overflow-y-hidden min-h-[51px] flex flex-col"
+          contentClassName="h-full py-16 overflow-y-scroll"
+          tabClassName="ui-text-menu2 !px-16"
+          options={{ flexibleTabWidth: true }}
+        />
+      }
       searchButton={
         <button
           className="cursor-pointer focus-base rounded px-0 pt-4 text-neutral-1300 dark:text-neutral-000"
