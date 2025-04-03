@@ -63,7 +63,7 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
         customSetup={{
           dependencies: {
             cors: '^2.8.5',
-            '@ably/chat': '^0.4.0',
+            '@ably/chat': '^0.5.0',
             '@ably/spaces': '^0.4.0',
             ably: '^2.5.0',
             nanoid: '^5.0.7',
@@ -71,6 +71,7 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
             react: '^18',
             'react-dom': '^18',
             'react-icons': '^5.4.0',
+            'react-router-dom': '^6.22.2',
           },
           devDependencies: {
             typescript: '^4.0.0',
@@ -88,7 +89,10 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
             'sp-editor': 'sm:!h-[400px]',
             'sp-preview': '!w-[350px] !h-[233px]',
           },
-          externalResources: ['https://unpkg.com/@tailwindcss/ui/dist/tailwind-ui.min.css'],
+          externalResources: [
+            'https://cdn.tailwindcss.com',
+            'https://unpkg.com/franken-ui@2.0.0/dist/css/core.min.css',
+          ],
         }}
         theme={githubLight}
         template={determineSandpackTemplate(activeLanguage as LanguageKey)}
