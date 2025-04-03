@@ -87,7 +87,7 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
               'max-w-[calc(100vw-48px)] sm:max-w-[calc(100vw-48px-350px)] md:max-w-[calc(1040px-48px-350px)] lg:max-w-[calc(1280px-48px-350px)] xl:max-w-[calc(1440px-48px-350px)]',
             'sp-file-explorer': 'sm:!w-[172px] sm:!h-[400px] !flex-none sm:!min-w-[auto]',
             'sp-editor': 'sm:!h-[400px]',
-            'sp-preview': '!w-[350px] !h-[233px]',
+            'sp-preview': '!w-[350px] !h-[233px] ml-16',
           },
           externalResources: [
             'https://cdn.tailwindcss.com',
@@ -96,7 +96,7 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
         }}
         theme={githubLight}
         template={determineSandpackTemplate(activeLanguage as LanguageKey)}
-        className="!flex flex-col md:flex-row gap-16 [&>div:first-child]:flex-1"
+        className="!flex flex-col md:flex-row"
       >
         <CodeEditor
           theme="light"
@@ -106,12 +106,12 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
           }}
         />
         <div className="flex gap-16 flex-col sm:flex-row md:flex-col">
-          <div className="relative bg-neutral-000 dark:bg-neutral-1300 flex-1">
+          <div className="relative flex-1">
             <SandpackPreview className="rounded-lg overflow-hidden" showOpenInCodeSandbox={false} showRefreshButton />
             <UserIndicator user="user 1" />
           </div>
           {example.layout === 'two-ui' && (
-            <div className="relative bg-neutral-000 dark:bg-neutral-1300 flex-1">
+            <div className="relative flex-1">
               <SandpackPreview
                 className="rounded-lg overflow-hidden"
                 showOpenInCodeSandbox={false}
