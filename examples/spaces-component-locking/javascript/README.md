@@ -12,10 +12,10 @@ Component locking is implemented using [Ably Spaces](/docs/products/spaces). The
 
 Use the following components to add component locking into an application:
 
-* [`spaces.get()`](/docs/spaces/space#create): creates a new or retrieves an existing `space`.
-* [`space.member.subscribe()`](/docs/spaces/locking#subscribe): subscribes to members' online status and profile updates by registering a listener.
-* [`space.enter()`](/docs/spaces/space#enter): Entering a space will register a client as a member and emit an `enter` event to all subscribers.
-* [`space.locks.acquire()`](/docs/spaces/locking#acquire): a method to attempt to acquire a lock with a given unique ID.
+- [`spaces.get()`](/docs/spaces/space#create): creates a new or retrieves an existing `space`.
+- [`space.member.subscribe()`](/docs/spaces/locking#subscribe): subscribes to members' online status and profile updates by registering a listener.
+- [`space.enter()`](/docs/spaces/space#enter): Entering a space will register a client as a member and emit an `enter` event to all subscribers.
+- [`space.locks.acquire()`](/docs/spaces/locking#acquire): a method to attempt to acquire a lock with a given unique ID.
 
 This example also uses [`channels.get()`](/docs/channels#create), [`channel.subscribe()`](/docs/channels#subscribe), and [`channel.publish()`](/docs/channels#publish) from the core Pub/Sub product in order to track component values across multiple clients.
 
@@ -41,7 +41,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -59,4 +59,4 @@ yarn run spaces-component-locking-javascript
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and enter the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and enter the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

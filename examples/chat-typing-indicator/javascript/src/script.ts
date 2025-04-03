@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid';
 const names = ['Bob', 'Jane', 'John', 'Sammy'];
 const realtimeClient = new Ably.Realtime({
   clientId: names[Math.floor(Math.random() * names.length)] ?? nanoid(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 const chatClient = new ChatClient(realtimeClient);
 

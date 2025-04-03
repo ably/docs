@@ -10,7 +10,7 @@ Connection states is implemented using [Ably Pub/Sub](/docs/auth). The Pub/Sub S
 
 Use the following components to manage the connection state in a pub/sub application:
 
-* [`client.connection.on()`](/docs/connect/states#listen): subscribes to the connection state events of your client by registering a listener.
+- [`client.connection.on()`](/docs/connect/states#listen): subscribes to the connection state events of your client by registering a listener.
 
 Find out more about [connection states](/docs/connect/states).
 
@@ -34,7 +34,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -52,4 +52,4 @@ yarn run pub-sub-connection-state-javascript
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.
