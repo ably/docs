@@ -4,25 +4,12 @@ export const DEFAULT_EXAMPLE_LANGUAGES = ['javascript', 'react'];
 
 export const examples: Example[] = [
   {
-    id: 'auth-generate-jwt',
-    name: 'Generate JWT',
-    description: 'Learn how to generate JWT tokens for authentication with Ably.',
-    products: ['auth'],
-    useCases: ['authentication'],
-  },
-  {
-    id: 'auth-request-token',
-    name: 'Request Token',
-    description: 'Implement token-based authentication using Ably token requests.',
-    products: ['auth'],
-    useCases: ['authentication'],
-  },
-  {
     id: 'chat-online-status',
     name: 'Online Status',
     description: 'Show online/offline status of users in a chat application.',
     products: ['chat'],
     useCases: ['live-chat'],
+    layout: 'two-ui',
   },
   {
     id: 'chat-room-history',
@@ -30,6 +17,7 @@ export const examples: Example[] = [
     description: 'Display message history in chat rooms.',
     products: ['chat'],
     useCases: ['live-chat'],
+    layout: 'two-ui',
   },
   {
     id: 'chat-room-messages',
@@ -37,6 +25,7 @@ export const examples: Example[] = [
     description: 'Implement real-time messaging in chat rooms.',
     products: ['chat'],
     useCases: ['live-chat'],
+    layout: 'two-ui',
   },
   {
     id: 'chat-room-reactions',
@@ -44,6 +33,7 @@ export const examples: Example[] = [
     description: 'Add emoji reactions to messages in chat rooms.',
     products: ['chat'],
     useCases: ['live-chat'],
+    layout: 'two-ui',
   },
   {
     id: 'chat-typing-indicator',
@@ -51,6 +41,7 @@ export const examples: Example[] = [
     description: 'Show when users are typing in a chat room.',
     products: ['chat'],
     useCases: ['live-chat'],
+    layout: 'two-ui',
   },
   {
     id: 'pub-sub-channel-messages',
@@ -58,6 +49,7 @@ export const examples: Example[] = [
     description: 'Implement pub/sub messaging using channels.',
     products: ['pubsub'],
     useCases: ['messaging'],
+    layout: 'two-ui',
   },
   {
     id: 'pub-sub-channel-state',
@@ -65,6 +57,7 @@ export const examples: Example[] = [
     description: 'Monitor and react to channel state changes.',
     products: ['pubsub'],
     useCases: ['messaging'],
+    layout: 'two-ui',
   },
   {
     id: 'pub-sub-connection-state',
@@ -72,6 +65,7 @@ export const examples: Example[] = [
     description: 'Handle connection state changes in pub/sub applications.',
     products: ['pubsub'],
     useCases: ['messaging'],
+    layout: 'two-ui',
   },
   {
     id: 'pub-sub-history',
@@ -79,6 +73,7 @@ export const examples: Example[] = [
     description: 'Retrieve historical messages from channels.',
     products: ['pubsub'],
     useCases: ['messaging'],
+    layout: 'two-ui',
   },
   {
     id: 'pub-sub-message-encryption',
@@ -86,6 +81,7 @@ export const examples: Example[] = [
     description: 'Implement end-to-end encryption for pub/sub messages.',
     products: ['pubsub'],
     useCases: ['messaging'],
+    layout: 'two-ui',
   },
   {
     id: 'pub-sub-occupancy',
@@ -93,6 +89,7 @@ export const examples: Example[] = [
     description: 'Monitor the number of subscribers on a channel.',
     products: ['pubsub'],
     useCases: ['messaging'],
+    layout: 'two-ui',
   },
   {
     id: 'pub-sub-presence',
@@ -100,6 +97,7 @@ export const examples: Example[] = [
     description: 'Track presence of users on channels.',
     products: ['pubsub'],
     useCases: ['messaging'],
+    layout: 'two-ui',
   },
   {
     id: 'spaces-avatar-stack',
@@ -115,6 +113,7 @@ export const examples: Example[] = [
     description: 'Implement component-level locking in collaborative spaces.',
     products: ['spaces'],
     useCases: ['collaboration'],
+    layout: 'two-ui',
   },
   {
     id: 'spaces-live-cursors',
@@ -122,6 +121,7 @@ export const examples: Example[] = [
     description: 'Show real-time cursor positions of users in a space.',
     products: ['spaces'],
     useCases: ['collaboration'],
+    layout: 'two-ui',
   },
   {
     id: 'spaces-member-location',
@@ -129,6 +129,7 @@ export const examples: Example[] = [
     description: 'Track and display member locations within a space.',
     products: ['spaces'],
     useCases: ['collaboration'],
+    layout: 'two-ui',
   },
 ];
 
