@@ -21,6 +21,10 @@ export const updateAblyConnectionKey = (
       content = content.replaceAll(/new Ably\.(Realtime|Rest)\(\{/g, (_match, type) => {
         return `new Ably.${type}({\n  environment: '${ablyEnvironment}',`;
       });
+
+      content = content.replaceAll(/new (Realtime|Rest)\(\{/g, (_match, type) => {
+        return `new ${type}({\n  environment: '${ablyEnvironment}',`;
+      });
     }
 
     // API Key
