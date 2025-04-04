@@ -1,3 +1,5 @@
+import { LanguageKey } from './types';
+
 export default {
   javascript: {
     label: 'JavaScript',
@@ -92,4 +94,4 @@ export default {
     label: 'REST',
     syntaxHighlighterKey: 'javascript',
   },
-} as Record<string, { label: string; syntaxHighlighterKey: string; alias?: string }>;
+} as Record<LanguageKey, { label: string; syntaxHighlighterKey: string; alias?: string }>;

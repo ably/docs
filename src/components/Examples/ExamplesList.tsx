@@ -1,10 +1,10 @@
 import React from 'react';
-import examplesData from '../../data/examples';
+import { examples } from '../../data/examples/';
 
 const ExamplesList: React.FC = () => {
   return (
     <div className="flex flex-col gap-24 py-12">
-      {examplesData.examples.map((example) => (
+      {examples.map((example) => (
         <a
           key={example.name}
           href={'#'}

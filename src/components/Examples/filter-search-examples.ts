@@ -1,4 +1,4 @@
-import { Example } from '../../data/examples';
+import { Example } from '../../data/examples/types';
 import { SelectedFilters } from './ExamplesContent';
 
 export const filterSearchExamples = (examples: Example[], selected: SelectedFilters, searchTerm: string) => {
