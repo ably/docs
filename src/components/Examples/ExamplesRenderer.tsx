@@ -84,7 +84,7 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
           autoReload: true,
           classes: {
             'sp-layout':
-              'max-w-[calc(100vw-48px)] sm:max-w-[calc(100vw-48px-350px)] md:max-w-[calc(1040px-48px-350px)] lg:max-w-[calc(1280px-48px-350px)] xl:max-w-[calc(1440px-48px-350px)]',
+              'w-[calc(100vw-48px)] sm:w-[calc(100vw-48px-350px)] md:w-[calc(1040px-48px-350px)] lg:w-[calc(1280px-48px-350px)] xl:w-[calc(1440px-48px-350px)]',
             'sp-file-explorer': 'sm:!w-[172px] sm:!h-[400px] !flex-none sm:!min-w-[auto]',
             'sp-editor': 'sm:!h-[400px]',
             'sp-preview': '!w-[350px] !h-[233px] ml-16',
