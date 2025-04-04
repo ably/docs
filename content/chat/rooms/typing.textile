@@ -72,6 +72,10 @@ The following is the structure of a typing event:
     "clemons",
     "zoranges",
   },
+  "change": {
+    "type": "typing.started",
+    "clientId": "clemons"
+  }
 }
 ```
 
@@ -79,6 +83,9 @@ The following are the properties of a typing event:
 
 |_. Property |_. Description |_. Type |
 | currentlyTyping | A set of all users currently typing. | Set |
+| change | The single change that resulted in the event. | Object |
+| | type: The type of change that occurred. | String |
+| | clientId: The @clientId@ of the user that triggered the change. | String |
 
 You can use the size of the @currentlyTyping@ set to decide whether to display individual user names, or that multiple people are typing in your user interface.
 
@@ -99,8 +106,9 @@ blang[react].
 blang[javascript,kotlin].
   ```[javascript]
   // Initial subscription
-  const { unsubscribe } = room.typing.subscribe((event) => {
-    console.log(`${event.clientId} is currently typing...`);
+  import { TypingEvent } from '@ably/chat';
+  const { unsubscribe } = room.typing.subscribe((event: TypingEvent) => {
+    console.log('Typing event received: ', event);
   });
 
   // To remove the listener
@@ -125,30 +133,28 @@ blang[react,swift,kotlin].
 h2(#set). Set typing status
 
 blang[javascript,swift,kotlin].
-  Use the <span lang="javascript">"@typing.start()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Typing.html#start</span><span lang="swift">"@typing.start()@":https://sdk.ably.com/builds/ably/ably-chat-swift/main/AblyChat/documentation/ablychat/typing/start%28%29</span><span lang="kotlin">"@typing.start()@":https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat-android/com.ably.chat/-typing/start.html</span> method to emit a typing event with @isTyping@ set to @true@.
+  Use the <span lang="javascript">"@typing.keystroke()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Typing.html#start</span><span lang="swift">"@typing.start()@":https://sdk.ably.com/builds/ably/ably-chat-swift/main/AblyChat/documentation/ablychat/typing/start%28%29</span><span lang="kotlin">"@typing.start()@":https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat-android/com.ably.chat/-typing/start.html</span> method to emit a typing event with @type@ set to @typing.started@.
 
 blang[react].
-  Use the "@start()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-react.UseTypingResponse.html#start method available from the response of the @useTyping@ hook to emit an event when a user has started typing.
-
-There is a timeout associated with start events. A stop event will be automatically emitted after it expires if one isn't received before the timeout. The length of this timeout is customizable using the @timeoutMs@ parameter that can be configured in the @RoomOptions@ that you set when you "create a room":/docs/chat/rooms#create. The default is 10000ms.
+  Use the "@keystroke()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-react.UseTypingResponse.html#keystroke method available from the response of the @useTyping@ hook to emit an event when a user has started typing.
 
 ```[javascript]
-await room.typing.start();
+await room.typing.keystroke();
 ```
 
 ```[react]
 import { useTyping } from '@ably/chat';
 
 const MyComponent = () => {
-  const { start, currentlyTyping, error } = useTyping();
-  const handleStartClick = () => {
-    start();
+  const { keystroke, currentlyTyping, error } = useTyping();
+  const handleKeystrokeClick = () => {
+    keystroke();
   };
 
   return (
     <div>
       {error && <p>Typing Error: {error.message}</p>}
-      <button onClick={handleStartClick}>Start Typing</button>
+      <button onClick={handleKeystrokeClick}>Start Typing</button>
       <p>Currently typing: {currentlyTyping.join(', ')}</p>
     </div>
   );
@@ -199,13 +205,49 @@ try await room.typing.stop()
 room.typing.stop()
 ```
 
+h3(#frequency). Typing Event Frequency
+
+The Typing feature includes a configurable timer that controls how often typing events are sent to the server. This timer is reset each time a new typing event is sent, it works as follows:
+- On the **first call** to @keystroke()@, the timer is set and an event is sent to the server.
+- **Subsequent calls** before the timer expires result in a no-op.
+- After the timer expires, a new typing event is sent and the timer is reset.
+- If @stop()@ is called, the timer is reset and a @typing.stopped@ event is sent to the server.
+
+You can configure the length of this timer using the @heartbeatThrottleMs@ parameter in @RoomOptions@ (default: **10,000ms**).
+It is recommended that you call @keystroke()@ with every keypress, and the SDK will handle when and if to send a typing indicator to the server.
+
+h3(#emulating-heartbeats). Emulating User Behavior
+
+You can emulate user behavior (e.g., in chatbots) by setting a timeout to call @keystroke()@ at intervals equal to the @heartbeatThrottleMs@ plus a small delay, e.g. 200ms. This will ensure the typing indicator remains active.
+
+h3(#grace-period). Grace Period for Typing Events
+
+For the recipient of typing events:
+- The typing indicator remains active for the **duration** defined by the @heartbeatThrottleMs@ parameter, plus a predefined **2000ms grace period**.
+- Receiving a new typing event before the grace period ends will reset the timeout.
+- If the grace period ends without receiving a new typing event, the SDK will emit a @typing.stopped@ event for that client to any subscribed listeners.
+
+**For example:** With the @heartbeatThrottleMs@ set to **10,000ms**, the typing indicator remains active for **12,000ms**. If no new typing event is received within this time, the SDK will emit a @typing.stopped@ event.
+
+h3(#adjusting-timeout). Adjusting the Event Frequency
+
+You can adjust the @heartbeatThrottleMs@ parameter to balance responsiveness and resource costs:
+- **Increase responsiveness**: Lower the value → More typing events are sent to the server → Higher cost as more messages are sent.
+- **Save resource costs**: Raise the value → Fewer typing events are sent to the server → Lower responsiveness, but less cost as fewer messages are sent overall.
+
+This balance allows you to optimize cost and responsiveness based on your applications needs.
+
+<aside data-type='note'>
+<p>All clients in a room must have the same timeout value configured. If not, typing indicators might not display correctly.</p>
+</aside>
+
 h2(#retrieve). Retrieve a list of users that are currently typing
 
 blang[javascript,swift,kotlin].
   Use the <span lang="javascript">"@typing.get()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Typing.html#get</span><span lang="swift">"@typing.get()@":https://sdk.ably.com/builds/ably/ably-chat-swift/main/AblyChat/documentation/ablychat/typing/get%28%29</span><span lang="kotlin">"@typing.get()@":https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat-android/com.ably.chat/-typing/get.html</span> method to retrieve a set of @clientId@s for all users that are currently typing in the room:
 
   ```[javascript]
-  const currentlyTypingClientIds = await room.typing.get();
+  const currentlyTypingClientIds = room.typing.get();
   ```
 
   ```[swift]
