@@ -60,6 +60,15 @@ export default {
       ],
     },
     {
+      name: 'Architecture',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/architecture',
+        },
+      ],
+    },
+    {
       name: 'Integrations',
       pages: [
         {
