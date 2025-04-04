@@ -1,8 +1,8 @@
 import { UserDetails } from 'src/contexts';
 
 export const getApiKey = (userData: UserDetails) =>
-  process.env.NODE_ENV === 'development' && process.env.GATSBY_VITE_PUBLIC_ABLY_KEY
-    ? process.env.GATSBY_VITE_PUBLIC_ABLY_KEY
+  process.env.NODE_ENV === 'development' && process.env.GATSBY_VITE_ABLY_KEY
+    ? process.env.GATSBY_VITE_ABLY_KEY
     : userData.apps?.[0]?.apiKeys?.[0]?.whole_key;
 
 export const updateAblyConnectionKey = (
@@ -24,7 +24,7 @@ export const updateAblyConnectionKey = (
     }
 
     // API Key
-    content = content.replaceAll(/import\.meta\.env\.VITE_(PUBLIC_)?ABLY_KEY/g, `"${apiKey}"`);
+    content = content.replaceAll(/import\.meta\.env\.VITE_ABLY_KEY/g, `"${apiKey}"`);
 
     // Additional keys
     if (additionalKeys) {
