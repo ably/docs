@@ -112,7 +112,8 @@ const getTools = () => [
 
 const aiChatSettings = () => ({
   organizationDisplayName: 'Ably',
-  aiAssistantAvatar: 'https://storage.googleapis.com/organization-image-assets/ably-botAvatarSrcUrl-1721406747144.png',
+  aiAssistantAvatar:
+    'https://storage.googleapis.com/organization-image-assets/ably-botAvatarDarkSrcUrl-1744125448083.png',
   getHelpOptions: [
     {
       name: 'Request a meeting',
