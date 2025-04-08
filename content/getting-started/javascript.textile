@@ -1,0 +1,186 @@
+---
+title: "Getting started: Pub/Sub in JavaScript"
+meta_description: "Get started with Pub/Sub in JavaScript using Ably. Learn how to publish, subscribe, track presence, fetch message history, and manage realtime connections."
+meta_keywords: "Pub/Sub JavaScript, JavaScript PubSub, Ably JavaScript SDK, realtime messaging JavaScript, publish subscribe JavaScript, Ably Pub/Sub guide, JavaScript realtime communication, Ably tutorial JavaScript, JavaScript message history, presence API JavaScript, Ably Pub/Sub example, realtime Pub/Sub JavaScript, subscribe to channel JavaScript, publish message JavaScript, Ably CLI Pub/Sub"
+---
+
+This guide will get you started with Ably Pub/Sub in JavaScript.
+
+It will take you through the following steps:
+
+* Create a client and establish a realtime connection to Ably.
+* Attach to a channel and subscribe to its messages.
+* Publish a message to the channel for your client to receive.
+* Join and subscribe to the presence set of the channel.
+* Retrieve the messages you sent in the guide from history.
+* Close a connection to Ably when it is no longer needed.
+
+h2(#prerequisites). Prerequisites
+
+* Sign up for an Ably account.
+** Create a new app, and create your first API key.
+** Your API key will need the @publish@, @subscribe@, @presence@ and @history@ capabilities.
+
+* Install the Ably CLI:
+
+```[sh]
+npm install -g @ably/cli
+```
+
+* Run the following to log in to your Ably account and set the default app and API key:
+
+```[sh]
+ably login
+
+ably apps switch
+ably auth keys switch
+```
+
+* Install "Node.js":https://nodejs.org/en version 16 or greater.
+* Create a new project in your IDE and install the Ably Pub/Sub JavaScript SDK:
+
+```[sh]
+npm init
+
+npm install ably
+```
+
+* Set @"type": "module"@ in your @package.json@ file.
+
+<aside data-type='note'>
+<p>The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI and view outputs within your Ably account, ensure that you replace them with your own API key.</p>
+</aside>
+
+h2(#step-1). Step 1: Connect to Ably
+
+Clients establish a connection with Ably when they instantiate an SDK. This enables them to send and receive messages in realtime across channels.
+
+* Open up the "dev console":https://ably.com/accounts/any/apps/any/console of your first app before instantiating your client so that you can see what happens.
+
+* Create an @index.js@ file in your project and add the following function to instantiate the SDK and establish a connection to Ably. At the minimum you need to provide an authentication mechanism. Use an API key for simplicity, but you should use token authentication in a production app. A @clientId@ ensures the client is identified, which is required to use certain features, such as presence:
+
+```[javascript]
+import * as Ably from 'ably';
+
+async function getStarted() {
+
+  const realtimeClient = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-first-client' });
+
+  await realtimeClient.connection.once('connected');
+    console.log(`Made my first connection!`);
+
+};
+
+getStarted();
+```
+
+You can monitor the lifecycle of clients' connections by registering a listener that will emit an event every time the connection state changes. For now, run the function with @node index.js@ to log a message to the console to know that the connection attempt was successful. You'll see the message printed to your console, and you can also inspect the connection event in the dev console of your app.
+
+h2(#step-2). Step 2: Subscribe to a channel and publish a message
+
+Messages contain the data that a client is communicating, such as a short 'hello' from a colleague, or a financial update being broadcast to subscribers from a server. Ably uses channels to separate messages into different topics, so that clients only ever receive messages on the channels they are subscribed to.
+
+* Add the following lines to your @getStarted()@ function to create a channel instance and register a listener to subscribe to the channel. Then run it with @node index.js@:
+
+```[javascript]
+const channel = realtimeClient.channels.get('my-first-channel');
+
+await channel.subscribe((message) => {
+  console.log(`Received message: ${message.data}`);
+});
+```
+
+* Use the Ably CLI to publish a message to your first channel. The message will be received by the client you've subscribed to the channel, and be logged to the console.
+
+```[sh]
+ably channels publish my-first-channel 'Hello!'
+```
+
+* In a new terminal tab, subscribe to the same channel using the CLI:
+
+```[sh]
+ably channels subscribe my-first-channel
+```
+
+Publish another message using the CLI and you will see that it's received instantly by the client you have running locally, as well as the subscribed terminal instance.
+
+h2(#step-3). Step 3: Join the presence set
+
+Presence enables clients to be aware of one another if they are present on the same channel. You can then show clients who else is online, provide a custom status update for each, and notify the channel when someone goes offline.
+
+* Add the following lines to your @getStarted()@ function to subscribe to, and join, the presence set of the channel. Then run it with @node index.js@:
+
+```[javascript]
+await channel.presence.subscribe((member) => {
+  console.log(`Event type: ${member.action} from ${member.clientId} with the data ${JSON.stringify(member.data)}`)
+});
+
+await channel.presence.enter("I'm here!");
+```
+
+* In the "dev console":https://ably.com/accounts/any/apps/any/console of your first app, attach to @my-first-channel@. Enter a @clientId@, such as @my-dev-console@, and then join the presence set of the channel. You'll see that @my-first-client@ is already present in the channel. In the console of your browser or IDE you'll see that an event was received when the dev console client joined the channel.
+
+* You can have another client join the presence set using the Ably CLI:
+
+```[sh]
+ably channels presence enter my-first-channel --client-id "my-cli" --data '{"status":"learning about Ably!"}'
+```
+
+h2(#step-4). Step 4: Retrieve message history
+
+You can retrieve previously sent messages using the history feature. Ably stores all messages for 2 minutes by default in the event a client experiences network connectivity issues. This can be extended for longer if required.
+
+If more than 2 minutes has passed since you published a regular message (excluding the presence events), then you can publish some more before trying out history. You can use the Pub/Sub SDK, Ably CLI or the dev console to do this.
+
+For example, using the Ably CLI to publish 5 messages:
+
+```[sh]
+ably channels publish --count 5 my-first-channel "Message number {{.Count}}"
+```
+
+* Add the following lines to your @getStarted()@ function to retrieve any messages that were recently published to the channel. Then run it with @node index.js@:
+
+```[javascript]
+const history = await channel.history();
+console.log(history.items.map((message) => message.data));
+```
+
+The output will look similar to the following:
+
+```[json]
+[
+  'Message number 5',
+  'Message number 4',
+  'Message number 3',
+  'Message number 2',
+  'Message number 1'
+]
+```
+
+h2(#step-5). Step 5: Close the connection
+
+Connections are automatically closed approximately 2 minutes after no heartbeat is detected by Ably. Explicitly closing connections when they are no longer needed is good practice to help save costs. It will also remove all listeners that were registered by the client.
+
+Note that messages are streamed to clients as soon as they attach to a channel, as long as they have the necessary capabilities. Clients are implicitly attached to a channel when they call @subscribe()@. Detaching from a channel using the @detach()@ method will stop the client from being streamed messages by Ably.
+
+Listeners registered when subscribing to a channel are registered client-side. Unsubscribing by calling @unsubscribe()@  will remove previously registered listeners for that channel. Detaching from a channel has no impact on listeners. As such, if a client reattaches to a channel that they previously registered listeners for, then those listeners will continue to function upon reattachment.
+
+* Add the following to either of the clients to close the connection after a simulated 10 seconds. Run it with @node index.js@:
+
+```[javascript]
+setTimeout(() => realtimeClient.close(), 10000);
+```
+
+h2(#next). Next steps
+
+Continue to explore the documentation with JavaScript as the selected language:
+
+Read more about the concepts covered in this guide:
+
+* Revisit the basics of "Pub/Sub":/docs/pub-sub
+* Explore more "advanced":/docs/pub-sub/advanced Pub/Sub concepts
+* Understand realtime "connections":/docs/connect to Ably
+* Read more about how to use "presence":/docs/presence-occupancy/presence in your apps
+* Fetch message "history":/docs/storage-history/history in your apps
+
+You can also explore the Ably CLI further, or visit the Pub/Sub "API references":/docs/api/realtime-sdk.
