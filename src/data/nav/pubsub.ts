@@ -21,6 +21,10 @@ export default {
       name: 'Getting started',
       pages: [
         {
+          name: 'JavaScript',
+          link: '/docs/getting-started/javascript',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
