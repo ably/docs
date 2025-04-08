@@ -1,17 +1,20 @@
 import { scriptLoader } from './utils';
+import posthog from 'posthog-js';
 
 const inkeepChat = (apiKey: string) => {
   if (!apiKey) {
     return;
   }
 
-  scriptLoader(document, 'https://unpkg.com/@inkeep/cxkit-js@0.5.36/dist/embed.js', {
+  scriptLoader(document, 'https://unpkg.com/@inkeep/cxkit-js@0.5.40/dist/embed.js', {
     defer: true,
     async: false,
     type: 'module',
     crossOrigin: 'anonymous',
     onload: () => {
-      inkeepOnLoad(apiKey);
+      posthog.onFeatureFlags(() => {
+        inkeepOnLoad(apiKey);
+      });
     },
   });
 };
@@ -56,7 +59,58 @@ const openHubSpotConversations = () => {
   });
 };
 
-const aiChatSettings = {
+const getTools = () => [
+  {
+    type: 'function',
+    function: {
+      name: 'contactSales',
+      description:
+        "Detect if there is buyer intent or the customer is asking about pricing information or Ably's paid plans.",
+      parameters: {
+        type: 'object',
+        properties: {
+          aiAnnotations: {
+            type: 'object',
+            properties: {
+              answerConfidence: {
+                anyOf: [
+                  { type: 'string', const: 'very_confident' },
+                  { type: 'string', const: 'somewhat_confident' },
+                  { type: 'string', const: 'not_confident' },
+                  { type: 'string', const: 'no_sources' },
+                ],
+              },
+            },
+            required: ['answerConfidence'],
+          },
+        },
+        required: ['aiAnnotations'],
+      },
+    },
+    renderMessageButtons: ({ args }: { args: { aiAnnotations: { answerConfidence: string } } }) => {
+      const confidence = args.aiAnnotations.answerConfidence;
+      if (confidence === 'very_confident' || confidence === 'somewhat_confident') {
+        return [
+          {
+            label: 'Talk to Sales',
+            icon: { builtIn: 'LuUsers' },
+            action: {
+              type: 'invoke_callback',
+              callback: () => {
+                window.history.pushState({}, '', '?chat-type=product');
+                openHubSpotConversations();
+              },
+              shouldCloseModal: true,
+            },
+          },
+        ];
+      }
+      return [];
+    },
+  },
+];
+
+const aiChatSettings = () => ({
   organizationDisplayName: 'Ably',
   aiAssistantAvatar: 'https://storage.googleapis.com/organization-image-assets/ably-botAvatarSrcUrl-1721406747144.png',
   getHelpOptions: [
@@ -82,7 +136,8 @@ const aiChatSettings = {
   ],
   exampleQuestions: ['What is a channel?', 'How do I authenticate with Ably?', 'How to manage user status?'],
   shouldShowCopyChatButton: true,
-};
+  ...(posthog.isFeatureEnabled('inkeep-intent') ? { getTools } : {}),
+});
 
 interface SourceItem {
   id?: string;
@@ -149,12 +204,52 @@ export const inkeepOnLoad = (apiKey: string) => {
   const baseSettings = {
     apiKey,
     transformSource,
+    theme: {
+      styles: [
+        {
+          key: 'custom-style',
+          type: 'style',
+          value: `css
+            .ikp-ai-chat-message-toolbar {
+              flex-wrap: wrap;
+              justify-content: flex-end;
+            }
+
+            .ikp-ai-chat-message-tool-actions {
+              width: 100%;
+            }
+
+            .ikp-ai-chat-message-tool-action {
+              background: #03020d;
+              color: white;
+              height: 36px;
+              font-size: 15px;
+              border: none;
+              margin: 0px auto;
+              margin-bottom: 8px;
+              padding: 12px 24px;
+              height: auto;
+              gap: 12px;
+            }
+
+            .ikp-ai-chat-message-tool-action > .ikp-icon {
+              font-size: 18px;
+            }
+
+            .ikp-ai-chat-message-tool-action:hover:not([disabled]) {
+              background: #2c3344;
+              color: white;
+            }
+          `,
+        },
+      ],
+    },
   };
 
   const config = {
     baseSettings,
     label: 'Ask Ably',
-    aiChatSettings,
+    aiChatSettings: aiChatSettings(),
     searchSettings,
   };
 
