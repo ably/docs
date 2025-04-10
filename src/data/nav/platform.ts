@@ -250,7 +250,7 @@ export default {
       ],
     },
     {
-      name: 'Error handling',
+      name: 'Debugging and Errors',
       pages: [
         {
           name: 'Overview',
