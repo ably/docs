@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import * as Ably from 'ably';
 import { AblyProvider, ChannelProvider, useChannel } from 'ably/react';
-import { faker } from '@faker-js/faker';
-import { useSearchParams } from 'next/navigation';
+import minifaker from 'minifaker';
+import { useLocation } from 'react-router-dom';
+import 'minifaker/locales/en';
 
 interface MatchOdds {
   match: {
     homeTeam: string;
     awayTeam: string;
-    timestamp: string;
+    timestamp: number;
     score: string;
     matchOdds: {
       homeWin: string;
@@ -21,12 +22,13 @@ interface MatchOdds {
 }
 
 export default function MatchWrapper() {
-  const searchParams = useSearchParams();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
   const channelName = searchParams.get('name') || 'match-odds-feed';
 
   const client = new Ably.Realtime({
-    key: process.env.NEXT_PUBLIC_ABLY_KEY,
-    clientId: faker.person.firstName()
+    key: import.meta.env.VITE_ABLY_KEY,
+    clientId: minifaker.firstName()
   });
 
   return (
@@ -73,7 +75,7 @@ function LiveMatch({ channelName }: { channelName: string }) {
           newOdds.match.matchOdds[market] = (parseFloat(newOdds.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
         });
 
-        newOdds.match.timestamp = new Date().toISOString();
+        newOdds.match.timestamp = Date.now();
         if (isMounted) {
           await channel.publish('odds', newOdds);
         }
@@ -142,7 +144,7 @@ function LiveMatch({ channelName }: { channelName: string }) {
                       <span>Home: {odds.match.matchOdds.homeWin}</span>
                       <span>Draw: {odds.match.matchOdds.draw}</span>
                       <span>Away: {odds.match.matchOdds.awayWin}</span>
-                      <span>{new Date(odds.match.timestamp).toLocaleTimeString()}</span>
+                      <span>{new Date(odds.match.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                 ))}

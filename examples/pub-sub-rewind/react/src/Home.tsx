@@ -1,22 +1,24 @@
 'use client'
 
 import * as Ably from 'ably';
-import { faker } from '@faker-js/faker';
-import { useRouter, useSearchParams } from 'next/navigation';
+import minifaker from 'minifaker';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
+import 'minifaker/locales/en';
 
 export default function Home() {
   const [alerts, setAlerts] = useState<Array<{id: number, message: string}>>([]);
-  const router = useRouter();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const searchParams = useSearchParams();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
   const channelName = searchParams.get('name') || 'pub-sub-rewind';
 
   const preloadOddsHistory = async () => {
     setIsLoading(true);
-    const clientId = faker.person.firstName();
+    const clientId = minifaker.firstName();
     const client = new Ably.Realtime({
-      key: process.env.NEXT_PUBLIC_ABLY_KEY,
+      key: import.meta.env.VITE_ABLY_KEY,
       clientId,
     });
 
@@ -28,7 +30,7 @@ export default function Home() {
       match: {
         homeTeam,
         awayTeam,
-        timestamp: new Date().toISOString(),
+        timestamp: Date.now(),
         score: "0-0",
         matchOdds: {
           homeWin: "2.45",
@@ -47,22 +49,22 @@ export default function Home() {
         currentOdds.match.matchOdds[market] = (parseFloat(currentOdds.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
       });
 
-      currentOdds.match.timestamp = new Date().toISOString();
+      currentOdds.match.timestamp = Date.now();
       await channel.publish('odds', currentOdds);
 
-      // Use React state for alerts
+      const alertId = Date.now();
       const alertMessage = `Update ${i + 1}/10: New odds published`;
-      setAlerts(prev => [...prev, { id: Date.now(), message: alertMessage }]);
+      setAlerts(prev => [...prev, { id: alertId, message: alertMessage }]);
 
-      // Remove alert after 2 seconds
       setTimeout(() => {
-        setAlerts(prev => prev.filter(alert => alert.id !== Date.now()));
+        setAlerts(prev => prev.filter(alert => alert.id !== alertId));
       }, 2000);
 
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    router.push(`/odds?name=${encodeURIComponent(channelName)}`);
+    setIsLoading(false);
+    navigate(`/odds?name=${encodeURIComponent(channelName)}`);
   };
 
   return (
