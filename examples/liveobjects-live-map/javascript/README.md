@@ -12,12 +12,12 @@ LiveMaps are implemented using [Ably LiveObjects](https://ably.com/docs/liveobje
 
 Use the following methods to interact with a LiveMap in your application:
 
-* [`objects.getRoot()`](https://ably.com/docs/liveobjects) - retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
-* [`objects.createMap()`](https://ably.com/docs/liveobjects) - creates a new LiveMap instance.
-* [`liveMap.get(key)`](https://ably.com/docs/liveobjects/livemap) - returns the current value associated with a given key in the map.
-* [`liveMap.set(key, value)`](https://ably.com/docs/liveobjects/livemap) - sends the operation message to the Ably system to assign a value to a key in the map.
-* [`liveMap.remove(key)`](https://ably.com/docs/liveobjects/livemap) - sends the operation message to the Ably system to remove a key from the map.
-* [`liveMap.subscribe()`](https://ably.com/docs/liveobjects/livemap) - subscribes to LiveMap updates by registering a listener.
+- [`objects.getRoot()`](https://ably.com/docs/liveobjects) - retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
+- [`objects.createMap()`](https://ably.com/docs/liveobjects) - creates a new LiveMap instance.
+- [`liveMap.get(key)`](https://ably.com/docs/liveobjects/livemap) - returns the current value associated with a given key in the map.
+- [`liveMap.set(key, value)`](https://ably.com/docs/liveobjects/livemap) - sends the operation message to the Ably system to assign a value to a key in the map.
+- [`liveMap.remove(key)`](https://ably.com/docs/liveobjects/livemap) - sends the operation message to the Ably system to remove a key from the map.
+- [`liveMap.subscribe()`](https://ably.com/docs/liveobjects/livemap) - subscribes to LiveMap updates by registering a listener.
 
 Find out more about [LiveMap](https://ably.com/docs/liveobjects/livemap).
 
@@ -41,7 +41,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -59,4 +59,4 @@ yarn run liveobjects-live-map-javascript
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.
