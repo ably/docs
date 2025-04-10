@@ -11,7 +11,7 @@ export enum Color {
 
 const client = new Realtime({
   clientId: nanoid(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  key: import.meta.env.VITE_ABLY_KEY as string,
   environment: 'sandbox',
   plugins: { Objects },
 });
@@ -19,7 +19,7 @@ const client = new Realtime({
 const urlParams = new URLSearchParams(window.location.search);
 
 const channelName = urlParams.get('name') || 'objects-live-counter';
-const channel = client.channels.get(channelName, { modes: ['STATE_PUBLISH', 'STATE_SUBSCRIBE'] });
+const channel = client.channels.get(channelName, { modes: ['OBJECT_PUBLISH', 'OBJECT_SUBSCRIBE'] });
 
 const colorCountDivs: Record<Color, HTMLElement> = {
   red: document.getElementById('count-red'),

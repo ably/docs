@@ -12,12 +12,12 @@ LiveCounters are implemented using [Ably LiveObjects](https://ably.com/docs/live
 
 Use the following methods to interact with a LiveCounter in your application:
 
-* [`objects.getRoot()`](https://ably.com/docs/liveobjects) - retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
-* [`objects.createCounter()`](https://ably.com/docs/liveobjects) - creates a new LiveCounter instance.
-* [`liveCounter.value()`](https://ably.com/docs/liveobjects/livecounter) - returns the current value of a counter.
-* [`liveCounter.increment()`](https://ably.com/docs/liveobjects/livecounter) - sends the operation message to the Ably system to increase the counter value.
-* [`liveCounter.decrement()`](https://ably.com/docs/liveobjects/livecounter) - sends the operation message to the Ably system to decrease the counter value.
-* [`liveCounter.subscribe()`](https://ably.com/docs/liveobjects/livecounter) - subscribes to LiveCounter updates by registering a listener.
+- [`objects.getRoot()`](https://ably.com/docs/liveobjects) - retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
+- [`objects.createCounter()`](https://ably.com/docs/liveobjects) - creates a new LiveCounter instance.
+- [`liveCounter.value()`](https://ably.com/docs/liveobjects/livecounter) - returns the current value of a counter.
+- [`liveCounter.increment()`](https://ably.com/docs/liveobjects/livecounter) - sends the operation message to the Ably system to increase the counter value.
+- [`liveCounter.decrement()`](https://ably.com/docs/liveobjects/livecounter) - sends the operation message to the Ably system to decrease the counter value.
+- [`liveCounter.subscribe()`](https://ably.com/docs/liveobjects/livecounter) - subscribes to LiveCounter updates by registering a listener.
 
 Find out more about [LiveCounter](https://ably.com/docs/liveobjects/livecounter).
 
@@ -41,7 +41,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -59,4 +59,4 @@ yarn run liveobjects-live-counter-javascript
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.
