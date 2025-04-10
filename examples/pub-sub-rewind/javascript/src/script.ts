@@ -1,13 +1,15 @@
 import * as Ably from 'ably';
 import type { Message } from 'ably';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
 import './styles.css';
+
+import 'minifaker/locales/en';
 
 interface MatchOdds {
   match: {
     homeTeam: string;
     awayTeam: string;
-    timestamp: string;
+    timestamp: number;
     score: string;
     matchOdds: {
       homeWin: string;
@@ -21,7 +23,7 @@ let matchData: MatchOdds | null = {
   match: {
     homeTeam: 'Royal Knights',
     awayTeam: 'North Rangers',
-    timestamp: new Date().toISOString(),
+    timestamp: Date.now(),
     score: '0-0',
     matchOdds: {
       homeWin: '2.45',
@@ -43,8 +45,8 @@ async function enterGame() {
   game.style.display = 'block';
 
   const client = new Ably.Realtime({
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
-    clientId: faker.person.firstName(),
+    key: import.meta.env.VITE_ABLY_KEY as string,
+    clientId: minifaker.firstName(),
   });
 
   channel = client.channels.get(channelName, {
@@ -63,8 +65,8 @@ async function enterGame() {
 preloadButton.addEventListener('click', async () => {
   preloadButton.disabled = true;
   const client = new Ably.Realtime({
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
-    clientId: faker.person.firstName(),
+    key: import.meta.env.VITE_ABLY_KEY as string,
+    clientId: minifaker.firstName(),
   });
 
   const channel = client.channels.get(channelName);
@@ -78,7 +80,7 @@ preloadButton.addEventListener('click', async () => {
       matchData.match.matchOdds[market] = (parseFloat(matchData.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
     });
 
-    matchData.match.timestamp = new Date().toISOString();
+    matchData.match.timestamp = Date.now();
     await channel.publish('odds', matchData);
 
     // Show alert for each publish
@@ -127,11 +129,8 @@ async function addHistoryItem(message: Message, position = 'prepend') {
   const awayWin = document.createElement('span');
   awayWin.textContent = `Away: ${message.data.match.matchOdds.awayWin}`;
   const time = document.createElement('span');
-  time.textContent = new Date(message.data.match.timestamp).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
+  const timestamp = new Date(message.data.match.timestamp);
+  time.textContent = `${timestamp.getHours()}:${timestamp.getMinutes().toString().padStart(2, '0')}`;
   historyDiv.appendChild(homeWin);
   historyDiv.appendChild(draw);
   historyDiv.appendChild(awayWin);
@@ -149,22 +148,9 @@ async function updateRandomOdds() {
     return;
   }
 
-  let running = true;
-  window.addEventListener('beforeunload', () => {
-    running = false;
-  });
-
   for (let i = 0; i < 20; i++) {
-    if (!running) break;
     const delayTime = 5000;
-    await new Promise((resolve) => {
-      const timeoutId = setTimeout(resolve, delayTime);
-      // Allow for cleanup
-      return () => {
-        clearTimeout(timeoutId);
-        running = false;
-      };
-    });
+    await new Promise((resolve) => setTimeout(resolve, delayTime));
 
     const markets = ['homeWin', 'draw', 'awayWin'];
     const numMarketsToUpdate = Math.floor(Math.random() * 3) + 1;
@@ -176,9 +162,7 @@ async function updateRandomOdds() {
       newOdds.match.matchOdds[market] = (parseFloat(newOdds.match.matchOdds[market]) + (Math.random() * 0.2 - 0.1)).toFixed(2);
     });
 
-    newOdds.match.timestamp = new Date().toISOString();
-    if (running) {
-      await channel.publish('odds', newOdds);
-    }
+    newOdds.match.timestamp = Date.now();
+    await channel.publish('odds', newOdds);
   }
 }
