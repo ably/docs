@@ -28,6 +28,10 @@ export default {
               name: 'JavaScript',
               link: '/docs/chat/getting-started/javascript',
             },
+            {
+              name: 'React',
+              link: '/docs/chat/getting-started/react',
+            },
           ],
         },
         {

@@ -1,0 +1,956 @@
+---
+title: "Getting started: Chat, React & Vite"
+meta_description: "A getting started guide for Ably Chat React that steps through some of the key features using React and Vite."
+meta_keywords: "Ably, realtime, quickstart, getting started, basics, Chat, React, Vite"
+---
+
+This guide will get you started with Ably Chat React on a new React application built with Vite.
+
+It will take you through the following steps:
+
+* Installing Vite on macOS or Linux.
+* Initialising a React + TypeScript project.
+* Installing the Ably Chat SDK.
+* Setting up tailwind for styling.
+* Setting up the Ably and Chat React providers.
+* Create a client and establish a realtime connection to Ably.
+* Create a room and subscribe to its messages.
+* Send a message to the room, and then edit that message.
+* Set up a typing indicator to see which clients are typing.
+* Display the online status of clients to the room.
+* Subscribe and send reactions to the room.
+* Retrieve historical messages to provide context to new joiners.
+* Usage of the Ably CLI and custom Chat React hooks.
+
+h2(#prerequisites). Prerequisites
+
+h3(#prerequisites-ably). Ably
+
+* Sign up for an Ably account.
+* Create a new app, and get your first API key.
+* Your API key will need the @publish@, @subscribe@, @presence@ and @history@ capabilities.
+
+h3(#prerequisites-ably). Ably-CLI
+
+<aside data-type='note'>
+<p>The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI, ensure that you replace them with your own API key.</p>
+</aside>
+
+Run the following command to install the Ably CLI:
+
+```[sh]
+  npm install -g @ably/cli
+```
+
+Once installed, you will need to authenticate the CLI with your Ably account, run the following command:
+
+```[sh]
+  ably login
+```
+
+<aside data-type='note'>
+<p>You will be prompted to enter your "Ably API key":/docs/auth#create. You can find this on your "Ably dashboard":https://ably.com/dashboard.</p>
+</aside>
+
+You will then need to set the default app to use with the CLI, run the following command:
+
+```[sh]
+  ably apps switch
+```
+
+Finally, to select the API key to use with the CLI, run the following command:
+
+```[sh]
+  ably auth keys switch
+```
+
+h3(#prerequisites-node). Node
+
+Ensure you have recent versions of Node installed if using macOS or Linux.
+To do this on macOS (Homebrew), run the following command:
+
+```[sh]
+    brew install node
+```
+
+Or for Linux (Debian/Ubuntu) use:
+
+```[sh]
+    sudo apt-get update
+    sudo apt-get install nodejs npm
+```
+
+h3(#prerequisites-vite). Create a new Vite project
+
+Create a new React + TypeScript project with Vite. On macOS or Linux, run:
+
+```[sh]
+  npm create vite@latest ably-chat-demo -- --template react-ts
+```
+
+or, if you prefer Yarn use:
+
+```[sh]
+  yarn create vite ably-chat-demo --template react-ts
+```
+
+Change into your new project directory:
+
+```[sh]
+cd ably-chat-demo
+```
+
+You should see a directory structure similar to this:
+
+```[sh]
+  ├── index.html
+  ├── package.json
+  ├── public
+  ├── src
+  │   ├── App.tsx
+  │   ├── main.tsx
+  │   ├── App.css
+  │   └── vite-env.d.ts
+  ├── tsconfig.app.json
+  ├── tsconfig.json
+  ├── tsconfig.node.json
+  └── vite.config.ts
+```
+
+<aside data-type='note'>
+<p>The tsconfig files should be set up for you, there is no need to change them.</p>
+</aside>
+
+h3(#prerequisites-chat). Chat SDK
+
+Install the Ably Chat SDK in the new project. This will also install the Ably Pub/Sub SDK as it is a dependency:
+
+```[sh]
+  npm install @ably/chat
+```
+
+Add React (and React DOM) if they are not already installed:
+
+```[sh]
+  npm install react react-dom
+```
+
+h3(#prerequisites-tailwind). Tailwind
+
+The project will also use tailwind for styling. To install tailwind, run the following command:
+
+```[sh]
+  npm install tailwindcss @tailwindcss/vite
+```
+
+Now in the @vite.config.ts@ file, make sure you import the tailwindcss plugin and add it to the plugins array:
+
+```[typescript]
+  import tailwindcss from '@tailwindcss/vite'
+
+  // https://vite.dev/config/
+  export default defineConfig({
+    plugins: [react(), tailwindcss()],
+  })
+```
+
+Then, in your @src/App.css@ file, add the following to the top of the file:
+
+```[css]
+@import "tailwindcss";
+```
+
+Finally, in your @src/App.tsx@ file, ensure you import the CSS file:
+
+```[react]
+import "./App.css";
+```
+
+h2(#providers-setup). Setting up the providers
+
+The Ably Pub/Sub SDK and the Ably Chat SDK expose React hooks and context providers to make it easier to use them in your React components.
+The "AblyProvider":/docs/getting-started/react#ably-provider and "ChatClientProvider":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.ChatClientProvider.html should be used at the top level of your application, typically in @main.tsx@.
+
+<aside data-type='note'>
+<p>These are required when working with "useChatConnection":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useChatConnection.html hook and "ChatRoomProvider":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.ChatRoomProvider.html exposed by Ably Chat.</p>
+</aside>
+
+* Replace the contents of your @src/main.tsx@ file with the following code to set up the providers:
+
+```[react]
+// main.tsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import * as Ably from 'ably';
+import { ChatClient, LogLevel } from '@ably/chat';
+import { ChatClientProvider } from '@ably/chat';
+import { AblyProvider } from 'ably/react';
+import App from './App'; // Your main app component
+
+// Create your Ably Realtime client and ChatClient instances:
+const realtimeClient = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  clientId: 'my-first-client',
+});
+
+const chatClient = new ChatClient(realtimeClient, {
+  logLevel: LogLevel.Info,
+});
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <AblyProvider client={realtimeClient}>
+      <ChatClientProvider client={chatClient}>
+        <App /> {/* Your main app component */}
+      </ChatClientProvider>
+    </AblyProvider>
+  </React.StrictMode>,
+);
+```
+
+Ensure you replace the @{{API_KEY}}@ placeholder with your actual Ably API key.
+
+h2(#step-1). Step 1: Connect to Ably
+
+Clients establish a connection with Ably when they instantiate an SDK.
+
+This enables them to send and receive messages in realtime across channels.
+You will need to create a new component component
+that uses the "useChatConnection":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useChatConnection.html hook,
+exposed by the Ably Chat SDK, to get the current connection status of the Ably Chat client. This hook must be nested within a @ChatClientProvider@, so the component must be placed inside the @ChatClientProvider@ in your app.
+
+* In your project, open @src/App.tsx@, and replace its contents with the following:
+
+```[react]
+// App.tsx
+import { useChatConnection } from '@ably/chat';
+
+// This component will display the current connection status
+function ConnectionStatus() {
+  const { currentStatus } = useChatConnection(); // Hook to get the current connection status
+
+   return (
+        <div className="p-4 text-center h-full border-gray-300 bg-gray-100">
+            <h2 className="text-lg font-semibold text-blue-500">Ably Chat Connection</h2>
+            <p className="mt-2">Connection: {currentStatus}!</p>
+        </div>
+    );
+}
+
+function App() {
+  return (
+    <div
+      className="flex flex-col w-[900px] h-full border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+      <div
+          className="flex flex-row w-full border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+          <div className="flex-1 border-1 border-blue-500">
+              <ConnectionStatus/>
+          </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
+```
+
+Now run your application by starting the development server:
+
+```[sh]
+npm run dev
+```
+
+Then open the URL shown in the terminal (typically "http://127.0.0.1:5173":http://127.0.0.1:5173).
+You should see the connection status reflected in your UI (for example, @“Currently connected!”@).
+
+h2(#step-2). Step 2: Create a room
+
+Now that you have a connection to Ably, you can create a room.
+
+Ably Chat exposes the "ChatRoomProvider":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.ChatRoomProvider.html
+to help you create and manage rooms. It must be nested under the @ChatClientProvider@ described above.
+
+<aside data-type='note'>
+<p>The @ChatRoomProvider@ is required when working with any of feature hooks, such as the "useMessages":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useMessages.html hook, exposed by the Chat SDK.</p>
+</aside>
+
+This provider also gives you access to the room via the "useRoom()":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useRoom.html hook,
+which you can be used to interact with the room and monitor its status.
+
+* In your project, open @src/App.tsx@, and add the following additional imports, along with a new component called @RoomStatus@:
+
+```[react]
+// App.tsx
+import { ChatRoomProvider, useRoom, AllFeaturesEnabled } from '@ably/chat';
+import { useState } from "react";
+
+// This component will display the current room status
+function RoomStatus() {
+  const [currentRoomStatus, setCurrentRoomStatus] = useState('');
+  const {roomId} = useRoom({
+    onStatusChange: (status) => {
+      setCurrentRoomStatus(status.current); // Update the room status
+    },
+  });
+  return (
+    <div className="p-4 text-center h-full border-gray-300 bg-gray-100">
+      <h2 className="text-lg font-semibold text-blue-500">Room Status</h2>
+      <p className="mt-2">Status: {roomStatus}
+        <br/>
+        Room: {roomId}
+      </p>
+    </div>
+  );
+}
+```
+
+* Then, update your main app component to include the @ChatRoomProvider@ and nest the @RoomStatus@ component inside it:
+
+```[react]
+function App() {
+  // Wrap your Room component with the ChatRoomProvider:
+  return (
+    <ChatRoomProvider
+      id="my-first-room" // The room ID you want to create or join
+      release={true} // Release the room automatically when unmounted
+      attach={true} // Attach to the room automatically when mounted
+      options={AllFeaturesEnabled} // Any additional options you want to pass
+    >
+      <div
+        className="flex flex-col w-[900px] h-full border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+        <div className="flex flex-row w-full border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+            <div className="flex-1 border-1 border-blue-500">
+                <ConnectionStatus/>
+            </div>
+            <div className="flex-1 border-1 border-blue-500">
+            {/* Your RoomStatus component should go here */}
+                <RoomStatus/>
+            </div>
+        </div>
+      </div>
+    </ChatRoomProvider>
+  );
+}
+
+export default App;
+```
+
+The above code creates a room with the ID @my-first-room@ and sets up a listener to monitor the room status. It also displays the room ID and current status in the UI. The @AllFeaturesEnabled@ constant is used to enable all features of the Chat SDK for this room.
+
+<aside data-type='note'>
+<p>Monitoring the room status is useful for deciding when to show a loading spinner or other UI elements while waiting for the room to be created or joined.</p>
+</aside>
+
+h2(#step-3). Step 3: Send a message
+
+Ably Chat exposes a @useMessages()@ hook to interact with the "messages":./messages feature of the Chat SDK.
+
+After the room provider is set up, you can use the "useMessages()":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useMessages.html hook to send and receive messages in the room.
+
+* In your project, open @src/App.tsx@, and add the following imports to those already in place:
+
+```[react]
+// App.tsx
+import { useState } from 'react';
+import { ChatRoomProvider, useMessages } from '@ably/chat';
+import { MessageEvent, Message } from '@ably/chat';
+```
+
+* Then add a new component called @ChatBox@, like so:
+
+```[react]
+// App.tsx
+function ChatBox() {
+  const [inputValue, setInputValue] = useState('');
+  // State to hold the messages
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  // The useMessages hook subscribes to messages in the room and provides a send method
+  const { send } = useMessages({
+    listener: (event: MessageEvent) => {
+      const message = event.message;
+      switch (event.type) {
+        case MessageEvents.Created: {
+          // Add the new message to the list
+          setMessages((prevMessages) => [...prevMessages, message]);
+          break;
+        }
+        default: {
+          console.error('Unhandled event', event);
+        }
+      }
+    }
+  });
+
+  // Function to handle sending messages
+  const handleSend = () => {
+    if (!inputValue.trim()) return;
+    send({ text: inputValue.trim() }).catch((err) =>
+      console.error('Error sending message', err))
+    setInputValue('');
+  };
+
+  return (
+  <div className="flex flex-col w-full h-[600px] item-left border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+    <div className="flex-1 p-4 overflow-y-auto space-y-2">
+      {messages.map((msg: Message) => {
+        const isMine = msg.clientId === 'my-first-client';
+        return (
+          <div className={`max-w-[60%] rounded-2xl px-3 py-2 shadow-sm ${
+            isMine ? 'bg-green-200 text-gray-800 rounded-br-none' : 'bg-blue-50 text-gray-800 rounded-bl-none'
+          }`}>
+            {msg.text}
+          </div>
+        );
+      })}
+    </div>
+    <div className="flex items-center px-2 mt-auto mb-2">
+      <input
+        type="text"
+        placeholder="Type your message..."
+        className="flex-1 p-2 border border-gray-400 rounded outline-none bg-white"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            handleSend();
+          }
+        }}
+      />
+      <button
+        className="bg-blue-500 text-white px-4 ml-2 h-10 flex items-center justify-center rounded hover:bg-blue-600 transition-colors"
+        onClick={handleSend}
+      >
+        Send
+      </button>
+    </div>
+  </div>
+);}
+```
+
+* Finally, add the @ChatBox@ component to your main app component:
+
+```[react]
+// App.tsx
+function App() {
+  return (
+    <ChatRoomProvider
+      id="my-first-room" // The room ID you want to create or join
+      release={true} // Release the room automatically when unmounted
+      attach={true} // Attach to the room automatically when mounted
+      options={AllFeaturesEnabled}
+    >
+      <div className="flex flex-col w-[900px] h-full border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+        <div className="flex flex-row w-full border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+          <div className="flex-1 border-1 border-blue-500">
+            <ConnectionStatus/>
+          </div>
+          <div className="flex-1 border-1 border-blue-500">
+            <RoomStatus/>
+          </div>
+        </div>
+        <div className="flex flex-1 flex-row flex justify-evenly">
+          <div className="flex flex-col bg-white w-1/2 border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+          {/* Your ChatBox component should go here */}
+            <ChatBox/>
+          </div>
+        </div>
+      </div>
+    </ChatRoomProvider>
+  );
+}
+```
+
+The UI should automatically render the new component, and you should be able to send messages to the room.
+
+* Type a message in the input box and click the send button. You should see the message appear in the chat box.
+
+You can also use the Ably CLI to send a message to the room from another environment:
+
+```[sh]
+  ably rooms messages send my-first-room 'Hello from CLI!'
+```
+
+You should see the message in your app's chat box UI. If you have sent a message via CLI, it should appear in a different color to the one you sent from the app.
+
+h2(#step-4). Step 4: Edit a message
+
+If your client makes a typo, or needs to update their original message then they can edit it.
+To do this, you can extend the functionality of the @ChatBox@ component to allow updating of messages.
+
+The @useMessages()@ hook exposes the "update()":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#update method of the Chat SDK "Messages":./messages feature.
+
+* Expose the @update()@ method from the @useMessages()@ hook and then add a method to the @ChatBox@ component to handle the edit action like so:
+
+```[react]
+// Place this in the ChatBox component
+const onUpdateMessage = useCallback(
+  (message: Message) => {
+    const newText = prompt('Enter new text');
+    if (!newText) {
+      return;
+    }
+    update(
+      message.copy({
+        text: newText,
+        metadata: message.metadata,
+        headers: message.headers,
+      }),
+    ).catch((error: unknown) => {
+      console.warn('Failed to update message', error);
+    });
+  },
+  [update],
+);
+```
+
+* Update the messages rendering of the chat box to enable the update action in the UI:
+
+```[react]
+// Update the rendering of messages in the ChatBox component
+return (
+  <div className="flex flex-col w-full h-[600px] item-left border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+    <div className="flex-1 p-4 overflow-y-auto space-y-2">
+      {messages.map((msg: Message, idx: number) => {
+        const isMine = msg.clientId === 'my-first-client';
+        return (
+          <div
+            /* message update handling */
+            key={idx}
+            className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+            onClick={() => onUpdateMessage(msg)}
+          >
+            <div
+              className={`max-w-[60%] rounded-2xl px-3 py-2 shadow-sm ${
+                isMine
+                  ? 'bg-green-200 text-gray-800 rounded-br-none'
+                  : 'bg-blue-50 text-gray-800 rounded-bl-none'
+              }`}
+            >
+              {msg.text}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+    {/* rest of your rendering code*/}
+  </div>
+);
+```
+
+* Finally, you must update the listener provided to the @useMessages()@ hook to handle the @MessageEvents.Updated@ event:
+
+```[react]
+// Replace the listener in the useMessages hook with the following:
+listener: (event: MessageEvent) => {
+const message = event.message;
+switch (event.type) {
+  case MessageEvents.Created: {
+    // Add the new message to the list
+    setMessages((prevMessages) => [...prevMessages, event.message]);
+    break;
+  }
+  case MessageEvents.Updated: {
+    setMessages((prevMessages) => {
+      // Find the index of the message to update
+      const index = prevMessages.findIndex((other) => message.isSameAs(other));
+
+      // If the message is not found, return the previous messages
+      if (index === -1) {
+        return prevMessages;
+      }
+
+      // Apply the update to the original message
+      const newMessage = prevMessages[index].with(event);
+
+      // Create a new array with the updated message and return it
+      const updatedArray = prevMessages.slice();
+      updatedArray[index] = newMessage;
+      return updatedArray;
+    });
+    break;
+  }
+  default: {
+    console.error('Unhandled event', event);
+  }
+}}});
+```
+
+* Now, when you click on a previously sent message in the UI, it will prompt you to enter new text. After entering the required change and submitting, it will send the updated message to the room, where the listener will receive it and update the UI accordingly.
+
+h2(#step-5). Step 5: Message history and continuity
+
+Ably Chat allows retrieving previously sent messages in a room, this is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on.
+
+The @useMessages()@ hook exposes the "getPreviousMessages()":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#getPreviousMessages method to enable this functionality. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
+
+To do this, you need to expose the @getPreviousMessages()@ on the hook, and extend the @ChatBox@ component to include a method to retrieve the last 10 messages when the component mounts.
+
+* In your @src/app.tsx@ file, ensure you add the @useEffect@ and @useState@ imports to your existing imports, then add the following @useEffect@ to your @ChatBox@ component:
+
+```[react]
+function ChatBox() {
+  /* existing code */
+  useEffect(() => {
+    async function loadHistory() {
+      try {
+        if (!getPreviousMessages) {
+          // The room is not ready yet
+          return;
+        }
+        // Retrieve the last 10 messages
+        const history = await getPreviousMessages({ limit: 10 });
+        // Set the messages in the state
+        setMessages(history.items);
+      } catch (error) {
+        console.error('Error loading message history:', error);
+      }
+    }
+    loadHistory();
+  }, [getPreviousMessages]);
+  /* rest of your code */
+}
+```
+
+The above code will retrieve the last 10 messages when the component mounts, and set them in the state.
+
+Try the following to test this feature:
+
+1. Use the ably CLI to simulate sending some messages to the room from another client.
+2. Start your app and you should see the messages appear in the chat box UI.
+
+h2(#step-6). Step 6: Show who is typing a message
+
+The Chat SDK also provides a typing indicator feature that allows you to show when users are typing a message.
+The @currentlyTyping@ array from "useTyping()":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useTyping.html hook tells you which clients are currently typing, allowing you to render them in the UI. The hook also exposes @start()@ and @stop()@ methods to start and stop typing.
+
+* In your @src/app.tsx@ file, ensure you add the @useTyping()@ hook to your imports:
+
+```[react]
+import { useTyping } from '@ably/chat';
+```
+
+* You will need to update the existing @ChatBox@ component to include the typing indicator hook, a function to handle text input and then update the @handleSend@ method so typing stops on message send:
+
+```[react]
+function ChatBox() {
+  // Expose the currentlyTyping set and the start and stop methods
+  const { currentlyTyping, start, stop } = useTyping();
+
+  /* rest of your code */
+
+  const handleSend = () => {
+        if (!inputValue.trim()) return;
+        send({text: inputValue.trim()}).catch((err) =>
+            console.error('Error sending message', err))
+        setInputValue('');
+        /* stop typing when the message is sent */
+        stop().catch((err) => console.error('Error stopping typing', err))
+    };
+
+  /* handle client typing changes */
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    if (newValue.trim().length > 0) {
+      // If the input value is not empty, start typing
+      start().catch(
+        (err) => console.error('Error starting typing', err))
+    } else {
+      // If the input is cleared, stop typing
+      stop().catch(
+        (err) => console.error('Error stopping typing', err))
+    }
+  };
+
+  /* rest of your code */
+```
+
+* To render the typing indicator, you will need to update @ChatBox@ rendering section like so:
+
+```[react]
+// ChatBox component
+return (
+  <div className="flex flex-col w-full h-[600px] item-left border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+    <div className="flex-1 p-4 overflow-y-auto space-y-2">
+      {messages.map((msg: Message, idx: number) => {
+        const isMine = msg.clientId === 'my-first-client';
+        return (
+          <div
+            key={idx}
+            className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+            onClick={() => onUpdateMessage(msg)}
+          >
+            /* message update handling */
+            <div
+              className={`max-w-[60%] rounded-2xl px-3 py-2 shadow-sm ${
+                isMine
+                  ? 'bg-green-200 text-gray-800 rounded-br-none'
+                  : 'bg-blue-50 text-gray-800 rounded-bl-none'
+              }`}
+            >
+              {msg.text}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+    <div
+      className="flex flex-col border-t border-gray-300 bg-gray-100"
+      style={{ minHeight: '100px', maxHeight: '100px' }}
+    >
+      {/* Typing indicator */}
+      <div className="h-6 px-2 pt-2">
+        {currentlyTyping.size > 0 && (
+          <p className="text-sm text-gray-700 overflow-hidden">
+            {Array.from(currentlyTyping).join(', ')}
+            {' '}
+            {currentlyTyping.size > 1 ? 'are' : 'is'} typing...
+          </p>
+        )}
+      </div>
+      {/* Text input & message sending */}
+      <div className="flex items-center px-2 mt-auto mb-2">
+        <input
+          type="text"
+          placeholder="Type something..."
+          className="flex-1 p-2 border border-gray-400 rounded outline-none bg-white"
+          value={inputValue}
+          onChange={handleChange}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              handleSend();
+            }
+          }}
+        />
+        <button
+          className="bg-blue-500 text-white px-4 ml-2 h-10 flex items-center justify-center rounded hover:bg-blue-600 transition-colors"
+          onClick={handleSend}
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  </div>
+);
+```
+
+* When you start typing in the input box, your client will be indicated as typing, and if you clear all text, the indicator will stop. Other connected clients can also be displayed in the list if they’re typing, you can use the Ably CLI to simulate typing from another client by running the following command:
+
+```[sh]
+  ably rooms typing keystroke my-first-room --client-id "my-cli"
+```
+
+h2(#step-7). Step 7: Display who is present in the room
+
+The Chat SDK also provides a presence feature that allows you to see who is currently present in the room.
+You can show a list of everyone who’s currently present in the same room by using the "usePresenceListener()":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.usePresenceListener.html hook. You can also @enter@ and @update@ your own presence status using the "usePresence()":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.usePresence.html hook.
+
+* In your @src/app.tsx@ file, ensure you add the hooks to your current imports:
+
+```[react]
+import {
+    usePresence,
+    usePresenceListener,
+} from '@ably/chat';
+```
+
+* Create a new component called @PresenceStatus@ like so:
+
+```[react]
+// ChatRoom.tsx
+function PresenceStatus() {
+  // The usePresence hook enters the current client into the room presence
+  usePresence();
+  // The usePresenceListener hook subscribes to presence updates for the room
+  const { presenceData } = usePresenceListener();
+  return (
+    <div className="flex flex-col border-b border-gray-300 bg-white w-full h-full px-4 py-2">
+      <strong className="text-green-700 mr-4 text-center border-b border-gray-900">
+        Online: {presenceData.length}
+      </strong>
+      <div className="flex-1 flex-col flex flex-nowrap items-start gap-4 overflow-x-auto">
+        {presenceData.map((member, idx) => (
+          <div key={idx} className="flex items-center gap-1">
+            <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+            <span className="text-gray-800">{member.clientId}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+* Then add the @PresenceStatus@ component to your main app component like so:
+
+```[react]
+// App.tsx
+function App() {
+  return (
+  <ChatRoomProvider
+    id="my-first-room" // The room ID you want to create or join
+    release={true} // Release the room automatically when unmounted
+    attach={true} // Attach to the room automatically when mounted
+    options={AllFeaturesEnabled}
+  >
+    <div className="flex flex-col w-[900px] h-full border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+      <div className="flex flex-row w-full border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+        <div className="flex-1 border-1 border-blue-500">
+          <ConnectionStatus />
+        </div>
+        <div className="flex-1 border-1 border-blue-500">
+          <RoomStatus />
+        </div>
+      </div>
+      <div className="flex flex-1 flex-row justify-evenly">
+        <div className="flex flex-col w-1/2 border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+          <div className="flex-1 border-1 border-blue-500 overflow-y-auto">
+          {/* Your PresenceStatus component should go here */}
+            <PresenceStatus />
+          </div>
+        </div>
+        <div className="flex flex-col bg-white w-1/2 border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+          <ChatBox />
+        </div>
+      </div>
+    </div>
+  </ChatRoomProvider>
+);
+}
+```
+
+The component will display a list of clients currently present in the room. The @usePresence()@ hook enters the current client into the room presence, and the @usePresenceListener()@ hook subscribes to presence updates for the room. You should see your current client ID in the list of present users.
+
+* You can also use the Ably CLI to enter the room from another client by running the following command:
+
+```[sh]
+  ably rooms presence enter my-first-room --client-id "my-cli"
+```
+
+h2(#step-8). Step 8: Send a reaction
+
+Clients can send a reaction to a room to show their sentiment for what is happening, such as a point being scored in a sports game.
+Ably Chat provides a "useReactions()":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useReactions.html hook to send and receive reactions in a room. These are short-lived (ephemeral) and are not stored in the room history.
+
+* In your @src/app.tsx@ file, ensure you import the @useReactions()@ hook:
+
+```[react]
+import {
+  useRoomReactions,
+} from '@ably/chat';
+```
+
+* Then add a new component called @ReactionComponent@, like so:
+
+```[react]
+function ReactionComponent() {
+  const reactions = ['👍', '❤️', '💥', '🚀', '👎', '💔'];
+  const [roomReactions, setRoomReactions] = useState<Reaction[]>([]);
+  const { send } = useRoomReactions({
+    listener: (reaction: Reaction) => {
+      setRoomReactions([...roomReactions, reaction]);
+    },
+  });
+
+  return (
+    <div>
+      {/* Reactions buttons */}
+      <div className="flex justify-evenly items-center px-4 py-2 border-t border-gray-300 bg-white mx-auto">
+        {reactions.map((reaction) => (
+          <button
+            key={reaction}
+            onClick={() =>
+              send({ type: reaction }).catch((err) =>
+                console.error('Error sending reaction', err)
+              )
+            }
+            className="text-xl p-1 border border-blue-500 rounded hover:bg-blue-100 text-blue-500 transition-colors"
+          >
+            {reaction}
+          </button>
+        ))}
+      </div>
+
+      {/* Received reactions */}
+      <div className="flex gap-2 px-2 py-2 border-t border-gray-300 mx-auto">
+        <span>Received reactions:</span>
+        <div className="flex-1 flex items-center max-h-[24px] gap-1 overflow-x-auto whitespace-nowrap scrollbar-thin scrollbar-thumb-gray-300">
+          {roomReactions.map((r, idx) => (
+            <span
+              key={idx}
+              className="px-2 py-1 bg-white rounded text-blue-600"
+            >
+              {r.type}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+* Finally, add the @ReactionComponent@ component to your main app component:
+
+```[react]
+// App.tsx
+function App() {
+  // Wrap your Room component with the ChatRoomProvider:
+  return (
+    <ChatRoomProvider
+      id="my-first-room" // The room ID you want to create or join
+      release={true} // Release the room automatically when unmounted
+      attach={true} // Attach to the room automatically when mounted
+      options={AllFeaturesEnabled}
+    >
+      <div className="flex flex-col w-[900px] h-full border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+        <div className="flex flex-row w-full border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+          <div className="flex-1 border-1 border-blue-500">
+            <ConnectionStatus />
+          </div>
+          <div className="flex-1 border-1 border-blue-500">
+            <RoomStatus />
+          </div>
+        </div>
+        <div className="flex flex-1 flex-row justify-evenly">
+          <div className="flex flex-col w-1/2 border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+            <div className="flex-1 border-1 border-blue-500 overflow-y-auto">
+              <PresenceStatus />
+            </div>
+            <div className="flex-1 border-1 min-h-[100px] max-h-[100px] border-blue-500">
+            {/* Your ReactionComponent component should go here */}
+              <ReactionComponent />
+            </div>
+          </div>
+          <div className="flex flex-col bg-white w-1/2 border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+            <ChatBox />
+          </div>
+        </div>
+      </div>
+    </ChatRoomProvider>
+  );
+}
+```
+
+The above code should display a list of reactions that can be sent to the room. When you click on a reaction, it will send it to the room and display it in the UI.
+
+* You can also send a reaction to the room via the Ably CLI by running the following command:
+
+```[sh]
+  ably rooms reactions send my-first-room 👍
+```
+
+h2(#next). Next steps
+
+Continue exploring Ably Chat with React:
+
+* Read more about using [rooms](https://ably.com/docs/chat/rooms) and sending [messages](https://ably.com/docs/chat/rooms/messages).
+* Learn about [presence status](https://ably.com/docs/chat/rooms/presence).
+* Set up [typing indicators](https://ably.com/docs/chat/rooms/typing).
+* Send [reactions](https://ably.com/docs/chat/rooms/reactions) to express real-time feedback.
+* Investigate pulling messages from [history](https://ably.com/docs/chat/rooms/history) for context.
+
+Explore the Ably CLI further, or check out the [Chat JS API references](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-js.html) for additional functionality.
+
+
