@@ -37,6 +37,11 @@ export default {
           name: 'LiveMap',
           link: '/docs/liveobjects/map',
         },
+      ],
+    },
+    {
+      name: 'Advanced',
+      pages: [
         {
           name: 'Batch operations',
           link: '/docs/liveobjects/batch',
