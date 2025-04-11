@@ -32,6 +32,7 @@ const ExamplesGrid = ({
       case 'assetTracking':
         return 'text-green-600';
       case 'liveObjects':
+        // Reusing Asset Tracking color as no examples exist for it yet.
         return 'text-green-600';
       default:
         return 'text-orange-700';
