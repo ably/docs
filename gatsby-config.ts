@@ -50,7 +50,23 @@ export const plugins = [
       HowTos: `${__dirname}/how-tos`,
     },
   },
-  'gatsby-plugin-mdx',
+  {
+    resolve: 'gatsby-plugin-mdx',
+    options: {
+      gatsbyRemarkPlugins: [
+        {
+          resolve: `gatsby-remark-autolink-headers`,
+        },
+      ],
+    },
+  },
+  {
+    resolve: `gatsby-source-filesystem`,
+    options: {
+      name: `pages`,
+      path: `${__dirname}/src/pages`,
+    },
+  },
   // Images
   {
     resolve: 'gatsby-source-filesystem',
