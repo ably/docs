@@ -9,19 +9,96 @@ redirect_from:
   - /docs/general/webhooks/aws-lambda
 ---
 
-As part of "Webhooks":/docs/integrations/webhooks, it is possible to integrate with various systems.
+"AWS Lambda Functions":https://aws.amazon.com/lambda/ provide event-driven serverless compute functions. Lambda Functions let you run code automatically whenever events are sent to them, making it easy to integrate with other AWS services.
 
-"AWS Lambda Functions":https://aws.amazon.com/lambda/ provide event-driven serverless compute functions which allow users to easily run code whenever events are sent to it. These can be very useful for integrating into various other AWS systems.
+h2(#trigger). Trigger AWS Lambda functions
 
-h2(#fields). Rule fields
+To trigger an AWS Lambda function in response to Ably "channel":/docs/metadata-stats/metadata/subscribe#channel-lifecycle events:
 
-- AWS Region := The region you chose for your "AWS Lambda function":https://docs.aws.amazon.com/general/latest/gr/rande.html#lambda_region.
-- Function Name := The name you gave your "AWS Lambda function":https://docs.aws.amazon.com/lambda/latest/dg/getting-started.html.
-- AWS Authentication Scheme := the authentication scheme you use for your function. Either @AWS Credentials@ or @ARN of an assumable role@. See the Ably "AWS authentication":/docs/general/aws-authentication/ documentation.
-- Qualifier := optional qualifier for your AWS Lambda function.
-- "Source":/docs/integrations/webhooks#sources := Choose which of @channel.message@, @channel.presence@, @channel.lifecycle@, or @channel.occupancy@ events on channels should activate this event rule.
-- "Channel filter":/docs/integrations/webhooks#channel-filter := An optional filter on channel name, to restrict the channels the rule applies to. Use a regular expression to match multiple channels.
+* Go to your Ably "dashboard":https://ably.com/dashboard/any and select your app.
+* Navigate to the *Integrations* tab.
+* Click *New Integration Rule*.
+* In the *Select your rule type* section, choose *webhook*.
+* Under *Select service integration*, click *AWS Lambda*.
+* Fill in the required *AWS Region* and your *Function Name* (must match the name of your function in AWS).
+* Choose an *Authentication* scheme:
+** Select either *AWS Credentials* and provide a key:value pair.
+** Or use *ARN of an assumable role* if you're using IAM role-based authentication.
+* (Optional) Enter a *Qualifier* if you're using a version or alias of your Lambda function.
+* In the "*Source*":/docs/integrations/webhooks#sources dropdown, select the type of events that will trigger the rule:
+** Message
+** Presence
+** Channel Lifecycle
+** Channel Occupancy
+* (Optional) Add a "*Channel Filter*":/docs/integrations/webhooks#channel-filter using a regular expression to target specific channels. Leave empty to apply to all channels.
+* Choose an "*Encoding*":/docs/integrations/webhooks#encoding format:
+** JSON
+** MsgPack
+* Choose if you want messages to be "*Enveloped:*":/docs/integrations/webhooks#enveloped
+** Enabled by default. If unchecked, the raw payload will be sent without additional metadata.
+* Click *Create* to finish setting up the rule.
 
-h2(#restrictions). Restrictions
+h2(#auth). AWS authentication
 
-At present, it is not possible to "batch":/docs/integrations/webhooks#batching messages to AWS Lambda Functions, nor can messages be "encoded":/docs/integrations/webhooks#encoding in anything besides JSON.
+Create an "IAM role":https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html that the Ably AWS account can assume to delegate access to your AWS resources. This approach follows AWS best practices, as it avoids sharing access keys directly. Specify the role’s ARN to grant Ably the necessary permissions in a secure manner.
+
+h3(#lambada). Create Lambda policy
+
+The following steps show you how to create a policy for AWS Lambda:
+
+* In the IAM console sidebar select *Policies*.
+* Click *Create Policy*.
+* Click the JSON tab and enter the following JSON to configure the policy:
+
+```[json]
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowInvokeLambdaFunction",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:InvokeAsync",
+                "lambda:InvokeFunction"
+            ],
+            "Resource": [
+                "arn:aws:lambda:<YOUR_AWS_REGION>:<YOUR_AWS_ACCOUNT>:function:<YOUR_FUNCTION_NAME>"
+            ]
+        }
+    ]
+}
+```
+
+<aside data-type='note'>
+<p>You will need to replace @<YOUR_AWS_REGION>@, @<YOUR_AWS_ACCOUNT>@, and @<YOUR_FUNCTION_NAME>@ with the AWS region that hosts your AWS Lambda function, your AWS account ID, and your AWS Lambda function name respectively.</p>
+</aside>
+
+* Click *Next: Tags*. You don't need to add any tags.
+* Click *Next: Review*.
+* Enter a suitable name for your policy.
+* Click *Create Policy*.
+
+h3(#role). Create a role
+
+Create an IAM role as follows:
+
+* In the AWS IAM console, click *Roles* in the sidebar and then click *Create Role*.
+* For type of trusted entity select *Another AWS account*.
+* For Account ID specify 203461409171. This is the Ably AWS account.
+* Click the *Require external ID checkbox* and then enter an "external ID":/docs/ids-and-keys/ of @<Your_Ably_Account_ID>.<Your_Ably_app_ID>@. This is also displayed when you create an Ably AWS Lambda, AWS Kinesis, or AWS SQS integration rule and select the *ARN of an assumable role* radio button in the create rule dialog.
+* Click *Next: Permissions*.
+* Now select the policy you created earlier to attach to this role. You can type the name of your policy into the *Filter policies* search box.
+
+Then ensure the checkbox for the policy is selected.
+
+* Click *Next: Tags*.
+* You don't need to add tags so click *Next: Review*.
+* Enter a suitable name for your role.
+* Click *Create Role*.
+
+
+h3(#setup). Set up ARN
+
+When setting up an Ably integration rule, you can copy the ARN for your rule by clicking the provided button Then, enter the copied ARN into the *Assume Role ARN* text field in the rule creation section.
+
+You can test your Ably rule by clicking *Test rule* in the "dashboard":https://ably.com/dashboard/any. If the test returns a success message, your AWS permissions are correctly configured.

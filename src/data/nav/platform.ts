@@ -119,7 +119,7 @@ export default {
               link: '/docs/integrations/webhooks',
             },
             {
-              name: 'AWS Lambda Functions',
+              name: 'Lambda Functions',
               link: '/docs/integrations/webhooks/lambda',
             },
             {
@@ -127,7 +127,7 @@ export default {
               link: '/docs/integrations/webhooks/azure',
             },
             {
-              name: 'Google Cloud Functions',
+              name: 'Cloud Functions',
               link: '/docs/integrations/webhooks/gcp-function',
             },
             {
@@ -174,12 +174,12 @@ export default {
           ],
         },
         {
-          name: 'AWS authentication',
-          link: '/docs/integrations/aws-authentication',
-        },
-        {
           name: 'Message Queues',
           link: '/docs/integrations/queues',
+        },
+        {
+          name: 'Skip integrations',
+          link: '/docs/integrations/skip-integrations',
         },
       ],
     },
