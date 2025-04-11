@@ -71,24 +71,38 @@ export default {
           name: 'Room reactions',
           link: '/docs/chat/rooms/reactions',
         },
+      ],
+    },
+    {
+      name: 'Moderation',
+      pages: [
         {
-          name: 'Moderation',
+          name: 'Introduction',
+          link: '/docs/chat/moderation',
+        },
+        {
+          name: 'Direct Integrations',
           pages: [
             {
-              name: 'Introduction',
-              link: '/docs/chat/rooms/moderation',
-            },
-            {
               name: 'Hive (Model Only)',
-              link: '/docs/chat/rooms/moderation/hive-model-only',
+              link: '/docs/chat/moderation/direct/hive-model-only',
             },
             {
               name: 'Hive (Dashboard)',
-              link: '/docs/chat/rooms/moderation/hive-dashboard',
+              link: '/docs/chat/moderation/direct/hive-dashboard',
+            },
+          ],
+        },
+        {
+          name: 'Custom',
+          pages: [
+            {
+              name: 'API Overview',
+              link: '/docs/chat/moderation/custom',
             },
             {
               name: 'AWS Lambda',
-              link: '/docs/chat/rooms/moderation/lambda',
+              link: '/docs/chat/moderation/custom/lambda',
             },
           ],
         },
