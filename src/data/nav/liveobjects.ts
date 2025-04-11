@@ -38,11 +38,11 @@ export default {
           link: '/docs/liveobjects/map',
         },
         {
-          name: 'Batch Operations',
+          name: 'Batch operations',
           link: '/docs/liveobjects/batch',
         },
         {
-          name: 'Lifecycle Events',
+          name: 'Lifecycle events',
           link: '/docs/liveobjects/lifecycle',
         },
         {
