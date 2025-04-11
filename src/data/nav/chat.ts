@@ -93,7 +93,7 @@ export default {
             },
             {
               name: 'AWS Lambda',
-              link: '/docs/chat/moderation/custom/transports/lambda',
+              link: '/docs/chat/moderation/custom/lambda',
             },
           ],
         },
