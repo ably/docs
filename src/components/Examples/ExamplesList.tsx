@@ -8,7 +8,7 @@ const ExamplesList: React.FC = () => {
         <a
           key={example.name}
           href={'#'}
-          className="px-16 ui-text-menu1 text-neutral-1000 dark:text-neutral-300 font-bold hover:text-neutral-1300 dark:hover:text-neutral-000"
+          className="px-16 ui-text-label1 text-neutral-1000 dark:text-neutral-300 font-bold hover:text-neutral-1300 dark:hover:text-neutral-000"
         >
           {example.name}
         </a>

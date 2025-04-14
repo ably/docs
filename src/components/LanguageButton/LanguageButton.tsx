@@ -30,7 +30,7 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language, select
 
   return (
     <button
-      className={cn(button, 'ui-text-menu3', {
+      className={cn(button, 'ui-text-label3', {
         [isActive]: isLanguageActive,
       })}
       onClick={handleClick}

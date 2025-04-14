@@ -46,7 +46,7 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
   return (
     <div
       className={cn(
-        'ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 group/lang-dropdown flex gap-8 items-center rounded',
+        'ui-text-label4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 group/lang-dropdown flex gap-8 items-center rounded',
         {
           'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer': isOption,
         },
