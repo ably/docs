@@ -78,6 +78,7 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
             'react-dom': '^18',
             'react-icons': '^5.4.0',
             'react-router-dom': '^6.22.2',
+            uikit: '^3.7.0',
           },
           devDependencies: {
             typescript: '^4.0.0',

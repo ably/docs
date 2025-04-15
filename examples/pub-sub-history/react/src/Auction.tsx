@@ -130,7 +130,6 @@ export default function AuctionRoom() {
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-        <img src="/assets/auction-item.png" alt="Auction Item" className="w-full object-cover" />
         <div className="p-6">
           <h1 className="text-2xl font-bold mb-2">Vintage timepiece</h1>
           <p className="text-gray-600 mb-4">
