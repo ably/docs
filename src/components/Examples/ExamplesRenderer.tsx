@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { SandpackProvider, SandpackPreview, SandpackConsole } from '@codesandbox/sandpack-react';
+import { SandpackProvider, SandpackPreview } from '@codesandbox/sandpack-react';
 import { githubLight } from '@codesandbox/sandpack-themes';
 import { CodeEditor } from 'src/components/CodeEditor';
 import { LanguageKey } from 'src/data/languages/types';
@@ -8,6 +8,7 @@ import { updateAblyConnectionKey } from 'src/utilities/update-ably-connection-ke
 import { IconName } from '@ably/ui/core/Icon/types';
 import SegmentedControl from '@ably/ui/core/SegmentedControl';
 import dotGrid from './images/dot-grid.svg';
+import cn from '@ably/ui/core/utils/cn';
 
 type ExamplesRendererProps = {
   example: ExampleWithContent;
@@ -34,13 +35,18 @@ const UserIndicator = ({ user }: { user: string }) => {
 };
 
 const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }: ExamplesRendererProps) => {
+  const { files, visibleFiles, layout } = example;
+
   const rewrittenFiles = useMemo<ExampleFiles>(() => {
-    return Object.entries(example.files).reduce((acc, [languageKey, languageFiles]) => {
+    return Object.entries(files).reduce((acc, [languageKey, languageFiles]) => {
       return { ...acc, [languageKey]: updateAblyConnectionKey(languageFiles, apiKey) };
     }, {});
-  }, [example.files, apiKey]);
+  }, [files, apiKey]);
 
   const languageFiles = rewrittenFiles[activeLanguage];
+
+  const isVerticalLayout = useMemo(() => layout === 'single-vertical' || layout === 'double-vertical', [layout]);
+  const isDoubleLayout = useMemo(() => layout === 'double-horizontal' || layout === 'double-vertical', [layout]);
 
   return (
     <div className="bg-neutral-100 dark:bg-neutral-1200 p-16 rounded-2xl flex flex-col gap-16">
@@ -79,15 +85,26 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
           environment: activeLanguage === 'react' ? 'create-react-app' : 'parcel',
         }}
         options={{
-          visibleFiles: example.visibleFiles,
+          visibleFiles,
           autorun: true,
           autoReload: true,
           classes: {
-            'sp-layout':
-              'w-[calc(100vw-48px)] sm:w-[calc(100vw-48px-350px)] md:w-[calc(1040px-48px-350px)] lg:w-[calc(1280px-48px-350px)] xl:w-[calc(1440px-48px-350px)]',
-            'sp-file-explorer': 'sm:!w-[172px] sm:!h-[400px] !flex-none sm:!min-w-[auto]',
-            'sp-editor': 'sm:!h-[400px]',
-            'sp-preview': '!w-[350px] !h-[233px] ml-16',
+            /*
+            For the calcs below:
+            - 350px is the width of the preview (applicable to vertical layouts)
+            - 64px is the padding subtotal within the container at smaller breakpoints
+            - 176px is the padding subtotal within the container at larger breakpoints (vertical layouts)
+            - 160px is the padding subtotal within the container at larger breakpoints (horizontal layouts)
+            */
+            'sp-layout': cn(
+              'w-[calc(100vw-64px)]',
+              isVerticalLayout
+                ? 'md:w-[calc(100vw-64px-350px)] lg:w-[calc(100vw-176px-350px)] xl:w-[calc(1440px-176px-350px)]'
+                : 'lg:w-[calc(100vw-160px)] xl:w-[calc(1440px-160px)]',
+            ),
+            'sp-file-explorer': cn('sm:!w-[172px] sm:min-w-[auto]', isVerticalLayout && 'sm:!h-[400px]'),
+            'sp-editor': cn(isVerticalLayout && 'sm:!h-[400px]'),
+            'sp-preview': cn('!h-[320px] w-full', isVerticalLayout && '!h-[350px] md:!h-full md:!w-[350px]'),
           },
           externalResources: [
             'https://cdn.tailwindcss.com',
@@ -96,31 +113,31 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
         }}
         theme={githubLight}
         template={determineSandpackTemplate(activeLanguage as LanguageKey)}
-        className="!flex flex-col md:flex-row"
       >
-        <CodeEditor
-          theme="light"
-          editor={{
-            className: '',
-            showLineNumbers: true,
-          }}
-        />
-        <div className="flex gap-16 flex-col sm:flex-row md:flex-col">
-          <div className="relative flex-1">
-            <SandpackPreview className="rounded-lg overflow-hidden" showOpenInCodeSandbox={false} showRefreshButton />
-            <UserIndicator user="user 1" />
-          </div>
-          {example.layout === 'two-ui' && (
+        <div className={cn('flex flex-col gap-16 max-w-[calc(100vw-64px)]', isVerticalLayout && 'md:flex-row')}>
+          <CodeEditor
+            theme="light"
+            editor={{
+              className: '',
+              showLineNumbers: true,
+            }}
+          />
+          <div className={cn('flex gap-16 flex-col sm:flex-row', isVerticalLayout && 'md:flex-col')}>
             <div className="relative flex-1">
-              <SandpackPreview
-                className="rounded-lg overflow-hidden"
-                showOpenInCodeSandbox={false}
-                startRoute="/?publisher=false"
-              />
-              <UserIndicator user="user 2" />
+              <SandpackPreview className="rounded-lg overflow-hidden" showOpenInCodeSandbox={false} showRefreshButton />
+              <UserIndicator user="user 1" />
             </div>
-          )}
-          {example.layout === 'ui-console' && <SandpackConsole className="flex-1" />}
+            {isDoubleLayout && (
+              <div className="relative flex-1">
+                <SandpackPreview
+                  className="rounded-lg overflow-hidden"
+                  showOpenInCodeSandbox={false}
+                  startRoute="/?publisher=false"
+                />
+                <UserIndicator user="user 2" />
+              </div>
+            )}
+          </div>
         </div>
       </SandpackProvider>
       <div

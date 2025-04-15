@@ -8,7 +8,7 @@ export type Example = {
   products: string[];
   useCases: UseCase[];
   languages?: LanguageKey[];
-  layout?: 'one-ui' | 'two-ui' | 'ui-console';
+  layout?: 'single-horizontal' | 'double-horizontal' | 'single-vertical' | 'double-vertical';
   visibleFiles?: string[];
 };
 
