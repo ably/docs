@@ -85,7 +85,6 @@ export const onCreateNode: GatsbyNode['onCreateNode'] = async ({
       potentialLanguage && ['react', 'javascript', 'server'].includes(potentialLanguage) ? potentialLanguage : null;
 
     if (!project || !language) {
-      console.error('No project/language found for example file - excluding', node.relativePath);
       return;
     }
 
