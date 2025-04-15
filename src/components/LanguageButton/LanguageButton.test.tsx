@@ -18,7 +18,7 @@ describe(`<LanguageButton />`, () => {
     );
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
       <button
-        class="button ui-text-menu3 isActive"
+        class="button ui-text-label3 isActive"
       >
         JavaScript
       </button>
@@ -32,7 +32,7 @@ describe(`<LanguageButton />`, () => {
     );
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
       <button
-        class="button ui-text-menu3 isActive"
+        class="button ui-text-label3 isActive"
       >
         JavaScript
       </button>
@@ -47,7 +47,7 @@ describe(`<LanguageButton />`, () => {
     );
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
       <button
-        class="button ui-text-menu3"
+        class="button ui-text-label3"
       >
         Ruby
       </button>
@@ -62,7 +62,7 @@ describe(`<LanguageButton />`, () => {
     );
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
       <button
-        class="button ui-text-menu3"
+        class="button ui-text-label3"
       />
     `);
   });
