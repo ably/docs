@@ -12,98 +12,10 @@ servers:
   - url: https://main.realtime.ably.net/
     description: Production server for Ably REST API
 
-tags:
-  - name: objectId format
-    description: |
-      An `objectId` is made of the following components:<br><br>
-
-      ```
-      objectType:base64hash@millisecondTimestamp`
-      // Example:
-      counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlgICjkk@1734628392000
-      ```
-
-      <br>The object types are `map` or `counter`.<br><br>
-
-      The millisecond timestamp is "now". There is a small leeway to compensate for server clocks being out of sync. You can fetch the ably server time using `rest.ably.io/time`.<br><br>
-
-      The base64 raw url encoding hash is made of `initialValue:nonce`. The initial value is the raw bytes taken from the data field on create operations. The `nonce` is any random string.
-
-      | initial value          | nonce  | result hash                                      |
-      |-------------------------|--------|-------------------------------------------------|
-      | `{"value":3.1415926539}` | `nonce`  | `u41d1-DfkEt1AtbyJUSUJn3qAFblVVGmx5Dpg-ToCeI`     |
-      | `{"foo":{"string":"bar"}}` | `nonce` | `ME2yWbb_6sK5AlwxklHA8mTBPxPZx9iyW2Zk6rKJfRs` |
-      | `{"myMapKey":{"string":"myMapValue"}}` | `myNonce` | `99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_-yXQE` |
-
-      > **Note:** the initial value is space and case sensitive.
-
-      The Operations API accepts the “data” field as either a json object, or as a string with an encoding field. For example, this request passes the data field for a counter as a string with json encoding.<br><br>
-
-      ```json
-      {
-        "operation": "COUNTER_CREATE",
-        "data": "{ \"number\": 3.1415926 }",
-        "encoding": "json"
-      }
-      ```
-  - name: Object metadata
-    description: |
-      Object metadata describes the internal details of an object. There are two metadata fields that are common to all objects:
-
-      | Field | Description |
-      |-------|-------------|
-      | Tombstone | true or false, indicates if the object has been deleted. Objects will exist as tombstones for a short while to ensure they remain deleted and are not accidentally created by a lagging live objects client. |
-      | SiteTimeserials | a map of sites, and the last operation applied to this object from that site. |
-
-      Maps have additional metadata attached to their map entries.
-
-      | Operation | Example  |
-      |-----------|----------|
-      | Create a map | `{ "operation": "MAP_CREATE", "data": { "myMapKey": {"string": "myMapValue"}, "myOtherKey": {"boolean": true} } }` |
-      | Set a value on a map | `{ "operation": "MAP_SET", "objectId": "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_@1742207566771", "data": {"key":"foo", "value":{"string":"bar"}} }` |
-      | Remove a value from a map | `{ "operation": "MAP_REMOVE", "objectId": "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_@1742207566771", "data": {"key":"myMapKey"} }` |
-      | Create a counter | `{ "operation": "COUNTER_CREATE", "data": { "number": 3.1415926 } }` |
-      | Increment a counter | `{ "operation": "COUNTER_INC", "objectId": "counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlgICjkk@1734628392000", "data": {"number": 2} }` |
-
-      Example object with metadata included:
-
-      ```json
-      {
-        "objectId": "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000",
-        "map": {
-          "mapSemantics": "LWW",
-          "entries": {
-            "myMapKey": {
-              "timeserial": "...",
-              "tombstone": false,
-              "data": { "string": "my map value" }
-            },
-            "myObjectRef": {
-              "timeserial": "...",
-              "tombstone": true,
-              "data": { "objectId": "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000" }
-            }
-          }
-        }
-      }
-      ```
-
-  - name: Tombstones
-    description: |
-      Tombstones are used on objects and on map entires to indicate that the object or map entry has been deleted. This protects against lagging live objects clients from re-introducing a deleted value by accident.
-
-      Tombstone objects are not included by default, but can be enabled using `metadata=true` query param.
-
-      Tombstone map entry keys are included by default, but the values are not. The key will be present in the entries object but with a null value e.g. `myKey: null`. Tombstoned map entry values can be included using the `metadata=true` flag.
-
-  - name: Cyclic and diamond references
-    description: |
-      In the List, Get object, and Get compact object APIs objects will only be included in the response once. For cyclic or diamond references, the later references to any object that was already included will have an objectIds only. The reference will be included even if you request the data to be inlined using query params, as objects will only appear in the response once.
-
 paths:
   /channels/{channelId}/objects:
     get:
-      summary: List objects.
+      summary: Get a tree of objects
       description: |
         Fetches the list of objects stored on the channel.<br><br>
 
@@ -122,6 +34,7 @@ paths:
 
         <br>Maps are made of entries, which are a user-defined key (e.g. `myMapKey`) and a data value. Counters are data values containing a number.
       tags:
+        - List objects
       parameters:
         - name: channelId
           in: path
@@ -231,6 +144,7 @@ paths:
       description: |
         Allows creating or updating objects on the channel by providing the operation and data in the request body. If `objectId` is not provided, the server will generate one and return it in the response.
       tags:
+        - Create or update objects
       parameters:
         - name: channelId
           in: path
@@ -350,8 +264,9 @@ paths:
     get:
       summary: Gets an object using an object ID.
       description: |
-        Fetch a live object stored on the channel in a tree structure.
+        Fetch a LiveObject stored on the channel in a tree structure.
       tags:
+        - Get object by ID
       parameters:
         - name: channelId
           in: path
@@ -367,6 +282,7 @@ paths:
           schema:
             type: string
             example: "object-123"
+            default: root
         - name: children
           in: query
           required: false
@@ -376,7 +292,7 @@ paths:
             default: false
       responses:
         '200':
-          description: Retrieve a live object stored on the channel in a tree structure.
+          description: Retrieve a LiveObject stored on the channel in a tree structure.
           content:
             application/json:
               schema:
@@ -463,10 +379,11 @@ paths:
           description: Invalid request.
   /channels/{channelId}/objects/{objectId}/compact:
     get:
-      summary: Gets a compact representation of the object tree.
+      summary: Get a compact tree of objects
       description: |
         Returns a tree structure of the objects in a concise format that's easier to unmarshal into data types that represent your state. To fetch the full object tree, use the objectId root.
       tags:
+        - Get compact object
       parameters:
         - name: channelId
           in: path
@@ -479,6 +396,7 @@ paths:
           in: path
           required: true
           description: The object ID.
+          default: root
           schema:
             type: string
             example: "object-123"
@@ -496,6 +414,106 @@ paths:
                 myFlag: true
                 myNestedMap:
                   nestedKey: "nested value"
+
+tags:
+  - name: List objects
+    description: |
+      Operations related to listing objects on a channel.
+  - name: Create or update objects
+    description: |
+      Operations related to creating or updating objects on a channel.
+  - name: Get object by ID
+    description: |
+      Operations related to retrieving an object by its ID.
+  - name: Get compact object
+    description: |
+      Operations related to retrieving a compact representation of an object tree.
+  - name: objectId format
+    description: |
+      An `objectId` is made of the following components:<br><br>
+
+      ```
+      objectType:base64hash@millisecondTimestamp`
+      // Example:
+      counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlgICjkk@1734628392000
+      ```
+
+      <br>The object types are `map` or `counter`.<br><br>
+
+      The millisecond timestamp is "now". There is a small leeway to compensate for server clocks being out of sync. You can fetch the ably server time using `rest.ably.io/time`.<br><br>
+
+      The base64 raw url encoding hash is made of `initialValue:nonce`. The initial value is the raw bytes taken from the data field on create operations. The `nonce` is any random string.
+
+      | initial value          | nonce  | result hash                                      |
+      |-------------------------|--------|-------------------------------------------------|
+      | `{"value":3.1415926539}` | `nonce`  | `u41d1-DfkEt1AtbyJUSUJn3qAFblVVGmx5Dpg-ToCeI`     |
+      | `{"foo":{"string":"bar"}}` | `nonce` | `ME2yWbb_6sK5AlwxklHA8mTBPxPZx9iyW2Zk6rKJfRs` |
+      | `{"myMapKey":{"string":"myMapValue"}}` | `myNonce` | `99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_-yXQE` |
+
+      > **Note:** the initial value is space and case sensitive.
+
+      The Operations API accepts the “data” field as either a json object, or as a string with an encoding field. For example, this request passes the data field for a counter as a string with json encoding.<br><br>
+
+      ```json
+      {
+        "operation": "COUNTER_CREATE",
+        "data": "{ \"number\": 3.1415926 }",
+        "encoding": "json"
+      }
+      ```
+  - name: Object metadata
+    description: |
+      Object metadata describes the internal details of an object. There are two metadata fields that are common to all objects:
+
+      | Field | Description |
+      |-------|-------------|
+      | Tombstone | true or false, indicates if the object has been deleted. Objects will exist as tombstones for a short while to ensure they remain deleted and are not accidentally created by a lagging LiveObjects client. |
+      | SiteTimeserials | a map of sites, and the last operation applied to this object from that site. |
+
+      Maps have additional metadata attached to their map entries.
+
+      | Operation | Example  |
+      |-----------|----------|
+      | Create a map | `{ "operation": "MAP_CREATE", "data": { "myMapKey": {"string": "myMapValue"}, "myOtherKey": {"boolean": true} } }` |
+      | Set a value on a map | `{ "operation": "MAP_SET", "objectId": "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_@1742207566771", "data": {"key":"foo", "value":{"string":"bar"}} }` |
+      | Remove a value from a map | `{ "operation": "MAP_REMOVE", "objectId": "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_@1742207566771", "data": {"key":"myMapKey"} }` |
+      | Create a counter | `{ "operation": "COUNTER_CREATE", "data": { "number": 3.1415926 } }` |
+      | Increment a counter | `{ "operation": "COUNTER_INC", "objectId": "counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlgICjkk@1734628392000", "data": {"number": 2} }` |
+
+      Example object with metadata included:
+
+      ```json
+      {
+        "objectId": "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000",
+        "map": {
+          "mapSemantics": "LWW",
+          "entries": {
+            "myMapKey": {
+              "timeserial": "...",
+              "tombstone": false,
+              "data": { "string": "my map value" }
+            },
+            "myObjectRef": {
+              "timeserial": "...",
+              "tombstone": true,
+              "data": { "objectId": "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000" }
+            }
+          }
+        }
+      }
+      ```
+
+  - name: Tombstones
+    description: |
+      Tombstones are used on objects and on map entires to indicate that the object or map entry has been deleted. This protects against lagging LiveObjects clients from re-introducing a deleted value by accident.
+
+      Tombstone objects are not included by default, but can be enabled using `metadata=true` query param.
+
+      Tombstone map entry keys are included by default, but the values are not. The key will be present in the entries object but with a null value e.g. `myKey: null`. Tombstoned map entry values can be included using the `metadata=true` flag.
+
+  - name: Cyclic and diamond references
+    description: |
+      In the List, Get object, and Get compact object APIs objects will only be included in the response once. For cyclic or diamond references, the later references to any object that was already included will have an objectIds only. The reference will be included even if you request the data to be inlined using query params, as objects will only appear in the response once.
 
 components:
   parameters:
