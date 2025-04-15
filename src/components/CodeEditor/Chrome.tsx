@@ -44,10 +44,14 @@ const Chrome = ({ title, children, theme = 'dark' }: ComponentProps) => {
       <div
         className={cn('flex gap-x-4 h-40 px-16 py-12 items-center rounded-b-lg border-t', {
           'bg-[#202531] border-[#292831]': theme === 'dark',
-          'bg-neutral-000 border-neutral-100]': theme === 'light',
+          'bg-neutral-000 border-neutral-100': theme === 'light',
         })}
       >
-        <SmallMenuLabel>API Key:</SmallMenuLabel>
+        <SmallMenuLabel
+          className={cn({ 'text-neutral-000': theme === 'dark', 'text-neutral-1300': theme === 'light' })}
+        >
+          API Key:
+        </SmallMenuLabel>
         <APIKeyIndicator tooltip={NO_API_KEY_TOOLTIP} />
       </div>
     </div>
