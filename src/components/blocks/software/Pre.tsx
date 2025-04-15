@@ -161,7 +161,7 @@ const Pre = ({
           <div className="mt-2">
             <Icon name="icon-gui-information-circle-micro" size="1rem" />
           </div>
-          <div className="ml-8 leading-normal">
+          <div className="ml-8 leading-tight">
             You&apos;re currently viewing the <span className="font-semibold">{languageLabel ?? pageLanguage}</span>{' '}
             docs. There either isn&apos;t a {languageLabel ?? pageLanguage} code sample for this example, or this
             feature isn&apos;t supported in {languageLabel ?? pageLanguage}. Switch language to view this example in a
