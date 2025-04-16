@@ -1,0 +1,290 @@
+---
+title: "Getting started: Chat and Kotlin (Android)"
+meta_description: "A getting started guide for Ably Chat that steps through some of the key features using Kotlin."
+meta_keywords: "Ably, realtime, quickstart, getting started, basics, chat"
+---
+
+This guide will get you started with Ably Chat.
+
+It will take you through the following steps:
+
+* Create a client and establish a realtime connection to Ably.
+* Create a room and subscribe to its messages.
+* Send a message to the room, and then edit that message.
+* Set up a typing indicator to see which clients are typing.
+* Display the online status of clients to the room.
+* Subscribe and send reactions to the room.
+* Retrieve historical messages to provide context to new joiners.
+
+h2(#prerequisites). Prerequisites
+
+* Sign up for an Ably account.
+** Create a new app, and get your first API key.
+** You can use the root API key that is provided by default to get started.
+
+* Install the Ably CLI:
+
+```[sh]
+npm install -g @ably/cli
+```
+
+* Run the following to log in to your Ably account and set the default app and API key:
+
+```[sh]
+ably login
+
+ably apps switch
+ably auth keys switch
+```
+
+* Install "JDK":https://docs.aws.amazon.com/corretto/latest/corretto-8-ug/downloads-list.html version 8 or greater.
+* Install "Android Studio":https://developer.android.com/studio or "IntelliJ IDEA":https://www.jetbrains.com/idea/download.
+* Open IDE (Android Studio or IntelliJ IDEA).
+* Select File > New > Project.
+* Choose Empty Activity from the wizard.
+* Name your project (e.g., @AblyChatDemo@).
+* Choose @Kotlin@ as the build configuration language.
+* Add Ably Chat SDK to the list of dependencies:
+
+```[kotlin]
+implementation("com.ably.chat:chat-android:<latest-version>")
+```
+* Add the Kotlinx Coroutines library for asynchronous operations:
+
+```[kotlin]
+implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:<coroutine-version>")
+```
+
+<aside data-type='note'>
+<p>The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI, ensure that you replace them with your own API key.</p>
+</aside>
+
+h2(#step-1). Step 1: Connect to Ably
+
+Clients establish a connection with Ably when they instantiate an SDK. This enables them to send and receive messages in realtime across channels.
+
+Open @MainActivity.kt@ file in your project and add the following function to instantiate a realtime client with the Pub/Sub SDK and then pass that client into the Chat SDK constructor. Provide an API key and a @clientId@ to identify the client. In production, use token authentication so that your API keys are not exposed publicly.
+
+```[kotlin]
+import com.ably.chat.*
+import io.ably.lib.realtime.AblyRealtime
+import io.ably.lib.types.ClientOptions
+import kotlinx.coroutines.*
+
+suspend fun getStarted() {
+  val realtimeClient = AblyRealtime(
+    ClientOptions().apply {
+      key = "{{API_KEY}}"
+      clientId = "my-first-client"
+    }
+  )
+  val chatClient = ChatClient(realtimeClient)
+
+  chatClient.connection.onStatusChange { change ->
+    println("Currently ${change.current}!")
+  }
+}
+
+class MainActivity : ComponentActivity() {
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+
+    GlobalScope.launch {
+        getStarted()
+    }
+  }
+}
+```
+
+You can monitor the lifecycle of clients' connections by registering a listener that will emit an event every time the connection state changes. For now, run the app to log a message to the console to know that the connection attempt was successful. You'll see a message saying @Connection status is currently connected!@ printed to your device console.
+
+h2(#step-2). Step 2: Create a room and send a message
+
+Messages are how your clients interact with one another. Use rooms to separate and organize clients and messages into different topics, or 'chat rooms'. Rooms are the entry object into Chat, providing access to all of its features, such as messages, presence and reactions.
+
+Add the following lines to your @getStarted()@ function to create an instance of a room, attach to the room instance, and then register a listener to subscribe to messages sent to the room. You then also send your first message. Afterwards, run it:
+
+```[kotlin]
+val room = chatClient.rooms.get("my-first-room", options = RoomOptions.default)
+room.attach()
+
+val messageSubscription = room.messages.subscribe { messageEvent ->
+    println("Received message: ${messageEvent.message.text}")
+}
+
+val myFirstMessage = room.messages.send(text = "My first message!")
+```
+
+Use the Ably CLI to send a message to your first room. The message will be received by the client you've subscribed to the room, and be logged to the console:
+
+```[sh]
+ably rooms messages send my-first-room 'Hello!'
+```
+
+h2(#step-3). Step 3: Edit a message
+
+If your client makes a typo, or needs to update their original message then they can edit it.
+
+Add the following line to your @getStarted()@ function. Now, when you run the function again and send another message, that message will be updated and you should see both in your terminal. Run it.
+
+```[kotlin]
+room.messages.update(myFirstMessage.copy(text = "My 1st message! (edited)"))
+```
+
+h2(#step-4). Step 4: Message history and continuity
+
+Ably Chat provides a method for retrieving messages that have been previously sent in a room, up until the point that a client joins (attaches) to it. This enables clients joining a room part way through a conversation to receive the context of what has happened, and what is being discussed, without having to ask another client for context.
+
+Use the Ably CLI to send some additional messages to your room, for example:
+
+```[sh]
+ably rooms messages send my-first-room 'Old message #1'
+```
+
+* Right-click on your package name in the Android project explorer.
+* Select New > Activity > Gallery…
+* In the popup, choose Empty Activity and name it @SecondActivity@.
+
+Once created, open the generated @SecondActivity.kt@ file and replace its content with the following:
+
+```[kotlin]
+import com.ably.chat.*
+import io.ably.lib.realtime.AblyRealtime
+import io.ably.lib.types.ClientOptions
+import kotlinx.coroutines.*
+
+suspend fun getStartedLate() {
+  val realtimeClient = AblyRealtime(
+    ClientOptions().apply {
+      key = "{{API_KEY}}"
+      clientId = "my-first-client"
+    }
+  )
+  val chatClient = ChatClient(realtimeClient)
+
+  val room = chatClient.rooms.get("my-first-room", RoomOptions.default)
+
+  room.attach()
+
+  val messageSubscription = room.messages.subscribe { messageEvent ->
+    println("New message received: ${messageEvent.message.text}")
+  }
+
+  val historicalMessages = messageSubscription.getPreviousMessages(limit = 10)
+  historicalMessages.items.forEach { message ->
+    println("${message.clientId}: ${message.text}")
+  }
+}
+
+class SecondActivity : ComponentActivity() {
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+
+    GlobalScope.launch {
+        getStartedLate()
+    }
+  }
+}
+```
+
+Simulate a Second Client
+
+* Open the Device Manager in the IDE.
+* Create a new virtual device.
+* Launch a second emulator instance.
+* Run the @SecondActivity@ in that emulator.
+
+It imitates a second client, @my-second-client@ joining the room and receiving the context of the previous 10 messages.
+
+h2(#step-5). Step 5: Show who is typing a message
+
+Typing indicators enable you to display messages to clients when someone is currently typing. An event is emitted when someone starts typing, when they press a keystroke, and then another event is emitted after a configurable amount of time has passed without a key press.
+
+In practice the @typing.start()@ method would be called on keypress, however for demonstration purposes we will call it and wait for the default period of time to pass for a stop event to be emitted. Using your original client, add the following lines to @getStarted()@ to subscribe to typing events and emit one, then run it:
+
+```[kotlin]
+val typingSubscription = room.typing.subscribe { typingEvent ->
+  if (typingEvent.currentlyTyping.isEmpty()) {
+    println("No one is currently typing")
+  } else {
+    println("${typingEvent.currentlyTyping.first()} is typing")
+  }
+}
+
+room.typing.start()
+```
+
+Use the Ably CLI to subscribe to typing events. You will see that the client using the SDK starts to type after re-running @getStarted()@, with the message @my-first-client is typing...@:
+
+```[sh]
+ably rooms typing subscribe my-first-room
+```
+
+h2(#step-6). Step 6: Display online status
+
+Display the online status of clients using the presence feature. This enables clients to be aware of one another if they are present in the same room. You can then show clients who else is online, provide a custom status update for each, and notify the room when someone enters it, or leaves it, such as by going offline.
+
+Add the following lines to your @getStarted()@ function to subscribe to, and join, the presence set of the room. It also sets a short wait before leaving the presence set. Run it with @npx ts-node index.ts@:
+
+```[kotlin]
+val presenceSubscription = room.presence.subscribe { member ->
+  println("Event type: ${member.action} from ${member.clientId} with data ${member.data}")
+}
+
+room.presence.enter(JsonPrimitive("I'm here!"))
+
+delay(3.seconds)
+
+room.presence.leave(JsonPrimitive("I'm leaving!"))
+```
+
+You can have another client join the presence set using the Ably CLI:
+
+```[sh]
+ably rooms presence enter my-first-room --client-id "my-cli" --data '{"status":"learning about Ably!"}'
+```
+
+h2(#step-7). Step 7: Send a reaction
+
+Clients can send an ephemeral reaction to a room to show their sentiment for what is happening, such as a point being scored in a sports game.
+
+Add the following lines to your @getStarted()@ function to subscribe to room reactions. Then run it:
+
+```[kotlin]
+val reactionsSubscription = room.reactions.subscribe { reaction ->
+  println("${reaction.type} to that!")
+}
+```
+
+Use the Ably CLI to send some reactions to the room, such as:
+
+```[sh]
+ably rooms reactions send my-first-room 👍
+```
+
+h2(#step-8). Step 8: Close the connection
+
+Connections are automatically closed approximately 2 minutes after no heartbeat is detected by Ably. Explicitly closing connections when they are no longer needed is good practice to help save costs. It will also remove all listeners that were registered by the client.
+
+Connections to Ably are handled by the underlying Pub/Sub SDK. To close the connection you need to call @connection.close()@ on the original realtime client instance.
+
+Add the following to @getStarted()@ to close the connection after a simulated 10 seconds. Run it with @npx ts-node index.ts@:
+
+```[kotlin]
+delay(10.seconds)
+realtimeClient.close()
+```
+
+h2(#next). Next steps
+
+Continue to explore the documentation with Kotlin as the selected language:
+
+Read more about the concepts covered in this guide:
+* Read more about using "rooms":/docs/chat/rooms and sending "messages":/docs/chat/rooms/messages.
+* Find out more regarding "online status":/docs/chat/rooms/presence.
+* Understand how to use "typing indicators":/docs/chat/rooms/typing.
+* Send "reactions":/docs/chat/rooms/reactions to your rooms.
+* Read into pulling messages from "history":/docs/chat/rooms/history and providing context to new joiners.
+* Understand "token authentication":/docs/authentication/token-authentication before going to production.
+
+Explore the Ably CLI further, or visit the Chat "API references":https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat-android/com.ably.chat/.
