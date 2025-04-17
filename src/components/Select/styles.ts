@@ -32,7 +32,7 @@ export const selectMenuStyles: StylesConfig<ReactSelectOption, false> = {
     backgroundColor: 'transparent',
     boxShadow: 'none',
     fontSize: '14px',
-    lineHeight: 'var(--lh-snug)',
+    lineHeight: 'var(--lh-dense)',
     height: SELECT_HEIGHT,
     minHeight: SELECT_HEIGHT,
     cursor: 'pointer',

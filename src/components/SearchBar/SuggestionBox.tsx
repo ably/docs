@@ -45,7 +45,7 @@ export const SuggestionBox = ({ results, isActive, error, query, displayLocation
 
   return (
     <div aria-label="suggestions" className={container} style={containerStyle ?? {}}>
-      <div className="uppercase ui-text-menu3 px-16 mb-2">Results from docs</div>
+      <div className="uppercase ui-text-label3 px-16 mb-2">Results from docs</div>
       {results && totalResults > 0 ? (
         results.map((hit, index) => {
           const { title, highlight, meta_description, url, id } = hit;
@@ -66,7 +66,7 @@ export const SuggestionBox = ({ results, isActive, error, query, displayLocation
               role="link"
             >
               <h4 className={cn('ui-text-h4 mb-6', titleStyle)}>{pageTitle}</h4>
-              <div className="ui-text-menu3">{htmr(body)}</div>
+              <div className="ui-text-label3">{htmr(body)}</div>
             </a>
           );
         })
