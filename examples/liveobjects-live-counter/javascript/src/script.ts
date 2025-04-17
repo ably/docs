@@ -22,11 +22,11 @@ const channelName = urlParams.get('name') || 'objects-live-counter';
 const channel = client.channels.get(channelName, { modes: ['OBJECT_PUBLISH', 'OBJECT_SUBSCRIBE'] });
 
 const colorCountDivs: Record<Color, HTMLElement> = {
-  red: document.getElementById('count-red'),
-  green: document.getElementById('count-green'),
-  blue: document.getElementById('count-blue'),
+  red: document.getElementById('count-red')!,
+  green: document.getElementById('count-green')!,
+  blue: document.getElementById('count-blue')!,
 };
-const countersReset = document.getElementById('reset');
+const countersReset = document.getElementById('reset')!;
 
 async function main() {
   await channel.attach();
@@ -50,7 +50,7 @@ async function initCounters(root: LiveMap<DefaultRoot>) {
       if (Object.values(Color).includes(keyName as Color)) {
         // key pointing to a counter object got updated, resubscribe to a counter
         const color = keyName as Color;
-        subscribeToCounterUpdates(color, root.get(color));
+        subscribeToCounterUpdates(color, root.get(color)!);
       }
     });
   });
@@ -58,7 +58,7 @@ async function initCounters(root: LiveMap<DefaultRoot>) {
   await Promise.all(
     Object.values(Color).map(async (color) => {
       if (root.get(color)) {
-        subscribeToCounterUpdates(color, root.get(color));
+        subscribeToCounterUpdates(color, root.get(color)!);
         return;
       }
 
@@ -78,7 +78,7 @@ function addEventListenersToButtons(root: LiveMap<DefaultRoot>) {
   document.querySelectorAll('.vote-button').forEach((button) => {
     const color = button.getAttribute('data-color') as Color;
     button.addEventListener('click', () => {
-      root.get(color).increment(1);
+      root.get(color)?.increment(1);
     });
   });
 

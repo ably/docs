@@ -17,9 +17,9 @@ const channelName = urlParams.get('name') || 'objects-live-map';
 const channel = client.channels.get(channelName, { modes: ['OBJECT_PUBLISH', 'OBJECT_SUBSCRIBE'] });
 
 const taskInput = document.getElementById('task-input') as HTMLInputElement;
-const addTaskButton = document.getElementById('add-task');
-const tasksDiv = document.getElementById('tasks');
-const removeAllTasksDiv = document.getElementById('remove-tasks');
+const addTaskButton = document.getElementById('add-task')!;
+const tasksDiv = document.getElementById('tasks')!;
+const removeAllTasksDiv = document.getElementById('remove-tasks')!;
 
 async function main() {
   await channel.attach();
@@ -36,12 +36,12 @@ async function initTasks(root: LiveMap<DefaultRoot>) {
   // for example, when we clear all tasks
   root.subscribe(({ update }) => {
     if (update.tasks === 'updated') {
-      subscribeToTasksUpdates(root.get('tasks'));
+      subscribeToTasksUpdates(root.get('tasks')!);
     }
   });
 
   if (root.get('tasks')) {
-    subscribeToTasksUpdates(root.get('tasks'));
+    subscribeToTasksUpdates(root.get('tasks')!);
     return;
   }
 
@@ -65,16 +65,16 @@ function subscribeToTasksUpdates(tasks: Tasks) {
   });
 
   for (const [taskId] of tasks.entries()) {
-    createTaskDiv({ id: taskId, title: tasks.get(taskId) }, tasks);
+    createTaskDiv({ id: taskId, title: tasks.get(taskId)! }, tasks);
   }
 }
 
 function tasksOnUpdated(taskId: string, tasks: Tasks) {
   const taskSpan = document.querySelector(`.task[data-task-id="${taskId}"] > span`);
   if (taskSpan) {
-    taskSpan.innerHTML = tasks.get(taskId);
+    taskSpan.innerHTML = tasks.get(taskId)!;
   } else {
-    createTaskDiv({ id: taskId, title: tasks.get(taskId) }, tasks);
+    createTaskDiv({ id: taskId, title: tasks.get(taskId)! }, tasks);
   }
 }
 
@@ -97,14 +97,14 @@ function createTaskDiv(task: { id: string; title: string }, tasks: Tasks) {
 
   tasksDiv.appendChild(taskDiv);
 
-  taskDiv.querySelector('.update-task').addEventListener('click', async () => {
+  taskDiv.querySelector('.update-task')!.addEventListener('click', async () => {
     const newTitle = prompt('New title for a task:');
     if (!newTitle) {
       return;
     }
     await tasks.set(id, newTitle);
   });
-  taskDiv.querySelector('.remove-task').addEventListener('click', async () => {
+  taskDiv.querySelector('.remove-task')!.addEventListener('click', async () => {
     await tasks.remove(id);
   });
 }
@@ -118,7 +118,7 @@ function addEventListenersToButtons(root: LiveMap<DefaultRoot>) {
 
     const taskId = nanoid();
     taskInput.value = '';
-    await root.get('tasks').set(taskId, taskTitle);
+    await root.get('tasks')?.set(taskId, taskTitle);
   });
 
   removeAllTasksDiv.addEventListener('click', async () => {
