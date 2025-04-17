@@ -3,13 +3,13 @@ import { LanguageData } from './types';
 
 export default {
   platform: {
-    javascript: 2.7,
-    nodejs: 2.7,
+    javascript: 2.8,
+    nodejs: 2.8,
   },
   pubsub: {
-    javascript: 2.7,
-    nodejs: 2.7,
-    react: 2.7,
+    javascript: 2.8,
+    nodejs: 2.8,
+    react: 2.8,
     csharp: 1.2,
     flutter: 1.2,
     java: 1.2,
