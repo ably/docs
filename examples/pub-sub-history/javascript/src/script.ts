@@ -2,7 +2,6 @@ import * as Ably from 'ably';
 import type { Message } from 'ably';
 import minifaker from 'minifaker';
 import 'minifaker/locales/en';
-import UIkit from 'uikit';
 import './styles.css';
 
 const preloadButton = document.getElementById('pre-load-history');
