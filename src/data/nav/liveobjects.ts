@@ -62,13 +62,13 @@ export default {
       name: 'API References',
       pages: [
         {
-          link: '/docs/liveobjects/rest-api',
-          name: 'REST API',
-        },
-        {
           link: 'https://ably.com/docs/sdk/js/v2.0/interfaces/ably.Objects.html',
           name: 'JavaScript SDK',
           external: true,
+        },
+        {
+          link: '/docs/api/liveobjects-rest',
+          name: 'REST API',
         },
       ],
     },

@@ -1,0 +1,622 @@
+openapi: 3.0.0
+info:
+  title: Ably LiveObjects REST API
+  version: 1.0.0
+  description: |
+    # LiveObjects API
+
+    LiveObjects provides a set of purpose-built APIs and data structures to handle the complexities of persisting and synchronizing state, freeing you to focus on building features instead of managing concurrency or conflict resolution.
+
+    LiveObjects enables you to store data as "objects" on a channel. These objects are automatically synchronized in realtime across all connected clients, and any conflicts that arise from concurrent updates are seamlessly resolved in the background.
+servers:
+  - url: https://main.realtime.ably.net/
+    description: Production server for Ably REST API
+
+paths:
+  /channels/{channelId}/objects:
+    get:
+      summary: Get a tree of objects
+      description: |
+        Fetches the list of objects stored on the channel.<br><br>
+
+        In the list API, data values represent a concrete piece of data (a number, a string, etc) or a reference to another object. The key in the data value indicates the type that you can expect to receive in the value.<br><br>
+
+        ```json
+          { "data": { "number" : 4 }}
+          { "data": { "string" : "Ably Pub/Sub" }}
+          { "data": { "boolean" : true }}
+          { "data": { "bytes": "TGl2ZU9iamVjdHMgaXMgYXdlc29tZQo=", "encoding": "base64" }}
+          { "data": {
+            "objectId":
+              "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+          }}
+        ```
+
+        <br>Maps are made of entries, which are a user-defined key (e.g. `myMapKey`) and a data value. Counters are data values containing a number.
+      tags:
+        - List objects
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: The channel ID.
+          schema:
+            type: string
+            example: "my-app:likes:counter"
+        - name: values
+          in: query
+          required: false
+          description: Include the values in the response. Setting this to false returns a list of `objectIds` only.
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          required: false
+          description: Set the number of objects to be returned in each page.
+          schema:
+            type: integer
+        - name: cursor
+          in: query
+          required: false
+          description: The cursor used for pagination.
+          schema:
+            type: string
+        - name: metadata
+          in: query
+          required: false
+          description: Include object metadata in the response.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of retrieved objects or object references.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/ObjectWithDetails'
+                  - type: array
+                    items:
+                      type: string
+                      example: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+              examples:
+                objectArray:
+                  summary: Full response with object values (url param values=true)
+                  value:
+                    - objectId: "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000"
+                      map:
+                        entries:
+                          myMapKey: { data: { string: "my map value" }}
+                          myBoolean: { data: { boolean: true }}
+                          myEncodedKey: { data: { bytes: "TGl2ZU9iamVjdHMgaXMgYXdlc29tZQo=", encoding: "base64" }}
+                    - objectId: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+                      map:
+                        entries:
+                          counter: { data:{ number: 5 }}
+                          myObjectRef: { data: { objectId: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000" }}
+                refArray:
+                  summary: Just object references (url param values=false or not set)
+                  value:
+                    - "root"
+                    - "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000"
+                    - "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+        '401':
+          description: Authentication failed
+        '404':
+          description: Channel not found.
+        '500':
+          description: Internal server error.
+    post:
+      summary: Create or update objects.
+      description: |
+        Allows creating or updating objects on the channel by providing the operation and data in the request body. If `objectId` is not provided, the server will generate one and return it in the response.
+      tags:
+        - Create or update objects
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: The channel ID.
+          schema:
+            type: string
+            example: "my-app:likes:counter"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    id:
+                      $ref: '#/components/parameters/idempotentParameter'
+                    path:
+                      $ref: '#/components/parameters/pathParameter'
+                    operation:
+                      $ref: '#/components/parameters/operationParameter'
+                    data:
+                      $ref: '#/components/parameters/dataParameter'
+                - type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        $ref: '#/components/parameters/idempotentParameter'
+                      path:
+                        $ref: '#/components/parameters/pathParameter'
+                      operation:
+                        $ref: '#/components/parameters/operationParameter'
+                      data:
+                        $ref: '#/components/parameters/dataParameter'
+            examples:
+              singleOperation:
+                summary: Single operation example
+                value:
+                  id: "myIdempotencyKey"
+                  operation: "MAP_SET"
+                  objectId: "map:cwhvmsq21tXtFDS02TQqPdIh..."
+                  data:
+                    key: "isActive"
+                    value: { "boolean": true }
+              batchOperation:
+                summary: Batch operation example
+                value:
+                  - id: "myIdempotencyKey:0"
+                    operation: "MAP_SET"
+                    objectId: "map:cwhvmsq21tXtFDS02TQqPdIhGGezcSc..."
+                    data:
+                      key: "isActive"
+                      value: { "boolean": true }
+                  - id: "myIdempotencyKey:1"
+                    operation: "COUNTER_INC"
+                    objectId: "counter:DXr2i8FHRGkLrHPccWhXKDj1VUX2s7ACvmT..."
+                    data:
+                      number: 1
+              createMap:
+                summary: Create a map
+                value:
+                  operation: MAP_CREATE
+                  data:
+                    myMapKey: { string: "myMapValue" }
+                    myOtherKey: { boolean: true }
+              setValueOnMap:
+                summary: Set a value on a map
+                value:
+                  operation: MAP_SET
+                  objectId: "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcE..."
+                  data:
+                    key: "foo"
+                    value: { string: "bar" }
+              removeValueFromMap:
+                summary: Remove a value from a map
+                value:
+                  operation: MAP_REMOVE
+                  objectId: "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_@174220..."
+                  data:
+                    key: "myMapKey"
+              createCounter:
+                summary: Create a counter
+                value:
+                  operation: COUNTER_CREATE
+                  data:
+                    number: 3.1415926
+              incrementCounter:
+                summary: Increment a counter
+                value:
+                  operation: COUNTER_INC
+                  objectId: "counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlg..."
+                  data:
+                    number: 2
+      responses:
+        '200':
+          description: Successfully created or updated objects.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    type: string
+                    description: The channel ID.
+                    example: "<channelId>"
+                  objectIds:
+                    type: array
+                    items:
+                      type: string
+                    description: The list of object IDs created or updated.
+                    example: ["map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000"]
+        '400':
+          description: Invalid request.
+  /channels/{channelId}/objects/{objectId}:
+    get:
+      summary: Gets an object using an object ID.
+      description: |
+        Fetch a LiveObject stored on the channel in a tree structure.
+      tags:
+        - Get object by ID
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: The channel ID.
+          schema:
+            type: string
+            example: "my-app:likes:counter"
+        - name: objectId
+          in: path
+          required: true
+          description: The object ID.
+          schema:
+            type: string
+            example: "object-123"
+            default: root
+        - name: children
+          in: query
+          required: false
+          description: Causes the content of the objects to be included in the tree response, instead of just the objectIds.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Retrieve a LiveObject stored on the channel in a tree structure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithDetails'
+        examples:
+          withChildren:
+            summary: Expanded object with embedded children
+            value:
+              objectId: "root"
+              map:
+                entries:
+                  myMapKey:
+                    data:
+                      string: "my map value"
+                  myObjectRef:
+                    data:
+                      objectId: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+                      counter:
+                        data:
+                          number: 5
+          withoutChildren:
+            summary: Object references only
+            value:
+              objectId: "root"
+              map:
+                entries:
+                  myMapKey:
+                    data:
+                      string: "my map value"
+                  myObjectRef:
+                    data:
+                      objectId: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+
+        '400':
+          description: Invalid request.
+  /channels/{channelId}/objects/{objectId}/compact:
+    get:
+      summary: Get a compact tree of objects
+      description: |
+        Returns a tree structure of the objects in a concise format that's easier to unmarshal into data types that represent your state. To fetch the full object tree, use the objectId root.
+      tags:
+        - Get compact object
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: The channel ID.
+          schema:
+            type: string
+            example: "my-app:chat:room-123"
+        - name: objectId
+          in: path
+          required: true
+          description: The object ID.
+          default: root
+          schema:
+            type: string
+            example: "object-123"
+      responses:
+        '200':
+          description: Successfully retrieved the compact object tree.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                myMapKey: "my map value"
+                myCounter: 5
+                myFlag: true
+                myNestedMap:
+                  nestedKey: "nested value"
+
+tags:
+  - name: List objects
+    description: |
+      Operations related to listing objects on a channel.
+  - name: Create or update objects
+    description: |
+      Operations related to creating or updating objects on a channel.
+  - name: Get object by ID
+    description: |
+      Operations related to retrieving an object by its ID.
+  - name: Get compact object
+    description: |
+      Operations related to retrieving a compact representation of an object tree.
+  - name: objectId format
+    description: |
+      An `objectId` is made of the following components:<br><br>
+
+      ```
+      objectType:base64hash@millisecondTimestamp`
+      // Example:
+      counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlgICjkk@1734628392000
+      ```
+
+      <br>The object types are `map` or `counter`.<br><br>
+
+      The millisecond timestamp is "now". There is a small leeway to compensate for server clocks being out of sync. You can fetch the ably server time using `rest.ably.io/time`.<br><br>
+
+      The base64 raw url encoding hash is made of `initialValue:nonce`. The initial value is the raw bytes taken from the data field on create operations. The `nonce` is any random string.
+
+      | initial value          | nonce  | result hash                                      |
+      |-------------------------|--------|-------------------------------------------------|
+      | `{"value":3.1415926539}` | `nonce`  | `u41d1-DfkEt1AtbyJUSUJn3qAFblVVGmx5Dpg-ToCeI`     |
+      | `{"foo":{"string":"bar"}}` | `nonce` | `ME2yWbb_6sK5AlwxklHA8mTBPxPZx9iyW2Zk6rKJfRs` |
+      | `{"myMapKey":{"string":"myMapValue"}}` | `myNonce` | `99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_-yXQE` |
+
+      > **Note:** the initial value is space and case sensitive.
+
+      The Operations API accepts the “data” field as either a json object, or as a string with an encoding field. For example, this request passes the data field for a counter as a string with json encoding.<br><br>
+
+      ```json
+      {
+        "operation": "COUNTER_CREATE",
+        "data": "{ \"number\": 3.1415926 }",
+        "encoding": "json"
+      }
+      ```
+  - name: Object metadata
+    description: |
+      Object metadata describes the internal details of an object. There are two metadata fields that are common to all objects:
+
+      | Field | Description |
+      |-------|-------------|
+      | Tombstone | true or false, indicates if the object has been deleted. Objects will exist as tombstones for a short while to ensure they remain deleted and are not accidentally created by a lagging LiveObjects client. |
+      | SiteTimeserials | a map of sites, and the last operation applied to this object from that site. |
+
+      Maps have additional metadata attached to their map entries.
+
+      | Field | Description |
+      | MapSemantics | Indicates the conflict resolution method used in this map. |
+      | Timeserial | The last operation applied to this map key, used to preserve the map semantics.|
+      | Tombstone | true or false, indicates if the map entry has been deleted. Tombstoned map values are not included in the responses by default or when using the @metadata=false@ query param. |
+
+      Example object with metadata included:
+
+      ```json
+      {
+        "objectId": "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000",
+        "map": {
+          "mapSemantics": "LWW",
+          "entries": {
+            "myMapKey": {
+              "timeserial": "...",
+              "tombstone": false,
+              "data": { "string": "my map value" }
+            },
+            "myObjectRef": {
+              "timeserial": "...",
+              "tombstone": true,
+              "data": { "objectId": "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000" }
+            }
+          }
+        }
+      }
+      ```
+
+  - name: Tombstones
+    description: |
+      Tombstones are used on objects and on map entires to indicate that the object or map entry has been deleted. This protects against lagging LiveObjects clients from re-introducing a deleted value by accident.
+
+      Tombstone objects are not included in API responses by default, but can be enabled using `metadata=true` query param.
+
+      Tombstone map entry keys are included by default, but the values are not. The key will be present in the entries object but with a null value e.g. `myKey: null`. Tombstoned map entry values can be included using the `metadata=true` flag.
+
+  - name: Cyclic and diamond references
+    description: |
+      In the List, Get object, and Get compact object APIs objects will only be included in the response once. For cyclic or diamond references, the later references to any object that was already included will have an objectIds only. The reference will be included even if you request the data to be inlined using query params, as objects will only appear in the response once.
+
+components:
+  schemas:
+    ObjectWithDetails:
+      type: object
+      required:
+        - objectId
+      properties:
+        objectId:
+          $ref: '#/components/schemas/ObjectId'
+        map:
+          $ref: '#/components/schemas/Map'
+        counter:
+          $ref: '#/components/schemas/Counter'
+    ObjectId:
+      type: string
+      example: "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000"
+    Map:
+      type: object
+      properties:
+        entries:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              data:
+                type: object
+                oneOf:
+                  - properties:
+                      string:
+                        type: string
+                        example: "my map value"
+                  - properties:
+                      objectId:
+                        $ref: '#/components/schemas/ObjectId'
+    Counter:
+      type: object
+      properties:
+        objectId:
+          $ref: '#/components/schemas/ObjectId'
+        data:
+          type: object
+          properties:
+            number:
+              type: number
+              example: 5
+  parameters:
+    idempotentParameter:
+      name: id
+      in: query
+      required: false
+      description: |
+        Optional: Only use when requiring idempotent publishing. All operations support an id field. Operations are deduplicated using idempotent publishing based on the operation's `id` field.<br><br>
+
+        ```json
+        {
+          "id": "myIdempotencyKey",
+          "operation": "MAP_SET"
+          "objectId": "map:cwhvmsq21tXtFDS02TQqPdIhGGezcSc8UsBYeUGygng@1636022994797",
+          "data": {"key": "isActive", "value": { "boolean": true }}
+        }
+        ```
+
+        <br>Batches of operations can be made idempotent using a compound key based on the format `<baseId>:<index>`. The index is the order of the operation in the batch. The base of the `id` must be the same across all operations in the batch.<br><br>
+
+        ```json
+        [
+          {
+            "id": "myIdempotencyKey:0",
+            "operation": "MAP_SET"
+            "objectId": "map:cwhvmsq21tXtFDS02TQqPdIhGGezcSc8UsBYeUGygng@1636022994797",
+            "data": {"key": "isActive", "value": { "boolean": true }}
+          },
+          {
+            "id": "myIdempotencyKey:1",
+            "operation": "COUNTER_INC"
+            "objectId": "counter:DXr2i8FHRGkLrHPccWhXKDj1VUX2s7ACvmTrNEguJXo@1742481614000",
+            "data": {"number": 1}
+          }
+        ]
+        ```
+    pathParameter:
+      name: path
+      in: query
+      required: false
+      description: |
+        Optional: Only use when using path operations. Path operations issue operations against objects based on their referenced location in the tree of objects stored on the channel.<br><br>
+
+        Paths must start with a key in the 'root' map, and then reference keys in nested maps, until the target location.<br><br>
+
+        For example, increment the likes counter in the reactions map by 3:<br><br>
+
+        ```json
+        {
+          "path": "reactions.likes",
+          "operation": "COUNTER_INC",
+          "data": { "number": 3 }
+        }
+        ```
+
+        <br>You can issue a single operation against multiple objects at once using the wildcard `*`.  For example, increment all reactions counters by 1.<br><br>
+
+        ```json
+        {
+          "path": "reactions.*",
+          "operation": "COUNTER_INC",
+          "data": { "number": 1 }
+        }
+        ```
+
+        <br>Wildcards can be included at the end or in the middle of paths and will match exactly one level in the object tree. For example, this path increments all objects reachable from the root map that have a likes counter:<br><br>
+
+        ```json
+        {
+          "path": "*.likes",
+          "operation": "COUNTER_INC",
+          "data": { "number": 1 }
+        }
+        ```
+      schema:
+        type: string
+        example: "reactions.likes"
+    operationParameter:
+      name: operation
+      in: query
+      required: true
+      description: |
+        Specifies the operation to perform. Supported values include:<br><br>
+        - `MAP_CREATE`: Create a map object.
+        - `MAP_SET`: Set a key-value pair in a map object.
+        - `MAP_REMOVE`: Remove a key-value pair from a map object.
+        - `COUNTER_CREATE`: Create a counter object initialized to a specific value.
+        - `COUNTER_INC`: Increment a counter object by a specified value (can be negative).
+      schema:
+        type: string
+        enum:
+          - MAP_CREATE
+          - MAP_SET
+          - MAP_REMOVE
+          - COUNTER_CREATE
+          - COUNTER_INC
+        example: COUNTER_INC
+    dataParameter:
+      name: data
+      in: query
+      required: true
+      description: |
+        The data to be created or updated. The structure depends on the operation being performed. Examples include:<br><br>
+
+        ```json
+        { "data": { "number": 4 }}
+        { "data": { "string": "Ably Pub/Sub" }}
+        { "data": { "boolean": true }}
+        { "data": { "bytes": "TGl2ZU9iamVjdHMgaXMgYXdlc29tZQo=", "encoding": "base64" }}
+        { "data": { "objectId": "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000" }}
+        ```
+
+        <br>Maps are made of entries, which are a user-defined key (e.g., `myMapKey`) and a data value. Counters are data values containing a number.
+      schema:
+        type: object
+        additionalProperties:
+          type: object
+          properties:
+            number:
+              type: number
+              description: For COUNTER_CREATE or COUNTER_INC, this is the value.
+              example: 3
+            string:
+              type: string
+              description: A string value.
+              example: "Ably Pub/Sub"
+            boolean:
+              type: boolean
+              description: A boolean value.
+              example: true
+            bytes:
+              type: string
+              description: A base64-encoded string.
+              example: "TGl2ZU9iamVjdHMgaXMgYXdlc29tZQo="
+            encoding:
+              type: string
+              description: The encoding type for the bytes field.
+              example: "base64"
+            objectId:
+              type: string
+              description: A reference to another object.
+              example: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
