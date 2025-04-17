@@ -2,24 +2,24 @@
 
 Enable clients to update and synchronize numerical values in an application in realtime.
 
-LiveCounter provides a simple way to manage shared numerical state in realtime applications. Each counter represents a numerical value that clients can increment or decrement.
+LiveCounter is a synchronized numerical counter that supports increment and decrement operations. It ensures that all updates are correctly applied and synchronized across users in realtime, preventing inconsistencies when multiple users modify the counter value simultaneously.
 
-LiveCounters are useful for tracking values that need to be updated dynamically, such as votes, reaction counts, live leaderboards, game stats, or other numeric data points.
+LiveCounter is useful for tracking values that need to be updated dynamically, such as votes, reaction counts, live leaderboards, game stats, or other numeric data points.
 
-LiveCounters are implemented using [Ably LiveObjects](https://ably.com/docs/liveobjects). LiveObjects, as a feature of [Ably Pub/Sub](https://ably.com/docs/products/channels), contains a set of purpose-built APIs that abstract away the complexities of managing shared state between clients in an application. It is built on top of Ably's core platform, and so it provides the same performance guarantees and scaling potential.
+LiveCounter is implemented using [Ably LiveObjects](/docs/liveobjects). LiveObjects, as a feature of [Ably Pub/Sub](/docs/channels), contains a set of purpose-built APIs that abstract away the complexities of managing shared state between clients in an application. It is built on top of Ably's core platform, and so it provides the same performance guarantees and scaling potential.
 
 ## Resources
 
 Use the following methods to interact with a LiveCounter in your application:
 
-- [`objects.getRoot()`](https://ably.com/docs/liveobjects) - retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
-- [`objects.createCounter()`](https://ably.com/docs/liveobjects) - creates a new LiveCounter instance.
-- [`liveCounter.value()`](https://ably.com/docs/liveobjects/livecounter) - returns the current value of a counter.
-- [`liveCounter.increment()`](https://ably.com/docs/liveobjects/livecounter) - sends the operation message to the Ably system to increase the counter value.
-- [`liveCounter.decrement()`](https://ably.com/docs/liveobjects/livecounter) - sends the operation message to the Ably system to decrease the counter value.
-- [`liveCounter.subscribe()`](https://ably.com/docs/liveobjects/livecounter) - subscribes to LiveCounter updates by registering a listener.
+- [`objects.getRoot()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.Objects.html#getRoot): retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
+- [`objects.createCounter()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.Objects.html#createCounter): creates a new LiveCounter instance.
+- [`liveCounter.value()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveCounter.html#value): returns the current value of a counter.
+- [`liveCounter.increment()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveCounter.html#increment): sends the operation message to the Ably system to increase the counter value.
+- [`liveCounter.decrement()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveCounter.html#decrement): sends the operation message to the Ably system to decrease the counter value.
+- [`liveCounter.subscribe()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveCounter.html#subscribe): subscribes to LiveCounter updates by registering a listener.
 
-Find out more about [LiveCounter](https://ably.com/docs/liveobjects/livecounter).
+Find out more about [LiveCounter](/docs/liveobjects/counter).
 
 ## Getting started
 
