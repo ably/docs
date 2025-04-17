@@ -19,15 +19,15 @@ function Stream() {
   }, []);
 
   return (
-    <div className="flex justify-center items-center min-h-screen p-4 relative">
-      <div className="w-full max-w-2xl h-[400px] bg-gray-200 flex items-center justify-center relative">
+    <div className="flex justify-center items-center min-h-screen relative">
+      <div className="h-[320px] bg-gray-200 flex items-center justify-center relative">
         <video
           src="https://cdn.ably.com/chat/basket_ball_international.mov"
           preload="auto"
           autoPlay
           muted
           loop
-          className="w-full h-full"
+          className="max-w-full max-h-full object-contain"
         />
 
         <div className="absolute bottom-4 right-4 flex items-center bg-black/50 text-white px-3 py-2 rounded-full">

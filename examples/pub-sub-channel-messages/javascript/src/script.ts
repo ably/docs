@@ -44,6 +44,7 @@ channel.subscribe((message) => {
   newMessage.appendChild(newFlag);
   const messageText = document.createElement('span');
   messageText.innerText = message.data;
+  messageText.className = 'text-sm';
   newMessage.appendChild(messageText);
   messagesDiv.prepend(newMessage);
 

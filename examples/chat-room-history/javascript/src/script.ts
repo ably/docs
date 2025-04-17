@@ -62,7 +62,7 @@ document.getElementById('send-message').addEventListener('click', () => {
     const enterChatButton = document.getElementById('enter-chat') as HTMLButtonElement;
     if (enterChatButton) {
       enterChatButton.disabled = false;
-      enterChatButton.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded';
+      enterChatButton.className = 'uk-btn uk-btn-sm uk-btn-primary mb-1 rounded';
     }
   }
 

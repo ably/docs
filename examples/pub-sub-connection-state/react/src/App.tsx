@@ -20,7 +20,7 @@ function ConnectionStateComponent({
     <button
       id="disconnect"
       onClick={onDisconnect}
-      className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded min-w-[180px]"
+      className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded min-w-[180px]"
     >
       Disconnect
     </button>
@@ -55,7 +55,7 @@ export default function App() {
   return (
     <div className="flex justify-center items-center min-h-screen p-4">
       <div className="w-1/2 h-1/2 flex flex-col items-center space-y-4">
-        <h2 className="text-xl font-bold text-center mb-4">Connection State: {connectionState}</h2>
+        <h2 className="text-m font-bold text-center mb-4">Connection State: {connectionState}</h2>
         <div className="flex justify-center space-x-2">
           {client ? (
             <AblyProvider client={client}>
@@ -65,7 +65,7 @@ export default function App() {
             <button
               id="connect"
               onClick={connect}
-              className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded min-w-[180px]"
+              className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded min-w-[180px]"
             >
               Connect
             </button>

@@ -20,7 +20,6 @@ function PresenceList() {
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-xl font-bold mb-4">User list</h2>
         <div className="space-y-2">
           {presenceData.map((viewer) => (
             <li key={viewer.clientId} className="flex items-center justify-between p-2 border-b">
