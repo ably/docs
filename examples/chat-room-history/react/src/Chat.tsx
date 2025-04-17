@@ -46,7 +46,7 @@ export default function Chat() {
       <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
         <div
           id="messages"
-          className="w-96 flex flex-auto flex-col space-y-2 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
+          className="w-full flex flex-auto flex-col space-y-2 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
         >
           <button
             id="load-past-messages"
