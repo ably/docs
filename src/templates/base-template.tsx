@@ -1,5 +1,5 @@
 import { Script, ScriptStrategy } from 'gatsby';
-import { useLayoutEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { Head } from 'src/components/Head';
 import Article from 'src/components/Article';
@@ -9,8 +9,6 @@ import { PathnameContext } from 'src/contexts';
 import { AblyDocument, AblyDocumentMeta, AblyTemplateData, ProductName } from './template-data';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { getMetaTitle } from 'src/components/common/meta-title';
-import { useLayoutContext } from 'src/contexts/layout-context';
-import { LanguageKey } from 'src/data/languages/types';
 
 const getMetaDataDetails = (
   document: AblyDocument,
@@ -31,21 +29,6 @@ const Template = ({
   data: { document: ablyDocument },
   currentProduct,
 }: ITemplate) => {
-  const { setLanguages } = useLayoutContext();
-
-  useLayoutEffect(() => {
-    const languagesSet = new Set<LanguageKey>();
-
-    document.querySelectorAll('.docs-language-navigation').forEach((element) => {
-      const languages = element.getAttribute('data-languages');
-      if (languages) {
-        languages.split(',').forEach((language) => languagesSet.add(language as LanguageKey));
-      }
-    });
-
-    setLanguages(Array.from(languagesSet));
-  }, [setLanguages]);
-
   const title = getMetaDataDetails(ablyDocument, 'title') as string;
   const description = getMetaDataDetails(ablyDocument, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
   const { canonicalUrl } = useSiteMetadata();

@@ -2,17 +2,13 @@ import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo
 import { useLocation } from '@reach/router';
 import { ActivePage, determineActivePage } from 'src/components/Layout/utils/nav';
 import { productData } from 'src/data';
-import { NavProduct } from 'src/data/nav/types';
-import { ProductData, ProductKey } from 'src/data/types';
 import { LanguageKey } from 'src/data/languages/types';
-import { languageData } from 'src/data/languages';
+import { languageData, languageInfo } from 'src/data/languages';
 
 /**
  * LayoutContext
  *
  * activePage - The navigation tree that leads to the current page, and a list of languages referenced on the page.
- * products - List of products with their navigation data.
- * setLanguages - Set the possible languages for the current page.
  * setLanguage - Set the active language for the current page.
  */
 
@@ -20,8 +16,6 @@ export const DEFAULT_LANGUAGE = 'javascript';
 
 const LayoutContext = createContext<{
   activePage: ActivePage;
-  products: [ProductKey, NavProduct][];
-  setLanguages: (languages: LanguageKey[]) => void;
   setLanguage: (language: LanguageKey) => void;
 }>({
   activePage: {
@@ -30,10 +24,6 @@ const LayoutContext = createContext<{
     languages: [],
     language: DEFAULT_LANGUAGE,
     product: null,
-  },
-  products: [],
-  setLanguages: (languages) => {
-    console.warn('setLanguages called without a provider', languages);
   },
   setLanguage: (language) => {
     console.warn('setLanguage called without a provider', language);
@@ -77,29 +67,24 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const langParam = params.get('lang') as LanguageKey;
 
-    if (params.get('lang')) {
-      setLanguage(params.get('lang') as LanguageKey);
-    } else if (activePage.product) {
-      setLanguage(Object.keys(languageData[activePage.product])[0]);
+    if (langParam && Object.keys(languageInfo).includes(langParam)) {
+      setLanguage(langParam);
+    } else if (activePage.product && activePage.languages.length > 0) {
+      const productLanguages = languageData[activePage.product];
+      const defaultLanguage =
+        Object.keys(productLanguages ?? []).filter((lang) => activePage.languages.includes(lang))[0] ??
+        DEFAULT_LANGUAGE;
+
+      setLanguage(defaultLanguage);
     }
-  }, [location.search, activePage.product]);
-
-  const products = useMemo(
-    () =>
-      Object.entries(productData satisfies ProductData).map((product) => [product[0], product[1].nav]) as [
-        ProductKey,
-        NavProduct,
-      ][],
-    [],
-  );
+  }, [location.search, activePage.product, activePage.languages]);
 
   return (
     <LayoutContext.Provider
       value={{
         activePage,
-        products,
-        setLanguages,
         setLanguage,
       }}
     >
