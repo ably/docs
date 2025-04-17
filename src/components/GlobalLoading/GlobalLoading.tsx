@@ -31,8 +31,6 @@ const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
             announcementEnabled
             inkeepEnabled
             inkeepApiKey
-            inkeepIntegrationId
-            inkeepOrganizationId
             insightsEnabled
             insightsDebug
             mixpanelApiKey

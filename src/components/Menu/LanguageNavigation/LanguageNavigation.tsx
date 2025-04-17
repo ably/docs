@@ -1,5 +1,4 @@
 import { Dispatch, FunctionComponent as FC, SetStateAction } from 'react';
-import { usePageLanguage } from 'src/contexts';
 import { SingleValue } from 'react-select';
 import { navigate } from 'gatsby';
 
@@ -15,6 +14,7 @@ import {
   Select,
 } from 'src/components';
 import cn from '@ably/ui/core/utils/cn';
+import { useLayoutContext } from 'src/contexts/layout-context';
 
 export interface LanguageNavigationComponentProps {
   language: string;
@@ -65,12 +65,13 @@ const LanguageNavigation = ({
   setSelectedSDKInterfaceTab,
   setPreviousSDKInterfaceTab,
 }: LanguageNavigationProps) => {
-  const { currentLanguage: pageLanguage, setPreferredLanguage } = usePageLanguage();
-  const selectedPageLanguage = pageLanguage === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : pageLanguage;
+  const { activePage, setLanguage } = useLayoutContext();
+  const selectedPageLanguage =
+    activePage.language === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : activePage.language;
   const options = items.map((item) => ({ label: item.content, value: item.props.language }));
   const value = options.find((option) => option.value === selectedPageLanguage);
 
-  const onSelectChange = changePageOnSelect(pageLanguage, setPreferredLanguage);
+  const onSelectChange = changePageOnSelect(activePage.language, setLanguage);
 
   const isSDKInterFacePresent = allListOfLanguages
     ? checkIfLanguageHasSDKInterface(allListOfLanguages, SDK_INTERFACES)

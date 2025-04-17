@@ -23,11 +23,11 @@ function base64urlEncode(str: string) {
 app.get('/generate-jwt', async (_req, res) => {
   console.log('1 - /generate-jwt endpoint called');
 
-  const ablyApiKey = process.env.VITE_PUBLIC_ABLY_KEY || '';
+  const ablyApiKey = process.env.VITE_ABLY_KEY || '';
   const [apiKeyName, apiKeySecret] = ablyApiKey.split(':');
   try {
     if (ablyApiKey === '') {
-      throw new Error('VITE_PUBLIC_ABLY_KEY is not set');
+      throw new Error('VITE_ABLY_KEY is not set');
     }
 
     const header = {

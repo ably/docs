@@ -1,10 +1,11 @@
 import * as Ably from 'ably';
 import { ChatClient, PresenceEvent, PresenceMember, AllFeaturesEnabled } from '@ably/chat';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 
 const realtimeClient = new Ably.Realtime({
-  clientId: faker.person.firstName(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  clientId: minifaker.firstName(),
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 const chatClient = new ChatClient(realtimeClient);
 

@@ -10,11 +10,11 @@ Member locations are implemented using [Ably Spaces](/docs/products/spaces). The
 
 Use the following components to add member location into an application:
 
-* [`spaces.get()`](/docs/spaces/space#create): creates a new or retrieves an existing `space`.
-* [`space.locations.subscribe()`](/docs/spaces/locations#subscribe): subscribes to location on the document by registering a listener.
-* [`space.enter()`](/docs/spaces/space#enter): entering a space will register a client as a member and emit an `enter` event to all subscribers.
-* [`space.locations.set()`](/docs/spaces/locations#set): a method to emit a location event in realtime that the member has changed their location.
-* [`space.locations.getSelf()` and `space.locations.getOthers()`](/docs/spaces/locations#retrieve): a method to retrieve the locations of members currently within the space.
+- [`spaces.get()`](/docs/spaces/space#create): creates a new or retrieves an existing `space`.
+- [`space.locations.subscribe()`](/docs/spaces/locations#subscribe): subscribes to location on the document by registering a listener.
+- [`space.enter()`](/docs/spaces/space#enter): entering a space will register a client as a member and emit an `enter` event to all subscribers.
+- [`space.locations.set()`](/docs/spaces/locations#set): a method to emit a location event in realtime that the member has changed their location.
+- [`space.locations.getSelf()` and `space.locations.getOthers()`](/docs/spaces/locations#retrieve): a method to retrieve the locations of members currently within the space.
 
 Find out more about [member location](/docs/spaces/locations).
 
@@ -38,7 +38,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -56,4 +56,4 @@ yarn run spaces-member-location-javascript
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and enter the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and enter the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

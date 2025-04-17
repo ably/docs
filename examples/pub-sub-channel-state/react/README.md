@@ -10,9 +10,9 @@ Channel states is implemented using [Ably Pub/Sub](/docs/). The Pub/Sub SDK prov
 
 Use the following components to manage the channel state in a pub/sub application:
 
-* [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
-* [`ChannelProvider`](/docs/getting-started/react#channel-provider): initializes and manages a shared channel instance, passing it down through React context to enable realtime pub/sub functionality across the application.
-* [`useChannelStateListener`](/docs/getting-started/react#useChannelStateListener): creates a subscriber to be notified of channel state changes.
+- [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+- [`ChannelProvider`](/docs/getting-started/react#channel-provider): initializes and manages a shared channel instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+- [`useChannelStateListener`](/docs/getting-started/react#useChannelStateListener): creates a subscriber to be notified of channel state changes.
 
 Find out more about [channel states](/docs/channels/states).
 
@@ -36,7 +36,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `NEXT_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -54,4 +54,4 @@ yarn run pub-sub-channel-state-react
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `NEXT_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

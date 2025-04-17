@@ -54,7 +54,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-7. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+7. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 8. Install dependencies:
 
@@ -72,4 +72,4 @@ yarn run auth-generate-jwt-server
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

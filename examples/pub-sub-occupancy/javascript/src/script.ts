@@ -6,7 +6,7 @@ import './styles.css';
 const occupantCount = document.getElementById('occupants-count');
 
 const client = new Ably.Realtime({
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  key: import.meta.env.VITE_ABLY_KEY as string,
   clientId: nanoid(),
 });
 
@@ -23,7 +23,7 @@ async function simulatedOccupants() {
   for (let loopCount = 0; loopCount < 20; loopCount++) {
     const clientId = nanoid();
     const client = new Ably.Realtime({
-      key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+      key: import.meta.env.VITE_ABLY_KEY as string,
       clientId,
     });
 
