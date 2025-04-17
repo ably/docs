@@ -9,6 +9,7 @@ import { IconName } from '@ably/ui/core/Icon/types';
 import SegmentedControl from '@ably/ui/core/SegmentedControl';
 import dotGrid from './images/dot-grid.svg';
 import cn from '@ably/ui/core/utils/cn';
+import { getRandomChannelName } from '../blocks/software/Code/get-random-channel-name';
 
 type ExamplesRendererProps = {
   example: ExampleWithContent;
@@ -39,7 +40,10 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
 
   const rewrittenFiles = useMemo<ExampleFiles>(() => {
     return Object.entries(files).reduce((acc, [languageKey, languageFiles]) => {
-      return { ...acc, [languageKey]: updateAblyConnectionKey(languageFiles, apiKey) };
+      return {
+        ...acc,
+        [languageKey]: updateAblyConnectionKey(languageFiles, apiKey, { [languageKey]: getRandomChannelName() }),
+      };
     }, {});
   }, [files, apiKey]);
 
@@ -47,16 +51,6 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
 
   const isVerticalLayout = useMemo(() => layout === 'single-vertical' || layout === 'double-vertical', [layout]);
   const isDoubleLayout = useMemo(() => layout === 'double-horizontal' || layout === 'double-vertical', [layout]);
-
-  const conditionalReactDeps =
-    activeLanguage === 'react' || products.includes('chat') || products.includes('spaces')
-      ? {
-          react: '^18',
-          'react-dom': '^18',
-          'react-icons': '^5.4.0',
-          'react-router-dom': '^6.22.2',
-        }
-      : {};
 
   return (
     <div className="bg-neutral-100 dark:bg-neutral-1200 p-16 rounded-2xl flex flex-col gap-16">
@@ -84,9 +78,15 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
             ...(products.includes('auth') ? { cors: '^2.8.5' } : {}),
             ...(products.includes('chat') ? { '@ably/chat': '^0.5.0' } : {}),
             ...(products.includes('spaces') ? { '@ably/spaces': '^0.4.0' } : {}),
-            ...(id === 'pub-sub-history' ? { uikit: '^3.7.0' } : {}),
             ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
-            ...conditionalReactDeps,
+            ...(activeLanguage === 'react' || products.includes('chat') || products.includes('spaces')
+              ? {
+                  react: '^18',
+                  'react-dom': '^18',
+                  'react-icons': '^5.4.0',
+                  'react-router-dom': '^6.22.2',
+                }
+              : {}),
           },
           devDependencies: {
             typescript: '^4.0.0',
@@ -118,6 +118,12 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
           externalResources: [
             'https://cdn.tailwindcss.com',
             'https://unpkg.com/franken-ui@2.0.0/dist/css/core.min.css',
+            ...(id === 'pub-sub-history'
+              ? [
+                  'https://cdn.jsdelivr.net/npm/uikit@3.16.22/dist/js/uikit.min.js',
+                  'https://cdn.jsdelivr.net/npm/uikit@3.16.22/dist/js/uikit-icons.min.js',
+                ]
+              : []),
           ],
         }}
         theme={githubLight}
@@ -133,8 +139,13 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
           />
           <div className={cn('flex gap-16 flex-col sm:flex-row', isVerticalLayout && 'md:flex-col')}>
             <div className="relative flex-1">
-              <SandpackPreview className="rounded-lg overflow-hidden" showOpenInCodeSandbox={false} showRefreshButton />
-              <UserIndicator user="user 1" />
+              <SandpackPreview
+                className="rounded-lg overflow-hidden"
+                showOpenInCodeSandbox={false}
+                showRefreshButton
+                {...(id === 'pub-sub-message-encryption' && { startRoute: '?encrypted=true' })}
+              />
+              <UserIndicator user={id === 'pub-sub-message-encryption' ? 'user 1 - encrypted' : 'user 1'} />
             </div>
             {isDoubleLayout && (
               <div className="relative flex-1">
