@@ -5,7 +5,7 @@ import { productData } from 'src/data';
 import { NavProduct } from 'src/data/nav/types';
 import { ProductData, ProductKey } from 'src/data/types';
 import { LanguageKey } from 'src/data/languages/types';
-import { languageData } from 'src/data/languages';
+import { languageData, languageInfo } from 'src/data/languages';
 
 /**
  * LayoutContext
@@ -77,13 +77,19 @@ export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
+    const langParam = params.get('lang') as LanguageKey;
 
-    if (params.get('lang')) {
-      setLanguage(params.get('lang') as LanguageKey);
-    } else if (activePage.product) {
-      setLanguage(Object.keys(languageData[activePage.product])[0]);
+    if (langParam && Object.keys(languageInfo).includes(langParam)) {
+      setLanguage(langParam);
+    } else if (activePage.product && activePage.languages.length > 0) {
+      const productLanguages = languageData[activePage.product];
+      const defaultLanguage =
+        Object.keys(productLanguages ?? []).filter((lang) => activePage.languages.includes(lang))[0] ??
+        DEFAULT_LANGUAGE;
+
+      setLanguage(defaultLanguage);
     }
-  }, [location.search, activePage.product]);
+  }, [location.search, activePage.product, activePage.languages]);
 
   const products = useMemo(
     () =>
