@@ -49,7 +49,7 @@ export const examples: Example[] = [
     description: 'Implement pub/sub messaging using channels.',
     products: ['pubsub'],
     useCases: ['messaging'],
-    layout: 'single-horizontal',
+    layout: 'single-vertical',
   },
   {
     id: 'pub-sub-channel-state',
@@ -57,7 +57,7 @@ export const examples: Example[] = [
     description: 'Monitor and react to channel state changes.',
     products: ['pubsub'],
     useCases: ['messaging'],
-    layout: 'single-horizontal',
+    layout: 'single-vertical',
   },
   {
     id: 'pub-sub-connection-state',
