@@ -42,7 +42,10 @@ export default function Chat() {
   };
 
   return (
-    <div id="chat-room-messages" className="w-full flex justify-center items-center relative bg-[#f4f8fb] h-screen uk-text-primary">
+    <div
+      id="chat-room-messages"
+      className="w-full flex justify-center items-center relative bg-[#f4f8fb] h-screen uk-text-primary"
+    >
       <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
         <div
           id="messages"

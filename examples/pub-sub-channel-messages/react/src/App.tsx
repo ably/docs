@@ -43,7 +43,8 @@ function ChannelMessages() {
     if (headlines.length === 0) {
       setIsButtonDisabled(true);
       const publishButton = document.getElementById('publish-button') as HTMLButtonElement;
-      publishButton.className = 'uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 cursor-not-allowed';
+      publishButton.className =
+        'uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 cursor-not-allowed';
 
       return;
     }
