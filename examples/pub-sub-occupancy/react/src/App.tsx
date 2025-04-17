@@ -27,7 +27,7 @@ function Stream() {
           autoPlay
           muted
           loop
-          className="w-full h-full"
+          className="max-w-full max-h-full object-contain"
         />
 
         <div className="absolute bottom-4 right-4 flex items-center bg-black/50 text-white px-3 py-2 rounded-full">

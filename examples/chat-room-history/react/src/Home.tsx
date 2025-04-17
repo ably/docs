@@ -51,7 +51,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 uk-text-primary">
       <div className="w-1/3 bg-gray-300 p-8 rounded-lg shadow-lg">
-        <h2 className="text-xl mb-8 text-center">
+        <h2 className="text-sm mb-4 text-center">
           Use the 'Send message' button to send 5 messages before you enter and subscribe to the chat room.
         </h2>
         <div className="flex flex-col gap-2">

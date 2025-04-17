@@ -55,7 +55,7 @@ export default function App() {
   return (
     <div className="flex justify-center items-center min-h-screen p-4 uk-text-primary">
       <div className="w-1/2 h-1/2 flex flex-col items-center space-y-4">
-        <h2 className="text-xl font-bold text-center mb-4">Connection State: {connectionState}</h2>
+        <h2 className="text-m font-bold text-center mb-4">Connection State: {connectionState}</h2>
         <div className="flex justify-center space-x-2">
           {client ? (
             <AblyProvider client={client}>

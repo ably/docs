@@ -59,7 +59,7 @@ function ChannelState() {
           </button>
         </div>
       )}
-      <textarea readOnly value={channelStates.join('\n')} className="w-full h-40 p-2 border rounded" />
+      <textarea readOnly value={channelStates.join('\n')} className="w-full text-sm h-80 p-2 border rounded" />
     </div>
   );
 }
