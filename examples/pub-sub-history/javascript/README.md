@@ -12,9 +12,9 @@ History is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/Su
 
 Use the following methods to retrieve message history in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
-* [`channel.subscribe()`](/docs/channels#subscribe): subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message.
-* [`channel.history()`](/docs/storage-history/history#retrieve-channel): retrieve paginated message event history.
+- [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
+- [`channel.subscribe()`](/docs/channels#subscribe): subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message.
+- [`channel.history()`](/docs/storage-history/history#retrieve-channel): retrieve paginated message event history.
 
 Find out more about [history](/docs/storage-history/history).
 
@@ -38,7 +38,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -56,4 +56,4 @@ yarn run pub-sub-history-javascript
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

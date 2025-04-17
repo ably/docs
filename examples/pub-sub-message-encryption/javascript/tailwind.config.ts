@@ -3,7 +3,7 @@ import type { Config } from 'tailwindcss';
 
 const config: Config = {
   ...baseConfig,
-  content: [...(Array.isArray(baseConfig.content) ? baseConfig.content : []), './src/**/*.ts'],
+  content: ['./src/**/*.{js,ts,tsx}', './index.html'],
 };
 
 export default config;

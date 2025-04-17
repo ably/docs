@@ -40,7 +40,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
       // nav={
       //   <TabMenu
       //     tabs={tabs}
-      //     tabClassName="ui-text-menu3 !px-16"
+      //     tabClassName="ui-text-label3 !px-16"
       //     tabOnClick={(index) => {
       //       navigate(tabLinks(index));
       //     }}
@@ -53,7 +53,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
       //     contents={[<LeftSidebar inHeader key="nav-mobile-documentation-tab" />, <ExamplesList key="nav-mobile-examples-tab" />]}
       //     rootClassName="h-full overflow-y-hidden min-h-[51px] flex flex-col"
       //     contentClassName="h-full py-16 overflow-y-scroll"
-      //     tabClassName="ui-text-menu2 !px-16"
+      //     tabClassName="ui-text-label2 !px-16"
       //     options={{ flexibleTabWidth: true }}
       //   />
       // }

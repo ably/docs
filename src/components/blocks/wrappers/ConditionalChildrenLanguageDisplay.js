@@ -6,10 +6,10 @@ import {
 } from '../../../../data/createPages/constants';
 import { makeGroup, assignPrimary, addToFilter, isIrrelevantForLanguageDisplay } from './language-utilities';
 import { isEmpty } from 'lodash';
-import { usePageLanguage } from 'src/contexts';
+import { useLayoutContext } from 'src/contexts/layout-context';
 
 const ConditionalChildrenLanguageDisplay = ({ children }) => {
-  const { currentLanguage: pageLanguage } = usePageLanguage();
+  const { activePage } = useLayoutContext();
 
   let currentGroup = false;
   const childLanguageGroups = [];
@@ -31,7 +31,7 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
         currentGroup = makeGroup(attribs.lang, index, props.data);
       } else {
         currentGroup.end = index;
-        currentGroup = assignPrimary(currentGroup, attribs.lang, pageLanguage, props.data, index);
+        currentGroup = assignPrimary(currentGroup, attribs.lang, activePage.language, props.data, index);
       }
       return;
     }
@@ -59,11 +59,15 @@ const ConditionalChildrenLanguageDisplay = ({ children }) => {
         key.includes(REALTIME_SDK_INTERFACE),
       );
       const allAltDataRest = Object.entries(relevantGroup.data).filter(([key]) => key.includes(REST_SDK_INTERFACE));
-      const realtimeAltData = getCleanedSDKInterfaceAltData(allAltDataRealtime, pageLanguage, REALTIME_SDK_INTERFACE);
-      const restAltData = getCleanedSDKInterfaceAltData(allAltDataRest, pageLanguage, REST_SDK_INTERFACE);
+      const realtimeAltData = getCleanedSDKInterfaceAltData(
+        allAltDataRealtime,
+        activePage.language,
+        REALTIME_SDK_INTERFACE,
+      );
+      const restAltData = getCleanedSDKInterfaceAltData(allAltDataRest, activePage.language, REST_SDK_INTERFACE);
 
       return React.cloneElement(child, {
-        pageLanguage,
+        pageLanguage: activePage.language,
         languages: relevantGroup.languages,
         altData: relevantGroup.data,
         isSDKInterface: !isEmpty(allAltDataRealtime) || !isEmpty(allAltDataRest),

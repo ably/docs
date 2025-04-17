@@ -18,6 +18,38 @@ export default {
       ],
     },
     {
+      name: 'Architecture',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/platform/architecture',
+        },
+      ],
+    },
+    {
+      name: 'Products and SDKs',
+      pages: [
+        {
+          name: 'SDKs',
+          link: '/docs/sdks',
+          external: true,
+        },
+        {
+          name: 'Deprecation',
+          pages: [
+            {
+              name: 'Policy',
+              link: '/docs/platform/deprecate',
+            },
+            {
+              name: 'Nov 2025 - Protocol v1',
+              link: '/docs/platform/deprecate/protocol-v1',
+            },
+          ],
+        },
+      ],
+    },
+    {
       name: 'Pricing',
       pages: [
         {

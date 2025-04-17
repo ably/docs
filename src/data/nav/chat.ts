@@ -78,6 +78,10 @@ export default {
           name: 'React SDK',
           external: true,
         },
+        {
+          link: '/docs/api/chat-rest',
+          name: 'REST API',
+        },
       ],
     },
   ],

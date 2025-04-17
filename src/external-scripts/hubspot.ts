@@ -6,6 +6,10 @@ declare global {
   type HubspotItem = string | Record<string, string>;
   interface Window {
     _hsq: Array<string | Record<string, string>>[];
+    hsConversationsSettings?: {
+      loadImmediately: boolean;
+    };
+    hsConversationsOnReady?: Array<() => void>;
   }
 }
 
@@ -22,12 +26,25 @@ export type HubspotUser = {
   adminUrl: string;
 };
 
-const hubspot = (hubspotTrackingId, loadImmediately = true) => {
+const hubspot = (hubspotTrackingId: string, loadImmediately = true) => {
+  const openFromMetaTag = () => {
+    const metaConversation = document.querySelector('meta[name="conversation"]') as HTMLMetaElement;
+
+    if (metaConversation) {
+      window.history.pushState({}, '', `?chat-type=${metaConversation.content}`);
+
+      window.HubSpotConversations?.widget.load();
+      window.HubSpotConversations?.widget.open();
+    }
+  };
+
   scriptLoader(document, `//js.hs-scripts.com/${hubspotTrackingId}.js`, { id: 'hs-script-loader' });
   window._hsq = window._hsq || [];
   window.hsConversationsSettings = {
     loadImmediately: loadImmediately,
   };
+
+  window.hsConversationsOnReady = [...(window.hsConversationsOnReady || []), openFromMetaTag];
 };
 
 export const hubspotIdentifyUser = ({

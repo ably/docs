@@ -26,8 +26,6 @@ export const siteMetadata = {
     oneTrustTest: process.env.ONE_TRUST_TEST,
     inkeepEnabled: process.env.INKEEP_CHAT_ENABLED,
     inkeepApiKey: process.env.INKEEP_CHAT_API_KEY,
-    inkeepIntegrationId: process.env.INKEEP_CHAT_INTEGRATION_ID,
-    inkeepOrganizationId: process.env.INKEEP_CHAT_ORGANIZATION_ID,
     insightsEnabled: !!process.env.INSIGHTS_ENABLED,
     insightsDebug: process.env.INSIGHTS_DEBUG === 'true',
     mixpanelApiKey: process.env.MIXPANEL_API_KEY,

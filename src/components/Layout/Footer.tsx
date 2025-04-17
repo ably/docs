@@ -88,7 +88,7 @@ const Footer: React.FC = () => (
             <a
               key={link.label}
               href={link.link}
-              className="ui-text-menu4 font-medium text-neutral-900 hover:text-neutral-1300 dark:text-neutral-400 dark:hover:text-neutral-000 transition-colors"
+              className="ui-text-label4 font-medium text-neutral-900 hover:text-neutral-1300 dark:text-neutral-400 dark:hover:text-neutral-000 transition-colors"
             >
               {link.label}
             </a>

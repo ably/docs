@@ -8,7 +8,7 @@ export type Member = Omit<SpaceMember, "profileData"> & {
   profileData: { userColors: { cursorColor: string; }; name: string };
 };
 
-// 💡 This component is used to render the cursor of the user
+// 💡 This component is used to update the location of the user's cursor
 const YourCursor = ({
   self,
   parentRef,
@@ -24,28 +24,7 @@ const YourCursor = ({
 
   useTrackCursor(setCursorPosition, parentRef);
 
-  if (!self) return null;
-  if (!cursorPosition || cursorPosition.state === "leave") return null;
-
-  const { cursorColor } = self.profileData.userColors;
-
-  return (
-    <div
-      className="uk-position-absolute uk-animation-fade pointer-events-none"
-      style={{
-        top: `${cursorPosition?.top || 0}px`,
-        left: `${cursorPosition?.left || 0}px`,
-      }}
-    >
-      <CursorSvg cursorColor={cursorColor} />
-      <div
-        style={{ backgroundColor: cursorColor }}
-        className="uk-badge uk-position-relative text-white transform translate-x-4 -translate-y-1 px-3 py-2"
-      >
-        You
-      </div>
-    </div>
-  );
+  return null;
 };
 
 // 💡 This component is used to render the cursors of other users in the space

@@ -21,8 +21,6 @@ export const useSiteMetadata = () => {
             announcementEnabled
             inkeepEnabled
             inkeepApiKey
-            inkeepIntegrationId
-            inkeepOrganizationId
             insightsEnabled
             insightsDebug
             mixpanelApiKey

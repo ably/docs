@@ -46,7 +46,7 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
   return (
     <div
       className={cn(
-        'ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 group/lang-dropdown flex gap-8 items-center rounded',
+        'ui-text-label4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 group/lang-dropdown flex gap-8 items-center rounded',
         {
           'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer': isOption,
         },
@@ -98,13 +98,6 @@ export const LanguageSelector = () => {
 
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const langParam = queryParams.get('lang');
-
-  useEffect(() => {
-    if (langParam && !options.some((option) => option.label === langParam)) {
-      queryParams.delete('lang');
-      navigate(`${location.pathname}?${queryParams.toString()}`, { replace: true });
-    }
-  }, [langParam, options, location.pathname, queryParams]);
 
   useEffect(() => {
     const defaultOption = options.find((option) => option.label === langParam) || options[0];

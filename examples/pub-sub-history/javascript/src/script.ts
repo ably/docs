@@ -1,6 +1,7 @@
 import * as Ably from 'ably';
 import type { Message } from 'ably';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 import UIkit from 'uikit';
 import './styles.css';
 
@@ -14,9 +15,9 @@ preloadButton.addEventListener('click', async () => {
   preloadButton.disabled = true;
 
   for (let i = 0; i < numBids; i++) {
-    const clientId = faker.person.firstName();
+    const clientId = minifaker.firstName();
     const client = new Ably.Realtime({
-      key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+      key: import.meta.env.VITE_ABLY_KEY as string,
       clientId,
     });
     const channel = client.channels.get(urlParams.get('name') || 'pub-sub-history');
@@ -45,8 +46,8 @@ async function enterAuction() {
   auctionRoom.style.display = 'block';
 
   client = new Ably.Realtime({
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
-    clientId: faker.person.firstName(),
+    key: import.meta.env.VITE_ABLY_KEY as string,
+    clientId: minifaker.firstName(),
   });
 
   channel = client.channels.get(channelName);

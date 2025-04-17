@@ -10,8 +10,8 @@ Occupancy is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/
 
 Use the following components to access occupancy in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`. By using channel options to enable occupancy, the channel will automatically update occupancy information.
-* [`channel.subscribe()`](/docs/channels#subscribe): subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message. Whenever the occupancy is updated, the `useChannel()` hook will update the occupancy information.
+- [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`. By using channel options to enable occupancy, the channel will automatically update occupancy information.
+- [`channel.subscribe()`](/docs/channels#subscribe): subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message. Whenever the occupancy is updated, the `useChannel()` hook will update the occupancy information.
 
 Find out more about [occupancy](/docs/presence-occupancy/occupancy).
 
@@ -35,7 +35,7 @@ cd /examples/
 mv .env.example .env.local
 ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
@@ -53,4 +53,4 @@ yarn run pub-sub-occupancy-javascript
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

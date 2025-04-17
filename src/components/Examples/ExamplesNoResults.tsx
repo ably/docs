@@ -12,7 +12,7 @@ const ExamplesNoResults = () => {
       <p className="ui-text-p3 mt-24 text-neutral-1100">Try these popular search terms</p>
       <div className="flex mt-8 gap-x-6">
         {popularSearchTerm.map((term) => (
-          <Badge key={`search-term-${term}`} className="text-neutral-1300 ui-text-menu3 font-medium">
+          <Badge key={`search-term-${term}`} className="text-neutral-1300 ui-text-label3 font-medium">
             {term}
           </Badge>
         ))}

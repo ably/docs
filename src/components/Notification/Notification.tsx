@@ -23,7 +23,7 @@ export const Notification = ({
   return isVisible ? (
     <div
       className={cn(
-        'py-6 px-12 w-full col-span-3 hidden md:flex text-white relative items-center justify-center rounded ui-text-menu3',
+        'py-6 px-12 w-full col-span-3 hidden md:flex text-white relative items-center justify-center rounded ui-text-label3',
         {
           'bg-active-orange': variant === NotificationVariant.Warning,
         },

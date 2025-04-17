@@ -54,7 +54,7 @@ const NavPage = ({
         key={hierarchicalKey(page.link, depth, activePage.tree)}
         id={linkId}
         className={cn({
-          'block ui-text-menu2 leading-relaxed md:leading-snug md:ui-text-menu4 text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base':
+          'block ui-text-label2 leading-relaxed md:leading-snug md:ui-text-label4 text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base':
             true,
           '!font-semibold': !pageActive,
           'text-neutral-900': !pageActive && type === 'content',

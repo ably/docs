@@ -173,7 +173,7 @@ const RightSidebar = () => {
                     key={[location.pathname, header.id, language, index].join('-')}
                     id={`sidebar-${header.id}`}
                     className={cn(
-                      'ui-text-menu4 font-medium text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth hover:text-neutral-1300 dark:hover:text-neutral-000',
+                      'ui-text-label4 font-medium text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth hover:text-neutral-1300 dark:hover:text-neutral-000',
                       { 'text-neutral-1300 dark:text-neutral-000': header.id === activeHeader?.id },
                       { 'ml-8': header.type !== 'H2' },
                     )}
