@@ -32,7 +32,6 @@ const Online = () => {
 
   return (
     <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800">Live user status</h2>
       <div className="space-y-4">
         {presenceData.map((onlineStatus) => (
           <div

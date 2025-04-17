@@ -56,24 +56,24 @@ function ChannelMessages() {
   };
 
   return (
-    <div className="min-h-screen p-8 flex flex-col items-center gap-6">
+    <div className="min-h-screen p-4 flex flex-col items-center gap-6">
       <button
         id="publish-button"
         onClick={publishHeadline}
-        className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded"
+        className="uk-btn uk-btn-sm uk-btn-primary mb-4 rounded"
         disabled={isButtonDisabled}
       >
         Publish Random Headline
       </button>
 
-      <div className="w-full max-w-2xl h-96 border rounded-lg overflow-y-auto bg-white shadow-lg">
+      <div className="w-full max-w-2xl h-80 border rounded-lg overflow-y-auto bg-white shadow-lg">
         <div className="p-4 space-y-2">
           {messages.map((msg, index) => (
             <div key={index} className="p-3 bg-gray-50 rounded-lg flex items-center gap-2">
               {msg.isNew && (
                 <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>
               )}
-              <span>{msg.text}</span>
+              <span className="text-sm">{msg.text}</span>
             </div>
           ))}
         </div>

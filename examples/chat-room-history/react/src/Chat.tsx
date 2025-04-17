@@ -30,7 +30,7 @@ export default function Chat() {
       if (loadButton instanceof HTMLButtonElement) {
         loadButton.disabled = true;
         loadButton.className =
-          'uk-btn uk-btn-md uk-btn-primary mb-4 rounded absolute top-2 left-1/2 transform -translate-x-1/2 p-2';
+          'uk-btn uk-btn-sm uk-btn-primary mb-2 rounded absolute top-2 left-1/2 transform -translate-x-1/2 p-2';
       }
     });
   };
@@ -42,15 +42,15 @@ export default function Chat() {
   };
 
   return (
-    <div id="chat-room-messages" className="container">
+    <div id="chat-room-messages" className="w-full flex justify-center items-center relative bg-[#f4f8fb] h-screen">
       <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
         <div
           id="messages"
-          className="w-96 flex flex-auto flex-col space-y-2 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
+          className="w-full flex flex-auto flex-col space-y-2 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
         >
           <button
             id="load-past-messages"
-            className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded absolute top-2 left-1/2 transform -translate-x-1/2 p-2"
+            className="uk-btn uk-btn-sm uk-btn-primary mb-2 rounded absolute top-2 left-1/2 transform -translate-x-1/2 p-2"
             onClick={getPastMessages}
           >
             ↑ Load previous messages
