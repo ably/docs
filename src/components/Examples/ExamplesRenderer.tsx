@@ -35,7 +35,7 @@ const UserIndicator = ({ user }: { user: string }) => {
 };
 
 const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }: ExamplesRendererProps) => {
-  const { files, visibleFiles, layout } = example;
+  const { id, files, visibleFiles, layout, products } = example;
 
   const rewrittenFiles = useMemo<ExampleFiles>(() => {
     return Object.entries(files).reduce((acc, [languageKey, languageFiles]) => {
@@ -47,6 +47,16 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
 
   const isVerticalLayout = useMemo(() => layout === 'single-vertical' || layout === 'double-vertical', [layout]);
   const isDoubleLayout = useMemo(() => layout === 'double-horizontal' || layout === 'double-vertical', [layout]);
+
+  const conditionalReactDeps =
+    activeLanguage === 'react' || products.includes('chat') || products.includes('spaces')
+      ? {
+          react: '^18',
+          'react-dom': '^18',
+          'react-icons': '^5.4.0',
+          'react-router-dom': '^6.22.2',
+        }
+      : {};
 
   return (
     <div className="bg-neutral-100 dark:bg-neutral-1200 p-16 rounded-2xl flex flex-col gap-16">
@@ -68,17 +78,15 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
         files={languageFiles}
         customSetup={{
           dependencies: {
-            cors: '^2.8.5',
-            '@ably/chat': '^0.5.0',
-            '@ably/spaces': '^0.4.0',
             ably: '^2.5.0',
             nanoid: '^5.0.7',
             minifaker: '1.34.1',
-            react: '^18',
-            'react-dom': '^18',
-            'react-icons': '^5.4.0',
-            'react-router-dom': '^6.22.2',
-            uikit: '^3.7.0',
+            ...(products.includes('auth') ? { cors: '^2.8.5' } : {}),
+            ...(products.includes('chat') ? { '@ably/chat': '^0.5.0' } : {}),
+            ...(products.includes('spaces') ? { '@ably/spaces': '^0.4.0' } : {}),
+            ...(id === 'pub-sub-history' ? { uikit: '^3.7.0' } : {}),
+            ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
+            ...conditionalReactDeps,
           },
           devDependencies: {
             typescript: '^4.0.0',
