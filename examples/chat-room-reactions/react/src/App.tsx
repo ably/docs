@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ChatClient, ChatClientProvider, ChatRoomProvider, AllFeaturesEnabled } from '@ably/chat';
+import { ChatClient, AllFeaturesEnabled, Reaction as ReactionInterface } from '@ably/chat';
+import { ChatClientProvider, ChatRoomProvider, useRoom, useRoomReactions } from '@ably/chat/react';
 import { Realtime } from 'ably';
-import { Reaction as ReactionInterface, useRoom, useRoomReactions } from '@ably/chat';
 import './styles/styles.css';
 
 const mockNames = ['Bob', 'Jane', 'John', 'Sammy'];

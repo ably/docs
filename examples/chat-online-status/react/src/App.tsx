@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import {
+  ChatClient,
+  AllFeaturesEnabled,
+} from '@ably/chat';
+import {
   useChatClient,
   useRoom,
   usePresenceListener,
   usePresence,
-  ChatClient,
   ChatClientProvider,
   ChatRoomProvider,
-  AllFeaturesEnabled,
-} from '@ably/chat';
+} from '@ably/chat/react';
 import { Realtime } from 'ably';
 import minifaker from 'minifaker';
 import 'minifaker/locales/en';

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useRoom, useMessages } from '@ably/chat';
+import { useRoom, useMessages } from '@ably/chat/react';
 import { useNavigate } from 'react-router-dom';
 import './styles/styles.css';
 

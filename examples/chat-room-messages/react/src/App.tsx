@@ -1,14 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import {
   Message,
+  ChatClient,
+  AllFeaturesEnabled,
+} from '@ably/chat';
+import {
   useRoom,
   useMessages,
   useChatClient,
-  ChatClient,
   ChatClientProvider,
   ChatRoomProvider,
-  AllFeaturesEnabled,
-} from '@ably/chat';
+} from '@ably/chat/react';
 import { Realtime } from 'ably';
 import './styles/styles.css';
 

@@ -1,4 +1,5 @@
-import { ChatClient, ChatClientProvider, ChatRoomProvider, AllFeaturesEnabled } from '@ably/chat';
+import { ChatClient, AllFeaturesEnabled } from '@ably/chat';
+import { ChatClientProvider, ChatRoomProvider } from '@ably/chat/react';
 import { Realtime } from 'ably';
 import minifaker from 'minifaker';
 import 'minifaker/locales/en';
