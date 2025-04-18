@@ -15,14 +15,14 @@ import {
   tipTitleElement,
 } from './dividers.module.css';
 
-const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
-  const isVersioningInfo: boolean =
-    attribs && (attribs[`data-type`] === 'new' || attribs[`data-type`] === 'updated') ? true : false;
+const versioningColors: { [key: string]: { bg: string; text: string } } = {
+  new: { bg: '#FFF0BA', text: '#AC8600' },
+  updated: { bg: '#FFB8F1', text: '#9C007E' },
+  experimental: { bg: '#D8BCFB', text: '#460894' },
+};
 
-  const versioningColors: { [key: string]: { bg: string; text: string } } = {
-    new: { bg: '#FFF0BA', text: '#AC8600' },
-    updated: { bg: '#FFB8F1', text: '#9C007E' },
-  };
+const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
+  const isVersioningInfo: boolean = Object.keys(versioningColors).includes(attribs?.[`data-type`] ?? '');
 
   let paddingBottom: string | false = false;
   if ((isArray(data) && data[data.length - 1].name === HtmlDataTypes.ul) || isVersioningInfo) {
