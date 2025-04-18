@@ -249,6 +249,19 @@ export default {
         },
       ],
     },
+    {
+      name: 'Debugging and Errors',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/errors',
+        },
+        {
+          name: 'Error codes',
+          link: '/docs/errors/codes',
+        },
+      ],
+    },
   ],
   api: [
     {
