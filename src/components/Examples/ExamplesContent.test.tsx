@@ -2,7 +2,8 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import ExamplesContent from './ExamplesContent';
-import examples, { Example } from '../../data/examples';
+import { examples } from '../../data/examples/';
+import { Example } from '../../data/examples/types';
 import { ImageProps } from '../Image';
 
 jest.mock('gatsby-plugin-image', () => {
@@ -40,7 +41,7 @@ describe('ExamplesContent', () => {
 
   it('renders the ExamplesGrid with filtered examples', () => {
     render(<ExamplesContent exampleImages={exampleImages} />);
-    examples.examples.forEach((example) => {
+    examples.forEach((example) => {
       expect(screen.getByText(example.name)).toBeInTheDocument();
     });
   });
@@ -50,8 +51,8 @@ describe('ExamplesContent', () => {
     const searchInput = screen.getByPlaceholderText('Find an example');
     fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
     expect(screen.getByText('No results found')).toBeInTheDocument();
-    expect(screen.queryByText('Member location')).not.toBeInTheDocument();
-    expect(screen.queryByText('Avatar stack')).not.toBeInTheDocument();
+    expect(screen.queryByText('Member Location')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avatar Stack')).not.toBeInTheDocument();
   });
 
   it('filters examples based on search input (with results)', () => {
@@ -59,8 +60,8 @@ describe('ExamplesContent', () => {
     const searchInput = screen.getByPlaceholderText('Find an example');
     fireEvent.change(searchInput, { target: { value: 'avatar' } });
     expect(screen.queryByText('No results found')).not.toBeInTheDocument();
-    expect(screen.queryByText('Member location')).not.toBeInTheDocument();
-    expect(screen.getByText('Avatar stack')).toBeInTheDocument();
+    expect(screen.queryByText('Member Location')).not.toBeInTheDocument();
+    expect(screen.getByText('Avatar Stack')).toBeInTheDocument();
   });
 
   it('filters examples based on product filter selection', () => {
@@ -72,7 +73,7 @@ describe('ExamplesContent', () => {
     const productFilterInput = screen.getByTestId('product-spaces');
     fireEvent.click(productFilterInput);
 
-    expect(screen.queryByText('Avatar stack')).not.toBeInTheDocument();
-    expect(screen.getByText('Member location')).toBeInTheDocument();
+    expect(screen.queryByText('Online Status')).not.toBeInTheDocument();
+    expect(screen.getByText('Member Location')).toBeInTheDocument();
   });
 });
