@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import {
   TypingEvent,
-  useChatClient,
-  useRoom,
-  useTyping,
-  ChatClient,
-  ChatClientProvider,
-  ChatRoomProvider,
+  ChatClient  ,
   AllFeaturesEnabled,
   TypingOptions,
 } from '@ably/chat';
+import {
+  useTyping,
+  useChatClient,
+  useRoom,
+  ChatClientProvider,
+  ChatRoomProvider,
+} from '@ably/chat/react';
 import { Realtime } from 'ably';
 import './styles/styles.css';
 
