@@ -27,7 +27,7 @@ export default {
       ],
     },
     {
-      name: 'LiveObjects features',
+      name: 'Object Types',
       pages: [
         {
           name: 'LiveCounter',
