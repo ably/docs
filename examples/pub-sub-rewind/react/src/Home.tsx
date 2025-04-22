@@ -2,7 +2,7 @@
 
 import * as Ably from 'ably';
 import minifaker from 'minifaker';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import 'minifaker/locales/en';
 
@@ -10,8 +10,7 @@ export default function Home() {
   const [alerts, setAlerts] = useState<Array<{id: number, message: string}>>([]);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
+  const [searchParams] = useSearchParams();
   const channelName = searchParams.get('name') || 'pub-sub-rewind';
 
   const preloadOddsHistory = async () => {
