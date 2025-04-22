@@ -18,7 +18,7 @@ export default {
       ],
     },
     {
-      name: 'Get started',
+      name: 'Getting started',
       pages: [
         {
           name: 'Quickstart',
