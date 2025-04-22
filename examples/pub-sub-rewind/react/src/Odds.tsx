@@ -116,7 +116,7 @@ function LiveMatch({ channelName }: { channelName: string }) {
 
             <div className="grid grid-cols-3 gap-2 mb-4">
               <div className="bg-white rounded shadow p-2">
-                <h3 className="text-xs font-medium mb-1">Home Win</h3>
+                <h3 className="text-xs font-medium mb-1">Home win</h3>
                 <p className="text-lg font-bold text-green-600">
                   {matchData.match.matchOdds.homeWin}
                 </p>
@@ -128,7 +128,7 @@ function LiveMatch({ channelName }: { channelName: string }) {
                 </p>
               </div>
               <div className="bg-white rounded shadow p-2">
-                <h3 className="text-xs font-medium mb-1">Away Win</h3>
+                <h3 className="text-xs font-medium mb-1">Away win</h3>
                 <p className="text-lg font-bold text-red-600">
                   {matchData.match.matchOdds.awayWin}
                 </p>
@@ -136,7 +136,7 @@ function LiveMatch({ channelName }: { channelName: string }) {
             </div>
 
             <div className="bg-white rounded shadow p-3">
-              <h2 className="text-sm font-bold mb-2">Odds Movement History</h2>
+              <h2 className="text-sm font-bold mb-2">Odds history</h2>
               <div className="space-y-2">
                 {oddsHistory.map((odds, index) => (
                   <div key={index} className="border-b pb-1">

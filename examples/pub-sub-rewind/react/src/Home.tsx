@@ -70,8 +70,8 @@ export default function Home() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg w-96">
-        <h2 className="text-2xl mb-6 text-center">Live Football League Odds</h2>
-        <p>Watch real-time odds movement for today's Football League match.</p>
+        <h2 className="text-2xl mb-6 text-center">Live odds</h2>
+        <p>Simulate 10 betting odds for a sports game before attaching.</p>
         <div className="flex flex-col gap-4">
           <button
             onClick={() => preloadOddsHistory()}

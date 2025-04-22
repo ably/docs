@@ -1,12 +1,12 @@
 # Rewind channel option with Pub/Sub
 
-Rewind is a Pub/Sub channel option that enables users to retrieve a set number of historical messages published to an application.
+Rewind is a channel option that enables users to choose where to begin a channel attachment from.
 
-Use rewind to retrieve a pre-determined number of messages that have been previously published to a channel when attached. Users can then start working in your application with context of what happened before they went joined, or came online. Uses include retrieving the history of odds on a football game before providing the last 2 minutes worth of contextual data in a realtime dashboard.
+Use rewind to choose at which point in the past a client attaches to a room. This enables them to receive previously published messages upon attaching and provide context as to what has been happening. Rewind can be by a set number of messages in the past, or within a certain timeframe. Note that [message storage](https://ably.com/docs/storage-history/storage) needs to be enabled to retrieve messages older than 2 minutes.
 
-Rewind enables users to retrieve a set number of messages that have been previously published within an application. It enables provides users with context as to how the current state has been reached.
+Rewind can be used to retrieve the history of how odds for a football game changed over the past 5 minutes, or provide the most recent 50 events that occurred in a realtime dashboard.
 
-Rewind is a channel option which is implemented using [Ably Pub/Sub](https://ably.com/docs/products/channels). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
+Rewind is a channel option which is implemented using [Ably Pub/Sub](https://ably.com/docs/basics). The Pub/Sub SDK provides a set of flexible APIs capable of building any realtime application. It is powered by Ably's reliable and scalable platform.
 
 ## Resources
 
