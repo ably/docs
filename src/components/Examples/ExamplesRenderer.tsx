@@ -87,6 +87,7 @@ const ExamplesRenderer = ({ example, apiKey, activeLanguage, setActiveLanguage }
                   'react-router-dom': '^6.22.2',
                 }
               : {}),
+            ...(id === 'pub-sub-history' && activeLanguage === 'react' ? { uikit: '^3.16.22' } : {}),
           },
           devDependencies: {
             typescript: '^4.0.0',
