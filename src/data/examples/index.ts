@@ -129,7 +129,7 @@ export const examples: Example[] = [
     description: 'Track and display member locations within a space.',
     products: ['spaces'],
     useCases: ['collaboration'],
-    layout: 'double-vertical',
+    layout: 'double-horizontal',
   },
 ];
 
