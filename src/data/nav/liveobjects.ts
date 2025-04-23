@@ -27,6 +27,15 @@ export default {
       ],
     },
     {
+      name: 'Concepts',
+      pages: [
+        {
+          name: 'Objects',
+          link: '/docs/liveobjects/concepts/objects',
+        },
+      ],
+    },
+    {
       name: 'Object Types',
       pages: [
         {
