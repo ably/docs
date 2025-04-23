@@ -12,7 +12,7 @@ export default function Home() {
   const preloadBiddingHistory = async () => {
     let lastBidAmount = 100;
     // Define how many bids to simulate
-    const numBids = 10;
+    const numBids = 4;
 
     for (let i = 0; i < numBids; i++) {
       const clientId = minifaker.firstName();

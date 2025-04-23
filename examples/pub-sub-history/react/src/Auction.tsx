@@ -128,15 +128,14 @@ export default function AuctionRoom() {
   };
 
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold mb-2">Vintage timepiece</h1>
-          <p className="text-gray-600 mb-4">
-            A rare collector's piece from the early 20th century, featuring intricate mechanical craftsmanship.
+    <div className="h-max p-4 overflow-y-auto">
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="p-4">
+          <p className="text-gray-600 text-sm mb-2">
+          Auction item #1
           </p>
           <button
-            className="uk-btn uk-btn-md uk-btn-secondary mb-4 rounded"
+            className="uk-btn uk-btn-sm uk-btn-secondary mb-2 rounded"
             type="button"
             onClick={() => UIkit.modal('#bid-modal').show()}
           >
@@ -144,14 +143,14 @@ export default function AuctionRoom() {
           </button>
 
           {currentBid ? (
-            <div className="bg-gray-100 p-4 rounded-lg mb-6">
-              <h2 className="text-lg font-bold mb-2">Current Bid</h2>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">
+            <div className="bg-gray-100 p-2 rounded-lg mb-4">
+              <h2 className="text-sm font-bold mb-1">Current Bid</h2>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-medium w-1/3 text-left">
                   {currentBid.clientId}
                   {currentBid.clientId === currentClientId ? ' (You)' : ''}
                 </span>
-                <span className="text-gray-600">
+                <span className="text-gray-600 w-1/3 text-center">
                   {currentBid.timestamp.toLocaleTimeString([], {
                     hour: '2-digit',
                     minute: '2-digit',
@@ -168,21 +167,21 @@ export default function AuctionRoom() {
             </div>
           )}
 
-          <div className="mt-8 border-t pt-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Bidding history</h2>
+          <div className="mt-4 border-t pt-2">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-semibold">Bidding history</h2>
               <button
-                className="uk-btn uk-btn-md uk-btn-primary py-2 rounded"
+                className="uk-btn uk-btn-sm uk-btn-primary py-1 rounded"
                 onClick={() => retrieveBiddingHistory()}
                 disabled={historyLoaded}
               >
                 Load history
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1 text-x">
               {biddingHistory.map((bid, index) => (
-                <div key={index} className="flex justify-between items-center py-2 border-b">
-                  <span className="font-medium w-1/3">
+                <div key={index} className="flex items-center justify-between py-1 border-b">
+                  <span className="font-medium w-1/3 text-left">
                     {bid.clientId}
                     {bid.clientId === currentClientId ? ' (You)' : ''}
                   </span>
@@ -198,22 +197,22 @@ export default function AuctionRoom() {
 
         {ReactDOM.createPortal(
           <div id="bid-modal" className="uk-modal">
-            <div className="uk-modal-dialog uk-modal-body">
-              <h3 className="text-lg font-bold mb-4">Place your bid</h3>
+            <div className="uk-modal-dialog uk-modal-body p-4">
+              <h3 className="text-sm font-bold mb-2">Place your bid</h3>
 
               <input
                 type="number"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(Number(e.target.value))}
-                className="uk-input uk-form-md mb-4"
+                className="uk-input uk-form-sm mb-2"
                 placeholder="Enter bid amount"
               />
 
               <p className="uk-text-right">
-                <button className="uk-btn uk-btn-default mr-2" type="button" uk-toggle="target: #bid-modal">
+                <button className="uk-btn uk-btn-default uk-btn-sm mr-2" type="button" uk-toggle="target: #bid-modal">
                   Cancel
                 </button>
-                <button onClick={handleBid} className="uk-btn uk-btn-primary" type="button">
+                <button onClick={handleBid} className="uk-btn uk-btn-sm uk-btn-primary" type="button">
                   Place bid
                 </button>
               </p>

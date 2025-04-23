@@ -6,7 +6,7 @@ import './styles.css';
 
 const preloadButton = document.getElementById('pre-load-history');
 let lastBidAmount = 100;
-const numBids = 10;
+const numBids = 4;
 const urlParams = new URLSearchParams(window.location.search);
 const channelName = urlParams.get('name') || 'pub-sub-history';
 
@@ -106,7 +106,7 @@ async function addHistoryItem(message: Message, position = 'prepend') {
   const history = document.getElementById('history');
   const historyItem = document.createElement('div');
   historyItem.id = `history-item-${message.id}`;
-  historyItem.className = 'flex items-center justify-between py-2 border-b';
+  historyItem.className = 'flex items-center justify-between py-1 border-b';
 
   if (position === 'prepend') {
     history.prepend(historyItem);
@@ -138,7 +138,7 @@ const loadHistoryButton = document.getElementById('load-history') as HTMLButtonE
 
 async function addHistory() {
   loadHistoryButton.disabled = true;
-  loadHistoryButton.className = 'uk-btn uk-btn-md uk-btn-default py-2 rounded cursor-not-allowed';
+  loadHistoryButton.className = 'uk-btn uk-btn-sm uk-btn-default py-1 rounded cursor-not-allowed';
 
   const resultPage = await channel.history();
   const messages = resultPage.items;
