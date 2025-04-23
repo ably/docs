@@ -73,7 +73,7 @@ export const examples: Example[] = [
     description: 'Retrieve historical messages from channels.',
     products: ['pubsub'],
     useCases: ['messaging'],
-    layout: 'single-horizontal',
+    layout: 'single-vertical',
   },
   {
     id: 'pub-sub-message-encryption',

@@ -141,10 +141,10 @@ export default function AuctionRoom() {
           </button>
 
           {currentBid ? (
-            <div className="bg-gray-100 p-4 rounded-lg mb-6">
-              <h2 className="text-lg font-bold mb-2">Current Bid</h2>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">
+            <div className="bg-gray-100 p-2 rounded-lg mb-4">
+              <h2 className="text-sm font-bold mb-1">Current Bid</h2>
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-medium w-1/3 text-left">
                   {currentBid.clientId}
                   {currentBid.clientId === currentClientId ? ' (You)' : ''}
                 </span>
@@ -165,9 +165,9 @@ export default function AuctionRoom() {
             </div>
           )}
 
-          <div className="mt-8 border-t pt-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Bidding history</h2>
+          <div className="mt-4 border-t pt-2">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-semibold">Bidding history</h2>
               <button
                 className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 min-w-[180px]"
                 onClick={() => retrieveBiddingHistory()}
@@ -176,10 +176,10 @@ export default function AuctionRoom() {
                 Load history
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1 text-x">
               {biddingHistory.map((bid, index) => (
-                <div key={index} className="flex justify-between items-center py-2 border-b">
-                  <span className="font-medium w-1/3">
+                <div key={index} className="flex items-center justify-between py-1 border-b">
+                  <span className="font-medium w-1/3 text-left">
                     {bid.clientId}
                     {bid.clientId === currentClientId ? ' (You)' : ''}
                   </span>
@@ -195,14 +195,14 @@ export default function AuctionRoom() {
 
         {ReactDOM.createPortal(
           <div id="bid-modal" className="uk-modal">
-            <div className="uk-modal-dialog uk-modal-body">
-              <h3 className="text-lg font-bold mb-4">Place your bid</h3>
+            <div className="uk-modal-dialog uk-modal-body p-4">
+              <h3 className="text-sm font-bold mb-2">Place your bid</h3>
 
               <input
                 type="number"
                 value={bidAmount}
                 onChange={(e) => setBidAmount(Number(e.target.value))}
-                className="uk-input uk-form-md mb-4"
+                className="uk-input uk-form-sm mb-2"
                 placeholder="Enter bid amount"
               />
 
