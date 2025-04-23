@@ -131,9 +131,7 @@ export default function AuctionRoom() {
     <div className="h-max p-4 overflow-y-auto">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="p-4">
-          <p className="text-gray-600 text-sm mb-2">
-          Auction item #1
-          </p>
+          <p className="text-gray-600 text-sm mb-2">Auction item #1</p>
           <button
             className="uk-btn uk-btn-sm uk-btn-secondary mb-2 rounded"
             type="button"
@@ -178,7 +176,7 @@ export default function AuctionRoom() {
                 Load history
               </button>
             </div>
-            <div className="space-y-1 text-x">
+            <div className="space-y-1 text-xs">
               {biddingHistory.map((bid, index) => (
                 <div key={index} className="flex items-center justify-between py-1 border-b">
                   <span className="font-medium w-1/3 text-left">
