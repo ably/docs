@@ -39,7 +39,7 @@ export default function Home() {
       }
     };
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 4; i++) {
       const markets = ['homeWin', 'draw', 'awayWin'];
       const numMarketsToUpdate = Math.floor(Math.random() * 2) + 1;
       const marketsToUpdate = markets.sort(() => 0.5 - Math.random()).slice(0, numMarketsToUpdate);
@@ -52,14 +52,14 @@ export default function Home() {
       await channel.publish('odds', currentOdds);
 
       const alertId = Date.now();
-      const alertMessage = `Update ${i + 1}/10: New odds published`;
+      const alertMessage = `Update ${i + 1}/4: New odds published`;
       setAlerts(prev => [...prev, { id: alertId, message: alertMessage }]);
 
       setTimeout(() => {
         setAlerts(prev => prev.filter(alert => alert.id !== alertId));
       }, 2000);
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     setIsLoading(false);
@@ -70,7 +70,7 @@ export default function Home() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg w-96">
         <h2 className="text-2xl mb-6 text-center">Live odds</h2>
-        <p>Simulate 10 betting odds for a sports game before attaching.</p>
+        <p>Simulate 4 betting odds for a sports game before attaching.</p>
         <div className="flex flex-col gap-4">
           <button
             onClick={() => preloadOddsHistory()}

@@ -100,6 +100,14 @@ export const examples: Example[] = [
     layout: 'double-horizontal',
   },
   {
+    id: 'pub-sub-rewind',
+    name: 'Rewind',
+    description: 'Specify where to start a channel attachment from.',
+    products: ['pubsub'],
+    useCases: ['messaging'],
+    layout: 'single-vertical',
+  },
+  {
     id: 'spaces-avatar-stack',
     name: 'Avatar Stack',
     description: 'Display stacked avatars for users in a space.',
