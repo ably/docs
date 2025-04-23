@@ -6,10 +6,10 @@ This guide covers how to contribute to the Ably docs repository. From general pu
 
 The following high-level information covers the pull request process for Ably docs:
 
-* Pull requests should be raised against the `main` branch in the majority of cases.
-* A review site is built for every pull request, and rebuilt on subsequent commits.
-* Tag `@team-deved` for review.
-* Once approved and merged into `main`, content is automatically updated on `/docs`.
+- Pull requests should be raised against the `main` branch in the majority of cases.
+- A review site is built for every pull request, and rebuilt on subsequent commits.
+- Tag `@team-deved` for review.
+- Once approved and merged into `main`, content is automatically updated on `/docs`.
 
 ### CI
 
@@ -33,10 +33,10 @@ There is a [writing style guide](writing-style-guide.md) that contributors shoul
 
 There are two main locations that contributors need to work with to varying extents. The following is a table explaining what each folder contains that is relevant to editing the docs:
 
-| Folder | Contains |
-| ------ | -------- |
-| content | All content pages written in textile. |
-| src | Images, navigation and language version and management. |
+| Folder  | Contains                                                |
+| ------- | ------------------------------------------------------- |
+| content | All content pages written in textile.                   |
+| src     | Images, navigation and language version and management. |
 
 ## Textile format
 
@@ -48,10 +48,10 @@ The following metadata can be included in the front matter of files. Metadata sh
 
 ```yaml
 ---
-title: "The page title that will appear on page. This is required."
-meta_description: "A description for the page that will be returned in searches. This is required."
-meta_keywords: "A comma separated list of keywords about the page."
-redirect_from: "A YAML array of pages that will redirect to the current page."
+title: 'The page title that will appear on page. This is required.'
+meta_description: 'A description for the page that will be returned in searches. This is required.'
+meta_keywords: 'A comma separated list of keywords about the page.'
+redirect_from: 'A YAML array of pages that will redirect to the current page.'
 ---
 ```
 
@@ -61,9 +61,9 @@ Redirects are automatically added to [`config/nginx-redirects.conf`](config/ngin
 
 Other one-off instances of redirects are contained in the following files. These should rarely, if ever need to be touched.
 
-* [`/config/website-redirects.conf`](config/website-redirects.conf)
-* [`/config/client-lib-development-guide-redirects.conf`](config/client-lib-development-guide-redirects.conf)
-* [`/config/nginx.conf.erb`](config/nginx.conf.erb)
+- [`/config/website-redirects.conf`](config/website-redirects.conf)
+- [`/config/client-lib-development-guide-redirects.conf`](config/client-lib-development-guide-redirects.conf)
+- [`/config/nginx.conf.erb`](config/nginx.conf.erb)
 
 ### Headings
 
@@ -93,18 +93,18 @@ To link externally, or outside of the docs repository, use a fully qualified lin
 
 Codeblocks are defined using triple backticks followed by the language wrapped in square brackets, for example: ` ```[javascript] `. They are closed using triple backticks. Codeblocks are grouped into tabs when they follow one another with a single empty line between them:
 
-```plaintext
+````plaintext
     ```[javascript]
     const channel = realtime.channels.get('channelName');
     ```
     ```[objc]
     ARTRealtimeChannel *channel = [realtime.channels get:@"channelName"];
     ```
-```
+````
 
 To use nested codeblocks when describing features that are available to the realtime and REST interfaces, use the the same syntax as a normal codeblock but prefix the languages with `realtime_` or `rest_`. Spacing should be continuous as with a normal codeblock, however the snippets for each interface should all be written together, rather than interspersed:
 
-```plaintext
+````plaintext
     ```[realtime_javascript]
     const channel = realtime.channels.get('channelName');
     ```
@@ -118,7 +118,7 @@ To use nested codeblocks when describing features that are available to the real
     ```[rest_objc]
     ARTRestChannel *channel = [realtime.channels get:@"channelName"];
     ```
-```
+````
 
 ### In-line code
 
@@ -128,10 +128,10 @@ In-line code should be written between `@` symbols. For example, `the @get()@ me
 
 The following variables can be inserted into codeblocks to generate values at runtime:
 
-| Variable | Description |
-| -------- | ----------- |
-| `{{API_KEY}}` | Injects a demo API key into the code sample if a user isn't logged in. Enables users to select an API key from from their dashboard if they are logged in. |
-| `{{RANDOM_CHANNEL_NAME}}` | Generates a random channel name. |
+| Variable                  | Description                                                                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{{API_KEY}}`             | Injects a demo API key into the code sample if a user isn't logged in. Enables users to select an API key from from their dashboard if they are logged in. |
+| `{{RANDOM_CHANNEL_NAME}}` | Generates a random channel name.                                                                                                                           |
 
 ### Definition lists
 
@@ -167,12 +167,14 @@ To make a cell span two columns:
 There are three types of admonition that can be used; `note`, `important` and `further-reading`. Update the value of `data-type` to switch between them. Admonitions are written using the HTML `<aside>` tag. Content must be constructed in HTML, other than links and in-line code styling which accept textile format.
 
 ```html
-<aside data-type='note'>
-<p>The following restrictions apply to "channel":/docs/channels names:</p>
-<ul><li>Channel names are case sensitive</li>
-<li>They can't start with @[@ or @:@</li>
-<li>They can't be empty</li>
-<li>They can't contain newline characters</li></ul>
+<aside data-type="note">
+  <p>The following restrictions apply to "channel":/docs/channels names:</p>
+  <ul>
+    <li>Channel names are case sensitive</li>
+    <li>They can't start with @[@ or @:@</li>
+    <li>They can't be empty</li>
+    <li>They can't contain newline characters</li>
+  </ul>
 </aside>
 ```
 
@@ -183,8 +185,12 @@ There are three types of admonition that can be used; `note`, `important` and `f
 Two additional types of admonition are used to display features that have been added or updated in a version update; `new` and `updated`.
 
 ```html
-<aside data-type='updated'>
-<p>The @AblyProvider@ was updated in version 2.0. See the "migration guide":https://github.com/ably/ably-js/blob/main/docs/migration-guides/v2/react-hooks.md#rename-optional-id-field-to-ablyid for details on upgrading from a previous version.</p>
+<aside data-type="updated">
+  <p>
+    The @AblyProvider@ was updated in version 2.0. See the "migration
+    guide":https://github.com/ably/ably-js/blob/main/docs/migration-guides/v2/react-hooks.md#rename-optional-id-field-to-ablyid
+    for details on upgrading from a previous version.
+  </p>
 </aside>
 ```
 
@@ -250,10 +256,8 @@ This sentence will be visible regardless of which language is selected.
 
 ```html
 <div lang="java,swift,objc">
-
-h6(#device).
-
-A reference to the "<span lang="default">@LocalDevice@</span><span lang="objc,swift">@ARTLocalDevice@</span>":/api/realtime-sdk/push#local-device object.
+  h6(#device). A reference to the "<span lang="default">@LocalDevice@</span
+  ><span lang="objc,swift">@ARTLocalDevice@</span>":/api/realtime-sdk/push#local-device object.
 </div>
 ```
 
@@ -401,7 +405,7 @@ Each example must include a `README.md` file with instructions to get the develo
   2. Navigate to the examples directory.
   3. Rename environment variable files. (`.env.example` -> `.env.local`)
   4. Update environment variables.
-  5. Install dependencies with `yarn install`.
+  5. Install dependencies with `pnpm install`.
   6. Run the project.
 - **Opening in CodeSandbox**: Instructions for opening the example in CodeSandbox. (At this moment, this heading contains the renaming of the environment variables)
 
@@ -415,8 +419,8 @@ Add entries for each example to the `/examples/package.json` file under `workspa
   "chat-typing-indicator/javascript",
 ],
 "scripts": {
-  "chat-typing-indicator-javascript": "yarn workspace chat-typing-indicator-javascript dev",
-  "chat-typing-indicator-react": "yarn workspace chat-typing-indicator-react dev",
+  "chat-typing-indicator-javascript": "pnpm --filter chat-typing-indicator-javascript dev",
+  "chat-typing-indicator-react": "pnpm --filter chat-typing-indicator-react dev",
 },
 ```
 
@@ -472,7 +476,6 @@ All examples use config from the examples root directory. Update these files ins
   }
   ```
 
-
 #### Styling consistency
 
 For styling consistency purposes, each example will need to use [Franken-ui](https://franken-ui.dev/) for components, and any other styling to use tailwindcss. Some examples for this are the button and input components below:
@@ -480,13 +483,11 @@ For styling consistency purposes, each example will need to use [Franken-ui](htt
 **Button:**
 
 ```html
-<button class="uk-btn uk-btn-md uk-btn-primary py-2 rounded">
-  Submit
-</button>
+<button class="uk-btn uk-btn-md uk-btn-primary py-2 rounded">Submit</button>
 ```
 
 **Input:**
 
 ```html
-<input type="text" class="uk-input uk-width-1-1 uk-border-rounded-left">
+<input type="text" class="uk-input uk-width-1-1 uk-border-rounded-left" />
 ```
