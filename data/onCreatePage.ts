@@ -2,17 +2,22 @@ import { GatsbyNode } from 'gatsby';
 import path from 'path';
 import fs from 'fs';
 
-export type LayoutOptions = { sidebar: boolean; searchBar: boolean; template: string };
+export type LayoutOptions = {
+  leftSidebar: boolean;
+  rightSidebar: boolean;
+  searchBar: boolean;
+  template: string;
+};
 
 const mdxWrapper = path.resolve('src/components/Layout/MDXWrapper.tsx');
 
 const pageLayoutOptions: Record<string, LayoutOptions> = {
-  '/docs': { sidebar: false, searchBar: false, template: 'index' },
-  '/docs/api/control-api': { sidebar: false, searchBar: true, template: 'control-api' },
-  '/docs/sdks': { sidebar: false, searchBar: true, template: 'sdk' },
-  '/examples': { sidebar: false, searchBar: true, template: 'examples' },
-  '/docs/how-to/pub-sub': { sidebar: true, searchBar: true, template: 'how-to' },
-  '/docs/404': { sidebar: false, searchBar: false, template: '404' },
+  '/docs': { leftSidebar: true, rightSidebar: false, searchBar: true, template: 'index' },
+  '/docs/api/control-api': { leftSidebar: false, rightSidebar: false, searchBar: true, template: 'control-api' },
+  '/docs/sdks': { leftSidebar: false, rightSidebar: false, searchBar: true, template: 'sdk' },
+  '/examples': { leftSidebar: false, rightSidebar: false, searchBar: true, template: 'examples' },
+  '/docs/how-to/pub-sub': { leftSidebar: true, rightSidebar: true, searchBar: true, template: 'how-to' },
+  '/docs/404': { leftSidebar: false, rightSidebar: false, searchBar: false, template: '404' },
 };
 
 // Function to extract code element classes from an MDX file
