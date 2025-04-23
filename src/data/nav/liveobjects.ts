@@ -33,6 +33,10 @@ export default {
           name: 'Objects',
           link: '/docs/liveobjects/concepts/objects',
         },
+        {
+          name: 'Operations',
+          link: '/docs/liveobjects/concepts/operations',
+        },
       ],
     },
     {
