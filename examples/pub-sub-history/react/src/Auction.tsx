@@ -176,7 +176,7 @@ export default function AuctionRoom() {
                 Load history
               </button>
             </div>
-            <div className="space-y-1 text-x">
+            <div className="space-y-1 text-xs">
               {biddingHistory.map((bid, index) => (
                 <div key={index} className="flex items-center justify-between py-1 border-b">
                   <span className="font-medium w-1/3 text-left">
