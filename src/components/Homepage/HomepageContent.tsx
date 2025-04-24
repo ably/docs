@@ -2,6 +2,7 @@ import type { ContentData } from 'src/data/content/types';
 import { Image, ImageProps, getImageFromList } from 'src/components/Image';
 import { HeroSection } from './HeroSection';
 import { PlatformAndProducts } from './PlatformAndProducts';
+import { ExamplesSection } from './ExamplesSection';
 
 export const HomepageContent = ({
   homepageContent,
