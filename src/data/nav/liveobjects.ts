@@ -67,6 +67,10 @@ export default {
           name: 'Typing',
           link: '/docs/liveobjects/typing',
         },
+        {
+          name: 'Using the REST API',
+          link: '/docs/liveobjects/rest-api-usage',
+        },
       ],
     },
   ],
