@@ -49,6 +49,13 @@ export const plugins = [
   'gatsby-transformer-sharp',
   'gatsby-plugin-react-helmet',
   {
+    resolve: `gatsby-source-rss-feed`,
+    options: {
+      url: `https://changelog.ably.com/rss`,
+      name: `AblyChangelog`,
+    },
+  },
+  {
     resolve: 'gatsby-plugin-root-import',
     options: {
       'how-tos': `${__dirname}/how-tos`,
