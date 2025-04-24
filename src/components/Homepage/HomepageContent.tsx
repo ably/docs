@@ -3,6 +3,7 @@ import { Image, ImageProps, getImageFromList } from 'src/components/Image';
 import { HeroSection } from './HeroSection';
 import { PlatformAndProducts } from './PlatformAndProducts';
 import { ExamplesSection } from './ExamplesSection';
+import { ChangelogSection } from './Changelog';
 
 export const HomepageContent = ({
   homepageContent,
@@ -41,8 +42,11 @@ export const HomepageContent = ({
         <h3 className="ui-text-h3 pb-24">{platformProducts.title}</h3>
         <PlatformAndProducts section={platformProducts} images={images} />
       </div>
+
       <div className="grid grid-cols-1 gap-y-30 mt-64 md:gap-y-0 md:grid-cols-2 md:gap-x-12 lg:gap-x-24">
         <ExamplesSection section={examples} images={images} />
+
+        <ChangelogSection />
       </div>
     </div>
   );
