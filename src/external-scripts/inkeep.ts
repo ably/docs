@@ -280,14 +280,17 @@ export type InkeepUser = {
 };
 
 export const inkeepChatIdentifyUser = ({ user }: { user?: InkeepUser }) => {
-  if (!(window.inkeepWidget && user)) {
+  const deviceId = (document?.querySelector('meta[name="device_id"]') as HTMLMetaElement)?.content;
+  const userId = user?.uuid || deviceId;
+
+  if (!(window.inkeepWidget && userId)) {
     return;
   }
 
   window.inkeepWidget.update({
     baseSettings: {
       userProperties: {
-        id: user.uuid,
+        id: userId,
       },
     },
   });

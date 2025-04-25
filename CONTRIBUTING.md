@@ -180,7 +180,7 @@ There are three types of admonition that can be used; `note`, `important` and `f
 
 #### Feature changes
 
-Two additional types of admonition are used to display features that have been added or updated in a version update; `new` and `updated`.
+Three additional types of admonition are used to display features that have been added or updated in a version update; `new`, `updated` and `experimental`.
 
 ```html
 <aside data-type='updated'>
