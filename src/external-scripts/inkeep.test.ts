@@ -1,8 +1,6 @@
 import * as scriptLoader from './utils';
 import inkeepChat, { inkeepChatIdentifyUser } from './inkeep';
 
-const identifyKey = 'key';
-
 describe('inkeepChat', () => {
   beforeEach(() => {
     document.body.innerHTML = `<script></script>`;
@@ -42,6 +40,28 @@ describe('inkeepChat', () => {
       inkeepChatIdentifyUser({ user: { uuid: '123' } });
 
       expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: '123' } } });
+    });
+
+    it('sets the Inkeep userId from device_id meta tag when user is not provided', () => {
+      const metaTag = document.createElement('meta');
+      metaTag.name = 'device_id';
+      metaTag.content = 'device123';
+      document.head.appendChild(metaTag);
+
+      inkeepChatIdentifyUser({});
+
+      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: 'device123' } } });
+    });
+
+    it('sets the Inkeep userId from user uuid, even if device_id meta tag exists', () => {
+      const metaTag = document.createElement('meta');
+      metaTag.name = 'device_id';
+      metaTag.content = 'device123';
+      document.head.appendChild(metaTag);
+
+      inkeepChatIdentifyUser({ user: { uuid: 'user123' } });
+
+      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: 'user123' } } });
     });
   });
 });
