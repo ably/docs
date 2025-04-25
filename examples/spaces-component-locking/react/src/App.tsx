@@ -36,7 +36,7 @@ function ComponentLocking() {
   }, [space]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-8">
+    <div className="min-h-screen flex items-center justify-center p-8 text-N1000">
       <div className="flex flex-col space-y-4 w-full max-w-md">
         {entries.map((entry) => {
           return (

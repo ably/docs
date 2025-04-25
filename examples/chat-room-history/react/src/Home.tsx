@@ -39,7 +39,7 @@ export default function Home() {
 
     if (messageCount >= 4 && enterChatButton) {
       (enterChatButton as HTMLButtonElement).disabled = false;
-      enterChatButton.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded';
+      enterChatButton.className = 'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black bg-transparent text-black';
       enterChatButton.onclick = () => navigate('/chat');
     }
 
@@ -49,18 +49,23 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 text-N1000">
       <div className="w-1/3 bg-gray-300 p-8 rounded-lg shadow-lg">
         <h2 className="text-xl mb-8 text-center">
           Use the 'Send message' button to send 5 messages before you enter and subscribe to the chat room.
         </h2>
         <div className="flex flex-col gap-2">
-          <button onClick={handleSendMessage} className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded w-full">
+          <button
+            onClick={handleSendMessage}
+            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] w-full hover:uk-btn-primary+1 active:uk-btn-primary+2">
             Send message
           </button>
-          <button id="enter-chat" className="uk-btn uk-btn-md uk-btn-secondary mb-4 rounded w-full" disabled>
+            <button
+            id="enter-chat"
+            className="uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black bg-transparent text-black cursor-not-allowed hover:uk-btn-primary+1 active:uk-btn-primary+2"
+            disabled>
             Enter chat
-          </button>
+            </button>
         </div>
       </div>
     </div>

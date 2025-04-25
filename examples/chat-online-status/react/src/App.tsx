@@ -31,8 +31,7 @@ const Online = () => {
   });
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800">Live user status</h2>
+    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg text-N1000">
       <div className="space-y-4">
         {presenceData.map((onlineStatus) => (
           <div
@@ -45,11 +44,11 @@ const Online = () => {
               }`}
             ></div>
             <div>
-              <p className="font-medium text-gray-900">
+              <p className="font-medium">
                 {onlineStatus.clientId}
                 {onlineStatus.clientId === clientId ? ' (You)' : ''}
               </p>
-              <p className="text-sm italic text-gray-600">{(onlineStatus.data as OnlineStatus)?.status ?? 'Online'}</p>
+              <p className="text-sm italic">{(onlineStatus.data as OnlineStatus)?.status ?? 'Online'}</p>
             </div>
           </div>
         ))}
@@ -58,7 +57,7 @@ const Online = () => {
           .map((userStatus) => (
             <button
               key={clientId}
-              className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded w-full min-w-[120px]"
+              className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded-[1998px] w-full min-w-[120px] border uk-border-primary hover:bg-N300"
               onClick={async () =>
                 await update({
                   status: (userStatus.data as OnlineStatus)?.status === 'Away' ? 'Online' : 'Away',

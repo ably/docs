@@ -67,7 +67,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 text-N1000">
       <div className="bg-white p-8 rounded-lg shadow-lg w-96">
         <h2 className="text-2xl mb-6 text-center">Live odds</h2>
         <p>Simulate 10 betting odds for a sports game before attaching.</p>
@@ -76,10 +76,10 @@ export default function Home() {
             onClick={() => preloadOddsHistory()}
             disabled={isLoading}
             className={`
-              uk-btn uk-btn-primary uk-border-rounded-right whitespace-nowrap
+             uk-btn uk-btn-primary rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 min-w-[180px]  whitespace-nowrap
               ${isLoading
-                ? ' uk-btn-secondary cursor-not-allowed'
-                : ' uk-btn-primary'}
+                ? ' cursor-not-allowed'
+                : ''}
             `}
           >
             {isLoading ? 'Loading...' : 'Load Live Match Odds'}

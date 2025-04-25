@@ -34,7 +34,7 @@ function AvatarStack() {
   const hasMoreUsers = others.length > 3;
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center text-N1000">
       <div className="flex items-center space-x-[-8px]">
         {self && (
           <div className="relative" key={self.clientId}>

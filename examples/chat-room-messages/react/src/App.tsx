@@ -38,7 +38,7 @@ const Chat = () => {
 
   return (
     <div id="chat-room-reactions" className="container">
-      <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
+      <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen text-N1000">
         <div
           id="messages"
           className="w-96 flex flex-auto flex-col space-y-2 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
@@ -59,11 +59,11 @@ const Chat = () => {
               placeholder="Type something..."
               onChange={(e) => setMessage(e.target.value)}
               value={message}
-              className="uk-input uk-width-1-1 uk-border-rounded-left"
+              className="uk-input uk-width-1-1"
               autoFocus
             />
             <div className="items-center inset-y-0 flex ml-2">
-              <button type="submit" className="uk-btn uk-btn-primary uk-border-rounded-right">
+              <button type="submit" className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] w-full hover:uk-btn-primary+1 active:uk-btn-primary+2">
                 Send
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

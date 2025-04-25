@@ -38,12 +38,12 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 text-N1000">
       <div className="bg-white p-8 rounded-lg shadow-lg w-96 text-center">
         <h2 className="text-2xl mb-6">Welcome to the auction</h2>
         <p>Click the button below to add some historical bids.</p>
         <div className="inline-flex flex-col gap-4 items-center">
-          <button onClick={() => preloadBiddingHistory()} className="uk-btn uk-btn-lg uk-btn-primary">
+          <button onClick={() => preloadBiddingHistory()} className="uk-btn uk-btn-md uk-btn-primary mb-1 mt-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 min-w-[180px]">
             Pre-load bidding history
           </button>
         </div>
