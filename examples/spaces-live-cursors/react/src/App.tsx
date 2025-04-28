@@ -40,7 +40,7 @@ function LiveCursorsDemo() {
     <div
       id="live-cursors"
       ref={liveCursors}
-      className="uk-container min-h-screen flex items-center justify-center bg-gray-50 relative text-N1000"
+      className="uk-container min-h-screen flex items-center justify-center bg-gray-50 relative uk-text-primary"
     >
       <p className="uk-text-lead text-center absolute top-8 left-1/2 transform -translate-x-1/2">
         Move your cursor over the screen to see live cursors in action

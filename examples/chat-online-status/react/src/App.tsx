@@ -31,7 +31,7 @@ const Online = () => {
   });
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg text-N1000">
+    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg uk-text-primary">
       <div className="space-y-4">
         {presenceData.map((onlineStatus) => (
           <div
@@ -57,7 +57,7 @@ const Online = () => {
           .map((userStatus) => (
             <button
               key={clientId}
-              className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded-[1998px] w-full min-w-[120px] border uk-border-primary hover:bg-N300"
+              className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded-[1998px] w-full min-w-[120px] border uk-border-primary"
               onClick={async () =>
                 await update({
                   status: (userStatus.data as OnlineStatus)?.status === 'Away' ? 'Online' : 'Away',

@@ -128,7 +128,7 @@ export default function AuctionRoom() {
   };
 
   return (
-    <div className="h-max p-4 overflow-y-auto text-N1000">
+    <div className="h-max p-4 overflow-y-auto uk-text-primary">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
         <div className="p-4">
           <p className="text-gray-600 text-sm mb-2">Auction item #1</p>

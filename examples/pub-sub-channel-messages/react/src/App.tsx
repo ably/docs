@@ -56,7 +56,7 @@ function ChannelMessages() {
   };
 
   return (
-    <div className="min-h-screen p-4 flex flex-col items-center gap-6 text-N1000">
+    <div className="min-h-screen p-4 flex flex-col items-center gap-6 uk-text-primary">
       <button
         id="publish-button"
         onClick={publishHeadline}

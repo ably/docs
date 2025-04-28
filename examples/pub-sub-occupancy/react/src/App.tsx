@@ -19,7 +19,7 @@ function Stream() {
   }, []);
 
   return (
-    <div className="flex justify-center items-center min-h-screen relative text-N1000">
+    <div className="flex justify-center items-center min-h-screen relative uk-text-primary">
       <div className="h-[320px] bg-gray-200 flex items-center justify-center relative">
         <video
           src="https://cdn.ably.com/chat/basket_ball_international.mov"

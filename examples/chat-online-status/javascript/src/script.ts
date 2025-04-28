@@ -30,7 +30,7 @@ async function initializeChat() {
 
       if (event.clientId === realtimeClient.auth.clientId) {
         const button = document.createElement('button');
-        button.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded-[1998px] w-full min-w-[120px] border uk-border-primary hover:bg-N300';
+        button.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded-[1998px] w-full min-w-[120px] border uk-border-primary';
         button.id = 'status-button';
         button.onclick = async () => {
           await room.presence.update({

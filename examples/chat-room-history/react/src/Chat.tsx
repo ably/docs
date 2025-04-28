@@ -42,7 +42,7 @@ export default function Chat() {
   };
 
   return (
-    <div id="chat-room-messages" className="w-full flex justify-center items-center relative bg-[#f4f8fb] h-screen text-N1000">
+    <div id="chat-room-messages" className="w-full flex justify-center items-center relative bg-[#f4f8fb] h-screen uk-text-primary">
       <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
         <div
           id="messages"
@@ -60,7 +60,7 @@ export default function Chat() {
               <span className={`font-bold ${message.clientId === clientId ? 'text-grey-500' : 'text-blue-500'} mr-2`}>
                 {message.clientId === clientId ? 'You' : message.clientId}:
               </span>
-              <span className="text-N1000">{message.text}</span>
+              <span className="uk-text-primary">{message.text}</span>
             </div>
           ))}
         </div>

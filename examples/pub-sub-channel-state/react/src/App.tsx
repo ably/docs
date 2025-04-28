@@ -45,7 +45,7 @@ function ChannelState() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 text-N1000">
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 uk-text-primary">
       {isAttached ? (
         <div className="flex justify-center items-center">
           <button onClick={handleDetach} className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2">

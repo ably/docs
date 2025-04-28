@@ -97,7 +97,6 @@ const getPastMessages = async () => {
 
   const loadButton = document.getElementById('load-past-messages');
   if (loadButton instanceof HTMLButtonElement) {
-    console.log('hello?');
     loadButton.disabled = true;
     loadButton.className =
       'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black bg-transparent text-black cursor-not-allowed hover:uk-btn-primary+1 active:uk-btn-primary+2 absolute top-2 left-1/2 transform -translate-x-1/2 p-2 cursor-not-allowed';
