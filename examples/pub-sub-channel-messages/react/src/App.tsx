@@ -43,7 +43,7 @@ function ChannelMessages() {
     if (headlines.length === 0) {
       setIsButtonDisabled(true);
       const publishButton = document.getElementById('publish-button') as HTMLButtonElement;
-      publishButton.className = 'bg-gray-500 text-white px-4 py-2 rounded';
+      publishButton.className = 'uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 cursor-not-allowed';
 
       return;
     }
@@ -56,11 +56,11 @@ function ChannelMessages() {
   };
 
   return (
-    <div className="min-h-screen p-8 flex flex-col items-center gap-6">
+    <div className="min-h-screen p-4 flex flex-col items-center gap-6 uk-text-primary">
       <button
         id="publish-button"
         onClick={publishHeadline}
-        className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded"
+        className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2"
         disabled={isButtonDisabled}
       >
         Publish Random Headline

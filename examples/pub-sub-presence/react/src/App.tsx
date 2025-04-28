@@ -18,7 +18,7 @@ function PresenceList() {
   const { updateStatus } = usePresence(channelName, 'Online');
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen p-8 uk-text-primary">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-xl font-bold mb-4">User list</h2>
         <div className="space-y-2">
@@ -47,7 +47,7 @@ function PresenceList() {
             onClick={() => {
               updateStatus(status);
             }}
-            className="uk-btn uk-btn-primary uk-border-rounded-right whitespace-nowrap"
+            className="uk-btn uk-btn-primary rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 whitespace-nowrap"
             disabled={!status.trim()}
           >
             Update status

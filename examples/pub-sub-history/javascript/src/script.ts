@@ -139,7 +139,7 @@ const loadHistoryButton = document.getElementById('load-history') as HTMLButtonE
 
 async function addHistory() {
   loadHistoryButton.disabled = true;
-  loadHistoryButton.className = 'uk-btn uk-btn-md uk-btn-default py-2 rounded cursor-not-allowed';
+  loadHistoryButton.className = 'uk-btn uk-btn-sm rounded-[1998px] uk-btn-default py-1 rounded cursor-not-allowed';
 
   const resultPage = await channel.history();
   const messages = resultPage.items;

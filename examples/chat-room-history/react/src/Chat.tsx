@@ -30,7 +30,7 @@ export default function Chat() {
       if (loadButton instanceof HTMLButtonElement) {
         loadButton.disabled = true;
         loadButton.className =
-          'uk-btn uk-btn-md uk-btn-primary mb-4 rounded absolute top-2 left-1/2 transform -translate-x-1/2 p-2';
+          'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black bg-transparent text-black cursor-not-allowed hover:uk-btn-primary+1 active:uk-btn-primary+2 absolute top-2 left-1/2 transform -translate-x-1/2 p-2 cursor-not-allowed';
       }
     });
   };
@@ -42,7 +42,7 @@ export default function Chat() {
   };
 
   return (
-    <div id="chat-room-messages" className="container">
+    <div id="chat-room-messages" className="w-full flex justify-center items-center relative bg-[#f4f8fb] h-screen uk-text-primary">
       <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen">
         <div
           id="messages"
@@ -50,7 +50,7 @@ export default function Chat() {
         >
           <button
             id="load-past-messages"
-            className="uk-btn uk-btn-md uk-btn-primary mb-4 rounded absolute top-2 left-1/2 transform -translate-x-1/2 p-2"
+            className="uk-btn uk-btn-sm uk-btn-primary mb-2 rounded-[1998px] absolute top-2 left-1/2 transform -translate-x-1/2 p-2 hover:uk-btn-primary+1 active:uk-btn-primary+2"
             onClick={getPastMessages}
           >
             ↑ Load previous messages
@@ -60,7 +60,7 @@ export default function Chat() {
               <span className={`font-bold ${message.clientId === clientId ? 'text-grey-500' : 'text-blue-500'} mr-2`}>
                 {message.clientId === clientId ? 'You' : message.clientId}:
               </span>
-              <span className="text-gray-700">{message.text}</span>
+              <span className="uk-text-primary">{message.text}</span>
             </div>
           ))}
         </div>
@@ -75,7 +75,10 @@ export default function Chat() {
               autoFocus
             />
             <div className="items-center inset-y-0 flex ml-2">
-              <button type="submit" className="uk-btn uk-btn-secondary uk-border-rounded-right">
+              <button
+                type="submit"
+                className="uk-btn uk-btn-primary rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2"
+              >
                 Send
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

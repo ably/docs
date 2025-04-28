@@ -64,6 +64,7 @@ publishButton.addEventListener('click', () => {
 
   if (headlines.length === 0) {
     publishButton.disabled = true;
-    publishButton.className = 'bg-gray-500 text-white px-4 py-2 rounded';
+    publishButton.className =
+      'uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 cursor-not-allowed';
   }
 });
