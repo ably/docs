@@ -37,6 +37,10 @@ export default {
           name: 'Operations',
           link: '/docs/liveobjects/concepts/operations',
         },
+        {
+          name: 'Synchronization',
+          link: '/docs/liveobjects/concepts/synchronization',
+        },
       ],
     },
     {
