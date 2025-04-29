@@ -1,5 +1,6 @@
 import { scriptLoader } from './utils';
 import posthog from 'posthog-js';
+import { track } from '@ably/ui/core/insights';
 
 const inkeepChat = (apiKey, conversationsUrl: '') => {
   if (!apiKey) {
@@ -307,6 +308,9 @@ export const inkeepOnLoad = (apiKey: string, conversationsUrl: string) => {
   };
 
   baseSettings.onEvent = (event: ConversationEvent) => {
+    const { eventName, properties } = event;
+    track(`inkeep_${eventName}`, properties);
+
     if (event.eventName === 'user_message_submitted') {
       sendConversationData(event as ConversationEvent, conversationsUrl);
     }
