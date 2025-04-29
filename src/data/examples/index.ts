@@ -8,7 +8,6 @@ export const examples: Example[] = [
     name: 'Online Status',
     description: 'Show online/offline status of users in a chat application.',
     products: ['chat'],
-    useCases: ['live-chat'],
     layout: 'double-horizontal',
   },
   {
@@ -16,7 +15,6 @@ export const examples: Example[] = [
     name: 'Room History',
     description: 'Display message history in chat rooms.',
     products: ['chat'],
-    useCases: ['live-chat'],
     layout: 'single-horizontal',
   },
   {
@@ -24,7 +22,6 @@ export const examples: Example[] = [
     name: 'Room Messages',
     description: 'Implement real-time messaging in chat rooms.',
     products: ['chat'],
-    useCases: ['live-chat'],
     layout: 'double-vertical',
   },
   {
@@ -32,7 +29,6 @@ export const examples: Example[] = [
     name: 'Room Reactions',
     description: 'Add emoji reactions to messages in chat rooms.',
     products: ['chat'],
-    useCases: ['live-chat'],
     layout: 'double-vertical',
   },
   {
@@ -40,7 +36,6 @@ export const examples: Example[] = [
     name: 'Typing Indicator',
     description: 'Show when users are typing in a chat room.',
     products: ['chat'],
-    useCases: ['live-chat'],
     layout: 'double-vertical',
   },
   {
@@ -48,7 +43,6 @@ export const examples: Example[] = [
     name: 'Channel Messages',
     description: 'Implement pub/sub messaging using channels.',
     products: ['pubsub'],
-    useCases: ['messaging'],
     layout: 'single-vertical',
   },
   {
@@ -56,7 +50,6 @@ export const examples: Example[] = [
     name: 'Channel State',
     description: 'Monitor and react to channel state changes.',
     products: ['pubsub'],
-    useCases: ['messaging'],
     layout: 'single-vertical',
   },
   {
@@ -64,7 +57,6 @@ export const examples: Example[] = [
     name: 'Connection State',
     description: 'Handle connection state changes in pub/sub applications.',
     products: ['pubsub'],
-    useCases: ['messaging'],
     layout: 'single-vertical',
   },
   {
@@ -72,7 +64,6 @@ export const examples: Example[] = [
     name: 'Message History',
     description: 'Retrieve historical messages from channels.',
     products: ['pubsub'],
-    useCases: ['messaging'],
     layout: 'single-vertical',
   },
   {
@@ -80,7 +71,6 @@ export const examples: Example[] = [
     name: 'Message Encryption',
     description: 'Implement end-to-end encryption for pub/sub messages.',
     products: ['pubsub'],
-    useCases: ['messaging'],
     layout: 'double-horizontal',
   },
   {
@@ -88,7 +78,6 @@ export const examples: Example[] = [
     name: 'Channel Occupancy',
     description: 'Monitor the number of subscribers on a channel.',
     products: ['pubsub'],
-    useCases: ['messaging'],
     layout: 'single-horizontal',
   },
   {
@@ -96,7 +85,6 @@ export const examples: Example[] = [
     name: 'Presence',
     description: 'Track presence of users on channels.',
     products: ['pubsub'],
-    useCases: ['messaging'],
     layout: 'double-horizontal',
   },
   {
@@ -104,7 +92,6 @@ export const examples: Example[] = [
     name: 'Rewind',
     description: 'Specify where to start a channel attachment from.',
     products: ['pubsub'],
-    useCases: ['messaging'],
     layout: 'single-vertical',
   },
   {
@@ -112,7 +99,6 @@ export const examples: Example[] = [
     name: 'Avatar Stack',
     description: 'Display stacked avatars for users in a space.',
     products: ['spaces'],
-    useCases: ['collaboration'],
     layout: 'double-vertical',
   },
   {
@@ -120,7 +106,6 @@ export const examples: Example[] = [
     name: 'Component Locking',
     description: 'Implement component-level locking in collaborative spaces.',
     products: ['spaces'],
-    useCases: ['collaboration'],
     layout: 'double-horizontal',
   },
   {
@@ -128,7 +113,6 @@ export const examples: Example[] = [
     name: 'Live Cursors',
     description: 'Show real-time cursor positions of users in a space.',
     products: ['spaces'],
-    useCases: ['collaboration'],
     layout: 'double-vertical',
   },
   {
@@ -136,10 +120,21 @@ export const examples: Example[] = [
     name: 'Member Location',
     description: 'Track and display member locations within a space.',
     products: ['spaces'],
-    useCases: ['collaboration'],
     layout: 'double-horizontal',
   },
 ];
+
+export const products = {
+  pubsub: {
+    label: 'Pub/Sub',
+  },
+  chat: {
+    label: 'Chat',
+  },
+  spaces: {
+    label: 'Spaces',
+  },
+};
 
 const useCasesList = [
   'authentication',
