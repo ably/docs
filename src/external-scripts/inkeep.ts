@@ -1,7 +1,7 @@
 import { scriptLoader } from './utils';
 import posthog from 'posthog-js';
 
-const inkeepChat = (apiKey: string) => {
+const inkeepChat = (apiKey, conversationsUrl: '') => {
   if (!apiKey) {
     return;
   }
@@ -13,7 +13,7 @@ const inkeepChat = (apiKey: string) => {
     crossOrigin: 'anonymous',
     onload: () => {
       posthog.onFeatureFlags(() => {
-        inkeepOnLoad(apiKey);
+        inkeepOnLoad(apiKey, conversationsUrl);
       });
     },
   });
@@ -152,6 +152,16 @@ interface SourceItem {
   tabs?: string[];
 }
 
+interface ConversationEvent {
+  eventName: string;
+  properties: {
+    conversation: {
+      id: string;
+      messages: { content: string }[];
+    };
+  };
+}
+
 const transformSource = (source: SourceItem) => {
   const { url, breadcrumbs } = source;
   if (!url) {
@@ -201,8 +211,33 @@ const searchSettings = {
   tabs: ['All', 'Docs', 'Blog', 'FAQs', 'GitHub'],
 };
 
-export const inkeepOnLoad = (apiKey: string) => {
-  const baseSettings = {
+export const inkeepOnLoad = (apiKey: string, conversationsUrl: string) => {
+  interface BaseSettings {
+    apiKey: string;
+    transformSource: (source: SourceItem) =>
+      | SourceItem
+      | {
+          tabs: (string | { breadcrumbs: string[] })[][];
+          id?: string;
+          title: string | undefined;
+          url: string;
+          description: string | undefined;
+          breadcrumbs: string[];
+          type: string;
+          contentType?: string;
+          tag?: string;
+        };
+    theme: {
+      styles: Array<{
+        key: string;
+        type: string;
+        value: string;
+      }>;
+    };
+    onEvent?: (event: ConversationEvent) => void;
+  }
+
+  const baseSettings: BaseSettings = {
     apiKey,
     transformSource,
     theme: {
@@ -245,6 +280,36 @@ export const inkeepOnLoad = (apiKey: string) => {
         },
       ],
     },
+  };
+
+  const sendConversationData = (event: ConversationEvent, conversationsUrl: string): void => {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    if (!csrfToken || !conversationsUrl) {
+      return;
+    }
+
+    const payload = {
+      conversation: {
+        conversation_id: event.properties.conversation.id,
+        message: event.properties.conversation.messages.at(-1)?.content,
+      },
+    };
+
+    fetch(conversationsUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify(payload),
+    });
+  };
+
+  baseSettings.onEvent = (event: ConversationEvent) => {
+    if (event.eventName === 'user_message_submitted') {
+      sendConversationData(event as ConversationEvent, conversationsUrl);
+    }
   };
 
   const config = {
