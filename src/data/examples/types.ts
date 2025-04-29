@@ -1,12 +1,10 @@
 import { LanguageKey } from '../languages/types';
-import { UseCase } from './index';
 
 export type Example = {
   id: string;
   name: string;
   description: string;
   products: string[];
-  useCases: UseCase[];
   languages?: LanguageKey[];
   layout?: 'single-horizontal' | 'double-horizontal' | 'single-vertical' | 'double-vertical';
   visibleFiles?: string[];
