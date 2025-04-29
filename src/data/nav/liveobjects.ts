@@ -75,6 +75,10 @@ export default {
           name: 'Using the REST API',
           link: '/docs/liveobjects/rest-api-usage',
         },
+        {
+          name: 'Inband Objects',
+          link: '/docs/liveobjects/inband-objects',
+        },
       ],
     },
   ],
