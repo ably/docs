@@ -43,7 +43,7 @@ function EncodedMessages() {
           <button
             id="publish-button"
             onClick={publishMessage}
-            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 min-w-[180px] h-10"
+            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 h-10"
             disabled={!message.trim()}
           >
             Publish
@@ -94,7 +94,7 @@ function DecodedMessages() {
           <button
             id="publish-button"
             onClick={publishMessage}
-            className="uk-btn uk-btn-primary rounded h-10"
+            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 h-10"
             disabled={!message.trim()}
           >
             Publish
