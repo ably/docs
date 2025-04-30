@@ -19,7 +19,7 @@ export const examples: Example[] = [
   },
   {
     id: 'chat-room-messages',
-    name: 'Room Messages',
+    name: 'Chat Messages',
     description: 'Implement real-time messaging in chat rooms.',
     products: ['chat'],
     layout: 'double-vertical',
