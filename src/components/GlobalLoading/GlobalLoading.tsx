@@ -37,6 +37,7 @@ const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
             mixpanelAutoCapture
             posthogApiKey
             posthogHost
+            conversationsUrl
           }
         }
       }

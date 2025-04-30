@@ -32,6 +32,7 @@ export const siteMetadata = {
     mixpanelAutoCapture: !!process.env.MIXPANEL_AUTO_CAPTURE,
     posthogApiKey: process.env.POSTHOG_API_KEY,
     posthogHost: process.env.POSTHOG_API_HOST || 'https://insights.ably.com',
+    conversationsUrl: process.env.CONVERSATIONS_API_URL,
   },
 };
 
