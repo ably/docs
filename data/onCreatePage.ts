@@ -6,7 +6,7 @@ const pageLayoutOptions: Record<string, LayoutOptions> = {
   '/docs': { sidebar: false, searchBar: false, template: 'index' },
   '/docs/api/control-api': { sidebar: false, searchBar: true, template: 'control-api' },
   '/docs/sdks': { sidebar: false, searchBar: true, template: 'sdk' },
-  '/docs/examples': { sidebar: false, searchBar: true, template: 'examples' },
+  '/examples': { sidebar: false, searchBar: true, template: 'examples' },
   '/docs/how-to/pub-sub': { sidebar: true, searchBar: true, template: 'how-to' },
   '/docs/404': { sidebar: false, searchBar: false, template: '404' },
 };

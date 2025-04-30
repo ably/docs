@@ -24,7 +24,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
   };
 
   const tabs = ['Documentation', 'Examples'];
-  const tabLinks = ['/docs', '/docs/examples'];
+  const tabLinks = ['/docs', '/examples'];
 
   return (
     <AblyHeader
@@ -38,7 +38,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
           options={{
             underline: false,
             flexibleTabHeight: true,
-            defaultTabIndex: location.pathname.includes('/docs/examples') ? 1 : 0,
+            defaultTabIndex: location.pathname.includes('/examples') ? 1 : 0,
           }}
         />
       }

@@ -13,7 +13,7 @@ const Examples = ({
   data: { allFile: { images: ImageProps[] } };
 }) => {
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl('/docs/examples');
+  const canonical = canonicalUrl('/examples');
   const meta_title = 'Ably Examples - Code Samples and Implementation Guides';
   const meta_description =
     'Browse our collection of code examples, implementation guides, and sample projects to help you integrate Ably into your applications.';

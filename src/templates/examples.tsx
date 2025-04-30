@@ -86,7 +86,7 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
   return (
     <>
       <div className="my-40">
-        <Link to="/docs/examples" className="flex gap-4 items-center mb-20">
+        <Link to="/examples" className="flex gap-4 items-center mb-20">
           <Icon name="icon-gui-chevron-left-micro" size="16px" />
           <span className="ui-text-menu4 text-neutral-900 dark:text-neutral-400 font-semibold">All examples</span>
         </Link>

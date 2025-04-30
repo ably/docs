@@ -81,7 +81,7 @@ const ExamplesGrid = ({
     <div className="grid grid-cols-[repeat(auto-fill,_minmax(260px,_1fr))] gap-x-20 gap-y-32">
       {examples.map(({ id, name, description, languages, products, useCases }, key) => (
         <div
-          onClick={() => navigate(`/docs/examples/${id}`)}
+          onClick={() => navigate(`/examples/${id}`)}
           className="w-full relative overflow-hidden group/examples-index-card cursor-pointer"
           key={`${name}-${key}`}
         >

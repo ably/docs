@@ -278,7 +278,7 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     };
 
     createPage({
-      path: `/docs/examples/${example.id}`,
+      path: `/examples/${example.id}`,
       component: examplesTemplate,
       context: {
         example,
