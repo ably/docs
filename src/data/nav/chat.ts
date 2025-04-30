@@ -18,8 +18,17 @@ export default {
       ],
     },
     {
-      name: 'Get started',
+      name: 'Getting started',
       pages: [
+        {
+          name: 'Quickstarts',
+          pages: [
+            {
+              name: 'JavaScript',
+              link: '/docs/chat/getting-started/javascript',
+            },
+          ],
+        },
         {
           name: 'SDK setup',
           link: '/docs/chat/setup',
