@@ -1,7 +1,8 @@
 "use client";
 
 import { Inter } from "next/font/google";
-import { ChatClient, ChatClientProvider, ChatRoomProvider, AllFeaturesEnabled } from '@ably/chat';
+import { ChatClientProvider, ChatRoomProvider } from '@ably/chat/react';
+import { ChatClient } from '@ably/chat';
 import { Realtime } from 'ably';
 import '../../styles/styles.css'
 import { useEffect, useState } from "react";
@@ -35,9 +36,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ChatClientProvider client={chatClient}>
           <ChatRoomProvider
-            id={roomName}
-            options={AllFeaturesEnabled}
-          >
+            id={roomName}>
             {children}
           </ChatRoomProvider>
         </ChatClientProvider>

@@ -1,5 +1,5 @@
 import * as Ably from 'ably';
-import { ChatClient, PresenceEvent, PresenceMember, AllFeaturesEnabled } from '@ably/chat';
+import { ChatClient, PresenceEvent, PresenceMember } from '@ably/chat';
 import { faker } from '@faker-js/faker';
 
 const realtimeClient = new Ably.Realtime({
@@ -13,9 +13,7 @@ async function initializeChat() {
   const channelName = urlParams.get('name') || 'chat-online-status';
 
   // Get ROOM with typing capabilities
-  const room = await chatClient.rooms.get(channelName, {
-    presence: AllFeaturesEnabled.presence,
-  });
+  const room = await chatClient.rooms.get(channelName);
   const onlineStatuses = await room.presence.get();
 
   for (const onlineStatus of onlineStatuses) {
