@@ -8,6 +8,7 @@ import ExamplesRenderer from 'src/components/Examples/ExamplesRenderer';
 import { Link } from 'gatsby';
 import { LanguageKey } from 'src/data/languages/types';
 import LinkButton from '@ably/ui/core/LinkButton';
+import { UnstyledOpenInCodeSandboxButton } from '@codesandbox/sandpack-react';
 
 const MarkdownOverrides = {
   h1: {
@@ -99,37 +100,40 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
           apiKey={apiKey}
           activeLanguage={activeLanguage}
           setActiveLanguage={setActiveLanguage}
-        />
+        >
+          <div className="flex md:flex-row flex-col justify-between gap-40 mt-64">
+            {content ? (
+              <div className="flex flex-col gap-40 max-w-[800px] order-2 md:order-1">
+                <Markdown
+                  options={{
+                    wrapper: React.Fragment,
+                    overrides: MarkdownOverrides,
+                  }}
+                >
+                  {content}
+                </Markdown>
+              </div>
+            ) : null}
+            <div className="flex flex-col gap-8 w-full md:w-[260px] order-1 md:order-2 md:sticky md:top-80 self-start">
+              <LinkButton
+                href={`https://github.com/ably/docs/tree/main/examples/${example.id}/${activeLanguage}`}
+                target="_blank"
+                variant="secondary"
+                rightIcon="icon-social-github"
+              >
+                View on GitHub
+              </LinkButton>
+              <UnstyledOpenInCodeSandboxButton className="p-0">
+                <LinkButton href={'#'} variant="secondary" rightIcon="icon-gui-code-bracket-outline" className="w-full">
+                  View on CodeSandbox
+                </LinkButton>
+              </UnstyledOpenInCodeSandboxButton>
+            </div>
+          </div>
+        </ExamplesRenderer>
       ) : (
         <p>Loading...</p>
       )}
-      <div className="flex md:flex-row flex-col justify-between gap-40 mt-64">
-        {content ? (
-          <div className="flex flex-col gap-40 max-w-[800px] order-2 md:order-1">
-            <Markdown
-              options={{
-                wrapper: React.Fragment,
-                overrides: MarkdownOverrides,
-              }}
-            >
-              {content}
-            </Markdown>
-          </div>
-        ) : null}
-        <div className="flex flex-col gap-8 w-full md:w-[260px] order-1 md:order-2 md:sticky md:top-80 self-start">
-          <LinkButton
-            href={`https://github.com/ably/docs/tree/main/examples/${example.id}/${activeLanguage}`}
-            target="_blank"
-            variant="secondary"
-            rightIcon="icon-social-github"
-          >
-            View on GitHub
-          </LinkButton>
-          <LinkButton href={'#'} variant="secondary" rightIcon="icon-gui-code-bracket-outline">
-            View on CodeSandbox
-          </LinkButton>
-        </div>
-      </div>
     </>
   );
 };
