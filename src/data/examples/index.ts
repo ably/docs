@@ -9,6 +9,7 @@ export const examples: Example[] = [
     description: 'Show online/offline status of users in a chat application.',
     products: ['chat'],
     layout: 'double-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'chat-room-history',
@@ -16,6 +17,7 @@ export const examples: Example[] = [
     description: 'Display message history in chat rooms.',
     products: ['chat'],
     layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
   },
   {
     id: 'chat-room-messages',
@@ -23,6 +25,7 @@ export const examples: Example[] = [
     description: 'Implement real-time messaging in chat rooms.',
     products: ['chat'],
     layout: 'double-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'chat-room-reactions',
@@ -30,6 +33,7 @@ export const examples: Example[] = [
     description: 'Add emoji reactions to messages in chat rooms.',
     products: ['chat'],
     layout: 'double-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'chat-typing-indicator',
@@ -37,6 +41,7 @@ export const examples: Example[] = [
     description: 'Show when users are typing in a chat room.',
     products: ['chat'],
     layout: 'double-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-channel-messages',
@@ -44,6 +49,7 @@ export const examples: Example[] = [
     description: 'Implement pub/sub messaging using channels.',
     products: ['pubsub'],
     layout: 'single-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-channel-state',
@@ -51,6 +57,7 @@ export const examples: Example[] = [
     description: 'Monitor and react to channel state changes.',
     products: ['pubsub'],
     layout: 'single-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-connection-state',
@@ -58,6 +65,7 @@ export const examples: Example[] = [
     description: 'Handle connection state changes in pub/sub applications.',
     products: ['pubsub'],
     layout: 'single-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-history',
@@ -65,6 +73,7 @@ export const examples: Example[] = [
     description: 'Retrieve historical messages from channels.',
     products: ['pubsub'],
     layout: 'single-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'Auction.tsx', 'Home.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-message-encryption',
@@ -72,6 +81,7 @@ export const examples: Example[] = [
     description: 'Implement end-to-end encryption for pub/sub messages.',
     products: ['pubsub'],
     layout: 'double-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-occupancy',
@@ -79,6 +89,7 @@ export const examples: Example[] = [
     description: 'Monitor the number of subscribers on a channel.',
     products: ['pubsub'],
     layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-presence',
@@ -86,6 +97,7 @@ export const examples: Example[] = [
     description: 'Track presence of users on channels.',
     products: ['pubsub'],
     layout: 'double-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-rewind',
@@ -93,6 +105,7 @@ export const examples: Example[] = [
     description: 'Specify where to start a channel attachment from.',
     products: ['pubsub'],
     layout: 'single-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'Home.tsx', 'Odds.tsx', 'index.tsx'],
   },
   {
     id: 'spaces-avatar-stack',
@@ -100,6 +113,7 @@ export const examples: Example[] = [
     description: 'Display stacked avatars for users in a space.',
     products: ['spaces'],
     layout: 'double-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'main.tsx', 'components/Avatar.tsx'],
   },
   {
     id: 'spaces-component-locking',
@@ -107,6 +121,15 @@ export const examples: Example[] = [
     description: 'Implement component-level locking in collaborative spaces.',
     products: ['spaces'],
     layout: 'double-horizontal',
+    visibleFiles: [
+      'index.html',
+      'src/script.ts',
+      'App.tsx',
+      'index.tsx',
+      'components/AblyPoweredInput.tsx',
+      'InputCell.tsx',
+      'LockedField.tsx',
+    ],
   },
   {
     id: 'spaces-live-cursors',
@@ -114,6 +137,15 @@ export const examples: Example[] = [
     description: 'Show real-time cursor positions of users in a space.',
     products: ['spaces'],
     layout: 'double-vertical',
+    visibleFiles: [
+      'index.html',
+      'src/script.ts',
+      'App.tsx',
+      'index.tsx',
+      'components/CursorSvg.tsx',
+      'components/Livecursors.tsx',
+      'hooks/useTrackCursor.tsx',
+    ],
   },
   {
     id: 'spaces-member-location',
@@ -121,6 +153,14 @@ export const examples: Example[] = [
     description: 'Track and display member locations within a space.',
     products: ['spaces'],
     layout: 'double-horizontal',
+    visibleFiles: [
+      'index.html',
+      'src/script.ts',
+      'App.tsx',
+      'index.tsx',
+      'components/Cell.tsx',
+      'components/Spreadsheet.tsx',
+    ],
   },
 ];
 
