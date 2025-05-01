@@ -58,17 +58,11 @@ export default function Home() {
         <div className="flex flex-col gap-2">
           <button
             onClick={handleSendMessage}
-            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] w-full hover
-:uk-btn-primary+1 active:uk-btn-primary+2"
+            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] w-full hover:uk-btn-primary+1 active:uk-btn-primary+2"
           >
             Send message
           </button>
-          <button
-            id="enter-chat"
-            className="uk-btn uk-btn-sm uk-btn-secondary mb-1 round
-ed"
-            disabled
-          >
+          <button id="enter-chat" className="uk-btn uk-btn-sm uk-btn-secondary mb-1 rounded" disabled>
             Enter chat
           </button>
         </div>
