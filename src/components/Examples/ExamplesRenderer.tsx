@@ -35,6 +35,27 @@ const UserIndicator = ({ user }: { user: string }) => {
   );
 };
 
+const getDependencies = (id: string, products: string[], activeLanguage: LanguageKey) => {
+  return {
+    ably: '^2.5.0',
+    nanoid: '^5.0.7',
+    minifaker: '1.34.1',
+    ...(products.includes('auth') ? { cors: '^2.8.5' } : {}),
+    ...(products.includes('chat') ? { '@ably/chat': '^0.6.0' } : {}),
+    ...(products.includes('spaces') ? { '@ably/spaces': '^0.4.0' } : {}),
+    ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
+    ...(activeLanguage === 'react' || products.includes('chat') || products.includes('spaces')
+      ? {
+          react: '^18',
+          'react-dom': '^18',
+          'react-icons': '^5.4.0',
+          'react-router-dom': '^6.22.2',
+        }
+      : {}),
+    ...(id === 'pub-sub-history' && activeLanguage === 'react' ? { uikit: '^3.16.22' } : {}),
+  };
+};
+
 const ExamplesRenderer = ({
   example,
   apiKey,
@@ -45,41 +66,26 @@ const ExamplesRenderer = ({
   const { id, files, visibleFiles, layout, products } = example;
 
   const rewrittenFiles = useMemo<ExampleFiles>(() => {
-    return Object.entries(files).reduce((acc, [languageKey, languageFiles]) => {
-      return {
-        ...acc,
-        [languageKey]: updateAblyConnectionKey(languageFiles, apiKey, { [languageKey]: getRandomChannelName() }),
-      };
-    }, {});
+    const result: ExampleFiles = {};
+    Object.entries(files).forEach(([languageKey, languageFiles]) => {
+      result[languageKey as LanguageKey] = updateAblyConnectionKey(languageFiles, apiKey, {
+        [languageKey]: getRandomChannelName(),
+      });
+    });
+    return result;
   }, [files, apiKey]);
 
   const languageFiles = rewrittenFiles[activeLanguage];
 
   const isVerticalLayout = useMemo(() => layout === 'single-vertical' || layout === 'double-vertical', [layout]);
   const isDoubleLayout = useMemo(() => layout === 'double-horizontal' || layout === 'double-vertical', [layout]);
+  const dependencies = useMemo(() => getDependencies(id, products, activeLanguage), [id, products, activeLanguage]);
 
   return (
     <SandpackProvider
       files={languageFiles}
       customSetup={{
-        dependencies: {
-          ably: '^2.5.0',
-          nanoid: '^5.0.7',
-          minifaker: '1.34.1',
-          ...(products.includes('auth') ? { cors: '^2.8.5' } : {}),
-          ...(products.includes('chat') ? { '@ably/chat': '^0.6.0' } : {}),
-          ...(products.includes('spaces') ? { '@ably/spaces': '^0.4.0' } : {}),
-          ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
-          ...(activeLanguage === 'react' || products.includes('chat') || products.includes('spaces')
-            ? {
-                react: '^18',
-                'react-dom': '^18',
-                'react-icons': '^5.4.0',
-                'react-router-dom': '^6.22.2',
-              }
-            : {}),
-          ...(id === 'pub-sub-history' && activeLanguage === 'react' ? { uikit: '^3.16.22' } : {}),
-        },
+        dependencies,
         devDependencies: {
           typescript: '^4.0.0',
         },

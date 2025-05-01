@@ -84,6 +84,14 @@ const ExamplesGrid = ({
           onClick={() => navigate(`/examples/${id}`)}
           className="w-full relative overflow-hidden group/examples-index-card cursor-pointer"
           key={`${name}-${key}`}
+          role="button"
+          aria-label={`View ${name} example`}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              navigate(`/examples/${id}`);
+            }
+          }}
         >
           <div className="z-0 bg-neutral-100 overflow-hidden h-256 sm:h-200 relative flex justify-center items-center ">
             <div className="group-hover/examples-index-card:scale-105 transition-transform">

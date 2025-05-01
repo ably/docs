@@ -256,7 +256,9 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     }
 
     const relatedFiles = examplesResult.data.allExampleFile.nodes.filter((node) => node.project === exampleDatum.id);
-    const languageFiles = (exampleDatum.languages ?? DEFAULT_EXAMPLE_LANGUAGES).reduce((acc, language) => {
+    const languageFiles: Record<string, Record<string, string>> = {};
+
+    for (const language of exampleDatum.languages ?? DEFAULT_EXAMPLE_LANGUAGES) {
       const filesForLanguage = relatedFiles.reduce<Record<string, string>>((acc, file) => {
         if (file.language === language && language === 'react' && file.projectRelativePath.startsWith('src/')) {
           acc[file.projectRelativePath.replace('src/', '')] = file.content;
@@ -265,12 +267,8 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
         }
         return acc;
       }, {});
-
-      return {
-        ...acc,
-        [language]: filesForLanguage,
-      };
-    }, {});
+      languageFiles[language] = filesForLanguage;
+    }
 
     const example = {
       ...exampleDatum,
