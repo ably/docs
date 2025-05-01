@@ -10,6 +10,7 @@ export const examples: Example[] = [
     products: ['chat'],
     useCases: ['live-chat'],
     layout: 'double-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'chat-room-history',
@@ -18,6 +19,7 @@ export const examples: Example[] = [
     products: ['chat'],
     useCases: ['live-chat'],
     layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
   },
   {
     id: 'chat-room-messages',
@@ -26,6 +28,7 @@ export const examples: Example[] = [
     products: ['chat'],
     useCases: ['live-chat'],
     layout: 'double-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'chat-room-reactions',
@@ -34,6 +37,7 @@ export const examples: Example[] = [
     products: ['chat'],
     useCases: ['live-chat'],
     layout: 'double-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'chat-typing-indicator',
@@ -42,6 +46,7 @@ export const examples: Example[] = [
     products: ['chat'],
     useCases: ['live-chat'],
     layout: 'double-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-channel-messages',
@@ -50,6 +55,7 @@ export const examples: Example[] = [
     products: ['pubsub'],
     useCases: ['messaging'],
     layout: 'single-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-channel-state',
@@ -58,6 +64,7 @@ export const examples: Example[] = [
     products: ['pubsub'],
     useCases: ['messaging'],
     layout: 'single-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-connection-state',
@@ -66,6 +73,7 @@ export const examples: Example[] = [
     products: ['pubsub'],
     useCases: ['messaging'],
     layout: 'single-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-history',
@@ -74,6 +82,7 @@ export const examples: Example[] = [
     products: ['pubsub'],
     useCases: ['messaging'],
     layout: 'single-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'Auction.tsx', 'Home.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-message-encryption',
@@ -82,6 +91,7 @@ export const examples: Example[] = [
     products: ['pubsub'],
     useCases: ['messaging'],
     layout: 'double-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-occupancy',
@@ -90,6 +100,7 @@ export const examples: Example[] = [
     products: ['pubsub'],
     useCases: ['messaging'],
     layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-presence',
@@ -98,6 +109,7 @@ export const examples: Example[] = [
     products: ['pubsub'],
     useCases: ['messaging'],
     layout: 'double-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
   },
   {
     id: 'pub-sub-rewind',
@@ -106,6 +118,7 @@ export const examples: Example[] = [
     products: ['pubsub'],
     useCases: ['messaging'],
     layout: 'single-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'Home.tsx', 'Odds.tsx', 'index.tsx'],
   },
   {
     id: 'spaces-avatar-stack',
@@ -114,6 +127,7 @@ export const examples: Example[] = [
     products: ['spaces'],
     useCases: ['collaboration'],
     layout: 'double-vertical',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'main.tsx', 'components/Avatar.tsx'],
   },
   {
     id: 'spaces-component-locking',
@@ -122,6 +136,15 @@ export const examples: Example[] = [
     products: ['spaces'],
     useCases: ['collaboration'],
     layout: 'double-horizontal',
+    visibleFiles: [
+      'index.html',
+      'src/script.ts',
+      'App.tsx',
+      'index.tsx',
+      'components/AblyPoweredInput.tsx',
+      'InputCell.tsx',
+      'LockedField.tsx',
+    ],
   },
   {
     id: 'spaces-live-cursors',
@@ -130,6 +153,15 @@ export const examples: Example[] = [
     products: ['spaces'],
     useCases: ['collaboration'],
     layout: 'double-vertical',
+    visibleFiles: [
+      'index.html',
+      'src/script.ts',
+      'App.tsx',
+      'index.tsx',
+      'components/CursorSvg.tsx',
+      'components/Livecursors.tsx',
+      'hooks/useTrackCursor.tsx',
+    ],
   },
   {
     id: 'spaces-member-location',
@@ -138,6 +170,14 @@ export const examples: Example[] = [
     products: ['spaces'],
     useCases: ['collaboration'],
     layout: 'double-horizontal',
+    visibleFiles: [
+      'index.html',
+      'src/script.ts',
+      'App.tsx',
+      'index.tsx',
+      'components/Cell.tsx',
+      'components/Spreadsheet.tsx',
+    ],
   },
 ];
 
