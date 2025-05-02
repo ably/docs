@@ -8,6 +8,8 @@ export type Example = {
   languages?: LanguageKey[];
   layout?: 'single-horizontal' | 'double-horizontal' | 'single-vertical' | 'double-vertical';
   visibleFiles?: string[];
+  metaTitle?: string;
+  metaDescription?: string;
 };
 
 export type ExampleWithContent = Example & {

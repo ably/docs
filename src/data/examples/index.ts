@@ -10,6 +10,8 @@ export const examples: Example[] = [
     products: ['chat'],
     layout: 'double-horizontal',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: 'Build online status with Ably’s Chat SDK',
+    metaDescription: `Learn how to build realtime chat features with user presence and online status using Ably’s Chat SDK. Reliable, scalable, and easy to implement.`,
   },
   {
     id: 'chat-room-history',
@@ -18,6 +20,8 @@ export const examples: Example[] = [
     products: ['chat'],
     layout: 'single-horizontal',
     visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
+    metaTitle: `Build chat history with Ably’s Chat SDK`,
+    metaDescription: `Implement chat room history with message persistence and replay. Learn how to store, retrieve, and sync past messages in realtime apps.`,
   },
   {
     id: 'chat-room-messages',
@@ -26,6 +30,8 @@ export const examples: Example[] = [
     products: ['chat'],
     layout: 'double-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Build chat messaging with Ably’s Chat SDK`,
+    metaDescription: `Create realtime chat by publishing and receiving messages using Ably’s Chat SDK. Power fast, reliable messaging in modern web apps.`,
   },
   {
     id: 'chat-room-reactions',
@@ -34,6 +40,8 @@ export const examples: Example[] = [
     products: ['chat'],
     layout: 'double-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Build chat room reactions with Ably’s Chat SDK`,
+    metaDescription: `Add realtime chat room reactions using Ably’s Chat SDK. Enable instant emoji responses and seamless updates for engaging user experiences.`,
   },
   {
     id: 'chat-typing-indicator',
@@ -42,6 +50,8 @@ export const examples: Example[] = [
     products: ['chat'],
     layout: 'double-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Build typing indicators with Ably’s Chat SDK`,
+    metaDescription: `Add realtime typing indicators to your chat app using Ably’s Chat SDK. Show when users are typing with instant, low-latency updates.`,
   },
   {
     id: 'pub-sub-channel-messages',
@@ -50,6 +60,8 @@ export const examples: Example[] = [
     products: ['pubsub'],
     layout: 'single-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Build Pub/Sub Messaging with Ably’s Chat SDK`,
+    metaDescription: `Use the Ably Pub/Sub SDK for to publish and subscribe to realtime messages over channels. Power reliable, low-latency data delivery at scale.`,
   },
   {
     id: 'pub-sub-channel-state',
@@ -58,6 +70,8 @@ export const examples: Example[] = [
     products: ['pubsub'],
     layout: 'single-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Track channel state with the Ably Pub/Sub SDK`,
+    metaDescription: `Use the Ably Pub/Sub SDK to monitor channel state in realtime. Detect connection status, presence, and lifecycle events reliably.`,
   },
   {
     id: 'pub-sub-connection-state',
@@ -66,6 +80,8 @@ export const examples: Example[] = [
     products: ['pubsub'],
     layout: 'single-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Track connection state with the Ably Pub/Sub SDK`,
+    metaDescription: `Use the Ably Pub/Sub SDK to track connection state in realtime. Respond to connectivity changes with low latency and high reliability.`,
   },
   {
     id: 'pub-sub-history',
@@ -74,6 +90,8 @@ export const examples: Example[] = [
     products: ['pubsub'],
     layout: 'single-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'Auction.tsx', 'Home.tsx', 'index.tsx'],
+    metaTitle: `Build message history with the Ably Pub/Sub SDK`,
+    metaDescription: `Use the Ably Pub/Sub SDK to build message history functionality. Retrieve and replay past messages for reliable, state-aware realtime apps.`,
   },
   {
     id: 'pub-sub-message-encryption',
@@ -82,6 +100,8 @@ export const examples: Example[] = [
     products: ['pubsub'],
     layout: 'double-horizontal',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Implement message encryption with the Ably Pub/Sub SDK`,
+    metaDescription: `Use the Ably Pub/Sub JavaScript SDK to implement message encryption. Secure realtime communication with client-side encryption and decryption.`,
   },
   {
     id: 'pub-sub-occupancy',
@@ -90,6 +110,8 @@ export const examples: Example[] = [
     products: ['pubsub'],
     layout: 'single-horizontal',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Implement occupancy tracking with the Ably Pub/Sub SDK`,
+    metaDescription: `Use the Ably Pub/Sub SDK to track occupancy in realtime. Broadcast and receive channel member count updates with low latency and high reliability.`,
   },
   {
     id: 'pub-sub-presence',
@@ -98,6 +120,8 @@ export const examples: Example[] = [
     products: ['pubsub'],
     layout: 'double-horizontal',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Implement presence tracking with the Ably Pub/Sub SDK`,
+    metaDescription: `Use the Ably Pub/Sub SDK to track presence in realtime. Broadcast and respond to member join and leave events with low latency and high reliability.`,
   },
   {
     id: 'pub-sub-rewind',
@@ -106,6 +130,8 @@ export const examples: Example[] = [
     products: ['pubsub'],
     layout: 'single-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'Home.tsx', 'Odds.tsx', 'index.tsx'],
+    metaTitle: `Implement message rewind with the Ably Pub/Sub SDK`,
+    metaDescription: `Use the Ably Pub/Sub SDK to implement message rewind. Automatically retrieve recent messages on subscribe to improve app state continuity.`,
   },
   {
     id: 'spaces-avatar-stack',
@@ -114,6 +140,8 @@ export const examples: Example[] = [
     products: ['spaces'],
     layout: 'double-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'main.tsx', 'components/Avatar.tsx'],
+    metaTitle: `Add an avatar stack with the Ably Spaces SDK`,
+    metaDescription: `Use the Ably Pub/Sub SDK to display avatar stacks in realtime. Broadcast and receive presence and avatar updates with low latency and high reliability.`,
   },
   {
     id: 'spaces-component-locking',
@@ -130,6 +158,8 @@ export const examples: Example[] = [
       'InputCell.tsx',
       'LockedField.tsx',
     ],
+    metaTitle: `Implement component locking with the Ably Spaces SDK`,
+    metaDescription: `Use the Ably Spaces SDK to implement component locking. Control access to shared UI elements and prevent user conflicts in realtime.`,
   },
   {
     id: 'spaces-live-cursors',
@@ -146,6 +176,8 @@ export const examples: Example[] = [
       'components/Livecursors.tsx',
       'hooks/useTrackCursor.tsx',
     ],
+    metaTitle: `Implement live cursors with the Ably Spaces SDK`,
+    metaDescription: `Use the Ably Spaces SDK to implement live cursors. Share realtime pointer positions to enhance collaboration in shared interfaces.`,
   },
   {
     id: 'spaces-member-location',
@@ -161,6 +193,8 @@ export const examples: Example[] = [
       'components/Cell.tsx',
       'components/Spreadsheet.tsx',
     ],
+    metaTitle: `Track member location with the Ably Spaces SDK`,
+    metaDescription: `Use the Ably Spaces SDK to track and display member location in realtime. Show where users are within a shared interface or app view.`,
   },
 ];
 

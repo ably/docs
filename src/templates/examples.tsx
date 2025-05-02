@@ -1,14 +1,17 @@
 import React, { PropsWithChildren, useContext, useEffect } from 'react';
 import Markdown from 'markdown-to-jsx';
+import { Link } from 'gatsby';
+import Icon from '@ably/ui/core/Icon';
+import LinkButton from '@ably/ui/core/LinkButton';
+import { UnstyledOpenInCodeSandboxButton } from '@codesandbox/sandpack-react';
+
+import { Head } from '../components/Head';
+import { useSiteMetadata } from '../hooks/use-site-metadata';
 import { ExampleWithContent } from 'src/data/examples/types';
 import UserContext from 'src/contexts/user-context';
 import { getApiKey } from 'src/utilities/update-ably-connection-keys';
-import Icon from '@ably/ui/core/Icon';
 import ExamplesRenderer from 'src/components/Examples/ExamplesRenderer';
-import { Link } from 'gatsby';
 import { LanguageKey } from 'src/data/languages/types';
-import LinkButton from '@ably/ui/core/LinkButton';
-import { UnstyledOpenInCodeSandboxButton } from '@codesandbox/sandpack-react';
 
 const MarkdownOverrides = {
   h1: {
@@ -51,7 +54,11 @@ const MarkdownOverrides = {
 };
 
 const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent } }) => {
+  const { canonicalUrl } = useSiteMetadata();
   const { example } = pageContext;
+  const canonical = canonicalUrl(`/examples/${example.id}`);
+  const meta_title = example.metaTitle || `Ably Examples | ${example.name}`;
+  const meta_description = example.metaDescription || example.description;
   const userData = useContext(UserContext);
   const apiKey = getApiKey(userData);
 
@@ -86,6 +93,7 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
 
   return (
     <>
+      <Head title={meta_title} canonical={canonical} description={meta_description} />
       <div className="my-40">
         <Link to="/examples" className="flex gap-4 items-center mb-20">
           <Icon name="icon-gui-chevron-left-micro" size="16px" />
