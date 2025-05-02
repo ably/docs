@@ -33,7 +33,7 @@ export default function MatchWrapper() {
 
   return (
     <AblyProvider client={client}>
-      <ChannelProvider channelName={channelName} options={{ params: { rewind: '10' } }}>
+      <ChannelProvider channelName={channelName} options={{ params: { rewind: '4' } }}>
         <LiveMatch channelName={channelName} />
       </ChannelProvider>
     </AblyProvider>

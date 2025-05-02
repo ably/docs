@@ -113,8 +113,7 @@ function buildCell(value: string, rowIndex: number, colIndex: number, cellMember
 
 async function buildSpreadsheet(otherMembers: Member[], self: Member) {
   const fragment = document.createDocumentFragment();
-
-  for (const [rowIndex, row] of cellData.entries()) {
+  cellData.forEach((row, rowIndex) => {
     const sheetRow = document.createElement('tr');
     sheetRow.className = 'uk-table-middle';
 
@@ -123,17 +122,17 @@ async function buildSpreadsheet(otherMembers: Member[], self: Member) {
     sheetTd.textContent = (rowIndex + 1).toString();
     sheetRow.appendChild(sheetTd);
 
-    for (const [colIndex, col] of row.entries()) {
+    row.forEach((col, colIndex) => {
       const cellMembers = otherMembers.filter(
         (user) => user.location?.row === rowIndex && user.location?.col === colIndex,
       );
 
       const cellTd = buildCell(col, rowIndex, colIndex, cellMembers, self);
       sheetRow.appendChild(cellTd);
-    }
+    });
 
     fragment.appendChild(sheetRow);
-  }
+  });
 
   return fragment;
 }
@@ -144,7 +143,6 @@ async function refreshSpreadsheet() {
 
   const spreadsheet = await buildSpreadsheet(otherMembers, self);
   const spreadsheetElement = document.getElementById('sheet-body');
-
   if (spreadsheetElement) {
     // Clear the existing content before appending the new spreadsheet
     spreadsheetElement.innerHTML = '';
