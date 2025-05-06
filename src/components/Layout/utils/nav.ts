@@ -152,7 +152,7 @@ export const commonAccordionOptions = (
   },
 });
 
-export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128 pt-24';
+export const sidebarAlignmentClasses = 'absolute md:sticky w-[240px] md:pb-128 pt-24';
 
 export const sidebarAlignmentStyles: React.CSSProperties = {
   top: HEADER_HEIGHT,

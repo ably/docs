@@ -23,7 +23,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
     account: userContext.sessionState.account ?? { links: { dashboard: { href: '#' } } },
   };
 
-  const tabs = ['Documentation', 'Examples'];
+  const tabs = ['Docs', 'Examples'];
   const tabLinks = ['/docs', '/examples'];
 
   return (
@@ -83,6 +83,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
           />
         ) : null
       }
+      headerCenterClassName="max-w-[280px]"
       headerLinks={[
         {
           href: '/docs/sdks',

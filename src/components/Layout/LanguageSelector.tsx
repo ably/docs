@@ -120,7 +120,7 @@ export const LanguageSelector = () => {
         classNames={{
           control: () => '!border-none !inline-flex !cursor-pointer group/lang-dropdown',
           valueContainer: () => '!p-0',
-          menu: () => 'absolute right-0 w-240 z-10',
+          menu: () => 'absolute right-0 w-[240px] z-10',
         }}
         styles={{
           control: () => ({ height: LANGUAGE_SELECTOR_HEIGHT }),
