@@ -144,7 +144,7 @@ export const commonAccordionOptions = (
       },
     ),
     selectedHeaderCSS: '!text-neutral-1300 mb-8',
-    contentCSS: cn('[&>div]:pb-0'),
+    contentCSS: '[&>div]:pb-0',
     rowIconSize: '20px',
     defaultOpenIndexes: !inHeader && openIndex !== undefined ? [openIndex] : [],
     hideBorders: true,
