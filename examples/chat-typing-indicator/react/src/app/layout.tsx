@@ -2,7 +2,8 @@
 
 import { Inter } from "next/font/google";
 import { Realtime } from 'ably';
-import { ChatClient, ChatClientProvider, ChatRoomProvider, AllFeaturesEnabled, TypingOptions } from '@ably/chat';
+import { ChatClientProvider, ChatRoomProvider } from '@ably/chat/react';
+import { ChatClient, TypingOptions } from '@ably/chat';
 import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -14,7 +15,7 @@ const realtimeClient = new Realtime({key: process.env.NEXT_PUBLIC_ABLY_KEY, clie
 const chatClient = new ChatClient(realtimeClient);
 
 const typingOptions: TypingOptions = {
-  timeoutMs: 5000,
+  heartbeatThrottleMs: 3000,
 };
 
 export default function RootLayout({
@@ -41,7 +42,6 @@ export default function RootLayout({
           <ChatRoomProvider
             id={roomName}
             options={{
-              ...AllFeaturesEnabled,
               typing: typingOptions
             }}
           >

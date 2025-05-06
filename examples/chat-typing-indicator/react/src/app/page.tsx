@@ -1,14 +1,15 @@
 "use client";
 
-import { TypingEvent, useChatClient, useRoom, useTyping } from '@ably/chat';
+import { useChatClient, useRoom, useTyping } from '@ably/chat/react';
+import { TypingSetEvent } from '@ably/chat';
 import '../../styles/styles.css'
 
 const Loading = () => <div>Loading...</div>;
 
 const ChatInput = () => {
-  const {start, currentlyTyping } = useTyping({
-    listener: (typingEvent: TypingEvent) => {
-      console.log('Typing event received: ', typingEvent);
+  const {keystroke, currentlyTyping } = useTyping({
+    listener: (event: TypingSetEvent) => {
+      console.log('Typing set event received: ', event);
     },
   });
   const { clientId } = useChatClient();
@@ -24,7 +25,7 @@ const ChatInput = () => {
           type="text"
           id="user-input"
           placeholder="Start typing..."
-          onKeyDown={start}
+          onKeyDown={keystroke}
         />
         <label id="user-input-label" htmlFor="user-input">
           {typingIndicatorText}

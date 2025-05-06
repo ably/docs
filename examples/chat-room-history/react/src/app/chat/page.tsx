@@ -1,7 +1,7 @@
 "use client";
 
-import { Message, useMessages, useChatClient } from '@ably/chat';
-import { useEffect, useState } from 'react';
+import { Message, useMessages, useChatClient } from '@ably/chat/react';
+import { useState } from 'react';
 import '../../../styles/styles.css';
 
 export default function Chat() {
