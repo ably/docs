@@ -23,19 +23,19 @@ export type PageContextType = {
 type LayoutProps = PageProps<unknown, PageContextType>;
 
 const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
-  const { searchBar, sidebar, template } = pageContext.layout ?? {};
+  const { searchBar, leftSidebar, rightSidebar, template } = pageContext.layout ?? {};
 
   return (
     <GlobalLoading template={template}>
       <Header searchBar={searchBar} />
       <div className="flex pt-64 md:gap-48 lg:gap-64 xl:gap-80 justify-center ui-standard-container mx-auto">
-        {sidebar ? <LeftSidebar /> : null}
+        {leftSidebar ? <LeftSidebar /> : null}
         <Container as="main" className="flex-1 overflow-x-auto">
-          {sidebar ? <Breadcrumbs /> : null}
+          {leftSidebar ? <Breadcrumbs /> : null}
           {children}
           <Footer />
         </Container>
-        {sidebar ? <RightSidebar /> : null}
+        {rightSidebar ? <RightSidebar /> : null}
       </div>
     </GlobalLoading>
   );
