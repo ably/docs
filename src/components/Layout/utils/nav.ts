@@ -144,7 +144,7 @@ export const commonAccordionOptions = (
       },
     ),
     selectedHeaderCSS: '!text-neutral-1300 mb-8',
-    contentCSS: cn('[&>div]:pb-0'),
+    contentCSS: '[&>div]:pb-0',
     rowIconSize: '20px',
     defaultOpenIndexes: !inHeader && openIndex !== undefined ? [openIndex] : [],
     hideBorders: true,
@@ -152,7 +152,7 @@ export const commonAccordionOptions = (
   },
 });
 
-export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128 pt-24';
+export const sidebarAlignmentClasses = 'absolute md:sticky w-[240px] md:pb-128 pt-24';
 
 export const sidebarAlignmentStyles: React.CSSProperties = {
   top: HEADER_HEIGHT,

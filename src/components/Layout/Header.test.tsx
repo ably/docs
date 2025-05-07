@@ -50,7 +50,7 @@ describe('Header', () => {
     render(<Header />);
     expect(screen.getAllByAltText('Ably logo').length).toBeGreaterThan(0);
 
-    expect(screen.getByText('Documentation')).toBeInTheDocument();
+    expect(screen.getByText('Docs')).toBeInTheDocument();
     expect(screen.getByText('Examples')).toBeInTheDocument();
   });
 
