@@ -17,7 +17,7 @@ describe('inkeepChat', () => {
   it('load Inkeep when configuration is present', () => {
     const spy = jest.spyOn(scriptLoader, 'scriptLoader');
 
-    inkeepChat('apiKey');
+    inkeepChat('apiKey', 'http://localhost:3000/api/conversations');
 
     expect(spy).toHaveBeenCalled();
   });

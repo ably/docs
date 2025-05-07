@@ -13,7 +13,7 @@ const LanguageLink = ({ language }: { language: LanguageKey }) => {
 
   return (
     <Link
-      className="cursor-pointer relative select-none block text-brand-black hover:text-brand-richOrange active:text-brand-richOrange"
+      className="cursor-pointer relative select-none block text-neutral-1300 hover:text-orange-600 active:text-orange-600"
       to={href}
     >
       {languageLabel(language) ?? language}

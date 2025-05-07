@@ -1,3 +1,5 @@
+import { ProductName } from '@ably/ui/core/ProductTile/data';
+
 export type ContentLink = {
   text: string;
   href: string;
@@ -37,5 +39,31 @@ export type ContentMeta = {
 export type ContentData = {
   name: string;
   meta: ContentMeta;
-  sections: ContentSection[];
+  platformProducts: PlatformProductsSectionData;
+  examples: ExamplesSectionData;
+};
+
+export type PlatformCardData = {
+  title: string;
+  content: string;
+  image: string;
+  link: string;
+};
+
+export type ProductCardData = {
+  name: ProductName;
+  link: string;
+};
+
+export type PlatformProductsSectionData = {
+  title: string;
+  platformCard: PlatformCardData;
+  productCards: ProductCardData[];
+};
+
+export type ExamplesSectionData = {
+  title: string;
+  link: ContentLink;
+  content: string;
+  image: string;
 };

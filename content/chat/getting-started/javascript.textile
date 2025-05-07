@@ -1,0 +1,251 @@
+---
+title: "Getting started: Chat in JavaScript / TypeScript"
+meta_description: "Get started with Ably's JavaScript Chat SDK. Build scalable, real-time chat applications using live chat APIs and realtime messaging."
+meta_keywords: "chat js, javascript chat sdk, live chat javascript api, javascript chat api, chat api js, chat api javascript, chat javascript api, real time chat javascript, real time chat application in javascript, javascript real time chat, ably chat sdk, typescript chat sdk, typescript chat api, real time messaging javascript, realtime chat javascript, realtime chat application javascript"
+---
+
+This guide will get you started with Ably Chat using TypeScript.
+
+It will take you through the following steps:
+
+* Create a client and establish a realtime connection to Ably.
+* Create a room and subscribe to its messages.
+* Send a message to the room, and then edit that message.
+* Retrieve historical messages to provide context to new joiners.
+* Set up a typing indicator to see which clients are typing.
+* Display the online status of clients to the room.
+* Subscribe and send reactions to the room.
+* Close a connection to Ably when it is no longer needed.
+
+h2(#prerequisites). Prerequisites
+
+* Sign up for an Ably account.
+** Create a new app, and get your first API key.
+** You can use the root API key that is provided by default to get started.
+
+* Install the Ably CLI:
+
+```[sh]
+npm install -g @ably/cli
+```
+
+* Run the following to log in to your Ably account and set the default app and API key:
+
+```[sh]
+ably login
+
+ably apps switch
+ably auth keys switch
+```
+
+* Install "Node.js":https://nodejs.org/en version 18 or greater.
+* Install "ts-node":https://www.npmjs.com/package/ts-node to execute TypeScript files:
+
+```[sh]
+npm install ts-node
+```
+
+* Create a new project in your IDE and install the Ably Chat JavaScript SDK. This will also install the Ably Pub/Sub SDK as it is a dependency:
+
+```[sh]
+npm init -y
+tsc --init
+
+npm install @ably/chat
+```
+
+<aside data-type='note'>
+<p>The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI, ensure that you replace them with your own API key.</p>
+</aside>
+
+h2(#step-1). Step 1: Connect to Ably
+
+Clients establish a connection with Ably when they instantiate an SDK. This enables them to send and receive messages in realtime across channels.
+
+Create an @index.ts@ file in your project and add the following function to instantiate a realtime client with the Pub/Sub SDK and then pass that client into the Chat SDK constructor. Provide an API key and a @clientId@ to identify the client. In production, use token authentication so that your API keys are not exposed publicly.
+
+```[javascript]
+import * as Ably from 'ably';
+import { ChatClient, AllFeaturesEnabled, MessageEvent, Message } from '@ably/chat';
+
+async function getStarted() {
+
+  const realtimeClient = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-first-client' });
+
+  const chatClient = new ChatClient(realtimeClient);
+
+  chatClient.connection.onStatusChange((change) => console.log(`Connection status is currently ${change.current}!`));
+
+};
+
+getStarted();
+```
+
+You can monitor the lifecycle of clients' connections by registering a listener that will emit an event every time the connection state changes. For now, run the function with @npx ts-node index.ts@ to log a message to the console to know that the connection attempt was successful. You'll see a message saying @Connection status is currently connected!@ printed to your console.
+
+h2(#step-2). Step 2: Create a room and send a message
+
+Messages are how your clients interact with one another. Use rooms to separate and organize clients and messages into different topics, or 'chat rooms'. Rooms are the entry object into Chat, providing access to all of its features, such as messages, presence and reactions.
+
+Add the following lines to your @getStarted()@ function to create an instance of a room, attach to the room instance, and then register a listener to subscribe to messages sent to the room. You then also send your first message. Afterwards, run it with @npx ts-node index.ts@:
+
+```[javascript]
+const room = await chatClient.rooms.get('my-first-room', AllFeaturesEnabled);
+
+await room.attach();
+
+room.messages.subscribe((messageEvent: MessageEvent) => {
+  console.log(`Received message: ${ messageEvent.message.text }`);
+});
+
+const myFirstMessage = await room.messages.send({ text: 'My first message!' });
+```
+
+Use the Ably CLI to send a message to your first room. The message will be received by the client you've subscribed to the room, and be logged to the console:
+
+```[sh]
+ably rooms messages send my-first-room 'Hello!'
+```
+
+h2(#step-3). Step 3: Edit a message
+
+If your client makes a typo, or needs to update their original message then they can edit it.
+
+Add the following line to your @getStarted()@ function. Now, when you run the function again and send another message, that message will be updated and you should see both in your terminal. Run it with @npx ts-node index.ts@.
+
+```[javascript]
+await room.messages.update(myFirstMessage.copy({ text: 'My 2nd message! (edited)' }));
+```
+
+h2(#step-4). Step 4: Message history and continuity
+
+Ably Chat provides a method for retrieving messages that have been previously sent in a room, up until the point that a client joins (attaches) to it. This enables clients joining a room part way through a conversation to receive the context of what has happened, and what is being discussed, without having to ask another client for context.
+
+Use the Ably CLI to send some additional messages to your room, for example:
+
+```[sh]
+ably rooms messages send my-first-room 'Old message #1'
+```
+
+Create a new @clientTwo.ts@ file in your project, and run the following in a separate terminal instance. It imitates a second client, @my-second-client@ joining the room and receiving the context of the previous 10 messages. Run it with @npx ts-node clientTwo.ts@
+
+```[javascript]
+import * as Ably from 'ably';
+import { ChatClient, AllFeaturesEnabled } from '@ably/chat';
+
+async function getStartedLate() {
+
+  const realtimeClient = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-second-client' });
+  const chatClient = new ChatClient(realtimeClient);
+
+
+  const room = await chatClient.rooms.get('my-first-room', AllFeaturesEnabled);
+
+  await room.attach();
+
+  const { getPreviousMessages } = room.messages.subscribe(() => {
+    console.log('New message received');
+  });
+
+
+  const historicalMessages = await getPreviousMessages({ limit: 10 });
+    console.log(historicalMessages.items.map((message) => `${message.clientId}: ${message.text}`));
+
+};
+
+getStartedLate();
+```
+
+h2(#step-5). Step 5: Show who is typing a message
+
+Typing indicators enable you to display messages to clients when someone is currently typing. An event is emitted when someone starts typing, when they press a keystroke, and then another event is emitted after a configurable amount of time has passed without a key press.
+
+In practice the @typing.start()@ method would be called on keypress, however for demonstration purposes we will call it and wait for the default period of time to pass for a stop event to be emitted. Using your original client, add the following lines to @getStarted()@ to subscribe to typing events and emit one, then run it with @npx ts-node index.ts@:
+
+```[javascript]
+room.typing.subscribe((typingEvent) => {
+  if (typingEvent.currentlyTyping.size === 0) {
+    console.log('No one is currently typing');
+  } else {
+    console.log(`${Array.from(typingEvent.currentlyTyping).join(", ")} is typing`);
+  }
+});
+
+await room.typing.start()
+// A client types
+await room.typing.stop()
+```
+
+Use the Ably CLI to subscribe to typing events. You will see that the client using the SDK starts to type after re-running @getStarted()@, with the message @my-first-client is typing...@:
+
+```[sh]
+ably rooms typing subscribe my-first-room
+```
+
+h2(#step-6). Step 6: Display online status
+
+Display the online status of clients using the presence feature. This enables clients to be aware of one another if they are present in the same room. You can then show clients who else is online, provide a custom status update for each, and notify the room when someone enters it, or leaves it, such as by going offline.
+
+Add the following lines to your @getStarted()@ function to subscribe to, and join, the presence set of the room. It also sets a short wait before leaving the presence set. Run it with @npx ts-node index.ts@:
+
+```[javascript]
+room.presence.subscribe((member) => {
+  console.log(`Event type: ${ member.action } from  ${ member.clientId } with the data ${ JSON.stringify(member.data) }`)
+});
+
+await room.presence.enter("I'm here!");
+
+setTimeout( () => {
+  room.presence.leave("I'm leaving!");
+}, 3000);
+```
+
+You can have another client join the presence set using the Ably CLI:
+
+```[sh]
+ably rooms presence enter my-first-room --client-id "my-cli" --data '{"status":"learning about Ably!"}'
+```
+
+h2(#step-7). Step 7: Send a reaction
+
+Clients can send an ephemeral reaction to a room to show their sentiment for what is happening, such as a point being scored in a sports game.
+
+Add the following lines to your @getStarted()@ function to subscribe to room reactions. Then run it with @npx ts-node index.ts@:
+
+```[javascript]
+room.reactions.subscribe((reaction) => {
+  console.log(`${ reaction.type } to that!`)
+});
+```
+
+Use the Ably CLI to send some reactions to the room, such as:
+
+```[sh]
+ably rooms reactions send my-first-room 👍
+```
+
+h2(#step-8). Step 8: Close the connection
+
+Connections are automatically closed approximately 2 minutes after no heartbeat is detected by Ably. Explicitly closing connections when they are no longer needed is good practice to help save costs. It will also remove all listeners that were registered by the client.
+
+Connections to Ably are handled by the underlying Pub/Sub SDK. To close the connection you need to call @connection.close()@ on the original realtime client instance.
+
+Add the following to @getStarted()@ to close the connection after a simulated 10 seconds. Run it with @npx ts-node index.ts@:
+
+```[javascript]
+setTimeout(() => realtimeClient.close(), 10000);
+```
+
+h2(#next). Next steps
+
+Continue to explore the documentation with JavaScript as the selected language:
+
+Read more about the concepts covered in this guide:
+* Read more about using "rooms":/docs/chat/rooms and sending "messages":/docs/chat/rooms/messages.
+* Find out more regarding "online status":/docs/chat/rooms/presence.
+* Understand how to use "typing indicators":/docs/chat/rooms/typing.
+* Send "reactions":/docs/chat/rooms/reactions to your rooms.
+* Read into pulling messages from "history":/docs/chat/rooms/history and providing context to new joiners.
+* Understand "token authentication":/docs/authentication/token-authentication before going to production.
+
+Explore the Ably CLI further, or visit the Chat "API references":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-js.html.

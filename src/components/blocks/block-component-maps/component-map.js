@@ -7,7 +7,7 @@ import { ApiReferenceH6 } from '../api-reference/headings/ApiReferenceH6';
 import ApiReferenceDd from '../api-reference/list/ApiReferenceDd';
 import ApiReferenceDt from '../api-reference/list/ApiReferenceDt';
 import { Button, Input, Meter, Noscript, Progress, Script, Select, Textarea } from '../complex-functionality';
-import { Article, Aside, Div, Main, Section, Span } from '../dividers';
+import { Article, Div, Main, Section, Span } from '../dividers';
 import { A, Address, Audio, Blockquote, Iframe, Img, Quote, Video } from '../external-references';
 import { H1, H2, H3, H4, H5, H6, Header } from '../headings';
 import { Dd, Dt, Dl, Li, Ol, Ul } from '../list';
@@ -82,7 +82,10 @@ export const HtmlTypeComponentMap = Object.freeze({
   [HtmlDataTypes.main]: Main,
   [HtmlDataTypes.article]: Article,
   [HtmlDataTypes.section]: Section,
-  [HtmlDataTypes.aside]: Aside,
+  [HtmlDataTypes.aside]: (props) => {
+    const AsideComponent = require('../dividers/Aside').default;
+    return <AsideComponent {...props} />;
+  },
   [HtmlDataTypes.span]: Span,
   [HtmlDataTypes.div]: Div,
   // complex functionality

@@ -4,6 +4,7 @@ import { ActivePage, determineActivePage } from 'src/components/Layout/utils/nav
 import { productData } from 'src/data';
 import { LanguageKey } from 'src/data/languages/types';
 import { languageData, languageInfo } from 'src/data/languages';
+import { PageContextType } from 'src/components/Layout/Layout';
 
 /**
  * LayoutContext
@@ -30,22 +31,29 @@ const LayoutContext = createContext<{
   },
 });
 
-export const LayoutProvider: React.FC<PropsWithChildren> = ({ children }) => {
+export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageContextType }>> = ({
+  children,
+  pageContext,
+}) => {
   const location = useLocation();
-  const [languages, setLanguages] = useState<LanguageKey[]>([]);
+  const [languages, setLanguages] = useState<LanguageKey[]>(pageContext?.languages ?? []);
   const [language, setLanguage] = useState<LanguageKey>(DEFAULT_LANGUAGE);
 
   useEffect(() => {
-    const languagesSet = new Set<LanguageKey>();
+    const languageBlocks = document.querySelectorAll('.docs-language-navigation');
 
-    document.querySelectorAll('.docs-language-navigation').forEach((element) => {
-      const languages = element.getAttribute('data-languages');
-      if (languages) {
-        languages.split(',').forEach((language) => languagesSet.add(language as LanguageKey));
-      }
-    });
+    if (languageBlocks.length > 0) {
+      const languagesSet = new Set<LanguageKey>();
 
-    setLanguages(Array.from(languagesSet));
+      document.querySelectorAll('.docs-language-navigation').forEach((element) => {
+        const languages = element.getAttribute('data-languages');
+        if (languages) {
+          languages.split(',').forEach((language) => languagesSet.add(language as LanguageKey));
+        }
+      });
+
+      setLanguages(Array.from(languagesSet));
+    }
   }, [location.pathname]);
 
   const activePage = useMemo(() => {

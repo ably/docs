@@ -43,7 +43,8 @@ function ChannelMessages() {
     if (headlines.length === 0) {
       setIsButtonDisabled(true);
       const publishButton = document.getElementById('publish-button') as HTMLButtonElement;
-      publishButton.className = 'uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 cursor-not-allowed';
+      publishButton.className =
+        'uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 cursor-not-allowed';
 
       return;
     }
@@ -66,14 +67,14 @@ function ChannelMessages() {
         Publish Random Headline
       </button>
 
-      <div className="w-full max-w-2xl h-96 border rounded-lg overflow-y-auto bg-white shadow-lg">
+      <div className="w-full max-w-2xl h-80 border rounded-lg overflow-y-auto bg-white shadow-lg">
         <div className="p-4 space-y-2">
           {messages.map((msg, index) => (
             <div key={index} className="p-3 bg-gray-50 rounded-lg flex items-center gap-2">
               {msg.isNew && (
                 <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-bold">NEW</span>
               )}
-              <span>{msg.text}</span>
+              <span className="text-sm">{msg.text}</span>
             </div>
           ))}
         </div>

@@ -43,7 +43,7 @@ function EncodedMessages() {
           <button
             id="publish-button"
             onClick={publishMessage}
-            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 min-w-[180px] h-10"
+            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 h-10"
             disabled={!message.trim()}
           >
             Publish
@@ -82,7 +82,7 @@ function DecodedMessages() {
   return (
     <div className="flex justify-center items-center min-h-screen p-4">
       <div className="w-1/2 h-1/2 flex flex-col space-y-4">
-        <h2 className="text-xl font-bold text-center mb-4">Client with an encryption key</h2>
+        <h2 className="text-lg font-bold text-center mb-2">Client with an encryption key</h2>
         <div className="flex space-x-2">
           <input
             type="text"
@@ -94,7 +94,7 @@ function DecodedMessages() {
           <button
             id="publish-button"
             onClick={publishMessage}
-            className="uk-btn uk-btn-primary rounded h-10"
+            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2 h-10"
             disabled={!message.trim()}
           >
             Publish
