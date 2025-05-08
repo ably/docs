@@ -4,7 +4,6 @@ import { Key } from 'react';
 import Badge from '@ably/ui/core/Badge';
 import FeaturedLink from '@ably/ui/core/FeaturedLink';
 import Link from '../Link';
-import parse from '@js-bits/dom-parser';
 
 interface ChangelogFeedItemNode {
   title: string;
@@ -84,8 +83,16 @@ const stripHtml = (html: string | null | undefined): string => {
   if (!html) {
     return '';
   }
-  const doc = parse(html);
-  return doc.textContent || '';
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  const firstBodyChild = doc.body.firstChild;
+  if (firstBodyChild?.nodeName?.toLowerCase() === 'parsererror') {
+    return '';
+  }
+
+  return doc.body.textContent || '';
 };
 
 const parseChangelogContent = (htmlContent: string): { tags: string[]; description: string } => {
