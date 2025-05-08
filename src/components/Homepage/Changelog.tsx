@@ -84,7 +84,9 @@ const stripHtml = (html: string | null | undefined): string => {
   if (!html) {
     return '';
   }
+
   const doc = parse(html);
+
   return doc.textContent || '';
 };
 
@@ -120,7 +122,7 @@ const parseChangelogContent = (htmlContent: string): { tags: string[]; descripti
             break;
           }
 
-          const paragraphHtml = htmlContent.substring(pStartIndex + 3, pEndIndex);
+          const paragraphHtml = htmlContent.substring(pStartIndex, pEndIndex + 4);
           const strippedText = stripHtml(paragraphHtml).trim();
 
           if (strippedText) {
