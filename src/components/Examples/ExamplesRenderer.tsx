@@ -152,6 +152,7 @@ const ExamplesRenderer = ({
           />
           <div className={cn('flex gap-16 flex-col sm:flex-row', isVerticalLayout && 'md:flex-col')}>
             <div className="relative flex-1">
+              {console.log(id, activeLanguage)}
               <SandpackPreview
                 className="rounded-lg overflow-hidden"
                 showOpenInCodeSandbox={false}
