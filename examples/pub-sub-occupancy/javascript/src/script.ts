@@ -6,11 +6,13 @@ import './styles.css';
 const occupantCount = document.getElementById('occupants-count');
 
 const client = new Ably.Realtime({
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  key: import.meta.env.VITE_ABLY_KEY as string,
   clientId: nanoid(),
 });
 
-const channel = client.channels.get('occupancy-example', { params: { occupancy: 'metrics' } });
+const urlParams = new URLSearchParams(window.location.search);
+const channelName = urlParams.get('name') || 'pub-sub-occupancy';
+const channel = client.channels.get(channelName, { params: { occupancy: 'metrics' } });
 
 channel.subscribe((message: Message) => {
   console.log('occupancy: ', message.data);
@@ -23,11 +25,11 @@ async function simulatedOccupants() {
   for (let loopCount = 0; loopCount < 20; loopCount++) {
     const clientId = nanoid();
     const client = new Ably.Realtime({
-      key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+      key: import.meta.env.VITE_ABLY_KEY as string,
       clientId,
     });
 
-    const channel = client.channels.get('occupancy-example');
+    const channel = client.channels.get(channelName);
     // Attach would be called automatically when subscribing to a channel,
     // but for the simulation we do not need to subscribe. We just need to attach.
     const randomDuration = 5000 + Math.random() * 10000;

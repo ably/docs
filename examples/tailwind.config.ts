@@ -2,14 +2,10 @@ import type { Config } from 'tailwindcss';
 import franken from 'franken-ui/shadcn-ui/preset-quick';
 
 const baseConfig: Config = {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore (franken-ui/shadcn-ui/preset-quick is not properly typed - JH)
   presets: [franken()],
-  content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-    './index.html',
-    './src/**/*.ts',
-  ],
+  content: ['./**/*.{js,ts,tsx}'],
   safelist: [
     {
       pattern: /^uk-/,
@@ -22,7 +18,7 @@ const baseConfig: Config = {
     'opacity-50',
   ],
   theme: {
-    extend: {},
+    extend: { sizing: true },
   },
   plugins: [],
 };

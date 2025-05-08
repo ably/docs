@@ -10,8 +10,8 @@ Channel states is implemented using [Ably Pub/Sub](/docs/). The Pub/Sub SDK prov
 
 Use the following components to manage the channel state in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
-* [`channel.on()`](/docs/channels/states?lang=javascript): subscribes to the channel state events of your client by registering a listener.
+- [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
+- [`channel.on()`](/docs/channels/states?lang=javascript): subscribes to the channel state events of your client by registering a listener.
 
 Find out more about [channel states](/docs/channels/states).
 
@@ -19,38 +19,38 @@ Find out more about [channel states](/docs/channels/states).
 
 1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
-```sh
-git clone git@github.com:ably/docs.git
-```
+  ```sh
+  git clone git@github.com:ably/docs.git
+  ```
 
 2. Change directory:
 
-```sh
-cd /examples/
-```
+  ```sh
+  cd /examples/
+  ```
 
 3. Rename the environment file:
 
-```sh
-mv .env.example .env.local
-```
+  ```sh
+  mv .env.example .env.local
+  ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
-```sh
-yarn install
-```
+  ```sh
+  yarn install
+  ```
 
 6. Run the server:
 
-```sh
-yarn run pub-sub-channel-state-javascript
-```
+  ```sh
+  yarn run pub-sub-channel-state-javascript
+  ```
 
 7. Try it out by opening a tab to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

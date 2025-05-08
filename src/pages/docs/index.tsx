@@ -4,7 +4,6 @@ import { Helmet } from 'react-helmet';
 import { ImageProps } from 'src/components/Image';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { HomepageContent } from 'src/components/Homepage/HomepageContent';
-import { PageLanguageProvider } from 'src/contexts';
 import { pageData } from 'src/data';
 
 export const ABLY_MAIN_WEBSITE = process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000';
@@ -13,12 +12,11 @@ const IndexPage = ({
   data: {
     allFile: { images },
   },
-  location: { search },
 }: {
   data: { allFile: { images: ImageProps[] } };
-  location: Location;
 }) => {
-  const { sections, meta } = pageData.homepage.content;
+  const homepageContent = pageData.homepage.content;
+  const { meta } = homepageContent;
   const openGraphTitle = meta.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/docs');
@@ -41,9 +39,7 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <PageLanguageProvider search={search}>
-        <HomepageContent sections={sections} images={images} />
-      </PageLanguageProvider>
+      <HomepageContent homepageContent={homepageContent} images={images} />
     </>
   );
 };

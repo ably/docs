@@ -1,7 +1,8 @@
 import Spaces, { Space, type SpaceMember } from '@ably/spaces';
 import { Realtime } from 'ably';
 import { nanoid } from 'nanoid';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 
 type Member = Omit<SpaceMember, 'profileData' | 'location'> & {
   profileData: {
@@ -46,7 +47,7 @@ function setLocation(location: Member['location']) {
 async function connect() {
   const client = new Realtime({
     clientId: nanoid(),
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+    key: import.meta.env.VITE_ABLY_KEY as string,
   });
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -56,8 +57,8 @@ async function connect() {
 
   /** 💡 Enter the space as soon as it's available 💡 */
   await space.enter({
-    memberName: faker.person.fullName(),
-    memberColor: faker.color.rgb({ format: 'hex', casing: 'lower' }),
+    memberName: `${minifaker.firstName()} ${minifaker.lastName()}`,
+    memberColor: minifaker.color(),
   });
 
   /** 💡 Subscribe to all locations updates 💡 */
@@ -112,8 +113,7 @@ function buildCell(value: string, rowIndex: number, colIndex: number, cellMember
 
 async function buildSpreadsheet(otherMembers: Member[], self: Member) {
   const fragment = document.createDocumentFragment();
-
-  for (const [rowIndex, row] of cellData.entries()) {
+  cellData.forEach((row, rowIndex) => {
     const sheetRow = document.createElement('tr');
     sheetRow.className = 'uk-table-middle';
 
@@ -122,17 +122,17 @@ async function buildSpreadsheet(otherMembers: Member[], self: Member) {
     sheetTd.textContent = (rowIndex + 1).toString();
     sheetRow.appendChild(sheetTd);
 
-    for (const [colIndex, col] of row.entries()) {
+    row.forEach((col, colIndex) => {
       const cellMembers = otherMembers.filter(
         (user) => user.location?.row === rowIndex && user.location?.col === colIndex,
       );
 
       const cellTd = buildCell(col, rowIndex, colIndex, cellMembers, self);
       sheetRow.appendChild(cellTd);
-    }
+    });
 
     fragment.appendChild(sheetRow);
-  }
+  });
 
   return fragment;
 }
@@ -143,7 +143,6 @@ async function refreshSpreadsheet() {
 
   const spreadsheet = await buildSpreadsheet(otherMembers, self);
   const spreadsheetElement = document.getElementById('sheet-body');
-
   if (spreadsheetElement) {
     // Clear the existing content before appending the new spreadsheet
     spreadsheetElement.innerHTML = '';

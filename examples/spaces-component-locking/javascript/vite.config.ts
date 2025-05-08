@@ -1,10 +1,7 @@
-import baseConfig from '../../vite.config';
 import { defineConfig } from 'vite';
-import dotenv from 'dotenv';
-import path from 'path';
-
-dotenv.config({ path: path.resolve(__dirname, '../../.env.local') });
+import baseConfig from '../../vite.config';
 
 export default defineConfig({
   ...baseConfig,
+  envDir: '../../',
 });

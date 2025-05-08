@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid';
 const names = ['Bob', 'Jane', 'John', 'Sammy'];
 const realtimeClient = new Ably.Realtime({
   clientId: names[Math.floor(Math.random() * names.length)] ?? nanoid(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 const chatClient = new ChatClient(realtimeClient);
 
@@ -21,6 +21,7 @@ async function initializeChat() {
 
   // Get ROOM with typing capabilities
   room = await chatClient.rooms.get(roomName, { typing: typingOptions });
+  room.attach();
 
   // Subscribe to room for anyone typing or updates on typing
   room.typing.subscribe(async () => {

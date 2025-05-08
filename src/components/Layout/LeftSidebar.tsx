@@ -2,8 +2,11 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { navigate, useLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Accordion from '@ably/ui/core/Accordion';
+import { AccordionData } from '@ably/ui/core/Accordion/types';
 import Icon from '@ably/ui/core/Icon';
+import { throttle } from 'lodash';
 
+import { productData } from 'src/data';
 import { NavProduct, NavProductContent, NavProductPages } from 'src/data/nav/types';
 import {
   commonAccordionOptions,
@@ -13,11 +16,8 @@ import {
   sidebarAlignmentClasses,
   sidebarAlignmentStyles,
 } from './utils/nav';
-import { ProductKey } from 'src/data/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
-import { AccordionData } from '@ably/ui/core/Accordion/types';
-import { throttle } from 'lodash';
 
 type ContentType = 'content' | 'api';
 
@@ -54,7 +54,7 @@ const NavPage = ({
         key={hierarchicalKey(page.link, depth, activePage.tree)}
         id={linkId}
         className={cn({
-          'block ui-text-menu2 leading-relaxed md:leading-snug md:ui-text-menu4 text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base':
+          'block ui-text-label2 leading-relaxed md:leading-snug md:ui-text-label4 text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base':
             true,
           '!font-semibold': !pageActive,
           'text-neutral-900': !pageActive && type === 'content',
@@ -119,12 +119,9 @@ const renderProductContent = (
     </div>
   ));
 
-const constructProductNavData = (
-  activePageTree: PageTreeNode[],
-  products: [ProductKey, NavProduct][],
-  inHeader: boolean,
-): AccordionData[] => {
-  const navData: AccordionData[] = products.map(([productKey, product], index) => {
+const constructProductNavData = (activePageTree: PageTreeNode[], inHeader: boolean): AccordionData[] => {
+  const navData: AccordionData[] = Object.entries(productData).map(([productKey, productObj], index) => {
+    const product = productObj.nav as NavProduct;
     const apiReferencesId = `${productKey}-api-references`;
 
     return {
@@ -199,7 +196,7 @@ const constructProductNavData = (
 };
 
 const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
-  const { activePage, products } = useLayoutContext();
+  const { activePage } = useLayoutContext();
   const [hasScrollbar, setHasScrollbar] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -218,10 +215,7 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
     };
   }, []);
 
-  const productNavData = useMemo(
-    () => constructProductNavData(activePage.tree, products, inHeader),
-    [activePage.tree, products, inHeader],
-  );
+  const productNavData = useMemo(() => constructProductNavData(activePage.tree, inHeader), [activePage.tree, inHeader]);
 
   return (
     <Accordion

@@ -1,14 +1,12 @@
 import { defineConfig } from 'vite';
-import dotenv from 'dotenv';
 import path from 'path';
 import tailwindcss from 'tailwindcss';
 import autoprefixer from 'autoprefixer';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
-
 const baseConfig = defineConfig({
   css: {
     postcss: {
+      config: path.resolve(process.cwd(), 'postcss.config.mts'),
       plugins: [tailwindcss({ config: path.resolve(process.cwd(), 'tailwind.config.ts') }), autoprefixer()],
     },
   },

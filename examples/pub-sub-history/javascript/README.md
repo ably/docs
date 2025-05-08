@@ -12,9 +12,9 @@ History is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/Su
 
 Use the following methods to retrieve message history in a pub/sub application:
 
-* [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
-* [`channel.subscribe()`](/docs/channels#subscribe): subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message.
-* [`channel.history()`](/docs/storage-history/history#retrieve-channel): retrieve paginated message event history.
+- [`channel.get()`](/docs/channels#create): creates a new or retrieves an existing `channel`.
+- [`channel.subscribe()`](/docs/channels#subscribe): subscribes to message events within a specific channel by registering a listener. Message events are emitted when a user publishes a message.
+- [`channel.history()`](/docs/storage-history/history#retrieve-channel): retrieve paginated message event history.
 
 Find out more about [history](/docs/storage-history/history).
 
@@ -22,38 +22,38 @@ Find out more about [history](/docs/storage-history/history).
 
 1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
-```sh
-git clone git@github.com:ably/docs.git
-```
+  ```sh
+  git clone git@github.com:ably/docs.git
+  ```
 
 2. Change directory:
 
-```sh
-cd /examples/
-```
+  ```sh
+  cd /examples/
+  ```
 
 3. Rename the environment file:
 
-```sh
-mv .env.example .env.local
-```
+  ```sh
+  mv .env.example .env.local
+  ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
-```sh
-yarn install
-```
+  ```sh
+  yarn install
+  ```
 
 6. Run the server:
 
-```sh
-yarn run pub-sub-history-javascript
-```
+  ```sh
+  yarn run pub-sub-history-javascript
+  ```
 
 7. Try it out by opening a tab to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and update the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

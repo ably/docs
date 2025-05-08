@@ -1,10 +1,11 @@
 import * as Ably from 'ably';
 import { ChatClient, PresenceEvent, PresenceMember, AllFeaturesEnabled } from '@ably/chat';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 
 const realtimeClient = new Ably.Realtime({
-  clientId: faker.person.firstName(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  clientId: minifaker.firstName(),
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 const chatClient = new ChatClient(realtimeClient);
 
@@ -29,7 +30,7 @@ async function initializeChat() {
 
       if (event.clientId === realtimeClient.auth.clientId) {
         const button = document.createElement('button');
-        button.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded w-full min-w-[120px]';
+        button.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded-[1998px] w-full min-w-[120px] border uk-border-primary';
         button.id = 'status-button';
         button.onclick = async () => {
           await room.presence.update({
@@ -100,10 +101,10 @@ async function addCard(onlineStatus: PresenceMember | PresenceEvent) {
   // Create elements to store name and status
   const nameParentDiv = document.createElement('div');
   const nameDiv = document.createElement('div');
-  nameDiv.className = 'font-medium text-gray-900';
+  nameDiv.className = 'font-medium';
   nameDiv.textContent = onlineStatus.clientId + (onlineStatus.clientId === chatClient.clientId ? ' (You)' : '');
   const statusDiv = document.createElement('div');
-  statusDiv.className = 'text-sm italic text-gray-600';
+  statusDiv.className = 'text-sm italic';
   statusDiv.textContent = (onlineStatus.data as { status?: string })?.status ?? 'Online';
 
   const parentDiv = document.getElementById('cards');

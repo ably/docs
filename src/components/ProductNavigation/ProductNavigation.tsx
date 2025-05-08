@@ -11,7 +11,7 @@ const Item = ({ to, children, active = false }: PropsWithChildren<ItemProps>) =>
   return (
     <Link
       to={to}
-      className={cn('px-12 md:px-14 py-16 relative cursor-pointer ui-text-menu3', {
+      className={cn('px-12 md:px-14 py-16 relative cursor-pointer ui-text-label3', {
         'text-neutral-1300 md:mr-2': active,
         'text-neutral-1000 md:px-14': !active,
       })}

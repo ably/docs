@@ -1,12 +1,12 @@
 import * as Ably from 'ably';
 import type { Message } from 'ably';
-import { faker } from '@faker-js/faker';
-import UIkit from 'uikit';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 import './styles.css';
 
 const preloadButton = document.getElementById('pre-load-history');
 let lastBidAmount = 100;
-const numBids = 10;
+const numBids = 4;
 const urlParams = new URLSearchParams(window.location.search);
 const channelName = urlParams.get('name') || 'pub-sub-history';
 
@@ -14,9 +14,9 @@ preloadButton.addEventListener('click', async () => {
   preloadButton.disabled = true;
 
   for (let i = 0; i < numBids; i++) {
-    const clientId = faker.person.firstName();
+    const clientId = minifaker.firstName();
     const client = new Ably.Realtime({
-      key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+      key: import.meta.env.VITE_ABLY_KEY as string,
       clientId,
     });
     const channel = client.channels.get(urlParams.get('name') || 'pub-sub-history');
@@ -45,8 +45,8 @@ async function enterAuction() {
   auctionRoom.style.display = 'block';
 
   client = new Ably.Realtime({
-    key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
-    clientId: faker.person.firstName(),
+    key: import.meta.env.VITE_ABLY_KEY as string,
+    clientId: minifaker.firstName(),
   });
 
   channel = client.channels.get(channelName);
@@ -106,7 +106,7 @@ async function addHistoryItem(message: Message, position = 'prepend') {
   const history = document.getElementById('history');
   const historyItem = document.createElement('div');
   historyItem.id = `history-item-${message.id}`;
-  historyItem.className = 'flex items-center justify-between py-2 border-b';
+  historyItem.className = 'flex items-center justify-between py-1 border-b';
 
   if (position === 'prepend') {
     history.prepend(historyItem);
@@ -138,7 +138,7 @@ const loadHistoryButton = document.getElementById('load-history') as HTMLButtonE
 
 async function addHistory() {
   loadHistoryButton.disabled = true;
-  loadHistoryButton.className = 'uk-btn uk-btn-md uk-btn-default py-2 rounded cursor-not-allowed';
+  loadHistoryButton.className = 'uk-btn uk-btn-sm rounded-[1998px] uk-btn-default py-1 rounded cursor-not-allowed';
 
   const resultPage = await channel.history();
   const messages = resultPage.items;
