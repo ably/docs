@@ -18,8 +18,17 @@ export default {
       ],
     },
     {
-      name: 'Get started',
+      name: 'Getting started',
       pages: [
+        {
+          name: 'Quickstarts',
+          pages: [
+            {
+              name: 'JavaScript',
+              link: '/docs/chat/getting-started/javascript',
+            },
+          ],
+        },
         {
           name: 'SDK setup',
           link: '/docs/chat/setup',
@@ -77,6 +86,10 @@ export default {
           link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-react.html',
           name: 'React SDK',
           external: true,
+        },
+        {
+          link: '/docs/api/chat-rest',
+          name: 'REST API',
         },
       ],
     },

@@ -18,6 +18,38 @@ export default {
       ],
     },
     {
+      name: 'Architecture',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/platform/architecture',
+        },
+      ],
+    },
+    {
+      name: 'Products and SDKs',
+      pages: [
+        {
+          name: 'SDKs',
+          link: '/docs/sdks',
+          external: true,
+        },
+        {
+          name: 'Deprecation',
+          pages: [
+            {
+              name: 'Policy',
+              link: '/docs/platform/deprecate',
+            },
+            {
+              name: 'Nov 2025 - Protocol v1',
+              link: '/docs/platform/deprecate/protocol-v1',
+            },
+          ],
+        },
+      ],
+    },
+    {
       name: 'Pricing',
       pages: [
         {
@@ -139,6 +171,10 @@ export default {
               name: 'Pulsar',
               link: '/docs/integrations/streaming/pulsar',
             },
+            {
+              name: 'DataDog',
+              link: '/docs/integrations/streaming/datadog',
+            },
           ],
         },
         {
@@ -214,6 +250,19 @@ export default {
         {
           name: 'Programmatic management using Control API',
           link: '/docs/account/control-api',
+        },
+      ],
+    },
+    {
+      name: 'Debugging and Errors',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/errors',
+        },
+        {
+          name: 'Error codes',
+          link: '/docs/errors/codes',
         },
       ],
     },

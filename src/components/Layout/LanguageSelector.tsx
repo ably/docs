@@ -46,7 +46,7 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
   return (
     <div
       className={cn(
-        'ui-text-menu4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 group/lang-dropdown flex gap-8 items-center rounded',
+        'ui-text-label4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 group/lang-dropdown flex gap-8 items-center rounded',
         {
           'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer': isOption,
         },
@@ -74,10 +74,9 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
 };
 
 export const LanguageSelector = () => {
-  const { activePage, products } = useLayoutContext();
+  const { activePage } = useLayoutContext();
   const location = useLocation();
-  const activeProduct = products[activePage.tree[0].index]?.[0];
-  const languageVersions = languageData[activeProduct ?? 'pubsub'];
+  const languageVersions = languageData[activePage.product ?? 'pubsub'];
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState<LanguageSelectorOptionData | null>(null);
   const selectRef = useRef<HTMLDivElement>(null);
@@ -98,13 +97,6 @@ export const LanguageSelector = () => {
 
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const langParam = queryParams.get('lang');
-
-  useEffect(() => {
-    if (langParam && !options.some((option) => option.label === langParam)) {
-      queryParams.delete('lang');
-      navigate(`${location.pathname}?${queryParams.toString()}`, { replace: true });
-    }
-  }, [langParam, options, location.pathname, queryParams]);
 
   useEffect(() => {
     const defaultOption = options.find((option) => option.label === langParam) || options[0];
@@ -128,7 +120,7 @@ export const LanguageSelector = () => {
         classNames={{
           control: () => '!border-none !inline-flex !cursor-pointer group/lang-dropdown',
           valueContainer: () => '!p-0',
-          menu: () => 'absolute right-0 w-240 z-10',
+          menu: () => 'absolute right-0 w-[240px] z-10',
         }}
         styles={{
           control: () => ({ height: LANGUAGE_SELECTOR_HEIGHT }),

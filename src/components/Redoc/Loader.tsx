@@ -57,7 +57,7 @@ export const Loader = ({ specUrl }: { specUrl: string }) => {
     <>
       <GoTopButton />
       {specUrl ? (
-        <div id="redoc-container" className="redoc-content"></div>
+        <div id="redoc-container" className="redoc-content max-w-[100vw]"></div>
       ) : (
         <div className="ml-24 mb-20">
           Missing <span className="ui-text-code">{specUrl}</span> metadata

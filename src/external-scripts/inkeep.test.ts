@@ -1,8 +1,6 @@
 import * as scriptLoader from './utils';
 import inkeepChat, { inkeepChatIdentifyUser } from './inkeep';
 
-const identifyKey = 'key';
-
 describe('inkeepChat', () => {
   beforeEach(() => {
     document.body.innerHTML = `<script></script>`;
@@ -11,7 +9,7 @@ describe('inkeepChat', () => {
   it('does not load Inkeep when configuration is not present', () => {
     const spy = jest.spyOn(scriptLoader, 'scriptLoader');
 
-    inkeepChat(undefined, 'integrationId', 'organizationId');
+    inkeepChat(undefined);
 
     expect(spy).not.toHaveBeenCalled();
   });
@@ -19,7 +17,7 @@ describe('inkeepChat', () => {
   it('load Inkeep when configuration is present', () => {
     const spy = jest.spyOn(scriptLoader, 'scriptLoader');
 
-    inkeepChat('apiKey', 'integrationId', 'organizationId');
+    inkeepChat('apiKey', 'http://localhost:3000/api/conversations');
 
     expect(spy).toHaveBeenCalled();
   });
@@ -28,12 +26,12 @@ describe('inkeepChat', () => {
     let spy;
 
     beforeEach(() => {
-      global.inkeepWidget = { render: jest.fn };
-      spy = jest.spyOn(global.inkeepWidget, 'render');
+      global.inkeepWidget = { update: jest.fn };
+      spy = jest.spyOn(global.inkeepWidget, 'update');
     });
 
     it('returns when the user is undefined', () => {
-      inkeepChatIdentifyUser({ account: { uuid: '123' } });
+      inkeepChatIdentifyUser({});
 
       expect(spy).not.toHaveBeenCalled();
     });
@@ -41,7 +39,29 @@ describe('inkeepChat', () => {
     it('sets the Inkeep userId', () => {
       inkeepChatIdentifyUser({ user: { uuid: '123' } });
 
-      expect(spy).toHaveBeenCalledWith({ baseSettings: { userId: '123' } });
+      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: '123' } } });
+    });
+
+    it('sets the Inkeep userId from device_id meta tag when user is not provided', () => {
+      const metaTag = document.createElement('meta');
+      metaTag.name = 'device_id';
+      metaTag.content = 'device123';
+      document.head.appendChild(metaTag);
+
+      inkeepChatIdentifyUser({});
+
+      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: 'device123' } } });
+    });
+
+    it('sets the Inkeep userId from user uuid, even if device_id meta tag exists', () => {
+      const metaTag = document.createElement('meta');
+      metaTag.name = 'device_id';
+      metaTag.content = 'device123';
+      document.head.appendChild(metaTag);
+
+      inkeepChatIdentifyUser({ user: { uuid: 'user123' } });
+
+      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: 'user123' } } });
     });
   });
 });

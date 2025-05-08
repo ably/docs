@@ -30,7 +30,7 @@ jest.mock('./LeftSidebar', () => ({
 }));
 
 jest.mock('@reach/router', () => ({
-  useLocation: jest.fn(),
+  useLocation: jest.fn().mockReturnValue({ pathname: '/docs' }),
 }));
 
 jest.mock('./LanguageSelector', () => ({
@@ -50,9 +50,8 @@ describe('Header', () => {
     render(<Header />);
     expect(screen.getAllByAltText('Ably logo').length).toBeGreaterThan(0);
 
-    // TODO reenable when examples are ready to be released
-    // expect(screen.getByText('Documentation')).toBeInTheDocument();
-    // expect(screen.getByText('Examples')).toBeInTheDocument();
+    expect(screen.getByText('Docs')).toBeInTheDocument();
+    expect(screen.getByText('Examples')).toBeInTheDocument();
   });
 
   it('renders the search bar when searchBar is true', () => {

@@ -36,7 +36,7 @@ const APIKeyMenuSelector = ({
 
   return dataContainsKey ? (
     <div className="border-t border-charcoal-grey py-14 px-16 flex items-center">
-      <SmallMenuLabel>API Key:</SmallMenuLabel>
+      <SmallMenuLabel className="text-neutral-000">API Key:</SmallMenuLabel>
       {signedIn && atLeastOneAppHasApiKeys(apps) ? (
         <APIKeyMenu apps={apps} setActiveApiKey={setActiveApiKey} />
       ) : (

@@ -4,10 +4,17 @@ import { HEADER_HEIGHT, componentMaxHeight } from '@ably/ui/core/utils/heights';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
 import { LanguageKey } from 'src/data/languages/types';
+import { DEFAULT_LANGUAGE } from 'src/contexts/layout-context';
 
 export type PageTreeNode = { index: number; page: NavProductPage };
 
-export type ActivePage = { tree: PageTreeNode[]; page: NavProductPage; languages: LanguageKey[] };
+export type ActivePage = {
+  tree: PageTreeNode[];
+  page: NavProductPage;
+  languages: LanguageKey[];
+  language: LanguageKey;
+  product: ProductKey | null;
+};
 
 /**
  * Determines the active page based on the provided target link.
@@ -64,6 +71,8 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
         tree: [{ index: Object.keys(data).indexOf(key), page: { name, link } }],
         page: { name, link },
         languages: [],
+        language: DEFAULT_LANGUAGE,
+        product: key,
       };
     }
 
@@ -94,7 +103,7 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
           data[key].nav[apiResult ? 'api' : 'content'],
         );
 
-        return { tree, page: page?.[0] as NavProductPage, languages: [] };
+        return { tree, page: page?.[0] as NavProductPage, languages: [], language: DEFAULT_LANGUAGE, product: key };
       }
     }
   }
@@ -130,12 +139,12 @@ export const commonAccordionOptions = (
       'text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 hover:text-neutral-1100 active:text-neutral-1000 !py-0 pl-0 !mb-0 transition-colors [&_svg]:!w-24 [&_svg]:!h-24 md:[&_svg]:!w-20 md:[&_svg]:!h-20',
       {
         'my-12': topLevel && inHeader,
-        'h-40 ui-text-menu1 !font-bold md:ui-text-menu4 px-16': topLevel,
-        'min-h-[1.625em] md:min-h-[1.375em] ui-text-menu2 !font-semibold md:ui-text-menu4': !topLevel,
+        'h-40 ui-text-label1 !font-bold md:ui-text-label4 px-16': topLevel,
+        'min-h-[1.625em] md:min-h-[1.375em] ui-text-label2 !font-semibold md:ui-text-label4': !topLevel,
       },
     ),
     selectedHeaderCSS: '!text-neutral-1300 mb-8',
-    contentCSS: cn('[&>div]:pb-0'),
+    contentCSS: '[&>div]:pb-0',
     rowIconSize: '20px',
     defaultOpenIndexes: !inHeader && openIndex !== undefined ? [openIndex] : [],
     hideBorders: true,
@@ -143,7 +152,7 @@ export const commonAccordionOptions = (
   },
 });
 
-export const sidebarAlignmentClasses = 'absolute md:sticky w-240 md:pb-128 pt-24';
+export const sidebarAlignmentClasses = 'absolute md:sticky w-[240px] md:pb-128 pt-24';
 
 export const sidebarAlignmentStyles: React.CSSProperties = {
   top: HEADER_HEIGHT,

@@ -25,7 +25,7 @@ const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
       />
       {tooltipHover ? (
         <aside
-          className="w-240 max-w-240 absolute box-border
+          className="w-[240px] max-w-[240px] absolute box-border
           whitespace-pre-wrap bg-white shadow-tooltip rounded border border-light-grey
           p-16 text-center ui-text-p3 cursor-default -ml-160 -mt-88"
         >

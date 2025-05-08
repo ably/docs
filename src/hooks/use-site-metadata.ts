@@ -21,14 +21,13 @@ export const useSiteMetadata = () => {
             announcementEnabled
             inkeepEnabled
             inkeepApiKey
-            inkeepIntegrationId
-            inkeepOrganizationId
             insightsEnabled
             insightsDebug
             mixpanelApiKey
             mixpanelAutoCapture
             posthogApiKey
             posthogHost
+            conversationsUrl
           }
         }
       }

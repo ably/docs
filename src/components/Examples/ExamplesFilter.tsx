@@ -1,14 +1,13 @@
 import React, { ChangeEvent, Dispatch, SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import Icon from '@ably/ui/core/Icon';
-import { products } from '@ably/ui/core/ProductTile/data';
+import { products } from '../../data/examples';
 import Button from '@ably/ui/core/Button';
 import cn from '@ably/ui/core/utils/cn';
 import Badge from '@ably/ui/core/Badge';
 import ExamplesCheckbox from './ExamplesCheckbox';
 import { SelectedFilters } from './ExamplesContent';
 import { useOnClickOutside } from 'src/hooks';
-import examples from '../../data/examples';
 
 const ExamplesFilter = ({
   selected,
@@ -51,14 +50,8 @@ const ExamplesFilter = ({
         selected: localSelected.products,
         handleSelect: (e: ChangeEvent<HTMLInputElement>) => handleSelect(e, 'products'),
       },
-      {
-        key: 'use-case',
-        data: examples.useCases,
-        selected: localSelected.useCases,
-        handleSelect: (e: ChangeEvent<HTMLInputElement>) => handleSelect(e, 'useCases'),
-      },
     ],
-    [localSelected.products, localSelected.useCases, handleSelect],
+    [localSelected.products, handleSelect],
   );
 
   const closeFilterMenu = useCallback(() => {

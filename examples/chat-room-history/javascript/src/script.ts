@@ -1,11 +1,12 @@
 import * as Ably from 'ably';
 import { ChatClient, Message, Room, AllFeaturesEnabled } from '@ably/chat';
-import { faker } from '@faker-js/faker';
+import minifaker from 'minifaker';
+import 'minifaker/locales/en';
 import './styles.css';
 
 const realtimeClient = new Ably.Realtime({
-  clientId: faker.person.firstName(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  clientId: minifaker.firstName(),
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 // Number of times messages are sent to the chat room before the user enters the room.
 let sendCount = 0;
@@ -61,7 +62,8 @@ document.getElementById('send-message').addEventListener('click', () => {
     const enterChatButton = document.getElementById('enter-chat') as HTMLButtonElement;
     if (enterChatButton) {
       enterChatButton.disabled = false;
-      enterChatButton.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded';
+      enterChatButton.className =
+        'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black bg-transparent text-black';
     }
   }
 
@@ -97,7 +99,7 @@ const getPastMessages = async () => {
   if (loadButton instanceof HTMLButtonElement) {
     loadButton.disabled = true;
     loadButton.className =
-      'uk-btn uk-btn-md uk-btn-primary mb-4 rounded absolute top-2 left-1/2 transform -translate-x-1/2 p-2';
+      'uk-btn uk-btn-sm mb-1 rounded-[1998px] border border-black bg-transparent text-black cursor-not-allowed hover:uk-btn-primary+1 active:uk-btn-primary+2 absolute top-2 left-1/2 transform -translate-x-1/2 p-2 cursor-not-allowed';
   }
 };
 

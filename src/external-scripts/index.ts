@@ -26,9 +26,8 @@ type ExternalScriptsData = {
   headwayAccountId?: string;
   inkeepEnabled?: string;
   inkeepApiKey?: string;
-  inkeepIntegrationId?: string;
-  inkeepOrganizationId?: string;
   insightsEnabled?: boolean;
+  conversationsUrl?: string;
 };
 
 // Inject scripts and run any init code
@@ -37,8 +36,7 @@ const injectScripts = ({
   announcementEnabled,
   inkeepEnabled,
   inkeepApiKey,
-  inkeepIntegrationId,
-  inkeepOrganizationId,
+  conversationsUrl,
 }: ExternalScriptsData = {}) => {
   if (announcementEnabled) {
     announcement();
@@ -49,7 +47,7 @@ const injectScripts = ({
   }
 
   if (inkeepEnabled) {
-    inkeepChat(inkeepApiKey, inkeepIntegrationId, inkeepOrganizationId);
+    inkeepChat(inkeepApiKey, conversationsUrl);
   }
 
   if (!document.querySelector('div[data-scripts-loaded="true"]')) {

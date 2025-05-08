@@ -12,10 +12,10 @@ Live cursors are implemented using [Ably Spaces](/docs/products/spaces). The Spa
 
 Use the following components to add live cursors into an application:
 
-* [`spaces.get()`](/docs/spaces/space#create): creates a new or retrieves an existing `space`.
-* [`space.cursors.subscribe()`](/docs/spaces/cursors#subscribe): subscribes to members' online status and profile updates by registering a listener.
-* [`space.enter()`](/docs/spaces/space#enter): entering a space will register a client as a member and emit an `enter` event to all subscribers.
-* [`space.cursors.set()`](/docs/spaces/cursors#set): a method to update this member's cursor location in realtime
+- [`spaces.get()`](/docs/spaces/space#create): creates a new or retrieves an existing `space`.
+- [`space.cursors.subscribe()`](/docs/spaces/cursors#subscribe): subscribes to members' online status and profile updates by registering a listener.
+- [`space.enter()`](/docs/spaces/space#enter): entering a space will register a client as a member and emit an `enter` event to all subscribers.
+- [`space.cursors.set()`](/docs/spaces/cursors#set): a method to update this member's cursor location in realtime
 
 Find out more about [live-cursors](/docs/spaces/cursors).
 
@@ -23,38 +23,38 @@ Find out more about [live-cursors](/docs/spaces/cursors).
 
 1. Clone the [Ably docs](https://github.com/ably/docs) repository where this example can be found:
 
-```sh
-git clone git@github.com:ably/docs.git
-```
+  ```sh
+  git clone git@github.com:ably/docs.git
+  ```
 
 2. Change directory:
 
-```sh
-cd /examples/
-```
+  ```sh
+  cd /examples/
+  ```
 
 3. Rename the environment file:
 
-```sh
-mv .env.example .env.local
-```
+  ```sh
+  mv .env.example .env.local
+  ```
 
-4. In `.env.local` update the value of `VITE_PUBLIC_ABLY_KEY` to be your Ably API key.
+4. In `.env.local` update the value of `VITE_ABLY_KEY` to be your Ably API key.
 
 5. Install dependencies:
 
-```sh
-yarn install
-```
+  ```sh
+  yarn install
+  ```
 
 6. Run the server:
 
-```sh
-yarn run spaces-live-cursors-javascript
-```
+  ```sh
+  yarn run spaces-live-cursors-javascript
+  ```
 
 7. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
 
 ## Open in CodeSandbox
 
-In CodeSandbox, rename the `.env.example` file to `.env.local` and enter the value of your `VITE_PUBLIC_ABLY_KEY` variable to use your Ably API key.
+In CodeSandbox, rename the `.env.example` file to `.env.local` and enter the value of your `VITE_ABLY_KEY` variable to use your Ably API key.

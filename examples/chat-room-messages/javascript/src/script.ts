@@ -6,7 +6,7 @@ const mockNames = ['Bob', 'Jane', 'John', 'Sammy'];
 const mockName = () => mockNames[Math.floor(Math.random() * mockNames.length)];
 const realtimeClient = new Ably.Realtime({
   clientId: mockName(),
-  key: import.meta.env.VITE_PUBLIC_ABLY_KEY as string,
+  key: import.meta.env.VITE_ABLY_KEY as string,
 });
 
 let chatClient: ChatClient;

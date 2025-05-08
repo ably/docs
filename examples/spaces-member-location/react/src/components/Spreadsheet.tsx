@@ -32,7 +32,7 @@ const Spreadsheet = ({
   };
 
   return (
-    <table className="uk-table uk-table-bordered uk-table-divider uk-table-middle border-collapse border-2 border-gray-300">
+    <table className="uk-table uk-table-bordered uk-table-divider uk-table-middle border-collapse border-2 border-gray-300 uk-text-primary">
       <tbody>
         {cellData.map((row: string[], rowIndex: number) => (
           <tr key={rowIndex} className="uk-table-middle">
