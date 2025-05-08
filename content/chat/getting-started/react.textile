@@ -416,71 +416,94 @@ const onUpdateMessage = useCallback(
 ```[react]
 // App.tsx - Update the rendering of messages in the ChatBox component
 return (
-  <div className="flex flex-col w-full h-[600px] item-left border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
-    <div className="flex-1 p-4 overflow-y-auto space-y-2">
-      {messages.map((msg: Message, idx: number) => {
-        const isMine = msg.clientId === 'my-first-client';
-        return (
-          <div
-            /* message update handling */
-            key={idx}
-            className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
-            onClick={() => onUpdateMessage(msg)}
-          >
-            <div
-              className={`max-w-[60%] rounded-2xl px-3 py-2 shadow-sm ${
-                isMine
-                  ? 'bg-green-200 text-gray-800 rounded-br-none'
-                  : 'bg-blue-50 text-gray-800 rounded-bl-none'
-              }`}
-            >
-              {msg.text}
+        <div
+            className="flex flex-col w-full h-[600px] item-left border-1 border-blue-500 rounded-lg overflow-hidden mx-auto font-sans">
+            <div className="flex-1 p-4 overflow-y-auto space-y-2">
+                {messages.map((msg: Message, idx: number) => {
+                    const isMine = msg.clientId === 'my-first-client';
+                    return (
+                        <div
+                            /* message update handling */
+                            key={idx}
+                            className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
+                            onClick={() => onUpdateMessage(msg)}
+                        >
+                            <div
+                                className={`max-w-[60%] rounded-2xl px-3 py-2 shadow-sm ${
+                                    isMine
+                                        ? 'bg-green-200 text-gray-800 rounded-br-none'
+                                        : 'bg-blue-50 text-gray-800 rounded-bl-none'
+                                }`}
+                            >
+                                {msg.text}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
-          </div>
-        );
-      })}
-    </div>
-    {/* rest of your rendering code*/}
-  </div>
-);
+            <div className="flex items-center px-2 mt-auto mb-2">
+                <input
+                    type="text"
+                    placeholder="Type your message..."
+                    className="flex-1 p-2 border border-gray-400 rounded outline-none bg-white"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            handleSend();
+                        }
+                    }}
+                />
+                <button
+                    className="bg-blue-500 text-white px-4 ml-2 h-10 flex items-center justify-center rounded hover:bg-blue-600 transition-colors"
+                    onClick={handleSend}
+                >
+                    Send
+                </button>
+            </div>
+        </div>
+    );
 ```
 
 * Next, you must update the listener provided to the @useMessages()@ hook to handle the @MessageEvents.Updated@ event:
 
 ```[react]
-// App.tsx - Replace the listener in the useMessages hook with the following:
-listener: (event: MessageEvent) => {
-const message = event.message;
-switch (event.type) {
-  case MessageEvents.Created: {
-    // Add the new message to the list
-    setMessages((prevMessages) => [...prevMessages, event.message]);
-    break;
-  }
-  case MessageEvents.Updated: {
-    setMessages((prevMessages) => {
-      // Find the index of the message to update
-      const index = prevMessages.findIndex((other) => message.isSameAs(other));
+// App.tsx - Replace the useMessages hook with the following:
+const {send, update} = useMessages({
+        listener: (event: MessageEvent) => {
+            const message = event.message;
+            switch (event.type) {
+                case MessageEvents.Created: {
+                    // Add the new message to the list
+                    setMessages((prevMessages) => [...prevMessages, event.message]);
+                    break;
+                }
+                case MessageEvents.Updated: {
+                    setMessages((prevMessages) => {
+                        // Find the index of the message to update
+                        const index = prevMessages.findIndex((other) => message.isSameAs(other));
 
-      // If the message is not found, return the previous messages
-      if (index === -1) {
-        return prevMessages;
-      }
+                        // If the message is not found, return the previous messages
+                        if (index === -1) {
+                            return prevMessages;
+                        }
 
-      // Apply the update to the original message
-      const newMessage = prevMessages[index].with(event);
+                        // Apply the update to the original message
+                        const newMessage = prevMessages[index].with(event);
 
-      // Create a new array with the updated message and return it
-      const updatedArray = prevMessages.slice();
-      updatedArray[index] = newMessage;
-      return updatedArray;
+                        // Create a new array with the updated message and return it
+                        const updatedArray = prevMessages.slice();
+                        updatedArray[index] = newMessage;
+                        return updatedArray;
+                    });
+                    break;
+                }
+                default: {
+                    console.error('Unhandled event', event);
+                }
+            }
+        }
     });
-    break;
-  }
-  default: {
-    console.error('Unhandled event', event);
-  }
-}}});
 ```
 
 * Now, when you click on a previously sent message in the UI, it will prompt you to enter new text. After entering the required change and submitting, it will send the updated message to the room, where the listener will receive it and update the UI accordingly.
@@ -495,6 +518,8 @@ To do this, you need to expose @getPreviousMessages()@ on the hook, and extend t
 ```[react]
 // App.tsx
 function ChatBox() {
+  /* Expose getPreviousMessages() */
+  /* const {send, update, getPreviousMessages} = useMessages({...*/
   /* existing code */
   useEffect(() => {
     async function loadHistory() {
@@ -536,11 +561,13 @@ The Chat SDK exposes the "useTyping()":https://sdk.ably.com/builds/ably/ably-cha
 ```[react]
 // App.tsx
 function ChatBox() {
+  /* existing code */
+
   // Expose the currentlyTyping set and the start and stop methods
   const { currentlyTyping, start, stop } = useTyping();
 
-  /* rest of your code */
 
+  /* replace the existing handleSend method with the following */
   const handleSend = () => {
         if (!inputValue.trim()) return;
         send({text: inputValue.trim()}).catch((err) =>
@@ -551,7 +578,7 @@ function ChatBox() {
         stop().catch((err) => console.error('Error stopping typing', err))
     };
 
-  /* handle client typing changes */
+  /* add the following method to handle input changes */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
@@ -584,7 +611,7 @@ return (
             className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
             onClick={() => onUpdateMessage(msg)}
           >
-            /* message update handling */
+            {/* message update handling */}
             <div
               className={`max-w-[60%] rounded-2xl px-3 py-2 shadow-sm ${
                 isMine
