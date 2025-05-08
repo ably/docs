@@ -1,0 +1,1225 @@
+openapi: 3.0.0
+info:
+  title: Ably LiveObjects REST API
+  version: 1.0.0
+  description: |
+    # LiveObjects API
+
+    LiveObjects provides a set of purpose-built APIs and data structures to handle the complexities of persisting and synchronizing state, freeing you to focus on building features instead of managing concurrency or conflict resolution.
+    <br><br>
+    LiveObjects enables you to store data as "objects" on a channel. These objects are automatically synchronized in realtime across all connected clients, and any conflicts that arise from concurrent updates are seamlessly resolved in the background.
+servers:
+  - url: https://main.realtime.ably.net/
+    description: Production server for Ably REST API
+
+paths:
+  /channels/{channelId}/objects:
+    get:
+      summary: Get a tree of objects
+      description: |
+        Fetches the list of objects stored on the channel.<br><br>
+
+        In the list API, data values represent a concrete piece of data (a number, a string, etc) or a reference to another object. The key in the data value indicates the type that you can expect to receive in the value, for example, `{ "data": { "string" : "Ably Pub/Sub" }}`.<br><br>
+
+        Maps are made of entries, which are a user-defined key (e.g. `myMapKey`) and a data value. Counters are data values containing a number.<br><br>
+
+        For more information on objects, see the Ably LiveObjects documentation on [objects](/docs/liveobjects/concepts/objects).
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: The channel ID.
+          schema:
+            type: string
+            example: "my-app:likes:counter"
+        - name: values
+          in: query
+          required: false
+          description: Include the values in the response. Setting this to false returns a list of `objectIds` only.
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          required: false
+          description: Set the number of objects to be returned in each page.
+          schema:
+            type: integer
+        - name: cursor
+          in: query
+          required: false
+          description: The cursor used for pagination.
+          schema:
+            type: string
+        - name: metadata
+          in: query
+          required: false
+          description: Include object metadata in the response.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of retrieved objects or object references.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/ObjectWithDetails'
+                  - type: array
+                    items:
+                      type: string
+                      example: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+              examples:
+                objectArray:
+                  summary: Full response with object values (url param values=true)
+                  value:
+                    - objectId: "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000"
+                      map:
+                        entries:
+                          myMapKey: { data: { string: "my map value" }}
+                          myBoolean: { data: { boolean: true }}
+                          myEncodedKey: { data: { bytes: "TGl2ZU9iamVjdHMgaXMgYXdlc29tZQo=", encoding: "base64" }}
+                    - objectId: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+                      map:
+                        entries:
+                          counter: { data:{ number: 5 }}
+                          myObjectRef: { data: { objectId: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000" }}
+                refArray:
+                  summary: Just object references (url param values=false or not set)
+                  value:
+                    - "root"
+                    - "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000"
+                    - "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AuthError'
+                  - $ref: '#/components/schemas/ClientRestrictionNotSatisfied'
+                  - $ref: '#/components/schemas/InvalidTokenKey'
+                  - $ref: '#/components/schemas/MalformedCredential'
+                  - $ref: '#/components/schemas/OperationObjectSubscribeUnauthorized'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ApplicationDisabled'
+                  - $ref: '#/components/schemas/ChannelStateNotEnabled'
+                  - $ref: '#/components/schemas/StateOperationsOnlyAppliedOnRegularChannels'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppNotFound'
+        '429':
+          description: Too Many Requests
+          $ref: '#/components/schemas/RateLimitExceeded'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+    post:
+      summary: Create or update objects.
+      description: |
+        Allows creating or updating objects on the channel by providing the operation and data in the request body. If `objectId` is not provided, the server will generate one and return it in the response.<br><br>
+
+        For more information on operations, see the Ably LiveObjects documentation on [operations](/docs/liveobjects/concepts/operations).
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: The channel ID.
+          schema:
+            type: string
+            example: "my-app:likes:counter"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    id:
+                      $ref: '#/components/parameters/idempotentParameter'
+                    path:
+                      $ref: '#/components/parameters/pathParameter'
+                    operation:
+                      $ref: '#/components/parameters/operationParameter'
+                    data:
+                      $ref: '#/components/parameters/dataParameter'
+                - type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        $ref: '#/components/parameters/idempotentParameter'
+                      path:
+                        $ref: '#/components/parameters/pathParameter'
+                      operation:
+                        $ref: '#/components/parameters/operationParameter'
+                      data:
+                        $ref: '#/components/parameters/dataParameter'
+            examples:
+              singleOperation:
+                summary: Single operation example
+                value:
+                  id: "myIdempotencyKey"
+                  operation: "MAP_SET"
+                  objectId: "map:cwhvmsq21tXtFDS02TQqPdIh..."
+                  data:
+                    key: "isActive"
+                    value: { "boolean": true }
+              batchOperation:
+                summary: Batch operation example
+                value:
+                  - id: "myIdempotencyKey:0"
+                    operation: "MAP_SET"
+                    objectId: "map:cwhvmsq21tXtFDS02TQqPdIhGGezcSc..."
+                    data:
+                      key: "isActive"
+                      value: { "boolean": true }
+                  - id: "myIdempotencyKey:1"
+                    operation: "COUNTER_INC"
+                    objectId: "counter:DXr2i8FHRGkLrHPccWhXKDj1VUX2s7ACvmT..."
+                    data:
+                      number: 1
+              createMap:
+                summary: Create a map
+                value:
+                  operation: MAP_CREATE
+                  data:
+                    myMapKey: { string: "myMapValue" }
+                    myOtherKey: { boolean: true }
+              setValueOnMap:
+                summary: Set a value on a map
+                value:
+                  operation: MAP_SET
+                  objectId: "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcE..."
+                  data:
+                    key: "foo"
+                    value: { string: "bar" }
+              removeValueFromMap:
+                summary: Remove a value from a map
+                value:
+                  operation: MAP_REMOVE
+                  objectId: "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_@174220..."
+                  data:
+                    key: "myMapKey"
+              createCounter:
+                summary: Create a counter
+                value:
+                  operation: COUNTER_CREATE
+                  data:
+                    number: 3.1415926
+              incrementCounter:
+                summary: Increment a counter
+                value:
+                  operation: COUNTER_INC
+                  objectId: "counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlg..."
+                  data:
+                    number: 2
+      responses:
+        '200':
+          description: Successfully created or updated objects.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel:
+                    type: string
+                    description: The channel ID.
+                    example: "<channelId>"
+                  objectIds:
+                    type: array
+                    items:
+                      type: string
+                    description: The list of object IDs created or updated.
+                    example: ["map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000"]
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/CreateOrUpdateObjectsBadRequest"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AuthError'
+                  - $ref: '#/components/schemas/ClientRestrictionNotSatisfied'
+                  - $ref: '#/components/schemas/InvalidTokenKey'
+                  - $ref: '#/components/schemas/MalformedCredential'
+                  - $ref: '#/components/schemas/OperationObjectSubscribeUnauthorized'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ApplicationDisabled'
+                  - $ref: '#/components/schemas/ChannelStateNotEnabled'
+                  - $ref: '#/components/schemas/StateOperationsOnlyAppliedOnRegularChannels'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppNotFound'
+        '429':
+          description: Too many requests
+          $ref: '#/components/schemas/RateLimitExceeded'
+  /channels/{channelId}/objects/{objectId}:
+    get:
+      summary: Gets an object using an object ID.
+      description: |
+        Fetch a LiveObject stored on the channel in a tree structure.
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: The channel ID.
+          schema:
+            type: string
+            example: "my-app:likes:counter"
+        - name: objectId
+          in: path
+          required: true
+          description: The object ID.
+          schema:
+            type: string
+            example: "object-123"
+            default: root
+        - name: children
+          in: query
+          required: false
+          description: Causes the content of the objects to be included in the tree response, instead of just the objectIds.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Retrieve a LiveObject stored on the channel in a tree structure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectWithDetails'
+        examples:
+          withChildren:
+            summary: Expanded object with embedded children
+            value:
+              objectId: "root"
+              map:
+                entries:
+                  myMapKey:
+                    data:
+                      string: "my map value"
+                  myObjectRef:
+                    data:
+                      objectId: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+                      counter:
+                        data:
+                          number: 5
+          withoutChildren:
+            summary: Object references only
+            value:
+              objectId: "root"
+              map:
+                entries:
+                  myMapKey:
+                    data:
+                      string: "my map value"
+                  myObjectRef:
+                    data:
+                      objectId: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AuthError'
+                  - $ref: '#/components/schemas/ClientRestrictionNotSatisfied'
+                  - $ref: '#/components/schemas/InvalidTokenKey'
+                  - $ref: '#/components/schemas/MalformedCredential'
+                  - $ref: '#/components/schemas/OperationObjectSubscribeUnauthorized'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ApplicationDisabled'
+                  - $ref: '#/components/schemas/ChannelStateNotEnabled'
+                  - $ref: '#/components/schemas/StateOperationsOnlyAppliedOnRegularChannels'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AppNotFound'
+                  - $ref: '#/components/schemas/ObjectNotFound'
+        '429':
+          description: Too many requests
+          $ref: '#/components/schemas/RateLimitExceeded'
+  /channels/{channelId}/objects/{objectId}/compact:
+    get:
+      summary: Get a compact tree of objects
+      description: |
+        Returns a tree structure of the objects in a concise format that's easier to unmarshal into data types that represent your state. To fetch the full object tree, use the objectId root.
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          description: The channel ID.
+          schema:
+            type: string
+            example: "my-app:chat:room-123"
+        - name: objectId
+          in: path
+          required: true
+          description: The object ID.
+          default: root
+          schema:
+            type: string
+            example: "object-123"
+      responses:
+        '200':
+          description: Successfully retrieved the compact object tree.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                myMapKey: "my map value"
+                myCounter: 5
+                myFlag: true
+                myNestedMap:
+                  nestedKey: "nested value"
+        '400':
+          description: Bad request
+          $ref: '#/components/schemas/TombstoneObjectError'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AuthError'
+                  - $ref: '#/components/schemas/ClientRestrictionNotSatisfied'
+                  - $ref: '#/components/schemas/InvalidTokenKey'
+                  - $ref: '#/components/schemas/MalformedCredential'
+                  - $ref: '#/components/schemas/OperationObjectSubscribeUnauthorized'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ApplicationDisabled'
+                  - $ref: '#/components/schemas/ChannelStateNotEnabled'
+                  - $ref: '#/components/schemas/StateOperationsOnlyAppliedOnRegularChannels'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/AppNotFound'
+                  - $ref: '#/components/schemas/ObjectNotFound'
+        '429':
+          description: Too many requests
+          $ref: '#/components/schemas/RateLimitExceeded'
+
+components:
+  schemas:
+    ApplicationDisabled:
+      title: Application disabled
+      type: object
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "Application disabled."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 403
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          nullable: true
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          nullable: true
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+    AuthError:
+      title: Auth error
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 401
+        message:
+          type: string
+          example: "Token expired, token revoked, or client restriction not satisfied."
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          nullable: true
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          nullable: true
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+    AppNotFound:
+      title: App not found
+      type: object
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "Application not found."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 404
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          nullable: true
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          nullable: true
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+    ChannelStateNotEnabled:
+      title: Channel state not enabled
+      type: object
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "Channel state is not enabled for this app."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 403
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          nullable: true
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          nullable: true
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+    ClientRestrictionNotSatisfied:
+      description: Client restriction not satisfied.
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Client restriction not satisfied."
+        code:
+          type: integer
+          example: 401
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 40160
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: https://help.ably.io/error/40160
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+    ClientSpecifiedMessageIdInvalid:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Client-specified message ID cannot be empty or does not match the required format for batches."
+        code:
+          type: integer
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 40031
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: https://help.ably.io/error/40031
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    Counter:
+      type: object
+      properties:
+        objectId:
+          $ref: '#/components/schemas/ObjectId'
+        data:
+          type: object
+          properties:
+            number:
+              type: number
+              example: 5
+    CreateOrUpdateObjectsBadRequest:
+      oneOf:
+      - $ref: '#/components/schemas/FailureDecodingRequestBody'
+      - $ref: '#/components/schemas/InvalidObjectId'
+      - $ref: '#/components/schemas/InvalidObjectMessage'
+      - $ref: '#/components/schemas/NoOperationsInRequest'
+      - $ref: '#/components/schemas/ObjectIdOrPathRequired'
+      - $ref: '#/components/schemas/UnknownOperationType'
+      - $ref: '#/components/schemas/OperationPathNotProcessable'
+      - $ref: '#/components/schemas/ClientSpecifiedMessageIdInvalid'
+      - $ref: '#/components/schemas/FailedToUnmarshalOperationData'
+      - $ref: '#/components/schemas/NoObjectsMatchedPath'
+      - $ref: '#/components/schemas/UnableToUnquoteJsonData'
+      - $ref: '#/components/schemas/ObjectsLimitExceeded'
+      discriminator:
+        propertyName: statusCode
+        mapping:
+          'Failure decoding request body': '#/components/schemas/FailureDecodingRequestBody'
+          'Failed to unmarshal operation data': '#/components/schemas/FailedToUnmarshalOperationData'
+          'No operations in request': '#/components/schemas/NoOperationsInRequest'
+          'Operation Id or path required': '#/components/schemas/ObjectIdOrPathRequired'
+          'No objects matched path': '#/components/schemas/NoObjectsMatchedPath'
+          'Unknown operation type': '#/components/schemas/UnknownOperationType'
+          'Unable to unquote json data': '#/components/schemas/UnableToUnquoteJsonData'
+          'Invalid object message': '#/components/schemas/InvalidObjectMessage'
+          'Invalid object id': '#/components/schemas/InvalidObjectId'
+          'Client specified message Id invalid': '#/components/schemas/ClientSpecifiedMessageIdInvalid'
+          'Objects limit exceeded': '#/components/schemas/ObjectsLimitExceeded'
+          'Operation path not processable': '#/components/schemas/OperationPathNotProcessable'
+    FailureDecodingRequestBody:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "Failure decoding request body."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92001
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: "https://help.ably.io/error/92001"
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    FailedToUnmarshalOperationData:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "Failed to unmarshal operation data."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92002
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: "https://help.ably.io/error/92002"
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    InvalidObjectMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Invalid object message."
+        code:
+          type: integer
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92000
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: https://help.ably.io/error/92000
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    InvalidObjectId:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Invalid object ID."
+        code:
+          type: integer
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92000
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: https://help.ably.io/error/92000
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    InvalidTokenKey:
+      title: Token expired or revoked, or key revoked, expired, or removed.
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 401
+        message:
+          type: string
+          example: "Token expired"
+    MalformedCredential:
+      title: Malformed credential or invalid request.
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 401
+        message:
+          type: string
+          example: "Malformed credential or unknown operation type."
+    Map:
+      type: object
+      properties:
+        entries:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              data:
+                type: object
+                oneOf:
+                  - properties:
+                      string:
+                        type: string
+                        example: "my map value"
+                  - properties:
+                      objectId:
+                        $ref: '#/components/schemas/ObjectId'
+    NoObjectsMatchedPath:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "(92005) No objects matched path."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92005
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: "https://help.ably.io/error/92005"
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    NoOperationsInRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "No operations in request."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92003
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: "https://help.ably.io/error/92003"
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    ObjectId:
+      type: string
+      example: "map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000"
+    ObjectIdOrPathRequired:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "(92006) Object ID or path required."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92006
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: "https://help.ably.io/error/92006"
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    ObjectNotFound:
+      title: Object not found
+      type: object
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "Object not found."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 404
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92004
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: "https://help.ably.io/error/92004"
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    ObjectsLimitExceeded:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Objects limit max number exceeded."
+        code:
+          type: integer
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 32001
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: https://help.ably.io/error/32001
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    ObjectWithDetails:
+      type: object
+      required:
+        - objectId
+      properties:
+        objectId:
+          $ref: '#/components/schemas/ObjectId'
+        map:
+          $ref: '#/components/schemas/Map'
+        counter:
+          $ref: '#/components/schemas/Counter'
+    OperationPathNotProcessable:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Operation path not processable."
+        code:
+          type: integer
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92007
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: https://help.ably.io/error/92007
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    OperationObjectSubscribeUnauthorized:
+      title: Operation object-subscribe unauthorized on channel.
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Operation object-subscribe unauthorized on channel."
+        code:
+          type: integer
+          example: 401
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 40160
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: https://help.ably.io/error/40160
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    RateLimitExceeded:
+      description: Rate limit exceeded.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code:
+                type: integer
+                example: 429
+              message:
+                type: string
+                example: "Rate limit exceeded."
+    StateOperationsOnlyAppliedOnRegularChannels:
+      title: State operations only applied on regular channels
+      type: object
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "State operations only applied on regular channels (e.g., not [meta], [chat], etc channels)."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 403
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          nullable: true
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          nullable: true
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+    TombstoneObjectError:
+      type: object
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "Unable to fetch objects tree for tombstone object."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92003
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: "https://help.ably.io/error/92003"
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    UnknownOperationType:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          description: The error message.
+          example: "Unknown operation type."
+        code:
+          type: integer
+          description: The HTTP status code returned.
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          example: 92007
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          example: "https://help.ably.io/error/92007"
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+    UnableToUnquoteJsonData:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Unable to unquote JSON encoded data field."
+        code:
+          type: integer
+          example: 400
+        statusCode:
+          type: integer
+          description: The Ably error code.
+          nullable: true
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+          nullable: true
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+    error:
+      type: object
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+          description: The error message.
+        code:
+          type: integer
+          description: The HTTP status code returned.
+        statusCode:
+          type: integer
+          description: The Ably error code.
+        href:
+          type: string
+          description: The URL to documentation about the error code.
+        details:
+          type: object
+          nullable: true
+          description: Any additional details about the error message.
+      required:
+      - message
+      - code
+      - statusCode
+      - href
+  parameters:
+    idempotentParameter:
+      name: id
+      in: query
+      required: false
+      description: |
+        Optional: Only use when requiring idempotent publishing. All operations support an id field. Operations are deduplicated using idempotent publishing based on the operation's `id` field.<br><br>
+
+        Batches of operations can be made idempotent using a compound key based on the format `<baseId>:<index>`. The index is the order of the operation in the batch. The base of the `id` must be the same across all operations in the batch.
+    pathParameter:
+      name: path
+      in: query
+      required: false
+      description: |
+        Optional: Only use when using path operations. Path operations issue operations against objects based on their referenced location in the tree of objects stored on the channel.<br><br>
+
+        Paths must start with a key in the 'root' map, and then reference keys in nested maps, until the target location.<br><br>
+
+        You can issue a single operation against multiple objects at once using the wildcard `*`.<br><br>
+
+        Wildcards can be included at the end or in the middle of paths and will match exactly one level in the object tree.
+      schema:
+        type: string
+        example: "reactions.likes"
+    operationParameter:
+      name: operation
+      in: query
+      required: true
+      description: |
+        Specifies the operation to perform. Supported values include:<br><br>
+        - `MAP_CREATE`: Create a map object.
+        - `MAP_SET`: Set a key-value pair in a map object.
+        - `MAP_REMOVE`: Remove a key-value pair from a map object.
+        - `COUNTER_CREATE`: Create a counter object initialized to a specific value.
+        - `COUNTER_INC`: Increment a counter object by a specified value (can be negative).
+      schema:
+        type: string
+        enum:
+          - MAP_CREATE
+          - MAP_SET
+          - MAP_REMOVE
+          - COUNTER_CREATE
+          - COUNTER_INC
+        example: COUNTER_INC
+    dataParameter:
+      name: data
+      in: query
+      required: true
+      description: |
+        The data to be created or updated. The structure depends on the operation being performed. For example, `{ "data": { "number": 4 }}`.<br><br>
+
+        Maps are made of entries, which are a user-defined key (e.g., `myMapKey`) and a data value. Counters are data values containing a number.
+      schema:
+        type: object
+        additionalProperties:
+          type: object
+          properties:
+            number:
+              type: number
+              description: For COUNTER_CREATE or COUNTER_INC, this is the value.
+              example: 3
+            string:
+              type: string
+              description: A string value.
+              example: "Ably Pub/Sub"
+            boolean:
+              type: boolean
+              description: A boolean value.
+              example: true
+            bytes:
+              type: string
+              description: A base64-encoded string.
+              example: "TGl2ZU9iamVjdHMgaXMgYXdlc29tZQo="
+            encoding:
+              type: string
+              description: The encoding type for the bytes field.
+              example: "base64"
+            objectId:
+              type: string
+              description: A reference to another object.
+              example: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"

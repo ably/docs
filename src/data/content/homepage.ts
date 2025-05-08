@@ -40,7 +40,7 @@ export default {
       },
       {
         name: 'liveObjects',
-        link: '/docs/objects',
+        link: '/docs/liveobjects',
       },
     ],
   },
