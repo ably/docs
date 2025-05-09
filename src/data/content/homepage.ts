@@ -31,16 +31,16 @@ export default {
         link: '/docs/spaces',
       },
       {
+        name: 'liveObjects',
+        link: '/docs/liveobjects',
+      },
+      {
         name: 'liveSync',
         link: '/docs/livesync',
       },
       {
         name: 'assetTracking',
         link: '/docs/asset-tracking',
-      },
-      {
-        name: 'liveObjects',
-        link: '/docs/liveobjects',
       },
     ],
   },
