@@ -12,12 +12,12 @@ LiveMap is implemented using [Ably LiveObjects](/docs/liveobjects). LiveObjects,
 
 Use the following methods to interact with a LiveMap in your application:
 
-- [`objects.getRoot()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.Objects.html#getRoot): retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
-- [`objects.createMap()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.Objects.html#createMap): creates a new LiveMap instance.
-- [`liveMap.get(key)`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveMap.html#get): returns the current value associated with a given key in the map.
-- [`liveMap.set(key, value)`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveMap.html#set): sends the operation message to the Ably system to assign a value to a key in the map.
-- [`liveMap.remove(key)`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveMap.html#remove): sends the operation message to the Ably system to remove a key from the map.
-- [`liveMap.subscribe()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveMap.html#subscribe): subscribes to LiveMap updates by registering a listener.
+- [`objects.getRoot()`](/docs/liveobjects/concepts/objects#root-object): retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
+- [`objects.createMap()`](/docs/liveobjects/map#create): creates a new LiveMap instance.
+- [`liveMap.get(key)`](/docs/liveobjects/map#get): returns the current value associated with a given key in the map.
+- [`liveMap.set(key, value)`](/docs/liveobjects/map#set): sends the operation message to the Ably system to assign a value to a key in the map.
+- [`liveMap.remove(key)`](/docs/liveobjects/map#remove): sends the operation message to the Ably system to remove a key from the map.
+- [`liveMap.subscribe()`](/docs/liveobjects/map#subscribe-data): subscribes to LiveMap updates by registering a listener.
 
 Find out more about [LiveMap](/docs/liveobjects/map).
 

@@ -12,12 +12,12 @@ LiveCounter is implemented using [Ably LiveObjects](/docs/liveobjects). LiveObje
 
 Use the following methods to interact with a LiveCounter in your application:
 
-- [`objects.getRoot()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.Objects.html#getRoot): retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
-- [`objects.createCounter()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.Objects.html#createCounter): creates a new LiveCounter instance.
-- [`liveCounter.value()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveCounter.html#value): returns the current value of a counter.
-- [`liveCounter.increment()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveCounter.html#increment): sends the operation message to the Ably system to increase the counter value.
-- [`liveCounter.decrement()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveCounter.html#decrement): sends the operation message to the Ably system to decrease the counter value.
-- [`liveCounter.subscribe()`](https://ably.com/docs/sdk/js/v2.0/interfaces/ably.LiveCounter.html#subscribe): subscribes to LiveCounter updates by registering a listener.
+- [`objects.getRoot()`](/docs/liveobjects/concepts/objects#root-object): retrieves the root object that serves as the starting point for storing and organizing objects on a channel.
+- [`objects.createCounter()`](/docs/liveobjects/counter#create): creates a new LiveCounter instance.
+- [`liveCounter.value()`](/docs/liveobjects/counter#value): returns the current value of a counter.
+- [`liveCounter.increment()`](/docs/liveobjects/counter#update): sends the operation message to the Ably system to increase the counter value.
+- [`liveCounter.decrement()`](/docs/liveobjects/counter#update): sends the operation message to the Ably system to decrease the counter value.
+- [`liveCounter.subscribe()`](/docs/liveobjects/counter#subscribe-data): subscribes to LiveCounter updates by registering a listener.
 
 Find out more about [LiveCounter](/docs/liveobjects/counter).
 
