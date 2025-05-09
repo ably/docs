@@ -1,0 +1,335 @@
+---
+title: About Asset Tracking
+product: asset-tracking
+meta_description: "The Ably Asset Tracking solution provides a way to track multiple assets in realtime."
+meta_keywords: "Ably, Asset Tracking SDK, Mapbox, Mapbox Navigation SDK, Mapbox location enhancement, Ably realtime, map matching, location tracking, Publishing SDK, Subscribing SDK"
+languages:
+  - kotlin
+  - swift
+redirect_from: /docs/products/asset-tracking
+---
+
+The Ably Asset Tracking solution provides a way to track the location of multiple assets in realtime. An asset is any object that moves geographically, and whose position needs to be monitored. The Ably Asset Tracking solution is powered by the Ably realtime network, the Ably Asset Tracking SDKs, and the Mapbox Navigation SDK with location enhancement.
+
+The Ably Asset Tracking solution provides two [SDKs](/docs/asset-tracking/using-the-sdks#58):
+
+* **Publishing SDK** (Android, iOS) - for embedding in apps on the asset to be tracked.
+* **Subscribing SDK** (Android, iOS, JavaScript) - for embedding in apps that want to observe the asset being tracked using a realtime subscription.
+
+As Ably is used as the underlying transport, you have direct access to your data and can use [Ably Integrations](/docs/integrations) for a wide range of applications, in addition to direct realtime subscriptions. Examples include:
+
+* Passing data to another service for realtime processing or tracking.
+* Persistence of data to a database for later retrieval.
+* Monitoring.
+
+As the asset being tracked moves, it publishes its position through the app to an Ably channel. Any subscribers to the channel can then receive positional information, which can be displayed on a detailed map.
+
+The following diagram provides an overview of an asset tracking use case:
+
+![Overview](@content/screenshots/asset-tracking/overview.png)
+
+In a typical asset tracking scenario key components are:
+
+* asset (trackable): Item that the customer wants to track such as driver, vehicle, container, and so on. This is also known as a `Trackable` in the SDKs.
+* carrier: The entity that physically transports the asset. This could be a driver delivering a package. It could also be a machine moving the asset under software direction, such as in the case of a delivery drone.
+* customer: Company that uses the Ably Asset Tracking SDKs to build their product to solve the asset tracking problem for their users.
+* end user: Entity that uses the product built by the customer and uses the asset tracking capabilities.
+
+Each asset being tracked must have a `trackableId`, and this ID must be unique within an Ably application. The name of the Ably channel used to carry updates is the `trackableId`, preceded by `tracking:`. For example, `tracking:demo-123`.
+
+## Dynamic resolution <a id="dynamic-resolution"/>
+
+The Asset Tracking SDKs allow the frequency of publication of location updates to be controlled based on a range of parameters, both by the publisher and the subscriber. Having this control, to vary the frequency of updates, and sensor(s) used to obtain location information, is important to be able to control the resource usage of the application. In many mobile applications, for example, conservation of the battery life of the courier's device is paramount; high frequency and high resolution location updates that are broadcast unconditionally are not compatible with the battery constraints for mobile delivery riders, for example. The Asset Tracking SDKs aim to provide a sufficient level of control to be able to optimize the multiple parameters that influence bandwidth and energy usage.
+
+There are two key factors that impact asset tracking resource usage:
+
+1. The sensor used to obtain the location of the asset, such as GPS.
+2. The frequency with which location updates are sent over the network.
+
+The actual resource usage, in practice, also depends on certain factors that can be beyond the control of the Asset Tracking application; for example, a delivery rider might be using an app to navigate, which causes the GPS to be used continuously. This means that not all aspects of the resource usage are always controllable by the Asset Tracking application. However, even in this situation it is important that the application is able to control the frequency of updates being sent over the network.
+
+The following scenarios are examples of how update resolution can be changed depending on the state of the asset and subscribers:
+
+* Updates can be sent to the subscriber more often when asset is closer to the destination.
+* Updates don't need to occur as frequently when the user of the subscribing SDK is not observing the location of the asset. The frequency of updates can be reduced, for example, if the user of delivery app is not checking the app for the driver's location.
+* Different subscribers may have different preferences regarding the resolution of location updates.
+* When the driver's battery is running low, location updates can be transmitted at lower frequency.
+
+Using approaches similar to these, an optimal resolution of updates can be identified, which provides a good user experience when it is needed, such as when the driver is close to the destination, and the user is observing the location of the driver in the app. This approach also reduces battery usage when possible, for example when the driver is far from the destination and the user is not observing location updates.
+
+The SDK provides a set of extensible interfaces for implementing custom logic for battery optimization. The SDK also provides a set of default constraints and policies, which developers can use to handle common use cases.
+
+## Resolution <a id="resolution"/>
+
+Resolution governs how often to sample locations, at what level of positional accuracy, and how often to send updates to subscribers.
+
+`Resolution` is made up of:
+
+* `Accuracy`: The general priority for accuracy of location updates, used to govern any trade-off between power usage and positional accuracy. The highest positional accuracy will be achieved by specifying `Accuracy.MAXIMUM`, but at the expense of significantly increased power usage. Conversely, the lowest power usage will be achieved by specifying `Accuracy.MINIMUM` but at the expense of significantly decreased positional accuracy.
+* `desiredInterval`: Desired time between updates, in milliseconds. Lowering this value increases the temporal resolution. Location updates whose timestamp differs from the last captured update timestamp by less that this value are to be filtered out. Used to govern the frequency of updates requested from the underlying location provider, as well as the frequency of messages broadcast to subscribers. **Note:** For iOS, it is not possible to change the time interval for GPS resolution. It does however affect network resolution (how often location updates are sent to the subscribers). For further details see the [Apple documentation](https://developer.apple.com/documentation/corelocation/cllocationmanager).
+* `minimumDisplacement`: Minimum positional granularity required, in metres. Lowering this value increases the spatial resolution. Location updates whose position differs from the last known position by a distance smaller than this value are to be filtered out. Used to configure the underlying location provider, as well as to filter the broadcast of updates to subscribers.
+
+### Request a different Resolution <a id="request-different-resolution"/>
+
+The subscriber may require different resolutions of updates depending on state. For example, whether the map is currently displayed to the user or not, what zoom level the map is set to, and so on. This feature allows the subscriber to specify different preferences depending on any factors of interest to the client.
+
+## Resolution set <a id="resolution-set"/>
+
+A resolution set is a set of resolutions that, when provided, can be used by the resolution policy to create the best possible resolution for a given situation.
+
+While developers can define their own resolution sets, Ably also provides a default resolution set that can be used with the default resolution policy.
+
+### Default resolution set <a id="default-resolution-set"/>
+
+The `DefaultResolutionSet` is the set of resolutions which must be defined in order to satisfy the [default resolution constraints](#default-resolution-constraints) for a trackable. When provided, they are used by the [default resolution policy](#default-resolution-policy) to choose a better resolution for a given situation.
+
+For the `DefaultResolutionSet` the following resolutions are expected to be included:
+
+* `farWithoutSubscriber`: The resolution to select if above the [`proximityThreshold`](#default-resolution-constraints), with no subscribers.
+* `farWithSubscriber`: The resolution to select if above the [`proximityThreshold`](#default-resolution-constraints), with one or more subscribers.
+* `nearWithoutSubscriber`: The resolution to select if below the [`proximityThreshold`](#default-resolution-constraints), with no subscribers.
+* `nearWithSubscriber`: The resolution to select if below the [`proximityThreshold`](#default-resolution-constraints), with one or more subscribers.
+
+## Resolution constraints <a id="resolution-constraints"/>
+
+Resolution constraint objects, `ResolutionConstraints`, are defined on a per-`Trackable` basis, and are then used to calculate an appropriate `Resolution` by the `ResolutionPolicy`.
+
+### Default resolution constraints <a id="default-resolution-constraints"/>
+
+The SDK provides default resolution constraints consisting of:
+
+* `DefaultResolutionSet`: The set of resolutions for values for proximity and number of active subscribers.
+* `DefaultProximity`: This is the proximity to the destination at which point the resolution from the `DefaultResolutionSet` will be used. Proximity can be spatial, temporal, or both.
+* `batteryLevelThreshold`: This is a battery level for the publisher's device that is considered to be low. When the battery level falls below this, the resolution of updates is reduced.
+* `lowBatteryMultiplier`: The multiplier to be applied to the interval when the battery level is below `batteryLevelThreshold`.
+
+The following example shows how the default resolution constraints are populated:
+
+<Code>
+```kotlin
+// Prepare Resolution Constraints for an asset that will be used in the Resolution Policy
+val exampleConstraints = DefaultResolutionConstraints(
+    DefaultResolutionSet( // this constructor provides one Resolution for all states
+        Resolution(
+            accuracy = Accuracy.BALANCED,
+            desiredInterval = 1000L,
+            minimumDisplacement = 1.0
+        )
+    ),
+    proximityThreshold = DefaultProximity(spatial = 1.0),
+    batteryLevelThreshold = 10.0f,
+    lowBatteryMultiplier = 2.0f
+)
+```
+
+```swift
+let resolution = Resolution(accuracy: .balanced,
+                            desiredInterval: 1000,
+                            minimumDisplacement: 1.0)
+let resolutions = DefaultResolutionSet(resolution: resolution)
+let proximity = DefaultProximity(spatial: 1)
+let constraints = DefaultResolutionConstraints(resolutions: resolutions,
+                                               proximityThreshold: proximity,
+                                               batteryLevelThreshold: 10,
+                                               lowBatteryMultiplier: 2)
+```
+</Code>
+
+## Resolution policy <a id="resolution-policy"/>
+
+Resolution policy defines the strategy by which the various `ResolutionRequests` and preferences are translated by `Publisher` instances into a target `Resolution`.
+
+As different use cases have different requirements for battery optimization, Ably Asset Tracking SDKs provide a flexible `ResolutionPolicy` interface, that allows SDK users to provide their own implementation of resolution optimization logic. Ably also provides a [default resolution policy](#default-resolution-policy), which is suitable for common use cases.
+
+### Default resolution policy <a id="default-resolution-policy"/>
+
+Ably Asset Tracking SDKs come with a `DefaultResolutionPolicy` implementation provided out of the box, which is suitable for common use cases.
+
+Each `Trackable` added to the `Publisher` has a destination and set of `ResolutionConstraints`. Both `destination` and `resolutionConstraints` are optional for `Trackable`, but having them enables the resolution policy to reflect those constraints. The SDK provides an optional set of [default resolution constraints](#default-resolution-constraints), `DefaultResolutionConstraints`.
+
+When the SDK is running, on each change of the device or trackable status, the `ResolutionPolicy` recalculates the resolution to be applied. Example changes include:
+
+* Subscribers added or removed from the list of subscribers.
+* Battery or proximity threshold hit.
+* Subscriber closes app.
+
+The following logic is used:
+
+1. When comparing resolutions, the more precise resolution is always selected. Each field of the resolution (`accuracy`, `desiredInterval`, `minimumDisplacement`) is compared and the most precise value for each of those fields are chosen, so that the final resolution could be a hybrid of all of the provided resolutions. For example, the final resolution could have the `accuracy` of resolution A, the `desiredInterval` of resolution B and the `minimumDisplacement` of resolution C.
+2. The most precise resolution is selected from the resolutions requested by subscribers.
+3. Then, based on the `ResolutionSet` provided, and also the state of the thresholds, the correct `Resolution` is identified from the set. This resolution is then compared with the one from previous step, and the more precise one is selected.
+4. The low battery multiplier is applied if needed.
+
+The following diagram illustrates the default resolution policy in the Ably Asset Tracking SDK:
+
+![Default Resolution Policy](@content/screenshots/asset-tracking/default-resolution-policy.png)
+
+#### Example scenarios <a id="example-scenarios"/>
+
+The following table shows example scenarios demonstrating how `DefaultResolutionPolicy` works:
+
+| Scenario | Input | Output |
+| -------- | ----- | ------ |
+| One trackable, no subscribers | Trackable A resolution constraint = Balanced, 1000, 1.0 | Trackable A network resolution = Balanced, 1000, 1.0<br/>GPS resolution = Balanced, 1000, 1.0 |
+| One trackable, one subscriber | Trackable A resolution constraint = Balanced, 1000, 1.0 <br/>Trackable A subscriber 1 resolution = Maximum, 50, 2.0 | Trackable A network resolution = Maximum, 50, 1.0<br/>GPS resolution = Maximum, 50, 1.0 |
+| One trackable, two subscribers | Trackable A resolution constraint = Balanced, 1000, 1.0<br/>Trackable A subscriber 1 resolution = Maximum, 50, 2.0<br/>Trackable A subscriber 2 resolution = Low, 10, 5.0 | Trackable A network resolution = Maximum, 10, 1.0<br/>GPS resolution = Maximum, 10, 1.0 |
+| Two trackables, no subscribers | Trackable A resolution constraint = Balanced, 1000, 1.0<br/>Trackable B resolution constraint = High, 2000, 3.0 | Trackable A network resolution = Balanced, 1000, 1.0<br/>Trackable B network resolution = High, 2000, 3.0<br/>GPS resolution = High, 1000, 1.0 |
+| One trackable without constraints, one subscriber | Trackable A subscriber 1 resolution = Maximum, 50, 2.0 | Trackable A network resolution = Maximum, 50, 2.0<br/>GPS resolution = Maximum, 50, 2.0|
+| One trackable without constraints, no subscribers | Default resolution policy resolution = Balanced, 3000, 10.0 | Trackable A network resolution = Balanced, 3000, 10.0<br/>GPS resolution = Balanced, 3000, 10.0|
+
+### Custom resolution policy <a id="custom-resolution-policy"/>
+
+To create your custom resolution policy there are two required classes you must implement, and some optional ones. The required classes are:
+
+* `ResolutionPolicy`: Responsible for calculating network and GPS resolutions.
+* `ResolutionPolicy.Factory`: Responsible for creating the resolution policy instance.
+
+The optional classes are:
+
+* `ResolutionPolicy.Hooks.SubscriberSetListener`: Called whenever the amount of subscribers changes.
+* `ResolutionPolicy.Hooks.TrackableSetListener`: Called whenever the amount of trackables changes or the active trackable changes.
+* `ResolutionPolicy.Methods.ProximityHandler`: Called when the proximity is reached or cancelled.
+
+From within the `ResolutionPolicy` class you have access to the following:
+
+* `ResolutionPolicy.Methods`: You can use this to perform actions on the publisher, for example, `refresh()` and notify the publisher about some events, such as `setProximityThreshold()`.
+* `ResolutionPolicy.Hooks`: You can use this to attach the optional listeners.
+
+Additionally, you can create custom `ResolutionConstraints` that can be specified later, when creating a `Trackable`. This allows you to add constraints to a trackable that can be used when resolving a resolution by your custom resolution policy, for example, you can set a battery threshold and modify the frequency of messages based on the current battery level.
+
+You then need to provide your custom resolution policy factory to the `Publisher` builder:
+
+<Code>
+```kotlin
+Publisher.publishers()
+    .resolutionPolicy(CustomResolutionPolicyFactory("optional param"))
+    // other required configurations
+   .start()
+```
+</Code>
+
+The simplest custom implementation is shown in the following example code:
+
+<Code>
+```kotlin
+class CustomResolutionPolicyFactory : ResolutionPolicy.Factory {
+    override fun createResolutionPolicy(
+        hooks: ResolutionPolicy.Hooks,
+        methods: ResolutionPolicy.Methods
+    ): ResolutionPolicy {
+        return CustomResolutionPolicy(hooks, methods)
+    }
+}
+
+class CustomResolutionPolicy(
+    hooks: ResolutionPolicy.Hooks,
+    private val methods: ResolutionPolicy.Methods,
+) : ResolutionPolicy {
+    override fun resolve(resolutions: Set<Resolution>): Resolution =
+        resolveGpsResolution(resolutions)
+
+    override fun resolve(request: TrackableResolutionRequest): Resolution =
+        resolveNetworkResolution(request)
+
+    private fun resolveGpsResolution(requests: Set<Resolution>): Resolution =
+        TODO()
+
+    private fun resolveNetworkResolution(request: TrackableResolutionRequest): Resolution =
+        TODO()
+}
+```
+</Code>
+
+An example with all optional listeners, and a custom parameter implemented, is shown in the following code:
+
+<Code>
+```kotlin
+class CustomResolutionPolicyFactory(
+    private val customParameter: String,
+) : ResolutionPolicy.Factory {
+    override fun createResolutionPolicy(
+        hooks: ResolutionPolicy.Hooks,
+        methods: ResolutionPolicy.Methods
+    ): ResolutionPolicy {
+        return CustomResolutionPolicy(hooks, methods, customParameter)
+    }
+}
+
+class CustomResolutionPolicy(
+    hooks: ResolutionPolicy.Hooks,
+    private val methods: ResolutionPolicy.Methods,
+    private val customParameter: String,
+) : ResolutionPolicy {
+    private val proximityHandler = CustomProximityHandler()
+
+    init {
+        hooks.trackables(CustomTrackableSetListener())
+        hooks.subscribers(CustomSubscriberSetListener())
+    }
+
+    override fun resolve(resolutions: Set<Resolution>): Resolution =
+        resolveGpsResolution(resolutions)
+
+    override fun resolve(request: TrackableResolutionRequest): Resolution =
+        resolveNetworkResolution(request)
+
+    private fun resolveGpsResolution(requests: Set<Resolution>): Resolution =
+        TODO()
+
+    private fun resolveNetworkResolution(request: TrackableResolutionRequest): Resolution =
+        TODO()
+
+    private inner class CustomSubscriberSetListener : ResolutionPolicy.Hooks.SubscriberSetListener {
+        override fun onSubscriberAdded(subscriber: Subscriber) {
+            // do something
+        }
+
+        override fun onSubscriberRemoved(subscriber: Subscriber) {
+            // do something
+        }
+    }
+
+    private inner class CustomTrackableSetListener : ResolutionPolicy.Hooks.TrackableSetListener {
+        override fun onTrackableAdded(trackable: Trackable) {
+            // do something
+        }
+
+        override fun onTrackableRemoved(trackable: Trackable) {
+            // do something
+        }
+
+        override fun onActiveTrackableChanged(trackable: Trackable?) {
+            // do something
+        }
+    }
+
+    private inner class CustomProximityHandler : ResolutionPolicy.Methods.ProximityHandler {
+        override fun onProximityReached(threshold: Proximity) {
+            // do something
+        }
+
+        override fun onProximityCancelled() {
+            // do something
+        }
+    }
+}
+```
+</Code>
+
+## Constant Location Engine <a id="constant-location-engine"/>
+
+This is a mechanism that overwrites the resolution policy's GPS resolution and always uses a static GPS resolution. This can be helpful if, for example, you want to send messages every 10 seconds but you want to retrieve them from the GPS sensor each second, so the quality of your trip data is high.
+
+By default this is disabled.
+
+You can enable the constant location engine with the following `Publisher` method:
+
+<Code>
+```kotlin
+fun constantLocationEngineResolution(resolution: Resolution?): Builder
+```
+</Code>
+
+If the `resolution` is not `null` then instead of using `ResolutionPolicy` to calculate a dynamic resolution for the location engine, the `resolution` is used as the location engine resolution.
+
+If the `resolution` is `null` then the constant resolution is disabled and the location engine resolution will be calculated by the `ResolutionPolicy`.
