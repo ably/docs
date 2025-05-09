@@ -23,6 +23,7 @@ export default {
         {
           name: 'Using the example apps',
           link: '/docs/asset-tracking/example-apps',
+          languages: ['javascript', 'kotlin', 'swift'],
         },
         {
           name: 'Using the SDKs',
