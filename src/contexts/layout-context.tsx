@@ -31,63 +31,84 @@ const LayoutContext = createContext<{
   },
 });
 
+const determineActiveLanguage = (activePageData: ActivePage, location: string): LanguageKey => {
+  const params = new URLSearchParams(location);
+  const langParam = params.get('lang') as LanguageKey;
+
+  if (langParam && Object.keys(languageInfo).includes(langParam)) {
+    return langParam;
+  } else if (activePageData.product && activePageData.languages.length > 0) {
+    const productLanguages = languageData[activePageData.product];
+    const firstActiveLanguage = Object.keys(productLanguages ?? []).filter((lang) =>
+      activePageData.languages.includes(lang as LanguageKey),
+    )[0];
+
+    return firstActiveLanguage as LanguageKey;
+  }
+
+  return DEFAULT_LANGUAGE;
+};
+
+// Function to get languages from DOM (for Textile pages)
+const getLanguagesFromDOM = (): LanguageKey[] => {
+  const languageBlocks = document.querySelectorAll('.docs-language-navigation');
+
+  if (languageBlocks.length > 0) {
+    const languagesSet = new Set<LanguageKey>();
+
+    languageBlocks.forEach((element) => {
+      const languages = element.getAttribute('data-languages');
+      if (languages) {
+        languages.split(',').forEach((language) => languagesSet.add(language as LanguageKey));
+      }
+    });
+
+    return Array.from(languagesSet);
+  }
+
+  return [];
+};
+
 export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageContextType }>> = ({
   children,
   pageContext,
 }) => {
   const location = useLocation();
-  const [languages, setLanguages] = useState<LanguageKey[]>(pageContext?.languages ?? []);
   const [language, setLanguage] = useState<LanguageKey>(DEFAULT_LANGUAGE);
+  const [domLanguages, setDomLanguages] = useState<LanguageKey[]>([]);
 
+  // Effect to update DOM languages after render
   useEffect(() => {
-    const languageBlocks = document.querySelectorAll('.docs-language-navigation');
-
-    if (languageBlocks.length > 0) {
-      const languagesSet = new Set<LanguageKey>();
-
-      document.querySelectorAll('.docs-language-navigation').forEach((element) => {
-        const languages = element.getAttribute('data-languages');
-        if (languages) {
-          languages.split(',').forEach((language) => languagesSet.add(language as LanguageKey));
-        }
-      });
-
-      setLanguages(Array.from(languagesSet));
+    if (typeof document !== 'undefined') {
+      const languages = getLanguagesFromDOM();
+      setDomLanguages(languages);
     }
-  }, [location.pathname]);
+  }, [location.pathname]); // Re-run when the path changes
 
   const activePage = useMemo(() => {
     const activePageData = determineActivePage(productData, location.pathname);
-    return activePageData
-      ? {
-          ...activePageData,
-          languages: activePageData.page.languages ?? languages,
-          language,
-        }
-      : {
-          tree: [],
-          page: { name: '', link: '' },
-          languages: [],
-          language,
-          product: null,
-        };
-  }, [location.pathname, languages, language]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const langParam = params.get('lang') as LanguageKey;
-
-    if (langParam && Object.keys(languageInfo).includes(langParam)) {
-      setLanguage(langParam);
-    } else if (activePage.product && activePage.languages.length > 0) {
-      const productLanguages = languageData[activePage.product];
-      const defaultLanguage =
-        Object.keys(productLanguages ?? []).filter((lang) => activePage.languages.includes(lang))[0] ??
-        DEFAULT_LANGUAGE;
-
-      setLanguage(defaultLanguage);
+    if (!activePageData) {
+      return {
+        tree: [],
+        page: { name: '', link: '' },
+        languages: [],
+        language,
+        product: null,
+      };
     }
-  }, [location.search, activePage.product, activePage.languages]);
+
+    const activeLanguage = determineActiveLanguage(activePageData, location.search);
+
+    // Use DOM languages if available, otherwise fall back to pageContext languages
+    const activeLanguages = domLanguages.length > 0 ? domLanguages : pageContext.languages ?? [];
+
+    return {
+      ...activePageData,
+      languages: (activePageData.page.languages as LanguageKey[]) ?? activeLanguages,
+      language: activeLanguage,
+    };
+  }, [location.pathname, location.search, language, pageContext.languages, domLanguages]);
 
   return (
     <LayoutContext.Provider
