@@ -59,7 +59,9 @@ export const onCreatePage: GatsbyNode['onCreatePage'] = async ({ page, actions }
       ...page,
       context: {
         ...page.context,
-        layout: pathOptions ? pathOptions[1] : { sidebar: true, searchBar: true, template: 'base' },
+        layout: pathOptions
+          ? pathOptions[1]
+          : { leftSidebar: true, rightSidebar: true, searchBar: true, template: 'base' },
         ...(isMDX ? { languages: Array.from(detectedLanguages) } : {}),
       },
       component: isMDX ? `${mdxWrapper}?__contentFilePath=${page.component}` : page.component,
