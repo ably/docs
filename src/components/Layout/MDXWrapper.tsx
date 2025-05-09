@@ -1,5 +1,5 @@
 import React, { PropsWithChildren } from 'react';
-import { PageProps } from 'gatsby';
+import { navigate, PageProps } from 'gatsby';
 import CodeSnippet, { CodeSnippetProps } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
 
@@ -18,7 +18,7 @@ type MDXWrapperProps = PageProps<unknown, PageContextType>;
 const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext }) => {
   const { frontmatter } = pageContext;
   const title = frontmatter?.title;
-  const { activePage, setLanguage } = useLayoutContext();
+  const { activePage } = useLayoutContext();
 
   // Use the copyable headers hook
   useCopyableHeaders();
@@ -28,8 +28,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext }) => {
       <CodeSnippet
         lang={activePage.language}
         onChange={(lang) => {
-          setLanguage(lang);
-          window.history.replaceState({}, '', `${location.pathname}?lang=${lang}`);
+          navigate(`${location.pathname}?lang=${lang}`);
         }}
         className={cn(props.className, 'mb-20')}
         {...props}

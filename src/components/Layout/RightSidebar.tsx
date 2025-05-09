@@ -10,6 +10,7 @@ import { useLayoutContext } from 'src/contexts/layout-context';
 import { languageInfo } from 'src/data/languages';
 import { PageTreeNode, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
 import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
+import { LanguageKey } from 'src/data/languages/types';
 
 type SidebarHeader = {
   id: string;
@@ -36,7 +37,7 @@ const externalLinks = (
       githubBasePath +
       (githubPathSegments.length === 1 ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
 
-    const language = new URLSearchParams(location.search).get('lang');
+    const language = new URLSearchParams(location.search).get('lang') as LanguageKey;
     const requestTitle = `Change request for: ${currentPage.link}`;
     const requestBody = encodeURIComponent(`
   **Page name**: ${currentPage.name}
