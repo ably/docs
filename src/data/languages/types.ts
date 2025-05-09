@@ -26,4 +26,4 @@ export const languageKeys = [
 
 export type LanguageKey = (typeof languageKeys)[number];
 
-export type LanguageData = Record<LanguageKey, number>;
+export type LanguageData = Partial<Record<LanguageKey, number>>;
