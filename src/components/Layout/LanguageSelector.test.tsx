@@ -123,6 +123,15 @@ describe('LanguageSelector', () => {
       state: null,
     });
 
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        tree: [0],
+        languages: ['javascript', 'python'],
+        language: 'python',
+      },
+      products: [['pubsub']],
+    });
+
     jest.spyOn(window, 'URLSearchParams').mockImplementation(
       () =>
         ({
@@ -136,7 +145,7 @@ describe('LanguageSelector', () => {
     );
 
     render(<LanguageSelector />);
-    expect(screen.queryByText('icon-tech-javascript')).not.toBeInTheDocument();
     expect(screen.getByText('icon-tech-python')).toBeInTheDocument();
+    expect(screen.queryByText('icon-tech-javascript')).not.toBeInTheDocument();
   });
 });

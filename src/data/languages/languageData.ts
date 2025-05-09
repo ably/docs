@@ -42,4 +42,4 @@ export default {
     swift: 1.0,
     kotlin: 1.7,
   },
-} satisfies Record<ProductKey, Partial<LanguageData>>;
+} satisfies Partial<Record<ProductKey, LanguageData>>;

@@ -9,7 +9,7 @@ import { LanguageKey } from 'src/data/languages/types';
 import { useLayoutContext } from 'src/contexts/layout-context';
 
 const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language }) => {
-  const { activePage, setLanguage } = useLayoutContext();
+  const { activePage } = useLayoutContext();
   const selectedLanguage = getTrimmedLanguage(language);
   const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(selectedLanguage, activePage.language);
   /*
@@ -22,9 +22,6 @@ const LanguageButton: FC<LanguageNavigationComponentProps> = ({ language }) => {
   const handleClick = () => {
     const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, selectedLanguage);
 
-    if (!isPageLanguageDefault) {
-      setLanguage(language);
-    }
     navigate(href);
   };
 
