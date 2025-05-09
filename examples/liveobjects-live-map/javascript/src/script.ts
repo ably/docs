@@ -7,7 +7,6 @@ import './styles.css';
 const client = new Realtime({
   clientId: nanoid(),
   key: import.meta.env.VITE_ABLY_KEY as string,
-  environment: 'sandbox',
   plugins: { Objects },
 });
 
@@ -89,8 +88,8 @@ function createTaskDiv(task: { id: string; title: string }, tasks: Tasks) {
   const taskDiv = parser.parseFromString(
     `<div class="flex justify-between items-center rounded space-x-4 task" data-task-id="${id}">
         <span class="flex-grow">${title}</span>
-        <button class="uk-btn uk-btn-primary uk-border-rounded-right update-task">Edit</button>
-        <button class="uk-btn uk-btn-secondary uk-border-rounded-right remove-task">Remove</button>
+        <button class="uk-btn uk-btn-primary uk-btn-sm uk-border-rounded-right update-task rounded-[1998px]">Edit</button>
+        <button class="uk-btn uk-btn-sm uk-border-rounded-right remove-task rounded-[1998px] bg-transparent border border-black">Remove</button>
     </div>`,
     'text/html',
   ).body.firstChild as HTMLElement;

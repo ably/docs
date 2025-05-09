@@ -12,7 +12,6 @@ export enum Color {
 const client = new Realtime({
   clientId: nanoid(),
   key: import.meta.env.VITE_ABLY_KEY as string,
-  environment: 'sandbox',
   plugins: { Objects },
 });
 
