@@ -118,6 +118,15 @@ export default {
         },
       ],
     },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'Livestream chat',
+          link: '/docs/guides/chat/build-livestream',
+        },
+      ],
+    },
   ],
   api: [
     {

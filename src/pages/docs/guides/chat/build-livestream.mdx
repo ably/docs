@@ -1,0 +1,212 @@
+---
+title: "Guide: How to build livestream chat with Ably"
+meta_description: "How to architect your rooms and apply Chat SDK features to build a livestream chat application."
+meta_keywords: "livestream, livestream chat, chat, chat application, chat SDK, realtime chat, realtime messaging"
+---
+
+This guide explains how to use Ably Chat to build livestream chat functionality into a new or existing application. It will explain the features most suited to livestream chat, and how Ably recommends using them specifically in the context of livestream chat.
+
+Livestream chat is used in applications such as gaming and esports streaming, live commentary and interaction with sports games, and live events including auctions and music concerts.
+
+The areas that this guide covers are:
+
+* How best to architect the chat rooms in your application for scale.
+* The core functionality to include in a livestream chat application.
+* Optional additional functionality to enhance your application.
+* Considerations for application monitoring and discontinuity handling.
+* How to keep costs as low as possible when building your application.
+
+## How to architect your rooms <a id="architect"></a>
+
+[Rooms](/docs/chat/rooms) are the core building block for any application you create with Ably Chat. Users only ever receive messages from other users in the same room as them. In the context of livestream chat rooms would be used to separate traffic between different streams, events or games.
+
+Understanding how to architect the rooms in your application will ensure you're able to:
+
+* Provide a user experience most appropriate to your use case.
+* Scale effectively whether that's for thousands or millions of users.
+
+Ably can scale to handle millions of users in a single room. Theoretically this means that you can use a single room per stream or event and have all of your users connect to it. The main consideration for how to architect your rooms is the end-user experience that is appropriate for your specific livestream chat application.
+
+The end-user experience in this instance is largely driven by the readability of chat messages based on the rate at which messages are being sent to the room. This largely falls into three categories:
+
+* [Accept the message rate](#accept-the-message-rate)
+* [Control the message rate](#control-the-message-rate)
+* [Message rate consistency](#message-rate-consistency)
+
+### Accept the message rate
+
+For certain use cases, it's perfectly acceptable that not every message can be read by every user. In these instances the general sentiment returned from reading a proportion of messages is sufficient.
+
+### Control the message rate
+
+If it's important for your use case that users can read the majority of messages being written, then you can suppress the number of messages that each user can send within a set time period.
+
+This will enable you to control the maximum rate of messages, irrespective of how many users join each stream.
+
+<Code>
+```javascript
+if (timeSinceLastMessage > minTimeBetweenMessages) {
+  room.messages.send({text: 'my message'});
+} else {
+  throw new Exception('Too many messages');
+}
+```
+</Code>
+
+### Message rate consistency
+
+Whether the rate of messages being sent is consistent or not for your use case can be a determining factor.
+
+If the message rate only peaks to high levels during exciting moments on stream, such as a point being scored in a sporting event, then this can be acceptable for some use cases. In these instances then features such as room-wide reactions help to provide the general sentiment of the chat when users can't read every message.
+
+## Core functionality
+
+Core functionality includes the features that are required to build a livestream chat application.
+
+### Authenticate users
+
+The simplest way to handle authentication in a livestream chat application is using [JSON Web Tokens (JWTs)](/docs/auth/token#jwt).
+
+Users need to assume an identity when using Ably Chat. If your application requires a login then this can be a name, or identifier, read from your identity provider. If your application allows anonymous users, then use a mechanism to randomly assign users a unique client ID when issuing a JWT.
+
+#### Login required
+
+If a user is required to log in, use their unique user identifier as the client ID when they authenticate with Ably. This will enable you to easily associate their usage in your application with their activity over Ably.
+
+#### No login required
+
+If your application does not require users to log in, assign a randomly generated client ID to users when they authenticate with Ably.
+
+### Send messages
+
+There's nothing different to consider when [sending messages](/docs/chat/rooms/messages#send) in a livestream chat compared to how you would normally send a message. However, Ably recommends enabling server-side batching for livestream chat applications.
+
+[Server-side batching](/docs/messages/batch#server-side) means that Ably will group published messages over an interval before publishing them to subscribers.This will help to reduce costs, as streams usually contain a large number of talkative users.
+
+Be aware of the length of the interval you configure, over which messages are batched. If it is too high, then users may notice the delay from messages being sent, however this is normally less of a concern for fast-paced livestreams. An interval of 1-2 seconds is likely sufficient for most livestream chat applications.
+
+#### Message ordering
+
+Messages will be received by users in the order that they are broadcast, by the region that the user is connected to. This may differ slightly to users in other regions, which for a fast-paced livestream is usually acceptable.
+
+If you want to ensure that every user sees messages displayed in exactly the same order, you can use the [global ordering of messages](/docs/chat/rooms/messages#global-ordering) to do this.
+
+<Code>
+```javascript
+sortedMessages.sort((a, b) => (a.before(b) ? -1 : 1));
+```
+</Code>
+
+### User counts
+
+Most livestream applications display the number of users currently participating. There are two different places that you'll want to show this:
+
+* Within each stream so that users can see up-to-date totals of those in the stream.
+* If you are hosting multiple streams then you will want to show a count against each one to display the most popular when users are choosing which to join.
+
+#### Within a stream
+
+Use the [occupancy](/docs/chat/rooms/occupancy) feature to show the count of users within a stream. You can subscribe each user to the occupancy feature and use the `connections` metric to display the number of users attached to the room.
+
+#### On a stream list
+
+If your application hosts multiple streams, then you likely want to display the number of users watching each one. Use a server to periodically retrieve [occupancy](/docs/chat/rooms/occupancy#retrieve) from all streams via a REST call to display this information on a stream list.
+
+### Send reactions to the room
+
+[Room reactions](/docs/chat/rooms/reactions) are ephemeral reactions that users can send to the room, such as 👍 or ♥️. They are not persisted and are used for showing sentiment for what is happening in the stream.
+
+Ably recommends you enable server-side batching if you use room reactions in your stream. This is because the highest volumes of reactions are normally sent in a short space of time, such as when a team scores in a game. Server-side batching will reduce the costs associated with the reactions occurring over that short time period.
+
+### Moderate your stream
+
+Keeping your chat stream free of abuse and toxic behavior is paramount to providing a safe and enjoyable experience for your users.
+
+Use AI models to vet content in realtime and keep your stream free of abusive content. Ably recommends using an 'after-publish' form of moderation for livestream chat. This is where messages are briefly visible to users, and then removed after moderation has been run against them. The reason for this is to avoid the additional latency of moderating inline. In busy streams, users likely will not have time to read a message before it's removed by moderation.
+
+This is usually sufficient in a fast-paced livestream where messages move off-screen rapidly, however there is 'before-publish' moderation available if you would prefer.
+
+You can easily detect and handle 'before-publish' moderation failures in your code:
+
+<Code>
+```javascript
+try {
+  room.messages.send({text: 'something offensive'});
+} catch (e) {
+  if e.code === MessageRejectedByModeration {
+    // Handle moderation failure.
+  }
+}
+```
+</Code>
+
+## Optional functionality
+
+Optional functionality includes features that enhance the user experience of livestream chat applications, but aren't required.
+
+### Edit and delete messages
+
+Whether users can [edit](/docs/chat/rooms/messages#edit) or [delete](/docs/chat/rooms/messages#delete) the messages that they've previously sent is an optional feature that you can include in your livestream application. Its usefulness will depend on the rate at which messages are published.
+
+### Message history
+
+It's possible to retrieve previously sent messages from [history](/docs/chat/rooms/history), as Ably stores chat messages for 30 days. This can be extended for longer periods upon request.
+
+There are two uses for history that can be useful to livestream chat:
+
+The first is using the getPreviousMessages method. This enables users to view a certain number of messages that occurred in the stream prior to them joining. This can be useful to provide context to users when they join mid-stream, however it can be hard to read if the message throughput of the stream is high.
+
+The second use is for returning messages further back than contextual history. You can display something like a 'View previous messages' button for users to scroll back through the stream and load the messages in set batches by querying for history.
+
+## Monitoring and error recovery
+
+### Network disruption and connection discontinuity
+
+Users that experience intermittent network issues will [automatically rejoin](/docs/chat/connect#discontinuity) any rooms that they were in, if the period of disconnectivity lasts for less than 2 minutes. They will also be streamed any chat messages that they missed whilst offline as well.
+
+## Cost optimization
+
+The following items to be aware of, and to check, to ensure that you keep costs as low as possible.
+
+### Server-side batching
+
+Enabling [server-side batching](/docs/messsages/batch#server-side) means that Ably will group published messages over an interval before publishing them to subscribers. This makes messages more cost efficient, as they are sent in batches, and each batch only counts as a single message.
+
+It is recommended to enable server-side batching when creating a livestream chat application due to the high throughput of messages.
+
+The interval over which messages are grouped is configurable. It is important to strike a healthy balance between cost efficiencies and user experience. This is because a higher interval will increase the latency between messages being delivered to subscribers. This is normally less of a problem in livestream chat applications however, due to the high throughput.
+
+### Connection management
+
+Closing connections more aggressively can reduce costs in a livestream chat application.
+
+Ably identifies dropped connections by whether any activity has been received from clients' [heartbeats](/docs/connect#heartbeats). By default, this interval is 15 seconds, however you can reduce this to 5 seconds through configuration to identify and close connections more quickly.
+
+Set the `heartbeatInterval` `transportParam` in the Ably Pub/Sub client when you instantiate connections to Ably:
+
+<Code>
+```javascript
+const realtimeClient = new Ably.Realtime({
+   // Other options omitted for brevity
+   transportParams: { heartbeatInterval: 5000 }
+})
+```
+</Code>
+
+You may also aggressively close the realtime client when you no longer require it in your application:
+
+<Code>
+```javascript
+realtimeClient.close()
+```
+</Code>
+
+## Production-ready checklist
+
+Before moving your application into production, it's worth checking a few final details to ensure everything goes smoothly:
+
+* Token authentication: ensure that you're using [token authentication](/docs/auth/token#jwt) for all client-side communication with Ably. API key authentication should only be used server-side.
+* Principle of least privilege: ensure that your clients only have [permission](/docs/auth/capabilities) to perform the actions that they need to.
+* Message rate: ensure that the [message rate](#architect) that you're expecting for your application provides the user experience that you're happy with.
+* Server-side batching: Ably recommends using [server-side batching](/docs/messages/batch#server-side) to reduce costs in livestream chat applications. Ensure that it is configured for the rooms that your application will be using.
+* Ably package: check that you're on the right [Ably package](/docs/pricing#packages) for your use case, based on your expected number of users. Certain package types are more suited to delivering high throughput applications commonly seen in livestream chat applications.
