@@ -87,28 +87,47 @@ const RightSidebar = () => {
 
       setHeaders(headerData);
 
-      headerElements.forEach((header) => {
-        intersectionObserver.current?.observe(header);
-      });
+      // Set the first header as active when page changes
+      if (headerData.length > 0) {
+        setActiveHeader({ id: headerData[0].id });
+      }
 
       const handleIntersect = (
         entries: {
           target: Element;
           isIntersecting: boolean;
+          boundingClientRect: DOMRect;
         }[],
       ) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.target.id) {
+        // Get all currently intersecting headers
+        const intersectingEntries = entries.filter((entry) => entry.isIntersecting);
+
+        if (intersectingEntries.length > 0) {
+          // Find the entry nearest to the top of the viewport
+          const topEntry = intersectingEntries.reduce((nearest, current) => {
+            return current.boundingClientRect.top < nearest.boundingClientRect.top ? current : nearest;
+          }, intersectingEntries[0]);
+
+          if (topEntry.target.id) {
             setActiveHeader({
-              id: entry.target.id,
+              id: topEntry.target.id,
             });
           }
-        });
+        }
       };
 
+      // Create a new observer with configuration focused on the top of the viewport
       intersectionObserver.current = new IntersectionObserver(handleIntersect, {
         root: null,
-        threshold: 1,
+        // Using a small threshold to detect partial visibility
+        threshold: 0,
+        // Account for 64px header bar at top and focus on top portion of viewport
+        rootMargin: '-64px 0px -80% 0px',
+      });
+
+      // Observe each header
+      headerElements.forEach((header) => {
+        intersectionObserver.current?.observe(header);
       });
 
       return () => {
