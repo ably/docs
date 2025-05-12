@@ -57,6 +57,7 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       mixpanelAutoCapture: Boolean
       posthogApiKey: String
       posthogApiHost: String
+      conversationsUrl: String
     }
 
     type SiteSiteMetadata implements Node {

@@ -38,10 +38,10 @@ const Chat = () => {
 
   return (
     <div id="chat-room-reactions" className="container">
-      <div className="flex-1 p:2 sm:p-12 justify-between flex flex-col h-screen uk-text-primary">
+      <div className="flex-1 p:2 pl-4 sm:p-12 justify-between flex flex-col h-screen uk-text-primary">
         <div
           id="messages"
-          className="w-96 flex flex-auto flex-col space-y-2 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
+          className="w-80 flex flex-auto flex-col space-y-2 p-3 overflow-y-auto scrollbar-thumb-blue scrollbar-thumb-rounded scrollbar-track-blue-lighter scrollbar-w-2 scrolling-touch"
         >
           {messages.map((message, index) => (
             <div key={index} className="flex items-start">

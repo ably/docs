@@ -50,7 +50,7 @@ async function enterGame() {
   });
 
   channel = client.channels.get(channelName, {
-    params: { rewind: '10' },
+    params: { rewind: '4' },
   });
 
   channel.subscribe(async (message) => {
@@ -71,7 +71,7 @@ preloadButton.addEventListener('click', async () => {
 
   const channel = client.channels.get(channelName);
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 4; i++) {
     const markets = ['homeWin', 'draw', 'awayWin'];
     const numMarketsToUpdate = Math.floor(Math.random() * 2) + 1;
     const marketsToUpdate = markets.sort(() => 0.5 - Math.random()).slice(0, numMarketsToUpdate);
@@ -87,7 +87,7 @@ preloadButton.addEventListener('click', async () => {
     const alert = document.createElement('div');
     alert.className =
       'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg transition-opacity duration-500';
-    alert.textContent = `Update ${i + 1}/10: New odds published`;
+    alert.textContent = `Update ${i + 1}/4: New odds published`;
     document.body.appendChild(alert);
 
     // Remove alert after 2 seconds
@@ -96,7 +96,7 @@ preloadButton.addEventListener('click', async () => {
       setTimeout(() => alert.remove(), 500);
     }, 2000);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   await enterGame();

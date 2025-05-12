@@ -48,18 +48,24 @@ function ChannelState() {
     <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 uk-text-primary">
       {isAttached ? (
         <div className="flex justify-center items-center">
-          <button onClick={handleDetach} className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2">
+          <button
+            onClick={handleDetach}
+            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2"
+          >
             Click to detach
           </button>
         </div>
       ) : (
         <div className="flex justify-center items-center">
-          <button onClick={handleAttach} className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2">
+          <button
+            onClick={handleAttach}
+            className="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-[1998px] hover:uk-btn-primary+1 active:uk-btn-primary+2"
+          >
             Click to attach
           </button>
         </div>
       )}
-      <textarea readOnly value={channelStates.join('\n')} className="w-full h-40 p-2 border rounded" />
+      <textarea readOnly value={channelStates.join('\n')} className="w-full text-sm h-80 p-2 border rounded" />
     </div>
   );
 }

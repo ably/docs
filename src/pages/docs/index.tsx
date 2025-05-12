@@ -15,7 +15,8 @@ const IndexPage = ({
 }: {
   data: { allFile: { images: ImageProps[] } };
 }) => {
-  const { sections, meta } = pageData.homepage.content;
+  const homepageContent = pageData.homepage.content;
+  const { meta } = homepageContent;
   const openGraphTitle = meta.title ?? 'Ably Realtime Docs';
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl('/docs');
@@ -38,7 +39,7 @@ const IndexPage = ({
         <meta name="twitter:image" content={meta.image} />
       </Helmet>
 
-      <HomepageContent sections={sections} images={images} />
+      <HomepageContent homepageContent={homepageContent} images={images} />
     </>
   );
 };

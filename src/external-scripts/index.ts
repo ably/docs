@@ -27,6 +27,7 @@ type ExternalScriptsData = {
   inkeepEnabled?: string;
   inkeepApiKey?: string;
   insightsEnabled?: boolean;
+  conversationsUrl?: string;
 };
 
 // Inject scripts and run any init code
@@ -35,6 +36,7 @@ const injectScripts = ({
   announcementEnabled,
   inkeepEnabled,
   inkeepApiKey,
+  conversationsUrl,
 }: ExternalScriptsData = {}) => {
   if (announcementEnabled) {
     announcement();
@@ -45,7 +47,7 @@ const injectScripts = ({
   }
 
   if (inkeepEnabled) {
-    inkeepChat(inkeepApiKey);
+    inkeepChat(inkeepApiKey, conversationsUrl);
   }
 
   if (!document.querySelector('div[data-scripts-loaded="true"]')) {

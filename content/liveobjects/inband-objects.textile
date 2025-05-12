@@ -1,0 +1,72 @@
+---
+title: Inband Objects
+meta_description: "Subscribe to LiveObjects updates from Pub/Sub SDKs."
+product: liveobjects
+languages:
+  - javascript
+---
+
+<aside data-type='experimental'>
+<p>LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.</p>
+</aside>
+
+Inband objects enables clients to subscribe to LiveObjects updates in realtime, even on platforms that don't yet have a native LiveObjects Realtime client implementation.
+
+<aside class="note">
+<p>If you're using LiveObjects from JavaScript/TypeScript, use the LiveObjects "plugin":/docs/liveobjects/quickstart?lang=javascript which has dedicated support for all LiveObjects features.</p>
+</aside>
+
+Inband objects works by delivering changes to channel objects as regular channel messages, similar to "inband occupancy":/docs/channels/options#occupancy .
+
+h2(#inband-objects-enable). Enable Inband Objects
+
+To enable inband objects, use the @objects@ "channel parameter":/docs/channels/options#objects when getting a channel:
+
+blang[javascript].
+
+  ```[javascript]
+  // When getting a channel instance
+  const channelOpts = { params: { objects: 'objects' } };
+  const channel = realtime.channels.get('my-channel', channelOpts);
+
+  // Or using setOptions on an existing channel
+  await channel.setOptions({ params: { objects: 'objects' } });
+  ```
+
+<aside data-type='important'>
+<p>Clients require the @channel-metadata@ "capability":/docs/auth/capabilities to receive inband objects updates.</p>
+</aside>
+
+h2(#inband-objects-subscribe). Subscribe to updates
+
+When using inband objects, the client will receive special @[meta]objects@ messages whenever the objects on the channel are updated. These messages provide a snapshot of the current set of objects on the channel.
+
+<aside data-type='note'>
+<p>If there is a high rate of updates to the channel objects the inband messages will be throttled. However the client is guaranteed to receive a sequence of inband messages after the last change occurs so that the latest data is always available.</p>
+</aside>
+
+"Subscribe":/docs/api/realtime-sdk/channels#subscribe to @[meta]objects@ messages like you would any other message on the channel. For convenience, use a message name filter to only receive messages with the name @[meta]objects@ in your listener:
+
+blang[javascript].
+
+  ```[javascript]
+  // Subscribe to [meta]objects messages
+  channel.subscribe('[meta]objects', (message) => {
+    const { syncId, nextCursor, object } = message.data;
+    console.log("Received inband objects message:", syncId, nextCursor, JSON.stringify(message.data));
+  });
+  ```
+
+h2(#inband-objects-message-format). Message Format
+
+Inband objects messages are sent as a sequence of messages, where each message contains a snapshot of a single object on the channel. Taken together, a set of messages belonging to the same sequence describes the complete set of objects on the channel.
+
+Each inband objects message has a message @name@ of @[meta]objects@.
+
+The message @data@ is a JSON object with the following top-level properties:
+
+* @syncId@: A unique ID for this sequence. All messages with the same @syncId@ are part of the same sequence of messages which describes the complete set of the objects on the channel.
+* @nextCursor@: A cursor for the next message in the sequence, or @undefined@ if this is the last message in the sequence.
+* @object@: A JSON representation of the object included in the message.
+
+The shape of the @object@ is the same as the response format of an object when listing them via the "REST API":/docs/liveobjects/rest-api-usage?lang=javascript#fetching-objects-list-values .

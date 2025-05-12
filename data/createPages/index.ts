@@ -12,11 +12,13 @@ import { DEFAULT_LANGUAGE } from './constants';
 import { writeRedirectToConfigFile } from './writeRedirectToConfigFile';
 import { siteMetadata } from '../../gatsby-config';
 import { GatsbyNode } from 'gatsby';
+import { examples, DEFAULT_EXAMPLE_LANGUAGES } from '../../src/data/examples/';
+import { Example } from '../../src/data/examples/types';
 
 const writeRedirect = writeRedirectToConfigFile('config/nginx-redirects.conf');
 const documentTemplate = path.resolve(`src/templates/document.tsx`);
 const apiReferenceTemplate = path.resolve(`src/templates/apiReference.tsx`);
-
+const examplesTemplate = path.resolve(`src/templates/examples.tsx`);
 interface Edge {
   node: {
     slug: string;
@@ -66,6 +68,18 @@ interface ApiReferenceQueryResult {
           redirect_from?: string[];
         };
       };
+    }[];
+  };
+}
+
+interface ExampleQueryResult {
+  allExampleFile: {
+    nodes: {
+      project: string;
+      projectRelativePath: string;
+      language: string;
+      extension: string;
+      content: string;
     }[];
   };
 }
@@ -142,6 +156,20 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     }
   `);
 
+  const examplesResult = await graphql<ExampleQueryResult>(`
+    query {
+      allExampleFile {
+        nodes {
+          project
+          projectRelativePath
+          language
+          extension
+          content
+        }
+      }
+    }
+  `);
+
   const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
 
   const documentCreator =
@@ -201,7 +229,7 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
           contentOrderedList,
           contentMenu: contentMenuObject,
           script,
-          layout: { sidebar: true, searchBar: true, template: 'base' },
+          layout: { leftSidebar: true, rightSidebar: true, searchBar: true, template: 'base' },
         },
       });
       return slug;
@@ -209,14 +237,6 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
 
   createRedirect({
     fromPath: '/',
-    toPath: '/docs',
-    isPermanent: true,
-    redirectInBrowser: true,
-  });
-
-  // TODO: remove when examples are ready to be released
-  createRedirect({
-    fromPath: '/docs/examples',
     toPath: '/docs',
     isPermanent: true,
     redirectInBrowser: true,
@@ -230,8 +250,44 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     throw new Error('API reference result is undefined');
   }
 
+  const exampleCreator = async (exampleDatum: Example) => {
+    if (!examplesResult.data) {
+      throw new Error('Examples result is undefined');
+    }
+
+    const relatedFiles = examplesResult.data.allExampleFile.nodes.filter((node) => node.project === exampleDatum.id);
+    const languageFiles: Record<string, Record<string, string>> = {};
+
+    for (const language of exampleDatum.languages ?? DEFAULT_EXAMPLE_LANGUAGES) {
+      const filesForLanguage = relatedFiles.reduce<Record<string, string>>((acc, file) => {
+        if (file.language === language && language === 'react' && file.projectRelativePath.startsWith('src/')) {
+          acc[file.projectRelativePath.replace('src/', '')] = file.content;
+        } else if (file.language === language) {
+          acc[file.projectRelativePath] = file.content;
+        }
+        return acc;
+      }, {});
+      languageFiles[language] = filesForLanguage;
+    }
+
+    const example = {
+      ...exampleDatum,
+      files: languageFiles,
+    };
+
+    createPage({
+      path: `/examples/${example.id}`,
+      component: examplesTemplate,
+      context: {
+        example,
+        layout: { sidebar: false, searchBar: false, template: 'examples' },
+      },
+    });
+  };
+
   await Promise.all([
     ...documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)),
     ...apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate)),
+    ...examples.map(exampleCreator),
   ]);
 };

@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  ChatClient,
-  AllFeaturesEnabled,
-} from '@ably/chat';
+import { ChatClient, AllFeaturesEnabled } from '@ably/chat';
 import {
   useChatClient,
   useRoom,

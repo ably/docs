@@ -1,0 +1,250 @@
+---
+title: LiveMap
+meta_description: "Create, update and receive updates for a key/value data structure that synchronizes state across clients in realtime."
+product: liveobjects
+languages:
+  - javascript
+---
+
+<aside data-type='experimental'>
+<p>LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.</p>
+</aside>
+
+LiveMap is a key/value data structure that synchronizes its state across users in realtime. It enables you to store primitive values, such as numbers, strings, booleans and buffers, as well as other objects, "enabling you to build complex, hierarchical object structure":#composability.
+
+Conflicts in a LiveMap are automatically resolved with last-write-wins (LWW) semantics. The latest received operation on a key will be applied to the LiveMap and broadcast to all clients.
+
+h2(#create). Create LiveMap
+
+A @LiveMap@ instance can be created using the @channel.objects.createMap()@ method. It must be stored inside another @LiveMap@ object that is reachable from the "root object":/docs/liveobjects/concepts/objects#root-object .
+
+blang[javascript].
+
+  @channel.objects.createMap()@ is asynchronous, as the client sends the create operation to the Ably system and waits for an acknowledgment of the successful map creation.
+
+<aside data-type='note'>
+<p>
+  Note that you need to first "attach to the channel":/quickstart#step-3 before creating a new @LiveMap@ instance, as this operation requires sending a message to the Ably system.
+</p>
+</aside>
+
+blang[javascript].
+
+  ```[javascript]
+  const map = await channel.objects.createMap();
+  await root.set('myMap', map);
+  ```
+
+Optionally, you can specify an initial key/value structure when creating the map:
+
+blang[javascript].
+
+  ```[javascript]
+  // Pass a regular JavaScript object reflecting the initial state
+  const map = await channel.objects.createMap({ foo: 'bar', baz: 42 });
+  // You can also pass other objects as values for keys
+  await channel.objects.createMap({ nestedMap: map });
+  ```
+
+h2(#get). Get value for a key
+
+Get the current value for a key in a map using the @LiveMap.get()@ method:
+
+blang[javascript].
+
+  ```[javascript]
+  console.log('Value for my-key:', map.get('my-key'));
+  ```
+
+h2(#subscribe-data). Subscribe to data updates
+
+You can subscribe to data updates on a map to receive realtime changes made by you or other clients.
+
+<aside data-type='note'>
+<p>
+  @LiveMap@ mutation methods do not directly modify the local map state. Instead, they send the intended operation to the Ably system, and the change is applied only when the corresponding realtime operation is echoed back to the client. This means that the state retrieved immediately after a mutation may not reflect the latest updates yet. You will be notified via subscription when the map is updated.
+</p>
+</aside>
+
+Subscribe to data updates on a map using the @LiveMap.subscribe()@ method:
+
+blang[javascript].
+
+  ```[javascript]
+  map.subscribe((update) => {
+    console.log('Map updated:', [...map.entries()]);
+    console.log('Update details:', update);
+  });
+  ```
+
+The update object provides details about the change, listing the keys that were changed and indicating whether they were updated (value changed) or removed from the map.
+
+Example structure of an update object when the key @foo@ is updated and the key @bar@ is removed:
+
+```[json]
+{
+  {
+    "foo": "updated",
+    "bar": "removed"
+  }
+}
+```
+
+h3(#unsubscribe-data). Unsubscribe from data updates
+
+Use the @unsubscribe()@ function returned in the @subscribe()@ response to remove a map update listener:
+
+blang[javascript].
+
+  ```[javascript]
+  // Initial subscription
+  const { unsubscribe } = map.subscribe(() => console.log('Map updated'));
+  // To remove the listener
+  unsubscribe();
+  ```
+
+Use the @LiveMap.unsubscribe()@ method to deregister a provided listener:
+
+blang[javascript].
+
+  ```[javascript]
+  // Initial subscription
+  const listener = () => console.log('Map updated');
+  map.subscribe(listener);
+  // To remove the listener
+  map.unsubscribe(listener);
+  ```
+
+Use the @LiveMap.unsubscribeAll()@ method to deregister all map update listeners:
+
+blang[javascript].
+
+  ```[javascript]
+  map.unsubscribeAll();
+  ```
+
+h2(#set). Set keys in a LiveMap
+
+Set a value for a key in a map by calling @LiveMap.set()@. This operation is synchronized across all clients and triggers data subscription callbacks for the map, including on the client making the request.
+
+Keys in a map can contain numbers, strings, booleans and buffers, as well as other @LiveMap@ and @LiveCounter@ objects.
+
+blang[javascript].
+
+  This operation is asynchronous, as the client sends the corresponding update operation to the Ably system and waits for acknowledgment of the successful map key update.
+
+blang[javascript].
+
+  ```[javascript]
+  await map.set('foo', 'bar');
+  await map.set('baz', 42);
+
+  // Can also set a reference to another object
+  const counter = await channel.objects.createCounter();
+  await map.set('counter', counter);
+  ```
+
+h2(#remove). Remove a key from a LiveMap
+
+Remove a key from a map by calling @LiveMap.remove()@. This operation is synchronized across all clients and triggers data subscription callbacks for the map, including on the client making the request.
+
+blang[javascript].
+
+  This operation is asynchronous, as the client sends the corresponding remove operation to the Ably system and waits for acknowledgment of the successful map key removal.
+
+blang[javascript].
+
+  ```[javascript]
+  await map.remove('foo');
+  ```
+
+h2(#iterate). Iterate over key/value pairs
+
+blang[javascript].
+
+  Iterate over key/value pairs, keys or values using the @LiveMap.entries()@, @LiveMap.keys()@ and @LiveMap.values()@ methods respectively.
+
+  These methods return a "map iterator":https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Iterator object for convenient traversal. Note that contrary to JavaScript's "Map":https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map counterpart, these methods do not guarantee that entries are returned in insertion order.
+
+blang[javascript].
+
+  ```[javascript]
+  for (const [key, value] of map.entries()) {
+    console.log(`Key: ${key}, Value: ${value}`);
+  }
+
+  for (const key of map.keys()) {
+    console.log(`Key: ${key}`);
+  }
+
+  for (const value of map.values()) {
+    console.log(`Value: ${value}`);
+  }
+  ```
+
+h2(#subscribe-lifecycle). Subscribe to lifecycle events
+
+Subscribe to lifecycle events on a map using the @LiveMap.on()@ method:
+
+blang[javascript].
+
+  ```[javascript]
+  map.on('deleted', () => {
+    console.log('Map has been deleted');
+  });
+  ```
+
+Read more about "objects lifecycle events":/docs/liveobjects/lifecycle#objects.
+
+h3(#unsubscribe-lifecycle). Unsubscribe from lifecycle events
+
+Use the @off()@ function returned in the @on()@ response to remove a lifecycle event listener:
+
+blang[javascript].
+
+  ```[javascript]
+  // Initial subscription
+  const { off } = map.on(('deleted') => console.log('Map deleted'));
+  // To remove the listener
+  off();
+  ```
+
+Use the @LiveMap.off()@ method to deregister a provided lifecycle event listener:
+
+blang[javascript].
+
+  ```[javascript]
+  // Initial subscription
+  const listener = () => console.log('Map deleted');
+  map.on('deleted', listener);
+  // To remove the listener
+  map.off('deleted', listener);
+  ```
+
+Use the @LiveMap.offAll()@ method to deregister all lifecycle event listeners:
+
+blang[javascript].
+
+  ```[javascript]
+  map.offAll();
+  ```
+
+h2(#composability). Composability
+
+A @LiveMap@ can store other @LiveMap@ or @LiveCounter@ objects as values for its keys, enabling you to build complex, hierarchical object structure. This enables you to represent complex data models in your applications while ensuring realtime synchronization across clients.
+
+blang[javascript].
+
+  ```[javascript]
+  // Create a hierarchy of objects using LiveMap
+  const counter = await channel.objects.createCounter();
+  const map = await channel.objects.createMap({ nestedCounter: counter });
+  const outerMap = await channel.objects.createMap({ nestedMap: map });
+  await root.set('outerMap', outerMap);
+
+  // resulting structure:
+  // root (LiveMap)
+  // └── outerMap (LiveMap)
+  //     └── nestedMap (LiveMap)
+  //         └── nestedCounter (LiveCounter)
+  ```

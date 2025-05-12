@@ -6,6 +6,7 @@ export const getMetaTitle = (title: string, product: ProductName): string => {
     spaces: 'Ably Spaces',
     livesync: 'Ably LiveSync',
     chat: 'Ably Chat',
+    liveobjects: 'Ably LiveObjects',
     'asset-tracking': 'Ably Asset Tracking',
     'api-reference': 'API References',
     pub_sub: 'Ably Pub/Sub',

@@ -35,13 +35,22 @@ export type AblyPageContext = {
   script: string;
 };
 
-export type ProductName = 'channels' | 'spaces' | 'livesync' | 'chat' | 'asset-tracking' | 'api-reference' | 'home';
+export type ProductName =
+  | 'channels'
+  | 'spaces'
+  | 'livesync'
+  | 'chat'
+  | 'liveobjects'
+  | 'asset-tracking'
+  | 'api-reference'
+  | 'home';
 
 export type ProductTitle =
   | 'Channels'
   | 'Ably Spaces'
   | 'Ably LiveSync'
   | 'Ably Chat'
+  | 'Ably LiveObjects'
   | 'Ably Asset Tracking'
   | 'API References'
   | 'Home'
