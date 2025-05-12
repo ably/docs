@@ -79,6 +79,10 @@ export default {
           name: 'Inband Objects',
           link: '/docs/liveobjects/inband-objects',
         },
+        {
+          name: 'Object storage',
+          link: '/docs/liveobjects/storage',
+        },
       ],
     },
   ],
