@@ -67,6 +67,12 @@ const Ul: FC<JSX.IntrinsicElements['ul']> = ({ children, ...props }) => (
   </ul>
 );
 
+const Ol: FC<JSX.IntrinsicElements['ol']> = ({ children, ...props }) => (
+  <ol className="ui-ordered-list" {...props}>
+    {children}
+  </ol>
+);
+
 const Li: FC<JSX.IntrinsicElements['li']> = ({ children, ...props }) => (
   <li className="ui-text-p2 mb-8" {...props}>
     {children}
@@ -95,6 +101,7 @@ const defaultComponents = {
   h3: H3,
   p: Paragraph,
   a: Anchor,
+  ol: Ol,
   ul: Ul,
   li: Li,
   code: Code,
