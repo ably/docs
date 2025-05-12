@@ -12,6 +12,7 @@ import { useCopyableHeaders } from './mdx/headers';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Aside from '../blocks/dividers/Aside';
 import { HtmlComponentPropsData } from '../html-component-props';
+import { languageData } from 'src/data/languages';
 
 type MDXWrapperProps = PageProps<unknown, PageContextType>;
 
@@ -31,6 +32,9 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext }) => {
           navigate(`${location.pathname}?lang=${lang}`);
         }}
         className={cn(props.className, 'mb-20')}
+        languageOrdering={
+          activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
+        }
         {...props}
       />
     );
