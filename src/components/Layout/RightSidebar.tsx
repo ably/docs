@@ -60,13 +60,18 @@ const externalLinks = (
   ];
 };
 
+const getHeaderId = (element: Element) => {
+  const customId = element.querySelector('a')?.getAttribute('id') ?? element.querySelector('a')?.getAttribute('name');
+  return customId ?? element.id;
+};
+
 const RightSidebar = () => {
+  const location = useLocation();
   const { activePage } = useLayoutContext();
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
-  const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>();
+  const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>({ id: location.hash.slice(1) });
   const intersectionObserver = useRef<IntersectionObserver>();
   const manualSelection = useRef<boolean>(false);
-  const location = useLocation();
   const showLanguageSelector = activePage?.languages.length > 0;
   const language = new URLSearchParams(location.search).get('lang') as LanguageKey;
 
@@ -80,12 +85,17 @@ const RightSidebar = () => {
       const headerElements = articleElement.querySelectorAll('h2, h3, h6') ?? [];
       const headerData = Array.from(headerElements)
         .filter((element) => element.id && element.textContent)
-        .map((header) => ({
-          type: header.tagName,
-          label: header.textContent ?? '',
-          id: header.id,
-          height: header.getBoundingClientRect().height,
-        }));
+        .map((header) => {
+          const customId =
+            header.querySelector('a')?.getAttribute('id') ?? header.querySelector('a')?.getAttribute('name');
+
+          return {
+            type: header.tagName,
+            label: header.textContent ?? '',
+            id: customId ?? header.id,
+            height: header.getBoundingClientRect().height,
+          };
+        });
 
       setHeaders(headerData);
 
@@ -117,7 +127,7 @@ const RightSidebar = () => {
 
           if (topEntry.target.id) {
             setActiveHeader({
-              id: topEntry.target.id,
+              id: getHeaderId(topEntry.target),
             });
           }
         }
