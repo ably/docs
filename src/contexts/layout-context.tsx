@@ -81,21 +81,20 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
   }, [location.pathname]); // Re-run when the path changes
 
   const activePage = useMemo(() => {
+    // Use DOM languages if available, otherwise fall back to pageContext languages
+    const activeLanguages = (domLanguages.length > 0 ? domLanguages : pageContext.languages ?? []) as LanguageKey[];
     const activePageData = determineActivePage(productData, location.pathname);
+    const activeLanguage = determineActiveLanguage(activeLanguages, location.search, activePageData?.product ?? null);
 
     if (!activePageData) {
       return {
         tree: [],
         page: { name: '', link: '' },
         languages: [],
-        language: DEFAULT_LANGUAGE as LanguageKey,
+        language: activeLanguage,
         product: null,
       };
     }
-
-    // Use DOM languages if available, otherwise fall back to pageContext languages
-    const activeLanguages = (domLanguages.length > 0 ? domLanguages : pageContext.languages ?? []) as LanguageKey[];
-    const activeLanguage = determineActiveLanguage(activeLanguages, location.search, activePageData.product);
 
     return {
       ...activePageData,
