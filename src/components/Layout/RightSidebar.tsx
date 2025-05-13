@@ -69,7 +69,9 @@ const RightSidebar = () => {
   const location = useLocation();
   const { activePage } = useLayoutContext();
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
-  const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>({ id: location.hash.slice(1) });
+  const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>({
+    id: location.hash ? location.hash.slice(1) : '#',
+  });
   const intersectionObserver = useRef<IntersectionObserver>();
   const manualSelection = useRef<boolean>(false);
   const showLanguageSelector = activePage?.languages.length > 0;
