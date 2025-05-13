@@ -9,10 +9,14 @@ const stripTrailingSlash = (str: string) => (str.endsWith('/') ? str.slice(0, -1
 
 const mainWebsite = stripTrailingSlash(process.env.GATSBY_ABLY_MAIN_WEBSITE ?? 'http://localhost:3000');
 
-// Set the provided asset prefix so we can fetch assets from elsewhere when specified
-export const assetPrefix = process.env.ASSET_PREFIX;
+// Define an asset prefix to serve static assets from a different domain or CDN
+// This is used for Heroku PR deployments or when explicitly set via ASSET_PREFIX environment variable
+export const assetPrefix =
+  process.env.ASSET_PREFIX ||
+  (process.env.HEROKU_PR_NUMBER ? `https://${process.env.HEROKU_APP_NAME}.herokuapp.com` : undefined);
 
 export const trailingSlash = 'never';
+
 export const siteMetadata = {
   siteUrl: mainWebsite,
   title: 'Documentation | Ably Realtime',
