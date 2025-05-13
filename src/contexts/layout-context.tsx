@@ -82,7 +82,7 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
 
   const activePage = useMemo(() => {
     // Use DOM languages if available, otherwise fall back to pageContext languages
-    const activeLanguages = (domLanguages.length > 0 ? domLanguages : pageContext.languages ?? []) as LanguageKey[];
+    const activeLanguages = (domLanguages.length > 0 ? domLanguages : pageContext?.languages ?? []) as LanguageKey[];
     const activePageData = determineActivePage(productData, location.pathname);
     const activeLanguage = determineActiveLanguage(activeLanguages, location.search, activePageData?.product ?? null);
 
@@ -101,7 +101,7 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
       languages: (activePageData.page.languages as LanguageKey[]) ?? activeLanguages,
       language: activeLanguage,
     };
-  }, [location.pathname, location.search, pageContext.languages, domLanguages]);
+  }, [location.pathname, location.search, pageContext?.languages, domLanguages]);
 
   return (
     <LayoutContext.Provider
