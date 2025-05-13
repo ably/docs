@@ -45,7 +45,7 @@ if (element) {
 }
 
 async function startTyping() {
-  await room.typing.start();
+  await room.typing.keystroke();
 }
 
 initializeChat().catch((error) => {
