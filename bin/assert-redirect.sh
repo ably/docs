@@ -16,9 +16,16 @@ if [[ -z $FROM || -z $TO ]]; then
   exit 1
 fi
 
+# Add basic auth if enabled
+AUTH_OPTS=""
+if [[ "${ENABLE_BASIC_AUTH}" == "true" ]]; then
+  AUTH_OPTS="--user preview:preview"
+fi
+
 OUTPUT=$(curl --header "X-Forwarded-Proto: https" \
               --silent --output /dev/null \
               --write-out "%{http_code} %{redirect_url}" \
+              ${AUTH_OPTS} \
               http://localhost:3001${FROM})
 
 CODE=$(echo $OUTPUT | cut -f 1 -d " ")
