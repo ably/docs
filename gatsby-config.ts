@@ -76,6 +76,12 @@ export const plugins = [
             elements: [`h2`, `h3`],
           },
         },
+        {
+          resolve: 'gatsby-remark-images',
+          options: {
+            maxWidth: 1200,
+          },
+        },
       ],
       mdxOptions: {
         remarkPlugins: [
