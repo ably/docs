@@ -30,18 +30,7 @@ export const query = graphql`
         product
       }
     }
-    inlineTOC: fileInlineToc(slug: { eq: $slug }) {
-      tableOfContents {
-        content {
-          values {
-            linkTitle
-            link
-          }
-          key
-        }
-      }
-    }
-    images: allFile(filter: { relativeDirectory: { glob: "content/**" } }) {
+    images: allFile(filter: { sourceInstanceName: { eq: "images" } }) {
       nodes {
         ...ContentImage
       }

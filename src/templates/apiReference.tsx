@@ -23,16 +23,5 @@ export const query = graphql`
         product
       }
     }
-    inlineTOC: fileInlineToc(slug: { eq: $slug }) {
-      tableOfContents {
-        content {
-          values {
-            linkTitle
-            link
-          }
-          key
-        }
-      }
-    }
   }
 `;

@@ -1,5 +1,4 @@
-const yaml = require('js-yaml');
-const { upperFirst, camelCase, isPlainObject, lowerFirst, isEmpty, merge } = require('lodash');
+const { upperFirst, camelCase } = require('lodash');
 const { tryRetrieveMetaData, filterAllowedMetaFields, NO_MATCH, prepareAllowedMetaFields } = require('./front-matter');
 const DataTypes = require('../types');
 const { preParser } = require('./pre-parser');
@@ -8,38 +7,9 @@ const { maybeRetrievePartial } = require('./retrieve-partials');
 const { flattenContentOrderedList } = require('./shared-utilities');
 const { ARTICLE_TYPES } = require('./constants');
 
-const INLINE_TOC_REGEX = /^inline-toc\.[\r\n\s]*^([\s\S]*?)^\s*$/m;
-
 // Just the partial name: /<%=\s+partial\s+partial_version\('([^')]*)'\)[^%>]*%>/
 const parseNanocPartials = (contentString) =>
   contentString.split(/(<%=\s+partial\s+partial_version\('[^')]*'\)[^%>]*%>)/);
-const tryRetrieveInlineTOC = (contentString) => contentString.match(INLINE_TOC_REGEX);
-const removeInlineTOC = (contentString) => contentString.replace(INLINE_TOC_REGEX, '');
-const processTOCItems = (tocItem) => {
-  if (isEmpty(tocItem)) {
-    return tocItem;
-  }
-  if (Array.isArray(tocItem)) {
-    return tocItem.map(processTOCItems);
-  }
-  if (isPlainObject(tocItem)) {
-    return {
-      content: Object.entries(tocItem).map(([key, values]) => ({ key, values: processTOCItems(values) })),
-    };
-  }
-  const linkParts = tocItem.match(/(.+)#(.+)/);
-  const linkTitle = (linkParts && linkParts[1]) || tocItem;
-  const link = (linkParts && linkParts[2]) || lowerFirst(tocItem);
-  return {
-    linkTitle,
-    link: link.replace(/\s/g, '-'),
-  };
-};
-const retrieveAndReplaceInlineTOC = (contentString) => ({
-  noInlineTOC: removeInlineTOC(contentString),
-  // eslint-disable-next-line no-sparse-arrays
-  inlineTOCOnly: (tryRetrieveInlineTOC(contentString) ?? [, null])[1],
-});
 
 const removeFalsy = (dataArray) => dataArray.filter((x) => !!x);
 const makeTypeFromParentType = (type) => (node) => upperFirst(camelCase(`${node.internal.type}${type}`));
@@ -93,30 +63,6 @@ const constructDataObjectsFromStrings = (contentStrings, frontmatterMeta) => {
   return dataObjects;
 };
 
-const createInlineToc = (
-  inlineTOCOnly,
-  slug,
-  parentNode,
-  { createContentDigest, createNodeId, updateWithTransform },
-) => {
-  const loadedInlineTOC = yaml.load(inlineTOCOnly, 'utf-8');
-  const inlineTOCLinks = {
-    tableOfContents: processTOCItems(loadedInlineTOC),
-  };
-  const inlineTOCNode = merge(inlineTOCLinks, {
-    id: createNodeId(`${parentNode.id} >>> InlineTOC`),
-    children: [],
-    parent: parentNode.id,
-    slug,
-    internal: {
-      contentDigest: createContentDigest(inlineTOCLinks),
-      type: makeTypeFromParentType('InlineTOC')(parentNode),
-    },
-  });
-
-  updateWithTransform({ parent: parentNode, child: inlineTOCNode });
-};
-
 const splitDataAndMetaData = (text) => {
   const withPartials = parseNanocPartials(text);
   const withoutFalsyValues = removeFalsy(withPartials);
@@ -151,10 +97,7 @@ const transformNanocTextiles =
       content = `${content}\n`;
     }
     const preTextileTransform = preParser(content);
-    const { noInlineTOC, inlineTOCOnly } = retrieveAndReplaceInlineTOC(preTextileTransform);
-
-    createInlineToc(inlineTOCOnly, slug, node, { createContentDigest, createNodeId, updateWithTransform });
-    const { data, frontmatterMeta } = splitDataAndMetaData(noInlineTOC);
+    const { data, frontmatterMeta } = splitDataAndMetaData(preTextileTransform);
 
     let articleType = ARTICLE_TYPES.document;
     if (/^api\/.*/.test(slug)) {
