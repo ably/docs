@@ -21,6 +21,7 @@ async function initializeChat() {
 
   // Get ROOM with typing capabilities
   room = await chatClient.rooms.get(roomName, { typing: typingOptions });
+  room.attach();
 
   // Subscribe to room for anyone typing or updates on typing
   room.typing.subscribe(async () => {

@@ -54,6 +54,28 @@ export const examples: Example[] = [
     metaDescription: `Add realtime typing indicators to your chat app using Ably’s Chat SDK. Show when users are typing with instant, low-latency updates.`,
   },
   {
+    id: 'liveobjects-live-counter',
+    name: 'LiveCounter',
+    description: 'Use a synchronized numerical counter to track reactions or any numerical data in realtime.',
+    products: ['liveobjects'],
+    languages: ['javascript'],
+    layout: 'double-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Build a live counter with Ably’s LiveObjects`,
+    metaDescription: `Use Ably’s LiveObjects to synchronize numerical values in realtime with a LiveCounter. Power data synchronization at scale for votes, reaction counts, game stats, and more.`,
+  },
+  {
+    id: 'liveobjects-live-map',
+    name: 'LiveMap',
+    description: 'Synchronize application state across users in realtime using a key/value data structure.',
+    products: ['liveobjects'],
+    languages: ['javascript'],
+    layout: 'double-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
+    metaTitle: `Build a live map with Ably’s LiveObjects`,
+    metaDescription: `Use Ably’s LiveObjects to synchronize key/value data in realtime with a LiveMap. Build dynamic, collaborative apps with reliable, low-latency synchronization at scale.`,
+  },
+  {
     id: 'pub-sub-channel-messages',
     name: 'Channel Messages',
     description: 'Implement pub/sub messaging using channels.',
@@ -204,6 +226,9 @@ export const products = {
   },
   chat: {
     label: 'Chat',
+  },
+  liveobjects: {
+    label: 'LiveObjects',
   },
   spaces: {
     label: 'Spaces',

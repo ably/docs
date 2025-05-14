@@ -1,4 +1,4 @@
-import React, { PropsWithChildren, useContext, useEffect } from 'react';
+import React, { PropsWithChildren, useContext, useEffect, useRef } from 'react';
 import Markdown from 'markdown-to-jsx';
 import { Link } from 'gatsby';
 import Icon from '@ably/ui/core/Icon';
@@ -61,7 +61,7 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
   const meta_description = example.metaDescription || example.description;
   const userData = useContext(UserContext);
   const apiKey = getApiKey(userData);
-
+  const isFirstRender = useRef(true);
   const [activeLanguage, setActiveLanguage] = React.useState<LanguageKey>(() => {
     // Get all available language keys from the example
     const languageKeys = Object.keys(example.files) as LanguageKey[];
@@ -86,8 +86,22 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
       const urlParams = new URLSearchParams(window.location.search);
       urlParams.set('lang', activeLanguage);
       window.history.replaceState({}, '', window.location.pathname + '?' + urlParams.toString());
+
+      // There is a bug in Sandpack where startRoute is lost on re-renders. This is a workaround to reintroduce it post-language change.
+      if (example.id === 'pub-sub-message-encryption') {
+        if (isFirstRender.current) {
+          isFirstRender.current = false;
+        } else {
+          setTimeout(() => {
+            const iframe = document.querySelector('.sp-preview-iframe') as HTMLIFrameElement;
+            if (iframe) {
+              iframe.setAttribute('src', iframe.getAttribute('src') + '?encrypted=true');
+            }
+          }, 100);
+        }
+      }
     }
-  }, [activeLanguage]);
+  }, [activeLanguage, example.id]);
 
   const content = React.useMemo(() => example.files[activeLanguage]?.['README.md'], [example.files, activeLanguage]);
 
