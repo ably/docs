@@ -19,16 +19,12 @@ const getMetaDataDetails = (
 const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
 const META_PRODUCT_FALLBACK = 'pub_sub';
 
-interface ITemplate extends AblyTemplateData {
-  showProductNavigation: boolean;
-}
-
 const Template = ({
   location: { pathname },
   pageContext: { contentOrderedList, slug, script },
   data: { document: ablyDocument },
   currentProduct,
-}: ITemplate) => {
+}: AblyTemplateData) => {
   const title = getMetaDataDetails(ablyDocument, 'title') as string;
   const description = getMetaDataDetails(ablyDocument, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
   const { canonicalUrl } = useSiteMetadata();

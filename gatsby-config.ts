@@ -46,7 +46,13 @@ export const plugins = [
   'gatsby-plugin-image',
   'gatsby-plugin-sharp',
   'gatsby-transformer-yaml',
-  'gatsby-transformer-sharp',
+  {
+    resolve: 'gatsby-transformer-sharp',
+    options: {
+      // Stop logging warnings for SVG & GIF files
+      checkSupportedExtensions: false,
+    },
+  },
   'gatsby-plugin-react-helmet',
   {
     resolve: `gatsby-source-rss-feed`,
