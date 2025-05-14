@@ -14,9 +14,16 @@ if [[ -z $URI_PATH ]]; then
   exit 1
 fi
 
+# Add basic auth if enabled
+AUTH_OPTS=""
+if [[ "${ENABLE_BASIC_AUTH}" == "true" ]]; then
+  AUTH_OPTS="--user preview:preview"
+fi
+
 CODE=$(curl --header "X-Forwarded-Proto: https" \
               --silent --output /dev/null \
               --write-out "%{http_code}" \
+              ${AUTH_OPTS} \
               http://localhost:3001${URI_PATH})
 
 if [ ${CODE} -ne 200 ]; then
