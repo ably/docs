@@ -7,7 +7,7 @@ import { AblyTemplateData } from './template-data';
 
 const ApiReference = (props: AblyTemplateData) => (
   <ArticleTypeContext.Provider value={ARTICLE_TYPES.apiReference}>
-    <Template {...props} showProductNavigation={false} currentProduct="api-reference" />
+    <Template {...props} currentProduct="api-reference" />
   </ArticleTypeContext.Provider>
 );
 export default ApiReference;
