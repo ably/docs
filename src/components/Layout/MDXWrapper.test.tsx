@@ -20,7 +20,6 @@ jest.mock('./MDXWrapper', () => {
 jest.mock('src/contexts/layout-context', () => ({
   useLayoutContext: () => ({
     activePage: { language: 'javascript' },
-    setLanguage: jest.fn(),
   }),
   LayoutProvider: ({ children }: { children: ReactNode }) => <div data-testid="layout-provider">{children}</div>,
 }));

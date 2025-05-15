@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useLocation, WindowLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
@@ -10,6 +10,7 @@ import { useLayoutContext } from 'src/contexts/layout-context';
 import { languageInfo } from 'src/data/languages';
 import { PageTreeNode, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
 import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
+import { LanguageKey } from 'src/data/languages/types';
 
 type SidebarHeader = {
   id: string;
@@ -36,12 +37,12 @@ const externalLinks = (
       githubBasePath +
       (githubPathSegments.length === 1 ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
 
-    const language = new URLSearchParams(location.search).get('lang');
+    const language = new URLSearchParams(location.search).get('lang') as LanguageKey;
     const requestTitle = `Change request for: ${currentPage.link}`;
     const requestBody = encodeURIComponent(`
   **Page name**: ${currentPage.name}
   **URL**: [${currentPage.link}](https://ably.com${currentPage.link})
-  ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}` : ''}
+  ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}**` : ''}
 
   **Requested change or enhancement**:
 `);
@@ -59,14 +60,33 @@ const externalLinks = (
   ];
 };
 
+const getHeaderId = (element: Element) => {
+  const customId = element.querySelector('a')?.getAttribute('id') ?? element.querySelector('a')?.getAttribute('name');
+  return customId ?? element.id;
+};
+
 const RightSidebar = () => {
+  const location = useLocation();
   const { activePage } = useLayoutContext();
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
-  const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>();
-  const intersectionObserver = useRef<IntersectionObserver>();
-  const location = useLocation();
+  const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>({
+    id: location.hash ? location.hash.slice(1) : '#',
+  });
+  const intersectionObserver = useRef<IntersectionObserver | undefined>(undefined);
+  const manualSelection = useRef<boolean>(false);
   const showLanguageSelector = activePage?.languages.length > 0;
-  const language = new URLSearchParams(location.search).get('lang');
+  const language = new URLSearchParams(location.search).get('lang') as LanguageKey;
+
+  const handleHeaderClick = useCallback((headerId: string) => {
+    // Set manual selection flag to prevent intersection observer updates
+    manualSelection.current = true;
+    setActiveHeader({ id: headerId });
+
+    // Reset the flag after scroll animation completes
+    setTimeout(() => {
+      manualSelection.current = false;
+    }, 1000);
+  }, []);
 
   useEffect(() => {
     const articleElement = document.querySelector('article');
@@ -78,37 +98,66 @@ const RightSidebar = () => {
       const headerElements = articleElement.querySelectorAll('h2, h3, h6') ?? [];
       const headerData = Array.from(headerElements)
         .filter((element) => element.id && element.textContent)
-        .map((header) => ({
-          type: header.tagName,
-          label: header.textContent ?? '',
-          id: header.id,
-          height: header.getBoundingClientRect().height,
-        }));
+        .map((header) => {
+          const customId =
+            header.querySelector('a')?.getAttribute('id') ?? header.querySelector('a')?.getAttribute('name');
+
+          return {
+            type: header.tagName,
+            label: header.textContent ?? '',
+            id: customId ?? header.id,
+            height: header.getBoundingClientRect().height,
+          };
+        });
 
       setHeaders(headerData);
 
-      headerElements.forEach((header) => {
-        intersectionObserver.current?.observe(header);
-      });
+      // Set the first header as active when page changes
+      if (headerData.length > 0) {
+        setActiveHeader({ id: headerData[0].id });
+      }
 
       const handleIntersect = (
         entries: {
           target: Element;
           isIntersecting: boolean;
+          boundingClientRect: DOMRect;
         }[],
       ) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.target.id) {
+        // Skip updates if manual selection is active
+        if (manualSelection.current) {
+          return;
+        }
+
+        // Get all currently intersecting headers
+        const intersectingEntries = entries.filter((entry) => entry.isIntersecting);
+
+        if (intersectingEntries.length > 0) {
+          // Find the entry nearest to the top of the viewport
+          const topEntry = intersectingEntries.reduce((nearest, current) => {
+            return current.boundingClientRect.top < nearest.boundingClientRect.top ? current : nearest;
+          }, intersectingEntries[0]);
+
+          if (topEntry.target.id) {
             setActiveHeader({
-              id: entry.target.id,
+              id: getHeaderId(topEntry.target),
             });
           }
-        });
+        }
       };
 
+      // Create a new observer with configuration focused on the top of the viewport
       intersectionObserver.current = new IntersectionObserver(handleIntersect, {
         root: null,
-        threshold: 1,
+        // Using a small threshold to detect partial visibility
+        threshold: 0,
+        // Account for 64px header bar at top and focus on top portion of viewport
+        rootMargin: '-64px 0px -80% 0px',
+      });
+
+      // Observe each header
+      headerElements.forEach((header) => {
+        intersectionObserver.current?.observe(header);
       });
 
       return () => {
@@ -116,14 +165,8 @@ const RightSidebar = () => {
       };
     };
 
-    const observer = new MutationObserver(updateHeaders);
-
-    observer.observe(articleElement, { childList: true, subtree: true });
-
     updateHeaders();
-
-    return () => observer.disconnect();
-  }, [location.href]);
+  }, [location.pathname, location.search]);
 
   const highlightPosition = useMemo(() => {
     const sidebarElement =
@@ -177,7 +220,7 @@ const RightSidebar = () => {
                       { 'text-neutral-1300 dark:text-neutral-000': header.id === activeHeader?.id },
                       { 'ml-8': header.type !== 'H2' },
                     )}
-                    onClick={() => setActiveHeader({ id: header.id })}
+                    onClick={() => handleHeaderClick(header.id)}
                   >
                     {header.label}
                   </a>

@@ -75,7 +75,6 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
 
 export const LanguageSelector = () => {
   const { activePage } = useLayoutContext();
-  const location = useLocation();
   const languageVersions = languageData[activePage.product ?? 'pubsub'];
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState<LanguageSelectorOptionData | null>(null);
@@ -95,13 +94,10 @@ export const LanguageSelector = () => {
     [activePage.languages, languageVersions],
   );
 
-  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const langParam = queryParams.get('lang');
-
   useEffect(() => {
-    const defaultOption = options.find((option) => option.label === langParam) || options[0];
+    const defaultOption = options.find((option) => option.label === activePage.language) || options[0];
     setSelectedOption(defaultOption);
-  }, [langParam, options]);
+  }, [activePage.language, options]);
 
   const handleClick = (e: MouseEvent<HTMLButtonElement> | TouchEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -130,9 +126,16 @@ export const LanguageSelector = () => {
         menuIsOpen={menuOpen}
         components={{
           Option: (props) => (
-            <LanguageSelectorOption {...props} setMenuOpen={setMenuOpen} langParam={langParam} isOption />
+            <LanguageSelectorOption
+              {...props}
+              setMenuOpen={setMenuOpen}
+              langParam={selectedOption?.label || null}
+              isOption
+            />
           ),
-          SingleValue: (props) => <LanguageSelectorOption {...props} setMenuOpen={setMenuOpen} langParam={langParam} />,
+          SingleValue: (props) => (
+            <LanguageSelectorOption {...props} setMenuOpen={setMenuOpen} langParam={selectedOption?.label || null} />
+          ),
           IndicatorSeparator: null,
           DropdownIndicator: () => (
             <button

@@ -2,7 +2,7 @@ import { Dispatch, FunctionComponent as FC, SetStateAction } from 'react';
 import { SingleValue } from 'react-select';
 import { navigate } from 'gatsby';
 
-import { DEFAULT_LANGUAGE, DEFAULT_PREFERRED_LANGUAGE, SDK_INTERFACES } from '../../../../data/createPages/constants';
+import { DEFAULT_PREFERRED_LANGUAGE, SDK_INTERFACES } from '../../../../data/createPages/constants';
 import { dropdownContainer, horizontalNav } from './LanguageNavigation.module.css';
 import SDKInterfacePanel from '../../SDKInterfacePanel/SDKInterfacePanel';
 
@@ -40,23 +40,19 @@ export interface LanguageNavigationProps {
   setPreviousSDKInterfaceTab: Dispatch<SetStateAction<string>>;
 }
 
-const changePageOnSelect =
-  (pageLanguage: string, callback: (arg: string) => void) => (newValue: SingleValue<ReactSelectOption>) => {
-    if (newValue) {
-      const language = newValue.value;
-      const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
-        getTrimmedLanguage(language),
-        pageLanguage,
-      );
+const changePageOnSelect = (pageLanguage: string) => (newValue: SingleValue<ReactSelectOption>) => {
+  if (newValue) {
+    const language = newValue.value;
+    const { isLanguageDefault, isPageLanguageDefault } = getLanguageDefaults(
+      getTrimmedLanguage(language),
+      pageLanguage,
+    );
 
-      const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
-      if (!isPageLanguageDefault) {
-        callback(language);
-      }
+    const href = createLanguageHrefFromDefaults(isPageLanguageDefault, isLanguageDefault, language);
 
-      navigate(href);
-    }
-  };
+    navigate(href);
+  }
+};
 
 const LanguageNavigation = ({
   items,
@@ -65,13 +61,12 @@ const LanguageNavigation = ({
   setSelectedSDKInterfaceTab,
   setPreviousSDKInterfaceTab,
 }: LanguageNavigationProps) => {
-  const { activePage, setLanguage } = useLayoutContext();
-  const selectedPageLanguage =
-    activePage.language === DEFAULT_LANGUAGE ? DEFAULT_PREFERRED_LANGUAGE : activePage.language;
+  const { activePage } = useLayoutContext();
+  const selectedPageLanguage = activePage.language ?? DEFAULT_PREFERRED_LANGUAGE;
   const options = items.map((item) => ({ label: item.content, value: item.props.language }));
   const value = options.find((option) => option.value === selectedPageLanguage);
 
-  const onSelectChange = changePageOnSelect(activePage.language, setLanguage);
+  const onSelectChange = changePageOnSelect(activePage.language);
 
   const isSDKInterFacePresent = allListOfLanguages
     ? checkIfLanguageHasSDKInterface(allListOfLanguages, SDK_INTERFACES)
