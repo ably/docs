@@ -25,6 +25,10 @@ export default {
           link: '/docs/getting-started/javascript',
         },
         {
+          name: 'React',
+          link: '/docs/getting-started/react-new',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
