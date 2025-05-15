@@ -17,14 +17,14 @@ const TableBody = (props: React.HTMLAttributes<HTMLTableSectionElement>) => (
 
 const TableRow = (props: React.HTMLAttributes<HTMLTableRowElement>) => <tr className="hover:bg-gray-50" {...props} />;
 
-const TableHeader = (props: React.ThHTMLAttributes<HTMLTableHeaderCellElement>) => (
+const TableHeader = (props: React.HTMLAttributes<HTMLTableCellElement>) => (
   <th
     className="px-8 py-8 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
     {...props}
   />
 );
 
-const TableCell = (props: React.TdHTMLAttributes<HTMLTableDataCellElement>) => (
+const TableCell = (props: React.HTMLAttributes<HTMLTableCellElement>) => (
   <td className="px-6 py-4 text-sm" {...props} />
 );
 

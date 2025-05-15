@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useLocation, WindowLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
@@ -72,10 +72,21 @@ const RightSidebar = () => {
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>({
     id: location.hash ? location.hash.slice(1) : '#',
   });
-  const intersectionObserver = useRef<IntersectionObserver>();
+  const intersectionObserver = useRef<IntersectionObserver | undefined>(undefined);
   const manualSelection = useRef<boolean>(false);
   const showLanguageSelector = activePage?.languages.length > 0;
   const language = new URLSearchParams(location.search).get('lang') as LanguageKey;
+
+  const handleHeaderClick = useCallback((headerId: string) => {
+    // Set manual selection flag to prevent intersection observer updates
+    manualSelection.current = true;
+    setActiveHeader({ id: headerId });
+
+    // Reset the flag after scroll animation completes
+    setTimeout(() => {
+      manualSelection.current = false;
+    }, 1000);
+  }, []);
 
   useEffect(() => {
     const articleElement = document.querySelector('article');
@@ -209,16 +220,7 @@ const RightSidebar = () => {
                       { 'text-neutral-1300 dark:text-neutral-000': header.id === activeHeader?.id },
                       { 'ml-8': header.type !== 'H2' },
                     )}
-                    onClick={() => {
-                      // Set manual selection flag to prevent intersection observer updates
-                      manualSelection.current = true;
-                      setActiveHeader({ id: header.id });
-
-                      // Reset the flag after scroll animation completes
-                      setTimeout(() => {
-                        manualSelection.current = false;
-                      }, 1000);
-                    }}
+                    onClick={() => handleHeaderClick(header.id)}
                   >
                     {header.label}
                   </a>
