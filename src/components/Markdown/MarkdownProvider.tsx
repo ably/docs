@@ -67,6 +67,12 @@ export const Anchor: FC<JSX.IntrinsicElements['a']> = ({ children, href, ...prop
   );
 };
 
+const Ol: FC<JSX.IntrinsicElements['ol']> = ({ children, ...props }) => (
+  <ol className="ui-ordered-list" {...props}>
+    {children}
+  </ol>
+);
+
 const Ul: FC<JSX.IntrinsicElements['ul']> = ({ children, ...props }) => (
   <ul className="ui-unordered-list" {...props}>
     {children}
@@ -102,6 +108,7 @@ const defaultComponents = {
   h4: H4,
   p: Paragraph,
   a: Anchor,
+  ol: Ol,
   ul: Ul,
   li: Li,
   code: Code,
