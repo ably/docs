@@ -16,124 +16,90 @@ servers:
 paths:
   /channels/{channelName}/objects:
     post:
-      summary: Create or update objects.
+      summary: Publishing operations
       description: |
-        Allows creating or updating objects on the channel by providing the operation and data in the request body. If `objectId` is not provided, the server will generate one and return it in the response.<br><br>
-
-        For more information on operations, see the Ably LiveObjects documentation on [operations](/docs/liveobjects/concepts/operations).
+        Publish operations to create or update objects on the channel.<br><br>
+        
+        For more information, see the usage documentation for [publishing operations](/docs/liveobjects/rest-api-usage#updating-objects).
       parameters:
-        - name: channelId
+        - name: channelName
           in: path
           required: true
-          description: The channel ID.
+          description: The channel name.
           schema:
             type: string
-            example: "my-app:likes:counter"
+            example: "my-channel"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              oneOf:
-                - type: object
-                  properties:
-                    id:
-                      $ref: '#/components/parameters/idempotentParameter'
-                    path:
-                      $ref: '#/components/parameters/pathParameter'
-                    operation:
-                      $ref: '#/components/parameters/operationParameter'
-                    data:
-                      $ref: '#/components/parameters/dataParameter'
-                - type: array
-                  items:
-                    type: object
-                    properties:
-                      id:
-                        $ref: '#/components/parameters/idempotentParameter'
-                      path:
-                        $ref: '#/components/parameters/pathParameter'
-                      operation:
-                        $ref: '#/components/parameters/operationParameter'
-                      data:
-                        $ref: '#/components/parameters/dataParameter'
+              $ref: '#/components/schemas/OperationRequest'
             examples:
-              singleOperation:
-                summary: Single operation example
+              incObjectId:
+                summary: Increment a specific LiveCounter object
                 value:
-                  id: "myIdempotencyKey"
-                  operation: "MAP_SET"
-                  objectId: "map:cwhvmsq21tXtFDS02TQqPdIh..."
+                  operation: "COUNTER_INC"
+                  objectId: "counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269"
                   data:
-                    key: "isActive"
-                    value: { "boolean": true }
-              batchOperation:
-                summary: Batch operation example
+                    number: 1
+              incPath:
+                summary: Increment a LiveCounter object by path
                 value:
-                  - id: "myIdempotencyKey:0"
-                    operation: "MAP_SET"
-                    objectId: "map:cwhvmsq21tXtFDS02TQqPdIhGGezcSc..."
-                    data:
-                      key: "isActive"
-                      value: { "boolean": true }
-                  - id: "myIdempotencyKey:1"
-                    operation: "COUNTER_INC"
-                    objectId: "counter:DXr2i8FHRGkLrHPccWhXKDj1VUX2s7ACvmT..."
-                    data:
-                      number: 1
+                  operation: "COUNTER_INC"
+                  path: "votes.up"
+                  data:
+                    number: 1
+              incPathWildcard:
+                summary: Increment multiple LiveCounter objects by wildcard path
+                value:
+                  operation: "COUNTER_INC"
+                  path: "votes.*"
+                  data:
+                    number: 1
+              remove:
+                summary: Remove a LiveMap entry
+                value:
+                  operation: "MAP_REMOVE"
+                  objectId: "root"
+                  data:
+                    key: "posts"
               createMap:
-                summary: Create a map
+                summary: Create a new LiveMap object
                 value:
-                  operation: MAP_CREATE
+                  operation: "MAP_CREATE"
                   data:
-                    myMapKey: { string: "myMapValue" }
-                    myOtherKey: { boolean: true }
-              setValueOnMap:
-                summary: Set a value on a map
-                value:
-                  operation: MAP_SET
-                  objectId: "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcE..."
-                  data:
-                    key: "foo"
-                    value: { string: "bar" }
-              removeValueFromMap:
-                summary: Remove a value from a map
-                value:
-                  operation: MAP_REMOVE
-                  objectId: "map:99OSLwCFQsrs6GID4M8rfO_0sYmVwRADcECua_@174220..."
-                  data:
-                    key: "myMapKey"
+                    title:
+                      string: "LiveObjects is awesome"
+                    createdAt:
+                      number: 1745835181122
+                    isPublished:
+                      boolean: true
               createCounter:
-                summary: Create a counter
+                summary: Create a new LiveCounter object
                 value:
-                  operation: COUNTER_CREATE
+                  operation: "COUNTER_CREATE"
                   data:
-                    number: 3.1415926
-              incrementCounter:
-                summary: Increment a counter
+                    number: 5
+              createMapPath:
+                summary: Create a new LiveMap object at a specific path
                 value:
-                  operation: COUNTER_INC
-                  objectId: "counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlg..."
+                  operation: "MAP_CREATE"
+                  path: "posts.post1"
                   data:
-                    number: 2
+                    title:
+                      string: "LiveObjects is awesome"
+                    createdAt:
+                      number: 1745835181122
+                    isPublished:
+                      boolean: true
       responses:
         '200':
-          description: Successfully created or updated objects.
+          description: Successfully published operation.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  channel:
-                    type: string
-                    description: The channel ID.
-                    example: "<channelId>"
-                  objectIds:
-                    type: array
-                    items:
-                      type: string
-                    description: The list of object IDs created or updated.
-                    example: ["map:YIffJYRAP2k2e7ZP+xzequ9c5kDu1LfI/sEOKoWHvv4@1742479683000"]
+                $ref: '#/components/schemas/PublishResponse'
         '400':
           description: Bad request
           content:
@@ -846,6 +812,153 @@ components:
       oneOf:
         - $ref: '#/components/schemas/LiveCounterCompact'
         - $ref: '#/components/schemas/LiveMapCompact'
+    
+    # Operations
+    OperationBase:
+      type: object
+      properties:
+        id:
+          type: string
+          description: An idempotency key used for [idempotent operations](/docs/liveobjects/rest-api-usage#idempotent-operations).
+          example: "my-idempotency-key"
+        objectId:
+          $ref: '#/components/schemas/ObjectIdString'
+        path:
+          type: string
+          description: The [path](/docs/liveobjects/rest-api-usage#updating-objects-by-path) from the root to the object.
+          example: "votes.up"
+
+    OperationMapSet:
+      allOf:
+        - $ref: '#/components/schemas/OperationBase'
+        - type: object
+          required: [operation, data]
+          properties:
+            operation:
+              type: string
+              enum: [MAP_SET]
+            data:
+              type: object
+              description: The key and value to set in the [LiveMap](/docs/liveobjects/map) object.
+              properties:
+                key:
+                  type: string
+                  description: The name of the key.
+                value:
+                  description: The value to set at the specified `key`, which is either a [primitive value](/docs/liveobjects/concepts/objects#primitive-types) or the ID of another [LiveObject](/docs/liveobjects/concepts/objects).
+                  allOf:
+                    - $ref: '#/components/schemas/PrimitiveValue'
+
+    OperationMapRemove:
+      allOf:
+        - $ref: '#/components/schemas/OperationBase'
+        - type: object
+          required: [operation, data]
+          properties:
+            operation:
+              type: string
+              enum: [MAP_REMOVE]
+            data:
+              type: object
+              description: The key to remove from the [LiveMap](/docs/liveobjects/map) object.
+              properties:
+                key:
+                  type: string
+                  description: The name of the key.
+
+    OperationMapCreate:
+      allOf:
+      - $ref: '#/components/schemas/OperationBase'
+      - type: object
+        required: [operation, data]
+        properties:
+          operation:
+            type: string
+            enum: [MAP_CREATE]
+          data:
+            type: object
+            description: The initial value for the [LiveMap](/docs/liveobjects/map) object.
+            additionalProperties:
+              description: The initial value for this key, which is either a [primitive value](/docs/liveobjects/concepts/objects#primitive-types) or the ID of another [LiveObject](/docs/liveobjects/concepts/objects).
+              allOf:
+                - $ref: '#/components/schemas/PrimitiveValue'
+
+    OperationCounterInc:
+      allOf:
+        - $ref: '#/components/schemas/OperationBase'
+        - type: object
+          required: [operation, data]
+          properties:
+            operation:
+              type: string
+              enum: [COUNTER_INC]
+            data:
+              description: The value to increment the [LiveCounter](/docs/liveobjects/counter) object by.
+              allOf:
+                - $ref: '#/components/schemas/NumberValue'
+
+    OperationCounterCreate:
+      allOf:
+        - $ref: '#/components/schemas/OperationBase'
+        - type: object
+          required: [operation, data]
+          properties:
+            operation:
+              type: string
+              enum: [COUNTER_CREATE]
+            data:
+              description: The initial value for the [LiveCounter](/docs/liveobjects/counter) object.
+              allOf:
+                - $ref: '#/components/schemas/NumberValue'
+
+    Operation:
+      type: object
+      discriminator:
+        propertyName: operation
+        mapping:
+          MAP_SET: '#/components/schemas/OperationMapSet'
+          MAP_REMOVE: '#/components/schemas/OperationMapRemove'
+          MAP_CREATE: '#/components/schemas/OperationMapCreate'
+          COUNTER_CREATE: '#/components/schemas/OperationCounterCreate'
+          COUNTER_INC: '#/components/schemas/OperationCounterInc'
+      oneOf:
+        - $ref: '#/components/schemas/OperationMapSet'
+        - $ref: '#/components/schemas/OperationMapRemove'
+        - $ref: '#/components/schemas/OperationMapCreate'
+        - $ref: '#/components/schemas/OperationCounterCreate'
+        - $ref: '#/components/schemas/OperationCounterInc'
+
+    OperationRequest:
+      oneOf:
+        - $ref: '#/components/schemas/Operation'
+        - type: array
+          title: BatchOperation
+          items:
+            $ref: '#/components/schemas/Operation'
+
+    PublishResponse:
+      type: object
+      required:
+        - messageId
+        - channel
+        - objectIds
+      properties:
+        messageId:
+          type: string
+          description: The message ID of the published operation.
+          example: "TJPWHhMTrF:0"
+        channel:
+          type: string
+          description: The channel name.
+          example: "my-channel"
+        objectIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObjectIdString'
+          description: The [object IDs](/docs/liveobjects/concepts/objects#object-ids) of the objects that were created or updated by the operation.
+          example:
+            - "counter:JbZYiHnw0ORAyzzLSQahVik31iBDL_ehJNpTEF3qwg8@1745828651669"
+            - "counter:iVji62_MW_j4dShuJbr2fmsP2D8MyCs6tFqON9-xAkc@1745828645269"
 
     # Errors
     ApplicationDisabled:
@@ -1472,84 +1585,3 @@ components:
       - code
       - statusCode
       - href
-  parameters:
-    idempotentParameter:
-      name: id
-      in: query
-      required: false
-      description: |
-        Optional: Only use when requiring idempotent publishing. All operations support an id field. Operations are deduplicated using idempotent publishing based on the operation's `id` field.<br><br>
-
-        Batches of operations can be made idempotent using a compound key based on the format `<baseId>:<index>`. The index is the order of the operation in the batch. The base of the `id` must be the same across all operations in the batch.
-    pathParameter:
-      name: path
-      in: query
-      required: false
-      description: |
-        Optional: Only use when using path operations. Path operations issue operations against objects based on their referenced location in the tree of objects stored on the channel.<br><br>
-
-        Paths must start with a key in the 'root' map, and then reference keys in nested maps, until the target location.<br><br>
-
-        You can issue a single operation against multiple objects at once using the wildcard `*`.<br><br>
-
-        Wildcards can be included at the end or in the middle of paths and will match exactly one level in the object tree.
-      schema:
-        type: string
-        example: "reactions.likes"
-    operationParameter:
-      name: operation
-      in: query
-      required: true
-      description: |
-        Specifies the operation to perform. Supported values include:<br><br>
-        - `MAP_CREATE`: Create a map object.
-        - `MAP_SET`: Set a key-value pair in a map object.
-        - `MAP_REMOVE`: Remove a key-value pair from a map object.
-        - `COUNTER_CREATE`: Create a counter object initialized to a specific value.
-        - `COUNTER_INC`: Increment a counter object by a specified value (can be negative).
-      schema:
-        type: string
-        enum:
-          - MAP_CREATE
-          - MAP_SET
-          - MAP_REMOVE
-          - COUNTER_CREATE
-          - COUNTER_INC
-        example: COUNTER_INC
-    dataParameter:
-      name: data
-      in: query
-      required: true
-      description: |
-        The data to be created or updated. The structure depends on the operation being performed. For example, `{ "data": { "number": 4 }}`.<br><br>
-
-        Maps are made of entries, which are a user-defined key (e.g., `myMapKey`) and a data value. Counters are data values containing a number.
-      schema:
-        type: object
-        additionalProperties:
-          type: object
-          properties:
-            number:
-              type: number
-              description: For COUNTER_CREATE or COUNTER_INC, this is the value.
-              example: 3
-            string:
-              type: string
-              description: A string value.
-              example: "Ably Pub/Sub"
-            boolean:
-              type: boolean
-              description: A boolean value.
-              example: true
-            bytes:
-              type: string
-              description: A base64-encoded string.
-              example: "TGl2ZU9iamVjdHMgaXMgYXdlc29tZQo="
-            encoding:
-              type: string
-              description: The encoding type for the bytes field.
-              example: "base64"
-            objectId:
-              type: string
-              description: A reference to another object.
-              example: "counter:Nz1ZiNjqsDfkDjA61xarinqpWsqEGAAw2mzWWtvX2b8@1742481614000"
