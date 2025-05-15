@@ -1,5 +1,5 @@
 import * as Ably from 'ably';
-import { ChatClient, Message, Room, AllFeaturesEnabled } from '@ably/chat';
+import { ChatClient, Message, Room } from '@ably/chat';
 import minifaker from 'minifaker';
 import 'minifaker/locales/en';
 import './styles.css';
@@ -17,7 +17,7 @@ const roomName = urlParams.get('name') || 'chat-room-history';
 
 async function initializeChat() {
   chatClient = new ChatClient(realtimeClient);
-  room = await chatClient.rooms.get(roomName, AllFeaturesEnabled);
+  room = await chatClient.rooms.get(roomName);
 }
 
 initializeChat().catch((error) => {

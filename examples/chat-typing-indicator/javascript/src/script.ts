@@ -10,7 +10,7 @@ const realtimeClient = new Ably.Realtime({
 const chatClient = new ChatClient(realtimeClient);
 
 const typingOptions: TypingOptions = {
-  timeoutMs: 5000,
+  heartbeatThrottleMs: 3000,
 };
 
 let room: Room;
@@ -21,14 +21,11 @@ async function initializeChat() {
 
   // Get ROOM with typing capabilities
   room = await chatClient.rooms.get(roomName, { typing: typingOptions });
-  room.attach();
+  await room.attach();
 
   // Subscribe to room for anyone typing or updates on typing
-  room.typing.subscribe(async () => {
-    // Get clientIds of current users typing:
-    const currentlyTyping = await room.typing.get();
-
-    const typingClientIds = Array.from(currentlyTyping).filter((id) => id !== chatClient.clientId);
+  room.typing.subscribe((event) => {
+    const typingClientIds = Array.from(event.currentlyTyping).filter((id) => id !== chatClient.clientId);
     const clientsTyping = typingClientIds.join(' and ');
     const typingIndicator = document.getElementById('user-input-label');
 
@@ -46,7 +43,7 @@ if (element) {
 }
 
 async function startTyping() {
-  await room.typing.start();
+  await room.typing.keystroke();
 }
 
 initializeChat().catch((error) => {

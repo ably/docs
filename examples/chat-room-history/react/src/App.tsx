@@ -1,4 +1,4 @@
-import { ChatClient, AllFeaturesEnabled } from '@ably/chat';
+import { ChatClient } from '@ably/chat';
 import { ChatClientProvider, ChatRoomProvider } from '@ably/chat/react';
 import { Realtime } from 'ably';
 import minifaker from 'minifaker';
@@ -26,7 +26,7 @@ export default function App() {
 
   return (
     <ChatClientProvider client={chatClient}>
-      <ChatRoomProvider id={roomName} options={AllFeaturesEnabled}>
+      <ChatRoomProvider id={roomName}>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
