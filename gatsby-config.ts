@@ -177,6 +177,9 @@ export const plugins = [
       gtmPreview: process.env.GTM_ENVIRONMENT_PREVIEW,
     },
   },
+  {
+    resolve: '@sentry/gatsby',
+  },
   `gatsby-plugin-client-side-redirect`, // Keep this last in the list; Source: https://www.gatsbyjs.com/plugins/gatsby-plugin-client-side-redirect/
   {
     resolve: `gatsby-plugin-layout`,
