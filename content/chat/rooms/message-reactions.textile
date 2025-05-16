@@ -1,0 +1,196 @@
+---
+title: Message reactions (experimental)
+meta_description: "React to chat messages"
+product: chat
+languages:
+  - javascript
+  - react
+---
+
+<aside>
+<p>The Message Reactions feature is new and <strong>experimental</strong>.</p>
+</aside>
+
+Add, remove and display message reactions in a chat room. Users can react to messages, typically with emojis but can be any string, and others can see the reactions to the message. Message reactions can be added and removed and a summary of the reactions is persisted with the message.
+
+The reaction @name@ represents the reaction itself, for example an emoji. Reactions are aggregated by @name@ and the aggregation method including how many reactions a user can place for a message is controlled by the reaction @type@. The @count@ is an optional parameter that can be set when adding a reaction of type @Multiple@.
+
+The reaction @name@ can be any string. Summaries are aggregated based on unique @name@ values. UTF-8 emojis are a common use case, but any string can be used as long as they are consistent across all front-ends of your app. Examples of common reaction names are @👍@, @❤️@, @:like:@, @like@, @+1@, and so on. How those are presented to the user is entirely up to the app.
+
+h2(#adding-reactions). Adding a message reaction
+
+To add a message reaction use @room.messages.reactions.add(message, params)@. This method takes the following parameters:
+- @message@ - The message to add the reaction to. It can also be an object of format @{serial: "message serial"}@.
+- @params@ - Set the @name@, and optionally override the @type@ or set a @count@.
+
+```[javascript]
+    import { MessageReactionType } from '@ably/chat';
+
+    // Add a 👍 reaction using the default type
+    await room.messages.reactions.add(message, { name: '👍' });
+
+    // The reaction can be anything, not just UTF-8 emojis:
+    await room.messages.reactions.add(message, { name: ':like:' });
+    await room.messages.reactions.add(message, { name: '+1' });
+    
+    // Add a :love: reaction using the Unique type
+    await room.messages.reactions.add(message, {
+        name: ':love:',
+        type: MessageReactionType.Unique,
+    });
+
+    // Add a ❤️ reaction with count 100 using the Multiple type
+    await room.messages.reactions.add(message, {
+        name: '❤️',
+        type: MessageReactionType.Multiple,
+        count: 100,
+    });
+```
+
+The @annotation-publish@ capability is required for adding reactions.
+
+h2(#types-of-reactions). Types of message reactions
+
+Ably Chat supports three types of message reactions. They differ in how they are aggregated and what are the rules for adding and removing them.
+
+|_. Type |_. Description |_. Example |_. Similar to |
+| @Unique@, @reaction:unique.v1@ | A user can react to a message only once, with a reaction of their choice. When a user reacts a second time their reaction is changed. | Can 👍 or ❤️ but not both or more than once. | iMessage, WhatsApp, Facebook Messenger |
+| @Distinct@, @reaction:distinct.v1@ | A user can react to a message with each reaction at most once. | Can 👍 and ❤️ but each reaction only once. No 👍👍. | Slack |
+| @Multiple@, @reaction:multiple.v1@ | A user can react to a message with any reactions as many times as they like. Optionally a @count@ parameter can be set when reacting. Reacting again adds to the existing count.| Can 👍 10 times and ❤️ 100 times. | Claps on Medium |
+
+Note that if adding two identical reactions of type @Distinct@, the second one will be accepted and broadcast as a raw reaction, but it will be ignored in the summary (aggregate). Similarly, when removing a reaction that doesn't exist (of any type), the operation will be accepted and broadcast as a raw reaction, but it will have no effect on the summary.
+
+h3(#default-type). Configure the default reaction type
+
+The default reaction type can be configured at room-level using the Room Options. If nothing is set, the default is @Distinct@.
+
+```[javascript]
+    import { MessageReactionType } from '@ably/chat';
+
+    const room = await ablyChatClient.rooms.get('room1', {
+        messages: {
+            defaultMessageReactionType: MessageReactionType.Unique,
+        },
+    });
+```
+
+h2(#messages-and-reactions). Messages and reactions
+
+The @Message@ object contains a @reactions@ property which is an object that looks like this:
+
+```[javascript]
+    interface Message {
+        // ... (other fields omitted)
+        reactions: {
+            unique: Ably.SummaryUniqueValues,
+            distinct: Ably.SummaryDistinctValues,
+            multiple: Ably.SummaryMultipleValues,
+        }
+    }
+
+    // example (in real use, it is unlikely that all reaction types are present):
+    {
+        // ... other message fields omitted
+        reactions: {
+            unique: {
+                '👍': { total: 2, clientIds: ['clientA', 'clientB'] },
+                '❤️': { total: 1, clientIds: ['clientC'] },
+            },
+            distinct: {
+                '👍': { total: 2, clientIds: ['clientA', 'clientB'] },
+                '❤️': { total: 1, clientIds: ['clientA'] },
+            },
+            multiple: {
+                '👍': { total: 10, clientIds: {'clientA': 7, 'clientB': 3} },
+                '❤️': { total: 100, clientIds: {'clientA': 100} },
+            },
+        }
+    }
+```
+
+All reaction types are always available via @Message.reactions@, regardless of the default reaction type configured via room options.
+
+The @Message.reactions@ property is populated when fetching messages from history through @getPreviousMessages()@ or @room.messages.history()@. It is **not** populated when receiving message events such as @MessageEvents.Created@, @MessageEvents.Updated@, or @MessageEvents.Deleted@ from the realtime channel.
+
+Always call @Message.with(event)@ when applying message events and reaction events to existing messages to ensure that reactions are correctly copied or updated. **Do not** replace existing messages with messages received from events as reactions will be lost.
+
+
+h2(#subscribe). Subscribing to message reactions
+
+Ably generates a summary (aggregate) of the reactions for each message and for each reaction type. For displaying accurate counts for message reactions, subscribe to changes in the message summary.
+
+```[javascript]
+    room.messages.reactions.subscribe((event) => {
+        console.log("received reactions summary event", event);
+    });
+```
+
+The event is of type @reaction.summary@. @event.summary@ is the received reactions summary and contains the following properties:
+
+|_. Property |_. Description |_. Example |
+| @messageSerial@ | Serial of the message this summary is for. | @01826232498871-001&#64;abcdefghij:001@ |
+| @unique@ | Unique reactions summary. | @{ "👍": { total: 2, clientIds: ["a", "b"]} }@ |
+| @distinct@ | Distinct reactions summary. | @{ "👍": { total: 2, clientIds: ["a", "b"]} }@ |
+| @multiple@ | Multiple reactions summary. | @{ "👍": { total: 5, clientIds: {"a": 2, "b": 3} }@ |
+
+Message reaction summary events can be used with @Message.with(event)@ to get an updated message object, with the reactions applied correctly. Similarly, when calling @Message.with()@ with other message events (for example @MessageEvents.Updated@), the reactions summary will be correctly preserved in the resulting message object.
+
+Example usage:
+
+```[javascript]
+    // init messages, in practice this should be updated with a message subscription
+    let messages = await room.messages.get({limit: 50});
+
+    // subscribe to message reactions summary events
+    room.messages.reactions.subscribe((event) => {
+        // find the relevant message (in practice: use binary search or a map for lookups)
+        const idx = messages.findLastIndex((msg) => msg.serial === event.messageSerial);
+        if (idx === -1) {
+            // not found
+            return;
+        }
+        // update message
+        messages[idx] = messages[idx].with(event);
+    });
+```
+
+h3(#throttle). Summary events are sent efficiently at scale
+
+Summary events are typically created and published immediately after a reaction is added or removed. If the reaction is a no-op (for example, when removing a reaction that didn't exist), then there will be no summary event.
+
+If multiple reactions are added in a short period of time, multiple reactions may be rolled up and only a single summary event will be published that contains the aggregated results of all reactions. This reduces the number of outbound messages and thus your costs in busy rooms.
+
+h3(#raw-reactions). Subscribing to raw reactions
+
+Raw individual reactions are published for every reaction, unlike summaries which can be rolled up. Raw reactions are useful for receiving all reaction events, but they are not suitable for the purpose of displaying message reaction counts as their effect on the reactions summary depends on the previous reactions.
+
+Individual reactions are not received by default to save bandwidth and to reduce the number of messages and cost. If you want to receive them, you can configure them via a room option which, in turn, sets the appropriate channel options to enable receiving individual annotations and reactions:
+
+```[javascript]
+    const room = await ablyChatClient.rooms.get('room1', {
+        messages: {
+            rawMessageReactions: true,
+        },
+    });
+```
+
+Then you can receive raw reactions using the @room.messages.reactions.subscribeRaw()@ method:
+
+```[javascript]
+    room.messages.reactions.subscribeRaw((event) => {
+        if (event.type === MessageReactionEvents.Create) {
+            console.log("new reaction", event.reaction);
+        } else if (event.type === MessageReactionEvents.Delete) {
+            console.log("reaction removed", event.reaction);
+        }
+    });
+```
+
+The @annotation-subscribe@ capability is required for receiving individual reactions, however it is not required to receive summaries.
+
+You shoud be aware of the following limitations:
+- Deleting a reaction succeeds even if it did not initially exist. It is a no-op in regards to the summary but the delete event is still broadcast.
+- Adding a reaction succeeds and is broadcast, even if it has no effect on the summary (for example, when double-adding a reaction with the same name of type @Distinct@ or @Unique@).
+- Adding a reaction of type @Unique@ may remove another reaction, but no delete event will be broadcast.
+- It is not recommended to use raw reactions for displaying counts, instead use the summary events.
+- Keeping a local summary updated based on raw reactions is not recommended as it may become out-of-sync with server-generated summaries.

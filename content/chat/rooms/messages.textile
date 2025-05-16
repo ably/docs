@@ -573,4 +573,88 @@ Applying an action to a message produces a new version, which is uniquely identi
 
 The @Message@ object also has convenience methods "@isOlderVersionOf@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#isolderversionof, "@isNewerVersionOf@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#isnewerversionof and "@isSameVersionAs@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#issameversionas which provide the same comparison.
 
-Update and Delete events provide the full message payload, so may be used to replace the entire earlier version of the message.
+Update and Delete events provide the message payload without message reactions. To correctly use message reactions, always use the "@with()@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#with method to apply the event to the message instance.
+
+h2(#keep-messages-updated). Keep messages updated using @with()@
+
+The "@Message@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html object has a method "@with@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Message.html#with that takes a "@MessageEvent@":https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.MessageEvent.html, automatically compares versions, and returns the newest @Message@ instance. For updates and deletes, if @with@ is called with an event that is older than the message, the message is returned. If it is called with a newer event, the message from the event is returned. For message reaction events, the reactions will be correctly applied to the returned message.
+
+@Message.with()@ also ensures that reactions from existing messages are copied over to the new message instance in the case of UPDATEs or DELETEs.
+
+Example usage to keep a list of messages updated:
+
+```[javascript]
+import { MessageEvents, Message } from '@ably/chat';
+let myMessageList: Message[];
+
+// For messages (create, update, delete)
+room.messages.subscribe((event) => {
+  switch (event.type) {
+    case MessageEvents.Created:
+      myMessageList.push(event.message);
+      break;
+    case MessageEvents.Updated:
+    case MessageEvents.Deleted:
+      const idx = myMessageList.findIndex((msg) => msg.serial === event.message.serial);
+      if (idx !== -1) {
+        myMessageList[idx] = myMessageList[idx].with(event);
+      }
+      break;
+    default:
+      break;
+  }
+});
+
+// And for message reactions
+room.messages.reactions.subscribe((event) => {
+  const idx = myMessageList.findIndex((msg) => msg.serial === event.summary.messageSerial);
+  if (idx !== -1) {
+    myMessageList[idx] = myMessageList[idx].with(event);
+  }
+});
+```
+
+```[react]
+import { MessageEvents, useMessages, Message } from '@ably/chat';
+
+const MyComponent = () => {
+  // we use {list: []} to avoid copying the full array with every change
+  // but still take advantage of React's state change detection
+  const [ messages, setMessages ] = useState<{list: Message[]}>({list: []});
+  useMessages({
+    listener: (event) => {
+      switch (event.type) {
+        case MessageEvents.Created:
+          setMessages((prev) => {
+            // append new message
+            prev.list.push(event.message);
+            // update reference without copying whole array
+            return { list: prev.list };
+          });
+          break;
+        case MessageEvents.Updated:
+        case MessageEvents.Deleted:
+          setMyMessageList((prev) => {
+            // find existing message to apply update or delete to
+            const existing = prev.list.findIndex((msg) => msg.serial === event.message.serial);
+            if (existing === -1) {
+              return prev; // no change if not found
+            }
+            const newMsg = existing.with(event);
+            if (newMsg === existing) {
+              // with() returns the same object if the event is older,
+              // so in this case no change is needed
+              return prev;
+            }
+            // set new message and update reference without copying whole array
+            prev.list[existing] = newMsg;
+            return { list: prev.list };
+          });
+          break;
+      }
+    },
+  });
+
+  return <div>...</div>;
+};
+```

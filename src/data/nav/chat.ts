@@ -68,6 +68,10 @@ export default {
           link: '/docs/chat/rooms/occupancy',
         },
         {
+          name: 'Message reactions (experimental)',
+          link: '/docs/chat/rooms/message-reactions',
+        },
+        {
           name: 'Typing indicators',
           link: '/docs/chat/rooms/typing',
         },
