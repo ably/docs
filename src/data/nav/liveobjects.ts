@@ -57,7 +57,7 @@ export default {
       ],
     },
     {
-      name: 'Advanced',
+      name: 'Features',
       pages: [
         {
           name: 'Batch operations',
@@ -76,8 +76,12 @@ export default {
           link: '/docs/liveobjects/rest-api-usage',
         },
         {
-          name: 'Inband Objects',
+          name: 'Inband objects',
           link: '/docs/liveobjects/inband-objects',
+        },
+        {
+          name: 'Object storage',
+          link: '/docs/liveobjects/storage',
         },
       ],
     },
