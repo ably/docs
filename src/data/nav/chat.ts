@@ -68,7 +68,7 @@ export default {
           link: '/docs/chat/rooms/occupancy',
         },
         {
-          name: 'Message reactions (experimental)',
+          name: 'Message reactions',
           link: '/docs/chat/rooms/message-reactions',
         },
         {
