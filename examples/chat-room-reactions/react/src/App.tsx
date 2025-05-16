@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChatClient, AllFeaturesEnabled, Reaction as ReactionInterface } from '@ably/chat';
+import { ChatClient, Reaction as ReactionInterface } from '@ably/chat';
 import { ChatClientProvider, ChatRoomProvider, useRoom, useRoomReactions } from '@ably/chat/react';
 import { Realtime } from 'ably';
 import './styles/styles.css';
@@ -106,7 +106,7 @@ export default function App() {
 
   return (
     <ChatClientProvider client={chatClient}>
-      <ChatRoomProvider id={roomName} options={AllFeaturesEnabled}>
+      <ChatRoomProvider id={roomName}>
         <ChatRoomReactionsDemo />
       </ChatRoomProvider>
     </ChatClientProvider>

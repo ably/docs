@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChatClient, AllFeaturesEnabled } from '@ably/chat';
+import { ChatClient } from '@ably/chat';
 import {
   useChatClient,
   useRoom,
@@ -98,7 +98,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <ChatClientProvider client={chatClient}>
-        <ChatRoomProvider id={roomName} options={AllFeaturesEnabled}>
+        <ChatRoomProvider id={roomName}>
           <Home />
         </ChatRoomProvider>
       </ChatClientProvider>
