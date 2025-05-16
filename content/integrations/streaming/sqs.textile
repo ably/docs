@@ -1,6 +1,6 @@
 ---
 title: Amazon SQS rule
-meta_description: "Ably allows you to send data to SQS based on message, channel lifecycle, channel occupancy, and presence events."
+meta_description: "Send data to SQS based on message, channel lifecycle, channel occupancy, and presence events."
 meta_keywords: "SQS, integrations, events, serverless"
 languages:
   - none
@@ -8,18 +8,11 @@ redirect_from:
   - /docs/general/firehose/sqs-rule
 ---
 
-Use Ably's "Firehose":/docs/integrations/continuous-streaming/firehose#firehose-rules SQS rule to send "data":/docs/integrations/continuous-streaming/firehoset#data-sources such as messages, occupancy, lifecycle and presence events from Ably to SQS.
+"SQS":https://aws.amazon.com/sqs rules let you automatically forward "Ably events":/docs/integrations/continuous-streaming/firehoset#sources such as messages, occupancy, lifecycle, and presence events—to Amazon SQS queues, making it easy to integrate with your AWS-based systems.
 
-h2(#creating-sqs-rule). Creating a SQS rule
+h2(#create). Create a SQS rule using the Ably dashboard
 
-There are two ways to create a SQS rule:
-
-* Using the "Ably Dashboard":https://ably.com/dashboard.
-* Using the "Control API":/docs/account/control-api.
-
-h3(#creating-rule-dashboard). Creating a SQS rule in the dashboard
-
-To create a rule in your "dashboard":https://ably.com/dashboard#58:
+To create a rule in your "dashboard:":https://ably.com/dashboard/any
 
 * Login and select the application you wish to integrate with SQS.
 * Click the *Integrations* tab.
@@ -38,9 +31,80 @@ The following explains the SQS general rule settings:
 |AWS region                                                        |Defines the AWS region associated with the SQS queue.                                                      |
 |AWS authentication scheme                                         |Allows selection of the authentication method: AWS credentials or ARN of an assumable role.                |
 |AWS credentials                                                   |Enter AWS credentials in `key:value` format  for authentication.                                           |
-|"Source":/docs/integrations/continuous-streaming/firehose#data-sources |Defines the type of event to deliver, such as Message, Presence, Channel Lifecycle, or Channel Occupancy.  |
+|"Source":/docs/integrations/streaming#sources                     |Defines the type of event to deliver, such as Message, Presence, Channel Lifecycle, or Channel Occupancy.  |
 |Channel filter                                                    |Allows filtering of the rule based on a regular expression matching the channel name.                      |
 
-h3(#creating-rule-control-api). Creating a SQS rule using Control API
+h2(#auth). AWS authentication
 
-See some examples of creating rules in the "rules section":/docs/account/control-api#examples of the Control API documentation. You can also refer to the "rule section":/docs/api/control-api#tag/rules/paths/~1apps~1{app_id}~1rules/post of the Control API Reference for information on creating a SQS rule. You will need to select a @ruleType@ of @aws/sqs@.
+Create an "IAM role":https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html that the Ably AWS account can assume to delegate access to your AWS resources. This approach follows AWS best practices, as it avoids sharing access keys directly. Specify the role's ARN to grant Ably the necessary permissions in a secure manner.
+
+h3(#sqs). Create SQS policy
+
+The following steps show you how to create a policy for AWS SQS.
+
+* In the IAM console sidebar select *Policies*.
+* Click *Create Policy*.
+* Click the JSON tab and enter the following JSON to configure the policy:
+
+```[json]
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllowReadWriteSQS",
+            "Effect": "Allow",
+            "Action": [
+                "sqs:DeleteMessage",
+                "sqs:TagQueue",
+                "sqs:GetQueueUrl",
+                "sqs:ChangeMessageVisibility",
+                "sqs:DeleteMessageBatch",
+                "sqs:SendMessageBatch",
+                "sqs:UntagQueue",
+                "sqs:ReceiveMessage",
+                "sqs:SendMessage",
+                "sqs:ListQueueTags",
+                "sqs:ChangeMessageVisibilityBatch"
+            ],
+            "Resource": [
+                "arn:aws:sqs:<YOUR_AWS_REGION>:<YOUR_AWS_ACCOUNT>:<YOUR_QUEUE_NAME>"
+            ]
+        }
+    ]
+}
+```
+
+<aside data-type='note'>
+<p>You will need to replace @<YOUR_AWS_REGION>@, @<YOUR_AWS_ACCOUNT>@, and @<YOUR_QUEUE_NAME>@ with the AWS region that hosts your SQS queue, your AWS account ID, and your SQS queue name respectively.</p>
+</aside>
+
+* Click *Next: Tags*. You don't need to add any tags.
+* Click *Next: Review*.
+* Enter a suitable name for your policy.
+* Click *Create Policy*.
+
+You have created a policy that grants the permissions required to use an SQS queue. You must now attach it to the role that you'll specify in your Ably integration rule. The next step is to "create the role":#create-role.
+
+h3(#role). Create a role
+
+Create an IAM role as follows:
+
+* In the AWS IAM console, click *Roles* in the sidebar and then click *Create Role*.
+* For type of trusted entity select *Another AWS account*.
+* For Account ID specify 203461409171. This is the Ably AWS account.
+* Click the *Require external ID checkbox* and then enter an "external ID":/docs/ids-and-keys/ of @<Your_Ably_Account_ID>.<Your_Ably_app_ID>@. This is also displayed when you create an Ably AWS Lambda, AWS Kinesis, or AWS SQS integration rule and select the *ARN of an assumable role* radio button in the create rule dialog.
+* Click *Next: Permissions*.
+* Now select the policy you created earlier to attach to this role. You can type the name of your policy into the *Filter policies* search box.
+
+Then ensure the checkbox for the policy is selected.
+
+* Click *Next: Tags*.
+* You don't need to add tags so click *Next: Review*.
+* Enter a suitable name for your role.
+* Click *Create Role*.
+
+h3(#arn). Set up ARN
+
+When setting up an Ably integration rule, you can copy the ARN for your rule by clicking the provided button Then, enter the copied ARN into the *Assume Role ARN* text field in the rule creation section.
+
+You can test your Ably rule by clicking *Test rule* in the "dashboard":https://ably.com/dashboard/any. If the test returns a success message, your AWS permissions are correctly configured.
