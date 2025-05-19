@@ -4,7 +4,7 @@ import { StaticImage } from 'src/components/StaticImage';
 import { GatsbyImage, getImage } from 'gatsby-plugin-image';
 import { HtmlComponentProps } from '../../html-component-props';
 import SelfClosingHtmlBlock from '../Html/SelfClosingHtmlBlock';
-import { useContentImages } from 'src/hooks/use-content-images';
+import { useContentImages } from 'src/contexts/content-images-context';
 
 import 'react-medium-image-zoom/dist/styles.css';
 import { classDialog } from './Img.module.css';

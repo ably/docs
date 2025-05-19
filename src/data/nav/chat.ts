@@ -1,3 +1,4 @@
+import { link } from 'fs';
 import { NavProduct } from './types';
 
 export default {
