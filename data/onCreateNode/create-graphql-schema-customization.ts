@@ -10,6 +10,7 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
     type FileHtmlMetaData {
       languages: [String]
       meta_description: String
+      meta_keywords: String
       title: String
       redirect_from: [String]
       product: String
