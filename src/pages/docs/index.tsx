@@ -46,7 +46,7 @@ const IndexPage = ({
 
 export const query = graphql`
   query HomePageQuery {
-    allFile(filter: { relativeDirectory: { eq: "homepage" } }) {
+    allFile(filter: { sourceInstanceName: { eq: "images" }, relativeDirectory: { eq: "homepage" } }) {
       images: nodes {
         extension
         base

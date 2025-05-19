@@ -113,7 +113,7 @@ export const plugins = [
     resolve: 'gatsby-source-filesystem',
     options: {
       name: 'images',
-      path: './src/images/content',
+      path: './src/images',
       fastHash: true,
     },
     __key: 'images',

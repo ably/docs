@@ -10,7 +10,7 @@ export type Image = {
 
 export const findImage = (images: Image[]) => {
   return (rawSrc: string) => {
-    const src = rawSrc.replace('@content/', '');
+    const src = rawSrc.replace('@content/', 'content/');
 
     return images.find((image) => image.relativePath === src);
   };
@@ -26,7 +26,7 @@ export const useContentImages = () => {
       }
     }
     query {
-      images: allFile(filter: { sourceInstanceName: { eq: "images" } }) {
+      images: allFile(filter: { sourceInstanceName: { eq: "images" }, relativeDirectory: { glob: "content/**" } }) {
         nodes {
           ...ContentImage
         }
