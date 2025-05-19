@@ -109,6 +109,10 @@ export default {
               name: 'Tisane',
               link: '/docs/chat/moderation/direct/tisane',
             },
+            {
+              name: 'Bodyguard',
+              link: '/docs/chat/moderation/direct/bodyguard',
+            },
           ],
         },
         {
