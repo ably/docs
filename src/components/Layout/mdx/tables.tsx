@@ -20,11 +20,14 @@ const TableRow = (props: React.HTMLAttributes<HTMLTableRowElement>) => (
 );
 
 const TableHeader = (props: React.HTMLAttributes<HTMLTableCellElement>) => (
-  <th className="px-8 py-8 text-left text-neutral-1100 tracking-wider whitespace-nowrap" {...props} />
+  <th
+    className="px-12 py-8 text-left ui-text-p1 font-bold text-neutral-1100 tracking-wider whitespace-nowrap"
+    {...props}
+  />
 );
 
 const TableCell = (props: React.HTMLAttributes<HTMLTableCellElement>) => (
-  <td className="px-6 py-16 text-sm" {...props} />
+  <td className="px-12 py-16 align-text-top text-sm" {...props} />
 );
 
 export { Table, TableHead, TableBody, TableRow, TableHeader, TableCell };
