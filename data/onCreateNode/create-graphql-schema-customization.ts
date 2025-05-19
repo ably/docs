@@ -19,6 +19,12 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       contentOrderedList: [FileHtmlContentOrderedListItem]
       meta: FileHtmlMetaData
     }
+    type MdxFrontmatter implements Node {
+      title: String
+      meta_description: String
+      meta_keywords: String
+      redirect_from: [String]
+    }
     type HowToHtml implements Node {
       slug: String
       tutorial: Node
