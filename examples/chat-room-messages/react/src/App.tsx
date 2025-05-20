@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Message,
   ChatClient,
-  AllFeaturesEnabled,
 } from '@ably/chat';
 import {
   useRoom,
@@ -111,7 +110,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <ChatClientProvider client={chatClient}>
-        <ChatRoomProvider id={roomName} options={AllFeaturesEnabled}>
+        <ChatRoomProvider id={roomName}>
           <ChatRoomMessagesDemo />
         </ChatRoomProvider>
       </ChatClientProvider>
