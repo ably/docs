@@ -14,12 +14,17 @@ import Header from './Header';
 import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
 
+export type Frontmatter = {
+  title: string;
+  meta_description: string;
+  meta_keywords?: string;
+  redirect_from?: string[];
+};
+
 export type PageContextType = {
   layout: LayoutOptions;
   languages?: string[];
-  frontmatter?: {
-    title: string;
-  };
+  frontmatter: Frontmatter;
 };
 
 type LayoutProps = PageProps<unknown, PageContextType>;

@@ -19,6 +19,7 @@ const writeRedirect = writeRedirectToConfigFile('config/nginx-redirects.conf');
 const documentTemplate = path.resolve(`src/templates/document.tsx`);
 const apiReferenceTemplate = path.resolve(`src/templates/apiReference.tsx`);
 const examplesTemplate = path.resolve(`src/templates/examples.tsx`);
+
 interface Edge {
   node: {
     slug: string;
@@ -84,6 +85,22 @@ interface ExampleQueryResult {
   };
 }
 
+interface MdxNode {
+  parent: {
+    relativeDirectory: string;
+    name: string;
+  };
+  frontmatter?: {
+    redirect_from?: string[];
+  };
+}
+
+interface MdxRedirectsQueryResult {
+  allMdx: {
+    nodes: MdxNode[];
+  };
+}
+
 export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions: { createPage, createRedirect } }) => {
   /**
    * It's not ideal to have:
@@ -118,6 +135,7 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
       }
     }
   `);
+
   /**
    * We could log here, the reason we don't right now is that the error should already have been caught and logged.
    * Because Gatsby spawns a bunch of async processes during the onCreateNode step, though, and errors don't prevent
@@ -136,6 +154,7 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
   if (documentResult.data?.allError.nodes && documentResult.data.allError.nodes.length > 0) {
     process.exit(1);
   }
+
   // API REFERENCES TEMPLATE
   const apiReferenceResult = await graphql<ApiReferenceQueryResult>(`
     query {
@@ -156,6 +175,10 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     }
   `);
 
+  // Query partials used in textile files
+  const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
+
+  // Query our examples
   const examplesResult = await graphql<ExampleQueryResult>(`
     query {
       allExampleFile {
@@ -170,7 +193,24 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     }
   `);
 
-  const retrievePartialFromGraphQL = maybeRetrievePartial(graphql);
+  // Query for MDX pages with redirects
+  const mdxRedirectsResult = await graphql<MdxRedirectsQueryResult>(`
+    query {
+      allMdx {
+        nodes {
+          parent {
+            ... on File {
+              relativeDirectory
+              name
+            }
+          }
+          frontmatter {
+            redirect_from
+          }
+        }
+      }
+    }
+  `);
 
   const documentCreator =
     (documentTemplate: string) =>
@@ -191,9 +231,9 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
 
       contentMenuObject[DEFAULT_LANGUAGE] = contentMenu;
 
-      const script = safeFileExists(`static/scripts/${edge.node.slug}.js`);
-
-      const pagePath = `/docs/${edge.node.slug}`;
+      const slug = edge.node.slug;
+      const script = safeFileExists(`static/scripts/${slug}.js`);
+      const pagePath = `/docs/${slug}`;
 
       const redirectFromList = edge.node.meta?.redirect_from;
 
@@ -217,7 +257,6 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
         });
       }
 
-      const slug = edge.node.slug;
       createPage({
         path: pagePath,
         component: documentTemplate,
@@ -248,6 +287,10 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
 
   if (!apiReferenceResult.data) {
     throw new Error('API reference result is undefined');
+  }
+
+  if (!mdxRedirectsResult.data) {
+    throw new Error('MDX redirects result is undefined');
   }
 
   const exampleCreator = async (exampleDatum: Example) => {
@@ -285,9 +328,36 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     });
   };
 
+  // Handle redirects for MDX files
+  const mdxRedirectCreator = async (node: MdxNode) => {
+    if (node.frontmatter?.redirect_from) {
+      node.frontmatter.redirect_from.forEach((redirectFrom: string) => {
+        const redirectFromUrl = new URL(redirectFrom, siteMetadata.siteUrl);
+        // Here we don't have a slug, so we need to construct the path manually
+        // from the parent node. Mdx nodes are pretty bare
+        const toPath = `/${node.parent.relativeDirectory}${node.parent.name === 'index' ? '' : `/${node.parent.name}`}`;
+
+        if (!redirectFromUrl.hash) {
+          // We need to be prefix aware just like Gatsby's internals so it works
+          // with nginx redirects
+          writeRedirect(redirectFrom, toPath);
+        }
+
+        createRedirect({
+          fromPath: redirectFrom,
+          toPath: toPath,
+          isPermanent: true,
+          force: true,
+          redirectInBrowser: true,
+        });
+      });
+    }
+  };
+
   await Promise.all([
     ...documentResult.data.allFileHtml.edges.map(documentCreator(documentTemplate)),
     ...apiReferenceResult.data.allFileHtml.edges.map(documentCreator(apiReferenceTemplate)),
     ...examples.map(exampleCreator),
+    ...mdxRedirectsResult.data.allMdx.nodes.map(mdxRedirectCreator),
   ]);
 };

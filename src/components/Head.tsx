@@ -6,11 +6,13 @@ export const Head = ({
   canonical,
   description,
   metaTitle,
+  keywords,
 }: {
   title: string;
   canonical: string;
   description: string;
   metaTitle?: string;
+  keywords?: string;
 }) => (
   <Helmet>
     <title>{metaTitle || title}</title>
@@ -20,5 +22,6 @@ export const Head = ({
     <meta name="description" content={description} />
     <meta property="og:description" content={description} />
     <meta name="twitter:description" content={description} />
+    {keywords && <meta name="keywords" content={keywords} />}
   </Helmet>
 );
