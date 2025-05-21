@@ -26,7 +26,7 @@ export const examples: Example[] = [
   {
     id: 'chat-room-messages',
     name: 'Chat Messages',
-    description: 'Implement real-time messaging in chat rooms.',
+    description: 'Implement realtime messaging in chat rooms.',
     products: ['chat'],
     layout: 'double-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
@@ -186,7 +186,7 @@ export const examples: Example[] = [
   {
     id: 'spaces-live-cursors',
     name: 'Live Cursors',
-    description: 'Show real-time cursor positions of users in a space.',
+    description: 'Show realtime cursor positions of users in a space.',
     products: ['spaces'],
     layout: 'double-vertical',
     visibleFiles: [
