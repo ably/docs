@@ -14,6 +14,7 @@ export default {
         {
           name: 'About Ably',
           link: '/docs/platform',
+          index: true,
         },
       ],
     },
@@ -23,6 +24,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/platform/architecture',
+          index: true,
         },
       ],
     },
@@ -40,6 +42,7 @@ export default {
             {
               name: 'Policy',
               link: '/docs/platform/deprecate',
+              index: true,
             },
             {
               name: 'Nov 2025 - Protocol v1',
@@ -55,6 +58,7 @@ export default {
         {
           link: '/docs/pricing',
           name: 'Overview',
+          index: true,
         },
         {
           name: 'Package types',
@@ -97,6 +101,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/integrations',
+          index: true,
         },
         {
           name: 'Inbound integrations',
@@ -117,6 +122,7 @@ export default {
             {
               name: 'Overview',
               link: '/docs/integrations/webhooks',
+              index: true,
             },
             {
               name: 'AWS Lambda Functions',
@@ -150,6 +156,7 @@ export default {
             {
               name: 'Overview',
               link: '/docs/integrations/streaming',
+              index: true,
             },
             {
               name: 'Kafka',
@@ -193,6 +200,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/account',
+          index: true,
         },
         {
           name: 'User management',
@@ -220,6 +228,7 @@ export default {
             {
               name: 'Overview',
               link: '/docs/account/app',
+              index: true,
             },
             {
               name: 'Stats',
@@ -259,6 +268,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/errors',
+          index: true,
         },
         {
           name: 'Error codes',

@@ -8,12 +8,15 @@ import { DEFAULT_LANGUAGE } from 'src/contexts/layout-context';
 
 export type PageTreeNode = { index: number; page: NavProductPage };
 
+export type PageTemplate = 'mdx' | 'textile' | null;
+
 export type ActivePage = {
   tree: PageTreeNode[];
   page: NavProductPage;
   languages: LanguageKey[];
   language: LanguageKey;
   product: ProductKey | null;
+  template: PageTemplate;
 };
 
 /**
@@ -73,6 +76,7 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
         languages: [],
         language: DEFAULT_LANGUAGE,
         product: key,
+        template: null,
       };
     }
 
@@ -103,7 +107,14 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
           data[key].nav[apiResult ? 'api' : 'content'],
         );
 
-        return { tree, page: page?.[0] as NavProductPage, languages: [], language: DEFAULT_LANGUAGE, product: key };
+        return {
+          tree,
+          page: page?.[0] as NavProductPage,
+          languages: [],
+          language: DEFAULT_LANGUAGE,
+          product: key,
+          template: null,
+        };
       }
     }
   }

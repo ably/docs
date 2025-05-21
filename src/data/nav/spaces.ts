@@ -14,6 +14,7 @@ export default {
         {
           name: 'About Spaces',
           link: '/docs/spaces',
+          index: true,
         },
       ],
     },
