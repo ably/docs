@@ -8,6 +8,8 @@ import Badge from '@ably/ui/core/Badge';
 import ExamplesCheckbox from './ExamplesCheckbox';
 import { SelectedFilters } from './ExamplesContent';
 import { useOnClickOutside } from 'src/hooks';
+import { navigate } from 'gatsby';
+import { ProductName } from '@ably/ui/core/ProductTile/data';
 
 const ExamplesFilter = ({
   selected,
@@ -24,16 +26,35 @@ const ExamplesFilter = ({
 
   const handleSelect = useCallback((e: ChangeEvent<HTMLInputElement>, filterType: keyof SelectedFilters) => {
     setLocalSelected((prevSelected) => {
+      const params = new URLSearchParams(location.search);
+
       if (e.target.value === 'all') {
+        if (filterType === 'products') {
+          params.delete('product');
+          navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+        }
+
         return {
           ...prevSelected,
           [filterType]: [],
         };
       }
 
-      const newSelected = prevSelected[filterType].includes(e.target.value)
+      const newSelected = prevSelected[filterType].includes(e.target.value as ProductName)
         ? prevSelected[filterType].filter((item) => item !== e.target.value)
         : [...prevSelected[filterType], e.target.value];
+
+      if (filterType === 'products') {
+        const params = new URLSearchParams(location.search);
+
+        if (newSelected.length > 0) {
+          params.set('product', newSelected.join(','));
+        } else {
+          params.delete('product');
+        }
+
+        navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+      }
 
       return {
         ...prevSelected,
@@ -150,7 +171,7 @@ const ExamplesFilter = ({
                   name={`${key}-${itemKey}`}
                   value={itemKey}
                   handleSelect={handleSelect}
-                  isChecked={selected.includes(itemKey)}
+                  isChecked={selected.includes(itemKey as ProductName)}
                 />
               ))}
             </div>
