@@ -1,0 +1,60 @@
+---
+title: Message ordering
+meta_description: "Understand how Ably achieves reliable message ordering across its platform."
+---
+
+The Ably platform processes and distributes streams of messages between publishers and consumers of different types. As well as simply passing messages from publishers to consumers in real time, Ably also provides functionality where it processes prior sequences of messages, such as when sending a backlog of messages following resumption of a dropped connection. Message ordering is the the concern of defining and managing the ordering of messages in all of those operations.
+
+## Why message ordering matters
+
+Message ordering is a key aspect of any distributed messaging system because it affects how applications perceive the sequence of events. In a centralized system, establishing a single, clear ordering is straightforward. However, in a globally distributed architecture like Ably's, which spans multiple regions and processes messages from publishers worldwide, maintaining a coherent understanding of event ordering becomes more complex.
+
+Applications rely on message ordering for various critical functions. When displaying a conversation in a chat application, the sequence of messages is essential for context. In collaborative editing, the order of changes determines the final state of a document. Financial transactions must be processed in the correct sequence to maintain data integrity. Gaming applications require consistent event ordering to maintain fair gameplay.
+
+Ably's approach to message ordering enables applications to function correctly in a distributed environment while maintaining the low latency and high availability that realtime applications demand. By defining both a realtime order for each region and a canonical global order for the entire system, Ably provides the flexibility needed to support diverse application requirements.
+
+## Multi-region message distribution
+
+In the Ably platform, messages are distributed peer-to-peer between sites. This means that if a message is published by a client and is accepted in that client's nearest site, it is then distributed from that site to each of the other sites for which that channel is active at that time. This direct site-to-site distribution means that messages are delivered to all subscribers in the minimum time.
+
+This design also has the consequence that messages published in two different sites at nearly the same time can arrive in a different order at different sites. For example, if message A is published in site A and nearly simultaneously message B is published in site B, then a subscriber connected to site A is likely to see message A first, then message B. A subscriber connected to site B is likely to see message B first, then message A. A subscriber connected to a third site C might see the messages in either order, depending on the timing of the events and the relative latencies of communication between the sites.
+
+The order that messages are seen in real time therefore can differ between sites, if there are publishers in multiple regions. For a given site, the ordering of messages that is seen in real time is referred to as the "realtime order."
+
+## Realtime order vs canonical global order
+
+While the realtime order can differ between sites, there is also a need to establish a single "canonical" ordering of messages so that certain APIs and functionality behave consistently. This canonical ordering is one that every site can agree on, even though each site might have seen a different realtime order. This ordering is referred to as the "canonical global ordering," or CGO.
+
+The realtime order for a site should be thought of as the order in which events were observed at that site, whereas the CGO is the order in which the events occurred in reality. Establishing a canonical global order is essential for providing consistent views of message history, ensuring that back-end systems process messages in a predictable sequence, and enabling applications to synchronize state reliably across regions. Without a canonical ordering, different components of a distributed application might develop inconsistent views of the system state, leading to data anomalies or confusing user experiences.
+
+## Timeserials: Tracking position in message streams
+
+These different orderings are associated with corresponding time series. A time series is a totally ordered set of event identifiers, where each identifier includes an identifier for the time series itself, plus an explicit timestamp. The event identifier is referred to as a "timeserial." The structure of a timeserial includes time information but also additional sequencing data to disambiguate messages that might be generated in the same millisecond. This ensures that even under high-throughput conditions, every message has a unique and well-defined position in its respective time series.
+
+For a channel, the following time series exist: the CGO time series, and for each site in which the channel was active, the realtime time series. Accordingly, every message can be associated with multiple timeserials; the CGO timeserial, and each of the realtime timeserials.
+
+Timeserials serve multiple important functions in the Ably platform. They enable precise positioning within a message stream, allowing clients to resume connections from exactly where they left off. They provide unambiguous identifiers for messages that can be referenced across the distributed system. They also enable the platform to merge message streams from different sources while maintaining appropriate ordering.
+
+## When different orderings matter
+
+CGO order is the canonical order and therefore this is generally what is returned in response to a history API request that specifies start and end bounds as timestamps. This ensures that applications accessing historical data receive a consistent view regardless of which region they connect to.
+
+However, realtime order is relevant in several specific situations where consistency with the local realtime message stream is more important than global consistency.
+
+When resuming a connection, the messages in the backlog that is delivered on resumption of a connection are in realtime order - that is, the realtime order for the site associated with the connection. This ensures that the backlog contains exactly the messages that were missed from the time the connection dropped to the time it was reestablished. If the system were to use CGO instead, there might be inconsistencies between the backlog and the messages that would have been delivered had the connection remained active.
+
+When fulfilling a history request whose end bound is given by a realtime timeserial, which happens when a client makes a history request with the `untilAttach` parameter, the situation is similar. The set of messages returned is in realtime order, at least at the recent end of the result set, so that the messages in the history response mesh exactly with the messages delivered on the associated attachment. This creates a seamless experience when using history to retrieve messages that were published before a client connected.
+
+For the same reason, when rewinding a channel attachment (another feature that allows clients to receive historical messages before continuing with the realtime stream), the messages delivered must mesh exactly with the series of subsequent realtime messages. Using realtime order ensures this consistency.
+
+## Practical implications of dual ordering
+
+Understanding Ably's dual ordering system has practical implications for application developers building distributed realtime systems.
+
+Within a single site, all subscribers connected to that site will observe messages in the same order. This means that users in the same region will have a consistent experience. Local interactions will appear consistent to all local participants, and causality is preserved within regional boundaries. This is often sufficient for applications where users primarily interact with others in the same region.
+
+When building globally distributed applications, developers should understand that messages published nearly simultaneously from different regions might be observed in different orders by users in different regions. If strict global ordering is essential for the application, additional application-level sequencing or coordination may be needed. For most applications, however, realtime order provides an appropriate balance of low latency and useful ordering guarantees.
+
+The dual ordering system allows applications to choose the appropriate consistency model for their needs. For highly interactive applications where responsiveness is critical, realtime order minimizes latency. For applications that require a consistent historical record, the canonical global order provides a stable view that all components can agree on.
+
+To support both ordering systems efficiently, messages are stored with metadata that tracks their position in multiple sequences. This allows the platform to rapidly retrieve messages in either realtime or canonical global order as needed for different API operations or connection recovery scenarios.

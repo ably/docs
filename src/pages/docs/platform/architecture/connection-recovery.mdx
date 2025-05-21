@@ -1,0 +1,94 @@
+---
+title: Connection recovery
+meta_description: "Understand how Ably's platform ensures reliable connection recovery when clients experience network disruption."
+---
+
+Connection recovery is a core feature of Ably's platform, ensuring service continuity to clients during temporary network disruption. It provides reliable message delivery throughout periods of disruption and minimizes the impact on end-user experience.
+
+## Why connection recovery matters <a id="why"/>
+
+Network disruptions are a fact of life in modern applications, particularly in mobile environments where devices frequently switch between networks and encounter areas of poor coverage. Without an effective recovery mechanism, disruptions can significantly degrade user experience by causing message loss and application state resets.
+
+Ably minimizes the impact of these disruptions by providing an effective recovery mechanism to clients during temporary disconnections of less than 2 minutes. Ably SDKs automatically handle the recovery in these instances of brief disruption, meaning that you don't need to implement logic to handle this yourself.
+
+Applications built with Ably will continue to function normally during disruptions. They will maintain their state and all messages will be received by the client in the correct order. This is particularly important for applications where messages delivery guarantees are crucial, such as in applications where client state is hydrated and maintained incrementally by messages.
+
+Ably achieves a reliable connection recovery mechanism with the following:
+
+* [Connection states](#connection-states)
+* [Timeserials](#message-identificaiton-with-timeserials)
+* [Automatic reconnection attempts](#reconnection-process)
+
+### Connection states <a id="states"/>
+
+Ably SDKs manage connections through a well-defined state machine. Each connection can be in one of several [states](/docs/connect/states) that reflect its current connectivity status. Understanding these states is important for understanding how Ably achieves an effective connection recovery mechanism.
+
+When a client first initializes, its connection begins in the `initialized` state before any connection attempt has been made. Once the client attempts to connect, the connection moves to the `connecting` state. Upon successful connection to Ably, the connection enters the `connected` state, indicating normal operation.
+
+If network issues arise, the connection may transition to the `disconnected` state, indicating a temporary loss of connectivity. In this state, the SDK automatically attempts to reconnect to the service. If reconnection efforts continue to fail for an extended period, the connection may enter the `suspended` state, reflecting the fact that imminent connection restoration is no longer achievable, and reconnection with continuity from the prior connection state is no longer possible.
+
+When a client explicitly requests to close the connection, it transitions to the `closing` state while the close operation is in progress, and finally to the `closed` state once the connection is fully terminated.
+
+If at any time an error occurs for which retries will not succeed, such as when credentials are invalid, the connection will enter the `failed` state.
+
+### Message identification with timeserials <a id="timeserials"/>
+
+Each message sent to clients from Ably is assigned a "timeserial". A timeserial uniquely identifies a message and establishes its position in a stream of messages. Timeserials are opaque identifiers that encode both time and sequence information, ensuring that every message has a unique and ordered identifier.
+
+When a client receives a message, it records the timeserial associated with that message. This record serves as a position in the message stream, enabling the client to identify exactly which messages it has received and which it might have missed during a disconnection.
+
+Timeserials are essential for ensuring message continuity during connection recovery. By tracking the last message received on each channel, clients can resume their subscriptions from exactly where they left off, without missing messages or receiving duplicates.
+
+### Reconnection process <a id="reconnection"/>
+
+When a client experiences a disconnection, a recovery process begins. An Ably SDK first detects that the connection to Ably has been lost and transitions to the `disconnected` state. Once in this state, the SDK automatically begins making reconnection attempts. These attempts continue indefinitely until either the connection succeeds or some other action occurs, such as the client explicitly closing the connection.
+
+When network connectivity is reestablished, the client attempts to resume the connection rather than starting a fresh one. During this resumption process, the client provides the server with the timeserial of the last message received on each channel that the client was attached to. This information is used by the server to determine exactly which messages the client would have missed during the disconnection period.
+
+When the Ably service receives this resumption request, it performs several steps. First, it validates the connection credentials to ensure the client is authorized to reconnect. Then, it reattaches all channels that were previously attached to the connection. For each channel, the server identifies all messages published since the last received message indicated by the client. Finally, it delivers these queued messages to the client in the correct order.
+
+By delivering missed messages in this way, it enables the client to bring application state up to date, as if no disconnection had occurred. This process of reconnecting with continuity is referred to as "resuming" the connection.
+
+## Time limit <a id="time-limit"/>
+
+Connection recovery is designed for temporary disconnections, not extended periods of offline operation. The resume sequence will only be attempted by a client if the period of disconnection is less than 2 minutes.
+
+This time limit is based on the philosophy that after 2 minutes, messages are no longer considered "realtime". Beyond that time it is unlikely that a client would want all outstanding messages to be delivered transparently, as if there had been no interruption.
+
+After the 2-minute window expires, the client transitions to a different recovery approach. At this point, it is the client's responsibility to determine how to recover from the disconnection. It might use another API to re-hydrate or synchronize its state, so it can then meaningfully process new messages. Alternatively, it could use Ably's [history](/docs/storage-history/history) feature to obtain some or all of the missed messages, but in a more selective and controlled way than the automatic recovery process.
+
+This time limit ensures that the system remains efficient and that clients are not overwhelmed with potentially large numbers of messages after extended disconnections.
+
+## Server-side storage <a id="storage"/>
+
+In order to support resuming channels with continuity, Ably retains 2 minutes of history on each channel. This temporary message storage is optimized for quick retrieval during the recovery process and is maintained across Ably's infrastructure for reliability.
+
+Ably's server-side storage is designed to be efficient, storing only the information needed for connection recovery without imposing excessive overhead on the system. Messages are automatically pruned from this storage after the 2-minute window, ensuring that resources are used efficiently.
+
+By maintaining this temporary storage, Ably can provide seamless recovery for brief disconnections without requiring clients to implement complex recovery logic themselves. The system balances the need for reliable message delivery with the practical constraints of storing and processing large volumes of data.
+
+## Behavior during disconnection <a id="behavior"/>
+
+Understanding how Ably behaves during a client disconnection provides insight into the recovery process.
+
+When a client is disconnected but still within the 2-minute recovery window, the Ably service maintains the client's state as if it were still connected. All channels the client was attached to remain attached on the server, and all presence states remain active. Messages published to those channels are queued for delivery when the client reconnects.
+
+This behavior means that other clients won't observe any change in the disconnected client's status until the 2-minute window expires. From the perspective of the wider system, the client appears to still be present and active, which helps maintain application consistency during brief disconnections.
+
+During the disconnection period, the Ably service queues messages for delivery to the disconnected client. Messages published to channels the client was subscribed to are stored temporarily in the order they were received. This queue is maintained for up to 2 minutes, corresponding to the recovery window.
+
+There is no hard limit on the number of messages that can be queued during this period, although very high message rates might lead to resource constraints in extreme cases. When the client reconnects, the queued messages are delivered in the same order they would have been delivered had the connection remained active, ensuring consistency in the application.
+
+## Client-side and server-side implementation <a id="implementation"/>
+
+Connection recovery is implemented through a division of responsibilities between Ably SDKs and the Ably service. The SDK manages several key aspects of the recovery process. It tracks and stores the timeserials of received messages, providing this information to the server during reconnection. The SDK also handles the automatic reconnection attempts, implementing appropriate backoff strategies to avoid overwhelming the network or server when handling connectivity issues.
+
+When connectivity is restored, the SDK formulates and sends the resume request to the server, including all necessary information for the server to resume the connection correctly. It then processes the queued messages delivered by the server, maintaining message ordering and delivery to the application.
+
+The SDK also provides appropriate events and notifications to the application, enabling developers to react to connection state changes and implement custom recovery strategies when needed.
+
+On the server side, Ably implements several components to support connection recovery. The service maintains the temporary message storage system that retains 2 minutes of message history for each channel. It also preserves client connection state during the recovery window, keeping track of which channels the client was attached to and its presence information.
+
+When a resume request is received, the server validates the request, retrieves the queued messages based on the provided timeserials, and delivers them to the client in the correct order. It also manages the reattachment of channels and restoration of presence state.
+
+The server implements the time constraints of the recovery window, automatically cleaning up resources when clients exceed the 2-minute disconnection limit. This ensures efficient use of system resources while providing a robust recovery mechanism.

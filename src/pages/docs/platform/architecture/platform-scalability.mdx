@@ -1,0 +1,60 @@
+---
+title: Scalability of the Ably platform
+meta_description: "Understand how Ably's platform scales to meet the demands of its traffic."
+---
+
+Scalability refers to a system's ability to change in size or scale to accommodate varying workloads. In practice, this means that as demand increases—whether through more users, more messages, or more channels—the system can grow to meet that demand without degradation in performance or reliability.
+
+## Why scalability matters
+
+For real-time platforms, scalability is not a nice-to-have feature but a fundamental requirement, as applications can experience unpredictable growth and traffic spikes. When systems cannot scale effectively, users experience degraded service, increased latency, connection failures, and message loss during periods of high demand. A truly scalable system removes these constraints, allowing developers to build without worrying about artificial ceilings on their growth potential.
+
+Ably scales on several key dimensions. The maximum number of channels that can be used simultaneously by a single application can be scaled horizontally with no technical limit. Similarly, the maximum number of connections that can exist simultaneously for a single application can be scaled horizontally without limitation. The total volume of messages Ably can process for a single application at any given moment—the maximum message throughput—is scaled horizontally, meaning there is no limit on the maximum possible aggregate rate.
+
+## Vertical vs. horizontal scalability
+
+There are fundamentally two approaches to scaling systems. Vertical scalability (also known as "scaling up") means tackling larger problems by using larger components. In computing, vertical scaling typically means deploying server instances with more CPU cores, adding more memory to existing servers, or using larger storage devices. Vertical scaling has inherent limitations due to physical constraints on how powerful a single machine can become. Costs increase non-linearly with capacity, single points of failure become more critical, and downtime is often required for upgrades.
+
+Horizontal scalability (also known as "scaling out") means solving larger problems by having more components instead of larger ones. In computing, horizontal scaling means adding more server instances to a distributed system, distributing load across a larger number of machines, and partitioning data and workloads across multiple resources. Horizontal scaling offers virtually unlimited scaling potential, greater resilience through redundancy, more cost-effective scaling at large scales, and the ability to scale both up and down with demand (elasticity). Resources can be added incrementally as needed. For platforms like Ably that need to support arbitrary and elastic scalability, horizontal scaling is the only viable approach.
+
+## Challenges of horizontally scaling resources
+
+Effective horizontal scaling involves several significant challenges that must be addressed in a distributed system design. Resource coordination represents the first major challenge. It's not enough just to have unlimited resources—you have to direct requests to those resources effectively. Resources need coordinated access to shared dependencies, requests must be distributed efficiently across available resources, and the system must maintain consistent behavior as resources are added or removed. Without proper coordination mechanisms, a distributed system quickly becomes unpredictable and unreliable even as more capacity is added.
+
+Stateful interactions present another substantial challenge. Most realtime systems involve stateful interactions where the replicated resources cannot operate independently. Users expect consistent experiences across sessions, messages need to be delivered in the correct order, and subscribers to the same channel need to see the same content. Maintaining this state consistently across a distributed system requires sophisticated algorithms and careful system design to avoid race conditions, conflicts, and inconsistent views of data.
+
+High-scale fanout creates a particularly complex challenge for realtime platforms. This occurs when a single message needs to be delivered to a very large number of recipients. A sporting event might have millions of viewers receiving the same score updates, a financial application might distribute price changes to thousands of traders, or a chat application might deliver a message to everyone in a popular channel. These scenarios require specialized architectures to handle the efficient distribution of messages to large numbers of connections without overwhelming individual system components or creating network bottlenecks.
+
+## How Ably achieves scalability
+
+Ably's architecture is built from the ground up to enable horizontal scalability across all dimensions. This is achieved through several key design principles that work together to create a seamlessly scalable platform.
+
+Ably uses a multi-layered architecture organized into independently scalable layers, each responsible for different aspects of the service. The frontend layer handles REST requests and realtime connections (WebSocket and Comet), while the core layer performs central message processing for channels. These layers scale independently in each region according to demand, monitored through metrics like CPU and memory utilization. This separation of concerns allows each layer to scale efficiently according to its specific workload characteristics, preventing bottlenecks from forming as traffic increases.
+
+Channels are the core building block of Ably's service. Ably achieves horizontal scalability for channels through consistent hashing. Each compute instance within the core layer has a set of pseudo-randomly generated hashes, and hashing determines the location of any given channel. As a cluster scales, channels relocate to maintain an even load distribution, and any number of channels can exist as long as sufficient compute capacity is available. Whether there are many lightly-loaded channels or fewer heavily-loaded ones, scaling and placement strategies ensure capacity is added as required and load is effectively distributed. This approach allows Ably to scale to millions of channels without performance degradation.
+
+Connection processing is stateless, meaning connections can be freely routed to any frontend server without impacting functionality. This enables more straightforward scaling through load balancing. A load balancer distributes work and decides where to terminate each connection, combining simple random allocation with prioritization based on instantaneous load factors. The system performs background shedding to force the relocation of connections for balanced load. As long as sufficient capacity exists and routing maintains a balanced load, the service can absorb an unlimited number of connections. This stateless approach to connection handling significantly simplifies scaling while maintaining consistent user experience.
+
+The main challenge for connection scaling is high-scale fanout—when a large number of connections are subscribed to common channels. Ably addresses this through a tiered fanout architecture. In the first tier, a channel processing a message disseminates it to all frontends that have connections subscribed to that channel. In the second tier, each frontend forwards the message to its subscribed connections. At the regional tier, a channel also disseminates processed messages to corresponding channels in other regions where the channel is active. This tiered approach enables extremely high fanout capabilities without overwhelming any single component of the system.
+
+For message throughput, Ably achieves scalability through multiple complementary approaches. Messages are processed by the core instance responsible for the channel, distributing the load across the cluster through distributed processing. The system routes messages directly to interested parties without unnecessary network hops, ensuring efficient routing. Ably uses binary protocols and efficient message encoding to minimize overhead through optimized protocols. Features like delta compression reduce bandwidth requirements for large messages, providing connection optimizations that improve overall system efficiency.
+
+## Practical limits and considerations
+
+While Ably's architecture is designed for horizontal scalability, practical considerations do exist that developers should understand when architecting applications on the platform.
+
+When working with channels, several factors should be considered. While there's no hard limit on the number of channels, each active channel consumes memory and CPU resources. Very high message rates on a single channel may encounter throughput limitations, as all processing for one channel occurs on a single core instance. Applications should distribute high-volume message traffic across multiple channels when possible to avoid these limitations. This approach ensures that individual channels don't become bottlenecks in the system while still allowing for unlimited channel scaling across the application.
+
+Connection considerations also play an important role in scalability planning. Each connection consumes memory and processing resources on frontend instances. Very high message rates on a single connection may encounter throughput limitations due to network constraints and protocol overhead. For publishing at sustained high rates, applications may need to distribute work across multiple connections or use the REST API, which is optimized for high-throughput publishing without the overhead of maintaining persistent connections. Understanding these connection dynamics helps developers build applications that scale efficiently.
+
+Message rate and size impact overall system performance in important ways. Default message size limits (typically 64KB) protect against excessive memory pressure and network load. Very large messages impact processing cost and transit latency, especially in high-volume scenarios. Features like delta compression help manage bandwidth for large messages with minor changes, improving efficiency for applications that transmit state updates or other partially changed data. By optimizing message size and frequency, applications can achieve better performance at scale.
+
+## Benefits of Ably's scalable architecture
+
+Ably's horizontally scalable architecture provides several key benefits that directly impact application development and user experience.
+
+The most fundamental benefit is the removal of technical limitations on growth through the no scale ceiling approach. There is no limit on the number of channels, no limit on the number of connections, and no limit on the aggregate message throughput. This means applications can scale from prototype to global adoption without fundamental architecture changes or concerns about hitting arbitrary limits as usage grows. The freedom from scale ceilings allows developers to build with confidence, knowing their success won't be limited by infrastructure constraints.
+
+The platform handles scaling automatically, providing true elasticity without developer intervention. Resources are provisioned on demand as load changes, scaling occurs independently across different dimensions based on actual usage patterns, and applications benefit from elasticity without any additional configuration or management. This automatic scaling eliminates the need for capacity planning and over-provisioning, reducing costs and operational complexity while ensuring optimal performance.
+
+Engineering teams can concentrate on building features that deliver business value rather than managing infrastructure. There's no need to design complex scaling architectures, no requirement to manage infrastructure, and no operational overhead of monitoring and scaling systems. This developer focus accelerates time-to-market and allows teams to invest their time in innovation rather than operations, creating competitive advantages for businesses building on the platform.

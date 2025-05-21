@@ -24,6 +24,42 @@ export default {
           name: 'Overview',
           link: '/docs/platform/architecture',
         },
+        {
+          name: 'Access network',
+          link: '/docs/platform/architecture/access-network',
+        },
+        {
+          name: 'Infrastructure operations',
+          link: '/docs/platform/architecture/infrastructure-operations',
+        },
+        {
+          name: 'Fault tolerance',
+          link: '/docs/platform/architecture/fault-tolerance',
+        },
+        {
+          name: 'Performance',
+          link: '/docs/platform/architecture/performance',
+        },
+        {
+          name: 'Platform scalability',
+          link: '/docs/platform/architecture/platform-scalability',
+        },
+        {
+          name: 'Horizontal scalability',
+          link: '/docs/platform/architecture/horizontal-scalability',
+        },
+        {
+          name: 'Connection recovery',
+          link: '/docs/platform/architecture/connection-recovery',
+        },
+        {
+          name: 'Message ordering',
+          link: '/docs/platform/architecture/message-ordering',
+        },
+        {
+          name: 'Idempotency',
+          link: '/docs/platform/architecture/idempotency',
+        },
       ],
     },
     {
