@@ -25,8 +25,8 @@ export default {
           link: '/docs/platform/architecture',
         },
         {
-          name: 'Access network',
-          link: '/docs/platform/architecture/access-network',
+          name: 'Edge network',
+          link: '/docs/platform/architecture/edge-network',
         },
         {
           name: 'Infrastructure operations',
