@@ -6,11 +6,38 @@ import { ImageProps } from '../Image';
 import { examples } from '../../data/examples/';
 import { filterSearchExamples } from './filter-search-examples';
 import ExamplesNoResults from './ExamplesNoResults';
+import { ProductName, products as dataProducts } from '@ably/ui/core/ProductTile/data';
+import { useLocation } from '@reach/router';
 
-export type SelectedFilters = { products: string[]; useCases: string[] };
+export type SelectedFilters = { products: ProductName[]; useCases: string[] };
 
 const ExamplesContent = ({ exampleImages }: { exampleImages: ImageProps[] }) => {
-  const [selected, setSelected] = useState<SelectedFilters>({ products: [], useCases: [] });
+  const location = useLocation();
+
+  // Parse product query parameters and filter for valid ProductName values
+  const getInitialProducts = (): ProductName[] => {
+    const params = new URLSearchParams(location.search);
+    const productParam = params.get('product');
+    const validProductNames = Object.keys(dataProducts).map((product) => product.toLowerCase());
+
+    if (!productParam) {
+      return [];
+    }
+
+    // Split comma-separated products and filter only valid ProductName values
+    return productParam
+      .split(',')
+      .map((p) => p.trim())
+      .filter((product): product is ProductName =>
+        // Check if the product is a key in dataProducts
+        validProductNames.includes(product as string),
+      ) as ProductName[];
+  };
+
+  const [selected, setSelected] = useState<SelectedFilters>({
+    products: getInitialProducts(),
+    useCases: [],
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredExamples, setFilteredExamples] = useState(examples);
 

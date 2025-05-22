@@ -73,7 +73,7 @@ const META_PRODUCT_FALLBACK = 'pub_sub';
 const getFrontmatter = (frontmatter: Frontmatter, prop: keyof Frontmatter, alternative: string | string[] = '') =>
   frontmatter?.[prop] ? frontmatter[prop] : alternative;
 
-const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, path }) => {
+const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location }) => {
   const { frontmatter } = pageContext;
 
   const { activePage } = useLayoutContext();
@@ -85,7 +85,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, path }) 
   const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
 
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl(path);
+  const canonical = canonicalUrl(location.pathname);
 
   // Use the copyable headers hook
   useCopyableHeaders();

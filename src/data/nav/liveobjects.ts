@@ -14,6 +14,7 @@ export default {
         {
           name: 'About LiveObjects',
           link: '/docs/liveobjects',
+          index: true,
         },
       ],
     },

@@ -14,6 +14,7 @@ export default {
         {
           name: 'About Chat',
           link: '/docs/chat',
+          index: true,
         },
       ],
     },
@@ -44,6 +45,7 @@ export default {
         {
           name: 'Rooms',
           link: '/docs/chat/rooms',
+          index: true,
         },
       ],
     },
@@ -86,6 +88,7 @@ export default {
         {
           name: 'Introduction',
           link: '/docs/chat/moderation',
+          index: true,
         },
         {
           name: 'Direct Integrations',

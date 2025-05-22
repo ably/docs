@@ -14,6 +14,7 @@ export default {
         {
           name: 'About Asset Tracking',
           link: '/docs/asset-tracking/',
+          index: true,
         },
       ],
     },

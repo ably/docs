@@ -14,6 +14,7 @@ export default {
         {
           name: 'About Pub/Sub',
           link: '/docs/basics',
+          index: true,
         },
       ],
     },
@@ -44,6 +45,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/auth',
+          index: true,
         },
         {
           name: 'Basic auth',
@@ -73,6 +75,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/connect',
+          index: true,
         },
         {
           name: 'Connection state and recovery',
@@ -86,6 +89,7 @@ export default {
         {
           name: 'Basic pub-sub',
           link: '/docs/pub-sub',
+          index: true,
         },
         {
           name: 'Advanced pub-sub',
@@ -100,7 +104,11 @@ export default {
     {
       name: 'Channels',
       pages: [
-        { name: 'Channel concepts', link: '/docs/channels' },
+        {
+          name: 'Channel concepts',
+          link: '/docs/channels',
+          index: true,
+        },
         { name: 'Channel states', link: '/docs/channels/states' },
         {
           name: 'Channel options',
@@ -108,6 +116,7 @@ export default {
             {
               name: 'Overview',
               link: '/docs/channels/options',
+              index: true,
             },
             {
               name: 'Rewind',
@@ -131,6 +140,7 @@ export default {
         {
           name: 'Message concepts',
           link: '/docs/messages',
+          index: true,
         },
         {
           name: 'Message batching',
@@ -144,6 +154,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/presence-occupancy',
+          index: true,
         },
         {
           name: 'Presence',
@@ -174,6 +185,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/push',
+          index: true,
         },
         {
           name: 'Configure and activate',
@@ -203,6 +215,7 @@ export default {
             {
               name: 'Overview',
               link: '/docs/metadata-stats/metadata',
+              index: true,
             },
             {
               name: 'Metadata subscriptions',
@@ -226,6 +239,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/protocols',
+          index: true,
         },
         {
           name: 'Server-Sent Events (SSE)',
@@ -253,6 +267,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/api',
+          index: true,
         },
         {
           name: 'Realtime SDK',

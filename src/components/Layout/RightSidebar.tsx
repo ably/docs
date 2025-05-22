@@ -8,7 +8,7 @@ import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/u
 import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { languageInfo } from 'src/data/languages';
-import { PageTreeNode, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
+import { ActivePage, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
 import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
 import { LanguageKey } from 'src/data/languages/types';
 
@@ -18,30 +18,40 @@ type SidebarHeader = {
   label: string;
 };
 
-const githubBasePath = 'https://github.com/ably/docs/blob/main/content';
+const githubBasePathTextile = 'https://github.com/ably/docs/blob/main/content';
+const githubBasePathMDX = 'https://github.com/ably/docs/blob/main/src/pages/docs';
 const requestBasePath = 'https://github.com/ably/docs/issues/new';
 
-const externalLinks = (
-  pageTree: PageTreeNode[],
-  location: WindowLocation,
-): { label: string; icon: IconName; link: string }[] => {
-  const currentPage = pageTree[pageTree.length - 1]?.page;
+const customGithubPaths = {
+  '/how-to/pub-sub': 'https://github.com/ably/docs/blob/main/how-tos/pub-sub/how-to.mdx',
+} as Record<string, string>;
 
+const externalLinks = (
+  activePage: ActivePage,
+  location: WindowLocation,
+): { label: string; icon: IconName; link: string; type: string }[] => {
   let githubEditPath = '#';
   let requestPath = '#';
 
-  if (currentPage) {
+  if (activePage) {
     const githubPathName = location.pathname.replace('docs/', '');
-    const githubPathSegments = githubPathName.split('/').filter((segment) => segment !== '');
-    githubEditPath =
-      githubBasePath +
-      (githubPathSegments.length === 1 ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
+
+    if (customGithubPaths[githubPathName]) {
+      githubEditPath = customGithubPaths[githubPathName];
+    } else if (activePage.template === 'mdx') {
+      githubEditPath =
+        githubBasePathMDX + (activePage.page.index ? `${githubPathName}/index.mdx` : `${githubPathName}.mdx`);
+    } else {
+      githubEditPath =
+        githubBasePathTextile +
+        (activePage.page.index ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
+    }
 
     const language = new URLSearchParams(location.search).get('lang') as LanguageKey;
-    const requestTitle = `Change request for: ${currentPage.link}`;
+    const requestTitle = `Change request for: ${activePage.page.link}`;
     const requestBody = encodeURIComponent(`
-  **Page name**: ${currentPage.name}
-  **URL**: [${currentPage.link}](https://ably.com${currentPage.link})
+  **Page name**: ${activePage.page.name}
+  **URL**: [${activePage.page.link}](https://ably.com${activePage.page.link})
   ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}**` : ''}
 
   **Requested change or enhancement**:
@@ -55,8 +65,9 @@ const externalLinks = (
       label: 'Edit on GitHub',
       icon: 'icon-social-github-mono',
       link: githubEditPath,
+      type: 'github',
     },
-    { label: 'Request changes', icon: 'icon-gui-hand-raised-outline', link: requestPath },
+    { label: 'Request changes', icon: 'icon-gui-hand-raised-outline', link: requestPath, type: 'request' },
   ];
 };
 
@@ -230,8 +241,15 @@ const RightSidebar = () => {
           </>
         ) : null}
         <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-24">
-          {externalLinks(activePage.tree, location).map(({ label, icon, link }, index) => (
-            <a key={label} href={link} target="_blank" rel="noopener noreferrer" className="group/external-link">
+          {externalLinks(activePage, location).map(({ label, icon, link, type }, index) => (
+            <a
+              key={label}
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group/external-link"
+              data-testid={`external-${type}-link`}
+            >
               <div
                 className={cn(
                   'flex items-center p-16',

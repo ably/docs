@@ -14,6 +14,7 @@ export default {
         {
           name: 'About LiveSync',
           link: '/docs/livesync',
+          index: true,
         },
       ],
     },
@@ -23,6 +24,7 @@ export default {
         {
           name: 'MongoDB database connector',
           link: '/docs/livesync/mongodb',
+          index: true,
         },
       ],
     },
@@ -32,6 +34,7 @@ export default {
         {
           name: 'Postgres database connector',
           link: '/docs/livesync/postgres',
+          index: true,
         },
         {
           name: 'Frontend data models',
