@@ -185,6 +185,7 @@ const ExamplesRenderer = ({
                 showOpenInCodeSandbox={false}
                 showRefreshButton
                 {...(id === 'pub-sub-message-encryption' && { startRoute: '?encrypted=true' })}
+                {...(id === 'pub-sub-message-annotations' && { startRoute: '?clientId=user1' })}
               />
               <UserIndicator user={id === 'pub-sub-message-encryption' ? 'user 1 - encrypted' : 'user 1'} />
             </div>

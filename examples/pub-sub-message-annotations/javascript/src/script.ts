@@ -12,6 +12,9 @@ const urlParams = new URLSearchParams(window.location.search);
 const channelName = urlParams.get('name') || 'pub-sub-message-annotations';
 const channel = client.channels.get(channelName);
 
+const clientId = urlParams.get('clientId') || 'user2';
+console.log(`Client ID: ${clientId}`);
+
 channel.subscribe((message) => {
   console.log(message);
 });
