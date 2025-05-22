@@ -4,8 +4,8 @@ export default {
   name: 'Ably Spaces',
   link: '/docs/spaces',
   icon: {
-    closed: 'icon-product-spaces-mono',
-    open: 'icon-product-spaces',
+    closed: 'icon-gui-prod-spaces-outline',
+    open: 'icon-gui-prod-spaces-solid',
   },
   content: [
     {

@@ -4,8 +4,8 @@ export default {
   name: 'Ably Chat',
   link: '/docs/chat',
   icon: {
-    closed: 'icon-product-chat-mono',
-    open: 'icon-product-chat',
+    closed: 'icon-gui-prod-chat-outline',
+    open: 'icon-gui-prod-chat-solid',
   },
   content: [
     {

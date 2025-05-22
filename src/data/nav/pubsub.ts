@@ -4,8 +4,8 @@ export default {
   name: 'Ably Pub/Sub',
   link: '/docs/basics',
   icon: {
-    closed: 'icon-product-pubsub-mono',
-    open: 'icon-product-pubsub',
+    closed: 'icon-gui-prod-pubsub-outline',
+    open: 'icon-gui-prod-pubsub-solid',
   },
   content: [
     {
