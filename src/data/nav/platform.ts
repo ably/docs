@@ -45,10 +45,6 @@ export default {
           link: '/docs/platform/architecture/platform-scalability',
         },
         {
-          name: 'Horizontal scalability',
-          link: '/docs/platform/architecture/horizontal-scalability',
-        },
-        {
           name: 'Connection recovery',
           link: '/docs/platform/architecture/connection-recovery',
         },
