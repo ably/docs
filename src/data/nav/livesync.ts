@@ -4,8 +4,8 @@ export default {
   name: 'Ably LiveSync',
   link: '/docs/livesync',
   icon: {
-    closed: 'icon-product-livesync-mono',
-    open: 'icon-product-livesync',
+    closed: 'icon-gui-prod-livesync-outline',
+    open: 'icon-gui-prod-livesync-solid',
   },
   content: [
     {

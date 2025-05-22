@@ -4,8 +4,8 @@ export default {
   name: 'Ably LiveObjects',
   link: '/docs/liveobjects',
   icon: {
-    closed: 'icon-product-liveobjects-mono',
-    open: 'icon-product-liveobjects',
+    closed: 'icon-gui-prod-liveobjects-outline',
+    open: 'icon-gui-prod-liveobjects-solid',
   },
   content: [
     {

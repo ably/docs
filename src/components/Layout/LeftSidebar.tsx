@@ -126,7 +126,10 @@ const constructProductNavData = (activePageTree: PageTreeNode[], inHeader: boole
 
     return {
       name: product.name,
-      icon: activePageTree[0]?.page.name === product.name ? product.icon.open : product.icon.closed,
+      icon:
+        activePageTree[0]?.page.name === product.name
+          ? { name: product.icon.open, css: 'text-orange-600' }
+          : { name: product.icon.closed },
       onClick: () => {
         // When a product is clicked, find and scroll to any open accordion element
         if (typeof document !== 'undefined') {
