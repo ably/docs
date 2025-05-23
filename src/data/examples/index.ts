@@ -5,7 +5,7 @@ export const DEFAULT_EXAMPLE_LANGUAGES = ['javascript', 'react'];
 export const examples: Example[] = [
   {
     id: 'chat-presence',
-    name: 'Presence',
+    name: 'Chat Presence',
     description: 'Show online/offline status of users in a chat application.',
     products: ['chat'],
     layout: 'double-horizontal',
