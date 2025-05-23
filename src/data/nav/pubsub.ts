@@ -26,6 +26,10 @@ export default {
           link: '/docs/getting-started/javascript',
         },
         {
+          name: 'Swift',
+          link: '/docs/getting-started/swift',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
