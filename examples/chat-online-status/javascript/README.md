@@ -1,8 +1,8 @@
-# Online status for chat applications
+# Presence for chat applications
 
-Online statuses enable users to view who else is online and ready to chat.
+Presence powers features including online statuses, which enable users to view who else is online and ready to chat.
 
-Use online status to display which users are currently online in a chat room. Users can also manually update their status, such as to set themselves as 'Away'.
+Use presence to display which users are currently online in a chat room. Users can also manually update their status, such as to set themselves as 'Away'.
 
 Online statuses enable users to quickly understand the availability of others to communicate more effectively. For example, in a team chat room, users can quickly see who is available to collaborate with, and who is currently busy, in a meeting, or away from their desks.
 
@@ -16,7 +16,7 @@ Use the following methods to add an online status implementation into a chat app
 - [`rooms.presence.subscribe()`](/docs/chat/rooms/presence?lang=javascript#subscribe): subscribes to users' presence status events by registering a listener. Presence events are emitted when a user chooses a enter or leave the presence set or update their user data.
 - [`room.presence.enter`, `room.presence.update`, `room.presence.leave`](/docs/chat/rooms/presence?lang=javascript#set): Emits a presence event when the user enters or leaves a presence set, or updates their user data.
 
-Find out more about [online status](/docs/chat/rooms/presence?lang=javascript).
+Find out more about [presence](/docs/chat/rooms/presence?lang=javascript).
 
 ## Getting started
 
@@ -49,7 +49,7 @@ Find out more about [online status](/docs/chat/rooms/presence?lang=javascript).
 6. Run the server:
 
   ```sh
-  yarn run chat-online-status-javascript
+  yarn run chat-presence-javascript
   ```
 
 7. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
