@@ -61,7 +61,7 @@ export default {
           link: '/docs/chat/rooms/history',
         },
         {
-          name: 'Online status',
+          name: 'Presence',
           link: '/docs/chat/rooms/presence',
         },
         {
