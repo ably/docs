@@ -1,0 +1,92 @@
+---
+title: Fault tolerance
+meta_description: "Understand how Ably's platform is built to be fault tolerant to ensure high availability and reliability to clients."
+---
+
+Fault tolerance refers to a system's ability to continue functioning correctly despite the failure of one or more of its components. In distributed systems, component failures must be assumed as normal events that happen continuously somewhere in the system. The goal is not to eliminate failures but to design the system to detect, contain, and recover from them without significant service disruption.
+
+## Why fault tolerance matters
+
+Fault tolerance is imperative for several reasons. Business continuity is essential for applications built on Ably that serve critical functions where downtime is unacceptable. Even brief interruptions in service can lead to poor user experience and customer dissatisfaction. Maintaining the correctness of data and message delivery is crucial for applications that rely on accurate realtime information. At Ably's scale, where the system handles billions of messages across millions of connections, component failures are expected occurrences that must be managed effectively.
+
+The aim of fault tolerance is dependability, which encompasses both availability and reliability. Availability ensures that the service is accessible when needed, while reliability ensures that the service behaves correctly. Together, these properties enable Ably to deliver a consistent, dependable service even in the presence of failures.
+
+## The gossip layer: Building a resilient foundation
+
+The gossip layer uses the gossip protocol to establish a "netmap" - a data structure that describes a cluster by listing all nodes and providing relevant details of each of those nodes. The gossip protocol determines liveness of each participant and ensures that all participants share an eventually-consistent view of each other participant. This shared view is used to construct the netmap.
+
+Using the netmap, the gossip layer provides a service discovery service to all other layers of the platform. The gossip layer ensures that any changes in the underlying population of nodes are detected, broadcast, and assimilated by all other nodes, in real time, consistently, and in a way that is also tolerant to failures of the gossip nodes themselves.
+
+The gossip protocol continuously monitors the health of each participant through periodic heartbeats. It ensures that all participants eventually share a consistent view of each other, even as nodes join, leave, or fail. The gossip layer automatically adapts to changes in the cluster's composition, making it self-healing. Multiple gossip nodes operate in each region, ensuring that the failure of any individual gossip node doesn't compromise the system.
+
+The gossip layer forms the foundation upon which other fault tolerance mechanisms are built. If nodes cannot agree on the state of the cluster, higher-level fault tolerance mechanisms would be ineffective. By providing a reliable, distributed service discovery mechanism, the gossip layer enables other components to make informed decisions about resource allocation, role placement, and failure handling.
+
+## The frontend layer: Stateless scalability
+
+Frontend nodes are stateless, which simplifies the approach to fault tolerance. These nodes terminate client connections and handle REST API requests. The stateless nature of these components means that each request can be processed independently, without depending on previous requests or maintaining state between operations.
+
+Fault tolerance in the frontend layer is achieved primarily through redundancy. Ably ensures that there is always a sufficient population of nodes to handle the current load, plus extra capacity to absorb the impact of node failures. This redundancy allows the system to continue operating even when individual frontend nodes fail.
+
+Health checks continuously monitor the status of frontend nodes. When a node is detected as unhealthy, it is automatically removed from the load balancer's pool, preventing new connections or requests from being directed to it. This failure detection and traffic redirection mechanism ensures that clients only interact with healthy nodes.
+
+Failed frontend instances are promptly replaced through automated processes. The system maintains a defined capacity level and automatically initiates the creation of new instances when failures reduce the available capacity below the required threshold. This automatic replacement ensures that the system can maintain its service level even during extended failure scenarios.
+
+Client SDKs play a crucial role in frontend layer fault tolerance by implementing connection recovery mechanisms. When a client detects a connection failure, it automatically attempts to reconnect, often to a different frontend node. This client-side resilience complements the server-side redundancy, creating a comprehensive fault tolerance strategy.
+
+The stateless nature of the frontend layer makes it straightforward to achieve fault tolerance through redundancy and rapid replacement. However, this approach still requires active monitoring to ensure that sufficient capacity is always available, even during failure events.
+
+## The core layer: Stateful resilience
+
+The core, or channel processing layer, is where Ably processes messages for channels. Unlike the frontend layer, the core layer is stateful, which introduces additional complexity for fault tolerance. The stateful nature of this layer means that simply replacing a failed component is not sufficient; the state must be preserved or recovered to maintain service continuity.
+
+When a core node fails, its state must be preserved or reconstructed to ensure continuity of service. The roles performed by the failed node must be transferred to other nodes in a way that maintains correctness. The system must ensure that during role transfers, messages are not lost, duplicated, or delivered out of order.
+
+Ably implements several mechanisms to ensure fault tolerance in the stateful core layer. Channels are assigned to core nodes using consistent hashing, which minimizes the redistribution required when nodes are added or removed. This approach ensures that when a node fails, only the channels hosted on that node need to be relocated, rather than requiring a global reorganization of channel assignments.
+
+Critical state information is stored redundantly across multiple nodes. This redundancy ensures that even if a node fails, the state required to resume processing is available elsewhere in the system. Message processing is designed to be transactional, ensuring that a message is either fully processed or not processed at all. This transactional approach prevents partial updates that could lead to inconsistent state.
+
+The system includes a channel persistence layer where messages are persisted in multiple locations before being acknowledged. This persistence ensures that messages are not lost, even if the node processing them fails during or after acknowledgment. The system is designed for graceful degradation, continuing to function, potentially with reduced capacity or increased latency, even when multiple failures occur simultaneously.
+
+When a core node fails, the failure is detected by the gossip layer, and consensus is formed that the node is no longer available. The updated netmap is propagated to all remaining nodes, ensuring that all components have a consistent view of the cluster. Consistent hashing is used to determine the new locations for the channels previously assigned to the failed node. The channels are reactivated on their new nodes, using persisted state to ensure continuity. Processing then continues with minimal disruption to service.
+
+## Regional independence and global coordination
+
+Ably operates across multiple geographic regions, with each region capable of functioning independently while still coordinating with other regions. This design provides several fault tolerance benefits that enhance the overall reliability of the platform.
+
+Regional independence allows problems in one region to be contained without affecting service in other regions. If a region experiences failures or becomes unavailable due to infrastructure issues, other regions continue to operate normally. This containment prevents local problems from cascading into global outages.
+
+The multi-region architecture ensures continuous global service. Even if an entire region becomes unavailable, the global service continues to function. Clients can be redirected to healthy regions when their default region experiences issues, maintaining service availability during regional failures.
+
+Client traffic can be dynamically redirected between regions based on health and proximity. When a region can automatically be determined to be unhealthy or unreachable, traffic is automatically routed to the next closest healthy region. This traffic redirection is transparent to the end user, minimizing disruption during regional failures.
+
+Critical data is replicated across regions, ensuring it remains available even during regional outages. This replication is particularly important for stateful services, where continuity of state is essential for maintaining correct operation. By distributing data geographically, Ably creates a resilient system that can withstand even large-scale regional failures.
+
+The gossip protocol described earlier extends across regions, enabling global coordination while maintaining regional independence. This coordination ensures that all regions share a consistent view of the global system state, enabling efficient routing and failover decisions.
+
+## Gradations of failure and health
+
+In traditional fault tolerance theory, components are often modeled as either functioning correctly or failing completely. In reality, failures in distributed systems are typically non-binary and can manifest in various ways. This complexity requires sophisticated approaches to failure detection and remediation.
+
+Components may fail partially or intermittently, making failure detection challenging. A node might respond to some requests but not others, or it might respond with increased latency or error rates. These partial failures can be more difficult to detect than complete failures, requiring multiple monitoring dimensions and more complex health assessment algorithms.
+
+The system employs multiple health metrics to determine the status of components. These metrics include response time, error rates, resource utilization, and application-specific indicators. By considering multiple dimensions of health, the system can detect various degradations that might otherwise go unnoticed.
+
+Health assessment is a continuous process, with components constantly being evaluated based on their observed behavior. Rather than making binary healthy/unhealthy determinations, the system assigns health scores that reflect the gradual nature of performance degradation. This nuanced approach allows for more informed decisions about traffic routing and component replacement.
+
+Remediation strategies are tailored to the specific type and severity of failures. Minor degradations might trigger increased monitoring or load reduction, while more severe issues prompt component replacement or traffic redirection. This graduated response ensures that remediation is proportional to the impact of the failure, avoiding unnecessary disruption while still maintaining system health.
+
+The challenge of dealing with non-binary health is further complicated in a globally distributed system, where network conditions, regional variations, and asynchronous communication can make consistent health assessment difficult. Ably addresses this challenge through consensus formation mechanisms and cross-validation between independent monitoring systems, ensuring reliable detection even in complex failure scenarios.
+
+## Resource implications of fault tolerance
+
+Implementing robust fault tolerance has significant resource implications that must be considered in system design and capacity planning. These considerations are essential to ensure that fault tolerance mechanisms themselves remain effective during failure scenarios.
+
+Fault tolerance often requires running more instances than would be needed just to handle the current load. This redundancy ensures that there is sufficient capacity to absorb the impact of component failures without service degradation. The level of redundancy required depends on the service level objectives and the expected failure rate of components.
+
+Instances cannot be run at 100% capacity during normal operation; a resource margin must be maintained to handle failure scenarios. This margin ensures that when failures occur, the remaining components can accommodate the redistributed load without becoming overloaded themselves. The necessary margin depends on factors such as the frequency and scope of expected failures, the elasticity of the system, and the acceptable performance impact during failure events.
+
+When failures occur, the system may need to scale up quickly to maintain service levels. This requires the underlying infrastructure to support rapid scaling, as well as automated scaling mechanisms that can respond to changing demand. Reactive scaling must be fast enough to prevent service degradation during the scaling period.
+
+The fault tolerance mechanisms themselves must be fault-tolerant, which requires multiple layers of redundancy. For example, the system that detects and responds to failures must itself be resilient to failures, often requiring its own redundancy and fallback mechanisms. This recursive fault tolerance adds complexity and resource requirements to the system.
+
+A particularly challenging aspect is that fault tolerance mechanisms require resources to operate, such as CPU and memory. If a disruption occurs because these resources are exhausted, the very mechanisms designed to handle the failure may be unable to function properly. This creates a need for careful resource isolation and prioritization, ensuring that fault tolerance mechanisms have guaranteed access to the resources they need, even during resource contention.
