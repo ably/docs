@@ -4,7 +4,7 @@ import { MessageCreate } from '../types';
 import { createDropdownArrow, toggleArrowRotation } from './arrow';
 import { createDetailsPane } from './details';
 
-function createMessageElement(message: MessageCreate) {
+export function createMessageElement(message: MessageCreate) {
   const messageContainer = document.createElement('div');
   messageContainer.className = 'mb-4';
   messageContainer.setAttribute('data-serial', message.serial);
@@ -32,9 +32,4 @@ function createMessageElement(message: MessageCreate) {
   messageContainer.appendChild(detailsPane);
 
   return messageContainer;
-}
-
-export function addMessage(message: MessageCreate) {
-  const messageElement = createMessageElement(message);
-  document.getElementById('messages')?.appendChild(messageElement);
 }
