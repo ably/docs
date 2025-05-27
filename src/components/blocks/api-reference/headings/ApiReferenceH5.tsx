@@ -3,9 +3,9 @@ import LinkableHtmlBlock from 'src/components/blocks/Html/LinkableHtmlBlock';
 import { HtmlAttributes } from 'src/components/html-component-props';
 
 const StyledApiReferenceH5: FC<HtmlAttributes<'h5'>> = ({ children, ...attribs }) => (
-  <h5 {...attribs} className="ui-text-h5 font-sans my-16 font-bold leading-tight">
+  <h5 {...attribs} className="ui-text-h5 font-sans my-4 font-bold leading-tight">
     {children}
   </h5>
 );
 
-export const ApiReferenceH5 = LinkableHtmlBlock(StyledApiReferenceH5, 'mb-24');
+export const ApiReferenceH5 = LinkableHtmlBlock(StyledApiReferenceH5, 'mb-6');

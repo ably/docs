@@ -10,7 +10,7 @@ const StyledApiReferenceBlockquote = ({
   attribs: ComponentProps<'blockquote'>;
   children: ReactNode;
 }) => (
-  <blockquote {...{ ...attribs }} className="bg-extra-light-grey border border-mid-grey rounded-md p-16 mb-32">
+  <blockquote {...{ ...attribs }} className="bg-extra-light-grey border border-mid-grey rounded-md p-4 mb-8">
     {children}
   </blockquote>
 );

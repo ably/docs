@@ -9,7 +9,7 @@ const Paragraph = ({ data, attribs = {} }: HtmlComponentProps<'p'>) => {
   if (isTip) {
     return <Tip data={data} attribs={attribs} />;
   }
-  const paragraphClassName = 'ui-text-p2 text-neutral-1000 mb-24 leading-relaxed';
+  const paragraphClassName = 'ui-text-p2 text-neutral-1000 mb-6 leading-relaxed';
   const modifiedAttribs = { ...attribs, className: paragraphClassName };
   if (attribs?.className?.includes('definition')) {
     modifiedAttribs.className = `${attribs.className} font-mono font-semibold text-code leading-relaxed`;

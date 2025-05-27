@@ -31,7 +31,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
       nav={
         <TabMenu
           tabs={tabs}
-          tabClassName="ui-text-menu3 !px-16"
+          tabClassName="ui-text-menu3 !px-4"
           tabOnClick={(index) => {
             navigate(tabLinks[index] ?? '#');
           }}
@@ -49,15 +49,15 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
             <LeftSidebar inHeader key="nav-mobile-documentation-tab" />,
             <ExamplesList key="nav-mobile-examples-tab" />,
           ]}
-          rootClassName="h-full overflow-y-hidden min-h-[51px] flex flex-col"
-          contentClassName="h-full py-16 overflow-y-scroll"
-          tabClassName="ui-text-menu2 !px-16"
+          rootClassName="h-full overflow-y-hidden min-h-[3.1875rem] flex flex-col"
+          contentClassName="h-full py-4 overflow-y-scroll"
+          tabClassName="ui-text-menu2 !px-4"
           options={{ flexibleTabWidth: true }}
         />
       }
       searchButton={
         <button
-          className="cursor-pointer focus-base rounded px-0 pt-4 text-neutral-1300 dark:text-neutral-000"
+          className="cursor-pointer focus-base rounded px-0 pt-1 text-neutral-1300 dark:text-neutral-000"
           aria-label="Toggle search"
           onClick={() => {
             const searchContainer = document.querySelector('#inkeep-search > div');
@@ -83,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
           />
         ) : null
       }
-      headerCenterClassName="max-w-[280px]"
+      headerCenterClassName="max-w-[17.5rem]"
       headerLinks={[
         {
           href: '/docs/sdks',

@@ -29,7 +29,7 @@ const determineSandpackTemplate = (language: LanguageKey) => {
 
 const UserIndicator = ({ user }: { user: string }) => {
   return (
-    <div className="absolute top-8 right-8 ui-text-code uppercase bg-neutral-200 dark:bg-neutral-1100 text-neutral-800 dark:text-neutral-500 z-10 px-8 py-4 font-bold rounded select-none">
+    <div className="absolute top-2 right-2 ui-text-code uppercase bg-neutral-200 dark:bg-neutral-1100 text-neutral-800 dark:text-neutral-500 z-10 px-2 py-1 font-bold rounded select-none">
       {user}
     </div>
   );
@@ -109,9 +109,9 @@ const ExamplesRenderer = ({
               ? 'md:w-[calc(100vw-64px-350px)] lg:w-[calc(100vw-176px-350px)] xl:w-[calc(1440px-176px-350px)]'
               : 'lg:w-[calc(100vw-160px)] xl:w-[calc(1440px-160px)]',
           ),
-          'sp-file-explorer': cn('sm:!w-[172px] sm:min-w-[auto]', isVerticalLayout && 'sm:!h-[400px]'),
-          'sp-editor': cn(isVerticalLayout && 'sm:!h-[400px]'),
-          'sp-preview': cn('!h-[320px] w-full', isVerticalLayout && '!h-[350px] md:!h-full md:!w-[350px]'),
+          'sp-file-explorer': cn('sm:!w-[10.75rem] sm:min-w-[auto]', isVerticalLayout && 'sm:!h-[25rem]'),
+          'sp-editor': cn(isVerticalLayout && 'sm:!h-[25rem]'),
+          'sp-preview': cn('!h-80 w-full', isVerticalLayout && '!h-[21.875rem] md:!h-full md:!w-[21.875rem]'),
         },
         externalResources: [
           'https://cdn.tailwindcss.com',
@@ -127,8 +127,8 @@ const ExamplesRenderer = ({
       theme={githubLight}
       template={determineSandpackTemplate(activeLanguage as LanguageKey)}
     >
-      <div className="bg-neutral-100 dark:bg-neutral-1200 p-16 rounded-2xl flex flex-col gap-16">
-        <div className="flex gap-4">
+      <div className="bg-neutral-100 dark:bg-neutral-1200 p-4 rounded-2xl flex flex-col gap-4">
+        <div className="flex gap-1">
           {Object.keys(rewrittenFiles).map((languageKey) => (
             <SegmentedControl
               key={languageKey}
@@ -142,7 +142,7 @@ const ExamplesRenderer = ({
             </SegmentedControl>
           ))}
         </div>
-        <div className={cn('flex flex-col gap-16 max-w-[calc(100vw-64px)]', isVerticalLayout && 'md:flex-row')}>
+        <div className={cn('flex flex-col gap-4 max-w-[calc(100vw-64px)]', isVerticalLayout && 'md:flex-row')}>
           <CodeEditor
             theme="light"
             editor={{
@@ -150,7 +150,7 @@ const ExamplesRenderer = ({
               showLineNumbers: true,
             }}
           />
-          <div className={cn('flex gap-16 flex-col sm:flex-row', isVerticalLayout && 'md:flex-col')}>
+          <div className={cn('flex gap-4 flex-col sm:flex-row', isVerticalLayout && 'md:flex-col')}>
             <div className="relative flex-1">
               <SandpackPreview
                 className="rounded-lg overflow-hidden"
@@ -174,7 +174,7 @@ const ExamplesRenderer = ({
         </div>
         <div
           style={{ backgroundImage: `url(${dotGrid})` }}
-          className="absolute -z-10 top-[410px] left-0 w-full h-[360px] hidden sm:block"
+          className="absolute -z-10 top-[25.625rem] left-0 w-full h-[22.5rem] hidden sm:block"
         />
       </div>
       {children}

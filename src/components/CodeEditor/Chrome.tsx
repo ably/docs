@@ -15,12 +15,12 @@ const Chrome = ({ title, children, theme = 'dark' }: ComponentProps) => {
   return (
     <div className="antialiased">
       <div
-        className={cn('flex h-40 px-16 py-4 items-center flex-shrink-0 self-stretch rounded-t-lg border-b', {
+        className={cn('flex h-10 px-4 py-1 items-center flex-shrink-0 self-stretch rounded-t-lg border-b', {
           'bg-[#141924] border-[#2B303B]': theme === 'dark',
           'bg-neutral-000 border-neutral-100': theme === 'light',
         })}
       >
-        <div className="flex flex-none gap-x-4">
+        <div className="flex flex-none gap-x-1">
           <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none">
             <circle cx="5" cy="5" r="5" fill={theme === 'dark' ? '#39414E' : '#E5E5E5'} />
           </svg>
@@ -42,7 +42,7 @@ const Chrome = ({ title, children, theme = 'dark' }: ComponentProps) => {
       </div>
       {children}
       <div
-        className={cn('flex gap-x-4 h-40 px-16 py-12 items-center rounded-b-lg border-t', {
+        className={cn('flex gap-x-1 h-10 px-4 py-3 items-center rounded-b-lg border-t', {
           'bg-[#202531] border-[#292831]': theme === 'dark',
           'bg-neutral-000 border-neutral-100': theme === 'light',
         })}

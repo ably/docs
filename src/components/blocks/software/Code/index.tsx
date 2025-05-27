@@ -94,7 +94,7 @@ const Code = ({ data, attribs }: NestedHtmlComponentProps<'div'>) => {
 
     return (
       <>
-        <div {...attribs} className="overflow-auto relative p-16" data-testid="code-block">
+        <div {...attribs} className="overflow-auto relative p-4" data-testid="code-block">
           <UserContext.Consumer>
             {(value) => (
               <MultilineCodeContent

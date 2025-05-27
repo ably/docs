@@ -14,17 +14,17 @@ const ChatRestApi = () => {
   return (
     <>
       <Head title={meta_title} metaTitle={meta_title} canonical={canonical} description={meta_description} />
-      <div className="ml-8 mt-32 mb-24">
+      <div className="ml-2 mt-8 mb-6">
         <div className="text-gui-default hover:text-gui-hover focus:text-gui-focus focus:outline-gui-focus group ui-text-p2">
           <Link to="/docs/chat">
             <Icon
               name="icon-gui-arrow-long-right-micro"
               size="1rem"
-              additionalCSS="align-middle transform rotate-180 mr-4 h-16 w-16 ui-link"
+              additionalCSS="align-middle transform rotate-180 mr-1 h-4 w-4 ui-link"
             />
             Ably Chat
           </Link>
-          <span className="ui-text-p2 ml-4"> / {meta_title}</span>
+          <span className="ui-text-p2 ml-1"> / {meta_title}</span>
         </div>
       </div>
       <Loader specUrl={chatRest} />

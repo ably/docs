@@ -200,7 +200,7 @@ const RightSidebar = () => {
 
   return (
     <div
-      className={cn(sidebarAlignmentClasses, 'md:pb-[80px] right-32 md:right-0')}
+      className={cn(sidebarAlignmentClasses, 'md:pb-20 right-8 md:right-0')}
       style={{
         ...sidebarAlignmentStyles,
         height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, INKEEP_ASK_BUTTON_HEIGHT),
@@ -210,17 +210,17 @@ const RightSidebar = () => {
       <div className="hidden md:flex flex-col h-full">
         {headers.length > 0 ? (
           <>
-            <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
-            <div className="flex gap-16 overflow-auto shadow-[0.5px_0px_var(--color-neutral-000)_inset,1.5px_0px_var(--color-neutral-300)_inset] py-2 pl-16">
+            <p className="ui-text-overline2 text-neutral-700 mb-3">On this page</p>
+            <div className="flex gap-4 overflow-auto shadow-[0.5px_0px_var(--color-neutral-000)_inset,1.5px_0px_var(--color-neutral-300)_inset] py-0.5 pl-4">
               <div
-                className="h-[18px] -ml-16 w-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
+                className="h-[1.125rem] -ml-4 w-0.5 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
                 style={{
                   transform: `translateY(${highlightPosition.yOffset}px)`,
                   height: `${highlightPosition.height}px`,
                 }}
               ></div>
               {/* 18px derives from the 2px width of the grey tracker bar plus the 16px between it and the menu items */}
-              <div className="flex flex-col gap-8 w-[calc(100%-18px)] pr-16">
+              <div className="flex flex-col gap-2 w-[calc(100%-18px)] pr-4">
                 {headers.map((header, index) => (
                   <a
                     href={`#${header.id}`}
@@ -229,7 +229,7 @@ const RightSidebar = () => {
                     className={cn(
                       'ui-text-label4 font-medium text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth hover:text-neutral-1300 dark:hover:text-neutral-000',
                       { 'text-neutral-1300 dark:text-neutral-000': header.id === activeHeader?.id },
-                      { 'ml-8': header.type !== 'H2' },
+                      { 'ml-2': header.type !== 'H2' },
                     )}
                     onClick={() => handleHeaderClick(header.id)}
                   >
@@ -240,7 +240,7 @@ const RightSidebar = () => {
             </div>
           </>
         ) : null}
-        <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-24">
+        <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-6">
           {externalLinks(activePage, location).map(({ label, icon, link, type }, index) => (
             <a
               key={label}
@@ -252,11 +252,11 @@ const RightSidebar = () => {
             >
               <div
                 className={cn(
-                  'flex items-center p-16',
+                  'flex items-center p-4',
                   index === 0 && 'border-b border-neutral-300 dark:border-neutral-1000',
                 )}
               >
-                <div className="flex-1 flex items-center gap-12">
+                <div className="flex-1 flex items-center gap-3">
                   <Icon
                     size="20px"
                     name={icon}

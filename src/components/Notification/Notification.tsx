@@ -23,7 +23,7 @@ export const Notification = ({
   return isVisible ? (
     <div
       className={cn(
-        'py-6 px-12 w-full col-span-3 hidden md:flex text-white relative items-center justify-center rounded ui-text-label3',
+        'py-1.5 px-3 w-full col-span-3 hidden md:flex text-white relative items-center justify-center rounded ui-text-label3',
         {
           'bg-active-orange': variant === NotificationVariant.Warning,
         },
@@ -37,7 +37,7 @@ export const Notification = ({
           <span className="underline inline">{linkText}</span>
         </Link>
       </div>
-      <button type="button" className="text-black ml-12 flex items-center" onClick={handleDismiss} aria-label="Close">
+      <button type="button" className="text-black ml-3 flex items-center" onClick={handleDismiss} aria-label="Close">
         <Icon name="icon-gui-x-mark-outline" size="16px" />
       </button>
     </div>

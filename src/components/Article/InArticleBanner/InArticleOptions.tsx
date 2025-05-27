@@ -23,7 +23,7 @@ export const InArticleOptions = ({
   secondaryOptionDestination: string;
   secondaryTracker: () => void;
 }) => (
-  <div className="flex flex-row mt-16 gap-16">
+  <div className="flex flex-row mt-4 gap-4">
     <a
       onClick={linkClickWithTracker(primaryTracker, primaryOptionDestination)}
       href={primaryOptionDestination}

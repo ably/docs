@@ -51,13 +51,13 @@ const socialLinks: { key: string; colorIcon: IconName; monoIcon: IconName; link:
 ];
 
 const Footer: React.FC = () => (
-  <footer className="flex flex-col my-40">
-    <div className="border border-x-0 border-y-neutral-300 dark:border-y-neutral-1000 w-full py-24 flex lg:items-center flex-col lg:flex-row gap-24 px-24 lg:px-0">
-      <div className="flex gap-24 items-center flex-1">
-        <a href="/" className="bg-neutral-100 dark:bg-neutral-1200 h-40 w-40 p-8 rounded-full">
+  <footer className="flex flex-col my-10">
+    <div className="border border-x-0 border-y-neutral-300 dark:border-y-neutral-1000 w-full py-6 flex lg:items-center flex-col lg:flex-row gap-6 px-6 lg:px-0">
+      <div className="flex gap-6 items-center flex-1">
+        <a href="/" className="bg-neutral-100 dark:bg-neutral-1200 h-10 w-10 p-2 rounded-full">
           <Icon name="icon-tech-ably" size="24px" />
         </a>
-        <div className="flex gap-20 items-center">
+        <div className="flex gap-5 items-center">
           {socialLinks.map((link) => (
             <a
               key={link.key}
@@ -65,7 +65,7 @@ const Footer: React.FC = () => (
               target="_blank"
               rel="noreferrer noopener"
               aria-label={`Visit Ably on ${link.key}`}
-              className="w-20 h-20 group/social-icon"
+              className="w-5 h-5 group/social-icon"
             >
               <Icon
                 name={link.monoIcon}
@@ -81,9 +81,9 @@ const Footer: React.FC = () => (
         <Status statusUrl={StatusUrl} showDescription />
       </div>
     </div>
-    <div className="flex justify-between w-full flex-col lg:flex-row px-24 lg:px-0 mt-24 gap-24">
+    <div className="flex justify-between w-full flex-col lg:flex-row px-6 lg:px-0 mt-6 gap-6">
       {[leftFooterLinks, rightFooterLinks].map((links, index) => (
-        <div key={`link-set-${index}`} className="flex gap-20">
+        <div key={`link-set-${index}`} className="flex gap-5">
           {links.map((link) => (
             <a
               key={link.label}

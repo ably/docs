@@ -111,12 +111,12 @@ const ExamplesFilter = ({
 
   return (
     <>
-      <div className="h-[34px] sm:h-[30px] w-20 absolute left-8 top-4 flex items-center justify-center select-none cursor-default">
+      <div className="h-[2.125rem] sm:h-[1.875rem] w-5 absolute left-2 top-1 flex items-center justify-center select-none cursor-default">
         <Icon name={'icon-gui-magnifying-glass-outline'} size="1rem" />
       </div>
       <input
         type="search"
-        className="ui-input pl-36 w-full h-40 sm:h-34 ui-text-p3"
+        className="ui-input pl-9 w-full h-10 sm:h-[2.125rem] ui-text-p3"
         placeholder="Find an example"
         autoComplete="off"
         aria-label="Search examples"
@@ -124,7 +124,7 @@ const ExamplesFilter = ({
         onChange={(e) => handleSearch(e)}
       />
       <Button
-        className="flex sm:hidden mt-16 w-full"
+        className="flex sm:hidden mt-4 w-full"
         variant="secondary"
         leftIcon="icon-gui-adjustments-horizontal-outline"
         onClick={() => setExpandFilterMenu(true)}
@@ -140,22 +140,22 @@ const ExamplesFilter = ({
       <div
         ref={filterMenuRef}
         className={cn(
-          'fixed bottom-0 bg-white dark:bg-neutral-1300 z-30 w-full left-0 gap-20 mt-20 translate-y-full sm:static sm:translate-y-0 sm:flex sm:flex-col sm:bg-transparent sm:z-0 transition-[transform,colors] sm:transition-colors rounded-t-2xl sm:rounded-none max-h-[calc(100%-64px)] overflow-y-scroll',
+          'fixed bottom-0 bg-white dark:bg-neutral-1300 z-30 w-full left-0 gap-5 mt-5 translate-y-full sm:static sm:translate-y-0 sm:flex sm:flex-col sm:bg-transparent sm:z-0 transition-[transform,colors] sm:transition-colors rounded-t-2xl sm:rounded-none max-h-[calc(100%-64px)] overflow-y-scroll',
           {
             'translate-y-0': expandFilterMenu,
           },
         )}
       >
-        <div className="flex justify-between items-center sm:hidden h-64 px-16 py-8 bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-t-2xl sm:rounded-none">
+        <div className="flex justify-between items-center sm:hidden h-16 px-4 py-2 bg-neutral-000 dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-t-2xl sm:rounded-none">
           <p className="ui-text-p1 font-bold text-neutral-1300 dark:text-neutral-000">Filters</p>
           <button onClick={closeFilterMenu} aria-label="Close filter menu">
             <Icon name="icon-gui-x-mark-outline" size="24px" />
           </button>
         </div>
         {filters.map(({ key, selected, handleSelect, data }) => (
-          <div key={key} className="p-16 pt-24">
+          <div key={key} className="p-4 pt-6">
             <p className="ui-text-overline2 font-medium text-neutral-700">{key.replace(/-/g, ' ').toUpperCase()}</p>
-            <div className="mt-8 flex ui-text-p4 flex-col gap-8">
+            <div className="mt-2 flex ui-text-p4 flex-col gap-2">
               <ExamplesCheckbox
                 label="All"
                 name={`${key}-all`}
@@ -177,7 +177,7 @@ const ExamplesFilter = ({
             </div>
           </div>
         ))}
-        <div className="sm:hidden p-16 flex gap-12">
+        <div className="sm:hidden p-4 flex gap-3">
           <Button
             className="w-full flex-1"
             variant="primary"

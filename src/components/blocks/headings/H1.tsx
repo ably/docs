@@ -8,6 +8,6 @@ const AblyH1: FC<HtmlAttributes<'h1'>> = ({ children, ...attribs }) => (
   </h1>
 );
 
-const H1 = LinkableHtmlBlock(AblyH1, 'mb-40');
+const H1 = LinkableHtmlBlock(AblyH1, 'mb-10');
 
 export default H1;
