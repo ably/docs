@@ -34,7 +34,7 @@ export function createClientBadgeWithCount(clientId: string, count: number, colo
 
 export function createClientBadges(clients: string[], color: string) {
   const badges = document.createElement('div');
-  badges.className = `mt-2 flex flex-wrap gap-1`;
+  badges.className = 'flex flex-wrap gap-1';
   for (const id of clients) {
     const badge = createClientBadge(id, color);
     badges.appendChild(badge);
@@ -44,7 +44,7 @@ export function createClientBadges(clients: string[], color: string) {
 
 export function createClientBadgesWithCounts(clientIds: Record<string, number>, color: string) {
   const container = document.createElement('div');
-  container.className = 'flex flex-wrap gap-2 mt-2';
+  container.className = 'flex flex-wrap gap-2';
 
   for (const [clientId, count] of Object.entries(clientIds)) {
     const badge = createClientBadgeWithCount(clientId, count, color);
