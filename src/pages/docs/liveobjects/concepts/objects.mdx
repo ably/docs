@@ -1,0 +1,260 @@
+---
+title: Objects
+meta_description: "Learn how data is represented as objects in Ably LiveObjects"
+---
+
+<Aside data-type='experimental'>
+LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.
+
+**Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+</Aside>
+
+LiveObjects enables you to store shared data as "objects" on a channel, allowing your application data to be synchronized across multiple users and devices in realtime. This document explains the key concepts you need to know when working with objects.
+
+## Object Types <a id="object-types"/>
+
+LiveObjects provides specialized object types to model your application state. These object types are designed to be conflict-free and eventually consistent, meaning that all operations on them are commutative and converge to the same state across all clients.
+
+### LiveMap Object <a id="livemap"/>
+
+[LiveMap](/docs/liveobjects/map) is a key/value data structure similar to a dictionary or JavaScript [Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map):
+
+* Keys must be strings
+* Values can be primitive types or [references](#composability) to other objects
+* Supports `set` and `remove` operations
+* Concurrent updates to the same key are resolved using last-write-wins (LWW) semantics
+
+<Code>
+```javascript
+// Create a LiveMap
+const userSettings = await channel.objects.createMap();
+
+// Set primitive values
+await userSettings.set('theme', 'dark');
+await userSettings.set('notifications', true);
+```
+</Code>
+
+#### Primitive Types <a id="primitive-types"/>
+
+[LiveMap](/docs/liveobjects/map) supports the following primitive types as values:
+
+* `string`
+* `number`
+* `boolean`
+* `bytes`
+
+<Aside data-type='note'>
+`number` is a double-precision floating-point number, which is the same as JavaScript's [`number`](https://developer.mozilla.org/en-US/docs/Glossary/Number) type.
+</Aside>
+
+### LiveCounter Object <a id="livecounter"/>
+
+[LiveCounter](/docs/liveobjects/counter) is a numeric counter type:
+
+* The value is a double-precision floating-point number
+* Supports `increment` and `decrement` operations
+
+<Code>
+```javascript
+// Create a LiveCounter
+const visitsCounter = await channel.objects.createCounter();
+
+// Increment the counter
+await visitsCounter.increment(1);
+```
+</Code>
+
+### Root Object <a id="root-object"/>
+
+The root object is a special `LiveMap` instance which:
+
+* Implicitly exists on a channel and does not need to be created explicitly
+* Has the special [objectId](#object-ids) of `root`
+* Cannot be deleted
+* Serves as the [entry point](#reachability) for accessing all other objects on a channel
+
+Access the root object using the `getRoot()` function:
+
+<Code>
+```javascript
+// Get the Root Object
+const root = await channel.objects.getRoot();
+
+// Use it like any other LiveMap
+await root.set('app-version', '1.0.0');
+```
+</Code>
+
+## Reachability <a id="reachability"/>
+
+All objects must be reachable from the root object (directly or indirectly). Objects that cannot be reached from the root object will eventually [be deleted](/docs/liveobjects/lifecycle#objects-deleted).
+
+When an object has been deleted, it is no longer usable and calling any methods on the object will fail.
+
+In the example below, the only reference to the `counterOld` object is replaced on the `root`. This makes `counterOld` unreachable and it will eventually be deleted.
+
+<Code>
+```javascript
+// Create a counter and reference it from the root
+const counterOld = await channel.objects.createCounter();
+await root.set('myCounter', counterOld);
+
+// counterOld will eventually be deleted
+counterOld.on('deleted', () => {
+  console.log('counterOld has been deleted and can no longer be used');
+});
+
+// Create a new counter and replace the old one referenced from the root
+const counterNew = await channel.objects.createCounter();
+await root.set('myCounter', counterNew);
+```
+</Code>
+
+<Aside data-type='note'>
+When an object becomes unreachable or a map entry is removed, it becomes a [tombstone](#tombstones).
+</Aside>
+
+## Composability <a id="composability"/>
+
+LiveObjects enables you to build complex, hierarchical data structures through composability.
+
+Specifically, a [LiveMap](/docs/liveobjects/map) can store references to other `LiveMap` or `LiveCounter` object instances as values. This allows you to create nested hierarchies of data.
+
+<Code>
+```javascript
+// Create LiveObjects
+const profileMap = await channel.objects.createMap();
+const preferencesMap = await channel.objects.createMap();
+const activityCounter = await channel.objects.createCounter();
+
+// Build a composite structure
+await preferencesMap.set('theme', 'dark');
+await profileMap.set('preferences', preferencesMap);
+await profileMap.set('activity', activityCounter);
+await root.set('profile', profileMap);
+
+// Resulting structure:
+// root (LiveMap)
+// └── profile (LiveMap)
+//     ├── preferences (LiveMap)
+//     │   └── theme: "dark" (string)
+//     └── activity (LiveCounter)
+```
+</Code>
+
+<Aside data-type='note'>
+Internally, a `LiveMap` instance only stores a _reference_ to another object (by its ID), rather than the value of the nested object itself. When using a client SDK, object references are automatically resolved when using the `get()` [method](/docs/liveobjects/map#get).
+</Aside>
+
+It is possible for the same object instance to be accessed from multiple places in your object tree:
+
+<Code>
+```javascript
+// Create a counter
+const counter = await channel.objects.createCounter();
+
+// Create two different maps
+const mapA = await channel.objects.createMap();
+const mapB = await channel.objects.createMap();
+await root.set('a', mapA);
+await root.set('b', mapB);
+
+// Reference the same counter from both maps
+await mapA.set('count', counter);
+await mapB.set('count', counter);
+
+// The counter referenced from each location shows the same
+// value, since they refer to the same underlying counter
+mapA.get('count').subscribe(() => {
+  console.log(mapA.get('count').value()); // 1
+});
+mapB.get('count').subscribe(() => {
+  console.log(mapB.get('count').value()); // 1
+});
+
+// Increment the counter
+await counter.increment(1);
+```
+</Code>
+
+It is also possible that object references form a cycle:
+
+<Code>
+```javascript
+// Create two different maps
+const mapA = await channel.objects.createMap();
+const mapB = await channel.objects.createMap();
+
+// Set up a circular reference
+await mapA.set('ref', mapB);
+await mapB.set('ref', mapA);
+
+// Add one map to root (both are now reachable)
+await root.set('a', mapA);
+
+// We can traverse the cycle
+root.get('a') // mapA
+  .get('ref')  // mapB
+  .get('ref'); // mapA
+```
+</Code>
+
+## Metadata <a id="metadata"/>
+
+Objects include metadata that helps with synchronization, conflict resolution and managing the object lifecycle.
+
+<Aside data-type='note'>
+When using a client library, metadata is handled internally. However, this information can be helpful when working directly with the [REST API](/docs/liveobjects/rest-api-usage).
+</Aside>
+
+### Object IDs <a id="object-ids"/>
+
+Every object has a unique identifier that distinguishes it from all other objects.
+
+Object IDs follow a specific format:
+
+<Code fixed="true">
+```javascript
+type:hash@timestamp
+```
+</Code>
+
+For example:
+
+<Code fixed="true">
+```javascript
+counter:J7x6mAF8X5Ha60VBZb6GtXSgnKJQagNLgadUlgICjkk@1734628392000
+```
+</Code>
+
+This format has been specifically designed to ensure uniqueness in a globally distributed system and includes:
+
+| Part | Description |
+| ---- | ----------- |
+| type | The object type (either `map` or `counter`). |
+| hash | A base64 string encoded hash derived from the initial value of the object and a random nonce. |
+| timestamp | A Unix millisecond timestamp denoting the creation time of the object. |
+
+<Aside data-type='note'>
+The client library automatically manages object IDs and allows you to work with object references directly. However, you may specify object IDs explicitly when using the [REST API](/docs/liveobjects/rest-api-usage).
+</Aside>
+
+### Tombstones <a id="tombstones"/>
+
+Tombstones are markers indicating an object or map entry has been deleted.
+
+* A tombstone is created for an object when it becomes [unreachable](/docs/liveobjects/concepts/objects#reachability) from the root object.
+* A tombstone is created for a map entry when it is [removed](/docs/liveobjects/map#remove)
+
+Tombstones protect against lagging clients from re-introducing a deleted value, ensuring all clients eventually converge on the same state. They are eventually garbage collected after a safe period of time.
+
+### Timeserials <a id="timeserials"/>
+
+When an operation message is published it is assigned a unique logical timestamp called a "timeserial".
+
+This timeserial is stored on map entries in order to implement last-write-wins conflict resolution semantics.
+
+Additionally, all objects store the timeserial of the last operation that was applied to the object. Since Ably operates fully independent data centers, these timeserials are stored on a per-site basis.
+
+Timeserial metadata is used for internal purposes and is not directly exposed in client libraries. However, it can be viewed using the [REST API](/docs/liveobjects/rest-api-usage).
