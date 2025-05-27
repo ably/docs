@@ -4,13 +4,13 @@ export const DEFAULT_EXAMPLE_LANGUAGES = ['javascript', 'react'];
 
 export const examples: Example[] = [
   {
-    id: 'chat-online-status',
-    name: 'Online Status',
+    id: 'chat-presence',
+    name: 'Chat Presence',
     description: 'Show online/offline status of users in a chat application.',
     products: ['chat'],
     layout: 'double-horizontal',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
-    metaTitle: 'Build online status with Ably’s Chat SDK',
+    metaTitle: 'Build use presence and online status with Ably’s Chat SDK',
     metaDescription: `Learn how to build realtime chat features with user presence and online status using Ably’s Chat SDK. Reliable, scalable, and easy to implement.`,
   },
   {

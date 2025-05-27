@@ -1,8 +1,8 @@
-# Online status for chat applications
+# Presence for chat applications
 
-Online statuses enable users to view who else is online and ready to chat.
+Presence powers features including online statuses, which enable users to view who else is online and ready to chat.
 
-Use online status to display which users are currently online in a chat room. Users can also manually update their status, such as to set themselves as 'Away'.
+Use presence to display which users are currently online in a chat room. Users can also manually update their status, such as to set themselves as 'Away'.
 
 Online statuses enable users to quickly understand the availability of others to communicate more effectively. For example, in a team chat room, users can quickly see who is available to collaborate with, and who is currently busy, in a meeting, or away from their desks.
 
@@ -18,7 +18,7 @@ Use the following components to add an online status implementation into a chat 
 - [`usePresence()`](/docs/chat/rooms/presence?lang=react#set) hook: a hook to manage the status updates made by users within a chat room.
 - [`usePresenceListener()`](/docs/chat/rooms/presence?lang=react#subscribe) hook: a hook to manage the status updates made by users within a chat room.
 
-Find out more about [online status](/docs/chat/rooms/presence?lang=react).
+Find out more about [presence](/docs/chat/rooms/presence?lang=react).
 
 ## Getting started
 
@@ -51,7 +51,7 @@ Find out more about [online status](/docs/chat/rooms/presence?lang=react).
 6. Run the server:
 
   ```sh
-  yarn run chat-online-status-react
+  yarn run chat-presence-react
   ```
 
 7. Try it out by opening two tabs to [http://localhost:3000/](http://localhost:3000/) with your browser to see the result.
