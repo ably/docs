@@ -24,11 +24,6 @@ export function createAnnotationSummaryElement(message: MessageCreate) {
   annotationSummary.id = `summary-container-${message.serial}`;
   annotationSummary.setAttribute('data-serial', message.serial);
 
-  const header = document.createElement('div');
-  header.className = 'mb-3';
-  header.innerHTML = `<h3 class="text-sm font-medium text-gray-900">Annotation Summary</h3>`;
-  annotationSummary.appendChild(header);
-
   const sectionsContainer = document.createElement('div');
   sectionsContainer.className = 'space-y-2';
   sectionsContainer.id = `sections-${message.serial}`;

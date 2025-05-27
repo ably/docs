@@ -2,8 +2,9 @@ import './styles.css';
 import * as Ably from 'ably';
 import { getChannel } from './ably';
 import { MessageSummary, MessageCreate } from './types';
-import { addMessage } from './components/message';
+import { createMessageElement } from './components/message';
 import { updateAnnotationSummary } from './components/summary';
+import { addAnnotation } from './components/annotations';
 
 async function main() {
   // Publish regular messages that can be annotated.
@@ -25,8 +26,14 @@ async function main() {
     if (message.action === 'message.summary') {
       updateAnnotationSummary(message as MessageSummary);
     } else if (message.action === 'message.create') {
-      addMessage(message as MessageCreate);
+      const messageElement = createMessageElement(message as MessageCreate);
+      document.getElementById('messages')?.appendChild(messageElement);
     }
+  });
+
+  // Subscribe to individual annotations and display them in the raw annotations view
+  getChannel().annotations.subscribe((annotation: Ably.Annotation) => {
+    addAnnotation(annotation);
   });
 }
 

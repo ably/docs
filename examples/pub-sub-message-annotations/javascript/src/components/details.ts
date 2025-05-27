@@ -1,10 +1,10 @@
-// Expandable details panel for messages that supports publishing
-// annotations and viewing annotation summaries.
+// Details panel with publishing controls and tabbed annotations view
 
 import { MessageCreate } from '../types';
 import { annotationNamespace } from '../config';
 import { publishAnnotation } from '../ably';
 import { createAnnotationSummaryElement } from './summary';
+import { createAnnotationsListElement } from './annotations';
 
 export function createPublishAnnotationElement(message: MessageCreate) {
   const publisher = document.createElement('div');
@@ -33,6 +33,7 @@ export function createPublishAnnotationElement(message: MessageCreate) {
     const annotationType = selectInput.options[selectInput.selectedIndex].value;
     const nameInput = publisher.querySelector('input') as HTMLInputElement;
     const name = nameInput.value.trim();
+
     if (name) {
       publishAnnotation(message, {
         type: `${annotationNamespace}:${annotationType}`,
@@ -47,11 +48,69 @@ export function createPublishAnnotationElement(message: MessageCreate) {
 
 export function createMessageDetailsElement(message: MessageCreate) {
   const messageDetails = document.createElement('div');
-  messageDetails.className = `grid grid-cols-1 gap-4`;
+  messageDetails.className = 'grid grid-cols-1 gap-4';
+
   const publishAnnotation = createPublishAnnotationElement(message);
-  const annotationSummary = createAnnotationSummaryElement(message);
   messageDetails.appendChild(publishAnnotation);
-  messageDetails.appendChild(annotationSummary);
+
+  const tabContainer = document.createElement('div');
+  tabContainer.className = 'bg-white shadow-sm rounded-lg mb-4 overflow-hidden';
+
+  const tabList = document.createElement('ul');
+  tabList.className = 'uk-tab';
+  tabList.setAttribute('data-uk-tab', '');
+
+  const summaryTabItem = document.createElement('li');
+  summaryTabItem.className = 'uk-active';
+  const summaryLink = document.createElement('a');
+  summaryLink.href = '#';
+  summaryLink.textContent = 'Summary';
+  summaryTabItem.appendChild(summaryLink);
+
+  const rawTabItem = document.createElement('li');
+  const rawLink = document.createElement('a');
+  rawLink.href = '#';
+  rawLink.textContent = 'Raw Annotations';
+  rawTabItem.appendChild(rawLink);
+
+  tabList.appendChild(summaryTabItem);
+  tabList.appendChild(rawTabItem);
+
+  const tabContent = document.createElement('div');
+  tabContent.className = 'uk-switcher';
+
+  const summaryPanel = document.createElement('div');
+  summaryPanel.className = 'uk-active p-4';
+  summaryPanel.appendChild(createAnnotationSummaryElement(message));
+
+  const rawPanel = document.createElement('div');
+  rawPanel.className = 'p-4';
+  rawPanel.appendChild(createAnnotationsListElement(message.serial));
+
+  tabContent.appendChild(summaryPanel);
+  tabContent.appendChild(rawPanel);
+
+  tabContainer.appendChild(tabList);
+  tabContainer.appendChild(tabContent);
+
+  summaryLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    summaryTabItem.className = 'uk-active';
+    rawTabItem.className = '';
+    summaryPanel.className = 'uk-active p-4';
+    rawPanel.className = 'p-4';
+  });
+
+  rawLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    rawTabItem.className = 'uk-active';
+    summaryTabItem.className = '';
+    rawPanel.className = 'uk-active p-4';
+    summaryPanel.className = 'p-4';
+  });
+
+  messageDetails.appendChild(tabContainer);
+
   return messageDetails;
 }
 
