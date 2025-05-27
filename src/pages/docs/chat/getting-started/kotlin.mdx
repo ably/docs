@@ -69,27 +69,38 @@ implementation("com.ably.chat:chat-extensions-compose:<latest-version>")
 
 ## Step 1: Setting up Ably <a id="step-1"/>
 
-Replace the contents of your `MainActivity.kt` file with the following code to set up the Ably client:
+Replace the contents of your `MainActivity.kt` file with the following code to set up the Ably client.
+Replace `{{API_KEY}}` with your Ably API key from the dashboard.
+Note that this is for example purposes only. In production, you should use token authentication to avoid exposing your API keys publicly:
 
 <Code>
 ```kotlin
+package com.example.chatexample
+
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Colum
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import java.util.UUID
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
+import androidx.compose.material.icons.*
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.*
 import com.example.chatexample.ui.theme.ChatExampleTheme
 import com.ably.chat.*
+import com.ably.chat.extensions.compose.*
 import io.ably.lib.realtime.AblyRealtime
 import io.ably.lib.types.ClientOptions
+import kotlinx.coroutines.launch
+import java.text.*
+import java.util.*
 
 class MainActivity : ComponentActivity() {
     private lateinit var realtimeClient: AblyRealtime
@@ -100,7 +111,7 @@ class MainActivity : ComponentActivity() {
 
         realtimeClient = AblyRealtime(
             ClientOptions().apply {
-                key = "{{API_KEY}}"
+                key = "{{API_KEY}}" // In production, you should use token authentication to avoid exposing your API keys publicly
                 clientId = "my-first-client"
             },
         )
@@ -122,6 +133,7 @@ fun App(chatClient: ChatClient) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .padding(paddingValues)
         ) {
             Text("Hello Chat App")
@@ -144,7 +156,7 @@ In your `MainActivity.kt` file, add the following `ConnectionStatusUi` composabl
 fun ConnectionStatusUi(connection: Connection) {
     val connectionStatus = connection.collectAsStatus()
     Text(
-        text = "Connection Status: ${connectionStatus}",
+        text = "Connection Status: $connectionStatus",
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(start = 8.dp)
     )
@@ -162,6 +174,7 @@ fun App(chatClient: ChatClient) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .padding(paddingValues)
         ) {
             ConnectionStatusUi(connection = chatClient.connection)
@@ -199,7 +212,6 @@ Update your main app component to get and attach to the room and nest the `RoomS
 ```kotlin
 @Composable
 fun App(chatClient: ChatClient) {
-    val connectionStatus = chatClient.connection.collectAsStatus()
     val roomName = "my-first-room"
     var room by remember { mutableStateOf<Room?>(null) }
     LaunchedEffect(roomName) {
@@ -211,6 +223,7 @@ fun App(chatClient: ChatClient) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .padding(paddingValues)
         ) {
             ConnectionStatusUi(connection = chatClient.connection)
@@ -246,6 +259,7 @@ fun ChatBox(room: Room?) {
         val subscription = room?.messages?.subscribe { event ->
             when (event.type) {
                 MessageEventType.Created -> messages.add(0, event.message)
+                else -> Unit
             }
         }
 
@@ -371,6 +385,7 @@ fun App(chatClient: ChatClient) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .padding(paddingValues)
         ) {
             ConnectionStatusUi(connection = chatClient.connection)
@@ -403,7 +418,7 @@ You'll see the message in your app's chat box UI. If you have sent a message via
 
 If your client makes a typo, or needs to update their original message then they can edit it. To do this, you can extend the functionality of the `ChatBox` component to allow updating of messages.
 
-Add edited state variable that will contain edited now message or null if message is not edited:
+1. Add the edited state variable:
 
 <Code>
 ```kotlin
@@ -411,166 +426,7 @@ var edited: Message? by remember { mutableStateOf(null) }
 ```
 </Code>
 
-Update the send button code:
-
-<Code>
-```kotlin
-Button(
-    onClick = {
-        sending = true
-        if (textInput.text.isNotBlank()) {
-            scope.launch {
-                 try {
-                    edited?.let {
-                        room?.messages?.update(it.copy(text = textInput.text))
-                    } ?: room?.messages?.send(textInput.text)
-                } catch (e: Exception) {
-                    Log.e("APP", e.message, e)
-                }
-                edited = null
-                textInput = TextFieldValue("")
-                sending = false
-            }
-        }
-    },
-    enabled = textInput.text.isNotBlank() && !sending
-) {
-    Icon(
-        imageVector = Icons.AutoMirrored.Filled.Send,
-        contentDescription = if (edited != null) "Edit" else "Send"
-    )
-}
-```
-</Code>
-
-Update the rendering of messages in the chat box to enable the update action in the UI:
-
-<Code>
-```kotlin
-Column(
-    modifier = Modifier
-        .fillMaxWidth()
-        .padding(8.dp)
-) {
-    Card(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth(),
-    ) {
-        if (messages.isNullOrEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "No messages yet",
-                    color = Color.Gray
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                state = messagesState.listState
-            ) {
-                items(messages.size, key = { messages[it].serial }) {
-                    val message = messages[it]
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "${message.clientId}: ${message.text}",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            Text(
-                                text = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                                    .format(Date(message.timestamp)),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.Gray,
-                                modifier = Modifier.align(Alignment.End)
-                            )
-                            HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
-                        }
-                        Box {
-                            IconButton(onClick = { expanded = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More Options")
-                            }
-
-                            DropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false },
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Edit") },
-                                    onClick = {
-                                        expanded = false
-                                        edited = message
-                                        textInput = TextFieldValue(message.text)
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    // Message input
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        OutlinedTextField(
-            value = textInput,
-            onValueChange = { textInput = it },
-            modifier = Modifier.weight(1f),
-            placeholder = { Text("Type a message") },
-            maxLines = 3
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Button(
-            onClick = {
-                sending = true
-                if (textInput.text.isNotBlank()) {
-                    scope.launch {
-                        try {
-                            edited?.let {
-                                room?.messages?.update(it.copy(text = textInput.text))
-                            } ?: room?.messages?.send(textInput.text)
-                        } catch (e: Exception) {
-                            Log.e("APP", e.message, e)
-                        }
-                        textInput = TextFieldValue("")
-                        sending = false
-                    }
-                }
-            },
-            enabled = textInput.text.isNotBlank() && !sending
-        ) {
-            Icon(
-                imageVector = if (edited != null) Icons.Default.Edit
-                         else Icons.AutoMirrored.Filled.Send,
-                contentDescription = if (edited != null) "Edit" else "Send"
-            )
-        }
-    }
-}
-```
-</Code>
-
-You must also update the listener provided to `DisposableEffect` to handle the `MessageEventType.Updated` event:
+2. Update the message subscription to handle edited messages:
 
 <Code>
 ```kotlin
@@ -592,7 +448,81 @@ DisposableEffect(room) {
 ```
 </Code>
 
-Implement a `replaceFirstWith` function:
+3. Add an edit button to each message:
+
+<Code>
+```kotlin
+Row(
+    modifier = Modifier.fillMaxWidth(),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .padding(vertical = 4.dp)
+    ) {
+        // Message content
+        Text(
+            text = "${message.clientId}: ${message.text}",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        // Timestamp
+        Text(
+            text = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                .format(Date(message.timestamp)),
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.Gray,
+            modifier = Modifier.align(Alignment.End)
+        )
+        HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
+    }
+    // Edit button
+    IconButton(onClick = {
+        edited = message
+        textInput = TextFieldValue(message.text)
+    }) {
+        Icon(Icons.Default.Edit, contentDescription = "Edit")
+    }
+}
+```
+</Code>
+
+4. Update the send button to handle both new messages and edits:
+
+<Code>
+```kotlin
+Button(
+    onClick = {
+        sending = true
+        if (textInput.text.isNotBlank()) {
+            scope.launch {
+                try {
+                    edited?.let {
+                        room?.messages?.update(it.copy(text = textInput.text))
+                    } ?: room?.messages?.send(textInput.text)
+                } catch (e: Exception) {
+                    Log.e("APP", e.message, e)
+                }
+                edited = null
+                textInput = TextFieldValue("")
+                sending = false
+            }
+        }
+    },
+    enabled = textInput.text.isNotBlank() && !sending
+) {
+    Icon(
+        imageVector = if (edited != null) Icons.Filled.Edit
+                     else Icons.AutoMirrored.Filled.Send,
+        contentDescription = if (edited != null) "Edit" else "Send"
+    )
+}
+```
+</Code>
+
+
+
+Add this utility function to help with message updates:
 
 <Code>
 ```kotlin
@@ -614,8 +544,9 @@ Extend the `ChatBox` component to include a method to retrieve the last 10 messa
 <Code>
 ```kotlin
 fun ChatBox(room: Room?) {
-  val componentScope = rememberCoroutineScope()
-  DisposableEffect(room) {
+    /* variables declaration */
+
+    DisposableEffect(room) {
       val subscription = room?.messages?.subscribe { event ->
           when (event.type) {
               MessageEventType.Created -> messages.add(0, event.message)
@@ -626,9 +557,9 @@ fun ChatBox(room: Room?) {
           }
       }
 
-      componentScope.launch {
-        val previousMessages = subscription?.getPreviousMessages(10) ?: emptyList()
-        messages += previousMessages
+      scope.launch {
+          val previousMessages = subscription?.getPreviousMessages(10)?.items ?: emptyList()
+          messages.addAll(previousMessages)
       }
 
       onDispose {
@@ -648,7 +579,7 @@ and lazily load previous messages as you scroll through the message list.
 <Code>
 ```kotlin
 @Composable
-fun ChatBox(room: Room?, onSendMessage: suspend (String) -> Unit) {
+fun ChatBox(room: Room?) {
     val scope = rememberCoroutineScope()
     var textInput by remember { mutableStateOf(TextFieldValue("")) }
     val messagesState = room?.collectAsPagingMessagesState()
@@ -681,7 +612,8 @@ fun ChatBox(room: Room?, onSendMessage: suspend (String) -> Unit) {
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(8.dp),
-                    state = messagesState.listState
+                    reverseLayout = true,
+                    state = messagesState.listState,
                 ) {
                     items(messages.size, key = { messages[it].serial }) {
                         val message = messages[it]
@@ -819,6 +751,7 @@ fun App(chatClient: ChatClient) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .padding(paddingValues)
         ) {
             ConnectionStatusUi(connection = chatClient.connection)
@@ -945,6 +878,7 @@ fun App(chatClient: ChatClient) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .imePadding()
                 .padding(paddingValues)
         ) {
             ConnectionStatusUi(connection = chatClient.connection)
