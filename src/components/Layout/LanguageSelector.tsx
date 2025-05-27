@@ -59,7 +59,11 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
         <Icon size="20px" name={`icon-tech-${lang?.alias ?? props.data.label}` as IconName} />
         {isOption ? lang?.label : null}
       </div>
-      <Badge color="neutral" size="xs" className={cn('my-px', { 'group-hover/lang-dropdown:bg-neutral-000': isOption })}>
+      <Badge
+        color="neutral"
+        size="xs"
+        className={cn('my-px', { 'group-hover/lang-dropdown:bg-neutral-000': isOption })}
+      >
         v{props.data.version.toFixed(1)}
       </Badge>
       {isOption ? (

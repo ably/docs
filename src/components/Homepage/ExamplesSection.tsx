@@ -27,7 +27,9 @@ export const ExamplesSection = ({ section, images }: { section: ExamplesSectionD
             </FeaturedLink>
           </div>
         </div>
-        <p className="text-neutral-800 dark:text-neutral-500 ui-text-p3 max-w-[18.75rem] mb-[1.875rem]">{section.content}</p>
+        <p className="text-neutral-800 dark:text-neutral-500 ui-text-p3 max-w-[18.75rem] mb-[1.875rem]">
+          {section.content}
+        </p>
         {imageUrl && (
           <div className="mt-6 float-right md:mt-0 md:absolute md:bottom-0 md:right-0 md:z-0 max-w-[29.375rem]">
             <Image image={imageUrl} />

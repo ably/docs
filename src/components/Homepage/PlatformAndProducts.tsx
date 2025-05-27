@@ -18,7 +18,11 @@ const PlatformFeatureCard = ({
     '',
   ];
   const zIndices = ['z-30', 'z-20', 'z-10'];
-  const initialTops = ['top-[0.9375rem] md:top-[3.125rem]', 'top-[1.875rem] md:top-[4.6875rem]', 'top-[2.8125rem] md:top-[6.25rem]'];
+  const initialTops = [
+    'top-[0.9375rem] md:top-[3.125rem]',
+    'top-[1.875rem] md:top-[4.6875rem]',
+    'top-[2.8125rem] md:top-[6.25rem]',
+  ];
 
   return (
     <div
