@@ -1,0 +1,208 @@
+---
+title: Infrastructure operations
+meta_description: "Understand how Ably manages its infrastructure operations to ensure continued reliability and availability of its platform."
+---
+
+Infrastructure operations cover the people, systems, and processes that pertain to operating a distributed system. They are an essential complement to the technical architecture of a distributed system; the operations and the architecture combine to achieve the desired properties of the system such as scalability and availability.
+
+## Why infrastructure operations matter
+
+In a distributed system like Ably, the technical architecture provides the foundation for reliability and scalability, but it's the operational practices that ensure these properties are maintained in production. Without effective infrastructure operations, even the most well-designed system would fail to deliver consistent performance and reliability.
+
+Infrastructure operations encompass how infrastructure is provisioned and managed, how software is deployed, how the system is monitored, and how incidents are handled. These operations ensure that the system can adapt to changing conditions, recover from failures, and continue to meet service level objectives.
+
+For Ably's realtime messaging platform, effective infrastructure operations are crucial because any disruption can immediately impact thousands of applications and millions of end users who depend on the service. By implementing robust operational practices, Ably can maintain high availability and performance while efficiently scaling to meet demand.
+
+## Ably platform infrastructure on AWS
+
+Ably's infrastructure is built entirely on AWS, leveraging a range of AWS services to create a resilient, scalable platform.
+
+### Multi-region deployment
+
+The Ably platform is realized as a cluster that comprises multiple geographic regions or sites, each deployed in a separate AWS region. This architecture provides geographic proximity to users, regional isolation for fault containment, disaster recovery capabilities, and independent regional scaling.
+
+Each site is deployed in an AWS region, operating as a semi-autonomous unit capable of handling client connections, processing messages, and managing channels. Within each site, various roles such as gossip, core, and frontend services are deployed. Each role is implemented as an Auto Scaling Group (ASG) that can independently scale according to demand.
+
+The Auto Scaling Groups are configured to scale according to load metrics, so each role in each site scales independently according to need. This fine-grained scaling ensures efficient resource utilization while maintaining sufficient capacity to handle traffic peaks.
+
+### Role-based architecture
+
+Within each site, the Ably platform is organized into distinct roles with different responsibilities and scaling characteristics.
+
+The gossip layer manages service discovery and cluster health monitoring. It provides a distributed registry of all services running in the cluster, enabling other components to locate the services they need to communicate with. The gossip protocol ensures that all nodes share an eventually-consistent view of the cluster's state.
+
+The core layer processes messages and maintains channel state. These components handle the actual message routing, presence management, and persistence operations that form the heart of Ably's messaging capabilities. Core nodes are stateful, requiring special handling during scaling and failure events.
+
+The frontend layer handles client connections and REST API requests. These nodes terminate WebSocket connections, process HTTP requests, and route messages between clients and the appropriate core nodes. Frontend nodes are stateless, which simplifies scaling and failover.
+
+Support services include various components for persistence, monitoring, and management functions. These components provide the auxiliary functions needed for the platform's operation but aren't directly in the message flow path.
+
+### Containerized services
+
+Services on each instance are configured, launched, and monitored by Ably's proprietary orchestration code that runs on each instance. All services run in containers, which provide isolation between services, enabling multiple components to run efficiently on the same host while preventing resource conflicts.
+
+The containerization approach offers several benefits for operations. Container-level resource controls prevent service resource over-consumption, protecting the stability of the overall system. Containers also simplify scaling operations, as new container instances can be started quickly to handle increased load.
+
+When an instance starts, it's configured with specific roles to run and associated container image versions. This configuration determines which services the instance will provide and how they will interact with the rest of the cluster.
+
+### Service discovery
+
+The services running on each instance advertise themselves to the common gossip-based discovery layer. When services start, they register their capabilities with the discovery system, making themselves available to other components that need to use them.
+
+The gossip protocol ensures all nodes share an eventually-consistent view of available services across the cluster. This distributed approach eliminates single points of failure in the service discovery process and provides resilience against network partitions and node failures.
+
+Other services can discover and communicate with appropriate instances based on their advertised capabilities and health status. If a service becomes unhealthy, it's automatically removed from the registry, ensuring clients are only directed to functioning services.
+
+This service discovery mechanism enables the platform to adapt quickly to infrastructure changes, including scaling events and instance failures, without manual intervention and is a key component of Ably's self-healing capabilities.
+
+### Inbound connectivity
+
+Inbound connectivity from internet-connected client devices to each site is handled through a multi-layered approach designed for reliability and performance.
+
+AWS CloudFront serves as the outermost layer, providing DDoS protection and global distribution through Amazon's extensive edge network. This ensures clients can connect to a nearby edge location, reducing latency.
+
+Behind CloudFront, a collection of Network Load Balancers (NLBs) distribute connections among frontend instances. NLBs operate at Layer 4 (transport layer) and can handle millions of connections with very low latency, making them ideal for WebSocket traffic.
+
+DNS-based routing with latency-based resolution directs clients to the nearest available region. This ensures optimal performance under normal conditions while maintaining the ability to route traffic away from problematic regions.
+
+If a region becomes unavailable, clients can connect to alternative regions through fallback mechanisms built into Ably's client libraries. This ensures service continuity even during regional outages.
+
+## Configuration management
+
+Ably employs a two-pronged approach to managing its infrastructure configuration, combining infrastructure as code for static resources with a dynamic service configuration system for runtime parameters.
+
+### Infrastructure as code
+
+Infrastructure as code (IAC) is used to manage resources provisioned for AWS and all other cloud services providers. This means that the entire layout of the infrastructure and much of its configuration is managed as code, providing numerous benefits for operational reliability.
+
+By treating infrastructure configuration as code, all changes go through the same review and testing processes as application code. This ensures that infrastructure modifications are deliberately considered, properly reviewed, and tested before deployment.
+
+All infrastructure changes are tracked in version control, providing a complete audit trail of what changed, when, why, and by whom. This visibility is invaluable for troubleshooting and compliance purposes. The code-based approach also enables automated provisioning, which reduces the potential for manual errors that can occur with console-based changes.
+
+This approach ensures infrastructure changes are deliberate, reviewable, and reversible. If a configuration change causes issues, it can be reverted quickly by deploying the previous version of the infrastructure code.
+
+### Service configuration system
+
+A dedicated service configuration system is used to define the configuration of all configurable parameters of the running system. This system complements the static infrastructure by handling dynamic, runtime parameters.
+
+A centralized service maintains all service configurations, ensuring that there is a single source of truth for how services should behave. New instances obtain configuration from this service at startup, guaranteeing consistent behavior across all instances of the same role.
+
+Configuration can be updated dynamically to change service behavior at runtime, allowing for adjustments without redeploying instances. This capability is crucial for tuning system parameters in response to changing conditions. All configuration changes are versioned to allow rollback if necessary, providing a safety net for configuration updates.
+
+The system supports different configurations for different environments, facilitating a consistent progression from development to staging to production. This ensures that configuration changes can be thoroughly tested before reaching production.
+
+## Deployment practices
+
+Ably's deployment practices are built around containerization and immutable infrastructure principles, which together provide reliability and consistency.
+
+Container images are created for each role and distributed via a private container registry. When code changes are made, they trigger automated builds of container images, each tagged with a unique version identifier.
+
+Instances in Ably's infrastructure are largely immutable - any new version of any Ably software is deployed by deploying new instances and retiring existing instances. This immutability has several advantages for security and operational stability.
+
+New instances are started with updated configurations, including new container image versions. As these new instances come online and start serving traffic, old instances are gradually terminated. This gradual replacement ensures a smooth transition without service disruption.
+
+The immutable approach provides clean deployment and rollback paths. If issues are detected with a new version, traffic can be routed back to instances running the previous version, providing a straightforward rollback mechanism. By avoiding in-place updates, Ably reduces complexity and prevents configuration drift, which can lead to unreproducible bugs and inconsistent behavior.
+
+## Monitoring systems
+
+Ably employs multi-layered monitoring to ensure visibility into all aspects of the platform's operation, from individual service health to global service availability.
+
+### Local health monitoring
+
+Responsiveness and other health indicators are checked by a locally-running "health server" for each service. This monitoring component runs on each instance and performs regular checks to verify service responsiveness, resource usage (memory, CPU, disk, network), and key functionality.
+
+When a service is determined to be unhealthy by this process, it is automatically restarted. This local monitoring provides immediate detection and remediation of issues, often resolving problems before they impact service availability or trigger external alerts.
+
+The health server acts as a first line of defense, handling routine service issues without requiring human intervention. This approach minimizes recovery time and reduces the operational burden on the on-call team.
+
+### Metrics collection
+
+Metrics are collected from the host instance and from each of the containers on every instance. These metrics provide comprehensive visibility into system performance and resource utilization.
+
+Host-level metrics include CPU, memory, disk, and network usage, giving insight into the overall health of the infrastructure. Container-level metrics track resource usage and performance for each service, enabling precise monitoring of individual components. Application-level metrics record operational data such as message rates, connection counts, error rates, and latency, providing direct visibility into key performance indicators.
+
+All these metrics are forwarded to a centralized metrics system where they are stored, processed, and visualized. This centralized approach enables correlation across different metrics and components, simplifying troubleshooting and providing a holistic view of system health.
+
+The metrics data provides both real-time visibility for immediate operational concerns and historical data for trend analysis, capacity planning, and performance optimization. By tracking changes over time, Ably can identify gradual degradations before they become critical issues.
+
+### Synthetic traffic generation
+
+The service is exercised by traffic generator ("QoS") services in each site. These synthetic users generate simulated traffic using a wide range of APIs and features, providing continuous verification that the system is functioning correctly from an end-user perspective.
+
+The success and latency of operations performed by these synthetic users are measured and recorded as metrics. These metrics feed into the same monitoring and alerting system used for real traffic, ensuring that issues detected by synthetic users trigger appropriate responses.
+
+End-to-end verification ensures complete user journeys are tested, not just individual API calls or functions. This approach can detect subtle integration issues that might not be apparent from component-level monitoring.
+
+By constantly exercising the system with synthetic traffic, Ably can detect potential issues proactively, often identifying problems before they impact real users. This proactive approach is particularly valuable for infrequently used features or complex workflows that might otherwise only be tested by real users.
+
+### External monitoring
+
+External endpoints are monitored by separate third-party monitoring services, providing an outside-in perspective on service availability and functionality. These external monitors access Ably's public endpoints from multiple geographic locations, simulating the experience of real users.
+
+Endpoints are checked for availability, response time, and correct functionality, ensuring that the service is working as expected from an external perspective. Critical parameters such as TLS certificate validity are monitored to prevent outages due to expired certificates or similar configuration issues.
+
+A key advantage of this external monitoring is that it has no dependency on any Ably-operated services. This independence ensures that monitoring continues to function even during severe internal infrastructure issues that might affect Ably's own monitoring systems.
+
+When the external monitoring detects issues, it generates alerts that page an engineer for intervention. This completely independent perspective provides an additional verification of service health and serves as a critical safety net.
+
+### Alerting systems
+
+The metrics collected from all these monitoring sources are continuously analyzed for signs of system health issues. Where metrics exceed configured thresholds, alerts are generated that notify the appropriate on-call engineers.
+
+Alerting thresholds are carefully calibrated to balance between catching real issues early and avoiding false alarms that could lead to alert fatigue. Many alerts use percentile-based thresholds rather than simple averages, ensuring that issues affecting a subset of users don't get lost in aggregate statistics.
+
+When alerts are triggered, they are processed through an alert management system that handles deduplication, grouping, and routing. This processing reduces noise by combining related alerts and ensures that notifications reach the right team based on the affected component.
+
+Critical alerts automatically page an on-call engineer, triggering immediate investigation regardless of time of day. Less urgent issues may be queued for normal business hours, allowing the team to focus emergency response on true service-impacting issues.
+
+Ably operates a public status page, enabling customers to subscribe directly to notifications relating to incidents or disruption.
+
+## Operational management
+
+Ably's operational management combines skilled personnel, well-defined processes, and continuous improvement to maintain service reliability.
+
+Ably has a permanent Software Reliability Engineering (SRE) team that manages the day-to-day operation of its services. This team is responsible for maintaining the health and performance of the platform, responding to incidents, and implementing operational improvements.
+
+The SRE team maintains a 24x7 on-call rotation, ensuring that skilled engineers are always available to respond to issues. In addition to the primary SRE rotation, other teams responsible for specific platform roles also operate on-call rotations, providing specialized expertise when needed. When alerts are triggered, they page the relevant on-call engineer based on the affected component or service.
+
+On-call engineers lead incident response and resolution, following established procedures to diagnose issues, implement mitigations, and coordinate broader responses when necessary. Beyond reactive incident response, the team continuously monitors system health and performance, identifying potential issues before they become critical.
+
+A key responsibility of the SRE team is to identify and implement improvements to operational practices. By analyzing past incidents and system behavior, they drive ongoing enhancements to monitoring, automation, and response procedures.
+
+### On-call processes
+
+Ably has implemented comprehensive on-call procedures designed to minimize both mean time to detection (MTTD) and mean time to resolution (MTTR) for service issues.
+
+Each alert has associated documentation explaining the issue, its severity, troubleshooting steps, and remediation actions. These playbooks provide on-call engineers with the information they need to respond effectively, even for unfamiliar components or rare failure modes.
+
+All pages are automated based on monitoring and alerting thresholds. Engineers aren't expected to watch dashboards, reducing the risk of human error or attention lapses in detecting issues. The automated paging system is regularly tested to ensure reliability, including routine test pages when engineers begin their on-call shift.
+
+For managing larger incidents, Ably maintains a defined incident management framework with specific roles and standardized procedures. This structure ensures clear communication, appropriate escalation, and effective coordination during complex or high-impact issues.
+
+These practices ensure that on-call engineers can respond efficiently to incidents with the information and support they need, reducing the stress of on-call duties while improving response effectiveness.
+
+## Fault tolerance and service continuity
+
+The Ably platform is designed to be fault tolerant across a wide range of potential failure conditions, from individual component failures to regional outages.
+
+Most faults are handled transparently with no disruption to service or only very minor and transient disruption. The system includes automated recovery mechanisms that can restore normal operation without human intervention in many failure scenarios.
+
+Some events require human intervention to diagnose and remediate, but the service nonetheless continues to be available in the meantime thanks to redundancy and failover capabilities. If an instance fails, its workload is automatically redistributed to other healthy instances. As demand increases or decreases, the platform scales seamlessly to maintain appropriate capacity.
+
+### Multi-region resilience
+
+A primary architectural feature that ensures service continuity is the fact that the service runs in multiple sites, and these sites are largely autonomous even though they communicate peer-to-peer. Each region operates independently but shares data with other regions, creating a resilient global fabric.
+
+Clients by default connect to the nearest site using latency-based DNS resolution, optimizing performance under normal conditions. If one region experiences issues, traffic can be routed to others with minimal disruption. Clients will connect to alternate (or "fallback") endpoints if there is a problem detected with the service in their primary region.
+
+In the vast majority of cases, disruption is triggered by a failure of some hardware or service in a single site, and the resulting impact on Ably services is also therefore confined to that site. Provided that the remaining sites are operating healthily, and clients are able to connect to those alternate sites, then clients do not experience any loss of service.
+
+### Regional disabling
+
+In cases where it is determined that the disruption in a site will not resolve quickly, Ably on-call engineers will elect to disable that site, so all traffic is routed to the remaining sites. This deliberate traffic shifting ensures that clients experience minimal disruption while the affected site is being repaired.
+
+Traffic redistribution is accomplished through DNS configuration changes and load balancer adjustments. These changes direct both new connections and reconnection attempts to the healthy regions. Clients experience only brief disconnection before reconnecting to an alternative region.
+
+The affected site is then reintroduced once whatever problem it had has been resolved. This reintroduction is typically done gradually, with monitoring to verify proper operation before full traffic restoration.
+
+This ability to selectively disable and re-enable entire regions provides powerful operational flexibility, allowing for both emergency response and planned maintenance with minimal service impact.
