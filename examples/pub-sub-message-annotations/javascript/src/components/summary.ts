@@ -20,16 +20,11 @@ function createEmptyAnnotationSummaryContentElement() {
 
 export function createAnnotationSummaryElement(message: MessageCreate) {
   const annotationSummary = document.createElement('div');
-  annotationSummary.className = 'bg-white shadow-sm rounded-lg p-4 mb-4';
-  annotationSummary.id = `summary-container-${message.serial}`;
+  annotationSummary.className = 'space-y-2 p-4';
+  annotationSummary.id = `sections-${message.serial}`;
   annotationSummary.setAttribute('data-serial', message.serial);
+  annotationSummary.appendChild(createEmptyAnnotationSummaryContentElement());
 
-  const sectionsContainer = document.createElement('div');
-  sectionsContainer.className = 'space-y-2';
-  sectionsContainer.id = `sections-${message.serial}`;
-  sectionsContainer.appendChild(createEmptyAnnotationSummaryContentElement());
-
-  annotationSummary.appendChild(sectionsContainer);
   return annotationSummary;
 }
 
@@ -84,7 +79,20 @@ function createSectionHeader(key: string, entry: Ably.SummaryEntry) {
 function createFlagCard(entry: Ably.SummaryClientIdList, color: string) {
   const content = document.createElement('div');
   content.className = `p-3 bg-white border-t border-${color}-200`;
-  content.appendChild(createClientBadges(entry.clientIds, color));
+
+  const fromContainer = document.createElement('div');
+  fromContainer.className = 'flex items-center';
+
+  const fromLabel = document.createElement('span');
+  fromLabel.className = 'text-xs text-gray-500 mr-2';
+  fromLabel.textContent = 'From:';
+
+  fromContainer.appendChild(fromLabel);
+
+  const badgesContainer = createClientBadges(entry.clientIds, color);
+  fromContainer.appendChild(badgesContainer);
+
+  content.appendChild(fromContainer);
   return content;
 }
 
@@ -92,18 +100,44 @@ function createDistinctUniqueCard(value: string, entry: Ably.SummaryClientIdList
   const card = document.createElement('div');
   card.className = `p-3 border-t border-${color}-200`;
 
-  const header = document.createElement('div');
-  header.className = 'flex justify-between items-center';
+  const valueSection = document.createElement('div');
+  valueSection.className = 'mb-2';
+
+  const valueHeaderRow = document.createElement('div');
+  valueHeaderRow.className = 'flex justify-between items-center';
+
+  const valueContainer = document.createElement('div');
+  valueContainer.className = 'flex items-center';
 
   const valueLabel = document.createElement('span');
-  valueLabel.className = `text-sm font-medium text-${color}-800`;
-  valueLabel.textContent = value;
+  valueLabel.className = 'text-xs text-gray-500 mr-1';
+  valueLabel.textContent = 'Value:';
 
-  header.appendChild(valueLabel);
-  header.appendChild(createCountBadge(entry.total, color));
+  const valueContent = document.createElement('span');
+  valueContent.className = `text-sm font-medium text-${color}-800`;
+  valueContent.textContent = value;
 
-  card.appendChild(header);
-  card.appendChild(createClientBadges(entry.clientIds, color));
+  valueContainer.appendChild(valueLabel);
+  valueContainer.appendChild(valueContent);
+
+  valueHeaderRow.appendChild(valueContainer);
+  valueHeaderRow.appendChild(createCountBadge(entry.total, color));
+  valueSection.appendChild(valueHeaderRow);
+  card.appendChild(valueSection);
+
+  const fromContainer = document.createElement('div');
+  fromContainer.className = 'flex items-center';
+
+  const fromLabel = document.createElement('span');
+  fromLabel.className = 'text-xs text-gray-500 mr-2';
+  fromLabel.textContent = 'From:';
+
+  fromContainer.appendChild(fromLabel);
+
+  const badgesContainer = createClientBadges(entry.clientIds, color);
+  fromContainer.appendChild(badgesContainer);
+
+  card.appendChild(fromContainer);
 
   return card;
 }
@@ -112,25 +146,49 @@ function createMultipleCard(value: string, entry: Ably.SummaryMultipleValues[str
   const card = document.createElement('div');
   card.className = `p-3 border-t border-${color}-200`;
 
-  const header = document.createElement('div');
-  header.className = 'flex justify-between items-center';
+  const valueSection = document.createElement('div');
+  valueSection.className = 'mb-3';
+
+  const valueHeaderRow = document.createElement('div');
+  valueHeaderRow.className = 'flex justify-between items-center';
+
+  const valueContainer = document.createElement('div');
+  valueContainer.className = 'flex items-center';
 
   const valueLabel = document.createElement('span');
-  valueLabel.className = `text-sm font-medium text-${color}-800`;
-  valueLabel.textContent = value;
+  valueLabel.className = 'text-xs text-gray-500 mr-1';
+  valueLabel.textContent = 'Value:';
 
-  header.appendChild(valueLabel);
-  header.appendChild(createCountBadge(entry.total, color));
-  card.appendChild(header);
+  const valueContent = document.createElement('span');
+  valueContent.className = `text-sm font-medium text-${color}-800`;
+  valueContent.textContent = value;
 
-  const clientBadgesContainer = document.createElement('div');
-  clientBadgesContainer.className = 'mt-2';
-  clientBadgesContainer.appendChild(createClientBadgesWithCounts(entry.clientIds || {}, color));
-  card.appendChild(clientBadgesContainer);
+  valueContainer.appendChild(valueLabel);
+  valueContainer.appendChild(valueContent);
+
+  valueHeaderRow.appendChild(valueContainer);
+  valueHeaderRow.appendChild(createCountBadge(entry.total, color));
+  valueSection.appendChild(valueHeaderRow);
+  card.appendChild(valueSection);
+
+  const fromContainer = document.createElement('div');
+  fromContainer.className = 'flex items-start';
+
+  const fromLabel = document.createElement('span');
+  fromLabel.className = 'text-xs text-gray-500 mr-2';
+  fromLabel.textContent = 'From:';
+
+  fromContainer.appendChild(fromLabel);
+
+  const badgesContainer = document.createElement('div');
+  badgesContainer.className = 'flex-1';
+  badgesContainer.appendChild(createClientBadgesWithCounts(entry.clientIds || {}, color));
+  fromContainer.appendChild(badgesContainer);
+
+  card.appendChild(fromContainer);
 
   if (entry.totalUnidentified > 0) {
     const unidentifiedContainer = document.createElement('div');
-    unidentifiedContainer.className = 'mt-2';
     unidentifiedContainer.appendChild(createClientBadgeWithCount('Unidentified', entry.totalUnidentified, color));
     card.appendChild(unidentifiedContainer);
   }
@@ -200,11 +258,6 @@ export function createSection(key: string, entry: Ably.SummaryEntry, wasExpanded
 }
 
 export function updateAnnotationSummary(message: MessageSummary) {
-  const summaryContainer = document.getElementById(`summary-container-${message.serial}`);
-  if (!summaryContainer) {
-    return;
-  }
-
   const sectionsContainer = document.getElementById(`sections-${message.serial}`);
   if (!sectionsContainer) {
     return;
