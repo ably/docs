@@ -2,7 +2,8 @@
 
 import type { Annotation } from 'ably';
 import { findAnnotationType } from '../config';
-import { createClientBadge } from './badge';
+import { createBadge } from './badge';
+import { deleteAnnotation } from '../ably';
 
 function formatTimestamp(timestamp: number): string {
   const date = new Date(timestamp);
@@ -22,74 +23,89 @@ function createAnnotationItem(annotation: Annotation) {
   const { color, label } = findAnnotationType(typeKey);
 
   const item = document.createElement('div');
-  item.className = `mb-2 p-3 border border-${color}-200 rounded-md bg-white shadow-sm`;
+  item.className = `mb-2 pl-3 pr-2 py-2 border-l-4 border-l-${color}-500 border-y border-r border-gray-200 rounded-r-md bg-white shadow-sm flex flex-wrap items-center`;
   item.setAttribute('data-id', annotation.id);
   item.setAttribute('data-timestamp', annotation.timestamp.toString());
+  item.setAttribute('data-serial', annotation.messageSerial);
+  item.setAttribute('data-action', annotation.action || '');
 
-  const header = document.createElement('div');
-  header.className = 'flex justify-between items-center mb-2';
-
-  const typeLabel = document.createElement('div');
+  // First row: type, value (left aligned) and delete button (right aligned)
+  const firstRow = document.createElement('div');
+  firstRow.className = 'flex justify-between items-center w-full';
+  
+  const leftContent = document.createElement('div');
+  leftContent.className = 'flex items-center gap-2 min-w-0 flex-grow';
+  
+  const typeLabel = document.createElement('span');
   typeLabel.className = `text-sm font-medium text-${color}-800`;
   typeLabel.textContent = label;
+  leftContent.appendChild(typeLabel);
+  
+  const valueContent = document.createElement('span');
+  valueContent.className = 'text-sm text-gray-700 overflow-hidden text-ellipsis';
+  valueContent.textContent = annotation.name || 'unknown';
+  leftContent.appendChild(valueContent);
+
+  firstRow.appendChild(leftContent);
+
+  if (annotation.action !== 'annotation.delete') {
+    const deleteIcon = document.createElement('div');
+    deleteIcon.className = `size-4 text-red-500 hover:text-red-800 cursor-pointer shrink-0 ml-auto`;
+    deleteIcon.innerHTML = `<uk-icon icon="trash-2"></uk-icon>`;
+    deleteIcon.addEventListener('click', () => {
+      deleteAnnotation(annotation.messageSerial, annotation);
+    });
+    firstRow.appendChild(deleteIcon);
+  }
+
+  item.appendChild(firstRow);
+
+  // Second row: action (left aligned) and client ID with timestamp (right aligned)
+  const secondRow = document.createElement('div');
+  secondRow.className = 'flex justify-between items-center w-full mt-1';
+
+  let action = 'CREATE';
+  let actionColor = 'green';
+  if (annotation.action === 'annotation.delete') {
+    action = 'DELETE';
+    actionColor = 'red';
+  }
+  const actionBadge = createBadge(action, actionColor);
+  secondRow.appendChild(actionBadge);
+
+  const rightContent = document.createElement('div');
+  rightContent.className = 'flex items-center gap-2 ml-auto shrink-0';
+
+  const clientBadge = createBadge(annotation.clientId || 'unknown', color);
+  clientBadge.classList.add('shrink-0');
+  rightContent.appendChild(clientBadge);
 
   const timestamp = document.createElement('div');
   timestamp.className = 'text-xs text-gray-500';
   timestamp.textContent = formatTimestamp(annotation.timestamp);
+  rightContent.appendChild(timestamp);
 
-  header.appendChild(typeLabel);
-  header.appendChild(timestamp);
-  item.appendChild(header);
+  secondRow.appendChild(rightContent);
 
-  const value = document.createElement('div');
-  value.className = 'mb-2';
-
-  const valueLabel = document.createElement('span');
-  valueLabel.className = 'text-xs text-gray-500 mr-1';
-  valueLabel.textContent = 'Value:';
-
-  const valueContent = document.createElement('span');
-  valueContent.className = 'text-sm font-medium';
-  valueContent.textContent = annotation.name || 'unknown';
-
-  value.appendChild(valueLabel);
-  value.appendChild(valueContent);
-  item.appendChild(value);
-
-  const clientInfo = document.createElement('div');
-  clientInfo.className = 'flex items-center mt-2';
-
-  const clientLabel = document.createElement('span');
-  clientLabel.className = 'text-xs text-gray-500 mr-2';
-  clientLabel.textContent = 'From:';
-
-  clientInfo.appendChild(clientLabel);
-  clientInfo.appendChild(createClientBadge(annotation.clientId || 'unknown', color));
-
-  item.appendChild(clientInfo);
+  item.appendChild(secondRow);
 
   return item;
 }
 
 export function createAnnotationsListElement(messageSerial: string) {
-  const container = document.createElement('div');
-  container.className = 'bg-white shadow-sm rounded-lg p-4 mb-4';
-  container.id = `annotations-container-${messageSerial}`;
-
   const annotationsList = document.createElement('div');
-  annotationsList.className = 'space-y-2 max-h-80 overflow-y-auto';
+  annotationsList.className = 'space-y-1 max-h-80 overflow-y-auto';
   annotationsList.id = `annotations-list-${messageSerial}`;
   annotationsList.setAttribute('data-message-serial', messageSerial);
 
   const emptyState = document.createElement('div');
-  emptyState.className = 'text-center p-4 text-gray-500 text-sm';
+  emptyState.className = 'text-center p-2 text-gray-500 text-sm';
   emptyState.textContent = 'No annotations received yet.';
   emptyState.id = `annotations-empty-${messageSerial}`;
 
   annotationsList.appendChild(emptyState);
-  container.appendChild(annotationsList);
 
-  return container;
+  return annotationsList;
 }
 
 export function addAnnotation(annotation: Annotation) {
@@ -100,7 +116,8 @@ export function addAnnotation(annotation: Annotation) {
     return;
   }
 
-  const existingAnnotation = document.querySelector(`[data-id="${annotation.id}"]`);
+  // Check if we already have an annotation with the same ID and action
+  const existingAnnotation = document.querySelector(`[data-id="${annotation.id}"][data-action="${annotation.action || ''}"]`);
   if (existingAnnotation) {
     return;
   }
@@ -111,20 +128,11 @@ export function addAnnotation(annotation: Annotation) {
   }
 
   const annotationItem = createAnnotationItem(annotation);
-
-  let inserted = false;
-  const existingItems = listContainer.querySelectorAll('[data-timestamp]');
-
-  for (const item of existingItems) {
-    const itemTimestamp = parseInt(item.getAttribute('data-timestamp') || '0');
-    if (annotation.timestamp > itemTimestamp) {
-      listContainer.insertBefore(annotationItem, item);
-      inserted = true;
-      break;
-    }
+  
+  // Add at the beginning (newest first)
+  if (listContainer.firstChild) {
+    listContainer.insertBefore(annotationItem, listContainer.firstChild);
+    return;
   }
-
-  if (!inserted) {
-    listContainer.appendChild(annotationItem);
-  }
+  listContainer.appendChild(annotationItem);
 }
