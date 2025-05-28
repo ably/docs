@@ -10,17 +10,18 @@ import {
   createClientBadgesWithCounts,
   createBadgeWithCount,
 } from './badge';
+import { getAnnotationTypeKey } from './annotations';
 
 function createEmptyAnnotationSummaryContentElement() {
   const emptyState = document.createElement('div');
-  emptyState.className = 'text-center p-4 text-gray-500 text-sm';
+  emptyState.className = 'text-center py-2 text-gray-500 text-sm';
   emptyState.textContent = 'Publish an annotation to view summaries.';
   return emptyState;
 }
 
 export function createAnnotationSummaryElement(message: MessageCreate) {
   const annotationSummary = document.createElement('div');
-  annotationSummary.className = 'space-y-2 p-4';
+  annotationSummary.className = 'space-y-1';
   annotationSummary.id = `sections-${message.serial}`;
   annotationSummary.setAttribute('data-serial', message.serial);
   annotationSummary.appendChild(createEmptyAnnotationSummaryContentElement());
@@ -33,7 +34,7 @@ function createLabelContainer(label: string, color: string) {
   container.className = 'flex items-center';
 
   const labelSpan = document.createElement('span');
-  labelSpan.className = `text-xs font-medium text-${color}-800`;
+  labelSpan.className = `text-sm font-medium text-${color}-800`;
   labelSpan.textContent = label;
 
   container.appendChild(labelSpan);
@@ -41,35 +42,35 @@ function createLabelContainer(label: string, color: string) {
 }
 
 function createSectionHeader(key: string, entry: Ably.SummaryEntry) {
-  const { color, label } = findAnnotationType(key);
+  const typeKey = getAnnotationTypeKey(key);
+  const { color, label } = findAnnotationType(typeKey);
   const sectionHeader = document.createElement('div');
-  sectionHeader.className = `bg-${color}-50 px-3 py-2${key.endsWith('total.v1') ? '' : ' cursor-pointer'}`;
+  sectionHeader.className = `border-l-4 border-l-${color}-500 border-t border-r border-gray-200 bg-white shadow-sm px-3 py-1.5 ${typeKey === 'total.v1' ? '' : 'cursor-pointer'}`;
 
   const wrapper = document.createElement('div');
   wrapper.className = 'flex justify-between items-center';
 
   const labelContainer = createLabelContainer(label, color);
 
-  if (key.endsWith('total.v1')) {
+  if (typeKey === 'total.v1') {
     const total = (entry as Ably.SummaryTotal).total;
-    labelContainer.appendChild(createCountBadge(total, color, false));
+    labelContainer.appendChild(createCountBadge(total, color));
     wrapper.appendChild(labelContainer);
-  } else if (key.endsWith('flag.v1')) {
+  } else if (typeKey === 'flag.v1') {
     const total = (entry as Ably.SummaryClientIdList).total;
     labelContainer.appendChild(createCountBadge(total, color));
     wrapper.appendChild(labelContainer);
-    wrapper.appendChild(createDropdownArrow(color));
+    wrapper.appendChild(createDropdownArrow('gray'));
   } else {
     const count = Object.keys(entry).length;
     labelContainer.appendChild(createCountBadge(count, color));
 
     const valueLabel = document.createElement('span');
-    valueLabel.className = `ml-1 text-xs text-${color}-600`;
-    valueLabel.textContent = `value${count !== 1 ? 's' : ''}`;
+    valueLabel.className = `ml-1 text-xs text-gray-600`;
     labelContainer.appendChild(valueLabel);
 
     wrapper.appendChild(labelContainer);
-    wrapper.appendChild(createDropdownArrow(color));
+    wrapper.appendChild(createDropdownArrow('gray'));
   }
 
   sectionHeader.appendChild(wrapper);
@@ -77,156 +78,123 @@ function createSectionHeader(key: string, entry: Ably.SummaryEntry) {
 }
 
 function createFlagCard(entry: Ably.SummaryClientIdList, color: string) {
-  const content = document.createElement('div');
-  content.className = `p-3 bg-white border-t border-${color}-200`;
+  const card = document.createElement('div');
+  card.className = 'p-3 bg-white flex items-center gap-2';
 
-  const fromContainer = document.createElement('div');
-  fromContainer.className = 'flex items-center';
+  // Add empty spacer for alignment
+  const spacer = document.createElement('span');
+  spacer.className = 'flex-shrink-0 mr-auto';
+  card.appendChild(spacer);
 
-  const fromLabel = document.createElement('span');
-  fromLabel.className = 'text-xs text-gray-500 mr-2';
-  fromLabel.textContent = 'From:';
+  // Add client badges
+  const badgesContainer = createClientBadges(entry.clientIds, 'gray');
+  badgesContainer.className = 'flex flex-wrap gap-1 items-center justify-end';
+  card.appendChild(badgesContainer);
 
-  fromContainer.appendChild(fromLabel);
+  // Add count badge
+  const countBadge = createCountBadge(entry.total, color);
+  countBadge.className = countBadge.className + ' ml-2 flex-shrink-0';
+  card.appendChild(countBadge);
 
-  const badgesContainer = createClientBadges(entry.clientIds, color);
-  fromContainer.appendChild(badgesContainer);
-
-  content.appendChild(fromContainer);
-  return content;
+  return card;
 }
 
 function createDistinctUniqueCard(value: string, entry: Ably.SummaryClientIdList, color: string) {
   const card = document.createElement('div');
-  card.className = `p-3 border-t border-${color}-200`;
+  card.className = 'p-3 bg-white flex items-center gap-2';
 
-  const valueSection = document.createElement('div');
-  valueSection.className = 'mb-2';
-
-  const valueHeaderRow = document.createElement('div');
-  valueHeaderRow.className = 'flex justify-between items-center';
-
-  const valueContainer = document.createElement('div');
-  valueContainer.className = 'flex items-center';
-
-  const valueLabel = document.createElement('span');
-  valueLabel.className = 'text-xs text-gray-500 mr-1';
-  valueLabel.textContent = 'Value:';
-
+  // Add value text
   const valueContent = document.createElement('span');
-  valueContent.className = `text-sm font-medium text-${color}-800`;
+  valueContent.className = 'text-sm text-gray-700 flex-shrink-0 mr-auto';
   valueContent.textContent = value;
+  card.appendChild(valueContent);
 
-  valueContainer.appendChild(valueLabel);
-  valueContainer.appendChild(valueContent);
+  // Add client badges
+  const badgesContainer = createClientBadges(entry.clientIds, 'gray');
+  badgesContainer.className = 'flex flex-wrap gap-1 items-center justify-end';
+  card.appendChild(badgesContainer);
 
-  valueHeaderRow.appendChild(valueContainer);
-  valueHeaderRow.appendChild(createCountBadge(entry.total, color));
-  valueSection.appendChild(valueHeaderRow);
-  card.appendChild(valueSection);
-
-  const fromContainer = document.createElement('div');
-  fromContainer.className = 'flex items-center';
-
-  const fromLabel = document.createElement('span');
-  fromLabel.className = 'text-xs text-gray-500 mr-2';
-  fromLabel.textContent = 'From:';
-
-  fromContainer.appendChild(fromLabel);
-
-  const badgesContainer = createClientBadges(entry.clientIds, color);
-  fromContainer.appendChild(badgesContainer);
-
-  card.appendChild(fromContainer);
+  // Add count badge
+  const countBadge = createCountBadge(entry.total, color);
+  countBadge.className = countBadge.className + ' ml-2 flex-shrink-0';
+  card.appendChild(countBadge);
 
   return card;
 }
 
 function createMultipleCard(value: string, entry: Ably.SummaryMultipleValues[string], color: string) {
   const card = document.createElement('div');
-  card.className = `p-3 border-t border-${color}-200`;
+  card.className = 'p-3 bg-white flex items-center gap-2';
 
-  const valueSection = document.createElement('div');
-  valueSection.className = 'mb-3';
-
-  const valueHeaderRow = document.createElement('div');
-  valueHeaderRow.className = 'flex justify-between items-center';
-
-  const valueContainer = document.createElement('div');
-  valueContainer.className = 'flex items-center';
-
-  const valueLabel = document.createElement('span');
-  valueLabel.className = 'text-xs text-gray-500 mr-1';
-  valueLabel.textContent = 'Value:';
-
+  // Add value text
   const valueContent = document.createElement('span');
-  valueContent.className = `text-sm font-medium text-${color}-800`;
+  valueContent.className = 'text-sm text-gray-700 flex-shrink-0 mr-auto';
   valueContent.textContent = value;
+  card.appendChild(valueContent);
 
-  valueContainer.appendChild(valueLabel);
-  valueContainer.appendChild(valueContent);
+  // Badge container for client badges
+  const badgeWrapper = document.createElement('div');
+  badgeWrapper.className = 'flex flex-wrap gap-1 items-center justify-end';
 
-  valueHeaderRow.appendChild(valueContainer);
-  valueHeaderRow.appendChild(createCountBadge(entry.total, color));
-  valueSection.appendChild(valueHeaderRow);
-  card.appendChild(valueSection);
-
-  const fromContainer = document.createElement('div');
-  fromContainer.className = 'flex items-start';
-
-  const fromLabel = document.createElement('span');
-  fromLabel.className = 'text-xs text-gray-500 mr-2';
-  fromLabel.textContent = 'From:';
-
-  fromContainer.appendChild(fromLabel);
-
-  const badgesContainer = document.createElement('div');
-  badgesContainer.className = 'flex-1';
-  badgesContainer.appendChild(createClientBadgesWithCounts(entry.clientIds || {}, color));
-  fromContainer.appendChild(badgesContainer);
-
-  card.appendChild(fromContainer);
-
+  // Add client badges with counts and unidentified badge if needed
+  badgeWrapper.appendChild(createClientBadgesWithCounts(entry.clientIds || {}, 'gray'));
   if (entry.totalUnidentified > 0) {
-    const unidentifiedContainer = document.createElement('div');
-    unidentifiedContainer.appendChild(createBadgeWithCount('Unidentified', entry.totalUnidentified, color));
-    card.appendChild(unidentifiedContainer);
+    badgeWrapper.appendChild(createBadgeWithCount('Unidentified', entry.totalUnidentified, 'gray'));
   }
+
+  card.appendChild(badgeWrapper);
+
+  // Add count badge
+  const countBadge = createCountBadge(entry.total, color);
+  countBadge.className = countBadge.className + ' ml-2 flex-shrink-0';
+  card.appendChild(countBadge);
 
   return card;
 }
 
-function createSectionContent(typeKey: string, entry: Ably.SummaryEntry) {
+function createSectionContent(fullTypeKey: string, entry: Ably.SummaryEntry) {
+  const typeKey = getAnnotationTypeKey(fullTypeKey);
   const { color } = findAnnotationType(typeKey);
   const sectionContent = document.createElement('div');
-  sectionContent.className = 'bg-white';
+  sectionContent.className = `overflow-hidden border-l-4 border-l-${color}-500 border-b border-r border-gray-200`;
 
-  if (typeKey.endsWith('flag.v1')) {
-    sectionContent.appendChild(createFlagCard(entry as Ably.SummaryClientIdList, color));
-  } else if (typeKey.endsWith('distinct.v1') || typeKey.endsWith('unique.v1')) {
-    for (const [value, info] of Object.entries(entry as Ably.SummaryUniqueValues | Ably.SummaryDistinctValues)) {
-      sectionContent.appendChild(createDistinctUniqueCard(value, info, color));
-    }
-  } else if (typeKey.endsWith('multiple.v1')) {
-    for (const [value, info] of Object.entries(entry as Ably.SummaryMultipleValues)) {
-      sectionContent.appendChild(createMultipleCard(value, info, color));
-    }
+  if (typeKey === 'flag.v1') {
+    const card = createFlagCard(entry as Ably.SummaryClientIdList, color);
+    sectionContent.appendChild(card);
+  } else if (typeKey === 'distinct.v1' || typeKey === 'unique.v1') {
+    const entries = Object.entries(entry as Ably.SummaryUniqueValues | Ably.SummaryDistinctValues);
+    entries.forEach((entryData, index) => {
+      const [value, info] = entryData;
+      const card = createDistinctUniqueCard(value, info, color);
+      if (index < entries.length - 1) {
+        card.classList.add('border-b', 'border-gray-100');
+      }
+      sectionContent.appendChild(card);
+    });
+  } else if (typeKey === 'multiple.v1') {
+    const entries = Object.entries(entry as Ably.SummaryMultipleValues);
+    entries.forEach((entryData, index) => {
+      const [value, info] = entryData;
+      const card = createMultipleCard(value, info, color);
+      if (index < entries.length - 1) {
+        card.classList.add('border-b', 'border-gray-100');
+      }
+      sectionContent.appendChild(card);
+    });
   }
 
   return sectionContent;
 }
 
 export function createSection(key: string, entry: Ably.SummaryEntry, wasExpanded: boolean) {
-  const { color } = findAnnotationType(key);
-
   const section = document.createElement('div');
-  section.className = `border border-${color}-200 rounded-md overflow-hidden`;
   section.setAttribute('data-type', key);
 
   const sectionHeader = createSectionHeader(key, entry);
   section.appendChild(sectionHeader);
 
-  if (key.endsWith('total.v1')) {
+  const typeKey = getAnnotationTypeKey(key);
+  if (typeKey === 'total.v1') {
     return section;
   }
 
@@ -245,7 +213,8 @@ export function createSection(key: string, entry: Ably.SummaryEntry, wasExpanded
     rotateArrow(arrow, shouldExpand);
   }
 
-  sectionHeader.addEventListener('click', () => {
+  sectionHeader.addEventListener('click', (e) => {
+    e.preventDefault();
     sectionContent.classList.toggle('hidden');
 
     if (arrow instanceof SVGElement) {

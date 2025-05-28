@@ -5,12 +5,13 @@ export const annotationNamespace = 'my-annotations';
 
 export const annotationTypes = [
   { key: 'total.v1', color: 'blue', label: 'Total' },
-  { key: 'distinct.v1', color: 'green', label: 'Distinct' },
+  { key: 'distinct.v1', color: 'pink', label: 'Distinct' },
   { key: 'unique.v1', color: 'purple', label: 'Unique' },
   { key: 'multiple.v1', color: 'amber', label: 'Multiple' },
-  { key: 'flag.v1', color: 'red', label: 'Flag' },
+  { key: 'flag.v1', color: 'cyan', label: 'Flag' },
 ];
 
+// Looks up an annotation type by key, returning a fallback gray type if not found
 export function findAnnotationType(key: string) {
   return annotationTypes.find((type) => type.key === key) || { key, color: 'gray', label: 'Unknown' };
 }
