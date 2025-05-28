@@ -40,6 +40,7 @@ const getDependencies = (id: string, products: string[], activeLanguage: Languag
     ably: '^2.9.0',
     nanoid: '^5.0.7',
     minifaker: '1.34.1',
+    'franken-ui': '^2.0.0',
     ...(products.includes('auth') ? { cors: '^2.8.5' } : {}),
     ...(products.includes('chat') ? { '@ably/chat': '^0.7.0' } : {}),
     ...(products.includes('spaces') ? { '@ably/spaces': '^0.4.0' } : {}),
