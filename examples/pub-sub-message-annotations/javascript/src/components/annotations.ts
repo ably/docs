@@ -1,4 +1,4 @@
-// Display of raw annotation messages
+// Components for displaying and managing raw annotation messages
 
 import type { Annotation } from 'ably';
 import { findAnnotationType } from '../config';
@@ -10,7 +10,8 @@ function formatTimestamp(timestamp: number): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-function getAnnotationTypeKey(fullType: string): string {
+// Extracts the type key from a namespaced annotation type string (e.g. "my-annotations:total.v1" → "total.v1")
+export function getAnnotationTypeKey(fullType: string): string {
   const parts = fullType.split(':');
   if (parts.length > 1) {
     return parts[1];
@@ -18,12 +19,15 @@ function getAnnotationTypeKey(fullType: string): string {
   return fullType;
 }
 
+// Component to display a single annotation with all its details
+// Includes the annotation type, value, action, client ID, timestamp, and
+// a delete button for annotations with an annotation.create action
 function createAnnotationItem(annotation: Annotation) {
   const typeKey = getAnnotationTypeKey(annotation.type);
   const { color, label } = findAnnotationType(typeKey);
 
   const item = document.createElement('div');
-  item.className = `mb-2 pl-3 pr-2 py-2 border-l-4 border-l-${color}-500 border-y border-r border-gray-200 rounded-r-md bg-white shadow-sm flex flex-wrap items-center`;
+  item.className = `pl-3 pr-2 py-2 border-l-4 border-l-${color}-500 border-y border-r border-gray-200 bg-white shadow-sm flex flex-wrap items-center`;
   item.setAttribute('data-id', annotation.id);
   item.setAttribute('data-timestamp', annotation.timestamp.toString());
   item.setAttribute('data-serial', annotation.messageSerial);
@@ -32,15 +36,15 @@ function createAnnotationItem(annotation: Annotation) {
   // First row: type, value (left aligned) and delete button (right aligned)
   const firstRow = document.createElement('div');
   firstRow.className = 'flex justify-between items-center w-full';
-  
+
   const leftContent = document.createElement('div');
   leftContent.className = 'flex items-center gap-2 min-w-0 flex-grow';
-  
+
   const typeLabel = document.createElement('span');
   typeLabel.className = `text-sm font-medium text-${color}-800`;
   typeLabel.textContent = label;
   leftContent.appendChild(typeLabel);
-  
+
   const valueContent = document.createElement('span');
   valueContent.className = 'text-sm text-gray-700 overflow-hidden text-ellipsis';
   valueContent.textContent = annotation.name || 'unknown';
@@ -50,9 +54,10 @@ function createAnnotationItem(annotation: Annotation) {
 
   if (annotation.action !== 'annotation.delete') {
     const deleteIcon = document.createElement('div');
-    deleteIcon.className = `size-4 text-red-500 hover:text-red-800 cursor-pointer shrink-0 ml-auto`;
-    deleteIcon.innerHTML = `<uk-icon icon="trash-2"></uk-icon>`;
-    deleteIcon.addEventListener('click', () => {
+    deleteIcon.className = 'size-4 text-red-500 hover:text-red-800 cursor-pointer shrink-0 ml-auto';
+    deleteIcon.innerHTML = '<uk-icon icon="trash-2"></uk-icon>';
+    deleteIcon.addEventListener('click', (e) => {
+      e.preventDefault();
       deleteAnnotation(annotation.messageSerial, annotation);
     });
     firstRow.appendChild(deleteIcon);
@@ -76,7 +81,7 @@ function createAnnotationItem(annotation: Annotation) {
   const rightContent = document.createElement('div');
   rightContent.className = 'flex items-center gap-2 ml-auto shrink-0';
 
-  const clientBadge = createBadge(annotation.clientId || 'unknown', color);
+  const clientBadge = createBadge(annotation.clientId || 'unknown', 'gray');
   clientBadge.classList.add('shrink-0');
   rightContent.appendChild(clientBadge);
 
@@ -92,6 +97,8 @@ function createAnnotationItem(annotation: Annotation) {
   return item;
 }
 
+// Component for listing annotations related to a specific message
+// Includes an empty state message that will be removed when annotations are added
 export function createAnnotationsListElement(messageSerial: string) {
   const annotationsList = document.createElement('div');
   annotationsList.className = 'space-y-1 max-h-80 overflow-y-auto';
@@ -108,6 +115,7 @@ export function createAnnotationsListElement(messageSerial: string) {
   return annotationsList;
 }
 
+// Adds a new annotation to the appropriate message's annotation list
 export function addAnnotation(annotation: Annotation) {
   const messageSerial = annotation.messageSerial;
   const listContainer = document.getElementById(`annotations-list-${messageSerial}`);
@@ -128,7 +136,7 @@ export function addAnnotation(annotation: Annotation) {
   }
 
   const annotationItem = createAnnotationItem(annotation);
-  
+
   // Add at the beginning (newest first)
   if (listContainer.firstChild) {
     listContainer.insertBefore(annotationItem, listContainer.firstChild);

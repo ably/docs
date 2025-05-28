@@ -8,27 +8,24 @@ import { createAnnotationsListElement } from './annotations';
 
 export function createPublishAnnotationElement(message: MessageCreate) {
   const publisher = document.createElement('div');
-  publisher.className = 'md:col-span-2 mb-4';
+  publisher.className = 'p-2 border-b border-gray-200 bg-gray-50';
   publisher.innerHTML = `
-    <div class="flex flex-col space-y-2 md:flex-row md:space-x-2 md:space-y-0">
-      <div class="flex-none">
-        <div class="uk-form-controls">
-          <select class="uk-select">
-            <option>total.v1</option>
-            <option>distinct.v1</option>
-            <option>unique.v1</option>
-            <option>multiple.v1</option>
-            <option>flag.v1</option>
-          </select>
-        </div>
-      </div>
-      <input placeholder="Annotate message" class="uk-input uk-border-rounded-left h-10 border rounded-md px-3 bg-white" type="text" value="">
-      <button class="uk-btn uk-btn-sm uk-btn-primary mb-1 rounded-md hover:uk-btn-primary+1 active:uk-btn-primary+2 h-10">Publish</button>
+    <div class="flex items-center gap-1.5">
+      <select class="uk-select uk-form-sm w-24 flex-none bg-white border rounded-md">
+        <option>total.v1</option>
+        <option>distinct.v1</option>
+        <option>unique.v1</option>
+        <option>multiple.v1</option>
+        <option>flag.v1</option>
+      </select>
+      <input placeholder="Annotate message" class="uk-input uk-form-sm border rounded-md bg-white flex-grow" type="text">
+      <button class="uk-btn uk-btn-primary uk-btn-sm rounded-md flex-none">Publish</button>
     </div>
   `;
 
   const publishButton = publisher.querySelector('button');
-  publishButton?.addEventListener('click', () => {
+  publishButton?.addEventListener('click', (e) => {
+    e.preventDefault();
     const selectInput = publisher.querySelector('select') as HTMLSelectElement;
     const annotationType = selectInput.options[selectInput.selectedIndex].value;
     const nameInput = publisher.querySelector('input') as HTMLInputElement;
@@ -48,13 +45,13 @@ export function createPublishAnnotationElement(message: MessageCreate) {
 
 export function createMessageDetailsElement(message: MessageCreate) {
   const messageDetails = document.createElement('div');
-  messageDetails.className = 'grid grid-cols-1 gap-4';
+  messageDetails.className = 'grid grid-cols-1';
 
   const publishAnnotation = createPublishAnnotationElement(message);
   messageDetails.appendChild(publishAnnotation);
 
   const tabContainer = document.createElement('div');
-  tabContainer.className = 'bg-white shadow-sm rounded-lg mb-4 overflow-hidden';
+  tabContainer.className = 'overflow-hidden';
 
   const tabList = document.createElement('ul');
   tabList.className = 'uk-tab';
@@ -116,7 +113,7 @@ export function createMessageDetailsElement(message: MessageCreate) {
 
 export function createDetailsPane(message: MessageCreate) {
   const detailsPane = document.createElement('div');
-  detailsPane.className = 'mt-2 p-4 border rounded-lg bg-gray-50';
+  detailsPane.className = 'border-b border-l border-r border-gray-200 rounded-b-md overflow-hidden bg-white shadow-sm';
   detailsPane.id = `details-${message.id}`;
 
   const messageDetails = createMessageDetailsElement(message);

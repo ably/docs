@@ -18,76 +18,48 @@ export function createMessageElement(message: MessageCreate) {
 
   // Main message element that can be clicked to expand
   const messageElement = document.createElement('div');
-  messageElement.className = `flex flex-col p-4 border rounded-lg bg-white shadow-md cursor-pointer`;
+  messageElement.className = `px-3 py-2 border-t border-l border-r border-gray-200 rounded-t-md bg-white shadow-sm cursor-pointer`;
   messageElement.id = `message-${message.id}`;
 
-  // Create header row with clientId and timestamp
-  const headerRow = document.createElement('div');
-  headerRow.className = 'flex justify-between items-center mb-2';
-  
-  // Client info with "From:" label
-  const clientContainer = document.createElement('div');
-  clientContainer.className = 'flex items-center';
-  
-  const clientLabel = document.createElement('span');
-  clientLabel.className = 'text-xs text-gray-500 mr-2';
-  clientLabel.textContent = 'From:';
-  
-  clientContainer.appendChild(clientLabel);
-  clientContainer.appendChild(createBadge(message.clientId || 'unknown', 'blue'));
-  
-  // Timestamp with label
-  const timestampContainer = document.createElement('div');
-  timestampContainer.className = 'flex items-center';
-  
-  const timestampLabel = document.createElement('span');
-  timestampLabel.className = 'text-xs text-gray-500 mr-1';
-  timestampLabel.textContent = 'Time:';
-  
-  const timestampValue = document.createElement('span');
-  timestampValue.className = 'text-xs text-gray-600';
-  timestampValue.textContent = formatTimestamp(message.timestamp);
-  
-  timestampContainer.appendChild(timestampLabel);
-  timestampContainer.appendChild(timestampValue);
-  
-  headerRow.appendChild(clientContainer);
-  headerRow.appendChild(timestampContainer);
-  messageElement.appendChild(headerRow);
+  // First row: message text (left aligned) and dropdown arrow (right aligned)
+  const firstRow = document.createElement('div');
+  firstRow.className = 'flex justify-between items-center w-full';
 
-  // Create content row with message text and dropdown arrow
-  const contentRow = document.createElement('div');
-  contentRow.className = 'flex justify-between items-center';
+  const messageContent = document.createElement('div');
+  messageContent.className = 'flex-grow text-sm font-medium text-gray-700 overflow-hidden text-ellipsis';
+  messageContent.textContent = message.data;
+  firstRow.appendChild(messageContent);
 
-  // Message content with "Message:" label
-  const messageContentContainer = document.createElement('div');
-  messageContentContainer.className = 'flex items-center';
-  
-  const messageLabel = document.createElement('span');
-  messageLabel.className = 'text-xs text-gray-500 mr-2';
-  messageLabel.textContent = 'Message:';
-  
-  const textContent = document.createElement('span');
-  textContent.className = 'text-sm font-medium';
-  textContent.textContent = message.data;
-  
-  messageContentContainer.appendChild(messageLabel);
-  messageContentContainer.appendChild(textContent);
-  
-  contentRow.appendChild(messageContentContainer);
-  
   // Add dropdown arrow
   const arrow = createDropdownArrow('gray');
-  contentRow.appendChild(arrow);
-  
-  messageElement.appendChild(contentRow);
+  arrow.classList.add('ml-2', 'shrink-0');
+  firstRow.appendChild(arrow);
+
+  messageElement.appendChild(firstRow);
+
+  // Second row: client ID and timestamp (both right aligned)
+  const secondRow = document.createElement('div');
+  secondRow.className = 'flex justify-end items-center w-full mt-1 gap-2';
+
+  const clientBadge = createBadge(message.clientId || 'unknown', 'gray');
+  clientBadge.classList.add('shrink-0');
+
+  const timestamp = document.createElement('div');
+  timestamp.className = 'text-xs text-gray-500';
+  timestamp.textContent = formatTimestamp(message.timestamp || Date.now());
+
+  secondRow.appendChild(clientBadge);
+  secondRow.appendChild(timestamp);
+
+  messageElement.appendChild(secondRow);
 
   // Create the expandable details pane
   const detailsPane = createDetailsPane(message);
   detailsPane.classList.add('hidden');
 
   // Add click handler to toggle details
-  messageElement.addEventListener('click', () => {
+  messageElement.addEventListener('click', (e) => {
+    e.preventDefault();
     detailsPane.classList.toggle('hidden');
     toggleArrowRotation(arrow);
   });
