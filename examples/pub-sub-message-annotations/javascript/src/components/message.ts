@@ -3,7 +3,7 @@
 import { MessageCreate } from '../types';
 import { createDropdownArrow, toggleArrowRotation } from './arrow';
 import { createDetailsPane } from './details';
-import { createClientBadge } from './badge';
+import { createBadge } from './badge';
 
 // Format timestamp for human-readable display
 function formatTimestamp(timestamp: number): string {
@@ -34,7 +34,7 @@ export function createMessageElement(message: MessageCreate) {
   clientLabel.textContent = 'From:';
   
   clientContainer.appendChild(clientLabel);
-  clientContainer.appendChild(createClientBadge(message.clientId || 'unknown', 'blue'));
+  clientContainer.appendChild(createBadge(message.clientId || 'unknown', 'blue'));
   
   // Timestamp with label
   const timestampContainer = document.createElement('div');
