@@ -11,7 +11,8 @@ import { addAnnotation } from './components/annotations';
 async function main() {
   // Publish regular messages that can be annotated.
   const publishButton = document.getElementById('publish-button');
-  publishButton?.addEventListener('click', () => {
+  publishButton?.addEventListener('click', (e) => {
+    e.preventDefault();
     const messageInput = document.getElementById('message-input') as HTMLInputElement;
     const message = messageInput.value.trim();
     if (message) {
@@ -33,7 +34,8 @@ async function main() {
     }
   });
 
-  // Subscribe to individual annotations and display them in the raw annotations view
+  // Subscribe to individual annotations (both annotation.create and annotation.delete events)
+  // and display them in the raw annotations view
   getChannel().annotations.subscribe((annotation: Ably.Annotation) => {
     addAnnotation(annotation);
   });
