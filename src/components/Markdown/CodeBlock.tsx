@@ -30,7 +30,7 @@ export const CodeBlock: FC<{ children: React.ReactNode; language: string }> = ({
 
   return (
     <pre className="bg-cool-black text-white p-0 rounded-lg relative max-w-[calc(100vw-48px)] sm:max-w-full">
-      <div className="overflow-auto relative p-16 pr-32">
+      <div className="overflow-auto relative p-4 pr-8">
         <code
           className="ui-text-code"
           style={{ whiteSpace: 'pre-wrap' }}
@@ -46,7 +46,7 @@ export const CodeBlock: FC<{ children: React.ReactNode; language: string }> = ({
           }}
         />
       </div>
-      <div className="absolute top-16 right-8">
+      <div className="absolute top-4 right-2">
         <ButtonWithTooltip tooltip="Copy" notification="Copied!" onClick={handleCopy} className="text-white">
           <Icon name="icon-gui-square-2-stack-micro" size="1rem" color="text-neutral-000" />
         </ButtonWithTooltip>

@@ -55,14 +55,14 @@ const ChangelogEntry = ({
 
   return (
     <li>
-      <Link to={href} target="_blank" className="flex gap-16 group p-4 -m-4 rounded">
+      <Link to={href} target="_blank" className="flex gap-4 group p-1 -m-1 rounded">
         <div className="ui-text-p3 flex-shrink-0 text-neutral-800 dark:text-neutral-500">{date}</div>
-        <div className="grid gap-4">
-          <div className="text-neutral-1300 dark:text-neutral-000 font-bold group-hover:underline block mb-2">
+        <div className="grid gap-1">
+          <div className="text-neutral-1300 dark:text-neutral-000 font-bold group-hover:underline block mb-0.5">
             {title}
           </div>
           {tags && tags.length > 0 && (
-            <div className="flex gap-2 flex-wrap mb-2">
+            <div className="flex gap-0.5 flex-wrap mb-0.5">
               {tags.map((tag: string) => (
                 <Badge key={tag} color={getTagStyle(tag)}>
                   {tag.toUpperCase()}
@@ -174,8 +174,8 @@ export const ChangelogSection = () => {
   `);
 
   return (
-    <div className="rounded-lg border border-neutral-300 dark:border-neutral-1000 p-24 lg:p-32 mt-24 md:mt-0">
-      <div className="flex justify-between items-center mb-24">
+    <div className="rounded-lg border border-neutral-300 dark:border-neutral-1000 p-6 lg:p-8 mt-6 md:mt-0">
+      <div className="flex justify-between items-center mb-6">
         <h3 className="ui-text-h3 text-neutral-1300 dark:text-neutral-000">Changelog</h3>
         <FeaturedLink
           iconColor="text-orange-600"
@@ -185,7 +185,7 @@ export const ChangelogSection = () => {
           View all
         </FeaturedLink>
       </div>
-      <ul className="grid grid-cols-1 gap-y-24">
+      <ul className="grid grid-cols-1 gap-y-6">
         {data.allFeedAblyChangelog.edges.map(({ node }: ChangelogFeedEdge, index: Key) => {
           try {
             const { tags, description } = parseChangelogContent(node.content);

@@ -28,7 +28,7 @@ const Breadcrumbs: React.FC = () => {
     'ui-text-label4 font-semibold text-neutral-900 hover:text-neutral-1300 active:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-000 dark:active:text-neutral-500';
 
   return (
-    <nav aria-label="breadcrumb" className="flex mt-32 items-center gap-4">
+    <nav aria-label="breadcrumb" className="flex mt-8 items-center gap-1">
       <Link to="/docs" className={cn(linkStyles, 'hidden sm:block')}>
         Home
       </Link>

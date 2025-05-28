@@ -49,7 +49,7 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
         setSdk(sdk ?? null);
         navigate(`${location.pathname}?lang=${lang}`);
       }}
-      className={cn(props.className, 'mb-20')}
+      className={cn(props.className, 'mb-5')}
       languageOrdering={
         activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
       }

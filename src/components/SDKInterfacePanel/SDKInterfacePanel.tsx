@@ -13,7 +13,7 @@ const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
       role="button"
       tabIndex={0}
       aria-label={tooltip}
-      className="flex flex-row w-full justify-start mt-2"
+      className="flex flex-row w-full justify-start mt-0.5"
       onMouseOver={showTooltipHover}
       onMouseOut={hideTooltipHover}
     >
@@ -21,13 +21,13 @@ const SDKToolTip = ({ tooltip }: { tooltip: string }) => {
         name="icon-gui-information-circle-outline"
         size="1.25rem"
         color="text-neutral-500"
-        additionalCSS="mt-12 ml-16"
+        additionalCSS="mt-3 ml-4"
       />
       {tooltipHover ? (
         <aside
-          className="w-[240px] max-w-[240px] absolute box-border
+          className="w-60 max-w-60 absolute box-border
           whitespace-pre-wrap bg-white shadow-tooltip rounded border border-light-grey
-          p-16 text-center ui-text-p3 cursor-default -ml-160 -mt-88"
+          p-4 text-center ui-text-p3 cursor-default -ml-40 -mt-[5.5rem]"
         >
           {tooltip}
         </aside>
@@ -56,12 +56,12 @@ const SDKInterfacePanel = ({
     <div className="bg-dark-grey border-charcoal-grey text-white border-b-4 rounded-t-lg flex justify-end">
       <menu
         data-testid="menuSDKInterface"
-        className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-48 mr-16 my-0"
+        className="flex md:overflow-x-auto pl-0 justify-end md:justify-start h-12 mr-4 my-0"
       >
         {sdkInterfaceAvailable.map((sdkInterface) => (
           <button
             key={sdkInterface}
-            className={`font-medium font-sans focus:outline-none px-24 text-mid-grey ${
+            className={`font-medium font-sans focus:outline-none px-6 text-mid-grey ${
               selectedSDKInterfaceTab === sdkInterface ? 'bg-charcoal-grey' : ''
             }`}
             onClick={() => handleTabChanges(sdkInterface)}

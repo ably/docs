@@ -45,7 +45,7 @@ export const SuggestionBox = ({ results, isActive, error, query, displayLocation
 
   return (
     <div aria-label="suggestions" className={container} style={containerStyle ?? {}}>
-      <div className="uppercase ui-text-label3 px-16 mb-2">Results from docs</div>
+      <div className="uppercase ui-text-label3 px-4 mb-0.5">Results from docs</div>
       {results && totalResults > 0 ? (
         results.map((hit, index) => {
           const { title, highlight, meta_description, url, id } = hit;
@@ -59,13 +59,13 @@ export const SuggestionBox = ({ results, isActive, error, query, displayLocation
               href={url}
               tabIndex={index}
               className={cn(
-                'block p-16 hover:bg-light-grey focus:bg-light-grey focus:outline-none rounded-lg mb-4 overflow-hidden',
+                'block p-4 hover:bg-light-grey focus:bg-light-grey focus:outline-none rounded-lg mb-1 overflow-hidden',
                 { 'break-all': body.match(/[^\s]{109,}/) },
                 hitItem,
               )}
               role="link"
             >
-              <h4 className={cn('ui-text-h4 mb-6', titleStyle)}>{pageTitle}</h4>
+              <h4 className={cn('ui-text-h4 mb-1.5', titleStyle)}>{pageTitle}</h4>
               <div className="ui-text-label3">{htmr(body)}</div>
             </a>
           );
@@ -94,7 +94,7 @@ export const SuggestionBox = ({ results, isActive, error, query, displayLocation
             className="text-gui-active hover:underline"
           >
             our main site
-            <Icon name="icon-gui-arrow-top-right-on-square-outline" size="12px" additionalCSS="inline-block ml-4" />
+            <Icon name="icon-gui-arrow-top-right-on-square-outline" size="12px" additionalCSS="inline-block ml-1" />
           </a>
           .
         </EmptyState>

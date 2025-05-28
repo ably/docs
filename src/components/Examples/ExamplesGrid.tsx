@@ -78,7 +78,7 @@ const ExamplesGrid = ({
   );
 
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,_minmax(260px,_1fr))] gap-x-20 gap-y-32">
+    <div className="grid grid-cols-[repeat(auto-fill,_minmax(260px,_1fr))] gap-x-5 gap-y-8">
       {examples.map(({ id, name, description, languages, products }, key) => (
         <a
           href={`/examples/${id}`}
@@ -87,20 +87,20 @@ const ExamplesGrid = ({
           role="button"
           aria-label={`View ${name} example`}
         >
-          <div className="z-0 bg-neutral-100 overflow-hidden h-256 sm:h-200 relative flex justify-center items-center ">
+          <div className="z-0 bg-neutral-100 overflow-hidden h-64 sm:h-[12.5rem] relative flex justify-center items-center ">
             <div className="group-hover/examples-index-card:scale-105 transition-transform">
               {exampleImages ? displayExampleImage(exampleImages, id, name) : null}
             </div>
-            <div className="flex bg-neutral-000 gap-x-6 py-6 px-8 absolute right-12 bottom-12 rounded border border-neutral-200 z-10">
+            <div className="flex bg-neutral-000 gap-x-1.5 py-1.5 px-2 absolute right-3 bottom-3 rounded border border-neutral-200 z-10">
               {(languages ?? DEFAULT_EXAMPLE_LANGUAGES).map((language) => (
                 <Icon key={language} name={`icon-tech-${language}` as IconName} size="18px" />
               ))}
             </div>
           </div>
-          <div className="z-10 pt-16">
+          <div className="z-10 pt-4">
             <p className="ui-text-h4 text-neutral-1300">{highlightSearchTerm(name)}</p>
-            <p className="ui-text-p3 mt-8 text-neutral-900">{highlightSearchTerm(description)}</p>
-            <div className="mt-16 flex gap-x-4">
+            <p className="ui-text-p3 mt-2 text-neutral-900">{highlightSearchTerm(description)}</p>
+            <div className="mt-4 flex gap-x-1">
               {products ? products.map((product) => displayProductLabel(product as ProductName, dataProducts)) : null}
               {/* {useCases ? useCases.map((useCase) => displayUseCaseLabel(useCase)) : null} */}
             </div>

@@ -147,14 +147,14 @@ export const commonAccordionOptions = (
   options: {
     autoClose: topLevel,
     headerCSS: cn(
-      'text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 hover:text-neutral-1100 active:text-neutral-1000 !py-0 pl-0 !mb-0 transition-colors [&_svg]:!w-24 [&_svg]:!h-24 md:[&_svg]:!w-20 md:[&_svg]:!h-20',
+      'text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 hover:text-neutral-1100 active:text-neutral-1000 !py-0 pl-0 !mb-0 transition-colors [&_svg]:!w-6 [&_svg]:!h-6 md:[&_svg]:!w-5 md:[&_svg]:!h-5',
       {
-        'my-12': topLevel && inHeader,
-        'h-40 ui-text-label1 !font-bold md:ui-text-label4 px-16': topLevel,
+        'my-3': topLevel && inHeader,
+        'h-10 ui-text-label1 !font-bold md:ui-text-label4 px-4': topLevel,
         'min-h-[1.625em] md:min-h-[1.375em] ui-text-label2 !font-semibold md:ui-text-label4': !topLevel,
       },
     ),
-    selectedHeaderCSS: '!text-neutral-1300 mb-8',
+    selectedHeaderCSS: '!text-neutral-1300 mb-2',
     contentCSS: '[&>div]:pb-0',
     rowIconSize: '20px',
     defaultOpenIndexes: !inHeader && openIndex !== undefined ? [openIndex] : [],
@@ -163,7 +163,7 @@ export const commonAccordionOptions = (
   },
 });
 
-export const sidebarAlignmentClasses = 'absolute md:sticky w-[240px] md:pb-128 pt-24';
+export const sidebarAlignmentClasses = 'absolute md:sticky w-60 md:pb-32 pt-6';
 
 export const sidebarAlignmentStyles: React.CSSProperties = {
   top: HEADER_HEIGHT,

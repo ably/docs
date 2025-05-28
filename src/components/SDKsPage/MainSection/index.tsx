@@ -15,7 +15,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
   const activeTab = Object.values(Tab).includes(tab as Tab) ? tab : Tab.CHANNELS;
 
   const activeTabClasses =
-    "font-extrabold text-orange-600 after:content-[''] after:absolute after:w-full after:h-2 after:-bottom-[9px] after:left-0 after:bg-orange-600 after:rounded";
+    "font-extrabold text-orange-600 after:content-[''] after:absolute after:w-full after:h-0.5 after:-bottom-[0.5625rem] after:left-0 after:bg-orange-600 after:rounded";
 
   return (
     <div>
@@ -24,7 +24,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
           <Link
             to="/docs/sdks"
             className={cn(
-              'ui-text-h3 mr-16 px-8 py-16 inline-block relative',
+              'ui-text-h3 mr-4 px-2 py-4 inline-block relative',
               activeTab === Tab.CHANNELS && activeTabClasses,
             )}
           >
@@ -33,7 +33,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
           <Link
             to="/docs/sdks?tab=spaces"
             className={cn(
-              'ui-text-h3 mr-16 px-8 py-16 inline-block relative',
+              'ui-text-h3 mr-4 px-2 py-4 inline-block relative',
               activeTab === Tab.SPACES && activeTabClasses,
             )}
           >
@@ -42,7 +42,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
           <Link
             to="/docs/sdks?tab=chat"
             className={cn(
-              'ui-text-h3 mr-16 px-8 py-16 inline-block relative',
+              'ui-text-h3 mr-4 px-2 py-4 inline-block relative',
               activeTab === Tab.CHAT && activeTabClasses,
             )}
           >
@@ -52,7 +52,7 @@ const MainSection = ({ tab }: { tab: Tab }) => {
         <hr />
       </div>
       <div className={`${container}`}>
-        <p className="ui-text-p1 text-charcoal-grey py-72">{data.tabs[activeTab].text}</p>
+        <p className="ui-text-p1 text-charcoal-grey py-[4.5rem]">{data.tabs[activeTab].text}</p>
       </div>
       <CardGrid currentProduct={data.tabs[activeTab].cards} />
     </div>

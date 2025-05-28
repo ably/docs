@@ -7,7 +7,7 @@ const StyledApiReferenceH6: FC<HtmlAttributes<'h6'>> = ({ children, ...attribs }
   return (
     <h6
       {...attribs}
-      className={`inline-block font-mono items-center text-p2 w-full py-4 px-8 my-12 rounded-sm bg-neutral-100 border border-neutral-200 ${
+      className={`inline-block font-mono items-center text-p2 w-full py-1 px-2 my-3 rounded-sm bg-neutral-100 border border-neutral-200 ${
         attribs?.className ?? ''
       }`}
     >
@@ -16,4 +16,4 @@ const StyledApiReferenceH6: FC<HtmlAttributes<'h6'>> = ({ children, ...attribs }
   );
 };
 
-export const ApiReferenceH6 = LinkableHtmlBlock(StyledApiReferenceH6, 'mb-24');
+export const ApiReferenceH6 = LinkableHtmlBlock(StyledApiReferenceH6, 'mb-6');
