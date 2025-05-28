@@ -1,4 +1,6 @@
 import './styles.css';
+import 'franken-ui/js/core.iife';
+import 'franken-ui/js/icon.iife';
 import * as Ably from 'ably';
 import { getChannel } from './ably';
 import { MessageSummary, MessageCreate } from './types';

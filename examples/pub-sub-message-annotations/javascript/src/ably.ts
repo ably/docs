@@ -23,3 +23,7 @@ export function getChannel() {
 export function publishAnnotation(message: MessageCreate, annotation: Ably.OutboundAnnotation) {
   return getChannel().annotations.publish(message, annotation);
 }
+
+export function deleteAnnotation(serial: string, annotation: Ably.OutboundAnnotation) {
+  return getChannel().annotations.delete(serial, annotation);
+}

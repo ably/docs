@@ -8,7 +8,7 @@ import {
   createCountBadge,
   createClientBadges,
   createClientBadgesWithCounts,
-  createClientBadgeWithCount,
+  createBadgeWithCount,
 } from './badge';
 
 function createEmptyAnnotationSummaryContentElement() {
@@ -189,7 +189,7 @@ function createMultipleCard(value: string, entry: Ably.SummaryMultipleValues[str
 
   if (entry.totalUnidentified > 0) {
     const unidentifiedContainer = document.createElement('div');
-    unidentifiedContainer.appendChild(createClientBadgeWithCount('Unidentified', entry.totalUnidentified, color));
+    unidentifiedContainer.appendChild(createBadgeWithCount('Unidentified', entry.totalUnidentified, color));
     card.appendChild(unidentifiedContainer);
   }
 
@@ -273,8 +273,7 @@ export function updateAnnotationSummary(message: MessageSummary) {
   }
 
   sectionsContainer.innerHTML = '';
-
-  const hasAnnotations = annotationTypes.some((type) => message.summary[`${annotationNamespace}:${type.key}`]);
+  const hasAnnotations = annotationTypes.some((type) => message.summary && message.summary[`${annotationNamespace}:${type.key}`]);
 
   if (!hasAnnotations) {
     sectionsContainer.appendChild(createEmptyAnnotationSummaryContentElement());
