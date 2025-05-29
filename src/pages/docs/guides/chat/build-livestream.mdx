@@ -81,7 +81,38 @@ PLACEHOLDER: Visual image showing server-side batching in action
 
 Authentication in livestream chat is a design decision. In some cases, you'll want to tie participants to their identity in your application. In others, anyone can join and participate. Ably Chat supports both of these scenarios - you don't need to go through the hassle of setting up users in Ably and trying to keep them in sync with your application. Every client has a clientID. If you want random users, just choose a random string. If you want to tie it to your application, then use the UUID of the user or some other well-known identifier.
 
-PLACEHOLDER: Code snippet showing the JWT format, including the clientID and capabilities.
+<Code>
+```javascript
+    const jwt = require("jsonwebtoken");
+
+    var header = {
+        "typ": "JWT",
+        "alg": "HS256",
+        "kid": "{{ API_KEY_NAME }}"
+    }
+    var currentTime = Math.round(Date.now() / 1000);
+
+    // The clientID could be the users UUID in your appplication,
+    // or a random string if you want to make users anonymous.
+    //
+    // The capabilities here allow the holder of this token to publish and subscribe to messages, 
+    // typing indicators and room reactions in the chat room called "foo".
+    var claims = {
+        "iat": currentTime, /* current time in seconds */
+        "exp": currentTime + 14400, /* time of expiration in seconds */
+        "x-ably-capability": "{\"[chat]foo\":[\"publish\", \"subscribe\"]}",
+        "x-ably-clientId": "your-client-id",
+    }
+
+    ablyJwt = jwt.sign(
+        claims,
+        "{{ API_KEY_SECRET }}",
+        { header: header }
+    )
+
+    console.log('JWT is: ' + ablyJwt);
+```
+</Code>
 
 How you authenticate is also key. To balance security and experience, you want short-lived tokens that can be easily revoked if a users is misbehaving or needs their permissions changed, but also avoiding the overhead of issuing new tokens every 2 minutes. **In production apps, you should not use API keys for client-side authentication** (server-side is OK) - these are long-lived and much more difficult to revoke in a hurry.
 
@@ -127,7 +158,24 @@ Ably's integration with moderation providers enables you to customise the modera
 
 Of course, you may already have built moderation in other parts of your organisation and want to re-use it for your livestream chat. Ably's "bring your own" moderation rules enable you to connect your chat rooms to your own infrastructure via popular transports including serverless functions, queues and webhooks. By implementing simple APIs, you can integrate your own moderation solution seamlessly with Ably.
 
-CODE HERE: Example of handling moderation failures in Ably Chat
+<Code>
+```javascript
+import { ErrorCode } from '@ably/chat';
+
+const room = chatClient.rooms.get('my-livestream');
+
+room.messages.send({text: 'some horrible message'}).then((message) => {
+    console.log('Message sent:', message);
+}).catch((error) => {
+    if (error.code === ErrorCode.MessageRejectedByModeration) {
+        console.log('Message rejected by moderation:', error.message);
+        return;
+    }
+
+    console.error('Message failed to send:', error);
+});
+```
+</Code>
 
 PLACEHOLDER: Diagram showing moderation flow (user → Ably → moderation → delivery)
 
@@ -149,11 +197,43 @@ Enhance engagement with room reactions and typing indicators. Celebrate the winn
 
 Typing indicators are less common in large livestream chat, where a large number of users are typing at once. However, in more intimate experieces such as supporting 1:1 and group chats, they can be a great way to enhance engagement. So a key design decision is whether or not user engagement will benefit from them.
 
+<Code>
+```javascript
+const room = chatClient.rooms.get('my-livestream');
+
+// Subscribe to typing events
+room.typing.subscribe((event) => {
+  console.log('Currently typing clients', event.currentlyTyping);
+});
+
+// Each time a user does a keystroke, call the keystroke method.
+// This method is self-throttling, to prevent large numbers of messages being sent
+// and keep costs down
+await room.typing.keystroke();
+
+// You can let the typing indicator stop naturally, or explicitly stop it
+await room.typing.stop();
+```
+</Code>
+
 Room reactions are a great way to enhance engagement in a livestream and enable users to quickly express sentiment to key moments in the stream. They are not persisted, and are optimised for scale. [Ably's architecture](/docs/platform/architecture/platform-scalability) is designed to support the spikey traffic of livestream chat, ensuring that you don't encounter any performance issues in the pivotal moments.
 
-Both of these features are presented as simple APIs in the Ably Chat SDKs, enabling you to add them to your livestream with minimal effort.
+<Code>
+```javascript
+// Get the chat room
+const room = chatClient.rooms.get('my-livestream');
 
-CODE HERE: Example of sending a room reaction
+// Subscribe to room reactions
+room.reactions.subscribe((event) => {
+  console.log('A reaction was sent:', event.reaction);
+});
+
+// Send a room reaction
+await room.reactions.send({type: '👍'});
+```
+</Code>
+
+Both of these features are presented as simple APIs in the Ably Chat SDKs, enabling you to add them to your livestream with minimal effort.
 
 ## Message history and context
 
@@ -166,7 +246,21 @@ Again, there is a design decision to make here. In a large, high-throughput live
 
 If you decide that you do want history, the Ably Chat SDKs provide a paginated API to fetch message history that ensures you don't have any gaps and can go as far back as you need.
 
-CODE HERE: Example of fetching message history
+<Code>
+```javascript
+// Get the chat room
+const room = chatClient.rooms.get('my-livestream');
+
+// Subscribe to messages
+const subscription = room.messages.subscribe((messageEvent) => {
+  console.log('A message was sent:', messageEvent.message);
+});
+
+// Get the last 100 messages, based on the subscription.
+// This ensures you don't miss any get a fully joined up history.
+await subscription.historyBeforeSubscription({limit: 100});
+```
+</Code>
 
 ## Handling network disruption
 
@@ -219,7 +313,16 @@ When a client abruptly disconnects from Ably, there is a 2 minute delay before t
 
 All Ably SDKs also perform "heartbeats" with the server to enable detection of dropped or disrupted connections. The default interval for this is 15 seconds. By adjusting the heartbeat interval, you can control how quickly a connection is deemed to have dropped and therefore reduce the amount of time connections remain open for.
 
-PLACEHOLDER: Code for heartbeat interval
+<Code>
+```javascript
+import * as Ably from 'ably';
+
+const realtimeClient = new Ably.Realtime({
+   // Other options omitted for brevity
+   transportParams: { heartbeatInterval: 5000 }
+})
+```
+</Code>
 
 ## AI Integrations
 
