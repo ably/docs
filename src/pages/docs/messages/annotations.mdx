@@ -49,7 +49,7 @@ Annotations are a special type of message with the following properties:
 
 ## Publishing annotations <a id="publish" />
 
-To publish an annotation for a message, use the `annotations.publish()` method on a channel, passing either a [message](/docs/messages) instance or the `serial` of the message to annotate.
+To publish an annotation for a message, use the `annotations.publish()` method on a channel, passing either a [message](/docs/messages) instance or the `serial` of the message to annotate. This method will publish an annotation message with an action of `annotation.create`.
 
 The `clientId` specified in the [client options](/docs/api/realtime-sdk#client-options) will be associated with the published annotation.
 
@@ -148,6 +148,41 @@ await channel.annotations.publish(message.serial, {
 </Code>
 
 
+## Deleting annotations <a id="delete" />
+
+To delete a published annotation, use the `annotations.delete()` method on a channel, passing either a [message](/docs/messages) instance or the `serial` of the message to annotate. This method will publish a delete annotation message with an action of `annotation.delete`.
+
+Deleting an annotation does not remove the original annotation that was published. Instead, annotation delete messages affect the [annotation summary](#annotation-summaries) for that message by removing the contribution as specified by the delete annotation.
+
+The `clientId` specified in the [client options](/docs/api/realtime-sdk#client-options) will be associated with the published delete annotation.
+
+<Aside data-type='note'>
+Some summarization methods require the client to be identified with a `clientId` in order to delete annotations. For more information, see [annotation summaries](#annotation-summaries).
+</Aside>
+
+When publishing a delete annotation, specify the [annotation type](#annotation-types) on the `type` field of the annotation object.
+
+You can also optionally specify a `name` for the annotation which is used by certain [summarization methods](#annotation-summaries) that aggregate by `name`.
+
+<Code>
+```javascript
+// Delete a 'delivered' annotation
+await channel.annotations.delete(message.serial, {
+  type: 'receipts:flag.v1',
+  name: 'delivered'
+});
+```
+
+```nodejs
+// Delete a 'delivered' annotation
+await channel.annotations.delete(message.serial, {
+  type: 'receipts:flag.v1',
+  name: 'delivered'
+});
+```
+</Code>
+
+
 ## Subscribing to annotation updates <a id="subscribe" />
 
 There are two ways to subscribe to annotation updates:
@@ -236,7 +271,7 @@ When annotations for a message are published, Ably automatically generates a sum
 
 A separate summary is produced for each distinct [annotation type](#annotation-types).
 
-The summarization method specified in the [annotation type](#annotation-types) determines how annotations in the same namespace for a given message are aggregated into a summary.
+The summarization method specified in the [annotation type](#annotation-types) determines how annotations in the same namespace for a given message are aggregated into a summary. A summary is constructed from the set of `annotation.create` and `annotation.delete` messages that have been published for a message.
 
 When [publishing](#publish) an annotation you can optionally specify a `name` which is used by some summarization methods to produce a summary.
 
@@ -244,13 +279,13 @@ Ably provides five summarization methods to support different use cases which ar
 
 ### Total
 
-The `total.v1` summarization method counts the number of annotations of a given type that were published for a message.
+The `total.v1` summarization method counts the number of annotations of a given type that were [published](#publish) for a message.
 
-<Aside data-type="note">
+[Deleting](#delete) an annotation decrements the total count for that message.
+
+The `total.v1` summarization method does not attribute counts to individual clients in the summary; it maintains only a simple count per [annotation type](#annotation-types) and does not organize counts by name.
+
 If the same client publishes an annotation of a given type to the same message twice, the `total` count is incremented twice.
-</Aside>
-
-The `total.v1` summarization method does not attribute counts to individual clients in the summary; it maintains only a simple counter per type and does not organize counts by name.
 
 ```javascript
 {
@@ -260,15 +295,14 @@ The `total.v1` summarization method does not attribute counts to individual clie
 }
 ```
 
-<Aside data-type="note">
-Both identified and unidentified clients can publish `total.v1` annotations.
-</Aside>
 
 ### Flag
 
-The `flag.v1` summarization method counts how many distinct clients have published an annotation of a given type and maintains a list of those `clientId`s.
+The `flag.v1` summarization method counts how many distinct clients have [published](#publish) an annotation of a given type and maintains a list of those `clientId`s.
 
-A given client can contribute to the summary only once per annotation type.
+[Deleting](#delete) an annotation decrements the total count for that message and removes the `clientId` from the list of clients that contributed to the summary.
+
+A given client can contribute to the summary only once per [annotation type](#annotation-type).
 
 ```javascript
 {
@@ -280,13 +314,13 @@ A given client can contribute to the summary only once per annotation type.
 ```
 
 <Aside data-type="note">
-Only identified clients can publish annotations using the `flag.v1` summarization method, since the summary includes specific client IDs.
+You must specify a `clientId`in the [client options](/docs/api/realtime-sdk#client-options) to publish `flag.v1` annotations.
 </Aside>
 
 
 ### Distinct
 
-The `distinct.v1` summarization method counts how many unique clients have published an annotation with a given `name` for each annotation type along with the corresponding list of `clientId`s that published it.
+The `distinct.v1` summarization method counts how many unique clients have [published](#publish) an annotation with a given `name` for each annotation type along with the corresponding list of `clientId`s that published it.
 
 A given client can contribute to the summary for a particular annotation `name` only once, but the same client may publish additional annotations with different `name`s.
 
@@ -305,13 +339,15 @@ A given client can contribute to the summary for a particular annotation `name` 
 }
 ```
 
+[Deleting](#delete) an annotation removes the `clientId` from the list of clients that contributed to the summary for that `name`, and decrements the total count for that `name`.
+
 <Aside data-type="note">
-Only identified clients can publish annotations using the `distinct.v1` summarization method, since the summary includes specific client IDs.
+You must specify a `clientId`in the [client options](/docs/api/realtime-sdk#client-options) to publish `distinct.v1` annotations.
 </Aside>
 
 ### Unique
 
-The `unique.v1` summarization method counts how many unique clients have published an annotation with a given `name` for each annotation type, while guaranteeing that each client contributes to the summary for only one `name` at a time. The summary for each annotation `name` holds a `total` count of the number of distinct clients that have pubilshed an annotation with that `name` along with the corresponding list of `clientId`s that published it.
+The `unique.v1` summarization method counts how many unique clients have [published](#publish) an annotation with a given `name` for each annotation type, while guaranteeing that each client contributes to the summary for only one `name` at a time. The summary for each annotation `name` holds a `total` count of the number of distinct clients that have pubilshed an annotation with that `name` along with the corresponding list of `clientId`s that published it.
 
 A given client can contribute to the summary for a particular annotation `name` only once. Publishing an annotation with a different `name` automatically removes that client from the summary for the previous `name` and adds them to the new one, updating the affected total values and list of `clientId`s.
 
@@ -330,13 +366,15 @@ A given client can contribute to the summary for a particular annotation `name` 
 }
 ```
 
+[Deleting](#delete) an annotation removes the `clientId` from the list of clients that contributed to the summary for that `name`, and decrements the total count for that `name`.
+
 <Aside data-type="note">
-Only identified clients can publish annotations using the `unique.v1` summarization method, since the summary includes specific client IDs.
+You must specify a `clientId`in the [client options](/docs/api/realtime-sdk#client-options) to publish `unique.v1` annotations.
 </Aside>
 
 ### Multiple
 
-The `multiple.v1` summarization method counts both a total and a per-client count of the number of annotations that were published with a given `name` for each annotation type. Additionally it includes a count for the number of annotations published with a given `name` from unidentified clients.
+The `multiple.v1` summarization method counts both a total and a per-client count of the number of annotations that were [published](#publish) with a given `name` for each annotation type. Additionally it includes a count for the number of annotations published with a given `name` from unidentified clients.
 
 A given client can contribute to the summary for a particular annotation `name` multiple times. The same client may also publish additional annotations with different `name`s.
 
@@ -364,3 +402,5 @@ If a client specifies a `count` when publishing an annotation, the client's cont
   }
 }
 ```
+
+[Deleting](#delete) an annotation removes all contributions made by that `clientId` for that `name`.
