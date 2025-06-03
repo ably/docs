@@ -30,6 +30,10 @@ export default {
           link: '/docs/getting-started/react',
         },
         {
+          name: 'React Native',
+          link: '/docs/getting-started/react-native',
+        },
+        {
           name: 'Kotlin',
           link: '/docs/getting-started/kotlin',
         },
