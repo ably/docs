@@ -32,15 +32,14 @@ type LayoutProps = PageProps<unknown, PageContextType>;
 const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
   const location = useLocation();
   const { searchBar, leftSidebar, rightSidebar, template } = pageContext.layout ?? {};
-  const isRedocPage =
-    location.pathname === '/docs/api/control-api' || '/docs/api/chat-rest' || '/docs/api/liveobjects-rest';
+  const isControlApiPage = location.pathname === '/docs/api/control-api';
 
   return (
     <GlobalLoading template={template}>
       <Header searchBar={searchBar} />
       <div className="flex pt-16 md:gap-12 lg:gap-16 xl:gap-20 justify-center ui-standard-container mx-auto">
         {leftSidebar ? <LeftSidebar /> : null}
-        <Container as="main" className={cn('flex-1', { 'overflow-x-auto': !isRedocPage })}>
+        <Container as="main" className={cn('flex-1', { 'overflow-x-auto': !isControlApiPage })}>
           {leftSidebar ? <Breadcrumbs /> : null}
           {children}
           <Footer />
