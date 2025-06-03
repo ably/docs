@@ -26,6 +26,10 @@ export default {
           link: '/docs/getting-started/javascript',
         },
         {
+          name: 'React Native',
+          link: '/docs/getting-started/react-native',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
