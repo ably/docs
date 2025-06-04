@@ -9,6 +9,8 @@ export enum Tab {
   CHANNELS = 'channels',
   SPACES = 'spaces',
   CHAT = 'chat',
+  LIVEOBJECTS = 'liveobjects',
+  LIVESYNC = 'livesync',
 }
 
 const MainSection = ({ tab }: { tab: Tab }) => {
@@ -31,6 +33,24 @@ const MainSection = ({ tab }: { tab: Tab }) => {
             Pub/Sub
           </Link>
           <Link
+            to="/docs/sdks?tab=chat"
+            className={cn(
+              'ui-text-h3 mr-4 px-2 py-4 inline-block relative',
+              activeTab === Tab.CHAT && activeTabClasses,
+            )}
+          >
+            Chat
+          </Link>
+          <Link
+            to="/docs/sdks?tab=liveobjects"
+            className={cn(
+              'ui-text-h3 mr-4 px-2 py-4 inline-block relative',
+              activeTab === Tab.LIVEOBJECTS && activeTabClasses,
+            )}
+          >
+            LiveObjects
+          </Link>
+          <Link
             to="/docs/sdks?tab=spaces"
             className={cn(
               'ui-text-h3 mr-4 px-2 py-4 inline-block relative',
@@ -40,13 +60,13 @@ const MainSection = ({ tab }: { tab: Tab }) => {
             Spaces
           </Link>
           <Link
-            to="/docs/sdks?tab=chat"
+            to="/docs/sdks?tab=livesync"
             className={cn(
               'ui-text-h3 mr-4 px-2 py-4 inline-block relative',
-              activeTab === Tab.CHAT && activeTabClasses,
+              activeTab === Tab.LIVESYNC && activeTabClasses,
             )}
           >
-            Chat
+            LiveSync
           </Link>
         </div>
         <hr />
