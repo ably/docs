@@ -55,7 +55,7 @@ Ably gives you the flexibility to design for your users, not your infrastructure
 Livestream chat is defined by high message rates and unpredictable spikes. Ably [is engineered](/docs/platform/architecture/platform-scalability) to handle these loads without degradation.
 
 * **Proven at scale:** Ably delivers over 500 million messages per day for customers, with individual rooms supporting over 1 million concurrent users.
-* **Server-side batching:** Reduce costs and network overhead by grouping messages before delivery. For example, [batching messages](#server-side-batching) over a 500ms interval can reduce the number of outbound messages by up to 8x in high-traffic streams.
+* **Server-side batching:** Reduce costs and network overhead by grouping messages before delivery. As shown in the [example](#server-side-batching), [batching messages](#server-side-batching) reduces the number of outbound messages such that it increases linearly with the number of users in the chatroom.
 * **Rate limiting:** Control the flow of messages per user to maintain readability and prevent spam. Choose between per-connection rate limits or global throttling.
 
 Decisions that you need to make around throughput and rates:
@@ -107,7 +107,7 @@ console.log('JWT is: ' + ablyJwt);
 ```
 </Code>
 
-How you authenticate is also key. To balance security and experience, you want short-lived tokens that can be easily revoked if a users is misbehaving or needs their permissions changed, but also avoids the overhead of issuing new tokens every 2 minutes. **In production apps, you should not use API keys for client-side authentication**. You can use them server-side, but as they are long-lived they are much more difficult to revoke in a hurry.
+How you authenticate is also key. To balance security and experience, you want short-lived tokens that can be easily revoked if a users is misbehaving or needs their permissions changed, but automatically expire after a period of time. This means that if a token is compromised, it will only be valid for a limited time. **In production apps, you should not use API keys for client-side authentication**. You can use them server-side, but as they are long-lived and require explicit revocation, exposure to untrusted users poses a continuing risk.
 
 With Ably Chat, authentication is best achieved using JSON Web Tokens (JWTs). These are tied to a particular clientID and come with a set of [capabilities](/docs/chat/setup#authentication) that control what a client can and cannot do - for example whether they can send messages, join a certain room or moderate. Ably's SDKs handle the timing and process of requesting a new token for you, refreshing it when it expires. All you need to do is provide a server-side endpoint that can generate the JWT for the client. This enables clients to use your existing authentication systems or user sessions to generate their Ably token.
 
@@ -178,12 +178,15 @@ Ably's [occupancy](/docs/chat/rooms/occupancy) feature provides you with realtim
 * **Within a stream:** Show the number of active users in realtime.
 * **Across streams:** Aggregate occupancy data for stream lists or dashboards.
 
+Occupancy updates are debounced, so your clients aren't overwhelmed with updates and more importantly, you don't have to worry about occupancy spikes inflating your bill.
+
 ## Reactions and typing indicators
 
 Enhance engagement with [room reactions](/docs/chat/rooms/reactions) and [typing indicators](/docs/chat/rooms/typing). Celebrate the winning goal or protest the controversial decision by enabling users to express sentiment en-masse.
 
-* **Room reactions:** Broadcast sentiment (e.g., 👍, ❤️) to all users.
 * **Typing indicators:** Show when users are composing messages.
+* **Room reactions:** Broadcast sentiment (e.g., 👍, ❤️) to all users.
+* **Message reactions:** React to messages with emojis.
 
 Typing indicators are less common in large livestream chat, where a large number of users are typing at once. However, in more intimate experiences such as supporting 1:1 and group chats, they can be a great way to enhance engagement. So a key design decision is whether or not user engagement will benefit from them.
 
@@ -223,7 +226,23 @@ await room.reactions.send({type: '👍'});
 ```
 </Code>
 
-Both of these features are presented as simple APIs in the Ably Chat SDKs, enabling you to add them to your livestream with minimal effort.
+If you're planning a large busy room, messages may go by quicker than people can react. However, in a more intimate setting, for example 1:1 DMs or small group chats, message reactions can be a great way to enhance engagement and allow users to express their sentiments to key points in the discussion.
+
+<Code>
+```javascript
+const room = chatClient.rooms.get('my-livestream');
+
+// Subscribe to message reactions
+room.messages.reactions.subscribe((event) => {
+  console.log('A reaction was sent:', event.reaction);
+});
+
+// Send a message reaction
+await room.messages.reactions.send(message, {name: '👍'});
+```
+</Code>
+
+All of these features are presented as simple APIs in the Ably Chat SDKs, enabling you to add them to your livestream with minimal effort.
 
 ## Message history and context <a id="history"/>
 
@@ -258,7 +277,7 @@ Network disruption happens - mobile internet loses signal or someone drives thro
 
 Every SDK instance keeps track of where it's at in the message stream. If the connection is lost, the library will [automatically attempt to reconnect](/docs/platform/architecture/connection-recovery) to the servers and in doing so, resume its position in the stream. This enables the chat to continue as if the user never left. After extended periods of disconnection, the client can make use of [history](#history) to backfill missing messages.
 
-It's incredibly rare, but sometimes a client might lose connection to a particular data center. Ably operates in multiple data centers around the world with multiple fallback regions available. If a client can't reach the nearest data center, it will try the next one until the connection is re-established, ensuring minimal downtime and that network issues don't disrupt the experience that you are trying to build.
+It's incredibly rare, but sometimes a client might lose connection to a particular data center. Ably operates in multiple data centers around the world with multiple fallback regions available. If a client can't reach the nearest data center, it will try the next one until the connection is re-established, ensuring minimal downtime and that network issues don't disrupt the experience that you are trying to build. Ably's [fault tolerance guide](/docs/platform/architecture/fault-tolerance) describes how we do this and that, even if an entire region goes down, it has little-to-no impact on the global service and your application.
 
 ## Priced for scale
 
@@ -266,34 +285,36 @@ Livestreams can be a high-churn affair, with many users coming and going through
 
 If you have an audience that is relatively consistent, for example a number of people sign up for an event and then stay for the duration, Ably also offers a competitive MAU pricing model in addition to the traditional consumption-based model for these scenarios.
 
-A full breakdown of pricing, as well as a cost estimator for your scenario, can be found on the [pricing page](https://ably.com/pricing?chat-type=sales).
+A full breakdown of pricing, as well as a cost estimator for your scenario, can be found on the [pricing page](/pricing).
 
 ### Server-side message batching <a id="server-side-batching"/>
 
-In large livestream chats, the majority of the cost comes from delivering messages to all of the participants. It also limits how many messages per second can be processed.
+In large livestream chats, the majority of the cost comes from delivering websocket messages (whether that's chat messages, typing indicators, room reactions or other events) to all of the participants. It also limits how many messages per second can be processed.
 
 With server-side batching, Ably groups together messages sent in quick succession on the server and fans them out to clients as one unit. This reduces the total amount of messages sent to each client, greatly reducing your bill. All of this is fully configurable - you can control the rollup period to balance responsiveness in your chat versus cost.
 
-Let's calculate the fanout for a chat room with 1000 users, each posting once per minute:
+Let's calculate the fanout for a chat room with 100 users, each sending a message once per second:
 
 #### Unbatched scenario:
 
-* 1000 users × 1 message/minute = 1000 messages/minute or 16 messages/second
-* Total fanout: 1000 × 1000 (assuming the message is echoed back to the publisher)
-* Total outbound message rate: **1,000,000 outbound messages/minute** or 16,667 messages/second
+* 100 users sending 1 message per second.
+* Total fanout: 100 × 100 (assuming the message is echoed back to the publisher)
+* Total outbound message rate: **10,000 outbound messages/second**, or 600,000 messages/minute.
 
 #### With 500ms batching:
 
 * Messages are grouped into 500ms batches, so users will see a maximum of 500ms delay from publish to receiving
-* In 500ms, we expect: (1000 messages/minute) × (0.5 seconds/60 seconds) ≈ 8.3 messages per batch
+* In 500ms, we expect each batch to contain 50 messages. So over the course of 1 second, 2 batches are sent out.
 * Each batch is delivered once to each user
-* Over the space of a minute, there are now only **120,000 outbound messages/minute** or 2000 messages per second
+* Total outbound message rate: 200 messages/second, or 12,000 messages/minute.
 
-That's an **8x reduction** in the number of messages sent out to clients per minute.
+That's a **50x reduction** in the number of messages sent out to clients per minute.
 
 #### Cost grows linearly as you do
 
-The key takeaway is what happens once you increase the number of users to 2000, the inbound message rate goes up to 32/second, which unbatched is 4 million outbound messages/minute. With 500ms batching, the outbound message rate grows to 240,000 (double the amount for 1000 users). Therefore, with Ably's server-side batching feature, **your costs can grow linearly as you scale**.
+The key takeaway is what happens once you increase the number of users to 1000 (10x the original number of users), the inbound message rate goes up to 1000/second, which unbatched is 1 million outbound messages/second or 60 million messages/minute. With 500ms batching, each batch has 500 messages, with 2 batches sent out per second. For 1000 users, that's **2000 outbound messages/second** or 120,000 messages/minute - a **500x reduction**.
+
+As you can see, with server-side batching, the cost grows linearly as you scale. As the number of chat participans grows, the greater the cost reduction increases compared to the unbatched scenario.
 
 ### Aggressive connection management
 
@@ -319,8 +340,8 @@ AI chatbots are revolutionizing the way we interact with digital platforms. As l
 Ably's flexible [integration capabilities](/docs/integrations) make it easy to connect your chat system with AI services. Through Ably's integrations, you can automatically route messages to:
 
 * Serverless functions (AWS Lambda, Azure Functions, etc.)
-* Webhooks
-* Custom endpoints
+* Event streaming services including Kafka, SQS and Pulsar
+* Webhooks and custom endpoints
 
 This enables powerful AI features like:
 
