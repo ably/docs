@@ -92,9 +92,9 @@ import {
     useTyping
 } from '@ably/chat/react';
 import {
-    MessageEvent,
+    ChatMessageEvent,
     Message,
-    MessageEvents,
+    ChatMessageEventType,
     Reaction
 } from '@ably/chat';
 ```
@@ -209,7 +209,7 @@ In your project, open `src/App.tsx`, and add a new component called `RoomStatus`
 function RoomStatus() {
   // This component will display the current room status
   const [currentRoomStatus, setCurrentRoomStatus] = useState('');
-  const {roomId} = useRoom({
+  const {roomName} = useRoom({
     onStatusChange: (status) => {
       setCurrentRoomStatus(status.current); // Update the room status
     },
@@ -219,7 +219,7 @@ function RoomStatus() {
       <h2 className="text-lg font-semibold text-blue-500">Room Status</h2>
       <p className="mt-2">Status: {currentRoomStatus}
         <br/>
-        Room: {roomId}
+        Room: {roomName}
       </p>
     </div>
   );
@@ -236,7 +236,7 @@ function App() {
   // Wrap your Room component with the ChatRoomProvider:
   return (
     <ChatRoomProvider
-      id="my-first-room" // The room ID you want to create or join
+      name="my-first-room" // The room name you want to create or join
       release={true} // Release the room automatically when unmounted
       attach={true} // Attach to the room automatically when mounted
     >
@@ -259,7 +259,7 @@ export default App;
 ```
 </Code>
 
-The above code creates a room with the ID `my-first-room` and sets up a listener to monitor the room status. It also displays the room ID and current status in the UI.
+The above code creates a room with the name `my-first-room` and sets up a listener to monitor the room status. It also displays the room name and current status in the UI.
 
 <Aside data-type='note'>
 Monitoring the room status is useful for deciding when to show a loading spinner or other UI elements while waiting for the room to be created or joined.
@@ -284,7 +284,7 @@ function ChatBox() {
     listener: (event: MessageEvent) => {
       const message = event.message;
       switch (event.type) {
-        case MessageEvents.Created: {
+        case ChatMessageEventType.Created: {
           // Add the new message to the list
           setMessages((prevMessages) => [...prevMessages, message]);
           break;
@@ -352,7 +352,7 @@ Add the `ChatBox` component to your main app component:
 function App() {
   return (
     <ChatRoomProvider
-      id="my-first-room" // The room ID you want to create or join
+      name="my-first-room" // The room name you want to create or join
       release={true} // Release the room automatically when unmounted
       attach={true} // Attach to the room automatically when mounted
     >
@@ -477,21 +477,21 @@ return (
 ```
 </Code>
 
-Update the listener provided to the `useMessages()` hook to handle the `MessageEvents.Updated` event:
+Update the listener provided to the `useMessages()` hook to handle the `ChatMessageEventType.Updated` event:
 
 <Code>
 ```react
 // App.tsx - Replace the useMessages hook with the following:
 const {send, update} = useMessages({
-  listener: (event: MessageEvent) => {
+  listener: (event: ChatMessageEvent) => {
     const message = event.message;
     switch (event.type) {
-      case MessageEvents.Created: {
+      case ChatMessageEventType.Created: {
         // Add the new message to the list
         setMessages((prevMessages) => [...prevMessages, event.message]);
         break;
       }
-      case MessageEvents.Updated: {
+      case ChatMessageEventType.Updated: {
         setMessages((prevMessages) => {
           // Find the index of the message to update
           const index = prevMessages.findIndex((other) => message.isSameAs(other));
@@ -524,8 +524,8 @@ Now, when you click on a previously sent message in the UI, it will prompt you t
 
 ## Step 6: Message history and continuity <a id="step-6"/>
 
-Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The `useMessages()` hook exposes the [`getPreviousMessages()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#getPreviousMessages) method to enable this functionality. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
-To do this, you need to expose `getPreviousMessages()` on the hook, and extend the `ChatBox` component to include a method to retrieve the last 10 messages when the component mounts.
+Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The `useMessages()` hook exposes the [`historyBeforeSubscribe()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#historyBeforeSubscribe) method to enable this functionality. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
+To do this, you need to expose `historyBeforeSubscribe()` on the hook, and extend the `ChatBox` component to include a method to retrieve the last 10 messages when the component mounts.
 
 In your `src/App.tsx` file, add the following `useEffect` to your `ChatBox` component:
 
@@ -533,18 +533,18 @@ In your `src/App.tsx` file, add the following `useEffect` to your `ChatBox` comp
 ```react
 // App.tsx
 function ChatBox() {
-  /* Expose getPreviousMessages() */
-  /* const {send, update, getPreviousMessages} = useMessages({...*/
+  /* Expose historyBeforeSubscribe() */
+  /* const {send, update, historyBeforeSubscribe} = useMessages({...*/
   /* existing code */
   useEffect(() => {
     async function loadHistory() {
       try {
-        if (!getPreviousMessages) {
+        if (!historyBeforeSubscribe) {
           // The room is not ready yet
           return;
         }
         // Retrieve the last 10 messages
-        const history = await getPreviousMessages({ limit: 10 });
+        const history = await historyBeforeSubscribe({ limit: 10 });
         // Set the messages in the state
         setMessages(history.items);
       } catch (error) {
@@ -552,7 +552,7 @@ function ChatBox() {
       }
     }
     loadHistory();
-  }, [getPreviousMessages]);
+  }, [historyBeforeSubscribe]);
   /* rest of your code */
 }
 ```
@@ -563,7 +563,7 @@ The above code will retrieve the last 10 messages when the component mounts, and
 Try the following to test this feature:
 
 1. Use the ably CLI to simulate sending some messages to the room from another client.
-2. Refresh the page, this will cause the `ChatBox` component to mount again and call the `getPreviousMessages()` method.
+2. Refresh the page, this will cause the `ChatBox` component to mount again and call the `historyBeforeSubscribe()` method.
 3. You'll see the last 10 messages appear in the chat box.
 
 ## Step 7: Show who is typing a message <a id="step-7"/>
@@ -736,7 +736,7 @@ Add the `PresenceStatus` component to your main app component like so:
 function App() {
   return (
   <ChatRoomProvider
-    id="my-first-room" // The room ID you want to create or join
+    name="my-first-room" // The room name you want to create or join
     release={true} // Release the room automatically when unmounted
     attach={true} // Attach to the room automatically when mounted
   >
@@ -844,7 +844,7 @@ function App() {
   // Wrap your Room component with the ChatRoomProvider:
   return (
     <ChatRoomProvider
-      id="my-first-room" // The room ID you want to create or join
+      name="my-first-room" // The room name you want to create or join
       release={true} // Release the room automatically when unmounted
       attach={true} // Attach to the room automatically when mounted
     >
@@ -900,7 +900,7 @@ For React components, when a component using the `ChatRoomProvider` unmounts, th
 ```react
 // App.tsx
 <ChatRoomProvider
-  id="my-first-room"
+  name="my-first-room"
   release={true} // Release the room automatically when unmounted
   attach={true}
 >
@@ -910,7 +910,7 @@ For React components, when a component using the `ChatRoomProvider` unmounts, th
 
 h3(#manual-release). Manual release
 
-If relying on unmount is not enough, or you have opted to disable auto release by setting `release={false}`, you can manually call `rooms.release(roomId)` to release a room:
+If relying on unmount is not enough, or you have opted to disable auto release by setting `release={false}`, you can manually call `rooms.release(name)` to release a room:
 
 ```react
 import { useChatClient } from '@ably/chat/react';

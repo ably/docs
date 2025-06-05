@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Message,
   ChatClient,
+  ChatMessageEvent,
 } from '@ably/chat';
 import {
   useRoom,
@@ -24,8 +25,8 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const { clientId } = useChatClient();
   const { send } = useMessages({
-    listener: (message: Message) => {
-      setMessages((prevMessages: Message[]) => [...prevMessages, message.message]);
+    listener: (event: ChatMessageEvent) => {
+      setMessages((prevMessages: Message[]) => [...prevMessages, event.message]);
     },
   });
 
@@ -110,7 +111,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <ChatClientProvider client={chatClient}>
-        <ChatRoomProvider id={roomName}>
+        <ChatRoomProvider name={roomName}>
           <ChatRoomMessagesDemo />
         </ChatRoomProvider>
       </ChatClientProvider>

@@ -7,14 +7,14 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const { clientId } = useChatClient();
-  const { get, send } = useMessages({
+  const { history, send } = useMessages({
     listener: (event) => {
       setMessages((prevMessages: Message[]) => [...prevMessages, event.message]);
     },
   });
 
   const getPastMessages = () => {
-    get({ limit: 10 }).then((result) => {
+    history({ limit: 10 }).then((result) => {
       result.items.forEach((message) => {
         const messageExists = messages.some((prevMessage) => prevMessage.serial === message.serial);
 

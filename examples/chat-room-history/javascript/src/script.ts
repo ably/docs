@@ -81,7 +81,7 @@ document.getElementById('enter-chat').addEventListener('click', async () => {
 
 const getPastMessages = async () => {
   /** 💡 Add past 10 messages published to the room 💡 */
-  const pastMessages = await room.messages.get({ limit: 10 });
+  const pastMessages = await room.messages.history({ limit: 10 });
 
   pastMessages.items.forEach((message) => {
     const messageExists = document.getElementById(message.serial);
