@@ -15,11 +15,6 @@ async function initializeChat() {
 
   // Get ROOM with typing capabilities
   const room = await chatClient.rooms.get(channelName);
-  const onlineStatuses = await room.presence.get();
-
-  for (const onlineStatus of onlineStatuses) {
-    await addCard(onlineStatus);
-  }
 
   /** 💡 Subscribe to the presence set of the room to see online statuses 💡 */
   room.presence.subscribe(async (event: PresenceEvent) => {
@@ -29,14 +24,16 @@ async function initializeChat() {
 
       if (presenceMember.clientId === realtimeClient.auth.clientId) {
         const button = document.createElement('button');
-        button.className = 'uk-btn uk-btn-md uk-btn-primary mb-4 rounded-[1998px] w-full min-w-[120px] border uk-border-primary';
+        button.className =
+          'uk-btn uk-btn-md uk-btn-primary mb-4 rounded-[1998px] w-full min-w-[120px] border uk-border-primary';
         button.id = 'status-button';
         button.onclick = async () => {
           await room.presence.update({
             status: (presenceMember.data as { status?: string })?.status === 'Away' ? 'Online' : 'Away',
           });
         };
-        button.textContent = (presenceMember.data as { status?: string })?.status === 'Away' ? 'Show online' : 'Set away';
+        button.textContent =
+          (presenceMember.data as { status?: string })?.status === 'Away' ? 'Show online' : 'Set away';
 
         const parentDiv = document.getElementById('cards');
         if (parentDiv) {
@@ -50,7 +47,8 @@ async function initializeChat() {
       if (presenceMember.clientId === realtimeClient.auth.clientId) {
         const button = document.getElementById('status-button');
         if (button) {
-          button.textContent = (presenceMember.data as { status?: string })?.status === 'Away' ? 'Show online' : 'Set away';
+          button.textContent =
+            (presenceMember.data as { status?: string })?.status === 'Away' ? 'Show online' : 'Set away';
           button.onclick = async () => {
             await room.presence.update({
               status: (presenceMember.data as { status?: string })?.status === 'Away' ? 'Online' : 'Away',
@@ -77,6 +75,11 @@ async function initializeChat() {
 
   /** 💡 Attach the client to a room to begin streaming messages and events to the client.💡 */
   await room.attach();
+  const onlineStatuses = await room.presence.get();
+
+  for (const onlineStatus of onlineStatuses) {
+    await addCard(onlineStatus);
+  }
 
   /** 💡 Enter presence to appear online 💡 */
   await room.presence.enter({ status: 'Online' });
