@@ -83,6 +83,15 @@ export default {
       ],
     },
     {
+      name: "React ui components",
+      pages: [
+        {
+          name: 'Coming soon',
+          link: '/docs/chat/ui-kit/coming-soon',
+        },
+      ],
+    },
+    {
       name: 'Moderation',
       pages: [
         {
