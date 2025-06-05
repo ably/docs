@@ -88,7 +88,7 @@ export default function App() {
     <div className="min-h-screen">
       <ChatClientProvider client={chatClient}>
         <ChatRoomProvider
-          id={roomName}
+          name={roomName}
           options={{
             typing: typingOptions,
           }}

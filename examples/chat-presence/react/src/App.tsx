@@ -98,7 +98,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <ChatClientProvider client={chatClient}>
-        <ChatRoomProvider id={roomName}>
+        <ChatRoomProvider name={roomName}>
           <Home />
         </ChatRoomProvider>
       </ChatClientProvider>

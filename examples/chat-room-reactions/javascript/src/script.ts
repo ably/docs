@@ -1,5 +1,5 @@
 import * as Ably from 'ably';
-import { ChatClient, Room } from '@ably/chat';
+import { ChatClient, Room, RoomReactionEvent } from '@ably/chat';
 import { nanoid } from 'nanoid';
 import './styles.css';
 
@@ -17,7 +17,8 @@ async function initializeChat() {
   room = await chatClient.rooms.get(roomName);
 
   /** 💡 Add every room reaction published to the room 💡 */
-  room.reactions.subscribe((reaction) => {
+  room.reactions.subscribe((reactionEvent: RoomReactionEvent) => {
+    const reaction = reactionEvent.reaction;
     const reactionsContainer = document.getElementById('reaction-area');
 
     const reactionElement = document.createElement('span');
