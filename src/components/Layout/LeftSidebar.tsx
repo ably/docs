@@ -228,7 +228,7 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
         'overflow-y-auto',
         hasScrollbar ? 'md:pr-2' : 'md:pr-4',
       )}
-      style={sidebarAlignmentStyles}
+      style={!inHeader ? sidebarAlignmentStyles : {}}
       id={inHeader ? 'mobile-nav' : 'left-nav'}
       data={productNavData}
       {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}
