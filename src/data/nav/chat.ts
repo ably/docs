@@ -32,6 +32,10 @@ export default {
               name: 'React',
               link: '/docs/chat/getting-started/react',
             },
+            {
+              name: 'Kotlin',
+              link: '/docs/chat/getting-started/kotlin',
+            },
           ],
         },
         {
