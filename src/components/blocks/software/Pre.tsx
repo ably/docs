@@ -4,7 +4,6 @@ import Icon from '@ably/ui/core/Icon';
 import Html from '../Html';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import {
-  DEFAULT_LANGUAGE,
   DEFAULT_PREFERRED_INTERFACE,
   DEFAULT_PREFERRED_LANGUAGE,
   REALTIME_SDK_INTERFACE,
@@ -67,8 +66,7 @@ const Pre = ({
 
   const codeClassName = 'bg-cool-black text-white p-0 rounded-lg relative max-w-[calc(100vw-48px)] sm:max-w-full';
 
-  const hasCode =
-    languages?.some((lang) => getTrimmedLanguage(lang) === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
+  const hasCode = languages?.some((lang) => getTrimmedLanguage(lang) === pageLanguage);
   const shouldDisplayTip = !hasCode && languages?.length !== undefined;
   const withModifiedClassname = {
     ...attribs,
