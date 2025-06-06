@@ -75,6 +75,7 @@ export default {
         {
           name: 'Using the REST API',
           link: '/docs/liveobjects/rest-api-usage',
+          languages: ['javascript'],
         },
         {
           name: 'Inband objects',
