@@ -89,7 +89,7 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     const { title, meta_description } = meta;
 
     try {
-      const url = prefixPath({ url: slug, siteUrl, pathPrefix: basePath });
+      const url = prefixPath({ url: `/docs/${slug}`, siteUrl, pathPrefix: basePath });
       const safeTitle = escapeMarkdown(title);
       const link = `[${safeTitle}](${url})`;
       const line = `- ${[link, meta_description].join(': ')}`;
