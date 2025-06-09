@@ -18,7 +18,7 @@ Use the following components to add component locking into an application:
 - [`useMembers()`](/docs/spaces/react#useMembers) hook: a hook to build component locking. It retrieves members of the space, including members that have left the space, but have not yet been removed.
 - [`space.locks.acquire()`](/docs/spaces/locking#acquire): a method to attempt to acquire a lock with a given unique ID.
 
-This example also uses the [`ChannelProvider`](/docs/getting-started/react#channel-provider) and [`useChannel()`](/docs/getting-started/react#useChannel) hook from the core Pub/Sub product in order to publish and subscribe to the changing values of each component.
+This example also uses the [`ChannelProvider`](/docs/getting-started/react-hooks#channel-provider) and [`useChannel()`](/docs/getting-started/react-hooks#useChannel) hook from the core Pub/Sub product in order to publish and subscribe to the changing values of each component.
 
 Find out more about [component locking](/docs/spaces/locking).
 

@@ -10,7 +10,7 @@ Connection states is implemented using [Ably Pub/Sub](/docs/auth). The Pub/Sub S
 
 Use the following components to manage the connection state in a pub/sub application:
 
-- [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+- [`AblyProvider`](/docs/getting-started/react-hooks#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
 
 Find out more about [connection states](/docs/connect/states).
 

@@ -27,7 +27,7 @@ export default {
         },
         {
           name: 'React',
-          link: '/docs/getting-started/react-new',
+          link: '/docs/getting-started/react',
         },
         {
           name: 'Quickstart guide',
@@ -39,7 +39,7 @@ export default {
         },
         {
           name: 'React Hooks',
-          link: '/docs/getting-started/react',
+          link: '/docs/getting-started/react-hooks',
         },
       ],
     },

@@ -55,7 +55,7 @@ export const data = {
           text: 'Ably React Hooks package.',
           image: { src: react, isWide: false },
           githubRepoURL: 'https://github.com/ably/ably-js',
-          setupLink: 'getting-started/react',
+          setupLink: 'getting-started/react-hooks',
         },
         {
           title: 'C#.NET',
@@ -160,7 +160,7 @@ export const data = {
           text: 'Ably SDK for React Native.',
           image: { src: react, isWide: false },
           githubRepoURL: 'https://github.com/ably/ably-js',
-          setupLink: 'getting-started/react',
+          setupLink: 'getting-started/react-hooks',
         },
         {
           title: 'Cordova',
