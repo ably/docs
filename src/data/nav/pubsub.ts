@@ -26,6 +26,10 @@ export default {
           link: '/docs/getting-started/javascript',
         },
         {
+          name: 'React',
+          link: '/docs/getting-started/react',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
@@ -35,7 +39,7 @@ export default {
         },
         {
           name: 'React Hooks',
-          link: '/docs/getting-started/react',
+          link: '/docs/getting-started/react-hooks',
         },
       ],
     },
