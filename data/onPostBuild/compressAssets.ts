@@ -51,10 +51,16 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ reporter }) => {
 /**
  * From here on down is the worker code that is executed by the worker threads
  * in Piscina to perform the actual compression.
+ *
+ * The number of iterations is set to 15 by default, but can be overridden by
+ * setting the ASSET_COMPRESSION_ITERATIONS environment variable. Lower number of
+ * iterations means faster compression but lower compression ratio (good for CI
+ * and review apps)
+ *
  */
 
 const options = {
-  numiterations: 15,
+  numiterations: parseInt(process.env.ASSET_COMPRESSION_ITERATIONS || '15', 10),
 };
 
 interface CompressInputs {
