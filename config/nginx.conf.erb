@@ -83,6 +83,34 @@ http {
 
   # / CORS CONFIGURATION
 
+  ##
+  # PROTECTED CONTENT REQUESTS
+  <%
+    # By setting CONTENT_REQUEST_AUTH_TOKENS, we can protect content requests
+    # to the site. This is useful for preventing bad crawlers (the slop feeders
+    # that don't respect robots.txt) from crawling the content while still
+    # allowing the website to fetch and serve the content.
+    #
+    # The tokens are set as a comma-separated list of Bearer tokens in the
+    # CONTENT_REQUEST_AUTH_TOKENS environment variable.
+    #
+    # The CONTENT_REQUEST_CANONICAL_HOST environment variable can be set to
+    # redirect the request to a canonical host if the request is not authenticated.
+    #
+    content_request_auth_tokens = (ENV['CONTENT_REQUEST_AUTH_TOKENS'] || '').split(',').map(&:strip).reject(&:empty?)
+    content_request_protected = content_request_auth_tokens.any?
+  %>
+
+  <% if content_request_protected %>
+  # Define a variable to check if the bearer token in the Authorization header is valid
+  map $http_authorization $token_auth_status {
+    <% content_request_auth_tokens.each do |token| %>
+    "Bearer <%= token %>" "allowed";
+    <% end %>
+  }
+  <% end %>
+
+  # / PROTECTED CONTENT REQUESTS
 
   server {
     listen <%= ENV["PORT"] %>;
@@ -93,7 +121,7 @@ http {
     root <%= ENV['NGINX_ROOT'] || '/app/public' %>;
 
     # Use our error page instead of the nginx default
-    error_page 404 500 /404.html;
+    error_page 404 500 /docs/404/index.html;
 
     # Serve pre-gzipped versions of assets
     gzip_static on;
@@ -173,16 +201,52 @@ http {
     }
 
     location / {
-      try_files $uri $uri.html $uri/index.html @404;
+      # Remove the .html extension here so it can fall through to the @html_auth location
+      rewrite ^/(.*)\.html$ /$1 break;
+
+      <% if content_request_protected %>
+      # Serve the file if it exists, otherwise try to authenticate
+      # (.html requests won't match here, they'll go to the @html_auth location)
+      try_files $uri @html_auth;
+      <% else %>
+      # Serve the file if it exists, try index.html for paths without a trailing slash, otherwise 404
+      try_files $uri $uri/index.html $uri/ =404;
+      <% end %>
     }
 
-    location ~ \.html$ {
-      try_files $uri =404;
+    <% if content_request_protected %>
+    # Authenticate .html requests by checking the token_auth_status variable
+    # which is set in the map block earlier in this file.
+    location @html_auth {
+      if ($token_auth_status != "allowed") {
+        # .html request without authentication, so handle it here by 404ing or redirecting to the canonical host
+        # depending on whether CONTENT_REQUEST_CANONICAL_HOST is set or not
+        <% if host = ENV['CONTENT_REQUEST_CANONICAL_HOST'] %>
+        return 301 <%= ENV['SKIP_HTTPS'] == 'true' ? '$scheme' : 'https' %>://<%= host %>$uri;
+        <% else %>
+        return 404;
+        <% end %>
+      }
+
+      # If the request is authenticated, break out of the location block and serve the file
+      try_files $uri.html $uri/index.html $uri/ =404;
     }
 
-    # need this b/c setting $fallback to =404 will try #{root}=404 instead of returning a 404
-    location @404 {
+    # Don't serve files with the .html extension here, send them to the canonical location
+    location ~* \.html$ {
+      # If the request is authenticated, break out of the location block and serve the file
+      if ($token_auth_status = "allowed") {
+        break;
+      }
+
+      # .html request without authentication, so handle it here by 404ing or redirecting to the canonical host
+      # depending on whether CONTENT_REQUEST_CANONICAL_HOST is set or not
+      <% if host = ENV['CONTENT_REQUEST_CANONICAL_HOST'] %>
+      return 301 <%= ENV['SKIP_HTTPS'] == 'true' ? '$scheme' : 'https' %>://<%= host %>$uri;
+      <% else %>
       return 404;
+      <% end %>
     }
-	}
+    <% end %>
+  }
 }
