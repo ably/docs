@@ -146,6 +146,23 @@ export default {
           link: '/docs/api/chat-rest',
           name: 'REST API',
         },
+        {
+          name: 'JavaScript SDK',
+          pages: [
+            {
+              name: 'Rooms',
+              link: '/docs/chat/api/javascript/rooms',
+            },
+            {
+              name: 'Room',
+              link: '/docs/chat/api/javascript/room',
+            },
+            {
+              name: 'Typing',
+              link: '/docs/chat/api/javascript/typing',
+            },
+          ],
+        },
       ],
     },
   ],
