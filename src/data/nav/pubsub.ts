@@ -30,6 +30,10 @@ export default {
           link: '/docs/getting-started/react',
         },
         {
+          name: 'Kotlin',
+          link: '/docs/getting-started/kotlin',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
