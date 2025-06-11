@@ -1,53 +1,42 @@
-# Based off https://github.com/heroku/heroku-buildpack-nginx/blob/main/config/nginx-solo-sample.conf.erb
-
 daemon off;
-# Heroku dynos have at least 4 cores.
-worker_processes <%= ENV['NGINX_WORKERS'] || 'auto' %>;
+worker_processes auto;
 
 events {
-  <% unless RbConfig::CONFIG['host_os'] =~ /darwin/ %>
+<% unless RbConfig::CONFIG['host_os'] =~ /darwin/ %>
   use epoll;
-  <% end %>
+<% end %>
   accept_mutex on;
   worker_connections <%= ENV['NGINX_WORKER_CONNECTIONS'] || 1024 %>;
 }
 
+<% if pid_file = ENV['NGINX_PID_FILE'] %>
+# Be explicit about the pid file location
+pid <%= pid_file %>;
+<% end %>
+
 http {
   gzip on;
-  gzip_comp_level 2;
+  gzip_comp_level 6;
   gzip_min_length 512;
-  gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+  gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss font/woff font/woff2 image/svg+xml;
   gzip_vary on;
   gzip_proxied any; # Heroku router sends Via header
 
-	server_tokens off;
+  server_tokens off;
 
-	log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
-	access_log <%= ENV['NGINX_ACCESS_LOG_PATH'] || 'logs/nginx/access.log' %> l2met;
-	error_log <%= ENV['NGINX_ERROR_LOG_PATH'] || 'logs/nginx/error.log' %> error;
+  log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
+  access_log <%= ENV['NGINX_ACCESS_LOG_PATH'] || 'logs/nginx/access.log' %> l2met;
+  error_log <%= ENV['NGINX_ERROR_LOG_PATH'] || 'logs/nginx/error.log' %> notice;
 
-	include mime.types;
-	default_type application/octet-stream;
-	sendfile on;
+  include mime.types;
+  default_type application/octet-stream;
+  sendfile on;
 
-	# Must read the body in 5 seconds.
-	client_body_timeout <%= ENV['NGINX_CLIENT_BODY_TIMEOUT'] || 5 %>;
+  # Must read the body in 5 seconds.
+  client_body_timeout 5;
 
   map_hash_max_size 8192;
   map_hash_bucket_size 8192;
-
-  # Be as explicit as possible with our CORS origins. We can't use the
-  # `hostnames` directive as ably.com doesn't work with it
-  map $http_origin $cors_origin {
-    https://ably.com $http_origin;
-    https://www.ably.io $http_origin;
-    https://ably-dev.com $http_origin;
-    https://ik.imagekit.io $http_origin;
-    https://ably-docs.herokuapp.com $http_origin;
-    ~*https://website-[a-z0-9\-]*\.herokuapp\.com $http_origin;
-    ~*https://ably-docs-[a-z0-9\-]*\.herokuapp\.com $http_origin;
-    http://localhost:<%= ENV['PORT'] %> $http_origin;
-  }
 
   # Creates a map of redirects for us
   map $uri $redirected_url {
@@ -59,20 +48,55 @@ http {
     <% end %>
   }
 
-	server {
-	  listen <%= ENV["PORT"] %> reuseport;
-	  server_name _;
-	  keepalive_timeout 5;
-	  client_max_body_size <%= ENV['NGINX_CLIENT_MAX_BODY_SIZE'] || 1 %>M;
+  ##
+  # CORS CONFIGURATION
 
-    add_header X-Frame-Options SAMEORIGIN always;
+  # We can't use the `hostnames` directive because of the layers of proxying and varying hostnames.
+  # If the origin of the request is in the list below we'll get that value set as
+  # $cors_origin and we can use it further down the line.
+  map $http_origin $cors_origin {
+    https://ably.com $http_origin;
+    https://ably-dev.com $http_origin;
+    https://ik.imagekit.io $http_origin;
+    https://ably-docs.herokuapp.com $http_origin;
+    ~*https://website-[a-z0-9\-]*\.herokuapp\.com $http_origin;
+    ~*https://ably-docs-[a-z0-9\-]*\.herokuapp\.com $http_origin;
+    ~http://localhost:\d+ $http_origin;
+    ~https?://ably\.test $http_origin;
+  }
 
-    # Prevent nginx from adding the PORT to any redirects
+  # Further down in the configs where we can expect CORS requests we combine
+  # $request_method checks and $cors_origin to set the correct headers,
+  # including the Vary header to ensure the browser know we'll change the response
+  # based on the Origin request header. We make use of an ERB snippet to make it
+  # easier to maintain the shared configs
+
+  <%
+    cors_headers = <<~ERB
+        more_set_headers 'Access-Control-Allow-Origin: $cors_origin';
+        more_set_headers 'Access-Control-Allow-Headers: sentry-trace, baggage';
+        more_set_headers 'Access-Control-Allow-Methods: GET, OPTIONS';
+        more_set_headers 'Access-Control-Allow-Credentials: true';
+        more_set_headers 'Vary: Origin';
+    ERB
+  %>
+
+  # / CORS CONFIGURATION
+
+
+  server {
+    listen <%= ENV["PORT"] %>;
+    charset UTF-8;
     port_in_redirect off;
+    keepalive_timeout 5;
 
     root <%= ENV['NGINX_ROOT'] || '/app/public' %>;
 
+    # Use our error page instead of the nginx default
     error_page 404 500 /404.html;
+
+    # Serve pre-gzipped versions of assets
+    gzip_static on;
 
     <% if ENV['ENABLE_BASIC_AUTH'] == 'true' %>
     # Basic Authentication
@@ -82,9 +106,6 @@ http {
 
     # Removes trailing slashes everywhere (by redirecting)
     rewrite ^/(.*)/$ <%= ENV['SKIP_HTTPS'] == 'true' ? '$scheme' : 'https' %>://$host/$1 permanent;
-
-    # Serve pre-gzipped versions of assets
-    gzip_static on;
 
     <% unless ENV['SKIP_HTTPS'] == 'true' %>
     # Enforce HTTPS
@@ -98,13 +119,19 @@ http {
       rewrite ^ $redirected_url permanent;
     }
 
-    location ~* \.(json|yaml)$ {
+    location ~* \.json$ {
+      # Only do CORS checks on preflight requests
+      if ($request_method = OPTIONS) {
+        <%= cors_headers %>
+        return 204;
+      }
+
       more_set_headers 'Access-Control-Allow-Origin: *';
     }
 
     # Optimize for pre-compiled assets scattered all over the place
     location ~* \.(js|css|jpg|jpeg|gif|svg|png|woff|woff2)$ {
-      # expires 1y;
+      expires 1y;
       more_set_headers 'Cache-Control: public';
 
       # Some browsers still send conditional-GET requests if there's a
@@ -120,11 +147,26 @@ http {
         more_set_headers 'Access-Control-Allow-Origin: *';
       }
 
-      # Set explicit allowed origin for svg that are requested by methods that need
+      # Set explicit allowed origin for svg/png that are requested by methods that need
       # explicit headers like "fetch"
-      location ~* \.svg$ {
-        more_set_headers 'Access-Control-Allow-Origin: $cors_origin';
+      location ~* \.(svg|png)$ {
+        <%= cors_headers %>
       }
+
+      # Stop processing here and 404 if the asset/pack doesn't exist
+      break;
+    }
+
+    # Optimize for pre-compiled assets in the static directory
+    location ~ ^/static/ {
+      expires 1y;
+      more_set_headers 'Cache-Control: public';
+
+      # Some browsers still send conditional-GET requests if there's a
+      # Last-Modified header or an ETag header even if they haven't
+      # reached the expiry date sent in the Expires header.
+      more_clear_headers 'Last-Modified';
+      more_clear_headers 'ETag';
 
       # Stop processing here and 404 if the asset/pack doesn't exist
       break;
