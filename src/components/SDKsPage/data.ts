@@ -237,5 +237,29 @@ export const data = {
         },
       ],
     },
+    liveobjects: {
+      text: "LiveObjects is a plugin to the existing Pub/Sub SDKs. Choose from the following platforms to synchronize your shared state across clients at scale. Click 'Setup' for instructions on getting started, or view its source repository for a full list of the platforms it supports.",
+      cards: [
+        {
+          title: 'JavaScript',
+          text: 'LiveObjects plugin for JavaScript.',
+          image: { src: js, isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: 'liveobjects/quickstart',
+        },
+      ],
+    },
+    livesync: {
+      text: "Choose from the following list of SDKs to start broadcasting database updates to client applications in realtime. Click 'Setup' for instructions on getting started with an SDK, or view its source repository for a full list of the platforms it supports.",
+      cards: [
+        {
+          title: 'JavaScript',
+          text: 'Ably Models SDK for JavaScript.',
+          image: { src: js, isWide: false },
+          githubRepoURL: 'https://github.com/ably-labs/models',
+          setupLink: 'livesync/postgres/models',
+        },
+      ],
+    },
   },
 };
