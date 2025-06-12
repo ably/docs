@@ -133,13 +133,23 @@ export default {
       name: 'API References',
       pages: [
         {
-          link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-js.html',
+          link: '/docs/sdk/chat-js/v0',
           name: 'JavaScript SDK',
           external: true,
         },
         {
-          link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-react.html',
+          link: '/docs/sdk/chat-react/v0',
           name: 'React SDK',
+          external: true,
+        },
+        {
+          link: '/docs/sdk/chat-kotlin/v0',
+          name: 'Kotlin SDK',
+          external: true,
+        },
+        {
+          link: '/docs/sdk/chat-swift/v0',
+          name: 'Swift SDK',
           external: true,
         },
         {
