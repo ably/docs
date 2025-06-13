@@ -7,10 +7,11 @@ import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/u
 
 import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
+import { productData } from 'src/data';
+import { LanguageKey } from 'src/data/languages/types';
 import { languageInfo } from 'src/data/languages';
 import { ActivePage, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
 import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
-import { LanguageKey } from 'src/data/languages/types';
 
 type SidebarHeader = {
   id: string;
@@ -58,7 +59,7 @@ const externalLinks = (
 `);
 
   const requestPath = `${requestBasePath}?title=${requestTitle}&body=${requestBody}`;
-  const prompt = `Tell me more about Ably's '${activePage.page.name}' feature from https://ably.com${activePage.page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
+  const prompt = `Tell me more about ${activePage.product ? productData[activePage.product]?.nav.name : 'Ably'}'s '${activePage.page.name}' feature from https://ably.com${activePage.page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
   const gptPath = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
 
   return [

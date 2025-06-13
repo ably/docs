@@ -14,7 +14,7 @@ export type ActivePage = {
   tree: PageTreeNode[];
   page: NavProductPage;
   languages: LanguageKey[];
-  language: LanguageKey;
+  language: LanguageKey | null;
   product: ProductKey | null;
   template: PageTemplate;
 };
