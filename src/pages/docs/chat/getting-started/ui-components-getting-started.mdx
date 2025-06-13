@@ -1,0 +1,485 @@
+---
+title: "Getting started: Chat UI Components with React"
+meta_description: "Step-by-step quick-start for ably-chat-react-ui-components using React and Vite."
+meta_keywords: "Ably, realtime, quickstart, Chat UI, React, Vite"
+---
+
+This guide shows you how to add Ably Chat React UI Components to a brand-new React app built with Vite.
+
+You will:
+
+* Create an Ably realtime client and Chat client
+* Install the ready-made UI component package
+* Build up a complete chat interface component by component
+* Customise look and feel with your own styles
+* Add your own chat settings and avatars
+
+## Prerequisites <a id="prerequisites"/>
+
+1. Sign up for an Ably account.
+
+2. Create an app and copy its API key (the root key is fine while you experiment).
+
+3. Install the Ably CLI:
+
+<Code>
+  ```shell
+  npm install -g @ably/cli
+  ```
+</Code>
+
+4. Log in and set the default app/key:
+
+<Code>
+  ```shell
+  ably login
+  ably apps switch
+  ably auth keys switch
+  ```
+</Code>
+
+<Aside data-type="note">
+  The snippets below use a demo API key. Replace it with your own before going live.
+</Aside>
+
+### Create a new project <a id="prerequisites-project"/>
+
+1. Scaffold a **React + TypeScript** project with Vite:
+
+<Code>
+  ```shell
+  npm create vite@latest my-chat-ui-app -- --template react-ts
+  cd my-chat-ui-app
+  ```
+</Code>
+
+2. (Optional) Add Tailwind CSS if you want utility classes elsewhere in your app. The UI kit itself ships pre-compiled CSS, so Tailwind isn't required:
+
+<Code>
+  ```shell
+  npm install -D tailwindcss postcss autoprefixer
+  npx tailwindcss init -p
+  ```
+</Code>
+
+Follow the Tailwind Vite guide to configure the generated files.
+
+3. Install the Chat UI kit and its peers:
+
+<Code>
+  ```shell
+  npm install ably-chat-react-ui-components
+  npm install @ably/chat
+  
+  # Ensure React 18 is present (Vite template already has these)
+  npm install react react-dom
+  ```
+</Code>
+
+That's all the setup you need—the kit's CSS is automatically bundled by Vite alongside the rest of your styles.
+
+## Usage <a id="usage"/>
+
+Import the ready-made UI components and their stylesheet into your app:
+
+<Code>
+  ```tsx
+  import { App, ChatWindow, Sidebar, RoomInfo, AppLayout } from 'ably-chat-react-ui-components';
+  import 'ably-chat-react-ui-components/dist/styles.css';
+  ```
+</Code>
+
+### Providers setup <a id="providers-setup"/>
+
+ably-chat-react-ui-components relies on the same React context providers as the underlying Chat SDK, plus a few extras for theming and avatars.
+
+#### Basic provider setup <a id="basic-provider-setup"/>
+
+<Code>
+  ```tsx
+  import * as Ably from 'ably';
+  import { ChatClient } from '@ably/chat';
+  import { ChatClientProvider } from '@ably/chat/react';
+  import { ThemeProvider, AvatarProvider, ChatSettingsProvider } from 'ably-chat-react-ui-components';
+
+  // Create Ably Realtime client
+  const ablyClient = new Ably.Realtime({
+    key: '{{API_KEY}}', // Replace with your Ably API key
+    clientId: 'your-chat-client-id',
+  });
+
+  const chatClient = new ChatClient(ablyClient);
+
+  ReactDOM.createRoot(document.querySelector('#root') || document.createElement('div')).render(
+    <React.StrictMode>
+      <ThemeProvider>
+        <AvatarProvider>
+          <ChatSettingsProvider>
+            <ChatClientProvider client={chatClient}>
+              {/* Main application component that renders the chat UI */}
+            </ChatClientProvider>
+          </ChatSettingsProvider>
+        </AvatarProvider>
+      </ThemeProvider>
+    </React.StrictMode>
+  );
+  ```
+</Code>
+
+### Provider responsibilities <a id="provider-responsibilities"/>
+
+* **`ChatClientProvider`** – supplies the Ably Chat client so child components can publish, subscribe, and manage rooms
+* **`ThemeProvider`** – toggles light/dark mode and optionally stores the preference (`persist: true`)
+* **`AvatarProvider`** – generates and caches user / room avatars
+* **`ChatSettingsProvider`** – provides a place to store and retrieve chat settings that control the UI, such as enabling message editing or reactions
+* **`ChatRoomProvider`** – provides the chat room context for components that operate on a specific room, such as the `ChatWindow`, `TypingIndicators` and `RoomInfo` components
+
+## Building your chat interface <a id="building-interface"/>
+
+Let's build up a complete chat interface step by step, starting with individual components and working up to a full application.
+
+### RoomInfo component <a id="room-info"/>
+
+The `RoomInfo` component displays comprehensive information about a chat room. It shows the room avatar, live presence count, participant details, and typing indicators. It also allows users to edit the room avatar locally.
+
+**Features:**
+- Room avatar display with automatic generation
+- Live presence count badge showing active participants  
+- Interactive hover tooltip with participant preview
+- Expandable participant list with detailed user information
+- In-place avatar editing with color and image customization
+- Typing indicators built-in
+- Accessibility support with ARIA roles and keyboard navigation
+
+**Requirements:** Must be wrapped in both `ChatRoomProvider` and `AvatarProvider`.
+
+<Code>
+  ```tsx
+  import { RoomInfo } from 'ably-chat-react-ui-components';
+  import { ChatRoomProvider } from '@ably/chat/react';
+
+  function RoomInfoExample() {
+    return (
+      <div className="p-4 bg-gray-50 rounded-lg border">
+        <ChatRoomProvider roomName="general">
+          <RoomInfo 
+            className="flex items-center gap-3"
+            position={{ top: 60, left: 250 }}
+          />
+        </ChatRoomProvider>
+      </div>
+    );
+  }
+  ```
+</Code>
+
+You can customize the RoomInfo component with additional props:
+
+<Code>
+  ```tsx
+  <RoomInfo
+    // Optional custom avatar data (overrides AvatarProvider)
+    roomAvatar={{
+      displayName: "VIP Lounge",
+      color: "#FFD700", 
+      initials: "VL",
+      src: "https://example.com/vip-avatar.jpg"
+    }}
+    // Position for dropdown menus
+    position={{ top: 60, left: 250 }}
+    // Custom styling
+    className="p-4 bg-blue-50 rounded-lg shadow-sm"
+  />
+  ```
+</Code>
+
+### ChatWindow component <a id="chat-window"/>
+
+The `ChatWindow` component provides the main chat interface for a room. It handles everything related to messages - display, editing, deletion, reactions, and real-time updates.
+
+**Features:**
+- Message display with history loading and infinite scroll
+- Message editing, deletion, and reactions
+- Typing indicators and presence awareness  
+- Custom header and footer content areas
+- Discontinuity recovery on reconnection
+- Configurable message window size for performance
+
+**Requirements:** Must be wrapped in `ChatRoomProvider`, `AvatarProvider`, and `ChatSettingsProvider`. The settings provider controls which message actions (edit/delete/react) are available.
+
+<Code>
+  ```tsx
+  import { ChatWindow } from 'ably-chat-react-ui-components';
+  import { ChatRoomProvider } from '@ably/chat/react';
+
+  function ChatWindowExample() {
+    return (
+      <div className="h-96 border rounded-lg">
+        <ChatRoomProvider roomName="general">
+          <ChatWindow 
+            roomName="general"
+            enableTypingIndicators={true}
+            windowSize={200}
+          />
+        </ChatRoomProvider>
+      </div>
+    );
+  }
+  ```
+</Code>
+
+#### Adding to the header
+
+The chat window supports custom header content, which can be used to display room information or other controls. You can pass any React component as `customHeaderContent`, e.g., the `RoomInfo` component:
+
+<Code>
+  ```tsx
+  import { ChatWindow, RoomInfo } from 'ably-chat-react-ui-components';
+  import { ChatRoomProvider } from '@ably/chat/react';
+
+  function ChatWithRoomInfo() {
+    return (
+      <div className="h-96 border rounded-lg">
+        <ChatRoomProvider roomName="general">
+          <ChatWindow
+            roomName="general"
+            customHeaderContent={<RoomInfo />}
+            enableTypingIndicators={true}
+            className="h-full"
+          />
+        </ChatRoomProvider>
+      </div>
+    );
+  }
+  ```
+</Code>
+
+#### Adding to the footer
+
+The chat window also supports custom footer content, which can be used for additional controls like reactions. You can pass any React component as `customFooterContent`, e.g., the `RoomReaction` component:
+
+<Code>
+  ```tsx
+  import { ChatWindow, RoomInfo, RoomReaction } from 'ably-chat-react-ui-components';
+  import { ChatRoomProvider } from '@ably/chat/react';
+
+  function ChatWithReactions() {
+    return (
+      <div className="h-96 border rounded-lg">
+        <ChatRoomProvider roomName="general">
+          <ChatWindow
+            roomName="general"
+            customHeaderContent={<RoomInfo />}
+            customFooterContent={<RoomReaction />}
+            enableTypingIndicators={true}
+            className="h-full"
+          />
+        </ChatRoomProvider>
+      </div>
+    );
+  }
+  ```
+</Code>
+
+### Sidebar component <a id="sidebar"/>
+
+The `Sidebar` component provides room navigation and management. It displays a list of rooms, allows creating new rooms, and handles joining/leaving rooms. It can collapse to show only avatars or expand for more detail.
+
+**Features:**
+- Collapsible interface with avatar-only mode
+- Room creation and management
+- Theme toggle integration  
+- Active room highlighting
+- Room count display
+- Automatic room attachment/detachment
+
+**Requirements:** Must be wrapped in `ChatClientProvider`. The sidebar automatically manages room connections as users navigate.
+
+<Code>
+  ```tsx
+  import { Sidebar } from 'ably-chat-react-ui-components';
+  import { useState } from 'react';
+
+  function SidebarExample() {
+    const [rooms, setRooms] = useState<string[]>(['general', 'random']);
+    const [activeRoom, setActiveRoom] = useState<string>('general');
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
+    const addRoom = (name: string) => {
+      if (!rooms.includes(name)) {
+        setRooms([...rooms, name]);
+        setActiveRoom(name);
+      }
+    };
+
+    const leaveRoom = (name: string) => {
+      setRooms(rooms.filter(room => room !== name));
+      if (activeRoom === name && rooms.length > 1) {
+        setActiveRoom(rooms.find(room => room !== name) || '');
+      }
+    };
+
+    return (
+      <div className="w-80 h-96 border rounded-lg">
+        <Sidebar
+          roomNames={rooms}
+          activeRoomName={activeRoom}
+          addRoom={addRoom}
+          setActiveRoom={setActiveRoom}
+          leaveRoom={leaveRoom}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+        />
+      </div>
+    );
+  }
+  ```
+</Code>
+
+### AppLayout component <a id="app-layout"/>
+
+The `AppLayout` component provides a responsive container that combines the sidebar and main content area. It handles the layout structure and responsive behavior.
+
+Now you can combine the Sidebar and ChatWindow using `AppLayout`:
+
+<Code>
+  ```tsx
+  import { AppLayout, Sidebar, ChatWindow, RoomInfo, RoomReaction } from 'ably-chat-react-ui-components';
+  import { ChatRoomProvider } from '@ably/chat/react';
+  import { useState } from 'react';
+
+  function ChatApp() {
+    const [rooms, setRooms] = useState<string[]>(['general', 'random']);
+    const [activeRoom, setActiveRoom] = useState<string>('general');
+
+    const addRoom = (name: string) => {
+      if (!rooms.includes(name)) {
+        setRooms([...rooms, name]);
+        setActiveRoom(name);
+      }
+    };
+
+    const leaveRoom = (name: string) => {
+      setRooms(rooms.filter(room => room !== name));
+      if (activeRoom === name && rooms.length > 1) {
+        setActiveRoom(rooms.find(room => room !== name) || '');
+      }
+    };
+
+    return (
+      <AppLayout
+        width="90vw"
+        height="80vh"
+        sidebar={
+          <Sidebar
+            roomNames={rooms}
+            activeRoomName={activeRoom}
+            addRoom={addRoom}
+            setActiveRoom={setActiveRoom}
+            leaveRoom={leaveRoom}
+          />
+        }
+      >
+        {activeRoom && (
+          <ChatRoomProvider 
+            roomName={activeRoom}
+            attach={false}  // Let sidebar manage room connections
+            release={false} // Prevents conflicts with sidebar room management
+          >
+            <ChatWindow
+              roomName={activeRoom}
+              customHeaderContent={<RoomInfo />}
+              customFooterContent={<RoomReaction />}
+            />
+          </ChatRoomProvider>
+        )}
+      </AppLayout>
+    );
+  }
+  ```
+</Code>
+
+<Aside data-type="note">
+  When using ChatWindow with Sidebar, set `attach={false}` and `release={false}` on the ChatRoomProvider. This prevents conflicts since the Sidebar automatically manages room connections. This limitation will be removed in a future update when RoomProviders become aware of shared references.
+</Aside>
+
+### App component <a id="app-component"/>
+
+The `App` component is a complete, ready-to-use chat application that combines all the components above with sensible defaults. If you want to prototype quickly or need a complete solution out of the box, you can use this instead of building up the components manually.
+
+**Features:**
+- Manages room state (adding, leaving, selecting rooms)
+- Shows loading state when not connected
+- Renders layout with Sidebar and ChatWindow
+- Includes RoomInfo in header and RoomReaction in footer
+- Handles connection status and error states
+
+<Code>
+  ```tsx
+  import { App } from 'ably-chat-react-ui-components';
+
+  function MyApplication() {
+    return (
+      <App initialRoomNames={['general', 'random']} />
+    );
+  }
+  ```
+</Code>
+
+The App component automatically handles:
+- Connection status monitoring
+- Room management (adding, leaving, selecting)
+- Rendering the appropriate UI components
+- Loading states and error handling
+- Empty states when no room is selected
+
+Here's a complete example showing the App component with all required providers:
+
+<Code>
+  ```tsx
+  import * as Ably from 'ably';
+  import { ChatClient } from '@ably/chat';
+  import { ChatClientProvider } from '@ably/chat/react';
+  import { 
+    App, 
+    ThemeProvider, 
+    AvatarProvider, 
+    ChatSettingsProvider 
+  } from 'ably-chat-react-ui-components';
+  import 'ably-chat-react-ui-components/dist/styles.css';
+
+  // Create Ably Realtime client
+  const ablyClient = new Ably.Realtime({
+    key: '{{API_KEY}}',
+    clientId: 'your-chat-client-id',
+  });
+
+  const chatClient = new ChatClient(ablyClient);
+  
+  function MyApplication() {
+    return (
+      <ThemeProvider options={{ persist: true, defaultTheme: 'light' }}>
+        <AvatarProvider>
+          <ChatSettingsProvider>
+            <ChatClientProvider client={chatClient}>
+              <App initialRoomNames={['general', 'random', 'announcements']} />
+            </ChatClientProvider>
+          </ChatSettingsProvider>
+        </AvatarProvider>
+      </ThemeProvider>
+    );
+  }
+
+  export default MyApplication;
+  ```
+</Code>
+
+## Summary <a id="summary"/>
+
+You now have several options for building chat interfaces:
+
+1. **Individual components** - Use `RoomInfo`, `ChatWindow`, and `Sidebar` separately to create custom layouts and functionality
+2. **AppLayout approach** - Combine components using `AppLayout`, gives you something still pre-styled, but allows more control over the layout and room management
+3. **Complete App** - Use the `App` component for rapid prototyping and full-featured chat
+
+Each approach requires the appropriate provider setup, with the App component providing the most complete solution with minimal configuration required.
