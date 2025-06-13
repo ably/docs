@@ -158,6 +158,10 @@ export default {
           name: 'Message batching',
           link: '/docs/messages/batch',
         },
+        {
+          name: 'Message annotations',
+          link: '/docs/messages/annotations',
+        },
       ],
     },
     {
