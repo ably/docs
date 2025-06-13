@@ -34,6 +34,10 @@ export default {
           link: '/docs/getting-started/kotlin',
         },
         {
+          name: 'Swift',
+          link: '/docs/getting-started/swift',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
