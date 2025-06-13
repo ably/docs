@@ -36,6 +36,10 @@ export default {
               name: 'Kotlin',
               link: '/docs/chat/getting-started/kotlin',
             },
+            {
+              name: 'UI Kit',
+              link: '/docs/chat/getting-started/react-ui-components',
+            }
           ],
         },
         {
