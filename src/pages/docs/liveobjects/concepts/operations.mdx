@@ -1,0 +1,140 @@
+---
+title: Operations
+meta_description: "Learn how objects are updated by operations in Ably LiveObjects."
+---
+
+<Aside data-type='experimental'>
+LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.
+
+**Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+</Aside>
+
+LiveObjects operations define how object data is updated and synchronized across multiple clients.
+
+When you create or update an object, the change is expressed as an _operation_ that is sent as an [object message](/docs/metadata-stats/stats#messages) on the channel. The operation is then applied to the object instance on all clients that are subscribed to the channel.
+
+This document explains the key concepts you need to know when working with operations.
+
+## Operation Types <a id="operation-types"/>
+
+Each object type supports specific operations that modify the object's data.
+
+### LiveMap Operations <a id="livemap"/>
+
+[LiveMap](/docs/liveobjects/map) supports the following operations:
+
+* `set`: Set a value for a key
+* `remove`: Remove a key and its value
+
+The value of an entry in a `LiveMap` instance can be a [primitive type](/docs/liveobjects/concepts/objects#primitive-types) or a [reference](/docs/liveobjects/concepts/objects#composability) to another object.
+
+<Code>
+```javascript
+// Set a value for a key
+await map.set('username', 'alice');
+
+// Remove a key
+await map.remove('username');
+```
+</Code>
+
+### LiveCounter Operations <a id="livecounter"/>
+
+[LiveCounter](/docs/liveobjects/counter) supports the following operations:
+
+* `increment`: Increment the counter by a specified amount
+* `decrement`: Decrement the counter by a specified amount
+
+The amount is a double-precision floating-point number, which is the same as underlying type of a [LiveCounter](/docs/liveobjects/concepts/objects#livecounter) value.
+
+<Aside data-type='note'>
+The `decrement` operation is just syntactic sugar for `increment` with a negative amount.
+</Aside>
+
+<Code>
+```javascript
+// Increment counter by 5
+await counter.increment(5);
+
+// Decrement counter by 2
+await counter.decrement(2);
+```
+</Code>
+
+### Create Operations <a id="create-operations"/>
+
+Create operations are used to instantiate new objects of a given type.
+
+A create operation can optionally specify an initial value for the object.
+
+<Code>
+```javascript
+// Create a map with initial values
+const userMap = await channel.objects.createMap({
+  username: 'alice',
+  status: 'online'
+});
+
+// Create a counter with initial value
+const scoreCounter = await channel.objects.createCounter(100);
+```
+</Code>
+
+When a create operation is processed, an [object ID](/docs/liveobjects/concepts/objects#object-ids) for the new object instance is automatically generated for the object.
+
+<Aside data-type='important'>
+Newly created objects are not automatically [reachable](/docs/liveobjects/concepts/objects#reachability) from the root object. You must explicitly add them to the object tree to prevent garbage collection.
+</Aside>
+
+## Object IDs <a id="object-ids"/>
+
+Every operation is expressed relative to a specific object instance, identified by its [object ID](/docs/liveobjects/concepts/objects#object-ids), which determines which object the operation is applied to.
+
+When using a client library object IDs are handled automatically, allowing you work directly with object references:
+
+<Code>
+```javascript
+// The published operation targets the object ID of the `userMap` object instance
+await userMap.set('username', 'alice');
+```
+</Code>
+
+Therefore it is important that you obtain an up-to-date object instance before performing operations on an object. For example, you can [subscribe](/docs/liveobjects/map#subscribe-data) to a `LiveMap` instance to ensure you always have an up-to-date reference to any child objects in the map:
+
+<Code>
+```javascript
+const root = await channel.objects.getRoot();
+
+let myCounter = root.get('myCounter');
+root.subscribe(() => { myCounter = root.get('myCounter'); });
+
+// before incrementing, ensure we have an up-to-date object reference if
+// the counter instance at the 'myCounter' key in the root map changes
+await myCounter.increment(1);
+```
+</Code>
+
+In the [REST API](/docs/liveobjects/rest-api-usage#updating-objects-by-id), this relationship is made explicit:
+
+<Code>
+```shell
+curl -X POST https://rest.ably.io/channels/my-channel/objects \
+ -u "{{API_KEY}}"
+ -H "Content-Type: application/json" \
+ --data \
+'{
+  "operation": "MAP_SET",
+  "objectId": "root",
+  "data": {"key": "username", "value": {"string": "alice"}}
+}'
+```
+</Code>
+
+## Batch Operations <a id="batch-operations"/>
+
+[Batch operations](/docs/liveobjects/batch) can be used to batch a set of operations together:
+
+* Multiple operations are grouped into a single atomic unit
+* All operations in the batch either succeed together or fail together
+* Operations in a batch are sent as a single message
+* No operations from other clients can be interleaved within a batch
