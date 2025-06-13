@@ -92,16 +92,18 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
         tree: [],
         page: { name: '', link: '' },
         languages: [],
-        language: activeLanguage,
+        language: null,
         product: null,
         template: null,
       };
     }
 
+    const languages = (activePageData.page.languages as LanguageKey[]) ?? activeLanguages;
+
     return {
       ...activePageData,
-      languages: (activePageData.page.languages as LanguageKey[]) ?? activeLanguages,
-      language: activeLanguage,
+      languages,
+      language: languages.includes(activeLanguage) ? activeLanguage : null,
       template: (pageContext?.layout?.mdx ? 'mdx' : 'textile') as PageTemplate,
     };
   }, [location.pathname, location.search, pageContext?.languages, domLanguages, pageContext?.layout?.mdx]);

@@ -7,10 +7,11 @@ import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/u
 
 import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
+import { productData } from 'src/data';
+import { LanguageKey } from 'src/data/languages/types';
 import { languageInfo } from 'src/data/languages';
 import { ActivePage, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
 import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
-import { LanguageKey } from 'src/data/languages/types';
 
 type SidebarHeader = {
   id: string;
@@ -30,26 +31,26 @@ const externalLinks = (
   activePage: ActivePage,
   location: WindowLocation,
 ): { label: string; icon: IconName; link: string; type: string }[] => {
+  if (!activePage) {
+    return [];
+  }
+
   let githubEditPath = '#';
-  let requestPath = '#';
+  const githubPathName = location.pathname.replace('docs/', '');
 
-  if (activePage) {
-    const githubPathName = location.pathname.replace('docs/', '');
+  if (customGithubPaths[githubPathName]) {
+    githubEditPath = customGithubPaths[githubPathName];
+  } else if (activePage.template === 'mdx') {
+    githubEditPath =
+      githubBasePathMDX + (activePage.page.index ? `${githubPathName}/index.mdx` : `${githubPathName}.mdx`);
+  } else {
+    githubEditPath =
+      githubBasePathTextile + (activePage.page.index ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
+  }
 
-    if (customGithubPaths[githubPathName]) {
-      githubEditPath = customGithubPaths[githubPathName];
-    } else if (activePage.template === 'mdx') {
-      githubEditPath =
-        githubBasePathMDX + (activePage.page.index ? `${githubPathName}/index.mdx` : `${githubPathName}.mdx`);
-    } else {
-      githubEditPath =
-        githubBasePathTextile +
-        (activePage.page.index ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
-    }
-
-    const language = new URLSearchParams(location.search).get('lang') as LanguageKey;
-    const requestTitle = `Change request for: ${activePage.page.link}`;
-    const requestBody = encodeURIComponent(`
+  const language = activePage.languages.length > 0 ? activePage.language : null;
+  const requestTitle = `Change request for: ${activePage.page.link}`;
+  const requestBody = encodeURIComponent(`
   **Page name**: ${activePage.page.name}
   **URL**: [${activePage.page.link}](https://ably.com${activePage.page.link})
   ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}**` : ''}
@@ -57,8 +58,9 @@ const externalLinks = (
   **Requested change or enhancement**:
 `);
 
-    requestPath = `${requestBasePath}?title=${requestTitle}&body=${requestBody}`;
-  }
+  const requestPath = `${requestBasePath}?title=${requestTitle}&body=${requestBody}`;
+  const prompt = `Tell me more about ${activePage.product ? productData[activePage.product]?.nav.name : 'Ably'}'s '${activePage.page.name}' feature from https://ably.com${activePage.page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
+  const gptPath = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
 
   return [
     {
@@ -68,6 +70,7 @@ const externalLinks = (
       type: 'github',
     },
     { label: 'Request changes', icon: 'icon-gui-hand-raised-outline', link: requestPath, type: 'request' },
+    { label: 'Open in ChatGPT', icon: 'icon-tech-openai', link: gptPath, type: 'llm' },
   ];
 };
 
@@ -253,7 +256,7 @@ const RightSidebar = () => {
               <div
                 className={cn(
                   'flex items-center p-4',
-                  index === 0 && 'border-b border-neutral-300 dark:border-neutral-1000',
+                  index > 0 && 'border-t border-neutral-300 dark:border-neutral-1000',
                 )}
               >
                 <div className="flex-1 flex items-center gap-3">
