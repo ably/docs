@@ -111,10 +111,6 @@ export default {
           name: 'Advanced pub-sub',
           link: '/docs/pub-sub/advanced',
         },
-        {
-          name: 'How-to: Publish and subscribe',
-          link: '/docs/how-to/pub-sub',
-        },
       ],
     },
     {
