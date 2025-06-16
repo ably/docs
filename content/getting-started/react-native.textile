@@ -15,21 +15,28 @@ It will take you through the following steps:
 * Publish a message to the channel for your client to receive.
 * Join and subscribe to the presence set of the channel.
 * Retrieve the messages you sent in the guide from history.
+* Close a connection to Ably when it is no longer needed.
 
 h2(#prerequisites). Prerequisites
 
-* Ensure you have "Node.js":https://nodejs.org and "npm":https://www.npmjs.org/ installed.
 * "Sign up":https://ably.com/sign-up for a free Ably account.
-* Create a new app and get your API key from the "dashboard":https://ably.com/dashboard.
-* Your API key will need the @publish@, @subscribe@, @presence@ and @history@ "capabilities":/docs/auth/capabilities.
-
-h3(#prerequisites-ably-cli). Install Ably CLI (optional)
-
-* Install the "Ably CLI":https://www.npmjs.com/package/&#64;ably/cli : @npm install -g &#64;ably/cli@
-* Run @ably login@ in the terminal and follow the prompts to provide an access token to the Ably CLI.
-* Set the default app to use with @ably apps switch@ and select an API key to use for operations with @ably auth keys switch@.
+** Create a new app and get your API key from the "dashboard":https://ably.com/dashboard.
+** Your API key will need the @publish@, @subscribe@, @presence@ and @history@ "capabilities":/docs/auth/capabilities.
 
 This step is optional. If you prefer not to use the Ably CLI to interact with your Pub/Sub React Native application, you can still follow along by using multiple browser windows, mobile devices or emulators.
+
+```[sh]
+npm install -g @ably/cli
+```
+
+* Run the following to log in to your Ably account and set the default app and API key:
+
+```[sh]
+ably login
+
+ably apps switch
+ably auth keys switch
+```
 
 <aside data-type='note'>
 <p>The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI and view outputs within your Ably account, ensure that you replace them with your own API key.</p>
@@ -44,13 +51,13 @@ npx rn-new@latest ably-pubsub-react-native --nativewind
 cd ably-pubsub-react-native
 ```
 
-If you'd like to open your project on the web, you also need to install the following required dependencies:
+To open your project on the web, you also need to install the following required dependencies:
 
 ```[sh]
 npx expo install react-dom react-native-web @expo/metro-runtime
 ```
 
-Now replace the contents of @App.tsx@ with the following:
+Replace the contents of @App.tsx@ with the following:
 
 ```[react]
 // App.tsx
@@ -183,7 +190,7 @@ export function ConnectionState() {
 }
 ```
 
-Then, update your @App@ component in the @App.tsx@ file to include the @ConnectionState@ component:
+Update your @App@ component in the @App.tsx@ file to include the @ConnectionState@ component:
 
 ```[react]
 // App.tsx
@@ -274,19 +281,7 @@ export default function App() {
     <AblyProvider client={realtimeClient}>
       {/* Wrap components with ChannelProvider */}
       <ChannelProvider channelName="my-first-channel">
-        <SafeAreaView className="flex-1 bg-white">
-          <View className="mt-8 w-full flex-1 items-center">
-            <View className="w-[90%] max-w-[900px] rounded-lg border border-blue-500">
-              <View className="w-full rounded-lg bg-gray-100 p-4">
-                <Text className="text-center text-lg font-semibold text-blue-500">
-                  Ably Pub/Sub React Native
-                </Text>
-                <ConnectionState />
-              </View>
-            </View>
-            <StatusBar style="auto" />
-          </View>
-        </SafeAreaView>
+        ...
       </ChannelProvider>
     </AblyProvider>
   );
@@ -520,21 +515,10 @@ Add the @PresenceStatus@ component to your main @App@ component in @App.tsx@ as 
 ```[react]
 // App.tsx
 
-import * as Ably from 'ably';
-import { AblyProvider, ChannelProvider } from 'ably/react';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, Text, View } from 'react-native';
-import { ConnectionState } from './components/ConnectionState';
-import { Messages } from './components/Messages';
+// Add PresenceStatus import
 import { PresenceStatus } from './components/PresenceStatus';
 
-import './global.css';
-
-// Create your Ably Realtime client
-const realtimeClient = new Ably.Realtime({
-  key: '{{API_KEY}}',
-  clientId: 'my-first-client',
-});
+// Other imports and realtimeClient initialization
 
 export default function App() {
   return (
@@ -573,7 +557,7 @@ The application will now display a list of clients currently present on the chan
 You can have another client join the presence set using the Ably CLI:
 
 ```[sh]
-ably channels presence enter my-first-channel --client-id "my-cli" --data '{"status":"From CLI"}'
+ably channels presence enter my-first-channel --client-id "my-cli" --profile-data '{"status":"From CLI"}'
 ```
 
 h2(#step-4). Step 4: Retrieve message history
@@ -587,38 +571,20 @@ Update your @components/Messages.tsx@ file to include the new @useEffect@ within
 ```[react]
 // components/Messages.tsx
 
-import type { Message } from 'ably';
-import { useChannel } from 'ably/react';
-import { useEffect, useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+// Update your react import to have `useEffect` as well.
+import { useState, useEffect } from 'react';
 
-function MessageView({ message }: { message: Message }) {
-  // Displays an individual message
-  const isMine = message.clientId === 'my-first-client';
-  return (
-    <View className={`my-1 rounded px-2 py-1 shadow-sm ${isMine ? 'bg-green-100' : 'bg-blue-50'}`}>
-      <Text className="text-gray-800">{message.data}</Text>
-    </View>
-  );
-}
+// MessageView component remains unchanged
 
 export function Messages() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState('');
+  // State management remains the same
 
-  // You can get a reference to the channel instance from the useChannel hook
+  // Include channel from useChannel hook
   const { channel, publish } = useChannel('my-first-channel', (message) => {
     setMessages((prevMessages) => [...prevMessages, message]);
   });
 
-  // Function to handle publishing messages
-  const handlePublish = () => {
-    if (!inputValue.trim()) return;
-    publish('my-first-messages', inputValue.trim()).catch((err) =>
-      console.error('Error publishing message', err)
-    );
-    setInputValue('');
-  };
+  // handlePublish function remains unchanged
 
   useEffect(() => {
     async function loadHistory() {
@@ -638,29 +604,8 @@ export function Messages() {
     loadHistory();
   }, [channel]);
 
-  return (
-    <View className="h-[200px] w-full rounded-lg lg:h-[400px]">
-      <ScrollView className="flex-1 p-4">
-        {messages.map((msg: Message) => (
-          <MessageView key={msg.id} message={msg} />
-        ))}
-      </ScrollView>
-      <View className="mb-2 mt-auto flex-row items-center border-t border-gray-200 p-2">
-        <TextInput
-          placeholder="Type your message..."
-          className="flex-1 rounded border border-gray-400 bg-white p-2"
-          value={inputValue}
-          onChangeText={setInputValue}
-          onSubmitEditing={handlePublish}
-        />
-        <TouchableOpacity
-          className="ml-2 items-center justify-center rounded bg-blue-500 px-4 py-2"
-          onPress={handlePublish}>
-          <Text className="text-white">Publish</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  // Return remains unchanged
+  return ();
 }
 ```
 
@@ -682,6 +627,22 @@ Message number 3
 Message number 4
 Message number 5
 ```
+
+h2(#step-5). Step 5: Close the connection
+
+Connections are automatically closed approximately two minutes after the last channel is detached. However, explicitly closing connections when they're no longer needed is good practice to help save costs and clean up listeners.
+
+```[react]
+const realtimeClient = useAbly();
+
+const handleDisconnect = () => {
+  realtimeClient.connection.close();
+};
+
+// Call handleDisconnect when needed
+```
+
+This ensures the connection is closed when your component unmounts, freeing resources and removing listeners.
 
 h2(#next). Next steps
 
