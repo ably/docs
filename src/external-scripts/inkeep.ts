@@ -246,7 +246,7 @@ export const inkeepOnLoad = (apiKey: string, conversationsUrl: string) => {
         {
           key: 'custom-style',
           type: 'style',
-          value: `css
+          value: `
             .ikp-chat-button__container {
               z-index: 10;
             }
