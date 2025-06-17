@@ -28,6 +28,12 @@ const H4: FC<JSX.IntrinsicElements['h4']> = ({ children, ...props }) => (
   </h4>
 );
 
+const H5: FC<JSX.IntrinsicElements['h5']> = ({ children, ...props }) => (
+  <h5 className="ui-text-h5 my-5" {...props}>
+    {children}
+  </h5>
+);
+
 const Paragraph: FC<JSX.IntrinsicElements['p']> = ({ children, ...props }) => (
   <p className="ui-text-p2 mb-5" {...props}>
     {children}
@@ -106,6 +112,7 @@ const defaultComponents = {
   h2: H2,
   h3: H3,
   h4: H4,
+  h5: H5,
   p: Paragraph,
   a: Anchor,
   ol: Ol,
