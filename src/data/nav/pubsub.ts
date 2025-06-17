@@ -42,6 +42,10 @@ export default {
           link: '/docs/getting-started/swift',
         },
         {
+          name: 'Ruby',
+          link: '/docs/getting-started/ruby',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
