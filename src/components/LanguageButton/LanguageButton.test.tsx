@@ -32,7 +32,7 @@ describe(`<LanguageButton />`, () => {
     );
     expect(screen.getByRole('button')).toMatchInlineSnapshot(`
       <button
-        class="button ui-text-label3 isActive"
+        class="button ui-text-label3"
       >
         JavaScript
       </button>
