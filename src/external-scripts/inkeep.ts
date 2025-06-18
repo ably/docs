@@ -7,7 +7,7 @@ const inkeepChat = (apiKey, conversationsUrl: '') => {
     return;
   }
 
-  scriptLoader(document, 'https://unpkg.com/@inkeep/cxkit-js@0.5.40/dist/embed.js', {
+  scriptLoader(document, 'https://unpkg.com/@inkeep/cxkit-js@0.5.75/dist/embed.js', {
     defer: true,
     async: false,
     type: 'module',
