@@ -12,10 +12,10 @@ Presence is implemented using [Ably Pub/Sub](/docs/products/channels). The Pub/S
 
 Use the following components to send and receive messages in a pub/sub application:
 
-- [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
-- [`ChannelProvider`](/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, presence, and realtime interactions within that channel via React context.
-- [`usePresenceListener()`](/docs/getting-started/react#useChannel) hook: a hook to subscribe to presence events on a channel, notifying users when other users enter or leave a presence set, or updates their member data.
-- [`usePresence()`](/docs/getting-started/react#usePresenceListener) hook: a hook enabling users to enter the presence set.
+- [`AblyProvider`](/docs/getting-started/react-hooks#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+- [`ChannelProvider`](/docs/getting-started/react-hooks#channel-provider): manages the state and functionality of a specific channel, providing access to messages, presence, and realtime interactions within that channel via React context.
+- [`usePresenceListener()`](/docs/getting-started/react-hooks#useChannel) hook: a hook to subscribe to presence events on a channel, notifying users when other users enter or leave a presence set, or updates their member data.
+- [`usePresence()`](/docs/getting-started/react-hooks#usePresenceListener) hook: a hook enabling users to enter the presence set.
 
 Find out more about [presence](/docs/presence-occupancy/presence).
 

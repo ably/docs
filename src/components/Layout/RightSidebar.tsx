@@ -7,10 +7,11 @@ import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/u
 
 import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
-import { languageInfo } from 'src/data/languages';
-import { PageTreeNode, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
-import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
+import { productData } from 'src/data';
 import { LanguageKey } from 'src/data/languages/types';
+import { languageInfo } from 'src/data/languages';
+import { ActivePage, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
+import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
 
 type SidebarHeader = {
   id: string;
@@ -18,45 +19,58 @@ type SidebarHeader = {
   label: string;
 };
 
-const githubBasePath = 'https://github.com/ably/docs/blob/main/content';
+const githubBasePathTextile = 'https://github.com/ably/docs/blob/main/content';
+const githubBasePathMDX = 'https://github.com/ably/docs/blob/main/src/pages/docs';
 const requestBasePath = 'https://github.com/ably/docs/issues/new';
 
+const customGithubPaths = {
+  '/how-to/pub-sub': 'https://github.com/ably/docs/blob/main/how-tos/pub-sub/how-to.mdx',
+} as Record<string, string>;
+
 const externalLinks = (
-  pageTree: PageTreeNode[],
+  activePage: ActivePage,
   location: WindowLocation,
-): { label: string; icon: IconName; link: string }[] => {
-  const currentPage = pageTree[pageTree.length - 1]?.page;
+): { label: string; icon: IconName; link: string; type: string }[] => {
+  if (!activePage) {
+    return [];
+  }
 
   let githubEditPath = '#';
-  let requestPath = '#';
+  const githubPathName = location.pathname.replace('docs/', '');
 
-  if (currentPage) {
-    const githubPathName = location.pathname.replace('docs/', '');
-    const githubPathSegments = githubPathName.split('/').filter((segment) => segment !== '');
+  if (customGithubPaths[githubPathName]) {
+    githubEditPath = customGithubPaths[githubPathName];
+  } else if (activePage.template === 'mdx') {
     githubEditPath =
-      githubBasePath +
-      (githubPathSegments.length === 1 ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
+      githubBasePathMDX + (activePage.page.index ? `${githubPathName}/index.mdx` : `${githubPathName}.mdx`);
+  } else {
+    githubEditPath =
+      githubBasePathTextile + (activePage.page.index ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
+  }
 
-    const language = new URLSearchParams(location.search).get('lang') as LanguageKey;
-    const requestTitle = `Change request for: ${currentPage.link}`;
-    const requestBody = encodeURIComponent(`
-  **Page name**: ${currentPage.name}
-  **URL**: [${currentPage.link}](https://ably.com${currentPage.link})
+  const language = activePage.languages.length > 0 ? activePage.language : null;
+  const requestTitle = `Change request for: ${activePage.page.link}`;
+  const requestBody = encodeURIComponent(`
+  **Page name**: ${activePage.page.name}
+  **URL**: [${activePage.page.link}](https://ably.com${activePage.page.link})
   ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}**` : ''}
 
   **Requested change or enhancement**:
 `);
 
-    requestPath = `${requestBasePath}?title=${requestTitle}&body=${requestBody}`;
-  }
+  const requestPath = `${requestBasePath}?title=${requestTitle}&body=${requestBody}`;
+  const prompt = `Tell me more about ${activePage.product ? productData[activePage.product]?.nav.name : 'Ably'}'s '${activePage.page.name}' feature from https://ably.com${activePage.page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
+  const gptPath = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
 
   return [
     {
       label: 'Edit on GitHub',
       icon: 'icon-social-github-mono',
       link: githubEditPath,
+      type: 'github',
     },
-    { label: 'Request changes', icon: 'icon-gui-hand-raised-outline', link: requestPath },
+    { label: 'Request changes', icon: 'icon-gui-hand-raised-outline', link: requestPath, type: 'request' },
+    { label: 'Open in ChatGPT', icon: 'icon-tech-openai', link: gptPath, type: 'llm' },
   ];
 };
 
@@ -189,7 +203,7 @@ const RightSidebar = () => {
 
   return (
     <div
-      className={cn(sidebarAlignmentClasses, 'md:pb-[80px] right-32 md:right-0')}
+      className={cn(sidebarAlignmentClasses, 'md:pb-20 right-8 md:right-0')}
       style={{
         ...sidebarAlignmentStyles,
         height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, INKEEP_ASK_BUTTON_HEIGHT),
@@ -199,17 +213,17 @@ const RightSidebar = () => {
       <div className="hidden md:flex flex-col h-full">
         {headers.length > 0 ? (
           <>
-            <p className="ui-text-overline2 text-neutral-700 mb-12">On this page</p>
-            <div className="flex gap-16 overflow-auto shadow-[0.5px_0px_var(--color-neutral-000)_inset,1.5px_0px_var(--color-neutral-300)_inset] py-2 pl-16">
+            <p className="ui-text-overline2 text-neutral-700 mb-3">On this page</p>
+            <div className="flex gap-4 overflow-auto shadow-[0.5px_0px_var(--color-neutral-000)_inset,1.5px_0px_var(--color-neutral-300)_inset] py-0.5 pl-4">
               <div
-                className="h-[18px] -ml-16 w-2 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
+                className="h-[1.125rem] -ml-4 w-0.5 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
                 style={{
                   transform: `translateY(${highlightPosition.yOffset}px)`,
                   height: `${highlightPosition.height}px`,
                 }}
               ></div>
               {/* 18px derives from the 2px width of the grey tracker bar plus the 16px between it and the menu items */}
-              <div className="flex flex-col gap-8 w-[calc(100%-18px)] pr-16">
+              <div className="flex flex-col gap-2 w-[calc(100%-18px)] pr-4">
                 {headers.map((header, index) => (
                   <a
                     href={`#${header.id}`}
@@ -218,7 +232,7 @@ const RightSidebar = () => {
                     className={cn(
                       'ui-text-label4 font-medium text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth hover:text-neutral-1300 dark:hover:text-neutral-000',
                       { 'text-neutral-1300 dark:text-neutral-000': header.id === activeHeader?.id },
-                      { 'ml-8': header.type !== 'H2' },
+                      { 'ml-2': header.type !== 'H2' },
                     )}
                     onClick={() => handleHeaderClick(header.id)}
                   >
@@ -229,16 +243,23 @@ const RightSidebar = () => {
             </div>
           </>
         ) : null}
-        <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-24">
-          {externalLinks(activePage.tree, location).map(({ label, icon, link }, index) => (
-            <a key={label} href={link} target="_blank" rel="noopener noreferrer" className="group/external-link">
+        <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-6">
+          {externalLinks(activePage, location).map(({ label, icon, link, type }, index) => (
+            <a
+              key={label}
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group/external-link"
+              data-testid={`external-${type}-link`}
+            >
               <div
                 className={cn(
-                  'flex items-center p-16',
-                  index === 0 && 'border-b border-neutral-300 dark:border-neutral-1000',
+                  'flex items-center p-4',
+                  index > 0 && 'border-t border-neutral-300 dark:border-neutral-1000',
                 )}
               >
-                <div className="flex-1 flex items-center gap-12">
+                <div className="flex-1 flex items-center gap-3">
                   <Icon
                     size="20px"
                     name={icon}

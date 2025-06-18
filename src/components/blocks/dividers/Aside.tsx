@@ -34,16 +34,16 @@ const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
         <>
           <span className={`${leftSideElement} ${pitfallElement}`}>&nbsp;</span>
           <strong className={tipTitleElement}>
-            <Icon name="icon-gui-exclamation-triangle-micro" size="1rem" additionalCSS="mr-12" />
-            <span className="ui-text-p2 font-bold text-neutral-1300 mb-48">Important</span>
+            <Icon name="icon-gui-exclamation-triangle-micro" size="1rem" additionalCSS="mr-3" />
+            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Important</span>
           </strong>
         </>
       ) : attribs && attribs[`data-type`] === `further-reading` ? (
         <>
           <span className={`${leftSideElement} ${furtherReadingElement}`}>&nbsp;</span>
           <strong className={tipTitleElement}>
-            <Icon name="icon-gui-resources" size="1rem" additionalCSS="mr-12" />
-            <span className="ui-text-p2 font-bold text-neutral-1300 mb-48">Further Reading</span>
+            <Icon name="icon-gui-resources" size="1rem" additionalCSS="mr-3" />
+            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Further Reading</span>
           </strong>
         </>
       ) : attribs && isVersioningInfo ? (
@@ -62,8 +62,8 @@ const Aside = ({ data, attribs }: HtmlComponentProps<'div'>) => {
         <>
           <span className={`${leftSideElement} ${noteElement}`}>&nbsp;</span>
           <strong className={tipTitleElement}>
-            <Icon name="icon-gui-document-text-micro" size="1rem" additionalCSS="mr-12" />
-            <span className="ui-text-p2 font-bold text-neutral-1300 mb-48">Note</span>
+            <Icon name="icon-gui-document-text-micro" size="1rem" additionalCSS="mr-3" />
+            <span className="ui-text-p2 font-bold text-neutral-1300 mb-12">Note</span>
           </strong>
         </>
       )}

@@ -24,6 +24,10 @@ describe('RightSidebar', () => {
   beforeEach(() => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
+        page: {
+          name: 'Test Page',
+          link: '/test-path',
+        },
         tree: [0],
         languages: [],
       },
@@ -66,6 +70,10 @@ describe('RightSidebar', () => {
   it('renders the LanguageSelector component when activePage.languages is not empty', () => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
+        page: {
+          name: 'Test Page',
+          link: '/test-path',
+        },
         tree: [0],
         languages: ['javascript'],
       },
@@ -81,16 +89,56 @@ describe('RightSidebar', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Header 2' })).toBeInTheDocument();
   });
 
+  it('sets active header on click', async () => {
+    render(<RightSidebar />);
+    const headerLink = await screen.findByRole('link', { name: 'Header 1' });
+    fireEvent.click(headerLink);
+    expect(headerLink).toHaveClass('text-neutral-1300');
+  });
+
   it('renders external links', () => {
     render(<RightSidebar />);
     expect(screen.getByText('Edit on GitHub')).toBeInTheDocument();
     expect(screen.getByText('Request changes')).toBeInTheDocument();
   });
 
-  it('sets active header on click', async () => {
+  it('renders a textile Github link when the page is textile', () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        page: {
+          name: 'Test Page',
+          link: '/test-path',
+        },
+        template: 'textile',
+        tree: [0],
+        languages: [],
+      },
+      products: [['pubsub']],
+    });
     render(<RightSidebar />);
-    const headerLink = await screen.findByRole('link', { name: 'Header 1' });
-    fireEvent.click(headerLink);
-    expect(headerLink).toHaveClass('text-neutral-1300');
+
+    const githubLink = screen.getByTestId('external-github-link');
+    expect(githubLink).toBeInTheDocument();
+    expect(githubLink).toHaveAttribute('href', 'https://github.com/ably/docs/blob/main/content/test-path.textile');
+  });
+
+  it('renders an MDX Github link when the page is MDX', () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        page: {
+          name: 'Test Page',
+          link: '/test-path',
+        },
+        template: 'mdx',
+        tree: [0],
+        languages: [],
+      },
+      products: [['pubsub']],
+    });
+    render(<RightSidebar />);
+
+    const githubLink = screen.getByTestId('external-github-link');
+    expect(githubLink).toBeInTheDocument();
+    expect(githubLink).toHaveAttribute('href', 'https://github.com/ably/docs/blob/main/src/pages/docs/test-path.mdx');
   });
 });

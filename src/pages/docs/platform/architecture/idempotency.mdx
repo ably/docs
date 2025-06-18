@@ -1,0 +1,85 @@
+---
+title: Idempotency
+meta_description: "Understand how Ably provides exactly-once message delivery through idempotent publishing."
+---
+
+Idempotency, in general, is a property of an operation such that the combined effect of performing the operation multiple times is the same as if it had been performed exactly once. In the context of Ably, idempotency relates to the publish operation; so an idempotent publish of a given message can be performed multiple times but any publishes after the first do not change the end result.
+
+## Why idempotency matters
+
+Idempotency is an important property of a system because it simplifies the challenge of getting predictable behavior when interactions with that system are subject to the possibility of failure. In distributed systems, network issues, timeouts, and other failures are inevitable. Without idempotency, handling these failures becomes significantly more complex, as retries can lead to duplicate operations, with unpredictable results.
+
+When a client publishes a message to a messaging system and, due to a network issue, it doesn't receive a confirmation, it faces a dilemma: should it retry the publication, potentially creating a duplicate, or should it assume the message was processed, risking message loss? Idempotency resolves this dilemma by ensuring that multiple identical requests have the same effect as a single request, eliminating the uncertainty around retries.
+
+In a messaging platform like Ably, idempotency is particularly important because it enables exactly-once message processing, a quality of service guarantee that is essential for many applications. Without idempotency, systems would have to choose between potentially losing messages (at-most-once semantics) or accepting duplicates (at-least-once semantics), both of which can lead to data inconsistency in certain applications.
+
+By implementing idempotent operations, Ably allows clients to retry operations safely when uncertainty exists, knowing that the operation will only be applied once. This significantly simplifies error handling and recovery strategies, making it easier to build reliable and consistent applications using the platform.
+
+## Types of messaging semantics
+
+When discussing message delivery in distributed pub/sub systems, three primary types of messaging semantics are commonly referenced: at-most-once, at-least-once, and exactly-once.
+
+At-most-once semantics follows a "fire-and-forget" approach where messages are sent without confirmation or retry mechanisms. Messages are delivered at most once to subscribers, and if a failure occurs during delivery, the message may be lost. No message duplication is possible, and system components can typically be stateless. This approach provides the weakest guarantees and is suitable only for use cases where occasional message loss is acceptable, such as low-priority messages, or continuously streamed values such as metrics.
+
+At-least-once semantics ensures messages aren't lost, even if it means delivering them multiple times. Messages are delivered at least once to subscribers, and if uncertainty exists about delivery, the message is resent. Message duplication is possible, and system components often maintain state to track delivery attempts. This approach is suitable for applications where data loss is unacceptable, but duplicates can be tolerated or managed through additional deduplication at the receiver. Examples include logging systems, analytics data collection, and event streams where completeness outweighs avoidance of duplicates.
+
+Exactly-once semantics represents the strongest guarantee. Each message is delivered precisely once to subscribers, and messages are neither lost nor duplicated. This approach requires system-wide state coordination and more complex engineering. It is ideal for transactional messaging, financial systems, ordered operations, and scenarios where data integrity is paramount.
+
+It’s worth emphasising that exactly-once is a system-wide characteristic that is a property of end-to-end behaviour of a system, and it is possible only if all the constituent components play their role and work together towards achieving it.
+In practice, many distributed systems can truly guarantee only "mostly-once" delivery. Under normal operating conditions, messages are delivered exactly once. However, when failures occur, some messages may revert to at-most-once or at-least-once semantics. The engineering challenge is to minimize these exceptions and clearly communicate to users when exactly-once guarantees cannot be maintained.
+
+## Use cases for exactly-once processing
+
+While exactly-once semantics is generally desirable, specific use cases make it critical for proper system functioning.
+
+Transactional messaging contains high-priority information triggered by important user actions. Financial transactions such as payments, transfers, and balance updates require exactly-once delivery to prevent double-charging or missed payments. Order confirmations and processing must happen exactly once to avoid duplicate order fulfillment or lost orders. Booking confirmations for travel, accommodations, or appointments need exactly-once processing to prevent double bookings or missed reservations. Critical system state changes should be applied once and only once to maintain system integrity.
+
+Applications that rely on ordered sequences of operations also require exactly-once processing. Delta compression systems that only stream changes from previous messages can't afford to miss or duplicate any state change, as this would corrupt the synchronized state. State synchronization between distributed components requires consistent updates to maintain coherence. Sequential workflow processors depend on each step being executed precisely once to function correctly.
+
+Exactly-once processing also significantly improves user experience in many applications. Push notifications should arrive exactly once to avoid annoying users with duplicate alerts. Chat messages should not be duplicated or lost to maintain conversation coherence. Live updates should be reliable and consistent to provide an accurate view of real-time data. Interactive experiences should behave predictably to maintain user trust and satisfaction.
+
+While some of these use cases might function with at-least-once semantics and client-side deduplication, native exactly-once guarantees simplify development and improve reliability by handling these concerns at the platform level.
+
+## Failure modes that prevent exactly-once processing
+
+To understand exactly-once implementation challenges, we must consider the various failure modes that affect message delivery.
+
+When publishers experience failures, several scenarios can occur. A publication failure with recovery happens when a publisher fails to receive an acknowledgment and retries publishing the same message, potentially creating duplicates (at-least-once behavior). Publication failure without detection occurs when a publisher fails to detect that a publish attempt failed, resulting in a lost message (at-most-once behavior). Some publishers implement limited retry behavior, attempting to republish a message a fixed number of times before giving up. Without idempotent publishing, these failures compromise exactly-once delivery guarantees.
+
+Message brokers can also experience failures that impact delivery guarantees. Data loss might occur during critical failures, resulting in loss of stored messages. Incomplete acknowledgment happens when the broker acknowledges receipt before ensuring sufficient redundancy. Infrastructure failures including hardware, network, or region-wide issues can disrupt normal operation. A reliable broker ensures that message acknowledgment implies sufficient redundancy to maintain service continuity despite multiple infrastructure failures.
+
+Subscriber-side issues can also prevent exactly-once delivery. Temporary disconnections caused by network interruptions can cause subscribers to disconnect and reconnect, potentially missing messages or receiving duplicates. State tracking issues may occur if the broker tracks the last message sent rather than the subscriber tracking the last message received, leading to duplicate deliveries after disconnections. Connection recovery failures after a disconnection can compromise exactly-once guarantees if connection state isn't properly recovered. For exactly-once behavior, subscribers should track the last message received, not rely on broker-side tracking.
+
+Understanding these failure modes is essential for designing systems that can maintain exactly-once semantics despite inevitable component failures.
+
+## Ably's approach to idempotent publishing
+
+Idempotent publishing ensures that multiple attempts to publish the same message result in only one delivery to subscribers. This capability is fundamental to achieving exactly-once message processing in a distributed system.
+
+Ably's idempotent publishing system operates through several key mechanisms. Each message is assigned a unique identifier, either automatically by Ably's SDKs when idempotent publishing is enabled, or explicitly supplied by publishers. When a message is published, the system checks for already-accepted messages with the same identifier and discards duplicates. Messages on a given channel in a region are indexed by their unique IDs to identify and prevent duplicate processing. The system also includes mechanisms to prevent duplicate processing even when publish attempts occur in different regions.
+
+Ably's globally distributed architecture includes safeguards for handling duplicate publications across regions. When a message is published in one region and propagates to other regions, the message ID is included in each region's index. If a duplicate attempt occurs in any region, it's discarded as already present in that region's index. Even if publications occur almost simultaneously in different regions, as each region's message propagates to others, one is identified as a duplicate and discarded.
+
+This cross-region coordination ensures that even with multiple publish attempts across different regions, subscribers receive each message only once, providing true exactly-once semantics.
+
+## Connection recovery and exactly-once delivery
+
+Beyond idempotent publishing, Ably provides mechanisms for maintaining message continuity when subscriber connections are disrupted, which is another essential component of exactly-once delivery.
+
+Each message delivered to subscribers includes an Ably-assigned serial number that uniquely identifies a message and its position in the stream, establishes a clear message sequence, and provides a precise resumption point for connections. When a client receives a message, it stores the serial number locally. If the connection is later disrupted and reestablished, the client informs Ably of the last message received, allowing the stream to resume exactly where it left off.
+
+Ably's SDKs provide two primary mechanisms for connection recovery. The "resume" mechanism activates when a connection drops temporarily. The client library automatically attempts reconnection, and once reestablished, the stream resumes, and missed messages are delivered in the correct order. The "recover" mechanism is designed for scenarios where a client instance fails completely and a new instance takes over. The client can request "recover mode" and provide the previous connection's recovery key containing the serial number of the last message received.
+
+These mechanisms ensure message delivery maintains exactly-once semantics during connection interruptions. However, Ably maintains connection state and messages for a finite period—typically two minutes—for practical reasons. If a client reconnects within two minutes, full connection recovery with exactly-once delivery is guaranteed. After two minutes, the connection state is discarded, and full recovery is no longer possible.
+
+This time limit exists because after two minutes, messages are no longer considered "realtime," and indefinite state retention would require substantial resources and impact system performance. When the two-minute window expires, clients are notified and can implement alternative recovery strategies, such as using the history API or application-specific state synchronization.
+
+## Protocol support for exactly-once delivery
+
+Ably supports multiple protocols for consuming data, each with different capabilities, but here we focus on the native Ably protocol which operates usually over websockets, but also over HTTP (via long-polling, or "comet"). Given that Ably reliably and uniquely identifies messages that are inbound - so each independent message that is published by a publisher appears exactly once in a channel, say - then the goal of the protocol is to ensure that those messages are delivered by subscribing clients exactly once. This should be true even if the subscriber's connection drops and is reestablished.
+
+A client keeps track of each received message on each channel by recording the timeserial of the message; the message is received on the connection, decoded, the serial is recorded, and the message is dispatched to any listeners that the subscriber has added to the associated channel. If the connection drops and is reestablished, the serial of the last recorded message is sent to the server in order to resume the subscription for that channel. This can ensure exactly-once client-side message processing provided that, on invocation of the subscriber's listener, the given message is processed exactly once - that is, the client processing ensures that any errror or exception in processing the message is handled without loss or duplication of the message processing.
+
+When integrating with external systems, the exactly-once guarantee depends on whether those systems provide idempotent interfaces. Webhooks, AMQP, STOMP, and most serverless platforms typically provide at-least-once guarantees by design, not exactly-once semantics. However, several modern systems like Apache Kafka, Apache Pulsar, Amazon Kinesis, and Amazon SQS FIFO queues do support exactly-once semantics or provide deduplication capabilities that enable exactly-once processing.
+
+Understanding the capabilities and limitations of each protocol and integration is essential for maintaining end-to-end exactly-once semantics across system boundaries.

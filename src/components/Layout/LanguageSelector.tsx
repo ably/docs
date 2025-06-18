@@ -46,24 +46,28 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
   return (
     <div
       className={cn(
-        'ui-text-label4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 group/lang-dropdown flex gap-8 items-center rounded',
+        'ui-text-label4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 group/lang-dropdown flex gap-2 items-center rounded',
         {
-          'p-8 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer': isOption,
+          'p-2 hover:bg-neutral-100 dark:hover:bg-neutral-1200 cursor-pointer': isOption,
         },
       )}
       onClick={handleClick}
       onTouchEnd={handleClick}
       role="menuitem"
     >
-      <div className={cn('flex items-center gap-8', { 'flex-1': isOption })}>
+      <div className={cn('flex items-center gap-2', { 'flex-1': isOption })}>
         <Icon size="20px" name={`icon-tech-${lang?.alias ?? props.data.label}` as IconName} />
         {isOption ? lang?.label : null}
       </div>
-      <Badge color="neutral" size="xs" className={cn('my-1', { 'group-hover/lang-dropdown:bg-neutral-000': isOption })}>
+      <Badge
+        color="neutral"
+        size="xs"
+        className={cn('my-px', { 'group-hover/lang-dropdown:bg-neutral-000': isOption })}
+      >
         v{props.data.version.toFixed(1)}
       </Badge>
       {isOption ? (
-        <div className="w-16 h-16">
+        <div className="w-4 h-4">
           {props.data.label === langParam ? (
             <Icon name="icon-gui-check-outline" size="16px" color="text-neutral-1000" />
           ) : null}
@@ -107,7 +111,7 @@ export const LanguageSelector = () => {
   return (
     <div
       ref={selectRef}
-      className="md:relative w-full text-right md:text-left mb-24 focus-base -mt-4 md:mt-0 -mr-4 md:mr-0"
+      className="md:relative w-full text-right md:text-left mb-6 focus-base -mt-1 md:mt-0 -mr-1 md:mr-0"
     >
       <Select
         options={options}
@@ -116,7 +120,7 @@ export const LanguageSelector = () => {
         classNames={{
           control: () => '!border-none !inline-flex !cursor-pointer group/lang-dropdown',
           valueContainer: () => '!p-0',
-          menu: () => 'absolute right-0 w-[240px] z-10',
+          menu: () => 'absolute right-0 w-60 z-10',
         }}
         styles={{
           control: () => ({ height: LANGUAGE_SELECTOR_HEIGHT }),
@@ -140,7 +144,7 @@ export const LanguageSelector = () => {
           DropdownIndicator: () => (
             <button
               role="button"
-              className="flex items-center pl-8 text-red-orange cursor-pointer"
+              className="flex items-center pl-2 text-red-orange cursor-pointer"
               onClick={handleClick}
               onTouchEnd={handleClick}
               aria-label="Toggle language dropdown"
@@ -155,7 +159,7 @@ export const LanguageSelector = () => {
           Input: () => null,
           MenuList: ({ children }) => (
             <div
-              className="overflow-y-scroll bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft p-8"
+              className="overflow-y-scroll bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft p-2"
               style={{
                 maxHeight: componentMaxHeight(
                   HEADER_HEIGHT,
@@ -166,7 +170,7 @@ export const LanguageSelector = () => {
               }}
               role="menu"
             >
-              <p className="ui-text-overline2 text-left py-16 px-8 text-neutral-700 dark:text-neutral-600">
+              <p className="ui-text-overline2 text-left py-4 px-2 text-neutral-700 dark:text-neutral-600">
                 Code Language
               </p>
               {children}

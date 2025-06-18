@@ -27,6 +27,7 @@ const Template = ({
 }: AblyTemplateData) => {
   const title = getMetaDataDetails(ablyDocument, 'title') as string;
   const description = getMetaDataDetails(ablyDocument, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
+  const keywords = getMetaDataDetails(ablyDocument, 'meta_keywords') as string;
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl(`/docs/${slug}`);
 
@@ -47,7 +48,7 @@ const Template = ({
   return (
     <>
       <PathnameContext.Provider value={pathname}>
-        <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} />
+        <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} keywords={keywords} />
         <Article>
           <PageTitle>{title}</PageTitle>
           <div>{elements}</div>

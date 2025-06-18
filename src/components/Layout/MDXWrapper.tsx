@@ -4,7 +4,7 @@ import CodeSnippet, { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippe
 import cn from '@ably/ui/core/utils/cn';
 
 import PageTitle from '../PageTitle';
-import { PageContextType } from './Layout';
+import { Frontmatter, PageContextType } from './Layout';
 import { MarkdownProvider } from '../Markdown';
 import Article from '../Article';
 import If from './mdx/If';
@@ -15,6 +15,10 @@ import { HtmlComponentPropsData } from '../html-component-props';
 import { languageData } from 'src/data/languages';
 import { ActivePage } from './utils/nav';
 import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from './mdx/tables';
+import { Head } from '../Head';
+import { useSiteMetadata } from 'src/hooks/use-site-metadata';
+import { ProductName } from 'src/templates/template-data';
+import { getMetaTitle } from '../common/meta-title';
 
 type MDXWrapperProps = PageProps<unknown, PageContextType>;
 
@@ -45,7 +49,7 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
         setSdk(sdk ?? null);
         navigate(`${location.pathname}?lang=${lang}`);
       }}
-      className={cn(props.className, 'mb-20')}
+      className={cn(props.className, 'mb-5')}
       languageOrdering={
         activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
       }
@@ -63,17 +67,32 @@ const WrappedAside = (props: PropsWithChildren<{ 'data-type': string }>) => {
   );
 };
 
-const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext }) => {
+const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
+const META_PRODUCT_FALLBACK = 'pub_sub';
+
+const getFrontmatter = (frontmatter: Frontmatter, prop: keyof Frontmatter, alternative: string | string[] = '') =>
+  frontmatter?.[prop] ? frontmatter[prop] : alternative;
+
+const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location }) => {
   const { frontmatter } = pageContext;
-  const title = frontmatter?.title;
+
   const { activePage } = useLayoutContext();
   const [sdk, setSdk] = useState<SDKType>(null);
+
+  const title = getFrontmatter(frontmatter, 'title') as string;
+  const description = getFrontmatter(frontmatter, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
+  const keywords = getFrontmatter(frontmatter, 'meta_keywords') as string;
+  const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
+
+  const { canonicalUrl } = useSiteMetadata();
+  const canonical = canonicalUrl(location.pathname);
 
   // Use the copyable headers hook
   useCopyableHeaders();
 
   return (
     <SDKContext.Provider value={{ sdk, setSdk }}>
+      <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} keywords={keywords} />
       <Article>
         <MarkdownProvider
           components={{
@@ -88,7 +107,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext }) => {
             td: TableCell,
           }}
         >
-          {title && <PageTitle>{title}</PageTitle>}
+          <PageTitle>{title}</PageTitle>
           {children}
         </MarkdownProvider>
       </Article>

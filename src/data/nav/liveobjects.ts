@@ -4,8 +4,8 @@ export default {
   name: 'Ably LiveObjects',
   link: '/docs/liveobjects',
   icon: {
-    closed: 'icon-product-liveobjects-mono',
-    open: 'icon-product-liveobjects',
+    closed: 'icon-gui-prod-liveobjects-outline',
+    open: 'icon-gui-prod-liveobjects-solid',
   },
   content: [
     {
@@ -14,6 +14,7 @@ export default {
         {
           name: 'About LiveObjects',
           link: '/docs/liveobjects',
+          index: true,
         },
       ],
     },
@@ -74,6 +75,7 @@ export default {
         {
           name: 'Using the REST API',
           link: '/docs/liveobjects/rest-api-usage',
+          languages: ['javascript'],
         },
         {
           name: 'Inband objects',

@@ -4,6 +4,7 @@ import { MenuData } from 'src/components/Sidebar/RightSidebar/menu-data';
 export type AblyDocumentMeta = {
   title: string;
   meta_description: string;
+  meta_keywords: string;
   languages: string[];
   redirect_from: string[];
   product?: string;

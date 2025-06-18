@@ -4,7 +4,7 @@ import Card, { CardProps } from './';
 const CardGrid = ({ currentProduct }: { currentProduct: CardProps[] }) => {
   return (
     <div
-      className={`${container} grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-16`}
+      className={`${container} grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4`}
       style={{ paddingBottom: '160px' }}
     >
       {currentProduct.map((item) => (

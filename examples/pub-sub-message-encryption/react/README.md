@@ -12,10 +12,10 @@ Message encryption is implemented using [Ably Pub/Sub](/docs/auth). The Pub/Sub 
 
 Use the following components to send and receive messages in a pub/sub application:
 
-- [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
-- [`ChannelProvider`](/docs/getting-started/react#channel-provider): manages the state and functionality of a specific channel, providing access to messages, members, and realtime interactions within that channel via React context. Options are optional with `ChannelProvider`, options such as `cipher` to enable encryption.
-- [`useChannel()`](/docs/getting-started/react#useChannel) hook: a hook to manage the state and interaction for a channel, allowing users to join, send messages, and listen for messages.
-- [`publish()`](/docs/getting-started/react#useChannel) function: a function to publish messages to the specified channel.
+- [`AblyProvider`](/docs/getting-started/react-hooks#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+- [`ChannelProvider`](/docs/getting-started/react-hooks#channel-provider): manages the state and functionality of a specific channel, providing access to messages, members, and realtime interactions within that channel via React context. Options are optional with `ChannelProvider`, options such as `cipher` to enable encryption.
+- [`useChannel()`](/docs/getting-started/react-hooks#useChannel) hook: a hook to manage the state and interaction for a channel, allowing users to join, send messages, and listen for messages.
+- [`publish()`](/docs/getting-started/react-hooks#useChannel) function: a function to publish messages to the specified channel.
 
 Find out more about [channels](/docs/channels), [messages](/docs/channels/messages), and [encryption](/docs/channels/options/encryption).
 

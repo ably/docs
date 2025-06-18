@@ -60,14 +60,14 @@ const NavPage = ({
           'text-neutral-900': !pageActive && type === 'content',
           'text-neutral-1000': !pageActive && type === 'api',
           '!font-bold !text-neutral-1300': pageActive,
-          'pl-12': indentLinks,
+          'pl-3': indentLinks,
         })}
         target={page.external ? '_blank' : undefined}
         rel={page.external ? 'noopener noreferrer' : undefined}
         to={language ? `${page.link}?lang=${language}` : page.link}
       >
         {page.name}
-        {page.external ? <Icon name="icon-gui-arrow-top-right-on-square-outline" additionalCSS="ml-4" /> : null}
+        {page.external ? <Icon name="icon-gui-arrow-top-right-on-square-outline" additionalCSS="ml-1" /> : null}
       </Link>
     );
   } else {
@@ -78,7 +78,7 @@ const NavPage = ({
           {
             name: page.name,
             content: page.pages.map((subPage, subPageIndex) => (
-              <div className="mb-8 first:mt-8" key={subPage.name}>
+              <div className="mb-2 first:mt-2" key={subPage.name}>
                 <NavPage
                   page={subPage}
                   indentLinks
@@ -104,7 +104,7 @@ const renderProductContent = (
   productIndex: number,
 ) =>
   content.map((productContent, productContentIndex) => (
-    <div className="flex flex-col gap-[10px] md:gap-8" key={productContent.name}>
+    <div className="flex flex-col gap-2.5 md:gap-2" key={productContent.name}>
       <div className="ui-text-overline2 text-neutral-700">{productContent.name}</div>
       {productContent.pages.map((page, pageIndex) => (
         <NavPage
@@ -126,7 +126,10 @@ const constructProductNavData = (activePageTree: PageTreeNode[], inHeader: boole
 
     return {
       name: product.name,
-      icon: activePageTree[0]?.page.name === product.name ? product.icon.open : product.icon.closed,
+      icon:
+        activePageTree[0]?.page.name === product.name
+          ? { name: product.icon.open, css: 'text-orange-600' }
+          : { name: product.icon.closed },
       onClick: () => {
         // When a product is clicked, find and scroll to any open accordion element
         if (typeof document !== 'undefined') {
@@ -148,7 +151,7 @@ const constructProductNavData = (activePageTree: PageTreeNode[], inHeader: boole
         }
       },
       content: (
-        <div key={product.name} className="flex flex-col gap-20 px-16 pt-12">
+        <div key={product.name} className="flex flex-col gap-5 px-4 pt-3">
           {product.showJumpLink ? (
             <a
               href="#"
@@ -170,7 +173,7 @@ const constructProductNavData = (activePageTree: PageTreeNode[], inHeader: boole
           {product.api.length > 0 ? (
             <div
               id={apiReferencesId}
-              className="flex flex-col gap-[10px] md:gap-8 rounded-lg bg-neutral-100 border border-neutral-300 p-16 mb-24 md:-mx-16"
+              className="flex flex-col gap-2.5 md:gap-2 rounded-lg bg-neutral-100 border border-neutral-300 p-4 mb-6 md:-mx-4"
             >
               {renderProductContent(product.api, 'api', inHeader, index)}
             </div>
@@ -221,11 +224,11 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
     <Accordion
       ref={sidebarRef}
       className={cn(
-        !inHeader && [sidebarAlignmentClasses, 'hidden md:block md:-mx-16'],
+        !inHeader && [sidebarAlignmentClasses, 'hidden md:block md:-mx-4'],
         'overflow-y-auto',
-        hasScrollbar ? 'md:pr-8' : 'md:pr-16',
+        hasScrollbar ? 'md:pr-2' : 'md:pr-4',
       )}
-      style={sidebarAlignmentStyles}
+      style={!inHeader ? sidebarAlignmentStyles : {}}
       id={inHeader ? 'mobile-nav' : 'left-nav'}
       data={productNavData}
       {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}

@@ -6,6 +6,17 @@ import { examples } from '../../data/examples/';
 import { Example } from '../../data/examples/types';
 import { ImageProps } from '../Image';
 
+// Mock the @reach/router useLocation hook
+jest.mock('@reach/router', () => ({
+  useLocation: jest.fn(() => ({
+    pathname: '/examples',
+    search: '',
+    hash: '',
+    state: null,
+    key: 'test',
+  })),
+}));
+
 jest.mock('gatsby-plugin-image', () => {
   return {
     StaticImage: jest.fn(({ alt }) => <img alt={alt} />),

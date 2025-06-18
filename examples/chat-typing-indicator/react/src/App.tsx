@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
-  TypingEvent,
-  ChatClient  ,
-  AllFeaturesEnabled,
+  TypingSetEvent,
+  ChatClient,
   TypingOptions,
 } from '@ably/chat';
 import {
@@ -22,15 +21,15 @@ const realtimeClient = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, client
 const chatClient = new ChatClient(realtimeClient);
 
 const typingOptions: TypingOptions = {
-  timeoutMs: 5000,
+  heartbeatThrottleMs: 5000,
 };
 
 const Loading = () => <div>Loading...</div>;
 
 const ChatInput = () => {
-  const { start, currentlyTyping } = useTyping({
-    listener: (typingEvent: TypingEvent) => {
-      console.log('Typing event received: ', typingEvent);
+  const { keystroke, currentlyTyping } = useTyping({
+    listener: (event: TypingSetEvent) => {
+      console.log('Typing set event received: ', event);
     },
   });
   const { clientId } = useChatClient();
@@ -49,7 +48,7 @@ const ChatInput = () => {
           id="user-input"
           className="uk-input uk-width-1-1 uk-border-rounded-left"
           placeholder="Start typing..."
-          onKeyDown={start}
+          onKeyDown={keystroke}
         />
         <label id="user-input-label" htmlFor="user-input">
           {typingIndicatorText}
@@ -89,9 +88,8 @@ export default function App() {
     <div className="min-h-screen">
       <ChatClientProvider client={chatClient}>
         <ChatRoomProvider
-          id={roomName}
+          name={roomName}
           options={{
-            ...AllFeaturesEnabled,
             typing: typingOptions,
           }}
         >

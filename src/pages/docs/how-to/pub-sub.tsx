@@ -89,8 +89,8 @@ const PubSubHowTo = () => {
   return (
     <>
       <Head title="Pub/Sub How To" canonical={canonical} description={meta_description} />
-      <article className="w-full mt-56 md:mt-0 md:pl-24">
-        <div className="max-w-md md:pr-24 md:border-r border-mid-grey">
+      <article className="w-full mt-14 md:mt-0 md:pl-6">
+        <div className="max-w-md md:pr-6 md:border-r border-mid-grey">
           <MarkdownProvider>
             <HowTo
               showSolution={() => {
@@ -99,7 +99,7 @@ const PubSubHowTo = () => {
             />
           </MarkdownProvider>
         </div>
-        <aside className="pt-48 md:pl-24 relative">
+        <aside className="pt-12 md:pl-6 relative">
           {/* 160px = 48px for aside top padding, 48px for nav bar and 64px for top header */}
           <div>
             {apiKey ? (
@@ -125,7 +125,7 @@ const PubSubHowTo = () => {
                     }}
                   />
 
-                  <div className="flex gap-16 my-16 flex-col sm:flex-row">
+                  <div className="flex gap-4 my-4 flex-col sm:flex-row">
                     <SandpackPreview
                       style={{ height: '480px' }}
                       className="rounded-lg overflow-hidden"

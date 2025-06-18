@@ -4,8 +4,8 @@ export default {
   name: 'Ably Asset Tracking',
   link: '/docs/asset-tracking',
   icon: {
-    closed: 'icon-product-asset-tracking-mono',
-    open: 'icon-product-asset-tracking',
+    closed: 'icon-gui-prod-asset-tracking-outline',
+    open: 'icon-gui-prod-asset-tracking-solid',
   },
   content: [
     {
@@ -14,6 +14,7 @@ export default {
         {
           name: 'About Asset Tracking',
           link: '/docs/asset-tracking/',
+          index: true,
         },
       ],
     },

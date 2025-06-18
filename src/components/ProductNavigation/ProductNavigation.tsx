@@ -11,13 +11,13 @@ const Item = ({ to, children, active = false }: PropsWithChildren<ItemProps>) =>
   return (
     <Link
       to={to}
-      className={cn('px-12 md:px-14 py-16 relative cursor-pointer ui-text-label3', {
-        'text-neutral-1300 md:mr-2': active,
-        'text-neutral-1000 md:px-14': !active,
+      className={cn('px-3 md:px-3.5 py-4 relative cursor-pointer ui-text-label3', {
+        'text-neutral-1300 md:mr-0.5': active,
+        'text-neutral-1000 md:px-3.5': !active,
       })}
     >
       {children}
-      {active && <div className="absolute left-0 right-0 -bottom-1 bg-neutral-1300 rounded-lg h-2"></div>}
+      {active && <div className="absolute left-0 right-0 -bottom-px bg-neutral-1300 rounded-lg h-0.5"></div>}
     </Link>
   );
 };
@@ -33,7 +33,7 @@ const ProductNavigation = ({ currentProduct = 'channels' }: { currentProduct?: s
 
   return (
     <nav
-      className="sticky z-40 flex flex-row justify-start h-48 px-8 bg-white top-64 sm:px-24"
+      className="sticky z-40 flex flex-row justify-start h-12 px-2 bg-white top-16 sm:px-6"
       style={{ boxShadow: '0 1px 0 0 #E5E5E5' }}
     >
       <Item to="/docs" active={onHome}>

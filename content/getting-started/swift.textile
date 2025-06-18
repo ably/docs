@@ -17,7 +17,7 @@ It will take you through the following steps:
 
 h2(#prerequisites). Prerequisites
 
-* Sign up for an Ably account.
+* "Sign up":https://ably.com/signup for an Ably account.
 ** Create a new app, and create your first API key.
 ** Your API key will need the @publish@, @subscribe@, @presence@ and @history@ capabilities.
 
@@ -36,7 +36,16 @@ ably apps switch
 ably auth keys switch
 ```
 
+<aside data-type='note'>
+<p>The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI and view outputs within your Ably account, ensure that you replace them with your own API key.</p>
+<p><strong>Important:</strong> API keys are suitable for development and demo purposes only. For production apps, <a href="/docs/authentication/token-authentication">use token authentication</a> to keep your credentials secure.</p>
+</aside>
+
 * Install "Xcode":https://developer.apple.com/xcode/
+
+h3(#xcode-setup). Create a Swift project with Xcode (SwiftUI)
+
+To follow this guide in Xcode, use a new iOS project with the SwiftUI App template. All code can be added directly to your @ContentView.swift@ file, inside the @ContentView@ struct. Use the @.onAppear@ modifier to run the Ably code when the view appears. No additional files or setup are needed. All @print@ output will appear in Xcode's debug console (View > Debug Area > Activate Console, or press Cmd+Shift+C).
 
 * Install the Ably SDK in your Swift project using Swift Package Manager:
 
@@ -46,67 +55,36 @@ dependencies: [
 ]
 ```
 
-
-<aside data-type='note'>
-<p>The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI and view outputs within your Ably account, ensure that you replace them with your own API key.</p>
-<p><strong>Important:</strong> API keys are suitable for development and demo purposes only. For production apps, <a href="/docs/authentication/token-authentication">use token authentication</a> to keep your credentials secure.</p>
-</aside>
-
-h2(#xcode-setup). Running this example in Xcode (SwiftUI)
-
-To follow this guide in Xcode, use a new iOS project with the SwiftUI App template. All code can be added directly to your @ContentView.swift@ file, inside the @ContentView@ struct. Use the @.onAppear@ modifier to run the Ably code when the view appears. No additional files or setup are needed.
-
-*Steps:*
-
-# Open Xcode and create a new iOS project (App template, Swift, SwiftUI).
-# Open @ContentView.swift@.
-# Add the code snippets from each step inside the @.onAppear@ block in the @ContentView@ struct.
-# Run the app using the Simulator or a real device.
-# All @print@ output will appear in Xcode's debug console (View > Debug Area > Activate Console, or press Cmd+Shift+C).
-
 h2(#step-1). Step 1: Connect to Ably
 
 Clients establish a connection with Ably when they instantiate an SDK. This enables them to send and receive messages in realtime across channels.
 
 * Open up the "dev console":https://ably.com/accounts/any/apps/any/console of your first app before instantiating your client so that you can see what happens.
 
-* Add these imports to the top of your Swift file:
+* Add the Ably import to the top of your @ContentView@ file:
 
 ```[swift]
 import Ably
 ```
 
-* Create an instance of @ARTRealtime@ with your API key. This is the main entry point for the realtime library. The @ARTRealtime@ client connects to Ably as soon as it's instantiated, using a basic transport such as a raw TCP socket or a WebSocket:
+* Create an instance of @ARTRealtime@ with your API key and provide a @clientId@. This is the main entry point for the realtime library. The @ARTRealtime@ client connects to Ably as soon as it's instantiated, using a basic transport such as a raw TCP socket or a WebSocket:
 
 ```[swift]
-let realtime = ARTRealtime(key: "{{API_KEY}}")
-```
+let clientOptions = ARTClientOptions(key: "{{API_KEY}}")
+clientOptions.clientId = "my-first-client"
+let realtime = ARTRealtime(options: clientOptions)
 
-* You can monitor the connection state by adding a listener to the connection property:
-
-```[swift]
 realtime.connection.on { stateChange in
     print("Connection state changed to: \(stateChange.current)")
-    
+
+
     if stateChange.current == .connected {
         print("Made my first connection!")
     }
 }
 ```
 
-You can also specify a client ID, which is a caller-defined string that identifies this client:
-
-```[swift]
-let clientOptions = ARTClientOptions(key: "{{API_KEY}}")
-clientOptions.clientId = "my-first-client"
-let realtime = ARTRealtime(options: clientOptions)
-```
-
-A client can establish a connection using "token authentication":/docs/authentication/token-authentication rather than "basic authentication":/docs/authentication/basic-authentication. To do so, specify a token instead of a key:
-
-```[swift]
-let realtime = ARTRealtime(token: "{{TOKEN}}")
-```
+You can monitor the lifecycle of clients’ connections, but for now just log a message to the console to know that the connection attempt was successful. You’ll see the message printed to your console, and you can also inspect the connection event in the dev console of your app.
 
 *To run:*
 - Build and run the app in Xcode (Cmd+R).
@@ -116,16 +94,12 @@ h2(#step-2). Step 2: Subscribe to a channel and publish a message
 
 Messages contain the data that a client is communicating, such as a short 'hello' from a colleague, or a financial update being broadcast to subscribers from a server. Ably uses channels to separate messages into different topics, so that clients only ever receive messages on the channels they are subscribed to.
 
-* Use the @channels@ property of your realtime client to get a reference to a channel instance:
+* Add the following lines to your @.onAppear{}@ function to create a channel instance and register a listener to subscribe to the channel. Then run the app again:
 
 ```[swift]
-let channel = realtime.channels.get("my-first-channel")
-```
+let channel = realtime?.channels.get("my-first-channel")
 
-* Subscribe to messages on the channel. When a client publishes a message to the channel, the handler function you passed into @subscribe@ will be called with that message:
-
-```[swift]
-channel.subscribe { message in
+channel?.subscribe { message in
     print("Received message: \(message.data ?? "no data")")
 }
 ```
@@ -145,7 +119,7 @@ ably channels subscribe my-first-channel
 * Now you can publish a message from your Swift code to the channel:
 
 ```[swift]
-channel.publish("greeting", data: "Hello from Swift!") { error in
+channel?.publish("greeting", data: "Hello from Swift!") { error in
     guard error == nil else {
         print("Error publishing message: \(error!.message)")
         return
@@ -167,15 +141,11 @@ Presence enables clients to be aware of one another if they are present on the s
 * Add the following code to subscribe to presence events, which lets you know when clients enter, update, and leave the presence set for this channel:
 
 ```[swift]
-channel.presence.subscribe { presenceMessage in
+channel?.presence.subscribe { presenceMessage in
     print("Presence event: \(presenceMessage.action) - Client: \(presenceMessage.clientId ?? "no client id") - \(presenceMessage.data ?? "no data")")
 }
-```
 
-* Enter the presence set for the channel:
-
-```[swift]
-channel.presence.enter("I'm here!") { error in
+channel?.presence.enter("I'm here!") { error in
     guard error == nil else {
         print("Error entering presence set: \(error!.message)")
         return
@@ -214,17 +184,17 @@ ably channels publish --count 5 my-first-channel "Message number {{.Count}}"
 let query = ARTRealtimeHistoryQuery()
 query.limit = 25 // Maximum number of messages to retrieve
 
-try channel.history(query) { paginatedResult, error in
+try channel?.history(query) { paginatedResult, error in
     guard error == nil else {
         print("Error retrieving message history: \(error!.message)")
         return
     }
-    
+
     guard let paginatedResult = paginatedResult else {
         print("No results received")
         return
     }
-    
+
     print("Retrieved \(paginatedResult.items.count) messages from history")
     for message in paginatedResult.items {
         print("Message: \(message.data ?? "no data")")

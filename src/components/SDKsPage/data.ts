@@ -55,7 +55,7 @@ export const data = {
           text: 'Ably React Hooks package.',
           image: { src: react, isWide: false },
           githubRepoURL: 'https://github.com/ably/ably-js',
-          setupLink: 'getting-started/react',
+          setupLink: 'getting-started/react-hooks',
         },
         {
           title: 'C#.NET',
@@ -160,7 +160,7 @@ export const data = {
           text: 'Ably SDK for React Native.',
           image: { src: react, isWide: false },
           githubRepoURL: 'https://github.com/ably/ably-js',
-          setupLink: 'getting-started/react',
+          setupLink: 'getting-started/react-hooks',
         },
         {
           title: 'Cordova',
@@ -234,6 +234,30 @@ export const data = {
           image: { src: kotlin, isWide: false },
           githubRepoURL: 'https://github.com/ably/ably-chat-kotlin',
           setupLink: 'chat/setup?lang=kotlin',
+        },
+      ],
+    },
+    liveobjects: {
+      text: "LiveObjects is a plugin to the existing Pub/Sub SDKs. Choose from the following platforms to synchronize your shared state across clients at scale. Click 'Setup' for instructions on getting started, or view its source repository for a full list of the platforms it supports.",
+      cards: [
+        {
+          title: 'JavaScript',
+          text: 'LiveObjects plugin for JavaScript.',
+          image: { src: js, isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-js',
+          setupLink: 'liveobjects/quickstart',
+        },
+      ],
+    },
+    livesync: {
+      text: "Choose from the following list of SDKs to start broadcasting database updates to client applications in realtime. Click 'Setup' for instructions on getting started with an SDK, or view its source repository for a full list of the platforms it supports.",
+      cards: [
+        {
+          title: 'JavaScript',
+          text: 'Ably Models SDK for JavaScript.',
+          image: { src: js, isWide: false },
+          githubRepoURL: 'https://github.com/ably-labs/models',
+          setupLink: 'livesync/postgres/models',
         },
       ],
     },

@@ -4,8 +4,8 @@ export default {
   name: 'Ably Chat',
   link: '/docs/chat',
   icon: {
-    closed: 'icon-product-chat-mono',
-    open: 'icon-product-chat',
+    closed: 'icon-gui-prod-chat-outline',
+    open: 'icon-gui-prod-chat-solid',
   },
   content: [
     {
@@ -14,6 +14,7 @@ export default {
         {
           name: 'About Chat',
           link: '/docs/chat',
+          index: true,
         },
       ],
     },
@@ -31,6 +32,10 @@ export default {
               name: 'React',
               link: '/docs/chat/getting-started/react',
             },
+            {
+              name: 'Kotlin',
+              link: '/docs/chat/getting-started/kotlin',
+            },
           ],
         },
         {
@@ -44,6 +49,7 @@ export default {
         {
           name: 'Rooms',
           link: '/docs/chat/rooms',
+          index: true,
         },
       ],
     },
@@ -59,7 +65,7 @@ export default {
           link: '/docs/chat/rooms/history',
         },
         {
-          name: 'Online status',
+          name: 'Presence',
           link: '/docs/chat/rooms/presence',
         },
         {
@@ -86,6 +92,7 @@ export default {
         {
           name: 'Introduction',
           link: '/docs/chat/moderation',
+          index: true,
         },
         {
           name: 'Direct Integrations',
@@ -112,6 +119,15 @@ export default {
               link: '/docs/chat/moderation/custom/lambda',
             },
           ],
+        },
+      ],
+    },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'Livestream chat',
+          link: '/docs/guides/chat/build-livestream',
         },
       ],
     },

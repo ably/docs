@@ -4,8 +4,8 @@ export default {
   name: 'Ably LiveSync',
   link: '/docs/livesync',
   icon: {
-    closed: 'icon-product-livesync-mono',
-    open: 'icon-product-livesync',
+    closed: 'icon-gui-prod-livesync-outline',
+    open: 'icon-gui-prod-livesync-solid',
   },
   content: [
     {
@@ -14,6 +14,7 @@ export default {
         {
           name: 'About LiveSync',
           link: '/docs/livesync',
+          index: true,
         },
       ],
     },
@@ -23,6 +24,7 @@ export default {
         {
           name: 'MongoDB database connector',
           link: '/docs/livesync/mongodb',
+          index: true,
         },
       ],
     },
@@ -32,6 +34,7 @@ export default {
         {
           name: 'Postgres database connector',
           link: '/docs/livesync/postgres',
+          index: true,
         },
         {
           name: 'Frontend data models',

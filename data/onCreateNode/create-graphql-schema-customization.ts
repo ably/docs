@@ -10,6 +10,7 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
     type FileHtmlMetaData {
       languages: [String]
       meta_description: String
+      meta_keywords: String
       title: String
       redirect_from: [String]
       product: String
@@ -17,6 +18,12 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
     type FileHtml implements Node {
       contentOrderedList: [FileHtmlContentOrderedListItem]
       meta: FileHtmlMetaData
+    }
+    type MdxFrontmatter implements Node {
+      title: String
+      meta_description: String
+      meta_keywords: String
+      redirect_from: [String]
     }
     type HowToHtml implements Node {
       slug: String

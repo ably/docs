@@ -37,6 +37,14 @@ jest.mock('./LanguageSelector', () => ({
   LanguageSelector: jest.fn(() => <div>LanguageSelector</div>),
 }));
 
+jest.mock('../Link', () => {
+  const MockLink: React.FC<{ to: string; children: React.ReactNode; className?: string }> = ({ children }) => (
+    <a>{children}</a>
+  );
+  MockLink.displayName = 'MockLink';
+  return MockLink;
+});
+
 describe('Header', () => {
   beforeEach(() => {
     document.body.innerHTML = '';

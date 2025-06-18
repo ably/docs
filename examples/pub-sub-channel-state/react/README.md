@@ -10,9 +10,9 @@ Channel states is implemented using [Ably Pub/Sub](/docs/). The Pub/Sub SDK prov
 
 Use the following components to manage the channel state in a pub/sub application:
 
-- [`AblyProvider`](/docs/getting-started/react#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
-- [`ChannelProvider`](/docs/getting-started/react#channel-provider): initializes and manages a shared channel instance, passing it down through React context to enable realtime pub/sub functionality across the application.
-- [`useChannelStateListener`](/docs/getting-started/react#useChannelStateListener): creates a subscriber to be notified of channel state changes.
+- [`AblyProvider`](/docs/getting-started/react-hooks#ably-provider): initializes and manages a shared pub/sub client instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+- [`ChannelProvider`](/docs/getting-started/react-hooks#channel-provider): initializes and manages a shared channel instance, passing it down through React context to enable realtime pub/sub functionality across the application.
+- [`useChannelStateListener`](/docs/getting-started/react-hooks#useChannelStateListener): creates a subscriber to be notified of channel state changes.
 
 Find out more about [channel states](/docs/channels/states).
 

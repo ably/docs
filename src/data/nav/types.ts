@@ -22,4 +22,5 @@ export type NavProductPage = {
   link: string;
   external?: boolean;
   languages?: string[];
+  index?: boolean;
 };

@@ -7,7 +7,7 @@ const inkeepChat = (apiKey, conversationsUrl: '') => {
     return;
   }
 
-  scriptLoader(document, 'https://unpkg.com/@inkeep/cxkit-js@0.5.40/dist/embed.js', {
+  scriptLoader(document, 'https://unpkg.com/@inkeep/cxkit-js@0.5.75/dist/embed.js', {
     defer: true,
     async: false,
     type: 'module',
@@ -28,7 +28,7 @@ declare global {
         open: () => void;
         remove: () => void;
       };
-      on: (event: string, callback: () => void) => void;
+      on: (event: string, callback: (eventPayload: object) => void) => void;
       off: (event: string, callback: (() => void) | null) => void;
     };
     inkeepWidgetConfig?: object;
@@ -50,13 +50,19 @@ declare global {
   }
 }
 
+const handleHubspotConversationStartedEvent = (eventPayload: object) =>
+  track(`hubspot_conversation_started`, eventPayload);
+
 const openHubSpotConversations = () => {
   window.HubSpotConversations?.widget.load();
   window.HubSpotConversations?.widget.open();
 
-  window.HubSpotConversations.on('widgetClosed', () => {
+  window.HubSpotConversations?.on('conversationStarted', handleHubspotConversationStartedEvent);
+
+  window.HubSpotConversations?.on('widgetClosed', () => {
     window.HubSpotConversations?.widget.remove();
-    window.HubSpotConversations.off('widgetClosed', null);
+    window.HubSpotConversations?.off('widgetClosed', null);
+    window.HubSpotConversations?.off('conversationStarted', null);
   });
 };
 
@@ -65,8 +71,24 @@ const getTools = () => [
     type: 'function',
     function: {
       name: 'contactSales',
-      description:
-        "Detect if there is buyer intent or the customer is asking about pricing information or Ably's paid plans.",
+      description: `Check the message for signs of enterprise buying intent by looking for the presence or implication of the following keywords, phrases, or concepts:
+        • SSO or “single sign-on”
+        • Evaluation, trial, or proof of concept (PoC)
+        • Mentions of competitors like PubNub, Pusher, SendBird, Bird, or GetStream
+        • Custom CNAME or DNS requirements
+        • Security review or audit processes
+        • Procurement or vendor onboarding
+        • Requests to pay by invoice or mention of invoice-based payments
+        • Monthly Active Users (MAU), especially if specific numbers are mentioned
+        • Requests to constrain traffic to specific regions (EU-only, US-only, etc.)
+        • Dedicated or isolated environments
+        • Interest in purchasing via the AWS Marketplace
+        • SLA (Service Level Agreement) or SLI (Service Level Indicator) mentions
+        • Statements that they are already in production with over 1 million users (exclude future projections)
+        • Inquiries about enterprise or business-tier plans
+        • Requests for 24×7 support
+        • Extremely high availability requirements
+        • Expected scale of billions of messages`,
       parameters: {
         type: 'object',
         properties: {
@@ -98,10 +120,18 @@ const getTools = () => [
             action: {
               type: 'invoke_callback',
               callback: () => {
-                window.history.pushState({}, '', '?chat-type=product');
+                window.history.pushState({}, '', '?chat-type=sales');
                 openHubSpotConversations();
               },
               shouldCloseModal: true,
+            },
+          },
+          {
+            label: 'Book a Demo',
+            icon: { builtIn: 'LuBookOpen' },
+            action: {
+              type: 'open_link',
+              url: 'https://meetings.hubspot.com/ably-sales/book-a-demo',
             },
           },
         ];
@@ -246,7 +276,11 @@ export const inkeepOnLoad = (apiKey: string, conversationsUrl: string) => {
         {
           key: 'custom-style',
           type: 'style',
-          value: `css
+          value: `
+            .ikp-chat-button__container {
+              z-index: 10;
+            }
+
             .ikp-ai-chat-message-toolbar {
               flex-wrap: wrap;
               justify-content: flex-end;

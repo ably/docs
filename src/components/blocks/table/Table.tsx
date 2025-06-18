@@ -13,7 +13,7 @@ const Table = ({ data, attribs }: HtmlComponentProps<'table'>) => {
 
   return (
     <div className={cn(tableContainer, 'max-w-[calc(100vw-48px)] sm:max-w-full')}>
-      <table className={cn('border-0 border-collapse mb-4 border-spacing-0 ui-text-p2 text-left', table)} {...attribs}>
+      <table className={cn('border-0 border-collapse mb-1 border-spacing-0 ui-text-p2 text-left', table)} {...attribs}>
         <Html data={data.filter((item) => item.type === HtmlDataTypes.tag)} />
       </table>
     </div>

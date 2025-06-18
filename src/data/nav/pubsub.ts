@@ -4,8 +4,8 @@ export default {
   name: 'Ably Pub/Sub',
   link: '/docs/basics',
   icon: {
-    closed: 'icon-product-pubsub-mono',
-    open: 'icon-product-pubsub',
+    closed: 'icon-gui-prod-pubsub-outline',
+    open: 'icon-gui-prod-pubsub-solid',
   },
   content: [
     {
@@ -14,6 +14,7 @@ export default {
         {
           name: 'About Pub/Sub',
           link: '/docs/basics',
+          index: true,
         },
       ],
     },
@@ -23,6 +24,18 @@ export default {
         {
           name: 'JavaScript',
           link: '/docs/getting-started/javascript',
+        },
+        {
+          name: 'React',
+          link: '/docs/getting-started/react',
+        },
+        {
+          name: 'React Native',
+          link: '/docs/getting-started/react-native',
+        },
+        {
+          name: 'Kotlin',
+          link: '/docs/getting-started/kotlin',
         },
         {
           name: 'Swift',
@@ -38,7 +51,7 @@ export default {
         },
         {
           name: 'React Hooks',
-          link: '/docs/getting-started/react',
+          link: '/docs/getting-started/react-hooks',
         },
       ],
     },
@@ -48,6 +61,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/auth',
+          index: true,
         },
         {
           name: 'Basic auth',
@@ -77,6 +91,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/connect',
+          index: true,
         },
         {
           name: 'Connection state and recovery',
@@ -90,21 +105,22 @@ export default {
         {
           name: 'Basic pub-sub',
           link: '/docs/pub-sub',
+          index: true,
         },
         {
           name: 'Advanced pub-sub',
           link: '/docs/pub-sub/advanced',
-        },
-        {
-          name: 'How-to: Publish and subscribe',
-          link: '/docs/how-to/pub-sub',
         },
       ],
     },
     {
       name: 'Channels',
       pages: [
-        { name: 'Channel concepts', link: '/docs/channels' },
+        {
+          name: 'Channel concepts',
+          link: '/docs/channels',
+          index: true,
+        },
         { name: 'Channel states', link: '/docs/channels/states' },
         {
           name: 'Channel options',
@@ -112,6 +128,7 @@ export default {
             {
               name: 'Overview',
               link: '/docs/channels/options',
+              index: true,
             },
             {
               name: 'Rewind',
@@ -135,6 +152,7 @@ export default {
         {
           name: 'Message concepts',
           link: '/docs/messages',
+          index: true,
         },
         {
           name: 'Message batching',
@@ -148,6 +166,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/presence-occupancy',
+          index: true,
         },
         {
           name: 'Presence',
@@ -178,6 +197,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/push',
+          index: true,
         },
         {
           name: 'Configure and activate',
@@ -207,6 +227,7 @@ export default {
             {
               name: 'Overview',
               link: '/docs/metadata-stats/metadata',
+              index: true,
             },
             {
               name: 'Metadata subscriptions',
@@ -230,6 +251,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/protocols',
+          index: true,
         },
         {
           name: 'Server-Sent Events (SSE)',
@@ -257,6 +279,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/api',
+          index: true,
         },
         {
           name: 'Realtime SDK',

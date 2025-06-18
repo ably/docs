@@ -1,0 +1,979 @@
+---
+title: "Getting started: Chat with Kotlin"
+meta_description: "A getting started guide for Ably Chat Android that steps through some of the key features using Jetpack Compose."
+meta_keywords: "Ably, realtime, quickstart, getting started, basics, Chat, Android, Kotlin, Jetpack Compose"
+---
+
+This guide will help you get started with Ably Chat in a new Android Kotlin application
+built with Jetpack Compose.
+
+It will take you through the following steps:
+
+* Creating a client and establishing a realtime connection to Ably
+* Creating a room and subscribing to its messages
+* Sending messages to the room and editing messages
+* Retrieving historical messages to provide context for new joiners
+* Displaying online status of clients in the room
+* Subscribing to and sending reactions
+* Disconnecting and resource cleanup
+
+## Prerequisites <a id="prerequisites"/>
+
+### Ably <a id="prerequisites-ably"/>
+
+1. [Sign up](https://ably.com/signup) for an Ably account.
+2. Create a new app and get your API key. You can use the root API key that is provided by default to get started.
+
+3. Install the Ably CLI:
+
+<Code>
+```shell
+npm install -g @ably/cli
+```
+</Code>
+
+4. Run the following to log in to your Ably account and set the default app and API key:
+
+<Code>
+```shell
+ably login
+
+ably apps switch
+ably auth keys switch
+```
+</Code>
+
+<Aside data-type='note'>
+The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI, ensure that you replace them with your own API key.
+
+<p><strong>Important:</strong> API keys are suitable for development and demo purposes only. For production apps, <a href="/docs/authentication/token-authentication">use token authentication</a> to keep your credentials secure.</p>
+</Aside>
+
+### Create a new project <a id="prerequisites-project"/>
+
+Create a new Android project with Jetpack Compose. For detailed instructions, refer to the [Android Studio documentation](https://developer.android.com/jetpack/compose/setup).
+
+1. Create a new Android project in Android Studio.
+2. Select **Empty Activity** as the template
+3. Name the project **Chat Example** and place it in the `com.example.chatexample` package
+4. Set the minimum SDK level to API 24 or higher
+5. Select Kotlin as the programming language
+6. Add the Ably dependencies to your app-level `build.gradle.kts` file:
+
+<Code>
+```kotlin
+implementation("com.ably.chat:chat-android:<latest-version>")
+// This package contains extension functions for better Jetpack Compose integration.
+// It's experimental for now (safe to use, but the API may change later). You can always use its code as a reference.
+implementation("com.ably.chat:chat-extensions-compose:<latest-version>")
+```
+</Code>
+
+## Step 1: Setting up Ably <a id="step-1"/>
+
+Replace the contents of your `MainActivity.kt` file with the following code to set up the Ably client.
+
+Replace `{{API_KEY}}` with your Ably API key from the dashboard.
+Note that this is for example purposes only. In production, you should use token authentication to avoid exposing your API keys publicly:
+
+<Code>
+```kotlin
+package com.example.chatexample
+
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
+import androidx.compose.material.icons.*
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.*
+import com.example.chatexample.ui.theme.ChatExampleTheme
+import com.ably.chat.*
+import com.ably.chat.extensions.compose.*
+import io.ably.lib.realtime.AblyRealtime
+import io.ably.lib.types.ClientOptions
+import kotlinx.coroutines.launch
+import java.text.*
+import java.util.*
+
+class MainActivity : ComponentActivity() {
+    private lateinit var realtimeClient: AblyRealtime
+    private lateinit var chatClient: ChatClient
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        realtimeClient = AblyRealtime(
+            ClientOptions().apply {
+                key = "{{API_KEY}}" // In production, you should use token authentication to avoid exposing your API keys publicly
+                clientId = "my-first-client"
+            },
+        )
+
+        chatClient = ChatClient(realtimeClient) { logLevel = LogLevel.Info }
+
+        enableEdgeToEdge()
+        setContent {
+            ChatExampleTheme {
+                App(chatClient)
+            }
+        }
+    }
+}
+
+@Composable
+fun App(chatClient: ChatClient) {
+    Scaffold { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .padding(paddingValues)
+        ) {
+            Text("Hello Chat App")
+        }
+    }
+}
+```
+</Code>
+
+## Step 2: Connect to Ably <a id="step-2"/>
+
+Clients establish a connection with Ably when they instantiate an SDK. This enables them to send and receive messages in realtime across channels.
+
+In your `MainActivity.kt` file, add the following `ConnectionStatusUi` composable component:
+
+<Code>
+```kotlin
+// This component will display the current connection status
+@Composable
+fun ConnectionStatusUi(connection: Connection) {
+    val connectionStatus = connection.collectAsStatus()
+    Text(
+        text = "Connection Status: $connectionStatus",
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(start = 8.dp)
+    )
+}
+```
+</Code>
+
+Update the `App` component to display the connection status using the new `ConnectionStatusUi` component:
+
+<Code>
+```kotlin
+@Composable
+fun App(chatClient: ChatClient) {
+    Scaffold { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .padding(paddingValues)
+        ) {
+            ConnectionStatusUi(connection = chatClient.connection)
+        }
+    }
+}
+```
+</Code>
+
+Run your application by pressing **Run** button.
+
+## Step 3: Create a room <a id="step-3"/>
+
+Now that you have a connection to Ably, you can create a room. Use rooms to separate and organize clients and messages into different topics, or 'chat rooms'. Rooms are the entry point for Chat, providing access to all of its features, such as messages, presence and reactions.
+
+In your project, open `MainActivity.kt`, and add a new component called `RoomStatusUi`:
+
+<Code>
+```kotlin
+@Composable
+fun RoomStatusUi(roomName: String, room: Room?) {
+    val roomStatus = room?.collectAsStatus()
+    Text(
+        text = "Room Name: ${roomName}, Room Status: ${roomStatus ?: ""}",
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(start = 8.dp)
+    )
+}
+```
+</Code>
+
+Update your main app component to get and attach to the room and nest the `RoomStatusUi` component inside it:
+
+<Code>
+```kotlin
+@Composable
+fun App(chatClient: ChatClient) {
+    val roomName = "my-first-room"
+    var room by remember { mutableStateOf<Room?>(null) }
+    LaunchedEffect(roomName) {
+        val chatRoom = chatClient.rooms.get(roomName)
+        chatRoom.attach()
+        room = chatRoom
+    }
+    Scaffold { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .padding(paddingValues)
+        ) {
+            ConnectionStatusUi(connection = chatClient.connection)
+            RoomStatusUi(roomName = roomName, room = room)
+        }
+    }
+}
+```
+</Code>
+
+The above code creates a room with the ID `my-first-room` and sets up a listener to monitor the room status. It also displays the room ID and current status in the UI.
+
+<Aside data-type='note'>
+Monitoring the room status is useful for deciding when to show a loading spinner or other UI elements while waiting for the room to be created or joined.
+</Aside>
+
+## Step 4: Send a message <a id="step-4"/>
+
+Messages are how your clients interact with one another.
+
+In your project, open `MainActivity.kt`, and add a new component called `ChatBox`:
+
+<Code>
+```kotlin
+@Composable
+fun ChatBox(room: Room?) {
+    val scope = rememberCoroutineScope()
+    var textInput by remember { mutableStateOf(TextFieldValue("")) }
+    var sending by remember { mutableStateOf(false) }
+    val messages = remember { mutableStateListOf<Message>() }
+
+    DisposableEffect(room) {
+        val subscription = room?.messages?.subscribe { event ->
+            when (event.type) {
+                MessageEventType.Created -> messages.add(0, event.message)
+                else -> Unit
+            }
+        }
+
+        onDispose {
+            subscription?.unsubscribe()
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        Card(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+        ) {
+            if (messages.isNullOrEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No messages yet",
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    reverseLayout = true,
+                ) {
+                    items(messages.size, key = { messages[it].serial }) {
+                        val message = messages[it]
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "${message.clientId}: ${message.text}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                                    .format(Date(message.timestamp)),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray,
+                                modifier = Modifier.align(Alignment.End)
+                            )
+                            HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Message input
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = textInput,
+                onValueChange = { textInput = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Type a message") },
+                maxLines = 3
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Button(
+                onClick = {
+                    sending = true
+                    if (textInput.text.isNotBlank()) {
+                        scope.launch {
+                            try {
+                              room?.messages?.send(textInput.text)
+                            } catch (e: Exception) {
+                              Log.e("APP", e.message, e)
+                            }
+                            textInput = TextFieldValue("")
+                            sending = false
+                        }
+                    }
+                },
+                enabled = textInput.text.isNotBlank() && !sending
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send"
+                )
+            }
+        }
+    }
+}
+```
+</Code>
+
+Add the `ChatBox` component to your main app component:
+
+<Code>
+```kotlin
+@Composable
+fun App(chatClient: ChatClient) {
+    val roomName = "my-first-room"
+    var room by remember { mutableStateOf<Room?>(null) }
+    LaunchedEffect(roomName) {
+        val chatRoom = chatClient.rooms.get(
+            roomName,
+        )
+        chatRoom.attach()
+        room = chatRoom
+    }
+
+    Scaffold { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .padding(paddingValues)
+        ) {
+            ConnectionStatusUi(connection = chatClient.connection)
+            RoomStatusUi(roomName = roomName, room = room)
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            ChatBox(room = room)
+        }
+    }
+}
+```
+</Code>
+
+The UI should automatically render the new component, and you should be able to send messages to the room.
+
+Type a message in the input box and click the send button. You'll see the message appear in the chat box.
+
+You can also use the Ably CLI to send a message to the room from another environment:
+
+<Code>
+```shell
+ably rooms messages send my-first-room 'Hello from CLI!'
+```
+</Code>
+
+You'll see the message in your app's chat box UI. If you have sent a message via CLI, it should appear in a different color to the one you sent from the app.
+
+## Step 5: Edit a message <a id="step-5"/>
+
+If your client makes a typo, or needs to update their original message then they can edit it. To do this, you can extend the functionality of the `ChatBox` component to allow updating of messages.
+
+1. We will begin by adding this utility function to facilitate message data updates in the UI:
+
+ <Code>
+ ```kotlin
+ inline fun <T> MutableList<T>.replaceFirstWith(replacement: T, predicate: (T) -> Boolean) {
+     val index = indexOfFirst(predicate)
+     if (index != -1) set(index, replacement)
+ }
+ ```
+ </Code>
+
+2. Add the edited state variable:
+
+<Code>
+```kotlin
+var edited: Message? by remember { mutableStateOf(null) }
+```
+</Code>
+
+3. Update the message subscription to handle edited messages:
+
+<Code>
+```kotlin
+DisposableEffect(room) {
+    val subscription = room?.messages?.subscribe { event ->
+        when (event.type) {
+            MessageEventType.Created -> messages.add(0, event.message)
+            MessageEventType.Updated -> messages.replaceFirstWith(event.message) {
+                it.serial == event.message.serial
+            }
+            else -> Unit
+        }
+    }
+
+    onDispose {
+        subscription?.unsubscribe()
+    }
+}
+```
+</Code>
+
+4. Let's enhance the message display. To add an edit button to each message, we'll first need to locate
+the `Column` composable function within your layout inside the `items(messages.size, key = { messages[it].serial }) {` declarative loop. This is the component responsible for rendering
+the message content itself, along with the sender's username and the message timestamp.
+Once we've identified this `Column`, we will integrate the new edit button alongside these existing elements. Replace the `Column` with the following:
+
+<Code>
+```kotlin
+Row(
+    modifier = Modifier.fillMaxWidth(),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .padding(vertical = 4.dp)
+    ) {
+        // Message content
+        Text(
+            text = "${message.clientId}: ${message.text}",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        // Timestamp
+        Text(
+            text = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                .format(Date(message.timestamp)),
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.Gray,
+            modifier = Modifier.align(Alignment.End)
+        )
+        HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
+    }
+    // Edit button
+    IconButton(onClick = {
+        edited = message
+        textInput = TextFieldValue(message.text)
+    }) {
+        Icon(Icons.Default.Edit, contentDescription = "Edit")
+    }
+}
+```
+</Code>
+
+5. Update the send button to handle both new messages and edits:
+
+<Code>
+```kotlin
+Button(
+    onClick = {
+        sending = true
+        if (textInput.text.isNotBlank()) {
+            scope.launch {
+                try {
+                    edited?.let {
+                        room?.messages?.update(it.copy(text = textInput.text))
+                    } ?: room?.messages?.send(textInput.text)
+                } catch (e: Exception) {
+                    Log.e("APP", e.message, e)
+                }
+                edited = null
+                textInput = TextFieldValue("")
+                sending = false
+            }
+        }
+    },
+    enabled = textInput.text.isNotBlank() && !sending
+) {
+    Icon(
+        imageVector = if (edited != null) Icons.Filled.Edit
+                     else Icons.AutoMirrored.Filled.Send,
+        contentDescription = if (edited != null) "Edit" else "Send"
+    )
+}
+```
+</Code>
+
+
+When you click on the edit button in the UI, you can modify the text and it will send the updated message contents to the room.
+
+## Step 6: Message history and continuity <a id="step-6"/>
+
+Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The message subscription object exposes the [`getPreviousMessages()`](https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat-android/com.ably.chat/-messages-subscription/get-previous-messages.html) method to enable this functionality. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
+
+Extend the `ChatBox` component to include a method to retrieve the last 10 messages when the component mounts. In your `MainActivity.kt` file, add the `DisposableEffect` in your `ChatBox` component:
+
+<Code>
+```kotlin
+fun ChatBox(room: Room?) {
+    /* variables declaration */
+
+    DisposableEffect(room) {
+      val subscription = room?.messages?.subscribe { event ->
+          when (event.type) {
+              MessageEventType.Created -> messages.add(0, event.message)
+              MessageEventType.Updated -> messages.replaceFirstWith(event.message) {
+                  it.serial == event.message.serial
+              }
+              else -> Unit
+          }
+      }
+
+      scope.launch {
+          val previousMessages = subscription?.getPreviousMessages(10)?.items ?: emptyList()
+          messages.addAll(previousMessages)
+      }
+
+      onDispose {
+          subscription?.unsubscribe()
+      }
+  }
+  /* rest of your code */
+}
+```
+</Code>
+
+The above code will retrieve the last 10 messages when the component mounts, and set them in the state.
+
+You also can use `collectAsPagingMessagesState` to automatically subscribe to new messages
+and lazily load previous messages as you scroll through the message list.
+
+<Code>
+```kotlin
+@Composable
+fun ChatBox(room: Room?) {
+    val scope = rememberCoroutineScope()
+    var textInput by remember { mutableStateOf(TextFieldValue("")) }
+    val messagesState = room?.collectAsPagingMessagesState()
+    var sending by remember { mutableStateOf(false) }
+    var edited by remember { mutableStateOf<Message?>(null) }
+    val messages = messagesState?.loaded
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        Card(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+        ) {
+            if (messages.isNullOrEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No messages yet",
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    reverseLayout = true,
+                    state = messagesState.listState,
+                ) {
+                    items(messages.size, key = { messages[it].serial }) {
+                        val message = messages[it]
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "${message.clientId}: ${message.text}",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
+                                        .format(Date(message.timestamp)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Gray,
+                                    modifier = Modifier.align(Alignment.End)
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
+                            }
+                            IconButton(onClick = {
+                                edited = message
+                                textInput = TextFieldValue(message.text)
+                            }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Message input
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = textInput,
+                onValueChange = { textInput = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Type a message") },
+                maxLines = 3
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Button(
+                onClick = {
+                    sending = true
+                    if (textInput.text.isNotBlank()) {
+                        scope.launch {
+                            try {
+                                edited?.let {
+                                    room?.messages?.update(it.copy(text = textInput.text))
+                                } ?: room?.messages?.send(textInput.text)
+                            } catch (e: Exception) {
+                                Log.e("APP", e.message, e)
+                            }
+                            edited = null
+                            textInput = TextFieldValue("")
+                            sending = false
+                        }
+                    }
+                },
+                enabled = textInput.text.isNotBlank() && !sending
+            ) {
+                Icon(
+                    imageVector = if (edited != null) Icons.Default.Edit
+                             else Icons.AutoMirrored.Filled.Send,
+                    contentDescription = if (edited != null) "Edit" else "Send"
+                )
+            }
+        }
+    }
+}
+```
+</Code>
+
+Do the following to test this out:
+
+1. Use the ably CLI to simulate sending some messages to the room from another client.
+2. Refresh the page, this will cause the `ChatBox` component to mount again and call the `getPreviousMessages()` method.
+3. You'll see the last 10 messages appear in the chat box.
+
+## Step 7: Display who is present in the room <a id="step-7"/>
+
+Display the online status of clients using the presence feature. This enables clients to be aware of one another if they are present in the same room. You can then show clients who else is online, provide a custom status update for each, and notify the room when someone enters it, or leaves it, such as by going offline.
+
+In your `MainActivity.kt` file, create a new component called `PresenceStatusUi`:
+
+<Code>
+```kotlin
+@Composable
+fun PresenceStatusUi(room: Room?) {
+    val members = room?.collectAsPresenceMembers()
+
+    LaunchedEffect(room) {
+        room?.presence?.enter()
+    }
+
+    Text(
+        text = "Online: ${members?.size ?: 0}",
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(start = 8.dp)
+    )
+}
+```
+</Code>
+
+Add the `PresenceStatusUi` component to your main app component:
+
+<Code>
+```kotlin
+@Composable
+fun App(chatClient: ChatClient) {
+    val roomName = "my-first-room"
+    var room by remember { mutableStateOf<Room?>(null) }
+    LaunchedEffect(roomName) {
+        val chatRoom = chatClient.rooms.get(
+            roomName,
+        )
+        chatRoom.attach()
+        room = chatRoom
+    }
+
+    Scaffold { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .padding(paddingValues)
+        ) {
+            ConnectionStatusUi(connection = chatClient.connection)
+            RoomStatusUi(roomName = roomName, room = room)
+            PresenceStatusUi(room = room)
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            ChatBox(room = room)
+        }
+    }
+}
+```
+</Code>
+
+You'll now see your current client ID in the list of present users.
+
+You can also use the Ably CLI to enter the room from another client by running the following command:
+
+<Code>
+```shell
+ably rooms presence enter my-first-room --client-id "my-cli"
+```
+</Code>
+
+## Step 8: Send a reaction <a id="step-8"/>
+
+Clients can send a reaction to a room to show their sentiment for what is happening, such as a point being scored in a sports game. These are short-lived (ephemeral) and are not stored in the room history.
+
+In your `MainActivity.kt` file, add a new component called `ReactionBar`:
+
+<Code>
+```kotlin
+@Composable
+fun ReactionBar(room: Room?) {
+    val scope = rememberCoroutineScope()
+    val availableReactions = listOf("👍", "❤️", "💥", "🚀", "👎", "💔")
+    val receivedReactions = remember { mutableStateListOf<Reaction>() }
+
+    LaunchedEffect(room) {
+        room?.reactions?.asFlow()?.collect {
+            receivedReactions.add(it)
+        }
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Reaction send buttons
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            contentPadding = PaddingValues(vertical = 4.dp)
+        ) {
+            items(availableReactions) { emoji ->
+                Button(
+                    onClick = {
+                        scope.launch {
+                            room?.reactions?.send(emoji)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray)
+                ) {
+                    Text(
+                        text = emoji,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        // Display received reactions
+        if (receivedReactions.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Received Reactions",
+                modifier = Modifier.padding(vertical = 2.dp)
+            )
+
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                contentPadding = PaddingValues(vertical = 4.dp)
+            ) {
+                items(receivedReactions) { reaction ->
+                    Box(
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = reaction.type,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+</Code>
+
+Add the `ReactionBar` component to your main app component:
+
+<Code>
+```kotlin
+@Composable
+fun App(chatClient: ChatClient) {
+    val roomName = "my-first-room"
+    var room by remember { mutableStateOf<Room?>(null) }
+    LaunchedEffect(roomName) {
+        val chatRoom = chatClient.rooms.get(
+            roomName,
+        )
+        chatRoom.attach()
+        room = chatRoom
+    }
+
+    Scaffold { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .imePadding()
+                .padding(paddingValues)
+        ) {
+            ConnectionStatusUi(connection = chatClient.connection)
+            RoomStatusUi(roomName = roomName, room = room)
+            PresenceStatusUi(room = room)
+            ReactionBar(room = room)
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            ChatBox(room = room)
+        }
+    }
+}
+```
+</Code>
+
+The above code should display a list of reactions that can be sent to the room. When you click on a reaction, it will send it to the room and display it in the UI.
+
+You can also send a reaction to the room via the Ably CLI by running the following command:
+
+<Code>
+```shell
+ably rooms reactions send my-first-room 👍
+```
+</Code>
+
+## Step 9: Disconnection and clean up resources <a id="step-9"/>
+
+To gracefully close connection and clean up resources, you can subscribe to activity lifecycle events and close the connection when activity has paused or stopped, and then reconnect when activity resumes. To do this modify `MainActivity` class:
+
+<Code>
+```kotlin
+class MainActivity : ComponentActivity() {
+    private lateinit var realtimeClient: AblyRealtime
+    private lateinit var chatClient: ChatClient
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        realtimeClient = AblyRealtime(
+            ClientOptions().apply {
+                key = "{{API_KEY}}"
+                clientId = "my-first-client"
+            },
+        )
+
+        chatClient = ChatClient(realtimeClient) { logLevel = LogLevel.Info }
+
+        enableEdgeToEdge()
+        setContent {
+            ChatExampleTheme {
+                App(chatClient)
+            }
+        }
+    }
+
+    override fun onRestart() {
+        super.onRestart()
+        realtimeClient.connect()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        realtimeClient.connect()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        realtimeClient.close()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        realtimeClient.close()
+    }
+}
+```
+</Code>
+
+## Next steps <a id="next-steps"/>
+
+Continue exploring Ably Chat with Kotlin:
+
+Read more about the concepts covered in this guide:
+* Read more about using [rooms](/docs/chat/rooms) and sending [messages](/docs/chat/rooms/messages?lang=kotlin).
+* Find out more regarding [online status](/docs/chat/rooms/presence?lang=kotlin).
+* Understand how to use [typing indicators](/docs/chat/rooms/typing?lang=kotlin).
+* Send [reactions](/docs/chat/rooms/reactions?lang=kotlin) to your rooms.
+* Read into pulling messages from [history](/docs/chat/rooms/history?lang=kotlin) and providing context to new joiners.
+* Understand [token authentication](/docs/authentication/token-authentication) before going to production.
+
+Explore the Ably CLI further,
+or check out the [Chat Kotlin API references](https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat-android/com.ably.chat/) for additional functionality.

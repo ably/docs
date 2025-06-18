@@ -14,6 +14,7 @@ export default {
         {
           name: 'About Ably',
           link: '/docs/platform',
+          index: true,
         },
       ],
     },
@@ -23,6 +24,39 @@ export default {
         {
           name: 'Overview',
           link: '/docs/platform/architecture',
+          index: true,
+        },
+        {
+          name: 'Edge network',
+          link: '/docs/platform/architecture/edge-network',
+        },
+        {
+          name: 'Infrastructure operations',
+          link: '/docs/platform/architecture/infrastructure-operations',
+        },
+        {
+          name: 'Fault tolerance',
+          link: '/docs/platform/architecture/fault-tolerance',
+        },
+        {
+          name: 'Performance',
+          link: '/docs/platform/architecture/performance',
+        },
+        {
+          name: 'Platform scalability',
+          link: '/docs/platform/architecture/platform-scalability',
+        },
+        {
+          name: 'Connection recovery',
+          link: '/docs/platform/architecture/connection-recovery',
+        },
+        {
+          name: 'Message ordering',
+          link: '/docs/platform/architecture/message-ordering',
+        },
+        {
+          name: 'Idempotency',
+          link: '/docs/platform/architecture/idempotency',
         },
       ],
     },
@@ -40,10 +74,15 @@ export default {
             {
               name: 'Policy',
               link: '/docs/platform/deprecate',
+              index: true,
             },
             {
               name: 'Nov 2025 - Protocol v1',
               link: '/docs/platform/deprecate/protocol-v1',
+            },
+            {
+              name: 'June 2025 - TLS v1.0 and v1.1',
+              link: '/docs/platform/deprecate/tls-v1-1',
             },
           ],
         },
@@ -55,6 +94,7 @@ export default {
         {
           link: '/docs/pricing',
           name: 'Overview',
+          index: true,
         },
         {
           name: 'Package types',
@@ -97,6 +137,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/integrations',
+          index: true,
         },
         {
           name: 'Inbound integrations',
@@ -117,6 +158,7 @@ export default {
             {
               name: 'Overview',
               link: '/docs/integrations/webhooks',
+              index: true,
             },
             {
               name: 'AWS Lambda Functions',
@@ -150,6 +192,7 @@ export default {
             {
               name: 'Overview',
               link: '/docs/integrations/streaming',
+              index: true,
             },
             {
               name: 'Kafka',
@@ -193,6 +236,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/account',
+          index: true,
         },
         {
           name: 'User management',
@@ -220,6 +264,7 @@ export default {
             {
               name: 'Overview',
               link: '/docs/account/app',
+              index: true,
             },
             {
               name: 'Stats',
@@ -259,6 +304,7 @@ export default {
         {
           name: 'Overview',
           link: '/docs/errors',
+          index: true,
         },
         {
           name: 'Error codes',

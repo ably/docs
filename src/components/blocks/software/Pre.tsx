@@ -4,7 +4,6 @@ import Icon from '@ably/ui/core/Icon';
 import Html from '../Html';
 import LocalLanguageAlternatives from '../wrappers/LocalLanguageAlternatives';
 import {
-  DEFAULT_LANGUAGE,
   DEFAULT_PREFERRED_INTERFACE,
   DEFAULT_PREFERRED_LANGUAGE,
   REALTIME_SDK_INTERFACE,
@@ -67,8 +66,7 @@ const Pre = ({
 
   const codeClassName = 'bg-cool-black text-white p-0 rounded-lg relative max-w-[calc(100vw-48px)] sm:max-w-full';
 
-  const hasCode =
-    languages?.some((lang) => getTrimmedLanguage(lang) === pageLanguage) || pageLanguage === DEFAULT_LANGUAGE;
+  const hasCode = languages?.some((lang) => getTrimmedLanguage(lang) === pageLanguage);
   const shouldDisplayTip = !hasCode && languages?.length !== undefined;
   const withModifiedClassname = {
     ...attribs,
@@ -83,7 +81,7 @@ const Pre = ({
 
     return (
       <pre {...attribs} className={codeClassName}>
-        <div className="overflow-auto relative p-16">
+        <div className="overflow-auto relative p-4">
           <MultilineCodeContent
             dataContainsKey={false}
             contentWithObfuscatedKey={stringToRender}
@@ -152,16 +150,16 @@ const Pre = ({
   const languageLabel = getLanguageLabel(pageLanguage);
   return (
     <div
-      className={cn('my-32', {
-        'p-16 bg-light-grey rounded-lg': shouldDisplayTip,
+      className={cn('my-8', {
+        'p-4 bg-light-grey rounded-lg': shouldDisplayTip,
       })}
     >
       {shouldDisplayTip && (
-        <aside className="mb-16 flex justify-between items-start">
-          <div className="mt-2">
+        <aside className="mb-4 flex justify-between items-start">
+          <div className="mt-0.5">
             <Icon name="icon-gui-information-circle-micro" size="1rem" />
           </div>
-          <div className="ml-8 leading-tight">
+          <div className="ml-2 leading-tight">
             You&apos;re currently viewing the <span className="font-semibold">{languageLabel ?? pageLanguage}</span>{' '}
             docs. There either isn&apos;t a {languageLabel ?? pageLanguage} code sample for this example, or this
             feature isn&apos;t supported in {languageLabel ?? pageLanguage}. Switch language to view this example in a

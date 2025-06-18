@@ -2,8 +2,8 @@ import React from 'react';
 
 // Table components with responsive styling
 const Table = (props: React.HTMLAttributes<HTMLTableElement>) => (
-  <div className="overflow-x-auto mb-8">
-    <table className="border-0 border-collapse mb-4 border-spacing-0 ui-text-p2 text-left" {...props} />
+  <div className="overflow-x-auto mb-2">
+    <table className="border-0 border-collapse mb-1 border-spacing-0 ui-text-p2 text-left" {...props} />
   </div>
 );
 
@@ -21,13 +21,13 @@ const TableRow = (props: React.HTMLAttributes<HTMLTableRowElement>) => (
 
 const TableHeader = (props: React.HTMLAttributes<HTMLTableCellElement>) => (
   <th
-    className="px-12 py-8 text-left ui-text-p1 font-bold text-neutral-1100 tracking-wider whitespace-nowrap"
+    className="px-3 py-2 text-left ui-text-p1 font-bold text-neutral-1100 tracking-wider whitespace-nowrap"
     {...props}
   />
 );
 
 const TableCell = (props: React.HTMLAttributes<HTMLTableCellElement>) => (
-  <td className="px-12 py-16 align-text-top text-sm" {...props} />
+  <td className="px-3 py-4 align-text-top text-sm" {...props} />
 );
 
 export { Table, TableHead, TableBody, TableRow, TableHeader, TableCell };

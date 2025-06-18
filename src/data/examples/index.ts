@@ -4,13 +4,13 @@ export const DEFAULT_EXAMPLE_LANGUAGES = ['javascript', 'react'];
 
 export const examples: Example[] = [
   {
-    id: 'chat-online-status',
-    name: 'Online Status',
+    id: 'chat-presence',
+    name: 'Chat Presence',
     description: 'Show online/offline status of users in a chat application.',
     products: ['chat'],
     layout: 'double-horizontal',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
-    metaTitle: 'Build online status with Ably’s Chat SDK',
+    metaTitle: 'Build use presence and online status with Ably’s Chat SDK',
     metaDescription: `Learn how to build realtime chat features with user presence and online status using Ably’s Chat SDK. Reliable, scalable, and easy to implement.`,
   },
   {
@@ -26,7 +26,7 @@ export const examples: Example[] = [
   {
     id: 'chat-room-messages',
     name: 'Chat Messages',
-    description: 'Implement real-time messaging in chat rooms.',
+    description: 'Implement realtime messaging in chat rooms.',
     products: ['chat'],
     layout: 'double-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
@@ -186,7 +186,7 @@ export const examples: Example[] = [
   {
     id: 'spaces-live-cursors',
     name: 'Live Cursors',
-    description: 'Show real-time cursor positions of users in a space.',
+    description: 'Show realtime cursor positions of users in a space.',
     products: ['spaces'],
     layout: 'double-vertical',
     visibleFiles: [

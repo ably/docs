@@ -76,6 +76,11 @@ export const onCreateNode: GatsbyNode['onCreateNode'] = async ({
   }
 
   if (node.sourceInstanceName === 'examples' && node.extension) {
+    // Skip processing directories
+    if (node.internal.type === 'Directory') {
+      return;
+    }
+
     const content = await loadNodeContent(node);
     const contentDigest = createContentDigest(content);
     const type = 'ExampleFile';

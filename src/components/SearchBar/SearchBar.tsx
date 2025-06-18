@@ -102,7 +102,7 @@ export const SearchBar = ({
     >
       <div
         className={cn('relative w-full', {
-          'mx-24 mt-24 md:m-0': displayLocation !== 'homepage',
+          'mx-6 mt-6 md:m-0': displayLocation !== 'homepage',
         })}
       >
         {externalScriptsData.inkeepEnabled ? (
@@ -118,11 +118,11 @@ export const SearchBar = ({
               onChange={handleSearch}
               style={{ ...extraInputStyle }}
             />
-            <Icon name="icon-gui-magnifying-glass-outline" size="24px" additionalCSS="absolute left-16 top-8" />
+            <Icon name="icon-gui-magnifying-glass-outline" size="24px" additionalCSS="absolute left-4 top-2" />
             {!isInFocus && (
-              <div className="absolute right-16 top-8 hidden lg:flex items-center justify-end">
-                <KeyIcon className="mr-4">{keyIcon}</KeyIcon>
-                <KeyIcon className="pt-2">K</KeyIcon>
+              <div className="absolute right-4 top-2 hidden lg:flex items-center justify-end">
+                <KeyIcon className="mr-1">{keyIcon}</KeyIcon>
+                <KeyIcon className="pt-0.5">K</KeyIcon>
               </div>
             )}
             <SuggestionBox
