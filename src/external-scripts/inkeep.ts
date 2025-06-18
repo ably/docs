@@ -28,7 +28,7 @@ declare global {
         open: () => void;
         remove: () => void;
       };
-      on: (event: string, callback: () => void) => void;
+      on: (event: string, callback: (eventPayload: object) => void) => void;
       off: (event: string, callback: (() => void) | null) => void;
     };
     inkeepWidgetConfig?: object;
@@ -50,13 +50,19 @@ declare global {
   }
 }
 
+const handleHubspotConversationStartedEvent = (eventPayload: object) =>
+  track(`hubspot_conversation_started`, eventPayload);
+
 const openHubSpotConversations = () => {
   window.HubSpotConversations?.widget.load();
   window.HubSpotConversations?.widget.open();
 
-  window.HubSpotConversations.on('widgetClosed', () => {
+  window.HubSpotConversations?.on('conversationStarted', handleHubspotConversationStartedEvent);
+
+  window.HubSpotConversations?.on('widgetClosed', () => {
     window.HubSpotConversations?.widget.remove();
-    window.HubSpotConversations.off('widgetClosed', null);
+    window.HubSpotConversations?.off('widgetClosed', null);
+    window.HubSpotConversations?.off('conversationStarted', null);
   });
 };
 
@@ -114,10 +120,18 @@ const getTools = () => [
             action: {
               type: 'invoke_callback',
               callback: () => {
-                window.history.pushState({}, '', '?chat-type=product');
+                window.history.pushState({}, '', '?chat-type=sales');
                 openHubSpotConversations();
               },
               shouldCloseModal: true,
+            },
+          },
+          {
+            label: 'Book a Demo',
+            icon: { builtIn: 'LuBookOpen' },
+            action: {
+              type: 'open_link',
+              url: 'https://meetings.hubspot.com/ably-sales/book-a-demo',
             },
           },
         ];
