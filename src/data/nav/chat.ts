@@ -147,6 +147,16 @@ export default {
           external: true,
         },
         {
+          link: 'https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/',
+          name: 'Kotlin SDK',
+          external: true,
+        },
+        {
+          link: 'https://sdk.ably.com/builds/ably/ably-chat-swift/main/AblyChat/documentation/ablychat/',
+          name: 'Swift SDK',
+          external: true,
+        },
+        {
           link: '/docs/api/chat-rest',
           name: 'REST API',
         },
