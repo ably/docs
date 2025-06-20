@@ -36,6 +36,10 @@ export default {
               name: 'Kotlin',
               link: '/docs/chat/getting-started/kotlin',
             },
+            {
+              name: 'Swift',
+              link: '/docs/chat/getting-started/swift',
+            },
           ],
         },
         {
