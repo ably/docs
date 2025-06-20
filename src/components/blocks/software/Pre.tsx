@@ -64,7 +64,8 @@ const Pre = ({
     languages = getLanguagesSDKInterface(languages, selectedSDKInterfaceTab);
   }
 
-  const codeClassName = 'bg-cool-black text-white p-0 rounded-lg relative max-w-[calc(100vw-48px)] sm:max-w-full';
+  const codeClassName =
+    'ui-theme-dark bg-cool-black text-white p-0 rounded-lg relative max-w-[calc(100vw-48px)] sm:max-w-full';
 
   const hasCode = languages?.some((lang) => getTrimmedLanguage(lang) === pageLanguage);
   const shouldDisplayTip = !hasCode && languages?.length !== undefined;
