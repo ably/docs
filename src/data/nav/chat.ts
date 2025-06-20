@@ -37,6 +37,10 @@ export default {
               link: '/docs/chat/getting-started/kotlin',
             },
             {
+              name: 'Swift',
+              link: '/docs/chat/getting-started/swift',
+            },
+            {
               name: 'React UI Components',
               link: '/docs/chat/getting-started/react-ui-components',
             },
