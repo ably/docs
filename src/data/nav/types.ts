@@ -1,4 +1,5 @@
 import { IconName } from '@ably/ui/core/Icon/types';
+import { LanguageKey } from 'src/data/languages/types';
 
 export type NavProduct = {
   name: string;
@@ -21,6 +22,6 @@ export type NavProductPage = {
   name: string;
   link: string;
   external?: boolean;
-  languages?: string[];
+  languages?: LanguageKey[];
   index?: boolean;
 };

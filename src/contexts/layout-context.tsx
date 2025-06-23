@@ -1,5 +1,6 @@
 import React, { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
+import { stripSdkType } from '@ably/ui/core/CodeSnippet/languages';
 import { ActivePage, determineActivePage, PageTemplate } from 'src/components/Layout/utils/nav';
 import { productData } from 'src/data';
 import { LanguageKey } from 'src/data/languages/types';
@@ -82,28 +83,25 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
   }, [location.pathname]); // Re-run when the path changes
 
   const activePage = useMemo(() => {
-    // Use DOM languages if available, otherwise fall back to pageContext languages
-    const activeLanguages = (domLanguages.length > 0 ? domLanguages : pageContext?.languages ?? []) as LanguageKey[];
     const activePageData = determineActivePage(productData, location.pathname);
-    const activeLanguage = determineActiveLanguage(activeLanguages, location.search, activePageData?.product ?? null);
 
-    if (!activePageData) {
-      return {
-        tree: [],
-        page: { name: '', link: '' },
-        languages: [],
-        language: null,
-        product: null,
-        template: null,
-      };
+    let languages: LanguageKey[] = [];
+    if (activePageData?.page.languages) {
+      languages = activePageData.page.languages; // Use language overrides from the nav data first if possible
+    } else if (pageContext?.languages) {
+      languages = pageContext.languages.map(stripSdkType) as LanguageKey[]; // Use pageContext languages if available, this is generated for MDX pages
+    } else if (domLanguages.length > 0) {
+      languages = domLanguages; // Use languages from the DOMif available, this is for Textile pages
     }
 
-    const languages = (activePageData.page.languages as LanguageKey[]) ?? activeLanguages;
+    const language = determineActiveLanguage(languages, location.search, activePageData?.product ?? null);
 
     return {
-      ...activePageData,
+      tree: activePageData?.tree ?? [],
+      page: activePageData?.page ?? { name: '', link: '' },
       languages,
-      language: languages.includes(activeLanguage) ? activeLanguage : null,
+      language: languages.includes(language) ? language : null,
+      product: activePageData?.product ?? null,
       template: (pageContext?.layout?.mdx ? 'mdx' : 'textile') as PageTemplate,
     };
   }, [location.pathname, location.search, pageContext?.languages, domLanguages, pageContext?.layout?.mdx]);

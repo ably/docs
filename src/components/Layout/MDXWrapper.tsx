@@ -1,7 +1,7 @@
 import React, { PropsWithChildren, useState, createContext, useContext, useMemo } from 'react';
 import { navigate, PageProps } from 'gatsby';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
-import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet/types';
+import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
 
 import PageTitle from '../PageTitle';
@@ -47,10 +47,6 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
 }) => {
   const { sdk, setSdk } = useSDK();
 
-  if (!activePage.language) {
-    return null;
-  }
-
   return (
     <CodeSnippet
       {...props}
@@ -88,7 +84,11 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const { frontmatter } = pageContext;
 
   const { activePage } = useLayoutContext();
-  const [sdk, setSdk] = useState<SDKType>(null);
+  const [sdk, setSdk] = useState<SDKType>(
+    (pageContext.languages
+      ?.find((language) => activePage.language && language.endsWith(activePage.language))
+      ?.split('_')[0] as SDKType) ?? null,
+  );
   const userContext = useContext(UserContext);
 
   const title = getFrontmatter(frontmatter, 'title') as string;
