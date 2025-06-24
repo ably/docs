@@ -1,0 +1,165 @@
+---
+title: "Sharing media with Ably Chat"
+meta_description: "How to share media like images, videos, or files with Ably Chat"
+meta_keywords: "image, file, media, sharing, Ably Chat, chat SDK, realtime messaging, dependability, cost optimisation"
+---
+
+A common requirement for chat applications is the ability to share media like images, videos, or files with other participants.
+
+Ably Chat currently does not support media sharing out of the box, but it is very straightforward to link media and metadata to messages, and this can be used to implement media sharing features.
+
+## Architecture Overview
+
+The general approach for implementing media sharing in Ably Chat is:
+
+1. Upload media to your own storage service (your own servers, or a third-party service like AWS S3)
+2. Send a Chat Message with `metadata` containing information about the shared media
+3. On the receiving end, display the media when a message with the relevant metadata is received
+
+## Implementation Guide
+
+We'll build a simple chat room where users can share images with each other.
+
+We assume that `room` is an Ably chat room that is attached. Please refer to our [getting started guide](/docs/chat/getting-started/javascript) for step-by-step instructions on how to set up Ably Chat and get a chat room.
+
+We also assume that a function called `uploadImage() : Promise<string>` exists and handles the whole image upload flow: asks users to pick a picture, uploads it, and returns a unique identifier for this image.
+Let's say that the images will be served from `https://example.com/images/<identifier>`, where the identifier is a string of length between 10 and 15 and matches the `^[a-z0-9]{10,15}$` regex.
+
+### Sending messages with images
+
+When the user initiates the upload flow (for example by clicking a button called "attach"), we use the `uploadImage()` flow and save the resulting ID, like this:
+
+```javascript
+let imagesToAttach = [];
+async function onImageAttach() {
+  const imageId = await uploadImage();
+  imagesToAttach.push(imageId);
+}
+```
+
+In the UI, the `imagesToAttach` array is displayed so the users know what images will be attached to their message. The UI can allow users to remove or sort the images.
+
+When a user sends a message we check if there are any images to attach, and then send the message with appropriate metadata:
+
+```javascript
+async function send(text) {
+  let metadata = {};
+  if (imagesToAttach.length > 0) {
+    metadata["images"] = imagesToAttach;
+    imagesToAttach = [];
+  }
+  await room.messages.send({
+    text: text,
+    metadata: metadata
+  });
+}
+```
+
+### Displaying images
+
+First we need a way to get the valid image IDs, if any, from a message:
+
+```javascript
+const imageIdRegex = /^[a-z0-9]{10,15}$/;
+
+function getValidImages(message) {
+  if (message.metadata.images && message.metadata.images.length > 0) {
+    return message.metadata.images.filter(imageId => imageIdRegex.test(imageId));
+  }
+  return [];
+}
+```
+
+And now for each message we can display images if it has any.
+We provide here a simplistic example for displaying text and images by constructing the DOM for them manually. The same high-level logic applies for modern JavaScript front-end frameworks, Swift, and Kotlin.
+
+```javascript
+function createMessageDOM(message) {
+  const container = document.createElement("div");
+  const text = document.createElement("div");
+  text.innerText = message.text;
+  container.appendChild(text);
+  const validImages = getValidImages(message);
+  if (validImages.length > 0) {
+    const imagesContainer = document.createElement("div");
+    for (let imageId of validImages) {
+      const img = document.createElement("img");
+      img.src = "https://example.com/images/"+imageId;
+      imagesContainer.appendChild(img);
+    }
+    container.appendChild(imagesContainer);
+  }
+  return container;
+}
+```
+
+### Why image ID and not URL?
+
+Image IDs are simpler to validate than full URLs. You can also use URLs, but you must correctly validate them on the receiving end.
+
+### Metadata for each image
+
+In the example above we used a simple string array to store image IDs. We can change this to be an object where each image holds extra information that can be displayed to the user, such as a title or description, or the expected size in pixels so that the UI can allocate a placeholder loading box of the correct proportions.
+
+### Add an image to an existing message
+
+You can add an image to an existing message by editing its metadata.
+
+```javascript
+let imageId = 'abcd123abcd'; // assume this is the image we want to add
+let message = ...; // assume this is the message we want to edit
+
+const newMetadata = structuredClone(message.metadata);
+if (!newMetadata.images) {
+  newMetadata.images = [];
+}
+newMetadata.images.push(imageId);
+
+room.messages.update(message.serial, message.copy({metadata: newMetadata}))
+```
+
+### Remove an image from an existing message
+
+Similarly to how we add a new image, we can remove existing images from messages by updating the message:
+
+```javascript
+let imageId = 'abcd123abcd'; // assume this is the image we want to remove
+let message = ...; // assume this is the message we want to edit
+
+if (!message.metadata.images || message.metadata.images.length === 0) {
+  //do nothing if there are no images
+  return; 
+}
+const newMetadata = structuredClone(message.metadata);
+newMetadata.images = newMetadata.images.filter(id => imageId !== id);
+
+room.messages.update(message.serial, message.copy({metadata: newMetadata}))
+```
+
+## Privacy and security considerations
+
+The message metadata is not validated by the server. Always treat it as untrusted user input. The same applies to the text and headers of a chat message.
+
+### Validate metadata on the receiving end
+
+You must always validate the metadata before displaying any media to the user. Treat the metadata as untrusted user input. If you are using IDs, validate they are of the correct format. If you are using URLs, validate the schema, domain, path and query parameters are what you expect. Do not display images or other media directly from the metadata of a message.
+
+### Use authentication server-side to control access
+
+If the media shared isn't supposed to be public you must add a layer of authentication on the server side to control access to the images.
+
+Do not add signed URLs to the message metadata because everyone who receives the message will have access to the media. Users can share the signed URL which will allow anyone to access the media. Lastly, signed URLs typically have expiration dates and chat messages are probably stored for longer.
+
+Instead, add an authentication layer on the server side to control access to the media. This allows you full control over who can access the files.
+
+If you need to serve the files directly from a service, such as AWS S3, consider saving a file name in the metadata of the message, and have a mechanism for the user to request a signed URL to the file.
+
+### Moderation
+
+Ably Chat's [moderation feature](/docs/chat/moderation) is currently limited to text moderation. To add automatic or human moderation for images (and other attachments) you must implement moderation on the server side. A recommended flow is:
+
+1. Upload the media to your storage service (your own servers, or a third-party service like AWS S3)
+2. Asynchronously (server-side) start the moderation process
+3. Send a chat message with `metadata` containing information about the shared media (for example: file name or ID)
+4. When a user requests the media from your server, you can check the moderation status and serve the media if it is approved or return an error if it is not. You can choose to consider the media "safe" while moderation is ongoing or to block access to the media until moderation is complete.
+5. This way, there is no need to update the chat message metadata to reflect the moderation status.
