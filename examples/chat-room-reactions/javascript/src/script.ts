@@ -23,7 +23,7 @@ async function initializeChat() {
 
     const reactionElement = document.createElement('span');
     reactionElement.className = 'reaction';
-    reactionElement.textContent = reaction.type;
+    reactionElement.textContent = reaction.name;
     reactionElement.dataset.createdAt = new Date().toISOString();
     reactionsContainer.appendChild(reactionElement);
 
@@ -56,7 +56,7 @@ emojis.forEach((emoji) => {
   const emojiSpan = document.createElement('span');
   emojiSpan.textContent = emoji;
   emojiSpan.className = 'emoji-btn';
-  emojiSpan.onclick = () => room.reactions.send({ type: emoji });
+  emojiSpan.onclick = () => room.reactions.send({ name: emoji });
   emojiSelector.appendChild(emojiSpan);
 });
 

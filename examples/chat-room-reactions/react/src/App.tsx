@@ -35,7 +35,7 @@ function Chat() {
         <div className="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0">
           <div className="emoji-selector">
             {emojis.map((emoji, index) => (
-              <span key={index} className="emoji-btn" onClick={() => send({ type: emoji })}>
+              <span key={index} className="emoji-btn" onClick={() => send({ name: emoji })}>
                 {emoji}
               </span>
             ))}
@@ -45,7 +45,7 @@ function Chat() {
               <div className="reaction-area">
                 {reactions.map((reaction, index) => (
                   <span key={index} className="reaction">
-                    {reaction.type}
+                    {reaction.name}
                   </span>
                 ))}
               </div>
