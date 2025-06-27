@@ -37,6 +37,13 @@ const IndexPage = ({
         <meta name="twitter:site" content={meta.twitter} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={meta.image} />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Manrope:wght@200..800&family=Source+Code+Pro:wght@600&display=swap"
+          rel="stylesheet"
+        />
       </Helmet>
 
       <HomepageContent homepageContent={homepageContent} images={images} />

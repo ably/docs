@@ -1,6 +1,7 @@
-import React, { PropsWithChildren, useState, createContext, useContext } from 'react';
+import React, { PropsWithChildren, useState, createContext, useContext, useMemo } from 'react';
 import { navigate, PageProps } from 'gatsby';
-import CodeSnippet, { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
+import CodeSnippet from '@ably/ui/core/CodeSnippet';
+import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
 
 import PageTitle from '../PageTitle';
@@ -19,6 +20,7 @@ import { Head } from '../Head';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { ProductName } from 'src/templates/template-data';
 import { getMetaTitle } from '../common/meta-title';
+import UserContext from 'src/contexts/user-context';
 
 type MDXWrapperProps = PageProps<unknown, PageContextType>;
 
@@ -38,11 +40,16 @@ const useSDK = () => {
   return context;
 };
 
-const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps> = ({ activePage, ...props }) => {
+const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps> = ({
+  activePage,
+  apiKeys,
+  ...props
+}) => {
   const { sdk, setSdk } = useSDK();
 
   return (
     <CodeSnippet
+      {...props}
       lang={activePage.language}
       sdk={sdk}
       onChange={(lang, sdk) => {
@@ -53,7 +60,7 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
       languageOrdering={
         activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
       }
-      {...props}
+      apiKeys={apiKeys}
     />
   );
 };
@@ -77,7 +84,12 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const { frontmatter } = pageContext;
 
   const { activePage } = useLayoutContext();
-  const [sdk, setSdk] = useState<SDKType>(null);
+  const [sdk, setSdk] = useState<SDKType>(
+    (pageContext.languages
+      ?.find((language) => activePage.language && language.endsWith(activePage.language))
+      ?.split('_')[0] as SDKType) ?? null,
+  );
+  const userContext = useContext(UserContext);
 
   const title = getFrontmatter(frontmatter, 'title') as string;
   const description = getFrontmatter(frontmatter, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
@@ -90,6 +102,15 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   // Use the copyable headers hook
   useCopyableHeaders();
 
+  const apiKeys = useMemo(
+    () =>
+      userContext.apps?.flatMap(({ name, apiKeys }) => ({
+        app: name,
+        keys: apiKeys.map((apiKey) => ({ name: apiKey.name, key: apiKey.whole_key })),
+      })),
+    [userContext.apps],
+  );
+
   return (
     <SDKContext.Provider value={{ sdk, setSdk }}>
       <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} keywords={keywords} />
@@ -97,7 +118,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
         <MarkdownProvider
           components={{
             If,
-            Code: (props) => <WrappedCodeSnippet activePage={activePage} {...props} />,
+            Code: (props) => <WrappedCodeSnippet activePage={activePage} apiKeys={apiKeys} {...props} />,
             Aside: WrappedAside,
             table: Table,
             thead: TableHead,
