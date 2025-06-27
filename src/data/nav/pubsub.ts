@@ -331,7 +331,7 @@ export default {
             {
               name: 'Push Notifications - Devices',
               link: '/docs/api/realtime-sdk/push',
-              languages: ['swift', 'objc', 'android'],
+              languages: ['javascript', 'nodejs', 'swift', 'objc', 'android'],
             },
             {
               name: 'Encryption',
