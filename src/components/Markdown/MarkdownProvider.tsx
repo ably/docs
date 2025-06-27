@@ -1,5 +1,6 @@
 import React, { FC } from 'react';
 import { useStaticQuery, graphql } from 'gatsby';
+import { useLocation } from '@reach/router';
 import { MDXProvider } from '@mdx-js/react';
 import Link from 'src/components/Link';
 import { CodeBlock } from './CodeBlock';
@@ -57,6 +58,7 @@ export const Anchor: FC<JSX.IntrinsicElements['a']> = ({ children, href, ...prop
       }
     }
   `);
+  const location = useLocation();
 
   let cleanHref = href;
   const assetPrefix = site.assetPrefix ?? '';
@@ -64,6 +66,16 @@ export const Anchor: FC<JSX.IntrinsicElements['a']> = ({ children, href, ...prop
 
   if (href?.startsWith(brokenAssetPrefix)) {
     cleanHref = href.slice(brokenAssetPrefix.length);
+  }
+
+  // Add lang param from current URL if available
+  const urlParams = new URLSearchParams(location.search);
+  const langParam = urlParams.get('lang');
+
+  if (langParam && cleanHref && !cleanHref.startsWith('#')) {
+    const url = new URL(cleanHref, 'https://ably.com');
+    url.searchParams.set('lang', langParam);
+    cleanHref = url.pathname + url.search;
   }
 
   return (
