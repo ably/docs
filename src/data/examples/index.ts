@@ -5,7 +5,7 @@ export const DEFAULT_EXAMPLE_LANGUAGES = ['javascript', 'react'];
 export const examples: Example[] = [
   {
     id: 'chat-presence',
-    name: 'Chat Presence',
+    name: 'Chat presence',
     description: 'Show online/offline status of users in a chat application.',
     products: ['chat'],
     layout: 'double-horizontal',
@@ -15,7 +15,7 @@ export const examples: Example[] = [
   },
   {
     id: 'chat-room-history',
-    name: 'Room History',
+    name: 'Room history',
     description: 'Display message history in chat rooms.',
     products: ['chat'],
     layout: 'single-horizontal',
@@ -25,7 +25,7 @@ export const examples: Example[] = [
   },
   {
     id: 'chat-room-messages',
-    name: 'Chat Messages',
+    name: 'Chat messages',
     description: 'Implement realtime messaging in chat rooms.',
     products: ['chat'],
     layout: 'double-vertical',
@@ -35,7 +35,7 @@ export const examples: Example[] = [
   },
   {
     id: 'chat-room-reactions',
-    name: 'Room Reactions',
+    name: 'Room reactions',
     description: 'Add emoji reactions to messages in chat rooms.',
     products: ['chat'],
     layout: 'double-vertical',
@@ -45,7 +45,7 @@ export const examples: Example[] = [
   },
   {
     id: 'chat-typing-indicator',
-    name: 'Typing Indicator',
+    name: 'Typing indicator',
     description: 'Show when users are typing in a chat room.',
     products: ['chat'],
     layout: 'double-vertical',
@@ -77,7 +77,7 @@ export const examples: Example[] = [
   },
   {
     id: 'pub-sub-channel-messages',
-    name: 'Channel Messages',
+    name: 'Channel messages',
     description: 'Implement pub/sub messaging using channels.',
     products: ['pubsub'],
     layout: 'single-vertical',
@@ -87,7 +87,7 @@ export const examples: Example[] = [
   },
   {
     id: 'pub-sub-channel-state',
-    name: 'Channel State',
+    name: 'Channel state',
     description: 'Monitor and react to channel state changes.',
     products: ['pubsub'],
     layout: 'single-vertical',
@@ -97,7 +97,7 @@ export const examples: Example[] = [
   },
   {
     id: 'pub-sub-connection-state',
-    name: 'Connection State',
+    name: 'Connection state',
     description: 'Handle connection state changes in pub/sub applications.',
     products: ['pubsub'],
     layout: 'single-vertical',
@@ -107,7 +107,7 @@ export const examples: Example[] = [
   },
   {
     id: 'pub-sub-history',
-    name: 'Message History',
+    name: 'Message history',
     description: 'Retrieve historical messages from channels.',
     products: ['pubsub'],
     layout: 'single-vertical',
@@ -117,7 +117,7 @@ export const examples: Example[] = [
   },
   {
     id: 'pub-sub-message-encryption',
-    name: 'Message Encryption',
+    name: 'Message encryption',
     description: 'Implement end-to-end encryption for pub/sub messages.',
     products: ['pubsub'],
     layout: 'double-horizontal',
@@ -127,7 +127,7 @@ export const examples: Example[] = [
   },
   {
     id: 'pub-sub-occupancy',
-    name: 'Channel Occupancy',
+    name: 'Channel occupancy',
     description: 'Monitor the number of subscribers on a channel.',
     products: ['pubsub'],
     layout: 'single-horizontal',
@@ -157,7 +157,7 @@ export const examples: Example[] = [
   },
   {
     id: 'spaces-avatar-stack',
-    name: 'Avatar Stack',
+    name: 'Avatar stack',
     description: 'Display stacked avatars for users in a space.',
     products: ['spaces'],
     layout: 'double-vertical',
@@ -167,7 +167,7 @@ export const examples: Example[] = [
   },
   {
     id: 'spaces-component-locking',
-    name: 'Component Locking',
+    name: 'Component locking',
     description: 'Implement component-level locking in collaborative spaces.',
     products: ['spaces'],
     layout: 'double-horizontal',
@@ -185,7 +185,7 @@ export const examples: Example[] = [
   },
   {
     id: 'spaces-live-cursors',
-    name: 'Live Cursors',
+    name: 'Live cursors',
     description: 'Show realtime cursor positions of users in a space.',
     products: ['spaces'],
     layout: 'double-vertical',
@@ -203,7 +203,7 @@ export const examples: Example[] = [
   },
   {
     id: 'spaces-member-location',
-    name: 'Member Location',
+    name: 'Member location',
     description: 'Track and display member locations within a space.',
     products: ['spaces'],
     layout: 'double-horizontal',
