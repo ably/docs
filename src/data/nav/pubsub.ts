@@ -42,6 +42,10 @@ export default {
           link: '/docs/getting-started/swift',
         },
         {
+          name: 'PHP',
+          link: '/docs/getting-started/php',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
