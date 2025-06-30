@@ -1,5 +1,43 @@
 import { render, screen } from '@testing-library/react';
 import { A } from '.';
+import { useLocation, WindowLocation } from '@reach/router';
+
+jest.mock('@reach/router', () => ({
+  useLocation: jest.fn(),
+}));
+
+jest.mock('src/components/Link', () => {
+  return function MockLink({ to, children, ...props }: any) {
+    // Mock the checkLinkIsInternal logic
+    const checkLinkIsInternal = (link?: string): boolean => {
+      if (!link) {
+        return false;
+      }
+
+      // Relative links starting with / (but not //)
+      if (link.startsWith('/') && !link.startsWith('//')) {
+        return true;
+      }
+
+      // Ably docs links
+      const legacyDocsUrlPattern = /^(https?:\/\/(?:www\.)?ably.com\/docs).*/;
+      if (legacyDocsUrlPattern.test(link)) {
+        return true;
+      }
+
+      return false;
+    };
+
+    const isInternal = checkLinkIsInternal(to);
+    const testId = isInternal ? 'link-internal' : 'link-external';
+
+    return (
+      <a href={to} data-testid={testId} {...props}>
+        {children}
+      </a>
+    );
+  };
+});
 
 const gatsbyRootElement = {
   data: 'Lorem ipsum',
@@ -24,7 +62,15 @@ const linkWithImageElement = {
   attribs: { href: '/images/diagrams/Channels-Presence.gif', target: '_blank' },
 };
 
+const mockUseLocation = useLocation as jest.MockedFunction<typeof useLocation>;
+
 describe('Different data provided to link elements results in different components', () => {
+  beforeEach(() => {
+    mockUseLocation.mockReturnValue({
+      search: '',
+    } as WindowLocation);
+  });
+
   it('Successfully renders Gatsby links', () => {
     render(<A {...gatsbyRootElement} />);
 
