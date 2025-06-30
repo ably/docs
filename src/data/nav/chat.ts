@@ -96,6 +96,10 @@ export default {
           name: 'Room reactions',
           link: '/docs/chat/rooms/reactions',
         },
+        {
+          name: 'Media sharing',
+          link: '/docs/chat/rooms/media-sharing',
+        },
       ],
     },
     {
