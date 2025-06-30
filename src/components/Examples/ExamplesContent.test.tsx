@@ -62,8 +62,8 @@ describe('ExamplesContent', () => {
     const searchInput = screen.getByPlaceholderText('Find an example');
     fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
     expect(screen.getByText('No results found')).toBeInTheDocument();
-    expect(screen.queryByText('Member Location')).not.toBeInTheDocument();
-    expect(screen.queryByText('Avatar Stack')).not.toBeInTheDocument();
+    expect(screen.queryByText('Member location')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avatar stack')).not.toBeInTheDocument();
   });
 
   it('filters examples based on search input (with results)', () => {
@@ -71,8 +71,8 @@ describe('ExamplesContent', () => {
     const searchInput = screen.getByPlaceholderText('Find an example');
     fireEvent.change(searchInput, { target: { value: 'avatar' } });
     expect(screen.queryByText('No results found')).not.toBeInTheDocument();
-    expect(screen.queryByText('Member Location')).not.toBeInTheDocument();
-    expect(screen.getByText('Avatar Stack')).toBeInTheDocument();
+    expect(screen.queryByText('Member location')).not.toBeInTheDocument();
+    expect(screen.getByText('Avatar stack')).toBeInTheDocument();
   });
 
   it('filters examples based on product filter selection', () => {
@@ -84,7 +84,7 @@ describe('ExamplesContent', () => {
     const productFilterInput = screen.getByTestId('product-spaces');
     fireEvent.click(productFilterInput);
 
-    expect(screen.queryByText('Online Status')).not.toBeInTheDocument();
-    expect(screen.getByText('Member Location')).toBeInTheDocument();
+    expect(screen.queryByText('Online status')).not.toBeInTheDocument();
+    expect(screen.getByText('Member location')).toBeInTheDocument();
   });
 });
