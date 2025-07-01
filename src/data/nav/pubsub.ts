@@ -42,6 +42,10 @@ export default {
           link: '/docs/getting-started/swift',
         },
         {
+          name: 'Go',
+          link: '/docs/getting-started/go',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
