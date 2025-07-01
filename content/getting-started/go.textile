@@ -1,0 +1,266 @@
+---
+title: "Getting started: Pub/Sub in Go"
+meta_description: "Get started with Pub/Sub in Go using Ably. Learn how to publish, subscribe, track presence, fetch message history, and manage realtime connections."
+meta_keywords: "Pub/Sub Go, Go PubSub, Ably Go SDK, realtime messaging Go, publish subscribe Go, Ably Pub/Sub guide, Go realtime communication, Ably tutorial Go, Go message history, presence API Go, Ably Pub/Sub example, realtime Pub/Sub Go, subscribe to channel Go, publish message Go, Ably CLI Pub/Sub"
+---
+
+This guide will get you started with Ably Pub/Sub in Go.
+
+It will take you through the following steps:
+
+* Create a client and establish a realtime connection to Ably.
+* Attach to a channel and subscribe to its messages.
+* Publish a message to the channel for your client to receive.
+* Join and subscribe to the presence set of the channel.
+* Retrieve the messages you sent in the guide from history.
+* Close a connection to Ably when it is no longer needed.
+
+h2(#prerequisites). Prerequisites
+
+* "Sign up":https://ably.com/signup for an Ably account.
+** Create a new app, and create your first API key.
+** Your API key will need the @publish@, @subscribe@, @presence@ and @history@ capabilities.
+
+* Install the Ably CLI:
+
+```[sh]
+npm install -g @ably/cli
+```
+
+* Run the following to log in to your Ably account and set the default app and API key:
+
+```[sh]
+ably login
+
+ably apps switch
+ably auth keys switch
+```
+
+* Install "Go":https://go.dev/dl/ version 1.18 or greater.
+* Create a new project in your IDE and install the Ably Pub/Sub Go SDK:
+
+```[sh]
+mkdir ably-go-quickstart
+cd ably-go-quickstart
+go mod init ably-go-quickstart
+
+go get -u github.com/ably/ably-go/ably
+```
+
+<aside data-type='note'>
+<p>The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI and view outputs within your Ably account, ensure that you replace them with your own API key.</p>
+</aside>
+
+h2(#step-1). Step 1: Connect to Ably
+
+Clients establish a connection with Ably when they instantiate an SDK instance. This enables them to send and receive messages in realtime across channels.
+
+* Create a @main.go@ file in your project and add the following function to instantiate the SDK and establish a connection to Ably. At the minimum you need to provide an authentication mechanism. Use an API key for simplicity, but you should use token authentication in a production app. A @clientId@ ensures the client is identified, which is required to use certain features, such as presence:
+
+```[go]
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/ably/ably-go/ably"
+)
+
+func main() {
+	client, err := ably.NewRealtime(
+		ably.WithKey("{{API_KEY}}"),
+		ably.WithClientID("my-first-client"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+
+	// Wait for the connection to be connected
+	connStateChan := make(chan ably.ConnectionStateChange, 1)
+	client.Connection.On(ably.ConnectionEventConnected, func(change ably.ConnectionStateChange) {
+		connStateChan <- change
+	})
+	select {
+	case <-connStateChan:
+		fmt.Println("Made my first connection!")
+	case <-context.Background().Done():
+		log.Fatal("Context cancelled before connection established")
+	}
+
+	// Keep the program running
+	select {}
+}
+```
+
+You can monitor the lifecycle of clients' connections by registering a listener that will emit an event every time the connection state changes. For now, run the function with @go run main.go@ to log a message to the console to know that the connection attempt was successful. You'll see the message printed to your console, and you can also inspect the connection event in the dev console of your app.
+
+h2(#step-2). Step 2: Subscribe to a channel and publish a message
+
+Messages contain the data that a client is communicating, such as a short 'hello' from a colleague, or a financial update being broadcast to subscribers from a server. Ably uses channels to separate messages into different topics, so that clients only ever receive messages on the channels they are subscribed to.
+
+* In your @main()@ function, before the line @// Keep the program running@, add the following to create a channel instance and register a listener to subscribe to the channel. Then run it with @go run main.go@:
+
+```[go]
+channel := client.Channels.Get("my-first-channel")
+
+// Subscribe to messages
+unsubscribe, err := channel.SubscribeAll(context.Background(), func(msg *ably.Message) {
+  fmt.Printf("Received message: %s\n", msg.Data)
+})
+
+if err != nil {
+  log.Fatal(err)
+}
+defer unsubscribe()
+```
+
+* Use the Ably CLI to publish a message to your first channel. The message will be received by the client you've subscribed to the channel, and be logged to the console.
+
+```[sh]
+ably channels publish my-first-channel 'Hello!'
+```
+
+* In a new terminal tab, subscribe to the same channel using the CLI:
+
+```[sh]
+ably channels subscribe my-first-channel
+```
+
+Publish another message using the CLI and you will see that it's received instantly by the client you have running locally, as well as the subscribed terminal instance.
+
+To publish a message in your code, you can add the following line to your @main@ function after subscribing to the channel:
+
+```[go]
+err = channel.Publish(context.Background(), "example", "A message sent from my first client!")
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+h2(#step-3). Step 3: Join the presence set
+
+Presence enables clients to be aware of one another if they are present on the same channel. You can then show clients who else is online, provide a custom status update for each, and notify the channel when someone goes offline.
+
+* In your @main()@ function, before the line @// Keep the program running@, add the following to subscribe to, and join, the presence set of the channel. Then run it with @go run main.go@:
+
+```[go]
+// Subscribe to presence events
+presenceUnsubscribe, err := channel.Presence.Subscribe(context.Background(), ably.PresenceActionEnter, func(msg *ably.PresenceMessage) {
+  fmt.Printf("Event type: %s from %s with the data %v\n", msg.Action, msg.ClientID, msg.Data)
+})
+if err != nil {
+  log.Fatal(err)
+}
+defer presenceUnsubscribe()
+
+// Enter the presence set
+err = channel.Presence.Enter(context.Background(), "I'm here!")
+if err != nil {
+  log.Fatal(err)
+}
+```
+
+* You can have another client join the presence set using the Ably CLI:
+
+```[sh]
+ably channels presence enter my-first-channel --client-id "my-cli" --data '{"status":"learning about Ably!"}'
+```
+
+h2(#step-4). Step 4: Retrieve message history
+
+You can retrieve previously sent messages using the history feature. Ably stores all messages for 2 minutes by default in the event a client experiences network connectivity issues. This can be extended for longer if required.
+
+If more than 2 minutes has passed since you published a regular message (excluding the presence events), then you can publish some more before trying out history. You can use the Pub/Sub SDK, Ably CLI or the dev console to do this.
+
+For example, using the Ably CLI to publish 5 messages:
+
+```[sh]
+ably channels publish --count 5 my-first-channel "Message number {{.Count}}"
+```
+
+* Update your @main()@ function to retrieve any messages that were recently published to the channel. Then run it with @go run main.go@:
+
+```[go]
+// Add this after channel subscription
+pages, err := channel.History().Pages(context.Background())
+if err != nil {
+	log.Fatal(err)
+}
+
+var messages []string
+for pages.Next(context.Background()) {
+	for _, msg := range pages.Items() {
+		messages = append(messages, fmt.Sprintf("%v", msg.Data))
+	}
+}
+if err := pages.Err(); err != nil {
+	log.Fatal(err)
+}
+
+// Print messages in reverse order (newest first)
+for i := len(messages) - 1; i >= 0; i-- {
+	fmt.Println(messages[i])
+}
+```
+
+The output will look similar to the following:
+
+```[json]
+[
+  'Message number 5',
+  'Message number 4',
+  'Message number 3',
+  'Message number 2',
+  'Message number 1'
+]
+```
+
+h2(#step-5). Step 5: Close the connection
+
+Connections are automatically closed approximately 2 minutes after no heartbeat is detected by Ably. Explicitly closing connections when they are no longer needed is good practice to help save costs. It will also remove all listeners that were registered by the client.
+
+Note that messages are streamed to clients as soon as they attach to a channel, as long as they have the necessary capabilities. Clients are implicitly attached to a channel when they call @subscribe()@. Detaching from a channel using the @detach()@ method will stop the client from being streamed messages by Ably.
+
+Listeners registered when subscribing to a channel are registered client-side. Unsubscribing by calling @unsubscribe()@  will remove previously registered listeners for that channel. Detaching from a channel has no impact on listeners. As such, if a client reattaches to a channel that they previously registered listeners for, then those listeners will continue to function upon reattachment.
+
+* Update your @main()@ function to close the connection after a simulated 10 seconds. Run it with @go run main.go@.
+
+First add the @time@ package to your imports:
+
+```[go]
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/ably/ably-go/ably"
+)
+```
+
+Now replace the @select {}@ statement with a sleep statement to simulate a delay before closing the connection:
+
+```[go]
+// Replace the select {} with:
+time.Sleep(10 * time.Second)
+fmt.Println("Closing the connection to Ably!")
+```
+
+Note that the @defer client.Close()@ statement at the beginning of the function ensures the connection is properly closed when the program exits.
+
+h2(#next). Next steps
+
+Continue to explore the documentation with Go as the selected language:
+
+Read more about the concepts covered in this guide:
+
+* Revisit the basics of "Pub/Sub":/docs/pub-sub?lang=go
+* Explore more "advanced":/docs/pub-sub/advanced?lang=go Pub/Sub concepts
+* Understand realtime "connections":/docs/connect?lang=go to Ably
+* Read more about how to use "presence":/docs/presence-occupancy/presence?lang=go in your apps
+* Fetch message "history":/docs/storage-history/history?lang=go in your apps
+
+You can also explore the Ably CLI further, or visit the Pub/Sub "API references":/docs/api/realtime-sdk?lang=go.
