@@ -42,6 +42,10 @@ export default {
           link: '/docs/getting-started/swift',
         },
         {
+          name: 'Laravel',
+          link: '/docs/getting-started/laravel',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
