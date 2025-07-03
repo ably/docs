@@ -80,6 +80,10 @@ export default {
               name: 'PHP',
               link: '/docs/getting-started/php',
             },
+            {
+              name: 'Laravel',
+              link: '/docs/getting-started/laravel',
+            },
           ],
         },
         {
