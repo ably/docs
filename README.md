@@ -38,3 +38,31 @@ To ensure proper setup in your local:
 2. Add `DOCS_BASE_URL=http://localhost:9000` to your `.env` file in the root of the Website app.
 3. Ensure that `.env.production` exists in the app root for the Yarn build to function correctly.
 4. You should be able to view the content and toggle between signed in and signed-out states.
+
+## Review Apps
+
+Review apps allow Ably organization members to create temporary deployments of the documentation site for sharing changes with stakeholders without requiring local development setup.
+
+### Creating a Review App
+
+To create a review app:
+
+1. Create a pull request with your changes
+2. Add the `review-app` label to your PR
+3. A Heroku review app will be automatically created and deployed
+4. The deployment will appear in the deployments section of your PR
+
+### Access and Authentication
+
+Review apps are protected with basic authentication. Contact team members for credentials if needed.
+
+### Cleanup
+
+Review apps are automatically cleaned up when:
+- The PR is closed
+- The `review-app` label is removed
+
+### Requirements
+
+- Only members of the Ably organization can create review apps
+- The label creator's organization membership is validated before deployment
