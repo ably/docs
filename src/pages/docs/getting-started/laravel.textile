@@ -1,0 +1,294 @@
+---
+title: "Getting started: Pub/Sub in Laravel"
+meta_description: "A getting started guide for Ably Pub/Sub Laravel that steps through some of the key features using Laravel."
+meta_keywords: "Pub/Sub Laravel, Laravel PubSub, Ably Laravel SDK, publish Laravel, Ably Pub/Sub guide, Laravel realtime communication, Ably tutorial Laravel, Laravel message history, presence API Laravel, Ably Pub/Sub example, realtime Pub/Sub Laravel, publish message Laravel, Ably CLI Pub/Sub"
+languages:
+  - PHP
+---
+
+This guide will get you started with Ably Pub/Sub in Laravel.
+
+It will take you through the following steps:
+
+* Create a client and establish a connection to Ably with the Laravel wrapper for the PHP SDK.
+* Generate a Token and TokenRequest.
+* Publish a message to the channel with your client for subscribers to receive.
+* Retrieve the presence set of the channel.
+* Retrieve the messages you sent in the guide from history.
+
+h2(#prerequisites). Prerequisites
+
+* "Sign up":https://ably.com/signup for an Ably account.
+** Create a new app, and create your first API key.
+** Your API key will need the @publish@, @presence@, and @history@ capabilities.
+
+* Install the Ably CLI:
+
+```[sh]
+npm install -g @ably/cli
+```
+
+* Run the following to log in to your Ably account and set the default app and API key:
+
+```[sh]
+ably login
+
+ably apps switch
+ably auth keys switch
+```
+
+* Install "PHP":https://www.php.net/downloads.php version 8.0 or greater and "Laravel":https://laravel.com/docs version 9.0 or greater.
+* Create a new Laravel project and install the Ably Laravel SDK:
+
+```[sh]
+# Create a new Laravel project
+composer create-project laravel/laravel ably-laravel-quickstart
+cd ably-laravel-quickstart
+
+# Install the Ably Laravel SDK
+composer require ably/laravel-broadcaster
+```
+
+<aside data-type='note'>
+<p>The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI and view outputs within your Ably account, ensure that you replace them with your own API key.</p>
+</aside>
+
+h2(#step-1). Step 1: Configure the Ably Laravel SDK
+
+The Ably Laravel SDK integrates with Laravel's broadcasting system. You need to configure it to establish a connection with Ably.
+
+* First, add your Ably credentials to your @.env@ file:
+
+```[env]
+BROADCAST_DRIVER=ably
+ABLY_KEY={{API_KEY}}
+```
+
+* Publish the Ably configuration file:
+
+```[sh]
+php artisan vendor:publish --provider="Ably\Laravel\AblyServiceProvider" --tag="config"
+```
+
+* Create a route in @routes/web.php@ to test the Ably functionality:
+
+```[php]
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Ably\Laravel\Facades\Ably;
+
+Route::get('/ably-test', function () {
+    // Get the Ably REST client
+    $ably = Ably::getFacadeRoot();
+
+    // Your test code will go here
+    return response()->json(['status' => 'Ably connected']);
+});
+```
+
+h2(#step-2). Step 2: Generate a JWT
+
+The Ably Laravel SDK provides token authentication for secure client connections. Authentication with a JWT is recommended over using API keys directly in production because they can be scoped to specific capabilities and have expiration times.
+
+Create a controller to handle token generation:
+
+```[sh]
+php artisan make:controller AblyController
+```
+
+Update @app/Http/Controllers/AblyController.php@:
+
+```[php]
+<?php
+
+namespace App\Http\Controllers;
+
+use Ably\Laravel\Facades\Ably;
+use Illuminate\Http\Request;
+
+class AblyController extends Controller
+{
+    public function generateToken()
+    {
+        $ably = Ably::getFacadeRoot();
+
+        $tokenParams = [
+            'ttl' => 3600 * 1000, // 1 hour in milliseconds
+            'capability' => ['*' => ['*']]
+        ];
+
+        $token = $ably->auth->requestToken($tokenParams);
+
+        return response()->json(['token' => $token->token]);
+    }
+}
+```
+
+Add a route for the token endpoint in @routes/web.php@:
+
+```[php]
+use App\Http\Controllers\AblyController;
+
+Route::get('/ably-token', [AblyController::class, 'generateToken']);
+```
+
+h2(#step-3). Step 3: Publish a message to a channel
+
+Messages contain the data that a client is communicating. The Laravel SDK can publish messages to channels through the REST API.
+
+* Use the Ably CLI to subscribe to a channel. The message will be received by the client you've subscribed to the channel, and be logged to the console.
+
+```[sh]
+ably channels subscribe my-first-channel
+```
+
+* Update your @/ably-test@ route in @routes/web.php@ to publish a message:
+
+```[php]
+Route::get('/ably-test', function () {
+    $ably = Ably::getFacadeRoot();
+
+    // Get a channel instance
+    $channel = $ably->channel('my-first-channel');
+
+    // Publish a message
+    $channel->publish('myEvent', 'Hello from Laravel!');
+
+    return response()->json(['status' => 'Message published']);
+});
+```
+
+Visit @http://localhost:8000/ably-test@ in your browser (after running @php artisan serve@) and check the console where you subscribed to the channel with the Ably CLI. You should see the message appear.
+
+h2(#step-4). Step 4: Presence
+
+Presence enables clients to be aware of one another if they are present on the same channel. With the Laravel SDK you can retrieve the presence set but cannot enter it.
+
+* Have a client join the presence set using the Ably CLI:
+
+```[sh]
+ably channels presence enter my-first-channel --client-id "my-cli" --data '{"status":"learning about Ably!"}'
+```
+
+* Create a new route to retrieve presence information:
+
+```[php]
+Route::get('/ably-presence', function () {
+    $ably = Ably::getFacadeRoot();
+    $channel = $ably->channel('my-first-channel');
+
+    // Get presence members
+    $membersPage = $channel->presence->get();
+    $memberIds = array_map(function($member) {
+        return $member->clientId;
+    }, $membersPage->items);
+
+    return response()->json([
+        'members' => $memberIds,
+        'count' => count($memberIds)
+    ]);
+});
+```
+
+h2(#step-5). Step 5: Retrieve message history
+
+You can retrieve previously sent messages using the history feature. Ably stores all messages for 2 minutes by default.
+
+For example, using the Ably CLI to publish 5 messages:
+
+```[sh]
+ably channels publish --count 5 my-first-channel "Message number {{.Count}}"
+```
+
+* Create a route to retrieve message history:
+
+```[php]
+Route::get('/ably-history', function () {
+    $ably = Ably::getFacadeRoot();
+    $channel = $ably->channel('my-first-channel');
+
+    // Get message history
+    $history = $channel->history();
+
+    $messages = [];
+    foreach ($history->items as $message) {
+        $messages[] = $message->data ?? 'null';
+    }
+
+    return response()->json([
+        'messages' => $messages,
+        'count' => count($messages)
+    ]);
+});
+```
+
+h2(#bonus). Bonus: Using Laravel Broadcasting
+
+The Ably Laravel SDK also integrates with Laravel's broadcasting system. Create an event that can be broadcast:
+
+```[sh]
+php artisan make:event TestMessage
+```
+
+Update @app/Events/TestMessage.php@:
+
+```[php]
+<?php
+
+namespace App\Events;
+
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+use Illuminate\Queue\SerializesModels;
+
+class TestMessage implements ShouldBroadcast
+{
+    use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public $message;
+
+    public function __construct($message)
+    {
+        $this->message = $message;
+    }
+
+    public function broadcastOn()
+    {
+        return new Channel('my-first-channel');
+    }
+
+    public function broadcastAs()
+    {
+        return 'test.message';
+    }
+}
+```
+
+Create a route to broadcast the event:
+
+```[php]
+use App\Events\TestMessage;
+
+Route::get('/ably-broadcast', function () {
+    event(new TestMessage('Hello from Laravel Broadcasting!'));
+
+    return response()->json(['status' => 'Event broadcasted']);
+});
+```
+
+h2(#next). Next steps
+
+Continue to explore the documentation with Laravel as the selected language:
+
+Read more about the concepts covered in this guide:
+
+* Revisit the basics of "Pub/Sub":/docs/pub-sub?lang=php
+* Explore more "advanced":/docs/pub-sub/advanced?lang=php Pub/Sub concepts
+* Read more about how to use "presence":/docs/presence-occupancy/presence?lang=php in your apps
+* Fetch message "history":/docs/storage-history/history?lang=php in your apps
+* Learn about "Laravel Broadcasting":https://laravel.com/docs/broadcasting with Ably
+
+You can also explore the Ably CLI further, or visit the Pub/Sub "API references":/docs/api/rest-sdk?lang=php.
