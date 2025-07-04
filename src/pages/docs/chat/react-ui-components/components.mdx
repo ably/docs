@@ -1,0 +1,551 @@
+---
+title: "Ably Chat UI React Components"
+meta_description: "Comprehensive documentation for Ably Chat React UI Components."
+meta_keywords: "Ably, realtime, Chat UI, React, components, chat-message, chat-message-list, chat-window, message-input, sidebar, participant-list, avatar"
+---
+
+# Components
+
+This page documents the components available in the Ably Chat React UI Components library. These components provide a comprehensive UI for building chat applications with Ably.
+
+## Avatar
+
+The `Avatar` component displays a user or room avatar with fallback to initials when no image is available.
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `src` | string | | URL to the avatar image |
+| `alt` | string | | Alternative text for the avatar image, also used for generating initials if needed |
+| `color` | string | | Background color for the avatar when no image is provided (uses Tailwind CSS color classes) |
+| `size` | 'sm' \| 'md' \| 'lg' \| 'xl' | 'md' | Size of the avatar |
+| `initials` | string | | Custom initials to display when no image is available |
+| `onClick` | () => void | | Click handler for the avatar |
+
+### Usage
+
+```tsx
+import { Avatar } from 'ably-chat-react-ui-components';
+
+// Basic usage
+<Avatar
+  src="https://example.com/avatar.jpg"
+  alt="John Doe"
+  size="md"
+/>
+
+// With fallback to initials
+<Avatar
+  alt="John Doe"
+  color="bg-blue-500"
+  size="lg"
+/>
+
+// With custom initials
+<Avatar
+  alt="John Doe"
+  initials="JD"
+  color="bg-green-500"
+  size="xl"
+/>
+
+// With click handler
+<Avatar
+  alt="John Doe"
+  onClick={() => console.log('Avatar clicked')}
+/>
+```
+
+### Integration with AvatarProvider
+
+The Avatar component is designed to integrate with the `AvatarProvider` to display consistent avatars across your application, but it also works independently. The `AvatarProvider` can be used to manage avatar generation and caching for users and rooms.:
+
+```tsx
+import { Avatar, useUserAvatar } from 'ably-chat-react-ui-components';
+const { userAvatar } = useUserAvatar({
+    clientId: 'user-123',
+    displayName: 'John Doe',
+  });
+
+<Avatar
+  src={userAvatar?.src}
+  alt={userAvatar?.displayName}
+  color={userAvatar?.color}
+  initials={userAvatar?.initials}
+/>
+```
+
+## ChatMessage
+
+The `ChatMessage` component displays an individual chat message with interactive capabilities. It allows users to view, edit, delete, and react to messages.
+
+### Features
+
+- Message content display with sender avatar
+- Edit/delete functionality for own messages with confirmation dialogs
+- Emoji reactions system with picker and toggle functionality
+- Status indicators (edited, deleted)
+- Basic ARIA support (role, aria-label)
+- Hover tooltips showing sender information
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `message` | Message | The Ably Chat message object used to display the message content |
+| `onEdit` | (message: Message, newText: string) => void | Callback triggered when the user saves an edited message |
+| `onDelete` | (message: Message) => void | Callback triggered when the user confirms message deletion |
+| `onReactionAdd` | (message: Message, emoji: string) => void | Callback triggered when a user adds an emoji reaction to the message |
+| `onReactionRemove` | (message: Message, emoji: string) => void | Callback triggered when a user removes their emoji reaction from the message |
+| `className` | string | Additional CSS class names to apply to the message container |
+
+### Usage
+
+```tsx
+import { ChatMessage } from 'ably-chat-react-ui-components';
+import { Message } from '@ably/chat';
+import { useMessages } from '@ably/chat/react';
+
+const { update, deleteMessage, addReaction, removeReaction } = useMessages();
+
+<ChatMessage
+  message={message}
+  onEdit={(message: Message, newText: string) => {
+    console.log(`Editing message with serial: ${message.serial}, setting text to: ${newText}`);
+    update(message.serial, { text: newText });
+  }}
+  onDelete={(message: Message) => {
+    console.log(`Deleting message with serial: ${message.serial}`);
+    deleteMessage(message.serial);
+  }}
+  onReactionAdd={(message: Message, emoji: string) => {
+    console.log(`Adding reaction ${emoji} to message with serial: ${message.serial}`);
+    addReaction(message.serial, emoji);
+  }}
+  onReactionRemove={(message: Message, emoji: string) => {
+    console.log(`Removing reaction ${emoji} from message with serial: ${message.serial}`);
+    removeReaction(message.serial, emoji);
+  }}
+/>
+```
+
+## ChatMessageList
+
+The `ChatMessageList` component displays a list of chat messages with advanced scrolling functionality. It supports infinite scrolling, message history loading, and automatic scrolling to new messages.
+
+### Features
+
+- Message display with history loading and infinite scroll
+- Automatic scrolling to new messages
+- Loading indicators for history fetching
+- Typing indicators integration
+- Scroll position preservation when loading history
+- Virtualized rendering for performance with large message lists
+- Accessibility support with proper ARIA roles
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `messages` | Message[] | | Array of Ably Chat Message objects to render |
+| `onLoadMoreHistory` | () => void | | Callback triggered when user scrolls near the top of the message list |
+| `isLoading` | boolean | false | Whether a history loading operation is currently in progress |
+| `hasMoreHistory` | boolean | true | Whether there are more historical messages available to load |
+| `onMessageInView` | (messageSerial: string) => void | | Callback triggered when the user scrolls to view a specific message |
+| `onViewLatest` | () => void | | Callback triggered when the user scrolls to the bottom of the message list |
+| `onEdit` | (message: Message, newText: string) => void | | Callback triggered when a user saves an edited message |
+| `onDelete` | (message: Message) => void | | Callback triggered when a user confirms deletion of their message |
+| `onReactionAdd` | (message: Message, emoji: string) => void | | Callback triggered when a user adds an emoji reaction to any message |
+| `onReactionRemove` | (message: Message, emoji: string) => void | | Callback triggered when a user removes their emoji reaction from a message |
+| `children` | React.ReactNode | | Optional React elements to render after all messages (e.g., TypingIndicators) |
+| `autoScroll` | boolean | true | Whether to automatically scroll to bottom when new messages arrive |
+| `loadMoreThreshold` | number | 100 | Distance in pixels from the top edge that triggers onLoadMoreHistory callback |
+| `enableTypingIndicators` | boolean | true | Whether to enable built-in typing indicators in the chat window |
+
+### Scrolling Behavior
+
+The ChatMessageList component implements sophisticated scrolling logic:
+
+1. **Auto-scrolling**: When new messages arrive, the list automatically scrolls to the bottom if the user is already near the bottom. This prevents interrupting the reading experience when viewing older messages.
+
+2. **Infinite scrolling**: When the user scrolls near the top of the list, the `onLoadMoreHistory` callback is triggered to load older messages.
+
+3. **Scroll position preservation**: When older messages are loaded, the scroll position is preserved so the user doesn't lose their place.
+
+### Usage
+
+```tsx
+import { ChatMessageList } from 'ably-chat-react-ui-components';
+import { Message } from '@ably/chat';
+import { useState } from 'react';
+
+// Example with useState for messages
+const [messages, setMessages] = useState<Message[]>([]);
+const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+const [hasMoreMessages, setHasMoreMessages] = useState(true);
+
+const fetchPreviousMessages = () => {
+  console.log('Loading more message history');
+  setIsLoadingHistory(true);
+  // Fetch logic would go here
+  setIsLoadingHistory(false);
+};
+
+const handleEditMessage = (message: Message, newText: string) => {
+  console.log(`Editing message with serial: ${message.serial}, setting text to: ${newText}`);
+};
+
+const handleDeleteMessage = (message: Message) => {
+  console.log(`Deleting message with serial: ${message.serial}`);
+};
+
+const handleAddReaction = (message: Message, emoji: string) => {
+  console.log(`Adding reaction ${emoji} to message with serial: ${message.serial}`);
+};
+
+const handleRemoveReaction = (message: Message, emoji: string) => {
+  console.log(`Removing reaction ${emoji} from message with serial: ${message.serial}`);
+};
+
+<ChatMessageList
+  messages={messages}
+  onLoadMoreHistory={fetchPreviousMessages}
+  isLoading={isLoadingHistory}
+  hasMoreHistory={hasMoreMessages}
+  enableTypingIndicators={true}
+  onEdit={handleEditMessage}
+  onDelete={handleDeleteMessage}
+  onReactionAdd={handleAddReaction}
+  onReactionRemove={handleRemoveReaction}
+  autoScroll={true}
+  loadMoreThreshold={150}
+>
+</ChatMessageList>
+```
+
+## ChatWindow
+
+The `ChatWindow` component provides the main chat interface for a room. This includes message display, input, and custom header/footer content. It also enters presence automatically when mounted.
+
+### Features
+
+- Message display with history loading
+- Message editing, deletion, and reactions
+- Typing indicators and presence awareness
+- Custom header and footer content
+- Discontinuity recovery on reconnection
+- Active chat window management to control which messages are rendered in the UI
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `roomName` | string | | Unique identifier for the chat room |
+| `customHeaderContent` | React.ReactNode | | Optional custom content for the header area of the chat window |
+| `customFooterContent` | React.ReactNode | | Optional custom content for the footer area of the chat window |
+| `enableTypingIndicators` | boolean | true | Whether to show typing indicators in the chat window |
+| `windowSize` | number | 200 | Controls the window size for rendering messages in UI |
+| `className` | string | | Additional CSS class names to apply to the root container |
+
+### Usage
+
+```tsx
+import { ChatWindow, RoomInfo, RoomReaction } from 'ably-chat-react-ui-components';
+import { ChatRoomProvider } from '@ably/chat/react';
+
+// Basic usage
+<ChatRoomProvider name="general">
+  <ChatWindow roomName="general" />
+</ChatRoomProvider>
+
+// With custom header and footer
+<ChatRoomProvider name="general">
+  <ChatWindow
+    roomName="general"
+    customHeaderContent={<RoomInfo />}
+    customFooterContent={<RoomReaction />}
+  />
+</ChatRoomProvider>
+
+// With typing indicators disabled
+<ChatRoomProvider name="general">
+  <ChatWindow
+    roomName="general"
+    enableTypingIndicators={false}
+  />
+
+// Setting a custom window size
+<ChatRoomProvider name="general">
+  <ChatWindow
+    roomName="general"
+    windowSize={300} // Custom size for message rendering in the UI
+  />
+</ChatRoomProvider>
+```
+
+### Integration with Other Components
+
+The ChatWindow component integrates several other components:
+
+- **ChatMessageList**: Displays the messages with infinite scrolling
+- **MessageInput**: Allows users to compose and send messages
+- **ChatWindowHeader**: Contains room information and controls
+- **ChatWindowFooter**: Contains additional controls and features
+
+## MessageInput
+
+The `MessageInput` component provides a comprehensive text input interface for composing and sending chat messages. This component supports multi-line input, emoji selection, and typing indicators.
+
+### Features
+
+- Multi-line text input with automatic height adjustment (max 150px)
+- Enter key to send (Shift+Enter for new line)
+- Integrated emoji picker with cursor position insertion
+- Typing indicators to alert others when composing messages
+- Automatic input cleanup and focus management
+- Accessible form controls with proper ARIA attributes
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `onSend` | (text: string) => void | | Callback function triggered when a message is sent |
+| `placeholder` | string | "Type a message..." | Placeholder text displayed in the input field when empty |
+
+### Typing Indicators
+
+The MessageInput component automatically triggers typing indicators when the user is typing. This is handled through the Ably Chat SDK's typing indicators feature:
+
+- Triggered on each keystroke when content is present
+- Automatically stopped when input is cleared or message is sent
+- Integrated with the useTyping hook from @ably/chat/react
+
+### Usage
+
+```tsx
+import { MessageInput } from 'ably-chat-react-ui-components';
+import { useMessages } from '@ably/chat/react';
+
+// Basic usage
+const { send } = useMessages();
+
+const handleSendMessage = (text: string) => {
+  console.log(`Sending message: ${text}`);
+  send({ text });
+};
+
+<MessageInput
+  onSend={handleSendMessage}
+  placeholder="Type your message here..."
+/>
+```
+
+## Sidebar
+
+The `Sidebar` component provides room navigation and management.
+
+### Features
+
+- Collapsible interface with avatar-only mode
+- Room creation and management
+- Theme toggle integration
+- Active room highlighting
+- Room count display
+- Automatic room attachment/detachment
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `roomNames` | string[] | Rooms to display |
+| `activeRoomName` | string | Currently-active room (optional) |
+| `defaultRoomOptions` | RoomOptions | Ably options passed to each ChatRoomProvider |
+| `addRoom` | (name: string) => void | Adds (or joins) a room |
+| `setActiveRoom` | (name?: string) => void | Sets the active room |
+| `leaveRoom` | (name: string) => void | Leaves a room |
+| `className` | string | Optional CSS class names for additional styling |
+| `isCollapsed` | boolean | Whether the sidebar is in collapsed mode (avatar-only) |
+| `onToggleCollapse` | () => void | Callback to toggle the collapsed state |
+
+### Room Management
+
+The Sidebar component handles room management through the following functions:
+
+- **addRoom**: Adds a new room to the list or joins an existing room
+- **setActiveRoom**: Sets the active room for display in the main content area
+- **leaveRoom**: Removes a room from the list and handles cleanup
+
+### Usage
+
+```tsx
+import { Sidebar } from 'ably-chat-react-ui-components';
+import { RoomOptions } from '@ably/chat';
+import { useState } from 'react';
+
+const [rooms, setRooms] = useState<string[]>(['general', 'random']);
+const [activeRoom, setActiveRoom] = useState<string | undefined>('general');
+const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+const [roomOptions] = useState<RoomOptions>({ occupancy: { enableEvents: true } });
+
+const addRoom = (name: string) => {
+  console.log(`Adding room: ${name}`);
+  setRooms(prev => prev.includes(name) ? prev : [...prev, name]);
+};
+
+const leaveRoom = (name: string) => {
+  console.log(`Leaving room: ${name}`);
+  setRooms(prev => prev.filter(n => n !== name));
+  if (activeRoom === name) {
+    setActiveRoom(rooms.length > 0 ? rooms[0] : undefined);
+  }
+};
+
+const handleSetActiveRoom = (name?: string) => {
+  console.log(`Setting active room to: ${name}`);
+  setActiveRoom(name);
+};
+
+<Sidebar
+  roomNames={rooms}
+  activeRoomName={activeRoom}
+  defaultRoomOptions={roomOptions}
+  addRoom={addRoom}
+  setActiveRoom={handleSetActiveRoom}
+  leaveRoom={leaveRoom}
+  isCollapsed={isSidebarCollapsed}
+  onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
+/>
+```
+
+Rooms are automatically attached when the Sidebar is mounted, and detached when the component unmounts.
+
+## ParticipantList
+
+The `ParticipantList` component displays a positioned modal showing all room participants.
+
+### Features
+
+- Modal overlay with absolute positioning based on provided coordinates
+- Participant list with avatars, names, and status indicators
+- Smart sorting: current user appears first, followed by alphabetical order
+- Typing indicators for active participants
+- Participant count display in header
+- Scrollable list with fixed maximum height for large participant counts
+- Accessible modal dialog with proper ARIA attributes and focus management
+
+### Props
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `presenceData` | PresenceMember[] | Array of Ably Chat presence members currently in the room |
+| `currentClientId` | string | Client ID of the current Ably Connection for the room |
+| `currentlyTyping` | Set<string> | Set of client IDs for users who are currently typing |
+| `onToggle` | () => void | Callback function to toggle the list open/closed state |
+| `position` | { top: number; left: number } | Absolute positioning coordinates for rendering the modal |
+
+### Live Participant Tracking
+
+The ParticipantList component can be used to show currently active participants in the room.
+
+- Only shows users who are currently present in the room based on presence data
+- Displays typing indicators for users who are currently typing
+- Sorts the current user to the top of the list for easy identification
+
+### Usage
+
+```tsx
+import { ParticipantList } from 'ably-chat-react-ui-components';
+import { useChatClient, usePresence, useTyping } from '@ably/chat/react';
+import { useState } from 'react';
+
+// Integration with presence and typing hooks
+const { presenceData } = usePresence();
+const { currentlyTyping } = useTyping();
+const { clientId } = useChatClient();
+const [participantListOpen, setParticipantListOpen] = useState(false);
+
+const toggleParticipantList = () => {
+  console.log('Toggling participant list');
+  setParticipantListOpen(prev => !prev);
+};
+
+{participantListOpen && (
+  <ParticipantList
+    presenceData={presenceData || []}
+    currentClientId={clientId}
+    currentlyTyping={currentlyTyping}
+    onToggle={toggleParticipantList}
+    position={{ top: 100, left: 200 }}
+  />
+)}
+```
+
+## App
+
+The `App` component is a complete, ready-to-use chat application that combines all the components above with sensible defaults. It's ideal for quickly prototyping a chat interface or seeing how everything fits together.
+
+### Features
+
+- Manages room state (adding, leaving, selecting rooms)
+- Shows loading state when not connected
+- Renders layout with Sidebar and ChatWindow
+- Includes RoomInfo in header and RoomReaction in footer
+- Handles connection status and error states
+- Provides customizable width and height
+- Shows empty state when no room is selected
+
+### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `initialRoomNames` | string[] | [] | An optional array of room names to populate the sidebar initially |
+| `width` | string \| number | '70vw' | Width of the app container |
+| `height` | string \| number | '70vh' | Height of the app container |
+
+### Usage
+
+```tsx
+import { App } from 'ably-chat-react-ui-components';
+import * as Ably from 'ably';
+import { ChatClient } from '@ably/chat';
+import { ChatClientProvider } from '@ably/chat/react';
+import { ThemeProvider, AvatarProvider, ChatSettingsProvider } from 'ably-chat-react-ui-components';
+import 'ably-chat-react-ui-components/dist/styles.css';
+
+// Create Ably Realtime client
+const ablyClient = new Ably.Realtime({
+  key: '{{API_KEY}}',
+  clientId: 'user-' + Math.random().toString(36).substring(2, 15),
+});
+
+const chatClient = new ChatClient(ablyClient);
+
+// Basic usage
+function QuickChatPrototype() {
+  return (
+    <ThemeProvider>
+      <AvatarProvider>
+        <ChatSettingsProvider>
+          <ChatClientProvider client={chatClient}>
+            <App initialRoomNames={['my-first-room']} />
+          </ChatClientProvider>
+        </ChatSettingsProvider>
+      </AvatarProvider>
+    </ThemeProvider>
+  );
+}
+
+// With custom dimensions
+function CustomSizedChat() {
+  return (
+    <ChatClientProvider client={chatClient}>
+      <App
+        initialRoomNames={['my-first-room']}
+        width="100%"
+        height="600px"
+      />
+    </ChatClientProvider>
+  );
+}
+```
