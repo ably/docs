@@ -91,6 +91,24 @@ export default {
       ],
     },
     {
+      name: 'React UI Components',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/chat/react-ui-components',
+          index: true,
+        },
+        {
+          name: 'Components',
+          link: '/docs/chat/react-ui-components/components',
+        },
+        {
+          name: 'Providers and Hooks',
+          link: '/docs/chat/react-ui-components/providers',
+        },
+      ],
+    },
+    {
       name: 'Moderation',
       pages: [
         {
