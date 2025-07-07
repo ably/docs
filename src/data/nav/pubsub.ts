@@ -22,6 +22,11 @@ export default {
       name: 'Getting started',
       pages: [
         {
+          name: 'Overview',
+          link: '/docs/getting-started',
+          index: true,
+        },
+        {
           name: 'JavaScript',
           link: '/docs/getting-started/javascript',
         },
