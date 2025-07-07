@@ -1,0 +1,218 @@
+---
+title: Room
+meta_description: ""
+---
+
+The `Room` interface represents a chat room.
+
+Access it via `ChatClient.rooms.get(name)`.
+
+---
+
+## Accessors
+
+It has the following accessors:
+
+| Property | Description | Type |
+| -------- | ----------- | ---- |
+| `name` | The unique name of the room. | String |
+| `status` | The current status of the room. | [`RoomStatus`](#roomstatus) |
+| `error` | The current error, if any, that caused the room to enter the current status. | [`ErrorInfo`](/docs/chat/api/javascript/error-info) \| `undefined` |
+| `channel` | The underlying Ably realtime channel used for the room. | [`RealtimeChannel`](LINK) |
+| `messages` | Allows you to send, subscribe to, and query messages in the room. | [`Messages`](LINK) |
+| `presence` | Interact with presence events in the room. | [`Presence`](LINK) |
+| `occupancy` | Interact with occupancy metrics for the room. | [`Occupancy`](LINK) |
+| `reactions` | Interact with room-level reactions. | [`RoomReactions`](LINK) |
+| `typing` | Interact with typing events in the room. | [`Typing`](LINK) |
+
+---
+
+## RoomStatus
+
+A `Room` is in one of the following states:
+
+| RoomStatus | Description |
+| ---------- | ----------- |
+| `Initializing` | The SDK is initializing the room. |
+| `Initialized` | A temporary state when a room is first initialized. |
+| `Attaching` | The room is attaching to Ably. |
+| `Attached` | The room is attached to Ably. |
+| `Detaching` | The room is detaching from Ably. |
+| `Detached` | The room is detached from Ably. |
+| `Failed` | The room failed to attach to Ably. |
+| `Suspended` | The room is suspended, and automatic reattachment has been temporarily disabled. |
+| `Releasing` | The room is in the process of releasing and is no long usable. |
+| `Released` | The room is released and no longer usable. |
+
+---
+
+## Attach to a room <a id="attach"/>
+
+`room.attach()`
+
+Attaches to the room in order to receive events in realtime.
+
+If a room fails to attach, it will enter either the `Suspended` or `Failed` [state](#roomstatus).
+
+If the room enters the `Failed` state, then the SDK will not automatically retry attaching and intervention is required.
+
+If the room enters the `Suspended` state, then the call to attach will reject with an [`ErrorInfo`](/docs/chat/api/javascript/error-info) that caused the suspension. However, the SDK will retry attaching to the room automatically after a delay.
+
+`attach(): Promise<void>`
+
+### Returns
+
+Returns a promise. On success, the promise is fulfilled and the room begins receiving real-time events. On failure, the promise is rejected with an [`ErrorInfo`](/docs/chat/api/javascript/error-info).
+
+<Code>
+```javascript
+const room = await client.rooms.get('room:general');
+await room.attach();
+```
+</Code>
+
+---
+
+## Detach from a room <a id="detach"/>
+
+`room.detach()`
+
+Detaches from the room to stop receiving events.
+
+`detach(): Promise<void>`
+
+### Returns
+
+Returns a promise. On success, the promise is fulfilled and the room stops receiving events. On failure, the promise is rejected with an [`ErrorInfo`](/docs/chat/api/javascript/error-info).
+
+<Code>
+```javascript
+await room.detach();
+```
+</Code>
+
+---
+
+## Listen for RoomStatus changes <a id="onStatusChange"/>
+
+`room.onStatusChange()`
+
+Registers a listener that is called whenever the [`RoomStatus`](#roomstatus) changes.
+
+`onStatusChange(listener: RoomStatusListener): StatusSubscription`
+
+### Parameters
+
+Use the following parameters:
+
+| Parameter | Description | Type |
+| --------- | ----------- | ---- |
+| `listener` | Function called when the room status changes. | [`RoomStatusListener`](#roomstatuslistener) |
+
+#### RoomStatusListener
+
+A function that is called when the [`RoomStatus`](#roomstatus) of a room changes.
+
+`RoomStatusListener: (change: RoomStatusChange) => void`
+
+It uses the following parameters:
+
+| Parameter | Description | Type |
+| --------- | ----------- | ---- |
+| `change` | The change in `RoomStatus`. | [`RoomStatusChange`](#roomstatuschange) |
+
+#### RoomStatusChange
+
+An interface that represents a change in the [`RoomStatus`](#roomstatus) of a room.
+
+It has the following properties:
+
+| Property | Description | Type |
+| -------- | ----------- | ---- |
+| `previous` | The previous status of the room. | [`RoomStatus`](#roomstatus) |
+| `current` | The current status of the room. | [`RoomStatus`](#roomstatus) |
+| `error` | *Optional* The error that caused the change. | [`ErrorInfo`](/docs/chat/api/javascript/error-info) |
+
+### Returns
+
+Returns a `StatusSubscription` object with an `off()` method to remove the listener.
+
+<Code>
+```javascript
+room.onStatusChange((status) => {
+  console.log(`Room status changed to: ${status}`);
+});
+```
+</Code>
+
+#### StatusSubscription
+
+An interface that represents a subscription to status change events. It also provides a method of cleaning up subscriptions that are no longer needed.
+
+It has the following properties:
+
+| Property | Description | Type |
+| -------- | ----------- | ---- |
+| `off` | Unsubscribes from the status change events. It will ensure that no further status change events will be sent to the subscriber and that references to the subscriber are cleaned up. | Method |
+
+`off: () => void`
+
+---
+
+## Register a discontinuity handler <a id="onDiscontinuity"/>
+
+`room.onDiscontinuity()`
+
+Registers a handler that is called whenever a discontinuity is detected. Discontinuity occurs when a connection is interrupted and a `Room` cannot be resumed from its previous state.
+
+If the discontinuity lasts for less than 2 minutes, then the SDK will automatically reattach to any rooms and replay any missed messages once it reconnects.
+
+If the discontinuity last for longer than 2 minutes, then use [`historyBeforeSubscribe()`](/docs/chat/api/javascript/messages#historybeforesubscribe) to retrieve any missed messages.
+
+`onDiscontinuity(handler: DiscontinuityListener): StatusSubscription`
+
+### Parameters
+
+Use the following parameters:
+
+| Parameter | Description | Type |
+| --------- | ----------- | ---- |
+| `handler` | Function called when a discontinuity is detected. | `DiscontinuityListener` |
+
+#### DiscontinuityListener
+
+A handler for discontinuity events.
+
+`DiscontinuityListener: (error: ErrorInfo) => void`
+
+It uses the following parameters:
+
+| Parameter | Description | Type |
+| --------- | ----------- | ---- |
+| `error` | The error that occurred to cause the discontinuity. | [`ErrorInfo`](/docs/chat/api/javascript/error-info) |
+
+### Returns
+
+Returns a `StatusSubscription` object with an `off()` method to remove the handler.
+
+<Code>
+```javascript
+const { off } = room.onDiscontinuity((reason: ErrorInfo) => {
+  // Recover from the discontinuity
+});
+```
+</Code>
+
+---
+
+## Get RoomOptions <a id="options"/>
+
+`room.options()`
+
+Returns the [`RoomOptions`](/docs/chat/api/javascript/rooms#roomoptions) used to create the room.
+
+`options(): RoomOptions`
+
+### Returns
+
+Returns a copy of the [`RoomOptions`](/docs/chat/api/room#roomoptions) used to create the room.
