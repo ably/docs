@@ -168,6 +168,63 @@ export default {
           link: '/docs/api/chat-rest',
           name: 'REST API',
         },
+        {
+          name: 'JavaScript SDK',
+          pages: [
+            {
+              name: 'ChatClient',
+              link: '/docs/chat/api/javascript/chat-client',
+            },
+            {
+              name: 'Authentication',
+              link: '/docs/chat/api/javascript/auth',
+            },
+            {
+              name: 'Connection',
+              link: '/docs/chat/api/javascript/connection',
+            },
+            {
+              name: 'Rooms',
+              link: '/docs/chat/api/javascript/rooms',
+            },
+            {
+              name: 'Room',
+              link: '/docs/chat/api/javascript/room',
+            },
+            {
+              name: 'Room reactions',
+              link: '/docs/chat/api/javascript/room-reactions',
+            },
+            {
+              name: 'Message',
+              link: '/docs/chat/api/javascript/message',
+            },
+            {
+              name: 'Messages',
+              link: '/docs/chat/api/javascript/messages',
+            },
+            {
+              name: 'Message reactions',
+              link: '/docs/chat/api/javascript/messages-reactions',
+            },
+            {
+              name: 'Presence',
+              link: '/docs/chat/api/javascript/presence',
+            },
+            {
+              name: 'Occupancy',
+              link: '/docs/chat/api/javascript/occupancy',
+            },
+            {
+              name: 'Typing',
+              link: '/docs/chat/api/javascript/typing',
+            },
+            {
+              name: 'ErrorInfo',
+              link: '/docs/chat/api/javascript/error-info',
+            },
+          ],
+        },
       ],
     },
   ],
