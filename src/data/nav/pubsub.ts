@@ -46,6 +46,10 @@ export default {
           link: '/docs/getting-started/ruby',
         },
         {
+          name: 'Python',
+          link: '/docs/getting-started/python',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
