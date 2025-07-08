@@ -16,7 +16,7 @@ import { LANGUAGE_SELECTOR_HEIGHT, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heig
 type LanguageSelectorOptionData = {
   label: LanguageKey;
   value: string;
-  version: number;
+  version: string;
 };
 
 type LanguageSelectorOptionProps = {
@@ -64,7 +64,7 @@ const LanguageSelectorOption = ({ isOption, setMenuOpen, langParam, ...props }: 
         size="xs"
         className={cn('my-px', { 'group-hover/lang-dropdown:bg-neutral-000': isOption })}
       >
-        v{props.data.version.toFixed(1)}
+        v{props.data.version}
       </Badge>
       {isOption ? (
         <div className="w-4 h-4">
