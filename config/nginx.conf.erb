@@ -24,8 +24,22 @@ http {
 
   server_tokens off;
 
+  log_format logfmtably
+    'nginx '
+    'request_time=$request_time '
+    'request_id=$http_x_request_id '
+    'status=$status '
+    'remote_addr=$remote_addr '
+    'remote_port=$remote_port '
+    'server_addr=$server_addr '
+    'bytes_sent=$bytes_sent body_bytes_sent=$body_bytes_sent '
+    'request_length=$request_length '
+    'scheme=$scheme request_method=$request_method '
+    'request_uri="$request_uri" host="$http_host" '
+    'referrer="$http_referer" user_agent="$http_user_agent" '
+    'content_type="$sent_http_content_type" accept="$http_accept"';
   log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
-  access_log <%= ENV['NGINX_ACCESS_LOG_PATH'] || 'logs/nginx/access.log' %> l2met;
+  access_log <%= ENV['NGINX_ACCESS_LOG_PATH'] || 'logs/nginx/access.log' %> logfmtably;
   error_log <%= ENV['NGINX_ERROR_LOG_PATH'] || 'logs/nginx/error.log' %> notice;
 
   include mime.types;
@@ -39,7 +53,7 @@ http {
   map_hash_bucket_size 8192;
 
   # Creates a map of redirects for us
-  map $uri $redirected_url {
+  map $request_uri $redirected_url {
     default "none";
     include website-redirects.conf;
     include client-lib-development-guide-redirects.conf;
@@ -207,10 +221,10 @@ http {
       <% if content_request_protected %>
       # Serve the file if it exists, otherwise try to authenticate
       # (.html requests won't match here, they'll go to the @html_auth location)
-      try_files $uri @html_auth;
+      try_files $request_uri @html_auth;
       <% else %>
       # Serve the file if it exists, try index.html for paths without a trailing slash, otherwise 404
-      try_files $uri $uri/index.html $uri/ =404;
+      try_files $request_uri $request_uri/index.html $request_uri/ =404;
       <% end %>
     }
 
@@ -222,14 +236,14 @@ http {
         # .html request without authentication, so handle it here by 404ing or redirecting to the canonical host
         # depending on whether CONTENT_REQUEST_CANONICAL_HOST is set or not
         <% if host = ENV['CONTENT_REQUEST_CANONICAL_HOST'] %>
-        return 301 <%= ENV['SKIP_HTTPS'] == 'true' ? '$scheme' : 'https' %>://<%= host %>$uri;
+        return 301 <%= ENV['SKIP_HTTPS'] == 'true' ? '$scheme' : 'https' %>://<%= host %>$request_uri;
         <% else %>
         return 404;
         <% end %>
       }
 
       # If the request is authenticated, break out of the location block and serve the file
-      try_files $uri.html $uri/index.html $uri/ =404;
+      try_files $request_uri.html $request_uri/index.html $request_uri/ =404;
     }
 
     # Don't serve files with the .html extension here, send them to the canonical location
@@ -242,7 +256,7 @@ http {
       # .html request without authentication, so handle it here by 404ing or redirecting to the canonical host
       # depending on whether CONTENT_REQUEST_CANONICAL_HOST is set or not
       <% if host = ENV['CONTENT_REQUEST_CANONICAL_HOST'] %>
-      return 301 <%= ENV['SKIP_HTTPS'] == 'true' ? '$scheme' : 'https' %>://<%= host %>$uri;
+      return 301 <%= ENV['SKIP_HTTPS'] == 'true' ? '$scheme' : 'https' %>://<%= host %>$request_uri;
       <% else %>
       return 404;
       <% end %>
