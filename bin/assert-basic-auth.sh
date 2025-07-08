@@ -1,5 +1,8 @@
 #!/bin/bash
 
+source "$(dirname "$0")/nginx-utils.sh"
+trap stop_nginx EXIT
+
 #
 # A utility script to assert basic auth is working correctly
 #
@@ -13,6 +16,10 @@ if [[ -z $URI_PATH ]]; then
   echo "Usage: assert-basic-auth.sh PATH"
   exit 1
 fi
+
+export ENABLE_BASIC_AUTH=true
+
+start_nginx
 
 # Test without credentials (should get 401)
 NO_AUTH_CODE=$(curl --header "X-Forwarded-Proto: https" \
