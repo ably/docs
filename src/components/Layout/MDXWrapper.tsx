@@ -16,6 +16,7 @@ import { HtmlComponentPropsData } from '../html-component-props';
 import { languageData } from 'src/data/languages';
 import { ActivePage } from './utils/nav';
 import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from './mdx/tables';
+import { Tiles } from './mdx/tiles';
 import { Head } from '../Head';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { ProductName } from 'src/templates/template-data';
@@ -126,6 +127,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
             tr: TableRow,
             th: TableHeader,
             td: TableCell,
+            Tiles,
           }}
         >
           <PageTitle>{title}</PageTitle>
