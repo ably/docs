@@ -1,4 +1,7 @@
-#!/usr/bin/env bash
+#!/bin/bash
+
+source "$(dirname "$0")/nginx-utils.sh"
+trap stop_nginx EXIT
 
 set -euo pipefail
 # set -x # uncomment to help debugging
@@ -9,58 +12,6 @@ set -euo pipefail
 
 # Make sure basic auth is disabled for these tests as it will interfere with the content request auth tokens
 export ENABLE_BASIC_AUTH=false
-
-# First we define some utility functions to help us in the test
-
-wait_for_nginx_pid_file() {
-    local operation=$1  # "start" or "stop"
-    local count=0
-
-    while ( [ "$operation" = "start" ] && [ ! -f /tmp/nginx.pid ] ) || \
-          ( [ "$operation" = "stop" ] && [ -f /tmp/nginx.pid ] ); do
-        # nginx operations are quick so we can be impatient here
-        sleep 0.1
-        count=$((count + 1))
-        if [ $count -ge 100 ]; then  # 0.1s * 100 = 10s
-            echo "Error: Timeout waiting for nginx to $operation"
-            exit 1
-        fi
-    done
-}
-
-start_nginx() {
-    # Start nginx in the background
-    ./bin/start-nginx &
-
-    # Wait for nginx to start successfully (pid file is created)
-    wait_for_nginx_pid_file "start"
-
-    # Get the PID from the nginx.pid file
-    NGINX_PID=$(cat /tmp/nginx.pid)
-
-    # Check if nginx is still running
-    if ! kill -0 $NGINX_PID 2>/dev/null; then
-        echo "Error: Failed to start nginx"
-        exit 1
-    fi
-}
-
-stop_nginx() {
-    # Read the PID from the file
-    if [ -f /tmp/nginx.pid ]; then
-        NGINX_PID=$(cat /tmp/nginx.pid)
-        # Kill nginx if it's still running
-        if kill -0 $NGINX_PID 2>/dev/null; then
-            kill $NGINX_PID
-        fi
-
-        # Wait for nginx to stop (pid file to be removed)
-        wait_for_nginx_pid_file "stop"
-    fi
-}
-
-# Set up trap to stop nginx on script exit or failure
-trap stop_nginx EXIT
 
 # Function to run a single test case
 run_test() {

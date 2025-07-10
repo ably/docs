@@ -1,5 +1,8 @@
 #!/bin/bash
 
+source "$(dirname "$0")/nginx-utils.sh"
+trap stop_nginx EXIT
+
 #
 # A utility script to assert redirects served up by nginx
 #
@@ -15,6 +18,8 @@ if [[ -z $FROM || -z $TO ]]; then
   echo "Usage: assert-redirects.sh PATH DESTINATION_URL"
   exit 1
 fi
+
+start_nginx
 
 # Add basic auth if enabled
 AUTH_OPTS=""
