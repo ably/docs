@@ -22,7 +22,7 @@ export default {
       name: 'Getting started',
       pages: [
         {
-          name: 'Overview',
+          name: 'Guides',
           link: '/docs/getting-started',
           index: true,
         },
