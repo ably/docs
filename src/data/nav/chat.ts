@@ -36,6 +36,10 @@ export default {
               name: 'Kotlin',
               link: '/docs/chat/getting-started/kotlin',
             },
+            {
+              name: 'React UI Components',
+              link: '/docs/chat/getting-started/react-ui-components',
+            }
           ],
         },
         {
@@ -83,6 +87,24 @@ export default {
         {
           name: 'Room reactions',
           link: '/docs/chat/rooms/reactions',
+        },
+      ],
+    },
+    {
+      name: 'React UI Components',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/chat/react-ui-components',
+          index: true,
+        },
+        {
+          name: 'Components',
+          link: '/docs/chat/react-ui-components/components',
+        },
+        {
+          name: 'Providers and Hooks',
+          link: '/docs/chat/react-ui-components/providers',
         },
       ],
     },
