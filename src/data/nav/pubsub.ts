@@ -50,6 +50,10 @@ export default {
           link: '/docs/getting-started/python',
         },
         {
+          name: 'Java',
+          link: '/docs/getting-started/java',
+        },
+        {
           name: 'Quickstart guide',
           link: '/docs/getting-started/quickstart',
         },
