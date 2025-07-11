@@ -220,6 +220,10 @@ export default {
               link: '/docs/chat/api/javascript/typing',
             },
             {
+              name: 'Subscriptions',
+              link: '/docs/chat/api/javascript/subscriptions',
+            },
+            {
               name: 'ErrorInfo',
               link: '/docs/chat/api/javascript/error-info',
             },
