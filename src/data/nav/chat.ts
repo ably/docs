@@ -168,6 +168,10 @@ export default {
           name: 'Livestream chat',
           link: '/docs/guides/chat/build-livestream',
         },
+        {
+          name: 'Replies',
+          link: '/docs/guides/chat/replies',
+        }
       ],
     },
   ],
