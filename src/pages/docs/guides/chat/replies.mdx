@@ -2,8 +2,6 @@
 title: "Implementing Replies and Quotes with Chat"
 meta_description: "Learn how to implement message replies and quotes in your Ably Chat applications using TypeScript. This guide shows how to use metadata to create quote and reply functionality."
 meta_keywords: "ably chat, message replies, message quotes, chat replies, chat quotes, javascript chat replies, typescript chat replies, chat metadata, ably chat metadata, realtime chat replies"
-languages:
-  - javascript
 ---
 
 This guide will show you how you could implement a simple solution for things like replies and quotes in your Ably Chat application.
@@ -45,7 +43,7 @@ Store this information in your application state or pass it to your message inpu
 For example, when a user clicks a "Reply" button on a message, you would extract these properties from the message and store them in your application state, perhaps in a variable called `replyingTo`.
 
 <Code>
-```javascript
+```typescript
 import { Message } from '@ably/chat';
 function prepareReply(originalMessage: Message) {
   // Extract key information from the original message
@@ -70,7 +68,7 @@ Create a metadata object with a "reply" property that contains the original mess
 The structure of your metadata object should look like this:
 
 <Code>
-```javascript
+```typescript
 // Example metadata structure for a reply message
 const metadata = {
   reply: {
@@ -88,7 +86,7 @@ Then use the [`room.messages.send()`](https://sdk.ably.com/builds/ably/ably-chat
 In your `text` property, include the reply text that the user is sending. The `metadata` property should contain the metadata object you created earlier.
 
 <Code>
-```javascript
+```typescript
 // Function to send a reply message
 import {Message} from '@ably/chat';
 
@@ -130,7 +128,7 @@ await sendReply(messageToReplyTo, replyText);
 To test this out, you can try sending a message to a room, and then sending a reply to that message using the `sendReply` function. Make sure to replace `messageToReplyTo` with the actual message object you want to reply to.
 
 <Code>
-```javascript
+```typescript
 const originalMessage = await room.messages.send({
   text: "Hello, this is the original message!"
 });
@@ -154,7 +152,7 @@ When receiving messages, you need to check if they contain reply metadata and di
 7. If the original message is not found, you might want to fetch it (see next section) or display a simplified version.
 
 <Code>
-```javascript
+```typescript
 // Subscribe to messages and handle replies
 const messageSubscription = room.messages.subscribe((messageEvent) => {
   const message = messageEvent.message;
@@ -188,7 +186,7 @@ When displaying a reply message, you might want to show a preview of the origina
 You can try sending a message and then sending a reply to it, and see how the reply is displayed in your application.
 
 <Code>
-```javascript
+```typescript
 import { Message } from '@ably/chat';
 
 room.messages.subscribe((messageEvent) => {
@@ -217,7 +215,7 @@ If a reply references a message that isn't in your local state (for example, if 
 6. You may need to handle pagination to find the right message.
 
 <Code>
-```javascript
+```typescript
 // Function to fetch the original message referenced in a reply
 async function fetchOriginalMessage(replyData) {
     const timestamp = replyData.createdAt;
@@ -259,7 +257,7 @@ Here's how to use it:
 Of course, if you have a lot of history and the reply came much later, it might be better to use the `history` function to load only the specific message you care about, as shown in the previous section.
 
 <Code>
-```javascript
+```typescript
 const { historyBeforeSubscribe } = room.messages.subscribe((messageEvent) => {
   console.log('New message received:', messageEvent.message);
 });
@@ -309,209 +307,8 @@ This guide was meant to show the basic principles of implementing replies and qu
 
 Here's a simple React component that demonstrates how to implement a chat interface with basic reply functionality using the `useMessages` hook:
 
-<Code>
-```javascript
-import React, { useState } from 'react';
-import { useMessages } from '@ably/chat/react';
-import { Message, ChatMessageEventType } from '@ably/chat';
-import type { ChatMessageEvent } from '@ably/chat';
-
-interface ReplyMetadata {
-  serial: string;
-  timestamp: number;
-  clientId: string;
-  previewText: string;
-}
-
-interface MessageWithReply extends Message {
-  metadata: {
-    reply?: ReplyMetadata;
-    [key: string]: unknown;
-  };
-}
-
-export const ChatWithReplies: React.FC = () => {
-  const [messages, setMessages] = useState<MessageWithReply[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [replyingTo, setReplyingTo] = useState<MessageWithReply | null>(null);
-
-  const { send } = useMessages({
-    listener: (event: ChatMessageEvent) => {
-      if (event.type === ChatMessageEventType.Created) {
-        setMessages(prev => [...prev, event.message as MessageWithReply]);
-      }
-    }
-  });
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim()) return;
-
-    try {
-      const messageParams: any = { text: inputText };
-
-      // Add reply metadata if replying to a message
-      if (replyingTo) {
-        messageParams.metadata = {
-          reply: {
-            serial: replyingTo.serial,
-            timestamp: replyingTo.createdAt.getTime(),
-            clientId: replyingTo.clientId,
-            previewText: replyingTo.text.length > 100
-              ? replyingTo.text.substring(0, 100) + '...'
-              : replyingTo.text
-          }
-        };
-      }
-
-      await send(messageParams);
-      setInputText('');
-      setReplyingTo(null);
-    } catch (error) {
-      console.error('Failed to send message:', error);
-    }
-  };
-
-  const handleReply = (message: MessageWithReply) => {
-    setReplyingTo(message);
-  };
-
-  const cancelReply = () => {
-    setReplyingTo(null);
-  };
-
-  const getOriginalMessage = (replyMessage: MessageWithReply): MessageWithReply | null => {
-    if (!replyMessage.metadata?.reply) return null;
-    return messages.find(msg => msg.serial === replyMessage.metadata.reply!.serial) || null;
-  };
-
-  const isReply = (message: MessageWithReply): boolean => {
-    return !!message.metadata?.reply;
-  };
-
-  return (
-    <div className="min-h-screen w-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden">
-        {/* Messages Container */}
-        <div className="h-96 overflow-y-auto p-6 space-y-4 bg-gray-50">
-          {messages.length === 0 ? (
-            <div className="text-center text-gray-500 mt-20">
-              <div className="text-4xl mb-2">💬</div>
-              <p className="text-lg">No messages yet. Start the conversation!</p>
-            </div>
-          ) : (
-            messages.map((message) => {
-              const originalMessage = isReply(message) ? getOriginalMessage(message) : null;
-
-              return (
-                <div key={message.serial} className="group">
-                  {/* Reply Context */}
-                  {originalMessage && (
-                    <div className="ml-6 mb-3 p-3 bg-indigo-50 border-l-4 border-indigo-400 rounded-r-lg">
-                      <div className="text-xs text-indigo-600 font-medium mb-1 flex items-center">
-                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        Replying to {originalMessage.clientId}
-                      </div>
-                      <div className="text-sm text-gray-700 truncate">
-                        {originalMessage.text}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Main Message */}
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-white text-sm font-bold">
-                        {message.clientId.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-sm font-semibold text-gray-900">
-                          {message.clientId}
-                        </span>
-                      </div>
-
-                      <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-200 max-w-md">
-                        <p className="text-gray-800 break-words leading-relaxed">
-                          {message.text}
-                        </p>
-                      </div>
-
-                      {/* Reply Button */}
-                      <button
-                        onClick={() => handleReply(message)}
-                        className="mt-2 text-xs text-gray-500 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-all duration-200 font-medium hover:bg-indigo-50 px-2 py-1 rounded-full"
-                      >
-                        Reply
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Input Area */}
-        <div className="border-t border-gray-200 p-6 bg-white">
-          {/* Reply Preview */}
-          {replyingTo && (
-            <div className="mb-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-indigo-600 font-semibold mb-1 flex items-center">
-                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    Replying to {replyingTo.clientId}
-                  </div>
-                  <div className="text-sm text-gray-700 truncate">
-                    {replyingTo.text}
-                  </div>
-                </div>
-                <button
-                  onClick={cancelReply}
-                  className="ml-3 p-1 text-gray-400 hover:text-gray-600 hover:bg-white rounded-full transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Message Input */}
-          <form onSubmit={handleSendMessage} className="flex space-x-3">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder={replyingTo ? "Type your reply..." : "Type a message..."}
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-            />
-            <button
-              type="submit"
-              disabled={!inputText.trim()}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg disabled:shadow-none"
-            >
-              Send
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-```
-</Code>
-
-<Code>
-```javascript
+<Code fixed="true">
+```typescript
 import React, { useState } from 'react';
 import { useMessages } from '@ably/chat/react';
 import { Message, ChatMessageEventType } from '@ably/chat';
@@ -713,8 +510,8 @@ export const ChatWithReplies: React.FC = () => {
 
 To use this component, you would need to wrap it with the necessary providers:
 
-<Code>
-```javascript
+<Code fixed="true">
+```typescript
 import * as Ably from 'ably';
 import { ChatClient } from '@ably/chat';
 import { ChatClientProvider } from '@ably/chat/react';
@@ -743,7 +540,7 @@ const App = () => {
 
 This component demonstrates the core concepts of implementing replies with Ably Chat:
 
-1. It uses the `useMessages` hook to subscribe to new messages and send messages
+1. It uses the [`useMessages()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useMessages.html) hook to subscribe to new messages and send messages
 2. It maintains a local state of messages
 3. It allows users to reply to messages by clicking on them
 4. When sending a reply, it includes the original message's information in the metadata
