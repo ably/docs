@@ -240,19 +240,19 @@ export default {
         },
         {
           name: 'User management',
-          link: '/docs/account/users',
+          link: '/docs/platform/account/users',
         },
         {
           name: 'Organizations',
-          link: '/docs/account/organizations',
+          link: '/docs/platform/account/organizations',
         },
         {
           name: 'Single sign-on (SSO)',
-          link: '/docs/account/sso',
+          link: '/docs/platform/account/sso',
         },
         {
           name: 'Two-factor authentication (2FA)',
-          link: '/docs/account/2fa',
+          link: '/docs/platform/account/2fa',
         },
         {
           name: 'Enterprise customization',
@@ -263,38 +263,38 @@ export default {
           pages: [
             {
               name: 'Overview',
-              link: '/docs/account/app',
+              link: '/docs/platform/account/app',
               index: true,
             },
             {
               name: 'Stats',
-              link: '/docs/account/app/stats',
+              link: '/docs/platform/account/app/stats',
             },
             {
               name: 'API keys',
-              link: '/docs/account/app/api',
+              link: '/docs/platform/account/app/api',
             },
             {
               name: 'Queues',
-              link: '/docs/account/app/queues',
+              link: '/docs/platform/account/app/queues',
             },
             {
               name: 'Notifications',
-              link: '/docs/account/app/notifications',
+              link: '/docs/platform/account/app/notifications',
             },
             {
               name: 'Dev console',
-              link: '/docs/account/app/console',
+              link: '/docs/platform/account/app/console',
             },
             {
               name: 'Settings',
-              link: '/docs/account/app/settings',
+              link: '/docs/platform/account/app/settings',
             },
           ],
         },
         {
           name: 'Programmatic management using Control API',
-          link: '/docs/account/control-api',
+          link: '/docs/platform/account/control-api',
         },
       ],
     },
