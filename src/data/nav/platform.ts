@@ -92,7 +92,7 @@ export default {
       name: 'Pricing',
       pages: [
         {
-          link: '/docs/pricing',
+          link: '/docs/platform/pricing',
           name: 'Overview',
           index: true,
         },
@@ -100,33 +100,33 @@ export default {
           name: 'Package types',
           pages: [
             {
-              link: '/docs/pricing/free',
+              link: '/docs/platform/pricing/free',
               name: 'Free',
             },
             {
-              link: '/docs/pricing/standard',
+              link: '/docs/platform/pricing/standard',
               name: 'Standard',
             },
             {
-              link: '/docs/pricing/pro',
+              link: '/docs/platform/pricing/pro',
               name: 'Pro',
             },
             {
-              link: '/docs/pricing/enterprise',
+              link: '/docs/platform/pricing/enterprise',
               name: 'Enterprise',
             },
           ],
         },
         {
-          link: '/docs/pricing/billing',
+          link: '/docs/platform/pricing/billing',
           name: 'Billing',
         },
         {
-          link: '/docs/pricing/limits',
+          link: '/docs/platform/pricing/limits',
           name: 'Limits',
         },
         {
-          link: '/docs/pricing/faqs',
+          link: '/docs/platform/pricing/faqs',
           name: 'Pricing FAQs',
         },
       ],
