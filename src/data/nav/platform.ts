@@ -256,7 +256,7 @@ export default {
         },
         {
           name: 'Enterprise customization',
-          link: '/docs/platform-customization',
+          link: '/docs/platform/account/enterprise-customization',
         },
         {
           name: 'App management',
