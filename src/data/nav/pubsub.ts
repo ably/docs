@@ -66,6 +66,10 @@ export default {
               link: '/docs/getting-started/python',
             },
             {
+              name: 'Flutter',
+              link: '/docs/getting-started/flutter',
+            },
+            {
               name: 'Ruby',
               link: '/docs/getting-started/ruby',
             },
