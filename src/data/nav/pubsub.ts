@@ -50,6 +50,10 @@ export default {
               link: '/docs/getting-started/swift',
             },
             {
+              name: 'Flutter',
+              link: '/docs/getting-started/flutter',
+            },
+            {
               name: 'Ruby',
               link: '/docs/getting-started/ruby',
             },
