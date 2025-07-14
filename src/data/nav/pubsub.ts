@@ -23,8 +23,41 @@ export default {
       pages: [
         {
           name: 'Guides',
-          link: '/docs/getting-started',
-          index: true,
+          pages: [
+            {
+              name: 'Index',
+              link: '/docs/getting-started',
+              index: true,
+            },
+            {
+              name: 'JavaScript',
+              link: '/docs/getting-started/javascript',
+            },
+            {
+              name: 'React',
+              link: '/docs/getting-started/react',
+            },
+            {
+              name: 'React Native',
+              link: '/docs/getting-started/react-native',
+            },
+            {
+              name: 'Kotlin',
+              link: '/docs/getting-started/kotlin',
+            },
+            {
+              name: 'Swift',
+              link: '/docs/getting-started/swift',
+            },
+            {
+              name: 'Ruby',
+              link: '/docs/getting-started/ruby',
+            },
+            {
+              name: 'PHP',
+              link: '/docs/getting-started/php',
+            },
+          ],
         },
         {
           name: 'SDK setup',
