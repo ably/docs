@@ -106,6 +106,11 @@ export default {
           name: 'Components',
           link: '/docs/chat/react-ui-components/components',
         },
+        {
+          name : 'Customisation',
+          link: '/docs/chat/react-ui-components/component-styling',
+          languages: [],
+        }
       ],
     },
     {
