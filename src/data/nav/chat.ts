@@ -99,6 +99,10 @@ export default {
           index: true,
         },
         {
+          name: 'Setup',
+          link: '/docs/chat/react-ui-components/setup',
+        },
+        {
           name: 'Providers and Hooks',
           link: '/docs/chat/react-ui-components/providers',
         },
