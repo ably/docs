@@ -105,6 +105,14 @@ export default {
               name: 'Hive (Dashboard)',
               link: '/docs/chat/moderation/direct/hive-dashboard',
             },
+            {
+              name: 'Tisane',
+              link: '/docs/chat/moderation/direct/tisane',
+            },
+            {
+              name: 'Bodyguard',
+              link: '/docs/chat/moderation/direct/bodyguard',
+            },
           ],
         },
         {
