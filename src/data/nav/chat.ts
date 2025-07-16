@@ -39,7 +39,7 @@ export default {
             {
               name: 'React UI Components',
               link: '/docs/chat/getting-started/react-ui-components',
-            }
+            },
           ],
         },
         {
@@ -111,10 +111,10 @@ export default {
           link: '/docs/chat/react-ui-components/components',
         },
         {
-          name : 'Customisation',
+          name: 'Customisation',
           link: '/docs/chat/react-ui-components/component-styling',
           languages: [],
-        }
+        },
       ],
     },
     {
