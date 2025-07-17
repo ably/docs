@@ -25,9 +25,9 @@ By storing the serial and creation time of a message you want to quote in the me
 
 To implement a reply to a message, you'll need to:
 
-1. Store the original message's information when a user wants to reply to it
-2. Include that information in the metadata when sending the reply
-3. Process incoming messages to check for reply metadata
+1. Store the original message's information when a user wants to reply to it.
+2. Include that information in the metadata when sending the reply.
+3. Process incoming messages to check for reply metadata.
 
 ### Step 1: Store information about the message being replied to <a id="store-information"/>
 
@@ -43,7 +43,7 @@ Store this information in your application state or pass it to your message inpu
 For example, when a user clicks a "Reply" button on a message, you would extract these properties from the message and store them in your application state, perhaps in a variable called `replyingTo`.
 
 <Code>
-```typescript
+```javascript
 import { Message } from '@ably/chat';
 function prepareReply(originalMessage: Message) {
   // Extract key information from the original message
@@ -52,11 +52,47 @@ function prepareReply(originalMessage: Message) {
     createdAt: originalMessage.createdAt.getTime(),
     clientId: originalMessage.clientId,
     previewText: originalMessage.text.length > 140
-      ? originalMessage.text.substring(0, 140) + '...'
+      ? originalMessage.text.substring(0, 137) + '...'
       : originalMessage.text
   };
   return replyingTo;
 }
+```
+
+```react
+import React from 'react';
+import { Message } from '@ably/chat';
+
+// In a React component
+const ChatComponent = () => {
+  const [replyingTo, setReplyingTo] = React.useState();
+  // Function to prepare reply data
+  const prepareReply = (originalMessage) => {
+    // Extract key information from the original message
+    const replyingTo = {
+      serial: originalMessage.serial,
+      createdAt: originalMessage.createdAt.getTime(),
+      clientId: originalMessage.clientId,
+      previewText: originalMessage.text.length > 140
+        ? originalMessage.text.substring(0, 137) + '...'
+        : originalMessage.text
+    };
+
+    // Store in component state
+    setReplyingTo(replyingTo);
+  };
+
+  // Example usage with a button
+  return (
+    <div>
+      {/* Message display */}
+      <div className="message">
+        {/* Message content */}
+        <button onClick={() => prepareReply(message)}>Reply</button>
+      </div>
+    </div>
+  );
+};
 ```
 </Code>
 
@@ -68,27 +104,31 @@ Create a metadata object with a "reply" property that contains the original mess
 The structure of your metadata object should look like this:
 
 <Code>
-```typescript
-// Example metadata structure for a reply message
-const metadata = {
-  reply: {
-    serial: "original-message-serial",
-    createdAt: 1634567890123,
-    clientId: "original-sender-id",
-    previewText: "Snippet of the original message..."
+```json
+{
+  "reply": {
+    "serial": "original-message-serial",
+    "createdAt": 1634567890123,
+    "clientId": "original-sender-id",
+    "previewText": "Snippet of the original message..."
   }
 };
 ```
 </Code>
 
-Then use the [`room.messages.send()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#send) method to send the message with this metadata. The method takes an object with `text` and `metadata` properties.
+<If lang="javascript">
+  Use the [`room.messages.send()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#send) method to send the message with this metadata. The method takes an object with `text` and `metadata` properties.
+</If>
+
+<If lang="react">
+  Use the [`useMessages`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat_react.useMessages.html) hook, which provides a `sendMessage` function to send messages. This method takes an object with `text` and `metadata` properties.
+</If>
 
 In your `text` property, include the reply text that the user is sending. The `metadata` property should contain the metadata object you created earlier.
 
 <Code>
-```typescript
-// Function to send a reply message
-import {Message} from '@ably/chat';
+```javascript
+import { Message } from '@ably/chat';
 
 async function sendReply(replyToMessage: Message, replyText: string) {
   try {
@@ -123,36 +163,90 @@ const replyText = "I'm responding to your message!";
 
 await sendReply(messageToReplyTo, replyText);
 ```
+
+```react
+import React, { useState } from 'react';
+import { useMessages } from '@ably/chat/react';
+
+const ReplyComponent = ({ messageToReplyTo }) => {
+  const [replyText, setReplyText] = useState('');
+  const { sendMessage } = useMessages();
+
+  const sendReply = async () => {
+    try {
+      // Create metadata object with reply information
+      const metadata = {
+        reply: {
+          serial: messageToReplyTo.serial,
+          createdAt: messageToReplyTo.createdAt.getTime(),
+          clientId: messageToReplyTo.clientId,
+          previewText: messageToReplyTo.text.length > 140
+            ? messageToReplyTo.text.substring(0, 140) + '...'
+            : messageToReplyTo.text
+        }
+      };
+
+      // Send the message with reply metadata
+      await sendMessage({
+        text: replyText,
+        metadata: metadata
+      });
+
+      // Clear input after sending
+      setReplyText('');
+
+      console.log('Reply sent successfully');
+    } catch (error) {
+      console.error('Failed to send reply:', error);
+    }
+  };
+
+  return (
+    <div>
+      <div>Replying to: {messageToReplyTo.clientId}</div>
+      <div>{messageToReplyTo.text}</div>
+      <input
+        type="text"
+        value={replyText}
+        onChange={(e) => setReplyText(e.target.value)}
+        placeholder="Type your reply..."
+      />
+      <button onClick={sendReply}>Send Reply</button>
+    </div>
+  );
+};
+```
 </Code>
 
+<If lang="javascript">
 To test this out, you can try sending a message to a room, and then sending a reply to that message using the `sendReply` function. Make sure to replace `messageToReplyTo` with the actual message object you want to reply to.
 
 <Code>
-```typescript
-const originalMessage = await room.messages.send({
+  ```javascript
+  const originalMessage = await room.messages.send({
   text: "Hello, this is the original message!"
 });
 
-const replyText = "This is a reply to the original message!";
+  const replyText = "This is a reply to the original message!";
 
-await sendReply(originalMessage, replyText);
-```
+  await sendReply(originalMessage, replyText);
+  ```
 </Code>
+</If>
 
 ## Handling received messages with reply metadata <a id="handling-received-messages"/>
 
 When receiving messages, you need to check if they contain reply metadata and display them accordingly. Here's how to do it:
-
-1. Subscribe to messages in the room using [`room.messages.subscribe()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#subscribe).
+1. Subscribe to messages in the room using <If lang="javascript">[`room.messages.subscribe()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#subscribe)</If><If lang="react">[`useMessages()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useMessages.html) and providing a callback via the `listener` param</If>.
 2. In the callback function, examine each incoming message.
 3. Check if the message has a `metadata.reply` property.
 4. If it does, extract the reply information (serial, createdAt, clientId, etc.).
 5. Find the original message in your local state using the serial stored in the metadata.
 6. If the original message is found, display the message as a reply with context from the original message.
-7. If the original message is not found, you might want to fetch it (see next section) or display a simplified version.
+7. If the original message is not found, you might want to fetch it (see next section) or display a simplified version using the preview data.
 
 <Code>
-```typescript
+```javascript
 // Subscribe to messages and handle replies
 const messageSubscription = room.messages.subscribe((messageEvent) => {
   const message = messageEvent.message;
@@ -178,30 +272,64 @@ function displayReply(replyMessage, originalMessage, replyData) {
   console.log(`Reply text: ${replyMessage.text}`);
 }
 ```
+
+```react
+import React, { useState, useEffect } from 'react';
+import { useMessages } from '@ably/chat/react';
+import { ChatMessageEventType, Message } from '@ably/chat';
+
+const MessageList = () => {
+  const [messages, setMessages] = useState<Message[]([]);
+  useMessages({
+    listener: (event) => {
+      if (event.type === ChatMessageEventType.Created) {
+        setMessages(prev => [...prev, event.message]);
+        }
+      }
+    });
+
+  const findOriginalMessage = (replyData) => {
+    return messages.find(msg => msg.serial === replyData.serial);
+  };
+
+  // Render messages with reply context
+  return (
+    <div>
+      {messages.map(message => (
+        <div key={message.serial}>
+          {message.metadata?.reply && (
+            <div>
+              {findOriginalMessage(message.metadata.reply) ? (
+                <div>
+                  <span>Replying to {findOriginalMessage(message.metadata.reply).clientId}:</span>
+                  <p>{findOriginalMessage(message.metadata.reply).text}</p>
+                </div>
+              ) : (
+                <div>
+                  <span>Replying to {message.metadata.reply.clientId}:</span>
+                  <p>{message.metadata.reply.previewText}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <div>
+            <div>
+              <span>{message.clientId}</span>
+              <span>{message.createdAt.toLocaleTimeString()}</span>
+            </div>
+            <p>{message.text}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+```
 </Code>
 
 Your message subscription logic should check for the reply metadata and handle it appropriately.
+
 When displaying a reply message, you might want to show a preview of the original message, the name of the original sender, or a visual indication that it's a reply.
-
-You can try sending a message and then sending a reply to it, and see how the reply is displayed in your application.
-
-<Code>
-```typescript
-import { Message } from '@ably/chat';
-
-room.messages.subscribe((messageEvent) => {
-  // ... subscription logic as shown above
-});
-
-const originalMessage = await room.messages.send({
-  text: "Hello, this is the original message!"
-});
-
-const replyText = "This is a reply to the original message!";
-
-await sendReply(originalMessage, replyText);
-```
-</Code>
 
 ## Finding quoted messages that aren't in local state <a id="finding-quoted-messages"/>
 
@@ -209,31 +337,95 @@ If a reply references a message that isn't in your local state (for example, if 
 
 1. Extract the serial and createdAt from the reply metadata.
 2. Use the exact createdAt time from the metadata to query messages, as start and end params are inclusive.
-3. Use [`room.messages.history()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#history) to query messages at that specific timestamp.
+3. Use the <If lang='javascript'>[`room.messages.history()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#history)</If><If lang='react'>[`useMessages()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-react.UseMessagesResponse.html#history) hook that exposes the `history`</If> method to query messages around that timestamp.
 4. When you receive the results, find the message with the matching serial.
 5. If found, add it to your local state and update your UI to show the reply with context.
 6. You may need to handle pagination to find the right message.
 
 <Code>
-```typescript
+```javascript
 // Function to fetch the original message referenced in a reply
 async function fetchOriginalMessage(replyData) {
     const timestamp = replyData.createdAt;
     try {
         // Query messages at this specific timestamp
-        const result = await room.messages.history({
+        let result = await room.messages.history({
             start: timestamp,
             end: timestamp,
             limit: 20
         });
 
         // Find the message with the matching serial
-        return result.items.find(msg => msg.serial === replyData.serial);
+        let originalMessage = result.items.find(msg => msg.serial === replyData.serial);
+
+        // If message not found and more pages exist, continue searching
+        while (!originalMessage && result.hasNext()) {
+            // Get the next page of results
+            result = await result.next();
+            originalMessage = result.items.find(msg => msg.serial === replyData.serial);
+        }
+        return originalMessage;
     } catch (error) {
         console.error('Error fetching original message:', error);
-         // Handle error appropriately in your application
+        // Handle error appropriately in your application
     }
 }
+```
+
+```react
+import React, { useState, useEffect } from 'react';
+import { useMessages } from '@ably/chat/react';
+import { Message } from '@ably/chat';
+
+const FetchOriginalMessage = ({ replyData }) => {
+  const [originalMessage, setOriginalMessage] = useState<Message>();
+  const { history } = useMessages();
+
+  useEffect(() => {
+    const fetchMessage = async () => {
+      try {
+        // Query messages at the specific timestamp
+        let result = await history({
+          start: replyData.createdAt,
+          end: replyData.createdAt,
+          limit: 20
+        });
+
+        // Find the message with the matching serial
+        let foundMessage = result.items.find(
+          msg => msg.serial === replyData.serial
+        );
+
+        // If message not found and more pages exist, continue searching
+        while (!foundMessage && result.hasNext()) {
+          // Get the next page of results
+          result = await result.next();
+          foundMessage = result.items.find(msg => msg.serial === replyData.serial);
+        }
+
+        setOriginalMessage(foundMessage);
+
+      } catch (err) {
+        console.error('Error fetching original message:', err);
+      }
+    };
+
+    fetchMessage();
+  }, [history, replyData]);
+
+
+  return (
+    <div>
+      {originalMessage && (
+        <div>
+          <h3>Original Message:</h3>
+          <p>{originalMessage.text}</p>
+          <span>Sent by: {originalMessage.clientId}</span>
+        </div>
+      )}
+    </div>
+  );
+};
 ```
 </Code>
 
@@ -243,334 +435,362 @@ If many messages are sent around the same time, you might need to increase the l
 
 ## Using historyBeforeSubscribe <a id="using-history-before-subscribe"/>
 
-The [`historyBeforeSubscribe`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.SubscribeMessagesResponse.html#historyBeforeSubscribe) method is useful because it allows you to search backwards from the point you attach to a room. You can use this to paginate back through history, and if you see any messages that are replies, you can keep paginating back until you have no replies without their original messages. This approach has the added bonus of backfilling your chat at the same time.
+The [`historyBeforeSubscribe`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.SubscribeMessagesResponse.html#historyBeforeSubscribe) method is another option that can be used to query history. It allows you to search backwards from the point you attach to a room, which can be useful for finding original messages for replies.
 
-Here's how to use it:
+The bonus here is that it will only return messages that were sent before you subscribed, and you get to backfill your local state at the same time. While this is useful for recent messages, it may not be the best option for older messages or high message rate situations.
 
-1. Subscribe to messages in the room using `room.messages.subscribe()`.
-2. The subscription returns an object that includes the `historyBeforeSubscribe` method.
-3. Call this method with a limit parameter (e.g., `{ limit: 50 }`) to get recent history.
-4. Process the results to identify any reply messages without their original messages.
-5. If you find replies without originals, paginate back further using the `next()` method on the result.
-6. Continue this process until all replies have their original messages or no more history is available.
+As such, its important to define a reasonable threshold for how far back you want to search in this way. This can help avoid performance issues and unnecessary data retrieval.
+- A good default might be to go backwards up to a week or N messages.
+- If you find a reply whos parent message is beyond your threshold, you can choose to page further, or load these on a case by case basis via the `history` function.
 
-Of course, if you have a lot of history and the reply came much later, it might be better to use the `history` function to load only the specific message you care about, as shown in the previous section.
+For most cases, using the `history` function to load only the specific message you care about, as shown in the previous section, is the recommended approach.
 
-<Code>
-```typescript
-const { historyBeforeSubscribe } = room.messages.subscribe((messageEvent) => {
-  console.log('New message received:', messageEvent.message);
-});
+## Example <a id="example"/>
 
-async function initializeChat(room) {
-  // Load message history before the subscription point
-  let result = await historyBeforeSubscribe({ limit: 200 });
-  let allMessages = [...result.items];
-  // Process messages and check for replies without originals
-  let repliesWithoutOriginals = processMessages(allMessages);
+<If lang="javascript">
+Here's a simple example that demonstrates how to implement a chat interface with basic reply functionality:
 
-  // Continue paginating back until we have no replies without originals or no more history
-  while (repliesWithoutOriginals.length > 0 && result.hasNext()) {
-    // Load the next page of history
-    result = await result.next();
+1. It uses the [`messages`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html) feature to subscribe to new messages and send messages
+2. It maintains a local state of messages
+3. It allows users to reply to messages by clicking on them
+4. When sending a reply, it includes the original message's information in the metadata
+5. When displaying a reply, it shows the original message's context if available
+</If>
 
-    // Add new messages to our collection
-    allMessages = [...allMessages, ...result.items];
-
-    // Process the updated collection and check again for replies without originals
-    repliesWithoutOriginals = processMessages(allMessages);
-  }
-
-  return allMessages;
-}
-
-function processMessages(messages) {
-  const bySerial = new Map(messages.map(m => [m.serial, m]));
-  return messages
-    .filter(m => m.metadata?.reply)
-    .filter(reply => !bySerial.has(reply.metadata.reply.serial));
-}
-```
-</Code>
-
-
-## Complete example <a id="complete-example"/>
-
-This guide was meant to show the basic principles of implementing replies and quotes in Ably Chat using metadata. In a more complete example, you would expect to:
-
-1. Create UI components for displaying regular messages and replies differently
-2. Implement a message selection mechanism to allow users to choose which message to reply to
-3. Set up local state management to store messages and their relationships
-4. Handle edge cases like missing original messages or pagination of history
-5. Implement error handling for failed message sends or history queries
-6. Add visual indicators for when a message is a reply and which message it's replying to
-
-Here's a simple React component that demonstrates how to implement a chat interface with basic reply functionality using the `useMessages` hook:
-
-<Code fixed="true">
-```typescript
-import React, { useState } from 'react';
-import { useMessages } from '@ably/chat/react';
-import { Message, ChatMessageEventType } from '@ably/chat';
-import type { ChatMessageEvent } from '@ably/chat';
-
-interface ReplyMetadata {
-  serial: string;
-  timestamp: number;
-  clientId: string;
-  previewText: string;
-}
-
-interface MessageWithReply extends Message {
-  metadata: {
-    reply?: ReplyMetadata;
-    [key: string]: unknown;
-  };
-}
-
-export const ChatWithReplies: React.FC = () => {
-  const [messages, setMessages] = useState<MessageWithReply[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [replyingTo, setReplyingTo] = useState<MessageWithReply | null>(null);
-
-  const { send } = useMessages({
-    listener: (event: ChatMessageEvent) => {
-      if (event.type === ChatMessageEventType.Created) {
-        setMessages(prev => [...prev, event.message as MessageWithReply]);
-      }
-    }
-  });
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim()) return;
-
-    try {
-      const messageParams: any = { text: inputText };
-
-      // Add reply metadata if replying to a message
-      if (replyingTo) {
-        messageParams.metadata = {
-          reply: {
-            serial: replyingTo.serial,
-            timestamp: replyingTo.createdAt.getTime(),
-            clientId: replyingTo.clientId,
-            previewText: replyingTo.text.length > 100
-              ? replyingTo.text.substring(0, 100) + '...'
-              : replyingTo.text
-          }
-        };
-      }
-
-      await send(messageParams);
-      setInputText('');
-      setReplyingTo(null);
-    } catch (error) {
-      console.error('Failed to send message:', error);
-    }
-  };
-
-  const handleReply = (message: MessageWithReply) => {
-    setReplyingTo(message);
-  };
-
-  const cancelReply = () => {
-    setReplyingTo(null);
-  };
-
-  const getOriginalMessage = (replyMessage: MessageWithReply): MessageWithReply | null => {
-    if (!replyMessage.metadata?.reply) return null;
-    return messages.find(msg => msg.serial === replyMessage.metadata.reply!.serial) || null;
-  };
-
-  const isReply = (message: MessageWithReply): boolean => {
-    return !!message.metadata?.reply;
-  };
-
-  return (
-    <div className="min-h-screen w-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center p-4">
-      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-2xl overflow-hidden">
-        {/* Messages Container */}
-        <div className="h-96 overflow-y-auto p-6 space-y-4 bg-gray-50">
-          {messages.length === 0 ? (
-            <div className="text-center text-gray-500 mt-20">
-              <div className="text-4xl mb-2">💬</div>
-              <p className="text-lg">No messages yet. Start the conversation!</p>
-            </div>
-          ) : (
-            messages.map((message) => {
-              const originalMessage = isReply(message) ? getOriginalMessage(message) : null;
-
-              return (
-                <div key={message.serial} className="group">
-                  {/* Reply Context */}
-                  {originalMessage && (
-                    <div className="ml-6 mb-3 p-3 bg-indigo-50 border-l-4 border-indigo-400 rounded-r-lg">
-                      <div className="text-xs text-indigo-600 font-medium mb-1 flex items-center">
-                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                        Replying to {originalMessage.clientId}
-                      </div>
-                      <div className="text-sm text-gray-700 truncate">
-                        {originalMessage.text}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Main Message */}
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
-                      <span className="text-white text-sm font-bold">
-                        {message.clientId.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-sm font-semibold text-gray-900">
-                          {message.clientId}
-                        </span>
-                      </div>
-
-                      <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-200 max-w-md">
-                        <p className="text-gray-800 break-words leading-relaxed">
-                          {message.text}
-                        </p>
-                      </div>
-
-                      {/* Reply Button */}
-                      <button
-                        onClick={() => handleReply(message)}
-                        className="mt-2 text-xs text-gray-500 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-all duration-200 font-medium hover:bg-indigo-50 px-2 py-1 rounded-full"
-                      >
-                        Reply
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        {/* Input Area */}
-        <div className="border-t border-gray-200 p-6 bg-white">
-          {/* Reply Preview */}
-          {replyingTo && (
-            <div className="mb-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-indigo-600 font-semibold mb-1 flex items-center">
-                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    Replying to {replyingTo.clientId}
-                  </div>
-                  <div className="text-sm text-gray-700 truncate">
-                    {replyingTo.text}
-                  </div>
-                </div>
-                <button
-                  onClick={cancelReply}
-                  className="ml-3 p-1 text-gray-400 hover:text-gray-600 hover:bg-white rounded-full transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Message Input */}
-          <form onSubmit={handleSendMessage} className="flex space-x-3">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder={replyingTo ? "Type your reply..." : "Type a message..."}
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-            />
-            <button
-              type="submit"
-              disabled={!inputText.trim()}
-              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg disabled:shadow-none"
-            >
-              Send
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-```
-</Code>
-
-To use this component, you would need to wrap it with the necessary providers:
-
-<Code fixed="true">
-```typescript
-import * as Ably from 'ably';
-import { ChatClient } from '@ably/chat';
-import { ChatClientProvider } from '@ably/chat/react';
-import './index.css';
-import { AblyProvider } from 'ably/react';
-
-// Initialize Ably client
-const client = new Ably.Realtime({
-  key: 'your-api-key',
-  clientId: 'user-123'
-});
-const chatClient = new ChatClient(realtimeClient);
-const App = () => {
-  return (
-    <AblyProvider client={realtimeClient}>
-      <ChatClientProvider client={chatClient}>
-        <ChatRoomProvider name={'room-with-replies'}>
-          <ChatWithReplies />
-        </ChatRoomProvider>
-      </ChatClientProvider>
-    </AblyProvider>
-  )
-};
-```
-</Code>
-
-This component demonstrates the core concepts of implementing replies with Ably Chat:
+<If lang="react">
+Here's a simple React component that demonstrates how to implement a chat interface with basic reply functionality:
 
 1. It uses the [`useMessages()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useMessages.html) hook to subscribe to new messages and send messages
 2. It maintains a local state of messages
 3. It allows users to reply to messages by clicking on them
 4. When sending a reply, it includes the original message's information in the metadata
 5. When displaying a reply, it shows the original message's context if available
+</If>
 
-Remember that Ably Chat doesn't provide built-in UI components or reply functionality **yet**, so you'll need to implement these aspects yourself using the metadata approach described in this guide. The steps outlined in the previous sections provide the foundation for building a complete reply system in your application.
+<Code>
+```javascript
+import { Realtime } from 'ably';
+import { ChatClient, ChatMessageEventType } from '@ably/chat';
 
+const messages = [];
+let replyingTo = null;
+
+// Find original message for a reply
+function findOriginalMessage(serial) {
+    return messages.find(msg => msg.serial === serial) || null;
+}
+
+// Set up replying to a message
+function prepareReply(message) {
+    replyingTo = {
+        serial: message.serial,
+        createdAt: message.createdAt.getTime(),
+        clientId: message.clientId,
+        previewText: message.text.length > 100
+            ? message.text.substring(0, 100) + '...'
+            : message.text
+    };
+
+    // Update UI to show reply preview
+    showReplyPreview(replyingTo);
+}
+
+// Send a message with optional reply metadata
+async function sendMessage(room, text) {
+    if (!text.trim()) return;
+
+    const messageParams = { text };
+
+    if (replyingTo) {
+        messageParams.metadata = {
+            reply: {
+                serial: replyingTo.serial,
+                createdAt: replyingTo.createdAt,
+                clientId: replyingTo.clientId,
+                previewText: replyingTo.previewText
+            }
+        };
+
+        // Clear reply state after sending
+        replyingTo = null;
+        hideReplyPreview();
+    }
+
+    await room.messages.send(messageParams);
+}
+
+function renderMessage(message) {
+    const messageEl = document.createElement('div');
+    messageEl.className = 'message';
+
+    // Add reply context if this is a reply
+    if (message.metadata?.reply) {
+        const replyData = message.metadata.reply;
+        const originalMessage = findOriginalMessage(replyData.serial);
+
+        const replyContext = document.createElement('div');
+        replyContext.className = 'reply-context';
+
+        if (originalMessage) {
+            replyContext.textContent = `Replying to ${originalMessage.clientId}: ${originalMessage.text}`;
+        } else {
+            replyContext.textContent = `Replying to ${replyData.clientId}: ${replyData.previewText}`;
+        }
+
+        messageEl.appendChild(replyContext);
+    }
+
+    // Add message content
+    const content = document.createElement('div');
+    content.textContent = `${message.clientId}: ${message.text}`;
+    messageEl.appendChild(content);
+
+    // Add reply button
+    const replyButton = document.createElement('button');
+    replyButton.textContent = 'Reply';
+    replyButton.onclick = () => prepareReply(message);
+    messageEl.appendChild(replyButton);
+
+    // Add to container
+    document.getElementById('message-container').appendChild(messageEl);
+}
+
+function showReplyPreview(replyData) {
+    const previewEl = document.getElementById('reply-preview');
+    previewEl.innerHTML = `
+    <div>Replying to ${replyData.clientId}: ${replyData.previewText}</div>
+  `;
+    previewEl.style.display = 'block';
+}
+
+function hideReplyPreview() {
+    replyingTo = null;
+    document.getElementById('reply-preview').style.display = 'none';
+}
+
+// Initialize the chat when the page loads
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const apiKey = '{{API_KEY}}'; // Replace with your actual API key
+        const clientId = 'user-' + Math.floor(Math.random() * 1000);
+        const roomName = 'chat-room';
+
+        const client = new Realtime({ key: apiKey, clientId });
+        const chatClient = new ChatClient(client);
+        const room = await chatClient.rooms.get(roomName);
+
+        // Subscribe to new messages
+        room.messages.subscribe((event) => {
+            console.log('New message:', event);
+            if (event.type === ChatMessageEventType.Created) {
+                messages.push(event.message);
+                renderMessage(event.message);
+            }
+        });
+        await room.attach()
+
+        // Set up send button click handler
+        document.getElementById('send-button').onclick = () => {
+            const inputEl = document.getElementById('message-input');
+            sendMessage(room, inputEl.value);
+            inputEl.value = '';
+        };
+
+        // Also allow sending with Enter key
+        document.getElementById('message-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const inputEl = document.getElementById('message-input');
+                sendMessage(room, inputEl.value);
+                inputEl.value = '';
+            }
+        });
+
+        console.log('Chat initialized successfully!');
+    } catch (error) {
+        console.error('Error initializing chat:', error);
+        document.getElementById('message-container').innerHTML =
+            `<div class="message" style="color: red">Error initializing chat: ${error.message}</div>`;
+    }
+});
+```
+
+```react
+import React, { useState, useEffect } from 'react';
+import { useMessages } from '@ably/chat/react';
+import { Message, ChatMessageEventType } from '@ably/chat';
+
+const ChatComponent = () => {
+  const [messages, setMessages] = useState([]);
+  const [inputText, setInputText] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+
+  const { sendMessage } = useMessages({
+    listener: (event) => {
+      if (event.type === ChatMessageEventType.Created) {
+        setMessages(prev => [...prev, event.message]);
+      }
+    }
+  });
+
+  const handleSend = async () => {
+    if (!inputText.trim()) return;
+
+    try {
+      if (replyingTo) {
+        const metadata = {
+          reply: {
+            serial: replyingTo.serial,
+            createdAt: replyingTo.createdAt.getTime(),
+            clientId: replyingTo.clientId,
+            previewText: replyingTo.text.length > 140
+              ? replyingTo.text.substring(0, 137) + '...'
+              : replyingTo.text
+          }
+        };
+        await sendMessage({ text: inputText, metadata });
+        setReplyingTo(null);
+      } else {
+        await sendMessage({ text: inputText });
+      }
+      setInputText('');
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
+  };
+
+  // Find original message for a reply
+  const findOriginalMessage = (serial) => {
+    return messages.find(msg => msg.serial === serial);
+  };
+
+  return (
+    <div style={{ maxWidth: '400px', margin: '0 auto', padding: '16px' }}>
+      {/* Message list */}
+      <div style={{
+        height: '300px',
+        overflowY: 'auto',
+        marginBottom: '16px',
+        border: '1px solid #ccc',
+        borderRadius: '4px',
+        padding: '8px'
+      }}>
+        {messages.map((message) => (
+          <div
+            key={message.serial}
+            style={{
+              padding: '8px',
+              marginBottom: '8px',
+              backgroundColor: '#f5f5f5',
+              borderRadius: '4px'
+            }}
+          >
+            {/* Reply context */}
+            {message.metadata?.reply && (
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                {(() => {
+                  const original = findOriginalMessage(message.metadata.reply.serial);
+                  if (original) {
+                    return `Replying to ${original.clientId}: ${original.text}`;
+                  } else {
+                    return `Replying to ${message.metadata.reply.clientId}: ${message.metadata.reply.previewText}`;
+                  }
+                })()}
+              </div>
+            )}
+
+            {/* Message content */}
+            <div style={{ fontWeight: 'bold' }}>
+              {message.clientId}: {message.text}
+            </div>
+
+            {/* Reply button */}
+            <button
+              onClick={() => setReplyingTo(message)}
+              style={{ marginTop: '4px', fontSize: '12px' }}
+            >
+              Reply
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Reply preview */}
+      {replyingTo && (
+        <div style={{
+          marginBottom: '8px',
+          padding: '8px',
+          backgroundColor: '#f0f0f0',
+          borderRadius: '4px',
+          display: 'flex',
+          justifyContent: 'space-between'
+        }}>
+          <div>
+            Replying to {replyingTo.clientId}: {replyingTo.text.length > 50
+              ? replyingTo.text.substring(0, 47) + '...'
+              : replyingTo.text}
+          </div>
+          <button onClick={() => setReplyingTo(null)}>Cancel</button>
+        </div>
+      )}
+
+      {/* Message input */}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <input
+          type="text"
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Type a message..."
+          style={{
+            flex: 1,
+            padding: '8px',
+            border: '1px solid #ccc',
+            borderRadius: '4px'
+          }}
+        />
+        <button
+          onClick={handleSend}
+          style={{
+            padding: '8px 16px',
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  );
+};
+</If>
+```
+</Code>
+
+Ably Chat doesn't provide built-in UI components or reply functionality **yet**, so you'll need to implement these aspects yourself using the metadata approach described in this guide. The steps outlined in the previous sections provide the foundation for building a complete reply system in your application.
 
 ## Limitations and considerations <a id="limitations-and-considerations"/>
 
 When implementing replies and quotes using metadata, keep these considerations in mind:
 
-1. **No built-in UI**: You'll need to build your own UI components to display replies and quotes.
+1. **Message availability**: If a quoted message is very old, it might not be available in history anymore, depending on your Ably account's [message persistence](docs/storage-history/storage#persist-last-message) settings.
 
-2. **Message availability**: If a quoted message is very old, it might not be available in history anymore, depending on your Ably account's message retention settings.
+2. **Message updates**: Because messages can be updated (including the metadata), it's possible to accidentally remove the quoted message reference. Also, if providing a message preview, you will have to handle updates to the original message text, as the preview might become outdated.
 
-3. **Message updates**: Because messages can be updated (including the metadata), it's possible to accidentally remove the quoted message reference. Be careful when updating messages that are part of a reply chain.
+3. **No server-side validation**: Since metadata is not validated by the server, you should ensure that your application logic correctly handles cases where the metadata might be malformed or missing.
 
-4. **No server-side validation**: Since metadata is not validated by the server, you should ensure that your application logic correctly handles cases where the metadata might be malformed or missing.
+4. **Local state management**: Maintaining a local state of messages will improve performance by reducing the need to query history.
 
-5. **Local state management**: Maintaining a local state of messages will improve performance by reducing the need to query history.
+5. **Tracking replies**: There isn't an easy way to know if a message has been replied to, other than to see its replies in history.
 
-6. **Tracking replies**: There isn't an easy way to know if a message has been replied to, other than to see its replies in history. This is why the historyBeforeSubscribe method is useful to ensure you have the full context of messages in your room.
-
-7. **Nested replies**: Implementing nested replies (replies to replies) in this fashion can be potentially expensive and error-prone. You may have to query history multiple times to fetch all nested replies, and either:
+6. **Nested replies**: Implementing nested replies (replies to replies) in this fashion can be potentially expensive and error-prone. You may have to query history multiple times to fetch all nested replies, and either:
     - Store the reply metadata for all of a child's parents in its own metadata field, or
     - Do a new history fetch for each message as you make your way up the reply tree.
-## Next steps <a id="next-steps"/>
 
-Now that you've implemented basic reply functionality, you might want to:
+7. **No built-in API**: You'll need to build some of your own custom components and logic to handle replies and quotes.
+
+## Next steps <a id="next-steps"/>
 
 * Explore the [Ably Chat documentation](/docs/chat) for API details.
 * Play around with the [Ably Chat examples](/examples?product=chat).
