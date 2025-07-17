@@ -171,7 +171,7 @@ export default {
         {
           name: 'Replies',
           link: '/docs/guides/chat/replies',
-          languages: [],
+          languages: ['react', 'javascript'],
         },
       ],
     },
