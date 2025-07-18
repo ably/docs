@@ -22,6 +22,7 @@ export const languageKeys = [
   'kotlin',
   'realtime',
   'rest',
+  'css',
 ] as const;
 
 export type LanguageKey = (typeof languageKeys)[number];
