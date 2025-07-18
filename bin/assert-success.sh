@@ -1,5 +1,8 @@
 #!/bin/bash
 
+source "$(dirname "$0")/nginx-utils.sh"
+trap stop_nginx EXIT
+
 #
 # A utility script to assert successful responses served up by nginx
 #
@@ -13,6 +16,8 @@ if [[ -z $URI_PATH ]]; then
   echo "Usage: assert-success.sh PATH"
   exit 1
 fi
+
+start_nginx
 
 # Add basic auth if enabled
 AUTH_OPTS=""

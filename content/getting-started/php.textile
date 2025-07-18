@@ -1,0 +1,215 @@
+---
+title: "Getting started: Pub/Sub in PHP"
+meta_description: "A getting started guide for Ably Pub/Sub PHP that steps through some of the key features using PHP."
+meta_keywords: "Pub/Sub PHP, PHP PubSub, Ably PHP SDK, publish PHP, Ably Pub/Sub guide, PHP realtime communication, Ably tutorial PHP, PHP message history, presence API PHP, Ably Pub/Sub example, realtime Pub/Sub PHP, publish message PHP, Ably CLI Pub/Sub"
+languages:
+  - PHP
+---
+
+This guide will get you started with Ably Pub/Sub in PHP.
+
+It will take you through the following steps:
+
+* Create a client and establish a connection to Ably with the Rest SDK.
+* Generate a JWT for authenticating frontend clients.
+* Publish a message to the channel with your client for subscribers to receive.
+* Retrieve the presence set of the channel.
+* Retrieve the messages you sent in the guide from history.
+
+<aside data-type='note'>
+<p>This guide covers the Ably PHP SDK which provides RESTful functionality for publishing messages, retrieving history, and checking presence. If you need realtime features like subscribing to channels and receiving live updates, check out the "Ably Laravel broadcaster":https://github.com/ably/laravel-broadcaster which integrates with Laravel's broadcasting system.</p>
+</aside>
+
+h2(#prerequisites). Prerequisites
+
+* "Sign up":https://ably.com/signup for an Ably account.
+** Create a new app, and create your first API key.
+** Your API key will need the @publish@, @presence@, and @history@ capabilities.
+
+* Install the Ably CLI:
+
+```[sh]
+npm install -g @ably/cli
+```
+
+* Run the following to log in to your Ably account and set the default app and API key:
+
+```[sh]
+ably login
+
+ably apps switch
+ably auth keys switch
+```
+
+* Install "PHP":https://www.php.net/downloads.php version 7.2 or greater.
+* Create a new project and install the Ably Pub/Sub PHP SDK:
+
+```[sh]
+# Create a new directory for your project
+mkdir ably-php-quickstart
+cd ably-php-quickstart
+
+# Initialize Composer (if you don't have a composer.json yet)
+composer init
+
+# Install the Ably PHP SDK
+composer require ably/ably-php
+```
+
+<aside data-type='note'>
+<p>The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI and view outputs within your Ably account, ensure that you replace them with your own API key.</p>
+</aside>
+
+
+h2(#step-1). Step 1: Configure the Ably Rest SDK client
+
+Clients can make REST API requests to Ably when they instantiate a REST SDK instance. This enables them to publish messages to channels and retrieve channel information.
+
+* Create a @get_started.php@ file in your project and add the following code to instantiate the SDK and make requests to Ably. At the minimum you need to provide an authentication mechanism. Using an API key directly is fine for server-side environments like PHP where the key remains secure. However, for frontend clients, you should use token authentication instead of exposing API keys. In this example, the @clientId@ will be the name of the client sending the message:
+
+```[php]
+<?php
+
+require 'vendor/autoload.php';
+
+use Ably\AblyRest;
+
+$ably = new AblyRest(['key' => '{{API_KEY}}', 'clientId' => 'my-first-client']);
+```
+
+h2(#step-2). Step 2: Generate a JWT
+
+The Ably PHP SDK provides token authentication for secure client connections. Authentication with a JWT is recommended over using API keys directly in production because they can be scoped to specific capabilities and have expiration times. This is essential when authenticating frontend clients where embedding API keys would expose them publicly. With PHP the API key would be considered secure as it's stored on the server.
+
+This section will show you how to build a JWT with the Ably API key credentials embedded, which you can then return to your frontend clients, for example from an API endpoint.
+
+First install the Firebase JWT library, which is used to create and verify JSON Web Tokens (JWTs):
+
+```[bash]
+composer require firebase/php-jwt
+```
+
+Import the necessary classes at the top of your @get_started.php@ file:
+
+```[php]
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+```
+
+Then create a new JWT with the following code:
+
+```[php]
+$currentTime = time();
+$payload = [
+    'iat' => $currentTime,
+    'exp' => $currentTime + 3600,
+    'x-ably-capability' => '{"*":["*"]}'
+];
+
+$apiKeyCredentials = explode(':', '{{API_KEY}}');
+$jwt = JWT::encode(
+    $payload,
+    $apiKeyCredentials[1],
+    'HS256',
+    $apiKeyCredentials[0]
+);
+
+echo $jwt;
+```
+
+To use this JWT for authenticating frontend clients, you would typically expose it through an API endpoint that your frontend application can call. For example, you might create an endpoint like @/get-auth-jwt@ that returns this JWT. Your frontend clients, a JavaScript application in the example below, can then use this JWT when instantiating their Ably client:
+
+```[bash]
+const realtime = new Ably.Realtime({ authUrl: '/get-auth-jwt' });
+```
+
+This approach keeps your API key secure on the server while allowing frontend clients to authenticate with Ably using the generated JWT.
+
+h2(#step-3). Step 3: Publish a message to a channel
+
+Messages contain the data that a client is communicating, such as a short 'hello' from a colleague, or a financial update being broadcast to subscribers from a server. Ably uses channels to separate messages into different topics, so that clients only ever receive messages on the channels they are subscribed to. The PHP SDK can only publish messages to channels and cannot subscribe to them. To subscribe to channels you will make use of the Ably CLI.
+
+* Use the Ably CLI to subscribe to a channel. The message that your PHP client sends will be received by CLI instance.
+
+```[sh]
+ably channels subscribe my-first-channel
+```
+
+* Add the following lines to the bottom of your @get_started@ file to create a channel instance and publish a message to the channel. Then run it with @php get_started.php@:
+
+```[php]
+$channel = $ably->channel('my-first-channel');
+$channel->publish('myEvent', 'Hello!');
+```
+
+The Ably CLI will receive the message.
+
+h2(#step-4). Step 4: Presence
+
+Presence enables clients to be aware of one another if they are present on the same channel. You can then show clients who else is online, provide a custom status update for each, and notify the channel when someone goes offline. With the PHP SDK you can retrieve the presence set but cannot enter it. This means you can see who is present on a channel, but you cannot announce your own presence from a PHP client.
+
+* Have a client join the presence set using the Ably CLI:
+
+```[sh]
+ably channels presence enter my-first-channel --client-id "my-cli" --data '{"status":"learning about Ably!"}'
+```
+
+* Add the following lines to your @get_started@ function to retrieve the list of members in the presence set. Then run it with @php get_started.php@:
+
+```[php]
+$membersPage = $channel->presence->get(); // Returns a PaginatedResult
+$memberIds = array_map(function($member) {
+    return $member->clientId;
+}, $membersPage->items);
+echo "\nMembers in presence set:\n " . implode(', ', $memberIds) . "\n";
+```
+
+h2(#step-5). Step 5: Retrieve message history
+
+You can retrieve previously sent messages using the history feature. Ably stores all messages for 2 minutes by default in the event a client experiences network connectivity issues. This can be extended for longer if required.
+
+If more than 2 minutes has passed since you published a regular message (excluding the presence events), then you can publish some more before trying out history. You can use the Pub/Sub SDK, Ably CLI or the dev console to do this.
+
+For example, using the Ably CLI to publish 5 messages:
+
+```[sh]
+ably channels publish --count 5 my-first-channel "Message number {{.Count}}" --name "myEvent"
+```
+
+* Add the following lines to your @get_started@ function to retrieve any messages that were recently published to the channel. Then run it with @php get_started.php@:
+
+```[php]
+$history = $channel->history();
+
+echo "\nMessage History:\n";
+echo str_repeat("-", 50) . "\n";
+
+foreach ($history->items as $index => $message) {
+    echo " * " . ($message->data ?? 'null') . "\n";
+}
+```
+
+The output will look similar to the following:
+
+```[json]
+[
+  'Message number 5',
+  'Message number 4',
+  'Message number 3',
+  'Message number 2',
+  'Message number 1'
+]
+```
+
+h2(#next). Next steps
+
+Continue to explore the documentation with PHP as the selected language:
+
+Read more about the concepts covered in this guide:
+
+* Revisit the basics of "Pub/Sub":/docs/pub-sub?lang=php
+* Explore more "advanced":/docs/pub-sub/advanced?lang=php Pub/Sub concepts
+* Read more about how to use "presence":/docs/presence-occupancy/presence?lang=php in your apps
+* Fetch message "history":/docs/storage-history/history?lang=php in your apps
+
+You can also explore the Ably CLI further, or visit the Pub/Sub "API references":/docs/api/rest-sdk?lang=php.

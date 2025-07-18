@@ -22,36 +22,42 @@ export default {
       name: 'Getting started',
       pages: [
         {
-          name: 'JavaScript',
-          link: '/docs/getting-started/javascript',
-        },
-        {
-          name: 'React',
-          link: '/docs/getting-started/react',
-        },
-        {
-          name: 'React Native',
-          link: '/docs/getting-started/react-native',
-        },
-        {
-          name: 'Kotlin',
-          link: '/docs/getting-started/kotlin',
-        },
-        {
-          name: 'Swift',
-          link: '/docs/getting-started/swift',
-        },
-        {
-          name: 'Ruby',
-          link: '/docs/getting-started/ruby',
-        },
-        {
-          name: 'Python',
-          link: '/docs/getting-started/python',
-        },
-        {
-          name: 'Quickstart guide',
-          link: '/docs/getting-started/quickstart',
+          name: 'Guides',
+          pages: [
+            {
+              name: 'Index',
+              link: '/docs/getting-started',
+              index: true,
+            },
+            {
+              name: 'JavaScript',
+              link: '/docs/getting-started/javascript',
+            },
+            {
+              name: 'React',
+              link: '/docs/getting-started/react',
+            },
+            {
+              name: 'React Native',
+              link: '/docs/getting-started/react-native',
+            },
+            {
+              name: 'Kotlin',
+              link: '/docs/getting-started/kotlin',
+            },
+            {
+              name: 'Swift',
+              link: '/docs/getting-started/swift',
+            },
+            {
+              name: 'Ruby',
+              link: '/docs/getting-started/ruby',
+            },
+            {
+              name: 'PHP',
+              link: '/docs/getting-started/php',
+            },
+          ],
         },
         {
           name: 'SDK setup',

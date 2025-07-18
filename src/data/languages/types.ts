@@ -22,8 +22,9 @@ export const languageKeys = [
   'kotlin',
   'realtime',
   'rest',
+  'css',
 ] as const;
 
 export type LanguageKey = (typeof languageKeys)[number];
 
-export type LanguageData = Partial<Record<LanguageKey, number>>;
+export type LanguageData = Partial<Record<LanguageKey, string>>;
