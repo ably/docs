@@ -4,34 +4,36 @@ meta_description: "Learn how to implement message replies and quotes in your Abl
 meta_keywords: "ably chat, message replies, message quotes, chat replies, chat quotes, javascript chat replies, typescript chat replies, chat metadata, ably chat metadata, realtime chat replies"
 ---
 
-This page will show you how you could implement a simple solution for things like replies and quotes in your Ably Chat application.
 While the two features have different applications, they share the same fundamental principle of referencing other messages in the chat.
-As such, we will cover only replies in this guide, but the same principles can be applied to quotes.
+As such, only replies will be covered here, but the same principles can be applied to quotes.
 
-While cross-room replies are possible, this guide will focus on providing replies within the same room for simplicity.
+Cross-room replies are possible, but the focus here will be on providing replies within the same room for simplicity.
 
-## Understanding the current limitations <a id="limitations"/>
+## Message data <a id="message-data"/>
 
-While Ably Chat doesn't have built-in support for replies or quotes, you can implement this functionality by using the metadata fields that can be sent along with chat messages.
+Each message provides a range of fields that can be used to implement message replies, including the message's unique identifier `serial`, the time it was created `createdAt`, and the sender's ID `clientId`.
 
 Every message in Ably Chat has:
-- A `serial` field (a UUID that uniquely identifies the message)
+- A `serial` field (a unique string that identifies the message)
+- A `clientId` field (the ID of the user who sent the message)
+- A `text` field (the content of the message)
 - A `createdAt` field (when the message was created)
 - A `metadata` field (key-value store for custom data)
 
-By storing the serial and creation time of a message you want to quote in the metadata of a new message, you can create a reference between messages that your application can interpret and display accordingly.
+By storing the serial and creation time of a message you want to reply to in the metadata of a new message, you can create a reference between messages that your application can interpret and display accordingly.
 
-## Implementing replies using message metadata <a id="implementing-replies"/>
+## Implement replies using message metadata <a id="implementing-replies"/>
 
 To implement a reply to a message, you'll need to:
 
-1. Store the original message's information when a user wants to reply to it.
+1. Store the parent message's information when a user wants to reply to it.
 2. Include that information in the metadata when sending the reply.
 3. Process incoming messages to check for reply metadata.
 
-### Step 1: Store information about the message being replied to <a id="store-information"/>
+### Store information about the message being replied to <a id="store-information"/>
 
-When a user selects a message to reply to, you should store its key information. Extract the following properties from the original message:
+When a user selects a message to reply to, you should store its key information.
+This can be done by extracting the following properties from the parent message:
 
 - `serial`: The unique identifier of the message
 - `createdAt`: The creation time of the message (use `createdAt.getTime()`)
@@ -40,20 +42,20 @@ When a user selects a message to reply to, you should store its key information.
 
 Store this information in your application state or pass it to your message input component.
 
-For example, when a user clicks a "Reply" button on a message, you would extract these properties from the message and store them in your application state, perhaps in a variable called `replyingTo`.
+For example, when a user clicks a "Reply" button on a message:
 
 <Code>
 ```javascript
 import { Message } from '@ably/chat';
-function prepareReply(originalMessage: Message) {
-  // Extract key information from the original message
+function prepareReply(parentMessage: Message) {
+  // Extract key information from the parent message
   const replyingTo = {
-    serial: originalMessage.serial,
-    createdAt: originalMessage.createdAt.getTime(),
-    clientId: originalMessage.clientId,
-    previewText: originalMessage.text.length > 140
-      ? originalMessage.text.substring(0, 137) + '...'
-      : originalMessage.text
+    serial: parentMessage.serial,
+    createdAt: parentMessage.createdAt.getTime(),
+    clientId: parentMessage.clientId,
+    previewText: parentMessage.text.length > 140
+      ? parentMessage.text.substring(0, 137) + '...'
+      : parentMessage.text
   };
   return replyingTo;
 }
@@ -67,15 +69,15 @@ import { Message } from '@ably/chat';
 const ChatComponent = () => {
   const [replyingTo, setReplyingTo] = React.useState();
   // Function to prepare reply data
-  const prepareReply = (originalMessage) => {
-    // Extract key information from the original message
+  const prepareReply = (parentMessage) => {
+    // Extract key information from the parent message
     const replyingTo = {
-      serial: originalMessage.serial,
-      createdAt: originalMessage.createdAt.getTime(),
-      clientId: originalMessage.clientId,
-      previewText: originalMessage.text.length > 140
-        ? originalMessage.text.substring(0, 137) + '...'
-        : originalMessage.text
+      serial: parentMessage.serial,
+      createdAt: parentMessage.createdAt.getTime(),
+      clientId: parentMessage.clientId,
+      previewText: parentMessage.text.length > 140
+        ? parentMessage.text.substring(0, 137) + '...'
+        : parentMessage.text
     };
 
     // Store in component state
@@ -96,21 +98,21 @@ const ChatComponent = () => {
 ```
 </Code>
 
-### Step 2: Send a reply message with metadata <a id="send-reply"/>
+### Send a reply message with metadata <a id="send-reply"/>
 
-When sending the reply message, include the original message's information in the metadata.
-Create a metadata object with a "reply" property that contains the original message's serial, timestamp and optionally the clientId and a snippet of the original text.
+When sending a reply message, include the parent message's information in the metadata.
+Create a metadata object with a property that contains the parent message's serial, timestamp and optionally the clientId and a snippet of the parent text (for previewing).
 
-The structure of your metadata object should look like this:
+The structure of your metadata could look like this:
 
 <Code>
 ```json
 {
   "reply": {
-    "serial": "original-message-serial",
+    "serial": "parent-message-serial",
     "createdAt": 1634567890123,
-    "clientId": "original-sender-id",
-    "previewText": "Snippet of the original message..."
+    "clientId": "sender-id",
+    "previewText": "Snippet of the parent message..."
   }
 };
 ```
@@ -223,27 +225,28 @@ To test this out, you can try sending a message to a room, and then sending a re
 
 <Code>
   ```javascript
-  const originalMessage = await room.messages.send({
-  text: "Hello, this is the original message!"
+  const parentMessage = await room.messages.send({
+  text: "Hello, this is the parent message!"
 });
 
-  const replyText = "This is a reply to the original message!";
+  const replyText = "This is a reply to the parent message!";
 
-  await sendReply(originalMessage, replyText);
+  await sendReply(parentMessage, replyText);
   ```
 </Code>
 </If>
 
-## Handling received messages with reply metadata <a id="handling-received-messages"/>
+## Handle received messages with reply metadata <a id="handle-received-messages"/>
 
 When receiving messages, you need to check if they contain reply metadata and display them accordingly. Here's how to do it:
+
 1. Subscribe to messages in the room using <If lang="javascript">[`room.messages.subscribe()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html#subscribe)</If><If lang="react">[`useMessages()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useMessages.html) and providing a callback via the `listener` param</If>.
 2. In the callback function, examine each incoming message.
 3. Check if the message has a `metadata.reply` property.
 4. If it does, extract the reply information (serial, createdAt, clientId, etc.).
-5. Find the original message in your local state using the serial stored in the metadata.
-6. If the original message is found, display the message as a reply with context from the original message.
-7. If the original message is not found, you might want to fetch it (see next section) or display a simplified version using the preview data.
+5. Find the parent message in your local state using the serial stored in the metadata.
+6. If the parent message is found, display the message as a reply with context from the parent message.
+7. If the parent message is not found, you might want to fetch it (see next section) or display a simplified version using the preview data.
 
 <Code>
 ```javascript
@@ -255,17 +258,17 @@ const messageSubscription = room.messages.subscribe((messageEvent) => {
   if (message.metadata && message.metadata.reply) {
     const replyData = message.metadata.reply;
 
-    // Find the original message in your local state
-    const originalMessage = localMessages.find(msg => msg.serial === replyData.serial);
+    // Find the parent message in your local state
+    const parentMessage = localMessages.find(msg => msg.serial === replyData.serial);
 
     // Display the reply message
-    displayReply(message, originalMessage, replyData);
+    displayReply(message, parentMessage, replyData);
   }
 });
 
-function displayReply(replyMessage, originalMessage, replyData) {
-  if (originalMessage) {
-    console.log(`Reply from ${replyMessage.clientId} to ${originalMessage.clientId}'s message: "${originalMessage.text}"`);
+function displayReply(replyMessage, parentMessage, replyData) {
+  if (parentMessage) {
+    console.log(`Reply from ${replyMessage.clientId} to ${parentMessage.clientId}'s message: "${parentMessage.text}"`);
   } else {
     console.log(`Reply from ${replyMessage.clientId} to a message by ${replyData.clientId}`);
   }
@@ -280,6 +283,7 @@ import { ChatMessageEventType, Message } from '@ably/chat';
 
 const MessageList = () => {
   const [messages, setMessages] = useState<Message[]([]);
+  // Subscribe to messages
   useMessages({
     listener: (event) => {
       if (event.type === ChatMessageEventType.Created) {
@@ -288,7 +292,8 @@ const MessageList = () => {
       }
     });
 
-  const findOriginalMessage = (replyData) => {
+  // Find the parent message for a reply
+  const findParentMessage = (replyData) => {
     return messages.find(msg => msg.serial === replyData.serial);
   };
 
@@ -299,10 +304,10 @@ const MessageList = () => {
         <div key={message.serial}>
           {message.metadata?.reply && (
             <div>
-              {findOriginalMessage(message.metadata.reply) ? (
+              {findParentMessage(message.metadata.reply) ? (
                 <div>
-                  <span>Replying to {findOriginalMessage(message.metadata.reply).clientId}:</span>
-                  <p>{findOriginalMessage(message.metadata.reply).text}</p>
+                  <span>Replying to {findParentMessage(message.metadata.reply).clientId}:</span>
+                  <p>{findParentMessage(message.metadata.reply).text}</p>
                 </div>
               ) : (
                 <div>
@@ -329,9 +334,9 @@ const MessageList = () => {
 
 Your message subscription logic should check for the reply metadata and handle it appropriately.
 
-When displaying a reply message, you might want to show a preview of the original message, the name of the original sender, or a visual indication that it's a reply.
+When displaying a reply message, you might want to show a preview of the parent message, the name of the its sender, or a visual indication that it's a reply.
 
-## Finding quoted messages that aren't in local state <a id="finding-quoted-messages"/>
+## Find parent messages that aren't in local state <a id="find-parent-messages"/>
 
 If a reply references a message that isn't in your local state (for example, if a user just joined the chat), you can use the history methods to find it. Here's how:
 
@@ -344,8 +349,8 @@ If a reply references a message that isn't in your local state (for example, if 
 
 <Code>
 ```javascript
-// Function to fetch the original message referenced in a reply
-async function fetchOriginalMessage(replyData) {
+// Function to fetch the parent message referenced in a reply
+async function fetchParentMessage(replyData) {
     const timestamp = replyData.createdAt;
     try {
         // Query messages at this specific timestamp
@@ -356,17 +361,17 @@ async function fetchOriginalMessage(replyData) {
         });
 
         // Find the message with the matching serial
-        let originalMessage = result.items.find(msg => msg.serial === replyData.serial);
+        let parentMessage = result.items.find(msg => msg.serial === replyData.serial);
 
-        // If message not found and more pages exist, continue searching
-        while (!originalMessage && result.hasNext()) {
+        // If the message is not found and more pages exist, continue searching
+        while (!parentMessage && result.hasNext()) {
             // Get the next page of results
             result = await result.next();
-            originalMessage = result.items.find(msg => msg.serial === replyData.serial);
+            parentMessage = result.items.find(msg => msg.serial === replyData.serial);
         }
-        return originalMessage;
+        return parentMessage;
     } catch (error) {
-        console.error('Error fetching original message:', error);
+        console.error('Error fetching parent message:', error);
         // Handle error appropriately in your application
     }
 }
@@ -377,8 +382,8 @@ import React, { useState, useEffect } from 'react';
 import { useMessages } from '@ably/chat/react';
 import { Message } from '@ably/chat';
 
-const FetchOriginalMessage = ({ replyData }) => {
-  const [originalMessage, setOriginalMessage] = useState<Message>();
+const FetchParentMessage = ({ replyData }) => {
+  const [parentMessage, setParentMessage] = useState<Message>();
   const { history } = useMessages();
 
   useEffect(() => {
@@ -396,17 +401,17 @@ const FetchOriginalMessage = ({ replyData }) => {
           msg => msg.serial === replyData.serial
         );
 
-        // If message not found and more pages exist, continue searching
+        // If the message is not found and more pages exist, continue searching
         while (!foundMessage && result.hasNext()) {
           // Get the next page of results
           result = await result.next();
           foundMessage = result.items.find(msg => msg.serial === replyData.serial);
         }
-
-        setOriginalMessage(foundMessage);
+        // Set the parent message in state
+        setParentMessage(foundMessage);
 
       } catch (err) {
-        console.error('Error fetching original message:', err);
+        console.error('Error fetching parent message:', err);
       }
     };
 
@@ -416,11 +421,11 @@ const FetchOriginalMessage = ({ replyData }) => {
 
   return (
     <div>
-      {originalMessage && (
+      {parentMessage && (
         <div>
-          <h3>Original Message:</h3>
-          <p>{originalMessage.text}</p>
-          <span>Sent by: {originalMessage.clientId}</span>
+          <h3>Parent Message:</h3>
+          <p>{parentMessage.text}</p>
+          <span>Sent by: {parentMessage.clientId}</span>
         </div>
       )}
     </div>
@@ -429,13 +434,13 @@ const FetchOriginalMessage = ({ replyData }) => {
 ```
 </Code>
 
-Here we use the exact timestamp to narrow down the search, reducing the number of messages to check. Since the start and end parameters are inclusive, you can set both to the exact timestamp of the original message.
+Here the exact timestamp is used to narrow down the search, reducing the number of messages to check. Since the start and end parameters are inclusive, you can set both to the exact timestamp of the parent message.
 
-If many messages are sent around the same time, you might need to increase the limit or handle pagination to ensure you find the original message.
+If many messages are sent around the same time, you might want to increase the limit or handle pagination to ensure you find the parent message.
 
-## Using historyBeforeSubscribe <a id="using-history-before-subscribe"/>
+## Use historyBeforeSubscribe <a id="use-history-before-subscribe"/>
 
-The [`historyBeforeSubscribe`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.SubscribeMessagesResponse.html#historyBeforeSubscribe) method is another option that can be used to query history. It allows you to search backwards from the point you attach to a room, which can be useful for finding original messages for replies.
+The [`historyBeforeSubscribe`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.SubscribeMessagesResponse.html#historyBeforeSubscribe) method is another option that can be used to query history. It allows you to search backwards from the point you attach to a room, which can be useful for finding parent messages for recent replies.
 
 The bonus here is that it will only return messages that were sent before you subscribed, and you get to backfill your local state at the same time. While this is useful for recent messages, it may not be the best option for older messages or high message rate situations.
 
@@ -453,8 +458,8 @@ Here's a simple example that demonstrates how to implement a chat interface with
 1. It uses the [`messages`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Messages.html) feature to subscribe to new messages and send messages
 2. It maintains a local state of messages
 3. It allows users to reply to messages by clicking on them
-4. When sending a reply, it includes the original message's information in the metadata
-5. When displaying a reply, it shows the original message's context if available
+4. When sending a reply, it includes the parent message's information in the metadata
+5. When displaying a reply, it shows the parent message's context if available
 </If>
 
 <If lang="react">
@@ -463,8 +468,8 @@ Here's a simple React component that demonstrates how to implement a chat interf
 1. It uses the [`useMessages()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.useMessages.html) hook to subscribe to new messages and send messages
 2. It maintains a local state of messages
 3. It allows users to reply to messages by clicking on them
-4. When sending a reply, it includes the original message's information in the metadata
-5. When displaying a reply, it shows the original message's context if available
+4. When sending a reply, it includes the parent message's information in the metadata
+5. When displaying a reply, it shows the parent message's context if available
 </If>
 
 <Code>
@@ -475,8 +480,8 @@ import { ChatClient, ChatMessageEventType } from '@ably/chat';
 const messages = [];
 let replyingTo = null;
 
-// Find original message for a reply
-function findOriginalMessage(serial) {
+// Find parent message for a reply
+function findParentMessage(serial) {
     return messages.find(msg => msg.serial === serial) || null;
 }
 
@@ -526,13 +531,13 @@ function renderMessage(message) {
     // Add reply context if this is a reply
     if (message.metadata?.reply) {
         const replyData = message.metadata.reply;
-        const originalMessage = findOriginalMessage(replyData.serial);
+        const parentMessage = findParentMessage(replyData.serial);
 
         const replyContext = document.createElement('div');
         replyContext.className = 'reply-context';
 
-        if (originalMessage) {
-            replyContext.textContent = `Replying to ${originalMessage.clientId}: ${originalMessage.text}`;
+        if (parentMessage) {
+            replyContext.textContent = `Replying to ${parentMessage.clientId}: ${parentMessage.text}`;
         } else {
             replyContext.textContent = `Replying to ${replyData.clientId}: ${replyData.previewText}`;
         }
@@ -658,8 +663,8 @@ const ChatComponent = () => {
     }
   };
 
-  // Find original message for a reply
-  const findOriginalMessage = (serial) => {
+  // Find parent message for a reply
+  const findParentMessage = (serial) => {
     return messages.find(msg => msg.serial === serial);
   };
 
@@ -688,9 +693,9 @@ const ChatComponent = () => {
             {message.metadata?.reply && (
               <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
                 {(() => {
-                  const original = findOriginalMessage(message.metadata.reply.serial);
-                  if (original) {
-                    return `Replying to ${original.clientId}: ${original.text}`;
+                  const parent = findParentMessage(message.metadata.reply.serial);
+                  if (parent) {
+                    return `Replying to ${parent.clientId}: ${parent.text}`;
                   } else {
                     return `Replying to ${message.metadata.reply.clientId}: ${message.metadata.reply.previewText}`;
                   }
@@ -768,7 +773,7 @@ const ChatComponent = () => {
 ```
 </Code>
 
-Ably Chat doesn't provide built-in UI components or reply functionality **yet**, so you'll need to implement these aspects yourself using the metadata approach described in this guide. The steps outlined in the previous sections provide the foundation for building a complete reply system in your application.
+The steps outlined in the previous sections provide the foundation for building a complete reply system in your application.
 
 ## Limitations and considerations <a id="limitations-and-considerations"/>
 
@@ -776,7 +781,7 @@ When implementing replies and quotes using metadata, keep these considerations i
 
 1. **Message availability**: If a quoted message is very old, it might not be available in history anymore, depending on your Ably account's [message persistence](docs/storage-history/storage#persist-last-message) settings.
 
-2. **Message updates**: Because messages can be updated (including the metadata), it's possible to accidentally remove the quoted message reference. Also, if providing a message preview, you will have to handle updates to the original message text, as the preview might become outdated.
+2. **Message updates**: Because messages can be updated (including the metadata), it's possible to accidentally remove the quoted message reference. Also, if providing a message preview, you will have to handle updates to the parent message text, as the preview might become outdated.
 
 3. **No server-side validation**: Since metadata is not validated by the server, you should ensure that your application logic correctly handles cases where the metadata might be malformed or missing.
 
@@ -787,8 +792,6 @@ When implementing replies and quotes using metadata, keep these considerations i
 6. **Nested replies**: Implementing nested replies (replies to replies) in this fashion can be potentially expensive and error-prone. You may have to query history multiple times to fetch all nested replies, and either:
     - Store the reply metadata for all of a child's parents in its own metadata field, or
     - Do a new history fetch for each message as you make your way up the reply tree.
-
-7. **No built-in API**: You'll need to build some of your own custom components and logic to handle replies and quotes.
 
 ## Next steps <a id="next-steps"/>
 
