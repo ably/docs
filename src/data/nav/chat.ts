@@ -88,6 +88,10 @@ export default {
           name: 'Room reactions',
           link: '/docs/chat/rooms/reactions',
         },
+        {
+          name: 'Replies and quotes',
+          link: '/docs/chat/rooms/replies',
+        },
       ],
     },
     {
@@ -167,11 +171,6 @@ export default {
         {
           name: 'Livestream chat',
           link: '/docs/guides/chat/build-livestream',
-        },
-        {
-          name: 'Replies',
-          link: '/docs/guides/chat/replies',
-          languages: ['react', 'javascript'],
         },
       ],
     },
