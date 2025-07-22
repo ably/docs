@@ -41,28 +41,30 @@ const getDependencies = (id: string, products: string[], activeLanguage: Languag
     nanoid: '^5.0.7',
     minifaker: '1.34.1',
     ...(products.includes('auth') ? { cors: '^2.8.5' } : {}),
-    ...(products.includes('chat') ? { '@ably/chat': '^0.11.0', '@ably/chat-react-ui-components': '^0.1.0', 'clsx':'^2.1.1' } : {}),
+    ...(products.includes('chat')
+      ? { '@ably/chat': '^0.11.0', '@ably/chat-react-ui-components': '^0.1.0', clsx: '^2.1.1' }
+      : {}),
     ...(products.includes('spaces') ? { '@ably/spaces': '^0.4.0' } : {}),
     ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
     ...(activeLanguage === 'react' || products.includes('chat') || products.includes('spaces')
       ? {
-        react: '^18',
-        'react-dom': '^18',
-        'react-icons': '^5.4.0',
-        'react-router-dom': '^6.22.2',
-      }
+          react: '^18',
+          'react-dom': '^18',
+          'react-icons': '^5.4.0',
+          'react-router-dom': '^6.22.2',
+        }
       : {}),
     ...(id === 'pub-sub-history' && activeLanguage === 'react' ? { uikit: '^3.16.22' } : {}),
   };
 };
 
 const ExamplesRenderer = ({
-                            example,
-                            apiKey,
-                            activeLanguage,
-                            setActiveLanguage,
-                            children,
-                          }: PropsWithChildren<ExamplesRendererProps>) => {
+  example,
+  apiKey,
+  activeLanguage,
+  setActiveLanguage,
+  children,
+}: PropsWithChildren<ExamplesRendererProps>) => {
   const { id, files, visibleFiles, layout, products } = example;
 
   const rewrittenFiles = useMemo<ExampleFiles>(() => {
@@ -110,12 +112,16 @@ const ExamplesRenderer = ({
               ? 'md:w-[calc(100vw-64px-350px)] lg:w-[calc(100vw-176px-350px)] xl:w-[calc(1440px-176px-350px)]'
               : 'lg:w-[calc(100vw-160px)] xl:w-[calc(1440px-160px)]',
           ),
-          'sp-file-explorer': cn('sm:!w-[10.75rem] sm:min-w-[auto]', isVerticalLayout && 'sm:!h-[25rem]', isLargeLayout && 'sm:!h-[20rem]'),
+          'sp-file-explorer': cn(
+            'sm:!w-[10.75rem] sm:min-w-[auto]',
+            isVerticalLayout && 'sm:!h-[25rem]',
+            isLargeLayout && 'sm:!h-[20rem]',
+          ),
           'sp-editor': cn(isVerticalLayout && 'sm:!h-[25rem]', isLargeLayout && 'sm:!h-[20rem]'),
           'sp-preview': cn(
             '!h-80 w-full',
             isVerticalLayout && '!h-[21.875rem] md:!h-full md:!w-[21.875rem]',
-            isLargeLayout && '!h-full w-full'
+            isLargeLayout && '!h-full w-full',
           ),
         },
         externalResources: [
@@ -123,19 +129,21 @@ const ExamplesRenderer = ({
           'https://unpkg.com/franken-ui@2.0.0/dist/css/core.min.css',
           ...(id === 'pub-sub-history'
             ? [
-              'https://cdn.jsdelivr.net/npm/uikit@3.16.22/dist/js/uikit.min.js',
-              'https://cdn.jsdelivr.net/npm/uikit@3.16.22/dist/js/uikit-icons.min.js',
-            ]
+                'https://cdn.jsdelivr.net/npm/uikit@3.16.22/dist/js/uikit.min.js',
+                'https://cdn.jsdelivr.net/npm/uikit@3.16.22/dist/js/uikit-icons.min.js',
+              ]
             : []),
         ],
       }}
       theme={githubLight}
       template={determineSandpackTemplate(activeLanguage as LanguageKey)}
     >
-      <div className={cn(
-        "bg-neutral-100 dark:bg-neutral-1200 p-4 rounded-2xl flex flex-col gap-4",
-        isLargeLayout && "pb-8"
-      )}>
+      <div
+        className={cn(
+          'bg-neutral-100 dark:bg-neutral-1200 p-4 rounded-2xl flex flex-col gap-4',
+          isLargeLayout && 'pb-8',
+        )}
+      >
         <div className="flex gap-1">
           {Object.keys(rewrittenFiles).map((languageKey) => (
             <SegmentedControl
@@ -150,11 +158,13 @@ const ExamplesRenderer = ({
             </SegmentedControl>
           ))}
         </div>
-        <div className={cn(
-          'flex flex-col gap-4 max-w-[calc(100vw-64px)]',
-          isVerticalLayout && 'md:flex-row',
-          isLargeLayout && 'md:flex-col'
-        )}>
+        <div
+          className={cn(
+            'flex flex-col gap-4 max-w-[calc(100vw-64px)]',
+            isVerticalLayout && 'md:flex-row',
+            isLargeLayout && 'md:flex-col',
+          )}
+        >
           <CodeEditor
             theme="light"
             editor={{
@@ -162,15 +172,14 @@ const ExamplesRenderer = ({
               showLineNumbers: true,
             }}
           />
-          <div className={cn(
-            'flex gap-4 flex-col sm:flex-row',
-            isVerticalLayout && 'md:flex-col',
-            isLargeLayout && 'md:flex-row md:justify-center md:h-fit md:min-h-[700px]'
-          )}>
-            <div className={cn(
-              'relative flex-1',
-              isLargeLayout && 'md:max-w-6xl'
-            )}>
+          <div
+            className={cn(
+              'flex gap-4 flex-col sm:flex-row',
+              isVerticalLayout && 'md:flex-col',
+              isLargeLayout && 'md:flex-row md:justify-center md:h-fit md:min-h-[700px]',
+            )}
+          >
+            <div className={cn('relative flex-1', isLargeLayout && 'md:max-w-6xl')}>
               <SandpackPreview
                 className="rounded-lg overflow-hidden"
                 showOpenInCodeSandbox={false}
