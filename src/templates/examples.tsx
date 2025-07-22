@@ -60,7 +60,8 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
   const meta_title = example.metaTitle || `Ably Examples | ${example.name}`;
   const meta_description = example.metaDescription || example.description;
   const userData = useContext(UserContext);
-  const apiKey = getApiKey(userData);
+  const apiKey = getApiKey(userData, true);
+
   const isFirstRender = useRef(true);
   const [activeLanguage, setActiveLanguage] = React.useState<LanguageKey>(() => {
     // Get all available language keys from the example
