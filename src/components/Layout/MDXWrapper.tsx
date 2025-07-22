@@ -105,10 +105,14 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
 
   const apiKeys = useMemo(
     () =>
-      userContext.apps?.flatMap(({ name, apiKeys }) => ({
-        app: name,
-        keys: apiKeys.map((apiKey) => ({ name: apiKey.name, key: apiKey.whole_key })),
-      })),
+      userContext.apps && userContext.apps.length > 0 && userContext.apps[0].apiKeys.length > 0
+        ? userContext.apps
+            .filter(({ demo }) => !demo)
+            .flatMap(({ name, apiKeys }) => ({
+              app: name,
+              keys: apiKeys.map((apiKey) => ({ name: apiKey.name, key: apiKey.whole_key })),
+            }))
+        : [{ app: 'demo', keys: [{ name: 'demo', key: 'demokey:123456' }] }],
     [userContext.apps],
   );
 
