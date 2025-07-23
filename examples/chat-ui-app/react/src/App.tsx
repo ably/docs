@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import * as Ably from 'ably';
 import { ChatClient } from '@ably/chat';
 import { ChatClientProvider } from '@ably/chat/react';
@@ -21,10 +20,11 @@ const ablyClient = new Ably.Realtime({
 // Initialize the Chat client
 const chatClient = new ChatClient(ablyClient);
 
+// Initial room to join when the app loads
+const initialRooms = ['general'];
+
 export default function App() {
   // Initial room to join when the app loads
-  const [initialRooms] = useState<string[]>(['general']);
-
   return (
     <ThemeProvider>
         <AvatarProvider>
