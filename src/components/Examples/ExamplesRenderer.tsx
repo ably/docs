@@ -176,7 +176,7 @@ const ExamplesRenderer = ({
             className={cn(
               'flex gap-4 flex-col sm:flex-row',
               isVerticalLayout && 'md:flex-col',
-              isLargeLayout && 'md:flex-row md:justify-center md:h-fit md:min-h-[700px]',
+              isLargeLayout && 'md:flex-row md:justify-center md:h-fit md:min-h-[700px] min-h-[400px]',
             )}
           >
             <div className={cn('relative flex-1', isLargeLayout && 'md:max-w-6xl')}>
