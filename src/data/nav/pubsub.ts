@@ -25,7 +25,7 @@ export default {
           name: 'Guides',
           pages: [
             {
-              name: 'Index',
+              name: 'Overview',
               link: '/docs/getting-started',
               index: true,
             },
