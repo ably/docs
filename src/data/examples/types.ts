@@ -6,7 +6,7 @@ export type Example = {
   description: string;
   products: string[];
   languages?: LanguageKey[];
-  layout?: 'single-horizontal' | 'double-horizontal' | 'single-vertical' | 'double-vertical';
+  layout?: 'single-horizontal' | 'double-horizontal' | 'single-vertical' | 'double-vertical' | 'single-large';
   visibleFiles?: string[];
   metaTitle?: string;
   metaDescription?: string;
