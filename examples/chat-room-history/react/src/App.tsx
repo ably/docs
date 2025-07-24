@@ -26,7 +26,7 @@ export default function App() {
 
   return (
     <ChatClientProvider client={chatClient}>
-      <ChatRoomProvider id={roomName}>
+      <ChatRoomProvider name={roomName}>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
