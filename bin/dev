@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# Exit on any error
+set -e
+
+# Show help if requested
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    echo "Usage: ./bin/dev"
+    echo ""
+    echo "This script ensures all requisite tools are installed via asdf,"
+    echo "runs yarn install, and then starts the development server."
+    echo ""
+    echo "Requirements:"
+    echo "  - asdf must be installed"
+    echo "  - .tool-versions file must exist in the project root"
+    echo ""
+    echo "The script will:"
+    echo "  1. Check if asdf is installed"
+    echo "  2. Install/update tools from .tool-versions"
+    echo "  3. Set local versions for the project"
+    echo "  4. Run yarn install"
+    echo "  5. Start the development server (yarn dev)"
+    exit 0
+fi
+
+echo "🚀  Starting development environment setup..."
+
+# Check if asdf is installed
+if ! command -v asdf &> /dev/null; then
+    echo "❌  asdf is not installed. Please install asdf first:"
+    echo "   https://asdf-vm.com/guide/getting-started.html"
+    exit 1
+fi
+
+# Check if .tool-versions file exists
+if [ ! -f ".tool-versions" ]; then
+    echo "❌  .tool-versions file not found in current directory"
+    exit 1
+fi
+
+echo "🧰  Installing/updating asdf tools from .tool-versions..."
+
+# Check all tools in .tool-versions
+while read -r tool version; do
+  # Skip empty lines
+  [[ -z "$tool" || -z "$version" ]] && continue
+  
+  echo "🛠️  Checking $tool version..."
+  
+  # Check if tool is installed via asdf
+  if ! asdf where "$tool" >/dev/null 2>&1; then
+    echo "🛠️ $tool is not installed via asdf, installing $version..."
+    asdf plugin add "$tool" 2>/dev/null || true
+    asdf install "$tool" "$version"
+  else
+    # Check if the correct version is installed
+    if ! asdf list "$tool" | grep -q "$version"; then
+      echo "🛠️  Installing $tool $version..."
+      asdf plugin update $tool
+      asdf install "$tool" "$version"
+    fi
+  fi
+done < .tool-versions
+
+# Ensure asdf shims are up to date
+asdf reshim
+
+echo "📦  Installing yarn dependencies..."
+yarn install
+
+# Check if .env.development exists
+if [ ! -f ".env.development" ]; then
+    echo "🛠️  .env.development not found, running environment setup..."
+    yarn develop:env-setup
+fi
+
+echo "🎯  Starting development server..."
+yarn develop
