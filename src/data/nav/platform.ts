@@ -303,12 +303,12 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/docs/errors',
+          link: '/docs/platform/errors',
           index: true,
         },
         {
           name: 'Error codes',
-          link: '/docs/errors/codes',
+          link: '/docs/platform/errors/codes',
         },
       ],
     },
