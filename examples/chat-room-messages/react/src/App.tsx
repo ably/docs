@@ -24,7 +24,7 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const { clientId } = useChatClient();
-  const { send } = useMessages({
+  const { sendMessage } = useMessages({
     listener: (event: ChatMessageEvent) => {
       setMessages((prevMessages: Message[]) => [...prevMessages, event.message]);
     },
@@ -32,7 +32,7 @@ const Chat = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    send({ text: message });
+    sendMessage({ text: message });
     setMessage('');
   };
 
