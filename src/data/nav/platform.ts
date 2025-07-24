@@ -43,6 +43,10 @@ export default {
           link: '/docs/platform/architecture/performance',
         },
         {
+          name: 'Latency',
+          link: '/docs/platform/architecture/latency',
+        },
+        {
           name: 'Platform scalability',
           link: '/docs/platform/architecture/platform-scalability',
         },

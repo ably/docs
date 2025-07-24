@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChatClient, Reaction as ReactionInterface, RoomReactionEvent } from '@ably/chat';
+import { ChatClient, RoomReaction as ReactionInterface, RoomReactionEvent } from '@ably/chat';
 import { ChatClientProvider, ChatRoomProvider, useRoom, useRoomReactions } from '@ably/chat/react';
 import { Realtime } from 'ably';
 import './styles/styles.css';
@@ -14,7 +14,7 @@ function Chat() {
   const [reactions, setReactions] = useState<ReactionInterface[]>([]);
   const emojis = ['❤️', '😲', '👍', '😊'];
 
-  const { send } = useRoomReactions({
+  const { sendRoomReaction } = useRoomReactions({
     listener: (reactionEvent: RoomReactionEvent) => {
       const reaction = reactionEvent.reaction;
       setReactions((prevReactions: ReactionInterface[]) => [...prevReactions, { ...reaction }]);
@@ -35,7 +35,7 @@ function Chat() {
         <div className="border-t-2 border-gray-200 px-4 pt-4 mb-2 sm:mb-0">
           <div className="emoji-selector">
             {emojis.map((emoji, index) => (
-              <span key={index} className="emoji-btn" onClick={() => send({ name: emoji })}>
+              <span key={index} className="emoji-btn" onClick={() => sendRoomReaction({ name: emoji })}>
                 {emoji}
               </span>
             ))}
