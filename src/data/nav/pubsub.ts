@@ -50,6 +50,14 @@ export default {
               link: '/docs/getting-started/swift',
             },
             {
+              name: 'Go',
+              link: '/docs/getting-started/go',
+            },
+            {
+              name: 'Python',
+              link: '/docs/getting-started/python',
+            },
+            {
               name: 'Ruby',
               link: '/docs/getting-started/ruby',
             },
