@@ -1,0 +1,141 @@
+---
+title: Architecture overview
+meta_description: "Learn more about Ably's platform architecture."
+meta_keywords: "architecture"
+---
+
+Ably's platform architecture is built to deliver dependable realtime experiences at global scale.
+
+As the definitive realtime experience platform, Ably serves billions of devices monthly and delivers over half a trillion messages monthly.
+
+## At a glance
+
+Ably's globally distributed infrastructure forms the foundation of the platform, allowing Ably to maintain exceptional performance, while serving massive scale and providing industry-leading quality of service guarantees.
+
+Ably characterizes the system across [4 pillars of dependability](https://ably.com/four-pillars-of-dependability):
+
+* **Performance**: Ably focuses on predictability of latencies to provide certainty in uncertain operating conditions.
+** `<30ms` round trip latency within datacenter (99th percentile)
+** `<65ms` global round trip latency (99th percentile)
+* **Integrity**: Guarantees for message ordering and delivery.
+** Exactly-once delivery semantics
+** Guaranteed message ordering from publishers to subscribers
+** Automatic connection recovery with message continuity
+* **Reliability**: Fault tolerant architecture at regional and global levels to survive multiple failures without outages.
+** 99.999999% message survivability
+** 99.99999999% persisted data survivability
+** Edge network failure resolution by the client SDKs within 30s
+** Automated routing of all traffic away from an abrupt failure of datacenter in less than two minutes
+* **Availability**: Meticulously designed to provide continuity of service even in the case of instance or whole datacenter failures.
+** 99.999% global service availability (5 minutes 15 seconds of downtime per year)
+** 50% global capacity margin for instant demand surges
+
+## Design objectives
+
+Ably's platform is a global service that supports all realtime messaging and associated services. It is architected to achieve horizontal scalability with [no effective ceiling](https://ably.com/blog/ablys-four-pillars-no-scale-ceiling) on application scale, while maintaining consistent latency, message integrity, and system reliability across the global network.
+
+The platform has been designed with the following primary objectives in mind:
+
+* **Horizontal scalability**: As more nodes are added, load is automatically redistributed across the cluster so that global capacity increases linearly with the number of instances Ably runs.
+* **No single point of congestion**: As the system scales, there is no single point of congestion for any data path, and data within the system is routed peer-to-peer, ensuring no single component becomes overloaded as traffic scales for an individual app or across the cluster.
+* **Fault tolerance**: Faults in the system are expected, and the system must have redundancy at every layer in the stack to ensure availability and reliability.
+* **Autonomy**: Each component in the system should be able to operate fully without reliance on a global controller. For example, two isolated data centers should continue to service realtime requests while isolated.
+* **Consistent low latencies**: Within data centers, Ably aims for latencies to be in the low 10s of milliseconds and less than 100ms globally. Consistently achieving low latencies requires careful consideration of the placement of data and services across the system as well as prioritisation of the computation performed by each service.
+* **Quality of service**: Ably intentionally designs for high QoS targets to enable sophisticated realtime applications that would be impossible on platforms with weaker guarantees.
+
+## Cluster architecture
+
+Ably's platform runs on AWS EC2 infrastructure with a globally distributed architecture. Ably's [clusters](/docs/platform/account/enterprise-customization#dedicated-and-isolated-clusters) typically span multiple regions, usually between two and ten. This multi-region approach maximizes availability and is a critical aspect of providing a fault tolerant service.
+
+Each regional deployment operates independently, handling its own subscriber connections, REST traffic, channel management and message routing. When activity occurs on a channel across multiple regions, messages flow peer-to-peer between regions directly, eliminating central bottlenecks and single points of failure.
+
+Ably's architecture consists of four primary layers:
+
+* **Routing Layer**: Provides intelligent, latency optimized routing for robust end client connectivity.
+* **Gossip Layer**: Distributes network topology information and facilitates service discovery.
+* **Frontend Layer**: Handles REST requests and maintains realtime connections (such as WebSocket, Comet and SSE).
+* **Core Layer**: Performs all central message processing for channels.
+
+![Ably Architecture Overview Diagram](../../../../images/content/diagrams/architecture-overview.png)
+
+Each component scales independently in each region based on demand. Ably continuously monitors CPU, memory, and other key metrics, triggering autoscaling based on aggregated performance indicators.
+
+The key to Ably's horizontal scalability is intelligent load distribution that efficiently utilizes new capacity as it becomes available:
+
+* In the frontend layer, new instances join the load balancer pool and begin handling their share of incoming connections and REST requests.
+* In the core layer, Ably employs consistent hashing to distribute channels across core processes - each core maintains a set of pseudo-randomly generated hashes that determine channel placement. As the cluster scales, channels automatically relocate to maintain even load distribution.
+
+### Routing layer
+
+Ably's latency-optimized routing infrastructure provides multiple layers of resilience to ensure reliable connectivity even during partial system failures.
+
+#### Intelligent routing
+
+Ably's custom routing layer provides sophisticated traffic management through deep integration with the application architecture.
+
+The routing layer is cluster-aware and implements advanced retry strategies, enables zero-downtime deployments, and distributes instrumentation across the cluster.
+
+This intelligent routing ensures traffic is directed optimally even as the system scales or during partial failures.
+
+#### DNS and edge protection
+
+Ably uses latency-based routing to ensure clients are consistently routed to their closest datacenter.
+
+Ably employs multiple DNS providers and global load balancing strategies for resilient connectivity, allowing client libraries to route around regional issues and ensuring consistent connectivity.
+
+The routing layer automatically removes unhealthy regions from DNS resolution and offers advanced DDoS protection at the edge.
+
+#### Connection management
+
+Ably's SDKs implement sophisticated connection management with automatic failover capabilities.
+
+Clients seamlessly handle transient disconnections and the system preserves message continuity if the connection is re-established within two minutes.
+
+Clients automatically select the best available transport (such as WebSocket or Comet) and seamlessly migrate connections across transports to provide the best possible service.
+
+Re-connection attempts cycle through up to 6 globally distributed endpoints. Clients automatically attempt to reconnect via alternative endpoints if a connection attempt fails.
+
+Progressive connection timeout strategies ensure rapid recovery from transient issues, while continuous connection quality monitoring triggers proactive reconnection when performance degrades.
+
+### Gossip layer
+
+Every cluster Ably operates includes a network of gossip nodes, spanning all regions, that participate in a (Scuttlebutt-inspired) gossip protocol to facilitate service discovery and even distribution of work across the cluster. Other nodes in the cluster communicate with the gossip layer to broadcast and receive information about the state of the cluster. As nodes are added and removed, or fail abruptly, the gossip layer ensures a single consistent view of the network is shared by all. The gossip layer also allows node health to be consistently determined system-wide without the need for any single coordinator.
+
+### Frontend layer
+
+Ably's frontend infrastructure consists of several components that handle individual requests and connections from realtime subscribers. Each component scales independently according to demand, ensuring requests are processed in the optimal location based on client location and system state.
+
+#### Request handling
+
+Nodes in the frontend layer process all incoming REST and realtime requests. They participate in the active service discovery mechanism between all nodes, maintaining realtime awareness of channel locations across the cluster, even as channels migrate during scaling events. Message fan-out is achieved by frontend nodes efficiently processing published messages and distributing them to all subscribed clients. The frontend layer also handles authentication, enforces rate limits, and provides additional DDoS protection.
+
+#### Protocol adapters
+
+Ably's [protocol adapters](/docs/protocols) enable interoperability with multiple industry protocols. These adapters translate between external protocols and Ably's internal protocols in both directions. Ably supports the MQTT standard as well as proprietary protocols like PubNub and Pusher.
+
+### Core layer
+
+Ably's core infrastructure handles all messages as they transit through the system. It is designed to scale elastically according to demand while managing all associated channel and system state.
+
+#### Resource placement
+
+Ably uses [consistent hashing](https://ably.com/blog/implementing-efficient-consistent-hashing) to distribute resources such as channels, apps and accounts across available core compute capacity.
+
+Each compute instance within the core layer has a set of pseudo-randomly generated hashes which determines which resources are located at that instance. As the cluster scales, channels relocate to maintain an even load distribution. Any number of channels can exist as long as sufficient compute capacity is available. Whether handling many lightly-loaded channels or heavily-loaded ones, Ably's scaling and placement strategies ensure capacity is added as required and load is effectively distributed.
+
+When a core node fails, the system detects the failure through the cluster-wide gossip protocol, and its resources are automatically redistributed to healthy nodes.
+
+#### Message processing
+
+Nodes in the core layer are responsible for all channel message processing and persistence and apply operations such as [delta](/docs/channels/options/deltas) computation, [batching](/docs/messages/batch) and [integration rule](/docs/integrations) invocation. They also aggregate and persist account and app [statistics](/docs/metadata-stats/stats) and enforce [limits](/docs/platform/pricing/limits). Nodes in the core layer communicate cross-regionally to facilitate inter-data-center message transit.
+
+#### Message persistence
+
+Messages are persisted in multiple locations to ensure that message availability and continuity are maintained even during individual node or data center failures.
+
+Once a message is acknowledged, it is stored in multiple physical locations, providing statistical guarantees of 99.999999% (8 nines) for message availability and survivability. This redundancy enables Ably to maintain its quality of service guarantees even during infrastructure failures.
+
+Messages are stored in two ways:
+
+* **Ephemeral Storage**: Messages are held for 2 minutes in an in-memory database (Redis). This data is distributed according to Ably's consistent hashing mechanism and relocated when channels move between nodes. This short-term storage enables low-latency message delivery and retrieval and supports features like [connection recovery](/docs/connect/states).
+* **Persisted Storage**: Messages can optionally be stored persistently on disk if longer term retention is required. Ably uses a globally distributed and clustered database (Cassandra) for this purpose, deployed across multiple data centers with message data replicated to three regions to ensure integrity and availability even if a region fails.
