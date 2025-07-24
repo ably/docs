@@ -7,7 +7,19 @@ const LLMS_FILE = path.join(PUBLIC_DIR, 'llms.txt');
 
 function countHtmlFiles(): number {
   const htmlFiles = glob.sync('**/*.html', { cwd: PUBLIC_DIR });
-  return htmlFiles.length;
+  // Filter out versioned redirects, system pages, and other non-content files
+  const contentFiles = htmlFiles.filter(file => {
+    // Exclude versioned redirect pages
+    if (file.includes('/versions/')) return false;
+    // Exclude gatsby system files
+    if (file.includes('_gatsby/')) return false;
+    // Exclude root index (not documentation content)
+    if (file === 'index.html') return false;
+    // Only include files under /docs/ path
+    if (!file.startsWith('docs/')) return false;
+    return true;
+  });
+  return contentFiles.length;
 }
 
 function countLlmsLines(): number {
