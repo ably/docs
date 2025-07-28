@@ -32,7 +32,7 @@ export default function App() {
           <ChatSettingsProvider>
             <ChatClientProvider client={chatClient}>
               <ChatRoomProvider name={initialRoom}>
-                <div className="flex flex-1 justify-center items-center h-screen bg-gray-50 dark:bg-gray-950">
+                <div className="flex flex-1 justify-center items-center h-screen bg-white dark:bg-gray-950">
                   <div
                     className="h-full w-full max-w-4xl border rounded-lg overflow-hidden bg-white dark:bg-gray-900 flex flex-col">
                     <ChatWindow
