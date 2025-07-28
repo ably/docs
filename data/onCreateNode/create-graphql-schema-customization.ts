@@ -56,7 +56,8 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       oneTrustEnabled: String
       oneTrustDomain: String
       oneTrustTest: String
-      inkeepEnabled: String
+      inkeepChatEnabled: Boolean
+      inkeepSearchEnabled: Boolean
       inkeepApiKey: String
       insightsEnabled: Boolean
       insightsDebug: Boolean

@@ -27,7 +27,8 @@ const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
             hubspotTrackingId
             headwayAccountId
             announcementEnabled
-            inkeepEnabled
+            inkeepChatEnabled
+            inkeepSearchEnabled
             inkeepApiKey
             insightsEnabled
             insightsDebug

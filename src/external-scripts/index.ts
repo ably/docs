@@ -25,10 +25,13 @@ type ExternalScriptsData = {
   gtmContainerId?: string;
   announcementEnabled?: boolean;
   headwayAccountId?: string;
-  inkeepEnabled?: string;
+  inkeepChatEnabled?: boolean;
+  inkeepSearchEnabled?: boolean;
   inkeepApiKey?: string;
   insightsEnabled?: boolean;
   conversationsUrl?: string;
+  intercomEnabled?: boolean;
+  intercomAppId?: string;
 };
 
 // Inject scripts and run any init code
@@ -47,7 +50,7 @@ const injectScripts = ({
   }
 
   if (hubspotTrackingId) {
-    hubspot(hubspotTrackingId, !(inkeepEnabled === 'true'));
+    hubspot(hubspotTrackingId, !inkeepChatEnabled);
   }
 
   // Inkeep and Intercom should not be enabled at the same time
@@ -76,7 +79,8 @@ const sessionTracker = (
     hubspotTrackingId,
     gtmContainerId,
     headwayAccountId,
-    inkeepEnabled,
+    inkeepChatEnabled,
+    inkeepSearchEnabled,
     inkeepApiKey,
     insightsEnabled,
     intercomEnabled,
@@ -101,7 +105,7 @@ const sessionTracker = (
     headway(headwayAccountId);
   }
 
-  if (inkeepEnabled && inkeepApiKey) {
+  if (inkeepChatEnabled && inkeepApiKey) {
     if (sessionState.user) {
       inkeepChatIdentifyUser({ user: sessionState.user });
     }

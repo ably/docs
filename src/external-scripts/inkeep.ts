@@ -2,7 +2,12 @@ import { scriptLoader } from './utils';
 import posthog from 'posthog-js';
 import { track } from '@ably/ui/core/insights';
 
-const inkeepChat = (apiKey, conversationsUrl: '') => {
+const inkeepChat = (
+  apiKey: string | undefined,
+  conversationsUrl: '',
+  inkeepChatEnabled: boolean,
+  inkeepSearchEnabled: boolean,
+) => {
   if (!apiKey) {
     return;
   }
@@ -14,7 +19,7 @@ const inkeepChat = (apiKey, conversationsUrl: '') => {
     crossOrigin: 'anonymous',
     onload: () => {
       posthog.onFeatureFlags(() => {
-        inkeepOnLoad(apiKey, conversationsUrl);
+        inkeepOnLoad(apiKey, conversationsUrl, inkeepChatEnabled, inkeepSearchEnabled);
       });
     },
   });
@@ -242,7 +247,12 @@ const searchSettings = {
   tabs: ['All', 'Docs', 'Blog', 'FAQs', 'GitHub'],
 };
 
-export const inkeepOnLoad = (apiKey: string, conversationsUrl: string) => {
+export const inkeepOnLoad = (
+  apiKey: string,
+  conversationsUrl: string,
+  inkeepChatEnabled: boolean,
+  inkeepSearchEnabled: boolean,
+) => {
   interface BaseSettings {
     apiKey: string;
     transformSource: (source: SourceItem) =>
@@ -355,16 +365,21 @@ export const inkeepOnLoad = (apiKey: string, conversationsUrl: string) => {
     label: 'Ask Ably',
     aiChatSettings: aiChatSettings(),
     searchSettings,
+    shouldShowAskAICard: false,
   };
 
-  window.inkeepWidget = window.Inkeep.ChatButton({
-    ...config,
-  });
+  if (inkeepChatEnabled) {
+    window.inkeepWidget = window.Inkeep.ChatButton({
+      ...config,
+    });
+  }
 
-  loadInkeepSearch(config);
+  if (inkeepSearchEnabled) {
+    loadInkeepSearch(config, inkeepChatEnabled);
+  }
 };
 
-const loadInkeepSearch = (config: object) => {
+const loadInkeepSearch = (config: object, inkeepChatEnabled: boolean) => {
   const searchBar = document.getElementById('inkeep-search');
   if (!searchBar) {
     return;
@@ -375,6 +390,7 @@ const loadInkeepSearch = (config: object) => {
     modalSettings: {
       defaultView: 'SEARCH',
     },
+    shouldShowAskAICard: false,
   }).remount();
 };
 
