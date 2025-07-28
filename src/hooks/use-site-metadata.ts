@@ -28,6 +28,8 @@ export const useSiteMetadata = () => {
             posthogApiKey
             posthogHost
             conversationsUrl
+            intercomEnabled
+            intercomAppId
           }
         }
       }

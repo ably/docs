@@ -65,6 +65,8 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       posthogApiKey: String
       posthogApiHost: String
       conversationsUrl: String
+      intercomEnabled: Boolean
+      intercomAppId: String
     }
 
     type SiteSiteMetadata implements Node {
