@@ -62,6 +62,10 @@ export default {
               link: '/docs/getting-started/ruby',
             },
             {
+              name: 'C# .NET',
+              link: '/docs/getting-started/dotnet',
+            },
+            {
               name: 'PHP',
               link: '/docs/getting-started/php',
             },
