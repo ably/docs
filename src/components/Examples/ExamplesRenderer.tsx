@@ -93,8 +93,9 @@ const ExamplesRenderer = ({
       }}
       options={{
         visibleFiles,
-        autorun: true,
-        autoReload: true,
+        autorun: process.env.NODE_ENV === 'production', // Only autorun in production
+        autoReload: process.env.NODE_ENV === 'production', // Only auto-reload in production
+        initMode: process.env.NODE_ENV === 'development' ? 'user-visible' : 'immediate', // Lazy loading in dev
         classes: {
           /*
               For the calcs below:
