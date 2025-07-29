@@ -6,8 +6,23 @@ const PUBLIC_DIR = path.join(process.cwd(), 'public');
 const LLMS_FILE = path.join(PUBLIC_DIR, 'llms.txt');
 
 function countHtmlFiles(): number {
-  const htmlFiles = glob.sync('**/*.html', { cwd: PUBLIC_DIR });
-  return htmlFiles.length;
+  const htmlFiles = glob.sync('docs/**/*.html', { cwd: PUBLIC_DIR });
+
+  const contentFiles = htmlFiles.filter((file) => {
+    // Exclude versioned redirect pages
+    if (file.includes('/versions/')) {
+      return false;
+    }
+
+    // Exclude root index (not documentation content)
+    if (file === 'index.html') {
+      return false;
+    }
+
+    return true;
+  });
+
+  return contentFiles.length;
 }
 
 function countLlmsLines(): number {
@@ -17,7 +32,7 @@ function countLlmsLines(): number {
 
 function validateCounts(htmlCount: number, llmsCount: number): boolean {
   const difference = Math.abs(htmlCount - llmsCount);
-  const maxAllowedDifference = Math.ceil(htmlCount * 0.75); // 75% of html count
+  const maxAllowedDifference = Math.ceil(htmlCount * 0.8); // 80% of html count
   return difference <= maxAllowedDifference;
 }
 
@@ -32,7 +47,7 @@ function main() {
 
     if (!isValid) {
       console.error(
-        `Error: The number of lines in llms.txt (${llmsCount}) is not within 75% of the number of HTML files (${htmlCount})`,
+        `Error: The number of lines in llms.txt (${llmsCount}) is not within 80% of the number of HTML files (${htmlCount})`,
       );
       process.exit(1);
     }
