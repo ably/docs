@@ -22,7 +22,7 @@ export default {
       name: 'Getting started',
       pages: [
         {
-          name: 'Guides',
+          name: 'Quickstarts',
           pages: [
             {
               name: 'Overview',
