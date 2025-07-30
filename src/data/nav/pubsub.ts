@@ -50,6 +50,14 @@ export default {
               link: '/docs/getting-started/swift',
             },
             {
+              name: 'Flutter',
+              link: '/docs/getting-started/quickstart',
+            },
+            {
+              name: 'Java',
+              link: '/docs/getting-started/quickstart',
+            },
+            {
               name: 'Go',
               link: '/docs/getting-started/go',
             },
@@ -60,6 +68,14 @@ export default {
             {
               name: 'Ruby',
               link: '/docs/getting-started/ruby',
+            },
+            {
+              name: 'C# .NET',
+              link: '/docs/getting-started/quickstart',
+            },
+            {
+              name: 'Objective C',
+              link: '/docs/getting-started/quickstart',
             },
             {
               name: 'PHP',
