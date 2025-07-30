@@ -7,6 +7,8 @@ import { DisplayMode, SearchBar } from '.';
 describe('<SearchBar />', () => {
   const externalScriptsData = {
     addsearchSiteKey: 'shh-do-not-tell-to-anyone',
+    inkeepChatEnabled: false,
+    inkeepSearchEnabled: false,
   };
 
   beforeEach(() => {
@@ -49,9 +51,9 @@ describe('<SearchBar />', () => {
     expect(screen.queryByLabelText('suggestions')).not.toBeInTheDocument();
   });
 
-  describe('when Inkeep is enabled', () => {
+  describe('when Inkeep search is enabled', () => {
     beforeEach(() => {
-      externalScriptsData.inkeepEnabled = true;
+      externalScriptsData.inkeepSearchEnabled = true;
     });
 
     it('should render the component', () => {

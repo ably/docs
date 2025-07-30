@@ -27,7 +27,8 @@ const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
             hubspotTrackingId
             headwayAccountId
             announcementEnabled
-            inkeepEnabled
+            inkeepChatEnabled
+            inkeepSearchEnabled
             inkeepApiKey
             insightsEnabled
             insightsDebug
@@ -36,6 +37,8 @@ const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
             posthogApiKey
             posthogHost
             conversationsUrl
+            intercomEnabled
+            intercomAppId
           }
         }
       }
