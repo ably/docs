@@ -87,6 +87,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const { activePage } = useLayoutContext();
   const [sdk, setSdk] = useState<SDKType>(
     (pageContext.languages
+      ?.filter((language) => language.startsWith('realtime') || language.startsWith('rest'))
       ?.find((language) => activePage.language && language.endsWith(activePage.language))
       ?.split('_')[0] as SDKType) ?? null,
   );
