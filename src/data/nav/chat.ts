@@ -97,8 +97,8 @@ export default {
           link: '/docs/chat/rooms/reactions',
         },
         {
-          name: 'Media sharing',
-          link: '/docs/chat/rooms/media-sharing',
+          name: 'Share media',
+          link: '/docs/chat/rooms/media',
         },
       ],
     },
