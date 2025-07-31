@@ -86,7 +86,7 @@ export const plugins = [
             className: `gatsby-copyable-header`,
             removeAccents: true,
             isIconAfterHeader: true,
-            elements: [`h2`, `h3`],
+            elements: [`h2`, `h3`, `h4`],
           },
         },
         {
