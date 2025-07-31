@@ -1,0 +1,123 @@
+---
+title: Message concepts
+meta_description: "Messages contain data and are sent and received through channels."
+redirect_from:
+  - /docs/rest/messages
+  - /docs/rest/versions/v1.1/messages
+  - /docs/rest/versions/v1.0/messages
+  - /docs/rest/versions/v0.8/messages
+  - /docs/realtime/messages
+  - /docs/realtime/versions/v1.1/messages
+  - /docs/realtime/versions/v1.0/messages
+  - /docs/realtime/versions/v0.8/messages
+  - /docs/channels/messages
+---
+
+Messages contain the data that a client is communicating, such as the contents of a chat message. Clients publish messages on [channels](/docs/channels), and these messages are received by clients that have [subscribed](/docs/pub-sub#subscribe) to them. This pattern is otherwise known as pub/sub, as publishers and subscribers are completely decoupled.
+
+<Aside type="note">
+Messages are counted in 5KiB chunks. See [what counts as a message](https://faqs.ably.com/how-does-ably-count-messages).
+</Aside>
+
+## Message properties <a id="properties"/>
+
+The following are the properties of a message:
+
+- **name** - The name of the message.
+- **data** - The contents of the message. Also known as the message payload.
+- **id** - Each message sent through Ably is assigned a unique ID, unless you provide your own ID. Client specified IDs ensure [publishes are idempotent](/docs/pub-sub/advanced#idempotency).
+- **clientId** - The [ID of the client](/docs/auth/identified-clients) that published the message.
+- **connectionId** - The ID of the connection used to publish the message.
+- **timestamp** - The timestamp of when the message was received by Ably, as milliseconds since the Unix epoch.
+- **extras** - A JSON object of arbitrary key-value pairs that may contain metadata, and/or ancillary payloads. Valid payloads include those related to [Push Notifications](/docs/push), [deltas](/docs/channels/options/deltas) and headers.
+- **encoding** - This is typically empty, as all messages received from Ably are automatically decoded client-side using this value. However, if the message encoding cannot be processed, this attribute contains the remaining transformations not applied to the data payload.
+
+## Message conflation <a id="conflation"/>
+
+Use message conflation to ensure that clients only ever receive the most up-to-date message, by removing redundant and outdated messages. Message conflation will aggregate published messages for a set period of time and evaluate all messages against a [conflation key](#routing). All but the latest message for each conflation key value will be discarded, and the resulting message, or messages, will be delivered to subscribers as a single batch once the period of time elapses.
+
+For example, messages published with the following in the `extras.headers` field will alternate between four different values for the market:
+
+<Code>
+```javascript
+market = pickOneFrom('market-A', 'market-B', 'market-C', 'market-D')
+headers = { market };
+channel.publish({ name: 'update', data: { market, update: counter++ }, extras: { headers }});
+```
+</Code>
+
+If the conflation key for this channel is set to `#{message.extras.headers['market']}` with a 200ms conflation interval, then at the end of each 200ms interval a maximum of four messages will be delivered to subscribers in a single batch.
+
+Conflation is useful in scenarios where the latest state of a message matters most. Applications in the betting or stocks industry are good examples of this, where odds and prices are changing rapidly, but end-users don't need to be overwhelmed by receiving a message with every single change. Instead they can receive only the latest update every 100ms, for example.
+
+In these instances the frequency of updates for the subscriber are of less importance than the rate at which the updates are published. It also reduces the message cost of applications by not propagating every single update to subscribers.
+
+### Configure message conflation <a id="configure-conflation"/>
+
+When configuring message conflation, you need to set a conflation interval, in milliseconds. Messages sent to Ably during this interval are temporarily held and assessed against the [conflation key](#routing). Once the interval elapses, the latest version of each message for a unique conflation key value will be delivered to subscribers as a single batch.
+
+Use the following steps to configure message conflation for a channel, or channel namespace:
+
+1. On your [dashboard](https://ably.com/accounts/any), select one of your apps.
+2. Go to **Settings**.
+3. Under [channel rules](/docs/channels#rules), click **Add new rule**.
+4. Enter the channel name, or channel namespace to apply message conflation to.
+5. Check **Conflation enabled**.
+6. Choose a conflation interval over which to aggregate messages.
+7. Enter a [conflation key](#routing) to assess messages against.
+8. Click **Create channel rule** to save.
+
+<Aside type="note">
+Message conflation is mutually exclusive with [server-side batching](/docs/messages/batch#server-side) on a channel, or channel namespace.
+</Aside>
+
+## Message routing and conflation syntax <a id="routing"/>
+
+Ably uses common syntax to select which messages are routed to integrations and for assessing which messages to apply conflation to. The following properties and features use this syntax:
+
+* `routingKey` for [AMQP](/docs/integrations/streaming/amqp) and [Kafka](/docs/integrations/streaming/kafka) integrations
+* `partitionKey` for [AWS Kinesis](/docs/integrations/streaming/kinesis) integrations
+* `conflationKey` for [message conflation](#conflation)
+
+### Interpolation <a id="interpolation"/>
+
+As part of the syntax, interpolation is available to use the properties of a message to create the routing or conflation key.
+
+The following properties can be used as variables:
+
+- **`channelName`** - The name of a channel.
+- **`message.name`** - The name of the message.
+- **`message.id`** - The unique ID of the message.
+- **`message.clientId`** - The ID of the client that published the message.
+- **`message.extras.headers['<header-name>']`** - The value of the specified header in the `message.extras` field.
+
+Interpolation uses the `#{...}` syntax, for example `channel-name-identifier-#{channel-1}`.
+
+<Aside type="note">
+For a Kafka rule, the `routingKey` includes both the topic and message routing key joined by a colon, for example `topic:key`, or with interpolation `topic-#{channelName}:message-key-#{message.name}`. So either, or both, can be dynamic. This split is done after any interpolation, but since Kafka topics cannot contain a colon, this does not introduce any ambiguity.
+</Aside>
+
+### Filters <a id="filters"/>
+
+Interpolation can optionally be followed by a filter using pipe syntax.
+
+The following filters are supported:
+
+- **hash** - Transforms the variable into a stringified 32-bit fingerprint. It takes an optional numerical argument, the base to use when stringifying, which defaults to 16.
+- **moduloHash** - Similar to hash, but runs the result through a modulo function before stringifying. This is useful for bucketing. It takes one mandatory argument; the number of buckets, and one optional argument; the base to use when stringifying, which defaults to 16.
+
+If using a filter, you can specify a tuple of two or more variables as the input to the filter. It should be comma-separated and delimited with parentheses.
+
+### Routing and conflation syntax examples <a id="examples"/>
+
+The following are examples of using interpolation and filters to create a routing or conflation key:
+
+* Hashed channel name as hex: `#{channelName | hash}`
+* Hashed channel name as decimal: `#{channelName | hash(10)}`
+* `the-foo-header-is-#{ message.extras.headers['foo'] }`
+* Channel name in mod 256: `#{channelName | moduloHash(256)}`
+* Channel name in octal: `#{channelName | moduloHash(256, 8)}`
+* `message name: #{message.name}, clientId: #{message.clientId}`
+* Hexadecimal hash combining all message properties except id: `#{(message.name, message.clientId, channelName) | hash}`
+* `#{message.id}` will be different for every message, so useful for routing to kinesis shards at random
+* `shard-#{message.id | moduloHash(4, 10)}` will be one of "shard-0", "shard-1", "shard-2", "shard-3"
