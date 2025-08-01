@@ -19,7 +19,8 @@ export const useSiteMetadata = () => {
             gtmContainerId
             headwayAccountId
             announcementEnabled
-            inkeepEnabled
+            inkeepChatEnabled
+            inkeepSearchEnabled
             inkeepApiKey
             insightsEnabled
             insightsDebug
@@ -28,6 +29,8 @@ export const useSiteMetadata = () => {
             posthogApiKey
             posthogHost
             conversationsUrl
+            intercomEnabled
+            intercomAppId
           }
         }
       }

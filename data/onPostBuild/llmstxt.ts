@@ -18,11 +18,25 @@ interface DocumentQueryResult {
     };
   };
   allFileHtml: {
+    edges: {
+      node: {
+        slug: string;
+        meta: {
+          title: string;
+          meta_description: string;
+        };
+      };
+    }[];
+  };
+  allMdx: {
     nodes: {
-      slug: string;
-      meta: {
-        title: string;
-        meta_description: string;
+      parent: {
+        relativeDirectory: string;
+        name: string;
+      };
+      frontmatter: {
+        title?: string;
+        meta_description?: string;
       };
     }[];
   };
@@ -49,9 +63,26 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
       }
 
       allFileHtml(filter: { articleType: { in: ["document", "apiReference"] } }) {
+        edges {
+          node {
+            slug
+            meta {
+              title
+              meta_description
+            }
+          }
+        }
+      }
+
+      allMdx {
         nodes {
-          slug
-          meta {
+          parent {
+            ... on File {
+              relativeDirectory
+              name
+            }
+          }
+          frontmatter {
             title
             meta_description
           }
@@ -62,7 +93,7 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
   const { data: queryRecords, errors } = await graphql<DocumentQueryResult>(query);
 
   if (errors) {
-    reporter.panicOnBuild(`Error while running GraphQL query.`);
+    reporter.panicOnBuild(`Error while running GraphQL query: ${JSON.stringify(errors, null, 2)}`);
     throw errors;
   }
 
@@ -78,9 +109,36 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     throw new Error('Site URL not found.');
   }
 
-  const allPages = queryRecords.allFileHtml.nodes;
+  // Process textile-based pages (allFileHtml)
+  const textilePages = queryRecords.allFileHtml.edges.map((edge) => edge.node);
 
-  reporter.info(`${REPORTER_PREFIX} Found ${allPages.length} pages to place into llms.txt`);
+  // Process MDX pages (allMdx)
+  const mdxPages = queryRecords.allMdx.nodes
+    .filter((node) => {
+      // Only include pages from docs directory that have the required frontmatter
+      return (
+        node.parent.relativeDirectory.startsWith('docs') &&
+        node.frontmatter?.title &&
+        node.frontmatter?.meta_description
+      );
+    })
+    .map((node) => ({
+      // Create slug from parent file info - remove 'docs/' prefix since it's already in relativeDirectory
+      slug: (node.parent.relativeDirectory + (node.parent.name === 'index' ? '' : `/${node.parent.name}`)).replace(
+        /^docs\//,
+        '',
+      ),
+      meta: {
+        title: node.frontmatter.title!,
+        meta_description: node.frontmatter.meta_description!,
+      },
+    }));
+
+  const allPages = [...textilePages, ...mdxPages];
+
+  reporter.info(
+    `${REPORTER_PREFIX} Found ${allPages.length} pages to place into llms.txt (${textilePages.length} textile, ${mdxPages.length} MDX)`,
+  );
 
   const serializedPages = [LLMS_TXT_PREAMBLE];
 

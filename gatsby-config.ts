@@ -29,7 +29,8 @@ export const siteMetadata = {
     oneTrustDomain: process.env.ONE_TRUST_DOMAIN,
     oneTrustEnabled: process.env.ONE_TRUST_ENABLED,
     oneTrustTest: process.env.ONE_TRUST_TEST,
-    inkeepEnabled: process.env.INKEEP_CHAT_ENABLED,
+    inkeepChatEnabled: process.env.INKEEP_CHAT_ENABLED == 'true',
+    inkeepSearchEnabled: process.env.INKEEP_SEARCH_ENABLED == 'true',
     inkeepApiKey: process.env.INKEEP_CHAT_API_KEY,
     insightsEnabled: process.env.INSIGHTS_ENABLED === 'true',
     insightsDebug: process.env.INSIGHTS_DEBUG === 'true',
@@ -38,6 +39,8 @@ export const siteMetadata = {
     posthogApiKey: process.env.POSTHOG_API_KEY,
     posthogHost: process.env.POSTHOG_API_HOST || 'https://insights.ably.com',
     conversationsUrl: process.env.CONVERSATIONS_API_URL,
+    intercomEnabled: process.env.INTERCOM_ENABLED === 'true',
+    intercomAppId: process.env.INTERCOM_APP_ID || '',
   },
 };
 
