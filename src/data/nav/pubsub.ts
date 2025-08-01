@@ -51,7 +51,7 @@ export default {
             },
             {
               name: 'Flutter',
-              link: '/docs/getting-started/quickstart',
+              link: '/docs/getting-started/flutter',
             },
             {
               name: 'Java',
