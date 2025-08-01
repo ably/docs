@@ -55,7 +55,7 @@ export default {
             },
             {
               name: 'Java',
-              link: '/docs/getting-started/quickstart',
+              link: '/docs/getting-started/java',
             },
             {
               name: 'Go',
