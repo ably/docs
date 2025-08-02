@@ -1,0 +1,351 @@
+---
+title: "Share media"
+meta_description: "Share media such as images, videos, or files in a chat room."
+meta_keywords: "image, file, media, sharing, Ably Chat, chat SDK, realtime messaging, dependability, cost optimization"
+---
+
+Share media such as images, videos and files with users in a chat room.
+
+Upload the media to your own storage service, such as AWS S3, and then use the `metadata` field to reference the location of the media when a user [sends a message](/docs/chat/rooms/messages#send). On the receiving end, display the media to [subscribers](/docs/chat/rooms/messages#subscribe) that received the message.
+
+## Access control
+
+Ensure that you add a layer of authentication server-side if the media shouldn't be publicly available.
+
+Do not add signed URLs to the message `metadata` because everyone who receives the message will have access to it. Additionally, signed URLs typically have expiration dates and chat messages may be stored for longer.
+
+If you serve the media directly from a service, such as AWS S3, consider saving a file name in the `metadata` of the message. Then use a mechanism for the user to request a signed URL to the file.
+
+## Upload media <a id="upload"/>
+
+Users need to be able to choose which media to attach to their message in your app. Write an upload function and make it available in the chat app context.
+
+You can use either a unique identifier for the media, or a URL to its location. Ensure that any identifier is unique and that URLs are validated when they are received.
+
+The following is an example of an upload function:
+
+<Code>
+```javascript
+async function uploadMedia() {
+  // ask the user to choose their media
+  // upload the media to your storage service
+  // return a unique identifier for the media
+
+  // mock implementation:
+  let mediaId = 'abcd123abcd';
+
+  // Some media metadata, useful for displaying the media in the UI
+  let title = 'A beautiful image';
+  let width = 1024;
+  let height = 768;
+
+  // Return the object
+  return { id: mediaId, title, width, height };
+}
+```
+</Code>
+
+Use the `uploadMedia()` flow to save the resulting object. In your UI, the `mediaToAttach` array should be displayed so that users can see which which media will be attached to their message. It also enables users to add or remove selected media.
+
+<Code>
+```javascript
+let mediaToAttach = [];
+async function onMediaAttach() {
+  const mediaData = await uploadMedia();
+  mediaToAttach.push(mediaData);
+}
+```
+
+```react
+import { useState } from 'react';
+
+const ChatComponent = () => {
+  const [mediaToAttach, setMediaToAttach] = useState([]);
+
+  const onMediaAttach = async () => {
+    const mediaData = await uploadMedia();
+    setMediaToAttach(prev => [...prev, mediaData]);
+  };
+
+  return (
+    <div>
+      <button onClick={onMediaAttach}>Attach Media</button>
+      {mediaToAttach.map((mediaData, index) => (
+        <div key={mediaData.id}>Media to attach: {mediaData.id} ({mediaData.title}, {mediaData.width}x{mediaData.height})</div>
+      ))}
+    </div>
+  );
+};
+```
+</Code>
+
+## Send a message <a id="send"/>
+
+Once a user has ['attached'](#upload) their media to the message, use the `metadata` field of the message to store its reference. `metadata` is a key-value object that can also be used to associate additional information such as its title and dimensions.
+
+<Code>
+```javascript
+async function send(text) {
+  let metadata = {};
+  if (mediaToAttach.length > 0) {
+    metadata["media"] = mediaToAttach;
+    mediaToAttach = [];
+  }
+  await room.messages.send({
+    text: text,
+    metadata: metadata
+  });
+}
+```
+
+```react
+import { useState } from 'react';
+import { useMessages } from '@ably/chat/react';
+
+const MessageSender = () => {
+  const [mediaToAttach, setMediaToAttach] = useState([]);
+  const [messageText, setMessageText] = useState('');
+  const { send } = useMessages();
+
+  const handleSend = async () => {
+    let metadata = {};
+    if (mediaToAttach.length > 0) {
+      metadata["media"] = mediaToAttach;
+    }
+    await send({
+      text: messageText,
+      metadata: metadata
+    });
+    setMediaToAttach([]);
+    setMessageText('');
+  };
+
+  const onMediaAttach = async () => {
+    const mediaId = await uploadMedia();
+    setMediaToAttach(prev => [...prev, mediaId]);
+  };
+
+  return (
+    <div>
+      <input
+        type="text"
+        value={messageText}
+        onChange={(e) => setMessageText(e.target.value)}
+        placeholder="Type a message..."
+      />
+      <button onClick={onMediaAttach}>Attach Media</button>
+      <button onClick={handleSend}>Send</button>
+      {mediaToAttach.map((mediaData, index) => (
+        <div key={index}>Media to attach: {mediaData.id} ({mediaData.title}, {mediaData.width}x{mediaData.height})</div>
+      ))}
+    </div>
+  );
+};
+```
+</Code>
+
+Be aware that message `metadata` is not validated by the server. Always treat it as untrusted user input.
+
+## Display media to subscribers <a id="display"/>
+
+When a message is received that contains media, you need to display it in your app.
+
+Firstly, make sure that you validate the `metadata`. If you are using IDs then ensure they are in the correct format, or if using URLs then validate the schema, domain, path and query parameters are as expected.
+
+Define a function to get the valid media from a message:
+
+<Code>
+```javascript
+// assume IDs are 10-15 characters long and alphanumeric
+const mediaIdRegex = /^[a-z0-9]{10,15}$/;
+
+function getValidMedia(message) {
+  if (message.metadata.media && message.metadata.media.length > 0) {
+    return message.metadata.media.filter(mediaData => mediaIdRegex.test(mediaData.id));
+  }
+  return [];
+}
+```
+
+```react
+// assume IDs are 10-15 characters long and alphanumeric
+const mediaIdRegex = /^[a-z0-9]{10,15}$/;
+
+const getValidMedia = (message) => {
+  if (message.metadata.media && message.metadata.media.length > 0) {
+    return message.metadata.media.filter(mediaData => mediaIdRegex.test(mediaData.id));
+  }
+  return [];
+};
+```
+</Code>
+
+Use a function or component to display the message and its media:
+
+<Code>
+```javascript
+function createMessageDOM(message) {
+  const container = document.createElement("div");
+  container.setAttribute('data-message-serial', message.serial)
+  container.setAttribute('data-message-version', message.version)
+
+  const text = document.createElement("div");
+  text.innerText = message.text;
+  container.appendChild(text);
+  const validMedia = getValidMedia(message);
+  if (validMedia.length > 0) {
+    const mediaContainer = document.createElement("div");
+    for (let mediaData of validMedia) {
+      const img = document.createElement("img");
+      img.src = "https://example.com/images/"+mediaData.id;
+      img.alt = mediaData.title;
+      img.width = mediaData.width;
+      img.height = mediaData.height;
+      mediaContainer.appendChild(img);
+    }
+    container.appendChild(mediaContainer);
+  }
+  return container;
+}
+```
+
+```react
+const mediaIdRegex = /^[a-z0-9]{10,15}$/;
+
+const getValidMedia = (message) => {
+  if (message.metadata.media && message.metadata.media.length > 0) {
+    return message.metadata.media.filter(mediaId => mediaIdRegex.test(mediaId));
+  }
+  return [];
+};
+
+const MessageDisplay = ({ message }) => {
+  const validMedia = getValidMedia(message);
+
+  return (
+    <div>
+      <div>{message.text}</div>
+      {validMedia.length > 0 && (
+        <div>
+          {validMedia.map((media, index) => (
+            <img
+              key={media.id}
+              src={`https://example.com/images/${media.id}`}
+              alt={media.title}
+              width={media.width}
+              height={media.height}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+```
+</Code>
+
+### Add media to an existing message <a id="add"/>
+
+You can also add media to an existing message by editing its `metadata`:
+
+<Code>
+```javascript
+let mediaId = 'abcd123abcd'; // assume this is the media we want to add
+let message = ...; // assume this is the message we want to edit
+
+const newMetadata = structuredClone(message.metadata);
+if (!newMetadata.media) {
+  newMetadata.media = [];
+}
+newMetadata.media.push(mediaId);
+
+room.messages.update(message.serial, message.copy({metadata: newMetadata}))
+```
+
+```react
+import { useMessages } from '@ably/chat/react';
+
+const AddMediaToMessage = ({ message }) => {
+  const { update } = useMessages();
+
+  const addMediaToMessage = async () => {
+    const mediaId = 'abcd123abcd'; // assume this is the media we want to add
+
+    const newMetadata = structuredClone(message.metadata);
+    if (!newMetadata.media) {
+      newMetadata.media = [];
+    }
+    newMetadata.media.push(mediaId);
+
+    await update(message.serial, message.copy({metadata: newMetadata}));
+  };
+
+  return (
+    <button onClick={addMediaToMessage}>
+      Add Media to Message
+    </button>
+  );
+};
+```
+</Code>
+
+### Remove media from an existing message <a id="remove"/>
+
+You can remove media from an existing message by updating its `metadata`:
+
+<Code>
+```javascript
+let mediaId = 'abcd123abcd'; // assume this is the media we want to remove
+let message = ...; // assume this is the message we want to edit
+
+if (!message.metadata.media || message.metadata.media.length === 0) {
+  //do nothing if there is no media
+  return;
+}
+const newMetadata = structuredClone(message.metadata);
+newMetadata.media = newMetadata.media.filter(id => mediaId !== id);
+
+room.messages.update(message.serial, message.copy({metadata: newMetadata}))
+```
+
+```react
+import { useMessages } from '@ably/chat/react';
+
+const RemoveMediaFromMessage = ({ message }) => {
+  const { update } = useMessages();
+
+  const removeMediaFromMessage = async () => {
+    const mediaId = 'abcd123abcd'; // assume this is the media we want to remove
+
+    if (!message.metadata.media || message.metadata.media.length === 0) {
+      // do nothing if there is no media
+      return;
+    }
+
+    const newMetadata = structuredClone(message.metadata);
+    newMetadata.media = newMetadata.media.filter(id => mediaId !== id);
+
+    await update(message.serial, message.copy({metadata: newMetadata}));
+  };
+
+  return (
+    <button onClick={removeMediaFromMessage}>
+      Remove Media from Message
+    </button>
+  );
+};
+```
+</Code>
+
+## Media moderation
+
+Ably [moderation feature](/docs/chat/moderation) is currently limited to text moderation. To add automatic or human moderation for media, you'll need to implement moderation server-side.
+
+An example flow for this would be:
+
+1. Upload the media to your storage service.
+2. Asynchronously start the moderation process on the server.
+3. Send a message with the `metadata` containing information about the media; either an ID or URL.
+4. When a user requests the media from your server, check the moderation status and serve it or return an error.
+
+This means you don't need to update the `metadata` field of the message to reflect its moderation status.
