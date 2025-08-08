@@ -1,7 +1,6 @@
-import { DefaultRoot, LiveMap, Realtime } from 'ably';
+import { LiveMap, LiveMapType, LiveMapUpdate, MapLocationObject, Realtime } from 'ably';
 import Objects from 'ably/objects';
 import { nanoid } from 'nanoid';
-import { Tasks } from './ably.config';
 import './styles.css';
 
 const client = new Realtime({
@@ -26,32 +25,25 @@ async function main() {
   const objects = channel.objects;
   const root = await objects.getRoot();
 
-  await initTasks(root);
+  // initialize default state
+  await root.default({
+    tasks: LiveMap.struct(),
+  });
+
+  subscribeToTasks(root);
   addEventListenersToButtons(root);
 }
 
-async function initTasks(root: LiveMap<DefaultRoot>) {
-  // subscribe to root to get notified when tasks object gets changed on the root.
-  // for example, when we clear all tasks
-  root.subscribe(({ update }) => {
-    if (update.tasks === 'updated') {
-      subscribeToTasksUpdates(root.get('tasks')!);
-    }
-  });
+function subscribeToTasks(root: MapLocationObject) {
+  // next type assertion won't be needed with user provided typings support for LocationObject
+  const tasks = root.get('tasks') as MapLocationObject;
 
-  if (root.get('tasks')) {
-    subscribeToTasksUpdates(root.get('tasks')!);
-    return;
-  }
-
-  await root.set('tasks', await channel.objects.createMap());
-}
-
-function subscribeToTasksUpdates(tasks: Tasks) {
-  tasksDiv.innerHTML = '';
-
+  // use Location API to subscribe to the tasks map. no need to handle instance management, as Location API will do it for us.
   tasks.subscribe(({ update }) => {
-    Object.entries(update).forEach(async ([taskId, change]) => {
+    tasksDiv.innerHTML = '';
+
+    // next type assertion won't be needed with user provided typings support for LocationObject
+    Object.entries(update as LiveMapUpdate<LiveMapType>).forEach(async ([taskId, change]) => {
       switch (change) {
         case 'updated':
           tasksOnUpdated(taskId, tasks);
@@ -63,17 +55,21 @@ function subscribeToTasksUpdates(tasks: Tasks) {
     });
   });
 
-  for (const [taskId] of tasks.entries()) {
-    createTaskDiv({ id: taskId, title: tasks.get(taskId)! }, tasks);
+  // set the initial values for tasks
+  for (const [taskId, value] of tasks.entries()) {
+    // next type assertion won't be needed with user provided typings support for LocationObject
+    createTaskDiv({ id: taskId, title: value as string }, tasks);
   }
 }
 
-function tasksOnUpdated(taskId: string, tasks: Tasks) {
+function tasksOnUpdated(taskId: string, tasks: MapLocationObject) {
   const taskSpan = document.querySelector(`.task[data-task-id="${taskId}"] > span`);
+  // next type assertion won't be needed with user provided typings support for LocationObject
+  const title = tasks.get(taskId).value() as string;
   if (taskSpan) {
-    taskSpan.innerHTML = tasks.get(taskId)!;
+    taskSpan.innerHTML = title;
   } else {
-    createTaskDiv({ id: taskId, title: tasks.get(taskId)! }, tasks);
+    createTaskDiv({ id: taskId, title }, tasks);
   }
 }
 
@@ -81,7 +77,7 @@ function tasksOnRemoved(taskId: string) {
   document.querySelector(`.task[data-task-id="${taskId}"]`)?.remove();
 }
 
-function createTaskDiv(task: { id: string; title: string }, tasks: Tasks) {
+function createTaskDiv(task: { id: string; title: string }, tasks: MapLocationObject) {
   const { id, title } = task;
 
   const parser = new DOMParser();
@@ -108,7 +104,7 @@ function createTaskDiv(task: { id: string; title: string }, tasks: Tasks) {
   });
 }
 
-function addEventListenersToButtons(root: LiveMap<DefaultRoot>) {
+function addEventListenersToButtons(root: MapLocationObject) {
   addTaskButton.addEventListener('click', async () => {
     const taskTitle = taskInput.value.trim();
     if (!taskTitle) {
@@ -117,11 +113,12 @@ function addEventListenersToButtons(root: LiveMap<DefaultRoot>) {
 
     const taskId = nanoid();
     taskInput.value = '';
-    await root.get('tasks')?.set(taskId, taskTitle);
+    // next type assertion won't be needed with user provided typings support for LocationObject
+    await (root.get('tasks') as MapLocationObject).set(taskId, taskTitle);
   });
 
   removeAllTasksDiv.addEventListener('click', async () => {
-    await root.set('tasks', await channel.objects.createMap());
+    await root.set('tasks', LiveMap.struct());
   });
 }
 
