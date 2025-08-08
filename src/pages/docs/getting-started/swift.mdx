@@ -98,6 +98,20 @@ You can monitor the lifecycle of clients’ connections, but for now just log a 
 - Build and run the app in Xcode (Cmd+R).
 - Watch the Xcode debug console for connection state changes and messages.
 
+### Mobile app lifecycle
+
+When using Ably in mobile apps, the connection will attempt to stay active even when your app moves to the background. However, iOS may terminate background network connections to preserve battery life, especially when the app is suspended or force-quit.
+
+The Ably SDK will continue attempting to reconnect automatically, but iOS progressively limits background network activity.
+
+If you want to explicitly [manage connections](/docs/connect/states?lang=swift) based on your app's lifecycle:
+- Call [`close()`](/api/realtime-sdk?lang=swift#close) when the app enters background if you don't need background connectivity.
+- Call [`connect()`](/api/realtime-sdk?lang=swift#connect) when the app returns to foreground to re-establish the connection.
+
+<Aside data-type='note'>
+It's good practice to call `close()` when your app no longer needs the connection, as this properly cleans up resources and removes all listeners. The connection will automatically close after about 2 minutes of inactivity, but explicit closure is recommended.
+</Aside>
+
 ## Step 2: Subscribe to a channel and publish a message <a id="step-2"/>
 
 Messages contain the data that a client is communicating, such as a short 'hello' from a colleague, or a financial update being broadcast to subscribers from a server. Ably uses channels to separate messages into different topics, so that clients only ever receive messages on the channels they are subscribed to.
@@ -149,6 +163,18 @@ When you publish this message, it will be received by both your Swift client and
 **To run:**
 - Build and run the app again.
 - Use the Ably CLI as described to publish/subscribe and see output in the Xcode debug console.
+
+### Subscription persistence
+
+Subscriptions only exist for the lifetime of your app instance. When your app restarts, you'll need to recreate any subscriptions. A common pattern is to:
+
+- Store the list of channels you want to subscribe to in `UserDefaults`.
+- On app launch, retrieve this list and resubscribe to each channel.
+- The Ably SDK will automatically handle reconnection and message continuity where possible.
+
+<Aside data-type='note'>
+Unlike push notification tokens, for example, [`ARTDeviceIdentityToken`](/docs/push/configure/device#ios), channel subscriptions are not persisted automatically. Ably stores device registration data in `UserDefault`s to survive app restarts, but subscription listeners exist only in memory and must be recreated by your app's code.
+</Aside>
 
 ## Step 3: Join the presence set <a id="step-3"/>
 
@@ -246,7 +272,13 @@ The output will look similar to the following:
 
 ## Step 5: Close the connection <a id="step-5"/>
 
-Connections are automatically closed approximately 2 minutes after no heartbeat is detected by Ably. Explicitly closing connections when they are no longer needed is good practice to help save costs. It will also remove all listeners that were registered by the client.
+Connections are automatically closed approximately 2 minutes after no heartbeat is detected by Ably. However, explicitly closing connections when they are no longer needed is good practice to help save costs and properly clean up resources. It will also remove all listeners that were registered by the client.
+
+When you call `close()`, the SDK will:
+- Immediately detach from all channels
+- Leave any presence sets the client has joined
+- Clean up all event listeners
+- Close the network connection
 
 Note that messages are streamed to clients as soon as they attach to a channel, as long as they have the necessary capabilities. Clients are implicitly attached to a channel when they call `subscribe()`. Detaching from a channel using the `detach()` method will stop the client from being streamed messages by Ably.
 
