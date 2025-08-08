@@ -1,4 +1,4 @@
-import { DefaultRoot, LiveCounter, LiveMap, Realtime } from 'ably';
+import { CounterLocationObject, LiveCounter, MapLocationObject, Realtime } from 'ably';
 import Objects from 'ably/objects';
 import { nanoid } from 'nanoid';
 import './styles.css';
@@ -33,56 +33,45 @@ async function main() {
   const objects = channel.objects;
   const root = await objects.getRoot();
 
-  await initCounters(root);
+  // initialize default state
+  await root.default({
+    [Color.red]: LiveCounter.struct(),
+    [Color.green]: LiveCounter.struct(),
+    [Color.blue]: LiveCounter.struct(),
+  });
+  subscribeToCounters(root);
   addEventListenersToButtons(root);
 }
 
-async function initCounters(root: LiveMap<DefaultRoot>) {
-  // subscribe to root to get notified when counter objects get changed on the root.
-  // for example, when we reset all counters
-  root.subscribe(({ update }) => {
-    Object.entries(update).forEach(([keyName, change]) => {
-      if (change === 'removed') {
-        return;
-      }
-
-      if (Object.values(Color).includes(keyName as Color)) {
-        // key pointing to a counter object got updated, resubscribe to a counter
-        const color = keyName as Color;
-        subscribeToCounterUpdates(color, root.get(color)!);
-      }
-    });
+function subscribeToCounters(root: MapLocationObject) {
+  // subscribe to root to get notified when counter objects get changed. this includes their value changes as well as instance changes when we reset them.
+  // no need to subscribe to each counter object individually or handle instance management.
+  root.subscribe(({ path, node }) => {
+    const color = path as Color;
+    if (Object.values(Color).includes(color)) {
+      // counter at a color key got updated, update UI
+      colorCountDivs[color].innerHTML = (node as LiveCounter).value().toString();
+    }
   });
 
-  await Promise.all(
-    Object.values(Color).map(async (color) => {
-      if (root.get(color)) {
-        subscribeToCounterUpdates(color, root.get(color)!);
-        return;
-      }
-
-      await root.set(color, await channel.objects.createCounter());
-    }),
-  );
-}
-
-function subscribeToCounterUpdates(color: Color, counter: LiveCounter) {
-  counter.subscribe(() => {
-    colorCountDivs[color].innerHTML = counter.value().toString();
+  // set the initial values for counters
+  Object.values(Color).forEach((color) => {
+    // next type assertion won't be needed with user provided typings support for LocationObject
+    colorCountDivs[color].innerHTML = (root.get(color) as CounterLocationObject).value().toString();
   });
-  colorCountDivs[color].innerHTML = counter.value().toString();
 }
 
-function addEventListenersToButtons(root: LiveMap<DefaultRoot>) {
+function addEventListenersToButtons(root: MapLocationObject) {
   document.querySelectorAll('.vote-button').forEach((button) => {
     const color = button.getAttribute('data-color') as Color;
-    button.addEventListener('click', () => {
-      root.get(color)?.increment(1);
+    button.addEventListener('click', async () => {
+      // next type assertion won't be needed with user provided typings support for LocationObject
+      (root.get(color) as CounterLocationObject).increment(1);
     });
   });
 
   countersReset.addEventListener('click', () => {
-    Object.values(Color).forEach(async (color) => root.set(color, await channel.objects.createCounter()));
+    Object.values(Color).forEach(async (color) => root.set(color, LiveCounter.struct()));
   });
 }
 
