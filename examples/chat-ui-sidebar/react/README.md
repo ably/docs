@@ -13,7 +13,7 @@ The `Sidebar` component provides room navigation and management functionality, a
 - Room count display
 - Automatic room attachment/detachment
 
-## How It Works
+## Resources
 
 This example uses the `Sidebar` component from the Ably Chat UI React Components library, and is wrapped with the necessary providers:
 
