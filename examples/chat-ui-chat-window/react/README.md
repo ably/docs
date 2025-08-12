@@ -12,7 +12,7 @@ The `ChatWindow` component provides the main chat interface for a room, includin
 - Custom header and footer content
 - Discontinuity recovery on reconnection
 
-## How It Works
+## Resources
 
 This example uses the `ChatWindow` component from the Ably Chat UI React Components library, and is wrapped with the necessary providers:
 
