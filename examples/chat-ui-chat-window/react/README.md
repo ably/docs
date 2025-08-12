@@ -4,14 +4,6 @@ This example demonstrates how to use the `ChatWindow` component from the Ably Ch
 
 The `ChatWindow` component provides the main chat interface for a room, including message display, input, and custom header/footer content.
 
-## Features
-
-- Message display with history loading
-- Message editing, deletion, and reactions
-- Typing indicators and presence awareness
-- Custom header and footer content
-- Discontinuity recovery on reconnection
-
 ## Resources
 
 This example uses the `ChatWindow` component from the Ably Chat UI React Components library, and is wrapped with the necessary providers:
