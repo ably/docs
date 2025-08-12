@@ -4,15 +4,6 @@ This example demonstrates how to use the `Sidebar` component from the Ably Chat 
 
 The `Sidebar` component provides room navigation and management functionality, allowing users to create, join, and leave rooms, as well as toggle between them.
 
-## Features
-
-- Collapsible interface with avatar-only mode
-- Room creation and management
-- Theme toggle integration
-- Active room highlighting
-- Room count display
-- Automatic room attachment/detachment
-
 ## Resources
 
 This example uses the `Sidebar` component from the Ably Chat UI React Components library, and is wrapped with the necessary providers:
