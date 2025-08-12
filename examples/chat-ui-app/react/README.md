@@ -4,7 +4,7 @@ This example demonstrates how to use the Ably Chat UI React Components to quickl
 
 It showcases the use of the `App` component, which provides a complete chat interface with room management, message handling, and user interactions.
 
-## How It Works
+## Resources
 
 This example uses the `App` component from the Ably Chat UI React Components library, and is wrapped with the necessary providers:
 
