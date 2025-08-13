@@ -16,13 +16,8 @@ export default {
           link: '/docs/liveobjects',
           index: true,
         },
-      ],
-    },
-    {
-      name: 'Getting started',
-      pages: [
         {
-          name: 'Quickstart',
+          name: 'Getting started',
           link: '/docs/liveobjects/quickstart',
         },
       ],

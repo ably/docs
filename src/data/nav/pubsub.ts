@@ -16,13 +16,8 @@ export default {
           link: '/docs/basics',
           index: true,
         },
-      ],
-    },
-    {
-      name: 'Getting started',
-      pages: [
         {
-          name: 'Quickstarts',
+          name: 'Getting started',
           pages: [
             {
               name: 'Overview',
