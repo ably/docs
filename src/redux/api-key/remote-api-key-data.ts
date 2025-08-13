@@ -60,16 +60,20 @@ const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>)
   // Fetch actual API keys from the payload
   const apiKeyData = await Promise.all(
     payload.data.map(async (value: ApiKeyValue) => {
-      const apiKeysRaw = await getJsonResponse(value.url, 'api-key-retrieval');
-      const apiKeys = apiKeysRaw.map(pick(['name', 'whole_key']));
-      return { ...value, apiKeys, demo: false };
+      try {
+        const apiKeysRaw = await getJsonResponse(value.url, 'api-key-retrieval');
+        const apiKeys = apiKeysRaw.map(pick(['name', 'whole_key']));
+        return { ...value, apiKeys, demo: false };
+      } catch (error) {
+        return null;
+      }
     }),
   );
 
   /**
    * Supporting ad hoc scripts; the following lines can be removed when ad hoc scripts are.
    */
-  if (window.ably?.docs) {
+  if (window.ably?.docs && apiKeyData[0]) {
     window.ably.docs.DOCS_API_KEY = apiKeyData[0].apiKeys[0].whole_key;
     safelyInvokeApiKeyRetrievalTrigger();
   }
@@ -80,7 +84,7 @@ const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>)
   // Return both actual keys and demo key
   return {
     ...payload,
-    data: [demoApiKey, ...apiKeyData],
+    data: [demoApiKey, ...apiKeyData.filter(Boolean)],
   };
 };
 
