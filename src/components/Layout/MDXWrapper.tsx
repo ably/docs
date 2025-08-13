@@ -103,18 +103,22 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   // Use the copyable headers hook
   useCopyableHeaders();
 
-  const apiKeys = useMemo(
-    () =>
-      userContext.apps && userContext.apps.length > 0 && userContext.apps[0].apiKeys.length > 0
-        ? userContext.apps
-            .filter(({ demo }) => !demo)
-            .flatMap(({ name, apiKeys }) => ({
-              app: name,
-              keys: apiKeys.map((apiKey) => ({ name: apiKey.name, key: apiKey.whole_key })),
-            }))
-        : [{ app: 'demo', keys: [{ name: 'demo', key: 'demokey:123456' }] }],
-    [userContext.apps],
-  );
+  const apiKeys = useMemo(() => {
+    const apps =
+      userContext.apps && userContext.apps.length > 0 && userContext.apps[0].apiKeys.length > 0 ? userContext.apps : [];
+
+    // Check if there are any non-demo apps
+    const hasNonDemo = apps.some(({ demo }) => !demo);
+
+    const filteredApps = hasNonDemo ? apps.filter(({ demo }) => !demo) : apps;
+
+    return filteredApps.length > 0
+      ? filteredApps.flatMap(({ name, apiKeys, demo }) => ({
+          app: demo ? 'demo' : name,
+          keys: apiKeys.map((apiKey) => ({ name: apiKey.name, key: apiKey.whole_key })),
+        }))
+      : [{ app: 'demo', keys: [{ name: 'demo', key: 'demokey:123456' }] }];
+  }, [userContext.apps]);
 
   return (
     <SDKContext.Provider value={{ sdk, setSdk }}>
