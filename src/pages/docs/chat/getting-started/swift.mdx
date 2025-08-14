@@ -1,11 +1,11 @@
 ---
-title: "Getting started: Chat with Swift"
-meta_description: "A getting started guide for Ably Chat iOS that steps through some of the key features using SwiftUI."
-meta_keywords: "Ably, realtime, quickstart, getting started, basics, Chat, iOS, Swift, SwiftUI"
+title: "Getting started: Chat with Swift (Callback Approach)"
+meta_description: "A getting started guide for Ably Chat iOS that steps through some of the key features using SwiftUI with callback-based subscriptions."
+meta_keywords: "Ably, realtime, quickstart, getting started, basics, Chat, iOS, Swift, SwiftUI, callbacks"
 ---
 
 This guide will help you get started with Ably Chat in a new iOS Swift application
-built with SwiftUI.
+built with SwiftUI, using a callback-based approach for handling real-time events.
 
 It will take you through the following steps:
 
@@ -78,8 +78,8 @@ import AblyChat
 import SwiftUI
 
 struct ContentView: View {
-    // Can be replaced with your own room ID
-    private let roomID = "my-first-room"
+    // Can be replaced with your own room name
+    private let roomName = "my-first-room"
 
     @State private var chatClient: ChatClient
 
@@ -89,7 +89,7 @@ struct ContentView: View {
         realtimeOptions.clientId = "my-first-client"
         let realtime = ARTRealtime(options: realtimeOptions)
 
-        let chatClient = DefaultChatClient(realtime: realtime, clientOptions: .init())
+        let chatClient = DefaultChatClient(realtime: realtime, clientOptions: ChatClientOptions())
         self._chatClient = State(initialValue: chatClient)
     }
 
@@ -112,12 +112,12 @@ struct ContentView: View {
 
 Clients establish a connection with Ably when they instantiate an SDK. This enables them to send and receive messages in realtime across channels.
 
-In your `ContentView.swift` file, add a connection status display:
+In your `ContentView.swift` file, add a connection status display using callbacks:
 
 <Code>
 ```swift
 struct ContentView: View {
-    private let roomID = "my-first-room"
+    private let roomName = "my-first-room"
 
     @State private var chatClient: ChatClient
     @State private var connectionStatus = ""
@@ -128,7 +128,7 @@ struct ContentView: View {
         realtimeOptions.clientId = "my-first-client"
         let realtime = ARTRealtime(options: realtimeOptions)
 
-        let chatClient = DefaultChatClient(realtime: realtime, clientOptions: .init())
+        let chatClient = DefaultChatClient(realtime: realtime, clientOptions: ChatClientOptions())
         self._chatClient = State(initialValue: chatClient)
     }
 
@@ -143,17 +143,13 @@ struct ContentView: View {
                 .padding()
         }
         .task {
-            await monitorConnectionStatus()
+            monitorConnectionStatus()
         }
     }
 
-    private func monitorConnectionStatus() async {
-        let connectionSubscription = chatClient.connection.onStatusChange()
-
-        for await status in connectionSubscription {
-            await MainActor.run {
-                connectionStatus = "\(status.current)"
-            }
+    private func monitorConnectionStatus() {
+        chatClient.connection.onStatusChange { status in
+            connectionStatus = "\(status.current)"
         }
     }
 }
@@ -166,12 +162,12 @@ Run your application and you should see the connection status displayed.
 
 Now that you have a connection to Ably, you can create a room. Use rooms to separate and organize clients and messages into different topics, or 'chat rooms'. Rooms are the entry point for Chat, providing access to all of its features, such as messages, presence and reactions.
 
-In your project, open `ContentView.swift`, and add room status monitoring:
+In your project, open `ContentView.swift`, and add room status monitoring using callbacks:
 
 <Code>
 ```swift
 struct ContentView: View {
-    private let roomID = "my-first-room"
+    private let roomName = "my-first-room"
 
     @State private var chatClient: ChatClient
     @State private var connectionStatus = ""
@@ -184,7 +180,7 @@ struct ContentView: View {
         realtimeOptions.clientId = "my-first-client"
         let realtime = ARTRealtime(options: realtimeOptions)
 
-        let chatClient = DefaultChatClient(realtime: realtime, clientOptions: .init())
+        let chatClient = DefaultChatClient(realtime: realtime, clientOptions: ChatClientOptions())
         self._chatClient = State(initialValue: chatClient)
     }
 
@@ -194,7 +190,7 @@ struct ContentView: View {
                 .font(.caption)
                 .padding(.horizontal)
 
-            Text("Room: \(roomID), Status: \(roomStatus)")
+            Text("Room: \(roomName), Status: \(roomStatus)")
                 .font(.caption)
                 .padding(.horizontal)
 
@@ -209,40 +205,33 @@ struct ContentView: View {
 
     private func setupRoom() async {
         do {
-            let chatRoom = try await chatClient.rooms.get(roomID: roomID)
+            let chatRoom = try await chatClient.rooms.get(name: roomName)
             try await chatRoom.attach()
             self.room = chatRoom
 
-            await monitorRoomStatus(room: chatRoom)
+            monitorConnectionStatus()
+            monitorRoomStatus(room: chatRoom)
         } catch {
             print("Failed to setup room: \(error)")
         }
     }
 
-    private func monitorRoomStatus(room: Room) async {
-        let connectionSubscription = chatClient.connection.onStatusChange()
-
-        // Monitor connection status
-        Task {
-            for await status in connectionSubscription {
-                await MainActor.run {
-                    connectionStatus = "\(status.current)"
-                }
-            }
+    private func monitorConnectionStatus() {
+        chatClient.connection.onStatusChange { status in
+            connectionStatus = "\(status.current)"
         }
+    }
 
-        // Monitor room status
-        for await status in room.onStatusChange() {
-            await MainActor.run {
-                roomStatus = "\(status.current)"
-            }
+    private func monitorRoomStatus(room: Room) {
+        room.onStatusChange { status in
+            roomStatus = "\(status.current)"
         }
     }
 }
 ```
 </Code>
 
-The above code creates a room with the ID `my-first-room` and sets up listeners to monitor both connection and room status. It displays the room ID and current status in the UI.
+The above code creates a room with the name `my-first-room` and sets up listeners to monitor both connection and room status. It displays the room name and current status in the UI.
 
 <Aside data-type='note'>
 Monitoring the room status is useful for deciding when to show a loading spinner or other UI elements while waiting for the room to be created or joined.
@@ -252,12 +241,12 @@ Monitoring the room status is useful for deciding when to show a loading spinner
 
 Messages are how your clients interact with one another.
 
-In your project, open `ContentView.swift`, and add message functionality:
+In your project, open `ContentView.swift`, and add message functionality using callbacks:
 
 <Code>
 ```swift
 struct ContentView: View {
-    private let roomID = "my-first-room"
+    private let roomName = "my-first-room"
 
     @State private var chatClient: ChatClient
     @State private var connectionStatus = ""
@@ -272,7 +261,7 @@ struct ContentView: View {
         realtimeOptions.clientId = "my-first-client"
         let realtime = ARTRealtime(options: realtimeOptions)
 
-        let chatClient = DefaultChatClient(realtime: realtime, clientOptions: .init())
+        let chatClient = DefaultChatClient(realtime: realtime, clientOptions: ChatClientOptions())
         self._chatClient = State(initialValue: chatClient)
     }
 
@@ -281,7 +270,7 @@ struct ContentView: View {
             // Status bar
             VStack {
                 Text("Connection: \(connectionStatus)")
-                Text("Room: \(roomID), Status: \(roomStatus)")
+                Text("Room: \(roomName), Status: \(roomStatus)")
             }
             .font(.caption)
             .padding(.horizontal)
@@ -290,7 +279,7 @@ struct ContentView: View {
             List(messages.reversed(), id: \.id) { message in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text("\(message.clientID ?? "Unknown"): \(message.text)")
+                        Text("\(message.clientID): \(message.text)")
                             .font(.body)
                         Spacer()
                     }
@@ -323,42 +312,34 @@ struct ContentView: View {
 
     private func setupRoom() async {
         do {
-            let chatRoom = try await chatClient.rooms.get(roomID: roomID)
+            let chatRoom = try await chatClient.rooms.get(name: roomName)
             try await chatRoom.attach()
             self.room = chatRoom
 
-            await setupMessages(room: chatRoom)
-            await monitorRoomStatus(room: chatRoom)
+            setupMessages(room: chatRoom)
+            monitorConnectionStatus()
+            monitorRoomStatus(room: chatRoom)
         } catch {
             print("Failed to setup room: \(error)")
         }
     }
 
-    private func setupMessages(room: Room) async {
-        do {
-            let messagesSubscription = try await room.messages.subscribe()
-
-            // Listen for new messages
-            Task {
-                for await message in messagesSubscription {
-                    await MainActor.run {
-                        switch message.action {
-                        case .create:
-                            messages.append(message)
-                        case .update:
-                            if let index = messages.firstIndex(where: { $0.id == message.id }) {
-                                messages[index] = message
-                            }
-                        case .delete:
-                            if let index = messages.firstIndex(where: { $0.id == message.id }) {
-                                messages[index] = message
-                            }
-                        }
+    private func setupMessages(room: Room) {
+        room.messages.subscribe { event in
+            withAnimation {
+                switch event.type {
+                case .created:
+                    messages.append(event.message)
+                case .updated:
+                    if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
+                        messages[index] = event.message
+                    }
+                case .deleted:
+                    if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
+                        messages[index] = event.message
                     }
                 }
             }
-        } catch {
-            print("Failed to setup messages: \(error)")
         }
     }
 
@@ -367,37 +348,28 @@ struct ContentView: View {
 
         do {
             _ = try await room.messages.send(params: .init(text: newMessage))
-            await MainActor.run {
-                newMessage = ""
-            }
+            newMessage = ""
         } catch {
             print("Failed to send message: \(error)")
         }
     }
 
-    private func monitorRoomStatus(room: Room) async {
-        let connectionSubscription = chatClient.connection.onStatusChange()
-
-        // Monitor connection status
-        Task {
-            for await status in connectionSubscription {
-                await MainActor.run {
-                    connectionStatus = "\(status.current)"
-                }
-            }
-        }
-
-        // Monitor room status
-        for await status in room.onStatusChange() {
-            await MainActor.run {
-                roomStatus = "\(status.current)"
-            }
+    private func monitorConnectionStatus() {
+        chatClient.connection.onStatusChange { status in
+            connectionStatus = "\(status.current)"
         }
     }
 
-    private func formatTimestamp(_ timestamp: Date) -> String {
+    private func monitorRoomStatus(room: Room) {
+        room.onStatusChange { status in
+            roomStatus = "\(status.current)"
+        }
+    }
+
+    private func formatTimestamp(_ timestamp: Date?) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .medium
+        guard let timestamp else { return "" }
         return formatter.string(from: timestamp)
     }
 }
@@ -427,7 +399,7 @@ Update your `ContentView.swift` to add message editing capability:
 <Code>
 ```swift
 struct ContentView: View {
-    private let roomID = "my-first-room"
+    private let roomName = "my-first-room"
 
     @State private var chatClient: ChatClient
     @State private var connectionStatus = ""
@@ -443,7 +415,7 @@ struct ContentView: View {
         realtimeOptions.clientId = "my-first-client"
         let realtime = ARTRealtime(options: realtimeOptions)
 
-        let chatClient = DefaultChatClient(realtime: realtime, clientOptions: .init())
+        let chatClient = DefaultChatClient(realtime: realtime, clientOptions: ChatClientOptions())
         self._chatClient = State(initialValue: chatClient)
     }
 
@@ -456,7 +428,7 @@ struct ContentView: View {
             // Status bar
             VStack {
                 Text("Connection: \(connectionStatus)")
-                Text("Room: \(roomID), Status: \(roomStatus)")
+                Text("Room: \(roomName), Status: \(roomStatus)")
             }
             .font(.caption)
             .padding(.horizontal)
@@ -511,9 +483,7 @@ struct ContentView: View {
 
         do {
             _ = try await room.messages.send(params: .init(text: newMessage))
-            await MainActor.run {
-                newMessage = ""
-            }
+            newMessage = ""
         } catch {
             print("Failed to send message: \(error)")
         }
@@ -525,10 +495,8 @@ struct ContentView: View {
         do {
             let updatedMessage = editingMessage.copy(text: newMessage)
             _ = try await room.messages.update(newMessage: updatedMessage, description: nil, metadata: nil)
-            await MainActor.run {
-                self.editingMessage = nil
-                newMessage = ""
-            }
+            self.editingMessage = nil
+            newMessage = ""
         } catch {
             print("Failed to update message: \(error)")
         }
@@ -546,7 +514,7 @@ struct MessageRowView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 VStack(alignment: .leading) {
-                    Text("\(message.clientID ?? "Unknown"): \(message.text)")
+                    Text("\(message.clientID): \(message.text)")
                         .font(.body)
                         .background(isEditing ? Color.blue.opacity(0.1) : Color.clear)
                     Text(formatTimestamp(message.timestamp))
@@ -564,9 +532,10 @@ struct MessageRowView: View {
         .padding(.vertical, 2)
     }
 
-    private func formatTimestamp(_ timestamp: Date) -> String {
+    private func formatTimestamp(_ timestamp: Date?) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .medium
+        guard let timestamp else { return "" }
         return formatter.string(from: timestamp)
     }
 }
@@ -577,46 +546,43 @@ When you tap the "Edit" button next to a message, you can modify the text and it
 
 ## Step 6: Message history and continuity <a id="step-6"/>
 
-Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The message subscription object exposes the `getPreviousMessages()` method to enable this functionality. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
+Ably Chat enables you to retrieve previously sent messages in a room. This is useful for providing conversational context when a user first joins a room, or when they subsequently rejoin it later on. The message subscription provides `historyBeforeSubscribe()` to enable this functionality. This method returns a paginated response, which can be queried further to retrieve the next set of messages.
 
 Update the `setupMessages` function in your `ContentView.swift` to retrieve previous messages:
 
 <Code>
 ```swift
-private func setupMessages(room: Room) async {
-    do {
-        let messagesSubscription = try await room.messages.subscribe()
-
-        // Get previous messages first
-        let previousMessages = try await messagesSubscription.getPreviousMessages(params: .init())
-        await MainActor.run {
-            messages.append(contentsOf: previousMessages.items)
-        }
-
-        // Listen for new messages
-        Task {
-            for await message in messagesSubscription {
-                await MainActor.run {
-                    switch message.action {
-                    case .create:
-                        // Only add if not already in the list
-                        if !messages.contains(where: { $0.id == message.id }) {
-                            messages.append(message)
-                        }
-                    case .update:
-                        if let index = messages.firstIndex(where: { $0.id == message.id }) {
-                            messages[index] = message
-                        }
-                    case .delete:
-                        if let index = messages.firstIndex(where: { $0.id == message.id }) {
-                            messages[index] = message
-                        }
-                    }
+private func setupMessages(room: Room) {
+    let subscription = room.messages.subscribe { event in
+        withAnimation {
+            switch event.type {
+            case .created:
+                // Only add if not already in the list
+                if !messages.contains(where: { $0.id == event.message.id }) {
+                    messages.append(event.message)
+                }
+            case .updated:
+                if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
+                    messages[index] = event.message
+                }
+            case .deleted:
+                if let index = messages.firstIndex(where: { $0.id == event.message.id }) {
+                    messages[index] = event.message
                 }
             }
         }
-    } catch {
-        print("Failed to setup messages: \(error)")
+    }
+
+    // Get previous messages after subscribing
+    Task {
+        do {
+            let previousMessages = try await subscription.historyBeforeSubscribe(.init())
+            await MainActor.run {
+                messages.append(contentsOf: previousMessages.items)
+            }
+        } catch {
+            print("Failed to get previous messages: \(error)")
+        }
     }
 }
 ```
@@ -634,12 +600,12 @@ Do the following to test this out:
 
 Display the online status of clients using the presence feature. This enables clients to be aware of one another if they are present in the same room. You can then show clients who else is online, provide a custom status update for each, and notify the room when someone enters it, or leaves it, such as by going offline.
 
-Update your `ContentView.swift` to add presence functionality:
+Update your `ContentView.swift` to add presence functionality using callbacks:
 
 <Code>
 ```swift
 struct ContentView: View {
-    private let roomID = "my-first-room"
+    private let roomName = "my-first-room"
 
     @State private var chatClient: ChatClient
     @State private var connectionStatus = ""
@@ -657,7 +623,7 @@ struct ContentView: View {
             // Status bar
             VStack {
                 Text("Connection: \(connectionStatus)")
-                Text("Room: \(roomID), Status: \(roomStatus)")
+                Text("Room: \(roomName), Status: \(roomStatus)")
                 Text("Online: \(presenceMembers.count)")
             }
             .font(.caption)
@@ -672,33 +638,34 @@ struct ContentView: View {
 
     private func setupRoom() async {
         do {
-            let chatRoom = try await chatClient.rooms.get(roomID: roomID)
+            let chatRoom = try await chatClient.rooms.get(name: roomName)
             try await chatRoom.attach()
             self.room = chatRoom
 
-            // Enter presence
+            // Enter presence with data
             try await chatRoom.presence.enter(data: ["status": "📱 Online"])
 
-            await setupMessages(room: chatRoom)
-            await setupPresence(room: chatRoom)
-            await monitorRoomStatus(room: chatRoom)
+            setupMessages(room: chatRoom)
+            setupPresence(room: chatRoom)
+            monitorConnectionStatus()
+            monitorRoomStatus(room: chatRoom)
         } catch {
             print("Failed to setup room: \(error)")
         }
     }
 
-    private func setupPresence(room: Room) async {
+    private func setupPresence(room: Room) {
         // Listen for presence events
-        Task {
-            for await event in room.presence.subscribe(events: [.enter, .leave, .update]) {
-                await MainActor.run {
-                    updatePresenceMembers()
-                }
+        room.presence.subscribe(events: [.enter, .leave, .update]) { event in
+            Task {
+                await updatePresenceMembers()
             }
         }
 
         // Update initial presence
-        await updatePresenceMembers()
+        Task {
+            await updatePresenceMembers()
+        }
     }
 
     private func updatePresenceMembers() async {
@@ -733,12 +700,12 @@ ably rooms presence enter my-first-room --client-id "my-cli"
 
 Clients can send a reaction to a room to show their sentiment for what is happening, such as a point being scored in a sports game. These are short-lived (ephemeral) and are not stored in the room history.
 
-Update your `ContentView.swift` to add reaction functionality:
+Update your `ContentView.swift` to add reaction functionality using callbacks:
 
 <Code>
 ```swift
 struct ContentView: View {
-    private let roomID = "my-first-room"
+    private let roomName = "my-first-room"
 
     @State private var chatClient: ChatClient
     @State private var connectionStatus = ""
@@ -757,7 +724,7 @@ struct ContentView: View {
             // Status bar
             VStack {
                 Text("Connection: \(connectionStatus)")
-                Text("Room: \(roomID), Status: \(roomStatus)")
+                Text("Room: \(roomName), Status: \(roomStatus)")
                 Text("Online: \(presenceMembers.count)")
             }
             .font(.caption)
@@ -771,7 +738,7 @@ struct ContentView: View {
                 ForEach(["👍", "❤️", "💥", "🚀", "👎"], id: \.self) { emoji in
                     Button(emoji) {
                         Task {
-                            await sendReaction(type: emoji)
+                            await sendReaction(name: emoji)
                         }
                     }
                     .font(.title2)
@@ -842,43 +809,40 @@ struct ContentView: View {
 
     private func setupRoom() async {
         do {
-            let chatRoom = try await chatClient.rooms.get(roomID: roomID)
+            let chatRoom = try await chatClient.rooms.get(name: roomName)
             try await chatRoom.attach()
             self.room = chatRoom
 
-            // Enter presence
+            // Enter presence with data
             try await chatRoom.presence.enter(data: ["status": "📱 Online"])
 
-            await setupMessages(room: chatRoom)
-            await setupPresence(room: chatRoom)
-            await setupReactions(room: chatRoom)
-            await monitorRoomStatus(room: chatRoom)
+            setupMessages(room: chatRoom)
+            setupPresence(room: chatRoom)
+            setupReactions(room: chatRoom)
+            monitorConnectionStatus()
+            monitorRoomStatus(room: chatRoom)
         } catch {
             print("Failed to setup room: \(error)")
         }
     }
 
-    private func setupReactions(room: Room) async {
-        let reactionSubscription = room.reactions.subscribe()
-
-        Task {
-            for await reaction in reactionSubscription {
-                await MainActor.run {
-                    recentReactions.append(reaction.type)
-                    // Keep only last 10 reactions
-                    if recentReactions.count > 10 {
-                        recentReactions.removeFirst()
-                    }
+    private func setupReactions(room: Room) {
+        room.reactions.subscribe { event in
+            withAnimation {
+                recentReactions.append(event.reaction.name)
+                // Keep only last 10 reactions
+                if recentReactions.count > 10 {
+                    recentReactions.removeFirst()
                 }
             }
         }
     }
 
-    private func sendReaction(type: String) async {
+    private func sendReaction(name: String) async {
         guard let room = room else { return }
 
         do {
-            try await room.reactions.send(params: .init(type: type))
+            try await room.reactions.send(params: .init(name: name))
         } catch {
             print("Failed to send reaction: \(error)")
         }
@@ -903,12 +867,12 @@ ably rooms reactions send my-first-room 👍
 
 Typing indicators let other users know when someone is actively composing a message. This creates a more responsive and interactive chat experience.
 
-Update your `ContentView.swift` to add typing indicators:
+Update your `ContentView.swift` to add typing indicators using callbacks:
 
 <Code>
 ```swift
 struct ContentView: View {
-    private let roomID = "my-first-room"
+    private let roomName = "my-first-room"
 
     @State private var chatClient: ChatClient
     @State private var connectionStatus = ""
@@ -982,31 +946,28 @@ struct ContentView: View {
 
     private func setupRoom() async {
         do {
-            let chatRoom = try await chatClient.rooms.get(roomID: roomID)
+            let chatRoom = try await chatClient.rooms.get(name: roomName)
             try await chatRoom.attach()
             self.room = chatRoom
 
-            // Enter presence
+            // Enter presence with data
             try await chatRoom.presence.enter(data: ["status": "📱 Online"])
 
-            await setupMessages(room: chatRoom)
-            await setupPresence(room: chatRoom)
-            await setupReactions(room: chatRoom)
-            await setupTyping(room: chatRoom)
-            await monitorRoomStatus(room: chatRoom)
+            setupMessages(room: chatRoom)
+            setupPresence(room: chatRoom)
+            setupReactions(room: chatRoom)
+            setupTyping(room: chatRoom)
+            monitorConnectionStatus()
+            monitorRoomStatus(room: chatRoom)
         } catch {
             print("Failed to setup room: \(error)")
         }
     }
 
-    private func setupTyping(room: Room) async {
-        let typingSubscription = room.typing.subscribe()
-
-        Task {
-            for await typing in typingSubscription {
-                await MainActor.run {
-                    typingUsers = typing.currentlyTyping.filter { $0 != chatClient.clientId }
-                }
+    private func setupTyping(room: Room) {
+        room.typing.subscribe { typing in
+            withAnimation {
+                typingUsers = typing.currentlyTyping.filter { $0 != chatClient.clientID }
             }
         }
     }
@@ -1036,12 +997,12 @@ Now when you type in the message field, other users will see a typing indicator.
 
 Occupancy shows how many connections and presence members are currently in the room. This helps users understand the activity level of the room.
 
-Update your `ContentView.swift` to add occupancy information:
+Update your `ContentView.swift` to add occupancy information using callbacks:
 
 <Code>
 ```swift
 struct ContentView: View {
-    private let roomID = "my-first-room"
+    private let roomName = "my-first-room"
 
     @State private var chatClient: ChatClient
     @State private var connectionStatus = ""
@@ -1062,7 +1023,7 @@ struct ContentView: View {
             // Status bar
             VStack {
                 Text("Connection: \(connectionStatus)")
-                Text("Room: \(roomID), Status: \(roomStatus)")
+                Text("Room: \(roomName), Status: \(roomStatus)")
                 Text("Online: \(presenceMembers.count)")
                 Text(occupancyInfo)
             }
@@ -1078,19 +1039,20 @@ struct ContentView: View {
 
     private func setupRoom() async {
         do {
-            let chatRoom = try await chatClient.rooms.get(roomID: roomID)
+            let chatRoom = try await chatClient.rooms.get(name: roomName, options: .init(occupancy: .init(enableEvents: true)))
             try await chatRoom.attach()
             self.room = chatRoom
 
-            // Enter presence
+            // Enter presence with data
             try await chatRoom.presence.enter(data: ["status": "📱 Online"])
 
-            await setupMessages(room: chatRoom)
-            await setupPresence(room: chatRoom)
-            await setupReactions(room: chatRoom)
-            await setupTyping(room: chatRoom)
+            setupMessages(room: chatRoom)
+            setupPresence(room: chatRoom)
+            setupReactions(room: chatRoom)
+            setupTyping(room: chatRoom)
             await setupOccupancy(room: chatRoom)
-            await monitorRoomStatus(room: chatRoom)
+            monitorConnectionStatus()
+            monitorRoomStatus(room: chatRoom)
         } catch {
             print("Failed to setup room: \(error)")
         }
@@ -1101,15 +1063,13 @@ struct ContentView: View {
             // Get initial occupancy
             let currentOccupancy = try await room.occupancy.get()
             await MainActor.run {
-                occupancyInfo = "Connections: \(currentOccupancy.presenceMembers) (\(currentOccupancy.connections))"
+                occupancyInfo = "Connections: \(currentOccupancy.connections)"
             }
 
-            // Listen for occupancy changes
-            Task {
-                for await event in room.occupancy.subscribe() {
-                    await MainActor.run {
-                        occupancyInfo = "Connections: \(event.presenceMembers) (\(event.connections))"
-                    }
+            // Listen for occupancy changes using callback
+            room.occupancy.subscribe { event in
+                withAnimation {
+                    occupancyInfo = "Connections: \(event.occupancy.connections)"
                 }
             }
         } catch {
@@ -1151,7 +1111,7 @@ struct MessageRowView: View {
             } else {
                 HStack {
                     VStack(alignment: .leading) {
-                        Text("\(message.clientID ?? "Unknown"): \(message.text)")
+                        Text("\(message.clientID): \(message.text)")
                             .font(.body)
                             .background(isEditing ? Color.blue.opacity(0.1) : Color.clear)
                         Text(formatTimestamp(message.timestamp))
@@ -1181,9 +1141,10 @@ struct MessageRowView: View {
         .padding(.vertical, 2)
     }
 
-    private func formatTimestamp(_ timestamp: Date) -> String {
+    private func formatTimestamp(_ timestamp: Date?) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .medium
+        guard let timestamp else { return "" }
         return formatter.string(from: timestamp)
     }
 }
