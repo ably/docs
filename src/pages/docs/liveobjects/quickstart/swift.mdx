@@ -1,0 +1,201 @@
+---
+title: "Quickstart: LiveObjects in Swift"
+meta_description: "A quickstart guide to learn the basics of integrating the Ably LiveObjects product into your Swift application."
+---
+
+<Aside data-type='experimental'>
+LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.
+
+**Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+</Aside>
+
+This guide shows how to integrate Ably LiveObjects into your Swift application.
+
+You will learn how to:
+
+* Create an Ably account and get an API key for authentication.
+* Install the Ably Pub/Sub SDK.
+* Create a channel with LiveObjects functionality enabled.
+* Create, update and subscribe to changes on LiveObjects data structures: [LiveMap](/docs/liveobjects/map) and [LiveCounter](/docs/liveobjects/counter).
+
+## Authentication <a id="step-0"/>
+
+An [API key](/docs/auth#api-keys) is required to authenticate with Ably. API keys are used either to authenticate directly with Ably using [basic authentication](/docs/auth/basic), or to generate tokens for untrusted clients using [token authentication](/docs/auth/token).
+
+<Aside data-type='important'>
+The examples use [basic authentication](/docs/auth/basic) to demonstrate features for convenience. In your own applications, basic authentication should never be used on the client-side as it exposes your Ably API key. Instead use [token authentication](/docs/auth/token).
+</Aside>
+
+[Sign up](https://ably.com/sign-up) for a free account and create your own API key in the [dashboard](https://ably.com/dashboard) or use the [Control API](/docs/platform/account/control-api) to create an API key programmatically.
+
+API keys and tokens have a set of [capabilities](/docs/auth/capabilities) assigned to them that specify which operations can be performed on which resources. The following capabilities are available for LiveObjects:
+
+* `object-subscribe` - grants clients read access to LiveObjects, allowing them to get the root object and subscribe to updates.
+* `object-publish` - grants clients write access to LiveObjects, allowing them to perform mutation operations on objects.
+
+To use LiveObjects, an API key must have at least the `object-subscribe` capability. With only this capability, clients will have read-only access, preventing them from calling mutation methods on LiveObjects.
+
+For the purposes of this guide, make sure your API key includes both `object-subscribe` and `object-publish` [capabilities](/docs/auth/capabilities) to allow full read and write access.
+
+## Install Ably Pub/Sub SDK <a id="step-1"/>
+
+LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated LiveObjects plugin.
+
+### Xcode <a id="xcode"/>
+
+To follow this guide in Xcode, use a new iOS project with the SwiftUI App template. All code can be added directly to your `ContentView.swift` file, inside the `ContentView` struct. Use the `.task` modifier with a `do { … } catch { … }` inside to run the Ably code when the view appears. No additional files or setup are needed. All `print` output will appear in Xcode's debug console (View > Debug Area > Activate Console, or press Cmd+Shift+C).
+
+Install the Ably SDK and the LiveObjects plugin in your Xcode project:
+
+1. Paste `https://github.com/ably/ably-cocoa` in the Swift Packages search box (File → Add Package Dependencies).
+2. Add the `Ably` product.
+3. Paste `https://github.com/ably/ably-cocoa-liveobject-plugin` in the Swift Packages search box.
+4. Add the `AblyLiveObjects` product.
+
+Import the SDK and the LiveObjects plugin into your project:
+
+<Code>
+```swift
+import Ably
+import AblyLiveObjects
+```
+</Code>
+
+## Instantiate a client <a id="step-2"/>
+
+Instantiate an Ably Realtime client from the Pub/Sub SDK, providing the LiveObjects plugin:
+
+<Code>
+```swift
+let clientOptions = ARTClientOptions(key: "{{API_KEY}}")
+clientOptions.plugins = [.liveObjects: AblyLiveObjects.Plugin.self]
+
+let realtimeClient = ARTRealtime(options: clientOptions)
+```
+</Code>
+
+A [`ClientOptions`](/docs/api/realtime-sdk#client-options) object may be passed to the Pub/Sub SDK instance to further customize the connection, however at a minimum you must set an API key and provide the `.liveObjects` plugin so that the client can use LiveObjects functionality.
+
+## Create a channel <a id="step-3"/>
+
+LiveObjects is managed and persisted on [channels](/docs/channels). To use LiveObjects, you must first create a channel with the correct [channel mode flags](/docs/channels/options#modes):
+
+* `OBJECT_SUBSCRIBE` - required to access objects on a channel.
+* `OBJECT_PUBLISH` - required to create and modify objects on a channel.
+
+<Aside data-type='note'>
+When you provide an explicit `modes` property for a channel, you override the set of [default modes](/docs/channels/options#modes) used for that channel. So, if you're using the channel for anything in addition to LiveObjects, you need to ensure that you also include the other modes required by the features you are using.
+</Aside>
+
+<Code>
+```swift
+let channelOptions = ARTRealtimeChannelOptions()
+channelOptions.modes = [.objectPublish, .objectSubscribe]
+let channel = realtimeClient.channels.get("my_liveobjects_channel", options: channelOptions)
+```
+</Code>
+
+Next, you need to [attach to the channel](/docs/channels/states). Attaching to a channel starts an initial synchronization sequence where the objects on the channel are sent to the client.
+
+<Code>
+{/* This is cumbersome and we'd really like to just write `try await channel.attach()`; see https://github.com/ably/ably-cocoa/issues/2087 */}
+```swift
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.attach { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+}
+```
+</Code>
+
+## Get root object <a id="step-4"/>
+
+The [`channel.objects`](/docs/api/realtime-sdk/channels#objects) property gives access to the LiveObjects API for a channel.
+
+Use it to get the root object, which is the entry point for accessing and persisting objects on a channel. The root object is a [`LiveMap`](/docs/liveobjects/map) instance that always exists on a channel and acts as the top-level node in your object tree. You can get the root object using the `getRoot()` function of LiveObjects:
+
+<Code>
+```swift
+// The getRoot call returns once the LiveObjects state is synchronized with the Ably system
+let root = try await channel.objects.getRoot()
+```
+</Code>
+
+## Create objects <a id="step-5"/>
+
+You can create new objects using dedicated functions of the LiveObjects API at [`channel.objects`](/docs/api/realtime-sdk/channels#objects). To persist them on a channel and share them between clients, you must assign objects to a parent `LiveMap` instance connected to the root object. The root object itself is a `LiveMap` instance, so you can assign objects to the root and start building your object tree from there.
+
+<Aside data-type='note'>
+Objects that are not descendants of the root object are "unreachable" and will eventually be garbage collected. Read more in the [objects lifecycle events section](/docs/liveobjects/lifecycle#objects-lifecycle).
+</Aside>
+
+<Code>
+```swift
+let visitsCounter = try await channel.objects.createCounter()
+let reactionsMap = try await channel.objects.createMap()
+
+try await root.set(key: "visits", value: .liveCounter(visitsCounter))
+try await root.set(key: "reactions", value: .liveMap(reactionsMap))
+```
+</Code>
+
+## Subscribe to updates <a id="step-6"/>
+
+Subscribe to realtime updates to objects on a channel. You will be notified when an object is updated by other clients or by you.
+
+<Code>
+```swift
+try visitsCounter.subscribe { _, _ in
+    do {
+        print("Visits counter updated: \(try visitsCounter.value)")
+    } catch {
+        // Error handling of visitsCounter.value omitted for brevity
+    }
+}
+
+try reactionsMap.subscribe { _, _ in
+    do {
+        print("Reactions map updated: \(try reactionsMap.entries)")
+    } catch {
+        // Error handling of reactionsMap.entries omitted for brevity
+    }
+}
+```
+</Code>
+
+## Update objects <a id="step-7"/>
+
+Update objects using mutation methods. All subscribers (including you) will be notified of the changes when you update an object:
+
+<Code>
+```swift
+try await visitsCounter.increment(amount: 5)
+// console: "Visits counter updated: 5.0"
+try await visitsCounter.decrement(amount: 2)
+// console: "Visits counter updated: 3.0"
+
+try await reactionsMap.set(key: "like", value: 10)
+// console: "Reactions map updated: [(key: "like", value: AblyLiveObjects.LiveMapValue.number(10.0))]"
+try await reactionsMap.set(key: "love", value: 5)
+// console: "Reactions map updated: [(key: "like", value: AblyLiveObjects.LiveMapValue.number(10.0)), (key: "love", value: AblyLiveObjects.LiveMapValue.number(5.0))]"
+try await reactionsMap.remove(key: "like")
+// console: "Reactions map updated: [(key: "love", value: AblyLiveObjects.LiveMapValue.number(5.0))]"
+```
+</Code>
+
+<Aside data-type='note'>
+Mutation methods (such as `LiveMap.set(key:value:)`, `LiveCounter.increment(amount:)`, etc.) do not directly modify the local object state. Instead, they send the intended operation to the Ably system, and the change is applied only when the corresponding realtime operation is echoed back to the client. This means that the state retrieved immediately after a mutation may not reflect the latest updates yet. You will be notified via subscription when the object is updated.
+</Aside>
+
+## Next steps <a id="step-8"/>
+
+This quickstart introduced the basic concepts of LiveObjects and demonstrated how it works. The next steps are to:
+
+* Read more about [LiveCounter](/docs/liveobjects/counter) and [LiveMap](/docs/liveobjects/map).
+* Learn about [Batching Operations](/docs/liveobjects/batch).
+* Learn about [Objects Lifecycle Events](/docs/liveobjects/lifecycle).
+* Add [Typings](/docs/liveobjects/typing) for your LiveObjects.

@@ -17,7 +17,7 @@ LiveObjects provides specialized object types to model your application state. T
 
 ### LiveMap Object <a id="livemap"/>
 
-[LiveMap](/docs/liveobjects/map) is a key/value data structure similar to a dictionary or JavaScript [Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map):
+[LiveMap](/docs/liveobjects/map) is a key/value data structure similar to a <If lang="javascript">dictionary or JavaScript [Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map)</If><If lang="swift">`Dictionary`</If>:
 
 * Keys must be strings
 * Values can be primitive types, JSON-serializable objects or arrays, or [references](#composability) to other objects
@@ -33,12 +33,22 @@ const userSettings = await channel.objects.createMap();
 await userSettings.set('theme', 'dark');
 await userSettings.set('notifications', true);
 ```
+
+```swift
+// Create a LiveMap
+let userSettings = try await channel.objects.createMap()
+
+// Set primitive values
+try await userSettings.set(key: "theme", value: "dark")
+try await userSettings.set(key: "notifications", value: true)
+```
 </Code>
 
 #### Primitive Types <a id="primitive-types"/>
 
 [LiveMap](/docs/liveobjects/map) supports the following primitive types as values:
 
+<If lang="javascript">
 * `string`
 * `number`
 * `boolean`
@@ -47,6 +57,15 @@ await userSettings.set('notifications', true);
 <Aside data-type='note'>
 `number` is a double-precision floating-point number, which is the same as JavaScript's [`number`](https://developer.mozilla.org/en-US/docs/Glossary/Number) type.
 </Aside>
+</If>
+
+<If lang="swift">
+* `String`
+* `Double`
+* `Bool`
+* `Data`
+* JSON arrays or objects
+</If>
 
 ### LiveCounter Object <a id="livecounter"/>
 
@@ -62,6 +81,14 @@ const visitsCounter = await channel.objects.createCounter();
 
 // Increment the counter
 await visitsCounter.increment(1);
+```
+
+```swift
+// Create a LiveCounter
+let visitsCounter = try await channel.objects.createCounter();
+
+// Increment the counter
+try await visitsCounter.increment(amount: 1);
 ```
 </Code>
 
@@ -83,6 +110,14 @@ const root = await channel.objects.getRoot();
 
 // Use it like any other LiveMap
 await root.set('app-version', '1.0.0');
+```
+
+```swift
+// Get the Root Object
+let root = try await channel.objects.getRoot()
+
+// Use it like any other LiveMap
+try await root.set(key: "app-version", value: "1.0.0")
 ```
 </Code>
 
@@ -109,6 +144,21 @@ counterOld.on('deleted', () => {
 const counterNew = await channel.objects.createCounter();
 await root.set('myCounter', counterNew);
 ```
+
+```swift
+// Create a counter and reference it from the root
+let counterOld = try await channel.objects.createCounter()
+try await root.set(key: "myCounter", value: .liveCounter(counterOld))
+
+// counterOld will eventually be deleted
+counterOld.on(event: .deleted) { _ in
+    print("counterOld has been deleted and can no longer be used")
+}
+
+// Create a new counter and replace the old one referenced from the root
+let counterNew = try await channel.objects.createCounter()
+try await root.set(key: "myCounter", value: .liveCounter(counterNew))
+```
 </Code>
 
 <Aside data-type='note'>
@@ -133,6 +183,26 @@ await preferencesMap.set('theme', 'dark');
 await profileMap.set('preferences', preferencesMap);
 await profileMap.set('activity', activityCounter);
 await root.set('profile', profileMap);
+
+// Resulting structure:
+// root (LiveMap)
+// └── profile (LiveMap)
+//     ├── preferences (LiveMap)
+//     │   └── theme: "dark" (string)
+//     └── activity (LiveCounter)
+```
+
+```swift
+// Create LiveObjects
+let profileMap = try await channel.objects.createMap()
+let preferencesMap = try await channel.objects.createMap()
+let activityCounter = try await channel.objects.createCounter()
+
+// Build a composite structure
+try await preferencesMap.set(key: "theme", value: "dark")
+try await profileMap.set(key: "preferences", value: .liveMap(preferencesMap))
+try await profileMap.set(key: "activity", value: .liveCounter(activityCounter))
+try await root.set(key: "profile", value: .liveMap(profileMap))
 
 // Resulting structure:
 // root (LiveMap)
@@ -176,6 +246,43 @@ mapB.get('count').subscribe(() => {
 // Increment the counter
 await counter.increment(1);
 ```
+
+```swift
+// Create a counter
+let counter = try await channel.objects.createCounter()
+
+// Create two different maps
+let mapA = try await channel.objects.createMap()
+let mapB = try await channel.objects.createMap()
+try await root.set(key: "a", value: .liveMap(mapA))
+try await root.set(key: "b", value: .liveMap(mapB))
+
+// Reference the same counter from both maps
+try await mapA.set(key: "count", value: .liveCounter(counter))
+try await mapB.set(key: "count", value: .liveCounter(counter))
+
+// The counter referenced from each location shows the same
+// value, since they refer to the same underlying counter
+try mapA.get(key: "count")?.liveCounterValue?.subscribe { _, _ in
+    do {
+        let value = try mapA.get(key: "count")?.liveCounterValue?.value
+        print(String(describing: value)) // 1
+    } catch {
+        // Error not relevant here
+    }
+}
+try mapB.get(key: "count")?.liveCounterValue?.subscribe { _, _ in
+    do {
+        let value = try mapB.get(key: "count")?.liveCounterValue?.value
+        print(String(describing: value)) // 1
+    } catch {
+        // Error not relevant here
+    }
+}
+
+// Increment the counter
+try await counter.increment(amount: 1)
+```
 </Code>
 
 It is also possible that object references form a cycle:
@@ -197,6 +304,24 @@ await root.set('a', mapA);
 root.get('a') // mapA
   .get('ref')  // mapB
   .get('ref'); // mapA
+```
+
+```swift
+// Create two different maps
+let mapA = try await channel.objects.createMap()
+let mapB = try await channel.objects.createMap()
+
+// Set up a circular reference
+try await mapA.set(key: "ref", value: .liveMap(mapB))
+try await mapB.set(key: "ref", value: .liveMap(mapA))
+
+// Add one map to root (both are now reachable)
+try await root.set(key: "a", value: .liveMap(mapA))
+
+// We can traverse the cycle
+_ = try root.get(key: "a")? // mapA
+    .liveMapValue?.get(key: "ref")? // mapB
+    .liveMapValue?.get(key: "ref") // mapA
 ```
 </Code>
 
