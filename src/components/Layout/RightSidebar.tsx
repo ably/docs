@@ -4,6 +4,7 @@ import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/ui/core/utils/heights';
+import Tooltip from '@ably/ui/core/Tooltip';
 
 import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
@@ -58,10 +59,6 @@ const externalLinks = (
   **Requested change or enhancement**:
 `);
 
-  const requestPath = `${requestBasePath}?title=${requestTitle}&body=${requestBody}`;
-  const prompt = `Tell me more about ${activePage.product ? productData[activePage.product]?.nav.name : 'Ably'}'s '${activePage.page.name}' feature from https://ably.com${activePage.page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
-  const gptPath = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
-
   return [
     {
       label: 'Edit on GitHub',
@@ -69,8 +66,23 @@ const externalLinks = (
       link: githubEditPath,
       type: 'github',
     },
-    { label: 'Request changes', icon: 'icon-gui-hand-raised-outline', link: requestPath, type: 'request' },
-    { label: 'Open in ChatGPT', icon: 'icon-tech-openai', link: gptPath, type: 'llm' },
+    {
+      label: 'Request changes',
+      icon: 'icon-gui-hand-raised-outline',
+      link: `${requestBasePath}?title=${requestTitle}&body=${requestBody}`,
+      type: 'request',
+    },
+  ];
+};
+
+const llmLinks = (activePage: ActivePage, language: LanguageKey): { label: string; icon: IconName; link: string }[] => {
+  const prompt = `Tell me more about ${activePage.product ? productData[activePage.product]?.nav.name : 'Ably'}'s '${activePage.page.name}' feature from https://ably.com${activePage.page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
+  const gptPath = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
+  const claudePath = `https://claude.ai/new?q=${encodeURIComponent(prompt)}`;
+
+  return [
+    { label: 'ChatGPT', icon: 'icon-tech-openai', link: gptPath },
+    { label: 'Claude (must be logged in)', icon: 'icon-tech-claude-mono', link: claudePath },
   ];
 };
 
@@ -244,7 +256,7 @@ const RightSidebar = () => {
           </>
         ) : null}
         <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-6">
-          {externalLinks(activePage, location).map(({ label, icon, link, type }, index) => (
+          {externalLinks(activePage, location).map(({ label, icon, link, type }) => (
             <a
               key={label}
               href={link}
@@ -253,12 +265,7 @@ const RightSidebar = () => {
               className="group/external-link"
               data-testid={`external-${type}-link`}
             >
-              <div
-                className={cn(
-                  'flex items-center p-4',
-                  index > 0 && 'border-t border-neutral-300 dark:border-neutral-1000',
-                )}
-              >
+              <div className="flex items-center p-4 border-b border-neutral-300 dark:border-neutral-1000">
                 <div className="flex-1 flex items-center gap-3">
                   <Icon
                     size="20px"
@@ -279,6 +286,31 @@ const RightSidebar = () => {
               </div>
             </a>
           ))}
+          <div className="flex items-center p-4 gap-2">
+            <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400">Open in </span>
+            {llmLinks(activePage, language).map(({ label, icon, link }) => (
+              <a
+                key={label}
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-5 ui-theme-dark group/llm-link"
+              >
+                <Tooltip
+                  content={label}
+                  triggerElement={
+                    <Icon
+                      name={icon}
+                      size="20px"
+                      additionalCSS="transition-colors text-neutral-900 dark:text-neutral-400 group-hover/llm-link:text-neutral-1300 dark:group-hover/llm-link:text-neutral-000"
+                    />
+                  }
+                >
+                  {label}
+                </Tooltip>
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </div>
