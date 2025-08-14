@@ -245,7 +245,7 @@ export const data = {
           text: 'LiveObjects plugin for JavaScript.',
           image: { src: js, isWide: false },
           githubRepoURL: 'https://github.com/ably/ably-js',
-          setupLink: 'liveobjects/quickstart',
+          setupLink: 'liveobjects/quickstart/javascript',
         },
       ],
     },
