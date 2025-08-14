@@ -22,8 +22,13 @@ export default {
       name: 'Getting started',
       pages: [
         {
-          name: 'Quickstart',
-          link: '/docs/liveobjects/quickstart',
+          name: 'Quickstarts',
+          pages: [
+            {
+              name: 'JavaScript',
+              link: '/docs/liveobjects/quickstart/javascript',
+            },
+          ],
         },
       ],
     },
