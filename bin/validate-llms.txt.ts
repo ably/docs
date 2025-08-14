@@ -25,29 +25,60 @@ function countHtmlFiles(): number {
   return contentFiles.length;
 }
 
-function countLlmsLines(): number {
+function countLlmsPages(): { totalLines: number; uniquePages: number } {
   const content = fs.readFileSync(LLMS_FILE, 'utf-8');
-  return content.split('\n').filter((line) => line.trim().length > 0).length;
+  const lines = content.split('\n').filter((line) => line.trim().length > 0);
+
+  // Extract unique page URLs (without ?lang= parameters)
+  const uniqueUrls = new Set<string>();
+
+  lines.forEach((line) => {
+    // Skip the header line
+    if (line.startsWith('#')) {
+      return;
+    }
+
+    // Extract URL from markdown link format: - [Title](URL): Description
+    const urlMatch = line.match(/\[.*?\]\((.*?)\)/);
+    if (urlMatch) {
+      const url = urlMatch[1];
+      // Remove lang parameter to get base URL
+      const baseUrl = url.split('?')[0];
+      uniqueUrls.add(baseUrl);
+    }
+  });
+
+  return {
+    totalLines: lines.length,
+    uniquePages: uniqueUrls.size,
+  };
 }
 
-function validateCounts(htmlCount: number, llmsCount: number): boolean {
-  const difference = Math.abs(htmlCount - llmsCount);
-  const maxAllowedDifference = Math.ceil(htmlCount * 0.8); // 80% of html count
-  return difference <= maxAllowedDifference;
+function validateCounts(htmlCount: number, uniquePageCount: number, totalLineCount: number): boolean {
+  // With language-specific URLs, we expect to have a reasonable coverage of the HTML files
+  // The unique page count should be at least 50% of the HTML count (allowing for pages not captured by our GraphQL queries)
+  // and at most 100% (we shouldn't have more unique pages than HTML files)
+  const coverage = uniquePageCount / htmlCount;
+  const minCoverage = 0.5; // At least 50% coverage
+  const maxCoverage = 1.0; // At most 100% coverage
+
+  return coverage >= minCoverage && coverage <= maxCoverage;
 }
 
 function main() {
   try {
     const htmlCount = countHtmlFiles();
-    const llmsCount = countLlmsLines();
-    const isValid = validateCounts(htmlCount, llmsCount);
+    const { totalLines, uniquePages } = countLlmsPages();
+    const isValid = validateCounts(htmlCount, uniquePages, totalLines);
 
     console.log(`HTML files found: ${htmlCount}`);
-    console.log(`Lines in llms.txt: ${llmsCount}`);
+    console.log(`Total lines in llms.txt: ${totalLines}`);
+    console.log(`Unique pages in llms.txt: ${uniquePages}`);
+    console.log(`Coverage: ${Math.round((uniquePages / htmlCount) * 100)}%`);
 
     if (!isValid) {
       console.error(
-        `Error: The number of lines in llms.txt (${llmsCount}) is not within 80% of the number of HTML files (${htmlCount})`,
+        `Error: The coverage of unique pages in llms.txt (${Math.round((uniquePages / htmlCount) * 100)}%) is not within the acceptable range of 50-100% of HTML files (${htmlCount})`,
       );
       process.exit(1);
     }
