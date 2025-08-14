@@ -5,6 +5,7 @@ import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/ui/core/utils/heights';
 import Tooltip from '@ably/ui/core/Tooltip';
+import { track } from '@ably/ui/core/insights';
 
 import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
@@ -75,14 +76,17 @@ const externalLinks = (
   ];
 };
 
-const llmLinks = (activePage: ActivePage, language: LanguageKey): { label: string; icon: IconName; link: string }[] => {
+const llmLinks = (
+  activePage: ActivePage,
+  language: LanguageKey,
+): { model: string; label: string; icon: IconName; link: string }[] => {
   const prompt = `Tell me more about ${activePage.product ? productData[activePage.product]?.nav.name : 'Ably'}'s '${activePage.page.name}' feature from https://ably.com${activePage.page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
   const gptPath = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
   const claudePath = `https://claude.ai/new?q=${encodeURIComponent(prompt)}`;
 
   return [
-    { label: 'ChatGPT', icon: 'icon-tech-openai', link: gptPath },
-    { label: 'Claude (must be logged in)', icon: 'icon-tech-claude-mono', link: claudePath },
+    { model: 'gpt', label: 'ChatGPT', icon: 'icon-tech-openai', link: gptPath },
+    { model: 'claude', label: 'Claude (must be logged in)', icon: 'icon-tech-claude-mono', link: claudePath },
   ];
 };
 
@@ -288,13 +292,20 @@ const RightSidebar = () => {
           ))}
           <div className="flex items-center p-4 gap-2">
             <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400">Open in </span>
-            {llmLinks(activePage, language).map(({ label, icon, link }) => (
+            {llmLinks(activePage, language).map(({ model, label, icon, link }) => (
               <a
-                key={label}
+                key={model}
                 href={link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex h-5 ui-theme-dark group/llm-link"
+                className="flex h-5 ui-theme-dark group/llm-link cursor-pointer"
+                onClick={() => {
+                  track('llm_link_clicked', {
+                    model,
+                    location: location.pathname,
+                    link,
+                  });
+                }}
               >
                 <Tooltip
                   content={label}
