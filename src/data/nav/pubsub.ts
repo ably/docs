@@ -75,7 +75,7 @@ export default {
             },
             {
               name: 'C# .NET',
-              link: '/docs/getting-started/quickstart',
+              link: '/docs/getting-started/dotnet',
             },
             {
               name: 'Objective C',
