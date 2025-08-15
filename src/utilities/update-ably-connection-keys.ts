@@ -1,9 +1,31 @@
 import { UserDetails } from 'src/contexts';
 
-export const getApiKey = (userData: UserDetails) =>
-  process.env.NODE_ENV === 'development' && process.env.GATSBY_VITE_ABLY_KEY
-    ? process.env.GATSBY_VITE_ABLY_KEY
-    : userData.apps?.[0]?.apiKeys?.[0]?.whole_key;
+export const getApiKey = (userData: UserDetails, demoOnly = false) => {
+  if (process.env.NODE_ENV === 'development' && process.env.GATSBY_VITE_ABLY_KEY) {
+    return process.env.GATSBY_VITE_ABLY_KEY;
+  }
+
+  const apps = userData.apps ?? [];
+  const app = apps.find((a) => a.demo === demoOnly);
+  return app?.apiKeys?.[0]?.whole_key;
+};
+
+/**
+ * Redacts an API key by showing only the part before the first colon, followed by asterisks
+ */
+export const redactApiKey = (apiKey: string): string => {
+  if (!apiKey) {
+    return apiKey;
+  }
+
+  const colonIndex = apiKey.indexOf(':');
+  if (colonIndex === -1) {
+    // If no colon found, show first 4 characters followed by asterisks
+    return apiKey.substring(0, 4) + '*****';
+  }
+
+  return apiKey.substring(0, colonIndex + 1) + '*****';
+};
 
 export const updateAblyConnectionKey = (
   files: Record<string, string>,
@@ -12,6 +34,7 @@ export const updateAblyConnectionKey = (
 ) => {
   const ablyEnvironment = process.env.GATSBY_ABLY_ENVIRONMENT ?? 'production';
   const names = Object.keys(files);
+  const redactedApiKey = redactApiKey(apiKey);
 
   return names.reduce(
     (acc, name: string) => {
@@ -28,13 +51,14 @@ export const updateAblyConnectionKey = (
         });
       }
 
-      // API Key
-      content = content.replaceAll(/import\.meta\.env\.VITE_ABLY_KEY/g, `"${apiKey}"`);
+      // API Key - use redacted version
+      content = content.replaceAll(/import\.meta\.env\.VITE_ABLY_KEY/g, `"${redactedApiKey}"`);
 
-      // Additional keys
+      // Additional keys - also redact these if they look like API keys
       if (additionalKeys) {
         Object.entries(additionalKeys).forEach(([key, value]) => {
-          content = content.replaceAll(`import.meta.env.VITE_${key}`, `"${value}"`);
+          const redactedValue = redactApiKey(value);
+          content = content.replaceAll(`import.meta.env.VITE_${key}`, `"${redactedValue}"`);
         });
       }
 
