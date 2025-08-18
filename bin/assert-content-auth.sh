@@ -75,18 +75,19 @@ export PORT=4001
 # run_test "/" "200" "text/html" "" "foo" "Root path with auth"
 
 # 1. Verify that things work as normal when the tokens aren't set
-run_test "/" "200" "text/html" "" "" "Root path without auth tokens"
+run_test "/" "301" "text/html" "/docs" "" "Root path without auth tokens"
 
 # 2. Verify that things work as expected when the tokens are set
 export CONTENT_REQUEST_AUTH_TOKENS=foo,bar
-run_test "/" "404" "text/html" "" "" "Root path with auth tokens but no auth"
+run_test "/" "301" "text/html" "/docs" "" "Root path with auth tokens but no auth"
 
 # 3. Verify that things work as expected when the tokens are set and the canonical host is set
 export CONTENT_REQUEST_CANONICAL_HOST=www.example.com
-run_test "/" "301" "text/html" "http://www.example.com/" "" "Root path with canonical host"
+run_test "/" "301" "text/html" "http://www.example.com/docs" "" "Root path with canonical host"
 
 # 4. Verify that things work as expected when the tokens are set and the canonical host is set and the request is authenticated
-run_test "/" "200" "text/html" "" "foo" "Root path with auth token"
+run_test "/" "301" "text/html" "/docs" "foo" "Root path with auth token"
+run_test "/docs" "200" "text/html" "" "foo" "/docs with auth token"
 
 # 5. Verify that things work as expected when the tokens are set and the canonical host is set and the request is authenticated and the request is for a .html file
 run_test "/index.html" "200" "text/html" "" "foo" "index.html with auth token"
