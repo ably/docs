@@ -102,7 +102,6 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
       ]}
       sessionState={sessionState}
       logoHref="/docs"
-      logoBadge="docs"
       location={location}
     />
   );
