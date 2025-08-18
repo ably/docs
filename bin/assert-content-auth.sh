@@ -23,7 +23,7 @@ run_test() {
     local test_name="${6:-Test case}"
 
     echo "--------------------------------"
-    echo "Running test: $test_name"
+    echo "🧪 Running test: $test_name"
     echo
 
     # Start nginx
@@ -45,23 +45,23 @@ run_test() {
 
     # Verify status code
     if [ "$status_code" != "$expected_status" ]; then
-        echo "Expected status code $expected_status, got $status_code"
+        echo "❌ Expected status code $expected_status, got $status_code"
         exit 1
     fi
 
     # Verify content type
     if [[ ! $content_type =~ $expected_content_type ]]; then
-        echo "Expected Content-Type to contain $expected_content_type, got $content_type"
+        echo "❌ Expected Content-Type to contain $expected_content_type, got $content_type"
         exit 1
     fi
 
     # Verify redirect URL if expected
     if [ -n "$expected_redirect_url" ] && [[ ! $redirect_url =~ $expected_redirect_url ]]; then
-        echo "Expected redirect URL to contain $expected_redirect_url, got $redirect_url"
+        echo "❌ Expected redirect URL to contain $expected_redirect_url, got $redirect_url"
         exit 1
     fi
 
-    echo "OK: $test_name passed"
+    echo "✅ $test_name passed"
     stop_nginx
     echo
 }
@@ -104,6 +104,8 @@ run_test "/${FIRST_ASSET}" "200" "image/jpeg" "" "" "JPEG without auth"
 
 # 9. Verify JSON requests work without auth
 run_test "/page-data/app-data.json" "200" "application/json" "" "" "Page data without auth"
+
+echo "✅ All tests passed"
 
 # Clean up environment variables
 unset CONTENT_REQUEST_AUTH_TOKENS
