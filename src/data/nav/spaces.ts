@@ -16,11 +16,6 @@ export default {
           link: '/docs/spaces',
           index: true,
         },
-      ],
-    },
-    {
-      name: 'Get started',
-      pages: [
         {
           name: 'SDK setup',
           link: '/docs/spaces/setup',
