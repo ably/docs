@@ -194,7 +194,7 @@ export default {
           name: 'Outbound streaming',
           pages: [
             {
-              name: 'Overview',
+              name: 'Firehose overview',
               link: '/docs/integrations/streaming',
               index: true,
             },
