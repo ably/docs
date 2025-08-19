@@ -3,6 +3,7 @@ import { useChannel } from 'ably/react';
 import { Realtime } from 'ably';
 import { AblyProvider, ChannelProvider } from 'ably/react';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 import './styles/styles.css';
 
 interface Message {
@@ -13,7 +14,7 @@ interface Message {
 const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
 const channelName = urlParams.get('name') || 'pub-sub-channel-messages';
 
-const client = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: nanoid() });
+const client = new Realtime({ key: config.ABLY_KEY, clientId: nanoid() });
 
 function ChannelMessages() {
   const [messages, setMessages] = useState<Message[]>([]);

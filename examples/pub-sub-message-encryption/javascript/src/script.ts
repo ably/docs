@@ -1,6 +1,7 @@
 import * as Ably from 'ably';
 import type { RealtimeChannel, Message } from 'ably';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 import './styles.css';
 
 let channel: RealtimeChannel | null;
@@ -22,7 +23,7 @@ async function decryptedMessages() {
 async function establishConnection(hasCipher = true) {
   const client = new Ably.Realtime({
     clientId: nanoid(),
-    key: import.meta.env.VITE_ABLY_KEY as string,
+    key: config.ABLY_KEY,
   });
 
   let options = {};

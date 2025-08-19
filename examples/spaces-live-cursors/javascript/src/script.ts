@@ -2,6 +2,7 @@ import Spaces, { type SpaceMember } from '@ably/spaces';
 import { Realtime } from 'ably';
 import { nanoid } from 'nanoid';
 import { createCursorSvg } from './CursorSvg';
+import { config } from './config';
 
 export type Member = Omit<SpaceMember, 'profileData'> & {
   profileData: { userColors: { cursorColor: string }; name: string };
@@ -31,7 +32,7 @@ function trackCursor(parentRef: HTMLDivElement, updatePosition: (position: Curso
 async function connect() {
   const client = new Realtime({
     clientId: nanoid(),
-    key: import.meta.env.VITE_ABLY_KEY as string,
+    key: config.ABLY_KEY,
   });
 
   const urlParams = new URLSearchParams(window.location.search);

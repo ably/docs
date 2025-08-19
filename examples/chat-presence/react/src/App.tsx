@@ -12,12 +12,13 @@ import { Realtime } from 'ably';
 import minifaker from 'minifaker';
 import 'minifaker/locales/en';
 import './styles/styles.css';
+import { config } from './config';
 
 interface OnlineStatus {
   status: string;
 }
 
-const realtimeClient = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: minifaker.firstName() });
+const realtimeClient = new Realtime({ key: config.ABLY_KEY, clientId: minifaker.firstName() });
 const chatClient = new ChatClient(realtimeClient);
 
 const Online = () => {
