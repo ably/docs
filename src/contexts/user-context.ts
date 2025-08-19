@@ -69,6 +69,7 @@ export type App = {
   name: string;
   url: string;
   apiKeys: AppApiKey[];
+  demo: boolean;
 };
 
 export type UserDetails = {

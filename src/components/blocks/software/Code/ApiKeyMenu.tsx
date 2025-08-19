@@ -23,7 +23,8 @@ export type APIKeyMenuProps = {
 };
 
 const APIKeyMenu = ({ apps, setActiveApiKey }: APIKeyMenuProps) => {
-  const initialApiKeyOption = findFirstApiKey(apps);
+  const appsWithoutDemo = apps.length > 0 ? apps.filter(({ demo }) => !demo) : apps;
+  const initialApiKeyOption = findFirstApiKey(appsWithoutDemo);
 
   const [value, setValue] = useState<ReactSelectOption>(
     initialApiKeyOption
@@ -34,7 +35,7 @@ const APIKeyMenu = ({ apps, setActiveApiKey }: APIKeyMenuProps) => {
       : errorOption,
   );
 
-  const options = apps.map((app) => ({
+  const options = appsWithoutDemo.map((app) => ({
     label: app.name,
     options: app.apiKeys.map((appApiKey) => ({
       label: makeLabel(appApiKey),

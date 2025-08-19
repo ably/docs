@@ -24,50 +24,67 @@ const safelyInvokeApiKeyRetrievalTrigger = () => {
   }
 };
 
-const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>) => {
-  if (payload.error || !payload.data || !isArray(payload.data)) {
-    const tempApiKeyResponse = await fetch(WEB_API_TEMP_KEY_ENDPOINT, { cache: DEFAULT_CACHE_STRATEGY });
-    const tempApiKey = await tempApiKeyResponse.text();
+const fetchDemoApiKey = async () => {
+  const tempApiKeyResponse = await fetch(WEB_API_TEMP_KEY_ENDPOINT, { cache: DEFAULT_CACHE_STRATEGY });
+  const tempApiKey = await tempApiKeyResponse.text();
 
-    if (window.ably?.docs && !window.ably.docs.DOCS_API_KEY) {
-      window.ably.docs.DOCS_API_KEY = tempApiKey;
-      safelyInvokeApiKeyRetrievalTrigger();
-    }
+  if (window.ably?.docs && !window.ably.docs.DOCS_API_KEY) {
+    window.ably.docs.DOCS_API_KEY = tempApiKey;
+    safelyInvokeApiKeyRetrievalTrigger();
+  }
+
+  return {
+    name: 'Demo Only',
+    demo: true,
+    url: WEB_API_TEMP_KEY_ENDPOINT,
+    apiKeys: [
+      {
+        name: 'Demo Only',
+        whole_key: tempApiKey,
+      },
+    ],
+  };
+};
+
+const retrieveApiKeyDataFromApiKeyUrl = async (payload: Record<string, unknown>) => {
+  // Always fetch the demo key
+  const demoApiKey = await fetchDemoApiKey();
+
+  // If there's no valid payload, return only the demo key
+  if (payload.error || !payload.data || !isArray(payload.data)) {
     return {
-      data: [
-        {
-          name: 'Demo Only',
-          url: WEB_API_TEMP_KEY_ENDPOINT,
-          apiKeys: [
-            {
-              name: 'Demo Only',
-              whole_key: tempApiKey,
-            },
-          ],
-        },
-      ],
+      data: [demoApiKey],
     };
   }
+
+  // Fetch actual API keys from the payload
   const apiKeyData = await Promise.all(
     payload.data.map(async (value: ApiKeyValue) => {
-      const apiKeysRaw = await getJsonResponse(value.url, 'api-key-retrieval');
-      const apiKeys = apiKeysRaw.map(pick(['name', 'whole_key']));
-      return { ...value, apiKeys };
+      try {
+        const apiKeysRaw = await getJsonResponse(value.url, 'api-key-retrieval');
+        const apiKeys = apiKeysRaw.map(pick(['name', 'whole_key']));
+        return { ...value, apiKeys, demo: false };
+      } catch (error) {
+        return null;
+      }
     }),
   );
+
   /**
    * Supporting ad hoc scripts; the following lines can be removed when ad hoc scripts are.
    */
-  if (window.ably?.docs) {
+  if (window.ably?.docs && apiKeyData[0]) {
     window.ably.docs.DOCS_API_KEY = apiKeyData[0].apiKeys[0].whole_key;
     safelyInvokeApiKeyRetrievalTrigger();
   }
   /**
    * Supporting ad hoc scripts; the preceding lines can be removed when ad hoc scripts are.
    */
+
+  // Return both actual keys and demo key
   return {
     ...payload,
-    data: apiKeyData,
+    data: [demoApiKey, ...apiKeyData.filter(Boolean)],
   };
 };
 
