@@ -23,7 +23,7 @@ run_test() {
     local test_name="${6:-Test case}"
 
     echo "--------------------------------"
-    echo "Running test: $test_name"
+    echo "🧪 Running test: $test_name"
     echo
 
     # Start nginx
@@ -45,23 +45,23 @@ run_test() {
 
     # Verify status code
     if [ "$status_code" != "$expected_status" ]; then
-        echo "Expected status code $expected_status, got $status_code"
+        echo "❌ Expected status code $expected_status, got $status_code"
         exit 1
     fi
 
     # Verify content type
     if [[ ! $content_type =~ $expected_content_type ]]; then
-        echo "Expected Content-Type to contain $expected_content_type, got $content_type"
+        echo "❌ Expected Content-Type to contain $expected_content_type, got $content_type"
         exit 1
     fi
 
     # Verify redirect URL if expected
     if [ -n "$expected_redirect_url" ] && [[ ! $redirect_url =~ $expected_redirect_url ]]; then
-        echo "Expected redirect URL to contain $expected_redirect_url, got $redirect_url"
+        echo "❌ Expected redirect URL to contain $expected_redirect_url, got $redirect_url"
         exit 1
     fi
 
-    echo "OK: $test_name passed"
+    echo "✅ $test_name passed"
     stop_nginx
     echo
 }
@@ -75,18 +75,19 @@ export PORT=4001
 # run_test "/" "200" "text/html" "" "foo" "Root path with auth"
 
 # 1. Verify that things work as normal when the tokens aren't set
-run_test "/" "200" "text/html" "" "" "Root path without auth tokens"
+run_test "/" "301" "text/html" "/docs" "" "Root path without auth tokens"
 
 # 2. Verify that things work as expected when the tokens are set
 export CONTENT_REQUEST_AUTH_TOKENS=foo,bar
-run_test "/" "404" "text/html" "" "" "Root path with auth tokens but no auth"
+run_test "/" "301" "text/html" "/docs" "" "Root path with auth tokens but no auth"
 
 # 3. Verify that things work as expected when the tokens are set and the canonical host is set
 export CONTENT_REQUEST_CANONICAL_HOST=www.example.com
-run_test "/" "301" "text/html" "http://www.example.com/" "" "Root path with canonical host"
+run_test "/" "301" "text/html" "http://www.example.com/docs" "" "Root path with canonical host"
 
 # 4. Verify that things work as expected when the tokens are set and the canonical host is set and the request is authenticated
-run_test "/" "200" "text/html" "" "foo" "Root path with auth token"
+run_test "/" "301" "text/html" "/docs" "foo" "Root path with auth token"
+run_test "/docs" "200" "text/html" "" "foo" "/docs with auth token"
 
 # 5. Verify that things work as expected when the tokens are set and the canonical host is set and the request is authenticated and the request is for a .html file
 run_test "/index.html" "200" "text/html" "" "foo" "index.html with auth token"
@@ -103,6 +104,8 @@ run_test "/${FIRST_ASSET}" "200" "image/jpeg" "" "" "JPEG without auth"
 
 # 9. Verify JSON requests work without auth
 run_test "/page-data/app-data.json" "200" "application/json" "" "" "Page data without auth"
+
+echo "✅ All tests passed"
 
 # Clean up environment variables
 unset CONTENT_REQUEST_AUTH_TOKENS

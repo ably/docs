@@ -11,8 +11,6 @@ LiveObjects is currently Experimental. Its features are still in development and
 
 This guide shows how to integrate Ably LiveObjects into your Swift application.
 
-TODO this is all copied from JS; need to update for Swift
-
 You will learn how to:
 
 * Create an Ably account and get an API key for authentication.
@@ -43,37 +41,23 @@ For the purposes of this guide, make sure your API key includes both `object-sub
 
 LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated Objects plugin.
 
-### NPM <a id="npm"/>
+### Xcode <a id="xcode"/>
 
-Install the Ably Pub/Sub SDK as an [NPM module](https://www.npmjs.com/package/ably):
+To follow this guide in Xcode, use a new iOS project with the SwiftUI App template. All code can be added directly to your `ContentView.swift` file, inside the `ContentView` struct. Use the `.task` modifier with a `do { … } catch { … }` inside to run the Ably code when the view appears. No additional files or setup are needed. All `print` output will appear in Xcode's debug console (View > Debug Area > Activate Console, or press Cmd+Shift+C).
 
-<Code>
-```shell
-npm install ably
-```
-</Code>
+Install the Ably SDK and the Objects plugin in your Xcode project:
+
+1. Paste `https://github.com/ably/ably-cocoa` in the Swift Packages search box (File → Add Package Dependencies).
+2. Add the `Ably` product.
+3. Paste `https://github.com/ably/ably-cocoa-liveobject-plugin` in the Swift Packages search box.
+4. Add the `AblyLiveObjects` product.
 
 Import the SDK and the Objects plugin into your project:
 
 <Code>
 ```swift
-import * as Ably from 'ably';
-import Objects from 'ably/objects';
-```
-</Code>
-
-### CDN <a id="cdn"/>
-
-Reference the Ably Pub/Sub SDK and the Objects plugin within your HTML file:
-
-<Code>
-```swift
-<script src="https://cdn.ably.com/lib/ably.min-2.js"></script>
-<script src="https://cdn.ably.com/lib/objects.umd.min-2.js"></script>
-<script>
-  // Objects plugin is now available on the global object via the `AblyObjectsPlugin` property
-  const Objects = window.AblyObjectsPlugin;
-</script>
+import Ably
+import AblyLiveObjects
 ```
 </Code>
 
@@ -83,11 +67,14 @@ Instantiate an Ably Realtime client from the Pub/Sub SDK, providing the Objects 
 
 <Code>
 ```swift
-const realtimeClient = new Ably.Realtime({ key: '{{API_KEY}}', plugins: { Objects } });
+let clientOptions = ARTClientOptions(key: "{{API_KEY}}")
+clientOptions.plugins = [.liveObjects: AblyLiveObjects.Plugin.self]
+
+let realtimeClient = ARTRealtime(options: clientOptions)
 ```
 </Code>
 
-A [`ClientOptions`](/docs/api/realtime-sdk#client-options) object may be passed to the Pub/Sub SDK instance to further customize the connection, however at a minimum you must set an API key and provide an `Objects` plugin so that the client can use LiveObjects functionality.
+A [`ClientOptions`](/docs/api/realtime-sdk#client-options) object may be passed to the Pub/Sub SDK instance to further customize the connection, however at a minimum you must set an API key and provide the `.liveObjects` plugin so that the client can use LiveObjects functionality.
 
 ## Create a channel <a id="step-3"/>
 
@@ -102,16 +89,26 @@ When you provide an explicit `modes` property for a channel, you override the se
 
 <Code>
 ```swift
-const channelOptions = { modes: ['OBJECT_SUBSCRIBE', 'OBJECT_PUBLISH'] };
-const channel = realtimeClient.channels.get('my_liveobjects_channel', channelOptions);
+let channelOptions = ARTRealtimeChannelOptions()
+channelOptions.modes = [.objectPublish, .objectSubscribe]
+let channel = realtimeClient.channels.get("my_liveobjects_channel", options: channelOptions)
 ```
 </Code>
 
 Next, you need to [attach to the channel](/docs/channels/states). Attaching to a channel starts an initial synchronization sequence where the objects on the channel are sent to the client.
 
 <Code>
+{/* This is cumbersome and we'd really like to just write `try await channel.attach()`; see https://github.com/ably/ably-cocoa/issues/2087 */}
 ```swift
-await channel.attach();
+try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+    channel.attach { error in
+        if let error {
+            continuation.resume(throwing: error)
+        } else {
+            continuation.resume()
+        }
+    }
+}
 ```
 </Code>
 
@@ -123,8 +120,8 @@ Use it to get the root object, which is the entry point for accessing and persis
 
 <Code>
 ```swift
-// The promise resolves once the LiveObjects state is synchronized with the Ably system
-const root = await channel.objects.getRoot();
+// The getRoot call returns once the LiveObjects state is synchronized with the Ably system
+let root = try await channel.objects.getRoot()
 ```
 </Code>
 
@@ -138,11 +135,11 @@ Objects that are not descendants of the root object are "unreachable" and will e
 
 <Code>
 ```swift
-const visitsCounter = await channel.objects.createCounter();
-const reactionsMap = await channel.objects.createMap();
+let visitsCounter = try await channel.objects.createCounter()
+let reactionsMap = try await channel.objects.createMap()
 
-await root.set('visits', visitsCounter);
-await root.set('reactions', reactionsMap);
+try await root.set(key: "visits", value: .liveCounter(visitsCounter))
+try await root.set(key: "reactions", value: .liveMap(reactionsMap))
 ```
 </Code>
 
@@ -152,13 +149,21 @@ Subscribe to realtime updates to objects on a channel. You will be notified when
 
 <Code>
 ```swift
-visitsCounter.subscribe(() => {
-  console.log('Visits counter updated:', visitsCounter.value());
-});
+try visitsCounter.subscribe { _, _ in
+    do {
+        print("Visits counter updated: \(try visitsCounter.value)")
+    } catch {
+        // Error handling of visitsCounter.value omitted for brevity
+    }
+}
 
-reactionsMap.subscribe(() => {
-  console.log('Reactions map updated:', [...reactionsMap.entries()]);
-});
+try reactionsMap.subscribe { _, _ in
+    do {
+        print("Reactions map updated: \(try reactionsMap.entries)")
+    } catch {
+        // Error handling of reactionsMap.entries omitted for brevity
+    }
+}
 ```
 </Code>
 
@@ -168,22 +173,22 @@ Update objects using mutation methods. All subscribers (including you) will be n
 
 <Code>
 ```swift
-await visitsCounter.increment(5);
-// console: "Visits counter updated: 5"
-await visitsCounter.decrement(2);
-// console: "Visits counter updated: 3"
+try await visitsCounter.increment(amount: 5)
+// console: "Visits counter updated: 5.0"
+try await visitsCounter.decrement(amount: 2)
+// console: "Visits counter updated: 3.0"
 
-await reactionsMap.set('like', 10);
-// console: "Reactions map updated: [['like',10]]"
-await reactionsMap.set('love', 5);
-// console: "Reactions map updated: [['like',10],['love',5]]"
-await reactionsMap.remove('like');
-// console: "Reactions map updated: [['love',5]]"
+try await reactionsMap.set(key: "like", value: 10)
+// console: "Reactions map updated: [(key: "like", value: AblyLiveObjects.LiveMapValue.number(10.0))]"
+try await reactionsMap.set(key: "love", value: 5)
+// console: "Reactions map updated: [(key: "like", value: AblyLiveObjects.LiveMapValue.number(10.0)), (key: "love", value: AblyLiveObjects.LiveMapValue.number(5.0))]"
+try await reactionsMap.remove(key: "like")
+// console: "Reactions map updated: [(key: "love", value: AblyLiveObjects.LiveMapValue.number(5.0))]"
 ```
 </Code>
 
 <Aside data-type='note'>
-Mutation methods (such as `LiveMap.set`, `LiveCounter.increment`, etc.) do not directly modify the local object state. Instead, they send the intended operation to the Ably system, and the change is applied only when the corresponding realtime operation is echoed back to the client. This means that the state retrieved immediately after a mutation may not reflect the latest updates yet. You will be notified via subscription when the object is updated.
+Mutation methods (such as `LiveMap.set(key:value:)`, `LiveCounter.increment(amount:)`, etc.) do not directly modify the local object state. Instead, they send the intended operation to the Ably system, and the change is applied only when the corresponding realtime operation is echoed back to the client. This means that the state retrieved immediately after a mutation may not reflect the latest updates yet. You will be notified via subscription when the object is updated.
 </Aside>
 
 ## Next steps <a id="step-8"/>

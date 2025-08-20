@@ -88,7 +88,7 @@ const Header: React.FC<HeaderProps> = ({ searchBar = true }) => {
           />
         ) : null
       }
-      headerCenterClassName="max-w-[17.5rem]"
+      headerCenterClassName="flex-none w-52 lg:w-[17.5rem]"
       headerLinks={[
         {
           href: '/docs/sdks',

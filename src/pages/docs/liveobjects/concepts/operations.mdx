@@ -178,6 +178,42 @@ root.subscribe(() => { myCounter = root.get('myCounter'); });
 await myCounter.increment(1);
 ```
 
+{ /* We can't map the JS example directly because Swift concurrency prevents us from mutating local variables in the way that the JS example does, so I tried to show how we might need to handle this scenario in a real-world app where things are isolated to the main actor. But it's long and ugly. */ }
+```swift
+struct MyView: View {
+    var root: any LiveMap
+    @State private var myCounter: (any LiveCounter)?
+
+    var body: some View {
+        Button("Increment the counter") {
+            Task {
+                try await myCounter?.increment(amount: 1)
+            }
+        }.onAppear {
+            do {
+                myCounter = try root.get(key: "myCounter")?.liveCounterValue
+
+                // We keep a reference to the latest value that the root map
+                // stores at the "myCounter" key, to ensure that upon tapping
+                // the button, we increment the correct counter.
+
+                try root.subscribe { _, _ in
+                    MainActor.assumeIsolated {
+                        do {
+                            myCounter = try root.get(key: "myCounter")?.liveCounterValue
+                        } catch {
+                            // Error handling of root.get(key:) omitted for brevity
+                        }
+                    }
+                }
+            } catch {
+                // Error handling of root.get(key:) omitted for brevity
+            }
+        }
+    }
+}
+```
+
 ```java
 LiveMap root = channel.getObjects().getRoot();
 

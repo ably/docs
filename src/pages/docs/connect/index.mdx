@@ -1,0 +1,319 @@
+---
+title: Connections overview
+meta_description: "Establish and maintain a persistent connection to Ably using the realtime interface of an Ably SDK."
+redirect_from:
+  - /docs/realtime/connection
+  - /docs/realtime/versions/v1.1/connection
+  - /docs/realtime/versions/v1.0/connection
+  - /docs/realtime/versions/v0.8/connection
+---
+
+Clients establish and maintain a connection to the Ably service using the most efficient transport available, typically [WebSockets](https://ably.com/topic/websockets). Ably SDKs operate and multiplex all [channel](/docs/channels) traffic over that connection. This maximizes throughput, minimizes bandwidth consumption, and reduces power usage. Once connected, clients can monitor and manage their [connection state](/docs/connect/states).
+
+<Aside data-type="note">
+Connections can only be established using the realtime interface of an Ably SDK. See [About Pub/Sub](/docs/basics) for further information on the differences between the REST and realtime interface.
+</Aside>
+
+## Create a connection <a id="create"/>
+
+Ably SDKs open and maintain a connection to the Ably realtime servers on instantiation, which can be interacted with by using the `Connection` object. The lifecycle of connections are reported by different [connection states](/docs/connect/states#connection-states) to simplify monitoring and managing connections.
+
+This example relies on the default auto-connect behavior of the SDK, checking for when the connection state is `connected` event:
+
+<Code>
+```realtime_javascript
+// Using callbacks
+const ably = new Ably.Realtime({ '{{API_KEY}}' });
+ably.connection.on('connected', () => {
+  console.log('Connected to Ably!');
+});
+
+// Using promises
+const Ably = require('ably');
+const ably = new Ably.Realtime('{{API_KEY}}');
+await ably.connection.once('connected');
+console.log('Connected to Ably!');
+```
+
+```realtime_nodejs
+// Using callbacks
+const Ably = require('ably');
+const ably = new Ably.Realtime({ '{{API_KEY}}' });
+ably.connection.on('connected', () => {
+  console.log('Connected to Ably!');
+});
+
+// Using promises
+const Ably = require('ably');
+const ably = new Ably.Realtime('{{API_KEY}}');
+await ably.connection.once('connected');
+console.log('Connected to Ably!');
+```
+
+```realtime_ruby
+ably = Ably::Realtime.new('{{API_KEY}}')
+ably.connection.on(:connected) do
+  puts "Connected to Ably!"
+end
+```
+
+```realtime_python
+ably = AblyRealtime('{{API_KEY}}')
+await ably.connection.once_async('connected')
+print('Connected to Ably')
+```
+
+```realtime_java
+AblyRealtime ably = new AblyRealtime("{{API_KEY}}");
+ably.connection.on(ConnectionEvent.connected, new ConnectionStateListener() {
+  @Override
+  public void onConnectionStateChanged(ConnectionStateChange change) {
+    System.out.println("Connected to Ably!");
+  }
+});
+```
+
+```realtime_csharp
+AblyRealtime ably = new AblyRealtime("{{API_KEY}}");
+ably.Connection.On(ConnectionEvent.Connected, args => {
+  Console.WriteLine("Connected to Ably!");
+});
+```
+
+```realtime_objc
+ARTRealtime *ably = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+[ably.connection on:ARTRealtimeConnectionEventConnected callback:^(ARTConnectionStateChange *change) {
+    NSLog(@"Connected to Ably!");
+}];
+```
+
+```realtime_swift
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+realtime.connection.on(.connected) { change in
+    print("Connected to Ably!")
+}
+```
+
+```realtime_flutter
+final realtime = ably.Realtime(key: '{{API_KEY}}');
+realtime.connection
+  .on(ably.ConnectionEvent.connected)
+  .listen((ably.ConnectionStateChange stateChange) {
+    print('Connected to Ably!');
+  }
+);
+```
+
+```realtime_go
+	realtime, err := ably.NewRealtime(ably.WithKey("{{API_KEY}}"))
+	if err != nil {
+		log.Fatalf("Error creating Ably client: %v", err)
+	}
+
+	// Subscribe to the 'connected' event
+	realtime.Connection.On(ably.ConnectionEventConnected, func(stateChange ably.ConnectionStateChange) {
+		log.Println("Connected to Ably!")
+	})
+```
+</Code>
+
+If you're not using the SDK's auto-connect feature you can also connect with [`connect()`](/docs/api/realtime-sdk/connection#connect) to manually connect unless the state is already `connected` or `connecting`.
+
+Explicitly calling connect is unnecessary unless the ClientOptions attribute autoConnect is false. Unless already connected or connecting, this method causes the connection to open, entering the connecting state. To manually attempt to open a connection you call the [`connect()`](/docs/api/realtime-sdk/connection#connect) function: `ably.connect()`.
+
+## Monitor connections to an app <a id="monitor"/>
+
+Connection monitoring allows you to view and manage the [states of connections](/docs/connect/states) to Ably, showing events for individual people connecting and disconnecting. The developer console in your Ably account also shows these events.
+
+This feature is intended for debugging, so once the number of new connections exceeds the number of messages per second permitted by the lifecycle channel, new events will be dropped. This means if you want a definitive list of everyone using your app you'd be best using [token authentication](/docs/auth/token) to create your own 'auth server'.
+
+The Ably dashboard contains a developer console. In the developer console you can view connection events.
+
+<Aside data-type="note">
+It isn't possible to share a connection between browser tabs. This is because browser security models ensure that each tab is effectively sandboxed from the others. If a user has three tabs open, each with a connection to Ably, then this will count as three separate connections.
+</Aside>
+
+### Connection IDs <a id="connection-ids"/>
+
+A connection ID is a unique identifier given to a connection, allowing for identifying and specifying particular connections.
+
+An active connection ID is guaranteed to be unique in the Ably system whilst it is active, i.e. no other connection will share that connection ID. However, Ably reserves the right to generate a new connection ID later that may be the same as a previously discarded connection ID (once the connection is closed). Therefore we advise customers to not use the connection ID as a perpetual unique identifier as it is possible that a connection ID may be used many times.
+
+### Connection metachannels <a id="metachannels"/>
+
+[Metachannels](/docs/metadata-stats/metadata/subscribe) are a namespace of channels beginning with the [meta] qualifier, distinguishing them from regular channels. For connections there is a specific `[meta]connection.lifecycle` channel that publishes messages about the lifecycle of realtime connections. The connection lifecycle consists of a number of [connection states](/docs/connect/states#available-connection-states) that can be observed and interacted with using methods available on the connection object.
+
+## Heartbeats <a id="heartbeats"/>
+
+Heartbeats enable Ably to identify clients that abruptly disconnect from the service, such as where an internet connection drops out or a client changes networks.
+
+Ably sends a heartbeat to connected clients every 15 seconds. If a client goes more than 25 seconds without seeing any server activity from Ably, it assumes that something has gone wrong with the connection and the [connection state](/docs/connect/states) will become `disconnected`. The 25 seconds the client waits is the heartbeat interval plus a 10 second margin of error to allow for network delays.
+
+Ably also uses this mechanism to detect dropped client connections, though some details vary depending on the transport used.
+
+It is important to note that this mechanism is only used when something disrupts communication and does not properly terminate the TCP connection. It isn't used when a connection is deliberately closed or disconnected, for example by calling the [`close()` method](/docs/api/realtime-sdk/connection#close) or being disconnected by the server.
+
+The 15 second interval between heartbeats is used to strike a balance between optimizing battery usage for client devices and the time it takes to identify a dropped or unstable connection.
+
+The interval between heartbeats can be customized if your app requires increased battery preservation or to identify dropped connections more quickly. Set a value between 5000 and 1800000 milliseconds (5 seconds and 30 minutes) using the `heartbeatInterval` parameter within the `transportParams` property of the [`clientOptions`](/docs/api/realtime-sdk#client-options) object.
+
+Using a higher `heartbeatInterval` can increase the time taken for the Ably service and the client itself to identify a connection has dropped when an abrupt disconnect occurs. The number of [concurrent connections](/docs/platform/pricing/limits#connection) may also appear higher as it can take longer to terminate dropped connections. Although `heartbeatInterval` can be set as high as 30 minutes, Ably does not recommend setting it this high.
+
+You can also call [`ping()`](/docs/api/realtime-sdk/connection#ping) to send a heartbeat ping to Ably, which can be useful for measuring the true round-trip latency to the Ably server.
+
+The following example code demonstrates establishing a connection to Ably with a `heartbeatInterval` of 10 seconds:
+
+<Code>
+```realtime_javascript
+const ably = new Ably.Realtime(
+  {
+    key: '{{API_KEY}}',
+    transportParams: { heartbeatInterval: 10000 }
+  }
+);
+```
+
+```realtime_nodejs
+const ably = new Ably.Realtime(
+  {
+    key: '{{API_KEY}}',
+    transportParams: { heartbeatInterval: 10000 }
+  }
+);
+```
+
+```realtime_go
+ably, err := ably.NewRealtime(
+  ably.WithKey("{{API_KEY}}"),
+  ably.WithTransportParams(url.Values{
+    "heartbeatInterval": {"10000"},
+  }),
+)
+```
+
+```realtime_java
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+options.transportParams = new Param[]{
+        new Param("heartbeatInterval", "10000")
+};
+AblyRealtime ably = new AblyRealtime(options);
+```
+</Code>
+
+## Close a connection <a id="close"/>
+
+A connection to Ably should be closed once it is no longer needed. Note that there is a 2 minute delay before a connection is closed, if the [`close()`](/docs/api/realtime-sdk/connection#close) method hasn't been explicitly called. This is important to consider in relation to the number of [concurrent connections](/docs/platform/pricing/limits#connection) to your account.
+
+The following code sample explicitly closes the connection to Ably by calling the `close()` method and prints the message `Closed the connection to Ably`:
+
+<Code>
+```realtime_javascript
+ably.close(); // runs synchronously
+console.log('Closed the connection to Ably.');
+```
+
+```realtime_nodejs
+ably.close(); // runs synchronously
+console.log('Closed the connection to Ably.');
+```
+
+```realtime_java
+ably.connection.close();
+ably.connection.on(ConnectionEvent.closed, new ConnectionStateListener() {
+  @Override
+  public void onConnectionStateChanged(ConnectionStateChange state) {
+    System.out.println("New state is " + state.current.name());
+    switch (state.current) {
+      case closed: {
+        // Connection closed
+        System.out.println("Closed the connection to Ably.");
+        break;
+      }
+      case failed: {
+        // Failed to close connection
+        break;
+      }
+    }
+  }
+});
+```
+
+```realtime_python
+await ably.close()
+print('Closed the connection to Ably.')
+```
+
+```realtime_ruby
+ably.connection.close
+ably.connection.on(:closed) do
+  puts "Closed the connection to Ably!"
+end
+```
+
+```realtime_swift
+ably.connection.close()
+ably.connection.on { stateChange in
+    let stateChange = stateChange
+    switch stateChange.current {
+    case .closed:
+        print("Closed the connection to Ably.")
+    case .failed:
+        print("Failed to close connection to Ably.")
+    default:
+        break
+    }
+}
+```
+
+```realtime_csharp
+ably.Connection.Close();
+ably.Connection.On(ConnectionEvent.Closed, args =>
+{
+  Console.Out.WriteLine("Closed the connection to Ably.");
+});
+```
+
+```realtime_objc
+[ably.connection close];
+[ably.connection on:ARTRealtimeConnectionEventClosed callback:^(ARTConnectionStateChange *stateChange) {
+    NSLog(@"Closed the connection to Ably.");
+}];
+```
+
+```realtime_flutter
+realtime.connection.close();
+realtime.connection
+    .on(ably.ConnectionEvent.closed)
+    .listen((ably.ConnectionStateChange stateChange) async {
+  print('New state is: ${stateChange.current}');
+  switch (stateChange.current) {
+    case ably.ConnectionState.closed:
+    // Connection closed
+      print('Closed the connection to Ably.');
+      break;
+    case ably.ConnectionState.failed:
+    // Failed to close connection
+      break;
+    default:
+      break;
+  }
+});
+```
+
+```realtime_go
+client.Connection.On(ably.ConnectionEventClosed, func(change ably.ConnectionStateChange) {
+    fmt.Println("Closed the connection to Ably.")
+})
+client.Close()
+```
+</Code>
+
+<Aside type="important">
+It is important to understand the difference between unsubscribing from a [channel](/docs/channels) and closing a connection, compared to calling the `off()` method for a channel or connection.
+
+The [`unsubscribe()`](/docs/api/realtime-sdk/channels#unsubscribe) method removes message listeners for a channel.
+
+The [`close()`](/docs/api/realtime-sdk/connection#close) method closes a realtime connection.
+
+The `off()` method for a [channel](/docs/api/realtime-sdk/channels#off) or [connection](/docs/api/realtime-sdk/connection#off) removes [`ChannelEvent`](/docs/channels#listen-for-state) or [`ConnectionEvent`](/docs/connect/states#listen) listeners that are listening for state changes on a channel or for a connection.
+</Aside>
