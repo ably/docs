@@ -2,6 +2,7 @@ import * as Ably from 'ably';
 import type { Message } from 'ably';
 import minifaker from 'minifaker';
 import 'minifaker/locales/en';
+import { config } from './config';
 import './styles.css';
 
 const preloadButton = document.getElementById('pre-load-history');
@@ -16,7 +17,7 @@ preloadButton.addEventListener('click', async () => {
   for (let i = 0; i < numBids; i++) {
     const clientId = minifaker.firstName();
     const client = new Ably.Realtime({
-      key: import.meta.env.VITE_ABLY_KEY as string,
+      key: config.ABLY_KEY,
       clientId,
     });
     const channel = client.channels.get(urlParams.get('name') || 'pub-sub-history');
@@ -45,7 +46,7 @@ async function enterAuction() {
   auctionRoom.style.display = 'block';
 
   client = new Ably.Realtime({
-    key: import.meta.env.VITE_ABLY_KEY as string,
+    key: config.ABLY_KEY,
     clientId: minifaker.firstName(),
   });
 

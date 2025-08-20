@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { CipherKey, Realtime } from 'ably';
 import { AblyProvider, ChannelProvider, useChannel } from 'ably/react';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 import './styles/styles.css';
 
 const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
@@ -123,7 +124,7 @@ export default function App() {
     const initializeAbly = async () => {
       const generatedKey = await Realtime.Crypto.generateRandomKey();
       const newClient = new Realtime({
-        key: import.meta.env.VITE_ABLY_KEY,
+        key: config.ABLY_KEY,
         clientId: nanoid(),
       });
 

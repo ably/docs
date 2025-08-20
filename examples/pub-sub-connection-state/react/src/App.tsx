@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Realtime } from 'ably';
 import { AblyProvider, useConnectionStateListener } from 'ably/react';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 import './styles/styles.css';
 
 function ConnectionStateComponent({
@@ -39,7 +40,7 @@ export default function App() {
 
   const connect = () => {
     const newClient = new Realtime({
-      key: import.meta.env.VITE_ABLY_KEY,
+      key: config.ABLY_KEY,
       clientId: nanoid(),
     });
 

@@ -1,10 +1,11 @@
 import * as Ably from 'ably';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 import './styles.css';
 
 const client = new Ably.Realtime({
   clientId: nanoid(),
-  key: import.meta.env.VITE_ABLY_KEY as string,
+  key: config.ABLY_KEY,
 });
 
 let headlines = [

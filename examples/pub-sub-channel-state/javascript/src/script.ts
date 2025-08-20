@@ -1,5 +1,6 @@
 import * as Ably from 'ably';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 
 let client: Ably.Realtime | null = null;
 let channel: Ably.RealtimeChannel | null = null;
@@ -9,7 +10,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const connect = () => {
   // Initialises a new client instance with the Ably key and client ID.
   const newClient = new Ably.Realtime({
-    key: import.meta.env.VITE_ABLY_KEY as string,
+    key: config.ABLY_KEY,
     clientId: nanoid(),
   });
 

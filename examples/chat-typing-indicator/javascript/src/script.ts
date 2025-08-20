@@ -1,11 +1,12 @@
 import * as Ably from 'ably';
 import { ChatClient, Room, TypingOptions } from '@ably/chat';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 
 const names = ['Bob', 'Jane', 'John', 'Sammy'];
 const realtimeClient = new Ably.Realtime({
   clientId: names[Math.floor(Math.random() * names.length)] ?? nanoid(),
-  key: import.meta.env.VITE_ABLY_KEY as string,
+  key: config.ABLY_KEY,
 });
 const chatClient = new ChatClient(realtimeClient);
 

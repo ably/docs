@@ -5,6 +5,7 @@ import type { SpaceMember } from '@ably/spaces';
 import Spaces from '@ably/spaces';
 import { Realtime } from 'ably';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 import './styles/styles.css';
 
 export type Member = Omit<SpaceMember, 'profileData'> & {
@@ -18,7 +19,7 @@ export const colors = [{ cursorColor: '#6366f1' }, { cursorColor: '#8b5cf6' }, {
 /** 💡 Select a mock name to assign randomly to a new user that enters the space💡 */
 const mockName = () => mockNames[Math.floor(Math.random() * mockNames.length)];
 
-const client = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: nanoid() });
+const client = new Realtime({ key: config.ABLY_KEY, clientId: nanoid() });
 const spaces = new Spaces(client);
 
 function LiveCursorsDemo() {

@@ -2,6 +2,7 @@ import Spaces, { type SpaceMember } from '@ably/spaces';
 import { Realtime } from 'ably';
 import { nanoid } from 'nanoid';
 import minifaker from 'minifaker';
+import { config } from './config';
 import 'minifaker/locales/en';
 
 export type Member = Omit<SpaceMember, 'profileData'> & {
@@ -13,7 +14,7 @@ connect();
 async function connect() {
   const client = new Realtime({
     clientId: nanoid(),
-    key: import.meta.env.VITE_ABLY_KEY as string,
+    key: config.ABLY_KEY,
   });
 
   const urlParams = new URLSearchParams(window.location.search);

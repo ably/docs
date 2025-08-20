@@ -1,11 +1,12 @@
 import * as Ably from 'ably';
 import { ChatClient, Room, RoomReactionEvent } from '@ably/chat';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 import './styles.css';
 
 const realtimeClient = new Ably.Realtime({
   clientId: nanoid(),
-  key: import.meta.env.VITE_ABLY_KEY as string,
+  key: config.ABLY_KEY,
 });
 
 let room: Room;

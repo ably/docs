@@ -4,6 +4,7 @@ import * as Ably from 'ably';
 import minifaker from 'minifaker';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
+import { config } from './config';
 import 'minifaker/locales/en';
 
 export default function Home() {
@@ -17,7 +18,7 @@ export default function Home() {
     setIsLoading(true);
     const clientId = minifaker.firstName();
     const client = new Ably.Realtime({
-      key: import.meta.env.VITE_ABLY_KEY,
+      key: config.ABLY_KEY,
       clientId,
     });
 
