@@ -147,7 +147,7 @@ export default {
           name: 'Inbound integrations',
           pages: [
             {
-              name: 'Inbound Webhooks',
+              name: 'Inbound webhooks',
               link: '/docs/integrations/inbound/webhooks',
             },
             {
@@ -157,7 +157,7 @@ export default {
           ],
         },
         {
-          name: 'Outbound Webhooks',
+          name: 'Outbound webhooks',
           pages: [
             {
               name: 'Overview',
@@ -165,7 +165,7 @@ export default {
               index: true,
             },
             {
-              name: 'AWS Lambda Functions',
+              name: 'Lambda Functions',
               link: '/docs/integrations/webhooks/lambda',
             },
             {
@@ -173,7 +173,7 @@ export default {
               link: '/docs/integrations/webhooks/azure',
             },
             {
-              name: 'Google Cloud Functions',
+              name: 'Google Functions',
               link: '/docs/integrations/webhooks/gcp-function',
             },
             {
@@ -225,12 +225,12 @@ export default {
           ],
         },
         {
-          name: 'AWS authentication',
-          link: '/docs/integrations/aws-authentication',
-        },
-        {
           name: 'Message Queues',
           link: '/docs/integrations/queues',
+        },
+        {
+          name: 'Skip integrations',
+          link: '/docs/integrations/skip-integrations',
         },
       ],
     },
