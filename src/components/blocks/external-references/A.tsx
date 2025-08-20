@@ -5,6 +5,7 @@ import { HtmlAttributes, HtmlComponentProps } from '../../html-component-props';
 import Img from './Img';
 import { filterAttribsForReact } from 'src/react-utilities';
 import Link from 'src/components/Link';
+import { checkLinkIsInternal } from 'src/utilities/link-checks';
 
 const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
   const { href, ...props } = attribs ?? {};
@@ -25,7 +26,7 @@ const A = ({ data, attribs }: HtmlComponentProps<'a'>): ReactElement => {
   const langParam = urlParams.get('lang');
 
   let cleanHref = href;
-  if (langParam && cleanHref && !cleanHref.startsWith('#')) {
+  if (langParam && cleanHref && checkLinkIsInternal(cleanHref)) {
     const url = new URL(cleanHref, 'https://ably.com');
     url.searchParams.set('lang', langParam);
     cleanHref = url.pathname + url.search;

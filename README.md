@@ -6,11 +6,9 @@ The source content is written in [Textile](https://github.com/textile/textile-sp
 
 ## Run locally
 
-To run the docs site locally, follow these steps:
+To run the docs site locally, run `bin/dev` from the root directory. Alternatively, follow these steps:
 
-1. Meet these prerequisites:
-  * Install Node
-  * Install Yarn
+1. Install Node 20 and Yarn 1.22
 
 2. Clone this repository and make it your working directory.
 

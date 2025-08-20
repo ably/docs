@@ -8,9 +8,10 @@ import { SpaceProvider, SpacesProvider, useSpace } from '@ably/spaces/react';
 import Spaces from '@ably/spaces';
 import type { SpaceMember } from '@ably/spaces';
 import { AblyPoweredInput } from './components/AblyPoweredInput';
+import { config } from './config';
 import './styles/styles.css';
 
-const client = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: nanoid() });
+const client = new Realtime({ key: config.ABLY_KEY, clientId: nanoid() });
 const spaces = new Spaces(client);
 
 export type Member = Omit<SpaceMember, 'profileData'> & {

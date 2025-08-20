@@ -45,7 +45,8 @@ export const SearchBar = ({
         siteMetadata {
           externalScriptsData {
             addsearchSiteKey
-            inkeepEnabled
+            inkeepChatEnabled
+            inkeepSearchEnabled
           }
         }
       }
@@ -80,7 +81,7 @@ export const SearchBar = ({
   useOnClickOutside(handleFocusEvent, searchDisplayRef);
   useKeyPress(['Escape'], handleFocusEvent);
   useKeyboardShortcut(['Meta', 'K'], focusOnSearchInput, {
-    overrideSystem: !externalScriptsData.inkeepEnabled,
+    overrideSystem: !externalScriptsData.inkeepSearchEnabled,
     repeatOnHold: false,
   });
 
@@ -105,7 +106,7 @@ export const SearchBar = ({
           'mx-6 mt-6 md:m-0': displayLocation !== 'homepage',
         })}
       >
-        {externalScriptsData.inkeepEnabled ? (
+        {externalScriptsData.inkeepSearchEnabled ? (
           <InkeepSearchBar className={`${searchInput} ${searchInputNoPadding}`} extraInputStyle={extraInputStyle} />
         ) : (
           <>

@@ -5,6 +5,7 @@ import * as Ably from 'ably';
 import { AblyProvider, ChannelProvider, useChannel } from 'ably/react';
 import minifaker from 'minifaker';
 import { useLocation } from 'react-router-dom';
+import { config } from './config';
 import 'minifaker/locales/en';
 
 interface MatchOdds {
@@ -27,7 +28,7 @@ export default function MatchWrapper() {
   const channelName = searchParams.get('name') || 'match-odds-feed';
 
   const client = new Ably.Realtime({
-    key: import.meta.env.VITE_ABLY_KEY,
+    key: config.ABLY_KEY,
     clientId: minifaker.firstName()
   });
 

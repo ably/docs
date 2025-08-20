@@ -2,11 +2,12 @@ import * as Ably from 'ably';
 import { ChatClient, Message, Room } from '@ably/chat';
 import minifaker from 'minifaker';
 import 'minifaker/locales/en';
+import { config } from './config';
 import './styles.css';
 
 const realtimeClient = new Ably.Realtime({
   clientId: minifaker.firstName(),
-  key: import.meta.env.VITE_ABLY_KEY as string,
+  key: config.ABLY_KEY,
 });
 // Number of times messages are sent to the chat room before the user enters the room.
 let sendCount = 0;

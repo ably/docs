@@ -12,19 +12,20 @@ import {
   ChatRoomProvider,
 } from '@ably/chat/react';
 import { Realtime } from 'ably';
+import { config } from './config';
 import './styles/styles.css';
 
 const mockNames = ['Bob', 'Jane', 'John', 'Sammy'];
 const mockName = () => mockNames[Math.floor(Math.random() * mockNames.length)];
 
-const realtimeClient = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: mockName() });
+const realtimeClient = new Realtime({ key: config.ABLY_KEY, clientId: mockName() });
 const chatClient = new ChatClient(realtimeClient);
 
 const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const { clientId } = useChatClient();
-  const { send } = useMessages({
+  const { sendMessage } = useMessages({
     listener: (event: ChatMessageEvent) => {
       setMessages((prevMessages: Message[]) => [...prevMessages, event.message]);
     },
@@ -32,7 +33,7 @@ const Chat = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    send({ text: message });
+    sendMessage({ text: message });
     setMessage('');
   };
 

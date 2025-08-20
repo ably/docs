@@ -1,8 +1,19 @@
-import React, { PropsWithChildren, useState, createContext, useContext, useMemo } from 'react';
+import React, {
+  PropsWithChildren,
+  useState,
+  createContext,
+  isValidElement,
+  cloneElement,
+  useContext,
+  useMemo,
+  ReactNode,
+  ReactElement,
+} from 'react';
 import { navigate, PageProps } from 'gatsby';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
 import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
+import { getRandomChannelName } from '../blocks/software/Code/get-random-channel-name';
 
 import PageTitle from '../PageTitle';
 import { Frontmatter, PageContextType } from './Layout';
@@ -31,6 +42,11 @@ type SDKContextType = {
   setSdk: (sdk: SDKType) => void;
 };
 
+type Replacement = {
+  term: string;
+  replacer: () => string;
+};
+
 const SDKContext = createContext<SDKContextType | undefined>(undefined);
 
 const useSDK = () => {
@@ -44,9 +60,42 @@ const useSDK = () => {
 const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps> = ({
   activePage,
   apiKeys,
+  children,
   ...props
 }) => {
   const { sdk, setSdk } = useSDK();
+
+  const replacements: Replacement[] = useMemo(
+    () => [{ term: 'RANDOM_CHANNEL_NAME', replacer: getRandomChannelName }],
+    [],
+  );
+
+  const processedChildren = useMemo(() => {
+    const replaceInString = (str: string) => {
+      let result = str;
+      replacements.forEach(({ term, replacer }) => {
+        const regex = new RegExp(`{{${term}}}`, 'g');
+        result = result.replace(regex, replacer());
+      });
+      return result;
+    };
+
+    const processChild = (child: ReactNode): ReactNode => {
+      if (typeof child === 'string') {
+        return replaceInString(child);
+      }
+      if (Array.isArray(child)) {
+        return child.map(processChild);
+      }
+      if (isValidElement(child)) {
+        const element = child as ReactElement<{ children?: ReactNode }>;
+        return cloneElement(element, element.props, processChild(element.props.children));
+      }
+      return child;
+    };
+
+    return processChild(children);
+  }, [children, replacements]);
 
   return (
     <CodeSnippet
@@ -62,7 +111,9 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
         activePage.product && languageData[activePage.product] ? Object.keys(languageData[activePage.product]) : []
       }
       apiKeys={apiKeys}
-    />
+    >
+      {processedChildren}
+    </CodeSnippet>
   );
 };
 
@@ -87,6 +138,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const { activePage } = useLayoutContext();
   const [sdk, setSdk] = useState<SDKType>(
     (pageContext.languages
+      ?.filter((language) => language.startsWith('realtime') || language.startsWith('rest'))
       ?.find((language) => activePage.language && language.endsWith(activePage.language))
       ?.split('_')[0] as SDKType) ?? null,
   );
@@ -103,14 +155,22 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   // Use the copyable headers hook
   useCopyableHeaders();
 
-  const apiKeys = useMemo(
-    () =>
-      userContext.apps?.flatMap(({ name, apiKeys }) => ({
-        app: name,
-        keys: apiKeys.map((apiKey) => ({ name: apiKey.name, key: apiKey.whole_key })),
-      })),
-    [userContext.apps],
-  );
+  const apiKeys = useMemo(() => {
+    const apps =
+      userContext.apps && userContext.apps.length > 0 && userContext.apps[0].apiKeys.length > 0 ? userContext.apps : [];
+
+    // Check if there are any non-demo apps
+    const hasNonDemo = apps.some(({ demo }) => !demo);
+
+    const filteredApps = hasNonDemo ? apps.filter(({ demo }) => !demo) : apps;
+
+    return filteredApps.length > 0
+      ? filteredApps.flatMap(({ name, apiKeys, demo }) => ({
+          app: demo ? 'demo' : name,
+          keys: apiKeys.map((apiKey) => ({ name: apiKey.name, key: apiKey.whole_key })),
+        }))
+      : [{ app: 'demo', keys: [{ name: 'demo', key: 'demokey:123456' }] }];
+  }, [userContext.apps]);
 
   return (
     <SDKContext.Provider value={{ sdk, setSdk }}>

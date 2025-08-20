@@ -1,9 +1,14 @@
 import { UserDetails } from 'src/contexts';
 
-export const getApiKey = (userData: UserDetails) =>
-  process.env.NODE_ENV === 'development' && process.env.GATSBY_VITE_ABLY_KEY
-    ? process.env.GATSBY_VITE_ABLY_KEY
-    : userData.apps?.[0]?.apiKeys?.[0]?.whole_key;
+export const getApiKey = (userData: UserDetails, demoOnly = false) => {
+  if (process.env.NODE_ENV === 'development' && process.env.GATSBY_VITE_ABLY_KEY) {
+    return process.env.GATSBY_VITE_ABLY_KEY;
+  }
+
+  const apps = userData.apps ?? [];
+  const app = apps.find((a) => a.demo === demoOnly);
+  return app?.apiKeys?.[0]?.whole_key;
+};
 
 export const updateAblyConnectionKey = (
   files: Record<string, string>,

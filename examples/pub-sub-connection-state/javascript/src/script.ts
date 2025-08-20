@@ -1,11 +1,12 @@
 import * as Ably from 'ably';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 
 let client: Ably.Realtime | null = null;
 
 const connect = () => {
   const newClient = new Ably.Realtime({
-    key: import.meta.env.VITE_ABLY_KEY as string,
+    key: config.ABLY_KEY,
     clientId: nanoid(),
   });
 

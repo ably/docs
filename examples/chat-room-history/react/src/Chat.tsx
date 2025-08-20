@@ -7,7 +7,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState('');
   const { clientId } = useChatClient();
-  const { history, send } = useMessages({
+  const { history, sendMessage } = useMessages({
     listener: (event) => {
       setMessages((prevMessages: Message[]) => [...prevMessages, event.message]);
     },
@@ -37,7 +37,7 @@ export default function Chat() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    send({ text: message });
+    sendMessage({ text: message });
     setMessage('');
   };
 

@@ -1,12 +1,13 @@
 import * as Ably from 'ably';
 import type { Message } from 'ably';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 import './styles.css';
 
 const occupantCount = document.getElementById('occupants-count');
 
 const client = new Ably.Realtime({
-  key: import.meta.env.VITE_ABLY_KEY as string,
+  key: config.ABLY_KEY,
   clientId: nanoid(),
 });
 
@@ -25,7 +26,7 @@ async function simulatedOccupants() {
   for (let loopCount = 0; loopCount < 20; loopCount++) {
     const clientId = nanoid();
     const client = new Ably.Realtime({
-      key: import.meta.env.VITE_ABLY_KEY as string,
+      key: config.ABLY_KEY,
       clientId,
     });
 

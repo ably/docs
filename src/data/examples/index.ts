@@ -36,12 +36,12 @@ export const examples: Example[] = [
   {
     id: 'chat-room-reactions',
     name: 'Room reactions',
-    description: 'Add emoji reactions to messages in chat rooms.',
+    description: 'Send emoji reactions to messages in chat rooms.',
     products: ['chat'],
     layout: 'double-vertical',
     visibleFiles: ['src/script.ts', 'App.tsx', 'index.tsx'],
     metaTitle: `Build chat room reactions with Ably’s Chat SDK`,
-    metaDescription: `Add realtime chat room reactions using Ably’s Chat SDK. Enable instant emoji responses and seamless updates for engaging user experiences.`,
+    metaDescription: `Send realtime chat room reactions using Ably’s Chat SDK. Enable instant emoji responses and seamless updates for engaging user experiences.`,
   },
   {
     id: 'chat-typing-indicator',

@@ -2,6 +2,7 @@ import * as Ably from 'ably';
 import type { Message } from 'ably';
 import minifaker from 'minifaker';
 import './styles.css';
+import { config } from './config';
 
 import 'minifaker/locales/en';
 
@@ -45,7 +46,7 @@ async function enterGame() {
   game.style.display = 'block';
 
   const client = new Ably.Realtime({
-    key: import.meta.env.VITE_ABLY_KEY as string,
+    key: config.ABLY_KEY,
     clientId: minifaker.firstName(),
   });
 
@@ -65,7 +66,7 @@ async function enterGame() {
 preloadButton.addEventListener('click', async () => {
   preloadButton.disabled = true;
   const client = new Ably.Realtime({
-    key: import.meta.env.VITE_ABLY_KEY as string,
+    key: config.ABLY_KEY,
     clientId: minifaker.firstName(),
   });
 

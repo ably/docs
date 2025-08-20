@@ -16,13 +16,8 @@ export default {
           link: '/docs/chat',
           index: true,
         },
-      ],
-    },
-    {
-      name: 'Getting started',
-      pages: [
         {
-          name: 'Quickstarts',
+          name: 'Getting started',
           pages: [
             {
               name: 'JavaScript',
@@ -36,12 +31,21 @@ export default {
               name: 'Kotlin',
               link: '/docs/chat/getting-started/kotlin',
             },
+            {
+              name: 'React UI Components',
+              link: '/docs/chat/getting-started/react-ui-components',
+            },
           ],
         },
         {
           name: 'SDK setup',
           link: '/docs/chat/setup',
         },
+      ],
+    },
+    {
+      name: 'Concepts',
+      pages: [
         {
           name: 'Connections',
           link: '/docs/chat/connect',
@@ -91,6 +95,33 @@ export default {
       ],
     },
     {
+      name: 'React UI Components',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/chat/react-ui-components',
+          index: true,
+        },
+        {
+          name: 'Setup',
+          link: '/docs/chat/react-ui-components/setup',
+        },
+        {
+          name: 'Providers and Hooks',
+          link: '/docs/chat/react-ui-components/providers',
+        },
+        {
+          name: 'Components',
+          link: '/docs/chat/react-ui-components/components',
+        },
+        {
+          name: 'Customisation',
+          link: '/docs/chat/react-ui-components/component-styling',
+          languages: [],
+        },
+      ],
+    },
+    {
       name: 'Moderation',
       pages: [
         {
@@ -108,6 +139,14 @@ export default {
             {
               name: 'Hive (Dashboard)',
               link: '/docs/chat/moderation/direct/hive-dashboard',
+            },
+            {
+              name: 'Tisane',
+              link: '/docs/chat/moderation/direct/tisane',
+            },
+            {
+              name: 'Bodyguard',
+              link: '/docs/chat/moderation/direct/bodyguard',
             },
           ],
         },

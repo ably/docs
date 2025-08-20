@@ -1,0 +1,142 @@
+---
+title: Debugging
+meta_description: "Debugging in Ably supported apps, including troubleshooting techniques, logging options, and tools for error analysis."
+redirect_from:
+  - /docs/errors/
+---
+
+Errors can occur in various scenarios when using Ably, such as invalid inputs in requests, authentication issues, or connection problems caused by network disruptions. Proper debugging is essential for building a reliable application and troubleshooting.
+
+You can debug issues in your Ably-supported app using the following:
+
+* Set up a custom log handler to capture and manage errors in a way that suits your requirements.
+* Meta channels allow you to monitor errors that might not otherwise be visible to clients, providing additional insights into issues.
+* The [Dev console](https://ably.com/accounts/any/apps/any/console) in your Ably dashboard is a quick and easy way to inspect errors and events, especially during development or debugging.
+
+## Error info <a id="format"/>
+
+All errors returned by Ably are standardized and use the [`ErrorInfo`](/docs/api/rest-sdk/types#error-info) object:
+
+<Code>
+```json
+{
+  "code": 40005,
+  "statusCode": 400,
+  "cause": "Authentication",
+  "nonfatal": false,
+  "href": "https://help.ably.io/error/40005"
+}
+```
+</Code>
+
+The following explains each property of an `ErrorInfo` object:
+
+* `code` := Ably-specific numeric code indicating the error type.
+* `statusCode` := An HTTP status code providing broader context, such as 400 for a bad request.
+* `cause` := A brief description of the issue.
+* `nonfatal` := A boolean indicating whether the error is critical.
+* `href` := A direct link to Ably's documentation or for quick troubleshooting references.
+
+## Logging <a id="logging"/>
+
+Ably SDKs allow you to customize the function that handles logging. This function is usually set in the options when configuring a client, such as the `ClientOptions` object for Pub/Sub.
+
+Two separate properties can be set:
+
+* `logHandler` := Provides a custom function for each line of log output.
+* `logLevel` := The verbosity of the logging output, from silent to trace. In some SDKs this is numeric, and in others string.
+
+The following table explains the `logLevel` setting for the Ably client, which controls how much logging output is shown. Higher levels include more detailed information:
+
+| Level | Description |
+| ----- | ----------- |
+| `0` | No logs |
+| `1` | Errors only |
+| `2` | Errors plus connection and channel state changes |
+| `3` | Abbreviated debug output |
+| `4` | Full debug output |
+
+The following example configures the Ably client to log only error messages using `logLevel:1` and processes them with the function `logWriteFun()`:
+
+<Code>
+```javascript
+const ablyClient = new Ably.Realtime({
+  key: {{API_KEY}},
+  logHandler: logWriteFunc,
+  logLevel: 1 // Errors only
+});
+```
+</Code>
+
+The following example is a log output for an Ably client configured to log messages using `logLevel:1`:
+
+<Code>
+```text
+LOG [Level 1]: Ably: ConnectionManager.failQueuedMessages(): failing 1 queued messages, err = [_ErrorInfo: Application Ptz0jg disabled.
+(See https://help.ably.io/error/40300 for help.); statusCode=403; code=40300]
+```
+</Code>
+
+## Metachannels <a id="meta"/>
+
+Ably provides a set of [metachannels](/docs/metadata-stats/metadata/subscribe#metachannels) that expose internal events from the Ably system. These metachannels are be useful for debugging and monitoring, especially when investigating issues not surfaced directly to clients.
+
+<Aside data-type='note'>
+Errors returned directly to clients are not published to metachannels. For example, if a client publishes a message but exceeds a channel rate limit, the `publish()` method uses an error callback to notify the client.
+</Aside>
+
+There are two metachannels related to [logging:](/docs/metadata-stats/metadata/subscribe#log)
+
+* `[meta]log` := Publishes errors that aren't visible to clients, except those related to push notifications.
+* `[meta]log:push` := Similar to `[meta]log`, but only publishes errors related to the delivery of push notifications.
+
+The following example subscribes to the `[meta]log` channel:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('[meta]log');
+channel.subscribe((msg) => {
+  console.log(msg);
+});
+```
+</Code>
+
+The following is an example event published to the `[meta]log` channel as an [`ErrorInfo`](#format) object:
+
+<Code>
+```json
+{
+  "code": 40005,
+  "statusCode": 400,
+  "cause": "Authentication",
+  "nonfatal": false,
+  "href": "https://help.ably.io/error/40005"
+}
+```
+</Code>
+
+## Dev console <a id="console"/>
+
+The [Dev console](https://ably.com/accounts/any/apps/any/console) in your Ably dashboard is a quick and easy way to inspect errors. It provides a live stream of all events in your application, which is especially useful during early-stage development or low-traffic periods when events are easier to track:
+
+* Monitor all live events in your application for detailed insights.
+* Test publishing and subscribing to channels to identify and resolve issues with these functions.
+
+<Aside data-type='note'>
+The Dev console displays a realtime feed of events. It does not store historical data, so you won't be able to query past events after an error has occurred.
+</Aside>
+
+## Support tickets <a id="support"/>
+
+If the provided information does not resolve your issue, contact Ably [support](https://ably.com/support). When contacting, include details such as your app ID, the error code, and any relevant logs to help troubleshoot.
+
+The following information is essential for effective troubleshooting, include as much of the following information as possible:
+
+* Provide timestamps in UTC format.
+* Include complete SDK logs from the time of the failure. Ensure these logs show activity before and after the timeout, as SDKs retry failed requests by default.
+* Specify which endpoints were accessed. Mention if you use custom client options, the environment setting, and the failing SDK operation.
+* State the SDK/s you use, including the platform and versions.
+* Include any stack traces related to the error.
+* Indicate whether the issue occurs consistently or was a one-time event.
+* Provide details to confirm whether the issue was related to your network or Ably's availability. For example, note whether other internet operations were succeeding simultaneously.
+* Include the `appID` associated with the request.

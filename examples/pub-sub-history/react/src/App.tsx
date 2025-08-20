@@ -3,13 +3,14 @@ import { AblyProvider, ChannelProvider } from 'ably/react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import minifaker from 'minifaker';
 import 'minifaker/locales/en';
+import { config } from './config';
 import './styles/styles.css';
 import AuctionRoom from './Auction';
 import Home from './Home';
 
 export default function App() {
   const client = new Ably.Realtime({
-    key: import.meta.env.VITE_ABLY_KEY,
+    key: config.ABLY_KEY,
     clientId: minifaker.firstName(),
   });
 

@@ -4,6 +4,7 @@ import { useLocation } from '@reach/router';
 import { MDXProvider } from '@mdx-js/react';
 import Link from 'src/components/Link';
 import { CodeBlock } from './CodeBlock';
+import { checkLinkIsInternal } from 'src/utilities/link-checks';
 
 const H1: FC<JSX.IntrinsicElements['h1']> = ({ children, ...props }) => (
   <h1 className="ui-text-h1 my-10" {...props}>
@@ -72,7 +73,7 @@ export const Anchor: FC<JSX.IntrinsicElements['a']> = ({ children, href, ...prop
   const urlParams = new URLSearchParams(location.search);
   const langParam = urlParams.get('lang');
 
-  if (langParam && cleanHref && !cleanHref.startsWith('#')) {
+  if (langParam && cleanHref && checkLinkIsInternal(cleanHref)) {
     const url = new URL(cleanHref, 'https://ably.com');
     url.searchParams.set('lang', langParam);
     cleanHref = url.pathname + url.search;

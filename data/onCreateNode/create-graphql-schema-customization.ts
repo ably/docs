@@ -56,7 +56,8 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       oneTrustEnabled: String
       oneTrustDomain: String
       oneTrustTest: String
-      inkeepEnabled: String
+      inkeepChatEnabled: Boolean
+      inkeepSearchEnabled: Boolean
       inkeepApiKey: String
       insightsEnabled: Boolean
       insightsDebug: Boolean
@@ -65,6 +66,8 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       posthogApiKey: String
       posthogApiHost: String
       conversationsUrl: String
+      intercomEnabled: Boolean
+      intercomAppId: String
     }
 
     type SiteSiteMetadata implements Node {
