@@ -28,6 +28,10 @@ export default {
               link: '/docs/chat/getting-started/react',
             },
             {
+              name: 'React Native',
+              link: '/docs/chat/getting-started/react-native',
+            },
+            {
               name: 'Kotlin',
               link: '/docs/chat/getting-started/kotlin',
             },
