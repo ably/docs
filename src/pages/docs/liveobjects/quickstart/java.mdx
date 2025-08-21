@@ -47,36 +47,26 @@ LiveObjects is available as part of the Ably Pub/Sub SDK via the dedicated Objec
 <dependency>
     <groupId>io.ably</groupId>
     <artifactId>ably-java</artifactId>
-    <version>1.2.54</version>
+    <version>1.2.55</version>
 </dependency>
 <dependency>
     <groupId>io.ably</groupId>
     <artifactId>live-objects</artifactId>
-    <version>1.2.54</version>
-</dependency>
-```
-
-For `Android` platform use `ably-android` instead of `ably-java`
-
-```xml
-<dependency>
-    <groupId>io.ably</groupId>
-    <artifactId>ably-android</artifactId>
-    <version>1.2.54</version>
+    <version>1.2.55</version>
 </dependency>
 ```
 
 ### Install for Gradle:
 
 ```java
-implementation 'io.ably:ably-java:1.2.54'
-implementation 'io.ably:live-objects:1.2.54'
+implementation 'io.ably:ably-java:1.2.55'
+implementation 'io.ably:live-objects:1.2.55'
 ```
 
-For `Android` platform use `ably-android` instead of `ably-java`
+For `Android` platform, use `ably-android` instead of `ably-java`
 
-```
-implementation 'io.ably:ably-android:1.2.54'
+```java
+implementation 'io.ably:ably-android:1.2.55'
 ```
 
 ## Instantiate a client <a id="step-2"/>
@@ -99,7 +89,7 @@ LiveObjects is managed and persisted on [channels](/docs/channels). To use LiveO
 * `OBJECT_PUBLISH` - required to create and modify objects on a channel.
 
 <Aside data-type='note'>
-When you provide an explicit `modes` property for a channel, you override the set of [default modes](/docs/channels/options#modes) used for that channel. So, if you're using the channel for anything in addition to LiveObjects, you need to ensure that you also include the other modes required by the features you are using.
+When you provide an explicit `modes` field for a channel, you override the set of [default modes](/docs/channels/options#modes) used for that channel. So, if you're using the channel for anything in addition to LiveObjects, you need to ensure that you also include the other modes required by the features you are using.
 </Aside>
 
 <Code>
@@ -115,21 +105,59 @@ ChannelBase channel = realtime.channels.get("test-channel", opts);
 
 ## Get root object <a id="step-4"/>
 
-The [`channel.objects`](/docs/api/realtime-sdk/channels#objects) property gives access to the LiveObjects API for a channel.
+The [`channel.getObjects`](/docs/api/realtime-sdk/channels#objects) method gives access to the LiveObjects API for a channel.
 
-Use it to get the root object, which is the entry point for accessing and persisting objects on a channel. The root object is a [`LiveMap`](/docs/liveobjects/map) instance that always exists on a channel and acts as the top-level node in your object tree. You can get the root object using the `getRoot()` function of LiveObjects:
+Use it to get the root object, which is the entry point for accessing and persisting objects on a channel. The root object is a [`LiveMap`](/docs/liveobjects/map) instance that always exists on a channel and acts as the top-level node in your object tree. You can get the root object using the `getRoot()` method of LiveObjects:
 
 <Code>
 ```java
-// The root is returned once the LiveObjects state is synchronized with the Ably system (implicitly attaches channel in INITIALIZED state)
+// The root is returned once the LiveObjects state is synchronized with the Ably system. 
+// `getRoot` Implicitly attaches channel if it's in a INITIALIZED state
 RealtimeObjects objects = channel.getObjects();
-LiveMap root = objects.getRoot();
+LiveMap root = objects.getRoot(); // blocks current thread till result is returned
 ```
 </Code>
 
+The above `getRoot()` method is blocking in nature so it's recommended to use `getRootAsync()` instead
+
+<Code>
+```java
+RealtimeObjects objects = channel.getObjects();
+objects.getRootAsync(new ObjectsCallback<LiveMap>() {
+    @Override
+    public void onSuccess(LiveMap root) {
+        // Successfully retrieved the root LiveMap
+        System.out.println("Root object retrieved: " + root);
+        // You can now use the root object to create and manage other objects
+    }
+    
+    @Override
+    public void onError(AblyException exception) {
+        // Handle errors (network issues, authentication failures, etc.)
+        System.err.println("Failed to get root object: " + exception.getMessage());
+    }
+});
+```
+</Code>
+
+<Aside data-type='note'>
+Calling blocking methods like `getRoot()` within `realtime` client callbacks can cause deadlocks. To avoid this, such calls should be executed on a separate thread pool or
+it's recommended to use the asynchronous equivalents of these blocking methods. You can wrap async callbacks in a `CompletableFuture` to create flat, chainable, and sequential logic.
+</Aside>
+
+| Blocking Method | Async Method |
+| --------------- | ------------ |
+| `RealtimeObjects.getRoot()` | `RealtimeObjects.getRootAsync()` |
+| `RealtimeObjects.createMap()` | `RealtimeObjects.createMapAsync()` |
+| `RealtimeObjects.createCounter()` | `RealtimeObjects.createCounterAsync()` |
+| `LiveMap.set()` | `LiveMap.setAsync()` |
+| `LiveMap.remove()` | `LiveMap.removeAsync()` |
+| `LiveCounter.increment()` | `LiveCounter.incrementAsync()` |
+| `LiveCounter.decrement()` | `LiveCounter.decrementAsync()` |
+
 ## Create objects <a id="step-5"/>
 
-You can create new objects using dedicated functions of the LiveObjects API at [`channel.objects`](/docs/api/realtime-sdk/channels#objects). To persist them on a channel and share them between clients, you must assign objects to a parent `LiveMap` instance connected to the root object. The root object itself is a `LiveMap` instance, so you can assign objects to the root and start building your object tree from there.
+You can create new objects using dedicated methods of the LiveObjects API at [`channel.getObjects()`](/docs/api/realtime-sdk/channels#objects). To persist them on a channel and share them between clients, you must assign objects to a parent `LiveMap` instance connected to the root object. The root object itself is a `LiveMap` instance, so you can assign objects to the root and start building your object tree from there.
 
 <Aside data-type='note'>
 Objects that are not descendants of the root object are "unreachable" and will eventually be garbage collected. Read more in the [objects lifecycle events section](/docs/liveobjects/lifecycle#objects-lifecycle).
@@ -152,7 +180,8 @@ Subscribe to realtime updates to objects on a channel. You will be notified when
 <Code>
 ```java
 visitsCounter.subscribe((counterUpdate) ->
-    System.out.println("Visits counter updated: " + counterUpdate.getUpdate().getAmount());
+    System.out.println("Visits counter updated: " + 
+        counterUpdate.getUpdate().getAmount());
 );
 
 reactionsMap.subscribe((mapUpdate) -> {
