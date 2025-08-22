@@ -251,7 +251,7 @@ export const data = {
           title: 'Swift',
           text: 'LiveObjects plugin for Swift.',
           image: { src: swift, isWide: false },
-          githubRepoURL: 'https://github.com/ably/ably-cocoa-liveobjects-plugin',
+          githubRepoURL: 'https://github.com/ably/ably-liveobjects-swift-plugin',
           setupLink: 'liveobjects/quickstart/swift',
         },
         {

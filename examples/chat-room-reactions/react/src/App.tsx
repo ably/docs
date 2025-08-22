@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { ChatClient, RoomReaction as ReactionInterface, RoomReactionEvent } from '@ably/chat';
 import { ChatClientProvider, ChatRoomProvider, useRoom, useRoomReactions } from '@ably/chat/react';
 import { Realtime } from 'ably';
+import { config } from './config';
 import './styles/styles.css';
 
 const mockNames = ['Bob', 'Jane', 'John', 'Sammy'];
 const mockName = () => mockNames[Math.floor(Math.random() * mockNames.length)];
 
-const realtimeClient = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: mockName() });
+const realtimeClient = new Realtime({ key: config.ABLY_KEY, clientId: mockName() });
 const chatClient = new ChatClient(realtimeClient);
 
 function Chat() {

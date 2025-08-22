@@ -16,13 +16,8 @@ export default {
           link: '/docs/liveobjects',
           index: true,
         },
-      ],
-    },
-    {
-      name: 'Getting started',
-      pages: [
         {
-          name: 'Quickstarts',
+          name: 'Getting started',
           pages: [
             {
               name: 'JavaScript',
@@ -111,7 +106,7 @@ export default {
           external: true,
         },
         {
-          link: 'https://sdk.ably.com/builds/ably/ably-cocoa-liveobjects-plugin/main/AblyLiveObjects/documentation/ablyliveobjects/',
+          link: 'https://sdk.ably.com/builds/ably/ably-liveobjects-swift-plugin/main/AblyLiveObjects/documentation/ablyliveobjects/',
           name: 'Swift plugin',
           external: true,
         },

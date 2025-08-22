@@ -2,11 +2,12 @@ import { DefaultRoot, LiveMap, Realtime } from 'ably';
 import Objects from 'ably/objects';
 import { nanoid } from 'nanoid';
 import { Tasks } from './ably.config';
+import { config } from './config';
 import './styles.css';
 
 const client = new Realtime({
   clientId: nanoid(),
-  key: import.meta.env.VITE_ABLY_KEY as string,
+  key: config.ABLY_KEY,
   plugins: { Objects },
 });
 

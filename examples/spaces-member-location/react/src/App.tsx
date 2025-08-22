@@ -7,6 +7,7 @@ import 'minifaker/locales/en';
 import Spaces from '@ably/spaces';
 import { Realtime } from 'ably';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 import './styles/styles.css';
 
 type Member = Omit<SpaceMember, 'profileData' | 'location'> & {
@@ -22,7 +23,7 @@ type Member = Omit<SpaceMember, 'profileData' | 'location'> & {
 
 type UpdateLocationCallback = (location: Member['location']) => void;
 
-const client = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: nanoid() });
+const client = new Realtime({ key: config.ABLY_KEY, clientId: nanoid() });
 const spaces = new Spaces(client);
 
 function MemberLocationDemo() {

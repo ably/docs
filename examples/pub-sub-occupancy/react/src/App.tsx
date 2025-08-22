@@ -3,6 +3,7 @@ import { AblyProvider, ChannelProvider, useChannel } from 'ably/react';
 import { nanoid } from 'nanoid';
 import { useEffect, useState } from 'react';
 import { FaEye } from 'react-icons/fa';
+import { config } from './config';
 import './styles/styles.css';
 
 const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
@@ -48,7 +49,7 @@ async function simulatedOccupants() {
   for (let loopCount = 0; loopCount < 20; loopCount++) {
     const clientId = nanoid();
     const client = new Realtime({
-      key: import.meta.env.VITE_ABLY_KEY,
+      key: config.ABLY_KEY,
       clientId,
     });
 
@@ -71,7 +72,7 @@ async function simulatedOccupants() {
 export default function App() {
   const clientId = nanoid();
   const client = new Realtime({
-    key: import.meta.env.VITE_ABLY_KEY,
+    key: config.ABLY_KEY,
     clientId,
   });
 

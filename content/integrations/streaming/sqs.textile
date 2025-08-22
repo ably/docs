@@ -1,6 +1,6 @@
 ---
-title: Amazon SQS rule
-meta_description: "Ably allows you to send data to SQS based on message, channel lifecycle, channel occupancy, and presence events."
+title: AWS SQS integration
+meta_description: "Send data to SQS based on message, channel lifecycle, channel occupancy, and presence events."
 meta_keywords: "SQS, integrations, events, serverless"
 languages:
   - none
@@ -8,39 +8,104 @@ redirect_from:
   - /docs/general/firehose/sqs-rule
 ---
 
-Use Ably's "Firehose":/docs/integrations/streaming SQS rule to send "data":/docs/integrations/streaming#data-sources such as messages, occupancy, lifecycle and presence events from Ably to SQS.
+"SQS":https://aws.amazon.com/sqs integrations enable you to automatically forward events that occur in Ably to AWS SQS queues.
 
-h2(#creating-sqs-rule). Creating a SQS rule
+h2(#create). Create an SQS integration
 
-There are two ways to create a SQS rule:
+To create an SQS integration in your "dashboard:":https://ably.com/dashboard/any
 
-* Using the "Ably Dashboard":https://ably.com/dashboard.
-* Using the "Control API":/docs/account/control-api.
+1. Login and select the application you wish to integrate with SQS.
+2. Click the *Integrations* tab.
+3. Click the *New Integration Rule* button.
+4. Choose Firehose.
+5. Choose AWS SQS.
+6. Configure the SQS "settings":#settings.
+7. Click *Create*.
 
-h3(#creating-rule-dashboard). Creating a SQS rule in the dashboard
+You can also create an SQS integration using the "Control API":/docs/platform/account/control-api.
 
-To create a rule in your "dashboard":https://ably.com/dashboard#58:
+h4(#settings). Settings
 
-* Login and select the application you wish to integrate with SQS.
-* Click the *Integrations* tab.
-* Click the *New Integration Rule* button.
-* Choose Firehose.
-* Choose AWS SQS.
-* Configure the settings applicable to your use case and your SQS installation.
-* Click *Create*,
+The following settings are available when creating an SQS integration:
 
-h4(#settings). SQS general rule settings
+|_. Setting |_. Description |
+| URL | Specifies the URL for the SQS queue, including credentials, region, and stream name. Only HTTPS is supported. |
+| AWS Region  | Specifies the AWS region of your SQS queue. |
+| "AWS authentication scheme":#auth | Choose the authentication method. Either *AWS credentials* or *ARN of an assumable role*. |
+| AWS Credentials | If using AWS credentials, enter the values in @key:value@ format. |
+| ARN of an assumable role | If using ARN of an assumable role, enter the ARN of the role that Ably can assume to access your SQS queue. |
+| "Source":/docs/integrations/streaming#sources | Specifies the event types being sent to SQS. |
+| "Channel filter":/docs/integrations/streaming#filter | Filters the source channels based on a regular expression. |
+| Encoding | Specifies the encoding format of messages. Either JSON or MsgPack. |
+| "Enveloped":/docs/integrations/streaming#enveloped | Checkbox to set whether messages should be enveloped or not. Enveloped is the default. |
 
-The following explains the SQS general rule settings:
+h2(#auth). AWS authentication
 
-|_. Section                                                        |_. Purpose                                                                                                 |
-|URL                                                               |Specifies the HTTPS URL for the SQS queue, including credentials, region, and stream name.                 |
-|AWS region                                                        |Defines the AWS region associated with the SQS queue.                                                      |
-|AWS authentication scheme                                         |Allows selection of the authentication method: AWS credentials or ARN of an assumable role.                |
-|AWS credentials                                                   |Enter AWS credentials in `key:value` format  for authentication.                                           |
-|"Source":/docs/integrations/streaming#data-sources |Defines the type of event to deliver, such as Message, Presence, Channel Lifecycle, or Channel Occupancy.  |
-|Channel filter                                                    |Allows filtering of the rule based on a regular expression matching the channel name.                      |
+Delegate access to your AWS resources by creating an "IAM role":https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles.html that the Ably AWS account can assume.
 
-h3(#creating-rule-control-api). Creating a SQS rule using Control API
+This approach follows AWS best practices, as it avoids sharing access keys directly. Specify the role's ARN to grant Ably the necessary permissions in a secure manner.
 
-See some examples of creating rules in the "rules section":/docs/account/control-api#examples of the Control API documentation. You can also refer to the "rule section":/docs/api/control-api#tag/rules/paths/~1apps~1{app_id}~1rules/post of the Control API Reference for information on creating a SQS rule. You will need to select a @ruleType@ of @aws/sqs@.
+h3(#sqs). Create an SQS policy
+
+The following steps show you how to create a policy for AWS SQS.
+
+1. In the IAM console sidebar select *Policies*.
+2. Click *Create Policy*.
+3. Click the JSON tab and enter the following JSON to configure the policy:
+
+```[json]
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowReadWriteSQS",
+      "Effect": "Allow",
+      "Action": [
+        "sqs:DeleteMessage",
+        "sqs:TagQueue",
+        "sqs:GetQueueUrl",
+        "sqs:ChangeMessageVisibility",
+        "sqs:DeleteMessageBatch",
+        "sqs:SendMessageBatch",
+        "sqs:UntagQueue",
+        "sqs:ReceiveMessage",
+        "sqs:SendMessage",
+        "sqs:ListQueueTags",
+        "sqs:ChangeMessageVisibilityBatch"
+      ],
+      "Resource": [
+        "arn:aws:sqs:<YOUR_AWS_REGION>:<YOUR_AWS_ACCOUNT>:<YOUR_QUEUE_NAME>"
+      ]
+    }
+  ]
+}
+```
+
+<aside data-type='note'>
+<p>You will need to replace @<YOUR_AWS_REGION>@, @<YOUR_AWS_ACCOUNT>@, and @<YOUR_QUEUE_NAME>@ with the AWS region that hosts your SQS queue, your AWS account ID, and your SQS queue name respectively.</p>
+</aside>
+
+4. Click *Next: Tags*. You don't need to add any tags.
+5. Click *Next: Review*.
+6. Enter a suitable name for your policy.
+7. Click *Create Policy*.
+
+You have created a policy that grants the permissions required to use an SQS queue.
+
+h3(#role). Create a role
+
+Create an IAM role as follows:
+
+1. In the AWS IAM console, click *Roles* in the sidebar and then click *Create Role*.
+2. For type of trusted entity select *Another AWS account*.
+3. For Account ID specify 203461409171. This is the Ably AWS account.
+4. Click the *Require external ID checkbox* and then enter an external ID of "@<Your_Ably_Account_ID>.<Your_Ably_app_ID>@":/docs/platform/account/control-api#ids.
+5. Click *Next: Permissions*.
+6. Now select the policy you created earlier to attach to this role. You can type the name of your policy into the *Filter policies* search box.
+
+Then ensure the checkbox for the policy is selected.
+
+1. Click *Next: Tags*.
+2. You don't need to add tags so click *Next: Review*.
+3. Enter a suitable name for your role.
+4. Click *Create Role*.

@@ -1,0 +1,495 @@
+---
+title: Metadata subscriptions
+meta_description: "Retrieve metadata updates in realtime by subscribing to metachannels."
+redirect_from:
+  - /docs/realtime/metachannels
+---
+
+Realtime metadata updates are provided by subscribing to metachannels using the realtime interface of an Ably SDK. Metachannels are a namespace of channels beginning with the `[meta]` qualifier and they can be subscribed to in the same manner as regular [channels](/docs/channels).
+
+Events are published to metachannels that provide app-level metadata about different resources, such as channels, connections and API requests.
+
+## Metachannels <a id="metachannels"/>
+
+The following is a list of available metachannels:
+
+| Metachannel | Description |
+|-------------|-------------|
+| **[meta]connection.lifecycle** | [connection-lifecycle](#connection-lifecycle): Publishes connection lifecycle events of realtime connections |
+| **[meta]channel.lifecycle** | [channel-lifecycle](#channel-lifecycle): Publishes channel lifecycle events, such as channels opening and closing |
+| **[meta]stats:minute** | [stats](#stats): Publishes app statistics at one minute intervals |
+| **[meta]clientEvents:connections** | [sample](#sample): Publishes metadata for a sample of connection events |
+| **[meta]clientEvents:apiRequests** | [sample](#sample): Publishes metadata for a sample of API request events |
+| **[meta]log** | [log](#log): Publishes error events that would otherwise not be received by a client. Excludes errors related to Push Notifications |
+| **[meta]log:push** | [log](#log): Similar to `[meta]log`, but only for errors that occur during delivery of Push Notifications |
+
+<Aside data-type='important'>
+[Capabilities](/docs/auth/capabilities) for metachannels work almost identically to how they do for regular channels. The only difference is that the resource name in the capability must explicitly include the `[meta]` qualifier.
+</Aside>
+
+It is never possible to publish or be present on a metachannel, however you can query their [history](/docs/storage-history/history).
+
+The following is an example of a capability that provides access to subscribe to all metachannels:
+
+<Code>
+```json
+{"[meta]*":["subscribe"]}
+```
+</Code>
+
+## Connection lifecycle events <a id="connection-lifecycle"/>
+
+Connection lifecycle events are published when [connections](/docs/connect) are opened and closed within an app. They are published to the `[meta]connection.lifecycle` metachannel.
+
+## Channel lifecycle events <a id="channel-lifecycle"/>
+
+Channel lifecycle events are published when [channels](/docs/channels) are opened and closed within an app.
+
+The following events are published to `[meta]channel.lifecycle`:
+
+| Event | Description |
+|-------|-------------|
+| **channel.opened** | Indicates that the channel has been activated globally. This means that it has become active in at least one region, having previously been inactive |
+| **channel.closed** | Indicates that the channel has been deactivated globally |
+| **channel.region.active** | Indicates that the channel has been activated in a specific region |
+| **channel.region.inactive** | Indicates that the channel has been deactivated in a specific region |
+
+The `data` property of all events is a [`ChannelDetails`](/docs/api/realtime-sdk/channel-metadata#channel-details) object. The [`ChannelDetails.ChannelStatus`](/docs/api/realtime-sdk/channel-metadata#channel-status) which includes [occupancy](/docs/presence-occupancy/occupancy) details varies depending on the event. If the event is specific to a region, such as `channel.region.active` then the occupancy metrics will only be for that region. For other events such as `channel.opened`, the occupancy metrics will be global.
+
+The following is an example of subscribing to all `[meta]channel.lifecycle` events:
+
+<Code>
+```realtime_javascript
+const channel = ably.channels.get('[meta]channel.lifecycle');
+
+await channel.subscribe((msg) => {
+    console.log('Event type: ' + msg.name, msg.data);
+});
+```
+
+```realtime_python
+channel = ably.channels.get('[meta]channel.lifecycle')
+
+def event_listener(msg):
+    print('Event type:', msg.name, msg.data)
+
+await channel.subscribe(event_listener)
+```
+
+```realtime_go
+channel := realtime.Channels.Get("[meta]channel.lifecycle")
+
+channel.SubscribeAll(context.Background(), func(msg *ably.Message) {
+  fmt.Printf("Event type: '%v - %v'\n", msg.Name, msg.Data)
+})
+```
+
+```realtime_java
+Channel channel = realtime.channels.get("[meta]channel.lifecycle");
+
+channel.subscribe(new Channel.MessageListener() {
+    @Override
+    public void onMessage(Message msg) {
+        System.out.println("Event type: " + msg.name + ", " + msg.data);
+    }
+});
+```
+</Code>
+
+The following is an example of subscribing to `channel.closed` events:
+
+<Code>
+```realtime_javascript
+const channel = ably.channels.get('[meta]channel.lifecycle');
+
+await channel.subscribe('channel.closed', (msg) => {
+    console.log('lifecycle meta channel (closed): ', msg.data);
+});
+```
+
+```realtime_python
+channel = ably.channels.get('[meta]channel.lifecycle')
+
+def event_listener(msg):
+    print('lifecycle meta channel (closed): ', msg.data)
+
+await channel.subscribe('channel.closed', event_listener)
+```
+
+```realtime_go
+channel := realtime.Channels.Get("[meta]channel.lifecycle")
+
+channel.Subscribe(context.Background(), "channel.closed", func(msg *ably.Message) {
+  fmt.Printf("lifecycle meta channel (closed): '%v'\n", msg.Data)
+})
+```
+
+```realtime_flutter
+final channel = realtime.channels.get('[meta]channel.lifecycle');
+channel.subscribe().listen((ably.Message message) {
+  print('Event type: ${message.name}, Data: ${message.data}');
+});
+```
+
+```realtime_java
+Channel channel = realtime.channels.get("[meta]channel.lifecycle");
+
+channel.subscribe("channel.closed", new Channel.MessageListener() {
+    @Override
+    public void onMessage(Message msg) {
+        System.out.println("lifecycle meta channel (closed): " + msg.data);
+    }
+});
+```
+</Code>
+
+## Log events <a id="log"/>
+
+The `[meta]log` and [`[meta]log:push`](/docs/push#Error) metachannels publish events that aren't otherwise available to clients.
+
+Errors where the client can be directly notified are **not** published to the metachannels. For example, if a client attempts to publish a message but exceeds a channel rate limit, the client will be notified by an error callback passed to the [publish()](/docs/api/realtime-sdk/channels#publish) method.
+
+The following example subscribes to the `[meta]log` channel:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('[meta]log');
+channel.subscribe(msg => console.log(msg));
+```
+</Code>
+
+## App statistics events <a id="stats"/>
+
+The `[meta]stats:minute` metachannel publishes [app-level statistics](/docs/metadata-stats/stats) at one minute intervals. This is in addition to being available in your account dashboard and to query programmatically.
+
+Events are published every minute and contain statistics for only the past minute. They are published as an `update` and this is the only event name published to the metachannel.
+
+The following is an example of subscribing to `[meta]stats:minute`:
+
+<Code>
+```realtime_javascript
+const channel = ably.channels.get("[meta]stats:minute");
+
+await channel.subscribe('update', event => {
+  console.log(JSON.stringify(event, undefined, 2));
+});
+```
+
+```realtime_python
+channel = ably.channels.get('[meta]stats:minute')
+
+def event_listener(event):
+    print(json.dumps(event, indent=2))
+
+await channel.subscribe('update', event_listener)
+```
+
+```realtime_go
+channel := realtime.Channels.Get("[meta]stats:minute")
+
+channel.Subscribe(context.Background(), "update", func(msg *ably.Message) {
+  eventJSON, err := json.MarshalIndent(msg, "", "  ")
+  if err != nil {
+    log.Printf("Failed to marshal event to JSON: %v", err)
+    return
+  }
+  fmt.Println(string(eventJSON))
+})
+```
+
+```realtime_flutter
+final channel = realtime.channels.get('[meta]stats:minute');
+channel.subscribe(name: 'update').listen((ably.Message message) {
+  print(message);
+});
+```
+
+```realtime_java
+Channel channel = ably.channels.get("[meta]stats:minute");
+
+// Subscribe to the channel for the specific event name "update"
+channel.subscribe("update", new Channel.MessageListener() {
+    @Override
+    public void onMessage(Message msg) {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        String json = gson.toJson(msg);
+        System.out.println(json);
+    }
+});
+```
+</Code>
+
+As there could potentially be a delay of up to one minute before the first event, you can obtain the most recent statistics event using the [rewind channel option](/docs/channels/options/rewind).
+
+The following example will return the most recent event and also subscribe to subsequent events:
+
+<Code>
+```realtime_javascript
+  const channel = ably.channels.get('[meta]stats:minute', {params: {rewind: '1'}});
+```
+
+```realtime_go
+channel := realtime.Channels.Get("[meta]stats:minute", ably.ChannelWithParams("rewind", "1"))
+```
+
+```realtime_flutter
+const channelOptions = ably.RealtimeChannelOptions(params: {'rewind': '1'});
+final channel = realtime.channels.get('[meta]stats:minute');
+channel.setOptions(channelOptions);
+```
+
+```realtime_java
+final Map<String, String> params = new HashMap<>();
+params.put("rewind", "1");
+final ChannelOptions options = new ChannelOptions();
+options.params = params;
+Channel channel = ably.channels.get("[meta]stats:minute", options);
+```
+</Code>
+
+You can also subscribe to `[meta]stats:minute` using [SSE](/docs/protocols/sse#stats).
+
+### App statistics event format <a id="stats-format"/>
+
+Each event will be formatted according to the [app-stats JSON schema](https://schemas.ably.com/json/app-stats-0.0.1.json). The following is an example of a returned event:
+
+<Code>
+```json
+{
+  "name": "update",
+  "id": "trVvT-KeEw:0:0",
+  "encoding": null,
+  "data": {
+    "intervalId": "2021-10-07:16:23",
+    "unit": "minute",
+    "schema": "https://schemas.ably.com/json/app-stats-0.0.1.json",
+    "entries": {
+      "connections.all.peak": 1,
+      "connections.all.min": 1,
+      "connections.all.mean": 0.2,
+      "connections.all.opened": 2,
+      "apiRequests.all.succeeded": 2,
+      "apiRequests.tokenRequests.succeeded": 2
+    }
+  }
+}
+```
+</Code>
+
+The following are the event properties:
+
+| Property | Description |
+|----------|-------------|
+| **name** | Only `update` is supported as an event name |
+| **id** | The unique ID of the event |
+| **encoding** | The encoding of the event data |
+| **intervalId** | This is an indication of the date-time interval that this statistics record relates to |
+| **unit** | Only `minute` is supported as a statistics unit |
+| **schema** | The JSON schema used for the encoding of the event |
+| **entries** | This is a flattened representation of the categories for which there are non-zero entries for this statistics record |
+
+## Sampled connection and request events <a id="sample"/>
+
+Enterprise accounts can sample connection and request events in order to monitor the usage of Ably services. Events are published to two metachannels that contain metadata for a sample of connections and API requests. These events can be used to compile statistics on app usage, enabling you to perform arbitrary data processing and aggregation related to client population and client activity. These metachannels must be enabled for each app you would like to sample.
+
+Events are published on the metachannels **`[meta]clientEvents:connections`** and **`[meta]clientEvents:apiRequests`**.
+
+The following code snippet shows how to subscribe to `connection.opened` events:
+
+<Code>
+```realtime_javascript
+const channel = ably.channels.get('[meta]clientEvents:connections');
+
+await channel.subscribe('connection.opened', (msg) => {
+    console.log('connection opened: ', msg.data);
+});
+```
+
+```realtime_python
+channel = ably.channels.get('[meta]clientEvents:connections')
+
+def event_listener(msg):
+    print('Connection opened:', msg.data)
+
+await channel.subscribe('connection.opened', event_listener)
+```
+
+```realtime_go
+channel := realtime.Channels.Get("[meta]clientEvents:connections")
+
+channel.Subscribe(context.Background(), "connection.opened", func(msg *ably.Message) {
+  log.Println("connection opened:", msg.Data)
+})
+```
+
+```realtime_flutter
+final channel = realtime.channels.get('[meta]clientEvents:connections');
+channel.subscribe(name: 'connection.opened').listen((ably.Message message) {
+  print('connection opened: ${message.data}');
+});
+```
+
+```realtime_java
+Channel channel = ably.channels.get("[meta]clientEvents:connections");
+
+channel.subscribe("connection.opened", new Channel.MessageListener() {
+    @Override
+    public void onMessage(Message msg) {
+        System.out.println("connection opened: " + msg.data);
+    }
+});
+```
+</Code>
+
+The following code snippet shows how to subscribe to all sampled API request events:
+
+<Code>
+```realtime_javascript
+const channel = ably.channels.get('[meta]clientEvents:apiRequests');
+
+// To subscribe to all event types
+await channel.subscribe((msg) => {
+    console.log('Event type: ' + msg.name, msg.data);
+});
+```
+
+```realtime_python
+channel = ably.channels.get('[meta]clientEvents:apiRequests')
+
+def message_callback(msg):
+    print('Event type:', msg.name, msg.data)
+
+await channel.subscribe(message_callback)
+```
+
+```realtime_go
+channel := realtime.Channels.Get("[meta]clientEvents:apiRequests")
+
+channel.SubscribeAll(context.Background(), func(msg *ably.Message) {
+  log.Printf("Event type: '%v' - '%v'", msg.Name, msg.Data)
+})
+```
+
+```realtime_flutter
+final channel = realtime.channels.get('[meta]clientEvents:apiRequests');
+channel.subscribe().listen((ably.Message message) {
+  print('Event type: ${msg.name} ${message.data}');
+});
+```
+
+```realtime_java
+Channel channel = ably.channels.get("[meta]clientEvents:apiRequests");
+
+channel.subscribe(new Channel.MessageListener() {
+    @Override
+    public void onMessage(Message msg) {
+        System.out.println("Event type: " + msg.name + ", " + msg.data);
+    }
+});
+```
+</Code>
+
+### Sample rate <a id="rate"/>
+
+The rate of sampling dictates the number of events published to the metachannels. For example, a rate of 0.1% for connections would publish an average of one message in every 1000. The sample rate can be configured independently for connections and API requests within the same app.
+
+### Connections <a id="sample-connections"/>
+
+A sample of connection events are published to the channel `[meta]clientEvents:connections`. Connection events can be used to compile statistics relating to client population.
+
+The connection event types are:
+
+| Event Type | Description |
+|------------|-------------|
+| **connection.opened** | The connection was successfully made by the client to Ably |
+| **connection.closed** | The connection was explicitly closed by the client |
+| **connection.refused** | The connection was rejected for an expected reason, such as invalid credentials or a malformed request |
+| **connection.failed** | The connection was rejected for an unexpected reason, such as a network failure |
+
+Events contain a subset of the following metadata in the `data` field:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| **host** | `String` | The host the connection was made to |
+| **requestId** | `String` | The unique ID of the request that Ably can use to correlate a connection event with internal logs, if necessary |
+| **region** | `String` | The region the connection was made from |
+| **headers** | `JSON Object` | The headers sent with the connection |
+| **query** | `JSON Object` | The parsed query string of the connection request, excluding authentication parameters. It contains connection information such as the client library version and any custom transport parameters |
+| **connectionId** | `String` | The unique ID of the connection |
+| **clientId** | `String` | The ID of the client that attempted the connection |
+| **channels** | `Array` | A list of channels included in the request. This is only relevant where channels are supported as part of the connection request, such as with [SSE](/docs/protocols/sse) |
+| **duration** | `Integer` | The duration the connection was open for |
+| **error** | `JSON Object` | The details of any error encountered whilst making the connection request. It includes an error message, error code and HTTP status code |
+
+An example of a `connection.closed` event is:
+
+<Code>
+```json
+{
+  "host": "realtime.ably.io",
+  "requestId": "fbbcb0ab-fa56-47c4-bbd4-fccc22a271b8",
+  "region": "us-east-1",
+  "headers": {
+    "host": "realtime.ably.io",
+    ...
+  },
+  "query": {
+    "format": "json",
+    "heartbeats": "true",
+    "v": "1.2",
+    "lib": "js-web-1.2.9"
+  },
+  "connectionId": "54321",
+  "clientId": "12345",
+  "duration": 61151
+}
+```
+</Code>
+
+### API requests <a id="sample-requests"/>
+
+Sampled API request events for an app are published to the channel `[meta]clientEvents:apiRequests`. API request events can be used to compile statistics relating to client activity.
+
+The request event types are:
+
+| Event Type | Description |
+|------------|-------------|
+| **request.succeeded** | The request was successful |
+| **request.refused** | The request was rejected for an expected reason, such as a malformed request or insufficient privileges |
+| **request.failed** | The request was rejected for an unexpected reason, such as a network failure |
+
+Events contain a subset of the following metadata in the `data` field:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| **host** | `String` | The host the request was made to |
+| **requestId** | `String` | The unique ID of the request that Ably can use to correlate a request event with internal logs, if necessary |
+| **region** | `String` | The region the request was made in |
+| **headers** | `JSON Object` | The headers sent with the request |
+| **query** | `JSON Object` | The details of the parsed request query, including information such as the request format |
+| **path** | `String` | The path of the endpoint called in the request, for example `/channels/{channel-name}/messages` |
+| **channels** | `Array` | A list of channels the request was made against |
+| **error** | `JSON Object` | The details of any error encountered whilst making the request. It includes an error message, error code and HTTP status code |
+
+An example of a `request.succeeded` event is:
+
+<Code>
+```json
+{
+  "host": "rest.ably.io",
+  "requestId": "fbbcb0ab-fa56-47c4-bbd4-fccc22a271c9",
+  "region": "us-east-2",
+  "headers": {
+    "host": "rest.ably.io",
+    ...
+  },
+  "query": {
+    "format": "json"
+  },
+  "path": "/channels/example-channel/messages",
+  "channels": [
+    "my-test-channel"
+  ]
+}
+```
+</Code>

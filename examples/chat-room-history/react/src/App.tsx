@@ -4,12 +4,13 @@ import { Realtime } from 'ably';
 import minifaker from 'minifaker';
 import 'minifaker/locales/en';
 import { useEffect, useState } from 'react';
+import { config } from './config';
 import './styles/styles.css';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Home from './Home';
 import Chat from './Chat';
 
-const realtimeClient = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: minifaker.firstName() });
+const realtimeClient = new Realtime({ key: config.ABLY_KEY, clientId: minifaker.firstName() });
 const chatClient = new ChatClient(realtimeClient);
 
 export default function App() {

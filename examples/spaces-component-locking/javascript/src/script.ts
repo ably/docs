@@ -3,6 +3,7 @@ import { Realtime } from 'ably';
 import { nanoid } from 'nanoid';
 import { createLockedFieldSvg } from './LockedField';
 import minifaker from 'minifaker';
+import { config } from './config';
 import 'minifaker/locales/en';
 
 type Member = Omit<SpaceMember, 'profileData'> & {
@@ -23,7 +24,7 @@ const entries: Entry[] = [
 
 const client = new Realtime({
   clientId: nanoid(),
-  key: import.meta.env.VITE_ABLY_KEY as string,
+  key: config.ABLY_KEY,
 });
 
 const handleFocus = async (event: FocusEvent) => {

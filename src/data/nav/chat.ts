@@ -16,13 +16,8 @@ export default {
           link: '/docs/chat',
           index: true,
         },
-      ],
-    },
-    {
-      name: 'Getting started',
-      pages: [
         {
-          name: 'Quickstarts',
+          name: 'Getting started',
           pages: [
             {
               name: 'JavaScript',
@@ -31,6 +26,10 @@ export default {
             {
               name: 'React',
               link: '/docs/chat/getting-started/react',
+            },
+            {
+              name: 'React Native',
+              link: '/docs/chat/getting-started/react-native',
             },
             {
               name: 'Kotlin',
@@ -46,6 +45,11 @@ export default {
           name: 'SDK setup',
           link: '/docs/chat/setup',
         },
+      ],
+    },
+    {
+      name: 'Concepts',
+      pages: [
         {
           name: 'Connections',
           link: '/docs/chat/connect',

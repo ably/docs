@@ -3,9 +3,10 @@ import { useChannel, useChannelStateListener } from 'ably/react';
 import { Realtime } from 'ably';
 import { AblyProvider, ChannelProvider } from 'ably/react';
 import { nanoid } from 'nanoid';
+import { config } from './config';
 import './styles/styles.css';
 
-const client = new Realtime({ key: import.meta.env.VITE_ABLY_KEY, clientId: nanoid() });
+const client = new Realtime({ key: config.ABLY_KEY, clientId: nanoid() });
 
 function ChannelState() {
   const [isAttached, setIsAttached] = useState(false);
