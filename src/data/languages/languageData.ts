@@ -34,6 +34,7 @@ export default {
   liveObjects: {
     javascript: '2.9',
     swift: '0.1',
+    java: '1.2.55',
   },
   liveSync: {
     javascript: '0.4',
