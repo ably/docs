@@ -140,7 +140,7 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/docs/integrations',
+          link: '/docs/platform/integrations',
           index: true,
         },
         {
@@ -148,11 +148,11 @@ export default {
           pages: [
             {
               name: 'Inbound webhooks',
-              link: '/docs/integrations/inbound/webhooks',
+              link: '/docs/platform/integrations/inbound/webhooks',
             },
             {
               name: 'Kafka Connector',
-              link: '/docs/integrations/inbound/kafka-connector',
+              link: '/docs/platform/integrations/inbound/kafka-connector',
             },
           ],
         },
@@ -161,32 +161,32 @@ export default {
           pages: [
             {
               name: 'Overview',
-              link: '/docs/integrations/webhooks',
+              link: '/docs/platform/integrations/webhooks',
               index: true,
             },
             {
               name: 'Lambda Functions',
-              link: '/docs/integrations/webhooks/lambda',
+              link: '/docs/platform/integrations/webhooks/lambda',
             },
             {
               name: 'Azure Functions',
-              link: '/docs/integrations/webhooks/azure',
+              link: '/docs/platform/integrations/webhooks/azure',
             },
             {
               name: 'Google Functions',
-              link: '/docs/integrations/webhooks/gcp-function',
+              link: '/docs/platform/integrations/webhooks/gcp-function',
             },
             {
               name: 'Zapier',
-              link: '/docs/integrations/webhooks/zapier',
+              link: '/docs/platform/integrations/webhooks/zapier',
             },
             {
               name: 'Cloudflare Workers',
-              link: '/docs/integrations/webhooks/cloudflare',
+              link: '/docs/platform/integrations/webhooks/cloudflare',
             },
             {
               name: 'IFTTT',
-              link: '/docs/integrations/webhooks/ifttt',
+              link: '/docs/platform/integrations/webhooks/ifttt',
             },
           ],
         },
@@ -195,42 +195,42 @@ export default {
           pages: [
             {
               name: 'Overview',
-              link: '/docs/integrations/streaming',
+              link: '/docs/platform/integrations/streaming',
               index: true,
             },
             {
               name: 'Kafka',
-              link: '/docs/integrations/streaming/kafka',
+              link: '/docs/platform/integrations/streaming/kafka',
             },
             {
               name: 'Kinesis',
-              link: '/docs/integrations/streaming/kinesis',
+              link: '/docs/platform/integrations/streaming/kinesis',
             },
             {
               name: 'AMQP',
-              link: '/docs/integrations/streaming/amqp',
+              link: '/docs/platform/integrations/streaming/amqp',
             },
             {
               name: 'SQS',
-              link: '/docs/integrations/streaming/sqs',
+              link: '/docs/platform/integrations/streaming/sqs',
             },
             {
               name: 'Pulsar',
-              link: '/docs/integrations/streaming/pulsar',
+              link: '/docs/platform/integrations/streaming/pulsar',
             },
             {
               name: 'DataDog',
-              link: '/docs/integrations/streaming/datadog',
+              link: '/docs/platform/integrations/streaming/datadog',
             },
           ],
         },
         {
           name: 'Message Queues',
-          link: '/docs/integrations/queues',
+          link: '/docs/platform/integrations/queues',
         },
         {
           name: 'Skip integrations',
-          link: '/docs/integrations/skip-integrations',
+          link: '/docs/platform/integrations/skip-integrations',
         },
       ],
     },
