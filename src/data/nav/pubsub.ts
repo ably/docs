@@ -74,7 +74,7 @@ export default {
             },
             {
               name: 'Objective C',
-              link: '/docs/getting-started/quickstart',
+              link: '/docs/getting-started/objective-c',
             },
             {
               name: 'PHP',
