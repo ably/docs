@@ -1,7 +1,9 @@
 import React, { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom/extend-expect';
 import If from './mdx/If';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
+import UserContext from 'src/contexts/user-context';
 
 // Mock the dependencies we need for testing
 jest.mock('./MDXWrapper', () => {
@@ -77,15 +79,97 @@ describe('MDX component integration', () => {
     expect(screen.queryByText('This should not be visible')).not.toBeInTheDocument();
   });
 
+  describe('If component loggedIn functionality', () => {
+    it('shows content when loggedIn=true and user is signed in', () => {
+      render(
+        <UserContext.Provider value={{ sessionState: { signedIn: true }, apps: [] }}>
+          <div>
+            <If loggedIn={true}>This should be visible for signed-in users</If>
+          </div>
+        </UserContext.Provider>,
+      );
+
+      expect(screen.getByText('This should be visible for signed-in users')).toBeInTheDocument();
+    });
+
+    it('hides content when loggedIn=true and user is signed out', () => {
+      render(
+        <UserContext.Provider value={{ sessionState: { signedIn: false }, apps: [] }}>
+          <div>
+            <If loggedIn={true}>This should not be visible for signed-out users</If>
+          </div>
+        </UserContext.Provider>,
+      );
+
+      expect(screen.queryByText('This should not be visible for signed-out users')).not.toBeInTheDocument();
+    });
+
+    it('shows content when loggedIn=false and user is signed out', () => {
+      render(
+        <UserContext.Provider value={{ sessionState: { signedIn: false }, apps: [] }}>
+          <div>
+            <If loggedIn={false}>This should be visible for signed-out users</If>
+          </div>
+        </UserContext.Provider>,
+      );
+
+      expect(screen.getByText('This should be visible for signed-out users')).toBeInTheDocument();
+    });
+
+    it('hides content when loggedIn=false and user is signed in', () => {
+      render(
+        <UserContext.Provider value={{ sessionState: { signedIn: true }, apps: [] }}>
+          <div>
+            <If loggedIn={false}>This should not be visible for signed-in users</If>
+          </div>
+        </UserContext.Provider>,
+      );
+
+      expect(screen.queryByText('This should not be visible for signed-in users')).not.toBeInTheDocument();
+    });
+
+    it('shows content when loggedIn is undefined (no auth check)', () => {
+      render(
+        <div>
+          <If>This should always be visible when no auth check</If>
+        </div>,
+      );
+
+      expect(screen.getByText('This should always be visible when no auth check')).toBeInTheDocument();
+    });
+
+    it('combines lang and loggedIn conditions correctly', () => {
+      render(
+        <UserContext.Provider value={{ sessionState: { signedIn: true }, apps: [] }}>
+          <div>
+            <If lang="javascript" loggedIn={true}>
+              Visible for JS + signed in
+            </If>
+            <If lang="ruby" loggedIn={true}>
+              Not visible for Ruby + signed in
+            </If>
+            <If lang="javascript" loggedIn={false}>
+              Not visible for JS + signed out
+            </If>
+          </div>
+        </UserContext.Provider>,
+      );
+
+      expect(screen.getByText('Visible for JS + signed in')).toBeInTheDocument();
+      expect(screen.queryByText('Not visible for Ruby + signed in')).not.toBeInTheDocument();
+      expect(screen.queryByText('Not visible for JS + signed out')).not.toBeInTheDocument();
+    });
+  });
+
   it('renders code snippets with different languages (JavaScript active)', () => {
     render(
       <div>
-        <CodeSnippet>
+        <CodeSnippet lang="javascript">
           <pre>
             <code className="language-javascript">
               {`var ably = new Ably.Realtime('API_KEY');
 var channel = ably.channels.get('channel-name');
-            
+
 // Subscribe to messages on channel
 channel.subscribe('event', function(message) {
   console.log(message.data);
@@ -96,7 +180,7 @@ channel.subscribe('event', function(message) {
             <code className="language-swift">
               {`let realtime = ARTRealtime(key: "API_KEY")
 let channel = realtime.channels.get("channel-name")
-              
+
 // Subscribe to messages on channel
 channel.subscribe("event") { message in
   print(message.data)
@@ -122,7 +206,7 @@ channel.subscribe("event") { message in
             <code className="language-javascript">
               {`var ably = new Ably.Realtime('API_KEY');
 var channel = ably.channels.get('channel-name');
-            
+
 // Subscribe to messages on channel
 channel.subscribe('event', function(message) {
   console.log(message.data);
@@ -133,7 +217,7 @@ channel.subscribe('event', function(message) {
             <code className="language-typescript">
               {`const ably = new Ably.Realtime('API_KEY');
 const channel = ably.channels.get('channel-name');
-            
+
 // Subscribe to messages on channel
 channel.subscribe('event', (message: Ably.Types.Message) => {
   console.log(message.data);

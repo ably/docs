@@ -20,7 +20,6 @@ import { Frontmatter, PageContextType } from './Layout';
 import { MarkdownProvider } from '../Markdown';
 import Article from '../Article';
 import If from './mdx/If';
-import IfLoggedIn from './mdx/IfLoggedIn';
 import { useCopyableHeaders } from './mdx/headers';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Aside from '../blocks/dividers/Aside';
@@ -180,7 +179,6 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
         <MarkdownProvider
           components={{
             If,
-            IfLoggedIn,
             Code: (props) => <WrappedCodeSnippet activePage={activePage} apiKeys={apiKeys} {...props} />,
             Aside: WrappedAside,
             table: Table,
