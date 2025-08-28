@@ -136,7 +136,7 @@ const getTools = () => [
             icon: { builtIn: 'LuBookOpen' },
             action: {
               type: 'open_link',
-              url: 'https://meetings.hubspot.com/ably-sales/book-a-demo',
+              url: 'https://go.ably.com/inkeep-demo',
             },
           },
         ];
@@ -155,7 +155,7 @@ const aiChatSettings = () => ({
       name: 'Request a meeting',
       action: {
         type: 'open_link',
-        url: 'https://meetings.hubspot.com/cameron-michie/ably-demo',
+        url: 'https://go.ably.com/inkeep-meeting',
       },
       isPinnedToToolbar: true,
     },
