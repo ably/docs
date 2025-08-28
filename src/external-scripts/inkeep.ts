@@ -1,5 +1,4 @@
 import { scriptLoader } from './utils';
-import posthog from 'posthog-js';
 import { track } from '@ably/ui/core/insights';
 
 const inkeepChat = (
@@ -18,9 +17,7 @@ const inkeepChat = (
     type: 'module',
     crossOrigin: 'anonymous',
     onload: () => {
-      posthog.onFeatureFlags(() => {
-        inkeepOnLoad(apiKey, conversationsUrl, inkeepChatEnabled, inkeepSearchEnabled);
-      });
+      inkeepOnLoad(apiKey, conversationsUrl, inkeepChatEnabled, inkeepSearchEnabled);
     },
   });
 };
@@ -173,7 +170,7 @@ const aiChatSettings = () => ({
   ],
   exampleQuestions: ['What is a channel?', 'How do I authenticate with Ably?', 'How to manage user status?'],
   shouldShowCopyChatButton: true,
-  ...(posthog.isFeatureEnabled('inkeep-intent') ? { getTools } : {}),
+  getTools,
 });
 
 interface SourceItem {
