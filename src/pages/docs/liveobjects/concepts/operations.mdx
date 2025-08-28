@@ -36,6 +36,14 @@ await map.set('username', 'alice');
 // Remove a key
 await map.remove('username');
 ```
+
+```swift
+// Set a value for a key
+try await map.set(key: "username", value: "alice")
+
+// Remove a key
+try await map.remove(key: "username")
+```
 </Code>
 
 ### LiveCounter Operations <a id="livecounter"/>
@@ -59,6 +67,14 @@ await counter.increment(5);
 // Decrement counter by 2
 await counter.decrement(2);
 ```
+
+```swift
+// Increment counter by 5
+try await counter.increment(amount: 5)
+
+// Decrement counter by 2
+try await counter.decrement(amount: 2)
+```
 </Code>
 
 ### Create Operations <a id="create-operations"/>
@@ -77,6 +93,17 @@ const userMap = await channel.objects.createMap({
 
 // Create a counter with initial value
 const scoreCounter = await channel.objects.createCounter(100);
+```
+
+```swift
+// Create a map with initial values
+let userMap = try await channel.objects.createMap(entries: [
+    "username": "alice",
+    "status": "online",
+])
+
+// Create a counter with initial value
+let scoreCounter = try await channel.objects.createCounter(count: 100)
 ```
 </Code>
 
@@ -97,6 +124,11 @@ When using a client library object IDs are handled automatically, allowing you w
 // The published operation targets the object ID of the `userMap` object instance
 await userMap.set('username', 'alice');
 ```
+
+```swift
+// The published operation targets the object ID of the `userMap` object instance
+try await userMap.set(key: "username", "alice")
+```
 </Code>
 
 Therefore it is important that you obtain an up-to-date object instance before performing operations on an object. For example, you can [subscribe](/docs/liveobjects/map#subscribe-data) to a `LiveMap` instance to ensure you always have an up-to-date reference to any child objects in the map:
@@ -111,6 +143,42 @@ root.subscribe(() => { myCounter = root.get('myCounter'); });
 // before incrementing, ensure we have an up-to-date object reference if
 // the counter instance at the 'myCounter' key in the root map changes
 await myCounter.increment(1);
+```
+
+{ /* We can't map the JS example directly because Swift concurrency prevents us from mutating local variables in the way that the JS example does, so I tried to show how we might need to handle this scenario in a real-world app where things are isolated to the main actor. But it's long and ugly. */ }
+```swift
+struct MyView: View {
+    var root: any LiveMap
+    @State private var myCounter: (any LiveCounter)?
+
+    var body: some View {
+        Button("Increment the counter") {
+            Task {
+                try await myCounter?.increment(amount: 1)
+            }
+        }.onAppear {
+            do {
+                myCounter = try root.get(key: "myCounter")?.liveCounterValue
+
+                // We keep a reference to the latest value that the root map
+                // stores at the "myCounter" key, to ensure that upon tapping
+                // the button, we increment the correct counter.
+
+                try root.subscribe { _, _ in
+                    MainActor.assumeIsolated {
+                        do {
+                            myCounter = try root.get(key: "myCounter")?.liveCounterValue
+                        } catch {
+                            // Error handling of root.get(key:) omitted for brevity
+                        }
+                    }
+                }
+            } catch {
+                // Error handling of root.get(key:) omitted for brevity
+            }
+        }
+    }
+}
 ```
 </Code>
 

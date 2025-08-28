@@ -18,7 +18,16 @@ export default {
         },
         {
           name: 'Getting started',
-          link: '/docs/liveobjects/quickstart',
+          pages: [
+            {
+              name: 'JavaScript',
+              link: '/docs/liveobjects/quickstart/javascript',
+            },
+            {
+              name: 'Swift',
+              link: '/docs/liveobjects/quickstart/swift',
+            },
+          ],
         },
       ],
     },
@@ -90,6 +99,11 @@ export default {
         {
           link: 'https://ably.com/docs/sdk/js/v2.0/interfaces/ably.Objects.html',
           name: 'JavaScript SDK',
+          external: true,
+        },
+        {
+          link: 'https://sdk.ably.com/builds/ably/ably-liveobjects-swift-plugin/main/AblyLiveObjects/documentation/ablyliveobjects/',
+          name: 'Swift plugin',
           external: true,
         },
         {
