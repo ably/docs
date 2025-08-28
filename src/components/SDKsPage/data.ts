@@ -254,6 +254,13 @@ export const data = {
           githubRepoURL: 'https://github.com/ably/ably-liveobjects-swift-plugin',
           setupLink: 'liveobjects/quickstart/swift',
         },
+        {
+          title: 'Java',
+          text: 'LiveObjects plugin for Java.',
+          image: { src: java, isWide: false },
+          githubRepoURL: 'https://github.com/ably/ably-java/tree/main/liveobjects',
+          setupLink: 'liveobjects/quickstart/java',
+        },
       ],
     },
     livesync: {

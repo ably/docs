@@ -27,6 +27,10 @@ export default {
               name: 'Swift',
               link: '/docs/liveobjects/quickstart/swift',
             },
+            {
+              name: 'Java',
+              link: '/docs/liveobjects/quickstart/java',
+            },
           ],
         },
       ],
@@ -104,6 +108,11 @@ export default {
         {
           link: 'https://sdk.ably.com/builds/ably/ably-liveobjects-swift-plugin/main/AblyLiveObjects/documentation/ablyliveobjects/',
           name: 'Swift plugin',
+          external: true,
+        },
+        {
+          link: 'https://sdk.ably.com/builds/ably/ably-java/main/javadoc/io/ably/lib/objects/RealtimeObjects.html',
+          name: 'Java SDK',
           external: true,
         },
         {

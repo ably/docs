@@ -17,7 +17,8 @@ LiveObjects provides specialized object types to model your application state. T
 
 ### LiveMap Object <a id="livemap"/>
 
-[LiveMap](/docs/liveobjects/map) is a key/value data structure similar to a <If lang="javascript">dictionary or JavaScript [Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map)</If><If lang="swift">`Dictionary`</If>:
+[LiveMap](/docs/liveobjects/map) is a key/value data structure similar to a <If lang="javascript">dictionary or JavaScript [Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map)</If>
+<If lang="swift">`Dictionary`</If><If lang="java">Java `Map`</If>:
 
 * Keys must be strings
 * Values can be primitive types, JSON-serializable objects or arrays, or [references](#composability) to other objects
@@ -41,6 +42,15 @@ let userSettings = try await channel.objects.createMap()
 // Set primitive values
 try await userSettings.set(key: "theme", value: "dark")
 try await userSettings.set(key: "notifications", value: true)
+```
+
+```java
+// Create a LiveMap
+LiveMap userSettings = channel.getObjects().createMap();
+
+// Set primitive values
+userSettings.set("theme", LiveMapValue.of("dark"));
+userSettings.set("notifications", LiveMapValue.of(true));
 ```
 </Code>
 
@@ -67,6 +77,14 @@ try await userSettings.set(key: "notifications", value: true)
 * JSON arrays or objects
 </If>
 
+<If lang="java">
+* `String`
+* `Number` (Double, Integer, Float, etc.)
+* `Boolean`
+* `byte[]` (binary data)
+* JSON arrays or objects (`JsonArray`, `JsonObject`)
+</If>
+
 ### LiveCounter Object <a id="livecounter"/>
 
 [LiveCounter](/docs/liveobjects/counter) is a numeric counter type:
@@ -89,6 +107,14 @@ let visitsCounter = try await channel.objects.createCounter();
 
 // Increment the counter
 try await visitsCounter.increment(amount: 1);
+```
+
+```java
+// Create a LiveCounter
+LiveCounter visitsCounter = channel.getObjects().createCounter();
+
+// Increment the counter
+visitsCounter.increment(1);
 ```
 </Code>
 
@@ -118,6 +144,14 @@ let root = try await channel.objects.getRoot()
 
 // Use it like any other LiveMap
 try await root.set(key: "app-version", value: "1.0.0")
+```
+
+```java
+// Get the Root Object
+LiveMap root = channel.getObjects().getRoot();
+
+// Use it like any other LiveMap
+root.set("app-version", LiveMapValue.of("1.0.0"));
 ```
 </Code>
 
@@ -158,6 +192,21 @@ counterOld.on(event: .deleted) { _ in
 // Create a new counter and replace the old one referenced from the root
 let counterNew = try await channel.objects.createCounter()
 try await root.set(key: "myCounter", value: .liveCounter(counterNew))
+```
+
+```java
+// Create a counter and reference it from the root
+LiveCounter counterOld = channel.getObjects().createCounter();
+root.set("myCounter", LiveMapValue.of(counterOld));
+
+// counterOld will eventually be deleted
+counterOld.on(ObjectLifecycleEvent.DELETED, (lifecycleEvent) -> {
+    System.out.println("counterOld has been deleted and can no longer be used");
+});
+
+// Create a new counter and replace the old one referenced from the root
+LiveCounter counterNew = channel.getObjects().createCounter();
+root.set("myCounter", LiveMapValue.of(counterNew));
 ```
 </Code>
 
@@ -203,6 +252,26 @@ try await preferencesMap.set(key: "theme", value: "dark")
 try await profileMap.set(key: "preferences", value: .liveMap(preferencesMap))
 try await profileMap.set(key: "activity", value: .liveCounter(activityCounter))
 try await root.set(key: "profile", value: .liveMap(profileMap))
+
+// Resulting structure:
+// root (LiveMap)
+// └── profile (LiveMap)
+//     ├── preferences (LiveMap)
+//     │   └── theme: "dark" (string)
+//     └── activity (LiveCounter)
+```
+
+```java
+// Create LiveObjects
+LiveMap profileMap = channel.getObjects().createMap();
+LiveMap preferencesMap = channel.getObjects().createMap();
+LiveCounter activityCounter = channel.getObjects().createCounter();
+
+// Build a composite structure
+preferencesMap.set("theme", LiveMapValue.of("dark"));
+profileMap.set("preferences", LiveMapValue.of(preferencesMap));
+profileMap.set("activity", LiveMapValue.of(activityCounter));
+root.set("profile", LiveMapValue.of(profileMap));
 
 // Resulting structure:
 // root (LiveMap)
@@ -283,6 +352,33 @@ try mapB.get(key: "count")?.liveCounterValue?.subscribe { _, _ in
 // Increment the counter
 try await counter.increment(amount: 1)
 ```
+
+```java
+// Create a counter
+LiveCounter counter = channel.getObjects().createCounter();
+
+// Create two different maps
+LiveMap mapA = channel.getObjects().createMap();
+LiveMap mapB = channel.getObjects().createMap();
+root.set("a", LiveMapValue.of(mapA));
+root.set("b", LiveMapValue.of(mapB));
+
+// Reference the same counter from both maps
+mapA.set("count", LiveMapValue.of(counter));
+mapB.set("count", LiveMapValue.of(counter));
+
+// The counter referenced from each location shows the same
+// value, since they refer to the same underlying counter
+mapA.get("count").asLiveCounter().subscribe((counterUpdate) -> {
+    System.out.println(mapA.get("count").asLiveCounter().value()); // 1.0
+});
+mapB.get("count").asLiveCounter().subscribe((counterUpdate) -> {
+    System.out.println(mapB.get("count").asLiveCounter().value()); // 1.0
+});
+
+// Increment the counter
+counter.increment(1);
+```
 </Code>
 
 It is also possible that object references form a cycle:
@@ -322,6 +418,24 @@ try await root.set(key: "a", value: .liveMap(mapA))
 _ = try root.get(key: "a")? // mapA
     .liveMapValue?.get(key: "ref")? // mapB
     .liveMapValue?.get(key: "ref") // mapA
+```
+
+```java
+// Create two different maps
+LiveMap mapA = channel.getObjects().createMap();
+LiveMap mapB = channel.getObjects().createMap();
+
+// Set up a circular reference
+mapA.set("ref", LiveMapValue.of(mapB));
+mapB.set("ref", LiveMapValue.of(mapA));
+
+// Add one map to root (both are now reachable)
+root.set("a", LiveMapValue.of(mapA));
+
+// We can traverse the cycle
+LiveMap result = root.get("a").asLiveMap() // mapA
+    .get("ref").asLiveMap()                // mapB
+    .get("ref").asLiveMap();               // mapA
 ```
 </Code>
 
