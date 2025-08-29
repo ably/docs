@@ -96,6 +96,10 @@ export default {
           name: 'Room reactions',
           link: '/docs/chat/rooms/reactions',
         },
+        {
+          name: 'Replies and quotes',
+          link: '/docs/chat/rooms/replies',
+        },
       ],
     },
     {
