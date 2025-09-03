@@ -23,6 +23,8 @@ export const languageKeys = [
   'realtime',
   'rest',
   'css',
+  'laravel',
+  'typescript',
 ] as const;
 
 export type LanguageKey = (typeof languageKeys)[number];

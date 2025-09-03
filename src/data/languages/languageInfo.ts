@@ -94,4 +94,13 @@ export default {
     label: 'REST',
     syntaxHighlighterKey: 'javascript',
   },
+  laravel: {
+    label: 'Laravel',
+    syntaxHighlighterKey: 'php',
+    alias: 'laravel-broadcast',
+  },
+  typescript: {
+    label: 'TypeScript',
+    syntaxHighlighterKey: 'typescript',
+  },
 } as Record<LanguageKey, { label: string; syntaxHighlighterKey: string; alias?: string }>;
