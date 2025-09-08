@@ -71,7 +71,7 @@ const ExamplesRenderer = ({
     const result: ExampleFiles = {};
     Object.entries(files).forEach(([languageKey, languageFiles]) => {
       result[languageKey as LanguageKey] = updateAblyConnectionKey(languageFiles, apiKey, {
-        [languageKey]: getRandomChannelName(),
+        NAME: getRandomChannelName(), // Use CHANNEL_NAME as env var key
       });
     });
     return result;

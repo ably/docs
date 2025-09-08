@@ -11,9 +11,7 @@ const client = new Realtime({
   plugins: { Objects },
 });
 
-const urlParams = new URLSearchParams(window.location.search);
-
-const channelName = urlParams.get('name') || 'objects-live-map';
+const channelName = config.CHANNEL_NAME || 'objects-live-map';
 const channel = client.channels.get(channelName, { modes: ['OBJECT_PUBLISH', 'OBJECT_SUBSCRIBE'] });
 
 const taskInput = document.getElementById('task-input') as HTMLInputElement;

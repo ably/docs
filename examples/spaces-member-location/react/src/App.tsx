@@ -51,8 +51,7 @@ export default function App() {
   const [spaceName, setSpaceName] = useState('spaces-member-location');
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const name = urlParams.get('name');
+    const name = config.SPACE_NAME;
 
     if (name) {
       setSpaceName(name);

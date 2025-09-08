@@ -8,8 +8,7 @@ const client = new Ably.Realtime({
   clientId: `${minifaker.firstName()} ${minifaker.lastName()}`,
   key: config.ABLY_KEY,
 });
-const urlParams = new URLSearchParams(window.location.search);
-const channelName = urlParams.get('name') || 'pub-sub-presence';
+const channelName = config.CHANNEL_NAME || 'pub-sub-presence';
 const channel = client.channels.get(channelName);
 const button = document.getElementById('status-button');
 const statusInput = document.getElementById('status-input') as HTMLInputElement;

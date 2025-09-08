@@ -37,8 +37,7 @@ async function establishConnection(hasCipher = true) {
     };
   }
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const channelName = urlParams.get('name') || 'pub-sub-message-encryption';
+  const channelName = config.CHANNEL_NAME || 'pub-sub-message-encryption';
   const channel = client.channels.get(channelName, options);
 
   return channel;

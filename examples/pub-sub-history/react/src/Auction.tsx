@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useAbly, useChannel } from 'ably/react';
 import UIkit from 'uikit';
+import { config } from './config';
 import './styles/styles.css';
 
 interface BiddingHistory {
@@ -10,8 +11,7 @@ interface BiddingHistory {
   timestamp: Date;
 }
 
-const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-const channelName = urlParams.get('name') || 'pub-sub-history';
+const channelName = config.CHANNEL_NAME || 'pub-sub-history';
 
 export default function AuctionRoom() {
   const [bidAmount, setBidAmount] = useState<number>(0);
