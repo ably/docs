@@ -61,10 +61,6 @@ export default {
               link: '/docs/getting-started/python',
             },
             {
-              name: 'Flutter',
-              link: '/docs/getting-started/flutter',
-            },
-            {
               name: 'Ruby',
               link: '/docs/getting-started/ruby',
             },
@@ -79,6 +75,10 @@ export default {
             {
               name: 'PHP',
               link: '/docs/getting-started/php',
+            },
+            {
+              name: 'Laravel',
+              link: '/docs/getting-started/laravel',
             },
           ],
         },
