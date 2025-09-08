@@ -392,22 +392,29 @@ const loadInkeepSearch = (config: object, inkeepChatEnabled: boolean) => {
 };
 
 export type InkeepUser = {
-  uuid: string;
+  id: string;
+  email: string;
+  companyName?: string;
 };
 
 export const inkeepChatIdentifyUser = ({ user }: { user?: InkeepUser }) => {
   const deviceId = (document?.querySelector('meta[name="device_id"]') as HTMLMetaElement)?.content;
-  const userId = user?.uuid || deviceId;
+  const userId = user?.id || deviceId;
 
   if (!(window.inkeepWidget && userId)) {
     return;
   }
 
+  const userProperties: { id: string; email?: string; cohorts?: string[] } = {
+    id: userId,
+    email: user?.email,
+  };
+  if (user?.companyName) {
+    userProperties.cohorts = [`Company: ${user?.companyName}`];
+  }
   window.inkeepWidget.update({
     baseSettings: {
-      userProperties: {
-        id: userId,
-      },
+      userProperties,
     },
   });
 };

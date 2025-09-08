@@ -23,23 +23,35 @@ describe('inkeepChat', () => {
   });
 
   describe('inkeepChatIdentifyUser', () => {
-    let spy;
-
+    let spy: jest.SpyInstance;
     beforeEach(() => {
-      global.inkeepWidget = { update: jest.fn };
-      spy = jest.spyOn(global.inkeepWidget, 'update');
+      (window as any).inkeepWidget = { update: jest.fn() };
+      spy = jest.spyOn((window as any).inkeepWidget, 'update');
+      // Remove any device_id meta tags before each test
+      document.querySelectorAll('meta[name="device_id"]').forEach((el) => el.remove());
     });
 
-    it('returns when the user is undefined', () => {
+    it('returns when the user is undefined and no deviceId', () => {
       inkeepChatIdentifyUser({});
-
       expect(spy).not.toHaveBeenCalled();
     });
 
-    it('sets the Inkeep userId', () => {
-      inkeepChatIdentifyUser({ user: { uuid: '123' } });
+    it('sets the Inkeep userId, email, and cohorts from user', () => {
+      inkeepChatIdentifyUser({ user: { id: '123', email: 'test@example.com', companyName: 'Acme' } });
+      expect(spy).toHaveBeenCalledWith({
+        baseSettings: {
+          userProperties: {
+            id: '123',
+            email: 'test@example.com',
+            cohorts: ['Company: Acme'],
+          },
+        },
+      });
+    });
 
-      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: '123' } } });
+    it('sets the Inkeep userId and email from user without companyName', () => {
+      inkeepChatIdentifyUser({ user: { id: '123', email: 'test@example.com' } });
+      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: '123', email: 'test@example.com' } } });
     });
 
     it('sets the Inkeep userId from device_id meta tag when user is not provided', () => {
@@ -47,21 +59,17 @@ describe('inkeepChat', () => {
       metaTag.name = 'device_id';
       metaTag.content = 'device123';
       document.head.appendChild(metaTag);
-
       inkeepChatIdentifyUser({});
-
-      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: 'device123' } } });
+      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: 'device123', email: undefined } } });
     });
 
-    it('sets the Inkeep userId from user uuid, even if device_id meta tag exists', () => {
+    it('sets the Inkeep userId from user id, even if device_id meta tag exists', () => {
       const metaTag = document.createElement('meta');
       metaTag.name = 'device_id';
       metaTag.content = 'device123';
       document.head.appendChild(metaTag);
-
-      inkeepChatIdentifyUser({ user: { uuid: 'user123' } });
-
-      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: 'user123' } } });
+      inkeepChatIdentifyUser({ user: { id: 'user123', email: 'foo@bar.com' } });
+      expect(spy).toHaveBeenCalledWith({ baseSettings: { userProperties: { id: 'user123', email: 'foo@bar.com' } } });
     });
   });
 });
