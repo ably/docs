@@ -1,0 +1,486 @@
+---
+title: Message annotations
+meta_description: "Annotate messages on a channel with additional metadata."
+---
+
+<Aside data-type='experimental'>
+Message annotations are currently Experimental. They are still in development and subject to rapid change.
+</Aside>
+
+Message annotations enable clients to add metadata to existing messages on a channel. You can use annotations to implement features like:
+
+* **Message reactions** - add emoji reactions (👍, ❤️, 😂) to messages
+* **Content categorization** - tag messages with categories such as "important" or "urgent"
+* **Community moderation** - flag inappropriate content for review
+* **Read receipts** - mark messages as "read" or "delivered"
+
+When clients publish or delete an annotation, Ably automatically creates a [summary](#annotation-summaries) that provides an aggregated view of all annotations for that message.
+
+## Enable annotations <a id="enable"/>
+
+Annotations can be enabled for a channel or channel namespace with the *Message annotations, updates, and deletes* channel rule.
+
+<Aside data-type='important'>
+Note that when message annotations are enabled, messages are [persisted](/docs/storage-history/storage#all-message-persistence) by default, and [continuous history](/docs/storage-history/history#continuous-history) features are not currently supported.
+</Aside>
+
+1. On your [dashboard](https://ably.com/accounts/any), select one of your apps.
+2. Go to **Settings**.
+3. Under [channel rules](/docs/channels#rules), click **Add new rule**.
+4. Enter the channel name or channel namespace on which to enable message annotations.
+5. Check **Message annotations, updates, and deletes** to enable message annotations.
+6. Click **Create channel rule** to save.
+
+## Annotation types <a id="annotation-types"/>
+
+Annotation types determine how annotations are processed and aggregated into [summaries](#annotation-summaries).
+
+The annotation type is a string of the format `namespace:summarization.version` where:
+
+* `namespace` is a string (e.g. `reactions`) that groups related annotations. Only annotations in the same namespace will be aggregated together to produce [summaries](#annotation-summaries).
+* `summarization` specifies how annotations are aggregated to produce [summaries](#annotation-summaries), such as `total`, `flag`, `distinct`, `unique`, or `multiple`.
+* `version` specifies the version component which allows for future changes to summarization behavior.
+
+### Total
+
+The `total.v1` summarization method counts the number of annotations of a given type that were published for a message.
+
+Deleting an annotation decrements the total count for that message.
+
+Using `total.v1` does not attribute counts to individual clients in the summary; it maintains only a simple count per annotation type and does not organize counts by name. [Unidentified](/docs/auth/identified-clients#unidentified) clients can publish `total.v1` annotations. Use the [identified channel rule](/docs/channels#rules) if you want to prevent unidentified clients from publishing annotations.
+
+If the same client publishes an annotation of a given type to the same message twice, the `total` count is incremented twice.
+
+<Code>
+```json
+{
+  "metrics:total.v1": {
+    "total": 42
+  }
+}
+```
+</Code>
+
+### Flag
+
+The `flag.v1` summarization method counts how many distinct clients have published an annotation of a given type and maintains a list of those `clientId`s. Clients must be [identified](/docs/auth/identified-clients) to publish `flag.v1` annotations.
+
+Deleting an annotation decrements the total count for that message and removes the `clientId` from the list of clients that contributed to the summary.
+
+A given client can contribute to the summary only once per annotation type.
+
+<Code>
+```json
+{
+  "reactions:flag.v1": {
+    "total": 3,
+    "clientIds": ["client1", "client2", "client3"]
+  }
+}
+```
+</Code>
+
+### Distinct
+
+The `distinct.v1` summarization method counts how many unique clients have published an annotation with a given `name` for each annotation type along with the corresponding list of `clientId`s that published it. Clients must be [identified](/docs/auth/identified-clients) to publish `distinct.v1` annotations.
+
+A given client can contribute to the summary for a particular annotation `name` only once, but the same client may publish additional annotations with different `name`s.
+
+Deleting an annotation removes the `clientId` from the list of clients that contributed to the summary for that `name`, and decrements the total count for that `name`.
+
+<Code>
+```json
+{
+  "categories:distinct.v1": {
+    "important": {
+      "total": 2,
+      "clientIds": ["client1", "client3"]
+    },
+    "urgent": {
+      "total": 3,
+      "clientIds": ["client1", "client2", "client3"]
+    }
+  }
+}
+```
+</Code>
+
+### Unique
+
+The `unique.v1` summarization method counts how many unique clients have published an annotation with a given `name` for each annotation type, while guaranteeing that each client contributes to the summary for only one `name` at a time. The summary for each annotation `name` holds a `total` count of the number of distinct clients that have published an annotation with that `name` along with the corresponding list of `clientId`s that published it. Clients must be [identified](/docs/auth/identified-clients) to publish `unique.v1` annotations.
+
+A given client can contribute to the summary for a particular annotation `name` only once. Publishing an annotation with a different `name` automatically removes that client from the summary for the previous `name` and adds them to the new one, updating the affected total values and list of `clientId`s.
+
+Deleting an annotation removes the `clientId` from the list of clients that contributed to the summary for that `name`, and decrements the total count for that `name`.
+
+<Code>
+```json
+{
+  "status:unique.v1": {
+    "important": {
+      "total": 2,
+      "clientIds": ["client1", "client3"]
+    },
+    "urgent": {
+      "total": 1,
+      "clientIds": ["client2"]
+    }
+  }
+}
+```
+</Code>
+
+### Multiple
+
+The `multiple.v1` summarization method counts both a total and a per-client count of the number of annotations that were published with a given `name` for each annotation type. Additionally it includes a count for the number of annotations published with a given `name` from unidentified clients. Use the [identified channel rule](/docs/channels#rules) if you want to prevent unidentified clients from publishing annotations.
+
+A given client can contribute to the summary for a particular annotation `name` multiple times. The same client may also publish additional annotations with different `name`s.
+
+If a client specifies a `count` when publishing an annotation, the client's contribution to the summary is incremented by the specified value.
+
+Deleting an annotation removes all contributions made by that `clientId` for that `name`.
+
+<Code>
+```json
+{
+  "voting:multiple.v1": {
+    "option-a": {
+      "total": 7,
+      "clientCounts": {
+        "client1": 3,
+        "client2": 2
+      },
+      "totalUnidentified": 2
+    },
+    "option-b": {
+      "total": 4,
+      "clientCounts": {
+        "client1": 2,
+        "client3": 1
+      },
+      "totalUnidentified": 1
+    }
+  }
+}
+```
+</Code>
+
+## Publish annotations <a id="publish" />
+
+To publish an annotation for a message, use the `annotations.publish()` method on a channel. Pass in either a [message](/docs/messages) instance or the `serial` of the message to annotate. This method will publish an annotation message with an action of `annotation.create`.
+
+The `clientId` specified in the [client options](/docs/api/realtime-sdk#client-options) will be associated with the published annotation. Note that certain annotation types require the client to be identified with a `clientId` in order to publish annotations.
+
+Specify the [annotation type](#annotation-types) using the `type` field of the annotation object, and optionally specify a `name` for the annotation. The `name` is used to aggregate certain annotations when producing an [annotation summary](#annotation-summaries).
+
+<Code>
+```javascript
+// Create an Ably Realtime client specifying the clientId that will
+// be associated with annotations published by this client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-client-id' });
+
+// Create a channel in a namespace called `annotations`
+// which has message annotations enabled
+const channel = realtime.channels.get('annotations:example');
+
+// Publish an annotation for a message that flags it as delivered
+await channel.annotations.publish(message, {
+  type: 'receipts:flag.v1',
+  name: 'delivered'
+});
+
+// You can also use a message's serial number
+await channel.annotations.publish(message.serial, {
+  type: 'receipts:flag.v1',
+  name: 'delivered'
+});
+```
+
+```nodejs
+// Create an Ably Realtime client specifying the clientId that will
+// be associated with annotations published by this client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-client-id' });
+
+// Create a channel in a namespace called `annotations`
+// which has message annotations enabled
+const channel = realtime.channels.get('annotations:example');
+
+// Publish an annotation for a message that flags it as delivered
+await channel.annotations.publish(message, {
+  type: 'receipts:flag.v1',
+  name: 'delivered'
+});
+
+// You can also use a message's serial number
+await channel.annotations.publish(message.serial, {
+  type: 'receipts:flag.v1',
+  name: 'delivered'
+});
+```
+</Code>
+
+When using `multiple.v1`, you can optionally specify a `count` by which to increment a client's contribution to the summary:
+
+<Code>
+```javascript
+await channel.annotations.publish(message.serial, {
+  type: 'rating:multiple.v1',
+  name: 'stars',
+  count: 4
+});
+```
+
+```nodejs
+await channel.annotations.publish(message.serial, {
+  type: 'rating:multiple.v1',
+  name: 'stars',
+  count: 4
+});
+```
+</Code>
+
+## Delete annotations <a id="delete" />
+
+To delete an annotation, use the `annotations.delete()` method on a channel. Pass in either a [message](/docs/messages) instance or the `serial` of the message to annotate. This method will publish an annotation message with an action of `annotation.delete`.
+
+Deleting an annotation does not remove the original annotation that was published. Instead, they affect the [annotation summary](#annotation-summaries) for that message by removing the contribution specified by the annotation.
+
+The `clientId` specified in the [client options](/docs/api/realtime-sdk#client-options) will be associated with the published delete annotation.
+
+Specify the [annotation type](#annotation-types) using the `type` field of the annotation object, and optionally specify a `name` for the annotation. The `name` is used to aggregate certain annotations when producing an annotation summary.
+
+<Code>
+```javascript
+// Create an Ably Realtime client specifying the clientId that will
+// be associated with annotations published by this client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-client-id' });
+
+// Create a channel in a namespace called `annotations`
+// which has message annotations enabled
+const channel = realtime.channels.get('annotations:example');
+
+// Delete a 'delivered' annotation
+await channel.annotations.delete(message.serial, {
+  type: 'receipts:flag.v1',
+  name: 'delivered'
+});
+```
+
+```nodejs
+// Create an Ably Realtime client specifying the clientId that will
+// be associated with annotations published by this client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-client-id' });
+
+// Create a channel in a namespace called `annotations`
+// which has message annotations enabled
+const channel = realtime.channels.get('annotations:example');
+
+// Delete a 'delivered' annotation
+await channel.annotations.delete(message.serial, {
+  type: 'receipts:flag.v1',
+  name: 'delivered'
+});
+```
+</Code>
+
+## Subscribe to annotations <a id="subscribe" />
+
+The recommended way to receive annotation updates is through annotation summaries. These events provide a summary of the complete, current state of all annotations for a message whenever an annotation is published or deleted.
+
+Annotation summaries are delivered to subscribers as messages with an `action` of `message.summary`. These messages have a `summary` field which provides a summary of all the annotations for the message, identified by the `serial` field on the summary message.
+
+The value of the `summary` field is an object where the keys are the [annotation types](#annotation-types). The structure of the value of each key depends on the summarization method used, for example `total.v1` will have a `total` field, while `flag.v1` will have `total` and `clientIds` fields.
+
+<Aside data-type='note'>
+Subscribing to annotations uses the same method as [subscribing to regular messages](/docs/pub-sub#subscribe) on a channel. When using message annotations, regular messages delivered to the `subscribe()` listener will have an `action` of `message.create`.
+</Aside>
+
+<Code>
+```javascript
+// Create an Ably Realtime client specifying the clientId that will
+// be associated with annotations published by this client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-client-id' });
+
+// Create a channel in a namespace called `annotations`
+// which has message annotations enabled
+const channel = realtime.channels.get('annotations:example');
+
+await channel.subscribe((message) => {
+  if (message.action === 'message.summary') {
+    console.log(message.summary);
+  }
+});
+```
+
+```nodejs
+// Create an Ably Realtime client specifying the clientId that will
+// be associated with annotations published by this client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-client-id' });
+
+// Create a channel in a namespace called `annotations`
+// which has message annotations enabled
+const channel = realtime.channels.get('annotations:example');
+
+await channel.subscribe((message) => {
+  if (message.action === 'message.summary') {
+    console.log(message.summary);
+  }
+});
+```
+</Code>
+
+### Annotation summaries <a id="annotation-summaries"/>
+
+When annotations for a message are published, Ably automatically generates a summary that provides an aggregated view of all annotations for that message.
+
+A separate summary is produced for each distinct [annotation type](#annotation-types). The summarization method specified in the annotation type determines how annotations in the same namespace for a given message are aggregated into a summary. A summary is constructed from the set of [individual annotation events](#individual-annotations) (annotation messages with an `action` of `annotation.create` or `annotation.delete`).
+
+The summary will be included in the message's `summary` field, which is an object whose keys are the annotation types and whose values describe the annotation summary for that type. For example:
+
+<Code>
+```json
+{
+  "metrics:total.v1": {
+    "total": 42
+  },
+  "reactions:flag.v1": {
+    "total": 3,
+    "clientIds": ["client1", "client2", "client3"]
+  },
+  "categories:distinct.v1": {
+    "important": {
+      "total": 2,
+      "clientIds": ["client1", "client3"]
+    },
+    "urgent": {
+      "total": 3,
+      "clientIds": ["client1", "client2", "client3"]
+    }
+  },
+  "status:unique.v1": {
+    "important": {
+      "total": 2,
+      "clientIds": ["client1", "client3"]
+    },
+    "urgent": {
+      "total": 1,
+      "clientIds": ["client2"]
+    }
+  },
+  "voting:multiple.v1": {
+    "option-a": {
+      "total": 7,
+      "clientCounts": {
+        "client1": 3,
+        "client2": 2
+      },
+      "totalUnidentified": 2
+    },
+    "option-b": {
+      "total": 4,
+      "clientCounts": {
+        "client1": 2,
+        "client3": 1
+      },
+      "totalUnidentified": 1
+    }
+  }
+}
+```
+</Code>
+
+## Individual annotation events <a id="individual-annotations"/>
+
+It is also possible to subscribe to individual annotation events, rather than annotation summaries. These are the emitted when [publishing](#publish) or [deleting](#delete) an annotation.
+
+Individual events can be useful for activity feeds or detailed logging, however annotation summaries are generally more reliable and efficient for maintaining UI state.
+
+### Publish individual annotation events <a id="publish-individual-annotations"/>
+
+Publishing annotations is the [same as for summaries](#publish). The only difference is that you can additionally specify a `data` payload when publishing an annotation, which isn't included in an annotation summary.
+
+<Code>
+```javascript
+await channel.annotations.publish(message.serial, {
+  type: 'receipts:flag.v1',
+  name: 'delivered',
+  data: 'Message delivered!'
+});
+```
+
+```nodejs
+await channel.annotations.publish(message.serial, {
+  type: 'receipts:flag.v1',
+  name: 'delivered',
+  data: 'Message delivered!'
+});
+```
+</Code>
+
+### Subscribe to individual annotations <a id="subscribe-individual-annotations"/>
+
+Subscribe to individual annotation events using the `annotations.subscribe()` method on a channel. To subscribe to individual annotations, you must request the `ANNOTATION_SUBSCRIBE` [mode](/docs/channels/options#modes).
+
+<Aside data-type='note'>
+When you provide an explicit `modes` property for a channel, you override the set of [default modes](/docs/channels/options#modes). It is likely that you will be using features other than just annotations on the channel, so ensure that you also include the other `modes` that you require.
+</Aside>
+
+Annotations delivered to the `annotations.subscribe()` listener will have an `action` of `annotation.create` or `annotation.delete`.
+
+<Code>
+```javascript
+// Create an Ably Realtime client specifying the clientId that will
+// be associated with annotations published by this client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-client-id' });
+
+// Create a channel in a namespace called `annotations`
+// which has message annotations enabled.
+// Specify the ANNOTATION_SUBSCRIBE mode to enable annotation subscriptions.
+const channel = realtime.channels.get('annotations:example', { modes: ['ANNOTATION_SUBSCRIBE', ... /* all other modes you need, such as MESSAGE_SUBSCRIBE */] });
+
+await channel.annotations.subscribe((annotation) => {
+  if (annotation.action === 'annotation.create') {
+    console.log(`New ${annotation.type} annotation with name ${annotation.name} from ${annotation.clientId}`);
+  } else if (annotation.action === 'annotation.delete') {
+    console.log(`${annotation.clientId} deleted a ${annotation.type} annotation with name ${annotation.name}`);
+  }
+});
+```
+
+```nodejs
+// Create an Ably Realtime client specifying the clientId that will
+// be associated with annotations published by this client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}', clientId: 'my-client-id' });
+
+// Create a channel in a namespace called `annotations`
+// which has message annotations enabled.
+// Specify the ANNOTATION_SUBSCRIBE mode to enable annotation subscriptions.
+const channel = realtime.channels.get('annotations:example', { modes: ['ANNOTATION_SUBSCRIBE'] });
+
+await channel.annotations.subscribe((annotation) => {
+  if (annotation.action === 'annotation.create') {
+    console.log(`New ${annotation.type} annotation with name ${annotation.name} from ${annotation.clientId}`);
+  } else if (annotation.action === 'annotation.delete') {
+    console.log(`${annotation.clientId} deleted a ${annotation.type} annotation with name ${annotation.name}`);
+  }
+});
+```
+</Code>
+
+### Annotation message properties <a id="annotation-properties"/>
+
+Annotations are a special type of message with the following properties:
+
+| Property | Description |
+| -------- | ----------- |
+| id | An Ably-generated ID used to uniquely identify the annotation. |
+| action | The action specifies whether this is an annotation being added (`annotation.create`) or removed (`annotation.delete`). |
+| serial | This annotation's unique serial (lexicographically totally ordered). |
+| messageSerial | The serial of the message that this annotation is annotating. |
+| type | The [annotation type](#annotation-types). |
+| name | The name of the annotation, used by some [annotation types](#annotation-types) for aggregation. |
+| clientId | The client identifier of the user that published this annotation. |
+| count | An optional count, only relevant to certain [annotation types](#annotation-types). |
+| data | An optional payload for the annotation. Available on an [individual annotation](#individual-annotations) but not aggregated or included in [annotation summaries](#annotation-summaries). |
+| encoding | This is typically empty, as all annotations received from Ably are automatically decoded client-side using this value. However, if the annotation encoding cannot be processed, this attribute contains the remaining transformations not applied to the `data` payload. |
+| timestamp | The timestamp of when the annotation was received by Ably, as milliseconds since the Unix epoch. |
