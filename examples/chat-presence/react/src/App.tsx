@@ -88,8 +88,7 @@ export default function App() {
   const [roomName, setRoomName] = useState('chat-online-status');
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const name = urlParams.get('name');
+    const name = config.ROOM_NAME;
 
     if (name !== null) {
       setRoomName(name);

@@ -11,11 +11,10 @@ const realtimeClient = new Ably.Realtime({
 const chatClient = new ChatClient(realtimeClient);
 
 async function initializeChat() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const channelName = urlParams.get('name') || 'chat-presence';
+  const roomName = config.ROOM_NAME || 'chat-presence';
 
   // Get ROOM with typing capabilities
-  const room = await chatClient.rooms.get(channelName);
+  const room = await chatClient.rooms.get(roomName);
 
   /** 💡 Subscribe to the presence set of the room to see online statuses 💡 */
   room.presence.subscribe(async (event: PresenceEvent) => {
@@ -65,12 +64,14 @@ async function initializeChat() {
 
       const parentDiv = document.getElementById(presenceMember.clientId);
       const onlineStatusDiv = parentDiv?.querySelector('#online-status');
-      onlineStatusDiv.classList.add(
-        (presenceMember.data as { status?: string })?.status === 'Away' ? 'bg-amber-500' : 'bg-green-500',
-      );
-      onlineStatusDiv.classList.remove(
-        (presenceMember.data as { status?: string })?.status === 'Away' ? 'bg-green-500' : 'bg-amber-500',
-      );
+      if (onlineStatusDiv) {
+        onlineStatusDiv.classList.add(
+          (presenceMember.data as { status?: string })?.status === 'Away' ? 'bg-amber-500' : 'bg-green-500',
+        );
+        onlineStatusDiv.classList.remove(
+          (presenceMember.data as { status?: string })?.status === 'Away' ? 'bg-green-500' : 'bg-amber-500',
+        );
+      }
     }
   });
 

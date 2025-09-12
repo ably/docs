@@ -6,8 +6,7 @@ import { FaEye } from 'react-icons/fa';
 import { config } from './config';
 import './styles/styles.css';
 
-const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-const channelName = urlParams.get('name') || 'pub-sub-occupancy';
+const channelName = config.CHANNEL_NAME || 'pub-sub-occupancy';
 
 function Stream() {
   const [occupancySubscribers, setOccupancySubscribers] = useState(0);

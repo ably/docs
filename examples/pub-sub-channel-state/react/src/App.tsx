@@ -14,8 +14,7 @@ function ChannelState() {
   const [channelName, setChannelName] = useState('pub-sub-channel-state');
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
-    const name = urlParams.get('name');
+    const name = config.CHANNEL_NAME;
 
     if (name) {
       setChannelName(name);
@@ -75,8 +74,7 @@ export default function App() {
   const [channelName, setChannelName] = useState('pub-sub-channel-state');
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const name = urlParams.get('name');
+    const name = config.CHANNEL_NAME;
 
     if (name) {
       setChannelName(name);

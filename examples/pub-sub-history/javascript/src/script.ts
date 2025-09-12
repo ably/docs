@@ -8,8 +8,7 @@ import './styles.css';
 const preloadButton = document.getElementById('pre-load-history');
 let lastBidAmount = 100;
 const numBids = 4;
-const urlParams = new URLSearchParams(window.location.search);
-const channelName = urlParams.get('name') || 'pub-sub-history';
+const channelName = config.CHANNEL_NAME || 'pub-sub-history';
 
 preloadButton.addEventListener('click', async () => {
   preloadButton.disabled = true;
@@ -20,7 +19,7 @@ preloadButton.addEventListener('click', async () => {
       key: config.ABLY_KEY,
       clientId,
     });
-    const channel = client.channels.get(urlParams.get('name') || 'pub-sub-history');
+    const channel = client.channels.get(channelName);
     const bidAmount = (lastBidAmount + Math.random() * 50).toFixed(2);
 
     await channel.publish('bid', {

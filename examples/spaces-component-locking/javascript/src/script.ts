@@ -103,8 +103,7 @@ function buildForm() {
 
 async function connect() {
   const spaces = new Spaces(client);
-  const urlParams = new URLSearchParams(window.location.search);
-  const spaceName = urlParams.get('name') || 'spaces-component-locking';
+  const spaceName = config.SPACE_NAME || 'spaces-component-locking';
   space = await spaces.get(spaceName);
 
   /** 💡 Enter the space as soon as it's available 💡 */
