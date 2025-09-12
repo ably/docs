@@ -22,8 +22,8 @@ export default {
     go: '1.2',
   },
   chat: {
-    javascript: '0.11',
-    react: '0.11',
+    javascript: '0.12',
+    react: '0.12',
     swift: '0.6',
     kotlin: '0.5',
   },
