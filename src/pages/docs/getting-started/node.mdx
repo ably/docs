@@ -1,0 +1,206 @@
+---
+title: "Getting started: Pub/Sub in Node.js"
+meta_description: "Get started with Pub/Sub in JavaScript using Ably. Learn how to publish, subscribe, track presence, fetch message history, and manage realtime connections."
+meta_keywords: "Pub/Sub Node.js, Node.js PubSub, Ably Node.js SDK, realtime messaging Node.js, publish subscribe Node.js, Ably Pub/Sub guide, Node.js realtime communication, Ably tutorial Node.js, Node.js message history, presence API Node.js, Ably Pub/Sub example, realtime Pub/Sub Node.js, subscribe to channel Node.js, publish message Node.js, Ably CLI Pub/Sub"
+---
+
+This guide will get you started with Ably Pub/Sub in Node.js.
+
+You'll establish a realtime connection to Ably and learn to publish and subscribe to messages. You'll also implement presence to track other online clients, and learn how to retrieve message history.
+
+## Prerequisites <a id="prerequisites"/>
+
+1. [Sign up](https://ably.com/signup) for an Ably account.
+
+2. Create a [new app](https://ably.com/accounts/any/apps/new), and create your first API key in the **API Keys** tab of the dashboard.
+
+3. Your API key will need the `publish`, `subscribe`, `presence` and `history` capabilities.
+
+4. Install [Node.js](https://nodejs.org/en) version 16 or greater.
+
+5. Create a new project in your IDE and install the Ably Pub/Sub JavaScript SDK:
+
+<Code>
+```shell
+npm init -y && npm pkg set type=module
+
+npm install ably
+```
+</Code>
+
+6. Create a `.env` file in your project root and add your API key:
+
+<Code>
+```shell
+echo "ABLY_API_KEY={{API_KEY}}" > .env
+```
+</Code>
+
+### (Optional) Install Ably CLI <a id="install-cli"/>
+
+The [Ably CLI](https://github.com/ably/cli) provides a command-line interface for managing your Ably applications directly from your terminal.
+
+1. Install the Ably CLI:
+
+<Code>
+```shell
+npm install -g @ably/cli
+```
+</Code>
+
+2. Run the following to log in to your Ably account and set the default app and API key:
+
+<Code>
+```shell
+ably login
+```
+</Code>
+
+<If loggedIn={false}>
+  <Aside data-type='note'>
+  The code examples in this guide include a demo API key. If you wish to interact with the Ably CLI and view outputs within your Ably account, ensure that you replace them with your own API key.
+  </Aside>
+</If>
+
+## Step 1: Connect to Ably <a id="step-1"/>
+
+Clients establish a connection with Ably when they instantiate an SDK instance. This enables them to send and receive messages in realtime across channels.
+
+Open up the [dev console](https://ably.com/accounts/any/apps/any/console) of your first app before instantiating your client so that you can see what happens.
+
+Create an `index.js` file in your project and add the following function to instantiate the SDK and establish a connection to Ably. At the minimum you need to provide an authentication mechanism. Use an API key for simplicity, but you should use [token authentication](/docs/auth/token#jwt) in a production app. A [`clientId`](/docs/auth/identified-clients) ensures the client is identified, which is required to use certain features, such as presence:
+
+<Code>
+```nodejs
+import * as Ably from 'ably';
+
+async function getStarted() {
+  const realtimeClient = new Ably.Realtime({
+    key: process.env.ABLY_API_KEY,
+    clientId: 'my-first-client'
+  });
+
+  await realtimeClient.connection.once('connected');
+  console.log(`Made my first connection!`);
+};
+
+getStarted();
+```
+</Code>
+
+You can monitor the lifecycle of clients' connections by registering a listener that will emit an event every time the connection state changes. For now, run the function with `node index.js` to log a message to the console to know that the connection attempt was successful. You'll see the message printed to your console, and you can also inspect the connection event in the dev console of your app.
+
+## Step 2: Subscribe to a channel and publish a message <a id="step-2"/>
+
+Messages contain the data that a client is communicating, such as a short 'hello' from a colleague, or a financial update being broadcast to subscribers from a server. Ably uses channels to separate messages into different topics, so that clients only ever receive messages on the channels they are subscribed to.
+
+Add the following lines to your `getStarted()` function to create a channel instance and register a listener to subscribe to the channel. Then run it with `node index.js`:
+
+<Code>
+```nodejs
+const channel = realtimeClient.channels.get('my-first-channel');
+
+await channel.subscribe((message) => {
+  console.log(`Received message: ${message.data}`);
+});
+```
+</Code>
+
+Use the Ably CLI to publish a message to your first channel. The message will be received by the client you've subscribed to the channel, and be logged to the console.
+
+<Code>
+```shell
+ably channels publish my-first-channel 'Hello!'
+```
+</Code>
+
+In a new terminal tab, subscribe to the same channel using the CLI:
+
+<Code>
+```shell
+ably channels subscribe my-first-channel
+```
+</Code>
+
+Publish another message using the CLI and you will see that it's received instantly by the client you have running locally, as well as the subscribed terminal instance.
+
+To publish a message in your code, you can add the following line to your `getStarted` method after subscribing to the channel:
+
+<Code>
+```nodejs
+await channel.publish('example', 'A message sent from my first client!');
+```
+</Code>
+
+## Step 3: Join the presence set <a id="step-3"/>
+
+Presence enables clients to be aware of one another if they are present on the same channel. You can then show clients who else is online, provide a custom status update for each, and notify the channel when someone goes offline.
+
+Add the following lines to your `getStarted()` function to subscribe to, and join, the presence set of the channel. Then run it with `node index.js`:
+
+<Code>
+```nodejs
+await channel.presence.subscribe((member) => {
+  console.log(`Event type: ${member.action} from ${member.clientId} with the data ${JSON.stringify(member.data)}`)
+});
+
+await channel.presence.enter("I'm here!");
+```
+</Code>
+
+In the [dev console](https://ably.com/accounts/any/apps/any/console) of your first app, attach to `my-first-channel`. Enter a `clientId`, such as `my-dev-console`, and then join the presence set of the channel. You'll see that `my-first-client` is already present in the channel. In the console of your browser or IDE you'll see that an event was received when the dev console client joined the channel.
+
+You can have another client join the presence set using the Ably CLI:
+
+<Code>
+```shell
+ably channels presence enter my-first-channel --data '{"status":"learning about Ably!"}'
+```
+</Code>
+
+## Step 4: Retrieve message history <a id="step-4"/>
+
+You can retrieve previously sent messages using the history feature. Ably stores all messages for 2 minutes by default in the event a client experiences network connectivity issues. You can [extend the storage period](/docs/storage-history/storage) of messages if required.
+
+If more than 2 minutes has passed since you published a regular message (excluding the presence events), then you can publish some more before trying out history. You can use the Pub/Sub SDK, Ably CLI or the dev console to do this.
+
+For example, using the Ably CLI to publish 5 messages:
+
+<Code>
+```shell
+ably channels publish --count 5 my-first-channel "Message number {{.Count}}"
+```
+</Code>
+
+Add the following lines to your `getStarted()` function to retrieve any messages that were recently published to the channel. Then run it with `node index.js`:
+
+<Code>
+```nodejs
+const history = await channel.history();
+console.log(history.items.map((message) => message.data));
+```
+</Code>
+
+The output will look similar to the following:
+
+<Code>
+```json
+[
+  'Message number 5',
+  'Message number 4',
+  'Message number 3',
+  'Message number 2',
+  'Message number 1'
+]
+```
+</Code>
+
+## Next steps <a id="next-steps"/>
+
+Continue to explore the documentation with JavaScript as the selected language:
+
+* Understand [token authentication](/docs/auth/token) before going to production.
+* Understand how to effectively [manage connections](https://ably.com/docs/connect#close?lang=nodejs).
+* Explore more [advanced](/docs/pub-sub/advanced?lang=nodejs) Pub/Sub concepts.
+
+You can also explore the [Ably CLI](https://www.npmjs.com/package/@ably/cli) further, or visit the Pub/Sub [API references](/docs/api/realtime-sdk?lang=nodejs).
