@@ -20,6 +20,11 @@ export default {
           name: 'Getting started',
           pages: [
             {
+              name: 'Overview',
+              link: '/docs/chat/getting-started',
+              index: true,
+            },
+            {
               name: 'JavaScript',
               link: '/docs/chat/getting-started/javascript',
             },
