@@ -50,10 +50,6 @@ export default {
             },
           ],
         },
-        {
-          name: 'SDK setup',
-          link: '/docs/chat/setup',
-        },
       ],
     },
     {
