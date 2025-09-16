@@ -1,0 +1,1062 @@
+---
+title: Authentication Methods
+meta_description: "Comprehensive guide to Ably's authentication methods including key authentication, token authentication, JWT, and implementation patterns."
+redirect_from:
+  - /docs/auth/basic
+  - /docs/auth/token
+---
+
+Ably provides multiple authentication methods designed for different use cases and security requirements. This page covers the implementation details for each method and when to use them.
+
+## How to choose authentication method?
+
+When deciding on which authentication method you will be using, it is recommended you bear in mind the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
+
+A client should ideally only possess the credentials and rights that it needs to accomplish what it wants. This way, if the credentials are compromised, the rights that can be abused by an attacker are minimized.
+
+The following table provides guidelines on what to consider when choosing your authentication method. Many applications will most naturally use a mixed strategy: one or more trusted application servers will use basic authentication to access the service and issue tokens over HTTPS, whereas remote browsers and devices will use individually issued tokens:
+
+| Scenario | [Key](#key-authentication) | [Token](#token-based-authentication) | Description |
+|----------|---------------------------|---------------------------|-------------|
+| Your scripts may be exposed | No | Yes | If the script, program or system holding the key is exposed, for example on a user's device, you should not embed an API key and instead use token authentication. If the script is on a secure environment such as your own server, an API key with basic authentication is fine. |
+| Your connection may be insecure | No | Yes | If there is a risk of exposure of the client's credentials, either directly or over an insecure, or insecurely proxied, connection, token authentication should be used. If you are sure the connection is secure and unmediated, basic authentication is acceptable. |
+| You have no server to control access | Yes | No  | If you do not have your own server to perform authentication and provide tokens to users, you'll need to use basic authentication. |
+| You require fine-grained access control | No | Yes | If you need to provide [privileges](/docs/platform/auth/capabilities#capabilities) on a user-by-user basis, you'd be better using token authentication. If you only need a few access control groups, basic authentication is reasonable. |
+| Users need restricted periods of access | No | Yes | If you need users to only have access for a certain period of time, or the ability to revoke access, token authentication is needed. If users are able to always have access, basic authentication is acceptable. |
+| Users need to identify themselves | Partial  | Yes | If the user can be trusted to [identify](/docs/platform/auth/capabilities#identified-clients) itself, basic authentication is fine. If the user cannot be trusted however, token authentication is better as it allows for a trusted token distributor to identify the user instead. |
+
+## Key authentication
+
+Key authentication is designed for server-side applications where the API key can be securely stored and not accessed by external clients.
+
+### Ably API keys
+
+Every Ably app can have one or more API keys associated with it in order to authenticate directly with Ably, or to issue tokens with. API keys can be created with different capabilities and any tokens issued using that API key can only permit a subset of those capabilities.
+
+#### API key format
+
+An Ably API key string has the following format: `I2E_JQ.OqUdfg:EVKVTCBlzLBPYJiCZTsIW_pqylJ9WVRB5K9P19Ap1y0`.
+
+The API key is made up of three parts:
+
+1. `I2E_JQ` is the public **app ID** (the part before the first period)
+2. `OqUdfg` is the public app **key ID** (the part after the period and before the colon). `I2E_JQ.OqUdfg` is the public API key ID (both the public app ID and app key ID together)
+3. `EVKVTCBlzLBPYJiCZTsIW_pqylJ9WVRB5K9P19Ap1y0` is the API **key secret** and should never be shared with untrusted parties (the part after the colon)
+
+The API key secret is private and should never be made public. This API key string is used in all Ably SDKs and for authentication with the REST API.
+
+### How to create an API key
+
+API keys are created in the [Ably dashboard](https://ably.com/dashboard). You can also create an API key programmatically using the [Control API](/docs/platform/account/control-api).
+
+To create an API key in the Ably dashboard:
+
+1. In your [Ably dashboard](https://ably.com/dashboard) click the API Keys tab.
+2. Click the **Create a new API key** button.
+3. Enter a name for your API key - this will help you identify the specific key when you have many keys created.
+4. Select the [capabilities](/docs/auth/capabilities) you want to apply to the key. Clients connecting with this key will be restricted to these capabilities.
+5. Optionally you can select whether to make tokens generated from this key to be revocable or not.
+6. Optionally select whether you want to restrict the scope of the key to channels, queues, or specific channels and queues using resource names and wildcards.
+
+<Aside data-type="important">
+Many of the code samples used throughout the documentation use key authentication to demonstrate features for convenience. It should be stressed that in your own applications, you should never use [key authentication](#key-authentication) on the client-side, as it exposes your Ably API key.
+
+If you are logged into your Ably account, the code samples will be populated with your actual key for convenience. If you are not logged into Ably, a temporary key is generated for you.
+</Aside>
+
+#### Authentication with a key
+
+The following is an example of using key authentication:
+
+<Code>
+```realtime_javascript
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}'
+});
+```
+
+```realtime_nodejs
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}'
+});
+```
+
+```realtime_ruby
+realtime = Ably::Realtime.new(key: '{{API_KEY}}')
+```
+
+```realtime_python
+realtime = AblyRealtime(key='{{API_KEY}}')
+```
+
+```realtime_java
+ClientOptions options = new ClientOptions();
+options.key = "{{API_KEY}}";
+AblyRealtime realtime = new AblyRealtime(options);
+```
+
+```realtime_swift
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+```
+
+```realtime_objc
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+```
+
+```realtime_csharp
+AblyRealtime realtime = AblyRealtime("{{API_KEY}}");
+```
+
+```realtime_go
+client, err := ably.NewRealtime(ably.WithKey("{{API_KEY}}"))
+```
+
+```realtime_flutter
+final clientOptions = ably.ClientOptions(
+  key: '{{API_KEY}}'
+);
+final realtime = ably.Realtime(options: clientOptions);
+```
+
+```rest_javascript
+var rest = new Ably.Rest({ key: '{{API_KEY}}' });
+```
+
+```rest_nodejs
+var rest = new Ably.Rest({ key: '{{API_KEY}}' });
+```
+
+```rest_ruby
+rest = Ably::Rest.new(key: '{{API_KEY}}')
+```
+
+```rest_python
+rest = AblyRest(key='{{API_KEY}}')
+```
+
+```rest_java
+ClientOptions options = new ClientOptions();
+options.key = "{{API_KEY}}";
+AblyRest rest = new AblyRest(options);
+```
+
+```rest_swift
+let rest = ARTRest(key: "{{API_KEY}}")
+```
+
+```rest_objc
+ARTRest *rest = [[ARTRest alloc] initWithKey:@"{{API_KEY}}"];
+```
+
+```rest_csharp
+AblyRest rest = new AblyRest("{{API_KEY}}");
+```
+
+```rest_go
+client, err := ably.NewREST(ably.WithKey("{{API_KEY}}"))
+```
+
+```rest_flutter
+final clientOptions = ably.ClientOptions(
+  key: '{{API_KEY}}'
+);
+ably.Rest rest = ably.Rest(options: clientOptions);
+```
+
+```rest_php
+$rest = new Ably\AblyRest(['key' => '{{API_KEY}}']);
+```
+</Code>
+
+## Token-based authentication
+
+Token authentication uses a trusted device with an [API key](#ably-api-keys) to issue time-limited tokens to untrusted clients. Tokens have a limited set of access rights, known as [capabilities](/docs/platform/auth/capabilities#capabilities), and can have a specific [identity](/docs/platform/auth/capabilities#identified-clients) using a `clientId`.
+
+Token authentication is the recommended authentication method to use client-side as it provides more fine-grained access control and limits the risk of credentials being exposed.
+
+Any of the following cause an SDK to use token authentication:
+
+* An [`authUrl`](/docs/api/realtime-sdk/types#client-options) or [`authCallback`](/docs/api/realtime-sdk/types#client-options) is provided that returns an Ably-compatible token or an Ably [`TokenRequest`](/docs/api/realtime-sdk/types#token-request)
+* [`useTokenAuth`](/docs/api/realtime-sdk/types#client-options) is true
+* A [`token`](/docs/api/realtime-sdk/types#client-options) or [`tokenDetails`](/docs/api/realtime-sdk/types#client-options) property is provided
+
+Ably supports two types of tokens:
+
+| Type | Description |
+|----------|-------------|
+| JWT tokens | JSON Web Tokens (JWT) provide a standardized, secure way to handle authentication with additional flexibility for custom claims. |
+| Ably tokens | Ably Tokens are issued directly by the Ably service using your API key. |
+
+### JSON Web Tokens (JWT)
+
+#### Creating Ably JWTs
+
+Ably JWTs must be signed, in your backend, with the following (which can be found in [Ably API keys](#ably-api-keys)):
+
+- your app ID,
+- your API key ID,
+- your API key secret
+
+The JWT must also include specific claims:
+
+<Code>
+```javascript
+const jwt = require('jsonwebtoken');
+
+function createAblyJWT(userId, capabilities) {
+    const currentTime = Math.floor(Date.now() / 1000);
+
+    const payload = {
+        iss: 'your-app-id.key-id', // API key name
+        sub: userId, // Subject (clientId)
+        iat: currentTime, // Issued at
+        exp: currentTime + 3600, // Expires in 1 hour
+        'x-ably-capability': JSON.stringify(capabilities),
+        'x-ably-clientId': userId
+    };
+
+    return jwt.sign(payload, 'your-key-secret', {
+        algorithm: 'HS256',
+        header: { typ: 'JWT', alg: 'HS256', kid: 'your-app-id.key-id' }
+    });
+}
+```
+
+```flutter
+final header = {
+  "typ": "JWT",
+  "alg": "HS256",
+  "kid": "{{API_KEY_NAME}}"
+};
+
+final currentTime = (DateTime.now().millisecondsSinceEpoch / 1000).round();
+final claims = {
+  "iat": currentTime, /* current time in seconds */
+  "exp": currentTime + 3600, /* time of expiration in seconds */
+  "x-ably-capability": "{\"*\":[\"*\"]}"
+};
+
+final base64Header = base64UrlEncode(utf8.encode(json.encode(header)));
+final base64Claims = base64UrlEncode(utf8.encode(json.encode(claims)));
+final hmacSha256 = Hmac(sha256, utf8.encode("$base64Header.$base64Claims"));
+final digest = hmacSha256.convert(utf8.encode("{{API_KEY_SECRET}}"));
+final signature = base64UrlEncode(digest.bytes);
+final ablyJwt = "$base64Header.$base64Claims.$signature";
+```
+
+```java
+Map<String, Object> headerClaims = new HashMap<>();
+headerClaims.put("typ", "JWT");
+headerClaims.put("alg", "HS256");
+headerClaims.put("kid", "{{API_KEY_NAME}}");
+
+// Define the current time
+long currentTimeInSeconds = System.currentTimeMillis() / 1000;
+
+// Define the claims
+Map<String, Object> claims = new HashMap<>();
+claims.put("iat", currentTimeInSeconds);
+claims.put("exp", currentTimeInSeconds + 3600);
+claims.put("x-ably-capability", "{\"*\":[\"*\"]}");
+
+// Create the JWT
+Algorithm algorithm = Algorithm.HMAC256("{{API_KEY_SECRET}}");
+String token = JWT.create()
+        .withHeader(headerClaims)
+        .withPayload(claims)
+        .sign(algorithm);
+```
+
+```php
+$header = [
+    'typ' => 'JWT',
+    'alg' => 'HS256',
+    'kid' => '{{API_KEY_NAME}}'
+];
+$currentTime = time();
+$claims = [
+    'iat' => $currentTime, /* current time in seconds */
+    'exp' => $currentTime + 3600, /* time of expiration in seconds (an hour) */
+    'x-ably-capability' => '{\"*\":[\"*\"]}'
+];
+$base64Header = base64_encode(json_encode($header));
+$base64Claims = base64_encode(json_encode($claims));
+$signature = hash_hmac(
+    'sha256',
+    $base64Header . '.' . $base64Claims,
+    '{{API_KEY_SECRET}}',
+    true
+);
+$jwt = $base64Header . '.' . $base64Claims . '.' . $signature;
+```
+
+```python
+import jwt
+import time
+
+def create_ably_jwt(user_id, capabilities):
+    current_time = int(time.time())
+
+    payload = {
+        'iss': 'your-app-id.key-id',  # API key name
+        'sub': user_id,  # Subject (clientId)
+        'iat': current_time,  # Issued at
+        'exp': current_time + 3600,  # Expires in 1 hour
+        'x-ably-capability': json.dumps(capabilities),
+        'x-ably-clientId': user_id
+    }
+
+    headers = {
+        'typ': 'JWT',
+        'alg': 'HS256',
+        'kid': 'your-app-id.key-id'
+    }
+
+    return jwt.encode(payload, 'your-key-secret', algorithm='HS256', headers=headers)
+```
+
+```go
+import (
+    "time"
+    "github.com/golang-jwt/jwt/v4"
+)
+
+func createAblyJWT(userID string, capabilities map[string][]string) (string, error) {
+    now := time.Now()
+
+    claims := jwt.MapClaims{
+        "iss": "your-app-id.key-id", // API key name
+        "sub": userID,               // Subject (clientId)
+        "iat": now.Unix(),           // Issued at
+        "exp": now.Add(time.Hour).Unix(), // Expires in 1 hour
+        "x-ably-capability": capabilities,
+        "x-ably-clientId": userID,
+    }
+
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    token.Header["kid"] = "your-app-id.key-id"
+
+    return token.SignedString([]byte("your-key-secret"))
+}
+```
+</Code>
+
+#### Embed an Ably Token in a JWT <a id="embedded"/>
+
+If a system has an existing [JWT](https://jwt.io/) scheme, it's possible to embed an Ably Token as a claim within it.
+
+The JWT and embedded token need to meet the following requirements:
+
+* The embedded token is an [Ably Token](#tokens).
+* The embedded token is included under the `x-ably-token` key in the [JOSE Header](https://tools.ietf.org/html/rfc7519), or if using JWS, the embedded token is included using the `x-ably-token` claim in the payload.
+* The expiry time of the embedded token must not be earlier than the outer JWT's expiry time (`exp` claim). Ably will reject any JWT if it is unencrypted and its `exp` claim is later than the expiry of the enclosed token. This helps to ensure that tokens are renewed prior to expiry.
+
+The process used by Ably SDKs to authenticate with Ably using an Ably Token embedded in a JWT is illustrated in the following diagram:
+
+![Token embedded in a JWT auth method](../../../../images/content/diagrams/Ably-Auth-Overview3.png)
+
+The following is an example of issuing an Ably Token inside the of header of a JWT. Note that the authenticity of the JWT will not be checked, due to Ably not having access to your `SECRET` key.
+
+<Code>
+```javascript
+const ably = new Ably.Rest({ key: '{{API_KEY}}' });
+const tokenDetails = await ably.auth.requestToken({ clientId: 'client@example.com' });
+const header = {
+  "typ":"JWT",
+  "alg":"HS256",
+  "x-ably-token": tokenDetails.token
+}
+const claims = {
+  "exp": currentTime + 3600
+}
+const base64Header = btoa(header);
+const base64Claims = btoa(claims);
+/* Apply the hash specified in the header */
+const signature = hash((base64Header + "." + base64Claims), SECRET);
+const jwt = base64Header + "." + base64Claims + "." + signature;
+/* Send jwt to client */
+```
+
+```python
+  rest = AblyRest(key='{{API_KEY}}')
+  token_request_data = {
+      'clientId': 'client@example.com',
+  }
+
+  token_details = await rest.auth.request_token(token_params=token_request_data)
+
+  header = {
+      "typ": "JWT",
+      "alg": "HS256",
+      "x-ably-token": token_details.token
+  }
+  claims = {
+      "exp": int(time.time()) + 3600
+  }
+
+  base64_header = base64.urlsafe_b64encode(bytes(json.dumps(header), 'utf-8')).decode('utf-8')
+  base64_claims = base64.urlsafe_b64encode(bytes(json.dumps(claims), 'utf-8')).decode('utf-8')
+
+  signature = hashlib.sha256((base64_header + "." + base64_claims + "{{API_KEY_SECRET}}").encode('utf-8')).digest()
+  signature_base64 = base64.urlsafe_b64encode(signature).decode('utf-8')
+
+  jwt_token = base64_header + "." + base64_claims + "." + signature_base64
+```
+
+```java
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+AblyRest rest = new AblyRest(options);
+
+Auth.TokenParams tokenParams = new Auth.TokenParams();
+tokenParams.clientId = "client@example.com";
+
+Auth.TokenDetails tokenDetails = rest.auth.requestToken(tokenParams, null);
+
+Map<String, Object> headerClaims = new HashMap<>();
+headerClaims.put("typ", "JWT");
+headerClaims.put("alg", "HS256");
+headerClaims.put("x-ably-token", tokenDetails.token);
+
+// Time of expiration in seconds (an hour)
+long currentTimeInSeconds = System.currentTimeMillis() / 1000;
+
+// Define the claims
+Map<String, Object> claims = new HashMap<>();
+claims.put("exp", currentTimeInSeconds + 3600);
+
+// Create the JWT
+Algorithm algorithm = Algorithm.HMAC256("{{API_KEY_SECRET}}");
+String token = JWT.create()
+        .withHeader(headerClaims)
+        .withPayload(claims)
+        .sign(algorithm);
+```
+
+```php
+$rest = new Ably\AblyRest(
+    ['key' => '{{API_KEY}}']
+);
+$tokenDetails = $rest->auth->requestToken(
+    ['clientId' => 'client@example.com']
+);
+$header = [
+    'typ' => 'JWT',
+    'alg' => 'HS256',
+    'x-ably-token' => $tokenDetails->token
+];
+$currentTime = time();
+$claims = [
+    'exp' => $currentTime + 3600 /* time of expiration in seconds (an hour) */
+];
+$base64Header = base64_encode(json_encode($header));
+$base64Claims = base64_encode(json_encode($claims));
+$secret = 'YOUR_SECRET';
+$signature = hash_hmac('sha256', $base64Header . '.' . $base64Claims, $secret, true);
+$base64Signature = base64_encode($signature);
+$jwt = $base64Header . '.' . $base64Claims . '.' . $base64Signature;
+```
+
+```go
+rest, err := ably.NewREST(ably.WithKey("{{API_KEY}}"))
+if err != nil {
+	log.Fatalf("Failed to create Ably REST client: %v", err)
+}
+
+// Request a token
+tokenParams := &ably.TokenParams{
+	ClientID: "client@example.com",
+}
+tokenDetails, err := rest.Auth.RequestToken(context.Background(), tokenParams)
+if err != nil {
+	log.Fatalf("Failed to request token: %v", err)
+}
+
+// Get the current time in seconds
+currentTime := time.Now().Unix()
+
+// Create JWT header
+header := map[string]interface{}{
+	"typ":          "JWT",
+	"alg":          "HS256",
+	"x-ably-token": tokenDetails.Token,
+}
+
+// Create JWT claims
+claims := map[string]interface{}{
+	"exp": currentTime + 3600, // time of expiration in seconds
+}
+
+// Encode header to base64
+headerJSON, err := json.Marshal(header)
+if err != nil {
+	log.Fatalf("Failed to marshal header: %v", err)
+}
+base64Header := base64.RawURLEncoding.EncodeToString(headerJSON)
+
+// Encode claims to base64
+claimsJSON, err := json.Marshal(claims)
+if err != nil {
+	log.Fatalf("Failed to marshal claims: %v", err)
+}
+base64Claims := base64.RawURLEncoding.EncodeToString(claimsJSON)
+
+// Create the signature
+dataToSign := base64Header + "." + base64Claims
+h := hmac.New(sha256.New, []byte("SECRET"))
+h.Write([]byte(dataToSign))
+signature := base64.RawURLEncoding.EncodeToString(h.Sum(nil))
+
+// Combine the parts to form the final JWT
+jwt := base64Header + "." + base64Claims + "." + signature
+log.Println("JWT:", jwt)
+
+// Send JWT to client (for demonstration, we print it here)
+```
+
+```flutter
+final clientOptions = ably.ClientOptions(
+  key: '{{API_KEY}}',
+);
+final rest = ably.Rest(options: clientOptions);
+const tokenParams = ably.TokenParams(
+  clientId: 'client@example.com',
+);
+final tokenDetails = await rest.auth.requestToken(
+    tokenParams: tokenParams
+);
+
+final header = {
+  "typ": "JWT",
+  "alg": "HS256",
+  "x-ably-token": tokenDetails.token
+};
+
+final currentTime = (DateTime.now().millisecondsSinceEpoch / 1000).round();
+final claims = {
+  "iat": currentTime, /* current time in seconds */
+  "exp": currentTime + 3600, /* time of expiration in seconds */
+  "x-ably-capability": "{\"*\":[\"*\"]}"
+};
+
+final base64Header = base64UrlEncode(utf8.encode(json.encode(header)));
+final base64Claims = base64UrlEncode(utf8.encode(json.encode(claims)));
+final hmacSha256 = Hmac(sha256, utf8.encode("$base64Header.$base64Claims"));
+final digest = hmacSha256.convert(utf8.encode("{{API_KEY_SECRET}}"));
+final signature = base64UrlEncode(digest.bytes);
+final ablyJwt = "$base64Header.$base64Claims.$signature";
+```
+</Code>
+
+#### Using JWTs with Ably
+
+There are several possible methods to using a JWT with Ably to authenticate. The preferred method is the `authUrl` method, which along with the callback method have automatic token refresh functionality:
+
+<Code>
+```javascript
+// With authUrl
+const realtime = new Ably.Realtime({ authUrl: '/auth_url_to_your_backend' });
+
+// Direct token usage
+const ably = new Ably.Realtime({
+    token: jwtToken,
+    clientId: 'user-123'
+});
+
+// Or via auth callback that generates JWT
+const ably = new Ably.Realtime({
+    authCallback: async (tokenParams, callback) => {
+        // generateJWTFromYourServer calls your server to a specific endpoint to retrieve the JWT.
+        const jwt = await generateJWTFromYourServer(tokenParams);
+        callback(null, jwt);
+    }
+});
+```
+</Code>
+
+#### Custom JWT claims
+
+JWTs can include custom claims for application-specific data:
+
+<Code>
+```javascript
+const payload = {
+    // Standard Ably claims
+    iss: 'your-app-id.key-id',
+    sub: 'user-123',
+    'x-ably-capability': '{"*":["*"]}',
+    'x-ably-clientId': 'user-123',
+
+    // Custom claims for channel-specific permissions
+    'ably.channel.private-user-123': 'owner',
+    'ably.channel.public-*': 'participant',
+    'ably.channel.*': 'guest',
+
+    // Custom application data
+    'userRole': 'premium',
+    'features': ['analytics', 'priority-support']
+};
+```
+</Code>
+
+### Ably Tokens
+
+Ably Tokens can be used to authenticate with Ably in the following ways:
+
+* Ably [TokenRequest](#token-request) is created by your servers and passed to clients.
+* An [Ably Token](#ably-token) is issued by your servers and passed to clients.
+
+Note that the machine on which you are running your auth server should have an accurate clock, as tokens and `TokenRequest` contain a timestamp. You can use an [NTP daemon](https://en.wikipedia.org/wiki/Ntpd), or if you are not able to control your server's clock, you can wish to use the `queryTime` [auth option](/docs/api/rest-sdk/types#auth-options).
+
+#### Ably TokenRequest <a id="token-request"/>
+
+Using an Ably SDK, a `TokenRequest` is [generated from your server](/docs/api/realtime-sdk/authentication#create-token-request) and returned to the client-side SDK instance. The client-side SDK instance then uses the [`TokenRequest`](/docs/api/realtime-sdk/types#token-request) to request an [Ably Token](/docs/api/realtime-sdk/authentication#request-token) from Ably, and subsequently authenticates using that [Ably Token](/docs/api/realtime-sdk/authentication#token-details).
+
+This is the recommended approach for client-side authentication, for the following reasons:
+
+* An Ably `TokenRequest` can be generated securely by your servers without communicating with Ably.
+* Your secret API key is never shared with Ably or your clients.
+* An Ably `TokenRequest` cannot be tampered with due to being signed, must be used soon after creation, and can only be used once.
+
+The process used by Ably SDKs to authenticate with Ably using a `TokenRequest` is illustrated in the following diagram:
+
+![Ably TokenRequest auth process diagram](../../../../images/content/diagrams/Ably-token-auth-1.png)
+
+The following is an example of creating an Ably `TokenRequest`, in your backend server to be returned to the client:
+
+<Code>
+```javascript
+const ably = new Ably.Rest({ key: '{{API_KEY}}' });
+const tokenRequest = await ably.auth.createTokenRequest({ clientId: 'client@example.com' });
+```
+
+```python
+ably = AblyRest('{{API_KEY}}')
+token = await ably.auth.create_token_request(
+{
+    "clientId": "client@example.com",
+    "capability": {
+        "channel1": ["publish", "subscribe"],
+    },
+    'ttl': 3600 * 1000, # ms
+})
+```
+
+```java
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+AblyRest rest = new AblyRest(options);
+
+Auth.TokenParams tokenParams = new Auth.TokenParams();
+tokenParams.clientId = "client@example.com";
+
+Auth.TokenRequest tokenDetails = rest.auth.createTokenRequest(tokenParams, null);
+```
+
+```php
+$rest = new Ably\AblyRest(
+    ['key' => '{{API_KEY}}']
+);
+
+$tokenRequest = $rest->auth->createTokenRequest(
+    ['clientId' => 'client@example.com']
+);
+```
+
+```go
+rest, err := ably.NewREST(
+  ably.WithKey("{{API_KEY}}"))
+if err != nil {
+  log.Fatalf("Error creating Ably client: %v", err)
+}
+
+tokenParams := &ably.TokenParams{ClientID: "client@example.com"}
+tokenRequest, _ := rest.Auth.CreateTokenRequest(tokenParams)
+```
+
+```flutter
+final clientOptions = ably.ClientOptions(
+  key: '{{API_KEY}}',
+);
+final rest = ably.Rest(options: clientOptions);
+const tokenParams = ably.TokenParams(
+  clientId: 'client@example.com'
+);
+final tokenRequest = rest.auth.createTokenRequest(tokenParams: tokenParams);
+```
+</Code>
+
+Clients can pass this server-side generated `TokenRequest` to Ably to authenticate with Ably automatically.
+
+#### Ably Token <a id="ably-token"/>
+
+Using an Ably SDK, an Ably Token is [requested by your servers](/docs/api/realtime-sdk/authentication#request-token) from Ably and then passed to the client-side SDK instance. The client-side SDK instance then uses that [Ably Token](/docs/api/realtime-sdk/authentication#tokens) to authenticate with Ably. This is an alternative approach for authentication that enables you to issue"Ably Tokens directly as opposed to providing Ably `TokenRequests` from your servers.
+
+The advantage for clients is that it saves one round trip request as they do not need to request an Ably Token themselves. The disadvantage is that your servers must communicate with Ably each time an Ably Token is required.
+
+The process used by Ably SDKs to authenticate with Ably using an Ably Token is illustrated in the following diagram:
+
+![Ably token auth process diagram](../../../../images/content/diagrams/Ably-Auth-Overview1.png)
+
+The following is an example of issuing an Ably Token from a server:
+
+<Code>
+```javascript
+const ably = new Ably.Rest({ key: '{{API_KEY}}' });
+const tokenDetails = await ably.auth.requestToken({ clientId: 'client@example.com' });
+```
+
+```python
+rest = AblyRest(key='{{API_KEY}}')
+token_request_params = {
+    'clientId': 'client@example.com',
+}
+
+token_details = await rest.auth.request_token(token_params=token_request_params)
+```
+
+```java
+ClientOptions options = new ClientOptions("{{API_KEY}}");
+AblyRest rest = new AblyRest(options);
+
+Auth.TokenParams tokenParams = new Auth.TokenParams();
+tokenParams.clientId = "client@example.com";
+
+Auth.TokenDetails tokenDetails = rest.auth.requestToken(tokenParams, null);
+```
+
+```php
+$rest = new Ably\AblyRest(
+    ['key' => '{{API_KEY}}']
+);
+
+$tokenDetails = $rest->auth->requestToken(
+    ['clientId' => 'client@example.com']
+);
+```
+
+```go
+rest, err := ably.NewREST(
+  ably.WithKey("API_KEY"))
+if err != nil {
+  log.Fatalf("Error creating Ably client: %v", err)
+}
+
+tokenParams := &ably.TokenParams{ClientID: "client@example.com"}
+tokenRequest, _ := rest.Auth.RequestToken(context.Background(), tokenParams)
+```
+
+```flutter
+final clientOptions = ably.ClientOptions(
+  key: '{{API_KEY}}',
+);
+final rest = ably.Rest(options: clientOptions);
+
+const tokenParams = ably.TokenParams(
+  clientId: 'client@example.com',
+);
+final tokenDetails = await rest.auth.requestToken(
+    tokenParams: tokenParams
+);
+```
+</Code>
+
+### How to use token-based authentication? <a id="how-to-use"/>
+
+In your server expose a URL that your clients can make requests to get a new token from. It is recommended to use Ably SDKs because it provides functionality that automatically refreshes tokens near their expiration.
+
+To use automatic refresh of tokens, provide either an `authUrl` or an `authCallback`. When the token is near to expiry the `authUrl` or `authCallback` is invoked and a new token is automatically requested.
+
+An `authURL` is recommended for use with web-based clients as they can easily utilize cookies and other web-only features. For non-web clients, `authCallback` is the recommended strategy.
+
+#### authUrl <a id="auth-url"/>
+
+You can specify an `authUrl` when you create the Ably client. For example:
+
+<Code>
+```realtime_javascript
+const realtime = new Ably.Realtime({ authUrl: '/auth' });
+```
+
+```realtime_nodejs
+const realtime = new Ably.Realtime({ authUrl: '/auth' });
+```
+
+```realtime_ruby
+realtime = Ably::Realtime.new(auth_url: '/auth')
+```
+
+```realtime_python
+  realtime = AblyRealtime(auth_url='/auth')
+```
+
+```realtime_java
+ClientOptions options = new ClientOptions();
+options.authUrl = "/auth";
+AblyRealtime realtime = new AblyRealtime(options);
+```
+
+```realtime_objc
+ARTClientOptions *options = [[ARTClientOptions alloc] init];
+options.authUrl = [NSURL URLWithString:@"/auth"];
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithOptions:options];
+```
+
+```realtime_swift
+let options = ARTClientOptions()
+options.authUrl = NSURL(string: "/auth")
+let realtime = ARTRealtime(options: options)
+```
+
+```realtime_csharp
+ClientOptions options = new ClientOptions();
+options.AuthUrl = new Uri("/auth");
+AblyRealtime realtime = new AblyRealtime(options);
+```
+
+```realtime_go
+client, err := ably.NewRealtime(ably.WithAuthURL("/auth"))
+```
+
+```realtime_flutter
+final clientOptions = ably.ClientOptions(
+    authUrl: '/auth'
+);
+final realtime = ably.Realtime(options: clientOptions);
+```
+
+```rest_javascript
+  const rest = new Ably.Rest({ authUrl: '/auth' });
+```
+
+```rest_nodejs
+  const rest = new Ably.Rest({ authUrl: '/auth' });
+```
+
+```rest_ruby
+  rest = Ably::Rest.new(auth_url: '/auth')
+```
+
+```rest_python
+  rest = AblyRest(auth_url='/auth')
+```
+
+```rest_php
+  $rest = new Ably\AblyRest(['authUrl' => '/auth']);
+```
+
+```rest_java
+  ClientOptions options = new ClientOptions();
+  options.authUrl = "/auth";
+  AblyRest rest = new AblyRest(options);
+```
+
+```rest_csharp
+  AblyRest rest = new AblyRest(new ClientOptions { AuthUrl = new Uri("/auth") });
+```
+
+```rest_objc
+  ARTClientOptions *options = [[ARTClientOptions alloc] init];
+  options.authUrl = [NSURL URLWithString:@"/auth"];
+  ARTRest *rest = [[ARTRest alloc] initWithOptions:options];
+```
+
+```rest_swift
+  let options = ARTClientOptions()
+  options.authUrl = NSURL(string: "/auth")
+  let rest = ARTRest(options: options)
+```
+
+```rest_go
+  client, err := ably.NewREST(ably.WithAuthURL("/auth"))
+```
+
+```rest_flutter
+final clientOptions = ably.ClientOptions(
+    authUrl: '/auth'
+);
+final rest = ably.Rest(options: clientOptions);
+```
+</Code>
+
+The client will obtain a token, JWT, or tokenRequest from the URL and use it to authenticate requests to Ably. Before token expiry, a request for a new token will be made automatically by the client to the `authUrl`.
+
+#### authCallback <a id="auth-callback"/>
+
+You can specify an authentication callback function when you create the Ably client. Inside `authCallback`, you can make a network request to your servers to generate the `tokenRequest`. For example:
+
+<Code>
+```realtime_javascript
+const ablyClient = new Realtime({
+    authCallback: async (tokenParams, callback) => {
+        let tokenRequest;
+        try {
+            tokenRequest = await obtainTokenRequest(); // Make a network request to your server
+        } catch (err) {
+            callback(err, null);
+            return;
+        }
+        callback(null, tokenRequest);
+    }
+});
+```
+
+```realtime_nodejs
+const ablyClient = new Realtime({
+    authCallback: async (tokenParams, callback) => {
+        let tokenRequest;
+        try {
+            tokenRequest = await obtainTokenRequest(); // Make a network request to your server
+        } catch (err) {
+            callback(err, null);
+            return;
+        }
+        callback(null, tokenRequest);
+    }
+});
+```
+
+```realtime_python
+realtime = AblyRealtime(auth_callback=get_token_request)
+
+async def get_token_request(*args, **kwargs):
+    create_token_request = await get_token_request() // Implement this function to get a token request from your server
+
+    if create_token_request.status_code == 200:
+        token_request = create_token_request.json()
+
+        return token_request
+    else:
+        raise Exception(f"Failed to retrieve token request: {create_token_request.status_code} - {create_token_request.text}")
+```
+
+```realtime_go
+realtime, _ := ably.NewRealtime(
+  ably.WithAuthCallback(func(context.Context, ably.TokenParams) (ably.Tokener, error) {
+    createTokenRequest := getTokenRequest() // Implement this function to get a token request from your server
+
+    if (createTokenRequest.StatusCode == 200) {
+      return createTokenRequest
+    }
+
+    return "Failed to retrieve token request: '%v' - '%v'", createTokenRequest.StatusCode, createTokenRequest.Text
+  })
+)
+```
+
+```realtime_flutter
+ably.ClientOptions clientOptions = ably.ClientOptions(
+    authCallback: (ably.TokenParams tokenParams) async {
+      // `createTokenRequest` should be implemented to communicate with user server
+      ably.TokenRequest tokenRequest = await createTokenRequest(tokenParams);
+      // `authCallback` has to return an instance of TokenRequest
+      return tokenRequest;
+    }
+);
+
+ably.Realtime realtime = ably.Realtime(options: clientOptions);
+```
+
+```realtime_java
+ClientOptions options = new ClientOptions();
+
+options.authCallback = new Auth.TokenCallback() {
+    @Override
+    public Object getTokenRequest(Auth.TokenParams params) throws AblyException {
+        // Implement this function to get a token request from your server
+        return getTokenRequestFromServer();
+    }
+};
+
+AblyRealtime realtime = new AblyRealtime(options);
+```
+
+```rest_javascript
+const rest = new Ably.Rest({
+  authCallback: (tokenParams, callback) => {
+    // implement your callback here
+  },
+});
+```
+
+```rest_nodejs
+const rest = new Ably.Rest({
+  authCallback: (tokenParams, callback) => {
+    // implement your callback here
+  },
+});
+```
+
+```rest_python
+rest = AblyRest(auth_callback=get_token_request)
+
+async def get_token_request(*args, **kwargs):
+    create_token_request = await get_token_request() // Implement this function to get a token request from your server
+
+    if create_token_request.status_code == 200:
+        token_request = create_token_request.json()
+
+        return token_request
+    else:
+        raise Exception(f"Failed to retrieve token request: {create_token_request.status_code} - {create_token_request.text}")
+```
+
+```rest_java
+ClientOptions options = new ClientOptions();
+
+options.authCallback = new Auth.TokenCallback() {
+    @Override
+    public Object getTokenRequest(Auth.TokenParams params) throws AblyException {
+        // Implement this function to get a token request from your server
+        return getTokenRequestFromServer();
+    }
+};
+
+AblyRest rest = new AblyRest(options);
+```
+
+```rest_php
+$rest = new Ably\AblyRest(
+    [
+        'authCallback' => function(Ably\Models\TokenParams $params) {
+            $curl = curl_init('/auth');
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            $response = curl_exec($curl);
+            curl_close($curl);
+
+            $tokenRequestData = json_decode($response, true);
+            $tokenRequest = new Ably\Models\TokenRequest($tokenRequestData);
+
+            return $tokenRequest;
+        }
+    ]
+);
+```
+
+```rest_go
+rest, _ := ably.NewREST(
+  ably.WithAuthCallback(func(context.Context, ably.TokenParams) (ably.Tokener, error) {
+    createTokenRequest := getTokenRequest() // Implement this function to get a token request from your server
+
+    if (createTokenRequest.StatusCode == 200) {
+      return createTokenRequest
+    }
+
+    return "Failed to retrieve token request: '%v' - '%v'", createTokenRequest.StatusCode, createTokenRequest.Text
+  })
+)
+```
+
+```rest_flutter
+ably.ClientOptions clientOptions = ably.ClientOptions(
+    authCallback: (ably.TokenParams tokenParams) async {
+      // `createTokenRequest` should be implemented to communicate with user server
+      ably.TokenRequest tokenRequest = await createTokenRequest(tokenParams);
+      // `authCallback` has to return an instance of TokenRequest
+      return tokenRequest;
+    }
+);
+
+ably.Rest rest = ably.Rest(options: clientOptions);
+```
+</Code>
+
+The [`tokenParams`](/docs/api/realtime-sdk/authentication#token-params) argument in `authCallback` is available for convenience, allowing you to see the capabilities, `clientId`, and other details requested by the client. However, `tokenParams` should not be trusted or used to generate the `tokenRequest` on the server side. Instead it is recommended that your `createTokenRequest` API authenticates clients separately, for example based on cookies, headers, or HTTP body.
