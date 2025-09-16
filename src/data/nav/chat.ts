@@ -110,7 +110,7 @@ export default {
           link: '/docs/chat/rooms/media',
         },
         {
-          name: 'Replies and quotes',
+          name: 'Replies',
           link: '/docs/chat/rooms/replies',
         },
       ],
