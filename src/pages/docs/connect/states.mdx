@@ -404,6 +404,50 @@ Recover the previous connection state conditionally based on some logic:
 
 Please note that as [`sessionStorage`](https://www.w3.org/TR/webstorage/) is used to persist the `LastConnectionDetails` between page reloads, it is only available for pages in the same origin and top-level browsing context.
 
+#### Multiple SDK instances on the same origin
+
+When using the default recovery behavior with multiple ably-js SDK instances on the same origin (in different iframes or different contexts within the same page), sessionStorage key collisions can occur since the recovery key is stored under a fixed sessionStorage key name.
+
+To handle multiple SDK instances that need independent recovery, you should manually manage the recovery keys with context-specific sessionStorage keys:
+
+<Code>
+```realtime_javascript
+const clientOpts = {
+  closeOnUnload: false, // Prevent connection being closed server-side when page closes
+  key: 'your-api-key'
+  // ... other auth options
+};
+
+// Use a unique sessionStorage key for each SDK context
+// This prevents recovery key collisions between multiple instances
+const sessionStorageKey = 'ably-sdk-recoverykey-for-mainpage'; // Make this specific to your context
+
+// Recover from previous session if one exists
+const previousSessionRecoveryKey = sessionStorage.getItem(sessionStorageKey);
+sessionStorage.removeItem(sessionStorageKey);
+if (previousSessionRecoveryKey) {
+  clientOpts.recover = previousSessionRecoveryKey;
+}
+
+const client = new Ably.Realtime(clientOpts);
+
+// Store recovery data when page is being closed or refreshed
+window.addEventListener('beforeunload', () => {
+  const recoveryKey = client.connection.createRecoveryKey();
+  sessionStorage.setItem(sessionStorageKey, recoveryKey);
+});
+```
+
+```realtime_nodejs
+// This pattern is specific to browser environments with sessionStorage
+// Node.js applications would need alternative storage mechanisms
+```
+</Code>
+
+<Aside data-type="important">
+Do not attempt to recover multiple SDK instances from a single recovery key. Each SDK instance must have its own unique recovery key. Sharing recovery keys between instances will result in undefined behavior.
+</Aside>
+
 Alternatively, if it is necessary to be explicit about the connection `recoveryKey`, the connection can be recovered by providing the last value of the connection's `recoveryKey` value in the [client options](/docs/api/realtime-sdk#client-options) `recover` attribute when instantiating an SDK.
 
 ## Handling connection failures <a id="handling-failures"/>
@@ -420,7 +464,7 @@ While an SDK will not automatically attempt to reconnect in the `FAILED` state, 
 
 Other classes of error are nonfatal. For example, a client may have network connectivity issues. An SDK will attempt to automatically reconnect and recover from these sort of issues, as detailed in the `DISCONNECTED` and `SUSPENDED` explanations in the [available connection states](#connection-states) section.
 
-If message continuity is lost in the process, e.g. because you have been disconnected from Ably for more than two minutes, the SDK will notify you through the [`resumed`](#resume) flag mechanism.
+If message continuity is lost in the process, for example, because you have been disconnected from Ably for more than two minutes, the SDK will notify you through the [`resumed`](#resume) flag mechanism.
 
 ## Mobile app lifecycle management <a id="mobile-lifecycle-management"/>
 
