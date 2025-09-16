@@ -1,0 +1,580 @@
+---
+title: Permissions and Capabilities
+meta_description: "Comprehensive guide to Ably's permissions system including API key capabilities, client identity management, and fine-grained access control."
+redirect_from:
+  - /docs/auth/capabilities
+  - /docs/auth/identified-clients
+---
+
+Ably's permissions system provides fine-grained access control through capabilities, client identity management, and flexible resource targeting. This allows you to implement the principle of least privilege across all your applications.
+
+## API Keys and Capabilities
+
+Every Ably API key has a set of capabilities that define what operations can be performed on which resources. These capabilities apply to all authentication methods and cascade through to any tokens issued from that key.
+
+### Understanding Capabilities
+
+Capabilities are defined as a JSON object mapping resource names to arrays of permitted operations:
+
+```json
+{
+  "channel-name": ["publish", "subscribe"],
+  "private-*": ["subscribe", "presence"],
+  "*": ["subscribe"]
+}
+```
+
+### API Key Management
+
+#### Creating API Keys
+
+API keys can be created through the [Ably Dashboard](https://ably.com/dashboard) or programmatically via the [Control API](/docs/platform/account/control-api).
+
+**Dashboard Creation:**
+1. Navigate to your app in the Ably Dashboard
+2. Go to the **API Keys** tab
+3. Click **Create a new API key**
+4. Configure capabilities and restrictions
+5. Save the key securely
+
+**Programmatic Creation:**
+
+<Code>
+```javascript
+// Using Control API to create a key
+const response = await fetch(`https://control.ably.io/v1/apps/${appId}/keys`, {
+    method: 'POST',
+    headers: {
+        'Authorization': `Bearer ${controlApiToken}`,
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        name: 'Client App Key',
+        capability: {
+            'public-*': ['publish', 'subscribe'],
+            'user-*': ['subscribe', 'presence']
+        }
+    })
+});
+```
+</Code>
+
+#### Key Capabilities Configuration
+
+API keys support several capability configurations:
+
+- **All channels and resources**: `{"*": ["*"]}`
+- **Specific channels**: `{"channel1": ["subscribe"], "channel2": ["publish"]}`
+- **Channel namespaces**: `{"chat:*": ["subscribe", "publish", "presence"]}`
+- **Mixed permissions**: `{"public:*": ["subscribe"], "private:user123": ["*"]}`
+
+### Resource Names and Wildcards
+
+#### Channel Resources
+
+<Code>
+```json
+{
+  "announcements": ["subscribe"],           // Exact channel match
+  "user:*": ["subscribe", "presence"],      // Namespace wildcard
+  "chat:room:*": ["publish", "subscribe"],  // Multi-level wildcard
+  "*": ["subscribe"]                        // All channels
+}
+```
+</Code>
+
+#### Queue Resources
+
+<Code>
+```json
+{
+  "[queue]notifications": ["publish"],      // Specific queue
+  "[queue]*": ["subscribe"],                // All queues
+  "[queue]user:*": ["publish", "subscribe"] // Queue namespace
+}
+```
+</Code>
+
+#### Metachannel Resources
+
+<Code>
+```json
+{
+  "[meta]connection": ["subscribe"],        // Connection lifecycle events
+  "[meta]channel": ["subscribe"],           // Channel lifecycle events
+  "[meta]*": ["subscribe"]                  // All metachannels
+}
+```
+</Code>
+
+#### Universal Resource Access
+
+<Code>
+```json
+{
+  "[*]*": ["subscribe"]  // All channels, queues, and metachannels
+}
+```
+</Code>
+
+## Capability Operations
+
+### Core Operations
+
+| Operation | Description | Applies To |
+|-----------|-------------|------------|
+| **subscribe** | Subscribe to messages and state changes | Channels, queues, metachannels |
+| **publish** | Publish messages | Channels, queues |
+| **presence** | Enter, update, and leave presence; subscribe to presence events | Channels |
+| **history** | Retrieve message and presence history | Channels |
+
+### Advanced Operations
+
+| Operation | Description | Use Cases |
+|-----------|-------------|-----------|
+| **object-subscribe** | Subscribe to object updates | LiveObjects applications |
+| **object-publish** | Update objects | LiveObjects applications |
+| **push-subscribe** | Subscribe devices for push notifications | Mobile applications |
+| **push-admin** | Manage device registrations and subscriptions | Administrative tools |
+| **channel-metadata** | Query channel status and enumerate channels | Monitoring and analytics |
+| **privileged-headers** | Set privileged message extras | System-level operations |
+| **stats** | Access usage statistics (requires `*` resource) | Analytics and monitoring |
+
+### Wildcard Operations
+
+Use `["*"]` to grant all available operations for a resource:
+
+<Code>
+```json
+{
+  "admin-channels:*": ["*"],           // All operations on admin channels
+  "user-data:user123": ["*"],          // Full access to specific user data
+  "[queue]processing": ["*"]           // All queue operations
+}
+```
+</Code>
+
+## Token Capabilities
+
+When creating tokens, capabilities are determined by the intersection between the requesting token's capabilities and the issuing API key's capabilities.
+
+### Token Creation with Capabilities
+
+<Code>
+```javascript
+// Server-side: Create token with specific capabilities
+const tokenRequest = await ably.auth.createTokenRequest({
+    clientId: 'user-123',
+    capability: {
+        'chat:general': ['publish', 'subscribe'],
+        'notifications:user-123': ['subscribe'],
+        'presence:lobby': ['presence']
+    },
+    ttl: 60 * 60 * 1000 // 1 hour
+});
+```
+
+```python
+# Python example
+token_request = await ably.auth.create_token_request({
+    'client_id': 'user-123',
+    'capability': {
+        'chat:general': ['publish', 'subscribe'],
+        'notifications:user-123': ['subscribe'],
+        'presence:lobby': ['presence']
+    },
+    'ttl': 60 * 60 * 1000  # 1 hour
+})
+```
+
+```go
+// Go example
+tokenParams := &ably.TokenParams{
+    ClientID: "user-123",
+    Capability: map[string][]string{
+        "chat:general": {"publish", "subscribe"},
+        "notifications:user-123": {"subscribe"},
+        "presence:lobby": {"presence"},
+    },
+    TTL: time.Hour,
+}
+
+tokenRequest, err := rest.Auth.CreateTokenRequest(tokenParams)
+```
+</Code>
+
+### Capability Inheritance Rules
+
+1. **No capability specified**: Token inherits all capabilities from the issuing API key
+2. **Capabilities specified**: Token receives the intersection of requested and key capabilities
+3. **No intersection**: Token request fails with an error
+
+#### Example: Capability Intersection
+
+<Code>
+```javascript
+// API Key capabilities:
+{
+  "chat:*": ["publish", "subscribe", "presence"],
+  "notifications": ["subscribe"],
+  "admin:*": ["*"]
+}
+
+// Token request:
+{
+  "chat:room1": ["publish", "subscribe"], // ✓ Allowed (subset of chat:*)
+  "notifications": ["*"],                 // ✓ Becomes ["subscribe"] (intersection)
+  "analytics": ["subscribe"]              // ✗ Rejected (no intersection)
+}
+
+// Resulting token capabilities:
+{
+  "chat:room1": ["publish", "subscribe"],
+  "notifications": ["subscribe"]
+}
+```
+</Code>
+
+## Client Identity Management
+
+### Client ID (`clientId`)
+
+The `clientId` parameter identifies a specific client connection and enables:
+
+- **Presence tracking**: Know which users are online
+- **Directed messaging**: Send messages to specific clients
+- **Identity verification**: Trust client identity claims
+- **Access control**: Apply user-specific permissions
+
+#### Setting Client Identity
+
+<Code>
+```javascript
+// During authentication
+const ably = new Ably.Realtime({
+    authUrl: '/api/ably/token',
+    clientId: 'user-123'
+});
+
+// Or via token request
+const tokenRequest = await ably.auth.createTokenRequest({
+    clientId: 'user-123',
+    capability: userCapabilities
+});
+```
+
+```swift
+let options = ARTClientOptions()
+options.authUrl = URL(string: "/api/ably/token")
+options.clientId = "user-123"
+let ably = ARTRealtime(options: options)
+```
+
+```java
+ClientOptions options = new ClientOptions();
+options.authUrl = "/api/ably/token";
+options.clientId = "user-123";
+AblyRealtime ably = new AblyRealtime(options);
+```
+</Code>
+
+#### Client Identity Validation
+
+When using token authentication, the server can enforce client identity:
+
+<Code>
+```javascript
+// Server-side validation
+app.post('/api/ably/token', authenticate, async (req, res) => {
+    const authenticatedUserId = req.user.id;
+    const requestedClientId = req.body.clientId;
+
+    // Ensure client can only authenticate as themselves
+    if (requestedClientId !== authenticatedUserId) {
+        return res.status(403).json({ error: 'Invalid client ID' });
+    }
+
+    const tokenRequest = await ably.auth.createTokenRequest({
+        clientId: authenticatedUserId,
+        capability: await getUserCapabilities(authenticatedUserId)
+    });
+
+    res.json(tokenRequest);
+});
+```
+</Code>
+
+### Anonymous Clients
+
+Clients can connect without a `clientId` for anonymous access:
+
+<Code>
+```javascript
+// Anonymous connection
+const ably = new Ably.Realtime({
+    authUrl: '/api/ably/token'
+    // No clientId specified
+});
+
+// Anonymous clients cannot use presence
+// and have limited identity features
+```
+</Code>
+
+## Advanced Permission Patterns
+
+### User-Based Capabilities
+
+Implement user-specific permissions:
+
+<Code>
+```javascript
+async function getUserCapabilities(userId) {
+    const user = await getUserFromDatabase(userId);
+
+    const baseCapabilities = {
+        [`notifications:${userId}`]: ['subscribe'],
+        'public:*': ['subscribe']
+    };
+
+    // Add role-based capabilities
+    if (user.role === 'admin') {
+        baseCapabilities['admin:*'] = ['*'];
+        baseCapabilities['[meta]*'] = ['subscribe'];
+    }
+
+    if (user.role === 'moderator') {
+        baseCapabilities['chat:*'] = ['*'];
+        baseCapabilities['moderation:*'] = ['publish', 'subscribe'];
+    }
+
+    // Add premium features
+    if (user.subscription === 'premium') {
+        baseCapabilities['premium:*'] = ['subscribe'];
+        baseCapabilities['analytics:*'] = ['subscribe'];
+    }
+
+    return baseCapabilities;
+}
+```
+</Code>
+
+### Resource-Specific Permissions
+
+<Code>
+```javascript
+// Chat application example
+const chatCapabilities = {
+    // Public channels - anyone can read
+    'chat:public:*': ['subscribe'],
+
+    // User can only write to channels they've joined
+    [`chat:joined:${userId}:*`]: ['publish', 'subscribe', 'presence'],
+
+    // Private messages
+    [`chat:private:${userId}`]: ['*'],
+
+    // Direct messages (bidirectional)
+    [`dm:${userId}:*`]: ['publish', 'subscribe'],
+    [`dm:*:${userId}`]: ['publish', 'subscribe']
+};
+```
+</Code>
+
+### Time-Limited Capabilities
+
+<Code>
+```javascript
+// Grant temporary admin access
+const temporaryAdminCapabilities = {
+    'admin:*': ['*'],
+    'audit:*': ['subscribe']
+};
+
+const tokenRequest = await ably.auth.createTokenRequest({
+    clientId: userId,
+    capability: temporaryAdminCapabilities,
+    ttl: 15 * 60 * 1000 // 15 minutes only
+});
+```
+</Code>
+
+## JWT Custom Claims
+
+### Channel-Specific Claims
+
+JWT tokens can include custom claims for channel-specific permissions:
+
+<Code>
+```javascript
+const jwtPayload = {
+    // Standard claims
+    iss: 'your-app-id.key-id',
+    sub: 'user-123',
+    'x-ably-capability': JSON.stringify(capabilities),
+    'x-ably-clientId': 'user-123',
+
+    // Custom channel claims
+    'ably.channel.chat:room1': 'moderator',
+    'ably.channel.chat:room2': 'participant',
+    'ably.channel.support:*': 'agent',
+    'ably.channel.*': 'user'
+};
+
+// These claims are available in message extras
+channel.subscribe((message) => {
+    const userRole = message.extras?.userClaim;
+    if (userRole === 'moderator') {
+        // Handle moderator-specific logic
+    }
+});
+```
+</Code>
+
+### Rate Limiting Claims
+
+<Code>
+```javascript
+const jwtPayload = {
+    // Standard claims...
+
+    // Rate limiting per channel
+    'ably.limits.publish.perAttachment.maxRate.chat:*': 1.0, // 1 message per second
+    'ably.limits.publish.perAttachment.maxRate.notifications:*': 0.1 // 1 per 10 seconds
+};
+```
+</Code>
+
+## Client Options and Configuration
+
+### Connection Options
+
+<Code>
+```javascript
+const ably = new Ably.Realtime({
+    // Authentication
+    authUrl: '/api/ably/token',
+    clientId: 'user-123',
+
+    // Connection behavior
+    autoConnect: true,
+    disconnectedRetryTimeout: 15000,
+    suspendedRetryTimeout: 30000,
+
+    // Transport options
+    transports: ['web_socket', 'xhr_polling'],
+
+    // Environment
+    environment: 'sandbox', // Use 'production' for live apps
+
+    // Logging
+    logLevel: 1 // 0=none, 1=errors, 2=warnings, 3=info, 4=debug
+});
+```
+
+```python
+ably = AblyRealtime(
+    auth_url='/api/ably/token',
+    client_id='user-123',
+    auto_connect=True,
+    disconnected_retry_timeout=15.0,
+    suspended_retry_timeout=30.0,
+    environment='sandbox',
+    log_level=1
+)
+```
+</Code>
+
+### Channel Options
+
+<Code>
+```javascript
+const channel = ably.channels.get('chat:room1', {
+    // Presence options
+    modes: ['PRESENCE', 'SUBSCRIBE', 'PUBLISH'],
+
+    // Message options
+    params: {
+        rewind: '1h',        // Get last hour of messages
+        delta: 'vcdiff'      // Enable delta compression
+    },
+
+    // Encryption
+    cipher: {
+        algorithm: 'aes',
+        key: encryptionKey
+    }
+});
+```
+</Code>
+
+## Best Practices
+
+### Security Best Practices
+
+1. **Principle of least privilege**: Grant minimal required permissions
+2. **Validate server-side**: Never trust client capability requests
+3. **Use specific resource names**: Avoid overly broad wildcards
+4. **Implement capability inheritance**: Design logical permission hierarchies
+5. **Regular key rotation**: Periodically rotate API keys
+
+### Performance Best Practices
+
+1. **Cache capabilities**: Store user permissions to reduce database queries
+2. **Optimize token TTL**: Balance security with token refresh frequency
+3. **Use appropriate wildcards**: Balance flexibility with precision
+4. **Monitor capability usage**: Track which permissions are actually used
+
+### Development Best Practices
+
+<Code>
+```javascript
+// Environment-specific capabilities
+const capabilities = process.env.NODE_ENV === 'development'
+    ? { '*': ['*'] } // Full access in development
+    : await getUserCapabilities(userId); // Restricted in production
+
+// Capability debugging
+console.log('Token capabilities:', JSON.stringify(capabilities, null, 2));
+```
+</Code>
+
+## Troubleshooting Permissions
+
+### Common Permission Errors
+
+- **40160 - Channel denied**: Insufficient capability for channel operation
+- **40161 - Presence denied**: No presence capability for channel
+- **40162 - Publish denied**: No publish capability for channel
+
+### Debug Capability Issues
+
+<Code>
+```javascript
+// Test capabilities
+try {
+    await channel.publish('test', 'data');
+    console.log('Publish capability confirmed');
+} catch (error) {
+    if (error.code === 40160) {
+        console.log('Insufficient publish capability');
+    }
+}
+
+// Check effective capabilities
+ably.auth.on('authorize', (tokenDetails) => {
+    console.log('Active capabilities:', tokenDetails.capability);
+});
+```
+</Code>
+
+## Migration and Compatibility
+
+If you're migrating from the previous authentication documentation structure, the core concepts remain the same:
+
+- **Basic auth** → **Key authentication**
+- **Token auth** → **Token authentication**
+- **Capabilities** remain unchanged but now apply to all Ably products
+- **Identified clients** → **Client identity management**
+
+Update your bookmarks and references to use the new URLs under `/docs/platform/auth/`.

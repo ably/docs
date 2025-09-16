@@ -19,6 +19,28 @@ export default {
       ],
     },
     {
+      name: 'Authentication',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/platform/auth',
+          index: true,
+        },
+        {
+          name: 'Authentication Methods',
+          link: '/docs/platform/auth/authentication',
+        },
+        {
+          name: 'Permissions & Capabilities',
+          link: '/docs/platform/auth/permissions',
+        },
+        {
+          name: 'Token Revocation',
+          link: '/docs/platform/auth/revocation',
+        },
+      ],
+    },
+    {
       name: 'Architecture',
       pages: [
         {

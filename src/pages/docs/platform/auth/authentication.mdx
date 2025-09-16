@@ -1,0 +1,485 @@
+---
+title: Authentication Methods
+meta_description: "Comprehensive guide to Ably's authentication methods including key authentication, token authentication, JWT, and implementation patterns."
+redirect_from:
+  - /docs/auth/basic
+  - /docs/auth/token
+---
+
+Ably provides multiple authentication methods designed for different use cases and security requirements. This page covers the implementation details for each method and when to use them.
+
+## How to choose authentication method?
+
+When deciding on which authentication method you will be using, it is recommended you bear in mind the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
+
+A client should ideally only possess the credentials and rights that it needs to accomplish what it wants. This way, if the credentials are compromised, the rights that can be abused by an attacker are minimized.
+
+The following table provides guidelines on what to consider when choosing your authentication method. Many applications will most naturally use a mixed strategy: one or more trusted application servers will use basic authentication to access the service and issue tokens over HTTPS, whereas remote browsers and devices will use individually issued tokens:
+
+| Scenario | [Basic](/docs/auth/basic) | [Token](/docs/auth/token) | Description |
+|----------|---------------------------|---------------------------|-------------|
+| Your scripts may be exposed | No | Yes | If the script, program or system holding the key is exposed, for example on a user's device, you should not embed an API key and instead use token authentication. If the script is on a secure environment such as your own server, an API key with basic authentication is fine. |
+| Your connection may be insecure | No | Yes | If there is a risk of exposure of the client's credentials, either directly or over an insecure, or insecurely proxied, connection, token authentication should be used. If you are sure the connection is secure and unmediated, basic authentication is acceptable. |
+| You have no server to control access | Yes | No  | If you do not have your own server to perform authentication and provide tokens to users, you'll need to use basic authentication. |
+| You require fine-grained access control | No | Yes | If you need to provide [privileges](/docs/auth/capabilities) on a user-by-user basis, you'd be better using token authentication. If you only need a few access control groups, basic authentication is reasonable. |
+| Users need restricted periods of access | No | Yes | If you need users to only have access for a certain period of time, or the ability to revoke access, token authentication is needed. If users are able to always have access, basic authentication is acceptable. |
+| Users need to identify themselves | Partial  | Yes | If the user can be trusted to [identify](/docs/auth/identified-clients) itself, basic authentication is fine. If the user cannot be trusted however, token authentication is better as it allows for a trusted token distributor to identify the user instead. |
+
+## Key authentication
+
+Key authentication is designed for server-side applications where the API key can be securely stored and not accessed by external clients.
+
+### Ably API keys
+
+Every Ably app can have one or more API keys associated with it in order to authenticate directly with Ably, or to issue tokens with. API keys can be created with different capabilities and any tokens issued using that API key can only permit a subset of those capabilities.
+
+#### API key format
+
+An Ably API key string has the following format: `I2E_JQ.OqUdfg:EVKVTCBlzLBPYJiCZTsIW_pqylJ9WVRB5K9P19Ap1y0`.
+
+The API key is made up of three parts:
+
+1. `I2E_JQ` is the public app ID (the part before the first period)
+2. `OqUdfg` is the public app key ID (the part after the period and before the colon). `I2E_JQ.OqUdfg` is the public API key ID (both the public app ID and app key ID together)
+3. `EVKVTCBlzLBPYJiCZTsIW_pqylJ9WVRB5K9P19Ap1y0` is the API key secret and should never be shared with untrusted parties (the part after the colon)
+
+The API key secret is private and should never be made public. This API key string is used in all Ably SDKs and for authentication with the REST API.
+
+### How to create an API key
+
+API keys are created in the [Ably dashboard](https://ably.com/dashboard). You can also create an API key programmatically using the [Control API](/docs/platform/account/control-api).
+
+To create an API key in the Ably dashboard:
+
+1. In your [Ably dashboard](https://ably.com/dashboard) click the API Keys tab.
+2. Click the **Create a new API key** button.
+3. Enter a name for your API key - this will help you identify the specific key when you have many keys created.
+4. Select the [capabilities](/docs/auth/capabilities) you want to apply to the key. Clients connecting with this key will be restricted to these capabilities.
+5. Optionally you can select whether to make tokens generated from this key to be revocable or not.
+6. Optionally select whether you want to restrict the scope of the key to channels, queues, or specific channels and queues using resource names and wildcards.
+
+<Aside data-type="important">
+Many of the code samples used throughout the documentation use basic authentication to demonstrate features for convenience. It should be stressed that in your own applications, you should never use [basic authentication](/docs/auth/basic) on the client-side, as it exposes your Ably API key.
+
+If you are logged into your Ably account, the code samples will be populated with your actual key for convenience. If you are not logged into Ably, a temporary key is generated for you.
+</Aside>
+
+#### Authentication with a key
+
+The following is an example of using basic authentication:
+
+<Code>
+```realtime_javascript
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}'
+});
+```
+
+```realtime_nodejs
+const realtime = new Ably.Realtime({
+  key: '{{API_KEY}}'
+});
+```
+
+```realtime_ruby
+realtime = Ably::Realtime.new(key: '{{API_KEY}}')
+```
+
+```realtime_python
+realtime = AblyRealtime(key='{{API_KEY}}')
+```
+
+```realtime_java
+ClientOptions options = new ClientOptions();
+options.key = "{{API_KEY}}";
+AblyRealtime realtime = new AblyRealtime(options);
+```
+
+```realtime_swift
+let realtime = ARTRealtime(key: "{{API_KEY}}")
+```
+
+```realtime_objc
+ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
+```
+
+```realtime_csharp
+AblyRealtime realtime = AblyRealtime("{{API_KEY}}");
+```
+
+```realtime_go
+client, err := ably.NewRealtime(ably.WithKey("{{API_KEY}}"))
+```
+
+```realtime_flutter
+final clientOptions = ably.ClientOptions(
+  key: '{{API_KEY}}'
+);
+final realtime = ably.Realtime(options: clientOptions);
+```
+
+```rest_javascript
+var rest = new Ably.Rest({ key: '{{API_KEY}}' });
+```
+
+```rest_nodejs
+var rest = new Ably.Rest({ key: '{{API_KEY}}' });
+```
+
+```rest_ruby
+rest = Ably::Rest.new(key: '{{API_KEY}}')
+```
+
+```rest_python
+rest = AblyRest(key='{{API_KEY}}')
+```
+
+```rest_java
+ClientOptions options = new ClientOptions();
+options.key = "{{API_KEY}}";
+AblyRest rest = new AblyRest(options);
+```
+
+```rest_swift
+let rest = ARTRest(key: "{{API_KEY}}")
+```
+
+```rest_objc
+ARTRest *rest = [[ARTRest alloc] initWithKey:@"{{API_KEY}}"];
+```
+
+```rest_csharp
+AblyRest rest = new AblyRest("{{API_KEY}}");
+```
+
+```rest_go
+client, err := ably.NewREST(ably.WithKey("{{API_KEY}}"))
+```
+
+```rest_flutter
+final clientOptions = ably.ClientOptions(
+  key: '{{API_KEY}}'
+);
+ably.Rest rest = ably.Rest(options: clientOptions);
+```
+
+```rest_php
+$rest = new Ably\AblyRest(['key' => '{{API_KEY}}']);
+```
+</Code>
+
+## Token authentication
+
+Token authentication uses short-lived tokens that are issued by your servers to client applications. This is the recommended approach for client-side authentication.
+
+Ably supports two types of tokens:
+
+| Type | Description |
+|----------|-------------|
+| JWT tokens | JSON Web Tokens (JWT) provide a standardized, secure way to handle authentication with additional flexibility for custom claims. |
+| Ably tokens | Ably Tokens are issued directly by the Ably service using your API key. |
+
+### JWT authentication
+
+#### Creating Ably JWTs
+
+Ably JWTs must be signed with your API key secret and include specific claims:
+
+<Code>
+```javascript
+const jwt = require('jsonwebtoken');
+
+function createAblyJWT(userId, capabilities) {
+    const currentTime = Math.floor(Date.now() / 1000);
+
+    const payload = {
+        iss: 'your-app-id.key-id', // API key name
+        sub: userId, // Subject (clientId)
+        iat: currentTime, // Issued at
+        exp: currentTime + 3600, // Expires in 1 hour
+        'x-ably-capability': JSON.stringify(capabilities),
+        'x-ably-clientId': userId
+    };
+
+    return jwt.sign(payload, 'your-key-secret', {
+        algorithm: 'HS256',
+        header: { typ: 'JWT', alg: 'HS256', kid: 'your-app-id.key-id' }
+    });
+}
+```
+
+```flutter
+final header = {
+  "typ": "JWT",
+  "alg": "HS256",
+  "kid": "{{API_KEY_NAME}}"
+};
+
+final currentTime = (DateTime.now().millisecondsSinceEpoch / 1000).round();
+final claims = {
+  "iat": currentTime, /* current time in seconds */
+  "exp": currentTime + 3600, /* time of expiration in seconds */
+  "x-ably-capability": "{\"*\":[\"*\"]}"
+};
+
+final base64Header = base64UrlEncode(utf8.encode(json.encode(header)));
+final base64Claims = base64UrlEncode(utf8.encode(json.encode(claims)));
+final hmacSha256 = Hmac(sha256, utf8.encode("$base64Header.$base64Claims"));
+final digest = hmacSha256.convert(utf8.encode("{{API_KEY_SECRET}}"));
+final signature = base64UrlEncode(digest.bytes);
+final ablyJwt = "$base64Header.$base64Claims.$signature";
+```
+
+```java
+Map<String, Object> headerClaims = new HashMap<>();
+headerClaims.put("typ", "JWT");
+headerClaims.put("alg", "HS256");
+headerClaims.put("kid", "{{API_KEY_NAME}}");
+
+// Define the current time
+long currentTimeInSeconds = System.currentTimeMillis() / 1000;
+
+// Define the claims
+Map<String, Object> claims = new HashMap<>();
+claims.put("iat", currentTimeInSeconds);
+claims.put("exp", currentTimeInSeconds + 3600);
+claims.put("x-ably-capability", "{\"*\":[\"*\"]}");
+
+// Create the JWT
+Algorithm algorithm = Algorithm.HMAC256("{{API_KEY_SECRET}}");
+String token = JWT.create()
+        .withHeader(headerClaims)
+        .withPayload(claims)
+        .sign(algorithm);
+```
+
+```php
+$header = [
+    'typ' => 'JWT',
+    'alg' => 'HS256',
+    'kid' => '{{API_KEY_NAME}}'
+];
+$currentTime = time();
+$claims = [
+    'iat' => $currentTime, /* current time in seconds */
+    'exp' => $currentTime + 3600, /* time of expiration in seconds (an hour) */
+    'x-ably-capability' => '{\"*\":[\"*\"]}'
+];
+$base64Header = base64_encode(json_encode($header));
+$base64Claims = base64_encode(json_encode($claims));
+$signature = hash_hmac(
+    'sha256',
+    $base64Header . '.' . $base64Claims,
+    '{{API_KEY_SECRET}}',
+    true
+);
+$jwt = $base64Header . '.' . $base64Claims . '.' . $signature;
+```
+
+```python
+import jwt
+import time
+
+def create_ably_jwt(user_id, capabilities):
+    current_time = int(time.time())
+
+    payload = {
+        'iss': 'your-app-id.key-id',  # API key name
+        'sub': user_id,  # Subject (clientId)
+        'iat': current_time,  # Issued at
+        'exp': current_time + 3600,  # Expires in 1 hour
+        'x-ably-capability': json.dumps(capabilities),
+        'x-ably-clientId': user_id
+    }
+
+    headers = {
+        'typ': 'JWT',
+        'alg': 'HS256',
+        'kid': 'your-app-id.key-id'
+    }
+
+    return jwt.encode(payload, 'your-key-secret', algorithm='HS256', headers=headers)
+```
+
+```go
+import (
+    "time"
+    "github.com/golang-jwt/jwt/v4"
+)
+
+func createAblyJWT(userID string, capabilities map[string][]string) (string, error) {
+    now := time.Now()
+
+    claims := jwt.MapClaims{
+        "iss": "your-app-id.key-id", // API key name
+        "sub": userID,               // Subject (clientId)
+        "iat": now.Unix(),           // Issued at
+        "exp": now.Add(time.Hour).Unix(), // Expires in 1 hour
+        "x-ably-capability": capabilities,
+        "x-ably-clientId": userID,
+    }
+
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    token.Header["kid"] = "your-app-id.key-id"
+
+    return token.SignedString([]byte("your-key-secret"))
+}
+```
+</Code>
+
+#### Using JWTs with Ably
+
+<Code>
+```javascript
+// Direct token usage
+const ably = new Ably.Realtime({
+    token: jwtToken,
+    clientId: 'user-123'
+});
+
+// Or via auth callback that generates JWT
+const ably = new Ably.Realtime({
+    authCallback: async (tokenParams, callback) => {
+        const jwt = await generateJWTFromYourServer(tokenParams);
+        callback(null, jwt);
+    }
+});
+```
+</Code>
+
+#### Custom JWT claims
+
+JWTs can include custom claims for application-specific data:
+
+<Code>
+```javascript
+const payload = {
+    // Standard Ably claims
+    iss: 'your-app-id.key-id',
+    sub: 'user-123',
+    'x-ably-capability': '{"*":["*"]}',
+    'x-ably-clientId': 'user-123',
+
+    // Custom claims for channel-specific permissions
+    'ably.channel.private-user-123': 'owner',
+    'ably.channel.public-*': 'participant',
+    'ably.channel.*': 'guest',
+
+    // Custom application data
+    'userRole': 'premium',
+    'features': ['analytics', 'priority-support']
+};
+```
+</Code>
+
+## Advanced token options
+
+### Token revocation support
+
+Enable token revocation for enhanced security:
+
+<Code>
+```javascript
+// When creating tokens, enable revocation
+const tokenRequest = await ably.auth.createTokenRequest({
+    clientId: 'user-123',
+    revocableTokens: true // Enable revocation for this token
+});
+```
+</Code>
+
+### Token TTL management
+
+Set appropriate token lifetimes based on your use case:
+
+<Code>
+```javascript
+const tokenRequest = await ably.auth.createTokenRequest({
+    clientId: 'user-123',
+    ttl: 15 * 60 * 1000, // 15 minutes in milliseconds
+    capability: { 'user-notifications': ['subscribe'] }
+});
+```
+</Code>
+
+### Handling token expiry
+
+Implement graceful token renewal:
+
+<Code>
+```javascript
+ably.auth.on('authorizationError', async (error) => {
+    console.log('Token expired, requesting new token...');
+    // SDK will automatically call authUrl or authCallback
+});
+
+// Monitor connection state changes
+ably.connection.on('failed', (stateChange) => {
+    if (stateChange.reason?.code === 40140) {
+        console.log('Authentication failed - token may be invalid');
+    }
+});
+```
+</Code>
+
+## Implementation examples
+
+### Server-Side token endpoint
+
+<Code>
+```javascript
+// Express.js token endpoint
+app.post('/api/ably/token', authenticate, async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const { capability } = req.body;
+
+        // Validate user permissions
+        const allowedCapability = await getUserCapabilities(userId);
+
+        const tokenRequest = await ably.auth.createTokenRequest({
+            clientId: userId,
+            capability: intersectCapabilities(capability, allowedCapability),
+            ttl: 30 * 60 * 1000 // 30 minutes
+        });
+
+        res.json(tokenRequest);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+```
+
+```python
+# Flask token endpoint
+@app.route('/api/ably/token', methods=['POST'])
+@authenticate
+async def ably_token():
+    try:
+        user_id = get_current_user_id()
+        capability = request.json.get('capability', {})
+
+        # Validate user permissions
+        allowed_capability = await get_user_capabilities(user_id)
+
+        token_request = await ably.auth.create_token_request({
+            'client_id': user_id,
+            'capability': intersect_capabilities(capability, allowed_capability),
+            'ttl': 30 * 60 * 1000  # 30 minutes
+        })
+
+        return jsonify(token_request)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+```
+</Code>
+
+## Best practices
+
+1. **Choose the right method**: Use key authentication for servers, token authentication for clients
+2. **Implement automatic token refresh**: Use `authUrl` or `authCallback` for seamless renewal
+3. **Set appropriate TTL**: Balance security (shorter TTL) with user experience
+4. **Validate capabilities server-side**: Never trust client-provided capability requests
+5. **Handle authentication errors gracefully**: Implement proper error handling and user feedback
+6. **Use HTTPS**: Always encrypt authentication requests in production
+7. **Monitor token usage**: Track token generation and usage patterns for security insights
