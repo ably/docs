@@ -200,6 +200,61 @@ AblyRealtime ably = new AblyRealtime(options);
 ```
 </Code>
 
+<If lang="javascript,nodejs">
+## Browser page unload behavior <a id="page-unload"/>
+In browser environments, ably-js automatically handles page unload events to ensure connections are properly closed when users navigate away or close pages.
+### Default `beforeunload` behavior
+By default, the Ably Pub/Sub JavaScript SDK adds a listener for the `beforeunload` event to cleanly close connections before a page is closed. This provides orderly behavior where:
+* Connections are seen as having closed immediately by Ably servers.
+* Presence members associated with the connection are seen by all users as having left immediately.
+
+If a connection to Ably is not explicitly closed when there is a page unload event, then the connection state is preserved by Ably for 2 minutes. Preserving connection state for 2 minutes when there is an unexpectedly dropped connection provides the opportunity for the client to reconnect and resume the connection without losing any messages.
+
+### Reliability considerations
+The `beforeunload` event can be unreliable and is not guaranteed to fire under certain circumstances:
+* The event may fire but the page is subsequently not disposed of (navigation can be cancelled).
+* The handler in ably-js that closes a connection on a `beforeunload` event is hazardous unless the application developer is certain that there is no case where `beforeunload` fires, but the page is subsequently not unloaded.
+* Recent releases of Chrome (version 108+) have introduced a Memory Saver feature that can cause pages to be discarded without firing `beforeunload` events.
+
+### Chrome Memory Saver impact
+Chrome's Memory Saver feature assists with controlling the browser's memory footprint by discarding inactive tabs. This significantly increases the frequency of pages being discarded, which:
+* Causes JavaScript execution to stop without opportunity to intercept the event.
+* Prevents connections from closing immediately since `beforeunload` doesn't fire.
+* Results in longer delays before Ably recognizes the connection has closed.
+* Affects presence members leaving immediately.
+
+### Managing connection lifecycle
+To ensure predictable connection closure behavior, consider these options:
+
+Set `closeOnUnload:false` in [`ClientOptions`](/docs/api/realtime-sdk#client-options) when initializing the library:
+<Code>
+```realtime_javascript
+const ably = new Ably.Realtime({
+  key: 'your-api-key',
+  closeOnUnload: false
+});
+```
+```realtime_nodejs
+const ably = new Ably.Realtime({
+  key: 'your-api-key',
+  closeOnUnload: false
+});
+```
+</Code>
+Manage connection lifecycle explicitly by calling [`close()`](/docs/api/realtime-sdk/connection#close) on the Ably realtime instance when it's no longer needed:
+<Code>
+```realtime_javascript
+// When your application determines the connection should close
+ably.close();
+```
+```realtime_nodejs
+// When your application determines the connection should close
+ably.close();
+```
+</Code>
+Disable Chrome Memory Saver globally or on a site-by-site basis in browser settings if the feature is impacting your application's behavior.
+</If>
+
 ## Close a connection <a id="close"/>
 
 A connection to Ably should be closed once it is no longer needed. Note that there is a 2 minute delay before a connection is closed, if the [`close()`](/docs/api/realtime-sdk/connection#close) method hasn't been explicitly called. This is important to consider in relation to the number of [concurrent connections](/docs/platform/pricing/limits#connection) to your account.
