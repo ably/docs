@@ -1,0 +1,739 @@
+---
+title: Token Revocation
+meta_description: "Complete guide to Ably's token revocation system for enhanced security and access control across all applications and services."
+redirect_from:
+  - /docs/auth/revocation
+---
+
+Token revocation provides a mechanism to invalidate authentication tokens before their natural expiry, enabling immediate access control and security response across all Ably services.
+
+## Overview
+
+Token revocation is essential for security scenarios where you need to:
+
+- **Immediately block malicious clients** before token expiry
+- **Respond to security incidents** by cutting off compromised access
+- **Implement real-time access control** based on changing user permissions
+- **Force token refresh** to update capabilities or identity
+- **Manage user sessions** across multiple devices or applications
+
+Without token revocation, the only way to restrict access would be to use very short token lifetimes and not issue new tokens to suspect clients. However, this increases the load on your authentication servers and can impact user experience.
+
+## Enabling Token Revocation
+
+Token revocation must be enabled at the API key level before tokens are issued. Tokens created from keys without revocation enabled cannot be revoked later.
+
+### Enable via Dashboard
+
+1. Sign into your [Ably Dashboard](https://ably.com/dashboard)
+2. Navigate to your app and select the **API Keys** tab
+3. Click **Settings** for an existing key or **Create a new API key**
+4. Check the **Revocable tokens** option
+5. Save the key configuration
+
+### Enable via Control API
+
+<Code>
+```javascript
+// Create a new API key with revocation enabled
+const response = await fetch(`https://control.ably.io/v1/apps/${appId}/keys`, {
+    method: 'POST',
+    headers: {
+        'Authorization': `Bearer ${controlApiToken}`,
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        name: 'Revocable Key',
+        capability: { '*': ['*'] },
+        revocableTokens: true
+    })
+});
+```
+
+```python
+import requests
+
+response = requests.post(
+    f'https://control.ably.io/v1/apps/{app_id}/keys',
+    headers={
+        'Authorization': f'Bearer {control_api_token}',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'name': 'Revocable Key',
+        'capability': {'*': ['*']},
+        'revocableTokens': True
+    }
+)
+```
+</Code>
+
+## Creating Revocable Tokens
+
+Once an API key has revocation enabled, all tokens created from that key are automatically revocable.
+
+### Token Restrictions
+
+Revocable tokens have specific limitations for security:
+
+- **Maximum TTL of 1 hour**: Prevents extremely long-lived revocable tokens
+- **Performance overhead**: Small latency cost for initial connections
+- **Storage requirements**: Token metadata must be maintained for revocation
+
+<Code>
+```javascript
+// Create revocable token (API key must have revocation enabled)
+const tokenRequest = await ably.auth.createTokenRequest({
+    clientId: 'user-123',
+    capability: { 'chat:*': ['publish', 'subscribe'] },
+    ttl: 30 * 60 * 1000 // 30 minutes (max 1 hour for revocable tokens)
+});
+```
+
+```python
+# Create revocable token
+token_request = await ably.auth.create_token_request({
+    'client_id': 'user-123',
+    'capability': {'chat:*': ['publish', 'subscribe']},
+    'ttl': 30 * 60 * 1000  # 30 minutes
+})
+```
+
+```go
+// Create revocable token
+tokenParams := &ably.TokenParams{
+    ClientID:   "user-123",
+    Capability: map[string][]string{"chat:*": {"publish", "subscribe"}},
+    TTL:        30 * time.Minute,
+}
+
+tokenRequest, err := rest.Auth.CreateTokenRequest(tokenParams)
+```
+</Code>
+
+## Revoking Tokens
+
+Token revocation is performed through the REST API using the key that issued the tokens.
+
+### Revocation API Endpoint
+
+<Code>
+```text
+POST /keys/{keyName}/revokeTokens
+```
+</Code>
+
+Where `{keyName}` follows the format `{appId}.{keyId}`.
+
+### Revocation Request Format
+
+<Code>
+```json
+{
+    "targets": [
+        "clientId:user-123",
+        "clientId:user-456",
+        "revocationKey:session-group-1"
+    ],
+    "issuedBefore": 1672531200000,
+    "allowReauthMargin": true
+}
+```
+</Code>
+
+### Request Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| **targets** | `string[]` | Array of target specifiers (max 100) |
+| **issuedBefore** | `number` | Unix timestamp (ms). Revokes tokens issued before this time. Defaults to current time |
+| **allowReauthMargin** | `boolean` | If `true`, delays enforcement by 30 seconds to allow graceful token renewal. Defaults to `false` |
+
+## Target Specifiers
+
+Target specifiers define which tokens to revoke. Multiple types are supported:
+
+### Client ID Targeting
+
+Revoke all tokens for specific clients:
+
+<Code>
+```javascript
+const revocationRequest = {
+    targets: [
+        'clientId:user-123',
+        'clientId:user-456',
+        'clientId:suspicious-client'
+    ]
+};
+```
+</Code>
+
+### Revocation Key Targeting
+
+For fine-grained control, include a revocation key in JWT tokens:
+
+<Code>
+```javascript
+// When creating JWT, include revocation key
+const jwtPayload = {
+    iss: 'your-app-id.key-id',
+    sub: 'user-123',
+    'x-ably-clientId': 'user-123',
+    'x-ably-capability': '{"*":["*"]}',
+    'x-ably-revocation-key': 'session-group-abc123' // Custom revocation key
+};
+
+// Later, revoke all tokens with this revocation key
+const revocationRequest = {
+    targets: ['revocationKey:session-group-abc123']
+};
+```
+</Code>
+
+This allows you to:
+- Group related tokens for bulk revocation
+- Revoke tokens across multiple clients in a session
+- Implement hierarchical revocation (e.g., by organization, team, or feature)
+
+### Channel-Based Targeting (Optional)
+
+If enabled by Ably for your account, you can revoke tokens based on specific channel capabilities:
+
+<Code>
+```javascript
+const revocationRequest = {
+    targets: [
+        'channel:chat:private-room-123',
+        'channel:admin:*'
+    ]
+};
+```
+</Code>
+
+## Revocation Implementation
+
+### Using Ably SDK
+
+<Code>
+```javascript
+// Revoke tokens using REST SDK
+const ably = new Ably.Rest({ key: 'your-api-key' });
+
+try {
+    const response = await ably.request(
+        'POST',
+        `/keys/${keyName}/revokeTokens`,
+        3, // API version
+        null, // headers
+        {
+            targets: ['clientId:user-123'],
+            allowReauthMargin: true
+        }
+    );
+
+    if (response.success) {
+        console.log('Tokens revoked successfully');
+    } else {
+        console.error('Revocation failed:', response.errorMessage);
+    }
+} catch (error) {
+    console.error('Revocation error:', error);
+}
+```
+
+```python
+# Python implementation
+import asyncio
+from ably import AblyRest
+
+async def revoke_tokens():
+    ably = AblyRest(key='your-api-key')
+
+    try:
+        response = await ably.request(
+            'POST',
+            f'/keys/{key_name}/revokeTokens',
+            3,  # API version
+            body={
+                'targets': ['clientId:user-123'],
+                'allowReauthMargin': True
+            }
+        )
+
+        if response.is_success:
+            print('Tokens revoked successfully')
+        else:
+            print(f'Revocation failed: {response.error_message}')
+
+    except Exception as error:
+        print(f'Revocation error: {error}')
+```
+
+```php
+<?php
+// PHP implementation
+$ably = new Ably\AblyRest(['key' => 'your-api-key']);
+
+$revocationData = [
+    'targets' => ['clientId:user-123'],
+    'allowReauthMargin' => true
+];
+
+try {
+    $response = $ably->request(
+        'POST',
+        "/keys/{$keyName}/revokeTokens",
+        [],
+        $revocationData
+    );
+
+    if ($response->success) {
+        echo 'Tokens revoked successfully';
+    } else {
+        echo 'Revocation failed: ' . $response->errorMessage;
+    }
+} catch (Exception $error) {
+    echo 'Revocation error: ' . $error->getMessage();
+}
+?>
+```
+</Code>
+
+### Direct HTTP Request
+
+<Code>
+```bash
+# cURL example
+curl -X POST \
+  "https://rest.ably.io/keys/YOUR_APP_ID.YOUR_KEY_ID/revokeTokens" \
+  -u "YOUR_APP_ID.YOUR_KEY_ID:YOUR_KEY_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "targets": ["clientId:user-123"],
+    "allowReauthMargin": true
+  }'
+```
+
+```javascript
+// Fetch API example
+const response = await fetch(
+    `https://rest.ably.io/keys/${keyName}/revokeTokens`,
+    {
+        method: 'POST',
+        headers: {
+            'Authorization': `Basic ${btoa(apiKey)}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            targets: ['clientId:user-123'],
+            allowReauthMargin: true
+        })
+    }
+);
+```
+</Code>
+
+## Advanced Revocation Patterns
+
+### Batch Revocation
+
+<Code>
+```javascript
+// Revoke multiple users at once
+const revocationRequest = {
+    targets: [
+        'clientId:user-001',
+        'clientId:user-002',
+        'clientId:user-003',
+        'revocationKey:suspicious-group'
+    ],
+    issuedBefore: Date.now(), // All tokens issued before now
+    allowReauthMargin: false  // Immediate revocation
+};
+
+await performRevocation(revocationRequest);
+```
+</Code>
+
+### Time-Based Revocation
+
+<Code>
+```javascript
+// Revoke tokens issued before a security incident
+const incidentTimestamp = new Date('2024-01-15T10:30:00Z').getTime();
+
+const revocationRequest = {
+    targets: ['clientId:compromised-user'],
+    issuedBefore: incidentTimestamp,
+    allowReauthMargin: false
+};
+```
+</Code>
+
+### Graceful Revocation
+
+<Code>
+```javascript
+// Allow 30 seconds for clients to obtain new tokens
+const revocationRequest = {
+    targets: ['clientId:user-updating-permissions'],
+    allowReauthMargin: true // Gives client time to get new token
+};
+
+await performRevocation(revocationRequest);
+
+// Client will receive a hint to refresh their token
+// and will automatically call authUrl/authCallback
+```
+</Code>
+
+### Session-Based Revocation
+
+<Code>
+```javascript
+// Implementation using revocation keys for session management
+class SessionManager {
+    async createUserSession(userId, sessionId) {
+        // Create JWT with session-specific revocation key
+        const jwtPayload = {
+            iss: 'your-app-id.key-id',
+            sub: userId,
+            'x-ably-clientId': userId,
+            'x-ably-revocation-key': `session:${userId}:${sessionId}`,
+            'x-ably-capability': JSON.stringify(await getUserCapabilities(userId))
+        };
+
+        return createJWT(jwtPayload);
+    }
+
+    async revokeUserSession(userId, sessionId) {
+        const revocationRequest = {
+            targets: [`revocationKey:session:${userId}:${sessionId}`]
+        };
+
+        await performRevocation(revocationRequest);
+    }
+
+    async revokeAllUserSessions(userId) {
+        const revocationRequest = {
+            targets: [`clientId:${userId}`]
+        };
+
+        await performRevocation(revocationRequest);
+    }
+}
+```
+</Code>
+
+## Client-Side Handling
+
+### Detecting Revoked Tokens
+
+Clients will receive specific error codes when using revoked tokens:
+
+<Code>
+```javascript
+// Monitor for revocation errors
+ably.connection.on('failed', (stateChange) => {
+    if (stateChange.reason?.code === 40141) {
+        console.log('Token has been revoked');
+        // Handle revoked token (e.g., redirect to login)
+        handleTokenRevoked();
+    }
+});
+
+// Monitor auth errors during operation
+ably.channels.get('chat').on('failed', (stateChange) => {
+    if (stateChange.reason?.code === 40141) {
+        console.log('Token revoked during operation');
+        // Attempt to get new token
+        ably.auth.authorize();
+    }
+});
+```
+
+```swift
+// Swift example
+ably.connection.on(.failed) { stateChange in
+    if let error = stateChange.reason, error.code == 40141 {
+        print("Token has been revoked")
+        handleTokenRevoked()
+    }
+}
+```
+
+```java
+// Java example
+ably.connection.on(ConnectionEvent.failed, new ConnectionStateListener() {
+    @Override
+    public void onConnectionStateChanged(ConnectionStateChange stateChange) {
+        if (stateChange.reason != null && stateChange.reason.code == 40141) {
+            System.out.println("Token has been revoked");
+            handleTokenRevoked();
+        }
+    }
+});
+```
+</Code>
+
+### Automatic Token Refresh
+
+When `allowReauthMargin` is used, clients can gracefully obtain new tokens:
+
+<Code>
+```javascript
+// Implement automatic token refresh on revocation hint
+ably.auth.on('authorize', (tokenDetails) => {
+    console.log('Token refreshed after revocation hint');
+});
+
+// The SDK will automatically call authUrl or authCallback
+// when it receives a revocation hint
+```
+</Code>
+
+## Rate Limiting and Performance
+
+### Rate Limits
+
+Token revocation API has rate limits to prevent abuse:
+
+- **Global rate limit per app**: Configurable by Ably based on your requirements
+- **Maximum targets per request**: 100 target specifiers
+- **Time window restrictions**: `issuedBefore` cannot be more than 1 hour in the past or in the future
+
+### Performance Considerations
+
+<Code>
+```javascript
+// Batch multiple revocations efficiently
+const performBatchRevocation = async (userIds) => {
+    // Group into batches of 100 (API limit)
+    const batches = [];
+    for (let i = 0; i < userIds.length; i += 100) {
+        batches.push(userIds.slice(i, i + 100));
+    }
+
+    // Process batches with rate limiting
+    for (const batch of batches) {
+        const targets = batch.map(id => `clientId:${id}`);
+
+        await performRevocation({
+            targets,
+            allowReauthMargin: true
+        });
+
+        // Rate limiting delay between batches
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+};
+```
+</Code>
+
+### Monitoring Revocation Usage
+
+<Code>
+```javascript
+// Track revocation metrics
+class RevocationMetrics {
+    constructor() {
+        this.revocations = [];
+    }
+
+    async recordRevocation(targets, reason) {
+        const record = {
+            timestamp: Date.now(),
+            targetCount: targets.length,
+            reason,
+            targets: targets.map(t => t.split(':')[0]) // Type only, not actual values
+        };
+
+        this.revocations.push(record);
+
+        // Send to monitoring system
+        await this.sendToMetrics(record);
+    }
+
+    getRevocationStats(timeWindow = 24 * 60 * 60 * 1000) { // 24 hours
+        const since = Date.now() - timeWindow;
+        const recent = this.revocations.filter(r => r.timestamp > since);
+
+        return {
+            totalRevocations: recent.length,
+            totalTargets: recent.reduce((sum, r) => sum + r.targetCount, 0),
+            reasonBreakdown: this.groupBy(recent, 'reason')
+        };
+    }
+}
+```
+</Code>
+
+## Security Best Practices
+
+### When to Use Revocation
+
+1. **Security incidents**: Immediate response to compromised accounts or suspicious activity
+2. **Permission changes**: Force refresh when user roles or capabilities change
+3. **Session management**: Clean logout and session termination
+4. **Compliance requirements**: Meet regulatory requirements for access control
+
+### Implementation Guidelines
+
+<Code>
+```javascript
+// Secure revocation implementation
+class SecureRevocationManager {
+    constructor(apiKey) {
+        this.ably = new Ably.Rest({ key: apiKey });
+        this.auditLog = [];
+    }
+
+    async revokeWithAudit(targets, reason, performedBy) {
+        // Validate inputs
+        if (!targets || targets.length === 0) {
+            throw new Error('No targets specified for revocation');
+        }
+
+        if (targets.length > 100) {
+            throw new Error('Too many targets (max 100 per request)');
+        }
+
+        // Perform revocation
+        const result = await this.performRevocation({
+            targets,
+            allowReauthMargin: true
+        });
+
+        // Audit logging
+        await this.auditLog.push({
+            timestamp: Date.now(),
+            action: 'token_revocation',
+            targets: targets.map(t => this.sanitizeTarget(t)),
+            reason,
+            performedBy,
+            success: result.success
+        });
+
+        return result;
+    }
+
+    sanitizeTarget(target) {
+        // Log target type but not sensitive values
+        const [type] = target.split(':');
+        return { type, count: 1 };
+    }
+}
+```
+</Code>
+
+### Preventing Abuse
+
+<Code>
+```javascript
+// Rate limiting and validation
+class RevocationRateLimit {
+    constructor() {
+        this.revocationCounts = new Map();
+    }
+
+    async checkRateLimit(performedBy) {
+        const windowStart = Date.now() - (60 * 60 * 1000); // 1 hour window
+        const userRevocations = this.revocationCounts.get(performedBy) || [];
+
+        // Clean old entries
+        const recentRevocations = userRevocations.filter(
+            timestamp => timestamp > windowStart
+        );
+
+        if (recentRevocations.length >= 10) { // Max 10 per hour per user
+            throw new Error('Revocation rate limit exceeded');
+        }
+
+        // Update counts
+        recentRevocations.push(Date.now());
+        this.revocationCounts.set(performedBy, recentRevocations);
+    }
+}
+```
+</Code>
+
+## Error Handling and Troubleshooting
+
+### Common Error Codes
+
+| Code | Description | Resolution |
+|------|-------------|------------|
+| **40141** | Token revoked | Client should request new token |
+| **40142** | Token expired | Normal token expiry, request new token |
+| **40143** | Invalid token | Token format or signature invalid |
+| **40401** | Invalid credentials | Check API key used for revocation |
+| **40403** | Forbidden | API key lacks permission to revoke tokens |
+
+### Debugging Revocation Issues
+
+<Code>
+```javascript
+// Comprehensive error handling
+const performRevocationWithLogging = async (revocationRequest) => {
+    try {
+        console.log('Attempting revocation:', {
+            targetCount: revocationRequest.targets.length,
+            issuedBefore: new Date(revocationRequest.issuedBefore || Date.now()),
+            allowReauthMargin: revocationRequest.allowReauthMargin
+        });
+
+        const response = await ably.request(
+            'POST',
+            `/keys/${keyName}/revokeTokens`,
+            3,
+            null,
+            revocationRequest
+        );
+
+        if (response.success) {
+            console.log('Revocation successful');
+            return { success: true };
+        } else {
+            console.error('Revocation failed:', response.errorMessage);
+            return { success: false, error: response.errorMessage };
+        }
+
+    } catch (error) {
+        console.error('Revocation error:', {
+            message: error.message,
+            code: error.code,
+            statusCode: error.statusCode
+        });
+
+        // Handle specific error cases
+        switch (error.code) {
+            case 40401:
+                console.log('Check API key credentials');
+                break;
+            case 40403:
+                console.log('API key lacks revocation permissions');
+                break;
+            case 40429:
+                console.log('Rate limit exceeded, retry later');
+                break;
+            default:
+                console.log('Unexpected error during revocation');
+        }
+
+        return { success: false, error: error.message };
+    }
+};
+```
+</Code>
+
+## Migration from Pub/Sub Documentation
+
+The token revocation functionality remains identical but is now available across all Ably products. Key changes:
+
+- Documentation moved from `/docs/auth/revocation` to `/docs/platform/auth/revocation`
+- Same API endpoints and functionality
+- Applies to all Ably services (Pub/Sub, Chat, LiveObjects, Spaces, Asset Tracking)
+- All existing revocation implementations continue to work unchanged
+
+Update your bookmarks and internal documentation to reference the new URLs under the Platform section.
