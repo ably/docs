@@ -41,6 +41,67 @@ When including the SDK from CDN, Ably recommends that you lock into major versio
 <script lang="text/javascript" src="https://cdn.ably.com/lib/ably.min-2.js"></script>
 ```
 </Code>
+
+### Chrome extension compatibility <a id="chrome-extension"/>
+
+When using ably-js in Chrome extensions, you may encounter CORB (Cross-Origin Resource Blocking) errors, particularly in Chrome 73 and later versions.
+
+#### The problem
+
+Chrome 73+ made changes to how cross-origin requests from content scripts work. Content scripts are now subject to stricter rules than regular page scripts:
+
+- Content scripts don't trigger CORS preflight requests for cross-origin requests
+- This causes the main request to be blocked by CORB
+- The error typically appears as: `"CORB blocked cross-origin response"`
+
+#### Solutions
+
+**Recommended: Use background script**
+
+The most reliable solution is to run the Ably library in the extension's background script rather than the content script.
+
+**Alternative: Content script with workarounds**
+
+If you need to use the library in a content script, implement these workarounds:
+
+1. **Use WebSocket-only transport** to avoid HTTP requests:
+
+```javascript
+const ably = new Ably.Realtime({
+  key: 'your-api-key',
+  transports: ['web_socket'] // Avoids XHR transport that triggers CORB
+});
+```
+
+2. **Implement custom authCallback** for token authentication:
+
+```javascript
+const ably = new Ably.Realtime({
+  authCallback: (tokenParams, callback) => {
+    // Send message to background script to fetch token
+    chrome.runtime.sendMessage({
+      action: 'getAblyToken',
+      tokenParams: tokenParams
+    }, (response) => {
+      if (response.error) {
+        callback(response.error);
+      } else {
+        callback(null, response.token);
+      }
+    });
+  },
+  transports: ['web_socket']
+});
+```
+
+3. **Ensure your auth server uses `requestToken`** rather than `createTokenRequest` to avoid additional REST requests from the client.
+
+<Aside data-type="important">
+When using authCallback with background script communication, make sure your auth server calls `requestToken` rather than `createTokenRequest`. Otherwise, the library will attempt additional REST requests that may be blocked by CORB.
+</Aside>
+
+For more details, see the [Chromium documentation on extension content script fetches](https://www.chromium.org/Home/chromium-security/extension-content-script-fetches).
+
 </If>
 
 <If lang="nodejs">
