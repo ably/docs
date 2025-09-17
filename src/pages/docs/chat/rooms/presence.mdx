@@ -155,7 +155,7 @@ Use the <If lang="javascript">[`presence.enter()`](https://sdk.ably.com/builds/a
 </If>
 
 <If lang="react">
-Indicate when a user joins a room with the [`usePresence`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.usePresence.html) hook. Users will automatically be entered into the presence set when the component mounts and removed when the component unmounts.
+Indicate when a user joins a room with the [`usePresence`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.usePresence.html) hook. Users will automatically be entered into the presence set when the component mounts and removed when the component unmounts. The `initialData` will be used on the first time the hook mounts. When using auto-entry, you should **not** have multiple instances of the hook with this setting enabled. The hook maintains internal state that may cause unintended side-effects when this happens. See below for more options if you require this behavior.
 
 To subscribe to the presence updates of a room, use the [`usePresenceListener`](#subscribe) hook instead.
 </If>
@@ -170,11 +170,14 @@ import React, { useMemo } from 'react';
 import { usePresence } from '@ably/chat/react';
 
 const MyComponent = () => {
-  const presenceParams = useMemo(() => ({
-    enterWithData: { status: 'Online' },
-    leaveWithData: { status: 'Offline' },
-  }), []);
+  // This data is only relevant when auto-entry is enabled
+  // Once it has been used once, subsequent changes will have no effect
+  const presenceParams = {
+    initialData: { status: 'Online' },
+  };
 
+  // By default, presence will be entered when the hook mounts and left
+  // when it subsequently unmounts.
   const { isPresent } = usePresence(presenceParams);
 
   return (
@@ -198,12 +201,6 @@ room.presence.enter(
 ```
 </Code>
 
-<If lang="react">
-<Aside data-type='important'>
-When using the `usePresence` hook, always memoize the params object passed to the hook. Without memoization, the params object is recreated on every render, causing unnecessary re-renders and unintended side-effects.
-</Aside>
-</If>
-
 <If lang="javascript,swift,kotlin">
 Use the <If lang="javascript">[`presence.update()`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/interfaces/chat-js.Presence.html#update)</If><If lang="swift">[`presence.update()`](https://sdk.ably.com/builds/ably/ably-chat-swift/main/AblyChat/documentation/ablychat/presence/update%28data%3A%29)</If><If lang="kotlin">[`presence.update()`](https://sdk.ably.com/builds/ably/ably-chat-kotlin/main/dokka/chat-android/com.ably.chat/-presence/update.html)</If> method when a user wants to update their data, such as an update to their status, or to indicate that they're raising their hand. Updates will send a presence event to all users subscribed to presence:
 </If>
@@ -222,9 +219,9 @@ import React, { useMemo } from 'react';
 import { usePresence } from '@ably/chat/react';
 
 const MyComponent = () => {
-  const presenceParams = useMemo(() => ({
-    enterWithData: { status: 'Online' },
-  }), []);
+  const presenceParams = {
+    initialData: { status: 'Online' },
+  };
 
   const { update, isPresent } = usePresence(presenceParams);
 
@@ -259,7 +256,11 @@ Use the <If lang="javascript">[`presence.leave()`](https://sdk.ably.com/builds/a
 </If>
 
 <If lang="react">
-Indicate when a user leaves a room with the [`usePresence`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.usePresence.html) hook. Users will automatically be removed from the presence set when the component unmounts.
+Indicate when a user leaves a room with the [`leave`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.UsePresenceResponse.html#leave) callback exposed by the usePresence hook. Users will automatically be removed from the presence set when the component unmounts.
+
+<Aside data-type='important'>
+  If you call `leave`, this will disable the automatic enter-leave behavior of the `usePresence` hook. To re-enable this, you must explicitly re-enter presence using the [`enter`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.UsePresenceResponse.html#enter) or [`update`](https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/functions/chat-react.UsePresenceResponse.html#update) callbacks.
+</Aside>
 </If>
 
 <Code>
@@ -272,11 +273,12 @@ import React, { useMemo } from 'react';
 import { usePresence } from '@ably/chat/react';
 
 const MyComponent = () => {
-  const presenceParams = useMemo(() => ({
-    leaveWithData: { status: 'Offline' },
-  }), []);
+  const presenceParams = {
+    initialData: { status: 'Online' },
+  };
 
-  const { isPresent } = usePresence(presenceParams);
+  // Call leave explicitly to disable auto-entry and leave presence
+  const { isPresent, leave } = usePresence(presenceParams);
 
   return (
     <div>
@@ -300,6 +302,58 @@ room.presence.leave(
 </Code>
 
 When a user goes offline or closes their [connection](/docs/chat/connect), a leave event is also emitted and they are removed from the presence set.
+
+<If lang="react">
+### Manually Controlling Presence
+
+For various reasons, you may wish to take manual control of presence (as you do with the base JavaScript SDK) and not have the React hooks automatically handle this for you. To do this, you should set `autoEnterLeave` to `false`. In this mode, `initialData` will have no effect.
+
+<Code>
+  ```react
+  import React, { useMemo, useCallback } from 'react';
+  import { usePresence } from '@ably/chat/react';
+
+  const MyComponent = () => {
+    // Mount the hook without auto-entry
+    const presenceParams = {
+      autoEnterLeave: false,
+    };
+
+    const { isPresent, leave, enter, update } = usePresence(presenceParams);
+
+    // Manual mount behavior - enter presence when component mounts
+    useEffect(() => {
+      enter({ status: 'active' });
+
+      // Manual unmount behavior - leave presence when component unmounts
+      return () => {
+        leave({ status: 'disconnecting' });
+      };
+    }, [enter, leave]);
+
+    // Update presence data when some event happens
+    const onSomeEvent = useCallback(() => {
+      const now = Date.now();
+      update({status: 'active', updated: now});
+    }, [update]);
+
+    return (
+      <div>
+        <div>Presence status: {isPresent ? 'Online' : 'Offline'}</div>
+        <button onClick={onSomeEvent}>Update</button>
+      </div>
+    );
+  };
+  ```
+</Code>
+
+### Multiple Presence Data Contributors
+
+Using multiple instances of `usePresence` with `autoEnterLeave` set to `true` is not recommended as the hooks maintain internal state to manage this behavior that is not shared between hooks. Furthermore, all instances of the hook use the same underlying presence instances, so calls to `enter`, `update` and `leave` can interact in unintended ways and lead to race conditions. Furthermore, the calls are PUT-like operations that replace your entire presence data payload. If you have multiple areas of your application that contribute data to presence, you can achieve this by using a central place to store your presence data.
+
+To implement this pattern, you would define a Provider or Context further up your application tree, or using a global state store such as Redux. Individual areas of your codebase then update this value (or contribute to parts of it). A single call to `usePresence` can then be used to keep this state synchronized with presence whenever the value changes. This allows multiple distinct components to contribute to the presence data, without multiple calls to `usePresence` and importantly, without requiring them to know anything about the complete presence data.
+
+</If>
 
 ## Presence options <a id="options"/>
 

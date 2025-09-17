@@ -25,7 +25,7 @@ const Online = () => {
   const { presenceData } = usePresenceListener();
   const { clientId } = useChatClient();
   const { update } = usePresence({
-    enterWithData: { status: 'Online' },
+    initialData: { status: 'Online' },
   });
 
   return (

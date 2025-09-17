@@ -24,8 +24,8 @@ export default {
     laravel: '1.0',
   },
   chat: {
-    javascript: '0.12',
-    react: '0.12',
+    javascript: '0.13',
+    react: '0.13',
     swift: '0.6',
     kotlin: '0.5',
   },
