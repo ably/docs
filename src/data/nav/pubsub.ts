@@ -29,6 +29,10 @@ export default {
               link: '/docs/getting-started/javascript',
             },
             {
+              name: 'Node.js',
+              link: '/docs/getting-started/node',
+            },
+            {
               name: 'React',
               link: '/docs/getting-started/react',
             },
