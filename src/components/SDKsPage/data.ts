@@ -2,6 +2,7 @@ import js from './images/js.svg';
 import java from './images/java.svg';
 import python from './images/python.svg';
 import react from './images/react.svg';
+import reactnative from './images/reactnative.svg';
 import csharp from './images/csharp.svg';
 import go from './images/go.svg';
 import nodejs from './images/nodejs.svg';
@@ -52,6 +53,12 @@ export const data = {
           text: 'Ably React Hooks package.',
           image: { src: react, isWide: false },
           setupLink: 'getting-started/react',
+        },
+        {
+          title: 'React Native',
+          text: 'Ably React Native SDK.',
+          image: { src: reactnative, isWide: false },
+          setupLink: 'getting-started/react-native',
         },
         {
           title: 'C#.NET',
