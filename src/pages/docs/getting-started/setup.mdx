@@ -42,66 +42,6 @@ When including the SDK from CDN, Ably recommends that you lock into major versio
 ```
 </Code>
 
-### Chrome extension compatibility <a id="chrome-extension"/>
-
-When using ably-js in Chrome extensions, you may encounter CORB (Cross-Origin Resource Blocking) errors, particularly in Chrome 73 and later versions.
-
-#### The problem
-
-Chrome 73+ made changes to how cross-origin requests from content scripts work. Content scripts are now subject to stricter rules than regular page scripts:
-
-- Content scripts don't trigger CORS preflight requests for cross-origin requests
-- This causes the main request to be blocked by CORB
-- The error typically appears as: `"CORB blocked cross-origin response"`
-
-#### Solutions
-
-**Recommended: Use background script**
-
-The most reliable solution is to run the Ably library in the extension's background script rather than the content script.
-
-**Alternative: Content script with workarounds**
-
-If you need to use the library in a content script, implement these workarounds:
-
-1. **Use WebSocket-only transport** to avoid HTTP requests:
-
-```javascript
-const ably = new Ably.Realtime({
-  key: 'your-api-key',
-  transports: ['web_socket'] // Avoids XHR transport that triggers CORB
-});
-```
-
-2. **Implement custom authCallback** for token authentication:
-
-```javascript
-const ably = new Ably.Realtime({
-  authCallback: (tokenParams, callback) => {
-    // Send message to background script to fetch token
-    chrome.runtime.sendMessage({
-      action: 'getAblyToken',
-      tokenParams: tokenParams
-    }, (response) => {
-      if (response.error) {
-        callback(response.error);
-      } else {
-        callback(null, response.token);
-      }
-    });
-  },
-  transports: ['web_socket']
-});
-```
-
-3. **Ensure your auth server uses `requestToken`** rather than `createTokenRequest` to avoid additional REST requests from the client.
-
-<Aside data-type="important">
-When using authCallback with background script communication, make sure your auth server calls `requestToken` rather than `createTokenRequest`. Otherwise, the library will attempt additional REST requests that may be blocked by CORB.
-</Aside>
-
-For more details, see the [Chromium documentation on extension content script fetches](https://www.chromium.org/Home/chromium-security/extension-content-script-fetches).
-
 </If>
 
 <If lang="nodejs">
@@ -164,44 +104,6 @@ repositories {
 }
 ```
 </Code>
-
-### ProGuard configuration <a id="proguard"/>
-
-If you're using ProGuard for code obfuscation in your Java or Android project, you may encounter `ClassNotFoundException` errors when trying to use Ably. This happens because ProGuard may remove classes that are accessed via reflection.
-
-#### The problem
-
-ProGuard obfuscation can remove or rename classes that Ably depends on, particularly:
-
-- Ably internal classes that are accessed dynamically
-- Third-party dependencies like MessagePack serialization classes
-
-This typically results in runtime errors such as:
-```
-ClassNotFoundException: io.ably.lib.transport.ConnectionManager
-ClassNotFoundException: org.msgpack.core.MessagePack
-```
-
-#### Solution
-
-Add the following keep rules to your ProGuard configuration file (`proguard-rules.pro`):
-
-```proguard
-# Keep Ably classes
--keep class io.ably.lib.** { *; }
-
-# Keep MessagePack classes (used by Ably for serialization)  
--keep class org.msgpack.core.** { *; }
-```
-
-These rules ensure that:
-
-1. **Ably classes**: All classes in the `io.ably.lib` package are preserved, preventing issues with dynamic class loading
-2. **MessagePack classes**: Serialization classes used internally by Ably are kept intact
-
-<Aside data-type="note">
-If you're using a minimal ProGuard configuration and still encounter issues, you may need to add additional keep rules for other dependencies. Check your ProGuard logs for specific classes that are being removed.
-</Aside>
 
 </If>
 
