@@ -14,8 +14,7 @@ export default function App() {
     clientId: minifaker.firstName(),
   });
 
-  const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
-  const channelName = urlParams.get('name') || 'pub-sub-history';
+  const channelName = config.CHANNEL_NAME || 'pub-sub-history';
 
   return (
     <AblyProvider client={client}>

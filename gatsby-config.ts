@@ -95,6 +95,7 @@ export const plugins = [
             maxWidth: 1200,
           },
         },
+        'gatsby-remark-gifs',
       ],
       mdxOptions: {
         remarkPlugins: [

@@ -2,9 +2,9 @@ import * as Ably from 'ably';
 import { useNavigate } from 'react-router-dom';
 import minifaker from 'minifaker';
 import 'minifaker/locales/en';
+import { config } from './config';
 
-const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
-const channelName = urlParams.get('name') || 'pub-sub-history';
+const channelName = config.CHANNEL_NAME || 'pub-sub-history';
 
 export default function Home() {
   const navigate = useNavigate();

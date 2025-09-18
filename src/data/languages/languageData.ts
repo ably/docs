@@ -9,6 +9,7 @@ export default {
   pubsub: {
     javascript: '2.11',
     nodejs: '2.11',
+    typescript: '2.11',
     react: '2.11',
     csharp: '1.2',
     flutter: '1.2',
@@ -20,10 +21,11 @@ export default {
     ruby: '1.2',
     swift: '1.2',
     go: '1.2',
+    laravel: '1.0',
   },
   chat: {
-    javascript: '0.11',
-    react: '0.11',
+    javascript: '0.13',
+    react: '0.13',
     swift: '0.6',
     kotlin: '0.5',
   },

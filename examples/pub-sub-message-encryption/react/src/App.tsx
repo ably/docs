@@ -5,9 +5,8 @@ import { nanoid } from 'nanoid';
 import { config } from './config';
 import './styles/styles.css';
 
-const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : {});
-const channelName = urlParams.get('name') || 'pub-sub-message-encryption';
-const isEncrypted = urlParams.get('encrypted') === 'true';
+const channelName = config.CHANNEL_NAME || 'pub-sub-message-encryption';
+const isEncrypted = true;
 
 function EncodedMessages() {
   const [message, setMessage] = useState('');

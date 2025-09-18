@@ -2,7 +2,7 @@
 
 import * as Ably from 'ably';
 import minifaker from 'minifaker';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { config } from './config';
 import 'minifaker/locales/en';
@@ -11,8 +11,7 @@ export default function Home() {
   const [alerts, setAlerts] = useState<Array<{id: number, message: string}>>([]);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [searchParams] = useSearchParams();
-  const channelName = searchParams.get('name') || 'pub-sub-rewind';
+  const channelName = config.CHANNEL_NAME || 'pub-sub-rewind';
 
   const preloadOddsHistory = async () => {
     setIsLoading(true);

@@ -7,8 +7,7 @@ import { config } from './config';
 import './styles/styles.css';
 
 const client = new Realtime({ key: config.ABLY_KEY, clientId: minifaker.firstName() });
-const urlParams = new URLSearchParams(window.location.search);
-const channelName = urlParams.get('name') || 'pub-sub-presence';
+const channelName = config.CHANNEL_NAME || 'pub-sub-presence';
 
 function PresenceList() {
   const [status, setStatus] = useState('Online');

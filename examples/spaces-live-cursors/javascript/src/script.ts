@@ -35,8 +35,7 @@ async function connect() {
     key: config.ABLY_KEY,
   });
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const spaceName = urlParams.get('name') || 'spaces-live-cursors';
+  const spaceName = config.SPACE_NAME || 'spaces-live-cursors';
   const spaces = new Spaces(client);
   const space = await spaces.get(spaceName);
   const parentRef = document.getElementById('live-cursors');

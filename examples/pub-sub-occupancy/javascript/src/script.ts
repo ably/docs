@@ -11,8 +11,7 @@ const client = new Ably.Realtime({
   clientId: nanoid(),
 });
 
-const urlParams = new URLSearchParams(window.location.search);
-const channelName = urlParams.get('name') || 'pub-sub-occupancy';
+const channelName = config.CHANNEL_NAME || 'pub-sub-occupancy';
 const channel = client.channels.get(channelName, { params: { occupancy: 'metrics' } });
 
 channel.subscribe((message: Message) => {

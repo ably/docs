@@ -2,9 +2,6 @@ import { GatsbyNode } from 'gatsby';
 import fastGlob from 'fast-glob';
 import path from 'path';
 import Piscina from 'piscina';
-import { isMainThread } from 'worker_threads';
-import fs from 'fs/promises';
-import { gzipAsync } from '@gfx/zopfli';
 
 /**
  * This file is inspired by gatsby-plugin-zopfli and is essentially a smaller,
@@ -37,8 +34,7 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ reporter }) => {
   reporter.info(`Compressing ${files.length} files with ${maxThreads} threads`);
 
   const pool = new Piscina({
-    filename: __filename,
-    execArgv: ['-r', 'ts-node/register'], // Needed for Piscina to work with TypeScript
+    filename: path.join(__dirname, 'compressAssetsWorker.js'), // Use separate JavaScript worker
     maxThreads,
   });
   const compress = files.map((file) => pool.run(file));
@@ -47,37 +43,3 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ reporter }) => {
 
   reporter.info(`Compressed ${pool.completed} files - ${(pool.duration / 1000).toFixed(3)}s`);
 };
-
-/**
- * From here on down is the worker code that is executed by the worker threads
- * in Piscina to perform the actual compression.
- *
- * The number of iterations is set to 15 by default, but can be overridden by
- * setting the ASSET_COMPRESSION_ITERATIONS environment variable. Lower number of
- * iterations means faster compression but lower compression ratio (good for CI
- * and review apps)
- *
- */
-
-const options = {
-  numiterations: parseInt(process.env.ASSET_COMPRESSION_ITERATIONS || '15', 10),
-};
-
-interface CompressInputs {
-  from: string;
-  to: string;
-}
-
-const compress = async ({ from, to }: CompressInputs) => {
-  const fileContent = await fs.readFile(from, 'utf8');
-  const compressedContent = await gzipAsync(fileContent, options);
-  await fs.writeFile(to, compressedContent);
-};
-
-// This strange bit of code is to ensure we export a default function
-// when we're being called by the Piscina worker
-if (!isMainThread) {
-  module.exports = async ({ from, to }: CompressInputs) => {
-    await compress({ from, to });
-  };
-}
