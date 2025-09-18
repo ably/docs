@@ -6,7 +6,7 @@ import './styles/styles.css';
 export default function Home() {
   const { roomStatus, connectionStatus } = useRoom();
   const navigate = useNavigate();
-  const { send } = useMessages();
+  const { sendMessage } = useMessages();
   const [messageCount, setMessageCount] = useState(0);
 
   if (roomStatus !== 'attached' || connectionStatus !== 'connected') {
@@ -27,7 +27,7 @@ export default function Home() {
 
   const handleSendMessage = () => {
     const randomMessage = generateRandomMessage();
-    send({ text: randomMessage });
+    sendMessage({ text: randomMessage });
     setMessageCount((prev) => prev + 1);
 
     const alert = document.createElement('div');

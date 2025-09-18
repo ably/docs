@@ -35,8 +35,7 @@ let matchData: MatchOdds | null = {
 };
 
 const preloadButton = document.getElementById('pre-load-odds') as HTMLButtonElement;
-const urlParams = new URLSearchParams(window.location.search);
-const channelName = urlParams.get('name') || 'pub-sub-rewind';
+const channelName = config.CHANNEL_NAME || 'pub-sub-rewind';
 const landingPage = document.getElementById('landing-page');
 const game = document.getElementById('game');
 let channel: Ably.RealtimeChannel | null = null;

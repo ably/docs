@@ -28,9 +28,7 @@ function getHeadlinesRemaining() {
 
 getHeadlinesRemaining();
 
-const urlParams = new URLSearchParams(window.location.search);
-
-const channelName = urlParams.get('name') || 'pub-sub-channel-messages';
+const channelName = config.CHANNEL_NAME || 'pub-sub-channel-messages';
 const channel = client.channels.get(channelName);
 const messagesDiv = document.getElementById('headlines');
 

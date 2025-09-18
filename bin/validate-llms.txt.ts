@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as glob from 'glob';
+import fastGlob from 'fast-glob';
 
 const PUBLIC_DIR = path.join(process.cwd(), 'public');
 const LLMS_FILE = path.join(PUBLIC_DIR, 'llms.txt');
 
 function countHtmlFiles(): number {
-  const htmlFiles = glob.sync('docs/**/*.html', { cwd: PUBLIC_DIR });
+  const htmlFiles = fastGlob.sync('docs/**/*.html', { cwd: PUBLIC_DIR });
 
   const contentFiles = htmlFiles.filter((file) => {
     // Exclude versioned redirect pages
@@ -54,7 +54,7 @@ function countLlmsPages(): { totalLines: number; uniquePages: number } {
   };
 }
 
-function validateCounts(htmlCount: number, uniquePageCount: number, totalLineCount: number): boolean {
+function validateCounts(htmlCount: number, uniquePageCount: number): boolean {
   // With language-specific URLs, we expect to have a reasonable coverage of the HTML files
   // The unique page count should be at least 50% of the HTML count (allowing for pages not captured by our GraphQL queries)
   // and at most 100% (we shouldn't have more unique pages than HTML files)
@@ -69,7 +69,7 @@ function main() {
   try {
     const htmlCount = countHtmlFiles();
     const { totalLines, uniquePages } = countLlmsPages();
-    const isValid = validateCounts(htmlCount, uniquePages, totalLines);
+    const isValid = validateCounts(htmlCount, uniquePages);
 
     console.log(`HTML files found: ${htmlCount}`);
     console.log(`Total lines in llms.txt: ${totalLines}`);

@@ -51,8 +51,7 @@ async function connect() {
     key: config.ABLY_KEY,
   });
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const spaceName = urlParams.get('name') || 'spaces-member-location';
+  const spaceName = config.SPACE_NAME || 'spaces-member-location';
   const spaces = new Spaces(client);
   space = await spaces.get(spaceName);
 

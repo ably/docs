@@ -42,7 +42,7 @@ const getDependencies = (id: string, products: string[], activeLanguage: Languag
     minifaker: '1.34.1',
     ...(products.includes('auth') ? { cors: '^2.8.5' } : {}),
     ...(products.includes('chat')
-      ? { '@ably/chat': '^0.11.0', '@ably/chat-react-ui-components': '^0.1.1', clsx: '^2.1.1' }
+      ? { '@ably/chat': '^0.13.0', '@ably/chat-react-ui-components': '^0.1.1', clsx: '^2.1.1' }
       : {}),
     ...(products.includes('spaces') ? { '@ably/spaces': '^0.4.0' } : {}),
     ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
@@ -71,7 +71,7 @@ const ExamplesRenderer = ({
     const result: ExampleFiles = {};
     Object.entries(files).forEach(([languageKey, languageFiles]) => {
       result[languageKey as LanguageKey] = updateAblyConnectionKey(languageFiles, apiKey, {
-        [languageKey]: getRandomChannelName(),
+        NAME: getRandomChannelName(), // Use CHANNEL_NAME as env var key
       });
     });
     return result;

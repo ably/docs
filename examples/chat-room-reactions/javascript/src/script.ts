@@ -13,8 +13,7 @@ let room: Room;
 
 async function initializeChat() {
   const chatClient = new ChatClient(realtimeClient);
-  const urlParams = new URLSearchParams(window.location.search);
-  const roomName = urlParams.get('name') || 'chat-room-reactions';
+  const roomName = config.ROOM_NAME || 'chat-room-reactions';
   room = await chatClient.rooms.get(roomName);
 
   /** 💡 Add every room reaction published to the room 💡 */

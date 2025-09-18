@@ -14,7 +14,7 @@ Use the following components to add room reactions into a chat application:
 
 - [`ChatClientProvider`](/docs/chat/setup?lang=react#instantiate): initializes and manages a shared chat client instance, passing it down through React context to enable realtime chat functionality across the application.
 - [`ChatRoomProvider`](/docs/chat/rooms?lang=react#create): manages the state and functionality of a specific chat room, providing access to messages, participants, and realtime interactions within that room via React context.
-- [`useRoom()`](/docs/chat/rooms?lang=react#create) hook: a hook to manage the state and interaction for a chat “room”, allowing users to join, send messages, listen for messages, and use the other chat functions such as typing indicators.
+- [`useRoom()`](/docs/chat/rooms?lang=react#create) hook: a hook to manage the state and interaction for a chat “room”.
 - [`useRoomReactions()`](/docs/chat/rooms/reactions?lang=react#subscribe) hook: a hook to manage the reactions sent by users within a chat room.
 
 Find out more about [room reactions](/docs/chat/rooms/reactions).

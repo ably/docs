@@ -21,7 +21,8 @@ const ablyClient = new Ably.Realtime({
 const chatClient = new ChatClient(ablyClient);
 
 // Initial room to join when the app loads
-const initialRooms = ['general'];
+const roomName = import.meta.env.VITE_NAME || 'general';
+const initialRooms = [roomName];
 
 export default function App() {
   // Initial room to join when the app loads
