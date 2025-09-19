@@ -20,6 +20,11 @@ export default {
           name: 'Getting started',
           pages: [
             {
+              name: 'Overview',
+              link: '/docs/chat/getting-started',
+              index: true,
+            },
+            {
               name: 'JavaScript',
               link: '/docs/chat/getting-started/javascript',
             },
@@ -44,10 +49,6 @@ export default {
               link: '/docs/chat/getting-started/react-ui-components',
             },
           ],
-        },
-        {
-          name: 'SDK setup',
-          link: '/docs/chat/setup',
         },
       ],
     },
