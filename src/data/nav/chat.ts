@@ -32,8 +32,8 @@ export default {
               link: '/docs/chat/getting-started/react-native',
             },
             {
-              name: 'Kotlin',
-              link: '/docs/chat/getting-started/kotlin',
+              name: 'Kotlin (Android)',
+              link: '/docs/chat/getting-started/android',
             },
             {
               name: 'Swift',
