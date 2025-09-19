@@ -36,6 +36,10 @@ export default {
               link: '/docs/chat/getting-started/android',
             },
             {
+              name: 'Kotlin (JVM)',
+              link: '/docs/chat/getting-started/jvm',
+            },
+            {
               name: 'Swift',
               link: '/docs/chat/getting-started/swift',
             },
