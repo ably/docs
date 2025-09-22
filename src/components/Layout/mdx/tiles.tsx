@@ -32,7 +32,7 @@ const Tile = ({ title, description, image, link = '/docs' }: TileProps) => {
 
 export const Tiles = ({ children }: { children: TileProps[] }) => {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-40">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {children
         .filter((item) => item.title && item.description)
         .map((item: TileProps) => (
