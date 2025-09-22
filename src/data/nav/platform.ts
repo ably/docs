@@ -134,8 +134,8 @@ export default {
           name: 'Pricing FAQs',
         },
         {
-          link: '/docs/platform/terms-of-service',
-          name: 'Terms of Service',
+          link: '/docs/platform/pricing/terms-faqs',
+          name: 'Legal terms FAQ',
         },
       ],
     },
