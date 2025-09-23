@@ -32,7 +32,7 @@ export default {
         },
         {
           name: 'Permissions & Capabilities',
-          link: '/docs/platform/auth/permissions',
+          link: '/docs/platform/auth/capabilities',
         },
         {
           name: 'Token Revocation',
