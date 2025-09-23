@@ -43,9 +43,9 @@ For example, if you have 10,000 users, and at your busiest time of the month the
 
 The maximum message size is based on the [package type](/docs/pricing#packages). The size is calculated as the sum of the `name`, `clientId`, `data` and `extras` [properties](/docs/api/realtime-sdk/messages#properties). This is before any compression or expansion occurs in the serialization process.
 
-* `name` and `clientId` are calculated as the size in bytes of their UTF-8 representation.
-* `data` is calculated as the size in bytes if it is in binary, or its UTF-8 byte length if it is a string.
-* `extras` is calculated as the string length of its JSON representation.
+- `name` and `clientId` are calculated as the size in bytes of their UTF-8 representation.
+- `data` is calculated as the size in bytes if it is in binary, or its UTF-8 byte length if it is a string.
+- `extras` is calculated as the string length of its JSON representation.
 
 If the `data` is binary and the message is sent on a text transport with base64 encoded data, and has an encoding attribute of base64, the size is calculated using the actual size of the binary data, not its base64 encoded string.
 
@@ -101,22 +101,65 @@ The following table explains how other message types are counted for billing pur
 
 Messages over 2KiB count as multiple messages for billing. For example, a 16KiB message counts as 8 messages when published, and if received by 10 clients, counts as 80 total messages. The bandwidth allocation is calculated as: total monthly messages × average message size allowance (typically 2KiB).
 
+### How can I reduce my message count? <a id="reduce-messages"/>
+
+First, understand how messages are counted by reading the [message counting section](#message-counting) above. Then use these strategies to optimize your usage:
+
+#### Analyze your usage with statistics API
+
+Use the [Statistics API](/docs/metadata-stats/stats) to get a detailed breakdown of message usage by type (REST/realtime publishes, realtime receives, history, presence, integrations) by minute, hour, day, or month. This will identify which areas consume the most messages.
+
+#### Optimize realtime messages
+
+If outbound realtime messages dominate your usage:
+
+| Optimization strategy | Description |
+|----------------------|-------------|
+| Use capabilities | For clients that only need to publish (not subscribe), use API keys or tokens without the `subscribe` [capability](/docs/auth/capabilities). This prevents them from receiving messages and being billed for them. |
+| Disable echo messages | If clients don't need to receive their own published messages, set the [`echoMessages`](/docs/api/realtime-sdk/types#client-options) client option to `false`. |
+| Avoid unnecessary messages | Ensure messages are only published when clients need them. |
+| Remember client-side filtering limitations | Client-side filtering has no effect on message counting. All messages published to a channel are received by every attached client (unless they lack `subscribe` capability). |
+
+#### Optimize presence usage
+
+Presence message usage scales approximately as the square of attached clients, since each client broadcasts state changes to every other client:
+
+| Optimization strategy | Description |
+|----------------------|-------------|
+| Evaluate presence necessity | Consider whether all clients need full presence functionality |
+| Use occupancy for counts | Use [occupancy](/docs/presence-occupancy/occupancy) instead of presence for simple user counts |
+| Limit presence capability | Limit the number of clients with presence capability on high-traffic channels |
+
+#### Optimize history usage
+
+| History type | Optimization strategy | Description |
+|--------------|----------------------|-------------|
+| Storage | Disable unnecessary persistence | Each stored message counts as one message. Disable [persistence](/docs/storage-history/storage) on channel namespaces where history is not needed. |
+| Retrieval | Use limit parameters | Each retrieved message counts as one message. Use the `limit` parameter to retrieve only the messages needed (e.g., most recent 5 messages) rather than retrieving more and discarding them. |
+
+#### Optimize integrations
+
+| Integration type | Optimization strategy | Description |
+|------------------|----------------------|-------------|
+| Reactor rules | Disable unused rules | Each message sent to [webhooks](/docs/platform/integrations/webhooks), [queues](/docs/platform/integrations/queues), or other integrations counts as an additional message. Disable unused rules in your dashboard. |
+| Active integrations | Review necessity | Ensure all active integrations are necessary for your application. |
+
 ### What happens if I exceed a limit? <a id="limit"/>
 
 The effect of exceeding a [limit](/docs/platform/pricing/limits) differs depending on the limit.
 
 In most cases, if you exceed a limit then it means that your app is performing well. Ably won't penalize your success by blocking usage on your account for most limits. Normal service will continue to function, up to a point, beyond the limit. You would have received a notification of nearing a limit, and will receive another notification alerting you to the need to upgrade your package to accommodate your increased usage.
 
-Limits will come into force either because there isn't any buffer on them, or because you have exceeded the buffer. Exceeding the limit depends on the limit:
+Limits will come into force either because there is not any buffer on them, or because you have exceeded the buffer. Exceeding the limit depends on the limit:
 
-* **Count-based limits**: only a set amount of resources can be in use simultaneously. This means that any usage in excess of that limit will be restricted until existing resources are removed, such as the number of concurrent connections, or concurrent channels.
-* **Rate-based limits**: the rate at which resources can be used, expressed as their frequency per second. Usage in excess of a rate limit can be rejected locally, such as a publisher trying to publish at a rate in excess of the publish rate per channel. The publisher will have any publish attempts in excess of this rate rejected and have an error code returned. Other rate limits apply rate suppression across your account when exceeded. For example, if the limit for publishing messages into a queue is exceeded by twice the rate, then each message will have a 50% chance of being rejected. The suppression probability is continuously updated based on the publishing rate.
+- **Count-based limits**: Only a set amount of resources can be in use simultaneously. This means that any usage in excess of that limit will be restricted until existing resources are removed, such as the number of concurrent connections, or concurrent channels.
+- **Rate-based limits**: The rate at which resources can be used, expressed as their frequency per second. Usage in excess of a rate limit can be rejected locally, such as a publisher trying to publish at a rate in excess of the publish rate per channel. The publisher will have any publish attempts in excess of this rate rejected and have an error code returned. Other rate limits apply rate suppression across your account when exceeded. For example, if the limit for publishing messages into a queue is exceeded by twice the rate, then each message will have a 50% chance of being rejected. The suppression probability is continuously updated based on the publishing rate.
 
 ## Data and compliance <a id="data"/>
 
 FAQs related to data and compliance.
 
-### What is your Data Protection policy? <a id="data-protection"/>
+### What is your data protection policy? <a id="data-protection"/>
 
 Please read Ably's [Data Protection Policy](https://ably.com/data-protection) for full details on how your data is handled.
 
@@ -132,7 +175,7 @@ No. This is not necessary as Ably's online Terms incorporate everything that is 
 
 The following information outlines Ably's compliance with the US HIPAA Security Rule. If you require further information then [contact us](https://ably.com/contact) to find out more.
 
-#### Is Ably a 'covered entity' which is required to comply with the HIPAA Security Rule?
+#### Is Ably a covered entity which is required to comply with the HIPAA Security Rule?
 
 No. The HIPAA Security Rule operationalizes the protections contained in the HIPAA Privacy Rule by addressing the technical and non-technical safeguards that organizations called 'covered entities' must put in place to secure individuals' electronic protected health information (e-PHI).
 
@@ -148,7 +191,7 @@ Ably is not a Health Plan, nor a Health Care Provider, nor a Clearinghouse as de
 
 *Health care clearinghouses include billing services, repricing companies, community health management information systems, and value-added networks and switches **if these entities perform clearinghouse functions**.”*
 
-#### Is Ably a 'business associate' under the terms of the HIPAA Security Rule?
+#### Is Ably a business associate under the terms of the HIPAA Security Rule?
 
 No. A business associate is “a person or organization, other than a member of a covered entity's workforce, that performs certain functions or activities on behalf of, or provides certain services to, a covered entity that involve the use or disclosure of individually identifiable health information.”
 
@@ -158,7 +201,7 @@ Whilst Ably may be used by covered entities to transport individually identifiab
 
 #### Does Ably transport individually identifiable health information?
 
-As a transport for information Ably does not know the nature of the data being handled. It is possible for our customers, who may be covered entities under HIPAA, to transport individually identifiable health information. However, Ably cannot inspect that data so there is no access to protected health information and any such access would be incidental, if at all.
+As a transport for information Ably does not know the nature of the data being handled. It is possible for Ably customers, who may be covered entities under HIPAA, to transport individually identifiable health information. However, Ably cannot inspect that data so there is no access to protected health information and any such access would be incidental, if at all.
 
 Under HIPAA there are no restrictions on the use or disclosure of de-identified health information which neither identifies nor provides a reasonable basis to identify an individual. So where Ably customers, even covered entities, are using Ably only to transport de-identified health information, then HIPAA does not apply.
 
@@ -176,7 +219,7 @@ Messages are only persisted when history is [explicitly enabled](/docs/storage-h
 
 [Enterprise packages](/docs/platform/pricing/enterprise) have the option to choose where the data is routed and stored geographically.
 
-#### Is Ably prepared to sign a 'Business Associate Agreement' (BAA)?
+#### Is Ably prepared to sign a Business Associate Agreement (BAA)?
 
 Under HIPAA, any covered entity must impose specified written safeguards on the individually identifiable health information used or disclosed by its business associates.
 
@@ -192,7 +235,7 @@ Ably is willing to sign Business Associate Agreements for our [Enterprise packag
 
 FAQs related to managing your Ably package.
 
-### How does the Free package work? <a id="free"/>
+### How does the free package work? <a id="free"/>
 
 The [Free package](/docs/platform/pricing/free) is a zero friction way for you to explore Ably and its features without any commitment. No credit card is required to sign up and there's no time limit on how long you can try it for.
 
@@ -200,13 +243,13 @@ Once you need production-level scale then there's a simple path to upgrade to a 
 
 ### Can I upgrade or downgrade my package at any time? <a id="change-package"/>
 
-Yes.
+Yes:
 
 1. Ensure you are the [account owner](/docs/platform/account/users).
 2. Log in to your [account](https://ably.com/login) and select **Billing** from the **Account** menu.
 3. Select the package that you would like to upgrade or downgrade to.
 
-Upgrades take effect immediately, whilst downgrades will take effect at the beginning of the following month.
+Upgrades take effect immediately, while downgrades will take effect at the beginning of the following month.
 
 ### Can I close my account at any time? <a id="cancel"/>
 
