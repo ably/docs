@@ -954,7 +954,32 @@ In some cases you may wish to set the unique message ID yourself to achieve idem
 * To ensure idempotency when a publisher instance might be restarted, and continuous activity cannot be guaranteed.
 * To integrate with an upstream system that uses message IDs, to ensure idempotency across an entire message processing pipeline.
 
-If setting your own message IDs be aware of the [restrictions](https://faqs.ably.com/client-specified-message-id-restrictions-for-multiple-messages-published-atomically) on its format when publishing messages atomically.
+If setting your own message IDs be aware of the restrictions on its format when publishing messages atomically.
+
+#### Client-specified message ID restrictions for multiple messages published atomically <a id="atomic-restrictions"/>
+
+When publishing multiple messages in a single publish request (via REST or realtime), those messages are published atomically by Ably. They are bundled together, and will either all succeed or all fail.
+
+##### Idempotency with atomic publishes
+
+From the point of view of idempotency, there is only a single idempotency 'key' for the entire array of messages. Ably prevents you from including a different, unrelated `id` in each message to avoid the mistaken impression that the messages will be individually idempotent.
+
+For example, if Ably permitted `publish([{ id: 'foo', data: 'first' },{ id: 'bar', data: 'second' }])`, it might seem like you could later call `publish([{ id: 'bar', data: 'second' }])` and the second publish would be ineffective due to idempotency; but that is not the case.
+
+##### ID format requirements
+
+For messages published atomically, all messages must have an `id` derived from a single base ID. Each message must contain an `id` of the form `<base id>:<idx>` where `idx` is a zero-based index into the array of messages.
+
+For example, to publish 3 messages with a base ID of `foo`, the messages must have IDs `foo:0`, `foo:1`, `foo:2`. This emphasizes that the messages share a single 'idempotency key' (which will be `foo`).
+
+##### Publishing messages with separate idempotency
+
+If you want messages to be separately and individually idempotent, you should publish them non-atomically:
+
+* Issue multiple `publish()` calls serially instead of a single `publish()` call with an array of messages.
+
+* If publishing over REST and you want all publishes to happen with a single HTTP request, use the batch publishing API. Each message is contained in its own `batchspec` object. All messages in a single `batchspec` are published atomically (for each channel in that `batchspec`), so by specifying multiple `batchspecs`, you can publish messages non-atomically, allowing you to specify a different idempotency ID for each message.
+
 
 <Aside data-type="note">
 Ably can only detect duplicate messages within a 2-minute window after the original message, with the same ID, is published. If a message with the same ID is published after this 2-minute window, it will be treated as a new message.
