@@ -168,9 +168,9 @@ $rest = new Ably\AblyRest(['key' => '{{API_KEY}}']);
 ```
 </Code>
 
-## Token authentication
+## Token-based authentication
 
-Token authentication uses short-lived tokens that are issued by your servers to client applications. This is the recommended approach for client-side authentication.
+Token-based authentication uses short-lived tokens that are issued by your servers to client applications. This is the recommended approach for client-side authentication.
 
 Ably supports two types of tokens:
 
@@ -183,7 +183,13 @@ Ably supports two types of tokens:
 
 #### Creating Ably JWTs
 
-Ably JWTs must be signed with your API key secret and include specific claims:
+Ably JWTs must be signed, in your backend, with the following:
+
+- your app ID,
+- your API key ID,
+- your API key secret
+
+The JWT must also include specific claims:
 
 <Code>
 ```javascript
@@ -329,8 +335,13 @@ func createAblyJWT(userID string, capabilities map[string][]string) (string, err
 
 #### Using JWTs with Ably
 
+There are several possible methods to using a JWT with Ably to authenticate. The preferred method is the `authUrl` method, which along with the callback method have automatic token refresh functionality:
+
 <Code>
 ```javascript
+// With authUrl
+const realtime = new Ably.Realtime({ authUrl: '/auth_url_to_your_backend' });
+
 // Direct token usage
 const ably = new Ably.Realtime({
     token: jwtToken,
@@ -340,6 +351,7 @@ const ably = new Ably.Realtime({
 // Or via auth callback that generates JWT
 const ably = new Ably.Realtime({
     authCallback: async (tokenParams, callback) => {
+        // generateJWTFromYourServer calls your server to a specific endpoint to retrieve the JWT.
         const jwt = await generateJWTFromYourServer(tokenParams);
         callback(null, jwt);
     }
@@ -371,115 +383,3 @@ const payload = {
 };
 ```
 </Code>
-
-## Advanced token options
-
-### Token revocation support
-
-Enable token revocation for enhanced security:
-
-<Code>
-```javascript
-// When creating tokens, enable revocation
-const tokenRequest = await ably.auth.createTokenRequest({
-    clientId: 'user-123',
-    revocableTokens: true // Enable revocation for this token
-});
-```
-</Code>
-
-### Token TTL management
-
-Set appropriate token lifetimes based on your use case:
-
-<Code>
-```javascript
-const tokenRequest = await ably.auth.createTokenRequest({
-    clientId: 'user-123',
-    ttl: 15 * 60 * 1000, // 15 minutes in milliseconds
-    capability: { 'user-notifications': ['subscribe'] }
-});
-```
-</Code>
-
-### Handling token expiry
-
-Implement graceful token renewal:
-
-<Code>
-```javascript
-ably.auth.on('authorizationError', async (error) => {
-    console.log('Token expired, requesting new token...');
-    // SDK will automatically call authUrl or authCallback
-});
-
-// Monitor connection state changes
-ably.connection.on('failed', (stateChange) => {
-    if (stateChange.reason?.code === 40140) {
-        console.log('Authentication failed - token may be invalid');
-    }
-});
-```
-</Code>
-
-## Implementation examples
-
-### Server-Side token endpoint
-
-<Code>
-```javascript
-// Express.js token endpoint
-app.post('/api/ably/token', authenticate, async (req, res) => {
-    try {
-        const { userId } = req.user;
-        const { capability } = req.body;
-
-        // Validate user permissions
-        const allowedCapability = await getUserCapabilities(userId);
-
-        const tokenRequest = await ably.auth.createTokenRequest({
-            clientId: userId,
-            capability: intersectCapabilities(capability, allowedCapability),
-            ttl: 30 * 60 * 1000 // 30 minutes
-        });
-
-        res.json(tokenRequest);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-```
-
-```python
-# Flask token endpoint
-@app.route('/api/ably/token', methods=['POST'])
-@authenticate
-async def ably_token():
-    try:
-        user_id = get_current_user_id()
-        capability = request.json.get('capability', {})
-
-        # Validate user permissions
-        allowed_capability = await get_user_capabilities(user_id)
-
-        token_request = await ably.auth.create_token_request({
-            'client_id': user_id,
-            'capability': intersect_capabilities(capability, allowed_capability),
-            'ttl': 30 * 60 * 1000  # 30 minutes
-        })
-
-        return jsonify(token_request)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-```
-</Code>
-
-## Best practices
-
-1. **Choose the right method**: Use key authentication for servers, token authentication for clients
-2. **Implement automatic token refresh**: Use `authUrl` or `authCallback` for seamless renewal
-3. **Set appropriate TTL**: Balance security (shorter TTL) with user experience
-4. **Validate capabilities server-side**: Never trust client-provided capability requests
-5. **Handle authentication errors gracefully**: Implement proper error handling and user feedback
-6. **Use HTTPS**: Always encrypt authentication requests in production
-7. **Monitor token usage**: Track token generation and usage patterns for security insights
