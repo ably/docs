@@ -954,7 +954,32 @@ In some cases you may wish to set the unique message ID yourself to achieve idem
 * To ensure idempotency when a publisher instance might be restarted, and continuous activity cannot be guaranteed.
 * To integrate with an upstream system that uses message IDs, to ensure idempotency across an entire message processing pipeline.
 
-If setting your own message IDs be aware of the [restrictions](https://faqs.ably.com/client-specified-message-id-restrictions-for-multiple-messages-published-atomically) on its format when publishing messages atomically.
+If setting your own message IDs be aware of the restrictions on its format when publishing messages atomically.
+
+#### Restrictions for atomic publishing <a id="atomic-restrictions"/>
+
+When publishing multiple messages atomically (e.g., by calling `publish()` with an array of messages), those messages are bundled together and will either all succeed or all fail. For idempotency purposes, there is only a single idempotency key for the entire array of messages.
+
+To prevent confusion about individual message idempotency, Ably requires that all messages in an atomic publish must have IDs derived from a single base ID. Each message must contain an ID of the form `<base id>:<idx>` where `idx` is a zero-based index into the array of messages.
+
+For example, to publish 3 messages atomically with a base ID of `foo`, the messages must have IDs `foo:0`, `foo:1`, and `foo:2`. This emphasizes that the messages share a single idempotency key (`foo`).
+
+```javascript
+// Correct: atomic publishing with derived IDs
+await channel.publish([
+  { id: 'foo:0', data: 'first' },
+  { id: 'foo:1', data: 'second' },
+  { id: 'foo:2', data: 'third' }
+]);
+
+// Incorrect: would be rejected
+await channel.publish([
+  { id: 'foo', data: 'first' },
+  { id: 'bar', data: 'second' }  // Different base ID not allowed
+]);
+```
+
+If you want messages to be individually idempotent, publish them separately using multiple `publish()` calls, or use the [batch publishing API](/docs/messages/batch#batch-publish) where each message is contained in its own batch specification.
 
 <Aside data-type="note">
 Ably can only detect duplicate messages within a 2-minute window after the original message, with the same ID, is published. If a message with the same ID is published after this 2-minute window, it will be treated as a new message.
