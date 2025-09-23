@@ -662,6 +662,35 @@ Another approach is to use differential token capabilities on a single channel. 
 
 Alternatively, [channel mode flags](/docs/channels/options#modes) can be used to enable clients to be present on a channel without subscribing to presence events. This also enables clients to still subscribe to regular messages on the channel.
 
+## External presence set maintenance <a id="external-maintenance"/>
+
+While it's technically possible to use [webhooks](/docs/platform/integrations/webhooks) or other integration rules to maintain an external copy of a channel's presence set, this approach is generally not recommended for several important reasons:
+
+### Implementation complexity
+
+Combining presence events into a presence set is not trivial to implement. Presence events are fundamentally a stream of delta updates to a CRDT (Conflict-free Replicated Data Type). These updates must be merged into your local copy following a detailed protocol designed to ensure:
+
+* Events can be applied in any order (commutative).
+* Synthetic leave events are handled correctly.
+* Members are properly identified by both `clientId` and `connectionId`.
+* State conflicts are resolved consistently.
+
+Ably's realtime client libraries handle this complex logic automatically, but external implementations must replicate this behavior correctly.
+
+### No synchronization mechanism
+
+External integration rules receive only a stream of updates with no way to retrieve the complete current state. If your server goes down or fails to process messages, you become permanently out of sync with no built-in way to recover. Key limitations include:
+
+* Ably retries failed webhooks within limits, but sufficiently old messages are eventually discarded.
+* There are caps on messages per webhook post and total messages per second.
+* Missing events cannot be retrieved after the fact.
+
+### If you must use external maintenance
+
+If you decide to proceed with webhook-based presence maintenance despite these limitations, you can use [`PresenceMessage.fromEncodedArray()`](/docs/api/realtime-sdk/presence#presence-from-encoded-array) to decode presence message arrays and translate numerical actions into readable strings. This method also handles data decoding and decryption if you're using [encryption](/docs/channels/options/encryption).
+
+For applications requiring an always-up-to-date presence set, we strongly recommend using Ably's realtime client libraries and attaching to the channel directly.
+
 ## Retrieve presence members <a id="retrieve-members"/>
 
 The membership of the presence set can be retrieved by calling the [`get()`](/docs/api/realtime-sdk/presence#get) method on the `Presence` object of a channel. This returns an array of all members currently present on the channel and is available using the REST and realtime interfaces of an Ably SDK.
