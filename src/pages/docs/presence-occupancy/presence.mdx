@@ -621,6 +621,36 @@ The interval over which this batching occurs is configurable. This is to ensure 
 
 Using server-side batching for presence events can reduce message costs when the membership of a channel is constantly changing. It also allows for a higher number of presence members per channel to be supported. By default, the number of presence members per channel is [limited](/docs/platform/pricing/limits#channel) to 200. With server-side batching enabled, this increases up to 20,000 clients depending on your [package type](/docs/pricing).
 
+## Why presence member limits exist <a id="presence-limits-rationale"/>
+
+It's important to understand that there are no limits on the number of clients that can [attach](/docs/channels/states#attach) and [subscribe](/docs/pub-sub) to a channel for regular messaging. Presence limits apply specifically to the presence feature only.
+
+The limits on presence members are largely not driven by constraints within the Ably platform, but instead exist as a precaution for customers who want very large presence sets and may not realize the implications of this approach.
+
+### Presence scaling implications
+
+To understand why limits exist, consider what happens when members enter or leave presence on a channel:
+
+* Only one enter event is emitted back to the user (2 total messages: 1 publish, 1 subscribe)
+* Two users receive the event (3 total messages: 1 publish, 2 subscribe)
+* Three users receive the event (4 total messages: 1 publish, 3 subscribe)
+
+Following this pattern, if 1,000 users enter a channel:
+* 1,000 enter events would be published.
+* 501,000 enter events would be received.
+* If all users then left: 1,000 leave events published + 501,000 leave events received.
+* Total: Over 1 million events for 1,000 members entering and leaving.
+
+If all 1,000 users left over 10 seconds, messages would be published at a rate of **50,000 per second**, which could impact performance and incur significant costs.
+
+### Managing large presence sets
+
+When considering channels with many present members, evaluate these factors:
+
+* Do all present members need to subscribe to presence events? If not, the scaling problem is eliminated (1,000 users entering/leaving generates only 2,000 events). Remove the `subscribe` capability for users who don't need presence notifications using token authentication.
+* Can you handle the message volume? If your application can consume this many messages, contact Ably to discuss increasing presence member limits for your account.
+* Alternative approaches: Use the REST API to periodically get presence members or have only server-side components subscribe to presence events.
+
 ### Be present without subscribing to presence events <a id="present-no-subscribe"/>
 
 Messages are streamed to clients as soon as they [attach](/docs/channels/states#attach) to a channel, as long as they have the [subscribe capability](/docs/auth/capabilities).
