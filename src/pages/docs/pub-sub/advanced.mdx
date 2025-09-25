@@ -954,7 +954,107 @@ In some cases you may wish to set the unique message ID yourself to achieve idem
 * To ensure idempotency when a publisher instance might be restarted, and continuous activity cannot be guaranteed.
 * To integrate with an upstream system that uses message IDs, to ensure idempotency across an entire message processing pipeline.
 
-If setting your own message IDs be aware of the [restrictions](https://faqs.ably.com/client-specified-message-id-restrictions-for-multiple-messages-published-atomically) on its format when publishing messages atomically.
+If setting your own message IDs be aware of the restrictions on its format when publishing messages atomically.
+
+#### Restrictions for atomic publishing <a id="atomic-restrictions"/>
+
+When publishing multiple messages atomically (e.g., by calling `publish()` with an array of messages), those messages are bundled together and will either all succeed or all fail. For idempotency purposes, there is only a single idempotency key for the entire array of messages.
+
+To prevent confusion about individual message idempotency, Ably requires that all messages in an atomic publish must have IDs derived from a single base ID. Each message must contain an ID of the form `<base id>:<idx>` where `idx` is a zero-based index into the array of messages.
+
+For example, to publish 3 messages atomically with a base ID of `foo`, the messages must have IDs `foo:0`, `foo:1`, and `foo:2`. This emphasizes that the messages share a single idempotency key (`foo`).
+
+```javascript
+// Correct: atomic publishing with derived IDs
+await channel.publish([
+  { id: 'foo:0', data: 'first' },
+  { id: 'foo:1', data: 'second' },
+  { id: 'foo:2', data: 'third' }
+]);
+
+// Incorrect: would be rejected
+await channel.publish([
+  { id: 'foo', data: 'first' },
+  { id: 'bar', data: 'second' }  // Different base ID not allowed
+]);
+```
+
+If you want messages to be individually idempotent, publish them separately using multiple `publish()` calls, or use the [batch publishing API](/docs/messages/batch#batch-publish) where each message is contained in its own batch specification.
+
+## Troubleshooting message delivery <a id="troubleshooting"/>
+
+If you're not receiving messages, follow these systematic debugging steps to identify the issue:
+
+### Common causes <a id="common-causes"/>
+
+Ably channel names are case-sensitive. `sports` is different from `Sports`, and `my_channel` is different from `"my_channel"`. If using protocol adapters like Pusher or Laravel Broadcasting, channel mappings may differ (`private:my_private_channel` vs `private-my_private_channel`).
+
+Ensure you're using the same Ably app everywhere. Don't publish with an API key from your Sandbox app while subscribing with an API key from your Production app.
+
+### Isolate the problem <a id="isolate-problem"/>
+
+Use the [Ably dashboard](https://ably.com/dashboard) dev console to determine if the issue is on the publishing or subscribing side:
+
+1. Open the dev console and attach to the channel you're publishing on.
+2. Try publishing a message.
+3. If the message appears in the dev console but not on your subscribing client, the problem is on the subscribing side.
+4. If the message doesn't appear in the dev console, the problem is on the publishing side.
+
+### Enable verbose logging <a id="verbose-logging"/>
+
+Enable client verbose logs on both publisher and subscriber to examine protocol-level messages:
+
+```javascript
+const realtime = new Ably.Realtime({
+  key: 'your-api-key',
+  log: { level: 4 } // Enable verbose logging
+});
+```
+
+Check the logs for:
+- Publisher: Protocol send message events
+- Subscriber: Protocol receive message events
+
+### Debugging publish problems <a id="debug-publish"/>
+
+When calling `channel.publish()`, use a callback to detect failures:
+
+```javascript
+channel.publish('event', 'data', (err) => {
+  if (err) {
+    console.error('Publish failed:', err.message);
+  } else {
+    console.log('Publish successful');
+  }
+});
+```
+
+### Debugging subscribe problems <a id="debug-subscribe"/>
+
+Check these common issues:
+
+Ensure you're connected to Ably:
+
+```javascript
+console.log('Connection state:', realtime.connection.state);
+// Should be 'connected'
+```
+
+Ensure you're attached to the channel:
+
+```javascript
+console.log('Channel state:', channel.state);
+// Should be 'attached'
+```
+
+Verify you've added a subscribe listener and that event names match exactly:
+
+```javascript
+// Make sure this matches your publish event name exactly
+channel.subscribe('specific-event', (message) => {
+  console.log('Received:', message.data);
+});
+```
 
 <Aside data-type="note">
 Ably can only detect duplicate messages within a 2-minute window after the original message, with the same ID, is published. If a message with the same ID is published after this 2-minute window, it will be treated as a new message.

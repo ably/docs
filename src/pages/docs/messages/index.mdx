@@ -34,6 +34,40 @@ The following are the properties of a message:
 | **extras** | A JSON object of arbitrary key-value pairs that may contain metadata, and/or ancillary payloads. Valid payloads include those related to [Push Notifications](/docs/push), [deltas](/docs/channels/options/deltas) and headers |
 | **encoding** | This is typically empty, as all messages received from Ably are automatically decoded client-side using this value. However, if the message encoding cannot be processed, this attribute contains the remaining transformations not applied to the data payload |
 
+## Message delivery tracking <a id="delivery-tracking"/>
+
+You can ensure a message was successfully published by checking the [history](/docs/storage-history/history) of the channel for your message. However, it is only possible to check if a device has received a message from the device itself.
+
+Ably does not store per-message delivery logs, nor logs of who is subscribed to a channel at any point in time. This means it is not possible to check which users have received messages retroactively.
+
+### Read receipts and acknowledgments <a id="read-receipts"/>
+
+Ably does not natively support read receipts or message acknowledgments to track who has read published messages. This aligns with the fundamental pub-sub pattern where publishers are decoupled from subscribers and shouldn't need to know or care about the number of recipients.
+
+Since Ably doesn't control how many clients are expected on a channel, it's architecturally difficult to determine who has read or received a message. However, you can implement a custom read receipt system by having subscribers publish acknowledgment messages when they consider a message received or read:
+
+```javascript
+// Subscriber acknowledges reading a message
+channel.subscribe('content', (message) => {
+  // Process the message
+  console.log('Received:', message.data);
+  
+  // Send read receipt
+  channel.publish('read-receipt', {
+    messageId: message.id,
+    readBy: clientId,
+    readAt: Date.now()
+  });
+});
+
+// Publisher listens for read receipts
+channel.subscribe('read-receipt', (receipt) => {
+  console.log(`Message ${receipt.data.messageId} read by ${receipt.data.readBy}`);
+});
+```
+
+This approach requires application-level implementation and careful consideration of scalability in high-traffic scenarios.
+
 ## Message conflation <a id="conflation"/>
 
 Use message conflation to ensure that clients only ever receive the most up-to-date message, by removing redundant and outdated messages. Message conflation will aggregate published messages for a set period of time and evaluate all messages against a [conflation key](#routing). All but the latest message for each conflation key value will be discarded, and the resulting message, or messages, will be delivered to subscribers as a single batch once the period of time elapses.

@@ -596,6 +596,8 @@ await channel.presence.enter();
 
 The number of clients that can be simultaneously present on a channel is [limited](/docs/platform/pricing/limits#channel). This ensures the rate of presence messages remains supportable, as it is common for all members on a channel to change state at a similar time.
 
+Understanding presence message scaling is important because each presence update (enter, update, leave) is counted as a message for billing purposes, and presence follows an n-squared pattern when you have both subscribers and members present on a channel. This can lead to a surprisingly large number of messages being generated in a short time.
+
 As an example, consider 200 clients subscribed to presence events on a channel and all of them join and leave the presence set within a few minutes. This would result in the following messages:
 
 * 200 presence messages published for the enter event.
@@ -603,7 +605,7 @@ As an example, consider 200 clients subscribed to presence events on a channel a
 * 200 presence messages published for the leave event.
 * 200 × 200 (40,000) presence messages subscribed to for the leave events.
 
-This highlights the potential for 80,400 messages to be sent in a very short space of time on a single channel.
+This highlights the potential for 80,400 messages to be sent in a very short space of time on a single channel, which could result in rate limit issues or unexpected message costs.
 
 If your application needs to have all clients subscribed to presence messages then [enabling server-side batching](#server-side-batch) can reduce the number of events received by clients. If your application doesn't need to have all clients subscribed then you can set some of them to [be present without subscribing](#present-no-subscribe).
 
@@ -619,11 +621,41 @@ The interval over which this batching occurs is configurable. This is to ensure 
 
 Using server-side batching for presence events can reduce message costs when the membership of a channel is constantly changing. It also allows for a higher number of presence members per channel to be supported. By default, the number of presence members per channel is [limited](/docs/platform/pricing/limits#channel) to 200. With server-side batching enabled, this increases up to 20,000 clients depending on your [package type](/docs/pricing).
 
+## Why presence member limits exist <a id="presence-limits-rationale"/>
+
+It's important to understand that there are no limits on the number of clients that can [attach](/docs/channels/states#attach) and [subscribe](/docs/pub-sub) to a channel for regular messaging. Presence limits apply specifically to the presence feature only.
+
+The limits on presence members are largely not driven by constraints within the Ably platform, but instead exist as a precaution for customers who want very large presence sets and may not realize the implications of this approach.
+
+### Presence scaling implications
+
+To understand why limits exist, consider what happens when members enter or leave presence on a channel:
+
+* Only one enter event is emitted back to the user (2 total messages: 1 publish, 1 subscribe)
+* Two users receive the event (3 total messages: 1 publish, 2 subscribe)
+* Three users receive the event (4 total messages: 1 publish, 3 subscribe)
+
+Following this pattern, if 1,000 users enter a channel:
+* 1,000 enter events would be published.
+* 501,000 enter events would be received.
+* If all users then left: 1,000 leave events published + 501,000 leave events received.
+* Total: Over 1 million events for 1,000 members entering and leaving.
+
+If all 1,000 users left over 10 seconds, messages would be published at a rate of **50,000 per second**, which could impact performance and incur significant costs.
+
+### Managing large presence sets
+
+When considering channels with many present members, evaluate these factors:
+
+* Do all present members need to subscribe to presence events? If not, the scaling problem is eliminated (1,000 users entering/leaving generates only 2,000 events). Remove the `subscribe` capability for users who don't need presence notifications using token authentication.
+* Can you handle the message volume? If your application can consume this many messages, contact Ably to discuss increasing presence member limits for your account.
+* Alternative approaches: Use the REST API to periodically get presence members or have only server-side components subscribe to presence events.
+
 ### Be present without subscribing to presence events <a id="present-no-subscribe"/>
 
 Messages are streamed to clients as soon as they [attach](/docs/channels/states#attach) to a channel, as long as they have the [subscribe capability](/docs/auth/capabilities).
 
-Efficient use of capabilities can prevent clients from receiving presence events while still allowing them to enter the presence set. This is a common scenario where only a server is required to monitor the presence set. This saves clients from subscribing to a potentially high volume of unnecessary messages.
+Efficient use of capabilities can prevent clients from receiving presence events while still allowing them to enter the presence set. This is a common scenario when you want lots of people to be present without necessarily listening for presence change events, such as when you just want to know how many people are present on a channel at any point in time. This approach saves clients from subscribing to a potentially high volume of unnecessary messages.
 
 One example of achieving this would be to use one channel for generic communications and another for the presence set. The following capabilities demonstrate this for clients and for servers:
 
@@ -649,7 +681,47 @@ For servers:
 ```
 </Code>
 
+Another approach is to use differential token capabilities on a single channel. The following example shows capabilities where clients can enter presence and publish, but only have subscribe access to regular messages:
+
+<Code>
+```json
+{
+  "presenceChannel": ["publish", "presence"],
+  "chat": ["presence", "history", "subscribe"]
+}
+```
+</Code>
+
 Alternatively, [channel mode flags](/docs/channels/options#modes) can be used to enable clients to be present on a channel without subscribing to presence events. This also enables clients to still subscribe to regular messages on the channel.
+
+## External presence set maintenance <a id="external-maintenance"/>
+
+While it's technically possible to use [webhooks](/docs/platform/integrations/webhooks) or other integration rules to maintain an external copy of a channel's presence set, this approach is generally not recommended for several important reasons:
+
+### Implementation complexity
+
+Combining presence events into a presence set is not trivial to implement. Presence events are fundamentally a stream of delta updates to a CRDT (Conflict-free Replicated Data Type). These updates must be merged into your local copy following a detailed protocol designed to ensure:
+
+* Events can be applied in any order (commutative).
+* Synthetic leave events are handled correctly.
+* Members are properly identified by both `clientId` and `connectionId`.
+* State conflicts are resolved consistently.
+
+Ably's realtime client libraries handle this complex logic automatically, but external implementations must replicate this behavior correctly.
+
+### No synchronization mechanism
+
+External integration rules receive only a stream of updates with no way to retrieve the complete current state. If your server goes down or fails to process messages, you become permanently out of sync with no built-in way to recover. Key limitations include:
+
+* Ably retries failed webhooks within limits, but sufficiently old messages are eventually discarded.
+* There are caps on messages per webhook post and total messages per second.
+* Missing events cannot be retrieved after the fact.
+
+### If you must use external maintenance
+
+If you decide to proceed with webhook-based presence maintenance despite these limitations, you can use [`PresenceMessage.fromEncodedArray()`](/docs/api/realtime-sdk/presence#presence-from-encoded-array) to decode presence message arrays and translate numerical actions into readable strings. This method also handles data decoding and decryption if you're using [encryption](/docs/channels/options/encryption).
+
+For applications requiring an always-up-to-date presence set, we strongly recommend using Ably's realtime client libraries and attaching to the channel directly.
 
 ## Retrieve presence members <a id="retrieve-members"/>
 
@@ -1222,6 +1294,15 @@ Clients that are part of a presence set remain present for 15 seconds after they
 The Ably SDK will attempt to [reconnect](/docs/connect/states) after a disconnect. If the connection is reestablished before 15 seconds have passed, a `leave` event will not be sent. If the connection is reestablished after 15 seconds, a `leave` event will be sent and the presence set will need to be rejoined.
 
 Note that the 15 second delay from being removed from the presence set is only for abrupt or unplanned disconnects. If a client calls [`leave()`](/docs/api/realtime-sdk/presence#leave) or [`close()`](/docs/api/realtime-sdk/connection#close) they immediately send a `leave` event.
+
+### Browser tab close behavior
+
+When using the JavaScript client library (ably-js), you may notice that closing a browser tab results in a 15-second delay before presence members leave the presence set. By default, the client library closes the connection when the page is closed or refreshed, which should cause presence members to leave immediately. However, this may not occur in certain scenarios:
+
+* If you have explicitly set the `closeOnUnload` client option to `false` (for example, when using connection state recovery), the connection won't close immediately on page unload. This option defaults to `true` in current versions.
+* When using the `recover` client option and closing a tab (rather than refreshing), presence members remain for 15 seconds. The recover option stores the recovery key in the browser's localStorage to resume connections after page refresh, but cannot distinguish between tab close and refresh events.
+* Some browsers don't allow sufficient time for the `beforeunload` handler to notify the server when tabs are closed or refreshed. This affects some versions of Safari, Internet Explorer, and other browsers.
+* When Chrome's Memory Saver feature discards tabs, it doesn't fire a `beforeunload` event, resulting in the 15-second delay before presence members are removed.
 
 The time taken before a `leave` event is sent in the case of an abrupt disconnect can be reduced to a minimum of 1 second by setting a value for `remainPresentFor`, in milliseconds. This property is set within the `transportParams` property of the [`clientOptions`](/docs/api/realtime-sdk#client-options) object.
 
