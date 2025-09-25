@@ -133,6 +133,10 @@ export default {
           link: '/docs/platform/pricing/faqs',
           name: 'Pricing FAQs',
         },
+        {
+          link: '/docs/platform/pricing/terms-faqs',
+          name: 'Legal terms FAQ',
+        },
       ],
     },
     {
