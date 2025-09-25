@@ -1,5 +1,6 @@
 export const languageKeys = [
   'javascript',
+  'typescript',
   'react',
   'java',
   'ruby',
