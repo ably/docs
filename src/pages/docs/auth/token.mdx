@@ -1072,3 +1072,79 @@ When selecting an Ably SDK for implementing token authentication with Ably, you 
 
 As basic authentication is primarily designed for authenticating a secure server, in this situation, and assuming the server is only used for authentication, it is more efficient to use the REST interface, as the overhead associated with maintaining a realtime connection, is not required to issue tokens.
 </Aside>
+
+## Incremental authorization and reauth <a id="incremental-auth"/>
+
+Ably's authentication uses a system of immutable tokens. Once created, tokens have a fixed set of [capabilities](/docs/auth/capabilities) that cannot be modified. However, there are scenarios where clients may need additional capabilities after their initial connection.
+
+### Reauthorization process
+
+When a client needs new capabilities, it can reauthorize by obtaining a new token from your auth server and calling [`auth.authorize()`](/docs/api/realtime-sdk/authentication#authorize). This upgrades the connection to use the new token without disrupting the existing connection or requiring reconnection.
+
+### Reauthorization strategies
+
+Choose the strategy that best fits your application architecture:
+
+#### Server-determined capabilities
+
+Best for applications with session management where the server maintains complete client state.
+
+Your auth server tracks the canonical list of capabilities each client should have. When the client requests a new token, the server generates it with the complete capability set. This is the most secure approach as the server is the single source of truth.
+
+#### Client-requested capabilities
+
+Best for applications where clients need to request specific additional capabilities.
+
+The client can request additional capabilities by including them in the token request:
+
+- With `authUrl`: Use `authParams` or `authHeaders` in [client options](/docs/api/realtime-sdk/types#client-options) to send capability requests.
+- With `authCallback`: Construct a custom request to your server with the needed capabilities.
+
+Your server validates the request, updates its records of client capabilities, and issues a token with the complete capability set.
+
+#### Client-managed capabilities
+
+Best for stateless auth servers that cannot maintain client sessions.
+
+The client maintains its own list of needed capabilities and sends the complete list to the server on each token request. The server validates each capability before issuing the token.
+
+#### Signed capability storage
+
+Best for stateless servers where re-validation of all capabilities is expensive.
+
+Store client capabilities in a signed format (HMAC-signed cookie) to avoid trusting the client. When requesting new capabilities:
+
+1. Server verifies the signature of existing capabilities.
+2. Adds the new capability to the validated set.
+3. Issues a token and updates the signed storage.
+
+### Handling capability errors
+
+When a client attempts an operation without proper capabilities, Ably returns an error with code `40160`. You can catch this error and trigger reauthorization:
+
+```javascript
+channel.attach((err) => {
+  if(err && err.code === 40160) {
+    console.log("Access denied - requesting new token with required capabilities");
+
+    // Update your capability requirements
+    channelsINeedAccessTo.push(channel.name);
+
+    // Reauthorize with new capabilities
+    realtime.auth.authorize((authErr) => {
+      if(!authErr) {
+        // Retry the original operation
+        channel.attach();
+      }
+    });
+  }
+});
+```
+
+### Best practices
+
+- **Server validation**: Always validate that clients should have access to requested capabilities
+- **Minimal privileges**: Issue tokens with only the capabilities clients actually need
+- **Token expiration**: Use appropriate token TTLs to balance security and performance
+- **Error handling**: Implement robust error handling for capability-related failures
+- **State management**: Choose the capability management strategy that fits your application's architecture
