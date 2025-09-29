@@ -1347,3 +1347,121 @@ channel = rest.channels.get('pushenabled:foo');
 channel.publish(message);
 ```
 </Code>
+
+## Handling push notifications on devices <a id="handling-push-notifications"/>
+
+After Ably delivers push notifications to devices, your mobile application needs to handle them appropriately. This includes processing the notification content, navigating users to relevant sections of your app, and implementing deep linking functionality.
+
+### Deep links and app navigation <a id="deep-links"/>
+
+Deep links allow push notifications to navigate users directly to specific screens or content within your mobile application. While Ably handles the delivery of push notifications, creating and handling deep links is implemented within your mobile app code.
+
+You don't create deep links using Ably itself. Instead, you handle deep links in your app's push notification receivers and use the notification data to determine where to navigate users.
+
+#### Android deep linking with push notifications
+
+On Android, you can implement deep links and app navigation in several ways.
+
+Using `onMessageReceived` (recommended):
+
+Handle push notifications in your `FirebaseMessagingService` and create deep links programmatically:
+
+```java
+@Override
+public void onMessageReceived(RemoteMessage remoteMessage) {
+    // Extract data from Ably push notification
+    Map<String, String> data = remoteMessage.getData();
+
+    // Create deep link based on notification data
+    if (data.containsKey("screen")) {
+        String targetScreen = data.get("screen");
+        Intent intent = createDeepLinkIntent(targetScreen, data);
+        startActivity(intent);
+    }
+}
+
+private Intent createDeepLinkIntent(String screen, Map<String, String> data) {
+    Intent intent = new Intent(this, MainActivity.class);
+    intent.putExtra("navigate_to", screen);
+    intent.putExtra("data", new Bundle(data));
+    return intent;
+}
+```
+
+Using `click_action` with intent filters:
+
+Specify a `click_action` in your push notification payload and handle it with intent filters:
+
+1. Add `click_action` to your notification payload when publishing via Ably:
+
+```json
+{
+  "push": {
+    "notification": {
+      "title": "New Message",
+      "body": "You have a new message",
+      "click_action": "OPEN_CHAT_SCREEN"
+    },
+    "data": {
+      "chat_id": "12345",
+      "user_id": "67890"
+    }
+  }
+}
+```
+
+2. Configure intent filters in your `AndroidManifest.xml`:
+```xml
+<activity android:name=".ChatActivity">
+    <intent-filter>
+        <action android:name="OPEN_CHAT_SCREEN" />
+        <category android:name="android.intent.category.DEFAULT" />
+    </intent-filter>
+</activity>
+```
+
+#### iOS deep linking with push notifications
+
+On iOS, handle deep links in your app delegate or scene delegate:
+
+Using URL schemes:
+```swift
+func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any]) {
+    // Extract navigation data from Ably push notification
+    if let screen = userInfo["screen"] as? String {
+        navigateToScreen(screen, with: userInfo)
+    }
+}
+
+private func navigateToScreen(_ screen: String, with data: [AnyHashable: Any]) {
+    // Implement navigation logic based on screen parameter
+    switch screen {
+    case "chat":
+        if let chatId = data["chat_id"] as? String {
+            showChatScreen(chatId: chatId)
+        }
+    case "profile":
+        if let userId = data["user_id"] as? String {
+            showProfileScreen(userId: userId)
+        }
+    default:
+        showMainScreen()
+    }
+}
+```
+
+Using Universal Links:
+Configure universal links in your app and handle them when users tap on push notifications:
+
+```swift
+func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+    guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+          let url = userActivity.webpageURL else {
+        return false
+    }
+
+    // Handle universal link from push notification
+    handleUniversalLink(url)
+    return true
+}
+```
