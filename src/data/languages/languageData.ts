@@ -27,7 +27,7 @@ export default {
     javascript: '0.13',
     react: '0.13',
     swift: '0.6',
-    kotlin: '0.5',
+    kotlin: '0.7',
   },
   spaces: {
     javascript: '0.4',
