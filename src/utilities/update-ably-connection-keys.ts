@@ -15,21 +15,21 @@ export const updateAblyConnectionKey = (
   apiKey: string,
   additionalKeys?: Record<string, string>,
 ) => {
-  const ablyEnvironment = process.env.GATSBY_ABLY_ENVIRONMENT ?? 'production';
+  const ablyEndpoint = process.env.GATSBY_ABLY_ENVIRONMENT ?? 'main';
   const names = Object.keys(files);
 
   return names.reduce(
     (acc, name: string) => {
       let content = files[name];
 
-      // Environment
-      if (ablyEnvironment !== 'production') {
+      // Endpoint
+      if (ablyEndpoint !== 'main') {
         content = content.replaceAll(/new Ably\.(Realtime|Rest)\(\{/g, (_match, type) => {
-          return `new Ably.${type}({\n  environment: '${ablyEnvironment}',`;
+          return `new Ably.${type}({\n  endpoint: '${ablyEndpoint}',`;
         });
 
         content = content.replaceAll(/new (Realtime|Rest)\(\{/g, (_match, type) => {
-          return `new ${type}({\n  environment: '${ablyEnvironment}',`;
+          return `new ${type}({\n  endpoint: '${ablyEndpoint}',`;
         });
       }
 
