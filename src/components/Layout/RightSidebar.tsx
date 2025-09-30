@@ -321,6 +321,44 @@ const RightSidebar = () => {
                 </Tooltip>
               </a>
             ))}
+            <a
+              href={`${location.pathname.replace(/\/$/, '')}/index.md`}
+              className="flex h-5 ui-theme-dark group/markdown-link cursor-pointer"
+              onClick={(e) => {
+                // Check if markdown file exists by attempting to fetch it
+                const markdownUrl = `${location.pathname.replace(/\/$/, '')}/index.md`;
+                fetch(markdownUrl, { method: 'HEAD' })
+                  .then((response) => {
+                    if (!response.ok) {
+                      e.preventDefault();
+                      alert(
+                        'Markdown files are only available in production builds. Run "yarn build" to generate them.',
+                      );
+                    }
+                  })
+                  .catch(() => {
+                    e.preventDefault();
+                    alert('Markdown files are only available in production builds. Run "yarn build" to generate them.');
+                  });
+
+                track('markdown_link_clicked', {
+                  location: location.pathname,
+                });
+              }}
+            >
+              <Tooltip
+                content="View in Markdown"
+                triggerElement={
+                  <img
+                    src="/icons/markdown-mark.svg"
+                    alt="View in Markdown"
+                    className="w-5 h-5 transition-opacity opacity-60 group-hover/markdown-link:opacity-100"
+                  />
+                }
+              >
+                View in Markdown
+              </Tooltip>
+            </a>
           </div>
         </div>
       </div>
