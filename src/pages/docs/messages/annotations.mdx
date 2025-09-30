@@ -21,7 +21,9 @@ When clients publish or delete an annotation, Ably automatically creates a [summ
 Annotations can be enabled for a channel or channel namespace with the *Message annotations, updates, and deletes* channel rule.
 
 <Aside data-type='important'>
-Note that when message annotations are enabled, messages are [persisted](/docs/storage-history/storage#all-message-persistence) by default, and [continuous history](/docs/storage-history/history#continuous-history) features are not currently supported.
+When message annotations are enabled, messages are [persisted](/docs/storage-history/storage#all-message-persistence) regardless of whether or not persistence is enabled, in order to support the feature. This may increase your package cost.
+
+[Continuous history](/docs/storage-history/history#continuous-history) features are not supported. Be aware that if you are currently using continuous history and enable annotations, updates, and deletes, continuous history will no longer function.
 </Aside>
 
 1. Go to the [**Settings**](https://ably.com/accounts/any/apps/any/edit) tab of an app in your dashboard.
@@ -135,7 +137,7 @@ The `multiple.v1` summarization method counts both a total and a per-client coun
 
 A given client can contribute to the summary for a particular annotation `name` multiple times. The same client may also publish additional annotations with different `name`s.
 
-If a client specifies a `count` when publishing an annotation, the client's contribution to the summary is incremented by the specified value.
+If a client specifies a `count` when publishing an annotation, the client's contribution to the summary is incremented by the specified value. If not, it defaults to incrementing by 1.
 
 Deleting an annotation removes all contributions made by that `clientId` for that `name`.
 
@@ -166,9 +168,9 @@ Deleting an annotation removes all contributions made by that `clientId` for tha
 
 ## Publish annotations <a id="publish" />
 
-To publish an annotation for a message, use the `annotations.publish()` method on a channel. Pass in either a [message](/docs/messages) instance or the `serial` of the message to annotate. This method will publish an annotation message with an action of `annotation.create`.
+To publish an annotation for a message, use the `annotations.publish()` method on a channel. Pass in either a [message](/docs/messages) instance or the `serial` of the message to annotate. This method will publish an annotation with the action `annotation.create`.
 
-The `clientId` specified in the [client options](/docs/api/realtime-sdk#client-options) will be associated with the published annotation. Note that certain annotation types require the client to be identified with a `clientId` in order to publish annotations.
+Certain annotation summarization methods require a client to be [identified](/docs/auth/identified-clients) for them to be able to publish an annotation. Their `clientId` will then be included in the associated published annotation.
 
 Specify the [annotation type](#annotation-types) using the `type` field of the annotation object.
 
@@ -240,7 +242,7 @@ await channel.annotations.publish(message.serial, {
 ```
 </Code>
 
-You can additionally specify a `data` payload when publishing an annotation. This is not included in an annotation summary, so only readably by someone [subscribing to individual annotation events](#individual-annotations).
+You can additionally specify a `data` payload when publishing an annotation. This is not included in an annotation summary, so only readable by someone [subscribing to individual annotation events](#individual-annotations).
 
 ## Delete annotations <a id="delete" />
 
@@ -292,7 +294,7 @@ The recommended way to receive annotation updates is through annotation summarie
 
 Annotation summaries are delivered to subscribers as messages with an `action` of `message.summary`, and a `serial` matching the `serial` of the message that they are updating. They have an `annotations` field which contains a `summary` of all the annotations for the message.
 
-The value of the `summary` field is an object where the keys are the [annotation types](#annotation-types). The structure of the value of each key depends on the summarization method used, for example `total.v1` will have a `total` field, while `flag.v1` will have `total` and `clientIds` fields.
+The value of that `summary` field is an object where the keys are the [annotation types](#annotation-types). The structure of the value of each key depends on the summarization method used, for example `total.v1` will have a `total` field, while `flag.v1` will have `total` and `clientIds` fields.
 
 <Aside data-type='note'>
 Subscribing to annotations uses the same method as [subscribing to regular messages](/docs/pub-sub#subscribe) on a channel. When using message annotations, regular messages delivered to the `subscribe()` listener will have an `action` of `message.create`.
@@ -310,7 +312,7 @@ const channel = realtime.channels.get('annotations:example');
 
 await channel.subscribe((message) => {
   if (message.action === 'message.summary') {
-    console.log(message.summary);
+    console.log(message.annotations.summary);
   }
 });
 ```
@@ -326,7 +328,7 @@ const channel = realtime.channels.get('annotations:example');
 
 await channel.subscribe((message) => {
   if (message.action === 'message.summary') {
-    console.log(message.summary);
+    console.log(message.annotations.summary);
   }
 });
 ```
@@ -338,7 +340,7 @@ When annotations for a message are published, Ably automatically generates a sum
 
 A separate summary is produced for each distinct [annotation type](#annotation-types). The summarization method specified in the annotation type determines how annotations in the same namespace for a given message are aggregated into a summary. A summary is constructed from the set of [individual annotation events](#individual-annotations) (annotation messages with an `action` of `annotation.create` or `annotation.delete`).
 
-The summary will be included in the message's `summary` field, which is an object whose keys are the annotation types and whose values describe the annotation summary for that type. For example:
+The summary will be included in a `summary` field nested within the message's `annotations` field, and is an object whose keys are the annotation types and whose values describe the annotation summary for that type. For example:
 
 <Code>
 ```json
@@ -396,9 +398,9 @@ The summary will be included in the message's `summary` field, which is an objec
 
 It is also possible to subscribe to individual annotation events, rather than annotation summaries. These are the emitted when [publishing](#publish) or [deleting](#delete) an annotation.
 
-Individual events can be useful for activity feeds or detailed logging, however annotation summaries are generally more reliable and efficient for maintaining UI state.
+Individual events can be useful for activity feeds or detailed logging, but generally, for most usecases, subscribed clients should rely on aggregated summaries. The aggregation of annotations for a message into a summary attached to the message is the primary benefit of using the annotations API; an app design oriented around every client needing to subscribe to raw annotation events may not be taking full advantage of the feature.
 
-Subscribe to individual annotation events using the `annotations.subscribe()` method on a channel. To subscribe to individual annotations, you must request the `ANNOTATION_SUBSCRIBE` [mode](/docs/channels/options#modes).
+If you need to, you can subscribe to individual annotation events using the `annotations.subscribe()` method on a channel. To subscribe to individual annotations, you must request the `ANNOTATION_SUBSCRIBE` [mode](/docs/channels/options#modes).
 
 <Aside data-type='note'>
 When you provide an explicit `modes` property for a channel, you override the set of [default modes](/docs/channels/options#modes). It is likely that you will be using features other than just annotations on the channel, so ensure that you also include the other `modes` that you require.
