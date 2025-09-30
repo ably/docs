@@ -58,7 +58,6 @@ The following steps show you how to create a policy for an AWS Lambda.
 <Code>
 ```json
 {
-{
   "Version": "2012-10-17",
   "Statement": [
     {
@@ -106,10 +105,116 @@ Then ensure the checkbox for the policy is selected.
 9. Enter a suitable name for your role.
 10. Click **Create Role**.
 
-## Lambda retry behavior <a id="retries"/>
+## Lambda retry behavior <a id="retry"/>
 
 Ably invokes Lambda functions asynchronously using the `event` invocation type. When a function returns an error, AWS Lambda automatically retries the execution up to two more times with delays between attempts (1 minute, then 2 minutes).
 
-This means your Lambda function might occasionally run multiple times for the same Ably event. Design your functions to handle this - either make them idempotent or check for duplicate processing.
+Lambda functions might run multiple times for the same Ably event. Design functions to handle this by making them idempotent or checking for duplicate processing.
 
 You can configure retry behavior in your AWS Lambda console under the function's asynchronous invocation settings. See the [AWS Lambda documentation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html#invocation-async-errors) for details on adjusting retry settings.
+
+## Routing messages with integration Rules <a id="routing"/>
+
+When an Integration Rule triggers your Lambda function, it can process the incoming message and publish a response back to Ably. This enables message routing and transformation patterns across your channels.
+
+### Lambda Function setup <a id="lambda-setup"/>
+
+Your Lambda Function must be packaged with the Ably SDK and uploaded to AWS Lambda as a zip file.
+
+Uses `Ably.Rest` instead of `Ably.Realtime` because REST API is more efficient for one-off publishing operations and avoids WebSocket connection overhead in Lambda's stateless environment.
+
+<If lang="javascript,nodejs">
+The following example shows an AWS Lambda function that receives Ably events and publishes responses back to an Ably channel:
+
+<If lang="javascript">
+<Code>
+```javascript
+'use strict';
+
+const Ably = require('ably');
+const inspect = require('util').inspect;
+
+exports.handler = (event, context, callback) => {
+  console.log("Received the following event from Ably: ", inspect(event));
+
+  // Parse the incoming event
+  // With enveloping enabled: event contains 'source', 'appId', 'channel',
+  // 'site', 'ruleId', and 'messages' or 'presence' arrays
+  // With enveloping disabled: event is the message data directly
+  const details = JSON.parse(event.messages[0].data);
+
+  // Use Ably.Rest for efficient REST-based publishing
+  // This avoids the overhead of establishing a WebSocket connection
+  const ably = new Ably.Rest({ key: '<YOUR_API_KEY>' });
+
+  // Get the target channel and publish the response
+  // Important: Do not publish to a channel that triggers this same rule
+  // to avoid infinite loops
+  const channel = ably.channels.get('<TARGET_CHANNEL_NAME>');
+
+  channel.publish('lambdaresponse', 'success', (err) => {
+    if(err) {
+      console.log("Error publishing back to ably:", inspect(err));
+      callback(err);
+    } else {
+      // Only call callback() after publish completes
+      // to ensure the HTTP request finishes before function execution ends
+      callback(null, 'success');
+    }
+  });
+};
+```
+</Code>
+</If>
+
+<If lang="nodejs">
+<Code>
+```nodejs
+'use strict';
+
+const Ably = require('ably');
+const inspect = require('util').inspect;
+
+exports.handler = (event, context, callback) => {
+  console.log("Received the following event from Ably: ", inspect(event));
+
+  // Parse the incoming event
+  // With enveloping enabled: event contains 'source', 'appId', 'channel',
+  // 'site', 'ruleId', and 'messages' or 'presence' arrays
+  // With enveloping disabled: event is the message data directly
+  const details = JSON.parse(event.messages[0].data);
+
+  // Use Ably.Rest for efficient REST-based publishing
+  // This avoids the overhead of establishing a WebSocket connection
+  const ably = new Ably.Rest({ key: '<YOUR_API_KEY>' });
+
+  // Get the target channel and publish the response
+  // Important: Do not publish to a channel that triggers this same rule
+  // to avoid infinite loops
+  const channel = ably.channels.get('<TARGET_CHANNEL_NAME>');
+
+  channel.publish('lambdaresponse', 'success', (err) => {
+    if(err) {
+      console.log("Error publishing back to ably:", inspect(err));
+      callback(err);
+    } else {
+      // Only call callback() after publish completes
+      // to ensure the HTTP request finishes before function execution ends
+      callback(null, 'success');
+    }
+  });
+};
+```
+</Code>
+</If>
+</If>
+
+## Handling high message volumes <a id="high-volume"/>
+
+Rate limiting is necessary when the message rate on source channels exceeds what your Lambda function can process. Without rate limiting, unprocessed messages accumulate in a backlog with no visibility or management options.
+
+### Using Kinesis for High-Volume Processing <a id="kinesis-processing"/>
+
+For high-volume message processing, use an intermediary queue such as [AWS Kinesis](https://aws.amazon.com/kinesis/). Configure [Integration Rules](/docs/platform/integrations/webhooks) to send events to Kinesis, then stream from Kinesis into your Lambda function.
+
+See [AWS documentation on streaming from Kinesis to Lambda](https://docs.aws.amazon.com/lambda/latest/dg/with-kinesis.html) for configuration details.
