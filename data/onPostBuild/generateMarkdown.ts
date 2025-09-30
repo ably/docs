@@ -13,6 +13,10 @@ import fastGlob from 'fast-glob';
 
 const REPORTER_PREFIX = 'generateMarkdown:';
 
+// Constants for content validation
+const REDIRECT_PAGE_MAX_SIZE = 1000; // Maximum size in bytes for redirect pages
+const MIN_CONTENT_LENGTH = 100; // Minimum content length to consider meaningful
+
 // Configure Turndown for documentation-friendly markdown
 const createTurndownService = () => {
   const turndownService = new TurndownService({
@@ -59,7 +63,7 @@ const extractMainContent = (htmlPath: string): string | null => {
     const html = fs.readFileSync(htmlPath, 'utf8');
 
     // Check if this is a redirect page (very small file with window.location.href)
-    if (html.length < 1000 && html.includes('window.location.href')) {
+    if (html.length < REDIRECT_PAGE_MAX_SIZE && html.includes('window.location.href')) {
       return null; // Skip redirect pages
     }
 
@@ -79,7 +83,7 @@ const extractMainContent = (htmlPath: string): string | null => {
     }
 
     // Check if content is meaningful (more than just whitespace/empty tags)
-    if (mainContent && mainContent.trim().length < 100) {
+    if (mainContent && mainContent.trim().length < MIN_CONTENT_LENGTH) {
       return null; // Skip pages with minimal content
     }
 
@@ -90,17 +94,9 @@ const extractMainContent = (htmlPath: string): string | null => {
   }
 };
 
-// Create markdown frontmatter (disabled - returns empty string)
-const createFrontmatter = (title: string, description: string): string => {
-  return '';
-};
-
 // Convert HTML content to Markdown
-const convertToMarkdown = (htmlContent: string, title: string, description: string): string => {
+const convertToMarkdown = (htmlContent: string): string => {
   const turndownService = createTurndownService();
-
-  // Add frontmatter
-  const frontmatter = createFrontmatter(title, description);
 
   // Convert HTML to Markdown
   const markdown = turndownService.turndown(htmlContent);
@@ -108,7 +104,7 @@ const convertToMarkdown = (htmlContent: string, title: string, description: stri
   // Clean up excessive newlines
   const cleanedMarkdown = markdown.replace(/\n{3,}/g, '\n\n');
 
-  return frontmatter + cleanedMarkdown;
+  return cleanedMarkdown;
 };
 
 // Write markdown file
@@ -193,7 +189,7 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     }
 
     // Convert to markdown
-    const markdown = convertToMarkdown(htmlContent, title, description);
+    const markdown = convertToMarkdown(htmlContent);
 
     // Write markdown file
     const markdownPath = path.join(publicDir, 'docs', slug, 'index.md');

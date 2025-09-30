@@ -11,6 +11,9 @@ import fastGlob from 'fast-glob';
 
 const publicDir = path.join(process.cwd(), 'public', 'docs');
 
+// Constants for content validation (must match generateMarkdown.ts)
+const REDIRECT_PAGE_MAX_SIZE = 1000; // Maximum size in bytes for redirect pages
+
 interface ValidationResult {
   totalPages: number;
   markdownFound: number;
@@ -42,7 +45,7 @@ const validateMarkdownFiles = async (): Promise<ValidationResult> => {
     const htmlPath = path.join(publicDir, htmlFile);
     const htmlContent = fs.readFileSync(htmlPath, 'utf8');
 
-    if (htmlContent.length < 1000 && htmlContent.includes('window.location.href')) {
+    if (htmlContent.length < REDIRECT_PAGE_MAX_SIZE && htmlContent.includes('window.location.href')) {
       result.redirectPages++;
       continue; // Skip redirect pages
     }

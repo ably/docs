@@ -325,21 +325,11 @@ const RightSidebar = () => {
               href={`${location.pathname.replace(/\/$/, '')}/index.md`}
               className="flex h-5 ui-theme-dark group/markdown-link cursor-pointer"
               onClick={(e) => {
-                // Check if markdown file exists by attempting to fetch it
-                const markdownUrl = `${location.pathname.replace(/\/$/, '')}/index.md`;
-                fetch(markdownUrl, { method: 'HEAD' })
-                  .then((response) => {
-                    if (!response.ok) {
-                      e.preventDefault();
-                      alert(
-                        'Markdown files are only available in production builds. Run "yarn build" to generate them.',
-                      );
-                    }
-                  })
-                  .catch(() => {
-                    e.preventDefault();
-                    alert('Markdown files are only available in production builds. Run "yarn build" to generate them.');
-                  });
+                // In development mode, markdown files aren't generated, so show alert immediately
+                if (process.env.NODE_ENV === 'development') {
+                  e.preventDefault();
+                  alert('Markdown files are only available in production builds. Run "yarn build" to generate them.');
+                }
 
                 track('markdown_link_clicked', {
                   location: location.pathname,
