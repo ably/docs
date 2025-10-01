@@ -143,12 +143,12 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
       const html = fs.readFileSync(htmlPath, 'utf8');
 
       // Skip redirect pages
-      if (html.length < 1000 && html.includes('window.location.href')) {
+      if (html.length < REDIRECT_PAGE_MAX_SIZE && html.includes('window.location.href')) {
         return null;
       }
 
-      // Extract slug from file path (remove /index.html)
-      const slug = htmlFile.replace(/\/index\.html$/, '').replace(/^\.\//, '');
+      // Extract slug from file path (remove index.html)
+      const slug = htmlFile.replace(/\/?index\.html$/, '').replace(/^\.\//, '');
 
       // Extract title and description from HTML meta tags
       const $ = cheerio.load(html);
