@@ -242,7 +242,7 @@ export function updateAnnotationSummary(message: MessageSummary) {
   }
 
   sectionsContainer.innerHTML = '';
-  const hasAnnotations = annotationTypes.some((type) => message.summary && message.summary[`${annotationNamespace}:${type.key}`]);
+  const hasAnnotations = annotationTypes.some((type) => message.annotations.summary && message.annotations.summary[`${annotationNamespace}:${type.key}`]);
 
   if (!hasAnnotations) {
     sectionsContainer.appendChild(createEmptyAnnotationSummaryContentElement());
@@ -250,7 +250,7 @@ export function updateAnnotationSummary(message: MessageSummary) {
   }
 
   for (const { key } of annotationTypes) {
-    const entry = message.summary[`${annotationNamespace}:${key}`];
+    const entry = message.annotations.summary[`${annotationNamespace}:${key}`];
     if (!entry) {
       continue;
     }

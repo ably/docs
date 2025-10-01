@@ -1,7 +1,7 @@
 export const urlParams = new URLSearchParams(window.location.search);
 export const clientId = urlParams.get('clientId') || 'user2';
-export const channelName = urlParams.get('name') || 'mutable:pub-sub-message-annotations';
-export const annotationNamespace = 'my-annotations';
+export const annotationNamespace = 'annotation';
+export const channelName = urlParams.get('name') || `${annotationNamespace}:pub-sub-message-annotations`;
 
 export const annotationTypes = [
   { key: 'total.v1', color: 'blue', label: 'Total' },
