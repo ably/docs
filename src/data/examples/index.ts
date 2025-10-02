@@ -4,6 +4,7 @@ export const DEFAULT_EXAMPLE_LANGUAGES = ['javascript', 'react'];
 
 export const examples: Example[] = [
   {
+<<<<<<< HEAD
     id: 'ai-transport-message-per-token',
     name: 'Message per token streaming',
     description: 'Stream AI responses token-by-token using the message-per-token pattern.',
@@ -22,6 +23,16 @@ export const examples: Example[] = [
     visibleFiles: ['src/script.ts', 'src/llm.ts', 'src/agent.ts', 'App.tsx', 'llm.ts', 'agent.ts', 'index.tsx'],
     metaTitle: 'Build AI message-per-response streaming with Ably AI Transport',
     metaDescription: `Stream AI-generated tokens by appending them to a single message using Ably AI Transport. Each response appears as one compacted message in channel history.`,
+  },
+  {
+    id: 'auth-generate-jwt',
+    name: 'Generate JWT',
+    description: 'Generate a JSON Web Token (JWT) for authenticating users.',
+    products: ['auth'],
+    layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
+    metaTitle: `Build chat history with Ably’s Chat SDK`,
+    metaDescription: `Learn how to build and use JWTs for client authentication with Ably. Secure token-based auth for realtime applications.`,
   },
   {
     id: 'chat-presence',
