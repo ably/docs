@@ -47,7 +47,6 @@ const createTurndownService = () => {
     },
   });
 
-  // Remove navigation, headers, footers, and other UI elements
   turndownService.remove(['nav', 'header', 'footer', 'script', 'style', 'noscript']);
 
   return turndownService;
@@ -62,15 +61,14 @@ const extractMainContent = (htmlPath: string): string | null => {
 
     const html = fs.readFileSync(htmlPath, 'utf8');
 
-    // Check if this is a redirect page (very small file with window.location.href)
-    if (html.length < REDIRECT_PAGE_MAX_SIZE && html.includes('window.location.href')) {
+    // Check if this is a redirect page
+    if (html.length < REDIRECT_PAGE_MAX_SIZE && /<script>window\.location\.href=/.test(html)) {
       return null; // Skip redirect pages
     }
 
     const $ = cheerio.load(html);
 
-    // Remove unwanted elements
-    $('nav, header, footer, script, style, noscript, .sidebar, .navigation').remove();
+    $('nav, header, footer, script, style, noscript').remove();
 
     // Try to find the main article content
     // Look for common article containers
@@ -143,38 +141,27 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
       const html = fs.readFileSync(htmlPath, 'utf8');
 
       // Skip redirect pages
-      if (html.length < REDIRECT_PAGE_MAX_SIZE && html.includes('window.location.href')) {
+      if (html.length < REDIRECT_PAGE_MAX_SIZE && /<script>window\.location\.href=/.test(html)) {
         return null;
       }
 
       // Extract slug from file path (remove index.html)
       const slug = htmlFile.replace(/\/?index\.html$/, '').replace(/^\.\//, '');
 
-      // Extract title and description from HTML meta tags
-      const $ = cheerio.load(html);
-      const title =
-        $('meta[property="og:title"]').attr('content') ||
-        $('meta[name="twitter:title"]').attr('content') ||
-        $('title').text() ||
-        'Untitled';
-      const description =
-        $('meta[name="description"]').attr('content') || $('meta[property="og:description"]').attr('content') || '';
-
       return {
         slug: slug || '.',
-        title,
-        description,
       };
     })
-    .filter((page) => page !== null) as { slug: string; title: string; description: string }[];
+    .filter((page) => page !== null) as { slug: string }[];
 
   reporter.info(`${REPORTER_PREFIX} Processing ${allPages.length} content pages`);
 
   let successCount = 0;
+  let skipCount = 0;
   let failCount = 0;
 
   for (const page of allPages) {
-    const { slug, title, description } = page;
+    const { slug } = page;
 
     // Determine the HTML file path
     const htmlPath = path.join(publicDir, 'docs', slug, 'index.html');
@@ -183,8 +170,8 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     const htmlContent = extractMainContent(htmlPath);
 
     if (!htmlContent) {
-      reporter.warn(`${REPORTER_PREFIX} Could not extract content for ${slug}`);
-      failCount++;
+      reporter.info(`${REPORTER_PREFIX} Skipped ${slug} (insufficient content)`);
+      skipCount++;
       continue;
     }
 
@@ -203,7 +190,9 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
   }
 
   if (failCount > 0) {
-    reporter.warn(`${REPORTER_PREFIX} Generated ${successCount} markdown files with ${failCount} failures`);
+    reporter.warn(`${REPORTER_PREFIX} Generated ${successCount} markdown files, skipped ${skipCount}, with ${failCount} failures`);
+  } else if (skipCount > 0) {
+    reporter.info(`${REPORTER_PREFIX} Successfully generated ${successCount} markdown files (${skipCount} skipped)`);
   } else {
     reporter.info(`${REPORTER_PREFIX} Successfully generated ${successCount} markdown files`);
   }
