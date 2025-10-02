@@ -179,7 +179,9 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     const markdown = convertToMarkdown(htmlContent);
 
     // Write markdown file
-    const markdownPath = path.join(publicDir, 'docs', slug, 'index.md');
+    const markdownPath = slug === '.'
+      ? path.join(publicDir, 'docs', 'index.md')
+      : path.join(publicDir, 'docs', `${slug}.md`);
     const success = writeMarkdownFile(markdownPath, markdown, reporter);
 
     if (success) {

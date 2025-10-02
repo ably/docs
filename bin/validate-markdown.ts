@@ -45,13 +45,15 @@ const validateMarkdownFiles = async (): Promise<ValidationResult> => {
     const htmlPath = path.join(publicDir, htmlFile);
     const htmlContent = fs.readFileSync(htmlPath, 'utf8');
 
-    if (htmlContent.length < REDIRECT_PAGE_MAX_SIZE && htmlContent.includes('window.location.href')) {
+    if (htmlContent.length < REDIRECT_PAGE_MAX_SIZE && /<script>window\.location\.href=/.test(htmlContent)) {
       result.redirectPages++;
       continue; // Skip redirect pages
     }
 
     // Check if corresponding markdown file exists
-    const markdownFile = path.join(publicDir, dir, 'index.md');
+    const markdownFile = dir === '.'
+      ? path.join(publicDir, 'index.md')
+      : path.join(publicDir, `${dir}.md`);
 
     if (fs.existsSync(markdownFile)) {
       result.markdownFound++;
@@ -59,7 +61,7 @@ const validateMarkdownFiles = async (): Promise<ValidationResult> => {
       // Verify the markdown file has content
       const stats = fs.statSync(markdownFile);
       if (stats.size === 0) {
-        console.warn(`⚠️  Warning: ${dir}/index.md is empty`);
+        console.warn(`⚠️  Warning: ${markdownFile} is empty`);
       }
     } else {
       result.markdownMissing++;
@@ -91,8 +93,9 @@ const main = async () => {
 
     if (result.markdownMissing > 0) {
       console.log('\n⚠️  Missing markdown files:');
-      result.missingFiles.slice(0, 10).forEach((file) => {
-        console.log(`   - ${file}/index.md`);
+      result.missingFiles.slice(0, 10).forEach((dir) => {
+        const mdPath = dir === '.' ? 'index.md' : `${dir}.md`;
+        console.log(`   - ${mdPath}`);
       });
 
       if (result.missingFiles.length > 10) {
