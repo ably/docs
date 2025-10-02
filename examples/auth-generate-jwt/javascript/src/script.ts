@@ -1,5 +1,6 @@
 import * as Ably from 'ably';
 import './styles.css';
+import { config } from './config';
 
 const connectButton = document.querySelector('button') as HTMLButtonElement;
 
@@ -14,7 +15,7 @@ function handleConnect() {
     messageOne.textContent = '✓';
 
     const realtimeClient = new Ably.Realtime({
-      authUrl: 'http://localhost:3001/generate-jwt',
+      authUrl: config.AUTH_URL || 'http://localhost:3001/generate-jwt',
     });
 
     const messageTwo = document.getElementById('message-2');
