@@ -105,3 +105,50 @@ Then ensure the checkbox for the policy is selected.
 8. You don't need to add tags so click **Next: Review**.
 9. Enter a suitable name for your role.
 10. Click **Create Role**.
+
+## Lambda retry behavior <a id="retries"/>
+
+Ably invokes Lambda functions asynchronously using the `event` invocation type. When a function returns an error, AWS Lambda automatically retries the execution up to two more times with delays between attempts (1 minute, then 2 minutes).
+
+Lambda functions might run multiple times for the same Ably event. Design functions to handle this by making them idempotent or checking for duplicate processing.
+
+Configure retry behavior in the AWS Lambda console under the function's asynchronous invocation settings. See the [AWS Lambda documentation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html#invocation-async-errors) for details on adjusting retry settings.
+
+## Example Lambda function <a id="example"/>
+
+The following Lambda function processes events from Ably and publishes a message back. Bundle this with the Ably client library when uploading.
+
+<Code>
+```javascript
+'use strict';
+
+const Ably = require('ably');
+const inspect = require('util').inspect;
+
+exports.handler = (event, context, callback) => {
+  console.log("Received event from Ably:", inspect(event));
+
+  // If you're using enveloped messages, the event has 'messages', 'appId', etc.
+  // Otherwise it's just the message data directly
+  const details = JSON.parse(event.messages[0].data);
+
+  // Use the REST client - don't bother with websockets for one-off publishes
+  const ably = new Ably.Rest({ key: 'YOUR_API_KEY' });
+
+  // Publish to a different channel or you'll trigger this Lambda again!
+  const channel = ably.channels.get('lambda-responses');
+  channel.publish('response', 'success', (err) => {
+    if(err) {
+      console.log("Error publishing back to Ably:", inspect(err));
+      callback(err);
+    } else {
+      callback(null, 'success');
+    }
+  });
+};
+```
+</Code>
+
+Important considerations: Use `Ably.Rest` instead of `Ably.Realtime` to avoid opening websockets for publishing. Publish to a different channel than the one triggering this Lambda to prevent loops. Always call the callback inside the publish callback to prevent the function from finishing before the publish request completes.
+
+A complete working example is available at [github.com/ably/example-lambda-function](https://github.com/ably/example-lambda-function) for download and deployment.
