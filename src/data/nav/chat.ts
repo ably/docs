@@ -104,6 +104,10 @@ export default {
           name: 'Share media',
           link: '/docs/chat/rooms/media',
         },
+        {
+          name: 'Message replies',
+          link: '/docs/chat/rooms/replies',
+        },
       ],
     },
     {
