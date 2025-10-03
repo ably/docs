@@ -23,7 +23,34 @@ One of the important benefits of using an Ably SDK is that the automatic refresh
 
 To use automatic refresh of tokens, provide either an `authUrl` or an `authCallback`. When the token is near to expiry the `authUrl` or `authCallback` is invoked and a new token is automatically requested.
 
+### Automatic renewal timing
+
+The Ably SDK will automatically renew the authentication token when it is within 30 seconds of expiry to ensure no loss of service. This automatic renewal process ensures that connections remain active without interruption due to token expiration.
+
+### Token authentication workflow
+
+Understanding how token authentication works helps clarify why automatic renewal is essential:
+
+1. Token Request creation: Your server uses the Ably API key to request a 'Token Request' object from Ably
+2. Token acquisition: Your client uses this 'Token Request' object to request the actual token from the Ably server every time it needs to authenticate  
+3. Token expiration: These tokens are short-lived and expire after a certain period of time
+4. Automatic renewal: The client SDK automatically requests a new token just before the previous one expires, ensuring the connection never drops due to authentication failure
+
+Using an `authUrl` or `authCallback` ensures your client automatically requests a new token when needed, making the authentication process seamless and preventing service interruptions.
+
 An `authURL` is recommended for use with web-based clients as they can easily utilize cookies and other web-only features. For non-web clients, `authCallback` is the recommended strategy.
+
+### Token TTL limits
+
+Ably enforces maximum TTL (time-to-live) limits on different types of tokens:
+
+- Access tokens: Maximum TTL of 24 hours
+- Device tokens (for push notifications): Maximum TTL of 5 years
+- Revocable tokens: Maximum TTL of 1 hour (when [token revocation](/docs/auth/revocation#revocable-tokens) is enabled)
+
+<Aside data-type="important">
+Attempting to create a token with a TTL that exceeds these limits will result in an error code [40003](/docs/platform/errors/codes#40003).
+</Aside>
 
 ### authUrl <a id="auth-url"/>
 
@@ -1004,7 +1031,7 @@ signature := base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 jwt := base64Header + "." + base64Claims + "." + signature
 log.Println("JWT:", jwt)
 
-// Send JWT to client (for demonstration, we print it here)
+// Send JWT to client (for demonstration, print it here)
 ```
 
 ```flutter
@@ -1040,6 +1067,55 @@ final signature = base64UrlEncode(digest.bytes);
 final ablyJwt = "$base64Header.$base64Claims.$signature";
 ```
 </Code>
+
+## Dynamic channel access control <a id="dynamic-access"/>
+
+One powerful use case for token authentication is dynamically changing the channels a user has access to without disconnecting. This can be achieved by issuing a re-authentication request from the client using the [`authorize()`](/docs/api/realtime-sdk/authentication#authorize) method.
+
+### How it works
+
+When you call `client.auth.authorize()` with new token parameters:
+
+1. New token acquisition: The client obtains a new token with different [capabilities](/docs/auth/capabilities) from your authentication server
+2. Connection upgrade: The new token is sent to Ably using the existing realtime connection 
+3. Automatic application: The capabilities (permissions) specified in the new token are automatically applied without disconnecting
+
+### Use cases
+
+Insufficient permissions scenario: A client might receive an `insufficient permissions` error (code [40160](/docs/platform/errors/codes#40160)) when attempting to attach to a channel. Your application can detect this error and trigger re-authentication to obtain the necessary permissions.
+
+Permission changes: You can proactively change a client's permissions by instructing them to re-authenticate. This can be done:
+- Via Ably channels: Send a message over an Ably channel that the client is listening on
+- Out-of-band communication: Use any other communication method your application supports
+
+### Example: Re-authentication for new permissions
+
+<Code>
+```javascript
+// Re-authenticate to get new capabilities
+try {
+  const newTokenDetails = await client.auth.authorize({
+    clientId: 'user123',
+    // Your auth server will return a token with updated capabilities
+  });
+  console.log('Successfully updated permissions');
+} catch (error) {
+  console.error('Failed to re-authenticate:', error);
+}
+```
+</Code>
+
+### Handling non-compliant clients
+
+For security purposes, if you need to handle potentially "rogue clients" that ignore re-authentication instructions:
+
+1. Token TTL reduction: You can reduce the token TTL (time-to-live) from the default of one hour to force more frequent re-authentication. However, avoid setting this shorter than 10 minutes to prevent excessive load on your authentication server.
+
+2. Token revocation: Use Ably's [token revocation API](/docs/auth/revocation) to immediately invalidate tokens for non-compliant clients. This provides a more scalable solution than relying solely on short TTLs.
+
+<Aside data-type="important">
+The `authorize()` method maintains the existing connection while updating permissions, making it ideal for real-time applications where connection continuity is important.
+</Aside>
 
 ## When to use token auth <a id="when"/>
 
