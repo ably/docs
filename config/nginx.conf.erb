@@ -18,7 +18,7 @@ http {
   gzip on;
   gzip_comp_level 6;
   gzip_min_length 512;
-  gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss font/woff font/woff2 image/svg+xml;
+  gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss font/woff font/woff2 image/svg+xml text/markdown;
   gzip_vary on;
   gzip_proxied any; # Heroku router sends Via header
 
@@ -126,6 +126,15 @@ http {
 
   # / PROTECTED CONTENT REQUESTS
 
+  ##
+  # CONTENT NEGOTIATION FOR MARKDOWN
+  # Check if the client accepts markdown by looking for text/markdown in the Accept header
+  map $http_accept $prefers_markdown {
+    default "no";
+    "~*text/markdown" "yes";
+  }
+  # / CONTENT NEGOTIATION FOR MARKDOWN
+
   server {
     listen <%= ENV["PORT"] %>;
     charset UTF-8;
@@ -230,11 +239,40 @@ http {
       <% if content_request_protected %>
       # Serve the file if it exists, otherwise try to authenticate
       # (.html requests won't match here, they'll go to the @html_auth location)
+      # If client prefers markdown and is authenticated, serve markdown
+      if ($prefers_markdown = "yes") {
+        rewrite ^ @markdown_request last;
+      }
       try_files $request_uri @html_auth;
       <% else %>
+      # If client prefers markdown, serve markdown instead of HTML
+      if ($prefers_markdown = "yes") {
+        rewrite ^ @markdown_request last;
+      }
       # Serve the file if it exists, try index.html for paths without a trailing slash, otherwise 404
       try_files $request_uri $request_uri/index.html $request_uri/ =404;
       <% end %>
+    }
+
+    # Serve markdown files with content negotiation
+    location @markdown_request {
+      <% if content_request_protected %>
+      # Check authentication for markdown requests
+      if ($token_auth_status != "allowed") {
+        <% if host = ENV['CONTENT_REQUEST_CANONICAL_HOST'] %>
+        return 301 <%= ENV['SKIP_HTTPS'] == 'true' ? '$scheme' : 'https' %>://<%= host %>$request_uri;
+        <% else %>
+        return 404;
+        <% end %>
+      }
+      <% end %>
+
+      # Set proper content type for markdown
+      more_set_headers 'Content-Type: text/markdown; charset=utf-8';
+      more_set_headers 'Vary: Accept';
+
+      # Try to serve the markdown file, fall back to HTML if not available
+      try_files $request_uri/index.md $request_uri.md $request_uri/index.html $request_uri/ =404;
     }
 
     <% if content_request_protected %>

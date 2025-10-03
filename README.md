@@ -22,6 +22,41 @@ To run the docs site locally, run `bin/dev` from the root directory. Alternative
 
 View the [contribution guide](CONTRIBUTING.md) for information on how to write content and contribute to Ably docs.
 
+## Markdown Static Files
+
+The build process generates both HTML and Markdown versions of each documentation page. This provides a more token-efficient format for LLM crawlers and API clients.
+
+### Content Negotiation
+
+The site supports content negotiation via the `Accept` header:
+
+```bash
+# Request markdown version
+curl -H "Accept: text/markdown" https://ably.com/docs/channels
+
+# Request HTML version (default)
+curl https://ably.com/docs/channels
+```
+
+Markdown files are located at `/docs/{page-path}/index.md` alongside their HTML counterparts at `/docs/{page-path}/index.html`.
+
+### Build Process
+
+1. **Source**: Content is written in Textile or MDX format
+2. **HTML Generation**: Gatsby converts source files to static HTML
+3. **Markdown Generation**: The `generateMarkdown` post-build hook converts HTML to clean Markdown
+4. **Compression**: Both HTML and Markdown files are gzip compressed
+
+### Validation
+
+Validate markdown generation after building:
+
+```bash
+yarn validate-markdown
+```
+
+This ensures all HTML pages have corresponding Markdown files and reports any issues.
+
 ## Support
 
 If you have any questions or suggestions, please [raise an issue](https://github.com/ably/docs/issues).
