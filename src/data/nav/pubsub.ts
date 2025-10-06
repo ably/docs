@@ -87,10 +87,6 @@ export default {
           ],
         },
         {
-          name: 'SDK setup',
-          link: '/docs/getting-started/setup',
-        },
-        {
           name: 'React Hooks',
           link: '/docs/getting-started/react-hooks',
         },

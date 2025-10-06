@@ -26,16 +26,18 @@ const Card = ({ githubRepoURL, setupLink, title, image, text }: CardProps) => {
       <p className="ui-text-p3 py-4">{text}</p>
       <div className="flex flex-col justify-center gap-2">
         <Link to={setupLink} rel="noreferrer" className={cn(btn_sdks, 'ui-button-primary gap-2')}>
-          Setup <Icon name="icon-gui-arrow-long-right-micro" size="1rem" />
+          Get started <Icon name="icon-gui-arrow-long-right-micro" size="1rem" />
         </Link>
-        <a
-          href={githubRepoURL}
-          target="_blank"
-          rel="noreferrer"
-          className={cn(btn_sdks, 'ui-button-secondary gap-2 align-middle')}
-        >
-          <span className="relative top-px">GitHub</span> <Icon name="icon-social-github" size="1.125rem" />
-        </a>
+        {githubRepoURL && (
+          <a
+            href={githubRepoURL}
+            target="_blank"
+            rel="noreferrer"
+            className={cn(btn_sdks, 'ui-button-secondary gap-2 align-middle')}
+          >
+            <span className="relative top-px">GitHub</span> <Icon name="icon-social-github" size="1.125rem" />
+          </a>
+        )}
       </div>
     </section>
   );
