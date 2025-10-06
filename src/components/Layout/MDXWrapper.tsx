@@ -97,10 +97,36 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
     return processChild(children);
   }, [children, replacements]);
 
+  // Utility languages that should be shown without warning (like JSON)
+  const UTILITY_LANGUAGES = ['html', 'xml', 'css', 'sql'];
+
+  // Check if this code block contains only a single utility language
+  const utilityLanguageOverride = useMemo(() => {
+    const childrenArray = React.Children.toArray(processedChildren);
+
+    // Check if this is a single child with a utility language
+    if (childrenArray.length !== 1) return null;
+
+    const child = childrenArray[0];
+    if (!isValidElement(child)) return null;
+
+    const preElement = child as ReactElement<{ children?: ReactNode }>;
+    const codeElement = isValidElement(preElement.props?.children) ? preElement.props.children as ReactElement : null;
+
+    if (!codeElement || !codeElement.props?.className) return null;
+
+    const className = codeElement.props.className as string;
+    const langMatch = className.match(/language-(\w+)/);
+    const lang = langMatch ? langMatch[1] : null;
+
+    // If it's a utility language, return the language to use as override
+    return lang && UTILITY_LANGUAGES.includes(lang) ? lang : null;
+  }, [processedChildren]);
+
   return (
     <CodeSnippet
       {...props}
-      lang={activePage.language}
+      lang={utilityLanguageOverride || activePage.language}
       sdk={sdk}
       onChange={(lang, sdk) => {
         setSdk(sdk ?? null);
