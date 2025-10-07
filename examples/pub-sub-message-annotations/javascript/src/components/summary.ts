@@ -2,7 +2,7 @@
 
 import * as Ably from 'ably';
 import type { MessageWithSerial } from '../types';
-import { annotationTypes, findAnnotationType, annotationNamespace } from '../config';
+import { findAnnotationType } from '../config';
 import { createDropdownArrow, rotateArrow, toggleArrowRotation } from './arrow';
 import {
   createCountBadge,
@@ -242,21 +242,14 @@ export function updateAnnotationSummary(message: MessageWithSerial) {
   }
 
   sectionsContainer.innerHTML = '';
-  const hasAnnotations = annotationTypes.some(
-    (type) => message.annotations?.summary?.[`${annotationNamespace}:${type.key}`],
-  );
+  const summaryEntries = Object.entries(message.annotations?.summary || {});
 
-  if (!hasAnnotations) {
+  if (summaryEntries.length === 0) {
     sectionsContainer.appendChild(createEmptyAnnotationSummaryContentElement());
     return;
   }
 
-  for (const { key } of annotationTypes) {
-    const entry = message.annotations?.summary[`${annotationNamespace}:${key}`];
-    if (!entry) {
-      continue;
-    }
-
+  for (const [key, entry] of summaryEntries) {
     const section = createSection(key, entry, expandedStates[key]);
     sectionsContainer.appendChild(section);
   }

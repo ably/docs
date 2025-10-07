@@ -1,6 +1,5 @@
 // Details panel with publishing controls and tabbed annotations view
 import type { MessageWithSerial } from '../types';
-import { annotationNamespace } from '../config';
 import { publishAnnotation } from '../ably';
 import { createAnnotationSummaryElement } from './summary';
 import { createAnnotationsListElement } from './annotations';
@@ -31,8 +30,12 @@ export function createPublishAnnotationElement(message: MessageWithSerial) {
     const name = nameInput.value.trim();
 
     if (name) {
+      // You might have multiple different usecases for annotations on the same message
+      // with the same aggregation type. A namespace lets you keep them separate, e.g.
+      // `read-receipt:flag.v1` and `delivery-receipt:flag.v1`. Here we just use "example"
+      // for everything since this example app only wants to use each aggregation type once.
       publishAnnotation(message, {
-        type: `${annotationNamespace}:${annotationType}`,
+        type: `example:${annotationType}`,
         name,
         count: 1, // only used by the multiple.v1 aggregation type, but for simplicity just set it to 1 unconditionally
       });

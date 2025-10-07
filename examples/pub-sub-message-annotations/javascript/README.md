@@ -63,18 +63,15 @@ This example demonstrates:
   yarn install
   ```
 
-6. Run the server:
+6. Enable the "Annotations, updates and deletes" channel rule that matches the channel name you'll be using (by default we use a channel name of `annotation:pub-sub-message-annotations`, so if using this, create this rule for the "annotation" channel namespace).
+
+7. Run the server:
 
   ```sh
   yarn run pub-sub-message-annotations-javascript
   ```
 
-7. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
-
-## Technical notes
-
-- Annotations require a channel with the "Annotations, updates and deletes" channel rule enabled. This example uses a channel with an initial segment of `annotation`, with a channel name of `annotation:pub-sub-message-annotations`
-- Annotations are logically grouped by an annotation namespace. This example uses `my-annotations`
+8. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
 
 ## How to use this example
 
