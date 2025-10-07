@@ -73,7 +73,7 @@ This example demonstrates:
 
 ## Technical notes
 
-- Annotations require a channel in the mutable channel namespace. This example uses `mutable:pub-sub-message-annotations`
+- Annotations require a channel with the "Annotations, updates and deletes" channel rule enabled. This example uses a channel with an initial segment of `annotation`, with a channel name of `annotation:pub-sub-message-annotations`
 - Annotations are logically grouped by an annotation namespace. This example uses `my-annotations`
 
 ## How to use this example

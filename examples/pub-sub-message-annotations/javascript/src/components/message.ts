@@ -1,6 +1,5 @@
 // Components for displaying messages received on the channel
-
-import { MessageCreate } from '../types';
+import type { MessageWithSerial } from '../types';
 import { createDropdownArrow, toggleArrowRotation } from './arrow';
 import { createDetailsPane } from './details';
 import { createBadge } from './badge';
@@ -11,7 +10,7 @@ function formatTimestamp(timestamp: number): string {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-export function createMessageElement(message: MessageCreate) {
+export function createMessageElement(message: MessageWithSerial) {
   const messageContainer = document.createElement('div');
   messageContainer.className = 'mb-4';
   messageContainer.setAttribute('data-serial', message.serial);

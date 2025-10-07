@@ -3,7 +3,7 @@ import 'franken-ui/js/core.iife';
 import 'franken-ui/js/icon.iife';
 import * as Ably from 'ably';
 import { getChannel } from './ably';
-import { MessageSummary, MessageCreate } from './types';
+import { hasSerial } from './types';
 import { createMessageElement } from './components/message';
 import { updateAnnotationSummary } from './components/summary';
 import { addAnnotation } from './components/annotations';
@@ -25,11 +25,15 @@ async function main() {
   // We will receive a message.summary event when an annotation is published
   // and a new summary is available.
   // Regular messages will be received as message.create events.
-  getChannel().subscribe((message: Ably.Message) => {
+  getChannel().subscribe((message) => {
+    if (!hasSerial(message)) {
+      console.error('Received message without serial (this indicates that you need to enable the "Annotations, updates, and deletes" feature in channel rules)');
+      return;
+    }
     if (message.action === 'message.summary') {
-      updateAnnotationSummary(message as MessageSummary);
+      updateAnnotationSummary(message);
     } else if (message.action === 'message.create') {
-      const messageElement = createMessageElement(message as MessageCreate);
+      const messageElement = createMessageElement(message);
       document.getElementById('messages')?.appendChild(messageElement);
     }
   });
