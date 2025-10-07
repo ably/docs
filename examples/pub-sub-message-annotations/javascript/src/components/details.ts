@@ -1,12 +1,11 @@
 // Details panel with publishing controls and tabbed annotations view
-
-import { MessageCreate } from '../types';
+import type { MessageWithSerial } from '../types';
 import { annotationNamespace } from '../config';
 import { publishAnnotation } from '../ably';
 import { createAnnotationSummaryElement } from './summary';
 import { createAnnotationsListElement } from './annotations';
 
-export function createPublishAnnotationElement(message: MessageCreate) {
+export function createPublishAnnotationElement(message: MessageWithSerial) {
   const publisher = document.createElement('div');
   publisher.className = 'p-2 border-b border-gray-200 bg-gray-50';
   publisher.innerHTML = `
@@ -35,6 +34,7 @@ export function createPublishAnnotationElement(message: MessageCreate) {
       publishAnnotation(message, {
         type: `${annotationNamespace}:${annotationType}`,
         name,
+        count: 1, // only used by the multiple.v1 aggregation type, but for simplicity just set it to 1 unconditionally
       });
       nameInput.value = '';
     }
@@ -43,7 +43,7 @@ export function createPublishAnnotationElement(message: MessageCreate) {
   return publisher;
 }
 
-export function createMessageDetailsElement(message: MessageCreate) {
+export function createMessageDetailsElement(message: MessageWithSerial) {
   const messageDetails = document.createElement('div');
   messageDetails.className = 'grid grid-cols-1';
 
@@ -111,7 +111,7 @@ export function createMessageDetailsElement(message: MessageCreate) {
   return messageDetails;
 }
 
-export function createDetailsPane(message: MessageCreate) {
+export function createDetailsPane(message: MessageWithSerial) {
   const detailsPane = document.createElement('div');
   detailsPane.className = 'border-b border-l border-r border-gray-200 rounded-b-md overflow-hidden bg-white shadow-sm';
   detailsPane.id = `details-${message.id}`;

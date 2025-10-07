@@ -1,11 +1,13 @@
-import type { Message } from 'ably';
-
-export type MessageSummary = Message & Required<Pick<Message, 'serial' | 'summary'>>;
-
-export type MessageCreate = Message & Required<Pick<Message, 'id' | 'serial' | 'data'>>;
+import * as Ably from 'ably';
 
 export type AnnotationType = {
   key: string;
   color: string;
   label: string;
 };
+
+export type MessageWithSerial = Ably.InboundMessage & { serial: string };
+
+export function hasSerial(message: Ably.InboundMessage): message is MessageWithSerial {
+  return typeof message.serial === 'string';
+}

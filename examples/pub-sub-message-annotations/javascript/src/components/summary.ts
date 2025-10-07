@@ -1,7 +1,7 @@
 // Handles the display and management of message annotation summaries
 
 import * as Ably from 'ably';
-import { MessageCreate, MessageSummary } from '../types';
+import type { MessageWithSerial } from '../types';
 import { annotationTypes, findAnnotationType, annotationNamespace } from '../config';
 import { createDropdownArrow, rotateArrow, toggleArrowRotation } from './arrow';
 import {
@@ -19,7 +19,7 @@ function createEmptyAnnotationSummaryContentElement() {
   return emptyState;
 }
 
-export function createAnnotationSummaryElement(message: MessageCreate) {
+export function createAnnotationSummaryElement(message: MessageWithSerial) {
   const annotationSummary = document.createElement('div');
   annotationSummary.className = 'space-y-1';
   annotationSummary.id = `sections-${message.serial}`;
@@ -226,7 +226,7 @@ export function createSection(key: string, entry: Ably.SummaryEntry, wasExpanded
   return section;
 }
 
-export function updateAnnotationSummary(message: MessageSummary) {
+export function updateAnnotationSummary(message: MessageWithSerial) {
   const sectionsContainer = document.getElementById(`sections-${message.serial}`);
   if (!sectionsContainer) {
     return;
@@ -243,7 +243,7 @@ export function updateAnnotationSummary(message: MessageSummary) {
 
   sectionsContainer.innerHTML = '';
   const hasAnnotations = annotationTypes.some(
-    (type) => message.annotations?.summary && message.annotations?.summary[`${annotationNamespace}:${type.key}`],
+    (type) => message.annotations?.summary?.[`${annotationNamespace}:${type.key}`],
   );
 
   if (!hasAnnotations) {

@@ -1,6 +1,5 @@
 import * as Ably from 'ably';
 import { clientId, channelName } from './config';
-import { MessageCreate } from './types';
 
 // Singleton Ably client instance
 let client: Ably.Realtime | null = null;
@@ -24,7 +23,7 @@ export function getChannel() {
 }
 
 // Publishes a new annotation for a specific message
-export function publishAnnotation(message: MessageCreate, annotation: Ably.OutboundAnnotation) {
+export function publishAnnotation(message: Ably.InboundMessage, annotation: Ably.OutboundAnnotation) {
   return getChannel().annotations.publish(message, annotation);
 }
 
