@@ -63,7 +63,7 @@ This example demonstrates:
   yarn install
   ```
 
-6. Enable the "Annotations, updates and deletes" channel rule that matches the channel name you'll be using (by default we use a channel name of `annotation:pub-sub-message-annotations`, so if using this, create this rule for the "annotation" channel namespace).
+6. Enable the "Annotations, updates and deletes" channel rule that matches the channel name you'll be using (by default we use a channel name of `annotation:pub-sub-message-annotations`, so if using this, [create this rule](https://ably.com/docs/channels#rules) for the "annotation" channel namespace).
 
 7. Run the server:
 
@@ -71,7 +71,7 @@ This example demonstrates:
   yarn run pub-sub-message-annotations-javascript
   ```
 
-8. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result.
+8. Try it out by opening two tabs to [http://localhost:5173/](http://localhost:5173/) with your browser to see the result. Specify different client IDs in the URL (e.g., `?clientId=user1` and `?clientId=user2`) to see how annotations from different clients are handled and summarized
 
 ## How to use this example
 
