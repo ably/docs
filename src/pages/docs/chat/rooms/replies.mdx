@@ -1,0 +1,199 @@
+---
+title: "Message replies"
+meta_description: "Add reply functionality to messages in a chat room."
+meta_keywords: "ably chat, message replies, chat replies, javascript chat replies, typescript chat replies, chat metadata"
+---
+
+Reply to messages that have been previously sent in the chat room.
+
+Message replies are implemented using the `metadata` field when you [send a message](/docs/chat/rooms/messages#send).
+
+## Send a reply <a id="send-reply"/>
+
+Use the [`metadata`](/docs/chat/rooms/messages#structure) field of a message to store the reply when you [send a message](/docs/chat/rooms/messages#send).
+
+You need to at least include the `serial` of the parent message that you're replying to. Other information can be included such as a preview of the text:
+
+<Code>
+```javascript
+async function sendReply(replyToMessage, replyText) {
+  const metadata = {
+    reply: {
+      serial: replyToMessage.serial,
+      timestamp: replyToMessage.createdAt.getTime(),
+      clientId: replyToMessage.clientId,
+      previewText: replyToMessage.text.substring(0, 140)
+    }
+  };
+
+  await room.messages.send({
+    text: replyText,
+    metadata: metadata
+  });
+}
+```
+
+```react
+import { useMessages } from '@ably/chat/react';
+
+const ReplyComponent = ({ messageToReplyTo }) => {
+  const { sendMessage } = useMessages();
+
+  const sendReply = async (replyText) => {
+    const metadata = {
+      reply: {
+        serial: messageToReplyTo.serial,
+        createdAt: messageToReplyTo.createdAt.getTime(),
+        clientId: messageToReplyTo.clientId,
+        previewText: messageToReplyTo.text.substring(0, 140)
+      }
+    };
+
+    await sendMessage({
+      text: replyText,
+      metadata: metadata
+    });
+  };
+
+  return (
+    <div>
+      <button onClick={() => sendReply("My reply")}>Send Reply</button>
+    </div>
+  );
+};
+```
+</Code>
+
+## Subscribe to message replies <a id="subscribe"/>
+
+Message replies will be received as normal messages in the room using the [`subscribe()`](/docs/chat/rooms/messages#subscribe) method.
+
+You just need to handle storing and displaying the reply:
+
+### Store reply information <a id="store"/>
+
+When a user replies to a message, extract and store the parent message details:
+
+<Code>
+```javascript
+function prepareReply(parentMessage) {
+  return {
+    serial: parentMessage.serial,
+    createdAt: parentMessage.createdAt.getTime(),
+    clientId: parentMessage.clientId,
+    previewText: parentMessage.text.substring(0, 140)
+  };
+}
+```
+
+```react
+const prepareReply = (parentMessage) => {
+  return {
+    serial: parentMessage.serial,
+    createdAt: parentMessage.createdAt.getTime(),
+    clientId: parentMessage.clientId,
+    previewText: parentMessage.text.substring(0, 140)
+  };
+};
+```
+</Code>
+
+If a parent message isn't in local state, fetch it directly using its `serial`:
+
+<Code>
+```javascript
+async function fetchParentMessage(replyData) {
+  const message = await room.messages.get(replyData.serial);
+  return message;
+}
+```
+
+```react
+const FetchParentMessage = ({ replyData }) => {
+  const [parentMessage, setParentMessage] = useState();
+
+  useEffect(() => {
+    const fetchMessage = async () => {
+      const message = await room.messages.get(replyData.serial);
+      setParentMessage(message);
+    };
+
+    fetchMessage();
+  }, [replyData]);
+
+  return parentMessage ? (
+    <div>{parentMessage.text}</div>
+  ) : null;
+};
+```
+</Code>
+
+### Display replies <a id="display"/>
+
+Check incoming messages for reply `metadata` and display accordingly:
+
+<Code>
+```javascript
+room.messages.subscribe((messageEvent) => {
+  const message = messageEvent.message;
+
+  if (message.metadata?.reply) {
+    const replyData = message.metadata.reply;
+    const parentMessage = localMessages.find(msg => msg.serial === replyData.serial);
+
+    if (parentMessage) {
+      console.log(`Reply to ${parentMessage.clientId}: ${parentMessage.text}`);
+    } else {
+      console.log(`Reply to ${replyData.clientId}: ${replyData.previewText}`);
+    }
+  }
+
+  console.log(`Message: ${message.text}`);
+});
+```
+
+```react
+import { useMessages } from '@ably/chat/react';
+import { ChatMessageEventType } from '@ably/chat';
+
+const MessageList = () => {
+  const [messages, setMessages] = useState([]);
+
+  useMessages({
+    listener: (event) => {
+      if (event.type === ChatMessageEventType.Created) {
+        setMessages(prev => [...prev, event.message]);
+      }
+    }
+  });
+
+  const findParentMessage = (replyData) => {
+    return messages.find(msg => msg.serial === replyData.serial);
+  };
+
+  return (
+    <div>
+      {messages.map(message => (
+        <div key={message.serial}>
+          {message.metadata?.reply && (
+            <div>
+              Replying to: {message.metadata.reply.previewText}
+            </div>
+          )}
+          <div>{message.text}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+```
+</Code>
+
+## Considerations
+
+Consider the following when implementing message replies:
+
+- Older messages may not be available depending on message persistence settings.
+- Messages can be [updated](/docs/chat/rooms/messages#update), potentially removing references to replies.
+- The `metadata` field is not server-validated.
+- Nested replies can be complex and expensive to implement, so consider limiting reply depth.
