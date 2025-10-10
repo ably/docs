@@ -37,7 +37,7 @@ const determineActiveLanguage = (
   const params = new URLSearchParams(location);
   const langParam = params.get('lang') as LanguageKey;
 
-  if (langParam && Object.keys(languageInfo).includes(langParam)) {
+  if (langParam && Object.keys(languageInfo).includes(langParam) && activeLanguages.includes(langParam)) {
     return langParam;
   } else if (activeLanguages.length > 0 && product) {
     const relevantLanguages = activeLanguages.filter((lang) => Object.keys(languageData[product]).includes(lang));
