@@ -17,11 +17,19 @@ redirect_from:
 
 Push notifications notify user devices or browsers regardless of whether an application is open and running. They deliver information, such as app updates, social media alerts, or promotional offers, directly to the user's screen. Ably sends push notifications to devices using [Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging) or [Apple Push Notification Service](https://developer.apple.com/notifications/), and to browsers using [Web Push](https://developer.mozilla.org/en-US/docs/Web/API/Push_API). Push notifications don't require a device or browser to stay connected to Ably. Instead, a device's or browser's operating system or web browser maintains its own battery-efficient transport to receive notifications.
 
+## Billing and connection considerations <a id="billing"/>
+
+Push notifications have specific billing implications that differ from regular realtime connections:
+
+- Push subscriptions don't count as connections: Devices registered for push notifications don't count toward [concurrent connection](/docs/platform/pricing/limits#connection) limits when they're not actively connected to Ably.
+- Channel activation affects billing: When publishing push notifications via channels, those channels become activated and count toward concurrent (peak) channel count for billing purposes.
+- Multiple devices, one message count: Publishing a single push notification to multiple devices via a channel counts as one outbound message per recipient device.
+
 You can publish push notifications to user devices or browsers [directly](/docs/push/publish/#direct-publishing) or [via channels](#via-channels).
 
-**Publishing directly** sends push notifications to specific devices or browsers identified by unique identifiers, such as a `deviceId` or a `clientId`. This approach is akin to sending a personal message or alerts directly to an individual user's device or browser, bypassing the need for channel subscriptions. It excels in targeted and personalized communications, such as alerts specific to a user's actions, account notifications, or customized updates.
+Publishing directly sends push notifications to specific devices or browsers identified by unique identifiers, such as a `deviceId` or a `clientId`. This approach is akin to sending a personal message or alerts directly to an individual user's device or browser, bypassing the need for channel subscriptions. It excels in targeted and personalized communications, such as alerts specific to a user's actions, account notifications, or customized updates.
 
-**Publishing via channels** uses a [Pub/Sub](/docs/channels/messages) model. Messages are sent to channels to which multiple devices or browsers can subscribe. When a message is published to a channel, all devices or browsers subscribed to that channel receive the notification. This approach is particularly powerful for simultaneously publishing messages to multiple users.
+Publishing via channels uses a [Pub/Sub](/docs/channels/messages) model. Messages are sent to channels to which multiple devices or browsers can subscribe. When a message is published to a channel, all devices or browsers subscribed to that channel receive the notification. This approach is particularly powerful for simultaneously publishing messages to multiple users.
 
 ## Push notification process
 
@@ -107,3 +115,84 @@ const channel = realtime.channels.get('[meta]log:push');
 channel.subscribe(msg => console.log(msg));
 ```
 </Code>
+
+## Troubleshooting push notifications <a id="troubleshooting"/>
+
+If not receiving expected push notifications, follow these debugging steps:
+
+### Verify device registration
+
+Check if the device is registered in the Ably dashboard:
+1. Go to Notifications tab → Device inspector
+2. Search for the device using `deviceId` or `clientId`
+3. Verify device state:
+   - ACTIVE: Ready to receive notifications
+   - FAILED: Check error details (common: registration expired, invalid token)
+
+### Test delivery
+
+Use the [push inspector](/docs/platform/account/app/notifications#push-inspector) in the dashboard to send test notifications directly to the device.
+
+### Check for errors
+
+Monitor the `[meta]log:push` channel for delivery errors. Common platform-specific issues:
+
+APNs (iOS):
+- BadDeviceToken: Environment mismatch (sandbox vs production)
+- DeviceTokenNotForTopic: Bundle ID mismatch in certificate
+
+FCM (Android):
+- FcmTransport not configured: Invalid service account JSON
+- 403 Forbidden: FCM API not enabled or permission issues
+- 404 NOT_FOUND: Device unregistered (app uninstalled)
+
+Web Push:
+- Service worker registration failed: Conflicting VAPID keys from previous registrations
+
+### Cannot publish push notifications
+
+If unable to publish push notifications on channels, check these common issues:
+
+#### Channel rules
+
+Push notifications are disabled by default on all channels. Explicitly enable push notifications for each channel or namespace:
+
+1. Go to the Ably dashboard → App settings → Channel rules.
+2. Create or edit a rule for your channel/namespace.
+3. Enable "Push notifications enabled".
+
+#### Permissions
+
+Ensure the publisher has the correct capabilities:
+
+- Publishing requires `publish` capability for the channel.
+- Push-specific operations may require additional push capabilities.
+
+#### Invalid payload
+
+Verify the push payload in the message `extras` field is valid:
+
+- Must include a `push` object with valid notification structure.
+- Check payload format matches platform requirements (APNs, FCM, Web Push).
+
+### Duplicate notifications
+
+If receiving duplicate push notifications for the same device, this typically occurs when a device has both a `deviceId` and `clientId` subscription to the same channel:
+
+- `deviceId` subscriptions deliver notifications to a single specific device.
+- `clientId` subscriptions deliver notifications to all devices sharing that client ID.
+
+If a device has both subscription types, it will receive the notification twice. To resolve:
+1. Use the [push inspector widget](/docs/platform/account/app/notifications#push-inspector-widget) to check channel subscriptions.
+2. Remove either the `deviceId` or `clientId` subscription for the affected device.
+
+### Debug checklist
+
+- Device shows as ACTIVE in dashboard.
+- Push credentials configured correctly.
+- Environment settings match (sandbox/production).
+- App has notification permissions.
+- No errors in `[meta]log:push` channel.
+- Check for duplicate subscriptions (both `deviceId` and `clientId`).
+
+For detailed troubleshooting steps, see the [push inspector documentation](/docs/platform/account/app/notifications#push-inspector) and [error logging](/docs/metadata-stats/metadata/subscribe#log).
