@@ -49,8 +49,8 @@ export default {
               link: '/docs/chat/getting-started/swift',
             },
             {
-              name: 'React UI Components',
-              link: '/docs/chat/getting-started/react-ui-components',
+              name: 'React UI Kit',
+              link: '/docs/chat/getting-started/react-ui-kit',
             },
           ],
         },
@@ -116,28 +116,28 @@ export default {
       ],
     },
     {
-      name: 'React UI Components',
+      name: 'React UI Kit',
       pages: [
         {
           name: 'Overview',
-          link: '/docs/chat/react-ui-components',
+          link: '/docs/chat/react-ui-kit',
           index: true,
         },
         {
           name: 'Setup',
-          link: '/docs/chat/react-ui-components/setup',
+          link: '/docs/chat/react-ui-kit/setup',
         },
         {
           name: 'Providers and Hooks',
-          link: '/docs/chat/react-ui-components/providers',
+          link: '/docs/chat/react-ui-kit/providers',
         },
         {
           name: 'Components',
-          link: '/docs/chat/react-ui-components/components',
+          link: '/docs/chat/react-ui-kit/components',
         },
         {
           name: 'Customisation',
-          link: '/docs/chat/react-ui-components/component-styling',
+          link: '/docs/chat/react-ui-kit/component-styling',
           languages: [],
         },
       ],
