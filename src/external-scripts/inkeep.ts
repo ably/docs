@@ -157,13 +157,10 @@ const aiChatSettings = () => ({
       isPinnedToToolbar: true,
     },
     {
-      name: 'Chat with support',
+      name: 'Get support',
       action: {
-        type: 'invoke_callback',
-        callback: () => {
-          openHubSpotConversations();
-        },
-        shouldCloseModal: true,
+        type: 'open_link',
+        url: '/support',
       },
       isPinnedToToolbar: true,
     },
