@@ -7,11 +7,29 @@ Token authentication uses a trusted device with an [API key](/docs/auth#api-key)
 
 Token authentication is the recommended authentication method to use client-side as it provides more fine-grained access control and limits the risk of credentials being exposed.
 
+## Access restrictions <a id="restrictions"/>
+
+### Token-based client validation
+
+Token authentication enables you to validate client characteristics (such as origin, IP address, cookies, or any other client features) in your authentication server before issuing tokens. This provides flexible access control as you can implement any validation logic in your auth server as part of the token issuance process.
+
+### API key restrictions
+
+For cases where token authentication is impractical, Ably can add origin or IP address restrictions directly to API keys. However, this approach has significant limitations:
+
+- Less flexible than token authentication.
+- Manual intervention required to modify restrictions.
+- Enterprise support packages only: contact [Ably support](https://ably.com/support) if interested.
+- Not a security boundary: origin headers can be easily spoofed, especially outside browser contexts.
+- Permissive fallback: requests with no origin header are allowed when origin restrictions are set.
+
+For maximum security and flexibility, token authentication with server-side validation is the recommended approach.
+
 Any of the following cause an SDK to use token authentication:
 
-* An [`authUrl`](/docs/api/realtime-sdk/types#client-options) or [`authCallback`](/docs/api/realtime-sdk/types#client-options) is provided that returns an Ably-compatible token or an Ably [`TokenRequest`](/docs/api/realtime-sdk/types#token-request)
-* [`useTokenAuth`](/docs/api/realtime-sdk/types#client-options) is true
-* A [`token`](/docs/api/realtime-sdk/types#client-options) or [`tokenDetails`](/docs/api/realtime-sdk/types#client-options) property is provided
+* An [`authUrl`](/docs/api/realtime-sdk/types#client-options) or [`authCallback`](/docs/api/realtime-sdk/types#client-options) is provided that returns an Ably-compatible token or an Ably [`TokenRequest`](/docs/api/realtime-sdk/types#token-request).
+* [`useTokenAuth`](/docs/api/realtime-sdk/types#client-options) is true.
+* A [`token`](/docs/api/realtime-sdk/types#client-options) or [`tokenDetails`](/docs/api/realtime-sdk/types#client-options) property is provided.
 
 Providing a literal `token` or `tokenDetails` is typically used for testing: since tokens are short-lived, in production you typically want to use an authentication method that allows the client library to renew the token automatically before the current token expires.
 
@@ -1053,4 +1071,117 @@ Ably recommends that token authentication is used client-side for the following 
 When selecting an Ably SDK for implementing token authentication with Ably, you don't need to use the realtime interface on the auth server.
 
 As basic authentication is primarily designed for authenticating a secure server, in this situation, and assuming the server is only used for authentication, it is more efficient to use the REST interface, as the overhead associated with maintaining a realtime connection, is not required to issue tokens.
+</Aside>
+
+## Incremental authorization and reauth <a id="incremental-auth"/>
+
+Ably's authentication uses a system of immutable tokens. Once created, tokens have a fixed set of [capabilities](/docs/auth/capabilities) that cannot be modified. However, there are scenarios where clients may need additional capabilities after their initial connection.
+
+### Reauthorization process
+
+When a client needs new capabilities, it can reauthorize by obtaining a new token from your auth server and calling [`auth.authorize()`](/docs/api/realtime-sdk/authentication#authorize). This upgrades the connection to use the new token without disrupting the existing connection or requiring reconnection.
+
+### Reauthorization strategies
+
+Choose the strategy that best fits your application architecture:
+
+#### Server-determined capabilities
+
+Best for applications with session management where the server maintains complete client state.
+
+Your auth server tracks the canonical list of capabilities each client should have. When the client requests a new token, the server generates it with the complete capability set. This is the most secure approach as the server is the single source of truth.
+
+#### Client-requested capabilities
+
+Best for applications where clients need to request specific additional capabilities.
+
+The client can request additional capabilities by including them in the token request:
+
+- With `authUrl`: Use `authParams` or `authHeaders` in [client options](/docs/api/realtime-sdk/types#client-options) to send capability requests.
+- With `authCallback`: Construct a custom request to your server with the needed capabilities.
+
+Your server validates the request, updates its records of client capabilities, and issues a token with the complete capability set.
+
+#### Client-managed capabilities
+
+Best for stateless auth servers that cannot maintain client sessions.
+
+The client maintains its own list of needed capabilities and sends the complete list to the server on each token request. The server validates each capability before issuing the token.
+
+#### Signed capability storage
+
+Best for stateless servers where re-validation of all capabilities is expensive.
+
+Store client capabilities in a signed format (HMAC-signed cookie) to avoid trusting the client. When requesting new capabilities:
+
+1. Server verifies the signature of existing capabilities.
+2. Adds the new capability to the validated set.
+3. Issues a token and updates the signed storage.
+
+### Handling capability errors
+
+When a client attempts an operation without proper capabilities, Ably returns an error with code `40160`. You can catch this error and trigger reauthorization:
+
+```javascript
+channel.attach((err) => {
+  if(err && err.code === 40160) {
+    console.log("Access denied - requesting new token with required capabilities");
+
+    // Update your capability requirements
+    channelsINeedAccessTo.push(channel.name);
+
+    // Reauthorize with new capabilities
+    realtime.auth.authorize((authErr) => {
+      if(!authErr) {
+        // Retry the original operation
+        channel.attach();
+      }
+    });
+  }
+});
+```
+
+### Best practices
+
+- **Server validation**: Always validate that clients should have access to requested capabilities
+- **Minimal privileges**: Issue tokens with only the capabilities clients actually need
+- **Token expiration**: Use appropriate token TTLs to balance security and performance
+- **Error handling**: Implement robust error handling for capability-related failures
+- **State management**: Choose the capability management strategy that fits your application's architecture
+
+## WebSocket security considerations <a id="websocket-security"/>
+
+When using tokens with WebSocket connections, developers often have concerns about including access tokens in WebSocket connection URLs as query parameters.
+
+### Token placement security
+
+From a security perspective, the location where an access token is stored (URL query parameters, headers, or message content) provides equivalent protection when connections use TLS:
+
+- All connection data, including URLs and query parameters, are encrypted in transit.
+- An attacker with access to inspect traffic can access tokens regardless of their location.
+- TLS tunnels prevent proxies from accessing URL contents.
+
+### Historical security concerns
+
+Traditional concerns about credentials in query parameters arose from non-TLS environments and don't apply to modern WebSocket implementations:
+
+Addressed concerns:
+- Proxies cannot access URLs when using TLS tunnels.
+- Browsers don't maintain history for WebSocket connections made by pages.
+- TLS prevents intermediate systems from logging connection URLs.
+
+Modern context:
+- Most OAuth flows use `access_token` query parameters as standard practice.
+- WebSocket connections default to TLS encryption.
+- Client WebSocket implementations often don't support custom headers, making query parameters the practical choice.
+
+### Recommendations
+
+- Always establish WebSocket connections over TLS (WSS protocol).
+- Use tokens with appropriate expiration times.
+- Implement automatic token refresh for long-lived connections.
+- Log and monitor token usage patterns for anomalies.
+
+<Aside data-type='note'>
+The security of your WebSocket authentication depends primarily on using TLS encryption and proper token management practices, rather than the specific method of token transmission.
 </Aside>
