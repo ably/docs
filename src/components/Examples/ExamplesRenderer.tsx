@@ -37,9 +37,10 @@ const UserIndicator = ({ user }: { user: string }) => {
 
 const getDependencies = (id: string, products: string[], activeLanguage: LanguageKey) => {
   return {
-    ably: '^2.9.0',
+    ably: '^2.13.0',
     nanoid: '^5.0.7',
     minifaker: '1.34.1',
+    'franken-ui': '^2.0.0',
     ...(products.includes('auth') ? { cors: '^2.8.5' } : {}),
     ...(products.includes('chat')
       ? { '@ably/chat': '^0.14.0', '@ably/chat-react-ui-components': '^0.1.2', clsx: '^2.1.1' }
@@ -185,6 +186,7 @@ const ExamplesRenderer = ({
                 showOpenInCodeSandbox={false}
                 showRefreshButton
                 {...(id === 'pub-sub-message-encryption' && { startRoute: '?encrypted=true' })}
+                {...(id === 'pub-sub-message-annotations' && { startRoute: '?clientId=user1' })}
               />
               <UserIndicator user={id === 'pub-sub-message-encryption' ? 'user 1 - encrypted' : 'user 1'} />
             </div>
