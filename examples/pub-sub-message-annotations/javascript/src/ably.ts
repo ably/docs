@@ -17,7 +17,7 @@ function getClient(): Ably.Realtime {
 
 // Returns the configured channel with all annotation modes enabled
 export function getChannel() {
-  return getClient().channels.get(`annotation:${channelName}`, {
+  return getClient().channels.get(`${channelName}`, {
     modes: ['PUBLISH', 'SUBSCRIBE', 'ANNOTATION_PUBLISH', 'ANNOTATION_SUBSCRIBE'],
   });
 }
