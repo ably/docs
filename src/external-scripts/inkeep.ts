@@ -52,22 +52,6 @@ declare global {
   }
 }
 
-const handleHubspotConversationStartedEvent = (eventPayload: object) =>
-  track(`hubspot_conversation_started`, eventPayload);
-
-const openHubSpotConversations = () => {
-  window.HubSpotConversations?.widget.load();
-  window.HubSpotConversations?.widget.open();
-
-  window.HubSpotConversations?.on('conversationStarted', handleHubspotConversationStartedEvent);
-
-  window.HubSpotConversations?.on('widgetClosed', () => {
-    window.HubSpotConversations?.widget.remove();
-    window.HubSpotConversations?.off('widgetClosed', null);
-    window.HubSpotConversations?.off('conversationStarted', null);
-  });
-};
-
 const getTools = () => [
   {
     type: 'function',
@@ -120,20 +104,8 @@ const getTools = () => [
             label: 'Talk to Sales',
             icon: { builtIn: 'LuUsers' },
             action: {
-              type: 'invoke_callback',
-              callback: () => {
-                window.history.pushState({}, '', '?chat-type=sales');
-                openHubSpotConversations();
-              },
-              shouldCloseModal: true,
-            },
-          },
-          {
-            label: 'Book a Demo',
-            icon: { builtIn: 'LuBookOpen' },
-            action: {
               type: 'open_link',
-              url: 'https://go.ably.com/inkeep-demo',
+              url: '/contact',
             },
           },
         ];
@@ -152,18 +124,15 @@ const aiChatSettings = () => ({
       name: 'Request a meeting',
       action: {
         type: 'open_link',
-        url: 'https://go.ably.com/inkeep-meeting',
+        url: '/contact',
       },
       isPinnedToToolbar: true,
     },
     {
-      name: 'Chat with support',
+      name: 'Get support',
       action: {
-        type: 'invoke_callback',
-        callback: () => {
-          openHubSpotConversations();
-        },
-        shouldCloseModal: true,
+        type: 'open_link',
+        url: '/support',
       },
       isPinnedToToolbar: true,
     },
@@ -372,11 +341,11 @@ export const inkeepOnLoad = (
   }
 
   if (inkeepSearchEnabled) {
-    loadInkeepSearch(config, inkeepChatEnabled);
+    loadInkeepSearch(config);
   }
 };
 
-const loadInkeepSearch = (config: object, inkeepChatEnabled: boolean) => {
+const loadInkeepSearch = (config: object) => {
   const searchBar = document.getElementById('inkeep-search');
   if (!searchBar) {
     return;
