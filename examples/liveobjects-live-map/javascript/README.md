@@ -1,4 +1,4 @@
-# Synchronizing key/value map data structures with LiveMap
+# Synchronize key/value map data structures with LiveMap
 
 Enable clients to update and synchronize key/value data in an application in realtime.
 

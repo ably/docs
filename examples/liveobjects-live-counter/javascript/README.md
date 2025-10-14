@@ -1,4 +1,4 @@
-# Synchronizing numeric values with LiveCounter
+# Synchronize numeric values with LiveCounter
 
 Enable clients to update and synchronize numerical values in an application in realtime.
 
