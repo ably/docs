@@ -193,6 +193,7 @@ export const examples: Example[] = [
     name: 'Message Annotations',
     description: 'Annotate pub/sub messages with additional data.',
     products: ['pubsub'],
+    languages: ['javascript'],
     layout: 'double-horizontal',
     visibleFiles: [
       'src/script.ts',
