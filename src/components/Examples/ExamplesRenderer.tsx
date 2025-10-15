@@ -196,6 +196,7 @@ const ExamplesRenderer = ({
                   className="rounded-lg overflow-hidden"
                   showOpenInCodeSandbox={false}
                   startRoute="/?publisher=false"
+                  {...(id === 'pub-sub-message-annotations' && { startRoute: '?publisher=false&clientId=user2' })}
                 />
                 <UserIndicator user="user 2" />
               </div>
