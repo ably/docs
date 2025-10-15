@@ -12,13 +12,11 @@ Use the following methods to work with message annotations in a pub/sub applicat
 
 - [`channels.get()`](/docs/channels#create) - creates a new or retrieves an existing `channel`. Specify the `ANNOTATION_PUBLISH` and `ANNOTATION_SUBSCRIBE` modes to publish and subscribe to message annotations.
 - [`channel.subscribe()`](/docs/pub-sub#subscribe) - subscribes to message events within a specific channel by registering a listener. Message events with a `message.create` action are received when a user publishes a message. Message events with a `message.summary` action are received when a user publishes or deletes an annotation.
-<!-- TODO links -->
-- `channel.annotations.publish()` - publishes an annotation for a specific message
-- `channel.annotations.subscribe()` - subscribes to receive individual annotation events
-- `channel.annotations.delete()` - deletes a previously published annotation
+- [`channel.annotations.publish()`](/docs/messages/annotations#publish) - publishes an annotation for a specific message
+- [`channel.annotations.subscribe()`](/docs/messages/annotations#individual-annotations) - subscribes to receive individual annotation events
+- [`channel.annotations.delete()`](/docs/messages/annotations#delete) - deletes a previously published annotation
 
-<!-- TODO link -->
-Find out more about annotations.
+Find out more about [annotations](/docs/messages/annotations).
 
 ## Annotation Types
 
