@@ -8,7 +8,16 @@ import languageInfo from '../../src/data/languages/languageInfo';
  * It is heavily inspired by the gatsby-plugin-sitemap plugin, and stripped down to only to what we need.
  */
 
-const LLMS_TXT_PREAMBLE = `# https://ably.com/docs llms.txt\n`;
+const LLMS_TXT_PREAMBLE = `# Ably Documentation
+
+> Ably is a realtime experience infrastructure platform that provides pub/sub messaging, chat, realtime data synchronization, and more.
+
+- **Global Edge Network**: Ultra-low latency realtime messaging delivered through a globally distributed edge network
+- **Enterprise Scale**: Built to handle millions of concurrent connections with guaranteed message delivery
+- **Multiple Products**: Pub/Sub, Chat, LiveSync, LiveObjects, Spaces, and Asset Tracking
+- **Developer-Friendly SDKs**: SDKs available for JavaScript, Node.js, Java, Python, Go, Objective-C, Swift, Csharp, PHP, Flutter, Ruby, React, React Native, and Kotlin
+
+`;
 
 const REPORTER_PREFIX = 'onPostBuild:';
 
@@ -25,6 +34,8 @@ const VALID_LANGUAGES = [
   'ruby',
   'swift',
   'go',
+  'kotlin',
+  'react',
 ];
 
 // Function to get the display label for a language
@@ -76,6 +87,105 @@ const prefixPath = ({ url, siteUrl, pathPrefix = `` }: { url: string; siteUrl: s
 const escapeMarkdown = (text: string) => {
   // backslash-escape Markdown special chars: \ ` * _ { } [ ] ( ) # + !
   return text.replace(/([\\`*_{}[\]()#+!])/g, '\\$1');
+};
+
+// Category structure for organizing pages
+interface CategoryStructure {
+  [category: string]: {
+    title: string;
+    pages?: Array<{
+      slug: string;
+      meta: { title: string; meta_description: string };
+      languages: string[];
+    }>;
+    subcategories: {
+      [subcategory: string]: {
+        title: string;
+        pages: Array<{
+          slug: string;
+          meta: { title: string; meta_description: string };
+          languages: string[];
+        }>;
+      };
+    };
+  };
+}
+
+// Function to categorize a page based on its slug
+const categorizePage = (slug: string): { category: string; subcategory?: string } => {
+  const parts = slug.split('/');
+  const firstPart = parts[0] || 'general';
+  const secondPart = parts[1];
+
+  // Define category mappings
+  const categoryMap: Record<string, { category: string; subcategory?: string }> = {
+    // Platform
+    platform: { category: 'Platform' },
+    account: { category: 'Platform', subcategory: 'Account Management' },
+    architecture: { category: 'Platform', subcategory: 'Architecture' },
+    deprecate: { category: 'Platform', subcategory: 'Deprecations' },
+    errors: { category: 'Platform', subcategory: 'Errors' },
+    integrations: { category: 'Platform', subcategory: 'Integrations' },
+    pricing: { category: 'Platform', subcategory: 'Pricing' },
+    auth: { category: 'Platform', subcategory: 'Authentication' },
+    guides: { category: 'Platform' },
+    sdks: { category: 'Platform', subcategory: 'SDKs' },
+
+    // Pub/Sub - Core realtime messaging features
+    api: { category: 'Pub/Sub', subcategory: 'API Reference' },
+    basics: { category: 'Pub/Sub' },
+    channels: { category: 'Pub/Sub', subcategory: 'Channels' },
+    connect: { category: 'Pub/Sub', subcategory: 'Connections' },
+    'getting-started': { category: 'Pub/Sub', subcategory: 'Getting Started' },
+    messages: { category: 'Pub/Sub', subcategory: 'Messages' },
+    'metadata-stats': { category: 'Pub/Sub', subcategory: 'Metadata & Statistics' },
+    'presence-occupancy': { category: 'Pub/Sub', subcategory: 'Presence & Occupancy' },
+    protocols: { category: 'Pub/Sub', subcategory: 'Protocols' },
+    'pub-sub': { category: 'Pub/Sub' },
+    push: { category: 'Pub/Sub', subcategory: 'Push Notifications' },
+    'storage-history': { category: 'Pub/Sub', subcategory: 'Storage & History' },
+
+    // Chat
+    chat: { category: 'Chat', subcategory: 'Chat' },
+
+    // Spaces
+    spaces: { category: 'Spaces', subcategory: 'Spaces' },
+
+    // LiveObjects
+    liveobjects: { category: 'LiveObjects', subcategory: 'LiveObjects' },
+
+    // LiveSync
+    livesync: { category: 'LiveSync', subcategory: 'LiveSync' },
+
+    // Asset Tracking
+    'asset-tracking': { category: 'Asset Tracking', subcategory: 'Asset Tracking' },
+  };
+
+  // Try to match two-part path first (e.g., "platform/account"), then single part (e.g., "platform")
+  const twoPartPath = secondPart ? `${firstPart}/${secondPart}` : null;
+
+  // Special handling for product/api pattern
+  if (twoPartPath && secondPart === 'api') {
+    // Check if it's a product-specific API
+    if (
+      categoryMap[firstPart] &&
+      ['Chat', 'Spaces', 'LiveObjects', 'LiveSync'].includes(categoryMap[firstPart].category)
+    ) {
+      return { category: categoryMap[firstPart].category, subcategory: 'API Reference' };
+    }
+  }
+
+  // Special handling for platform subdirectories
+  if (firstPart === 'platform' && secondPart && categoryMap[secondPart]?.category === 'Platform') {
+    return categoryMap[secondPart];
+  }
+
+  if (categoryMap[firstPart]) {
+    return categoryMap[firstPart];
+  }
+
+  // Default categorization for uncategorized pages
+  return { category: 'General', subcategory: 'Documentation' };
 };
 
 // Function to extract code element classes from an MDX file
@@ -217,32 +327,135 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     `${REPORTER_PREFIX} Found ${allPages.length} pages to place into llms.txt (${textilePages.length} textile, ${mdxPages.length} MDX)`,
   );
 
-  const serializedPages = [LLMS_TXT_PREAMBLE];
+  // Organize pages into categories
+  const categoryStructure: CategoryStructure = {};
 
   for (const page of allPages) {
-    const { slug, meta, languages } = page;
-    const { title, meta_description } = meta;
+    const { category, subcategory } = categorizePage(page.slug);
 
-    try {
-      const baseUrl = prefixPath({ url: `/docs/${slug}`, siteUrl, pathPrefix: basePath });
-      const safeTitle = escapeMarkdown(title);
+    // Initialize category if it doesn't exist
+    if (!categoryStructure[category]) {
+      categoryStructure[category] = {
+        title: category,
+        subcategories: {},
+      };
+    }
 
-      // Generate base page entry (without language parameter)
-      const baseLink = `[${safeTitle}](${baseUrl})`;
-      const baseLine = `- ${[baseLink, meta_description].join(': ')}`;
-      serializedPages.push(baseLine);
-
-      // Generate language-specific entries if the page has languages
-      if (languages && languages.length > 0) {
-        for (const language of languages) {
-          const langUrl = `${baseUrl}?lang=${language}`;
-          const langLink = `[${safeTitle} (${getLanguageLabel(language)})](${langUrl})`;
-          const langLine = `- ${[langLink, meta_description].join(': ')}`;
-          serializedPages.push(langLine);
-        }
+    // If no subcategory, add directly to category
+    if (!subcategory) {
+      if (!categoryStructure[category].pages) {
+        categoryStructure[category].pages = [];
       }
-    } catch (err) {
-      reporter.panic(`${REPORTER_PREFIX} Error serializing pages`, err as Error);
+      categoryStructure[category].pages.push(page);
+    } else {
+      // Initialize subcategory if it doesn't exist
+      if (!categoryStructure[category].subcategories[subcategory]) {
+        categoryStructure[category].subcategories[subcategory] = {
+          title: subcategory,
+          pages: [],
+        };
+      }
+
+      // Add page to subcategory (only base page without language variants)
+      categoryStructure[category].subcategories[subcategory].pages.push(page);
+    }
+  }
+
+  // Generate serialized output with categorization
+  const serializedPages = [LLMS_TXT_PREAMBLE];
+
+  // Define the order of categories
+  const categoryOrder = [
+    'Platform',
+    'Pub/Sub',
+    'Chat',
+    'Spaces',
+    'LiveObjects',
+    'LiveSync',
+    'Asset Tracking',
+    'General',
+  ];
+
+  // Sort categories by defined order
+  const sortedCategories = Object.keys(categoryStructure).sort((a, b) => {
+    const indexA = categoryOrder.indexOf(a);
+    const indexB = categoryOrder.indexOf(b);
+    if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  // Helper function to serialize pages
+  const serializePages = (
+    pages: Array<{ slug: string; meta: { title: string; meta_description: string }; languages: string[] }>,
+  ) => {
+    for (const page of pages) {
+      const { slug, meta, languages } = page;
+      const { title, meta_description } = meta;
+
+      try {
+        const baseUrl = prefixPath({ url: `/docs/${slug}`, siteUrl, pathPrefix: basePath });
+        const safeTitle = escapeMarkdown(title);
+
+        // Generate base page entry (without language parameter)
+        const baseLink = `[${safeTitle}](${baseUrl})`;
+        const baseLine = `- ${[baseLink, meta_description].join(': ')}`;
+        serializedPages.push(baseLine);
+
+        // Generate language-specific entries if the page has languages
+        // Skip language variants that match the page's primary language (e.g., skip ?lang=go for /getting-started/go)
+        if (languages && languages.length > 0) {
+          // Extract the last part of the slug to check if it matches a language
+          const slugParts = slug.split('/');
+          const slugLastPart = slugParts[slugParts.length - 1];
+
+          // Map slug names to their corresponding language codes
+          const slugToLangMap: Record<string, string> = {
+            dotnet: 'csharp',
+            'objective-c': 'objc',
+          };
+
+          // Get the primary language for this page (either direct match or mapped)
+          const primaryLanguage = slugToLangMap[slugLastPart] || slugLastPart;
+
+          for (const language of languages) {
+            // Skip if the language matches the page's primary language
+            if (language !== primaryLanguage) {
+              const langUrl = `${baseUrl}?lang=${language}`;
+              const langLink = `[${safeTitle} (${getLanguageLabel(language)})](${langUrl})`;
+              const langLine = `- ${[langLink, meta_description].join(': ')}`;
+              serializedPages.push(langLine);
+            }
+          }
+        }
+      } catch (err) {
+        reporter.panic(`${REPORTER_PREFIX} Error serializing pages`, err as Error);
+      }
+    }
+  };
+
+  for (const categoryKey of sortedCategories) {
+    const category = categoryStructure[categoryKey];
+    serializedPages.push(`## ${category.title}`);
+    serializedPages.push('');
+
+    // Add pages directly under the category (no subcategory)
+    if (category.pages && category.pages.length > 0) {
+      serializePages(category.pages);
+      serializedPages.push(''); // Add blank line after category pages
+    }
+
+    // Sort subcategories alphabetically
+    const sortedSubcategories = Object.keys(category.subcategories).sort();
+
+    for (const subcategoryKey of sortedSubcategories) {
+      const subcategory = category.subcategories[subcategoryKey];
+      serializedPages.push(`### ${subcategory.title}`);
+
+      serializePages(subcategory.pages);
+
+      serializedPages.push(''); // Add blank line after each subcategory
     }
   }
 
