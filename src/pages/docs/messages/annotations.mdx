@@ -4,29 +4,30 @@ meta_description: "Annotate messages on a channel with additional metadata."
 ---
 
 <Aside data-type='experimental'>
-Message annotations are currently Experimental. They are still in development and subject to rapid change.
+Message annotations are currently Experimental, meaning the API or behaviour may change in response to customer feedback without a major SDK release.
 </Aside>
 
-Message annotations enable clients to add metadata to existing messages on a channel. You can use annotations to implement features like:
+Message annotations enable clients to append information to existing messages on a channel. You can use annotations to implement features like:
 
 * **Message reactions** - add emoji reactions (👍, ❤️, 😂) to messages
 * **Content categorization** - tag messages with categories such as "important" or "urgent"
 * **Community moderation** - flag inappropriate content for review
 * **Read receipts** - mark messages as "read" or "delivered"
+* **Comments** - clients can comment on a message, which will not show up in normal channel history, but which can be loaded on demand
 
-When clients publish or delete an annotation, Ably automatically creates a [summary](#annotation-summaries) that provides an aggregated view of all annotations for that message.
+When clients publish or delete an annotation, Ably automatically creates a [summary](#annotation-summaries) that provides an aggregated view of all annotations for the associated message.
 
 ## Enable annotations <a id="enable"/>
 
 Annotations can be enabled for a channel or channel namespace with the *Message annotations, updates, and deletes* channel rule.
 
 <Aside data-type='important'>
-When message annotations are enabled, messages are [persisted](/docs/storage-history/storage#all-message-persistence) regardless of whether or not persistence is enabled, in order to support the feature. This may increase your package cost.
+When message annotations are enabled, messages are [persisted](/docs/storage-history/storage#all-message-persistence) regardless of whether or not persistence is enabled, in order to support the feature. This may increase your usage since [we charge for persisting messages](https://faqs.ably.com/how-does-ably-count-messages).
 
 [Continuous history](/docs/storage-history/history#continuous-history) features are not supported. Be aware that if you are currently using continuous history and enable annotations, updates, and deletes, continuous history will no longer function.
 </Aside>
 
-1. Go to the [**Settings**](https://ably.com/accounts/any/apps/any/edit) tab of an app in your dashboard.
+1. Go to the **Settings** tab of an app in your dashboard.
 3. Under [channel rules](/docs/channels#rules), click **Add new rule**.
 4. Enter the channel name or channel namespace on which to enable message annotations.
 5. Check **Message annotations, updates, and deletes** to enable message annotations.
@@ -38,7 +39,7 @@ Annotation types determine how annotations are processed and aggregated into [su
 
 The annotation type is a string of the format `namespace:summarization.version` where:
 
-* `namespace` is a string (e.g. `reactions`) that groups related annotations. Only annotations in the same namespace will be aggregated together to produce [summaries](#annotation-summaries).
+* `namespace` is a string (e.g. `reactions`) that groups related annotations. Only annotations in the same namespace will be aggregated to produce [summaries](#annotation-summaries).
 * `summarization` specifies how annotations are aggregated to produce [summaries](#annotation-summaries), such as `total`, `flag`, `distinct`, `unique`, or `multiple`.
 * `version` specifies the version component which allows for future changes to summarization behavior.
 
@@ -251,13 +252,13 @@ await channel.annotations.publish(message.serial, {
 ```
 </Code>
 
-You can additionally specify a `data` payload when publishing an annotation. This is not included in an annotation summary, so only readable by someone [subscribing to individual annotation events](#individual-annotations).
+You can additionally specify a `data` payload when publishing an annotation. This is not included in an annotation summary, so only readable by [clients that are subscribed to individual annotation events](#individual-annotations).
 
 ## Delete annotations <a id="delete" />
 
 To delete an annotation, use the `annotations.delete()` method on a channel. Pass in either a [message](/docs/messages) instance or the `serial` of the message to annotate. This method will publish an annotation message with an action of `annotation.delete`.
 
-Deleting an annotation does not remove the original annotation that was published. Instead, they affect the [annotation summary](#annotation-summaries) for that message by removing the contribution specified by the annotation.
+Deleting an annotation does not remove the original annotation that was published. Instead, the deletion modifies the [annotation summary](#annotation-summaries) for that message by removing the contribution specified by the annotation.
 
 The `clientId` specified in the [client options](/docs/api/realtime-sdk#client-options) will be associated with the published delete annotation.
 
@@ -299,7 +300,7 @@ await channel.annotations.delete(message.serial, {
 
 ## Subscribe to annotation summaries <a id="subscribe" />
 
-The recommended way to receive annotation updates is through annotation summaries. These events provide a summary of the complete, current state of all annotations for a message whenever an annotation is published or deleted.
+The simplest way to receive annotation updates is via annotation summaries. A message that has annotations also includes a summary which is a synopsis of certain details of all annotations for that message. Summaries are updated in response to further annotation events for that message, and summary changes are delivered by default to subscribing clients.
 
 Annotation summaries are delivered to subscribers as messages with an `action` of `message.summary`, and a `serial` matching the `serial` of the message that they are updating. They have an `annotations` field which contains a `summary` of all the annotations for the message.
 
@@ -419,13 +420,13 @@ If many clients publish the same annotation to the same message, the list of cli
 When a summary is clipped:
 - The `total` property shows the total number of annotations as expected, but the `clientIds` property will contain only a partial list of client IDs.
 - The `clipped` property is set to `true`.
-- For the `multiple` annotation type, use the `totalClientIds` property to determine the total number of clients that have published the annotation. For the other annotation types this is equal to `total`. 
+- For the `multiple` annotation type, use the `totalClientIds` property to determine the total number of clients that have published the annotation. For the other annotation types this is equal to `total`.
 
 ## Subscribe to individual annotation events <a id="individual-annotations"/>
 
-It is also possible to subscribe to individual annotation events, rather than annotation summaries. These are the emitted when [publishing](#publish) or [deleting](#delete) an annotation.
+It is also possible to subscribe to individual annotation events, as distinct from annotation summaries. These are the emitted when [publishing](#publish) or [deleting](#delete) an annotation.
 
-Individual events can be useful for activity feeds or detailed logging, but generally, for most usecases, subscribed clients should rely on aggregated summaries. The aggregation of annotations for a message into a summary attached to the message is the primary benefit of using the annotations API; an app design oriented around every client needing to subscribe to raw annotation events may not be taking full advantage of the feature.
+Summaries are designed to address the most common usecases for annotations, so there is usually no need to subscribe to individual annotation events. However, subscribing to individual annotations is appropriate for usecases where the payload of individual annotation events is relevant to the application.
 
 If you need to, you can subscribe to individual annotation events using the `annotations.subscribe()` method on a channel. To subscribe to individual annotations, you must request the `ANNOTATION_SUBSCRIBE` [mode](/docs/channels/options#modes).
 
