@@ -26,7 +26,7 @@ export default {
   chat: {
     javascript: '0.14',
     react: '0.14',
-    swift: '0.8',
+    swift: '0.9',
     kotlin: '0.8',
   },
   spaces: {
