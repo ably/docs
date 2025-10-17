@@ -18,11 +18,19 @@ Use the following methods to work with message annotations in a pub/sub applicat
 
 Find out more about [annotations](/docs/messages/annotations).
 
-## Annotation Types
+## Annotation types
 
 This example demonstrates five common annotation types, each suited to different use cases:
 
-<!-- TODO -->
+| Annotation type	| Behavior	| Example use case |
+|-----------------|-----------|------------------|
+|Total|Tracks the cumulative count of annotations, regardless of value or user.|Use for aggregate counts, like a simple “like” or “upvote” counter.|
+|Distinct|Allows multiple annotation values per user, but only one instance of each value. Multiple users can share the same value.|Works like Slack reactions - a user can add both 👍 and ❤️ to a message, but only once per reaction type.|
+|Unique|Restricts each user to one annotation value per message.|Works like WhatsApp reactions - a user can react with 👍 or ❤️, but not both.|
+|Multiple|Allows users to send the same annotation multiple times per value.|Ideal for repeated actions, like goal celebrations where users can send 🎉 multiple times.|
+|Flag|Represents a binary user state - flagged or unflagged. Each user can flag a message once, and multiple users can flag the same message.|Use for moderation workflows, e.g. flagging a message for review or follow-up.|
+
+Learn more about [annotation types](/docs/messages/annotations#annotation-types).
 
 ## Features
 
