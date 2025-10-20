@@ -1,238 +1,181 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
-import { navigate, useLocation } from '@reach/router';
+import * as Accordion from '@radix-ui/react-accordion';
 import cn from '@ably/ui/core/utils/cn';
-import Accordion from '@ably/ui/core/Accordion';
-import { AccordionData } from '@ably/ui/core/Accordion/types';
 import Icon from '@ably/ui/core/Icon';
-import { throttle } from 'lodash';
+import { useEffect, useRef, useState } from 'react';
 
 import { productData } from 'src/data';
-import { NavProduct, NavProductContent, NavProductPages } from 'src/data/nav/types';
-import {
-  commonAccordionOptions,
-  composeNavLinkId,
-  hierarchicalKey,
-  PageTreeNode,
-  sidebarAlignmentClasses,
-  sidebarAlignmentStyles,
-} from './utils/nav';
+import { NavProductContent, NavProductPage } from 'src/data/nav/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
-
-type ContentType = 'content' | 'api';
 
 type LeftSidebarProps = {
   inHeader?: boolean;
 };
 
-const NavPage = ({
-  depth,
-  page,
-  indices,
-  type,
-  indentLinks,
-  inHeader,
+const accordionContentClassName =
+  'overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animation-accordion-up';
+
+const accordionTriggerClassName =
+  'flex items-center justify-between gap-2 p-0 pr-2 w-full text-left ui-text-label3 bg-neutral-000 dark:bg-neutral-1300 hover:bg-neutral-100 dark:hover:bg-neutral-1200 active:bg-neutral-200 dark:active:bg-neutral-1100 text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000 [&[data-state=open]>svg]:rotate-90 focus-base transition-colors';
+
+const accordionLinkClassName =
+  'pl-3 py-[6px] text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000';
+
+const iconClassName = 'text-neutral-1300 dark:text-neutral-000 transition-transform';
+
+const boldClassName = 'text-neutral-1300 dark:text-neutral-000 font-bold';
+
+const ChildAccordion = ({
+  content,
+  layer,
+  tree,
 }: {
-  depth: number;
-  page: NavProductPages;
-  indices: number[];
-  type: ContentType;
-  inHeader: boolean;
-  indentLinks?: boolean;
+  content: (NavProductPage | NavProductContent)[];
+  layer: number;
+  tree: number[];
 }) => {
-  const location = useLocation();
-  const linkId = 'link' in page ? composeNavLinkId(page.link) : undefined;
   const { activePage } = useLayoutContext();
-  const treeMatch = indices.every((value, index) => value === activePage.tree[index]?.index);
+  const activeTriggerRef = useRef<HTMLButtonElement>(null);
+  const previousTree = activePage.tree.map(({ index }) => index).slice(0, layer + 2);
 
-  if ('link' in page) {
-    const language = new URLSearchParams(location.search).get('lang');
-    const pageActive = treeMatch && page.link === activePage.page.link;
+  useEffect(() => {
+    if (activeTriggerRef.current) {
+      setTimeout(() => {
+        activeTriggerRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      }, 200);
+    }
+  }, []);
 
-    return (
-      <Link
-        key={hierarchicalKey(page.link, depth, activePage.tree)}
-        id={linkId}
-        className={cn({
-          'block ui-text-label2 leading-relaxed md:leading-snug md:ui-text-label4 text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 transition-colors hover:text-neutral-1300 active:text-neutral-800 focus-base':
-            true,
-          '!font-semibold': !pageActive,
-          'text-neutral-900': !pageActive && type === 'content',
-          'text-neutral-1000': !pageActive && type === 'api',
-          '!font-bold !text-neutral-1300': pageActive,
-          'pl-3': indentLinks,
-        })}
-        target={page.external ? '_blank' : undefined}
-        rel={page.external ? 'noopener noreferrer' : undefined}
-        to={language ? `${page.link}?lang=${language}` : page.link}
-      >
-        {page.name}
-        {page.external ? <Icon name="icon-gui-arrow-top-right-on-square-outline" additionalCSS="ml-1" /> : null}
-      </Link>
-    );
-  } else {
-    return (
-      <Accordion
-        key={hierarchicalKey(page.name, depth, activePage.tree)}
-        data={[
-          {
-            name: page.name,
-            content: page.pages.map((subPage, subPageIndex) => (
-              <div className="mb-2 first:mt-2" key={subPage.name}>
-                <NavPage
-                  page={subPage}
-                  indentLinks
-                  indices={[...indices, subPageIndex]}
-                  type={type}
-                  depth={depth + 1}
-                  inHeader={inHeader}
-                />
-              </div>
-            )),
-          },
-        ]}
-        {...commonAccordionOptions(page, treeMatch ? 0 : undefined, false, inHeader)}
-      />
-    );
-  }
-};
+  return (
+    <Accordion.Root
+      type="multiple"
+      className={cn(layer > 0 && 'pl-3')}
+      defaultValue={[`item-${previousTree.join('-')}`]}
+    >
+      {content.map((page, index) => {
+        const hasDeeperLayer = 'pages' in page && page.pages;
+        const isActiveLink = 'link' in page && page.link === activePage.page.link;
+        const isActiveAncestor = (() => {
+          const arr1 = [...tree, index];
+          const arr2 = activePage.tree.map(({ index }) => index).slice(0, layer + 2);
+          return arr1.length === arr2.length && arr1.every((val, i) => val === arr2[i]);
+        })();
 
-const renderProductContent = (
-  content: NavProductContent[],
-  type: ContentType,
-  inHeader: boolean,
-  productIndex: number,
-) =>
-  content.map((productContent, productContentIndex) => (
-    <div className="flex flex-col gap-2.5 md:gap-2" key={productContent.name}>
-      <div className="ui-text-overline2 text-neutral-700">{productContent.name}</div>
-      {productContent.pages.map((page, pageIndex) => (
-        <NavPage
-          key={'name' in page ? page.name : `page-group-${pageIndex}`}
-          page={page}
-          indices={[productIndex, productContentIndex, pageIndex]}
-          type={type}
-          depth={2}
-          inHeader={inHeader}
-        />
-      ))}
-    </div>
-  ));
-
-const constructProductNavData = (activePageTree: PageTreeNode[], inHeader: boolean): AccordionData[] => {
-  const navData: AccordionData[] = Object.entries(productData).map(([productKey, productObj], index) => {
-    const product = productObj.nav as NavProduct;
-    const apiReferencesId = `${productKey}-api-references`;
-
-    return {
-      name: product.name,
-      icon:
-        activePageTree[0]?.page.name === product.name
-          ? { name: product.icon.open, css: 'text-orange-600' }
-          : { name: product.icon.closed },
-      onClick: () => {
-        // When a product is clicked, find and scroll to any open accordion element
-        if (typeof document !== 'undefined') {
-          // Use setTimeout to ensure the DOM has updated after the click and animation has completed
-          setTimeout(() => {
-            const targetAccordion = window.innerWidth >= 1040 ? 'left-nav' : 'mobile-nav';
-            const menuContainer = document.getElementById(targetAccordion);
-            const openAccordion: HTMLElement | null = menuContainer
-              ? menuContainer.querySelector('[data-state="open"] > button')
-              : null;
-
-            if (openAccordion) {
-              menuContainer?.scrollTo({
-                top: openAccordion.offsetTop,
-                behavior: 'smooth',
-              });
-            }
-          }, 200);
-        }
-      },
-      content: (
-        <div key={product.name} className="flex flex-col gap-5 px-4 pt-3">
-          {product.showJumpLink ? (
-            <a
-              href="#"
-              className="text-gui-blue-default-light text-[11px]"
-              onClick={(e) => {
-                e.preventDefault();
-                if (typeof document !== 'undefined') {
-                  const element = document.getElementById(apiReferencesId);
-                  if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  }
-                }
-              }}
+        return (
+          <Accordion.Item key={page.name} value={`item-${tree.join('-')}-${index}`}>
+            <Accordion.Trigger
+              ref={isActiveLink ? activeTriggerRef : null}
+              className={cn(accordionTriggerClassName, 'font-medium rounded-lg', {
+                'border-l border-neutral-300 dark:border-neutral-1000 hover:border-neutral-500 dark:hover:border-neutral-800 rounded-l-none':
+                  layer > 0,
+                'border-orange-600 bg-orange-100 hover:bg-orange-100': isActiveLink,
+              })}
             >
-              Jump to API references
-            </a>
-          ) : null}
-          {renderProductContent(product.content, 'content', inHeader, index)}
-          {product.api.length > 0 ? (
-            <div
-              id={apiReferencesId}
-              className="flex flex-col gap-2.5 md:gap-2 rounded-lg bg-neutral-100 border border-neutral-300 p-4 mb-6 md:-mx-4"
-            >
-              {renderProductContent(product.api, 'api', inHeader, index)}
-            </div>
-          ) : null}
-        </div>
-      ),
-    };
-  });
-
-  // Add a Home entry at the start of navData if inHeader is true
-  if (inHeader) {
-    navData.unshift({
-      name: 'Home',
-      content: null,
-      onClick: () => {
-        navigate('/docs');
-      },
-      interactive: false,
-    });
-  }
-
-  return navData;
+              {hasDeeperLayer ? (
+                <div className={cn(accordionLinkClassName, 'flex-1', isActiveAncestor && boldClassName)}>
+                  <span>{page.name}</span>
+                </div>
+              ) : (
+                'link' in page && (
+                  <Link
+                    className={cn(
+                      accordionLinkClassName,
+                      'ui-text-label3 font-medium w-full h-full pr-5',
+                      isActiveLink && boldClassName,
+                    )}
+                    tabIndex={-1}
+                    to={page.link}
+                  >
+                    <span>{page.name}</span>
+                  </Link>
+                )
+              )}
+              {hasDeeperLayer ? (
+                <Icon name="icon-gui-chevron-right-outline" additionalCSS={iconClassName} size="12px" />
+              ) : null}
+            </Accordion.Trigger>
+            {hasDeeperLayer && (
+              <Accordion.Content className={cn(accordionContentClassName, layer === 0 && 'pt-1')}>
+                <ChildAccordion content={page.pages} layer={layer + 1} tree={[...tree, index]} />
+              </Accordion.Content>
+            )}
+          </Accordion.Item>
+        );
+      })}
+    </Accordion.Root>
+  );
 };
 
 const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
   const { activePage } = useLayoutContext();
-  const [hasScrollbar, setHasScrollbar] = useState(false);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const checkScrollbar = throttle(() => {
-      if (sidebarRef.current) {
-        setHasScrollbar(sidebarRef.current.offsetWidth > sidebarRef.current.clientWidth);
-      }
-    }, 150);
-
-    checkScrollbar();
-    window.addEventListener('resize', checkScrollbar);
-
-    return () => {
-      window.removeEventListener('resize', checkScrollbar);
-    };
-  }, []);
-
-  const productNavData = useMemo(() => constructProductNavData(activePage.tree, inHeader), [activePage.tree, inHeader]);
+  const [openProduct, setOpenProduct] = useState<string | null>(`item-${activePage.tree[0]?.index}`);
 
   return (
-    <Accordion
-      ref={sidebarRef}
-      className={cn(
-        !inHeader && [sidebarAlignmentClasses, 'hidden md:block md:-mx-4'],
-        'overflow-y-auto',
-        hasScrollbar ? 'md:pr-2' : 'md:pr-4',
-      )}
-      style={!inHeader ? sidebarAlignmentStyles : {}}
-      id={inHeader ? 'mobile-nav' : 'left-nav'}
-      data={productNavData}
-      {...commonAccordionOptions(null, activePage.tree[0]?.index, true, inHeader)}
-    />
+    <div className={cn('sticky top-16 h-full', inHeader ? 'w-full' : 'w-[280px] hidden md:block')}>
+      <div
+        id={inHeader ? 'inkeep-search-mobile-mount' : 'inkeep-search-mount'}
+        className={cn(
+          'p-1 bg-neutral-100 dark:bg-neutral-1200',
+          inHeader ? 'sticky top-0' : 'border-r border-neutral-300 dark:border-neutral-1000',
+        )}
+      ></div>
+      <Accordion.Root
+        type="single"
+        collapsible
+        defaultValue={`item-${activePage.tree[0]?.index}`}
+        className={cn(
+          'bg-neutral-000 dark:bg-neutral-1300 overflow-y-auto',
+          inHeader
+            ? 'w-full h-[calc(100dvh-64px-128px)]'
+            : 'w-[280px] h-[calc(100dvh-64px-44px)] border-r border-neutral-300 dark:border-neutral-1000',
+        )}
+        onValueChange={(value) => {
+          setOpenProduct(value);
+        }}
+      >
+        {Object.entries(productData).map(([productKey, productObj], index) => (
+          <Accordion.Item
+            key={productKey}
+            value={`item-${index}`}
+            className="border-b border-neutral-300 dark:border-neutral-1000"
+          >
+            <Accordion.Trigger
+              className={cn(
+                'group/accordion-trigger',
+                accordionTriggerClassName,
+                'data-[state=open]:border-b data-[state=open]:sticky data-[state=open]:top-0 data-[state=open]:text-neutral-1300 dark:data-[state=open]:text-neutral-000 [&[data-state=open]_svg]:text-orange-600 h-12 px-4 py-3 font-bold',
+                openProduct === `item-${index}` && 'text-neutral-1300 dark:text-neutral-000',
+              )}
+            >
+              <div className="flex-1 flex items-center gap-2">
+                <Icon
+                  name={openProduct === `item-${index}` ? productObj.nav.icon.open : productObj.nav.icon.closed}
+                  additionalCSS={cn(
+                    iconClassName,
+                    openProduct === `item-${index}`
+                      ? 'text-orange-600'
+                      : 'text-neutral-900 dark:text-neutral-400 group-hover/accordion-trigger:text-neutral-1300 dark:group-hover/accordion-trigger:text-neutral-000',
+                  )}
+                  size="20px"
+                />
+                <span>{productObj.nav.name}</span>
+              </div>
+              <Icon
+                name="icon-gui-chevron-right-outline"
+                additionalCSS={cn(iconClassName, '!text-neutral-900 dark:!text-neutral-400')}
+                size="12px"
+              />
+            </Accordion.Trigger>
+            <Accordion.Content className={cn(accordionContentClassName, 'px-2 py-3')}>
+              <ChildAccordion content={productObj.nav.content} layer={0} tree={[index]} />
+            </Accordion.Content>
+          </Accordion.Item>
+        ))}
+      </Accordion.Root>
+    </div>
   );
 };
 
