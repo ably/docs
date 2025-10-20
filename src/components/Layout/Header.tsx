@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { useLocation } from '@reach/router';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { throttle } from 'es-toolkit/compat';
 import Icon from '@ably/ui/core/Icon';
 import TabMenu from '@ably/ui/core/TabMenu';
 import Logo from '@ably/ui/core/images/logo/ably-logo.svg';
@@ -13,6 +14,8 @@ import UserContext from 'src/contexts/user-context';
 import ExamplesList from '../Examples/ExamplesList';
 import Link from '../Link';
 
+// Tailwind 'md' breakpoint from tailwind.config.js
+const MD_BREAKPOINT = 1040;
 const CLI_ENABLED = false;
 const MAX_MOBILE_MENU_WIDTH = '560px';
 
@@ -82,9 +85,27 @@ const Header: React.FC = () => {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    const handleResize = throttle(() => {
+      if (window.innerWidth >= MD_BREAKPOINT && isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+      }
+    }, 150);
+
+    // Physically shift the inkeep search bar around given that it's initialised once
+    const targetId = isMobileMenuOpen ? 'inkeep-search-mobile-mount' : 'inkeep-search-mount';
+    const targetElement = document.getElementById(targetId);
+    const searchBar = searchBarRef.current;
+
+    if (targetElement && searchBar) {
+      targetElement.appendChild(searchBar);
+    }
+
+    window.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', handleResize);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleResize);
+      handleResize.cancel();
     };
   }, [isMobileMenuOpen]);
 
