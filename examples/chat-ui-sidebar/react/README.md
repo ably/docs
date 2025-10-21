@@ -1,12 +1,12 @@
-# Ably Chat UI React Components - Sidebar Example
+# Ably Chat UI React Kit - Sidebar Example
 
-This example demonstrates how to use the `Sidebar` component from the Ably Chat UI React Components library to build a chat application with room navigation and management.
+This example demonstrates how to use the `Sidebar` component from the Ably Chat UI React Kit to build a chat application with room navigation and management.
 
 The `Sidebar` component provides room navigation and management functionality, allowing users to create, join, and leave rooms, as well as toggle between them.
 
 ## Resources
 
-This example uses the `Sidebar` component from the Ably Chat UI React Components library, and is wrapped with the necessary providers:
+This example uses the `Sidebar` component from the Ably Chat UI React Kit, and is wrapped with the necessary providers:
 
 - `ThemeProvider`: Manages light/dark mode theming
 - `AvatarProvider`: Handles avatar generation and display
