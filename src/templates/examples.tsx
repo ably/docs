@@ -89,14 +89,18 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
       window.history.replaceState({}, '', window.location.pathname + '?' + urlParams.toString());
 
       // There is a bug in Sandpack where startRoute is lost on re-renders. This is a workaround to reintroduce it post-language change.
-      if (example.id === 'pub-sub-message-encryption') {
+      if (example.id === 'pub-sub-message-encryption' || example.id === 'pub-sub-message-annotations') {
         if (isFirstRender.current) {
           isFirstRender.current = false;
         } else {
           setTimeout(() => {
             const iframe = document.querySelector('.sp-preview-iframe') as HTMLIFrameElement;
             if (iframe) {
-              iframe.setAttribute('src', iframe.getAttribute('src') + '?encrypted=true');
+              let queryParams = 'encrypted=true'; // for pub-sub-message-encryption
+              if (example.id === 'pub-sub-message-annotations') {
+                queryParams = 'clientId=user1';
+              }
+              iframe.setAttribute('src', iframe.getAttribute('src') + '?' + queryParams);
             }
           }, 100);
         }
