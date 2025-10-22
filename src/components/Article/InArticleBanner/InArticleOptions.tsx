@@ -12,16 +12,10 @@ export const InArticleOptions = ({
   primaryOptionLabel,
   primaryOptionDestination,
   primaryTracker,
-  secondaryOptionLabel,
-  secondaryOptionDestination,
-  secondaryTracker,
 }: {
   primaryOptionLabel: string;
   primaryOptionDestination: string;
   primaryTracker: () => void;
-  secondaryOptionLabel: string;
-  secondaryOptionDestination: string;
-  secondaryTracker: () => void;
 }) => (
   <div className="flex flex-row mt-4 gap-4">
     <a
@@ -30,13 +24,6 @@ export const InArticleOptions = ({
       className="ui-button-primary"
     >
       {primaryOptionLabel}
-    </a>
-    <a
-      onClick={linkClickWithTracker(secondaryTracker, secondaryOptionDestination)}
-      href={secondaryOptionDestination}
-      className="ui-button-secondary"
-    >
-      {secondaryOptionLabel}
     </a>
   </div>
 );
