@@ -51,6 +51,34 @@ const MarkdownOverrides = {
       </a>
     ),
   },
+  table: {
+    component: ({ children }: PropsWithChildren) => (
+      <div className="overflow-x-auto mb-2">
+        <table className="border-0 border-collapse mb-1 border-spacing-0 ui-text-p2 text-left">{children}</table>
+      </div>
+    ),
+  },
+  thead: {
+    component: ({ children }: PropsWithChildren) => <thead className="bg-gray-50 border-b">{children}</thead>,
+  },
+  tbody: {
+    component: ({ children }: PropsWithChildren) => <tbody className="border-b divide-neutral-300">{children}</tbody>,
+  },
+  tr: {
+    component: ({ children }: PropsWithChildren) => (
+      <tr className="hover:bg-gray-50 border-b divide-neutral-300">{children}</tr>
+    ),
+  },
+  th: {
+    component: ({ children }: PropsWithChildren) => (
+      <th className="px-3 py-2 text-left ui-text-p1 font-bold text-neutral-1100 tracking-wider whitespace-nowrap">
+        {children}
+      </th>
+    ),
+  },
+  td: {
+    component: ({ children }: PropsWithChildren) => <td className="px-3 py-4 align-text-top text-sm">{children}</td>,
+  },
 };
 
 const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent } }) => {
