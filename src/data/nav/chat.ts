@@ -201,6 +201,10 @@ export default {
       name: 'API References',
       pages: [
         {
+          link: '/docs/chat/api',
+          name: 'Overview',
+        },
+        {
           link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-js.html',
           name: 'JavaScript SDK',
           external: true,
