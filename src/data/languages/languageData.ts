@@ -24,10 +24,10 @@ export default {
     laravel: '1.0',
   },
   chat: {
-    javascript: '0.15',
-    react: '0.15',
-    swift: '0.9',
-    kotlin: '0.8',
+    javascript: '1.0',
+    react: '1.0',
+    swift: '1.0',
+    kotlin: '1.0',
   },
   spaces: {
     javascript: '0.4',

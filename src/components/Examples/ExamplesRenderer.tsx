@@ -43,7 +43,7 @@ const getDependencies = (id: string, products: string[], activeLanguage: Languag
     'franken-ui': '^2.0.0',
     ...(products.includes('auth') ? { cors: '^2.8.5' } : {}),
     ...(products.includes('chat')
-      ? { '@ably/chat': '^0.15.0', '@ably/chat-react-ui-kit': '^0.1.3', clsx: '^2.1.1' }
+      ? { '@ably/chat': '^1.0.0', '@ably/chat-react-ui-kit': '^0.2.0', clsx: '^2.1.1' }
       : {}),
     ...(products.includes('spaces') ? { '@ably/spaces': '^0.4.0' } : {}),
     ...(id === 'spaces-component-locking' ? { 'usehooks-ts': '^3.1.0' } : {}),
