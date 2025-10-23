@@ -1,12 +1,12 @@
-# Ably Chat UI React Components - ChatWindow Example
+# Ably Chat UI React Kit - ChatWindow Example
 
-This example demonstrates how to use the `ChatWindow` component from the Ably Chat UI React Components library to build a focused chat interface for a single room.
+This example demonstrates how to use the `ChatWindow` component from the Ably Chat UI React Kit to build a focused chat interface for a single room.
 
 The `ChatWindow` component provides the main chat interface for a room, including message display, input, and custom header/footer content.
 
 ## Resources
 
-This example uses the `ChatWindow` component from the Ably Chat UI React Components library, and is wrapped with the necessary providers:
+This example uses the `ChatWindow` component from the Ably Chat UI React Kit, and is wrapped with the necessary providers:
 
 - `ThemeProvider`: Manages light/dark mode theming
 - `AvatarProvider`: Handles avatar generation and display

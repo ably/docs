@@ -7,8 +7,8 @@ import {
   ThemeProvider,
   AvatarProvider,
   ChatSettingsProvider,
-} from '@ably/chat-react-ui-components';
-import '@ably/chat-react-ui-components/dist/style.css';
+} from '@ably/chat-react-ui-kit';
+import '@ably/chat-react-ui-kit/dist/style.css';
 import 'minifaker/locales/en';
 import minifaker from 'minifaker';
 

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import * as Ably from 'ably';
 import { ChatClient, RoomOptions } from '@ably/chat';
 import { ChatClientProvider } from '@ably/chat/react';
-import { AvatarProvider, ChatSettingsProvider, Sidebar, ThemeProvider } from '@ably/chat-react-ui-components';
-import '@ably/chat-react-ui-components/dist/style.css';
+import { AvatarProvider, ChatSettingsProvider, Sidebar, ThemeProvider } from '@ably/chat-react-ui-kit';
+import '@ably/chat-react-ui-kit/dist/style.css';
 import 'minifaker/locales/en';
 import minifaker from 'minifaker';
 
