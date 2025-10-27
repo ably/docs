@@ -4,7 +4,6 @@ export const DEFAULT_EXAMPLE_LANGUAGES = ['javascript', 'react'];
 
 export const examples: Example[] = [
   {
-<<<<<<< HEAD
     id: 'ai-transport-message-per-token',
     name: 'Message per token streaming',
     description: 'Stream AI responses token-by-token using the message-per-token pattern.',
@@ -31,8 +30,28 @@ export const examples: Example[] = [
     products: ['auth'],
     layout: 'single-horizontal',
     visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
-    metaTitle: `Build chat history with Ably’s Chat SDK`,
-    metaDescription: `Learn how to build and use JWTs for client authentication with Ably. Secure token-based auth for realtime applications.`,
+    metaTitle: `Authenticate with Ably using JWTs`,
+    metaDescription: `Learn how to generate and use JWTs for client authentication with Ably. Secure token-based auth for realtime applications.`,
+  },
+  {
+    id: 'auth-request-token',
+    name: 'Request Token',
+    description: 'Request an Ably Token for authenticating users.',
+    products: ['auth'],
+    layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
+    metaTitle: `Authenticate with Ably Token`,
+    metaDescription: `Learn how to request and use Ably Tokens for client authentication. Secure token-based auth for realtime applications.`,
+  },
+  {
+    id: 'auth-request-token',
+    name: 'Request Token',
+    description: 'Request an Ably Token for authenticating users.',
+    products: ['auth'],
+    layout: 'single-horizontal',
+    visibleFiles: ['src/script.ts', 'App.tsx', 'Chat.tsx', 'Home.tsx', 'index.tsx'],
+    metaTitle: `Authenticate with Ably Token`,
+    metaDescription: `Learn how to request and use Ably Tokens for client authentication. Secure token-based auth for realtime applications.`,
   },
   {
     id: 'chat-presence',
