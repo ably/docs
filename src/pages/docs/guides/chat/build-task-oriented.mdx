@@ -23,7 +23,7 @@ Ably is trusted by organizations delivering chat to millions of users in realtim
 
 ![Ably Architecture Overview Diagram](../../../../images/content/diagrams/architecture-overview.png)
 
-Delivering chat messages in realtime is key to an engaging experience. Ably's [serverless architecture](/docs/platform/architecture) eliminates the need for you to manage websocket servers. It automatically scales to handle millions of concurrent connections without provisioning or maintenance. Ably also handles all of the edge-cases around delivery, failover and scaling.
+Delivering chat messages in realtime is key to a smooth online experience. Ably's [serverless architecture](/docs/platform/architecture) eliminates the need for you to manage websocket servers. It automatically scales to handle millions of concurrent connections without provisioning or maintenance. Ably also handles all of the edge-cases around delivery, failover and scaling.
 
 Despite the challenges of delivering these guarantees, Ably is designed to keep costs predictable.
 You can choose between MAU-based or per-minute pricing, depending on your needs.
@@ -36,7 +36,7 @@ The most important decision when developing task-oriented chat is the experience
 
 **What are task-oriented chats?** Any chat that serves as a companion to a specific activity or workflow: resolving a support ticket, coordinating a delivery, discussing a chess game, collaborating on a project, or facilitating a marketplace transaction. These chats are typically short-lived (minutes to days) and highly contextual. They can be 1:1 or small group conversations.
 
-For large-scale chat scenarios, see our [building livestream chat guide](/docs/guides/chat/build-livestream).
+For large-scale chat scenarios with many users per room, see our [building livestream chat guide](/docs/guides/chat/build-livestream).
 
 **Task-oriented room architecture:** The optimal approach is one chat room per task, where all participants join to communicate within that specific context. Rooms are:
 
@@ -60,10 +60,10 @@ With MAU-based pricing you will only be charged for the number of unique active 
 
 In task-oriented chat, each room is typically low throughput. Scaling comes by running as many rooms as you need at the same time. Ably handles everything from 1:1 conversations and small group discussions to [livestream chats](/docs/guides/chat/build-livestream) with the same reliability and scalability guarantees.
 
-Chat rooms (and Pub/Sub channels) scale horizontally. Ably allows you to have as many rooms as you need running in parallel.
+Chat rooms scale horizontally. Ably allows you to have as many rooms as you need running in parallel.
 
 * **Proven at scale:** Ably delivers over 500 million messages per day for customers.
-* **Rate limiting:** Prevent spam and maintain conversation quality with per-user rate limits or global throttling appropriate for your use case.
+* **Rate limiting:** Prevent spam and maintain conversation quality with global or per-user throttling appropriate for your use case.
 
 ## Authentication
 
@@ -97,7 +97,7 @@ const currentTime = Math.round(Date.now() / 1000);
 const claims = {
     "iat": currentTime, /* current time in seconds */
     "exp": currentTime + 14400, /* time of expiration in seconds */
-    "x-ably-capability": "{\"[chat]foo\":[\"publish\", \"subscribe\"]}",
+    "x-ably-capability": "{\"foo\":[\"publish\", \"subscribe\"]}",
     "x-ably-clientId": "your-client-id",
 }
 
@@ -111,9 +111,121 @@ console.log('JWT is: ' + ablyJwt);
 ```
 </Code>
 
-How you authenticate is also key. To balance security and experience, you want short-lived tokens that can be easily revoked if a users is misbehaving or needs their permissions changed, but automatically expire after a period of time. This means that if a token is compromised, it will only be valid for a limited time. **In production apps, you should not use API keys for client-side authentication**. You can use them server-side, but as they are long-lived and require explicit revocation, exposure to untrusted users poses a continuing risk.
+How you authenticate is also key. To balance security and experience, you want short-lived tokens that can be easily revoked if a user is misbehaving or needs their permissions changed, but automatically expire after a period of time. This means that if a token is compromised, it will only be valid for a limited time. **In production apps, you should not use API keys for client-side authentication**. You can use them server-side, but as they are long-lived and require explicit revocation, exposure to untrusted users poses a continuing risk.
 
 With Ably Chat, authentication is best achieved using JSON Web Tokens (JWTs). These are tied to a particular clientID and come with a set of [capabilities](/docs/chat/setup#authentication) that control what a client can and cannot do - for example whether they can send messages, join a certain room or moderate. Ably's SDKs handle the timing and process of requesting a new token for you, refreshing it when it expires. All you need to do is provide a server-side endpoint that can generate the JWT for the client. This enables clients to use your existing authentication systems or user sessions to generate their Ably token.
+
+## Presence: Know who's available for your task
+
+Ably's [presence](/docs/chat/rooms/presence) feature shows you who's currently active in your task-oriented chat. This is especially valuable for scenarios where task completion depends on participant availability:
+
+* **Support tickets:** See when agents are online and available to help.
+* **Deliveries:** Know if the delivery driver or customer is actively monitoring the chat.
+* **Gaming sessions:** See which players are currently active in the game.
+* **Collaborative work:** Know who's available for real-time discussion.
+
+Beyond just online/offline status, presence can include rich information:
+
+* **Current status:** "Available", "In a meeting", "Driving", "On break".
+* **Task context:** "Working on ticket #123", "In delivery zone A".
+* **User info:** Use presence to show an avatar, display name, role, or other information about the user.
+
+This contextual presence information helps participants understand not just who's online, but who's ready and able to engage with the current task.
+
+## Typing indicators
+
+Typing indicators are now a common feature in most chat applications. They show when someone is actively composing a message, helping to:
+
+* **Manage expectations:** Users know when a response is being prepared.
+* **Reduce duplicate messages:** See that someone is already addressing the question.
+* **Improve flow:** Better conversation pacing in support and collaborative scenarios.
+
+In Ably Chat typing indicators are a core feature with a simple API:
+
+```javascript
+const room = await chatClient.rooms.get('support-ticket-123');
+
+// show who's typing
+room.typing.subscribe((event) => {
+  console.log('Currently typing:', event.currentlyTyping);
+});
+
+// show a typing indicator (call on every keystroke, Ably Chat SDKs throttle this to a predefined interval)
+await room.typing.keystroke();
+
+// stop the typing indicator (for example when a message is sent)
+await room.typing.stop();
+```
+
+## Message reactions
+
+Message reactions are a great way to enhance engagement in a task-oriented chat and enable users to quickly express sentiment to key points in the conversation.
+
+**Message reactions** provide granular feedback on specific content:
+
+* **Validate information:** ✅ for confirmed details in deliveries or transactions.
+* **Request clarification:** ❓ for questions about specific messages.
+* **Show appreciation:** ⭐ for helpful responses in support.
+
+Send a message reaction:
+<Code>
+```javascript
+const message; // your message
+await room.messages.reactions.send(message.serial, {name: '✅'});
+```
+</Code>
+
+Message reactions in Ably Chat come in three types: `unique`, `distinct` and `multiple`, to suit different use cases: from one reaction per message to multiple reactions per message with or without counts. See the [Message reactions](/docs/chat/rooms/message-reactions) documentation for more details.
+
+## Message history: essential task context <a id="history"/>
+
+Message history is crucial for task-oriented chats, ensuring continuity and context even when participants join mid-task or return after interruptions.
+
+Ably stores [chat history](/docs/chat/rooms/history) for 30 days by default, with options to extend up to a year.
+
+* **Task continuity:** New participants can quickly understand the current state and previous decisions.
+* **Context preservation:** Users returning to a task don't lose important information.
+* **Audit trail:** Complete conversation records for compliance, training, or dispute resolution.
+
+For task-oriented scenarios, history is almost always beneficial:
+
+* **Support tickets:** Agents can see the full conversation history to understand the issue, after handover from automated/AI support or another agent.
+* **Collaborative work:** Team members can catch up on decisions and progress.
+* **Gaming sessions:** Players can review moves and strategy discussions.
+* **Marketplace transactions:** Complete communication record for orders and deliveries.
+
+<Code>
+```javascript
+// Get the chat room
+const room = await chatClient.rooms.get('support-ticket-123');
+
+// Subscribe to messages
+const subscription = room.messages.subscribe((messageEvent) => {
+  console.log('Received:', messageEvent);
+  // handle message event to update state and UI
+});
+
+// Load recent history for context
+// This ensures you get a complete picture without missing messages
+await subscription.historyBeforeSubscription({limit: 50});
+```
+</Code>
+
+You can use our [React UI Kit](/docs/chat/react-ui-kit) to easily create a [fully featured chat window](/docs/chat/getting-started/react-ui-kit#chat-window) 
+that handles subscrbing to messages, loading history, message updates and deletes, message reactions, and more.
+See the [React UI Kit](/docs/chat/react-ui-kit) for more details.
+
+## Enriching tasks with Ably's realtime services
+
+Ably's comprehensive platform enables you to combine chat with other realtime features to create rich, interactive task experiences.
+
+**Pub/Sub channels** add interactive elements:
+- **Live polls:** Quick feedback during collaborative decisions
+- **Status updates:** Real-time progress indicators for tasks
+- **Interactive ratings:** Instant feedback collection
+- **Live auctions:** Real-time bidding in marketplace scenarios
+
+These combined services transform basic chat into comprehensive task management platforms, where communication, coordination, and real-time updates work together seamlessly.
 
 ## Moderation: maintaining quality conversations
 
@@ -159,79 +271,17 @@ import { ErrorCode } from '@ably/chat';
 
 const room = await chatClient.rooms.get('support-ticket-123');
 
-await room.messages.send({text: 'Can you help me with my order?'}).then((message) => {
+room.messages.send({text: 'Can you help me with my order?'}).then((message) => {
     console.log('Message sent:', message);
 }).catch((error) => {
     if (error.code === ErrorCode.MessageRejectedByModeration) {
-        console.log('Message needs review:', error.message);
+        console.log('Message rejected by moderation:', error.message);
         return;
     }
     console.error('Message failed to send:', error);
 });
 ```
 </Code>
-
-## Presence: Know who's available for your task
-
-Ably's [presence](/docs/chat/rooms/presence) feature shows you who's currently active in your task-oriented chat. This is especially valuable for scenarios where task completion depends on participant availability:
-
-* **Support tickets:** See when agents are online and available to help
-* **Deliveries:** Know if the delivery driver or customer is actively monitoring the chat
-* **Gaming sessions:** See which players are currently active in the game
-* **Collaborative work:** Know who's available for real-time discussion
-
-Beyond just online/offline status, presence can include rich information:
-
-* **Current status:** "Available", "In a meeting", "Driving", "On break"
-* **Task context:** "Working on ticket #123", "In delivery zone A"
-* **User info:** Use presence to show an avatar, display name, role, or other information about the user.
-
-This contextual presence information helps participants understand not just who's online, but who's ready and able to engage with the current task.
-
-## Typing indicators
-
-Typing indicators are now a common feature in most chat applications. They show when someone is actively composing a message, helping to:
-
-* **Manage expectations:** Users know when a response is being prepared
-* **Reduce duplicate messages:** See that someone is already addressing the question
-* **Improve flow:** Better conversation pacing in support and collaborative scenarios
-
-In Ably Chat typing indicators are a core feature with a simple API:
-
-```javascript
-const room = await chatClient.rooms.get('support-ticket-123');
-
-// show who's typing
-room.typing.subscribe((event) => {
-  console.log('Currently typing:', event.currentlyTyping);
-});
-
-// show a typing indicator (call on every keystroke, Ably Chat SDKs throttle this to a predefined interval)
-await room.typing.keystroke();
-
-// stop the typing indicator (for example when a message is sent)
-await room.typing.stop();
-```
-
-## Message reactions
-
-Message reactions are a great way to enhance engagement in a task-oriented chat and enable users to quickly express sentiment to key points in the conversation.
-
-**Message reactions** provide granular feedback on specific content:
-
-* **Validate information:** ✅ for confirmed details in deliveries or transactions
-* **Request clarification:** ❓ for questions about specific messages
-* **Show appreciation:** ⭐ for helpful responses in support
-
-Send a message reaction:
-<Code>
-```javascript
-const message; // your message
-await room.messages.reactions.send(message.serial, {name: '✅'});
-```
-</Code>
-
-Message reactions in Ably Chat come in three types: `unique`, `distinct` and `multiple`, to suit different use cases: from one reaction per message to multiple reactions per message with or without counts. See the [Message reactions](/docs/chat/rooms/message-reactions) documentation for more details.
 
 ## Room reactions
 
@@ -248,44 +298,6 @@ room.reactions.subscribe((event) => {
 await room.reactions.send({name: '👍'});
 ```
 </Code>
-
-## Message history: essential task context <a id="history"/>
-
-Message history is crucial for task-oriented chats, ensuring continuity and context even when participants join mid-task or return after interruptions.
-
-Ably stores [chat history](/docs/chat/rooms/history) for 30 days by default, with options to extend up to a year.
-
-* **Task continuity:** New participants can quickly understand the current state and previous decisions
-* **Context preservation:** Users returning to a task don't lose important information
-* **Audit trail:** Complete conversation records for compliance, training, or dispute resolution
-
-For task-oriented scenarios, history is almost always beneficial:
-
-* **Support tickets:** Agents can see the full conversation history to understand the issue
-* **Collaborative work:** Team members can catch up on decisions and progress
-* **Gaming sessions:** Players can review moves and strategy discussions
-* **Marketplace transactions:** Complete communication record for orders and deliveries
-
-<Code>
-```javascript
-// Get the chat room
-const room = await chatClient.rooms.get('support-ticket-123');
-
-// Subscribe to messages
-const subscription = room.messages.subscribe((messageEvent) => {
-  console.log('Received:', messageEvent);
-  // handle message event to update state and UI
-});
-
-// Load recent history for context
-// This ensures you get a complete picture without missing messages
-await subscription.historyBeforeSubscription({limit: 50});
-```
-</Code>
-
-You can use our [React UI Kit](/docs/chat/react-ui-kit) to easily create a [fully featured chat window](/docs/chat/getting-started/react-ui-kit#chat-window) 
-that handles subscrbing to messages, loading history, message updates and deletes, message reactions, and more.
-See the [React UI Kit](/docs/chat/react-ui-kit) for more details.
 
 ## Handling network disruption
 
@@ -347,18 +359,6 @@ const realtimeClient = new Ably.Realtime({
 Ably Pub/Sub channels can be used for push notifications. See the [Push notifications](/docs/push/publish) documentation for more details. Since Ably Chat rooms are backed by a single Ably Pub/Sub channel, you can use the same channel for push notifications to notify all participants in the room when something happens.
 
 You can also use a separate channel to control notifications, in which case you can tailor them to individual users. Read more about push notifications with Ably in the [Push notifications](/docs/push/publish) documentation.
-
-## Enriching tasks with Ably's realtime services
-
-Ably's comprehensive platform enables you to combine chat with other realtime features to create rich, interactive task experiences.
-
-**Pub/Sub channels** add interactive elements:
-- **Live polls:** Quick feedback during collaborative decisions
-- **Status updates:** Real-time progress indicators for tasks
-- **Interactive ratings:** Instant feedback collection
-- **Live auctions:** Real-time bidding in marketplace scenarios
-
-These combined services transform basic chat into comprehensive task management platforms, where communication, coordination, and real-time updates work together seamlessly.
 
 ## Production-ready checklist
 
