@@ -121,7 +121,7 @@ const aiChatSettings = () => ({
     'https://storage.googleapis.com/organization-image-assets/ably-botAvatarDarkSrcUrl-1744125448083.png',
   getHelpOptions: [
     {
-      name: 'Request a meeting',
+      name: 'Speak to sales',
       action: {
         type: 'open_link',
         url: '/contact',
