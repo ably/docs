@@ -52,76 +52,13 @@ declare global {
   }
 }
 
-const getTools = () => [
-  {
-    type: 'function',
-    function: {
-      name: 'contactSales',
-      description: `Check the message for signs of enterprise buying intent by looking for the presence or implication of the following keywords, phrases, or concepts:
-        • SSO or “single sign-on”
-        • Evaluation, trial, or proof of concept (PoC)
-        • Mentions of competitors like PubNub, Pusher, SendBird, Bird, or GetStream
-        • Custom CNAME or DNS requirements
-        • Security review or audit processes
-        • Procurement or vendor onboarding
-        • Requests to pay by invoice or mention of invoice-based payments
-        • Monthly Active Users (MAU), especially if specific numbers are mentioned
-        • Requests to constrain traffic to specific regions (EU-only, US-only, etc.)
-        • Dedicated or isolated environments
-        • Interest in purchasing via the AWS Marketplace
-        • SLA (Service Level Agreement) or SLI (Service Level Indicator) mentions
-        • Statements that they are already in production with over 1 million users (exclude future projections)
-        • Inquiries about enterprise or business-tier plans
-        • Requests for 24×7 support
-        • Extremely high availability requirements
-        • Expected scale of billions of messages`,
-      parameters: {
-        type: 'object',
-        properties: {
-          aiAnnotations: {
-            type: 'object',
-            properties: {
-              answerConfidence: {
-                anyOf: [
-                  { type: 'string', const: 'very_confident' },
-                  { type: 'string', const: 'somewhat_confident' },
-                  { type: 'string', const: 'not_confident' },
-                  { type: 'string', const: 'no_sources' },
-                ],
-              },
-            },
-            required: ['answerConfidence'],
-          },
-        },
-        required: ['aiAnnotations'],
-      },
-    },
-    renderMessageButtons: ({ args }: { args: { aiAnnotations: { answerConfidence: string } } }) => {
-      const confidence = args.aiAnnotations.answerConfidence;
-      if (confidence === 'very_confident' || confidence === 'somewhat_confident') {
-        return [
-          {
-            label: 'Talk to Sales',
-            icon: { builtIn: 'LuUsers' },
-            action: {
-              type: 'open_link',
-              url: '/contact',
-            },
-          },
-        ];
-      }
-      return [];
-    },
-  },
-];
-
 const aiChatSettings = () => ({
   organizationDisplayName: 'Ably',
   aiAssistantAvatar:
     'https://storage.googleapis.com/organization-image-assets/ably-botAvatarDarkSrcUrl-1744125448083.png',
   getHelpOptions: [
     {
-      name: 'Request a meeting',
+      name: 'Speak to sales',
       action: {
         type: 'open_link',
         url: '/contact',
@@ -139,7 +76,6 @@ const aiChatSettings = () => ({
   ],
   exampleQuestions: ['What is a channel?', 'How do I authenticate with Ably?', 'How to manage user status?'],
   shouldShowCopyChatButton: true,
-  getTools,
 });
 
 interface SourceItem {
