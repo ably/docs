@@ -1,0 +1,344 @@
+---
+title: Updating and deleting messages
+meta_description: "Update and delete messages published to a channel, and retrieve message version history."
+---
+
+<Aside data-type='experimental'>
+Message updates and deletes are currently Experimental, meaning the API or behaviour may change in response to customer feedback without a major SDK release.
+</Aside>
+
+You can update and delete messages that have been published to a channel, for usecases such as:
+
+* **Message editing** - allow users to edit their messages in chat-like applications
+* **Content moderation** - remove or edit inappropriate content after publication
+* **Gradual message building** - a message can be published while still unfinished, and then repeatedly edited with more complete information, so that someone querying history once the message is complete will only see the final version
+
+Updating or deleting a message does not modify any messages that have been received by subscribing clients in-place: a given Message obect is immutable. Rather, it publishes a new message to the channel, with an action of `message.update` or `message.delete`, with the same `serial` as the original message, that subscribing clients can see and act on.
+
+It also replaces the original message in message history, so history queries will see the latest version of the message (but in the place in history of the original).
+
+You can specify metadata (such as the reason for the update and which client is doing the update), which is published along with it.
+
+You can access the full version history of any given message.
+
+## Enable message updates and deletes <a id="enable"/>
+
+Message updates and deletes can be enabled for a channel or channel namespace with the *Message annotations, updates, and deletes* channel rule.
+
+<Aside data-type='important'>
+When message updates and deletes are enabled, messages are [persisted](/docs/storage-history/storage#all-message-persistence) regardless of whether or not persistence is enabled, in order to support the feature. This may increase your usage since [we charge for persisting messages](https://faqs.ably.com/how-does-ably-count-messages).
+
+[Continuous history](/docs/storage-history/history#continuous-history) features are not yet supported. Be aware that for now, if you are currently using continuous history and enable annotations, updates, and deletes, continuous history will no longer function.
+</Aside>
+
+1. Go to the **Settings** tab of an app in your dashboard.
+2. Under [channel rules](/docs/channels#rules), click **Add new rule**.
+3. Enter the channel name or channel namespace on which to enable message updates and deletes.
+4. Check **Message annotations, updates, and deletes** to enable the feature.
+5. Click **Create channel rule** to save.
+
+## Update a message <a id="update"/>
+
+To update an existing message, use the `updateMessage()` method on a REST or realtime channel. The published update will have an `action` of `message.update`.
+
+The message is identified by its `serial`, which is populated by Ably. So to publish an update to a message, you have to have received it, as a subscriber or by querying history. Once you have that message, you can either take it, make your desired changes, and use that; or make a new Message object and just set its `serial` to that of the original message, as appropriate in your usecase.
+
+<Code>
+```javascript
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+// This assumes there is an 'updates' namespace with a channel rule enabling updates and deletes
+const channel = realtime.channels.get('updates:example');
+
+// First subscribe to a messages
+await channel.subscribe((msg) => {
+  if (msg.data === 'original-data') {
+    // Publish an update
+
+    // First way: mutate the received Message
+    msg.data = 'new-data-1';
+    await channel.updateMessage(msg, { description: 'reason for first update' });
+
+    // Second way: publish a new Message using the serial
+    const msg2 = {
+      name: 'message-name',
+      serial: msg.serial,
+    };
+    await channel.updateMessage(msg2, { description: 'reason for second update' });
+  }
+});
+
+// Publish the original message
+await channel.publish({
+  name: 'message-name',
+  data: 'original-data',
+});
+```
+
+```nodejs
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+// This assumes there is an 'updates' namespace with a channel rule enabling updates and deletes
+const channel = realtime.channels.get('updates:example');
+
+// First subscribe to a messages
+await channel.subscribe((msg) => {
+  if (msg.data === 'original-data') {
+    // Publish an update
+    // First way: mutate the received Message
+    msg.data = 'new-data-1';
+    await channel.updateMessage(msg, { description: 'reason for first update' });
+
+    // Second way: publish a new Message using the serial
+    const msg2 = {
+      name: 'message-name',
+      serial: msg.serial,
+    };
+    await channel.updateMessage(msg2, { description: 'reason for second update' });
+  }
+});
+
+// Publish the original message
+await channel.publish({
+  name: 'message-name',
+  data: 'original-data',
+});
+```
+</Code>
+
+#### Patch semantics <a id="patch-semantics"/>
+
+When updating a message, the fields you specify in the update will replace the corresponding fields in the existing message, and other fields will remain as they were. For example, if a message has `{ name: "greeting", data: "hello" }`, and you update it with `{ data: "hi" }`, the result will be `{ name: "greeting", data: "hi" }`.
+
+The fields that can be updated are:
+- `data`
+- `name`
+- `extras`
+
+#### Capabilities <a id="update-capabilities"/>
+
+To update messages, clients need one of the following [capabilities](/docs/auth/capabilities):
+
+| Capability | Description |
+| ---------- | ----------- |
+| **message-update-own** | Can update your own messages (more precisely, messages where the original publisher's `clientId` matches the updater's `clientId`, where both are [identified](/docs/auth/identified-clients)). |
+| **message-update-any** | Can update any message on the channel. |
+
+#### Operation metadata <a id="operation-metadata"/>
+
+When updating a message, you can optionally provide metadata about the update operation:
+
+| Property | Description | Type |
+| -------- | ----------- | ---- |
+| clientId | The client identifier of the user performing the update (automatically populated if the delete is done by an identified client). | String |
+| description | A description of why the update was made. | String |
+| metadata | Additional metadata about the update operation. | Object |
+
+This metadata will end up in the message's `version` property. See [Message version structure](http://localhost:8000/docs/messages/updates-deletes#version-structure) for what this looks like.
+
+## Delete a message <a id="delete"/>
+
+To delete a message, use the `deleteMessage()` method on a REST or realtime channel. This is very much a 'soft' delete: it's just an update, but with an `action` of `message.delete` instead of `message.update`. It's up to your application to interpret it.
+
+The latest version of each message will be accessible from history, including if that latest version happens to be a delete.
+
+As with updating, the message is identified by its `serial`, which is populated by Ably. So to delete a message, you have to have received it, as a subscriber or by querying history. Once you have that message, you can either take it, make your desired changes, and use that; or make a new Message object and just set its `serial` to that of the original message, as appropriate in your usecase.
+
+Deleting a message marks it as deleted without removing it from the server. The full message history remains accessible through the [message versions](#versions) API.
+
+<Code>
+```javascript
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+// This assumes there is an 'updates' namespace with a channel rule enabling updates and deletes
+const channel = realtime.channels.get('updates:example');
+
+// First subscribe to a messages
+await channel.subscribe((msg) => {
+  if (msg.data === 'original-data') {
+    // Publish a delete
+    // First way: just use the received Message
+    await channel.deleteMessage(msg, { description: 'reason for first delete' });
+
+    // Second way: publish a new Message using the serial
+    const msg2 = { serial: msg.serial };
+    await channel.updateMessage(msg2, { description: 'reason for second update' });
+  }
+});
+
+// Publish the original message
+await channel.publish({
+  name: 'message-name',
+  data: 'original-data',
+});
+```
+
+```nodejs
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+// This assumes there is an 'updates' namespace with a channel rule enabling updates and deletes
+const channel = realtime.channels.get('updates:example');
+
+// First subscribe to a messages
+await channel.subscribe((msg) => {
+  if (msg.data === 'original-data') {
+    // Publish a delete
+    // First way: just use the received Message
+    await channel.deleteMessage(msg, { description: 'reason for first delete' });
+
+    // Second way: publish a new Message using the serial
+    const msg2 = { serial: msg.serial };
+    await channel.updateMessage(msg2, { description: 'reason for second update' });
+  }
+});
+
+// Publish the original message
+await channel.publish({
+  name: 'message-name',
+  data: 'original-data',
+});
+```
+</Code>
+
+#### Patch semantics <a id="patch-semantics"/>
+
+Deleting has the same semantics as updating, so only fields you specify in the update will replace the corresponding fields in the existing message.
+
+That means that if you e.g. want the deleted message to have empty `data` (to prevent users looking at raw history results from the API from seeing what the data used to be), you must explicitly set to e.g. an empty object when publishing the delete. (And even then, all previous versions are accessible through the version history API).
+
+As with update, the fields that can be updated are `data`, `name`, and `extras`.
+
+#### Capabilities <a id="delete-capabilities"/>
+
+To delete messages, clients need one of the following [capabilities](/docs/auth/capabilities):
+
+| Capability | Description |
+| ---------- | ----------- |
+| **message-delete-own** | Can delete your own messages (more precisely, messages where the original publisher's `clientId` matches the deleter's `clientId`, where both are [identified](/docs/auth/identified-clients)). |
+| **message-delete-any** | Can delete any message on the channel. |
+
+#### Operation metadata <a id="operation-metadata"/>
+
+When deleting a message, you can optionally provide metadata:
+
+| Property | Description | Type |
+| -------- | ----------- | ---- |
+| clientId | The client identifier of the user performing the delete (automatically populated if the delete is done by an identified client). | String |
+| description | A description of why the delete was made. | String |
+| metadata | Additional metadata about the delete operation. | Object |
+
+This metadata will end up in the message's `version` property. See [Message version structure](http://localhost:8000/docs/messages/updates-deletes#version-structure) for what this looks like.
+
+## Get the latest version of a message <a id="get"/>
+
+To retrieve the most recent version of a specific message, use the `getMessage()` method on a REST channel. You can pass either the message's serial identifier as a string, or a message object with a `serial` property.
+
+This operation requires the history [capability](/docs/auth/capabilities).
+
+<Code>
+```javascript
+const rest = new Ably.Rest({ key: '{{API_KEY}}' });
+const channel = rest.channels.get('updates:example');
+
+// could also use msg.serial, useful if you want to retrieve a
+// message for a serial you have stored or passed around
+const message = await channel.getMessage(msg);
+```
+
+```nodejs
+const rest = new Ably.Rest({ key: '{{API_KEY}}' });
+const channel = rest.channels.get('updates:example');
+
+// could also use msg.serial, useful if you want to retrieve a
+// message for a serial you have stored or passed around
+const message = await channel.getMessage(msg);
+```
+</Code>
+
+## Get message versions <a id="versions"/>
+
+To retrieve all historical versions of a message, use the `getMessageVersions()` method. This returns a paginated result containing all versions of the message, including the original and all subsequent updates or delete operations, ordered by version.
+
+This operation requires the history [capability](/docs/auth/capabilities).
+
+<Code>
+```javascript
+const rest = new Ably.Rest({ key: '{{API_KEY}}' });
+const channel = rest.channels.get('updates:example');
+
+const page = await channel.getMessageVersions(msg);
+console.log(`Found ${page.items.length} versions`);
+```
+
+```nodejs
+const rest = new Ably.Rest({ key: '{{API_KEY}}' });
+const channel = rest.channels.get('updates:example');
+
+const page = await channel.getMessageVersions(msg);
+console.log(`Found ${page.items.length} versions`);
+```
+</Code>
+
+## Message version structure <a id="version-structure"/>
+
+A published update or delete contains version metadata in the `version` property. The following shows the structure of a message after it has been updated:
+
+<Code>
+```json
+{
+  // The top-level serial is a permanent identifier of the message, and remains
+  // the same for all updates and deletes of that message
+  "serial": "01826232498871-001@abcdefghij:001",
+
+  // The clientId of the user who published the original message
+  "clientId": "user123",
+
+  // The timestamp of that original publish
+  "timestamp": 1718195879988,
+
+  // Main payload fields
+  "name": "greeting",
+  "data": "hello world (edited)",
+
+  // The action tells you if it's an original ("message.create"), update,
+  // delete, or annotation summary
+  "action": "message.update",
+
+  "version": {
+    // The serial of the current version. For an original (with an action of
+    // "message.create"), this will be equal to the top-level serial. You can
+    // use this to compare different versions to see which one is more recent
+    "serial": "01826232512345-002@abcdefghij:002",
+
+    // The clientId of the user who made the update
+    "clientId": "user123",
+
+    // The timestamp of this latest version
+    "timestamp": 1718195912345,
+
+    // Update metadata, supplied by the user who published the update
+    "description": "Fixed typo",
+    "metadata": {
+      "reason": "correction"
+    }
+  }
+}
+```
+</Code>
+
+#### Message actions <a id="actions"/>
+
+The `action` property on a message indicates the type of operation:
+
+| Action | Description |
+| ------ | ----------- |
+| message.create | The original message |
+| message.update | An update to an existing message |
+| message.delete | A deletion of a message |
+| meta | A message originating from ably rather than being published by a user, such as [inband occupancy events](/docs/channels/options#occupancy) |
+| message.summary | TM5 | A message containing the [latest rolled-up summary of annotations](/docs/messages/annotations#annotation-summaries) |
+
+
+## Version ordering <a id="ordering"/>
+
+Both the message `serial` and `version.serial` are lexicographically sortable strings, providing a deterministic ordering of messages and their versions.
+
+To determine which version of a message is newer, compare the `version.serial` values.
+
+In the case of updates or deletes made by different users at similar times, both will be published on the channel, but the one that is assigned the lexicographically-highest `version.serial` will 'win', in the sense that retrieving channel history will eventually always return that version of the message.
