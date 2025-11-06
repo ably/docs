@@ -6,7 +6,7 @@ meta_keywords: "chat, data, storage, Ably, chat SDK, realtime messaging, dependa
 
 Ably Chat is designed to be a simple and easy to use realtime chat solution that handles any scale from 1:1 and small group chats to large livestream chats with millions of users.
 
-It is designed to be a reliable building block for your application. One trade-off we make is the data retention duration for chat messages. It is 30 days by default, but can be increased up to a year on request.
+Ably holds data for the purpose of providing realtime experiences. While Ably Chat provides flexible data retention for messages (30 days by default, up to a year on request), applications often need longer-term storage or additional control over their data.
 
 This guide presents different ways to use Ably Chat and store chat data in your own systems, which can help you meet your data retention requirements, as well as help you build more complex use cases such as search, analytics, and more.
 
@@ -16,10 +16,11 @@ We will explain each in detail, and provide code examples for each. This is an o
 
 This article covers the following options:
 
-1. Using [outbound webhooks](/docs/platform/integrations/webhooks). This can be a [HTTP endpoint](/docs/platform/integrations/webhooks/generic), [AWS Lambda](/docs/platform/integrations/webhooks/lambda), [Azure Function](/docs/platform/integrations/webhooks/azure), [Google Function](/docs/platform/integrations/webhooks/gcp-function) and others. Messages will arrive to your own system as they are published to a room.
-2. Using [outbound streaming](/docs/platform/integrations/streaming).
+1. Using [outbound webhooks](/docs/platform/integrations/webhooks). This can be a [HTTP endpoint](/docs/platform/integrations/webhooks/generic), [AWS Lambda](/docs/platform/integrations/webhooks/lambda), [Azure Function](/docs/platform/integrations/webhooks/azure), [Google Function](/docs/platform/integrations/webhooks/gcp-function) and others.
+2. Using [outbound streaming](/docs/platform/integrations/streaming). Stream messages to your own [Kafka](/docs/platform/integrations/streaming/kafka), [Kinesis](/docs/platform/integrations/streaming/kinesis), [AMQP](/docs/platform/integrations/streaming/amqp), [Pulsar](/docs/platform/integrations/streaming/pulsar) or [SQS](/docs/platform/integrations/streaming/sqs).
 3. Using an [Ably queue](/docs/platform/integrations/queues).
 4. Publishing via your own servers.
+5. Using the Chat History endpoint.
 
 ## Decoding and storing messages
 
@@ -27,13 +28,13 @@ Regardless of the delivery mechanism, you will need to decode the received messa
 
 After performing the decoding and you have a chat `Message` object, you can:
 
-1. Save it to your own database, index by `serial`.
+1. Save it to your own database. You can index by `serial`, this is the global unique identifier for a message, and is also used to sort messages in the canonical global order.
 2. If the message already exists by `serial`, it means you have received an update, delete, or reaction summary update. To check if you need to update the message, you can use the `version.serial` to compare the latest version of the message you have received with the version of the message you have in your database. Lexicographically higher means newer version.
 3. If you want to store reaction summaries, always update the reactions field when receiving a reaction summary update (action `4` or `message.summary`).
 
 <Code>
-```typescript
-const saveOrUpdateMessage = (message: Message) => {
+```javascript
+const saveOrUpdateMessage = (message) => {
   // Check if the message already exists by `serial`
   const existingMessage = await getMessageBySerial(message.serial);
   if (!existingMessage) {
@@ -81,6 +82,7 @@ Pros:
 
 You need to consider:
 - You need to maintain and be responsible for a reliable queue system. If you don't already have such a system it increases complexity on your end.
+- Consistency. If your queue system is not reachable, you will lose messages. Errors can be seen in the [`[meta]log` channel](/docs/platform/errors#meta).
 
 ## Using an Ably queue
 
@@ -114,10 +116,18 @@ You need to consider:
 - Your own servers are in the middle of the message publish path, so they can become a bottleneck in availability and will add latency in the publish path.
 - Your own servers will need to handle the scale you operate at for realtime publishes.
 
-## A note about the Chat History endpoint <a id="chat-history-api"/>
+## Using the Chat History endpoint
 
-The chat room history endpoint is a paginated HTTP endpoint that allows you to retrieve messages from a chat room. Its intended use is to retrieve messages for pre-filling a chat window, and not for ingesting messages into other systems.
+You can fetch the message history of a chat room using the [Chat History endpoint](/docs/api/chat-rest#tag/rooms/paths/~1chat~1%7Bversion%7D~1rooms~1%7BroomName%7D~1messages/get) or the [Chat SDK](/docs/chat/rooms/history). The chat room history endpoint is a paginated HTTP endpoint that allows you to retrieve messages from a chat room. The Chat SDK provides a convenient way to fetch  the history of a chat room.
 
-The history API returns messages in their canonical global order. For each message, only the latest version of the message is returned. The history endpoint is not a changelog, but a snapshot of the messages in the room at the time the request is made.
+If your use case is to archive chats that have ended, such as to export the chat history of a support ticket that is closed, you can use the chat history endpoint to export the messages to your own system. Read the docs on [chat history](/docs/chat/rooms/history) for more details.
 
-It is not suitable for ingesting messages into other systems, because polling it regularly will not converge to the correct state. It will miss updates and deletes of older messages.
+The intended use of the chat history endpoint is to retrieve messages for pre-filling a chat window, and not for ingesting messages into other systems. As a result, there are some important things to consider:
+
+- The history endpoint is not a changelog, it is a snapshot of the messages in the room at the time the request is made.
+- The history API returns messages in their canonical global order (sorted by `serial`).
+- For each message, only the latest version of the message is returned.
+- You will need to decide when and which rooms to import messages from.
+- You can import the same room multiple times (deduplicate by `serial` and `version.serial`), but you will need to always fetch from the first message to make sure you don't miss any updates or deletes of older messages.
+
+For use cases where there is a clear start and end of the chat, exporting the chat via history requests is a simple, reliable solution. If there is no clear start and end for chats, please consider using one of the other methods mentioned in this guide.
