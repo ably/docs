@@ -1,4 +1,3 @@
-import { HEADER_HEIGHT, componentMaxHeight } from '@ably/ui/core/utils/heights';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
 import { LanguageKey } from 'src/data/languages/types';
@@ -133,13 +132,6 @@ export const formatNavLink = (link: string) => {
   link = link.split('?')[0];
 
   return link.replace(/\/$/, '');
-};
-
-export const sidebarAlignmentClasses = 'absolute md:sticky w-60 md:pb-32 pt-6';
-
-export const sidebarAlignmentStyles: React.CSSProperties = {
-  top: HEADER_HEIGHT,
-  height: componentMaxHeight(HEADER_HEIGHT),
 };
 
 export const hierarchicalKey = (id: string, depth: number, tree?: PageTreeNode[]) =>
