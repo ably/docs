@@ -13,6 +13,7 @@ import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
 import ExamplesList from '../Examples/ExamplesList';
 import Link from '../Link';
+import { InkeepSearchBar } from '../SearchBar/InkeepSearchBar';
 
 // Tailwind 'md' breakpoint from tailwind.config.js
 const MD_BREAKPOINT = 1040;
@@ -71,6 +72,7 @@ const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const burgerButtonRef = useRef<HTMLDivElement>(null);
+  const searchBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -266,6 +268,10 @@ const Header: React.FC = () => {
         <button className={iconButtonClassName} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           <Icon name="icon-gui-bars-3-outline" size="20px" />
         </button>
+      </div>
+
+      <div className="hidden">
+        <InkeepSearchBar ref={searchBarRef} extraInputStyle={{ backgroundColor: 'white' }} />
       </div>
     </div>
   );
