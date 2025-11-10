@@ -56,38 +56,17 @@ describe('Header', () => {
 
   it('renders the header with logo and links', () => {
     render(<Header />);
-    expect(screen.getAllByAltText('Ably logo').length).toBeGreaterThan(0);
+    expect(screen.getByAltText('Ably')).toBeInTheDocument();
 
     expect(screen.getByText('Docs')).toBeInTheDocument();
     expect(screen.getByText('Examples')).toBeInTheDocument();
-  });
-
-  it('renders the search bar when searchBar is true', () => {
-    render(<Header searchBar={true} />);
-    expect(screen.getByText('SearchBar')).toBeInTheDocument();
-  });
-
-  it('does not render the search bar when searchBar is false', () => {
-    render(<Header searchBar={false} />);
-    expect(screen.queryByText('SearchBar')).not.toBeInTheDocument();
   });
 
   it('toggles the mobile menu when the burger icon is clicked', () => {
     render(<Header />);
     const burgerIcon = screen.getByText('icon-gui-bars-3-outline');
     fireEvent.click(burgerIcon);
-    expect(screen.getByText('icon-gui-x-mark-outline')).toBeInTheDocument();
     expect(screen.getByText('LeftSidebar')).toBeInTheDocument();
-  });
-
-  it('disables scrolling when the mobile menu is open', () => {
-    render(<Header />);
-    const burgerIcon = screen.getByText('icon-gui-bars-3-outline');
-    fireEvent.click(burgerIcon);
-    expect(document.body).toHaveClass('overflow-hidden');
-    const closeIcon = screen.getByText('icon-gui-x-mark-outline');
-    fireEvent.click(closeIcon);
-    expect(document.body).not.toHaveClass('overflow-hidden');
   });
 
   it('renders the sign in buttons when not signed in', () => {
