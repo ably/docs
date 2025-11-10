@@ -41,13 +41,13 @@ const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
     <GlobalLoading template={template}>
       <Header />
       <div className="flex pt-16 px-12 md:px-0 md:gap-12 lg:gap-16 xl:gap-20 justify-center">
-        {leftSidebar ? <LeftSidebar /> : null}
+        {leftSidebar ? <LeftSidebar /> : <div />}
         <Container as="main" className={cn('flex-1', { 'overflow-x-auto': !isRedocPage })}>
-          {leftSidebar ? <Breadcrumbs /> : null}
+          {leftSidebar ? <Breadcrumbs /> : <div />}
           {children}
           <Footer />
         </Container>
-        {rightSidebar ? <RightSidebar /> : null}
+        {rightSidebar ? <RightSidebar /> : <div />}
       </div>
     </GlobalLoading>
   );
