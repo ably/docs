@@ -79,7 +79,7 @@ export default {
       ],
     },
     {
-      name: 'Room features',
+      name: 'Chat features',
       pages: [
         {
           name: 'Messages',
