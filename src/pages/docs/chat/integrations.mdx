@@ -1,0 +1,63 @@
+---
+title: Integrations
+meta_description: "Ably Chat integrations with external services."
+---
+
+Ably Chat rooms use Ably Pub/Sub channels as the underlying building block. Each chat room uses one Pub/Sub channel. This allows you to integrate with external services using any of the [integrations](/docs/platform/integrations) that Ably Pub/Sub supports, enabling you to send data from Ably to an external service or push data into Ably from an external service.
+
+To integrate with an external service, you need to be aware of how Ably Chat messages are mapped to Ably Pub/Sub messages. All the Chat SDKs automatically do this conversion for you, and the Ably Chat REST API directly returns Chat messages. However there are some situations, such as building integrations, that we don't yet support directly in Chat, where understanding the mapping from an Ably Pub/Sub message to a Chat message is useful.
+
+If you're looking to add moderation, Ably Chat already has [built-in moderation](/docs/chat/moderation) support for Hive, Tisane, and Bodyguard, and you can also [build custom moderation](/docs/chat/moderation/custom).
+
+This guide is also applicable if you are using Ably Chat with a language or platform that doesn't yet have an Ably Chat SDK, but does have an Ably Pub/Sub SDK.
+
+## Convert a Pub/Sub message to a Chat message <a id="pub-sub-to-chat"/>
+
+To convert a Pub/Sub message to a Chat message you can use the table below:
+
+| Ably Message Field | Chat Message Field | Transformation/Notes |
+|-------------------|-------------------|---------------------|
+| `clientId` | `clientId` | Direct mapping. |
+| `timestamp` | `timestamp` | In Pub/Sub, this is a UNIX timestamp in milliseconds since the epoch. In Chat, this is a Date object. |
+| `serial` | `serial` | Direct mapping. |
+| `data.text` | `text` | Data must be JSON-decoded first. |
+| `data.metadata` | `metadata` | Data must be JSON-decoded first. |
+| `extras.headers` | `headers` | Flat object, key-value pairs. |
+| `action` | `action` | `message.create`, `message.update`, `message.delete`, or `message.summary` |
+| `version.serial` | `version.serial` | Use message `serial` if no `version` is set. |
+| `version.timestamp` | `version.timestamp` | Use message `timestamp` if no `version` is set. |
+| key `"reaction:unique.v1"` in `annotations.summary` | `reactions.unique` | Message reactions of type unique |
+| key `"reaction:distinct.v1"` in `annotations.summary` | `reactions.distinct` | Message reactions of type distinct |
+| key `"reaction:multiple.v1"` in `annotations.summary` | `reactions.multiple` | Message reactions of type multiple |
+
+If you are not using a language supported by an Ably Pub/Sub SDK, you will need to manually decode the message.
+
+Be aware that message actions are numeric values over the realtime channels, Pub/Sub REST API, and in integrations. Ably SDKs convert these numeric values to the corresponding string representations. If you do not use an Ably SDK, you will need to convert the numerical action values to their string representations.
+
+If possible, use an Ably Pub/Sub SDK with `fromEncoded()` or `fromEncodedArray()` to decode the message. This will ensure that the message is decoded correctly and all the fields are present, as well as convert things like numerical action values to their string representations. Details on how to do this are available in the [platform integrations documentation](/docs/platform/integrations/webhooks). Then you can apply the mapping from the table above to get a Chat message form the Pub/Sub message.
+
+### Is this message new, updated, or deleted?
+
+To determine if a message is new, updated, or deleted, you can use the `action` field.
+
+- If the action is `message.created` (numeric value `0`), then the message is new.
+- If the action is `message.updated` (numeric value `1`), then the message is updated.
+- If the action is `message.deleted` (numeric value `2`), thenthe message is deleted.
+- If the action is `message.summary` (numeric value `4`), then the message is either new or updated:
+   - Deleted messages do not receive summary updates.
+   - New messages either do not have a `version` field set, or if they do, it is identical to the message `serial` (`version.serial === serial`).
+   - Updated messages always have a `version` field set, and `version.serial` is different from the message `serial`.
+
+### How to handle message reactions
+
+Message reactions are a Chat feature based on the Pub/Sub [annotations](/docs/messages/annotations) feature. Chat uses the `reaction:` prefix for the annotation types used for message reactions. Here is the mapping from message reaction types to annotation types:
+
+| Reaction type | Annotation type |
+| ------------- | --------------- |
+| `unique` | `reaction:unique.v1` |
+| `distinct` | `reaction:distinct.v1` |
+| `multiple` | `reaction:multiple.v1` |
+
+Messages arriving from the realtime channel or integrations will show the annotation type under `message.annotations.summary`. The Chat SDKs automatically map the annotation type to the message reaction type and provide convenient `message.reactions.unique`, `message.reactions.distinct`, and `message.reactions.multiple` fields. When working with Pub/Sub integrations, you will need to either use the annotations directly or apply the mappping in your own code.
+
+All messages on a chat channel (or any channel with the **Message annotations, updates, and deletes** rule enabled) contain a `message.annotations.summary` field if the summary isn't empty. This is true even if the action is not `message.summary`.

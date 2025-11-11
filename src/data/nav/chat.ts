@@ -72,6 +72,10 @@ export default {
           link: '/docs/chat/rooms',
           index: true,
         },
+        {
+          name: 'Integrations',
+          link: '/docs/chat/integrations',
+        },
       ],
     },
     {
