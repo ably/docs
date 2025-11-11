@@ -16,6 +16,9 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       product: String
     }
     type FileHtml implements Node {
+      articleType: String
+      slug: String
+      version: String
       contentOrderedList: [FileHtmlContentOrderedListItem]
       meta: FileHtmlMetaData
     }
