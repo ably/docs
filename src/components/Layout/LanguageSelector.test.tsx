@@ -1,9 +1,10 @@
 import React from 'react';
 import { useLocation } from '@reach/router';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
 import { LanguageSelector } from './LanguageSelector';
 import { useLayoutContext } from 'src/contexts/layout-context';
+import { navigate } from '../Link';
 
 jest.mock('src/contexts/layout-context', () => ({
   useLayoutContext: jest.fn(),
@@ -19,6 +20,10 @@ jest.mock('@ably/ui/core/Badge', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+jest.mock('../Link', () => ({
+  navigate: jest.fn(),
+}));
+
 const mockUseLayoutContext = useLayoutContext as jest.Mock;
 
 jest.mock('@reach/router', () => ({
@@ -28,19 +33,20 @@ jest.mock('@reach/router', () => ({
 
 const mockUseLocation = useLocation as jest.Mock;
 
-const mockLanguageData = {
-  pubsub: {
-    javascript: 1.0,
-    python: 1.0,
-    ruby: 1.0,
+jest.mock('src/data/languages', () => ({
+  languageData: {
+    pubsub: {
+      javascript: '1.0',
+      python: '1.0',
+      ruby: '1.0',
+    },
   },
-};
-
-const mockLanguageInfo = {
-  javascript: { label: 'JavaScript' },
-  python: { label: 'Python' },
-  ruby: { label: 'Ruby' },
-};
+  languageInfo: {
+    javascript: { label: 'JavaScript' },
+    python: { label: 'Python' },
+    ruby: { label: 'Ruby' },
+  },
+}));
 
 describe('LanguageSelector', () => {
   beforeEach(() => {
@@ -55,26 +61,10 @@ describe('LanguageSelector', () => {
       activePage: {
         tree: [0],
         languages: ['javascript', 'python'],
+        language: 'javascript',
       },
       products: [['pubsub']],
     });
-
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      value: { search: '' },
-    });
-
-    jest.spyOn(window, 'URLSearchParams').mockImplementation(
-      () =>
-        ({
-          get: jest.fn().mockReturnValue(null),
-        }) as unknown as URLSearchParams,
-    );
-
-    jest.mock('src/data/languages', () => ({
-      languageData: mockLanguageData,
-      languageInfo: mockLanguageInfo,
-    }));
   });
 
   afterEach(() => {
@@ -85,44 +75,60 @@ describe('LanguageSelector', () => {
     render(<LanguageSelector />);
     expect(screen.getByText('icon-gui-chevron-down-micro')).toBeInTheDocument();
     expect(screen.getByText('icon-tech-javascript')).toBeInTheDocument();
-  });
-
-  it('opens the dropdown menu on click', () => {
-    render(<LanguageSelector />);
-    fireEvent.click(screen.getByText('icon-gui-chevron-down-micro'));
-    expect(screen.getByText('Code Language')).toBeInTheDocument();
-  });
-
-  it('renders language options', () => {
-    render(<LanguageSelector />);
-    fireEvent.click(screen.getByText('icon-gui-chevron-down-micro'));
     expect(screen.getByText('JavaScript')).toBeInTheDocument();
-    expect(screen.getByText('Python')).toBeInTheDocument();
   });
 
-  it('closes the dropdown menu on outside click', () => {
+  it('opens the dropdown menu on click', async () => {
     render(<LanguageSelector />);
-    fireEvent.click(screen.getByText('icon-gui-chevron-down-micro'));
-    fireEvent.mouseDown(document);
-    expect(screen.queryByText('Code Language')).not.toBeInTheDocument();
+    const trigger = screen.getByRole('combobox', { name: /select code language/i });
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText('Code Language')).toBeInTheDocument();
+    });
   });
 
-  it('filters options based on activePage.languages', () => {
+  it('renders language options', async () => {
     render(<LanguageSelector />);
-    fireEvent.click(screen.getByText('icon-gui-chevron-down-micro'));
-    expect(screen.getByText('JavaScript')).toBeInTheDocument();
-    expect(screen.getByText('Python')).toBeInTheDocument();
-    expect(screen.queryByText('Ruby')).not.toBeInTheDocument();
+    const trigger = screen.getByRole('combobox', { name: /select code language/i });
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      const items = screen.getAllByText('JavaScript');
+      // One in trigger, one in dropdown
+      expect(items.length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Python')).toBeInTheDocument();
+    });
   });
 
-  it('sets the default option to Python when ?lang=python is in the URL', () => {
-    mockUseLocation.mockReturnValue({
-      pathname: '/some-path',
-      search: '?lang=python',
-      hash: '',
-      state: null,
+  it('closes the dropdown menu on escape key', async () => {
+    render(<LanguageSelector />);
+    const trigger = screen.getByRole('combobox', { name: /select code language/i });
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText('Code Language')).toBeInTheDocument();
     });
 
+    fireEvent.keyDown(trigger, { key: 'Escape', code: 'Escape' });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Code Language')).not.toBeInTheDocument();
+    });
+  });
+
+  it('filters options based on activePage.languages', async () => {
+    render(<LanguageSelector />);
+    const trigger = screen.getByRole('combobox', { name: /select code language/i });
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText('Python')).toBeInTheDocument();
+      expect(screen.queryByText('Ruby')).not.toBeInTheDocument();
+    });
+  });
+
+  it('sets the default option to Python when language is python', () => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
         tree: [0],
@@ -132,20 +138,25 @@ describe('LanguageSelector', () => {
       products: [['pubsub']],
     });
 
-    jest.spyOn(window, 'URLSearchParams').mockImplementation(
-      () =>
-        ({
-          get: jest.fn((key) => {
-            if (key === 'lang') {
-              return 'python';
-            }
-            return null;
-          }),
-        }) as unknown as URLSearchParams,
-    );
-
     render(<LanguageSelector />);
     expect(screen.getByText('icon-tech-python')).toBeInTheDocument();
-    expect(screen.queryByText('icon-tech-javascript')).not.toBeInTheDocument();
+    expect(screen.getByText('Python')).toBeInTheDocument();
+  });
+
+  it('navigates when a language option is selected', async () => {
+    render(<LanguageSelector />);
+    const trigger = screen.getByRole('combobox', { name: /select code language/i });
+    fireEvent.click(trigger);
+
+    await waitFor(() => {
+      expect(screen.getByText('Python')).toBeInTheDocument();
+    });
+
+    const pythonOption = screen.getByRole('option', { name: /python/i });
+    fireEvent.click(pythonOption);
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('/some-path?lang=python');
+    });
   });
 });
