@@ -130,6 +130,7 @@ const categorizePage = (slug: string): { category: string; subcategory?: string 
     auth: { category: 'Platform', subcategory: 'Authentication' },
     guides: { category: 'Platform' },
     sdks: { category: 'Platform', subcategory: 'SDKs' },
+    'control-api': { category: 'Platform', subcategory: 'Control API' },
 
     // Pub/Sub - Core realtime messaging features
     api: { category: 'Pub/Sub', subcategory: 'API Reference' },
@@ -164,6 +165,22 @@ const categorizePage = (slug: string): { category: string; subcategory?: string 
   // Try to match two-part path first (e.g., "platform/account"), then single part (e.g., "platform")
   const twoPartPath = secondPart ? `${firstPart}/${secondPart}` : null;
 
+  // Special handling for API references - distinguish between REST SDK, Realtime SDK, and Control API
+  if (firstPart === 'api') {
+    if (secondPart === 'control-api') {
+      return { category: 'Platform', subcategory: 'Control API' };
+    } else if (secondPart === 'rest-sdk' || secondPart === 'rest-api' || secondPart === 'sse') {
+      return { category: 'Pub/Sub', subcategory: 'REST SDK API Reference' };
+    } else if (secondPart === 'realtime-sdk') {
+      return { category: 'Pub/Sub', subcategory: 'Realtime SDK API Reference' };
+    } else if (secondPart) {
+      // For other api/* paths, keep them in general API Reference
+      return { category: 'Pub/Sub', subcategory: 'API Reference' };
+    }
+    // For just /api (no second part), use general API Reference
+    return { category: 'Pub/Sub', subcategory: 'API Reference' };
+  }
+
   // Special handling for product/api pattern
   if (twoPartPath && secondPart === 'api') {
     // Check if it's a product-specific API
@@ -178,6 +195,11 @@ const categorizePage = (slug: string): { category: string; subcategory?: string 
   // Special handling for platform subdirectories
   if (firstPart === 'platform' && secondPart && categoryMap[secondPart]?.category === 'Platform') {
     return categoryMap[secondPart];
+  }
+
+  // Special handling for platform/account/control-api
+  if (firstPart === 'platform' && secondPart === 'account' && parts[2] === 'control-api') {
+    return { category: 'Platform', subcategory: 'Control API' };
   }
 
   if (categoryMap[firstPart]) {
@@ -199,14 +221,28 @@ const extractCodeLanguages = async (filePath: string): Promise<Set<string>> => {
     // Read the file content
     const fileContent = fs.readFileSync(filePath, 'utf8');
 
-    // Find all instances of code blocks with language specifiers (```language)
+    // Find all instances of code blocks with language specifiers (```language or ```prefix_language)
     const codeBlockRegex = /```(\w+)/g;
     let match;
     const languages = new Set<string>();
 
     while ((match = codeBlockRegex.exec(fileContent)) !== null) {
       if (match[1] && match[1].trim()) {
-        languages.add(match[1].trim());
+        const codeBlockLang = match[1].trim();
+
+        // Handle prefixed languages like realtime_javascript, rest_javascript, etc.
+        // Extract the language part after the underscore
+        if (codeBlockLang.includes('_')) {
+          const parts = codeBlockLang.split('_');
+          // Take the last part as the language (e.g., 'javascript' from 'realtime_javascript')
+          const language = parts[parts.length - 1];
+          if (language) {
+            languages.add(language);
+          }
+        } else {
+          // Add the language as-is if it doesn't have an underscore
+          languages.add(codeBlockLang);
+        }
       }
     }
     return languages;
