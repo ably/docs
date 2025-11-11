@@ -2,12 +2,12 @@ import React, { useMemo } from 'react';
 import { useLocation } from '@reach/router';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import Icon from '@ably/ui/core/Icon';
+import { IconName } from '@ably/ui/core/Icon/types';
 import { LanguageSelector } from '../LanguageSelector';
 import { track } from '@ably/ui/core/insights';
 import { productData } from 'src/data';
 import { languageInfo } from 'src/data/languages';
 import { useLayoutContext } from 'src/contexts/layout-context';
-import { IconName } from '@ably/ui/core/Icon/types';
 import { tooltipContentClassName } from '../utils/styles';
 
 type PageHeaderProps = {
@@ -56,7 +56,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) =>
                     href={link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex text-neutral-900 dark:text-neutral-400 cursor-pointer p-1.5"
+                    className="flex text-neutral-900 dark:text-neutral-400 cursor-pointer p-1.5 focus-base rounded-lg"
                     onClick={() => {
                       track('llm_link_clicked', {
                         model,
