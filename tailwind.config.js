@@ -12,6 +12,9 @@ module.exports = extendConfig((ablyUIConfig) => ({
     ...ablyUIConfig.theme,
     extend: {
       ...ablyUIConfig.theme.extend,
+      fontFamily: {
+        serif: ['IBM Plex Serif', 'Georgia', 'Cambria', 'Times New Roman', 'Times', 'serif'],
+      },
       gridTemplateColumns: {
         'header-layout': '173px minmax(200px, 400px) 1fr',
       },
