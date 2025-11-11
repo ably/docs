@@ -7,13 +7,13 @@ import Icon from '@ably/ui/core/Icon';
 import TabMenu from '@ably/ui/core/TabMenu';
 import Logo from '@ably/ui/core/images/logo/ably-logo.svg';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from '@ably/ui/core/utils/heights';
-import cn from '@ably/ui/core/utils/cn';
 import { IconName } from '@ably/ui/core/Icon/types';
 import LeftSidebar from './LeftSidebar';
 import UserContext from 'src/contexts/user-context';
 import ExamplesList from '../Examples/ExamplesList';
 import Link from '../Link';
 import { InkeepSearchBar } from '../SearchBar/InkeepSearchBar';
+import { secondaryButtonClassName, iconButtonClassName, tooltipContentClassName } from './utils/styles';
 
 // Tailwind 'md' breakpoint from tailwind.config.js
 const MD_BREAKPOINT = 1040;
@@ -50,14 +50,6 @@ const helpResourcesItems = [
     external: true,
   },
 ];
-const tooltipContentClassName = cn(
-  'px-2 py-1 bg-neutral-1000 dark:bg-neutral-300 text-neutral-200 dark:text-neutral-1100 ui-text-p3 font-medium rounded-lg relative z-50 mt-2',
-  'data-[state=closed]:animate-[tooltipExit_0.25s_ease-in-out]',
-  'data-[state=delayed-open]:animate-[tooltipEntry_0.25s_ease-in-out]',
-);
-const secondaryButtonClassName =
-  'focus-base flex items-center justify-center gap-2 px-4 py-[7px] h-9 ui-text-label4 text-neutral-1300 dark:text-neutral-000 rounded border border-neutral-400 dark:border-neutral-900 hover:border-neutral-600 dark:hover:border-neutral-700';
-const iconButtonClassName = cn(secondaryButtonClassName, 'w-9 p-0');
 
 const Header: React.FC = () => {
   const location = useLocation();
