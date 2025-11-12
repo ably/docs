@@ -12,6 +12,7 @@ import { LanguageKey } from 'src/data/languages/types';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { navigate } from '../Link';
 import { LANGUAGE_SELECTOR_HEIGHT, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
+import { Skeleton } from '../ui/Skeleton';
 
 type LanguageSelectorOptionData = {
   label: LanguageKey;
@@ -60,7 +61,7 @@ export const LanguageSelector = () => {
   };
 
   if (!selectedOption) {
-    return null;
+    return <Skeleton className="w-[180px] h-5 my-[9px]" />;
   }
 
   const selectedLang = languageInfo[selectedOption.label];
