@@ -15,15 +15,24 @@ type LeftSidebarProps = {
 const accordionContentClassName =
   'overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animation-accordion-up';
 
-const accordionTriggerClassName =
-  'flex items-center justify-between gap-2 p-0 pr-2 w-full text-left ui-text-label3 bg-neutral-000 dark:bg-neutral-1300 hover:bg-neutral-100 dark:hover:bg-neutral-1200 active:bg-neutral-200 dark:active:bg-neutral-1100 text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000 [&[data-state=open]>svg]:rotate-90 focus-base transition-colors';
+const accordionTriggerClassName = cn(
+  // Layout & display
+  'flex items-center justify-between gap-2 p-0 pr-2 w-full text-left ui-text-label3',
+  // Background color states
+  'bg-neutral-000 dark:bg-neutral-1300 hover:bg-neutral-100 dark:hover:bg-neutral-1200 active:bg-neutral-200 dark:active:bg-neutral-1100',
+  // Text color states
+  'text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000',
+  // State styles
+  'data-[state=open]:text-neutral-1300 dark:data-[state=open]:text-neutral-000 data-[state=open]:font-bold',
+  // Icon animation
+  '[&[data-state=open]>svg]:rotate-90',
+  // Misc
+  'focus-base transition-colors',
+);
 
-const accordionLinkClassName =
-  'pl-3 py-[6px] text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000';
+const accordionLinkClassName = 'pl-3 py-[6px]';
 
 const iconClassName = 'text-neutral-1300 dark:text-neutral-000 transition-transform';
-
-const boldClassName = 'text-neutral-1300 dark:text-neutral-000 font-bold';
 
 const ChildAccordion = ({
   content,
@@ -58,11 +67,6 @@ const ChildAccordion = ({
       {content.map((page, index) => {
         const hasDeeperLayer = 'pages' in page && page.pages;
         const isActiveLink = 'link' in page && page.link === activePage.page.link;
-        const isActiveAncestor = (() => {
-          const arr1 = [...tree, index];
-          const arr2 = activePage.tree.map(({ index }) => index).slice(0, layer + 2);
-          return arr1.length === arr2.length && arr1.every((val, i) => val === arr2[i]);
-        })();
 
         return (
           <Accordion.Item key={page.name} value={`item-${tree.join('-')}-${index}`}>
@@ -75,7 +79,7 @@ const ChildAccordion = ({
               })}
             >
               {hasDeeperLayer ? (
-                <div className={cn(accordionLinkClassName, 'flex-1', isActiveAncestor && boldClassName)}>
+                <div className={cn(accordionLinkClassName, 'flex-1')}>
                   <span>{page.name}</span>
                 </div>
               ) : (
@@ -84,7 +88,7 @@ const ChildAccordion = ({
                     className={cn(
                       accordionLinkClassName,
                       'ui-text-label3 font-medium w-full h-full pr-5',
-                      isActiveLink && boldClassName,
+                      isActiveLink && 'text-neutral-1300 dark:text-neutral-000 font-bold',
                     )}
                     tabIndex={-1}
                     to={page.link}
@@ -147,9 +151,9 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
             >
               <Accordion.Trigger
                 className={cn(
-                  'group/accordion-trigger',
+                  'group/accordion-trigger z-10',
                   accordionTriggerClassName,
-                  'data-[state=open]:border-b data-[state=open]:sticky data-[state=open]:top-0 data-[state=open]:text-neutral-1300 dark:data-[state=open]:text-neutral-000 [&[data-state=open]_svg]:text-orange-600 h-12 px-4 py-3 font-bold',
+                  'data-[state=open]:border-b data-[state=open]:sticky data-[state=open]:top-0 [&[data-state=open]_svg]:text-orange-600 h-12 px-4 py-3 font-bold',
                   isActive && 'text-neutral-1300 dark:text-neutral-000',
                 )}
               >
