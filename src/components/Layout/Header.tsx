@@ -76,13 +76,11 @@ const Header: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        isMobileMenuOpen &&
-        mobileMenuRef.current &&
-        !mobileMenuRef.current.contains(event.target as Node) &&
-        burgerButtonRef.current &&
-        !burgerButtonRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as HTMLElement;
+      const clickedOutsideMenu = mobileMenuRef.current && !mobileMenuRef.current.contains(target);
+      const clickedOutsideBurgerButton = burgerButtonRef.current && !burgerButtonRef.current.contains(target);
+
+      if (isMobileMenuOpen && clickedOutsideMenu && clickedOutsideBurgerButton) {
         setIsMobileMenuOpen(false);
       }
     };
@@ -116,12 +114,12 @@ const Header: React.FC = () => {
       <div className="flex items-center gap-8">
         <a href="/docs" className="flex items-center gap-2 focus-base p-2 rounded -ml-2">
           <img src={Logo} width="96px" alt="Ably" />
-          <span className="bg-orange-100 dark:bg-orange-1000 text-[10px] font-bold text-neutral-700 dark:text-neutral-600 px-1.5 py-[3px] rounded-md">
-            DOCS
+          <span className="bg-orange-100 dark:bg-orange-1000 text-[10px] font-bold text-neutral-700 dark:text-neutral-600 px-1.5 py-[3px] rounded-md uppercase">
+            Docs
           </span>
         </a>
         <TabMenu
-          rootClassName="h-16"
+          rootClassName="hidden md:flex h-16"
           tabs={desktopTabs}
           tabClassName="!p-0"
           options={{
