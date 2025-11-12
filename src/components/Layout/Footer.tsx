@@ -52,11 +52,39 @@ const socialLinks: { key: string; colorIcon: IconName; monoIcon: IconName; link:
 
 const Footer: React.FC = () => (
   <footer className="flex flex-col my-10">
-    <div className="border border-x-0 border-y-neutral-300 dark:border-y-neutral-1000 w-full py-6 flex lg:items-center flex-col lg:flex-row gap-6 px-6 lg:px-0">
-      <div className="flex gap-6 items-center flex-1">
-        <a href="/" className="bg-neutral-100 dark:bg-neutral-1200 h-10 w-10 p-2 rounded-full">
-          <Icon name="icon-tech-ably" size="24px" />
+    <div className="flex flex-col gap-6 px-6 lg:px-0">
+      <div className="flex flex-wrap items-center gap-6">
+        <span className="ui-text-label3 text-neutral-1300 dark:text-neutral-000">Was this page helpful?</span>
+        <div className="flex items-center gap-6">
+          <button className="flex items-center gap-2 ui-text-label3 text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000 transition-colors">
+            <Icon name="icon-gui-hand-thumb-up-outline" size="20px" />
+            Yes
+          </button>
+          <button className="flex items-center gap-2 ui-text-label3 text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000 transition-colors">
+            <Icon name="icon-gui-hand-thumb-down-outline" size="20px" />
+            No
+          </button>
+          <button className="flex items-center gap-2 ui-text-label3 text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000 transition-colors">
+            <Icon name="icon-gui-hand-raised-outline" size="20px" /> I have feedback
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-6">
+        <span className="ui-text-p3 text-neutral-800 dark:text-neutral-500">Last updated: Sept 10, 2024</span>
+        <a
+          href="#"
+          className="flex items-center gap-2 ui-text-p3 text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000 transition-colors"
+        >
+          <Icon name="icon-social-github-mono" size="16px" />
+          Edit on GitHub
         </a>
+      </div>
+    </div>
+
+    <div className="mt-8 border border-x-0 border-y-neutral-300 dark:border-y-neutral-1000 w-full py-6 flex lg:items-center flex-col lg:flex-row gap-6 px-6 lg:px-0">
+      <div className="flex gap-6 items-center flex-1">
+        <span className="ui-text-p3 text-neutral-900 dark:text-neutral-400">Find us on</span>
         <div className="flex gap-5 items-center">
           {socialLinks.map((link) => (
             <a
@@ -81,7 +109,8 @@ const Footer: React.FC = () => (
         <Status statusUrl={StatusUrl} showDescription />
       </div>
     </div>
-    <div className="flex justify-between w-full flex-col lg:flex-row px-6 lg:px-0 mt-6 gap-6">
+
+    <div className="flex justify-between w-full flex-col lg:flex-row px-6 lg:px-0 mt-6 gap-6 lg:gap-10">
       {[leftFooterLinks, rightFooterLinks].map((links, index) => (
         <div key={`link-set-${index}`} className="flex gap-5">
           {links.map((link) => (
