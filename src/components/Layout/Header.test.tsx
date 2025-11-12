@@ -58,7 +58,7 @@ describe('Header', () => {
     render(<Header />);
     expect(screen.getByAltText('Ably')).toBeInTheDocument();
 
-    expect(screen.getByText('Docs')).toBeInTheDocument();
+    expect(screen.getAllByText('Docs')).toHaveLength(2);
     expect(screen.getByText('Examples')).toBeInTheDocument();
   });
 

@@ -1,7 +1,7 @@
+import { useEffect, useRef, useState } from 'react';
 import * as Accordion from '@radix-ui/react-accordion';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
-import { useEffect, useRef, useState } from 'react';
 
 import { productData } from 'src/data';
 import { NavProductContent, NavProductPage } from 'src/data/nav/types';
@@ -136,44 +136,48 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
           setOpenProduct(value);
         }}
       >
-        {Object.entries(productData).map(([productKey, productObj], index) => (
-          <Accordion.Item
-            key={productKey}
-            value={`item-${index}`}
-            className="border-b border-neutral-300 dark:border-neutral-1000"
-          >
-            <Accordion.Trigger
-              className={cn(
-                'group/accordion-trigger',
-                accordionTriggerClassName,
-                'data-[state=open]:border-b data-[state=open]:sticky data-[state=open]:top-0 data-[state=open]:text-neutral-1300 dark:data-[state=open]:text-neutral-000 [&[data-state=open]_svg]:text-orange-600 h-12 px-4 py-3 font-bold',
-                openProduct === `item-${index}` && 'text-neutral-1300 dark:text-neutral-000',
-              )}
+        {Object.entries(productData).map(([productKey, productObj], index) => {
+          const isActive = openProduct === `item-${index}`;
+
+          return (
+            <Accordion.Item
+              key={productKey}
+              value={`item-${index}`}
+              className="border-b border-neutral-300 dark:border-neutral-1000"
             >
-              <div className="flex-1 flex items-center gap-2">
+              <Accordion.Trigger
+                className={cn(
+                  'group/accordion-trigger',
+                  accordionTriggerClassName,
+                  'data-[state=open]:border-b data-[state=open]:sticky data-[state=open]:top-0 data-[state=open]:text-neutral-1300 dark:data-[state=open]:text-neutral-000 [&[data-state=open]_svg]:text-orange-600 h-12 px-4 py-3 font-bold',
+                  isActive && 'text-neutral-1300 dark:text-neutral-000',
+                )}
+              >
+                <div className="flex-1 flex items-center gap-2">
+                  <Icon
+                    name={isActive ? productObj.nav.icon.open : productObj.nav.icon.closed}
+                    additionalCSS={cn(
+                      iconClassName,
+                      isActive
+                        ? 'text-orange-600'
+                        : 'text-neutral-900 dark:text-neutral-400 group-hover/accordion-trigger:text-neutral-1300 dark:group-hover/accordion-trigger:text-neutral-000',
+                    )}
+                    size="20px"
+                  />
+                  <span>{productObj.nav.name}</span>
+                </div>
                 <Icon
-                  name={openProduct === `item-${index}` ? productObj.nav.icon.open : productObj.nav.icon.closed}
-                  additionalCSS={cn(
-                    iconClassName,
-                    openProduct === `item-${index}`
-                      ? 'text-orange-600'
-                      : 'text-neutral-900 dark:text-neutral-400 group-hover/accordion-trigger:text-neutral-1300 dark:group-hover/accordion-trigger:text-neutral-000',
-                  )}
-                  size="20px"
+                  name="icon-gui-chevron-right-outline"
+                  additionalCSS={cn(iconClassName, '!text-neutral-900 dark:!text-neutral-400')}
+                  size="12px"
                 />
-                <span>{productObj.nav.name}</span>
-              </div>
-              <Icon
-                name="icon-gui-chevron-right-outline"
-                additionalCSS={cn(iconClassName, '!text-neutral-900 dark:!text-neutral-400')}
-                size="12px"
-              />
-            </Accordion.Trigger>
-            <Accordion.Content className={cn(accordionContentClassName, 'px-2 py-3')}>
-              <ChildAccordion content={productObj.nav.content} layer={0} tree={[index]} />
-            </Accordion.Content>
-          </Accordion.Item>
-        ))}
+              </Accordion.Trigger>
+              <Accordion.Content className={cn(accordionContentClassName, 'px-2 py-3')}>
+                <ChildAccordion content={productObj.nav.content} layer={0} tree={[index]} />
+              </Accordion.Content>
+            </Accordion.Item>
+          );
+        })}
       </Accordion.Root>
     </div>
   );
