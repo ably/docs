@@ -31,7 +31,7 @@ type LayoutProps = PageProps<unknown, PageContextType>;
 
 const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
   const location = useLocation();
-  const { searchBar, leftSidebar, rightSidebar, template } = pageContext.layout ?? {};
+  const { leftSidebar, rightSidebar, template } = pageContext.layout ?? {};
   const isRedocPage =
     location.pathname === '/docs/api/control-api' ||
     location.pathname === '/docs/api/chat-rest' ||
@@ -39,15 +39,15 @@ const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
 
   return (
     <GlobalLoading template={template}>
-      <Header searchBar={searchBar} />
-      <div className="flex pt-16 md:gap-12 lg:gap-16 xl:gap-20 justify-center ui-standard-container mx-auto">
-        {leftSidebar ? <LeftSidebar /> : null}
+      <Header />
+      <div className="flex pt-16 px-12 md:px-0 md:gap-12 lg:gap-16 xl:gap-20 justify-center">
+        {leftSidebar ? <LeftSidebar /> : <div />}
         <Container as="main" className={cn('flex-1', { 'overflow-x-auto': !isRedocPage })}>
-          {leftSidebar ? <Breadcrumbs /> : null}
+          {leftSidebar ? <Breadcrumbs /> : <div />}
           {children}
           <Footer />
         </Container>
-        {rightSidebar ? <RightSidebar /> : null}
+        {rightSidebar ? <RightSidebar /> : <div />}
       </div>
     </GlobalLoading>
   );

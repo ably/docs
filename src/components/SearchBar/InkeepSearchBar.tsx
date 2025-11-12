@@ -1,11 +1,9 @@
-import { CSSProperties } from 'react';
+import { CSSProperties, forwardRef } from 'react';
 
-export const InkeepSearchBar = ({
-  className,
-  extraInputStyle,
-}: {
-  className: string;
-  extraInputStyle: CSSProperties;
-}) => {
-  return <div id="inkeep-search" className={className} style={extraInputStyle}></div>;
-};
+export const InkeepSearchBar = forwardRef<HTMLDivElement, { className?: string; extraInputStyle?: CSSProperties }>(
+  ({ className, extraInputStyle = {} }, ref) => {
+    return <div ref={ref} id="inkeep-search" className={className} style={extraInputStyle}></div>;
+  },
+);
+
+InkeepSearchBar.displayName = 'InkeepSearchBar';
