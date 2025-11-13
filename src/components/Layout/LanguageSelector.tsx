@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
-import * as Select from '@radix-ui/react-select';
 import Badge from '@ably/ui/core/Badge';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
@@ -12,6 +11,7 @@ import { LanguageKey } from 'src/data/languages/types';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { navigate } from '../Link';
 import { LANGUAGE_SELECTOR_HEIGHT, INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
+import * as Select from '../ui/Select';
 import { Skeleton } from '../ui/Skeleton';
 
 type LanguageSelectorOptionData = {
@@ -92,7 +92,7 @@ export const LanguageSelector = () => {
 
         <Select.Portal>
           <Select.Content
-            className="overflow-hidden bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft z-50"
+            className="overflow-hidden bg-neutral-000 shadow dark:bg-neutral-1300 border border-neutral-300 dark:border-neutral-1000 rounded-lg ui-shadow-sm-soft z-40"
             position="popper"
             align="end"
             sideOffset={4}
