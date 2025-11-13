@@ -37,11 +37,11 @@ describe('Breadcrumbs', () => {
     jest.clearAllMocks();
   });
 
-  it('renders relevant breadcrumb nodes', () => {
+  it('renders all breadcrumb nodes from activePage tree', () => {
     render(<Breadcrumbs />);
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Section 1')).toBeInTheDocument();
-    expect(screen.queryByText('Subsection 1')).not.toBeInTheDocument();
+    expect(screen.getByText('Subsection 1')).toBeInTheDocument();
     expect(screen.getByText('Current Page')).toBeInTheDocument();
   });
 
@@ -49,38 +49,49 @@ describe('Breadcrumbs', () => {
     render(<Breadcrumbs />);
     expect(screen.getByText('Home')).toHaveAttribute('href', '/docs');
     expect(screen.getByText('Section 1')).toHaveAttribute('href', '/section-1');
-    expect(screen.queryByText('Subsection 1')).not.toBeInTheDocument();
+    expect(screen.getByText('Subsection 1')).toHaveAttribute('href', '#');
     expect(screen.getByText('Current Page')).toHaveAttribute('href', '/section-1/subsection-1/page-1');
   });
 
-  it('disables the link for the current page', () => {
+  it('disables the link for the current page and non-linked nodes', () => {
     render(<Breadcrumbs />);
+
+    // Current page (last item) should be disabled
     expect(screen.getByText('Current Page')).toHaveClass('text-gui-unavailable');
     expect(screen.getByText('Current Page')).toHaveClass('pointer-events-none');
+
+    // Non-linked nodes (link='#') should be disabled
+    expect(screen.getByText('Subsection 1')).toHaveClass('text-gui-unavailable');
+    expect(screen.getByText('Subsection 1')).toHaveClass('pointer-events-none');
+
+    // Active links should not be disabled
+    expect(screen.getByText('Section 1')).not.toHaveClass('text-gui-unavailable');
+    expect(screen.getByText('Section 1')).not.toHaveClass('pointer-events-none');
   });
 
-  it('removes duplicate links from breadcrumb nodes', () => {
+  it('shows only the last active node in mobile view', () => {
+    render(<Breadcrumbs />);
+
+    // All items except index 0 should have 'hidden sm:flex' classes
+    expect(screen.getByText('Section 1')).not.toHaveClass('hidden');
+    expect(screen.getByText('Subsection 1')).toHaveClass('hidden', 'sm:flex');
+    expect(screen.getByText('Current Page')).toHaveClass('hidden', 'sm:flex');
+  });
+
+  it('correctly identifies last active node when current page is non-linked', () => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
         tree: [
           { page: { name: 'Section 1', link: '/section-1' } },
-          { page: { name: 'Duplicate Section', link: '/section-1' } },
-          { page: { name: 'Current Page', link: '/section-1/page-1' } },
+          { page: { name: 'Subsection 1', link: '/section-1/subsection-1' } },
+          { page: { name: 'Current Page', link: '#' } },
         ],
       },
     });
 
     render(<Breadcrumbs />);
-
-    // Should only show one instance of the duplicate link
-    const section1Links = screen.getAllByText('Section 1');
-    expect(section1Links).toHaveLength(1);
-
-    // Should not render the duplicate with different text
-    expect(screen.queryByText('Duplicate Section')).not.toBeInTheDocument();
-
-    // Should still render other breadcrumb elements
-    expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.getByText('Current Page')).toBeInTheDocument();
+    expect(screen.getByText('Section 1')).toHaveClass('hidden', 'sm:flex');
+    expect(screen.getByText('Subsection 1')).not.toHaveClass('hidden');
+    expect(screen.getByText('Current Page')).toHaveClass('hidden', 'sm:flex');
   });
 });
