@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet';
+import { JsonLdSchema, serializeJsonLd } from '../utilities/json-ld';
 
 export const Head = ({
   title,
@@ -7,12 +8,14 @@ export const Head = ({
   description,
   metaTitle,
   keywords,
+  jsonLd,
 }: {
   title: string;
   canonical: string;
   description: string;
   metaTitle?: string;
   keywords?: string;
+  jsonLd?: JsonLdSchema | JsonLdSchema[];
 }) => (
   <Helmet>
     <title>{metaTitle || title}</title>
@@ -23,6 +26,18 @@ export const Head = ({
     <meta property="og:description" content={description} />
     <meta name="twitter:description" content={description} />
     {keywords && <meta name="keywords" content={keywords} />}
+
+    {/* JSON-LD Structured Data */}
+    {jsonLd &&
+      (Array.isArray(jsonLd) ? (
+        jsonLd.map((schema, index) => (
+          <script key={`jsonld-${index}`} type="application/ld+json">
+            {serializeJsonLd(schema)}
+          </script>
+        ))
+      ) : (
+        <script type="application/ld+json">{serializeJsonLd(jsonLd)}</script>
+      ))}
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />

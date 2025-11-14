@@ -19,6 +19,12 @@ export type Frontmatter = {
   meta_description: string;
   meta_keywords?: string;
   redirect_from?: string[];
+  jsonld_type?: string;
+  jsonld_date_published?: string;
+  jsonld_date_modified?: string;
+  jsonld_author_name?: string;
+  jsonld_author_type?: string;
+  [key: string]: unknown; // Allow additional custom JSON-LD fields
 };
 
 export type PageContextType = {
