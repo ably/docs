@@ -112,3 +112,54 @@ Ably invokes Lambda functions asynchronously using the `event` invocation type. 
 Lambda functions might run multiple times for the same Ably event. Design functions to handle this by making them idempotent or checking for duplicate processing.
 
 You can configure retry behavior in your AWS Lambda console under the function's asynchronous invocation settings. See the [AWS Lambda documentation](https://docs.aws.amazon.com/lambda/latest/dg/invocation-async.html#invocation-async-errors) for details on adjusting retry settings.
+
+## Routing messages with integration Rules <a id="routing"/>
+
+When an Integration Rule triggers your Lambda function, it can process the incoming message and publish a response back to Ably. This enables message routing and transformation patterns across your channels.
+
+### Lambda Function setup
+
+Your Lambda Function must be packaged with the Ably SDK and uploaded to AWS Lambda as a zip file.
+
+Uses `Ably.Rest` instead of `Ably.Realtime` because REST API is more efficient for one-off publishing operations and avoids WebSocket connection overhead in Lambda's stateless environment.
+
+The following example shows an AWS Lambda function that receives Ably events and publishes responses back to an Ably channel:
+
+<Code>
+```javascript
+'use strict';
+
+const Ably = require('ably');
+const inspect = require('util').inspect;
+
+exports.handler = (event, context, callback) => {
+  console.log("Received the following event from Ably: ", inspect(event));
+
+  // Parse the incoming event
+  // With enveloping enabled: event contains 'source', 'appId', 'channel',
+  // 'site', 'ruleId', and 'messages' or 'presence' arrays
+  // With enveloping disabled: event is the message data directly
+  const details = JSON.parse(event.messages[0].data);
+
+  // Use Ably.Rest for efficient REST-based publishing
+  // This avoids the overhead of establishing a WebSocket connection
+  const ably = new Ably.Rest({ key: '<YOUR_API_KEY>' });
+
+  // Get the target channel and publish the response
+  // Important: Do not publish to a channel that triggers this same rule
+  // to avoid infinite loops
+  const channel = ably.channels.get('<TARGET_CHANNEL_NAME>');
+
+  channel.publish('lambdaresponse', 'success', (err) => {
+    if(err) {
+      console.log("Error publishing back to ably:", inspect(err));
+      callback(err);
+    } else {
+      // Only call callback() after publish completes
+      // to ensure the HTTP request finishes before function execution ends
+      callback(null, 'success');
+    }
+  });
+};
+```
+</Code>
