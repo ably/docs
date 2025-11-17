@@ -10,7 +10,7 @@ Ably holds data for the purpose of providing realtime experiences. While Ably Ch
 
 This guide shows you how to export data from Ably Chat to your own systems. Before diving into the technical implementation, it's important to understand your architectural goals and what role your database will play.
 
-## Why export chat data?
+## Why export chat data? <a id="why"/>
 
 There are a few reasons to export chat data from Ably Chat to your own systems:
 
@@ -20,19 +20,19 @@ There are a few reasons to export chat data from Ably Chat to your own systems:
 - **Data sovereignty**: Maintain your own database as the canonical source of truth.
 - **Long-term storage**: Store chat data for longer than Ably Chat supports.
 
-## Key considerations
+## Key considerations <a id="key-considerations"/>
 
 Here are a few key considerations to keep in mind when exporting chat data:
 
-- **Database schema**: design in such a way that allows you to easily build the features you need, keeping in mind scale and reliability.
-  - If you need to store all history, including individual message history, you will need to save all the versions of chat messages that arrive to your servers, and balance this with the ability to fetch the latest version of each message in a room, in the order they were sent.
-  - If you are looking to implement features such as search, you may want to index only the latest version of each chat message, or at least have a way to indicate which messages from search results are current versions. Your schema or systems must allow you to do this efficiently.
-  - You need to bear in mind that new messages, updates, and deletes will arrive concurrently, so your database system must be able to handle this. Depending on your database system, consider reducing database roundtrips, thinking about locking, concurrent writes, or race conditions.
+- **Database schema**: Design your schema to allow you to easily build the features you need, keeping in mind scale and reliability.
+  - **Version history requirements**: Decide whether you need to store all versions of messages or just the latest version (see [Decision 1](#decision-1) below). If you need all versions, you'll need to design your schema accordingly. If you want to retrieve messages as shown in a chat window (latest version of each message), consider duplicating the latest message data in a separate table to avoid filtering at query time.
+  - **Indexing for search**: If you're implementing search, you may want to index only the latest version of each message, or have a way to indicate which search results represent current versions. Your schema must support this efficiently.
+  - **Concurrent writes**: New messages, updates, and deletes will arrive concurrently, so your database system must handle this. Depending on your database, consider reducing roundtrips, managing locks, and handling race conditions.
 - **Scale and reliability trade-offs**: Depending on the scale of your application, you need to consider how you will scale up and down the parts that handle the ingestion of messages from Ably.
-- **Recent history problem**: If you publish directly to Ably (recommended), there will be a small delay between a message being published and it arriving in your database via integrations. You need to consider whether this is acceptable for your use case or how to mitigate for situations where the most up-to-date data is required.
-- **Old messages problem**: You need to consider how to handle messages that are older than the time period Ably Chat holds them for, especially in situations where those need to be displayed in a chat window.
+- **Data latency and consistency**: If you publish directly to Ably (recommended), there will be a small delay between a message being published and it arriving in your database via integrations. You need to consider whether this is acceptable for your use case or how to mitigate for situations where the most up-to-date data is required.
+- **Handling messages beyond retention period**: Consider how to retrieve and display messages that are older than Ably Chat's retention period, especially when they need to appear in a chat window alongside newer messages.
 
-## Implementation options
+## Implementation options <a id="implementation-options"/>
 
 With your strategy in mind, choose the technical approach that fits your needs:
 
@@ -42,7 +42,7 @@ With your strategy in mind, choose the technical approach that fits your needs:
 4. Publishing via your own servers.
 5. Using the Chat History endpoint.
 
-## Decoding and storing messages
+## Decoding and storing messages <a id="decoding-and-storing"/>
 
 Regardless of the delivery mechanism, you will need to decode the received messages into Chat messages. Details of the mapping from Ably Pub/Sub messages to Chat messages are available in the [chat integrations](/docs/chat/integrations) documentation.
 
@@ -51,14 +51,14 @@ After performing the decoding to get your chat `Message` object, you can proceed
 There are two decisions to make when saving messages.
 
 
-#### Decicion 1: full version history or just the latest version?
+#### Decision 1: full version history or just the latest version? <a id="decision-1"/>
 
 Do you need all versions of a message or just the latest version?
-  - Messages are uniquely identified by their `serial`. Message versions are identified by message's `version.serial` property.
+  - Messages are uniquely identified by their `serial`. Message versions are identified by the message's `version.serial` property.
   - Lexicographically higher `version.serial` means a newer version.
-  - If you need to store all versions of a message, uniquely index by `serial` and `version.serial`.
-  - If you only need the latest version of a message, uniquely index by `serial` and always save the greatest `version.serial` received.
-  - For most use cases, you will want to keep the full version history for completeness. When performing a search or lookup, return the latest version of each message.
+  - If you need to store all versions of a message, uniquely index by `roomName`, `serial` and `version.serial`.
+  - If you only need the latest version of a message, uniquely index by `roomName` and `serial`, and only update if the received `version.serial` is greater than what you have stored. This handles out-of-order delivery.
+  - When performing a message search or lookup, you may want to return only the latest version of each message, even if you store the full version history.
 
 
 <Code>
@@ -69,99 +69,104 @@ const saveMessageVersion = (roomName, message) => {
     return;
   }
 
-  // only insert if you don't already have this message version in your database
+  // Pseudo-code: only insert if you don't already have this message version
+  // Implementation depends on your database's upsert/conflict handling capabilities
   await insertIfNotExists(roomName, message.serial, message.version.serial, message);
 };
 ```
 </Code>
 
-#### Decidion 2: how to store message reactions?
+#### Decision 2: how to store message reactions?
 
-Do you need to store message reactions? Message reactions are not linked to a particular message version. They are only linked to the message's `serial`. There are a few options for handling reactions:
-   1. Store the reaction summaries in a separate table. One row per message, uniquely identified by the message's `serial`. This allows you to save the latest state of the reactions summary for each message.
-    - The challenge arises for popular messages where the reaction summary gets clipped. Only need to mitigate if you need the list of clientIds who reacted. If you only need the totals, clipped summaries provide this.
-    - If you need the history of reactions, but don't need every single change, you can simply store all `message.summary` events for every message. It will not include every change to reactions but it will include many snapshots of the change history.
-    - Update the reactions only when you receive a `message.summary` event.
-   2. Store the individual reaction events. It can be high volume, and it is a change log of reactions being added and removed, which must be carefully resolved to the correct state. This allows you to keep a full history of all reactions for each message.
-    - This is complex to implement and maintain because resolving the correct state of reactions from the change log is not trivial: each summary type has a different aggregation logic which must be respected.
-    - If you need the detailed history of reactions you can store the individual reactions and also save the annotation summary, so that you can have a record of the Ably-provided aggregated state.
-    - Due to the number of individual reaction events, this operation can be expensive in both storage, compute, and your Ably per-message cost.
-   3. You discard message reactions altogether. Never store the `reactions` (or `annotations`) field and ignore messages with `message.summary` action.
+If you need to store message reactions you need to consider the following:
 
+1. Do you need to store only the current state of the reactions, historic snapshots of the current state, or the full history of all individual reactions?
+  - If you only need the current state (latest summary), simply save the values provided in the latest message with action `message.summary`. Uniquely index by `roomName` and `serial`.
+  - If you need to store historic snapshots, but don't require every single change, you can simply store all `message.summary` events for every message.
+  - If you need a full history of all reactions, you need to store individual reaction events (called [_"raw reactions"_](https://ably.com/docs/chat/rooms/message-reactions#raw-reactions) in Chat). To re-create the current state you need to apply the same logic Ably applies to each type of reaction. Some published reactions will have no effect on the summary, such as double publishing a reaction of type unique, or removing a reaction that does not exist. Due to the number of individual reaction events, this can be expensive in both storage, compute, and your Ably per-message cost
+2. Do you have a requirement to store the list of clientIds who reacted to a message, or just the totals?
+  - If you only need the totals, simply use the values provided in each message with action `message.summary`.
+  - If you need the list of clientIds who reacted, the values in summaries are sufficient for a reasonably large number of reactions. Over this limit, summaries will be clipped. Clipped summaries are marked with a `clipped` property set to `true`. Read more about [reaction summary clipping](/docs/chat/rooms/message-reactions#large-summaries).
+  - If you predict that your reaction summaries will get clipped and you need to store the list of clientIds who reacted, you will need to consider storing individual reaction events (called _"raw reactions"_ in Chat).
+  - The totals in clipped summaries represent the grand total of reactions, not just those included in the truncated clientId list.
 
-## Using a webhook via integration rules
+If you do not need to store message reactions, you can simply discard them. Never store the `reactions` (or `annotations`) field and ignore messages with action `message.summary`.
+
+## Filtering rooms and event types <a id="filtering"/>
+
+Integration rules allow you to filter which Ably channels are forwarded to your own system. This is a simple way to reduce the volume of messages you need to process to only the chat rooms you are interested in. Use a common prefix in the name of chat rooms that you want to trigger an integration rule for, and use the prefix as the filter.
+
+Use `channel.message` as the event type for all integration rules. This will forward all messages published to the relevant channels and exclude presence messages and channel lifecycle messages.
+
+## Using a webhook via integration rules <a id="webhook"/>
 
 Ably can forward messages to your own system via a webhook. This is the simplest to set up if you don't already have other systems in place for message ingestion. This section covers the simple HTTP endpoint webhook, but the same principles apply to other webhook integrations such as AWS Lambda, Azure Function, Google Function, and others.
 
 Read the guide on [outbound webhooks](/docs/platform/integrations/webhooks) for more details on how to set up a webhook with Ably for the platform of your choice.
 
-All webhook integrations allow you to use a regex filter on the channel name to control which channels the webhook should be triggered for. Use a common prefix in the name of chat rooms that you want to trigger a webhook for, and use the prefix as the filter.
-
-Use `channel.message` as the event type.
-
 You need to consider:
-- Redundancy. In case of failure, Ably will retry delivering the message to your webhook, but only for a short period of time. You can see errors in the [`[meta]log` channel](/docs/platform/errors#meta).
-- Ordering. Messages can arrive out-of-order. Mitigated by the fact that they are globally sortable by their `serial` and `version.serial`. In rare cases, this can cause inconsistencies for reaction summaries if those are of interest to you.
-- Consistency. Missing webhook calls will lead to inconsistencies between your database and Ably, which can be difficult to resolve.
-- [At-least-once delivery](/docs/platform/architecture/idempotency#protocol-support-for-exactly-once-delivery). You need to be able to handle duplicate messages. Deduplication can be done by checking `serial` and `version.serial`.
+- **Redundancy**: In case of failure, Ably will retry delivering the message to your webhook, but only for a short period. You can see errors in the [`[meta]log` channel](/docs/platform/errors#meta).
+- **Ordering**: Messages can arrive out-of-order. You can sort them using their `serial` and `version.serial` properties. However, if you're storing reaction summaries, out-of-order delivery may result in an older summary overwriting a newer one, causing temporary inconsistencies.
+- **Consistency**: Missing webhook calls will lead to inconsistencies between your database and Ably, which can be difficult to resolve. Detect if this happens using the `[meta]log` channel and use the [history endpoint](#history-endpoint) to backfill missing data.
+- **[At-least-once delivery](/docs/platform/architecture/idempotency#protocol-support-for-exactly-once-delivery)**: You need to handle duplicate messages. Deduplication can be done by checking `serial` and `version.serial`.
 
-## Using outbound streaming
+## Using outbound streaming <a id="outbound-streaming"/>
 
 Ably can stream messages directly to your own queueing or streaming service: Kinesis, Kafka, AMQP, SQS. Read the guide on [outbound streaming](/docs/platform/integrations/streaming) for more details on how to set up the streaming integration with Ably for the service of your choice.
 
-Pros:
+Benefits:
 - Use your existing queue system to process and save messages from Ably.
-- You have control over saving messages to your own database.
+- You control your own queue system, so you have full control over message ingestion from queue to database in terms of retry strategies, retention policies, queue lengths, and so on.
 
 You need to consider:
 - You need to maintain and be responsible for a reliable queue system. If you don't already have such a system it increases complexity on your end.
 - Consistency. If your queue system is not reachable, you will lose messages. Errors can be seen in the [`[meta]log` channel](/docs/platform/errors#meta).
 
-## Using an Ably queue
+## Using an Ably queue <a id="ably-queue"/>
 
 Ably can forward messages from chat room channels to an Ably Queue, which you can then consume from your own servers to save messages to your own database. Read the guide on [Ably queues](/docs/platform/integrations/queues) for more details on how to set up the queue integration with Ably.
 
 Ably ensures that each message is delivered to only one consumer even if multiple consumers are connected.
 
 Benefits of using an Ably queue:
-
 - You can consume it from your servers, meaning overall this is fault-tolerant. Ably takes care of the complexity of maintaining a queue.
 - You can use multiple queues and configure which channels go to which queue via regex filters on the channel name.
-- If your systems suffer any downtime, you will not miss anything (up to the queue max size).
+- Fault-tolerant: if your systems suffer any temporary downtime, you will not miss messages, up to the queue max size. There is a deadletter queue to handle the situation where messages are dropped from the Ably Queue.
 
 You need to consider:
 - During peak times you may need to scale up your consumers to avoid overloading the queue past the maximum queue length allowed.
-- Each message has a TTL in the queue.
+- Each message has a time-to-live in the queue. The default and maximum is 60 minutes.
 - Oldest messages are dropped if the maximum queue length is exceeded. Check the [dead letter queue](/docs/platform/integrations/queues#deadletter) to see if this is happening.
+- Always consume messages from the [dead letter queue](/docs/platform/integrations/queues#deadletter) to monitor errors.
 
-## Publishing via your own servers
+## Publishing via your own servers <a id="publish-via-own"/>
 
 Change the publish path: instead of publishing Chat messages, updates, and deletes to Ably directly, proxy them through your own server. This gives you the opportunity to also save the messages as they are produced, and also apply different validation schemes if needed.
 
 Benefits:
 - Full control over publishing.
 - Opportunity to add extra validation before publishing to Ably.
-- You can publish messages directly via the Chat REST API, and avoid having to encode/decode Chat Messages to and from Ably Pub/Sub messages. You can bypass using an SDK entirely or you can use the Chat SDK for publishing.
+- You can publish messages directly via the Chat REST API, and avoid having to encode/decode Chat Messages to and from Ably Pub/Sub messages.
+- If you are using a supported language, you have the option to publish via the Chat SDK.
 
 You need to consider:
-- You need to handle updates and deletes on your own.
-- Storing message reactions can be difficult since you will not have access to the aggregate (summaries) Ably provides.
+- You need to handle updates and deletes on your own, including all consistency issues that arise from this.
+- Storing message reactions can be difficult since you will not have access to the aggregate (summaries) Ably provides. If they are required, you can add them via the other methods presented in this guide.
 - Your own servers are in the middle of the message publish path, so they can become a bottleneck in availability and will add latency in the publish path.
 - Your own servers will need to handle the scale you operate at for realtime publishes.
 - Keeping both systems in sync can be a difficult problem to solve in all edge cases. Inconsistencies can happen if either publishing to Ably or saving to your own database fails. You will need mitigation strategies to handle all failure scenarios to ensure eventual consistency.
 
-## Using the Chat History endpoint
+## Using the Chat History endpoint <a id="history-endpoint"/>
 
 You can fetch the message history of a chat room using the [Chat History endpoint](/docs/api/chat-rest#tag/rooms/paths/~1chat~1%7Bversion%7D~1rooms~1%7BroomName%7D~1messages/get) or the [Chat SDK](/docs/chat/rooms/history). The chat room history endpoint is a paginated HTTP endpoint that allows you to retrieve messages from a chat room. The Chat SDK provides a convenient way to fetch the history of a chat room.
 
 If your use case is to archive chats that have ended, such as to export the chat history of a support ticket that is closed, you can use the chat history endpoint to export the messages to your own system. Read the docs on [chat history](/docs/chat/rooms/history) for more details.
 
-The intended use of the chat history endpoint is to retrieve messages for pre-filling a chat window, and not for ingesting messages into other systems. As a result, there are some important things to consider:
-
-- The history endpoint is not a changelog, it is a snapshot of the messages in the room at the time the request is made.
+The intended use of the chat history endpoint is to retrieve messages for pre-filling a chat window, not for continuous ingestion into other systems. As a result, there are some important things to consider:
+- The history endpoint is not a changelog, it is a snapshot of the messages in the room at the time the request is made. It returns only the latest version of each message.
 - The history API returns messages in their canonical global order (sorted by `serial`).
-- For each message, only the latest version of the message is returned.
+- For each message, only the latest version is returned.
 - You will need to decide when and which rooms to import messages from.
-- You can import the same room multiple times (deduplicate by `serial` and `version.serial`), but you will need to always fetch from the first message to make sure you don't miss any updates or deletes of older messages.
+- You can import the same room multiple times (deduplicate by `serial` and `version.serial`). However, to capture all updates and deletes, you will need to fetch from the first message each time, which can be impractical for long-running chats with large message histories.
 
 For use cases where there is a clear start and end of the chat, exporting the chat via history requests is a simple, reliable solution. If there is no clear start and end for chats, please consider using one of the other methods mentioned in this guide.
