@@ -8,11 +8,33 @@ Ably Chat is a simple and easy-to-use realtime chat solution that handles any sc
 
 Ably holds data for the purpose of providing realtime experiences. While Ably Chat provides flexible data retention for messages (30 days by default, up to a year on request), some applications may need longer-term storage or additional control over their data.
 
-This guide presents different ways to use Ably Chat and store chat data in your own systems, which can help you meet your data retention requirements, as well as help you build more complex use cases such as search, analytics, and more.
+This guide shows you how to export data from Ably Chat to your own systems. Before diving into the technical implementation, it's important to understand your architectural goals and what role your database will play.
 
-## Different ways to export data from Ably Chat
+## Why export chat data?
 
-This guide covers the following options to export data from Ably Chat:
+There are a few reasons to export chat data from Ably Chat to your own systems:
+
+- **Compliance and legal requirements**: Meet data retention policies, maintain audit trails for support conversations, or fulfill regulatory requirements.
+- **Analytics and business intelligence**: Build dashboards, train ML models, analyze customer sentiment, or track support quality metrics.
+- **Enhanced functionality**: Implement features that need the chat history, such as search.
+- **Data sovereignty**: Maintain your own database as the canonical source of truth.
+- **Long-term storage**: Store chat data for longer than Ably Chat supports.
+
+## Key considerations
+
+Here are a few key considerations to keep in mind when exporting chat data:
+
+- **Database schema**: design in such a way that allows you to easily build the features you need, keeping in mind scale and reliability.
+  - If you need to store all history, including individual message history, you will need to save all the versions of chat messages that arrive to your servers, and balance this with the ability to fetch the latest version of each message in a room, in the order they were sent.
+  - If you are looking to implement features such as search, you may want to index only the latest version of each chat message, or at least have a way to indicate which messages from search results are current versions. Your schema or systems must allow you to do this efficiently.
+  - You need to bear in mind that new messages, updates, and deletes will arrive concurrently, so your database system must be able to handle this. Depending on your database system, consider reducing database roundtrips, thinking about locking, concurrent writes, or race conditions.
+- **Scale and reliability trade-offs**: Depending on the scale of your application, you need to consider how you will scale up and down the parts that handle the ingestion of messages from Ably.
+- **Recent history problem**: If you publish directly to Ably (recommended), there will be a small delay between a message being published and it arriving in your database via integrations. You need to consider whether this is acceptable for your use case or how to mitigate for situations where the most up-to-date data is required.
+- **Old messages problem**: You need to consider how to handle messages that are older than the time period Ably Chat holds them for, especially in situations where those need to be displayed in a chat window.
+
+## Implementation options
+
+With your strategy in mind, choose the technical approach that fits your needs:
 
 1. Using [outbound webhooks](/docs/platform/integrations/webhooks). [HTTP endpoint](/docs/platform/integrations/webhooks/generic), [AWS Lambda](/docs/platform/integrations/webhooks/lambda), and others.
 2. Using [outbound streaming](/docs/platform/integrations/streaming). Stream to your own [Kafka](/docs/platform/integrations/streaming/kafka), [Kinesis](/docs/platform/integrations/streaming/kinesis), and others.
@@ -22,38 +44,50 @@ This guide covers the following options to export data from Ably Chat:
 
 ## Decoding and storing messages
 
-Regardless of the delivery mechanism, you will need to decode the received messages into Chat messages. Details of the mapping from Ably Pub/Sub messages to Chat messages are available in the [Integrations](/docs/chat/integrations) documentation.
+Regardless of the delivery mechanism, you will need to decode the received messages into Chat messages. Details of the mapping from Ably Pub/Sub messages to Chat messages are available in the [chat integrations](/docs/chat/integrations) documentation.
 
-After performing the decoding to get your chat `Message` object, you can:
+After performing the decoding to get your chat `Message` object, you can proceed to save it to your own database.
 
-1. Save it to your own database. You can index by `serial`, this is the global unique identifier for a message, and is also used to sort messages in the canonical global order.
-2. If the message already exists by `serial`, it means you have received an update, delete, or reaction summary update. To check if you need to update the message, you can use the `version.serial` to compare the latest version of the message you have received with the version of the message you have in your database. Lexicographically higher means newer version.
-3. If you want to store reaction summaries, always update the reactions field when receiving a reaction summary update (action `4` or `message.summary`).
+There are two decisions to make when saving messages.
+
+
+#### Decicion 1: full version history or just the latest version?
+
+Do you need all versions of a message or just the latest version?
+  - Messages are uniquely identified by their `serial`. Message versions are identified by message's `version.serial` property.
+  - Lexicographically higher `version.serial` means a newer version.
+  - If you need to store all versions of a message, uniquely index by `serial` and `version.serial`.
+  - If you only need the latest version of a message, uniquely index by `serial` and always save the greatest `version.serial` received.
+  - For most use cases, you will want to keep the full version history for completeness. When performing a search or lookup, return the latest version of each message.
+
 
 <Code>
 ```javascript
-const saveOrUpdateMessage = (message) => {
-  // Check if the message already exists in your own database by `serial`
-  const existingMessage = await getMessageBySerial(message.serial);
-  if (!existingMessage) {
-    // message not yet in your database => save it
-    await saveMessage(message);
-    return;
-  }
-  
-  if (message.version.serial < existingMessage.version.serial) {
-      // if received version is older, discard
-    return;
-  } else if (message.version.serial === existingMessage.version.serial && message.action !== 'message.summary') {
-    // if the message is the same version, and the action is not a summary, discard
+const saveMessageVersion = (roomName, message) => {
+  if (message.action === 'message.summary') {
+    // summary events are not part of the message version history, so discard
     return;
   }
 
-  // message is newer or it's a summary event => update the message
-  await updateMessage(existingMessage, message);
+  // only insert if you don't already have this message version in your database
+  await insertIfNotExists(roomName, message.serial, message.version.serial, message);
 };
 ```
 </Code>
+
+#### Decidion 2: how to store message reactions?
+
+Do you need to store message reactions? Message reactions are not linked to a particular message version. They are only linked to the message's `serial`. There are a few options for handling reactions:
+   1. Store the reaction summaries in a separate table. One row per message, uniquely identified by the message's `serial`. This allows you to save the latest state of the reactions summary for each message.
+    - The challenge arises for popular messages where the reaction summary gets clipped. Only need to mitigate if you need the list of clientIds who reacted. If you only need the totals, clipped summaries provide this.
+    - If you need the history of reactions, but don't need every single change, you can simply store all `message.summary` events for every message. It will not include every change to reactions but it will include many snapshots of the change history.
+    - Update the reactions only when you receive a `message.summary` event.
+   2. Store the individual reaction events. It can be high volume, and it is a change log of reactions being added and removed, which must be carefully resolved to the correct state. This allows you to keep a full history of all reactions for each message.
+    - This is complex to implement and maintain because resolving the correct state of reactions from the change log is not trivial: each summary type has a different aggregation logic which must be respected.
+    - If you need the detailed history of reactions you can store the individual reactions and also save the annotation summary, so that you can have a record of the Ably-provided aggregated state.
+    - Due to the number of individual reaction events, this operation can be expensive in both storage, compute, and your Ably per-message cost.
+   3. You discard message reactions altogether. Never store the `reactions` (or `annotations`) field and ignore messages with `message.summary` action.
+
 
 ## Using a webhook via integration rules
 
@@ -114,6 +148,7 @@ You need to consider:
 - Storing message reactions can be difficult since you will not have access to the aggregate (summaries) Ably provides.
 - Your own servers are in the middle of the message publish path, so they can become a bottleneck in availability and will add latency in the publish path.
 - Your own servers will need to handle the scale you operate at for realtime publishes.
+- Keeping both systems in sync can be a difficult problem to solve in all edge cases. Inconsistencies can happen if either publishing to Ably or saving to your own database fails. You will need mitigation strategies to handle all failure scenarios to ensure eventual consistency.
 
 ## Using the Chat History endpoint
 
