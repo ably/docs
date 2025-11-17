@@ -19,6 +19,7 @@ export type Frontmatter = {
   meta_description: string;
   meta_keywords?: string;
   redirect_from?: string[];
+  last_updated?: string;
 };
 
 export type PageContextType = {
@@ -45,7 +46,7 @@ const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
         <Container as="main" className={cn('flex-1 px-4 -mx-4', { 'overflow-x-auto': !isRedocPage })}>
           {leftSidebar ? <Breadcrumbs /> : <div />}
           {children}
-          <Footer />
+          <Footer pageContext={pageContext} />
         </Container>
         {rightSidebar ? <RightSidebar /> : <div />}
       </div>
