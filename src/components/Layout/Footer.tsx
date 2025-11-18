@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
+import { usePostHog } from 'posthog-js/react';
+import type { Survey } from 'posthog-js';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import Status, { StatusUrl } from '@ably/ui/core/Status';
@@ -7,6 +9,8 @@ import cn from '@ably/ui/core/utils/cn';
 import type { PageContextType } from './Layout';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Button from '@ably/ui/core/Button';
+import { useSiteMetadata } from 'src/hooks/use-site-metadata';
+import { track } from '@ably/ui/core/insights';
 
 type FeedbackMode = 'yes' | 'no' | 'feedback';
 
@@ -97,6 +101,55 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
   const { frontmatter } = pageContext;
   const location = useLocation();
   const [feedbackMode, setFeedbackMode] = useState<FeedbackMode | null>(null);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [survey, setSurvey] = useState<Survey | null>(null);
+  const posthog = usePostHog();
+  const { externalScriptsData } = useSiteMetadata();
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !posthog?.getSurveys) {
+      return;
+    }
+
+    posthog.getSurveys((surveys: Survey[]) => {
+      const relevantSurvey = surveys.find((s) => s.name === externalScriptsData.posthogFeedbackSurveyName);
+
+      if (relevantSurvey) {
+        setSurvey(relevantSurvey);
+      }
+    }, true);
+  }, [posthog, externalScriptsData.posthogFeedbackSurveyName]);
+
+  useEffect(() => {
+    if (!feedbackMode) {
+      setTimeout(() => {
+        setSubmitted(false);
+        setFeedbackText('');
+      }, 500);
+    }
+  }, [feedbackMode]);
+
+  const handleFeedbackSubmit = () => {
+    console.log('survey', survey);
+    if (!survey || !survey.id || !survey.questions[0]?.id) {
+      return;
+    }
+
+    const responseKey = `$survey_response_${survey.questions[0].id}`;
+
+    // posthog.capture('survey sent', {
+    //   $survey_id: survey.id,
+    //   [responseKey]: feedbackText || feedbackMode,
+    // });
+
+    setFeedbackText('');
+    setSubmitted(true);
+
+    setTimeout(() => {
+      setFeedbackMode(null);
+    }, 2000);
+  };
 
   const lastUpdated = useMemo(() => {
     if (frontmatter.last_updated) {
@@ -184,6 +237,17 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
         {feedbackMode &&
           (() => {
             const activeFeedbackButton = feedbackButtons[feedbackMode];
+
+            if (submitted) {
+              return (
+                <div className="flex items-center gap-2 py-2">
+                  <span className="ui-text-p3 font-medium text-green-600 dark:text-green-500">
+                    Feedback submitted. Thank you!
+                  </span>
+                </div>
+              );
+            }
+
             return (
               <div className="flex flex-col items-start gap-6">
                 {activeFeedbackButton?.description && (
@@ -195,6 +259,8 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
                   rows={3}
                   className="w-full py-2 px-3 ui-text-p3 rounded-lg border border-neutral-400 dark:border-neutral-900 focus-base"
                   placeholder={activeFeedbackButton?.placeholder}
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
                 />
                 <div className="flex items-center gap-2">
                   {feedbackMode === 'feedback' && (
@@ -202,7 +268,7 @@ const Footer: React.FC<{ pageContext: PageContextType }> = ({ pageContext }) => 
                       Cancel
                     </Button>
                   )}
-                  <Button variant="primary" size="xs">
+                  <Button variant="primary" size="xs" onClick={handleFeedbackSubmit}>
                     Send feedback
                   </Button>
                 </div>
