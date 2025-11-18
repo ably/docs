@@ -13,26 +13,31 @@ import { navigate, PageProps } from 'gatsby';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
 import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
-import { getRandomChannelName } from '../blocks/software/Code/get-random-channel-name';
 
-import PageTitle from '../PageTitle';
-import { Frontmatter, PageContextType } from './Layout';
-import { MarkdownProvider } from '../Markdown';
-import Article from '../Article';
+import { getRandomChannelName } from '../blocks/software/Code/get-random-channel-name';
+import Aside from '../blocks/dividers/Aside';
+
 import If from './mdx/If';
 import { useCopyableHeaders } from './mdx/headers';
-import { useLayoutContext } from 'src/contexts/layout-context';
-import Aside from '../blocks/dividers/Aside';
-import { HtmlComponentPropsData } from '../html-component-props';
-import { languageData } from 'src/data/languages';
-import { ActivePage } from './utils/nav';
 import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from './mdx/tables';
 import { Tiles } from './mdx/tiles';
+import { PageHeader } from './mdx/PageHeader';
+
+import { Frontmatter, PageContextType } from './Layout';
+import { ActivePage } from './utils/nav';
+
+import { HtmlComponentPropsData } from '../html-component-props';
+import { MarkdownProvider } from '../Markdown';
+
+import Article from '../Article';
 import { Head } from '../Head';
-import { useSiteMetadata } from 'src/hooks/use-site-metadata';
-import { ProductName } from 'src/templates/template-data';
-import { getMetaTitle } from '../common/meta-title';
+
 import UserContext from 'src/contexts/user-context';
+import { useLayoutContext } from 'src/contexts/layout-context';
+import { languageData } from 'src/data/languages';
+import { useSiteMetadata } from 'src/hooks/use-site-metadata';
+import { getMetaTitle } from '../common/meta-title';
+import { ProductName } from 'src/templates/template-data';
 
 type MDXWrapperProps = PageProps<unknown, PageContextType>;
 
@@ -46,6 +51,8 @@ type Replacement = {
   term: string;
   replacer: () => string;
 };
+
+type ElementProps = { className?: string; children?: ReactNode };
 
 const SDKContext = createContext<SDKContextType | undefined>(undefined);
 
@@ -114,10 +121,12 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
       return null;
     }
 
-    const preElement = child as ReactElement<{ children?: ReactNode }>;
-    const codeElement = isValidElement(preElement.props?.children) ? (preElement.props.children as ReactElement) : null;
+    const preElement = child as ReactElement<ElementProps>;
+    const codeElement = isValidElement(preElement.props?.children)
+      ? (preElement.props.children as ReactElement<ElementProps>)
+      : null;
 
-    if (!codeElement || !codeElement.props?.className) {
+    if (!codeElement || !codeElement.props.className) {
       return null;
     }
 
@@ -222,7 +231,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
             Tiles,
           }}
         >
-          <PageTitle>{title}</PageTitle>
+          <PageHeader title={title} description={description} />
           {children}
         </MarkdownProvider>
       </Article>
