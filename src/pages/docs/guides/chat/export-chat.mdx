@@ -80,20 +80,20 @@ const saveMessageVersion = (roomName, message) => {
 If you need to store message reactions you need to consider the following:
 
 1. Do you need to store only the current state of the reactions, historic snapshots of the current state, or the full history of all individual reactions?
-  - If you only need the current state (latest summary), simply save the values provided in the latest message with action `message.summary`. Uniquely index by `roomName` and `serial`.
-  - If you need to store historic snapshots, but don't require every single change, you can simply store all `message.summary` events for every message.
-  - If you need a full history of all reactions, you need to store individual reaction events (called [_"raw reactions"_](https://ably.com/docs/chat/rooms/message-reactions#raw-reactions) in Chat). To re-create the current state you need to apply the same logic Ably applies to each type of reaction. Some published reactions will have no effect on the summary, such as double publishing a reaction of type unique, or removing a reaction that does not exist. Due to the number of individual reaction events, keep in mind the cost of storage, compute, and your Ably per-message cost
+    - If you only need the current state (latest summary), simply save the values provided in the latest message with action `message.summary`. Uniquely index by `roomName` and `serial`.
+    - If you need to store historic snapshots, but don't require every single change, you can simply store all `message.summary` events for every message.
+    - If you need a full history of all reactions, you need to store individual reaction events (called [_"raw reactions"_](https://ably.com/docs/chat/rooms/message-reactions#raw-reactions) in Chat). To re-create the current state you need to apply the same logic Ably applies to each type of reaction. Some published reactions will have no effect on the summary, such as double publishing a reaction of type unique, or removing a reaction that does not exist. Due to the number of individual reaction events, keep in mind the cost of storage, compute, and your Ably per-message cost.
 2. Do you have a requirement to store the list of clientIds who reacted to a message, or just the totals?
-  - If you only need the totals, simply use the values provided in each message with action `message.summary`.
-  - If you need the list of clientIds who reacted, the values in summaries are sufficient for a reasonably large number of reactions. Over this limit, summaries will be clipped. Clipped summaries are marked with a `clipped` property set to `true`. Read more about [reaction summary clipping](/docs/chat/rooms/message-reactions#large-summaries).
-  - If you predict that your reaction summaries will get clipped and you need to store the list of clientIds who reacted, consider storing individual reaction events (called _"raw reactions"_ in Chat).
-  - The totals in clipped summaries represent the grand total of reactions, not just those included in the truncated clientId list.
+    - If you only need the totals, simply use the values provided in each message with action `message.summary`.
+    - If you need the list of clientIds who reacted, the values in summaries are sufficient for a reasonably large number of reactions. Over this limit, summaries will be clipped. Clipped summaries are marked with a `clipped` property set to `true`. Read more about [reaction summary clipping](/docs/chat/rooms/message-reactions#large-summaries).
+    - If you predict that your reaction summaries will get clipped and you need to store the list of clientIds who reacted, consider storing individual reaction events (called _"raw reactions"_ in Chat).
+    - The totals in clipped summaries represent the grand total of reactions, not just those included in the truncated clientId list.
 
 If you do not need to store message reactions, you can simply discard them. Never store the `reactions` (or `annotations`) field and ignore messages with action `message.summary`.
 
 ## Filtering rooms and event types <a id="filtering"/>
 
-Integration rules allow you to filter which Ably channels are forwarded to your own system. This is a simple way to reduce the volume of messages you need to process to only the chat rooms you are interested in. Use a common prefix in the name of chat rooms that you want to trigger an integration rule for, and use the prefix as the filter.
+Integration rules allow you to filter which Ably channels are forwarded to your own system using a regular expression on the channel name. This is a simple way to reduce the volume of messages you need to process by only receiving messages from the chat rooms you are interested in. Use a common prefix in the name of chat rooms that you want to trigger an integration rule for, and use the prefix as the filter.
 
 Use `channel.message` as the event type for all integration rules. This will forward all messages published to the relevant channels and exclude presence messages and channel lifecycle messages.
 
@@ -118,12 +118,12 @@ Benefits:
 - You control your own queue system, so you have full control over message ingestion from queue to database in terms of retry strategies, retention policies, queue lengths, and so on.
 
 You need to consider:
-- You need to maintain and be responsible for a reliable queue system. If you don't already have such a system it increases complexity on your end.
+- You need to maintain and be responsible for a reliable queue system. If you don't already have such a system, it increases complexity on your end.
 - Consistency. If your queue system is not reachable, you will lose messages. Errors can be seen in the [`[meta]log` channel](/docs/platform/errors#meta).
 
 ## Using an Ably queue <a id="ably-queue"/>
 
-Ably can forward messages from chat room channels to an Ably Queue, which you can then consume from your own servers to save messages to your own database. Read the guide on [Ably queues](/docs/platform/integrations/queues) for more details on how to set up the queue integration with Ably.
+Ably can forward messages from chat room channels to an [Ably Queue](/docs/platform/integrations/queues), which you can then consume from your own servers to save messages to your own database. Read the guide on [Ably queues](/docs/platform/integrations/queues) for more details on how to set up the queue integration with Ably.
 
 Ably ensures that each message is delivered to only one consumer even if multiple consumers are connected.
 
@@ -145,6 +145,7 @@ Change the publish path: instead of publishing Chat messages, updates, and delet
 Benefits:
 - Full control over publishing.
 - Opportunity to add extra validation before publishing to Ably.
+- Opportunity to add extra processing or business logic before publishing to Ably.
 - You can publish messages directly via the Chat REST API, and avoid having to encode/decode Chat Messages to and from Ably Pub/Sub messages.
 - If you are using a supported language, you have the option to publish via the Chat SDK.
 
@@ -164,8 +165,7 @@ If your use case is to archive chats that have ended, such as to export the chat
 The intended use of the chat history endpoint is to retrieve messages for pre-filling a chat window, not for continuous ingestion into other systems. As a result, there are some important things to consider:
 - The history endpoint is not a changelog, it is a snapshot of the messages in the room at the time the request is made. It returns only the latest version of each message.
 - The history API returns messages in their canonical global order (sorted by `serial`).
-- For each message, only the latest version is returned.
-- You will need to decide when and which rooms to import messages from.
+- You will need to decide when and which rooms to import messages from. The metachannel [`[meta]channel.lifecycle`](/docs/metadata-stats/metadata/subscribe#channel-lifecycle) provides events when channels are opened and closed, but your business logic might provide a better solution, for example import when a support ticket is closed or game session ends.
 - You can import the same room multiple times (deduplicate by `serial` and `version.serial`). However, to capture all updates and deletes, you will need to fetch from the first message each time, which can be impractical for long-running chats with large message histories.
 
-For use cases where there is a clear start and end of the chat, exporting the chat via history requests is a simple, reliable solution. If there is no clear start and end for chats, please consider using one of the other methods mentioned in this guide.
+For use cases where there is a clear start and end of the chat, exporting the chat via history requests is a simple, reliable solution. If there is no clear start and end for chats, if you require continuous ingestion, or if you need the full message version history, please consider using one of the other methods mentioned in this guide.
