@@ -17,7 +17,7 @@ Exporting chat data from Ably Chat to your own systems can be beneficial for man
 - **Compliance and legal requirements**: Meet data retention policies, maintain audit trails for support conversations, or fulfill regulatory requirements.
 - **Analytics and business intelligence**: Build dashboards, train ML models, analyze customer sentiment, or track support quality metrics.
 - **Enhanced functionality**: Implement features that need the chat history, such as search.
-- **Data sovereignty**: Maintain your own database as the canonical source of truth.
+- **Single source of truth**: Maintain your own database as the canonical source of truth.
 - **Long-term storage**: Store chat data for longer than Ably Chat supports.
 
 ## Key considerations <a id="key-considerations"/>
@@ -25,8 +25,7 @@ Exporting chat data from Ably Chat to your own systems can be beneficial for man
 Consider the following when exporting chat data:
 
 - **Database schema**: Design your schema to allow you to easily build the features you need, keeping in mind scale and reliability.
-  - **Version history requirements**: Decide whether you need to store all versions of messages or just the latest version (see [Decision 1](#decision-1) below). If you need all versions, you'll need to design your schema accordingly. If you want to retrieve messages as shown in a chat window (latest version of each message), consider duplicating the latest message data in a separate table to avoid filtering at query time.
-  - **Indexing for search**: consider indexing only the latest version of each message, or have a way to indicate which search results represent current versions.
+  - **Version history requirements**: Decide whether you need to store all versions of messages or just the latest version (see [Decision 1](#decision-1) below).
   - **Concurrent writes**: New messages, updates, and deletes will arrive concurrently, so your database system must handle this. Depending on your database, consider reducing roundtrips, managing locks, and handling race conditions.
 - **Scale and reliability trade-offs**: Depending on the scale of your application, you need to consider how you will scale up and down the parts that handle the ingestion of messages from Ably.
 - **Data latency and consistency**: If you publish directly to Ably (recommended), there will be a small delay between a message being published and it arriving in your database via integrations. Think of how to mitigate if needed for situations where the most up-to-date data is required.
@@ -50,8 +49,7 @@ After performing the decoding to get your chat `Message` object, you can proceed
 
 There are two decisions to make when saving messages.
 
-
-#### Decision 1: full version history or just the latest version? <a id="decision-1"/>
+### Decision 1: Full version history or just the latest version? <a id="decision-1"/>
 
 Do you need all versions of a message or just the latest version?
   - Messages are uniquely identified by their `serial`. Message versions are identified by the message's `version.serial` property.
@@ -59,6 +57,7 @@ Do you need all versions of a message or just the latest version?
   - If you need to store all versions of a message, uniquely index by `roomName`, `serial` and `version.serial`.
   - If you only need the latest version of a message, uniquely index by `roomName` and `serial`, and only update if the received `version.serial` is greater than what you have stored. This handles out-of-order delivery.
   - When performing a message search or lookup, do you want to return only the latest version of each message, even if you store the full version history?
+  - If you are looking to hydrate chat windows from your own database, think of how to efficiently retrieve the latest version of each message for a time window. For example, this can be implemented via a separate table or by iterating through all versions and filtering old versions out.
 
 <Code>
 ```javascript
@@ -75,7 +74,7 @@ const saveMessageVersion = (roomName, message) => {
 ```
 </Code>
 
-#### Decision 2: how to store message reactions?
+### Decision 2: How to store message reactions? <a id="decision-2"/>
 
 If you need to store message reactions you need to consider the following:
 
@@ -105,8 +104,8 @@ Read the guide on [outbound webhooks](/docs/platform/integrations/webhooks) for 
 
 You need to consider:
 - **Redundancy**: In case of failure, Ably will retry delivering the message to your webhook, but only for a short period. You can see errors in the [`[meta]log` channel](/docs/platform/errors#meta).
-- **Ordering**: Messages can arrive out-of-order. You can sort them using their `serial` and `version.serial` properties. However, if you're storing reaction summaries, out-of-order delivery can cause an older summary to overwrite a newer one, causing temporary inconsistencies.
-- **Consistency**: Missing webhook calls will lead to inconsistencies between your database and Ably, which can be difficult to resolve. Detect if this happens using the `[meta]log` channel and use the [history endpoint](#history-endpoint) to backfill missing data.
+- **Ordering**: Messages can arrive out-of-order. You can sort them using their `serial` and `version.serial` properties.
+- **Consistency**: Webhook calls that fail will lead to inconsistencies between your database and Ably, which can be difficult to resolve. Detect if this happens using the `[meta]log` channel and use the [history endpoint](#history-endpoint) to backfill missing data.
 - **[At-least-once delivery](/docs/platform/architecture/idempotency#protocol-support-for-exactly-once-delivery)**: You need to handle duplicate messages. Deduplication can be done by checking `serial` and `version.serial`.
 
 ## Using outbound streaming <a id="outbound-streaming"/>
