@@ -33,7 +33,7 @@ import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { ProductName } from 'src/templates/template-data';
 import { getMetaTitle } from '../common/meta-title';
 import UserContext from 'src/contexts/user-context';
-import { generateArticleSchema, inferSchemaTypeFromPath } from 'src/utilities/json-ld';
+import { generateCompleteSchema } from 'src/utilities/json-ld';
 
 type MDXWrapperProps = PageProps<unknown, PageContextType>;
 
@@ -198,15 +198,13 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
       }
     });
 
-    // Infer schema type from path if not explicitly set in frontmatter
-    const schemaType = frontmatter?.jsonld_type || inferSchemaTypeFromPath(location.pathname);
-
-    return generateArticleSchema({
+    return generateCompleteSchema({
       title,
       description,
       url: canonical,
+      pathname: location.pathname,
       keywords,
-      schemaType,
+      schemaType: frontmatter?.jsonld_type,
       datePublished: frontmatter?.jsonld_date_published,
       dateModified: frontmatter?.jsonld_date_modified,
       authorName: frontmatter?.jsonld_author_name,

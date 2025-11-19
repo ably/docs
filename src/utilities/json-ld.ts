@@ -1,17 +1,27 @@
 /**
  * JSON-LD Schema Generator for Ably Documentation
  *
- * Generates structured data (JSON-LD) for documentation pages to improve SEO
- * and provide rich snippets in search results.
+ * Generates comprehensive structured data (JSON-LD) using @graph for documentation pages
+ * to improve discoverability by search engines and AI (LLMs).
+ *
+ * Based on Ably's JSON-LD Schema Prompt requirements.
  */
 
 export type JsonLdSchema = {
-  '@context': string;
-  '@type': string;
+  '@context'?: string;
+  '@type'?: string;
+  '@id'?: string;
+  '@graph'?: JsonLdNode[];
   [key: string]: unknown;
 };
 
-export interface GenerateArticleSchemaParams {
+export type JsonLdNode = {
+  '@type': string | string[];
+  '@id'?: string;
+  [key: string]: unknown;
+};
+
+export interface GenerateSchemaParams {
   title: string;
   description: string;
   url: string;
@@ -21,79 +31,81 @@ export interface GenerateArticleSchemaParams {
   schemaType?: string;
   authorName?: string;
   authorType?: string;
+  pathname?: string;
   customFields?: Record<string, unknown>;
 }
 
 /**
- * Generates a JSON-LD schema for documentation pages.
- * Supports customization through frontmatter fields.
- *
- * @param params - The parameters for generating the schema
- * @returns A JSON-LD schema object
+ * Generates the Ably Organization entity (always included once in @graph).
  */
-export const generateArticleSchema = ({
-  title,
-  description,
-  url,
-  dateModified,
-  datePublished,
-  keywords,
-  schemaType = 'TechArticle',
-  authorName = 'Ably',
-  authorType = 'Organization',
-  customFields = {},
-}: GenerateArticleSchemaParams): JsonLdSchema => {
-  const schema: JsonLdSchema = {
-    '@context': 'https://schema.org',
-    '@type': schemaType,
-    headline: title,
-    description: description,
-    url: url,
-    publisher: {
-      '@type': 'Organization',
-      name: 'Ably',
-      url: 'https://ably.com',
+export const generateAblyOrganization = (): JsonLdNode => {
+  return {
+    '@type': 'Organization',
+    '@id': 'https://ably.com#organization',
+    name: 'Ably',
+    url: 'https://ably.com',
+    logo: {
+      '@type': 'ImageObject',
+      url: 'https://ably.com/favicon-512x512.png',
     },
-    author: {
-      '@type': authorType,
-      name: authorName,
-      ...(authorType === 'Organization' ? { url: 'https://ably.com' } : {}),
-    },
+    sameAs: [
+      'https://www.linkedin.com/company/ably-realtime/',
+      'https://twitter.com/ablyrealtime',
+      'https://github.com/ably',
+      'https://www.g2.com/products/ably',
+    ],
   };
-
-  // Add optional fields if provided
-  if (dateModified) {
-    schema.dateModified = dateModified;
-  }
-
-  if (datePublished) {
-    schema.datePublished = datePublished;
-  }
-
-  if (keywords) {
-    schema.keywords = keywords.split(',').map((k) => k.trim());
-  }
-
-  // Merge any custom fields from frontmatter
-  Object.entries(customFields).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
-      schema[key] = value;
-    }
-  });
-
-  return schema;
 };
 
 /**
- * Generates a BreadcrumbList JSON-LD schema for navigation breadcrumbs.
- *
- * @param breadcrumbs - Array of breadcrumb items with name and url
- * @returns A JSON-LD schema object
+ * Generates a WebSite node for the Ably documentation site.
  */
-export const generateBreadcrumbSchema = (breadcrumbs: Array<{ name: string; url: string }>): JsonLdSchema => {
+export const generateWebSiteNode = (): JsonLdNode => {
   return {
-    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': 'https://ably.com#website',
+    name: 'Ably Documentation',
+    url: 'https://ably.com',
+    publisher: {
+      '@id': 'https://ably.com#organization',
+    },
+  };
+};
+
+/**
+ * Generates a BreadcrumbList node for navigation.
+ */
+export const generateBreadcrumbNode = (pathname: string, url: string): JsonLdNode | null => {
+  // Parse pathname to create breadcrumbs
+  const segments = pathname.split('/').filter(Boolean);
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  const breadcrumbs: Array<{ name: string; url: string }> = [];
+  let currentPath = '';
+
+  // Add home
+  breadcrumbs.push({ name: 'Home', url: 'https://ably.com' });
+
+  // Add each segment
+  segments.forEach((segment) => {
+    currentPath += `/${segment}`;
+    const name = segment
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+
+    breadcrumbs.push({
+      name,
+      url: `https://ably.com${currentPath}`,
+    });
+  });
+
+  return {
     '@type': 'BreadcrumbList',
+    '@id': `${url}#breadcrumb`,
     itemListElement: breadcrumbs.map((crumb, index) => ({
       '@type': 'ListItem',
       position: index + 1,
@@ -105,13 +117,10 @@ export const generateBreadcrumbSchema = (breadcrumbs: Array<{ name: string; url:
 
 /**
  * Infers the appropriate schema type based on the page URL path.
- *
- * @param pathname - The URL pathname of the page
- * @returns The appropriate schema.org type
  */
 export const inferSchemaTypeFromPath = (pathname: string): string => {
   // API documentation and reference pages
-  if (pathname.includes('/api/')) {
+  if (pathname.includes('/api/') || pathname.includes('/reference/')) {
     return 'APIReference';
   }
 
@@ -120,15 +129,115 @@ export const inferSchemaTypeFromPath = (pathname: string): string => {
     return 'HowTo';
   }
 
+  // Conceptual/learning pages
+  if (pathname.includes('/concepts/') || pathname.includes('/learn/')) {
+    return 'Article';
+  }
+
   // Default to TechArticle for technical documentation
   return 'TechArticle';
 };
 
 /**
- * Serializes a JSON-LD schema object to a JSON string for use in script tags.
+ * Generates the main content node (TechArticle, APIReference, HowTo, etc.)
+ */
+export const generateMainContentNode = ({
+  title,
+  description,
+  url,
+  dateModified,
+  datePublished,
+  keywords,
+  schemaType = 'TechArticle',
+  authorName = 'Ably',
+  authorType = 'Organization',
+  customFields = {},
+}: GenerateSchemaParams): JsonLdNode => {
+  const entityId = `${url}#${schemaType.toLowerCase()}`;
+
+  const node: JsonLdNode = {
+    '@type': schemaType,
+    '@id': entityId,
+    headline: title,
+    name: title,
+    description: description,
+    url: url,
+    inLanguage: 'en',
+    mainEntityOfPage: url,
+    publisher: {
+      '@id': 'https://ably.com#organization',
+    },
+    author: {
+      '@type': authorType,
+      name: authorName,
+      ...(authorType === 'Organization' ? { '@id': 'https://ably.com#organization' } : {}),
+    },
+  };
+
+  // Add optional fields
+  if (dateModified) {
+    node.dateModified = dateModified;
+  }
+
+  if (datePublished) {
+    node.datePublished = datePublished;
+  }
+
+  if (keywords) {
+    node.keywords = keywords.split(',').map((k) => k.trim());
+  }
+
+  // Merge custom fields
+  Object.entries(customFields).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      node[key] = value;
+    }
+  });
+
+  return node;
+};
+
+/**
+ * Generates a complete JSON-LD schema with @graph structure.
  *
- * @param schema - The JSON-LD schema object
- * @returns A JSON string representation
+ * This follows the Ably JSON-LD Schema Prompt requirements for comprehensive,
+ * truthful structured data that improves discoverability.
+ */
+export const generateCompleteSchema = (params: GenerateSchemaParams): JsonLdSchema => {
+  const { url, pathname = '', schemaType: explicitSchemaType } = params;
+
+  // Infer schema type if not explicitly provided
+  const schemaType = explicitSchemaType || inferSchemaTypeFromPath(pathname);
+
+  // Build the @graph array
+  const graph: JsonLdNode[] = [];
+
+  // 1. Always include Ably Organization
+  graph.push(generateAblyOrganization());
+
+  // 2. Include WebSite node
+  graph.push(generateWebSiteNode());
+
+  // 3. Include BreadcrumbList if we have a pathname
+  if (pathname) {
+    const breadcrumb = generateBreadcrumbNode(pathname, url);
+    if (breadcrumb) {
+      graph.push(breadcrumb);
+    }
+  }
+
+  // 4. Include main content node
+  graph.push(generateMainContentNode({ ...params, schemaType }));
+
+  // Return complete schema with @graph
+  return {
+    '@context': 'https://schema.org',
+    '@graph': graph,
+  };
+};
+
+/**
+ * Serializes a JSON-LD schema object to a JSON string for use in script tags.
  */
 export const serializeJsonLd = (schema: JsonLdSchema): string => {
   return JSON.stringify(schema);
