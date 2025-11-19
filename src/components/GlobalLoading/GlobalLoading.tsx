@@ -37,8 +37,6 @@ const GlobalLoading: FC<GlobalLoadingProps> = ({ children, template }) => {
             posthogApiKey
             posthogHost
             conversationsUrl
-            intercomEnabled
-            intercomAppId
           }
         }
       }
