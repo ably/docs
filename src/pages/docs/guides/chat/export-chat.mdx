@@ -6,13 +6,13 @@ meta_keywords: "chat, data, export, stream, storage, Ably, chat SDK, realtime me
 
 Ably Chat is a simple and easy-to-use realtime chat solution that handles any scale from 1:1 and small group chats to large livestream chats with millions of users.
 
-Ably holds data for the purpose of providing realtime experiences. While Ably Chat provides flexible data retention for messages (30 days by default, up to a year on request), some applications may need longer-term storage or additional control over their data.
+Ably holds data for the purpose of providing realtime experiences. While Ably Chat provides flexible data retention for messages (30 days by default, up to a year on request), this guide discusses options for longer-term storage or additional control over data.
 
 This guide shows you how to export data from Ably Chat to your own systems. Before diving into the technical implementation, it's important to understand your architectural goals and what role your database will play.
 
 ## Why export chat data? <a id="why"/>
 
-There are a few reasons to export chat data from Ably Chat to your own systems:
+Exporting chat data from Ably Chat to your own systems can be beneficial for many use cases, for example:
 
 - **Compliance and legal requirements**: Meet data retention policies, maintain audit trails for support conversations, or fulfill regulatory requirements.
 - **Analytics and business intelligence**: Build dashboards, train ML models, analyze customer sentiment, or track support quality metrics.
@@ -22,14 +22,14 @@ There are a few reasons to export chat data from Ably Chat to your own systems:
 
 ## Key considerations <a id="key-considerations"/>
 
-Here are a few key considerations to keep in mind when exporting chat data:
+Consider the following when exporting chat data:
 
 - **Database schema**: Design your schema to allow you to easily build the features you need, keeping in mind scale and reliability.
   - **Version history requirements**: Decide whether you need to store all versions of messages or just the latest version (see [Decision 1](#decision-1) below). If you need all versions, you'll need to design your schema accordingly. If you want to retrieve messages as shown in a chat window (latest version of each message), consider duplicating the latest message data in a separate table to avoid filtering at query time.
-  - **Indexing for search**: If you're implementing search, you may want to index only the latest version of each message, or have a way to indicate which search results represent current versions. Your schema must support this efficiently.
+  - **Indexing for search**: consider indexing only the latest version of each message, or have a way to indicate which search results represent current versions.
   - **Concurrent writes**: New messages, updates, and deletes will arrive concurrently, so your database system must handle this. Depending on your database, consider reducing roundtrips, managing locks, and handling race conditions.
 - **Scale and reliability trade-offs**: Depending on the scale of your application, you need to consider how you will scale up and down the parts that handle the ingestion of messages from Ably.
-- **Data latency and consistency**: If you publish directly to Ably (recommended), there will be a small delay between a message being published and it arriving in your database via integrations. You need to consider whether this is acceptable for your use case or how to mitigate for situations where the most up-to-date data is required.
+- **Data latency and consistency**: If you publish directly to Ably (recommended), there will be a small delay between a message being published and it arriving in your database via integrations. Think of how to mitigate if needed for situations where the most up-to-date data is required.
 - **Handling messages beyond retention period**: Consider how to retrieve and display messages that are older than Ably Chat's retention period, especially when they need to appear in a chat window alongside newer messages.
 
 ## Implementation options <a id="implementation-options"/>
@@ -58,8 +58,7 @@ Do you need all versions of a message or just the latest version?
   - Lexicographically higher `version.serial` means a newer version.
   - If you need to store all versions of a message, uniquely index by `roomName`, `serial` and `version.serial`.
   - If you only need the latest version of a message, uniquely index by `roomName` and `serial`, and only update if the received `version.serial` is greater than what you have stored. This handles out-of-order delivery.
-  - When performing a message search or lookup, you may want to return only the latest version of each message, even if you store the full version history.
-
+  - When performing a message search or lookup, do you want to return only the latest version of each message, even if you store the full version history?
 
 <Code>
 ```javascript
@@ -83,11 +82,11 @@ If you need to store message reactions you need to consider the following:
 1. Do you need to store only the current state of the reactions, historic snapshots of the current state, or the full history of all individual reactions?
   - If you only need the current state (latest summary), simply save the values provided in the latest message with action `message.summary`. Uniquely index by `roomName` and `serial`.
   - If you need to store historic snapshots, but don't require every single change, you can simply store all `message.summary` events for every message.
-  - If you need a full history of all reactions, you need to store individual reaction events (called [_"raw reactions"_](https://ably.com/docs/chat/rooms/message-reactions#raw-reactions) in Chat). To re-create the current state you need to apply the same logic Ably applies to each type of reaction. Some published reactions will have no effect on the summary, such as double publishing a reaction of type unique, or removing a reaction that does not exist. Due to the number of individual reaction events, this can be expensive in both storage, compute, and your Ably per-message cost
+  - If you need a full history of all reactions, you need to store individual reaction events (called [_"raw reactions"_](https://ably.com/docs/chat/rooms/message-reactions#raw-reactions) in Chat). To re-create the current state you need to apply the same logic Ably applies to each type of reaction. Some published reactions will have no effect on the summary, such as double publishing a reaction of type unique, or removing a reaction that does not exist. Due to the number of individual reaction events, keep in mind the cost of storage, compute, and your Ably per-message cost
 2. Do you have a requirement to store the list of clientIds who reacted to a message, or just the totals?
   - If you only need the totals, simply use the values provided in each message with action `message.summary`.
   - If you need the list of clientIds who reacted, the values in summaries are sufficient for a reasonably large number of reactions. Over this limit, summaries will be clipped. Clipped summaries are marked with a `clipped` property set to `true`. Read more about [reaction summary clipping](/docs/chat/rooms/message-reactions#large-summaries).
-  - If you predict that your reaction summaries will get clipped and you need to store the list of clientIds who reacted, you will need to consider storing individual reaction events (called _"raw reactions"_ in Chat).
+  - If you predict that your reaction summaries will get clipped and you need to store the list of clientIds who reacted, consider storing individual reaction events (called _"raw reactions"_ in Chat).
   - The totals in clipped summaries represent the grand total of reactions, not just those included in the truncated clientId list.
 
 If you do not need to store message reactions, you can simply discard them. Never store the `reactions` (or `annotations`) field and ignore messages with action `message.summary`.
@@ -106,7 +105,7 @@ Read the guide on [outbound webhooks](/docs/platform/integrations/webhooks) for 
 
 You need to consider:
 - **Redundancy**: In case of failure, Ably will retry delivering the message to your webhook, but only for a short period. You can see errors in the [`[meta]log` channel](/docs/platform/errors#meta).
-- **Ordering**: Messages can arrive out-of-order. You can sort them using their `serial` and `version.serial` properties. However, if you're storing reaction summaries, out-of-order delivery may result in an older summary overwriting a newer one, causing temporary inconsistencies.
+- **Ordering**: Messages can arrive out-of-order. You can sort them using their `serial` and `version.serial` properties. However, if you're storing reaction summaries, out-of-order delivery can cause an older summary to overwrite a newer one, causing temporary inconsistencies.
 - **Consistency**: Missing webhook calls will lead to inconsistencies between your database and Ably, which can be difficult to resolve. Detect if this happens using the `[meta]log` channel and use the [history endpoint](#history-endpoint) to backfill missing data.
 - **[At-least-once delivery](/docs/platform/architecture/idempotency#protocol-support-for-exactly-once-delivery)**: You need to handle duplicate messages. Deduplication can be done by checking `serial` and `version.serial`.
 
@@ -151,7 +150,7 @@ Benefits:
 
 You need to consider:
 - You need to handle updates and deletes on your own, including all consistency issues that arise from this.
-- Storing message reactions can be difficult since you will not have access to the aggregate (summaries) Ably provides. If they are required, you can add them via the other methods presented in this guide.
+- Storing message reactions will require using one of the other methods presented in this guide, otherwise you will not have access to the aggregate (summaries) Ably provides.
 - Your own servers are in the middle of the message publish path, so they can become a bottleneck in availability and will add latency in the publish path.
 - Your own servers will need to handle the scale you operate at for realtime publishes.
 - Keeping both systems in sync can be a difficult problem to solve in all edge cases. Inconsistencies can happen if either publishing to Ably or saving to your own database fails. You will need mitigation strategies to handle all failure scenarios to ensure eventual consistency.
