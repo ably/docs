@@ -9,7 +9,6 @@ import {
 import inkeepChat, { inkeepChatIdentifyUser } from './inkeep';
 import type { SessionState } from '../contexts/user-context';
 import { identifyUser } from './ably-insights';
-import { intercomIdentifyUser, intercomSetup } from './intercom';
 
 export type TrackableSession = {
   emulatingUser?: boolean;
@@ -30,8 +29,6 @@ type ExternalScriptsData = {
   inkeepApiKey?: string;
   insightsEnabled?: boolean;
   conversationsUrl?: string;
-  intercomEnabled?: boolean;
-  intercomAppId?: string;
 };
 
 // Inject scripts and run any init code
@@ -42,8 +39,6 @@ const injectScripts = ({
   inkeepSearchEnabled,
   inkeepApiKey,
   conversationsUrl,
-  intercomEnabled,
-  intercomAppId,
 }: ExternalScriptsData = {}) => {
   if (announcementEnabled) {
     announcement();
@@ -53,17 +48,8 @@ const injectScripts = ({
     hubspot(hubspotTrackingId, !inkeepChatEnabled);
   }
 
-  // Inkeep and Intercom should not be enabled at the same time
-  if (inkeepChatEnabled && intercomEnabled) {
-    console.warn('Inkeep and Intercom should not be enabled at the same time');
-  }
-
   if ((inkeepChatEnabled || inkeepSearchEnabled) && inkeepApiKey) {
     inkeepChat(inkeepApiKey, conversationsUrl as '', inkeepChatEnabled || false, inkeepSearchEnabled || false);
-  }
-
-  if (intercomEnabled && intercomAppId) {
-    intercomSetup(intercomAppId);
   }
 
   if (!document.querySelector('div[data-scripts-loaded="true"]')) {
@@ -83,7 +69,6 @@ const sessionTracker = (
     inkeepSearchEnabled,
     inkeepApiKey,
     insightsEnabled,
-    intercomEnabled,
   }: ExternalScriptsData = {},
   sessionState: SessionState,
 ) => {
@@ -113,10 +98,6 @@ const sessionTracker = (
 
   if (insightsEnabled && sessionState.signedIn) {
     identifyUser(sessionState);
-  }
-
-  if (intercomEnabled && sessionState.signedIn) {
-    intercomIdentifyUser(sessionState);
   }
 };
 
