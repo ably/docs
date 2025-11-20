@@ -190,6 +190,23 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
     // Extract custom JSON-LD fields from frontmatter
     const customFields: Record<string, unknown> = {};
 
+    // Handle special structured fields
+    if (frontmatter?.jsonld_image) {
+      customFields.image = frontmatter.jsonld_image;
+    }
+    if (frontmatter?.jsonld_image_description) {
+      customFields.imageDescription = frontmatter.jsonld_image_description;
+    }
+    if (frontmatter?.jsonld_sdks) {
+      customFields.sdks = frontmatter.jsonld_sdks;
+    }
+    if (frontmatter?.jsonld_faqs) {
+      customFields.faqs = frontmatter.jsonld_faqs;
+    }
+    if (frontmatter?.jsonld_howto_steps) {
+      customFields.howToSteps = frontmatter.jsonld_howto_steps;
+    }
+
     // Collect any frontmatter fields that start with 'jsonld_custom_'
     Object.entries(frontmatter || {}).forEach(([key, value]) => {
       if (key.startsWith('jsonld_custom_')) {
@@ -235,14 +252,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
 
   return (
     <SDKContext.Provider value={{ sdk, setSdk }}>
-      <Head
-        title={title}
-        metaTitle={metaTitle}
-        canonical={canonical}
-        description={description}
-        keywords={keywords}
-        jsonLd={jsonLd}
-      />
+      <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} keywords={keywords} jsonLd={jsonLd} />
       <Article>
         <MarkdownProvider
           components={{

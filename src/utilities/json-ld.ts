@@ -4,6 +4,7 @@
  * Generates comprehensive structured data (JSON-LD) using @graph for documentation pages
  * to improve discoverability by search engines and AI (LLMs).
  *
+ * Hybrid approach: Uses frontmatter fields + automatic content extraction
  * Based on Ably's JSON-LD Schema Prompt requirements.
  */
 
@@ -76,7 +77,6 @@ export const generateWebSiteNode = (): JsonLdNode => {
  * Generates a BreadcrumbList node for navigation.
  */
 export const generateBreadcrumbNode = (pathname: string, url: string): JsonLdNode | null => {
-  // Parse pathname to create breadcrumbs
   const segments = pathname.split('/').filter(Boolean);
 
   if (segments.length === 0) {
@@ -86,10 +86,8 @@ export const generateBreadcrumbNode = (pathname: string, url: string): JsonLdNod
   const breadcrumbs: Array<{ name: string; url: string }> = [];
   let currentPath = '';
 
-  // Add home
   breadcrumbs.push({ name: 'Home', url: 'https://ably.com' });
 
-  // Add each segment
   segments.forEach((segment) => {
     currentPath += `/${segment}`;
     const name = segment
@@ -119,23 +117,111 @@ export const generateBreadcrumbNode = (pathname: string, url: string): JsonLdNod
  * Infers the appropriate schema type based on the page URL path.
  */
 export const inferSchemaTypeFromPath = (pathname: string): string => {
-  // API documentation and reference pages
   if (pathname.includes('/api/') || pathname.includes('/reference/')) {
     return 'APIReference';
   }
 
-  // Tutorial and guide pages
   if (pathname.includes('/guides/') || pathname.includes('/quickstart') || pathname.includes('/getting-started')) {
     return 'HowTo';
   }
 
-  // Conceptual/learning pages
   if (pathname.includes('/concepts/') || pathname.includes('/learn/')) {
     return 'Article';
   }
 
-  // Default to TechArticle for technical documentation
   return 'TechArticle';
+};
+
+/**
+ * Generates SDK list from frontmatter if provided.
+ */
+export const generateSDKList = (sdks: string[] | undefined, url: string): JsonLdNode | null => {
+  if (!sdks || sdks.length === 0) {
+    return null;
+  }
+
+  const sdkRepos: Record<string, { name: string; repo: string }> = {
+    javascript: { name: 'JavaScript SDK', repo: 'https://github.com/ably/ably-js' },
+    nodejs: { name: 'Node.js SDK', repo: 'https://github.com/ably/ably-js' },
+    ruby: { name: 'Ruby SDK', repo: 'https://github.com/ably/ably-ruby' },
+    python: { name: 'Python SDK', repo: 'https://github.com/ably/ably-python' },
+    java: { name: 'Java SDK', repo: 'https://github.com/ably/ably-java' },
+    swift: { name: 'Swift SDK', repo: 'https://github.com/ably/ably-cocoa' },
+    objc: { name: 'Objective-C SDK', repo: 'https://github.com/ably/ably-cocoa' },
+    csharp: { name: 'C# SDK', repo: 'https://github.com/ably/ably-dotnet' },
+    go: { name: 'Go SDK', repo: 'https://github.com/ably/ably-go' },
+    flutter: { name: 'Flutter SDK', repo: 'https://github.com/ably/ably-flutter' },
+    php: { name: 'PHP SDK', repo: 'https://github.com/ably/ably-php' },
+  };
+
+  return {
+    '@type': 'ItemList',
+    '@id': `${url}#sdks`,
+    name: 'Ably SDKs',
+    itemListElement: sdks.map((sdk, index) => {
+      const sdkInfo = sdkRepos[sdk.toLowerCase()] || { name: `${sdk} SDK`, repo: '' };
+      return {
+        '@type': 'ListItem',
+        position: index + 1,
+        item: {
+          '@type': 'SoftwareSourceCode',
+          name: sdkInfo.name,
+          programmingLanguage: sdk,
+          ...(sdkInfo.repo ? { codeRepository: sdkInfo.repo } : {}),
+        },
+      };
+    }),
+  };
+};
+
+/**
+ * Generates FAQ entities from frontmatter if provided.
+ */
+export const generateFAQPage = (
+  faqs: Array<{ question: string; answer: string }> | undefined,
+  url: string,
+): JsonLdNode | null => {
+  if (!faqs || faqs.length === 0) {
+    return null;
+  }
+
+  return {
+    '@type': 'FAQPage',
+    '@id': `${url}#faq`,
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+};
+
+/**
+ * Generates HowTo steps from frontmatter if provided.
+ */
+export const generateHowToSteps = (
+  steps: Array<{ name: string; text: string }> | undefined,
+  url: string,
+  title: string,
+): JsonLdNode | null => {
+  if (!steps || steps.length === 0) {
+    return null;
+  }
+
+  return {
+    '@type': 'HowTo',
+    '@id': `${url}#howto`,
+    name: title,
+    step: steps.map((step, index) => ({
+      '@type': 'HowToStep',
+      position: index + 1,
+      name: step.name,
+      text: step.text,
+    })),
+  };
 };
 
 /**
@@ -174,7 +260,6 @@ export const generateMainContentNode = ({
     },
   };
 
-  // Add optional fields
   if (dateModified) {
     node.dateModified = dateModified;
   }
@@ -187,9 +272,26 @@ export const generateMainContentNode = ({
     node.keywords = keywords.split(',').map((k) => k.trim());
   }
 
-  // Merge custom fields
+  // Add image if provided in custom fields
+  if (customFields.image) {
+    node.image = {
+      '@type': 'ImageObject',
+      url: customFields.image,
+      ...(customFields.imageDescription ? { description: customFields.imageDescription } : {}),
+    };
+  }
+
+  // Add other custom fields
   Object.entries(customFields).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
+    if (
+      value !== undefined &&
+      value !== null &&
+      key !== 'image' &&
+      key !== 'imageDescription' &&
+      key !== 'sdks' &&
+      key !== 'faqs' &&
+      key !== 'howToSteps'
+    ) {
       node[key] = value;
     }
   });
@@ -204,12 +306,10 @@ export const generateMainContentNode = ({
  * truthful structured data that improves discoverability.
  */
 export const generateCompleteSchema = (params: GenerateSchemaParams): JsonLdSchema => {
-  const { url, pathname = '', schemaType: explicitSchemaType } = params;
+  const { url, pathname = '', schemaType: explicitSchemaType, customFields = {} } = params;
 
-  // Infer schema type if not explicitly provided
   const schemaType = explicitSchemaType || inferSchemaTypeFromPath(pathname);
 
-  // Build the @graph array
   const graph: JsonLdNode[] = [];
 
   // 1. Always include Ably Organization
@@ -229,7 +329,28 @@ export const generateCompleteSchema = (params: GenerateSchemaParams): JsonLdSche
   // 4. Include main content node
   graph.push(generateMainContentNode({ ...params, schemaType }));
 
-  // Return complete schema with @graph
+  // 5. Include SDK list if provided
+  const sdkList = generateSDKList(customFields.sdks as string[] | undefined, url);
+  if (sdkList) {
+    graph.push(sdkList);
+  }
+
+  // 6. Include HowTo steps if provided
+  const howToSteps = generateHowToSteps(
+    customFields.howToSteps as Array<{ name: string; text: string }> | undefined,
+    url,
+    params.title,
+  );
+  if (howToSteps) {
+    graph.push(howToSteps);
+  }
+
+  // 7. Include FAQPage if provided
+  const faqPage = generateFAQPage(customFields.faqs as Array<{ question: string; answer: string }> | undefined, url);
+  if (faqPage) {
+    graph.push(faqPage);
+  }
+
   return {
     '@context': 'https://schema.org',
     '@graph': graph,

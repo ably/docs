@@ -24,7 +24,12 @@ export type Frontmatter = {
   jsonld_date_modified?: string;
   jsonld_author_name?: string;
   jsonld_author_type?: string;
-  [key: string]: unknown; // Allow additional custom JSON-LD fields
+  jsonld_image?: string;
+  jsonld_image_description?: string;
+  jsonld_sdks?: string[];
+  jsonld_faqs?: Array<{ question: string; answer: string }>;
+  jsonld_howto_steps?: Array<{ name: string; text: string }>;
+  [key: string]: unknown;
 };
 
 export type PageContextType = {

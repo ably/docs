@@ -28,16 +28,19 @@ export const Head = ({
     {keywords && <meta name="keywords" content={keywords} />}
 
     {/* JSON-LD Structured Data */}
-    {jsonLd &&
-      (Array.isArray(jsonLd) ? (
+    {jsonLd && (
+      Array.isArray(jsonLd) ? (
         jsonLd.map((schema, index) => (
           <script key={`jsonld-${index}`} type="application/ld+json">
             {serializeJsonLd(schema)}
           </script>
         ))
       ) : (
-        <script type="application/ld+json">{serializeJsonLd(jsonLd)}</script>
-      ))}
+        <script type="application/ld+json">
+          {serializeJsonLd(jsonLd)}
+        </script>
+      )
+    )}
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
