@@ -39,8 +39,6 @@ export const siteMetadata = {
     posthogApiKey: process.env.POSTHOG_API_KEY,
     posthogHost: process.env.POSTHOG_API_HOST || 'https://insights.ably.com',
     conversationsUrl: process.env.CONVERSATIONS_API_URL,
-    intercomEnabled: process.env.INTERCOM_ENABLED === 'true',
-    intercomAppId: process.env.INTERCOM_APP_ID || '',
   },
 };
 
