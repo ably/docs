@@ -199,6 +199,10 @@ export default {
           name: 'Message annotations',
           link: '/docs/messages/annotations',
         },
+        {
+          name: 'Updates and deletes',
+          link: '/docs/messages/updates-deletes',
+        },
       ],
     },
     {
