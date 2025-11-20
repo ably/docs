@@ -16,6 +16,9 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       product: String
     }
     type FileHtml implements Node {
+      articleType: String
+      slug: String
+      version: String
       contentOrderedList: [FileHtmlContentOrderedListItem]
       meta: FileHtmlMetaData
     }
@@ -66,8 +69,6 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       posthogApiKey: String
       posthogApiHost: String
       conversationsUrl: String
-      intercomEnabled: Boolean
-      intercomAppId: String
     }
 
     type SiteSiteMetadata implements Node {

@@ -49,8 +49,8 @@ export default {
               link: '/docs/chat/getting-started/swift',
             },
             {
-              name: 'React UI Components',
-              link: '/docs/chat/getting-started/react-ui-components',
+              name: 'React UI Kit',
+              link: '/docs/chat/getting-started/react-ui-kit',
             },
           ],
         },
@@ -72,10 +72,14 @@ export default {
           link: '/docs/chat/rooms',
           index: true,
         },
+        {
+          name: 'Integrations',
+          link: '/docs/chat/integrations',
+        },
       ],
     },
     {
-      name: 'Room features',
+      name: 'Chat features',
       pages: [
         {
           name: 'Messages',
@@ -116,28 +120,28 @@ export default {
       ],
     },
     {
-      name: 'React UI Components',
+      name: 'React UI Kit',
       pages: [
         {
           name: 'Overview',
-          link: '/docs/chat/react-ui-components',
+          link: '/docs/chat/react-ui-kit',
           index: true,
         },
         {
           name: 'Setup',
-          link: '/docs/chat/react-ui-components/setup',
+          link: '/docs/chat/react-ui-kit/setup',
         },
         {
           name: 'Providers and Hooks',
-          link: '/docs/chat/react-ui-components/providers',
+          link: '/docs/chat/react-ui-kit/providers',
         },
         {
           name: 'Components',
-          link: '/docs/chat/react-ui-components/components',
+          link: '/docs/chat/react-ui-kit/components',
         },
         {
           name: 'Customisation',
-          link: '/docs/chat/react-ui-components/component-styling',
+          link: '/docs/chat/react-ui-kit/component-styling',
           languages: [],
         },
       ],
@@ -200,6 +204,10 @@ export default {
     {
       name: 'API References',
       pages: [
+        {
+          link: '/docs/chat/api',
+          name: 'Overview',
+        },
         {
           link: 'https://sdk.ably.com/builds/ably/ably-chat-js/main/typedoc/modules/chat-js.html',
           name: 'JavaScript SDK',

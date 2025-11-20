@@ -51,6 +51,34 @@ const MarkdownOverrides = {
       </a>
     ),
   },
+  table: {
+    component: ({ children }: PropsWithChildren) => (
+      <div className="overflow-x-auto mb-2">
+        <table className="border-0 border-collapse mb-1 border-spacing-0 ui-text-p2 text-left">{children}</table>
+      </div>
+    ),
+  },
+  thead: {
+    component: ({ children }: PropsWithChildren) => <thead className="bg-gray-50 border-b">{children}</thead>,
+  },
+  tbody: {
+    component: ({ children }: PropsWithChildren) => <tbody className="border-b divide-neutral-300">{children}</tbody>,
+  },
+  tr: {
+    component: ({ children }: PropsWithChildren) => (
+      <tr className="hover:bg-gray-50 border-b divide-neutral-300">{children}</tr>
+    ),
+  },
+  th: {
+    component: ({ children }: PropsWithChildren) => (
+      <th className="px-3 py-2 text-left ui-text-p1 font-bold text-neutral-1100 tracking-wider whitespace-nowrap">
+        {children}
+      </th>
+    ),
+  },
+  td: {
+    component: ({ children }: PropsWithChildren) => <td className="px-3 py-4 align-text-top text-sm">{children}</td>,
+  },
 };
 
 const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent } }) => {
@@ -89,14 +117,18 @@ const Examples = ({ pageContext }: { pageContext: { example: ExampleWithContent 
       window.history.replaceState({}, '', window.location.pathname + '?' + urlParams.toString());
 
       // There is a bug in Sandpack where startRoute is lost on re-renders. This is a workaround to reintroduce it post-language change.
-      if (example.id === 'pub-sub-message-encryption') {
+      if (example.id === 'pub-sub-message-encryption' || example.id === 'pub-sub-message-annotations') {
         if (isFirstRender.current) {
           isFirstRender.current = false;
         } else {
           setTimeout(() => {
             const iframe = document.querySelector('.sp-preview-iframe') as HTMLIFrameElement;
             if (iframe) {
-              iframe.setAttribute('src', iframe.getAttribute('src') + '?encrypted=true');
+              let queryParams = 'encrypted=true'; // for pub-sub-message-encryption
+              if (example.id === 'pub-sub-message-annotations') {
+                queryParams = 'clientId=user1';
+              }
+              iframe.setAttribute('src', iframe.getAttribute('src') + '?' + queryParams);
             }
           }, 100);
         }

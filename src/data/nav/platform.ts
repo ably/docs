@@ -165,6 +165,10 @@ export default {
               index: true,
             },
             {
+              name: 'Generic HTTP webhooks',
+              link: '/docs/platform/integrations/webhooks/generic',
+            },
+            {
               name: 'Lambda Functions',
               link: '/docs/platform/integrations/webhooks/lambda',
             },

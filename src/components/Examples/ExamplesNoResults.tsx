@@ -19,7 +19,7 @@ const ExamplesNoResults = () => {
       </div>
       <p className="mt-4 ui-text-p3 text-neutral-1000">
         or{' '}
-        <Link to="/contact" className="ui-link">
+        <Link to="/support" className="ui-link">
           Suggest an example
         </Link>
       </p>
