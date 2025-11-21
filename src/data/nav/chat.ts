@@ -198,8 +198,8 @@ export default {
           link: '/docs/guides/chat/build-livestream',
         },
         {
-          name: 'Task-oriented chat',
-          link: '/docs/guides/chat/build-task-oriented',
+          name: 'Small group chat',
+          link: '/docs/guides/chat/build-small-group',
         },
       ],
     },
