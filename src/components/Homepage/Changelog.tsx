@@ -84,6 +84,16 @@ const stripHtml = (html: string | null | undefined): string => {
     return '';
   }
 
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+    // During SSR/build, use cheerio (loaded dynamically to avoid browser bundle)
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const cheerio = require('cheerio');
+    const $ = cheerio.load(html);
+    return $.text();
+  }
+
+  // In the browser, use DOMParser
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
