@@ -197,6 +197,10 @@ export default {
           name: 'Livestream chat',
           link: '/docs/guides/chat/build-livestream',
         },
+        {
+          name: 'Small group chat',
+          link: '/docs/guides/chat/build-small-group',
+        },
       ],
     },
   ],
