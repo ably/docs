@@ -33,6 +33,7 @@ import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { ProductName } from 'src/templates/template-data';
 import { getMetaTitle } from '../common/meta-title';
 import UserContext from 'src/contexts/user-context';
+import { generateCompleteSchema } from 'src/utilities/json-ld';
 
 type MDXWrapperProps = PageProps<unknown, PageContextType>;
 
@@ -184,6 +185,51 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl(location.pathname);
 
+  // Generate JSON-LD schema for the page
+  const jsonLd = useMemo(() => {
+    // Extract custom JSON-LD fields from frontmatter
+    const customFields: Record<string, unknown> = {};
+
+    // Handle special structured fields
+    if (frontmatter?.jsonld_image) {
+      customFields.image = frontmatter.jsonld_image;
+    }
+    if (frontmatter?.jsonld_image_description) {
+      customFields.imageDescription = frontmatter.jsonld_image_description;
+    }
+    if (frontmatter?.jsonld_sdks) {
+      customFields.sdks = frontmatter.jsonld_sdks;
+    }
+    if (frontmatter?.jsonld_faqs) {
+      customFields.faqs = frontmatter.jsonld_faqs;
+    }
+    if (frontmatter?.jsonld_howto_steps) {
+      customFields.howToSteps = frontmatter.jsonld_howto_steps;
+    }
+
+    // Collect any frontmatter fields that start with 'jsonld_custom_'
+    Object.entries(frontmatter || {}).forEach(([key, value]) => {
+      if (key.startsWith('jsonld_custom_')) {
+        const schemaKey = key.replace('jsonld_custom_', '');
+        customFields[schemaKey] = value;
+      }
+    });
+
+    return generateCompleteSchema({
+      title,
+      description,
+      url: canonical,
+      pathname: location.pathname,
+      keywords,
+      schemaType: frontmatter?.jsonld_type,
+      datePublished: frontmatter?.jsonld_date_published,
+      dateModified: frontmatter?.jsonld_date_modified,
+      authorName: frontmatter?.jsonld_author_name,
+      authorType: frontmatter?.jsonld_author_type,
+      customFields,
+    });
+  }, [title, description, canonical, keywords, frontmatter, location.pathname]);
+
   // Use the copyable headers hook
   useCopyableHeaders();
 
@@ -206,7 +252,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
 
   return (
     <SDKContext.Provider value={{ sdk, setSdk }}>
-      <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} keywords={keywords} />
+      <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} keywords={keywords} jsonLd={jsonLd} />
       <Article>
         <MarkdownProvider
           components={{
