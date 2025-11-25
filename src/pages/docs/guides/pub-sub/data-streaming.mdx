@@ -21,17 +21,13 @@ Ably is engineered around the four pillars of dependability:
 
 Ably's [serverless architecture](/docs/platform/architecture) eliminates infrastructure management. It automatically scales to handle millions of concurrent connections without provisioning or maintenance. The platform is proven at scale, delivering over 500 million messages per day for customers, with individual channels supporting over 1 million concurrent users.
 
-The following sections explore how Ably's optimization features solve real-world streaming challenges at scale.
+The following sections explore how Ably's optimization features solve real-world streaming challenges at scale for some of our own customers.
 
 ## How do I reduce bandwidth and latency when data changes frequently but incrementally?
 
-One Ably customer uses channels to fanout race car telemetry,
-sending hundreds of datapoints in a single payload per message to clients -
-speed, RPM, temperature, tire pressure, fuel levels, and more.
-To enhance engagement and provide fans with realtime race updates, this data is streamed multiple times per second and used to populate live dashboards.
-A large number of these datapoints don't change significantly between multiple successive messages,
-and a large amount of metadata, such as key names, do not change at all.
-Without optimization, every consumer receives the complete state repeatedly, even if no changes occur, consuming massive bandwidth for redundant information.
+**The problem:** One Ably customer operates a platform that streams race car telemetry to fans during live events. Each message contains hundreds of datapoints - speed, RPM, temperature, tire pressure, fuel levels, and more - sent multiple times per second to populate realtime dashboards. Between consecutive messages, most datapoints changed only slightly or not at all, and structural metadata like key names remained constant. Transmitting complete state repeatedly to every consumer would waste massive bandwidth on redundant information.
+
+**What they needed to solve:** The customer needed to maintain their high update frequency for responsive dashboards while reducing bandwidth consumption, and required a solution that wouldn't force them to redesign their publishing logic either.
 
 ### Solution: Delta compression
 
@@ -43,9 +39,8 @@ Ably's delta implementation uses [VCDIFF](https://tools.ietf.org/html/rfc3284), 
 
 Delta compression delivers significant advantages for streaming scenarios with incremental changes on large, consistently structured, payloads:
 
-* **Bandwidth reduction:** Payloads are often 80-95% smaller, dramatically reducing data transfer costs
-* **Higher throughput:** Connections can carry more effective messages when each payload is smaller
-* **Reduced costs:** Lower outbound data transfer translates to reduced billing for high-volume streams.
+* **Bandwidth reduction:** Size of each message is now proportional to the changes, not the full state, leading to substantial data savings
+* **Reduced costs:** Lower outbound data transfer translates to reduced billing for high-volume streams
 * **Lower latency:** Smaller payloads transit networks faster, improving end-to-end delivery time
 * **Producer simplicity:** Publishers send complete state; Ably handles the optimization
 * **Lossless updates:** Subscribers still receive every update, just in a more efficient format
@@ -70,6 +65,7 @@ Delta compression delivers maximum benefit when:
 
 Delta compression can be combined with [server-side batching](#how-do-i-manage-costs-and-stability-during-massive-bursts-of-activity) for scenarios where the rate of updates is high,
 helping to reduce outbound billable message cost at the cost of some increased latency.
+
 Care should be taken though, as if the Delta compression ratio is low,
 the CPU overhead of applying many consecutive Deltas at once may degragade performance,
 especially on resource-constrained devices like mobile phones.
@@ -156,19 +152,14 @@ This represents both significant cost savings and improved performance for consu
 
 ## How do I prevent clients from being overwhelmed by stale data?
 
-Another Ably customer provides a cryptocurrency trading platform,
-where users receive price updates for different financial instruments.
-Each instrument might update 10+ times per second during volatile periods.
-Consumer applications displaying these prices to users don't need every intermediate value,
-users typically see updates on a six-second interval, and so only the latest value over that period matters.
-Processing and rendering every single update would waste client resources and can overwhelm mobile devices or browsers,
-not to mention the increased bandwidth and costs of delivering unneeded messages.
+**The problem:** Another Ably customer operating a cryptocurrency trading platform faced a challenge with their price update distribution. During volatile market periods, individual financial instruments could update 10+ times per second, generating large volumes of price changes. However, their consumer applications only refreshed user displays every six seconds, meaning users never saw most of the intermediate values. The platform was consuming high bandwidth and generating many outbound messages that would be immediately discarded, while simultaneously risking overwhelming mobile devices and browsers with unnecessary processing and rendering work.
+
+**What they needed to solve:** The customer needed to maintain high-frequency publishing from their price feeds without modification, while reducing outbound delivery to match what consumers actually needed. They required a way to ensure clients always received the most current price without processing every intermediate update, reducing both infrastructure costs and client-side load. The solution had to handle multiple instruments independently on shared channels while maintaining the flexibility for producers to publish at different rates.
 
 ### Solution: Message conflation
 
 [Message conflation](/docs/messages#conflation) ensures clients receive only the most up-to-date information by delivering the latest message for each [conflation key](docs/messages#routing) over a configured time window. Ably aggregates published messages on the server, discards outdated values, and delivers the current state as a single batch when the window elapses.
 
-This is fundamentally different from simply rate-limiting publishers.
 With conflation, producers can continue publishing at high rates without modification,
 while controlling outbound delivery to match consumer needs.
 Multiple instrument updates can be conflated independently on the same channel,
@@ -178,8 +169,8 @@ and then published together as a single batch.
 
 Conflation can reduce outbound message count and bandwidth significantly:
 
-* **Reduced outbound throughput:** Multiple messages collapse into one per time-window
-* **Reduced bandwidth:** Latest values for multiple conflation keys are sent as a single batch
+* **Reduced outbound messages:** Multiple messages collapse into one per time-window
+* **Reduced bandwidth:** Redundant messages are dropped before delivery
 * **Reduce client-side work:** Prevents overwhelming consumers with processing/rendering loads
 * **Cost efficiency:** Fewer outbound messages reduce billable message counts
 * **Granular control:** Publish rates can differ across conflation groups, but still be conflated on the same channel.
@@ -252,10 +243,9 @@ For step-by-step configuration details, see [configure message conflation](/docs
 Before implementing message conflation, consider the following:
 
 * **Eventual consistency only:** Conflation discards intermediate messages. Only use this for scenarios where clients need the latest state and missing updates is acceptable (prices, positions, metrics). Never use for chat, transactions, or audit logs.
-* **Conflation key design:** Choose conflation keys carefully. Messages with the same key are conflated together, so ensure your key pattern groups related updates without being too broad or too narrow.
+* **Conflation key design:** Choose conflation keys carefully. Messages with the same key are conflated together, so ensure your key pattern groups related updates of the same state.
 * **Time window trade-offs:** Longer intervals maximize cost savings but increase staleness. A 1-second window means users may see data up to 1 second old during high activity.
 * **Batch delivery:** Conflated messages are delivered as a batch at the end of each window. There is a maximum batch size of 200 messages; if exceeded, multiple batches are sent.
-* **Message ordering:** Within each conflation key, only the latest message is delivered. Order between different keys is preserved within the batch.
 
 ### Implementation
 
@@ -300,27 +290,30 @@ The cost savings scale linearly with the number of consumers, making conflation 
 
 ## How do I manage costs and stability during massive bursts of activity?
 
-Large-scale social platforms and live event applications experience extreme traffic spikes during key moments.
-When a goal is scored or a celebrity posts, thousands of users react within seconds.
-Without optimization, each reaction becomes thousands of outbound messages -
-a 10,000-user room would generate 100 million outbound messages for 10,000 reactions.
-This creates both cost spikes and the risk of hitting rate limits, as well as the risk of overwhelming client applications.
+**The problem:** An Ably customer providing live event chat for major sporting events faced large traffic spikes during pivotal moments. When a goal was scored, thousands of users would react simultaneously within seconds. In a 10,000-user room, just 10,000 reactions would generate 100 million outbound messages. These burst patterns created multiple risks - unpredictable cost spikes from message volume, potential rate limit violations that could degrade service, and the possibility of overwhelming client applications with processing demands.
+
+**What they needed to solve:** The customer needed to preserve the experience of shared reactions during high-intensity moments while ensuring sustainable cost and resource usage at scale. They required a solution that would smooth traffic spikes without losing any user contributions, protect against rate limit issues during bursts, and prevent client applications from being overwhelmed. The optimization had to work transparently without requiring changes to how users published reactions or how applications subscribed to them.
 
 ### Solution: Server-side batching
 
 [Server-side batching](/docs/messages/batch#server-side) groups all messages published to a channel over a configured time window and delivers them as a single outbound message to each subscriber. Unlike conflation which selectively discards messages, batching still delivers every message published.
 
-Messages published during the batching window are held temporarily, then combined and distributed to consumers as one batch when the window elapses. Message order is preserved within each batch.
+Messages published during the batching window are held temporarily,
+then combined and distributed to consumers as one batch when the window elapses.
+This dramatically reduces the fan-out message count during bursts of activity,
+while also providing a predictable cost model that scales linearly with the number of users.
 
 ### Benefits and use cases
 
 Server-side batching can greatly reduce the cost of high-throughput streaming:
 
-* **Reduced outbound message count:** Hundreds of messages become one outbound batch.
-* **Lower costs:** Each batch counts as a single billable message
+* **Lower costs:** Hundreds of messages become one outbound batch and each batch counts as only a single billable message
 * **Rate limit protection:** Fewer messages reduce the likelihood of hitting throughput limits
 * **Traffic spike resilience:** Burst patterns are smoothed through aggregation
 * **Preserves all messages:** Unlike conflation, no messages are discarded
+* **Guaranteed ordering:** Message order is preserved within each batch
+* **Transparent to clients:** No code changes needed for producers or consumers
+* **Predictable billing:** Costs scale linearly with user count rather than message volume
 
 [//]: # (Again, might be good to get a diagram or somethign in here so it feels less like a wall of text..)
 
@@ -328,7 +321,6 @@ Server-side batching is best in scenarios like:
 - **Social feeds and reactions:** Likes, emoji reactions, comments during live events
 - **Chat applications:** High-activity chat rooms during key moments
 - **Event streams:** Real-time activity feeds with bursty traffic patterns
-- **Not highly latency-sensitive:** Scenarios where slight delays would be acceptable
 
 ### Configuration
 
@@ -354,7 +346,7 @@ See [configure server-side batching](/docs/messages/batch#configure) for complet
 
 Before implementing server-side batching, consider the following:
 
-* **Latency impact:** Messages are delayed by the batching interval. A 100ms interval means 0-100ms delay per message. Can you applications tolerate this?
+* **Latency impact:** Messages are delayed by the batching interval. A 100ms interval means 0-100ms additional delay per message. Can you applications tolerate this?
 * **Burst characteristics:** Batching is most effective during traffic spikes. Measure your actual burst patterns to choose optimal intervals. Steady, low-rate traffic may not benefit significantly.
 * **Batch size limits:** Each batch is limited to 200 messages or maximum data size. Higher rates may generate multiple batches per interval.
 * **Idempotency trade-off:** Messages with explicit IDs (for idempotency) are excluded from batching. If you need idempotent publishes, you cannot use server-side batching on those messages.
