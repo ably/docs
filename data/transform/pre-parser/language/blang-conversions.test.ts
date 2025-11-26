@@ -1,4 +1,4 @@
-import textile from 'textile-js';
+// textile-js removed
 import { convertBlangBlocksToTokens, convertJSAllToNodeAndJavaScript } from '.';
 import { preParser } from '..';
 import {
@@ -76,19 +76,7 @@ describe('Converts specific example blang blocks to HTML', () => {
 
       "
     `);
-    expect(textile(preParser(brokenCodeInsideBlangExample)))
-      .toBe(`<p>{{LANG_<span class="caps">BLOCK</span>[javascript,nodejs]}}</p>
-<pre lang="javascript"><code lang="javascript">
-realtime.connection.on('connected', function(stateChange) {
-  console.log('Ably is connected');
-});
-{{{github_br}}}</code></pre>
-<pre lang="nodejs"><code lang="nodejs">
-realtime.connection.on('connected', function(stateChange) {
-  console.log('Ably is connected');
-});
-{{{github_br}}}</code></pre>
-<p>{{/LANG_<span class="caps">BLOCK</span>}}</p>`);
+    // textile() call removed - textile-js no longer used
   });
 });
 
