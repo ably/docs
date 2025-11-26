@@ -93,9 +93,6 @@ const transformNanocTextiles =
       return;
     }
 
-    if (node.sourceInstanceName === 'textile-partials') {
-      content = `${content}\n`;
-    }
     const preTextileTransform = preParser(content);
     const { data, frontmatterMeta } = splitDataAndMetaData(preTextileTransform);
 
@@ -139,14 +136,8 @@ const transformNanocTextiles =
       type,
       mediaType: 'text/html',
     };
-    if (node.sourceInstanceName === 'textile-partials') {
-      newNodeInternals.type = `${type}Partial`;
-      newNodeData.relativePath = node.relativePath;
-    } else {
-      createNodesFromPath(node.relativePath.replace(/\.[^/.]+$/, ''));
-      // Partials should never have a slug, every other page type needs one.
-      newNodeData.slug = slug;
-    }
+    createNodesFromPath(node.relativePath.replace(/\.[^/.]+$/, ''));
+    newNodeData.slug = slug;
 
     const htmlNode = {
       ...newNodeData,
