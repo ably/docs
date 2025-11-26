@@ -173,6 +173,10 @@ export default {
               name: 'Bodyguard',
               link: '/docs/chat/moderation/direct/bodyguard',
             },
+            {
+              name: 'Azure Content Safety',
+              link: '/docs/chat/moderation/direct/azure',
+            },
           ],
         },
         {
