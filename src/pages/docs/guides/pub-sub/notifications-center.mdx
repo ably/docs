@@ -1,0 +1,513 @@
+---
+title: "Guide: Building a notification center at scale with Ably"
+meta_description: "Architecting a scalable notification center with Ably: outbox/inbox pattern, authentication, integrations, and cost optimization."
+meta_keywords: "notifications, notification center, push, push-notifications, inbox, outbox, pub/sub, scalability, Ably, realtime messaging, authentication, integrations, cost optimization"
+---
+
+Ably provides the infrastructure to build a robust, scalable notification center that can handle everything from individual user notifications to system-wide broadcasts. Whether you're building friend requests for a social platform, order updates for e-commerce, or alerts for a gaming application, Ably's platform enables you to deliver notifications reliably at any scale.
+
+Building with Ably means you can focus on your application logic while Ably handles the complexities of realtime delivery, connection management, and global distribution. This guide explains how to architect a notification center using the outbox/inbox pattern, with a focus on security, scalability, and cost optimization.
+
+## Why Ably for notification centers?
+
+Ably is trusted by organizations delivering notifications to millions of users in realtime. Its platform is engineered around the four pillars of dependability:
+
+* **[Performance](/docs/platform/architecture/performance):** Ultra-low latency messaging ensures notifications reach users instantly, even at global scale.
+* **[Integrity](/docs/platform/architecture/message-ordering):** Guaranteed message ordering and delivery, with no duplicates or data loss.
+* **[Reliability](/docs/platform/architecture/fault-tolerance):** 99.999% uptime SLA, with automatic failover and seamless re-connection.
+* **[Availability](/docs/platform/architecture/edge-network):** Global edge infrastructure ensures users connect to the closest point for optimal experience.
+
+![Ably Architecture Overview Diagram](../../../../images/content/diagrams/architecture-overview.png)
+
+Delivering notifications in realtime is critical for user engagement. Ably's [serverless architecture](/docs/platform/architecture) eliminates the need to manage websocket servers. It automatically scales to handle millions of concurrent connections without provisioning or maintenance, while handling all edge-cases around delivery, failover, and scaling.
+
+For notifications that need to reach users even when they're offline, Ably integrates seamlessly with push notification services like [Apple Push Notification Service (APNS) and Firebase Cloud Messaging (FCM)](/docs/push), ensuring your users never miss important updates.
+
+## Architecting your notification center: The outbox/inbox pattern
+
+The outbox/inbox pattern is a proven architecture for building scalable notification systems. It provides clear separation of concerns, simplified authentication, and flexible processing workflows.
+
+### The pattern
+
+The architecture consists of three main components:
+
+* **Outbox channel:** Clients publish notification requests to an outbox channel. This could be a friend request, an alert, or any other client-initiated action.
+* **Processing pipeline:** An integration (Lambda function, webhook, or queue consumer) receives the outbox message, validates it, applies business logic, and determines the target recipients.
+* **Inbox channels:** After processing, notifications are published to client-specific inbox channels (e.g., `inbox:clientId`), where recipients are subscribed.
+
+[/TODO/]: # (Should add some diagram here showing the flow from user -> outbox -> processing -> inbox -> recipient tp break up the text a bit)
+
+### Key benefits
+
+This pattern provides several advantages:
+
+* **Security:** Clients have publish-only access to the outbox and subscribe-only access to their own inbox. This prevents clients from accessing notifications they shouldn't see, or bypassing processing logic.
+* **Flexibility:** The processing pipeline can implement any business logic - validation, rate limiting, enrichment, filtering, or integration with other services.
+* **Scalability:** Each component scales independently. Ably handles the channels, your processing pipeline scales based on load, and inboxes grow with your client base.
+* **Auditability:** All notification requests pass through your processing pipeline, enabling logging, analytics, and compliance tracking.
+
+### Channel structure
+
+When designing your notification center, consider the following channel structure:
+
+<Code>
+```javascript
+// User publishes to a shared outbox
+const outboxChannel = 'notifications:outbox';
+
+// Processing pipeline publishes to client-specific inboxes
+const inboxChannel = 'notifications:inbox:clientId123';
+
+// Optional: general broadcast channel for system-wide notifications
+const generalChannel = 'notifications:inbox:general';
+```
+</Code>
+
+The outbox can be a single channel, or any numbers of channels to distribute load in high throughput scenarios.
+Inboxes are client-specific, one per client.
+The general channel is optional and used for notifications that should reach all clients.
+
+#### Scaling outbox channels
+
+Each Ably account has [channel limits](/docs/platform/pricing/limits#channels) that govern the allowed rate of publish.
+If you have high throughput with many clients publishing to the same outbox simultaneously,
+you may need to split the outbox into multiple channels to avoid overwhelming a single channel and being rate limited.
+For example, with 100,000 clinets all publishing notifications, a single outbox could become a bottleneck.
+
+How many outbox channels you need depends on your expected traffic and account limits.
+You can shard outbox channels based on some meaningful dimension, such as:
+
+* **User group:** `notifications:outbox:group1`, `notifications:outbox:group2`, etc.
+
+Multiple outbox channels can be routed through one or more integrations using a namespace filter. For example, the filter `^notifications:outbox` matches all channels starting with `notifications:outbox`, allowing your Lambda or webhook to process messages from all outbox channels.
+
+### Deciding between individual inboxes and a general channel
+
+For notifications that need to reach all clients, you have two architectural options:
+
+**Option 1: Individual inboxes**
+Iterate through the list of target clients and publish to each clients's inbox channel individually. Ably's [batch publish REST endpoint](/docs/api/rest-api#batch-publish) makes this efficient, allowing you to publish to multiple channels in a single HTTP request.
+
+
+**Option 2: General broadcast channel**
+Create a shared channel where all clients subscribe.
+Notifications published to this channel reach all subscribers.
+
+The decision comes down to cost and frequency:
+
+* **Individual inboxes:** Best when broadcast notifications are infrequent. You pay per message published and per user receiving it.
+* **General channel:** Best when broadcast notifications are frequent. You pay per channel attachment per minute, but save on message costs since you publish once regardless of the number of subscribers.
+
+See the [cost optimization section](#cost-optimization) for detailed calculations to help you decide.
+
+## Authentication: Securing your notification center
+
+Authentication is critical in a notification center.
+You need to ensure that clients can only publish to an outbox and only receive notifications intended for them.
+
+### Token-based authentication
+
+Ably's [token authentication](/docs/auth/token) with JSON Web Tokens (JWT) provides the flexibility to implement fine-grained access control. Tokens are short-lived, can be easily revoked, and include [capabilities](/docs/auth/capabilities) that define what actions a client can perform.
+
+For a notification center, you typically need two types of tokens:
+
+* **Outbox tokens:** Grant publish-only access to the outbox channel(s).
+* **Inbox tokens:** Grant subscribe-only access to a user's specific inbox channel.
+
+### Creating an outbox token
+
+The following example shows how to generate a JWT that allows a user to publish to the outbox:
+
+<Code>
+```javascript
+const jwt = require("jsonwebtoken");
+
+const header = {
+    "typ": "JWT",
+    "alg": "HS256",
+    "kid": "{{ API_KEY_NAME }}"
+}
+
+const currentTime = Math.round(Date.now() / 1000);
+
+// Allow publish-only access to the outbox channel
+const claims = {
+    "iat": currentTime,
+    "exp": currentTime + 3600, // Token expires in 1 hour
+    "x-ably-capability": JSON.stringify({
+        "notifications:outbox": ["publish"]
+    }),
+    "x-ably-clientId": "client123" // Identify the client
+}
+
+const token = jwt.sign(
+    claims,
+    "{{ API_KEY_SECRET }}",
+    { header: header }
+);
+
+console.log('Outbox JWT:', token);
+```
+</Code>
+
+### Creating an inbox token
+
+The following example shows how to generate a JWT that allows a client to subscribe to their inbox:
+
+<Code>
+```javascript
+const jwt = require("jsonwebtoken");
+
+const header = {
+    "typ": "JWT",
+    "alg": "HS256",
+    "kid": "{{ API_KEY_NAME }}"
+}
+
+const currentTime = Math.round(Date.now() / 1000);
+
+// Allow subscribe-only access to the client's inbox
+const claims = {
+    "iat": currentTime,
+    "exp": currentTime + 3600, // Token expires in 1 hour
+    "x-ably-capability": JSON.stringify({
+        "inbox:user123": ["subscribe", "history"]
+    }),
+    "x-ably-clientId": "client123"
+}
+
+const token = jwt.sign(
+    claims,
+    "{{ API_KEY_SECRET }}",
+    { header: header }
+);
+
+console.log('Inbox JWT:', token);
+```
+</Code>
+
+**History capability:**
+Inbox tokens can also include `history` capability to allow clients to retrieve notifications they might have missed while offline.
+Message persistence must be enabled to use history - see [message history documentation](/docs/channels/history) for details.
+
+### Best practices
+
+* **Use short-lived tokens:** Set token expiry to 1-4 hours to limit exposure if a token is compromised. Ably's SDKs automatically handle token renewal.
+* **Tie tokens to clientId:** Always include a `clientId` in your tokens to identify the client and enable auditing. You can also setup a rule to prevent anonymous connections.
+* **Implement token refresh:** Use [`authUrl`](/docs/auth/token#auth-url) or [`authCallback`](/docs/auth/token#auth-callback) to automatically refresh expiring tokens.
+* **Validate on the server:** Never trust client-provided data. Your processing pipeline should validate all notification request data.
+* **Custom Rate Limits:** It is possible to apply custom rate limits to tokens using Ably's [rate limiting feature](docs/auth/capabilities#jwt-limits). This is recommended for outbox tokens to help prevent abuse. Standard connection rate limits still apply based on your account plan.
+
+## Integration: Processing notifications
+
+The processing pipeline is where your business logic lives. It receives notifications from the outbox, validates them, applies transformations, and publishes to the appropriate inbox channels.
+
+Ably provides multiple integration options:
+
+* **[Webhooks](/docs/platform/integrations/webhooks):** HTTP endpoints (including AWS Lambda, Azure Functions, Google Cloud Functions)
+* **[Streaming](/docs/platform/integrations/streaming):** Kafka, Kinesis, SQS, AMQP
+* **[Queues](/docs/platform/integrations/queues):** Ably-managed queues for fault-tolerant processing
+
+### Choosing your integration approach
+
+The right integration depends on your throughput, ordering requirements, and infrastructure:
+
+**AWS Lambda / Serverless Functions:**
+* **Best for:** Low to high throughput with automatic scaling (up to account limits)
+* **Pros:** Scales automatically, no server management, pay per execution
+* **Cons:** Possible to quickly overspend without careful monitoring and appropriate limits, [concurrency limits](/docs/platform/pricing/limits#integrations) apply and [ordering](/docs/platform/integrations/webhooks#ordering) is not guaranteed.
+* **Recommended when:** You want simplicity and automatic scaling
+
+**Webhooks to your own servers:**
+* **Best for:** Custom infrastructure or specific processing requirements
+* **Pros:** Full control over processing logic and infrastructure
+* **Cons:** You manage scaling and reliability, [concurrency limits](/docs/platform/pricing/limits#integrations) apply and [ordering](/docs/platform/integrations/webhooks#ordering) is not guaranteed.
+* **Recommended when:** You have existing infrastructure or need specific processing capabilities
+
+**Ably Queues:**
+* **Best for:** Strong ordering guarantees and fault-tolerant processing
+* **Pros:** Guaranteed ordering, at-least-once delivery, fault-tolerant
+* **Cons:** Non-enterprise accounts limited to 200 msg/s per account, [concurrency limits](/docs/platform/pricing/limits#integrations) apply
+* **Recommended when:** Message ordering is critical and throughput is within limits
+
+Enterprise customers can scale Ably Queues to millions of messages per second. Non-enterprise customers with higher throughput needs should consider [outbound streaming](/docs/platform/integrations/streaming) to Kafka, Kinesis, or other external queueing services.
+
+### Example: Friend request processing with Lambda
+
+The following example demonstrates a notification flow for a social media application using AWS Lambda:
+
+#### Step 1: Configure the integration
+
+Configure an [AWS Lambda integration](/docs/platform/integrations/webhooks/lambda) in your Ably dashboard:
+
+* **Event type:** `channel.message`
+* **Channel filter:** `^notifications:outbox$` (only trigger for outbox messages)
+* **Enveloped:** Enabled (to receive full message metadata)
+
+#### Step 2: Client publishes a friend request
+
+<Code>
+```javascript
+const ably = new Ably.Realtime({ authUrl: '/auth/outbox-token' });
+const outbox = ably.channels.get('notifications:outbox');
+
+// User sends a friend request
+await outbox.publish('friend-request', {
+    type: 'friend-request',
+    fromUserId: 'user123',
+    toUserId: 'user456',
+    timestamp: Date.now()
+});
+```
+</Code>
+
+#### Step 3: Lambda processes and validates
+
+<Code>
+```javascript
+const Ably = require('ably');
+
+exports.handler = async (event) => {
+    console.log('Received notification request:', JSON.stringify(event));
+
+    // Parse the incoming event
+    const message = event.messages[0];
+    const data = JSON.parse(message.data);
+
+    // Validate the request, checking:
+    // - User existence
+    // - Payload integrity
+    // - Business rules (e.g., not already friends, not blocked)
+
+    if (!data.fromUserId || !data.toUserId) {
+        console.error('Invalid friend request data');
+        return { statusCode: 400, body: 'Invalid request' };
+    }
+
+    const isValid = await validateFriendRequest(data.fromUserId, data.toUserId);
+    if (!isValid) {
+        console.log('Friend request validation failed');
+        return { statusCode: 403, body: 'Request denied' };
+    }
+
+    // Prepare the notification payload
+    const fromUserProfile = await getUserProfile(data.fromUserId);
+
+    const notification = {
+        type: 'friend-request',
+        fromUserId: data.fromUserId,
+        fromUserName: fromUserProfile.name,
+        fromUserAvatar: fromUserProfile.avatar,
+        timestamp: data.timestamp,
+    };
+
+    // Use REST client to publish to the target user's inbox
+    const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+    const inbox = ably.channels.get(`inbox:${data.toUserId}`);
+
+    try {
+        await inbox.publish('notification', notification);
+        console.log(`Notification sent to inbox:${data.toUserId}`);
+        return { statusCode: 200, body: 'Success' };
+    } catch (error) {
+        console.error('Failed to publish notification:', error);
+        return { statusCode: 500, body: 'Failed to send notification' };
+    }
+};
+```
+</Code>
+
+#### Step 4: Recipient receives the notification
+
+<Code>
+```javascript
+const ably = new Ably.Realtime({ authUrl: '/auth/inbox-token' });
+const inbox = ably.channels.get('inbox:user456');
+
+inbox.subscribe('notification', (message) => {
+    const notification = message.data;
+
+    if (notification.type === 'friend-request') {
+        displayFriendRequest(notification);
+    }
+});
+
+function displayFriendRequest(notification) {
+    console.log(`Friend request from ${notification.fromUserName}`);
+    // Update UI to show the notification
+}
+```
+</Code>
+
+### Integration considerations
+
+When implementing your processing pipeline, consider:
+
+* **Idempotency:** Design your pipeline to handle duplicate messages gracefully. Ably provides [idempotent publishing](/docs/platform/architecture/idempotency), which can help prevent duplicate notifications at the publish stage.
+* **Error handling:** Implement proper error handling and monitoring. Use Ably's [`[meta]log` channel](/docs/platform/errors#meta) to track integration errors.
+* **Scalability:**
+  * All integrations have [concurrency limits](/docs/platform/pricing/limits#integrations) based on your account plan. For high throughput, consider streaming to a queue service to handle traffic spikes.
+  * Lambda functions scale automatically, but monitor for rate limits and usage.
+  * Ably Queues provide guaranteed ordering but have throughput limits on non-enterprise accounts (200 msg/s)
+* **Retry behavior:** Understand your integration's retry behavior:
+  * [Lambda retries](/docs/platform/integrations/webhooks/lambda#retry) up to 2 times with delays between attempts
+  * [Webhooks retry](/docs/platform/integrations/webhooks#retry) up to 2 times with delays between attempts
+  * [Queues](/docs/platform/integrations/queues) provide at-least-once delivery with message acknowledgment, failed messages are moved to a dead-letter queue after max attempts
+* **Ordering guarantees:** If strong ordering is required, use [Ably Queues](/docs/platform/integrations/queues) which provide reliable ordering of messages by channel.
+
+## Cost optimization <a id="cost-optimization"/>
+
+Understanding the cost implications of different architectural decisions helps you build efficiently at scale.
+
+### Individual inboxes vs general channel: A calculation
+
+Ably's pricing includes two main components relevant to notifications:
+
+* **Channel attachments:** Priced per channel minute. When a client subscribes to a channel, that channel is "attached" for as long as the client remains subscribed.
+* **Messages:** Priced per message. Each message published and delivered counts toward your usage.
+
+#### Scenario: System-wide notification
+
+Assume you want to send a notification to 10,000 clients. Let's compare the costs:
+
+**Option 1: Individual inboxes (using batch publish)**
+
+* Publish to 10,000 individual inbox channels (using [batch publish](/docs/api/rest-api#batch-publish) to reduce API calls)
+* Each channel publish counts as a separate inbound message
+* Each client receives 1 message
+* Cost: 10,000 inbound messages + 10,000 outbound messages = **20,000 messages**
+
+If you send this notification once per day:
+* Monthly messages: 20,000 × 30 = **600,000 messages/month**
+* No additional channel attachment costs (clients are already attached to their inboxes)
+
+**Option 2: General broadcast channel**
+
+* Publish 1 notification to the general channel
+* 10,000 clients are subscribed to the general channel
+* Cost: 1 inbound message + 10,000 outbound messages = **10,001 messages**
+* Plus: Channel attachment cost for 10,000 clients subscribed to the general channel
+
+If clients are connected for an average of 4 hours per day:
+* Channel minutes per client per day: 4 × 60 = 240 minutes
+* Total channel minutes per month: 10,000 clients × 240 minutes × 30 days = **72,000,000 channel minutes/month**
+
+#### Cost comparison
+
+Using Ably's pricing (check current [pricing page](/pricing) for exact rates):
+
+**Individual inboxes (1 notification/day):**
+* 600,000 messages/month
+* No extra channel costs (inbox channels needed anyway)
+
+**General channel (1 notification/day):**
+* ~300,000 messages/month (half the message cost)
+* 72 million channel minutes/month (significant channel attachment cost)
+
+#### The crossover point
+
+For infrequent broadcasts (daily or less), the general channel's message savings are offset by its channel attachment costs. As notification frequency increases, the message cost differential becomes more significant.
+
+Example with 100 notifications per day:
+
+**Individual inboxes:**
+* Messages: 20,000 × 100 × 30 = **60,000,000 messages/month**
+
+**General channel:**
+* Messages: 10,001 × 100 × 30 = **30,003,000 messages/month** (half the messages)
+* Channel minutes: **72,000,000 channel minutes/month** (same channel cost)
+
+At higher frequencies, the general channel's message cost advantage becomes significant -
+using half the messages compared to individual inboxes, which can justify the channel attachment costs.
+Messages are typically more expensive than channel minutes.
+
+#### Recommendation
+
+* **Use individual inboxes** for targeted notifications or when broadcast notifications are rare
+* **Use a hybrid approach** with both individual inboxes for targeted notifications and a general channel for high-frequency system-wide broadcasts
+
+<Aside data-type='note'>
+General channels save on message costs (1 inbound vs N inbound) but add channel attachment costs. The right choice depends on your broadcast frequency, number of clients, and how long those clients stay connected.
+</Aside>
+
+### Other cost optimizations
+
+* **Connection management:** Call `close()` on Ably clients when users log out to immediately clean up connections. Adjust [heartbeat intervals](/docs/connect#heartbeat) to detect dropped connections faster.
+* **Message batching:** If publishing to multiple inboxes, use the [batch publish REST endpoint](/docs/api/rest-api#batch-publish) to reduce API calls.
+* **Token lifetime:** Use appropriate token TTLs to balance security and token refresh overhead.
+* **Batch outbound messages:** If inboxes receive multiple notifications per second, consider [batching](/docs/messages/batch#server-side) them with Ably's server-side batching to reduce outbound message counts.
+
+## Handling offline notifications <a id="offline-notifications"/>
+
+Clients may not always be online when a notification arrives. Ably provides multiple mechanisms to ensure they receive important notifications:
+
+### Message history
+
+Ably stores [message history](/docs/channels/history), if enabled, for 24 hours by default
+(up to 1 year with configuration).
+When clients come online, they can retrieve missed notifications from their inbox:
+
+<Code>
+```javascript
+const ably = new Ably.Realtime({ authUrl: '/auth/inbox-token' });
+const inbox = ably.channels.get('inbox:client456');
+
+// Subscribe to new notifications
+inbox.subscribe('notification', (message) => {
+    handleNotification(message.data);
+});
+
+// Retrieve notifications received while offline
+const historyPage = await inbox.history({ limit: 50, untilAttach:true });
+historyPage.items.forEach(message => {
+    handleNotification(message.data);
+});
+```
+</Code>
+
+Message history is particularly useful for notifications that clients need to see when they return,
+but that don't require immediate push notification delivery.
+This is common in internal systems where notifications might inform clients of completed processes,
+status updates, or system alerts that can be reviewed when a client connects.
+
+### Push notifications for critical alerts
+
+For user-facing applications where notifications require attention even when the app is not running,
+push notifications can be used. These are particularly useful for social interactions,
+time-sensitive alerts, or critical updates that users should act upon immediately.
+
+Ably provides native support for push notifications through integration with [Apple Push Notification Service (APNs)](/docs/push/configure/device) and [Firebase Cloud Messaging (FCM)](/docs/push/configure/device). This enables your processing pipeline to send notifications directly to users' devices, ensuring delivery even when they're offline.
+
+For detailed information on configuring and using push notifications with Ably, including device registration,
+notification payloads, and platform-specific setup, see the [push notifications guide](/docs/guides/pubsub/push-notifications).
+
+### Best practices for offline handling
+
+* **Enable history on inbox channels** to allow users to retrieve missed notifications
+* **Set appropriate history retention** based on your use case (24 hours to 1 year)
+* **Use push notifications for critical alerts** that require immediate user attention
+* **Consider notification priorities** - not all notifications need push delivery
+
+## Production-ready checklist
+
+Before launching your notification center, review these key points:
+
+* **Authentication:** Use token authentication for all client-side communication with short TTLs (1-4 hours).
+* **Capabilities:** Apply the principle of least privilege - clients should only have publish access to an outbox and subscribe access to their own inbox.
+* **Validation:** Validate all notification request data in your processing pipeline, never trust client data.
+* **Monitoring:** Subscribe to [`[meta]log` channels](/docs/platform/errors#meta) to track integration errors and issues.
+* **Error handling:** Implement proper error handling in your processing pipeline and consider dead letter queues for failed notifications.
+* **Rate limiting:** Implement rate limiting in tokens to help prevent abuse.
+* **Testing:** Test your notification flow end-to-end, including error cases and retry behavior.
+* **Scalability:** Ensure your processing pipeline can scale to handle peak loads (consider integration concurrency limits).
+* **Cost monitoring:** Set up billing alerts and monitor usage patterns to optimize costs.
+
+## Next steps
+
+* Read the [token authentication documentation](/docs/auth/token) for detailed auth implementation.
+* Explore [integration options](/docs/platform/integrations) to choose the right processing pipeline for your needs.
+* Learn about [push notifications](/docs/push) to handle offline delivery.
+* Review the [batch publish API](/docs/api/rest-api#batch-publish) for efficient multi-channel publishing.
+* Understand [message history](/docs/channels/history) for retrieving missed notifications.
+* Check the [pricing page](/pricing) to understand costs at your scale.
+* Try the [pub/sub getting started guide](/docs/getting-started) to build a proof of concept.
