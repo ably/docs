@@ -1,6 +1,6 @@
 # Contribution guide
 
-This guide covers how to contribute to the Ably docs repository. From general pull request processes, to how to update and use each textile component.
+This guide covers how to contribute to the Ably docs repository, including general pull request processes and content formatting.
 
 ## Pull request process
 
@@ -35,12 +35,12 @@ There are two main locations that contributors need to work with to varying exte
 
 | Folder | Contains |
 | ------ | -------- |
-| content | All content pages written in textile. |
-| src | Images, navigation and language version and management. |
+| how-tos | Tutorial content in MDX format. |
+| src | Images, navigation, and language version management. |
 
-## Textile format
+## Content format
 
-The following sections discuss how to write and implement each component using textile.
+Documentation pages use MDX format for content. The following sections discuss common formatting patterns.
 
 ### Metadata
 
@@ -73,19 +73,17 @@ An example heading (with a custom anchor link) is: `h2(#subscribe). Subscribe to
 
 ### Links
 
-Links in textile are written in quotation marks. Link text can also be [code styled](#in-line-code).
+Use standard Markdown link syntax: `[link text](url)`.
 
 #### Internal links
 
-To link to another heading on the same page use the anchor link: `"channel state changes":#listen-for-state`.
+To link to another docs page use: `[messages](/docs/channels/message)`.
 
-To link to another docs page use: `"messages":/docs/channels/message`.
-
-You may also use in-line code to style link text: `"@get()@":/docs/api/realtime-sdk/channels#get method`
+To link to a heading on the same page: `[channel state changes](#listen-for-state)`.
 
 #### External links
 
-To link externally, or outside of the docs repository, use a fully qualified link: `"Ably dashboard":https://ably.com/dashboard`.
+Use fully qualified URLs: `[Ably dashboard](https://ably.com/dashboard)`.
 
 > Note: for dashboard links you can use `/any/` as the account ID to link directly to a specific page. For example: `https://ably.com/accounts/any/edit` for the account settings page.
 
@@ -164,7 +162,7 @@ To make a cell span two columns:
 
 ### Admonitions
 
-There are three types of admonition that can be used; `note`, `important` and `further-reading`. Update the value of `data-type` to switch between them. Admonitions are written using the HTML `<aside>` tag. Content must be constructed in HTML, other than links and in-line code styling which accept textile format.
+There are three types of admonition that can be used; `note`, `important` and `further-reading`. Update the value of `data-type` to switch between them. Admonitions are written using the HTML `<aside>` tag with HTML or Markdown content.
 
 ```html
 <aside data-type='note'>
@@ -198,7 +196,7 @@ Textile accepts several formats for unordered lists, however `*` should be used 
 * Mint Choc Chip
 ```
 
-For ordered lists, textile will accept any number before a `.` and order it appropriately. Ascending numbers should be used for readability and consistency.
+For ordered lists, use standard Markdown syntax with ascending numbers for readability and consistency.
 
 ```plaintext
 1. Cornetto
@@ -329,7 +327,7 @@ bq(definition).
 
 ### Partials
 
-API references make use of [partials](content/partials/) where content is reused between files. They are included in .textile files using the following syntax:
+API references previously used partials for reusable content. This functionality has been replaced with component-based content reuse.
 
 ```plaintext
 <%= partial partial_version('realtime/_stats') %>
