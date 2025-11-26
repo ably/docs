@@ -1,5 +1,4 @@
 import { GatsbyNode, Node } from 'gatsby';
-import { transformNanocTextiles, makeTypeFromParentType, createNodesFromPath } from '../transform';
 
 export const onCreateNode: GatsbyNode['onCreateNode'] = async ({
   node,
@@ -8,34 +7,6 @@ export const onCreateNode: GatsbyNode['onCreateNode'] = async ({
   createNodeId,
   createContentDigest,
 }) => {
-  const createChildNode = ({ parent, child }: { parent: Node; child: Node }) => {
-    createNode(child);
-    createParentChildLink({ parent, child });
-  };
-
-  if (node.extension === 'textile') {
-    const content = await loadNodeContent(node);
-    try {
-      transformNanocTextiles(node, content, createNodeId(`${node.id} >>> HTML`), makeTypeFromParentType('Html')(node), {
-        createContentDigest,
-        createNodesFromPath: createNodesFromPath('DocumentPath', { createNode, createNodeId, createContentDigest }),
-        createNodeId,
-      })(createChildNode);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const ErrorNode = {
-        id: createNodeId(`${errorMessage} >>> Error`),
-        message: errorMessage,
-        internal: {
-          contentDigest: createContentDigest(errorMessage),
-          type: 'Error',
-        },
-      };
-      createNode(ErrorNode);
-      console.error('Error at relative path:\n', node.relativePath ? `${node.relativePath}\n` : '\n', errorMessage);
-    }
-  }
-
   if (node.sourceInstanceName === 'how-tos') {
     // We derive the name of the how-to from the path
     const [tutorialName, src, ...paths] = (node.relativePath as string).split('/');
