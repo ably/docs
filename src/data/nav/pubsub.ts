@@ -512,6 +512,15 @@ export default {
           ],
         },
         {
+          name: 'Guides',
+          pages: [
+            {
+              name: 'Notifications center',
+              link: '/docs/guides/pub-sub/notifications-center',
+            },
+          ],
+        },
+        {
           name: 'REST API',
           link: '/docs/api/rest-api',
         },
