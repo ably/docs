@@ -124,22 +124,6 @@ export const plugins = [
   {
     resolve: 'gatsby-source-filesystem',
     options: {
-      name: 'textile-partials',
-      path: './content/partials',
-    },
-    __key: 'textile-partials',
-  },
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
-      name: 'textile-nanoc-compatible',
-      path: './content',
-    },
-    __key: 'textile-nanoc-compatible',
-  },
-  {
-    resolve: 'gatsby-source-filesystem',
-    options: {
       name: 'how-tos',
       path: './how-tos',
     },
