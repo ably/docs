@@ -1,4 +1,4 @@
-import { assert, constantFrom, property, tuple, webPath, webUrl } from 'fast-check';
+import { assert, property, webPath, webUrl } from 'fast-check';
 import { checkLinkIsInternal } from './check-link-is-internal';
 
 describe('Check link is internal: unit tests', () => {
