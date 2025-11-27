@@ -1,0 +1,526 @@
+---
+title: "Guide: Implementing push notifications at scale with Ably"
+meta_description: "A practical guide to architecting push notifications with Ably across iOS, Android, and web. Design decisions, delivery models, and optimization strategies."
+meta_keywords: "push notifications, APNs, FCM, Web Push, mobile notifications, device management, multi-platform, scalability"
+---
+
+Push notifications are an important channel for engaging users outside of your application. Whether you're sending transactional alerts, breaking news, or marketing messages, push notifications need to be reliable, fast, and work seamlessly across iOS, Android, and web platforms.
+
+This guide walks through the architectural decisions and practical considerations for implementing push notifications at scale using Ably. You'll learn how to design your notification system, manage devices across platforms, optimize for cost and performance, and handle the complexities of multi-platform delivery.
+
+## Why Ably for push notifications?
+
+Push notifications require integration with multiple platform-specific services: Apple Push Notification Service (APNs) for iOS, Firebase Cloud Messaging (FCM) for Android, and Web Push for browsers. Each has its own authentication mechanisms, payload formats, and reliability characteristics.
+
+Ably provides a unified API that handles all three platforms, managing:
+
+* **Platform abstraction:** Write once, deliver everywhere. Ably translates your notifications into platform-specific formats.
+* **Credential management:** Store your APNs certificates, FCM service accounts, and VAPID keys securely in one place.
+* **Delivery reliability:** Ably handles retries, tracks delivery status, and provides error reporting through meta channels.
+* **Scale:** From hundreds to millions of devices, Ably's infrastructure scales automatically without requiring you to manage connection pools or rate limits.
+* **Users and devices:** Ably provides methods to send notifications to the right recipients. Send notifications to channels, users by `clientId`, or devices by `deviceId`.
+
+The alternative is maintaining separate integrations with each push service, handling their individual quirks, managing credentials across multiple systems, building your own retry and error handling logic, mapping between devices and users in your application, and managing subscriptions to topics.
+
+![Push notifications lifecycle](../../../../images/content/diagrams/push-lifecycle.png)
+
+## Choosing your targeting model: Direct vs. Channel-based
+
+The first architectural decision is how you'll target notifications. Ably supports two fundamentally different approaches, each suited to different use cases.
+
+### Direct publishing
+
+[Direct publishing](/docs/push/publish#direct-publishing) sends notifications to specific devices or users without requiring them to subscribe to channels. You target notifications using one of:
+* `deviceId`: The unique identifier Ably assigns to each device during activation.
+* `clientId`: Your application's user identifier, which can target all of a user's devices at once.
+* **Recipient attributes:** Direct targeting using device tokens or transport types.
+
+This approach works well for:
+* Transactional notifications (order confirmations, password resets, account alerts).
+* User-specific messages that don't fit into predefined topics.
+* Migrating from an existing push system where you already have device tokens.
+* Applications where notification preferences are complex and user-specific.
+* Chat features such as at-mentions or direct messages.
+
+<Code>
+```javascript
+// Send to a specific device
+await client.push.admin.publish(
+  { deviceId: 'device-123' },
+  {
+    notification: {
+      title: 'Your order has shipped',
+      body: 'Track your package in the app'
+    }
+  }
+);
+
+// Send to all devices for a user
+await client.push.admin.publish(
+  { clientId: 'user-456' },
+  {
+    notification: {
+      title: 'New message from Sarah',
+      body: 'Hey, are you free tomorrow?'
+    }
+  }
+);
+```
+</Code>
+
+### Channel-based publishing
+
+[Publishing via channels](/docs/push/publish#via-channels) uses Ably's pub/sub model. Devices subscribe to channels representing topics, and notifications are broadcast to all subscribers.
+
+This approach works well for:
+
+* Topic-based notifications (news categories, sports scores, stock alerts).
+* Group messaging or team notifications.
+* Geographic or demographic targeting (if channels are organized that way).
+* Scenarios where users explicitly opt into notification categories.
+
+Using channels here is a form of organizing the notifications into categories or topics. While users (or devices) must subscribe for push notifications to channels using `subscribeDevice()` or `subscribeClient()` to receive channel push notifications, they do not need to be attached to the channels to receive them. The notifications are delivered efficiently via the relevant push service (APNs, FCM, or Web Push). Depending on the target device and permissions, they can be received when the app is closed or in the background.
+
+<Code>
+```javascript
+// Device subscribes to a channel
+const channel = client.channels.get('news:breaking');
+await channel.push.subscribeDevice();
+
+// Later, publish to all subscribers
+const channel = client.channels.get('news:breaking');
+await channel.publish({
+  name: 'alert',
+  data: 'Breaking news story',
+  extras: {
+    push: {
+      notification: {
+        title: 'Breaking News',
+        body: 'Major development in ongoing story'
+      }
+    }
+  }
+});
+```
+</Code>
+
+### Choosing between the two
+
+Many applications use both models for different features. For example:
+
+* Channel-based for optional categories users can subscribe to (sports updates, promotions, new messages to a group chat).
+* Direct publishing for critical user-specific alerts (account security, payment confirmations, direct chat messages).
+
+Consider your notification taxonomy. If you broadcast the same notification to many users, channels simplify this. You can also enable users to have granular preferences ("I want basketball scores but not football") by using different channels for different choices they can make. On the other hand, if most notifications are personal and transactional, direct publishing is simpler: either by `clientId` (target all devices of a specific user) or `deviceId` (target a specific device).
+
+## Multi-platform considerations
+
+A core challenge of push notifications is handling three different platforms with different capabilities and payload formats.
+
+### Platform features
+
+Each platform has unique features:
+
+* **iOS (APNs):** Rich notifications with media, notification categories, thread grouping, critical alerts.
+* **Android (FCM):** Custom notification colors, large icons, notification channels, background data messages.
+* **Web Push:** Basic notifications with icons and actions, limited styling, varies by browser.
+
+Ably provides a [unified payload structure](/docs/push/publish#payload) that maps to each platform.
+
+<Code>
+```javascript
+{
+  notification: {
+    title: 'Hello from Ably',       // Maps to all platforms
+    body: 'This is a notification', // Maps to all platforms
+    icon: '/icon.png',              // Used by FCM and Web Push, ignored by APNs
+    sound: 'default',               // Used by APNs and FCM, ignored by Web Push
+    collapseKey: 'chat'             // Maps to collapse_key (FCM) and thread-id (APNs)
+  },
+  data: {                           // Available on all platforms
+    customField: 'value'
+  }
+}
+```
+</Code>
+
+### Platform-specific overrides
+
+For platform-specific features, you can override the generic payload:
+
+<Code>
+```javascript
+{
+  notification: {
+    title: 'New Message',
+    body: 'You have a new message'
+  },
+  // iOS-specific overrides
+  apns: {
+    aps: {
+      alert: {
+        title: 'Hello, iOS',      // Different title for iOS
+      },
+    }
+  },
+  // Android-specific overrides
+  fcm: {
+    notification: {
+      color: '#FF5722',              // Android accent color
+    }
+  },
+  // Web-specific overrides
+  web: {
+    badge: '/badge.png',
+  }
+}
+```
+</Code>
+
+This lets you use platform-specific features while maintaining a single codebase for notification publishing.
+
+### Testing across platforms
+
+When developing, test notifications on all target platforms early. Platform-specific bugs often relate to:
+
+* Images don't show, for example because the URLs are not accessible from all platforms.
+* Sound files that don't exist or are in the wrong format.
+* Custom data that exceeds platform size limits (4KB for iOS, 4KB for FCM data payload).
+* Character encoding issues in titles or bodies.
+
+## Device and browser activation strategies
+
+Before [devices](/docs/push/configure/device) or [browsers](/docs/push/configure/web) can receive push notifications, they must be activated - registered with both the platform's push service (APNs, FCM, or Web Push) and with Ably.
+
+### Client-side activation
+
+Client-side activation is the simplest approach. Registration happens fully on the client device or browser. Ably SDKs provide a simple API to activate push notifications for devices and browsers:
+
+<Code>
+```javascript
+// Browsers
+import Ably from "ably";
+import Push from "ably/push";
+
+const client = new Ably.Realtime({
+  authCallback: getTokenFromYourServer,
+  pushServiceWorkerUrl: '/service-worker.js',
+  plugins: { Push }
+});
+
+await client.push.activate();
+```
+
+```swift
+// iOS
+let ably = self.getAblyRealtime()
+ably.push.activate()
+```
+
+```kotlin
+// Android
+val ably = getAblyRealtime()
+ably.setAndroidContext(context)
+ably.push.activate()
+```
+
+</Code>
+
+The device gets a `deviceId` from Ably and can immediately subscribe to channels or receive direct notifications. If the Ably client is using a `clientId`, the registration will also be associated with that `clientId`.
+
+Always deactivate the device when the user logs out or the device is no longer needed. This can be done by calling `push.deactivate()` on the Ably client.
+
+<Code>
+```javascript
+await client.push.deactivate();
+```
+
+```swift
+ably.push.deactivate()
+```
+
+```kotlin
+ably.push.deactivate()
+```
+</Code>
+
+### Server-side activation
+
+Server-side activation gives you more control. The device obtains its platform token (FCM registration token, APNs device token, or Web Push subscription) on the client, and then sends it to your server. Your server registers the device with Ably using the push admin API. This approach can also be used to migrate push notifications to Ably without reactivating push notifications on all devices for all platforms.
+
+Server-side activation also allows you to use FCM for both Android and iOS devices for unified push messaging.
+
+<Code>
+```javascript
+// On device: Get platform token and send to your server
+const platformToken = await getPlatformPushToken(); // Platform-specific
+await fetch('https://example.com/register-device', {
+  method: 'POST',
+  body: JSON.stringify({ 
+    userId: currentUser.id,
+    platformToken,
+    platform: 'ios' // or 'android', 'web'
+  })
+});
+
+// On your server: Register with Ably
+app.post('/register-device', async (req, res) => {
+  const { userId, platformToken, platform } = req.body;
+  
+  // Register device with Ably
+  await ablyClient.push.admin.deviceRegistrations.save({
+    id: generateDeviceId(userId, platform),
+    platform: platform,
+    formFactor: 'phone',
+    clientId: userId,
+    push: {
+      recipient: {
+        transportType: platform === 'ios' ? 'apns' : 'fcm',
+        deviceToken: platformToken
+      }
+    }
+  });
+  
+  res.json({ success: true });
+});
+```
+</Code>
+
+Server-side activation is preferred when:
+
+* You need strict control over who can register devices.
+* You want to validate user identity before enabling notifications.
+* You're migrating from another push provider and already have server-side device management.
+* You want to use FCM for both Android and iOS devices for unified push messaging.
+
+## Authentication and security
+
+Push notifications require careful permission management. Ably uses [capability-based authentication](/docs/auth/capabilities) to control what clients can do.
+
+### Capabilities
+
+Push notifications use two main capabilities:
+
+* **push-subscribe:** Allows a device to manage its own registration and subscribe to channels. Suitable for end user devices.
+* **push-admin:** Full access to push admin API - register any device, subscribe any device to channels, send direct notifications. Only for servers.
+
+
+Example capabilities:
+<Code>
+```javascript
+// Subscribe to all channels, and push-subscribe for "news:" channels; suitable for a client:
+{
+  '*': ['subscribe'],                        // Can subscribe to realtime messages
+  'news:*': ['subscribe', 'push-subscribe']  // Can also subscribe to push notifications on news channels
+}
+
+// For your server with push-admin
+{
+  '*': ['subscribe', 'publish', 'push-admin']  // Full push admin access
+}
+```
+</Code>
+
+Capabilities can be set for API keys, Ably tokens, and JWT tokens. Read more about [authentication with Ably](/docs/auth).
+
+If you are using channel-based push notifications, be aware that everyone with `publish` capability can publish messages to that channel, including sending push notifications. We recommend that only your server has `publish` capability on channels you want to use for push notifications.
+
+### Security considerations
+
+Follow these practices:
+
+* Never give clients `push-admin` capability. They could manage registrations and subscriptions for push notifications for any device.
+* Do not give `publish` capability to clients on channels used for push notifications. This could allow any clients to publish push notifications to that channel.
+* To make permission management straightforward, use separate channels for push notifications and other parts of your application.
+* Only grant the capabilities that are needed for the specific use case.
+* Use token authentication and not API key authentication.
+
+## Managing device lifecycle
+
+Device management is critical for a healthy push notification system. Devices don't last forever: users upgrade phones, uninstall apps, revoke notification permissions, or log out and in with different accounts.
+
+Devices need updates when:
+
+* The user logs in or out (changing `clientId`).
+* The platform token changes (for example, FCM tokens refresh).
+* The user disables push notifications for the app and later re-enables them.
+
+<Code>
+```javascript
+// Update device registration
+await client.push.admin.deviceRegistrations.save({
+  id: 'device-123',
+  clientId: 'new-user-id',  // User logged into different account
+});
+```
+</Code>
+
+### Handling deactivation
+
+When users disable notifications in your app or log out, remove the device registration from Ably:
+
+<Code>
+```javascript
+// User disables notifications in app settings
+await client.push.deactivate();
+```
+</Code>
+
+The device will not receive further notifications until reactivated.
+
+## Subscription management at scale
+
+If using channel-based notifications, managing subscriptions efficiently is important as your user base grows.
+
+### Channel organization
+
+Good channel design makes it easy for users to subscribe to exactly what they want, and for you to target notifications precisely. Design your channels thoughtfully:
+
+* General categories: topic, geography, user segment.
+* Personalized user interests: groups the user is in, discussion threads or chat rooms the user is active in, documents the user is working on, and more.
+* Any other business logic.
+
+<Code>
+```javascript
+// By topic
+'news:sports:basketball'
+'news:sports:football'
+'news:politics'
+
+// By geography
+'alerts:us:california'
+'alerts:uk:london'
+
+// By user segment
+'offers:premium-users'
+'offers:trial-users'
+
+// By user-specific interests
+'forum:thread:80483243',
+'game-session:cd0fe2fe-ba01-49bd-ae2b-6ad334f52197',
+'document:5b2aca2d-15f1-4dff-9bae-07e1c9454913'
+```
+</Code>
+
+### Subscribing devices
+
+Devices can subscribe using `deviceId` (this device only) or `clientId` (all user's devices):
+
+<Code>
+```javascript
+// Subscribe just this device
+const channel = client.channels.get('news:breaking');
+await channel.push.subscribeDevice();
+
+// Subscribe all devices for this user
+await channel.push.subscribeClient();
+```
+</Code>
+
+Subscribe the device when you need to target push notifications directly to this device:
+- For applications where there are no user accounts.
+- For use cases where each device matters independently, such as "find my," "play on this device," or "send to that device."
+- For more control where users can choose which notifications they receive on each of their devices.
+
+Subscribe the user when you need to target push notifications to all of the user's devices. For example:
+- When the user receives a new message, email, or game invite.
+- When the user is mentioned in a thread.
+- When there is a new comment on a document the user is watching.
+
+### Bulk subscription management
+
+For managing subscriptions at scale, use the push admin API from your server. It allows you to manage subscriptions to channels for a device, clientId, or both. It also supports bulk operations such as removing all subscriptions for a clientId or device.
+
+<Code>
+```javascript
+// Subscribe user-abcd to a new channel
+await ablyClient.push.admin.channelSubscriptions.save({
+  channel: 'document:5b2aca2d-15f1-4dff-9bae-07e1c9454913',
+  clientId: 'user-abcd'
+});
+
+// Get all channel subscriptions of user-abcd
+await ablyClient.push.admin.channelSubscriptions.list({"clientId": "user-abcd"});
+
+// Remove all channel subscriptions of user-abcd
+await ablyClient.push.admin.channelSubscriptions.remove({"clientId": "user-abcd"});
+```
+</Code>
+
+## Batch publishing for efficiency
+
+When you need to send distinct notifications to many users, use the [batch push API](/docs/push/publish#via-batch-push-api). It allows you to send customised notifications to many users in a single request. If you need to send the same notification to many users, use [channels](/docs/push/publish#via-channels).
+
+Batch publishing is ideal for scenarios like:
+
+* Sending personalized notifications to thousands of users (different content per user).
+* Daily digests with user-specific content.
+* Scheduled reminders that vary by user.
+* Re-engagement campaigns with customized messages.
+
+Example:
+<Code>
+```javascript
+// Build an array of notification specs
+const notifications = users.map(user => ({
+  recipient: { clientId: user.id },
+  payload: {
+    notification: {
+      title: `Hi ${user.name}!`,
+      body: `You left ${user.basketSize} items in your basket. Tap to continue shopping.`,
+    }
+  }
+}));
+
+// Send up to 10,000 notifications in one request
+await rest.request('POST', '/push/batch/publish', 3, null, notifications);
+```
+</Code>
+
+## Monitoring and error handling
+
+Push notification failures are inevitable: devices go offline, users uninstall apps, tokens expire. Monitoring and handling errors properly is critical.
+
+Ably publishes push errors to a dedicated meta channel `[meta]log:push`. Monitor this channel to track push notification delivery errors.
+
+<Code>
+```javascript
+const metaChannel = client.channels.get('[meta]log:push');
+metaChannel.subscribe((message) => {
+  console.log(message);
+});
+```
+</Code>
+
+Use meta channel data to:
+
+* Remove devices with permanent failures (InvalidRegistration, NotRegistered).
+* Track delivery rates and identify platform-specific issues.
+
+### Common failure scenarios
+
+* **Invalid tokens:** Device token changed or app was uninstalled. Remove the device registration.
+* **Platform service down:** APNs or FCM experiencing issues.
+* **Payload too large:** Keep total payload under 4KB. Large images should be URLs, not embedded data.
+* **Permission denied:** User revoked notification permissions. Prompt them to re-enable in settings.
+
+## Production-ready checklist
+
+Before launching push notifications:
+
+* **Platform configuration:** Ensure APNs certificates/tokens, FCM service account credentials, and Web Push service worker are properly configured and tested across all target platforms.
+* **Authentication and security:** Use token authentication for all client-side communication, restrict the `push-admin` capability to your backend servers only, and verify that clients cannot access admin push APIs.
+* **Device lifecycle management:** Implement device activation, deactivation, and token refresh handling, and have a strategy in place for removing devices that are no longer active.
+* **Channel structure and subscriptions:** Design your channel naming strategy and implement subscription management that allows users to control their notification preferences and easily unsubscribe.
+* **Monitoring and error tracking:** Subscribe to the `[meta]log:push` meta channel to monitor push notification delivery errors.
+* **Cross-platform testing:** Test notifications across all target platforms to ensure consistent delivery and behavior.
+* **Scale planning:** Confirm you are on the right Ably package for your expected notification volume and user base size.
+
+## Next steps
+
+* Review the [push notifications documentation](/docs/push) for API details.
+* Learn how to [configure devices](/docs/push/configure/device) and [web browsers](/docs/push/configure/web).
+* Understand [publishing methods](/docs/push/publish) in depth.
+* Explore the [push admin API](/docs/api/realtime-sdk/push-admin).
+* Check out [authentication best practices](/docs/auth).
+* Read about our [platform architecture](/docs/platform/architecture) for scale considerations.
