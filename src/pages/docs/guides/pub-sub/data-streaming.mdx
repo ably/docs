@@ -448,14 +448,74 @@ Optimization improves both performance and economics - smaller payloads and fewe
 
 ## Architecture and scale considerations
 
-Ably's optimization features are designed to work at any scale without requiring infrastructure management on your part:
+Ably's optimization features are designed to work at any scale without requiring infrastructure management on your part. However, understanding channel architecture and connection patterns is critical to building efficient, scalable data streaming applications.
 
-* **Automatic scaling:** Ably's [consistent hashing](/docs/platform/architecture/platform-scalability) distributes load across instances, enabling horizontal scaling without limits, meaning you can fan out to millions of subscribers on a single channel
-* **Proven at scale:** These features support millions of concurrent connections and channels handling thousands of messages per second with batching
+### Channel architecture patterns
+
+How you structure channels significantly impacts performance, costs, and scalability:
+
+**Single channel with many subscribers:**
+This is the most common pattern for data streaming, and is recommended in most use-cases. Ably uses [consistent hashing](/docs/platform/architecture/platform-scalability) to distribute channel load across instances, enabling you to fan out to millions of subscribers on a single channel:
+- Delta compression reduces bandwidth per subscriber
+- Conflation or server-side batching can dramatically reduce outbound message count during high activity
+- Message ordering is guaranteed within the channel
+
+**Keep in mind:**
+- Ably rate limits inbound messages to 50 msg/s per channel, though Enterprise plans can request higher limits.
+
+**Multiple channels with isolated streams:**
+For applications with independent data streams (e.g., different telemetry sources, separate instrument feeds), or very high throughput, consider using multiple channels.
+This provides:
+- Simple to isolate data, clients only attach to relevant channels.
+- Ability to apply different optimization rules per channel via [namespaces](/docs/channels#rules).
+- Inbound messages rates of one channel do not impact others, enabling higher overall throughput.
+
+**Keep in mind:**
+- Message ordering is **not** guaranteed across channels.
+- Multiple channels incur an increased cost in channel minutes, where possible, consolidate related streams.
+- Unless strict access control to different streams is required, it is more efficient to multiplex related streams on a single channel and filter for events relevant to the client using [subscription filters](/docs/pub-sub/advanced#subscription-filters).
+
+**Channel namespaces for configuration:**
+Use [channel namespaces](/docs/channels#rules) to apply consistent rules across related channels. For example:
+- `telemetry:*` channels use delta compression
+- `prices:*` channels use conflation with 1-second intervals
+- `events:*` channels use server-side batching
+
+This enables you to scale channel count without managing configuration individually.
+
+### Connection management
+
+Efficient connection handling is essential for cost and performance optimization:
+
+**Connection lifecycle:**
+- Establish connections when needed and keep them alive only for the session duration
+- When a channel is no longer needed, call `detach()` to avoid unnecessary outbound messages and channel minutes billing
+- Always call `close()` on connections when finished to avoid unnecessary billing for the [2-minute connection timeout](/docs/connect/states#connection-state-recovery)
+- Ably SDKs automatically handle reconnection and recovery during network disruptions
+
+**Realtime vs REST for publishing:**
+Choose the appropriate client type based on your publisher characteristics:
+- **Use Realtime SDK** when:
+  - Publishing messages at a very high volume
+  - Need the lowest possible latency
+  - Need bidirectional communication (publish and subscribe)
+  - Ordering of published messages is critical
+
+- **Use REST API** when:
+  - You have stateless publishers (e.g., serverless functions)
+  - Publishing from environments where maintaining persistent connections is impractical
+  - Publishing from some authoritative backend server, or on behalf of multiple users
+  - Batch publishing many messages to different channels in a single API call
+
+### Platform capabilities
+
+Ably's architecture provides built-in guarantees:
+
+* **Horizontal scalability:** Channels automatically distribute across instances without configuration
+* **Proven at scale:** Features support millions of concurrent connections and channels handling thousands of messages per second
 * **Built-in resilience:** [Connection recovery](/docs/connect/states) and [fault tolerance](/docs/platform/architecture/fault-tolerance) ensure things continue working through disruptions
 * **Global distribution:** Ably's [edge network](/docs/platform/architecture/edge-network) brings data closer to users for lowest latency
-
-**Note on rate limits:** Standard accounts support 50 messages per second per channel, with higher limits available on enterprise plans. If your use case requires higher per-channel rates, contact sales to discuss your specific requirements.
+* **Rate limits:** Standard accounts support 50 messages per second per channel. Enterprise plans offer higher limits. Contact sales if you need higher per-channel rates.
 
 ## Production checklist
 
