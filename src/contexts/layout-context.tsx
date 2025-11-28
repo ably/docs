@@ -33,13 +33,23 @@ const determineActiveLanguage = (
   activeLanguages: LanguageKey[],
   location: string,
   product: ProductKey | null,
+  pageContextLanguage?: string,
 ): LanguageKey => {
+  // Priority 1: Pre-set language from pageContext (for language variant pages)
+  if (pageContextLanguage && Object.keys(languageInfo).includes(pageContextLanguage)) {
+    return pageContextLanguage as LanguageKey;
+  }
+
+  // Priority 2: Query parameter
   const params = new URLSearchParams(location);
   const langParam = params.get('lang') as LanguageKey;
 
   if (langParam && Object.keys(languageInfo).includes(langParam) && activeLanguages.includes(langParam)) {
     return langParam;
-  } else if (activeLanguages.length > 0 && product) {
+  }
+
+  // Priority 3: First relevant language for product
+  if (activeLanguages.length > 0 && product) {
     const relevantLanguages = activeLanguages.filter((lang) => Object.keys(languageData[product]).includes(lang));
     return relevantLanguages[0];
   }
@@ -94,7 +104,12 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
       languages = domLanguages; // Use languages from the DOMif available, this is for Textile pages
     }
 
-    const language = determineActiveLanguage(languages, location.search, activePageData?.product ?? null);
+    const language = determineActiveLanguage(
+      languages,
+      location.search,
+      activePageData?.product ?? null,
+      pageContext?.language as string | undefined,
+    );
 
     return {
       tree: activePageData?.tree ?? [],
