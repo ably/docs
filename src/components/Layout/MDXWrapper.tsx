@@ -33,7 +33,6 @@ import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { ProductName } from 'src/templates/template-data';
 import { getMetaTitle } from '../common/meta-title';
 import UserContext from 'src/contexts/user-context';
-import { LanguageKey } from 'src/data/languages/types';
 
 type MDXWrapperProps = PageProps<unknown, PageContextType>;
 
