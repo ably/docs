@@ -1,5 +1,4 @@
 import React, {
-  PropsWithChildren,
   useState,
   createContext,
   isValidElement,
@@ -15,18 +14,17 @@ import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
 
 import { getRandomChannelName } from '../blocks/software/Code/get-random-channel-name';
-import Aside from '../blocks/dividers/Aside';
 
 import If from './mdx/If';
 import { useCopyableHeaders } from './mdx/headers';
 import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from './mdx/tables';
 import { Tiles } from './mdx/tiles';
 import { PageHeader } from './mdx/PageHeader';
+import Admonition from './mdx/Admonition';
 
 import { Frontmatter, PageContextType } from './Layout';
 import { ActivePage } from './utils/nav';
 
-import { HtmlComponentPropsData } from '../html-component-props';
 import { MarkdownProvider } from '../Markdown';
 
 import Article from '../Article';
@@ -158,15 +156,6 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
   );
 };
 
-const WrappedAside = (props: PropsWithChildren<{ 'data-type': string }>) => {
-  return (
-    <Aside
-      attribs={{ 'data-type': props['data-type'] }}
-      data={(<>{props.children}</>) as unknown as HtmlComponentPropsData}
-    />
-  );
-};
-
 const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
 const META_PRODUCT_FALLBACK = 'pub_sub';
 
@@ -251,7 +240,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
           components={{
             If,
             Code: (props) => <WrappedCodeSnippet activePage={activePage} apiKeys={apiKeys} {...props} />,
-            Aside: WrappedAside,
+            Aside: Admonition,
             table: Table,
             thead: TableHead,
             tbody: TableBody,
