@@ -7,12 +7,14 @@ export const Head = ({
   description,
   metaTitle,
   keywords,
+  robots,
 }: {
   title: string;
   canonical: string;
   description: string;
   metaTitle?: string;
   keywords?: string;
+  robots?: string;
 }) => (
   <Helmet>
     <title>{metaTitle || title}</title>
@@ -23,6 +25,7 @@ export const Head = ({
     <meta property="og:description" content={description} />
     <meta name="twitter:description" content={description} />
     {keywords && <meta name="keywords" content={keywords} />}
+    {robots && <meta name="robots" content={robots} />}
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />

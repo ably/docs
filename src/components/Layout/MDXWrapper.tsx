@@ -1,6 +1,7 @@
 import React, {
   PropsWithChildren,
   useState,
+  useEffect,
   createContext,
   isValidElement,
   cloneElement,
@@ -182,7 +183,29 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
 
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl(location.pathname);
+
+  // Check if current path is a language variant (ends with a language identifier)
+  // Pattern: /docs/auth/token/java → language variant
+  const languageSegmentPattern = /\/(javascript|typescript|python|java|ruby|php|go|swift|kotlin|csharp|objc|nodejs|react|flutter|laravel|shell)$/i;
+  const isLanguageVariant = languageSegmentPattern.test(location.pathname);
+
+  // Strip language segment from pathname for canonical URL and browser display
+  const cleanPath = isLanguageVariant
+    ? location.pathname.replace(languageSegmentPattern, '')
+    : location.pathname;
+  const canonical = canonicalUrl(cleanPath) + location.search;
+
+  // Prevent indexing of language variant URLs (nginx serves these via query params)
+  const robots = isLanguageVariant ? 'noindex, follow' : undefined;
+
+  // Clean up browser URL if it's a language variant (strip language segment)
+  // Use Gatsby's navigate to keep router state in sync
+  useEffect(() => {
+    if (isLanguageVariant) {
+      const cleanUrl = cleanPath + location.search;
+      navigate(cleanUrl, { replace: true });
+    }
+  }, [isLanguageVariant, cleanPath, location.search]);
 
   // Use the copyable headers hook
   useCopyableHeaders();
@@ -206,7 +229,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
 
   return (
     <SDKContext.Provider value={{ sdk, setSdk }}>
-      <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} keywords={keywords} />
+      <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} keywords={keywords} robots={robots} />
       <Article>
         <MarkdownProvider
           components={{
