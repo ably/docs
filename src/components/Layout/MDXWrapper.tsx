@@ -19,9 +19,10 @@ import Aside from '../blocks/dividers/Aside';
 
 import If from './mdx/If';
 import { useCopyableHeaders } from './mdx/headers';
-import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from './mdx/tables';
+import Table from './mdx/Table';
 import { Tiles } from './mdx/tiles';
 import { PageHeader } from './mdx/PageHeader';
+import Admonition from './mdx/Admonition';
 
 import { Frontmatter, PageContextType } from './Layout';
 import { ActivePage } from './utils/nav';
@@ -222,12 +223,14 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
             If,
             Code: (props) => <WrappedCodeSnippet activePage={activePage} apiKeys={apiKeys} {...props} />,
             Aside: WrappedAside,
-            table: Table,
-            thead: TableHead,
-            tbody: TableBody,
-            tr: TableRow,
-            th: TableHeader,
-            td: TableCell,
+            Admonition,
+            Table,
+            table: Table.Root,
+            thead: Table.Header,
+            tbody: Table.Body,
+            tr: Table.Row,
+            th: Table.Head,
+            td: Table.Cell,
             Tiles,
           }}
         >
