@@ -17,7 +17,7 @@ import { getRandomChannelName } from '../blocks/software/Code/get-random-channel
 
 import If from './mdx/If';
 import { useCopyableHeaders } from './mdx/headers';
-import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from './mdx/tables';
+import Table from './mdx/Table';
 import { Tiles } from './mdx/tiles';
 import { PageHeader } from './mdx/PageHeader';
 import Admonition from './mdx/Admonition';
@@ -211,12 +211,13 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
             If,
             Code: (props) => <WrappedCodeSnippet activePage={activePage} apiKeys={apiKeys} {...props} />,
             Aside: Admonition,
-            table: Table,
-            thead: TableHead,
-            tbody: TableBody,
-            tr: TableRow,
-            th: TableHeader,
-            td: TableCell,
+            Table,
+            table: Table.Root,
+            thead: Table.Header,
+            tbody: Table.Body,
+            tr: Table.Row,
+            th: Table.Head,
+            td: Table.Cell,
             Tiles,
           }}
         >
