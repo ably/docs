@@ -1,9 +1,10 @@
 import { GatsbyNode, Reporter } from 'gatsby';
-import fs from 'fs/promises';
-import path from 'path';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import { glob } from 'glob';
 import { JSDOM, VirtualConsole } from 'jsdom';
-import TurndownService from 'turndown';
+import * as TurndownService from 'turndown';
+import { exportToMarkdownWithLanguages } from './markdownOutputWithLanguages';
 
 const CONFIG = {
   htmlDir: './public',
@@ -25,8 +26,12 @@ const cleanAttribute = (attribute: string | null) => {
   return attribute ? attribute.replace(/(\n+\s*)+/g, '\n') : '';
 };
 
-async function exportToMarkdown({ reporter, siteUrl }: { reporter: Reporter; siteUrl: string }) {
-  const turndownService = new TurndownService({
+/**
+ * Simple markdown export (original implementation)
+ * Converts static HTML to markdown without language support
+ */
+async function exportToMarkdownSimple({ reporter, siteUrl }: { reporter: Reporter; siteUrl: string }) {
+  const turndownService = new (TurndownService as any)({
     headingStyle: 'atx',
     codeBlockStyle: 'fenced',
     emDelimiter: '*',
@@ -139,7 +144,50 @@ interface QueryResult {
   };
 }
 
-// Run the export
+export interface MarkdownOutputOptions {
+  /**
+   * Use advanced mode with React hydration and language support (default: true)
+   * Set to false for simple static HTML to markdown conversion
+   */
+  advancedMode?: boolean;
+}
+
+/**
+ * Main markdown export function with mode switching
+ */
+export async function exportToMarkdown(
+  { reporter, siteUrl }: { reporter: Reporter; siteUrl: string },
+  options: MarkdownOutputOptions = {}
+) {
+  const { advancedMode = true } = options;
+
+  // Check if advanced mode is disabled via environment variable
+  const forceSimpleMode = process.env.MARKDOWN_SIMPLE_MODE === 'true';
+
+  if (forceSimpleMode || !advancedMode) {
+    reporter.info('Using simple markdown export (static HTML conversion)');
+    return exportToMarkdownSimple({ reporter, siteUrl });
+  }
+
+  // Use advanced mode with language support
+  reporter.info('Using advanced markdown export (React hydration + language support)');
+
+  const assetPrefix = process.env.ASSET_PREFIX;
+
+  try {
+    await exportToMarkdownWithLanguages({
+      reporter,
+      siteUrl,
+      assetPrefix,
+    });
+  } catch (error) {
+    reporter.error('Advanced markdown export failed, falling back to simple mode:', error as Error);
+    // Fallback to simple mode if advanced mode fails
+    await exportToMarkdownSimple({ reporter, siteUrl });
+  }
+}
+
+// Run the export (Gatsby post-build hook)
 export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter }) => {
   const query = `
     query {
@@ -169,5 +217,6 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     throw new Error('Site URL not found.');
   }
 
-  await exportToMarkdown({ reporter, siteUrl });
+  // Default to advanced mode
+  await exportToMarkdown({ reporter, siteUrl }, { advancedMode: true });
 };
