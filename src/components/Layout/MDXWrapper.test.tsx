@@ -1,29 +1,31 @@
 import React, { ReactNode } from 'react';
+import { WindowLocation } from '@reach/router';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
+import { Helmet } from 'react-helmet';
 import If from './mdx/If';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
 import UserContext from 'src/contexts/user-context';
+import MDXWrapper from './MDXWrapper';
 
-// Mock the dependencies we need for testing
-jest.mock('./MDXWrapper', () => {
-  return {
-    __esModule: true,
-    default: ({ children, pageContext }: { children: ReactNode; pageContext: any }) => (
-      <div data-testid="mdx-wrapper">
-        {pageContext?.frontmatter?.title && <h1>{pageContext.frontmatter.title}</h1>}
-        <div data-testid="mdx-content">{children}</div>
-      </div>
-    ),
-  };
-});
+const mockUseLayoutContext = jest.fn(() => ({
+  activePage: { language: 'javascript', languages: ['javascript'], product: 'pubsub' },
+}));
 
 // Mock the layout context
 jest.mock('src/contexts/layout-context', () => ({
-  useLayoutContext: () => ({
-    activePage: { language: 'javascript' },
-  }),
+  useLayoutContext: () => mockUseLayoutContext(),
   LayoutProvider: ({ children }: { children: ReactNode }) => <div data-testid="layout-provider">{children}</div>,
+}));
+
+jest.mock('@reach/router', () => ({
+  useLocation: () => ({ pathname: '/docs/test-page' }),
+}));
+
+jest.mock('src/hooks/use-site-metadata', () => ({
+  useSiteMetadata: () => ({
+    canonicalUrl: (path: string) => `https://example.com${path}`,
+  }),
 }));
 
 // We need to mock minimal implementation of other dependencies that CodeSnippet might use
@@ -233,5 +235,82 @@ channel.subscribe('event', (message: Ably.Types.Message) => {
 
     expect(javascriptElement).not.toBeInTheDocument();
     expect(typescriptElement).toBeInTheDocument();
+  });
+});
+
+describe('MDXWrapper structured data', () => {
+  const defaultPageContext = {
+    frontmatter: {
+      title: 'Test Page',
+      meta_description: 'Test description',
+    },
+    languages: [],
+    layout: { mdx: true, leftSidebar: true, rightSidebar: true, searchBar: true, template: 'docs' },
+  };
+
+  const defaultLocation = {
+    pathname: '/docs/test-page',
+  } as WindowLocation;
+
+  beforeEach(() => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        product: 'pubsub',
+        language: 'javascript',
+        languages: [],
+      },
+    });
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('does not generate structured data when only one language is present', () => {
+    render(
+      <UserContext.Provider value={{ sessionState: { signedIn: false }, apps: [] }}>
+        <MDXWrapper pageContext={defaultPageContext} location={defaultLocation}>
+          <div>Test content</div>
+        </MDXWrapper>
+      </UserContext.Provider>,
+    );
+
+    const helmet = Helmet.peek();
+    const jsonLdScript = helmet.scriptTags?.find((tag: { type?: string }) => tag.type === 'application/ld+json');
+
+    expect(jsonLdScript).toBeUndefined();
+  });
+
+  it('generates TechArticle structured data with multiple languages', () => {
+    mockUseLayoutContext.mockReturnValue({
+      activePage: {
+        product: 'pubsub',
+        language: 'javascript',
+        languages: ['javascript', 'python'],
+      },
+    });
+
+    render(
+      <UserContext.Provider value={{ sessionState: { signedIn: false }, apps: [] }}>
+        <MDXWrapper pageContext={defaultPageContext} location={defaultLocation}>
+          <div>Test content</div>
+        </MDXWrapper>
+      </UserContext.Provider>,
+    );
+
+    const helmet = Helmet.peek();
+    const jsonLdScript = helmet.scriptTags?.find((tag: { type?: string }) => tag.type === 'application/ld+json');
+
+    expect(jsonLdScript).toBeDefined();
+    expect(jsonLdScript?.type).toBe('application/ld+json');
+
+    const structuredData = JSON.parse(jsonLdScript?.innerHTML || '{}');
+    expect(structuredData['@type']).toBe('TechArticle');
+    expect(structuredData.hasPart).toHaveLength(2);
+    expect(structuredData.hasPart[0]['@type']).toBe('SoftwareSourceCode');
+    expect(structuredData.hasPart[0].programmingLanguage).toBe('JavaScript');
+    expect(structuredData.hasPart[1].programmingLanguage).toBe('Python');
+    expect(structuredData.hasPart[0].url).toBe('https://example.com/docs/test-page?lang=javascript');
+    expect(structuredData.hasPart[1].url).toBe('https://example.com/docs/test-page?lang=python');
   });
 });
