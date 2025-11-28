@@ -205,6 +205,10 @@ export default {
           name: 'Export chat messages',
           link: '/docs/guides/chat/export-chat',
         },
+        {
+          name: 'Embedded chat',
+          link: '/docs/guides/chat/build-embedded-chat',
+        },
       ],
     },
   ],
