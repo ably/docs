@@ -182,7 +182,10 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
 
   const { canonicalUrl } = useSiteMetadata();
-  const canonical = canonicalUrl(location.pathname);
+  const langParam = new URLSearchParams(location.search).get('lang');
+  const canonical = langParam
+    ? canonicalUrl(`${location.pathname}?lang=${langParam}`)
+    : canonicalUrl(location.pathname);
 
   // Generate JSON-LD structured data for SEO
   const structuredData: StructuredData | undefined = useMemo(() => {
