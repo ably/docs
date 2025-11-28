@@ -1,18 +1,26 @@
 import React from 'react';
 import { Helmet } from 'react-helmet';
 
+export type StructuredData = {
+  '@context': string;
+  '@type': string;
+  [key: string]: unknown;
+};
+
 export const Head = ({
   title,
   canonical,
   description,
   metaTitle,
   keywords,
+  structuredData,
 }: {
   title: string;
   canonical: string;
   description: string;
   metaTitle?: string;
   keywords?: string;
+  structuredData?: StructuredData;
 }) => (
   <Helmet>
     <title>{metaTitle || title}</title>
@@ -23,6 +31,7 @@ export const Head = ({
     <meta property="og:description" content={description} />
     <meta name="twitter:description" content={description} />
     {keywords && <meta name="keywords" content={keywords} />}
+    {structuredData && <script type="application/ld+json">{JSON.stringify(structuredData)}</script>}
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
