@@ -89,9 +89,9 @@ export const LayoutProvider: React.FC<PropsWithChildren<{ pageContext: PageConte
     if (activePageData?.page.languages) {
       languages = activePageData.page.languages; // Use language overrides from the nav data first if possible
     } else if (pageContext?.languages) {
-      languages = pageContext.languages.map(stripSdkType) as LanguageKey[]; // Use pageContext languages if available, this is generated for MDX pages
+      languages = Array.from(new Set(pageContext.languages.map(stripSdkType))) as LanguageKey[]; // Use pageContext languages if available, this is generated for MDX pages
     } else if (domLanguages.length > 0) {
-      languages = domLanguages; // Use languages from the DOMif available, this is for Textile pages
+      languages = domLanguages; // Use languages from the DOM if available, this is for Textile pages
     }
 
     const language = determineActiveLanguage(languages, location.search, activePageData?.product ?? null);
