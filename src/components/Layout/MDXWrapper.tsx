@@ -24,15 +24,16 @@ import { useCopyableHeaders } from './mdx/headers';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import Aside from '../blocks/dividers/Aside';
 import { HtmlComponentPropsData } from '../html-component-props';
-import { languageData } from 'src/data/languages';
+import { languageData, languageInfo } from 'src/data/languages';
 import { ActivePage } from './utils/nav';
 import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from './mdx/tables';
 import { Tiles } from './mdx/tiles';
-import { Head } from '../Head';
+import { Head, StructuredData } from '../Head';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { ProductName } from 'src/templates/template-data';
 import { getMetaTitle } from '../common/meta-title';
 import UserContext from 'src/contexts/user-context';
+import { LanguageKey } from 'src/data/languages/types';
 
 type MDXWrapperProps = PageProps<unknown, PageContextType>;
 
@@ -184,6 +185,29 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const { canonicalUrl } = useSiteMetadata();
   const canonical = canonicalUrl(location.pathname);
 
+  // Generate JSON-LD structured data for SEO
+  const structuredData: StructuredData | undefined = useMemo(() => {
+    if (!activePage.languages || activePage.languages.length <= 1) {
+      return undefined;
+    }
+
+    // Create SoftwareSourceCode instances for each programming language
+    const codeParts = activePage.languages.map((lang) => ({
+      '@type': 'SoftwareSourceCode',
+      programmingLanguage: languageInfo[lang]?.label ?? lang,
+      url: canonicalUrl(`${location.pathname}?lang=${lang}`),
+    }));
+
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'TechArticle',
+      headline: title,
+      description: description,
+      url: canonical,
+      hasPart: codeParts,
+    };
+  }, [activePage.languages, title, description, canonical, location.pathname, canonicalUrl]);
+
   // Use the copyable headers hook
   useCopyableHeaders();
 
@@ -206,7 +230,14 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
 
   return (
     <SDKContext.Provider value={{ sdk, setSdk }}>
-      <Head title={title} metaTitle={metaTitle} canonical={canonical} description={description} keywords={keywords} />
+      <Head
+        title={title}
+        metaTitle={metaTitle}
+        canonical={canonical}
+        description={description}
+        keywords={keywords}
+        structuredData={structuredData}
+      />
       <Article>
         <MarkdownProvider
           components={{
