@@ -19,6 +19,17 @@ export type Frontmatter = {
   meta_description: string;
   meta_keywords?: string;
   redirect_from?: string[];
+  jsonld_type?: string;
+  jsonld_date_published?: string;
+  jsonld_date_modified?: string;
+  jsonld_author_name?: string;
+  jsonld_author_type?: string;
+  jsonld_image?: string;
+  jsonld_image_description?: string;
+  jsonld_sdks?: string[];
+  jsonld_faqs?: Array<{ question: string; answer: string }>;
+  jsonld_howto_steps?: Array<{ name: string; text: string }>;
+  [key: string]: unknown;
 };
 
 export type PageContextType = {
