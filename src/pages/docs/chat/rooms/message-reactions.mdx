@@ -81,7 +81,7 @@ const MyComponent = () => {
 
 ## Sending a message reaction <a id="sending-reactions"/>
 
-<If lang="javascript,swift,kotlin">
+<If lang="javascript,swift,kotlin,jetpack">
 To send a message reaction use `room.messages.reactions.send(message, params)`. This method takes the following parameters:
 * `message` - The message to send the reaction to. Can be either a Message object or a string containing the message serial.
 * `params` - Set the `name`, and optionally override the `type` or set a `count`.
@@ -145,8 +145,8 @@ await room.messages.reactions.send(forMessageWithSerial: message.serial, params:
 room.messages.reactions.send(message, name = "👍")
 
 // The reaction can be anything, not just UTF-8 emojis:
-room.messages.reactions.send(message, name = ":like:"))
-room.messages.reactions.send(message, name = "+1"))
+room.messages.reactions.send(message, name = ":like:")
+room.messages.reactions.send(message, name = "+1")
 
 // Send a :love: reaction using the Unique type
 room.messages.reactions.send(message,
@@ -160,6 +160,42 @@ room.messages.reactions.send(message,
   type = MessageReactionType.Multiple,
   count = 100,
 )
+```
+
+```jetpack
+import androidx.compose.material.Button
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
+@Composable
+fun SendMessageReactionComponent(room: Room, message: Message) {
+  val coroutineScope = rememberCoroutineScope()
+
+  Button(onClick = {
+    coroutineScope.launch {
+      // Send a 👍 reaction using the default type
+      room.messages.reactions.send(message, name = "👍")
+    }
+  }) {
+    Text("Send 👍")
+  }
+
+  Button(onClick = {
+    coroutineScope.launch {
+      // Send a ❤️ reaction with count 100 using the Multiple type
+      room.messages.reactions.send(
+        message,
+        name = "❤️",
+        type = MessageReactionType.Multiple,
+        count = 100,
+      )
+    }
+  }) {
+    Text("Send ❤️ x100")
+  }
+}
 ```
 
 ```react
@@ -210,7 +246,7 @@ The `annotation-publish` capability is required for sending reactions.
 
 ## Removing a message reaction <a id="removing-reactions"/>
 
-<If lang="javascript,swift,kotlin">
+<If lang="javascript,swift,kotlin,jetpack">
 To remove a message reaction use `room.messages.reactions.delete(message, params)`. This method takes the following parameters:
 * `message` - The message to remove the reaction from. This can be a Message object, or just the string serial.
 * `params` - Set the `name`, and optionally override the `type` or set a `count`.
@@ -276,6 +312,42 @@ const MyComponent = () => {
     </div>
   );
 };
+```
+
+```jetpack
+import androidx.compose.material.Button
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+
+@Composable
+fun RemoveMessageReactionComponent(room: Room, message: Message) {
+  val coroutineScope = rememberCoroutineScope()
+
+  Button(onClick = {
+    coroutineScope.launch {
+      // Remove a 👍 reaction using the default type
+      room.messages.reactions.delete(message, name = "👍")
+    }
+  }) {
+    Text("Remove 👍")
+  }
+
+  Button(onClick = {
+    coroutineScope.launch {
+      // Remove a ❤️ reaction with count 50 using the Multiple type
+      room.messages.reactions.delete(
+        message,
+        name = "❤️",
+        type = MessageReactionType.Multiple,
+        count = 50,
+      )
+    }
+  }) {
+    Text("Remove ❤️ x50")
+  }
+}
 ```
 </Code>
 
@@ -354,7 +426,7 @@ Always call `Message.with(event)` when applying message events and reaction even
 
 ## Subscribing to message reactions <a id="subscribe"/>
 
-<If lang="javascript,swift,kotlin">
+<If lang="javascript,swift,kotlin,jetpack">
 Ably generates a summary (aggregate) of the reactions for each message and for each reaction type. For displaying accurate counts for message reactions, subscribe to changes in the message summary.
 </If>
 
@@ -378,6 +450,20 @@ room.messages.reactions.subscribe { event in
 ```kotlin
 room.messages.reactions.subscribe { event ->
     println("received reactions summary event: $event")
+}
+```
+
+```jetpack
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+
+@Composable
+fun SubscribeToReactionsComponent(room: Room) {
+  LaunchedEffect(room) {
+    room.messages.reactions.asFlow().collect { event ->
+      println("received reactions summary event: $event")
+    }
+  }
 }
 ```
 
@@ -452,6 +538,36 @@ room.messages.reactions.subscribe { event ->
         messages[idx] = messages[idx].with(event)
     }
 }
+```
+
+```jetpack
+import androidx.compose.runtime.*
+
+@Composable
+fun ReactionsWithMessagesComponent(room: Room) {
+  var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
+
+  DisposableEffect(room) {
+    // init messages
+    messages = room.messages.history(limit = 50).items
+
+    // subscribe to message reactions summary events
+    val (unsubscribe) = room.messages.reactions.subscribe { event ->
+      // find the relevant message (in practice: use binary search or a map for lookups)
+      val idx = messages.indexOfLast { msg -> msg.serial == event.messageSerial }
+      if (idx != -1) {
+        // update message
+        messages = messages.toMutableList().apply {
+          this[idx] = this[idx].with(event)
+        }
+      }
+    }
+    onDispose {
+      unsubscribe()
+    }
+  }
+}
+// Note: `room.collectAsPagingMessagesState()` handles everything automatically
 ```
 
 ```react
@@ -568,7 +684,7 @@ const MyComponent = () => {
 ```
 </Code>
 
-<If lang="javascript,swift,kotlin">
+<If lang="javascript,swift,kotlin,jetpack">
 Then you can receive raw reactions using the `room.messages.reactions.subscribeRaw()` method:
 </If>
 
@@ -604,6 +720,28 @@ room.messages.reactions.subscribeRaw { event ->
     } else if (event.type == MessageReactionEventType.Delete) {
         println("reaction removed: ${event.reaction}")
     }
+}
+```
+
+```jetpack
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+
+@Composable
+fun SubscribeToRawReactionsComponent(room: Room) {
+  DisposableEffect(room) {
+    val (unsubscribe) = room.messages.reactions.subscribeRaw { event ->
+      if (event.type == MessageReactionEventType.Create) {
+        println("new reaction: ${event.reaction}")
+      } else if (event.type == MessageReactionEventType.Delete) {
+        println("reaction removed: ${event.reaction}")
+      }
+    }
+
+    onDispose {
+      unsubscribe()
+    }
+  }
 }
 ```
 
