@@ -40,7 +40,10 @@ http {
     'content_type="$sent_http_content_type" accept="$http_accept"';
   log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
   access_log <%= ENV['NGINX_ACCESS_LOG_PATH'] || 'logs/nginx/access.log' %> logfmtably;
-  error_log <%= ENV['NGINX_ERROR_LOG_PATH'] || 'logs/nginx/error.log' %> notice;
+  error_log <%= ENV['NGINX_ERROR_LOG_PATH'] || 'logs/nginx/error.log' %> <%= ENV['DEBUG_LOGGING'] == 'true' ? 'debug' : 'notice' %>;
+  <% if ENV['DEBUG_LOGGING'] == 'true' %>
+  rewrite_log on;
+  <% end %>
 
   include mime.types;
   default_type application/octet-stream;
@@ -60,6 +63,12 @@ http {
     <% if File.exist?(File.dirname(__FILE__) + '/nginx-redirects.conf') %>
     include nginx-redirects.conf;
     <% end %>
+  }
+
+  # This is used map ?lang=<language> to /<language>/ for serving up files
+  map $arg_lang $lang_path {
+    default "";
+    ~^(.+)$ "/$1";
   }
 
   ##
@@ -130,7 +139,7 @@ http {
   server {
     listen <%= ENV["PORT"] %>;
     charset UTF-8;
-    port_in_redirect off;
+    port_in_redirect <%= ENV['PORT_IN_REDIRECT'] ? 'on' : 'off' %>;
     keepalive_timeout 5;
 
     root <%= ENV['NGINX_ROOT'] || '/app/public' %>;
@@ -231,10 +240,11 @@ http {
       <% if content_request_protected %>
       # Serve the file if it exists, otherwise try to authenticate
       # (.html requests won't match here, they'll go to the @html_auth location)
-      try_files $request_uri @html_auth;
+      try_files $uri @html_auth;
       <% else %>
       # Serve the file if it exists, try index.html for paths without a trailing slash, otherwise 404
-      try_files $request_uri $request_uri/index.html $request_uri/ =404;
+      # try_files $uri $uri/index.html =404;
+      try_files $uri$lang_path/index.html $uri/index.html =404;
       <% end %>
     }
 
@@ -253,7 +263,7 @@ http {
       }
 
       # If the request is authenticated, break out of the location block and serve the file
-      try_files $request_uri.html $request_uri/index.html $request_uri/ =404;
+      try_files $uri.html $uri/index.html =404;
     }
 
     # Don't serve files with the .html extension here, send them to the canonical location
