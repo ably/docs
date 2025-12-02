@@ -289,9 +289,7 @@ const loadInkeepSearch = (config: object) => {
 
   window.Inkeep.SearchBar(`#${searchBar.id}`, {
     ...config,
-    modalSettings: {
-      defaultView: 'SEARCH',
-    },
+    defaultView: 'chat',
     shouldShowAskAICard: false,
   }).remount();
 };
