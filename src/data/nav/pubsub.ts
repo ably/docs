@@ -311,6 +311,20 @@ export default {
         },
       ],
     },
+    {
+      name: 'FAQs',
+      pages: [
+        {
+          name: 'Pub/Sub',
+          link: '/docs/faq',
+          index: true,
+        },
+        {
+          name: 'Push notifications',
+          link: '/docs/faq/push-faqs',
+        },
+      ],
+    },
   ],
   api: [
     {
