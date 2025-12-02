@@ -28,8 +28,6 @@ const Breadcrumbs: React.FC = () => {
     return null;
   })();
 
-  console.log(lastActiveNodeIndex, activePage.tree);
-
   return (
     <nav aria-label="breadcrumb" className="flex mt-8 items-center gap-1">
       <Link to="/docs" className={cn(linkStyles, 'hidden sm:block')}>
