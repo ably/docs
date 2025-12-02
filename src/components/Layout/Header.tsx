@@ -6,6 +6,7 @@ import { throttle } from 'es-toolkit/compat';
 import Icon from '@ably/ui/core/Icon';
 import TabMenu from '@ably/ui/core/TabMenu';
 import Logo from '@ably/ui/core/images/logo/ably-logo.svg';
+import { track } from '@ably/ui/core/insights';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from '@ably/ui/core/utils/heights';
 import { IconName } from '@ably/ui/core/Icon/types';
 import LeftSidebar from './LeftSidebar';
@@ -152,6 +153,8 @@ const Header: React.FC = () => {
               const searchContainer = document.querySelector('#inkeep-search > div');
               const searchButton = searchContainer?.shadowRoot?.querySelector('button');
 
+              track('docs_ask_ai_button_clicked');
+
               if (searchButton) {
                 searchButton.click();
               }
@@ -164,7 +167,7 @@ const Header: React.FC = () => {
             <Tooltip.Root>
               <DropdownMenu.Trigger asChild>
                 <Tooltip.Trigger asChild>
-                  <button className={iconButtonClassName}>
+                  <button className={iconButtonClassName} onClick={() => track('docs_help_resources_button_clicked')}>
                     <Icon name="icon-gui-question-mark-circle-outline" size="20px" />
                   </button>
                 </Tooltip.Trigger>
@@ -204,7 +207,7 @@ const Header: React.FC = () => {
           {CLI_ENABLED && (
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
-                <button className={iconButtonClassName}>
+                <button className={iconButtonClassName} onClick={() => track('docs_cli_button_clicked')}>
                   <Icon name="icon-gui-command-line-outline" size="20px" />
                 </button>
               </Tooltip.Trigger>
@@ -233,7 +236,7 @@ const Header: React.FC = () => {
               )}
               <Tooltip.Root>
                 <Tooltip.Trigger asChild>
-                  <button className={iconButtonClassName}>
+                  <button className={iconButtonClassName} onClick={() => track('docs_logout_button_clicked')}>
                     <Icon name="icon-gui-arrow-right-start-on-rectangle-outline" size="20px" />
                   </button>
                 </Tooltip.Trigger>
