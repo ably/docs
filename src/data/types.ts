@@ -3,7 +3,16 @@ import { LanguageData } from './languages/types';
 import { NavProduct } from './nav/types';
 
 const pageKeys = ['homepage'] as const;
-const productKeys = ['platform', 'pubsub', 'chat', 'spaces', 'liveObjects', 'liveSync', 'assetTracking'] as const;
+const productKeys = [
+  'platform',
+  'pubsub',
+  'chat',
+  'aiTransport',
+  'spaces',
+  'liveObjects',
+  'liveSync',
+  'assetTracking',
+] as const;
 
 export type ProductKey = (typeof productKeys)[number];
 type PageKey = (typeof pageKeys)[number];
