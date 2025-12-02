@@ -271,7 +271,7 @@ const RightSidebar = () => {
                 <div className="-ml-[7px]">{headers.map((header, index) => steppedHeader(header, index))}</div>
               ) : (
                 <div
-                  className="h-7 w-0.5 bg-orange-600 rounded-full transition-[transform,height,colors] z-0"
+                  className="h-7 w-px bg-orange-600 rounded-full transition-[transform,height,colors] z-0 ml-[0.5px]"
                   style={{
                     transform: `translateY(${indicatorPosition.yOffset}px)`,
                     height: `${indicatorPosition.height}px`,
