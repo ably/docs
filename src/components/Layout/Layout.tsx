@@ -44,12 +44,16 @@ const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
       <Header />
       <div className="flex pt-16 px-12 md:px-0 md:gap-12 lg:gap-16 xl:gap-20 justify-center">
         {leftSidebar ? <LeftSidebar /> : <div />}
-        <Container as="main" className={cn('flex-1 px-4 -mx-4', { 'overflow-x-auto': !isRedocPage })}>
-          {leftSidebar ? <Breadcrumbs /> : <div />}
-          {children}
-          <Footer pageContext={pageContext} />
-        </Container>
-        {rightSidebar ? <RightSidebar /> : <div />}
+        <div className="flex-1 flex justify-center min-w-0">
+          <div className="max-w-screen-lg w-full flex md:gap-12 lg:gap-16 xl:gap-20">
+            <Container as="main" className={cn('flex-1 px-4 -mx-4', { 'overflow-x-auto': !isRedocPage })}>
+              {leftSidebar ? <Breadcrumbs /> : <div />}
+              {children}
+              <Footer pageContext={pageContext} />
+            </Container>
+            {rightSidebar ? <RightSidebar /> : <div />}
+          </div>
+        </div>
       </div>
       <HiddenLanguageLinks />
     </GlobalLoading>

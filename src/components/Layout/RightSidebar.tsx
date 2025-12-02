@@ -252,7 +252,7 @@ const RightSidebar = () => {
 
   return (
     <div
-      className="absolute md:sticky w-60 my-10 top-[104px] right-6"
+      className="absolute md:sticky w-60 my-10 top-[104px]"
       style={{
         height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, INKEEP_ASK_BUTTON_HEIGHT),
       }}
