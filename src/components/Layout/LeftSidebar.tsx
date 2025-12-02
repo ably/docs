@@ -13,7 +13,7 @@ type LeftSidebarProps = {
 };
 
 const accordionContentClassName =
-  'overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animation-accordion-up';
+  'overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up';
 
 const accordionTriggerClassName = cn(
   // Layout & display
