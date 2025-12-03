@@ -18,7 +18,7 @@ http {
   gzip on;
   gzip_comp_level 6;
   gzip_min_length 512;
-  gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss font/woff font/woff2 image/svg+xml;
+  gzip_types text/plain text/markdown text/css application/json application/javascript text/xml application/xml application/xml+rss font/woff font/woff2 image/svg+xml;
   gzip_vary on;
   gzip_proxied any; # Heroku router sends Via header
 
@@ -61,6 +61,36 @@ http {
     include nginx-redirects.conf;
     <% end %>
   }
+
+  ##
+  # CONTENT NEGOTIATION FOR MARKDOWN
+  # Maps Accept header to file extension preference
+
+  map $http_accept $docs_file_extension {
+    default                          ".html";
+
+    # Exact markdown MIME types
+    "text/markdown"                  ".md";
+    "application/markdown"           ".md";
+    "text/plain"                     ".md";
+
+    # Handle multiple Accept values - prefer markdown if explicitly requested
+    "~*text/markdown"                ".md";
+    "~*application/markdown"         ".md";
+    "~*^text/plain"                  ".md";
+
+    # Explicit HTML request gets HTML (handles browser defaults)
+    "~*^text/html"                   ".html";
+    "*/*"                            ".html";
+  }
+
+  # Translate extension to file path
+  map $docs_file_extension $docs_try_file {
+    ".html"  "$request_uri/index.html";
+    ".md"    "$request_uri.md";
+  }
+
+  # / CONTENT NEGOTIATION FOR MARKDOWN
 
   ##
   # CORS CONFIGURATION
@@ -231,10 +261,10 @@ http {
       <% if content_request_protected %>
       # Serve the file if it exists, otherwise try to authenticate
       # (.html requests won't match here, they'll go to the @html_auth location)
-      try_files $request_uri @html_auth;
+      try_files $request_uri $docs_try_file @html_auth;
       <% else %>
-      # Serve the file if it exists, try index.html for paths without a trailing slash, otherwise 404
-      try_files $request_uri $request_uri/index.html $request_uri/ =404;
+      # Serve the file if it exists, try content-negotiated file, then index.html, otherwise 404
+      try_files $request_uri $docs_try_file $request_uri/index.html $request_uri/ =404;
       <% end %>
     }
 
@@ -252,8 +282,8 @@ http {
         <% end %>
       }
 
-      # If the request is authenticated, break out of the location block and serve the file
-      try_files $request_uri.html $request_uri/index.html $request_uri/ =404;
+      # If the request is authenticated, try content-negotiated file, then fallback to HTML
+      try_files $request_uri.html $docs_try_file $request_uri/index.html $request_uri/ =404;
     }
 
     # Don't serve files with the .html extension here, send them to the canonical location
