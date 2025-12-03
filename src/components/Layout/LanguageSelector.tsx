@@ -70,9 +70,13 @@ export const LanguageSelector = () => {
     <div className="md:relative w-full text-right md:text-left -mt-1 md:mt-0 -mr-1 md:mr-0">
       <Select.Root value={value} onValueChange={handleValueChange}>
         <Select.Trigger
-          className="border-none inline-flex cursor-pointer group/lang-dropdown focus-base rounded px-0"
+          className={cn(
+            'border-none inline-flex group/lang-dropdown focus-base rounded px-0',
+            options.length > 1 ? 'cursor-pointer' : 'cursor-auto',
+          )}
           style={{ height: LANGUAGE_SELECTOR_HEIGHT }}
           aria-label="Select code language"
+          disabled={options.length === 1}
         >
           <div className="ui-text-label4 text-left leading-none w-full text-neutral-1100 dark:text-neutral-200 hover:text-neutral-1200 dark:hover:text-neutral-300 flex gap-2 items-center">
             <Icon size="20px" name={`icon-tech-${selectedLang?.alias ?? selectedOption.label}` as IconName} />
@@ -81,13 +85,15 @@ export const LanguageSelector = () => {
               v{selectedOption.version}
             </Badge>
           </div>
-          <Select.Icon className="flex items-center pl-2 text-red-orange cursor-pointer">
-            <Icon
-              name="icon-gui-chevron-down-micro"
-              size="20px"
-              additionalCSS="text-neutral-700 group-hover/lang-dropdown:text-neutral-1300 dark:text-neutral-600 dark:group-hover/lang-dropdown:text-neutral-000 transition-colors"
-            />
-          </Select.Icon>
+          {options.length > 1 && (
+            <Select.Icon className="flex items-center pl-2 text-red-orange cursor-pointer">
+              <Icon
+                name="icon-gui-chevron-down-micro"
+                size="20px"
+                additionalCSS="text-neutral-700 group-hover/lang-dropdown:text-neutral-1300 dark:text-neutral-600 dark:group-hover/lang-dropdown:text-neutral-000 transition-colors"
+              />
+            </Select.Icon>
+          )}
         </Select.Trigger>
 
         <Select.Portal>
