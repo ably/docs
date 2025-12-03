@@ -170,63 +170,12 @@ export const inkeepOnLoad = (
           contentType?: string;
           tag?: string;
         };
-    theme: {
-      styles: Array<{
-        key: string;
-        type: string;
-        value: string;
-      }>;
-    };
     onEvent?: (event: ConversationEvent) => void;
   }
 
   const baseSettings: BaseSettings = {
     apiKey,
     transformSource,
-    theme: {
-      styles: [
-        {
-          key: 'custom-style',
-          type: 'style',
-          value: `
-            .ikp-chat-button__container {
-              z-index: 10;
-            }
-
-            .ikp-ai-chat-message-toolbar {
-              flex-wrap: wrap;
-              justify-content: flex-end;
-            }
-
-            .ikp-ai-chat-message-tool-actions {
-              width: 100%;
-            }
-
-            .ikp-ai-chat-message-tool-action {
-              background: #03020d;
-              color: white;
-              height: 36px;
-              font-size: 15px;
-              border: none;
-              margin: 0px auto;
-              margin-bottom: 8px;
-              padding: 12px 24px;
-              height: auto;
-              gap: 12px;
-            }
-
-            .ikp-ai-chat-message-tool-action > .ikp-icon {
-              font-size: 18px;
-            }
-
-            .ikp-ai-chat-message-tool-action:hover:not([disabled]) {
-              background: #2c3344;
-              color: white;
-            }
-          `,
-        },
-      ],
-    },
   };
 
   const sendConversationData = (event: ConversationEvent, conversationsUrl: string): void => {
@@ -269,12 +218,6 @@ export const inkeepOnLoad = (
     searchSettings,
     shouldShowAskAICard: false,
   };
-
-  if (inkeepChatEnabled) {
-    window.inkeepWidget = window.Inkeep.ChatButton({
-      ...config,
-    });
-  }
 
   if (inkeepSearchEnabled) {
     loadInkeepSearch(config);
