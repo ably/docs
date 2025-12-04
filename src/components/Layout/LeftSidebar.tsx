@@ -58,11 +58,15 @@ const ChildAccordion = ({
     }
   }, []);
 
+  const preExpandedItems = content
+    .map((page, index) => 'expand' in page && page.expand && `item-${tree.join('-')}-${index}`)
+    .filter((item) => typeof item === 'string');
+
   return (
     <Accordion.Root
       type="multiple"
       className={cn(layer > 0 && 'pl-3')}
-      defaultValue={[`item-${previousTree.join('-')}`]}
+      defaultValue={[`item-${previousTree.join('-')}`, ...preExpandedItems]}
     >
       {content.map((page, index) => {
         const hasDeeperLayer = 'pages' in page && page.pages;
