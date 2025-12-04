@@ -21,6 +21,7 @@ export type Frontmatter = {
   meta_keywords?: string;
   redirect_from?: string[];
   last_updated?: string;
+  intro?: string;
 };
 
 export type PageContextType = {

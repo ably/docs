@@ -175,7 +175,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
   const userContext = useContext(UserContext);
 
   const title = getFrontmatter(frontmatter, 'title') as string;
-  const description = getFrontmatter(frontmatter, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
+  const description = getFrontmatter(frontmatter, 'intro', META_DESCRIPTION_FALLBACK) as string;
   const keywords = getFrontmatter(frontmatter, 'meta_keywords') as string;
   const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
 
