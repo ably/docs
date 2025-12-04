@@ -41,7 +41,14 @@ const Breadcrumbs: React.FC = () => {
       />
       {activePage.tree.map((node, index) => (
         <React.Fragment key={hierarchicalKey(node.page.link, index, activePage.tree)}>
-          {index > 0 ? <Icon name="icon-gui-chevron-right-micro" size="16px" additionalCSS="hidden sm:flex" /> : null}
+          {index > 0 ? (
+            <Icon
+              name="icon-gui-chevron-right-micro"
+              size="16px"
+              color="text-neutral-900 dark:text-neutral-400"
+              additionalCSS="hidden sm:flex"
+            />
+          ) : null}
           <Link
             to={node.page.link}
             className={cn(linkStyles, {
