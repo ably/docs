@@ -52,7 +52,6 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
     # Extend site metadata with external script config
     type ExternalScriptData implements Node {
       hubspotTrackingId: String
-      addsearchSiteKey: String
       gtmContainerId: String
       headwayAccountId: String
       announcementEnabled: String
