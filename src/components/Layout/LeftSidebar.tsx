@@ -182,7 +182,7 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
                 />
               </Accordion.Trigger>
               <Accordion.Content className={cn(accordionContentClassName, 'px-2 py-3')}>
-                <ChildAccordion content={productObj.nav.content} tree={[index]} />
+                <ChildAccordion content={[...productObj.nav.content, ...productObj.nav.api]} tree={[index]} />
               </Accordion.Content>
             </Accordion.Item>
           );
