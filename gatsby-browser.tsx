@@ -9,6 +9,8 @@ import {
   reducerBlogPosts,
   reducerSessionData,
 } from '@ably/ui/core/scripts';
+import { PostHogProvider } from 'posthog-js/react';
+import posthog from 'posthog-js';
 
 import { reducerApiKeyData } from './src/redux/api-key/api-key-reducer';
 import UserContextWrapper from './src/contexts/user-context/wrap-with-provider';
@@ -66,7 +68,7 @@ const InsightsWrapper = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return children;
+  return <PostHogProvider client={posthog}>{children}</PostHogProvider>;
 };
 
 export const wrapRootElement = ({ element }) => {

@@ -27,6 +27,7 @@ export const useSiteMetadata = () => {
             mixpanelAutoCapture
             posthogApiKey
             posthogHost
+            posthogFeedbackSurveyName
             conversationsUrl
           }
         }
