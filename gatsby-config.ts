@@ -22,7 +22,6 @@ export const siteMetadata = {
   title: 'Documentation | Ably Realtime',
   externalScriptsData: {
     hubspotTrackingId: process.env.HUBSPOT_TRACKING_ID,
-    addsearchSiteKey: process.env.ADDSEARCH_SITE_KEY,
     gtmContainerId: process.env.GTM_CONTAINER_ID,
     headwayAccountId: process.env.HEADWAY_ACCOUNT_ID,
     announcementEnabled: process.env.ANNOUNCEMENT_ENABLED,
