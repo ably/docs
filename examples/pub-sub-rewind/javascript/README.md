@@ -28,7 +28,7 @@ Find out more about [rewind](https://ably.com/docs/channels/options/rewind).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

@@ -24,7 +24,7 @@ This example uses the `App` component from the Ably Chat UI React Kit, and is wr
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

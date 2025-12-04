@@ -32,7 +32,7 @@ Find out more about [LiveMap](/docs/liveobjects/map).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

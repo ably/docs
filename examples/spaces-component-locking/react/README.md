@@ -33,7 +33,7 @@ Find out more about [component locking](/docs/spaces/locking).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

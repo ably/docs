@@ -25,7 +25,7 @@ Find out more about [connection states](/docs/connect/states).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

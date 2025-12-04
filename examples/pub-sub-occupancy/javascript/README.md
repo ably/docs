@@ -26,7 +26,7 @@ Find out more about [occupancy](/docs/presence-occupancy/occupancy).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

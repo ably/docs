@@ -50,7 +50,7 @@ This example demonstrates:
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:
