@@ -30,7 +30,7 @@ Find out more about [rooms](/docs/chat/rooms?lang=react) and [messages](/docs/ch
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

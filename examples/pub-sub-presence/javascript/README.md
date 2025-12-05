@@ -30,7 +30,7 @@ Find out more about [presence](/docs/presence-occupancy/presence).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

@@ -29,7 +29,7 @@ Find out more about [rooms](/docs/chat/rooms?lang=javascript) and [messages](/do
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

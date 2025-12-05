@@ -29,7 +29,7 @@ Find out more about [channels](/docs/channels) and [messages](/docs/channels/mes
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:
