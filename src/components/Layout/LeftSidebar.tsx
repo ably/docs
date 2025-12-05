@@ -8,6 +8,7 @@ import { productData } from 'src/data';
 import { NavProductContent, NavProductPage } from 'src/data/nav/types';
 import Link from '../Link';
 import { useLayoutContext } from 'src/contexts/layout-context';
+import { interactiveButtonClassName } from './utils/styles';
 
 type LeftSidebarProps = {
   inHeader?: boolean;
@@ -17,16 +18,11 @@ const accordionContentClassName =
   'overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up';
 
 const accordionTriggerClassName = cn(
+  interactiveButtonClassName,
   // Layout & display
-  'flex items-center justify-between gap-2 p-0 pr-2 w-full text-left ui-text-label3',
-  // Background color states
-  'bg-neutral-000 dark:bg-neutral-1300 hover:bg-neutral-100 dark:hover:bg-neutral-1200 active:bg-neutral-200 dark:active:bg-neutral-1100',
-  // Text color states
-  'text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000',
+  'flex items-center justify-between gap-2 p-0 pr-2 w-full text-left ui-text-label3 rounded-none',
   // Icon animation
   '[&[data-state=open]>svg]:rotate-90',
-  // Misc
-  'focus-base transition-colors',
 );
 
 const accordionLinkClassName = 'pl-3 py-[6px]';
@@ -154,7 +150,10 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
           'bg-neutral-000 dark:bg-neutral-1300 overflow-y-auto',
           inHeader
             ? 'w-full h-[calc(100dvh-64px-128px)]'
-            : 'w-[280px] h-[calc(100dvh-64px-44px)] border-r border-neutral-300 dark:border-neutral-1000',
+            : [
+                'w-[280px] border-r border-neutral-300 dark:border-neutral-1000',
+                externalScriptsData.inkeepSearchEnabled ? 'h-[calc(100dvh-64px-44px)]' : 'h-[calc(100dvh-64px)]',
+              ],
         )}
         onValueChange={(value) => {
           setOpenProduct(value);
