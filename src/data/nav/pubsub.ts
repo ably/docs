@@ -316,6 +316,15 @@ export default {
         },
       ],
     },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'Push notifications',
+          link: '/docs/guides/pubsub/push-notifications',
+        },
+      ],
+    },
   ],
   api: [
     {
