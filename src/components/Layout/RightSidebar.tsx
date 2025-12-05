@@ -252,9 +252,9 @@ const RightSidebar = () => {
 
   return (
     <div
-      className="absolute md:sticky w-60 my-10 top-[104px] right-6"
+      className="absolute md:sticky w-60 top-24 right-6"
       style={{
-        height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, INKEEP_ASK_BUTTON_HEIGHT),
+        height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, 32),
       }}
     >
       <div className="hidden md:flex flex-col h-full overflow-y-auto">
@@ -271,7 +271,7 @@ const RightSidebar = () => {
                 <div className="-ml-[7px]">{headers.map((header, index) => steppedHeader(header, index))}</div>
               ) : (
                 <div
-                  className="h-7 w-0.5 bg-orange-600 rounded-full transition-[transform,height,colors] z-0"
+                  className="h-7 w-px bg-orange-600 rounded-full transition-[transform,height,colors] z-0 ml-[0.5px]"
                   style={{
                     transform: `translateY(${indicatorPosition.yOffset}px)`,
                     height: `${indicatorPosition.height}px`,

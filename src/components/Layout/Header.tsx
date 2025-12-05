@@ -1,11 +1,13 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { useLocation } from '@reach/router';
+import { graphql, useStaticQuery } from 'gatsby';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { throttle } from 'es-toolkit/compat';
 import Icon from '@ably/ui/core/Icon';
 import TabMenu from '@ably/ui/core/TabMenu';
 import Logo from '@ably/ui/core/images/logo/ably-logo.svg';
+import { track } from '@ably/ui/core/insights';
 import { componentMaxHeight, HEADER_BOTTOM_MARGIN, HEADER_HEIGHT } from '@ably/ui/core/utils/heights';
 import { IconName } from '@ably/ui/core/Icon/types';
 import LeftSidebar from './LeftSidebar';
@@ -22,14 +24,14 @@ const MAX_MOBILE_MENU_WIDTH = '560px';
 
 const desktopTabs = [
   <Link key="docs" to="/docs" className="p-4">
-    Docs
+    Documentation
   </Link>,
   <Link key="examples" to="/examples" className="p-4">
     Examples
   </Link>,
 ];
 
-const mobileTabs = ['Docs', 'Examples'];
+const mobileTabs = ['Documentation', 'Examples'];
 
 const helpResourcesItems = [
   {
@@ -54,6 +56,23 @@ const helpResourcesItems = [
 const Header: React.FC = () => {
   const location = useLocation();
   const userContext = useContext(UserContext);
+  const {
+    site: {
+      siteMetadata: { externalScriptsData },
+    },
+  } = useStaticQuery(graphql`
+    query {
+      site {
+        siteMetadata {
+          externalScriptsData {
+            inkeepSearchEnabled
+            inkeepChatEnabled
+          }
+        }
+      }
+    }
+  `);
+
   const sessionState = {
     ...userContext.sessionState,
     signedIn: userContext.sessionState.signedIn ?? false,
@@ -65,6 +84,7 @@ const Header: React.FC = () => {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const burgerButtonRef = useRef<HTMLDivElement>(null);
   const searchBarRef = useRef<HTMLDivElement>(null);
+  const chatBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -146,25 +166,29 @@ const Header: React.FC = () => {
       </div>
       <Tooltip.Provider delayDuration={0} disableHoverableContent>
         <div className="hidden md:flex gap-2 pt-3 md:py-0 px-4 md:px-0">
-          <button
-            className={secondaryButtonClassName}
-            onClick={() => {
-              const searchContainer = document.querySelector('#inkeep-search > div');
-              const searchButton = searchContainer?.shadowRoot?.querySelector('button');
+          {externalScriptsData.inkeepChatEnabled && (
+            <button
+              className={secondaryButtonClassName}
+              onClick={() => {
+                const chatContainer = document.querySelector('#inkeep-ai-chat > div');
+                const chatButton = chatContainer?.shadowRoot?.querySelector('button');
 
-              if (searchButton) {
-                searchButton.click();
-              }
-            }}
-          >
-            <Icon name="icon-gui-sparkles-outline" size="20px" />
-            <span>Ask AI</span>
-          </button>
+                track('docs_ask_ai_button_clicked');
+
+                if (chatButton) {
+                  chatButton.click();
+                }
+              }}
+            >
+              <Icon name="icon-gui-sparkles-outline" size="20px" />
+              <span>Ask AI</span>
+            </button>
+          )}
           <DropdownMenu.Root>
             <Tooltip.Root>
               <DropdownMenu.Trigger asChild>
                 <Tooltip.Trigger asChild>
-                  <button className={iconButtonClassName}>
+                  <button className={iconButtonClassName} onClick={() => track('docs_help_resources_button_clicked')}>
                     <Icon name="icon-gui-question-mark-circle-outline" size="20px" />
                   </button>
                 </Tooltip.Trigger>
@@ -204,7 +228,7 @@ const Header: React.FC = () => {
           {CLI_ENABLED && (
             <Tooltip.Root>
               <Tooltip.Trigger asChild>
-                <button className={iconButtonClassName}>
+                <button className={iconButtonClassName} onClick={() => track('docs_cli_button_clicked')}>
                   <Icon name="icon-gui-command-line-outline" size="20px" />
                 </button>
               </Tooltip.Trigger>
@@ -233,7 +257,7 @@ const Header: React.FC = () => {
               )}
               <Tooltip.Root>
                 <Tooltip.Trigger asChild>
-                  <button className={iconButtonClassName}>
+                  <button className={iconButtonClassName} onClick={() => track('docs_logout_button_clicked')}>
                     <Icon name="icon-gui-arrow-right-start-on-rectangle-outline" size="20px" />
                   </button>
                 </Tooltip.Trigger>
@@ -261,7 +285,12 @@ const Header: React.FC = () => {
       </div>
 
       <div className="hidden">
-        <InkeepSearchBar ref={searchBarRef} extraInputStyle={{ backgroundColor: 'white' }} />
+        {externalScriptsData.inkeepSearchEnabled && (
+          <InkeepSearchBar ref={searchBarRef} instanceType="search" extraInputStyle={{ backgroundColor: 'white' }} />
+        )}
+        {externalScriptsData.inkeepChatEnabled && (
+          <InkeepSearchBar ref={chatBarRef} instanceType="chat" extraInputStyle={{ backgroundColor: 'white' }} />
+        )}
       </div>
     </div>
   );

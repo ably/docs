@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useLocation } from '@reach/router';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import { LanguageSelector } from '../LanguageSelector';
@@ -8,14 +9,14 @@ import { track } from '@ably/ui/core/insights';
 import { productData } from 'src/data';
 import { languageInfo } from 'src/data/languages';
 import { useLayoutContext } from 'src/contexts/layout-context';
-import { tooltipContentClassName } from '../utils/styles';
+import { interactiveButtonClassName, tooltipContentClassName } from '../utils/styles';
 
 type PageHeaderProps = {
   title: string;
-  description: string;
+  intro: string;
 };
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
   const { activePage } = useLayoutContext();
   const { language, product, page } = activePage;
   const location = useLocation();
@@ -27,15 +28,15 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) =>
 
     return [
       { model: 'gpt', label: 'ChatGPT', icon: 'icon-tech-openai', link: gptPath },
-      { model: 'claude', label: 'Claude (must be logged in)', icon: 'icon-tech-claude-mono', link: claudePath },
+      { model: 'claude', label: 'Claude', icon: 'icon-tech-claude-mono', link: claudePath },
     ];
   }, [product, page.name, page.link, language]);
 
   return (
-    <div className="my-8">
+    <div className="my-8 border-b border-neutral-300 dark:border-neutral-1000 pb-8">
       <h1 className="ui-text-h1 mb-4">{title}</h1>
       <p className="text-neutral-800 dark:text-neutral-500 mb-8 font-serif italic tracking-tight text-lg leading-normal">
-        {description}
+        {intro}
       </p>
 
       <div className="flex items-center gap-5">
@@ -56,7 +57,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) =>
                     href={link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex text-neutral-900 dark:text-neutral-400 cursor-pointer p-1.5 focus-base rounded-lg"
+                    className={interactiveButtonClassName}
                     onClick={() => {
                       track('llm_link_clicked', {
                         model,

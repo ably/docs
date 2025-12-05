@@ -14,6 +14,20 @@ jest.mock('@reach/router', () => ({
   useLocation: jest.fn(),
 }));
 
+jest.mock('gatsby', () => ({
+  ...jest.requireActual('gatsby'),
+  useStaticQuery: jest.fn().mockReturnValue({
+    site: {
+      siteMetadata: {
+        externalScriptsData: {
+          inkeepSearchEnabled: true,
+        },
+      },
+    },
+  }),
+  graphql: jest.fn(),
+}));
+
 jest.mock('../Link', () => {
   const MockLink: React.FC<{ children: React.ReactNode; to: string }> = ({ children, to, ...props }) => (
     <a href={to} {...props}>
