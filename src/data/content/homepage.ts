@@ -38,10 +38,6 @@ export default {
         name: 'liveSync',
         link: '/docs/livesync',
       },
-      {
-        name: 'assetTracking',
-        link: '/docs/asset-tracking',
-      },
     ],
   },
   examples: {

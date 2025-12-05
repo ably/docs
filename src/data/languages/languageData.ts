@@ -41,9 +41,4 @@ export default {
   liveSync: {
     javascript: '0.4',
   },
-  assetTracking: {
-    javascript: '1.0',
-    swift: '1.0',
-    kotlin: '1.7',
-  },
 } satisfies Partial<Record<ProductKey, LanguageData>>;
