@@ -15,7 +15,6 @@ export const useSiteMetadata = () => {
           siteUrl
           externalScriptsData {
             hubspotTrackingId
-            addsearchSiteKey
             gtmContainerId
             headwayAccountId
             announcementEnabled

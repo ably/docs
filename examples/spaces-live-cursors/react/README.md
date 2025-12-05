@@ -31,7 +31,7 @@ Find out more about [live cursors](/docs/spaces/cursors).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

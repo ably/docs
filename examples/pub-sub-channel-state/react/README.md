@@ -27,7 +27,7 @@ Find out more about [channel states](/docs/channels/states).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

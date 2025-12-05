@@ -28,7 +28,7 @@ Find out more about [message history](/docs/chat/rooms/history?lang=react).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

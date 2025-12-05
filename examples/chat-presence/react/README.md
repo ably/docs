@@ -31,7 +31,7 @@ Find out more about [presence](/docs/chat/rooms/presence?lang=react).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

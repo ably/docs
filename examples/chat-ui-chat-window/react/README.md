@@ -25,7 +25,7 @@ This example uses the `ChatWindow` component from the Ably Chat UI React Kit, an
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:
