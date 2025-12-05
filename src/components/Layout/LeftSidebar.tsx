@@ -11,6 +11,7 @@ import { useLayoutContext } from 'src/contexts/layout-context';
 import { interactiveButtonClassName } from './utils/styles';
 
 type LeftSidebarProps = {
+  className?: string;
   inHeader?: boolean;
 };
 
@@ -113,7 +114,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
   );
 };
 
-const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
+const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
   const { activePage } = useLayoutContext();
   const [openProduct, setOpenProduct] = useState<string | null>(`item-${activePage.tree[0]?.index}`);
   const {
@@ -133,7 +134,7 @@ const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
   `);
 
   return (
-    <div className={cn('sticky top-16 h-full', inHeader ? 'w-full' : 'w-[280px] hidden md:block')}>
+    <div className={cn('sticky top-16 h-full', inHeader ? 'w-full' : 'w-[280px] hidden md:block', className)}>
       <div
         id={inHeader ? 'inkeep-search-mobile-mount' : 'inkeep-search-mount'}
         className={cn(
