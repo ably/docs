@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { graphql, useStaticQuery } from 'gatsby';
 import * as Accordion from '@radix-ui/react-accordion';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
@@ -119,13 +120,29 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
 const LeftSidebar = ({ inHeader = false }: LeftSidebarProps) => {
   const { activePage } = useLayoutContext();
   const [openProduct, setOpenProduct] = useState<string | null>(`item-${activePage.tree[0]?.index}`);
+  const {
+    site: {
+      siteMetadata: { externalScriptsData },
+    },
+  } = useStaticQuery(graphql`
+    query {
+      site {
+        siteMetadata {
+          externalScriptsData {
+            inkeepSearchEnabled
+          }
+        }
+      }
+    }
+  `);
 
   return (
     <div className={cn('sticky top-16 h-full', inHeader ? 'w-full' : 'w-[280px] hidden md:block')}>
       <div
         id={inHeader ? 'inkeep-search-mobile-mount' : 'inkeep-search-mount'}
         className={cn(
-          'p-1 bg-neutral-100 dark:bg-neutral-1200',
+          'bg-neutral-100 dark:bg-neutral-1200',
+          externalScriptsData.inkeepSearchEnabled && 'p-1',
           inHeader ? 'sticky top-0' : 'border-r border-neutral-300 dark:border-neutral-1000',
         )}
       ></div>
