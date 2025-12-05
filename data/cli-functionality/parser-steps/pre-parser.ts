@@ -1,7 +1,6 @@
 import { removeExternalClassFromLinks } from '../../transform/pre-parser/remove-external-class-from-links';
-import { replaceERB } from '../../transform/pre-parser/erbjs';
 import { addMinimizedIndent, addMinimizeForHeadings, stripComments } from '../../transform/pre-parser/semantic';
-import { removeNewlinesBeforeClosingTags, recursivelyProcessDivs } from '../../transform/pre-parser';
+import { removeNewlinesBeforeClosingTags } from '../../transform/pre-parser';
 import {
   addLanguageSupportForBlockQuotes,
   addLanguageSupportForGithubStyleCode,
@@ -16,10 +15,6 @@ export type Step = { fn: StringTransformation; description?: string };
 export const preParserSteps: Step[] = [
   {
     fn: removeExternalClassFromLinks,
-  },
-  {
-    fn: replaceERB,
-    description: `Replaces Ruby templating code`,
   },
   {
     fn: stripComments,
@@ -55,9 +50,5 @@ export const preParserSteps: Step[] = [
   },
   {
     fn: addLanguageSupportForHeadings,
-  },
-  {
-    fn: recursivelyProcessDivs,
-    description: `Divs across multiple lines pose an issue for textile-js.\nWe detect these divs and process the internal textile separately, marking it as 'notextile' in the process.`,
   },
 ];

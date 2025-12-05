@@ -1,4 +1,4 @@
-const { addHyphenListSupport } = require('../pre-parser/textile-js-workarounds/add-hyphen-list-support');
+// textile workarounds removed
 const { addDates } = require('./add-dates');
 const { addSpecAnchorLinks } = require('./spec-anchor-links');
 

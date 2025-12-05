@@ -2,7 +2,7 @@
 
 These are technical writing guidelines that should be used for Ably's developer documentation.
 
-This guide does not cover the details of marking up content source. See the [documentation formatting guide](https://github.com/ably/docs/blob/main/content/client-lib-development-guide/documentation-formatting-guide.textile) for the latest details on how to markup source content.
+This guide does not cover the details of marking up content source. See the [CONTRIBUTING.md](CONTRIBUTING.md) guide for details on content formatting.
 
 Some of the benefits of using this style guide are:
 
