@@ -37,16 +37,28 @@ interface FrontMatterAttributes {
  * Handles both single-line and multi-line statements
  */
 function removeImportExportStatements(content: string): string {
-  return content
-    // Remove import statements (single and multi-line)
+  let result = content;
+
+  // Remove import statements (single and multi-line)
+  result = result
     .replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')
-    .replace(/^import\s+['"][^'"]+['"];?\s*$/gm, '')
-    // Remove export statements (single and multi-line)
+    .replace(/^import\s+['"][^'"]+['"];?\s*$/gm, '');
+
+  // Remove export statements
+  // Handle: export { foo, bar }; (single and multi-line)
+  result = result
     .replace(/^export\s+\{[\s\S]*?\}\s*;?\s*$/gm, '')
-    .replace(/^export\s+\{[\s\S]*?\}\s+from\s+['"][^'"]+['"];?\s*$/gm, '')
-    .replace(/^export\s+(default|const|let|var|function|class)\s+.*$/gm, '')
-    // Clean up extra blank lines left behind
-    .replace(/\n\n\n+/g, '\n\n');
+    .replace(/^export\s+\{[\s\S]*?\}\s+from\s+['"][^'"]+['"];?\s*$/gm, '');
+
+  // Handle: export default Component; or export const foo = 'bar';
+  result = result.replace(/^export\s+(default|const|let|var)\s+.*$/gm, '');
+
+  // Handle: export function/class declarations (multi-line)
+  // Match from 'export function/class' until the closing brace
+  result = result.replace(/^export\s+(function|class)\s+\w+[\s\S]*?\n\}/gm, '');
+
+  // Clean up extra blank lines left behind
+  return result.replace(/\n\n\n+/g, '\n\n');
 }
 
 /**
@@ -196,28 +208,30 @@ function removeJsxComments(content: string): string {
 /**
  * Convert image paths to GitHub raw URLs
  * Handles relative (../), absolute (/images/), and direct (images/) paths
+ * Only converts paths with valid image extensions
  */
 function convertImagePathsToGitHub(content: string): string {
   const githubBaseUrl = 'https://raw.githubusercontent.com/ably/docs/main/src';
+  const imageExtensions = '(?:png|jpg|jpeg|gif|svg|webp|bmp|ico)';
 
   return content
-    // Handle relative paths: ../../../images/...
+    // Handle relative paths: ../../../images/...{ext}
     .replace(
-      /!\[([^\]]*)\]\(((?:\.\.\/)+)(images\/[^)]+)\)/g,
+      new RegExp(`!\\[([^\\]]*)\\]\\(((?:\\.\\.\\/)+)(images\\/[^)]+\\.${imageExtensions})\\)`, 'gi'),
       (match, altText, relativePath, imagePath) => {
         return `![${altText}](${githubBaseUrl}/${imagePath})`;
       }
     )
-    // Handle absolute paths: /images/...
+    // Handle absolute paths: /images/...{ext}
     .replace(
-      /!\[([^\]]*)\]\(\/(images\/[^)]+)\)/g,
+      new RegExp(`!\\[([^\\]]*)\\]\\(\\/(images\\/[^)]+\\.${imageExtensions})\\)`, 'gi'),
       (match, altText, imagePath) => {
         return `![${altText}](${githubBaseUrl}/${imagePath})`;
       }
     )
-    // Handle direct paths: images/... (no prefix)
+    // Handle direct paths: images/...{ext} (no prefix)
     .replace(
-      /!\[([^\]]*)\]\((images\/[^)]+)\)/g,
+      new RegExp(`!\\[([^\\]]*)\\]\\((images\\/[^)]+\\.${imageExtensions})\\)`, 'gi'),
       (match, altText, imagePath) => {
         return `![${altText}](${githubBaseUrl}/${imagePath})`;
       }
@@ -402,7 +416,14 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
   }
 
   // Get siteUrl from GraphQL
-  const siteUrl = data.site.siteMetadata.siteUrl;
+  const siteUrl = data.site?.siteMetadata?.siteUrl;
+
+  if (!siteUrl) {
+    reporter.panicOnBuild(
+      `${REPORTER_PREFIX} siteUrl is not configured in siteMetadata. Please check gatsby-config.ts`
+    );
+    return;
+  }
 
   // Filter to only docs directory
   const mdxNodes = data.allMdx.nodes.filter((node) => {
@@ -438,4 +459,17 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
       `${REPORTER_PREFIX} Successfully transpiled ${successCount} MDX files to Markdown`
     );
   }
+};
+
+// Export functions for testing
+export {
+  removeImportExportStatements,
+  removeScriptTags,
+  removeAnchorTags,
+  removeJsxComments,
+  convertImagePathsToGitHub,
+  convertRelativeUrls,
+  replaceTemplateVariables,
+  calculateOutputPath,
+  transformMdxToMarkdown,
 };
