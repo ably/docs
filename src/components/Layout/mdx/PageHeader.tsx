@@ -32,7 +32,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) =>
   }, [product, page.name, page.link, language]);
 
   return (
-    <div className="my-8">
+    <div className="my-8 border-b border-neutral-300 dark:border-neutral-1000 pb-8">
       <h1 className="ui-text-h1 mb-4">{title}</h1>
       <p className="text-neutral-800 dark:text-neutral-500 mb-8 font-serif italic tracking-tight text-lg leading-normal">
         {description}
