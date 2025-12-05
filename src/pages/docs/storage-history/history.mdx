@@ -437,14 +437,21 @@ You can also qualify a channel name with rewind when using the service without a
 
 You can obtain message history that is continuous with the realtime messages received on an attached channel, in the backwards direction from the point of attachment. When a channel instance is attached, it's automatically populated by the Ably service with the serial number of the last published message on the channel. As such the serial number can be used to make a history request to the Ably service for all messages published before the channel was attached. Any new messages therefore are received in real time via the attached channel, and any historical messages are accessible via the history method.
 
-Use the `untilAttach` option when making history requests on attached channels. If the channel is not yet attached, this will result in an error.
+Calling `subscribe()` implicitly attaches the channel if it is not already attached. To ensure there is no gap between historical and realtime messages, subscribe to the channel before making a history request with `untilAttach`. This guarantees that all messages from the point of attachment onwards are received via the subscription, while all prior messages are retrieved via history.
+
+The following example subscribes to the channel and then retrieves the last message published prior to the channel being attached:
 
 <Code>
 ```realtime_javascript
 const realtime = new Ably.Realtime('{{API_KEY}}');
 const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
 await channel.publish('example', 'message data');
-await channel.attach();
+
+channel.subscribe((message) => {
+    console.log('Received message: ' + message.data);
+});
+
+await channel.whenState('attached');
 
 const history = await channel.history({untilAttach: true});
 const lastMessage = history.items[0];
@@ -455,7 +462,12 @@ console.log('Last message before attach: ' + lastMessage.data);
 const realtime = new Ably.Realtime('{{API_KEY}}');
 const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
 await channel.publish('example', 'message data');
-await channel.attach();
+
+channel.subscribe((message) => {
+    console.log('Received message: ' + message.data);
+});
+
+await channel.whenState('attached');
 
 const history = await channel.history({untilAttach: true});
 const lastMessage = history.items[0];
@@ -465,7 +477,12 @@ console.log('Last message before attach: ' + lastMessage.data);
 ```realtime_ruby
   realtime = Ably::Realtime.new('{{API_KEY}}')
   channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}')
-  channel.attach do
+
+  channel.subscribe do |message|
+    puts "Received message: #{message.data}"
+  end
+
+  channel.on(:attached) do
     channel.history(until_attach: true) do |result_page|
       last_message = result_page.items.last
       puts "Last message before attach: #{last_message.data}")
@@ -476,6 +493,14 @@ console.log('Last message before attach: ' + lastMessage.data);
 ```realtime_java
   AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
   Channel channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+  channel.subscribe(new MessageListener() {
+      @Override
+      public void onMessage(Message message) {
+          System.out.println("Received message: " + message.data);
+      }
+  });
+
   channel.on(ChannelState.attached, new ChannelStateListener() {
       @Override
       public void onChannelStateChanged(ChannelStateChange stateChange) {
@@ -490,29 +515,37 @@ console.log('Last message before attach: ' + lastMessage.data);
           }
       }
   });
-
-  channel.attach();
 ```
 
 ```realtime_csharp
   AblyRealtime realtime = new AblyRealtime("{{API_KEY}}");
   IRealtimeChannel channel = realtime.Channels.Get("{{RANDOM_CHANNEL_NAME}}");
-  await channel.AttachAsync();
+
+  channel.Subscribe(message => {
+    Console.WriteLine("Received message: " + message.Data);
+  });
+
+  await channel.WaitForAttachAsync();
+
   PaginatedResult<Message> resultPage = await channel.HistoryAsync(untilAttach: true);
   Message lastMessage = resultPage.Items[0];
-  Console.WriteLine("Last message before attach: " + lastMessage.data);
+  Console.WriteLine("Last message before attach: " + lastMessage.Data);
 ```
 
 ```realtime_objc
 ARTRealtime *realtime = [[ARTRealtime alloc] initWithKey:@"{{API_KEY}}"];
 ARTRealtimeChannel *channel = [realtime.channels get:@"RANDOM_CHANNEL_NAME"];
-[channel attach];
+
+[channel subscribe:^(ARTMessage *message) {
+    NSLog(@"Received message: %@", message.data);
+}];
+
 [channel on:ARTChannelEventAttached callback:^(ARTErrorInfo *error) {
     ARTRealtimeHistoryQuery *query = [[ARTRealtimeHistoryQuery alloc] init];
     query.untilAttach = YES;
     [channel history:query callback:^(ARTPaginatedResult<ARTMessage *> *resultPage, ARTErrorInfo *error) {
         ARTMessage *lastMessage = resultPage.items[0];
-        NSLog(@"Last message: %@ - %@", lastMessage.id,lastMessage.data);
+        NSLog(@"Last message before attach: %@ - %@", lastMessage.id, lastMessage.data);
     } error:nil];
 }];
 ```
@@ -520,7 +553,11 @@ ARTRealtimeChannel *channel = [realtime.channels get:@"RANDOM_CHANNEL_NAME"];
 ```realtime_swift
 let realtime = ARTRealtime(key: "{{API_KEY}}")
 let channel = realtime.channels.get("{{RANDOM_CHANNEL_NAME}}")
-channel.attach()
+
+channel.subscribe { message in
+    print("Received message: \(message.data)")
+}
+
 channel.on(.attached) { error in
     let query = ARTRealtimeHistoryQuery()
     query.untilAttach = true
@@ -538,24 +575,26 @@ if err != nil {
   log.Fatalf("Failed to create Ably Realtime client: %v", err)
 }
 
-// Get the channel
 channel := client.Channels.Get("{{RANDOM_CHANNEL_NAME}}")
 
-// Publish a message
-err = channel.Publish(context.Background(), "example", "message data")
+unsubscribe, err := channel.Subscribe(context.Background(), func(msg *ably.Message) {
+  fmt.Printf("Received message: %v\n", msg.Data)
+})
 if err != nil {
-  log.Fatalf("Failed to publish message: %v", err)
+  log.Fatalf("Failed to subscribe: %v", err)
+}
+defer unsubscribe()
+
+err = channel.Attach(context.Background())
+if err != nil {
+  log.Fatalf("Failed to attach: %v", err)
 }
 
-// Attach the channel
-_ = channel.Attach(context.Background())
-
-// Get channel history until attach
 history, _ := channel.HistoryUntilAttach()
 pages, _ := history.Pages(context.Background())
 for pages.Next(context.Background()) {
   for _, message := range pages.Items() {
-    fmt.Println(message)
+    fmt.Printf("Last message before attach: %v\n", message.Data)
   }
 }
 ```
@@ -568,7 +607,12 @@ final realtime = ably.Realtime(options: clientOptions);
 final channel = realtime.channels.get(
   '{{RANDOM_CHANNEL_NAME}}'
 );
-await channel.publish(name: 'example', data: 'message data');
+
+final channelMessageSubscription = channel.subscribe()
+  .listen((message) {
+    print('Received message: ${message.data}');
+  });
+
 await channel.attach();
 
 final historyParams = ably.RealtimeHistoryParams(untilAttach: true);
