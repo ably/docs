@@ -1,5 +1,6 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
 import { useLocation } from '@reach/router';
+import { graphql, useStaticQuery } from 'gatsby';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { throttle } from 'es-toolkit/compat';
@@ -55,6 +56,23 @@ const helpResourcesItems = [
 const Header: React.FC = () => {
   const location = useLocation();
   const userContext = useContext(UserContext);
+  const {
+    site: {
+      siteMetadata: { externalScriptsData },
+    },
+  } = useStaticQuery(graphql`
+    query {
+      site {
+        siteMetadata {
+          externalScriptsData {
+            inkeepSearchEnabled
+            inkeepChatEnabled
+          }
+        }
+      }
+    }
+  `);
+
   const sessionState = {
     ...userContext.sessionState,
     signedIn: userContext.sessionState.signedIn ?? false,
@@ -148,22 +166,24 @@ const Header: React.FC = () => {
       </div>
       <Tooltip.Provider delayDuration={0} disableHoverableContent>
         <div className="hidden md:flex gap-2 pt-3 md:py-0 px-4 md:px-0">
-          <button
-            className={secondaryButtonClassName}
-            onClick={() => {
-              const chatContainer = document.querySelector('#inkeep-ai-chat > div');
-              const chatButton = chatContainer?.shadowRoot?.querySelector('button');
+          {externalScriptsData.inkeepChatEnabled && (
+            <button
+              className={secondaryButtonClassName}
+              onClick={() => {
+                const chatContainer = document.querySelector('#inkeep-ai-chat > div');
+                const chatButton = chatContainer?.shadowRoot?.querySelector('button');
 
-              track('docs_ask_ai_button_clicked');
+                track('docs_ask_ai_button_clicked');
 
-              if (chatButton) {
-                chatButton.click();
-              }
-            }}
-          >
-            <Icon name="icon-gui-sparkles-outline" size="20px" />
-            <span>Ask AI</span>
-          </button>
+                if (chatButton) {
+                  chatButton.click();
+                }
+              }}
+            >
+              <Icon name="icon-gui-sparkles-outline" size="20px" />
+              <span>Ask AI</span>
+            </button>
+          )}
           <DropdownMenu.Root>
             <Tooltip.Root>
               <DropdownMenu.Trigger asChild>
@@ -265,8 +285,12 @@ const Header: React.FC = () => {
       </div>
 
       <div className="hidden">
-        <InkeepSearchBar ref={searchBarRef} instanceType="search" extraInputStyle={{ backgroundColor: 'white' }} />
-        <InkeepSearchBar ref={chatBarRef} instanceType="chat" extraInputStyle={{ backgroundColor: 'white' }} />
+        {externalScriptsData.inkeepSearchEnabled && (
+          <InkeepSearchBar ref={searchBarRef} instanceType="search" extraInputStyle={{ backgroundColor: 'white' }} />
+        )}
+        {externalScriptsData.inkeepChatEnabled && (
+          <InkeepSearchBar ref={chatBarRef} instanceType="chat" extraInputStyle={{ backgroundColor: 'white' }} />
+        )}
       </div>
     </div>
   );

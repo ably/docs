@@ -221,6 +221,9 @@ export const inkeepOnLoad = (
 
   if (inkeepSearchEnabled) {
     loadInkeepSearch(config, 'inkeep-search');
+  }
+
+  if (inkeepChatEnabled) {
     loadInkeepSearch(config, 'inkeep-ai-chat');
   }
 };
