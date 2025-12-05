@@ -66,6 +66,7 @@ const Header: React.FC = () => {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const burgerButtonRef = useRef<HTMLDivElement>(null);
   const searchBarRef = useRef<HTMLDivElement>(null);
+  const chatBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -150,13 +151,13 @@ const Header: React.FC = () => {
           <button
             className={secondaryButtonClassName}
             onClick={() => {
-              const searchContainer = document.querySelector('#inkeep-search > div');
-              const searchButton = searchContainer?.shadowRoot?.querySelector('button');
+              const chatContainer = document.querySelector('#inkeep-ai-chat > div');
+              const chatButton = chatContainer?.shadowRoot?.querySelector('button');
 
               track('docs_ask_ai_button_clicked');
 
-              if (searchButton) {
-                searchButton.click();
+              if (chatButton) {
+                chatButton.click();
               }
             }}
           >
@@ -264,7 +265,8 @@ const Header: React.FC = () => {
       </div>
 
       <div className="hidden">
-        <InkeepSearchBar ref={searchBarRef} extraInputStyle={{ backgroundColor: 'white' }} />
+        <InkeepSearchBar ref={searchBarRef} instanceType="search" extraInputStyle={{ backgroundColor: 'white' }} />
+        <InkeepSearchBar ref={chatBarRef} instanceType="chat" extraInputStyle={{ backgroundColor: 'white' }} />
       </div>
     </div>
   );
