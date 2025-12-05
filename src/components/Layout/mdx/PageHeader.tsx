@@ -27,7 +27,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) =>
 
     return [
       { model: 'gpt', label: 'ChatGPT', icon: 'icon-tech-openai', link: gptPath },
-      { model: 'claude', label: 'Claude (must be logged in)', icon: 'icon-tech-claude-mono', link: claudePath },
+      { model: 'claude', label: 'Claude', icon: 'icon-tech-claude-mono', link: claudePath },
     ];
   }, [product, page.name, page.link, language]);
 
