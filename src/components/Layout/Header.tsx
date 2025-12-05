@@ -23,14 +23,14 @@ const MAX_MOBILE_MENU_WIDTH = '560px';
 
 const desktopTabs = [
   <Link key="docs" to="/docs" className="p-4">
-    Docs
+    Documentation
   </Link>,
   <Link key="examples" to="/examples" className="p-4">
     Examples
   </Link>,
 ];
 
-const mobileTabs = ['Docs', 'Examples'];
+const mobileTabs = ['Documentation', 'Examples'];
 
 const helpResourcesItems = [
   {
