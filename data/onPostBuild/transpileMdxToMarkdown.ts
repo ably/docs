@@ -439,3 +439,16 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     );
   }
 };
+
+// Export functions for testing
+export {
+  removeImportExportStatements,
+  removeScriptTags,
+  removeAnchorTags,
+  removeJsxComments,
+  convertImagePathsToGitHub,
+  convertRelativeUrls,
+  replaceTemplateVariables,
+  calculateOutputPath,
+  transformMdxToMarkdown,
+};
