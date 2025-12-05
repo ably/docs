@@ -220,19 +220,22 @@ export const inkeepOnLoad = (
   };
 
   if (inkeepSearchEnabled) {
-    loadInkeepSearch(config);
+    loadInkeepSearch(config, 'inkeep-search');
+    loadInkeepSearch(config, 'inkeep-ai-chat');
   }
 };
 
-const loadInkeepSearch = (config: object) => {
-  const searchBar = document.getElementById('inkeep-search');
+const loadInkeepSearch = (config: object, elementId: string) => {
+  const searchBar = document.getElementById(elementId);
   if (!searchBar) {
     return;
   }
 
+  const defaultView = elementId === 'inkeep-ai-chat' ? 'chat' : 'search';
+
   window.Inkeep.SearchBar(`#${searchBar.id}`, {
     ...config,
-    defaultView: 'chat',
+    defaultView,
     shouldShowAskAICard: false,
   }).remount();
 };
