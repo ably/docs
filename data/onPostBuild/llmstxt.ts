@@ -14,7 +14,7 @@ const LLMS_TXT_PREAMBLE = `# Ably Documentation
 
 - **Global Edge Network**: Ultra-low latency realtime messaging delivered through a globally distributed edge network
 - **Enterprise Scale**: Built to handle millions of concurrent connections with guaranteed message delivery
-- **Multiple Products**: Pub/Sub, Chat, LiveSync, LiveObjects, Spaces, and Asset Tracking
+- **Multiple Products**: Pub/Sub, Chat, LiveSync, LiveObjects and Spaces
 - **Developer-Friendly SDKs**: SDKs available for JavaScript, Node.js, Java, Python, Go, Objective-C, Swift, Csharp, PHP, Flutter, Ruby, React, React Native, and Kotlin
 
 `;
@@ -157,9 +157,6 @@ const categorizePage = (slug: string): { category: string; subcategory?: string 
 
     // LiveSync
     livesync: { category: 'LiveSync' },
-
-    // Asset Tracking
-    'asset-tracking': { category: 'Asset Tracking' },
   };
 
   // Try to match two-part path first (e.g., "platform/account"), then single part (e.g., "platform")
@@ -408,7 +405,6 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
     'Spaces',
     'LiveObjects',
     'LiveSync',
-    'Asset Tracking',
     'General',
   ];
 
