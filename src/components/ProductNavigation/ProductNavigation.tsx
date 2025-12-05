@@ -29,7 +29,6 @@ const ProductNavigation = ({ currentProduct = 'channels' }: { currentProduct?: s
   const onLiveSync = currentProduct === 'livesync';
   const onChat = currentProduct === 'chat';
   const onLiveObjects = currentProduct === 'liveobjects';
-  const onAssetTracking = currentProduct === 'asset-tracking';
 
   return (
     <nav
@@ -53,9 +52,6 @@ const ProductNavigation = ({ currentProduct = 'channels' }: { currentProduct?: s
       </Item>
       <Item to="/docs/products/liveobjects" active={onLiveObjects}>
         LiveObjects
-      </Item>
-      <Item to="/docs/products/asset-tracking" active={onAssetTracking}>
-        Asset Tracking
       </Item>
     </nav>
   );
