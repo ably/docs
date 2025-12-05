@@ -27,7 +27,7 @@ Find out more about [authentication](https://ably.com/docs/auth/token?lang=javas
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Install dependencies:
@@ -45,7 +45,7 @@ Find out more about [authentication](https://ably.com/docs/auth/token?lang=javas
 5. In a new tab, change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 6. Rename the environment file:

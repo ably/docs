@@ -29,7 +29,7 @@ Find out more about [room reactions](/docs/chat/rooms/reactions?lang=javascript)
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:

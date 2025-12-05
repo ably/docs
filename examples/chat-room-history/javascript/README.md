@@ -27,7 +27,7 @@ Find out more about [message history](/docs/chat/rooms/history?lang=javascript).
 2. Change directory:
 
   ```sh
-  cd /examples/
+  cd examples/
   ```
 
 3. Rename the environment file:
