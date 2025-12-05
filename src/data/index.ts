@@ -1,4 +1,5 @@
 import {
+  aiTransportNavData,
   assetTrackingNavData,
   chatNavData,
   liveObjectsNavData,
@@ -23,6 +24,10 @@ export const productData = {
   chat: {
     nav: chatNavData,
     languages: languageData.chat,
+  },
+  aiTransport: {
+    nav: aiTransportNavData,
+    languages: languageData.aiTransport,
   },
   spaces: {
     nav: spacesNavData,
