@@ -172,6 +172,45 @@ describe('MDX to Markdown Transpilation', () => {
       expect(output).toContain(`${githubBase}/images/a.png`);
       expect(output).toContain(`${githubBase}/images/b.png`);
     });
+
+    it('should handle escaped brackets in alt text', () => {
+      const input = '![Alt \\[with brackets\\]](images/test.png)';
+      const output = convertImagePathsToGitHub(input);
+      expect(output).toBe(`![Alt \\[with brackets\\]](${githubBase}/images/test.png)`);
+    });
+
+    it('should handle images with title attributes', () => {
+      const input = '![Alt text](images/test.png "Image title")';
+      const output = convertImagePathsToGitHub(input);
+      expect(output).toBe(`![Alt text](${githubBase}/images/test.png)`);
+    });
+
+    it('should only convert paths with valid image extensions', () => {
+      const input = '![Link to folder](images/folder) should not convert';
+      const output = convertImagePathsToGitHub(input);
+      expect(output).toBe(input); // Should remain unchanged
+    });
+
+    it('should handle all supported image formats', () => {
+      const formats = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'tiff', 'ico'];
+      formats.forEach((ext) => {
+        const input = `![Test](images/test.${ext})`;
+        const output = convertImagePathsToGitHub(input);
+        expect(output).toBe(`![Test](${githubBase}/images/test.${ext})`);
+      });
+    });
+
+    it('should not convert non-image paths containing "images"', () => {
+      const input = '[Link to images folder](/images/readme.txt)';
+      const output = convertImagePathsToGitHub(input);
+      expect(output).toBe(input); // Should remain unchanged (not an image tag)
+    });
+
+    it('should handle parentheses in image paths', () => {
+      const input = '![Alt](images/diagram(v2).png)';
+      const output = convertImagePathsToGitHub(input);
+      expect(output).toBe(`![Alt](${githubBase}/images/diagram(v2).png)`);
+    });
   });
 
   describe('convertRelativeUrls', () => {

@@ -37,16 +37,18 @@ interface FrontMatterAttributes {
  * Handles both single-line and multi-line statements
  */
 function removeImportExportStatements(content: string): string {
-  return content
-    // Remove import statements (single and multi-line)
-    .replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')
-    .replace(/^import\s+['"][^'"]+['"];?\s*$/gm, '')
-    // Remove export statements (single and multi-line)
-    .replace(/^export\s+\{[\s\S]*?\}\s*;?\s*$/gm, '')
-    .replace(/^export\s+\{[\s\S]*?\}\s+from\s+['"][^'"]+['"];?\s*$/gm, '')
-    .replace(/^export\s+(default|const|let|var|function|class)\s+.*$/gm, '')
-    // Clean up extra blank lines left behind
-    .replace(/\n\n\n+/g, '\n\n');
+  return (
+    content
+      // Remove import statements (single and multi-line)
+      .replace(/^import\s+[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, '')
+      .replace(/^import\s+['"][^'"]+['"];?\s*$/gm, '')
+      // Remove export statements (single and multi-line)
+      .replace(/^export\s+\{[\s\S]*?\}\s*;?\s*$/gm, '')
+      .replace(/^export\s+\{[\s\S]*?\}\s+from\s+['"][^'"]+['"];?\s*$/gm, '')
+      .replace(/^export\s+(default|const|let|var|function|class)\s+.*$/gm, '')
+      // Clean up extra blank lines left behind
+      .replace(/\n\n\n+/g, '\n\n')
+  );
 }
 
 /**
@@ -200,28 +202,24 @@ function removeJsxComments(content: string): string {
 function convertImagePathsToGitHub(content: string): string {
   const githubBaseUrl = 'https://raw.githubusercontent.com/ably/docs/main/src';
 
-  return content
-    // Handle relative paths: ../../../images/...
-    .replace(
-      /!\[([^\]]*)\]\(((?:\.\.\/)+)(images\/[^)]+)\)/g,
-      (match, altText, relativePath, imagePath) => {
-        return `![${altText}](${githubBaseUrl}/${imagePath})`;
-      }
-    )
-    // Handle absolute paths: /images/...
-    .replace(
-      /!\[([^\]]*)\]\(\/(images\/[^)]+)\)/g,
-      (match, altText, imagePath) => {
-        return `![${altText}](${githubBaseUrl}/${imagePath})`;
-      }
-    )
-    // Handle direct paths: images/... (no prefix)
-    .replace(
-      /!\[([^\]]*)\]\((images\/[^)]+)\)/g,
-      (match, altText, imagePath) => {
-        return `![${altText}](${githubBaseUrl}/${imagePath})`;
-      }
-    );
+  // Supported image extensions
+  const imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'tiff', 'ico'];
+  const imageExtPattern = imageExtensions.join('|');
+
+  // Regex to match Markdown images with images/ path and valid image extension
+  // Handles escaped brackets in alt text and parentheses in URL
+  // Alt text: allows any character, including escaped brackets
+  // URL: matches images/ path, allows parentheses in the path, and ends with valid extension
+  const imageRegex = new RegExp(
+    String.raw`!\[((?:[^\]\\]|\\.)*)\]\(((?:\.\.\/)+)?\/?(images\/(?:[^)\s]|\([^)]*\))+?\.(?:${imageExtPattern}))(?:\s+"[^"]*")?\)`,
+    'g',
+  );
+
+  return content.replace(imageRegex, (match, altText, relativePath, imagePath) => {
+    // Remove any leading slash from imagePath (since githubBaseUrl already ends with /src)
+    const cleanImagePath = imagePath.replace(/^\/+/, '');
+    return `![${altText}](${githubBaseUrl}/${cleanImagePath})`;
+  });
 }
 
 /**
@@ -234,37 +232,32 @@ function convertRelativeUrls(content: string, siteUrl: string): string {
 
   // Match markdown links: [text](url)
   // Only convert URLs that start with / (relative) and are not external URLs or hash-only
-  return content.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    (match, linkText, url) => {
-      // Don't convert external URLs
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        return match;
-      }
-
-      // Don't convert hash-only anchors
-      if (url.startsWith('#')) {
-        return match;
-      }
-
-      // Convert relative URLs (starting with /)
-      if (url.startsWith('/')) {
-        return `[${linkText}](${baseUrl}${url})`;
-      }
-
-      // Keep other URLs as-is (relative paths without leading /)
+  return content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+    // Don't convert external URLs
+    if (url.startsWith('http://') || url.startsWith('https://')) {
       return match;
     }
-  );
+
+    // Don't convert hash-only anchors
+    if (url.startsWith('#')) {
+      return match;
+    }
+
+    // Convert relative URLs (starting with /)
+    if (url.startsWith('/')) {
+      return `[${linkText}](${baseUrl}${url})`;
+    }
+
+    // Keep other URLs as-is (relative paths without leading /)
+    return match;
+  });
 }
 
 /**
  * Replace template variables with readable placeholders
  */
 function replaceTemplateVariables(content: string): string {
-  return content
-    .replace(/{{API_KEY}}/g, 'your-api-key')
-    .replace(/{{RANDOM_CHANNEL_NAME}}/g, 'your-channel-name');
+  return content.replace(/{{API_KEY}}/g, 'your-api-key').replace(/{{RANDOM_CHANNEL_NAME}}/g, 'your-channel-name');
 }
 
 /**
@@ -390,9 +383,7 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
   const { data, errors } = await graphql<MdxQueryResult>(query);
 
   if (errors) {
-    reporter.panicOnBuild(
-      `${REPORTER_PREFIX} Error running GraphQL query: ${JSON.stringify(errors)}`
-    );
+    reporter.panicOnBuild(`${REPORTER_PREFIX} Error running GraphQL query: ${JSON.stringify(errors)}`);
     return;
   }
 
@@ -421,22 +412,16 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
       successCount++;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      reporter.warn(
-        `${REPORTER_PREFIX} Failed to transpile ${node.internal.contentFilePath}: ${errorMessage}`
-      );
+      reporter.warn(`${REPORTER_PREFIX} Failed to transpile ${node.internal.contentFilePath}: ${errorMessage}`);
       failureCount++;
     }
   }
 
   // Report summary
   if (failureCount > 0) {
-    reporter.warn(
-      `${REPORTER_PREFIX} Transpiled ${successCount} files, ${failureCount} failed`
-    );
+    reporter.warn(`${REPORTER_PREFIX} Transpiled ${successCount} files, ${failureCount} failed`);
   } else {
-    reporter.info(
-      `${REPORTER_PREFIX} Successfully transpiled ${successCount} MDX files to Markdown`
-    );
+    reporter.info(`${REPORTER_PREFIX} Successfully transpiled ${successCount} MDX files to Markdown`);
   }
 };
 
