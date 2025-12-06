@@ -207,9 +207,18 @@ function convertImagePathsToGitHub(content: string): string {
   const imageExtPattern = imageExtensions.join('|');
 
   // Regex to match Markdown images with images/ path and valid image extension
-  // Handles escaped brackets in alt text and parentheses in URL
-  // Alt text: allows any character, including escaped brackets
-  // URL: matches images/ path, allows parentheses in the path, and ends with valid extension
+  // Pattern breakdown:
+  // - !\[                          - Image markdown syntax start
+  // - ((?:[^\]\\]|\\.)*)           - Alt text: matches any char except unescaped ], allows escaped chars
+  // - \]\(                         - End alt text, start URL
+  // - ((?:\.\.\/)+)?               - Optional: one or more ../ patterns (relative paths)
+  // - \/?                          - Optional: leading slash (absolute paths)
+  // - (images\/                    - Required: images/ directory
+  // -   (?:[^)\s]|\([^)]*\))+?     - Path: allows any char except ) and whitespace, or matched parentheses
+  // -   \.(?:${imageExtPattern})   - Required: file extension from allowed list
+  // - )
+  // - (?:\s+"[^"]*")?              - Optional: title attribute in quotes
+  // - \)                           - Close markdown image syntax
   const imageRegex = new RegExp(
     String.raw`!\[((?:[^\]\\]|\\.)*)\]\(((?:\.\.\/)+)?\/?(images\/(?:[^)\s]|\([^)]*\))+?\.(?:${imageExtPattern}))(?:\s+"[^"]*")?\)`,
     'g',
