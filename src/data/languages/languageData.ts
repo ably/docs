@@ -28,6 +28,7 @@ export default {
     react: '1.1',
     swift: '1.0',
     kotlin: '1.0',
+    jetpack: '1.0',
   },
   spaces: {
     javascript: '0.4',
