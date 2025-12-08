@@ -22,17 +22,23 @@ export PORT=${PORT:-3001}
 #   $3: expected_status - Expected HTTP status code
 #   $4: expected_format - "html", "markdown", or "any"
 #   $5: test_name - Human-readable test description
+#   $6: user_agent - Optional User-Agent string
 run_test() {
   local path="$1"
   local accept_header="$2"
   local expected_status="$3"
   local expected_format="$4"
   local test_name="$5"
+  local user_agent="${6:-}"
 
   echo "🧪 $test_name"
 
-  # Build curl command with optional Accept header
+  # Build curl command with optional Accept header and User-Agent
   local curl_cmd="curl --silent --header \"X-Forwarded-Proto: https\""
+
+  if [ -n "$user_agent" ]; then
+    curl_cmd="$curl_cmd --user-agent \"$user_agent\""
+  fi
 
   if [ -n "$accept_header" ]; then
     curl_cmd="$curl_cmd --header \"Accept: $accept_header\""
@@ -130,8 +136,26 @@ run_test "/docs/nonexistent" "text/markdown" "404" "any" "404 with markdown Acce
 run_test "/llms.txt" "" "200" "any" "Non-docs paths unaffected"
 echo
 
+# Group 6: Bot Detection (User-Agent)
+echo "Group 6: Bot Detection (User-Agent)"
+echo "------------------------------------"
+run_test "/docs/channels" "" "200" "markdown" "Claude-User bot gets markdown" "Claude-User/1.0"
+run_test "/docs/channels" "" "200" "markdown" "ClaudeBot gets markdown" "Mozilla/5.0 (compatible; ClaudeBot/1.0)"
+run_test "/docs/channels" "" "200" "markdown" "ChatGPT-User bot gets markdown" "ChatGPT-User"
+run_test "/docs/channels" "" "200" "markdown" "GPTBot gets markdown" "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.0)"
+run_test "/docs/channels" "" "200" "markdown" "PerplexityBot gets markdown" "PerplexityBot"
+run_test "/docs/channels" "" "200" "html" "Regular browser gets HTML" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
+echo
+
+# Group 7: Combined Bot + Accept Header
+echo "Group 7: Combined Bot + Accept Header"
+echo "--------------------------------------"
+run_test "/docs/channels" "text/html" "200" "markdown" "Bot overrides Accept: text/html" "Claude-User/1.0"
+run_test "/docs/channels" "text/markdown" "200" "markdown" "Bot + markdown Accept both work" "GPTBot/1.0"
+echo
+
 echo "================================"
-echo "✅ All 16 tests passed!"
+echo "✅ All 23 tests passed!"
 echo "================================"
 
 # Exit explicitly with success
