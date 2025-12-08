@@ -13,6 +13,7 @@ import GlobalLoading from '../GlobalLoading/GlobalLoading';
 import Header from './Header';
 import LeftSidebar from './LeftSidebar';
 import RightSidebar from './RightSidebar';
+import HiddenLanguageLinks from './HiddenLanguageLinks';
 
 export type Frontmatter = {
   title: string;
@@ -49,6 +50,7 @@ const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
         </Container>
         {rightSidebar ? <RightSidebar /> : null}
       </div>
+      <HiddenLanguageLinks />
     </GlobalLoading>
   );
 };
