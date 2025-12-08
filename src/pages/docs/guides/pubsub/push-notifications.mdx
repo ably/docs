@@ -12,12 +12,19 @@ This guide walks through the architectural decisions and practical consideration
 
 Push notifications require integration with multiple platform-specific services: Apple Push Notification Service (APNs) for iOS, Firebase Cloud Messaging (FCM) for Android, and Web Push for browsers. Each has its own authentication mechanisms, payload formats, and reliability characteristics.
 
+Ably's platform is engineered around the [four pillars of dependability](/four-pillars-of-dependability):
+
+* **[Performance](/docs/platform/architecture/performance):** Ultra-low latency messaging ensures notifications are delivered quickly, even at global scale.
+* **[Integrity](/docs/platform/architecture/message-ordering):** Guaranteed message delivery with no duplicates or lost notifications.
+* **[Reliability](/docs/platform/architecture/fault-tolerance):** 99.999% uptime SLA with automatic failover and seamless recovery.
+* **[Availability](/docs/platform/architecture/edge-network):** Global edge infrastructure ensures reliable connectivity worldwide.
+
 Ably provides a unified API that handles all three platforms, managing:
 
 * **Platform abstraction:** Write once, deliver everywhere. Ably translates your notifications into platform-specific formats.
 * **Credential management:** Store your APNs certificates, FCM service accounts, and VAPID keys securely in one place.
 * **Delivery reliability:** Ably handles retries, tracks delivery status, and provides error reporting through meta channels.
-* **Scale:** From hundreds to millions of devices, Ably's infrastructure scales automatically without requiring you to manage connection pools or rate limits.
+* **Scale:** From hundreds to millions of devices, Ably's [serverless architecture](/docs/platform/architecture) scales automatically without requiring you to manage connection pools or rate limits. Backed by a [99.999% uptime SLA](/uptime).
 * **Users and devices:** Ably provides methods to send notifications to the right recipients. Send notifications to channels, users by `clientId`, or devices by `deviceId`.
 
 The alternative is maintaining separate integrations with each push service, handling their individual quirks, managing credentials across multiple systems, building your own retry and error handling logic, mapping between devices and users in your application, and managing subscriptions to topics.
@@ -145,6 +152,8 @@ Many applications use both models for different features. For example:
 * Direct publishing for critical user-specific alerts (account security, payment confirmations, direct chat messages).
 
 Consider your notification taxonomy. If you broadcast the same notification to many users, channels simplify this. You can also enable users to have granular preferences ("I want basketball scores but not football") by using different channels for different choices they can make. On the other hand, if most notifications are personal and transactional, direct publishing is simpler: either by `clientId` (target all devices of a specific user) or `deviceId` (target a specific device).
+
+How you publish affects cost. Ably charges per notification delivered, plus inbound messages. Publishing to a channel with 100 subscribers costs 1 inbound + 100 outbound, in total 101 billable messages. Publishing individually to 100 devices costs 100 inbound + 100 outbound, in total 200 billable messages. Read more about Ably's pricing [here](/docs/platform/pricing). Ably offers both [MAU-based pricing](/docs/platform/pricing#mau) and [per minute pricing](/docs/platform/pricing#per-minute).
 
 ## Multi-platform considerations
 
@@ -296,12 +305,13 @@ Server-side activation gives you more control. The device obtains its platform t
 
 Server-side activation also allows you to use FCM for both Android and iOS devices for unified push messaging.
 
-```javascript
-// On device: Get platform token and send it to your server
+On the client, get the platform token and send it to your server. On your server, use the [Push Notifications Admin API](/docs/api/realtime-sdk/push-admin) to register the device with Ably:
 
+<Code>
+```javascript
 // On your server: Register with Ably using a platformToken, platform, and clientId
 await ablyClient.push.admin.deviceRegistrations.save({
-  id: generateDeviceId(clientId, platform),
+  id: generateDeviceId(clientId, platform),  // use your own function to generate a unique device id
   platform: platform,
   formFactor: 'phone',
   clientId: clientId,
@@ -313,6 +323,22 @@ await ablyClient.push.admin.deviceRegistrations.save({
   }
 });
 ```
+
+```java
+// On your server: Register with Ably using a platformToken, platform, and clientId
+DeviceDetails d = new DeviceDetails();
+d.id = generateDeviceId(clientId, platform); // use your own function to generate a unique device id
+d.platform = "ios";
+d.clientId = clientId;
+d.formFactor = "phone";
+d.push = new DeviceDetails.Push();
+d.push.recipient = new com.google.gson.JsonObject();
+d.push.recipient.addProperty("transportType", "apns");
+d.push.recipient.addProperty("deviceToken", platformToken);
+
+ablyRest.push.admin.deviceRegistrations.save(d);
+```
+</Code>
 
 Server-side activation is preferred when:
 
@@ -339,6 +365,7 @@ Follow these practices:
 * To make permission management straightforward, use separate channels for push notifications and other parts of your application.
 * Only grant the capabilities that are needed for the specific use case.
 * Use token authentication and not API key authentication.
+* Remember to deregister or update device registrations when users log out.
 
 ## Delivery monitoring
 
