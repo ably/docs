@@ -9,13 +9,12 @@ import { createLanguagePageVariants } from './createPageVariants';
 import { LATEST_ABLY_API_VERSION_STRING } from '../transform/constants';
 import { createContentMenuDataFromPage } from './createContentMenuDataFromPage';
 import { DEFAULT_LANGUAGE } from './constants';
-import { writeRedirectToConfigFile } from './writeRedirectToConfigFile';
+import { writeRedirectToConfigFile, getRedirectCount } from './writeRedirectToConfigFile';
 import { siteMetadata } from '../../gatsby-config';
-import { GatsbyNode } from 'gatsby';
+import { GatsbyNode, Reporter } from 'gatsby';
 import { examples, DEFAULT_EXAMPLE_LANGUAGES } from '../../src/data/examples/';
 import { Example } from '../../src/data/examples/types';
 
-const writeRedirect = writeRedirectToConfigFile('config/nginx-redirects.conf');
 const documentTemplate = path.resolve(`src/templates/document.tsx`);
 const apiReferenceTemplate = path.resolve(`src/templates/apiReference.tsx`);
 const examplesTemplate = path.resolve(`src/templates/examples.tsx`);
@@ -101,7 +100,11 @@ interface MdxRedirectsQueryResult {
   };
 }
 
-export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions: { createPage, createRedirect } }) => {
+export const createPages: GatsbyNode['createPages'] = async ({
+  graphql,
+  actions: { createPage, createRedirect },
+  reporter,
+}) => {
   /**
    * It's not ideal to have:
    * * the reusable function `documentCreator` defined inline like this
@@ -110,6 +113,9 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
    * you try to extract any of this functionality into an independent composable
    * and testable function.
    */
+
+  // Initialize redirect writer with reporter
+  const writeRedirect = writeRedirectToConfigFile('config/nginx-redirects.conf', reporter);
 
   // DOCUMENT TEMPLATE
   const documentResult = await graphql<DocumentQueryResult>(`
@@ -245,6 +251,8 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
             // We need to be prefix aware just like Gatsby's internals so it works
             // with nginx redirects
             writeRedirect(redirectFrom, pagePath);
+          } else {
+            reporter.info(`[REDIRECTS] Skipping hash fragment redirect: ${redirectFrom} (hash: ${redirectFromUrl.hash})`);
           }
 
           createRedirect({
@@ -341,6 +349,8 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
           // We need to be prefix aware just like Gatsby's internals so it works
           // with nginx redirects
           writeRedirect(redirectFrom, toPath);
+        } else {
+          reporter.info(`[REDIRECTS] Skipping MDX hash fragment redirect: ${redirectFrom} (hash: ${redirectFromUrl.hash})`);
         }
 
         createRedirect({
@@ -360,4 +370,6 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions:
     ...examples.map(exampleCreator),
     ...mdxRedirectsResult.data.allMdx.nodes.map(mdxRedirectCreator),
   ]);
+
+  reporter.info(`[REDIRECTS] Completed writing ${getRedirectCount()} redirects`);
 };
