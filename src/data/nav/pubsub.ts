@@ -325,6 +325,15 @@ export default {
         },
       ],
     },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'Notifications center',
+          link: '/docs/guides/pub-sub/notifications-center',
+        },
+      ],
+    },
   ],
   api: [
     {
@@ -508,15 +517,6 @@ export default {
                 'python',
                 'php',
               ],
-            },
-          ],
-        },
-        {
-          name: 'Guides',
-          pages: [
-            {
-              name: 'Notifications center',
-              link: '/docs/guides/pub-sub/notifications-center',
             },
           ],
         },
