@@ -1,12 +1,4 @@
-import {
-  assetTrackingNavData,
-  chatNavData,
-  liveObjectsNavData,
-  liveSyncNavData,
-  platformNavData,
-  pubsubNavData,
-  spacesNavData,
-} from './nav';
+import { chatNavData, liveObjectsNavData, liveSyncNavData, platformNavData, pubsubNavData, spacesNavData } from './nav';
 import { languageData } from './languages';
 import { PageData, ProductData } from './types';
 import homepageContentData from './content/homepage';
@@ -35,10 +27,6 @@ export const productData = {
   liveSync: {
     nav: liveSyncNavData,
     languages: languageData.liveSync,
-  },
-  assetTracking: {
-    nav: assetTrackingNavData,
-    languages: languageData.assetTracking,
   },
 } satisfies ProductData;
 
