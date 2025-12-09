@@ -116,7 +116,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
 
 const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
   const { activePage } = useLayoutContext();
-  const [openProduct, setOpenProduct] = useState<string | null>(`item-${activePage.tree[0]?.index}`);
+  const [openProduct, setOpenProduct] = useState(`item-${activePage.tree[0]?.index}`);
   const {
     site: {
       siteMetadata: { externalScriptsData },
@@ -133,6 +133,10 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
     }
   `);
 
+  useEffect(() => {
+    setOpenProduct(`item-${activePage.tree[0]?.index}`);
+  }, [activePage.tree]);
+
   return (
     <div className={cn('sticky top-16 h-full', inHeader ? 'w-full' : 'w-[280px] hidden md:block', className)}>
       <div
@@ -146,7 +150,7 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
       <Accordion.Root
         type="single"
         collapsible
-        defaultValue={`item-${activePage.tree[0]?.index}`}
+        value={openProduct}
         className={cn(
           'bg-neutral-000 dark:bg-neutral-1300 overflow-y-auto',
           inHeader
