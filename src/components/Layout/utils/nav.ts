@@ -83,26 +83,25 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
       on the matched page
     */
     if (data[key].nav.content) {
-      const contentResult = determinePagePresence(data[key].nav.content, []);
-      const apiResult = determinePagePresence(data[key].nav.api, []);
-      if (contentResult || apiResult) {
+      const { content, api } = data[key].nav;
+      const allContent = [...content, ...api];
+      const contentResult = determinePagePresence(allContent, []);
+
+      if (contentResult) {
         const tree = [
           {
             index: Object.keys(data).indexOf(key),
             page: { ...data[key].nav, link: data[key].nav.link ?? '#' },
           },
-          ...((contentResult || apiResult) ?? []),
+          ...(contentResult ?? []),
         ];
-        const page = tree.slice(1).reduce<NavProductPages[]>(
-          (acc, curr) => {
-            if (acc[curr.index] && 'pages' in acc[curr.index]) {
-              return (acc[curr.index] as NavProductContent).pages;
-            }
+        const page = tree.slice(1).reduce<NavProductPages[]>((acc, curr) => {
+          if (acc[curr.index] && 'pages' in acc[curr.index]) {
+            return (acc[curr.index] as NavProductContent).pages;
+          }
 
-            return [acc[curr.index]];
-          },
-          data[key].nav[apiResult ? 'api' : 'content'],
-        );
+          return [acc[curr.index]];
+        }, allContent);
 
         return {
           tree,
