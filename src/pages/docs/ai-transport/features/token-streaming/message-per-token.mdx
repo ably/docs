@@ -11,3 +11,137 @@ This pattern is useful when clients only care about the most recent part of a re
 - **Live transcription, captioning, or translation**: A viewer who joins a live stream only needs the last few tokens for the current "frame" of subtitles, not the entire transcript so far.
 - **Code assistance in an editor**: Streamed tokens become part of the file on disk as they are accepted, so past tokens do not need to be replayed from Ably.
 - **Autocomplete**: A fresh response is streamed for each change a user makes to a document, with only the latest suggestion being relevant.
+
+
+To get started with token streaming, all you need to do is:
+
+* [Use a channel](#use)
+* [Publish tokens from your server](#publish)
+* [Subscribe to the token stream](#subscribe)
+
+## Use a channel <a id="use"/>
+
+[Channels](/docs/channels) separate message traffic into different topics. For token streaming, each conversation or session typically has its own channel.
+
+Use the [`get()`](/docs/api/realtime-sdk/channels#get) method to create or retrieve a channel instance:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+```
+</Code>
+
+## Publish tokens from your server <a id="publish"/>
+
+Publishing tokens to a channel is how your AI agent communicates responses to clients. Subscribers receive tokens in realtime as they're published.
+
+<Aside data-type='important'>
+  You must publish tokens from a [Realtime](/docs/api/realtime-sdk) client, which maintains a persistent connection to the Ably service. This allows you to publish at very high message rates with the lowest possible latencies, while preserving guarantees around message delivery order. For more information, see [Realtime and REST](/docs/basics#realtime-and-rest).
+</Aside>
+
+Initialize an Ably Realtime client on your server:
+
+<Code>
+```javascript
+import Ably from 'ably';
+
+const realtime = new Ably.Realtime({ key: 'YOUR_API_KEY' });
+```
+</Code>
+
+### Continuous token stream
+
+For simple streaming scenarios such as live transcription, where all tokens are part of a continuous stream, simply publish each token as a message on the channel:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+// Example: stream returns events like { type: 'token', text: 'Hello' }
+for await (const event of stream) {
+  if (event.type === 'token') {
+    await channel.publish('token', event.text);
+  }
+}
+```
+</Code>
+
+### Token stream with distinct responses
+
+For applications with multiple, distinct responses, such as chat conversations, include a `responseId` in message [extras](/docs/messages#properties) to correlate tokens together that belong to the same response:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+// Example: stream returns events like { type: 'token', text: 'Hello', responseId: 'resp_abc123' }
+for await (const event of stream) {
+  if (event.type === 'token') {
+    await channel.publish({
+      name: 'token',
+      data: event.text,
+      extras: {
+        headers: {
+          responseId: event.responseId
+        }
+      }
+    });
+  }
+}
+```
+</Code>
+
+Clients use the `responseId` to group tokens belonging to the same response.
+
+### Token stream with explicit start/end events
+
+In some cases, your AI model response stream may include explicit events to mark response boundaries:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+
+// Example: stream returns events like:
+// { type: 'start', responseId: 'resp_abc123', metadata: { model: 'llama-3' } }
+// { type: 'token', responseId: 'resp_abc123', text: 'Hello' }
+// { type: 'end', responseId: 'resp_abc123' }
+
+for await (const event of stream) {
+  if (event.type === 'start') {
+    // Publish response start
+    await channel.publish({
+      name: 'response.start',
+      extras: {
+        headers: {
+          responseId: event.responseId,
+          model: event.metadata?.model
+        }
+      }
+    });
+  } else if (event.type === 'token') {
+    // Publish tokens
+    await channel.publish({
+      name: 'token',
+      data: event.text,
+      extras: {
+        headers: {
+          responseId: event.responseId
+        }
+      }
+    });
+  } else if (event.type === 'end') {
+    // Publish response complete
+    await channel.publish({
+      name: 'response.complete',
+      extras: {
+        headers: {
+          responseId: event.responseId
+        }
+      }
+    });
+  }
+}
+```
+</Code>
+
+This pattern provides explicit boundaries, making it easier for clients to manage response state.
