@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { graphql, useStaticQuery } from 'gatsby';
 import * as Accordion from '@radix-ui/react-accordion';
 import cn from '@ably/ui/core/utils/cn';
@@ -54,7 +54,7 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
   return (
     <Accordion.Root
       type="multiple"
-      className={cn(layer > 0 && 'pl-3')}
+      className={cn(layer > 0 ? 'pl-3' : 'px-2 py-3')}
       defaultValue={[`item-${previousTree.join('-')}`, ...preExpandedItems]}
     >
       {content.map((page, index) => {
@@ -116,7 +116,14 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
 
 const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
   const { activePage } = useLayoutContext();
-  const [openProduct, setOpenProduct] = useState(`item-${activePage.tree[0]?.index}`);
+
+  const defaultPageItems = useMemo(
+    () => (activePage.tree[0]?.index ? [`item-${activePage.tree[0].index}`] : []),
+    [activePage.tree],
+  );
+
+  const [openProducts, setOpenProducts] = useState(defaultPageItems);
+
   const {
     site: {
       siteMetadata: { externalScriptsData },
@@ -134,7 +141,9 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
   `);
 
   useEffect(() => {
-    setOpenProduct(`item-${activePage.tree[0]?.index}`);
+    if (activePage.tree[0]?.index) {
+      setOpenProducts((openProducts) => Array.from(new Set([...openProducts, `item-${activePage.tree[0].index}`])));
+    }
   }, [activePage.tree]);
 
   return (
@@ -148,9 +157,8 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
         )}
       ></div>
       <Accordion.Root
-        type="single"
-        collapsible
-        value={openProduct}
+        type="multiple"
+        value={openProducts}
         className={cn(
           'bg-neutral-000 dark:bg-neutral-1300 overflow-y-auto',
           inHeader
@@ -161,11 +169,10 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
               ],
         )}
         onValueChange={(value) => {
-          setOpenProduct(value);
+          setOpenProducts(value);
         }}
       >
         {Object.entries(productData).map(([productKey, productObj], index) => {
-          const isOpen = openProduct === `item-${index}`;
           const isSelected = activePage.tree[0]?.index === index;
 
           return (
@@ -179,8 +186,7 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
                   'group/accordion-trigger z-10',
                   accordionTriggerClassName,
                   'data-[state=open]:border-b data-[state=open]:sticky data-[state=open]:top-0 h-12 px-4 py-3 font-bold',
-                  isOpen && !isSelected && '[&[data-state=open]_svg]:text-neutral-1300',
-                  (isOpen || isSelected) && 'text-neutral-1300 dark:text-neutral-000',
+                  isSelected && 'text-neutral-1300 dark:text-neutral-000',
                 )}
               >
                 <div className="flex-1 flex items-center gap-2">
@@ -202,7 +208,7 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
                   size="12px"
                 />
               </Accordion.Trigger>
-              <Accordion.Content className={cn(accordionContentClassName, 'px-2 py-3')}>
+              <Accordion.Content className={accordionContentClassName}>
                 <ChildAccordion content={[...productObj.nav.content, ...productObj.nav.api]} tree={[index]} />
               </Accordion.Content>
             </Accordion.Item>
