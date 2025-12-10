@@ -16,6 +16,7 @@ import ExamplesList from '../Examples/ExamplesList';
 import Link from '../Link';
 import { InkeepSearchBar } from '../SearchBar/InkeepSearchBar';
 import { secondaryButtonClassName, iconButtonClassName, tooltipContentClassName } from './utils/styles';
+import { useLayoutContext } from 'src/contexts/layout-context';
 
 // Tailwind 'md' breakpoint from tailwind.config.js
 const MD_BREAKPOINT = 1040;
@@ -56,6 +57,7 @@ const helpResourcesItems = [
 const Header: React.FC = () => {
   const location = useLocation();
   const userContext = useContext(UserContext);
+  const { activePage } = useLayoutContext();
   const {
     site: {
       siteMetadata: { externalScriptsData },
@@ -120,6 +122,10 @@ const Header: React.FC = () => {
       handleResize.cancel();
     };
   }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [activePage]);
 
   return (
     <div className="flex items-center justify-between h-16 px-6 fixed w-full z-50 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000">
