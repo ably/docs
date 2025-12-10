@@ -44,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
       <Header />
       <div
         className={cn(
-          'flex pt-16 px-12 md:px-0 md:gap-12 lg:gap-16 xl:gap-20 justify-center',
+          'ui-standard-container mx-0 max-w-full flex pt-16 md:px-0 md:gap-12 lg:gap-16 xl:gap-20 justify-center',
           !leftSidebar && 'md:px-12',
         )}
       >
