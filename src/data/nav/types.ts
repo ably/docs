@@ -4,7 +4,7 @@ import { LanguageKey } from 'src/data/languages/types';
 export type NavProduct = {
   name: string;
   icon: { closed: IconName; open: IconName };
-  content: NavProductContent[];
+  content: NavProductPages[];
   api: NavProductContent[];
   showJumpLink?: boolean;
   link?: string;
