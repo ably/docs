@@ -1,0 +1,449 @@
+---
+title: "Identifying users and agents"
+meta_description: "Establish trusted identity and roles in decoupled AI sessions"
+meta_keywords: "user authentication, agent identity, JWT authentication, token authentication, verified identity, capabilities, authorization, user claims, RBAC, role-based access control, API key authentication, message attribution"
+---
+
+To build secure AI applications, agents need to trust who sent each message and understand what that sender is authorized to do. Ably's identity system provides cryptographically-verified identities and custom user attributes through token-based authentication.
+
+This page shows you how to authenticate users and agents, assign verified identities, attach custom attributes, and access that identity information in your applications.
+
+## Why identity matters <a id="why"/>
+
+In decoupled architectures, identity serves several critical purposes:
+
+**Prevent spoofing**: Without verified identity, malicious users could impersonate others by claiming to be someone else. Ably supports cryptographically binding each client's identity to their credentials, making spoofing impossible.
+
+**Message attribution**: Agents need to know whether messages come from users or other agents. This is essential for conversation flows, where agent responses should be securely distinguished from user prompts.
+
+**Personalized behavior**: Different users may have different privileges or attributes. A premium user might get access to more capable models, while a free user gets basic functionality. Ably allows your trusted authentication server to embed this information in the client's credentials, allowing this information to be securely passed to agents.
+
+**Authorization decisions**: Some operations should only be performed for specific users. For example, human-in-the-loop (HITL) tool calls that access sensitive data might require admin privileges. Ably allows agents to verify the privilege level and role of the user resolving the tool call.
+
+## Authenticating users <a id="authenticating"/>
+
+Use [token authentication](/docs/auth/token) to securely authenticate users. Your authentication server generates a token that is signed with the secret part of your Ably API key. Clients use this token to connect to Ably, and the token signature ensures it cannot be tampered with.
+
+The following examples use [JWT authentication](/docs/auth/token#jwt) for its simplicity and standard tooling support. For other approaches, see [token authentication](/docs/auth/token).
+
+Create a server endpoint that generates signed JWTs after verifying user authentication:
+
+<Code>
+```javascript
+// Server code
+import express from "express";
+import jwt from "jsonwebtoken";
+
+const app = express();
+
+// Mock authentication middleware.
+// This should be replaced with your actual authentication logic.
+function authenticateUser(req, res, next) {
+  // Assign a mock user ID for demonstration
+  req.session = { userId: "user123" };
+  next();
+}
+
+// Return the claims payload to embed in the signed JWT.
+function getJWTClaims(userId) {
+  // Returns an empty payload, so the token
+  // inherits the capabilities of the signing key.
+  return {};
+}
+
+// Define an auth endpoint used by the client to obtain a signed JWT
+// which it can use to authenticate with the Ably service.
+app.get("/api/auth/token", authenticateUser, (req, res) => {
+  const [keyName, keySecret] = "{{API_KEY}}".split(":");
+
+  // Sign a JWT using the secret part of the Ably API key.
+  const token = jwt.sign(getJWTClaims(req.session.userId), keySecret, {
+    algorithm: "HS256",
+    keyid: keyName,
+    expiresIn: "1h",
+  });
+
+  res.type("application/jwt").send(token);
+});
+
+app.listen(3001);
+```
+</Code>
+
+The JWT is signed with the secret part of your Ably API key using HMAC SHA-256. This example does not embed any claims in the JWT payload, so by default the token inherits the capabilities of the Ably API key used to sign the token.
+
+Configure your client to obtain a signed JWT from your server endpoint using an [`authUrl`](/docs/auth/token#auth-url). The client obtains a signed JWT from the URL and uses it to authenticate requests to Ably. The client automatically makes a request for a new token before it expires.
+
+<Aside data-type="important">
+Never include your Ably API key in client code. Instead, always authenticate clients using [token auth](/docs/auth/token).
+</Aside>
+
+<Code>
+```javascript
+// Client code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authUrl: "/api/auth/token"
+});
+
+ably.connection.on("connected", () => {
+  console.log("Connected to Ably");
+});
+```
+</Code>
+
+## Authenticating agents <a id="authenticating-agents"/>
+
+Agents typically run on servers in trusted environments where API keys can be securely stored. Use [API key authentication](/docs/auth#basic-authentication) to authenticate agents directly with Ably.
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}"
+});
+
+ably.connection.on("connected", () => {
+  console.log("Connected to Ably");
+});
+```
+</Code>
+
+<Aside data-type="important">
+Only use API key authentication in server-side code. Never include your Ably API key in client-side code that could be inspected by users.
+</Aside>
+
+<Aside data-type="note">
+Agents can also authenticate using [token authentication](/docs/auth/token), which is useful when agents run in environments where API keys should not be stored or when agents need dynamic capabilities that change based on runtime conditions.
+</Aside>
+
+## Specifying capabilities <a id="capabilities"/>
+
+Use [capabilities](/docs/auth/capabilities) to restrict which operations clients can perform on which channels. This applies to both users and agents, allowing you to enforce fine-grained permissions.
+
+### User capabilities <a id="user-capabilities"/>
+
+Add the [`x-ably-capability`](/docs/api/realtime-sdk/authentication##ably-jwt) claim to your JWT to specify the allowed capabilities of a client. This allows you to enforce fine-grained permissions, such as restricting some users to only subscribe to messages while allowing others to publish.
+
+Update your `getJWTClaims` function to specify the allowed capabilities for the authenticated user:
+
+<Code>
+```javascript
+// Server code
+
+// Return the claims payload to embed in the signed JWT.
+// Includes the `x-ably-capabilities` claim, which controls
+// which operations the user can perform on which channels.
+function getJWTClaims(userId) {
+  const orgId = "acme"; // Mock organization ID for demonstration
+  const capabilities = {
+    // The user can publish and subscribe to channels within the organization,
+    // that is, any channel matching `org:acme:*`.
+    [`org:${orgId}:*`]: ["publish", "subscribe"],
+    // The user can only subscribe to the `announcements` channel.
+    announcements: ["subscribe"],
+  };
+  return {
+    "x-ably-capability": JSON.stringify(capabilities),
+  };
+}
+```
+</Code>
+
+When a client authenticates with this token, Ably enforces these capabilities server-side. Any attempt to perform unauthorized operations will be rejected. For example, a client with the capabilities above can publish to channels prefixed with `org:acme:`, but an attempt to publish to a channel prefixed with `org:foobar:` will fail with error code [`40160`](/docs/platform/errors/codes#40160):
+
+<Code>
+```javascript
+// Client code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authUrl: "/api/auth/token"
+});
+
+const acmeChannel = ably.channels.get("org:acme:{{RANDOM_CHANNEL_NAME}}");
+await acmeChannel.publish("prompt", "What is the weather like today?"); // succeeds
+
+const foobarChannel = ably.channels.get("org:foobar:{{RANDOM_CHANNEL_NAME}}");
+await foobarChannel.publish("prompt", "What is the weather like today?"); // fails
+
+const announcementsChannel = ably.channels.get("announcements");
+await announcementsChannel.publish("prompt", "What is the weather like today?"); // fails
+await announcementsChannel.subscribe((msg) => console.log(msg)); // succeeds
+```
+</Code>
+
+<Aside data-type="note">
+Ably recommends using token authentication with short-lived tokens and minimal capabilities required for each user to limit the window of exposure if a token is compromised. For more information, see [When to use token auth](/docs/auth/token#when).
+</Aside>
+
+### Agent capabilities <a id="agent-capabilities"/>
+
+When using API key authentication, provision API keys through the [Ably dashboard](https://ably.com/dashboard) or [Control API](/docs/account/control-api) with only the capabilities required by the agent.
+
+The following example uses the Control API to create an API key with specific capabilities for a weather agent:
+
+<Aside data-type="note">
+To use the Control API, you must first [create an access token](/docs/platform/account/control-api#creating-access-token) in the Ably dashboard. You'll also need your [app ID](/docs/platform/account/control-api#app-id).
+</Aside>
+
+<Code>
+```shell
+curl --location --request POST 'https://control.ably.net/v1/apps/{{APP_ID}}/keys' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer ${ACCESS_TOKEN}' \
+--data-raw '{
+    "name": "weather-agent-key",
+    "capability": {
+        "org:acme:weather:*": ["publish", "subscribe"]
+    }
+}'
+```
+</Code>
+
+This creates an API key that can only publish and subscribe on channels matching `org:acme:weather:*`. The agent can then use this key to authenticate:
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+// Use an API key that was provisioned with capabilities to
+// publish and subscribe on channels matching "org:acme:weather:*"
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}"
+});
+
+const weatherChannel = ably.channels.get("org:acme:weather:{{RANDOM_CHANNEL_NAME}}");
+await weatherChannel.subscribe((msg) => console.log(msg)); // succeeds
+await weatherChannel.publish("update", "It's raining in London"); // succeeds
+
+const otherChannel = ably.channels.get("org:acme:other:{{RANDOM_CHANNEL_NAME}}");
+await otherChannel.subscribe((msg) => console.log(msg)); // fails
+await otherChannel.publish("update", "It's raining in London"); // fails
+```
+</Code>
+
+<Aside data-type="important">
+Following the principle of least privilege, provision API keys with the minimal capabilities needed by each agent. This limits the potential impact if an API key is compromised.
+</Aside>
+
+## Establishing verified identity <a id="identity"/>
+
+Use the [`clientId`](/docs/messages#properties) to identify the user or agent that published a message. For users, use [identified clients](/docs/auth/identified-clients) to assign a trusted `clientId` by embedding the identity in the signed JWT. For trusted agent code, specify the `clientId` directly when instantiating the client instance.
+
+### User identity <a id="user-identity"/>
+
+Add the [`x-ably-clientId`](/docs/api/realtime-sdk/authentication##ably-jwt) claim to your JWT to establish a verified identity for each client. This identity appears as the [`clientId`](/docs/messages#properties) in all messages the client publishes, and subscribers can trust this identity because only your server can issue JWTs with specific `clientId` values.
+
+Update your `getJWTClaims` function to specify a `clientId` for the user:
+
+<Code>
+```javascript
+// Return the claims payload to embed in the signed JWT.
+function getJWTClaims(userId) {
+  // Returns a payload with the `x-ably-clientId` claim, which ensures
+  // that the user's ID appears as the `clientId` on all messages
+  // published by the client using this token.
+  return { "x-ably-clientId": userId };
+}
+```
+</Code>
+
+When a client authenticates using this token, Ably's servers automatically attach the `clientId` specified in the token to every message the client publishes:
+
+<Code>
+```javascript
+// Client code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authUrl: "/api/auth/token"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Publish a message - the clientId is automatically attached
+await channel.publish("prompt", "What is the weather like today?");
+```
+</Code>
+
+Agents can then access this verified identity to identify the sender:
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Subscribe to messages from clients
+await channel.subscribe("prompt", (message) => {
+  // Access the verified clientId from the message
+  const userId = message.clientId;
+  const prompt = message.data;
+
+  console.log(`Received message from user: ${userId}`);
+  console.log(`Prompt:`, prompt);
+});
+```
+</Code>
+
+The `clientId` in the message can be trusted, so agents can use this identity to make decisions about what actions the user can take. For example, agents can check user permissions before executing tool calls, route messages to appropriate AI models based on subscription tiers, or maintain per-user conversation history and context.
+
+### Agent identity <a id="agent-identity"/>
+
+Agent code runs in a trusted environment, so it can directly specify the [`clientId`](/docs/auth/identified-clients#setting) when instantiating the Ably client to establish its identity. This identity appears as the [`clientId`](/docs/messages#properties) in all messages the agent publishes, allowing clients to identify the agent which published a message.
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}",
+  // Specify an identity for this agent
+  clientId: "weather-agent"
+});
+```
+</Code>
+
+When clients receive messages, they can use the `clientId` to determine which agent published the message:
+
+<Code>
+```javascript
+// Client code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authUrl: "/api/auth/token"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+await channel.subscribe((message) => {
+  if (message.clientId === "weather-agent") {
+    console.log("Weather agent response:", message.data);
+  }
+});
+```
+</Code>
+
+<Aside data-type="note">
+Agents can also authenticate using [token authentication](/docs/auth/token), which is useful when agents run in environments where API keys cannot be accessed securely or when agents need [dynamic capabilities](/docs/auth/token#dynamic-channel-access-control-.
+</Aside>
+
+## Adding roles and attributes <a id="roles-attributes"/>
+
+Embed custom roles and attributes in messages to enable role-based access control (RBAC) and convey additional context about users and agents. This is useful for authorization decisions without additional database lookups.
+
+### User claims <a id="user-claims"/>
+
+Use [authenticated claims for users](/docs/auth/capabilities#custom-restrictions-on-channels-) to embed custom claims in JWTs that represent user roles or attributes.
+
+Add claims using the `ably.channel.*` pattern to your JWT to specify user claims for specific channels. Claims can be scoped to individual channels or to [namespaces](/docs/channels#namespaces) of channels. The most specific user claim matching the channel is automatically included under `extras.userClaim` in all messages the client publishes.
+
+Update your `getJWTClaims` function to specify some user claims:
+
+<Code>
+```javascript
+// Return the claims payload to embed in the signed JWT.
+function getJWTClaims(userId) {
+  // Returns a payload with `ably.channel.*` claims, which ensures that
+  // the most specific claim appears as the `message.extras.userClaim`
+  // on all messages published by the client using this token.
+  return {
+    // The user is an editor on all acme channels.
+    "ably.channel.org:acme:*": "editor",
+    // The user is a guest on all other channels.
+    "ably.channel.*": "guest",
+  };
+}
+```
+</Code>
+
+When a client authenticates with a JWT containing `ably.channel.*` claims, Ably automatically includes the most specific matching claim value in the `message.extras.userClaim` field on messages published by the client:
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}"
+});
+
+const channel = ably.channels.get("org:acme:{{RANDOM_CHANNEL_NAME}}");
+
+// Subscribe to user prompts
+await channel.subscribe("prompt", async (message) => {
+  // Access the user's role from the user claim in message extras
+  const role = message.extras?.userClaim;
+
+  console.log(`Message from user with role: ${role}`);
+});
+```
+</Code>
+
+The `message.extras.userClaim` in the message can be trusted, so agents can use this information to make decisions about what actions the user can take. For example, an agent could allow users with an "editor" role to execute tool calls that modify documents, while restricting users with a "guest" role to read-only operations.
+
+### Agent metadata <a id="agent-metadata"/>
+
+Use [`message.extras.headers`](/docs/api/realtime-sdk/types##extras) to include custom metadata in agent messages, such as agent roles or attributes.
+
+When agents authenticate using API keys, they can include arbitrary metadata in `message.extras.headers`. This is useful for communicating agent characteristics to clients or other agents, such as which model the agent uses, the agent's role in a multi-agent system, or version information.
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}",
+  clientId: "weather-agent"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+await channel.publish({
+  name: "update",
+  data: "It's raining in London",
+  extras: {
+    headers: {
+      model: "gpt-4"
+    }
+  }
+});
+```
+</Code>
+
+Clients and other agents can access this metadata when messages are received:
+
+<Code>
+```javascript
+// Client code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authUrl: "/api/auth/token"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+await channel.subscribe((message) => {
+  if (message.clientId === "weather-agent") {
+    const model = message.extras?.headers?.model;
+    console.log(`Response from weather agent using ${model}:`, message.data);
+  }
+});
+```
+</Code>
+
+Unlike `message.extras.userClaim` for user messages, agent metadata in `message.extras.headers` is not authenticated and the values do not derive from the client's credentials. However, because agents run in trusted server environments, clients can trust the headers specified in messages from authenticated agents.
