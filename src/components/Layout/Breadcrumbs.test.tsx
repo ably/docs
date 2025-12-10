@@ -5,7 +5,16 @@ import Breadcrumbs from './Breadcrumbs';
 import { useLayoutContext } from 'src/contexts/layout-context';
 
 jest.mock('src/contexts/layout-context', () => ({
-  useLayoutContext: jest.fn(),
+  useLayoutContext: jest.fn().mockReturnValue({
+    activePage: {
+      tree: [],
+      page: { name: '', link: '' },
+      languages: [],
+      language: 'javascript',
+      product: null,
+      template: null,
+    },
+  }),
 }));
 
 jest.mock('../Link', () => {
@@ -29,6 +38,11 @@ describe('Breadcrumbs', () => {
           { page: { name: 'Subsection 1', link: '#' } },
           { page: { name: 'Current Page', link: '/section-1/subsection-1/page-1' } },
         ],
+        page: { name: 'Current Page', link: '/section-1/subsection-1/page-1' },
+        languages: [],
+        language: 'javascript',
+        product: null,
+        template: null,
       },
     });
   });
@@ -86,6 +100,11 @@ describe('Breadcrumbs', () => {
           { page: { name: 'Subsection 1', link: '/section-1/subsection-1' } },
           { page: { name: 'Current Page', link: '#' } },
         ],
+        page: { name: 'Current Page', link: '#' },
+        languages: [],
+        language: 'javascript',
+        product: null,
+        template: null,
       },
     });
 

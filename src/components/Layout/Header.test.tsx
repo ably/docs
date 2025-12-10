@@ -6,7 +6,16 @@ import Header from './Header';
 import UserContext from 'src/contexts/user-context';
 
 jest.mock('src/contexts/layout-context', () => ({
-  useLayoutContext: jest.fn(),
+  useLayoutContext: jest.fn().mockReturnValue({
+    activePage: {
+      tree: [],
+      page: { name: '', link: '' },
+      languages: [],
+      language: 'javascript',
+      product: null,
+      template: null,
+    },
+  }),
 }));
 
 jest.mock('@ably/ui/core/Icon', () => {
