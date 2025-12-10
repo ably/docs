@@ -18,6 +18,15 @@ export default {
         },
       ],
     },
+    {
+      name: 'Sessions & Identity',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/ai-transport/sessions-identity/overview',
+        },
+      ],
+    },
   ],
   api: [],
 } satisfies NavProduct;
