@@ -1,0 +1,279 @@
+---
+title: "Online status"
+meta_description: "Use Ably Presence to show which users and agents are currently connected to an AI session"
+meta_keywords: "presence, online status, multi-device, multi-user, session abandonment, async workflows"
+---
+
+In modern AI applications, agents need to know when users are online, when they've fully disconnected, and how to handle users connected across multiple devices. This allows agents to decide when to continue processing, when to wait for user input, and when to clean up resources. Ably's [Presence](/docs/presence-occupancy/presence) feature provides realtime online status with automatic lifecycle management.
+
+This page shows you how to detect which users and agents are currently connected to a session, distinguish between a single device disconnecting and a user going completely offline, and build responsive online/offline indicators in your applications.
+
+## Why online status matters <a id="why"/>
+
+In channel-oriented sessions, online status serves several critical purposes:
+
+**Session abandonment detection**: Agents need to know when users have fully disconnected to decide whether to continue processing, pause work, or clean up resources. Presence provides reliable signals when all of a user's devices have left the session.
+
+**Multi-device coordination**: A single user can connect from multiple devices simultaneously. Presence tracks each connection separately while maintaining stable identity across devices, allowing you to distinguish between "one device left" and "user completely offline".
+
+**Agent availability signaling**: Clients need to know when agents are online and ready to process requests. Agents can enter presence to advertise availability and leave when they complete work or shut down.
+
+**Collaborative session awareness**: In sessions with multiple users, participants can see who else is currently present. This enables realtime collaboration features and helps users understand the current session context.
+
+## Going online <a id="going-online"/>
+
+Use the [`enter()`](/docs/presence-occupancy/presence#enter) method to signal that a user or agent is online. You can optionally include data when entering presence to communicate additional context.
+
+You have flexibility in when to enter presence. For example, an agent might choose to appear as online only while processing a specific task, or remain present for the duration of the entire session. Users typically enter presence when they connect to a session and remain present until they disconnect.
+
+<Aside data-type="note">
+Clients require the [`presence`](/docs/auth/capabilities) capability on the channel to enter presence.
+</Aside>
+
+<Code>
+```javascript
+// Client code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authUrl: "/api/auth/token"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Enter presence with metadata about the user's device
+await channel.presence.enter({
+  device: "mobile",
+  platform: "ios"
+});
+```
+</Code>
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}",
+  clientId: "weather-agent"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Enter presence with metadata about the agent
+await channel.presence.enter({
+  model: "gpt-4"
+});
+```
+</Code>
+
+### Going online from multiple devices <a id="multiple-devices"/>
+
+A single user can be present on a channel from multiple devices simultaneously. Ably tracks each connection separately using a unique [`connectionId`](/docs/connect#connection-ids), while maintaining the same [`clientId`](/docs/auth/identified-clients#assign) across all connections.
+
+When a user connects from multiple devices, each device enters presence independently. All connections share the same `clientId` but have different `connectionId` values:
+
+<Code>
+```javascript
+// Client code (device 1: desktop browser)
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authUrl: "/api/auth/token"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+await channel.presence.enter({ device: "desktop" });
+```
+</Code>
+
+<Code>
+```javascript
+// Client code (device 2: mobile app)
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authUrl: "/api/auth/token"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+await channel.presence.enter({ device: "mobile" });
+```
+</Code>
+
+When either device leaves or disconnects, the other device remains in the presence set.
+
+## Going offline <a id="going-offline"/>
+
+### Explicitly going offline <a id="leaving"/>
+
+Use the [`leave()`](/docs/presence-occupancy/presence#leave) method when a user or agent wants to mark themselves as offline. This immediately notifies presence subscribers on the channel and removes the entry from the presence set, even if they remain connected to Ably.
+
+<Aside data-type="note">
+Clients require the [`presence`](/docs/auth/capabilities) capability on the channel to leave presence.
+</Aside>
+
+<Code>
+```javascript
+// Client code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authUrl: "/api/auth/token"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Leave presence when the user marks themselves offline
+await channel.presence.leave();
+```
+</Code>
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}",
+  clientId: "weather-agent"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Leave presence when the agent shuts down
+await channel.presence.leave();
+```
+</Code>
+
+### Going offline after disconnection <a id="disconnection"/>
+
+When a client loses connection unexpectedly, Ably detects the lost connection and automatically leaves the client from the presence set.
+
+By default, clients remain present for 15 seconds after an abrupt disconnection. This prevents excessive enter/leave events during brief network interruptions. If the client reconnects within this window, they remain in the presence set without triggering leave events.
+
+Use the `transportParams` [client option](/docs/api/realtime-sdk#client-options) to configure disconnection detection and presence lifecycle behaviour. After an abrupt disconnection, the `heartbeatInterval` transport parameter controls how quickly Ably detects the dead connection, while the `remainPresentFor` option controls how long the member is kept in presence before Ably emits the leave event.
+
+<Aside data-type="note">
+For more information, see [Handle unstable connections and failures](https://ably.com/docs/presence-occupancy/presence?lang=javascript#unstable-connections).
+</Aside>
+
+For example, if implementing resumable agents using techniques like durable execution, configure a longer `remainPresentFor` period to allow time for the new agent instance to come online and resume processing before the previous instance appears as offline. This provides a seamless handoff:
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}",
+  clientId: "weather-agent",
+  // Allow 30 seconds for agent resume and reconnection
+  transportParams: {
+    remainPresentFor: 30000
+  }
+});
+```
+</Code>
+
+## Viewing who is online <a id="viewing-presence"/>
+
+Participants in a session can query the current presence set or subscribe to presence events to see who else is online and react to changes in realtime. Users might want to see which agents are processing work, while agents might want to detect when specific users are offline to pause or cancel work.
+
+<Aside data-type="note">
+Clients require the `subscribe` or `presence-subscribe` [capability](/docs/auth/capabilities) on the channel to retrieve the presence set and subscribe to presence events.
+</Aside>
+
+### Retrieving current presence members <a id="get-members"/>
+
+Use [`presence.get()`](/docs/api/realtime-sdk/presence#get) to retrieve the current list of users and agents in the session. This is useful for showing who is currently available or checking if a specific participant is online before taking action.
+
+<Code>
+```javascript
+// Get all currently present members
+const members = await channel.presence.get();
+
+// Display each member - the same user will appear once per distinct connection
+members.forEach((member) => {
+  console.log(`${member.clientId} (connection: ${member.connectionId})`);
+});
+```
+</Code>
+
+### Subscribing to presence changes <a id="presence-subscribe"/>
+
+Use [`presence.subscribe()`](/docs/api/realtime-sdk/presence#subscribe) to receive realtime notifications when users or agents enter or leave the session. This enables building responsive UIs that show online users, or implementing agent logic that reacts to user connectivity changes.
+
+<Code>
+```javascript
+// Client code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  authUrl: "/api/auth/token"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+// Subscribe to changes to the presence set
+await channel.presence.subscribe(async (presenceMessage) => {
+  // Get the current synced presence set after any change
+  const members = await channel.presence.get();
+
+  // Display each member - the same user will appear once per distinct connection
+  members.forEach((member) => {
+    console.log(`${member.clientId} (connection: ${member.connectionId})`);
+  });
+});
+```
+</Code>
+
+You can also subscribe to specific presence events:
+
+<Code>
+```javascript
+// Subscribe only to enter events
+await channel.presence.subscribe("enter", (presenceMessage) => {
+  console.log(`${presenceMessage.clientId} joined on connection ${presenceMessage.connectionId}`);
+});
+
+// Subscribe only to leave events
+await channel.presence.subscribe("leave", (presenceMessage) => {
+  console.log(`${presenceMessage.clientId} left on connection ${presenceMessage.connectionId}`);
+});
+```
+</Code>
+
+### Detecting when a user is offline on all devices <a id="detecting-offline"/>
+
+Agents can monitor presence changes to detect when a specific user has gone completely offline across all devices. This is useful for deciding whether to pause expensive operations, cancel ongoing work, deprioritize tasks, or schedule work for later.
+
+<Code>
+```javascript
+// Agent code
+import * as Ably from "ably";
+
+const ably = new Ably.Realtime({
+  key: "{{API_KEY}}",
+  clientId: "weather-agent"
+});
+
+const channel = ably.channels.get("{{RANDOM_CHANNEL_NAME}}");
+
+await channel.presence.subscribe(async (presenceMessage) => {
+  // Get the current synced presence set
+  const members = await channel.presence.get();
+
+  // Check if all clients are offline
+  if (members.length === 0) {
+    console.log(`All clients are offline`);
+  }
+
+  // Check if a specific client is offline
+  if (!members.map(m => m.clientId).includes(targetUserId)) {
+    console.log(`${targetUserId} is now offline on all devices`);
+  }
+});
+```
+</Code>
