@@ -52,6 +52,15 @@ export default {
         },
       ],
     },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'OpenAI token streaming - message per token',
+          link: '/docs/guides/ai-transport/openai-message-per-token',
+        },
+      ],
+    },
   ],
   api: [],
 } satisfies NavProduct;
