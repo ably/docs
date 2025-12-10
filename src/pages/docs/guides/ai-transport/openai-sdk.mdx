@@ -1,0 +1,670 @@
+---
+title: "Guide: Token streaming using Ably and the OpenAI SDK"
+meta_description: "Stream AI model responses from the OpenAI SDK over Ably with real-time token delivery."
+meta_keywords: "AI, token streaming, OpenAI, Responses API, AI transport, Ably, realtime"
+---
+
+This guide demonstrates how to stream token-by-token responses from OpenAI's Responses API over Ably's realtime messaging platform. This pattern enables you to broadcast AI model responses to multiple clients simultaneously, with clear message boundaries for handling response lifecycle.
+
+By using Ably to distribute tokens from the OpenAI SDK, you can scale to thousands of concurrent subscribers, decouple your AI inference from client connections, and maintain reliable message delivery with ordering guarantees. This guide implements the [message-per-token with explicit start/stop events](/docs/ai-transport/features/token-streaming/message-per-token#explicit-events) pattern, which provides clear lifecycle management for each AI response.
+
+<Aside data-type="note">
+This guide focuses on OpenAI's Responses API. For general concepts about token streaming patterns, see the [message-per-token](/docs/ai-transport/features/token-streaming/message-per-token) guide.
+</Aside>
+
+## Prerequisites <a id="prerequisites"/>
+
+To follow this guide, you'll need:
+
+**Software requirements:**
+- Node.js 20 or higher
+
+**Account requirements:**
+- An OpenAI API key
+- An Ably API key
+
+**Useful links:**
+- [OpenAPI developer quickstart](https://platform.openai.com/docs/quickstart)
+- [Ably JavaScript SDK getting started](/docs/getting-started/javascript)
+
+## Setting up your environment <a id="setup"/>
+
+Create a new NPM package. This will contain our publisher and subscriber code:
+
+<Code>
+```shell
+mkdir ably-openai-example && cd ably-openai-example
+npm init -y
+```
+</Code>
+
+Install the required packages using NPM:
+
+<Code>
+```shell
+npm install openai@^4 ably@^2
+```
+</Code>
+
+<Aside data-type="note">
+We're using version 4.x of the OpenAI SDK. Some details of interacting with the OpenAI SDK may diverge from those given here if you're using a different major version.
+</Aside>
+
+Export your OpenAPI key to the environment; the OpenAI SDK will automatically read it later:
+
+<Code>
+```shell
+export OPENAI_API_KEY="your_api_key_here"
+```
+</Code>
+
+## Initializing the clients <a id="setup"/>
+
+### Publisher: Initializing the Ably and OpenAI clients <a id="publisher-setup"/>
+
+Initialize both the Ably and OpenAI clients. The Ably Realtime client maintains a persistent connection to the Ably service, allowing you to publish tokens at high message rates with low latency. The OpenAI client provides access to the Responses API.
+
+Create a new file `publisher.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from 'ably';
+import OpenAI from 'openai';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+
+// Initialize OpenAI client
+const openai = new OpenAI();
+
+// Create a channel for publishing streamed AI responses
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+```
+</Code>
+
+### Subscriber: Initializing the Ably client <a id="subscriber-setup"/>
+
+Initialize the Ably client, in the same way as you did for the publisher. The Ably subscriber will receive streamed AI response events in realtime.
+
+Create a new file `subscriber.mjs` with the following contents:
+
+<Code>
+```javascript
+import Ably from 'ably';
+
+// Initialize Ably Realtime client
+const realtime = new Ably.Realtime({ key: '{{API_KEY}}' });
+
+// Create a channel for subscribing to streamed AI responses
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+```
+</Code>
+
+## Understanding Responses API events <a id="understanding-events"/>
+
+OpenAI's Responses API streams results as a series of events when you set `stream: true`. The primary event type for text generation is `response.output_text.delta`, which contains incremental text content.
+
+Each streaming event includes a `type`, which describes the event type (e.g., `response.output_text.delta`).
+
+The stream lifecycle typically follows this pattern:
+1. **Stream start**: First event arrives with response ID
+2. **Content deltas**: Multiple `response.output_text.delta` events with incremental text
+3. **Stream completion**: Stream ends when all events have been received
+
+For more details on streaming events, see the [OpenAI Responses API streaming documentation](https://platform.openai.com/docs/api-reference/responses-streaming/response).
+
+See the [full publisher example](#full-mapping-example) below for an example sequence of events received from the OpenAI Responses API during the generation of a simple response.
+
+## Publishing tokens to Ably <a id="publishing"/>
+
+To stream OpenAI responses over Ably, iterate through the streaming events and publish each token to an Ably channel. This implementation follows the [explicit start/stop events pattern](/docs/ai-transport/features/token-streaming/message-per-token#explicit-events), which provides clear response boundaries.
+
+The pattern works as follows:
+- **First event**: Publish a `start` message to signal response beginning
+- **Each delta**: Publish a `token` message with the incremental text content
+- **Stream end**: Publish a `stop` message to signal response completion
+
+Use the response ID from OpenAI events in the Ably message extras to correlate tokens belonging to the same response.
+
+### Example: Mapping a full sequence of OpenAI events to Ably messages <a id="full-mapping-example"/>
+
+Let's consider the full sequence of events received from the OpenAI Responses API when processing a simple prompt, and consider how to map these events to Ably messages.
+
+<Aside data-type="note">
+This is only a representative example for a simple "text in, text out" use case, and may not reflect the exact sequence of events that you'll observe from the OpenAI API. It also does not handle response generation errors or refusals.
+</Aside>
+
+1. `{ type: 'response.created', response: { id: 'resp_abc123', … }, … }`: This gives us the response ID, which we'll include in all messages that we publish to Ably for this response. When we receive this event, we'll publish an Ably message named `start`.
+2. `{ type: 'response.in_progress', … }`: We'll ignore this event.
+3. `{ type: 'response.output_item.added', output_index: 0, item: { type: 'reasoning', … }, … }`: We'll ignore this event since its `item.type` is not `message`.
+4. `{ type: 'response.output_item.done', output_index: 0, item: { type: 'reasoning', … }, … }`: This indicates the completion of the preceding `reasoning` output item from event 3, and similarly we'll ignore it.
+5. `{ type: 'response.output_item.added', output_index: 1, item: { type: 'message', … }, … }`: This indicates the start of the output message. We'll extract its `output_index` and only publish `token` events to Ably for matching output items.
+6. `{ type: 'response.content_part.added', output_index: 1, content_index: 0, part: { type: 'output_text', … }, … }`: This indicates the start of the output text. We'll extract its `content_index` and only publish `token` events to Ably for matching content parts.
+7. Multiple events of the form `{ type: 'response.output_text.delta', output_index: 1, content_index: 0, delta: 'a bit of text that', … }`: This indicates that some tokens have been generated. When we receive such an event, we'll publish an Ably message named `token`, containing this text.
+8. `{ type: 'response.output_text.done', output_index: 1, content_index: 0, text: 'The full text of the response', … }`: This indicates that the output text is complete, and contains the full response text. We'll ignore this event.
+9. `{ type: 'response.content_part.done', output_index: 1, content_index: 0, part: { type: 'output_text', text: 'The full text of the response', … }, … }`: This indicates that the content part is complete, and contains the full response text. We'll ignore this event.
+10. `{ type: 'response.output_item.done', output_index: 1, … }`: This indicates that the output item is complete. We'll ignore this event.
+11. `{ type: 'response.completed', … }`: This indicates that the response is complete and will not emit any further events. When we receive this event, we'll publish an Ably message named `stop`.
+
+### Publisher code
+
+Add the following code to `publisher.mjs`:
+
+<Code>
+```javascript
+import { randomUUID } from "crypto";
+
+async function streamOpenAIResponse(userInput) {
+  // Create streaming response from OpenAI
+  const stream = await openai.responses.create({
+    model: "gpt-5",
+    input: userInput,
+    stream: true,
+  });
+
+  // Create a random request ID for correlating log messages when there are concurrent requests
+  const requestId = randomUUID().slice(0, 7);
+  console.log(`${requestId}: Created stream`);
+
+  // In this simple example, we'll only stream tokens for a single
+  // content_part of a single output_item (specifically, the first
+  // content_part of type "output_text" of the first output_item of type
+  // "message"). These variables contain the output_index and content_index
+  // event properties that correspond to these entities.
+  let outputIndex = null;
+  let contentIndex = null;
+
+  // Populated from the "response.created" OpenAI event and then included in
+  // all messages published to Ably for this response.
+  let responseId = null;
+
+  // Iterate through streaming events
+  for await (const event of stream) {
+    console.log(`${requestId}: Got event ${event.type}`);
+
+    if (event.type === "response.created") {
+      responseId = event.response.id;
+
+      console.log(
+        `${requestId}: Publishing 'start' event for response ${responseId}`,
+      );
+      channel.publish({
+        name: "start",
+        extras: {
+          headers: {
+            responseId: responseId,
+          },
+        },
+      });
+    } else {
+      if (responseId === null) {
+        throw new Error(
+          "OpenAI SDK behavior not as expected (initial response.created event not received)",
+        );
+      }
+
+      if (
+        event.type === "response.output_item.added" &&
+        event.item.type === "message" &&
+        outputIndex === null
+      ) {
+        outputIndex = event.output_index;
+      } else if (
+        event.type === "response.content_part.added" &&
+        event.part.type === "output_text" &&
+        event.output_index === outputIndex &&
+        contentIndex === null
+      ) {
+        contentIndex = event.content_index;
+      } else if (
+        event.type === "response.output_text.delta" &&
+        event.output_index === outputIndex &&
+        event.content_index === contentIndex
+      ) {
+        const delta = event.delta;
+
+        console.log(
+          `${requestId}: Publishing 'token' event with delta "${delta}" for response ${responseId}`,
+        );
+
+        channel.publish({
+          name: "token",
+          data: delta,
+          extras: {
+            headers: {
+              responseId: responseId,
+            },
+          },
+        });
+      } else if (event.type === "response.completed") {
+        console.log(
+          `${requestId}: Publishing 'stop' event for response ${responseId}`,
+        );
+
+        channel.publish({
+          name: "stop",
+          extras: {
+            headers: {
+              responseId: responseId,
+            },
+          },
+        });
+      } else {
+        console.log(
+          `${requestId}: Ignoring OpenAI SDK event ${event.type} for response ${responseId}`,
+        );
+      }
+    }
+  }
+}
+
+// Usage example: Multiple concurrent responses
+streamOpenAIResponse("Tell me a short joke");
+streamOpenAIResponse("Give me one interesting fact about Spain");
+streamOpenAIResponse("Write a one-line poem about carrot cake");
+```
+</Code>
+
+**Important implementation notes:**
+
+- **Don't await publish calls**: As shown in the code above, `channel.publish()` is called without `await`. This maximizes throughput by allowing Ably to batch acknowledgments. Messages are still published in order. For more details, see [publishing tokens](/docs/ai-transport/features/token-streaming/message-per-token#publishing) in the message-per-token guide.
+- **Response ID correlation**: The `response_id` from OpenAI uniquely identifies each response, allowing subscribers to correctly handle multiple concurrent responses.
+- **Event filtering**: Only publish when `event.delta` is present, as some events may not contain content.
+
+For more information about channels and publishing, see the [channels documentation](/docs/channels) and [message properties](/docs/messages#properties).
+
+## Subscribing to tokens <a id="subscribing"/>
+
+On the client side, subscribe to all three event types (`start`, `token`, and `stop`) to handle the complete response lifecycle. Use a `Map` to track multiple concurrent responses by their `responseId`.
+
+Add the following code to `subscriber.mjs`:
+
+<Code>
+```javascript
+// Track responses by ID
+const responses = new Map();
+
+// Subscribe to response start events
+await channel.subscribe("start", (message) => {
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) {
+    console.warn("Start event missing responseId");
+    return;
+  }
+
+  console.log(`${responseId}: Response started`);
+
+  // Initialize empty response
+  responses.set(responseId, {
+    text: "",
+    startTime: Date.now(),
+  });
+});
+
+// Subscribe to token events
+await channel.subscribe("token", (message) => {
+  const responseId = message.extras?.headers?.responseId;
+  const token = message.data;
+
+  if (!responseId) {
+    console.warn("Token event missing responseId");
+    return;
+  }
+
+  if (!responses.has(responseId)) {
+    console.warn(`${responseId}: Received token for unknown response`);
+    return;
+  }
+
+  // Append token to response
+  const response = responses.get(responseId);
+  response.text += token;
+  responses.set(responseId, response);
+
+  // Update UI or process token as it arrives
+  console.log(`${responseId}: Received token: "${token}"`);
+});
+
+// Subscribe to response stop events
+await channel.subscribe("stop", (message) => {
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) {
+    console.warn("Stop event missing responseId");
+    return;
+  }
+
+  const response = responses.get(responseId);
+
+  if (response) {
+    const duration = Date.now() - response.startTime;
+    console.log(
+      `${responseId} Response completed in ${duration}ms. Full text: ${response.text}`,
+    );
+
+    // Clean up completed response
+    responses.delete(responseId);
+  }
+});
+
+console.log("Waiting to receive events from Ably");
+```
+</Code>
+
+**Key implementation points:**
+
+- **Handle all event types**: Subscribe to `start`, `token`, and `stop` to manage the complete response lifecycle
+- **Track concurrent responses**: Use a `Map` to handle multiple responses streaming simultaneously
+- **Progressive updates**: Update your UI or process tokens as they arrive in the `token` handler
+
+For more information about subscribing to channels, see the [channel subscription documentation](/docs/channels/subscribe).
+
+<Aside data-type="note">
+If clients join mid-stream or need to catch up after reconnecting, you'll need to handle client hydration. For patterns on handling late joiners and page refreshes, see the [client hydration section](/docs/ai-transport/features/token-streaming/message-per-token#hydration) in the message-per-token guide.
+</Aside>
+
+## Run the subscriber and publisher <a id="run"/>
+
+We're going to run the publisher and two subscribers. This will allow us to see that:
+
+- messages published by a single publisher are successfully delivered simultaneously to multiple subscribers
+- subscribers are able to handle multiple AI responses being received simultaneously
+
+Open two new terminal tabs and run the subscriber in each of them:
+
+<Code>
+```shell
+node subscriber.mjs
+```
+</Code>
+
+Now, in the original terminal tab (the one in which you exported `OPENAI_API_KEY`), run the publisher:
+
+<Code>
+```shell
+node publisher.mjs
+```
+</Code>
+
+You should see publisher output similar to the following:
+
+```text
+f03945a: Created stream
+f03945a: Got event response.created
+f03945a: Publishing 'start' event for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.in_progress
+f03945a: Ignoring OpenAI SDK event response.in_progress for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+de6fbd3: Created stream
+de6fbd3: Got event response.created
+de6fbd3: Publishing 'start' event for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.in_progress
+de6fbd3: Ignoring OpenAI SDK event response.in_progress for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+38b6c91: Created stream
+38b6c91: Got event response.created
+38b6c91: Publishing 'start' event for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.in_progress
+38b6c91: Ignoring OpenAI SDK event response.in_progress for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_item.added
+38b6c91: Ignoring OpenAI SDK event response.output_item.added for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+f03945a: Got event response.output_item.added
+f03945a: Ignoring OpenAI SDK event response.output_item.added for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+de6fbd3: Got event response.output_item.added
+de6fbd3: Ignoring OpenAI SDK event response.output_item.added for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_item.done
+de6fbd3: Ignoring OpenAI SDK event response.output_item.done for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_item.added
+de6fbd3: Got event response.content_part.added
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta "I" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " told" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " my" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+38b6c91: Got event response.output_item.done
+38b6c91: Ignoring OpenAI SDK event response.output_item.done for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_item.added
+38b6c91: Got event response.content_part.added
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta "Spain" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta "’s" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " national" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " anthem" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta "," for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " the" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " “" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " suitcase" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " we" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta "March" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta "a" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " Real" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta ",”" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " is" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " one" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " of" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " the" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta "’re" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " not" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " going" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " few" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " on" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " vacation" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " this" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " year" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " in" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " the" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta "." for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " world" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " with" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " no" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " official" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " Now" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta " lyrics" for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_text.delta
+38b6c91: Publishing 'token' event with delta "." for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " I" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta "’m" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+38b6c91: Got event response.output_text.done
+38b6c91: Ignoring OpenAI SDK event response.output_text.done for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.content_part.done
+38b6c91: Ignoring OpenAI SDK event response.content_part.done for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+38b6c91: Got event response.output_item.done
+38b6c91: Ignoring OpenAI SDK event response.output_item.done for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " dealing" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " with" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " emotional" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta " baggage" for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.delta
+de6fbd3: Publishing 'token' event with delta "." for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_text.done
+de6fbd3: Ignoring OpenAI SDK event response.output_text.done for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.content_part.done
+de6fbd3: Ignoring OpenAI SDK event response.content_part.done for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+de6fbd3: Got event response.output_item.done
+de6fbd3: Ignoring OpenAI SDK event response.output_item.done for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+38b6c91: Got event response.completed
+38b6c91: Publishing 'stop' event for response resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c
+de6fbd3: Got event response.completed
+de6fbd3: Publishing 'stop' event for response resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5
+f03945a: Got event response.output_item.done
+f03945a: Ignoring OpenAI SDK event response.output_item.done for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_item.added
+f03945a: Got event response.content_part.added
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta "Car" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta "rot" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta " cake" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta ":" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta " garden" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta " gold" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta " grated" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta " into" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta " spice" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta "," for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta " dreaming" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta " beneath" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta " cream" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta "-che" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta "ese" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta " snow" for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.delta
+f03945a: Publishing 'token' event with delta "." for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_text.done
+f03945a: Ignoring OpenAI SDK event response.output_text.done for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.content_part.done
+f03945a: Ignoring OpenAI SDK event response.content_part.done for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.output_item.done
+f03945a: Ignoring OpenAI SDK event response.output_item.done for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+f03945a: Got event response.completed
+f03945a: Publishing 'stop' event for response resp_097628d5ede953e800693c497c30148194adc300e4ee412171
+```
+
+And you should see subscriber output similar to the following, in both of your subscriber terminal tabs:
+
+```text
+Waiting to receive events from Ably
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Response started
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Response started
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Response started
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: "I"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " told"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " my"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: "Spain"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: "’s"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " national"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " anthem"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: ","
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " the"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " “"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " suitcase"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " we"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: "March"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: "a"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " Real"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: ",”"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " is"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " one"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " of"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " the"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: "’re"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " not"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " going"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " few"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " on"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " vacation"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " this"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " year"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " in"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " the"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: "."
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " world"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " with"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " no"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " official"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " Now"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: " lyrics"
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c: Received token: "."
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " I"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: "’m"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " dealing"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " with"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " emotional"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: " baggage"
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5: Received token: "."
+resp_053c6147aba7289e00693c497c2ec88195ac8b2dcacef1231c Response completed in 1555ms. Full text: Spain’s national anthem, the “Marcha Real,” is one of the few in the world with no official lyrics.
+resp_0f89f403f4f5f71800693c497c319c8195acdf3676dbe32cf5 Response completed in 1651ms. Full text: I told my suitcase we’re not going on vacation this year. Now I’m dealing with emotional baggage.
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: "Car"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: "rot"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: " cake"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: ":"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: " garden"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: " gold"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: " grated"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: " into"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: " spice"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: ","
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: " dreaming"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: " beneath"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: " cream"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: "-che"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: "ese"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: " snow"
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171: Received token: "."
+resp_097628d5ede953e800693c497c30148194adc300e4ee412171 Response completed in 3253ms. Full text: Carrot cake: garden gold grated into spice, dreaming beneath cream-cheese snow.
+```
+
+**Key points**:
+
+- **Multiple concurrent responses are handled correctly**: The subscriber receives interleaved tokens for three concurrent AI responses, and correctly pieces together the three separate messages:
+  - "Spain’s national anthem, the “Marcha Real,” is one of the few in the world with no official lyrics."
+  - "I told my suitcase we’re not going on vacation this year. Now I’m dealing with emotional baggage."
+  - "Carrot cake: garden gold grated into spice, dreaming beneath cream-cheese snow."
+- **Multiple subscribers receive the same token stream**: Both subscribers receive exactly the same token stream that was generated by a single publisher.
+
+## Next steps
+
+You now have a working implementation of token streaming from OpenAI's Responses API over Ably. Here are some suggestions for taking this further:
+
+**Explore advanced patterns:**
+- Learn about [client hydration strategies](/docs/ai-transport/features/token-streaming/message-per-token#hydration) for handling late joiners and reconnections
+
+**Production readiness:**
+- Implement [token authentication](/docs/auth/token) for secure client connections
+- Add error handling for OpenAI API failures and rate limits
+
+**Learn more:**
+- [Message-per-token pattern guide](/docs/ai-transport/features/token-streaming/message-per-token) - Complete guide to token streaming patterns

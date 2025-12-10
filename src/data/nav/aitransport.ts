@@ -52,6 +52,15 @@ export default {
         },
       ],
     },
+    {
+      name: 'Guides',
+      pages: [
+        {
+          name: 'Using the OpenAI SDK',
+          link: '/docs/guides/ai-transport/openai-sdk',
+        },
+      ],
+    },
   ],
   api: [],
 } satisfies NavProduct;
