@@ -31,6 +31,27 @@ export default {
         },
       ],
     },
+    {
+      name: 'Sessions & Identity',
+      pages: [
+        {
+          name: 'Overview',
+          link: '/docs/ai-transport/features/sessions-identity',
+        },
+        {
+          name: 'Identifying users and agents',
+          link: '/docs/ai-transport/features/sessions-identity/identifying-users-and-agents',
+        },
+        {
+          name: 'Online status',
+          link: '/docs/ai-transport/features/sessions-identity/online-status',
+        },
+        {
+          name: 'Resuming sessions',
+          link: '/docs/ai-transport/features/sessions-identity/resuming-sessions',
+        },
+      ],
+    },
   ],
   api: [],
 } satisfies NavProduct;
