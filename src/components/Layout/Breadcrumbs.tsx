@@ -22,7 +22,13 @@ const Breadcrumbs: React.FC = () => {
       .findIndex((node) => node.page.link !== '#');
 
     if (index !== -1) {
-      return activePage.tree.length - index - 2;
+      const potentialIndex = activePage.tree.length - index - 2;
+
+      if (activePage.page.link === activePage.tree[potentialIndex].page.link) {
+        return null;
+      }
+
+      return potentialIndex;
     }
 
     return null;
@@ -30,7 +36,15 @@ const Breadcrumbs: React.FC = () => {
 
   return (
     <nav aria-label="breadcrumb" className="flex mt-8 items-center gap-1">
-      <Link to="/docs" className={cn(linkStyles, 'hidden sm:block')}>
+      {lastActiveNodeIndex === null && (
+        <Icon
+          name="icon-gui-chevron-left-micro"
+          size="16px"
+          color="text-neutral-900 dark:text-neutral-400"
+          additionalCSS="sm:hidden"
+        />
+      )}
+      <Link to="/docs" className={cn(linkStyles, lastActiveNodeIndex !== null && 'hidden sm:block')}>
         Home
       </Link>
       <Icon
