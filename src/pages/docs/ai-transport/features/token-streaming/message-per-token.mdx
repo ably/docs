@@ -230,3 +230,200 @@ await channel.subscribe('stop', (message) => {
 });
 ```
 </Code>
+
+## Client hydration <a id="hydration"/>
+
+When clients connect or reconnect, such as after a page refresh, they often need to catch up on tokens that were published while they were offline or before they joined. Ably provides several approaches to hydrate client state depending on your application's requirements.
+
+<Aside data-type="note">
+If you need to retrieve and process large amounts of historical data, consider using the [message-per-response](/docs/ai-transport/features/token-streaming/message-per-response) pattern instead, in which the complete response appears as a single message in history.
+</Aside>
+
+### Using rewind for recent history <a id="rewind"/>
+
+The simplest approach is to use Ably's [rewind](/docs/channels/options/rewind) channel option to automatically retrieve recent tokens when attaching to a channel:
+
+<Code>
+```javascript
+// Use rewind to receive recent historical messages
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', {
+  params: { rewind: '2m' } // or rewind: 100 for message count
+});
+
+// Subscribe to receive both recent historical and live messages,
+// which are delivered in order to the subscription
+await channel.subscribe('token', (message) => {
+  const token = message.data;
+
+  // Process tokens from both recent history and live stream
+  console.log('Token received:', token);
+});
+```
+</Code>
+
+Rewind supports two formats:
+
+- **Time-based**: Use a time interval like `'30s'` or `'2m'` to retrieve messages from that time period
+- **Count-based**: Use a number like `50` or `100` to retrieve the most recent N messages (maximum 100)
+
+<Aside data-type="note">
+At most 100 messages will be retrieved in a rewind request. If more messages exist within the specified interval, only the most recent 100 are sent.
+</Aside>
+
+By default, rewind is limited to the last 2 minutes of messages. This is usually sufficient for scenarios where clients need only recent context, such as for continuous token streaming, or when the response stream from a given model request does not exceed 2 minutes. If you need more than 2 minutes of history, see [Using history for longer persistence](#history).
+
+### Using history for longer persistence <a id="history"/>
+
+For applications that need to retrieve tokens beyond the 2-minute rewind window, enable [persistence](/docs/storage-history/storage#all-message-persistence) on your channel. Use [channel history](/docs/storage-history/history) with the [`untilAttach` option](/docs/storage-history/history#continuous-history) to paginate back through history to obtain historical tokens, while preserving continuity with the delivery of live tokens:
+
+<Code>
+```javascript
+// Use a channel in a namespace called 'persisted', which has persistence enabled
+const channel = realtime.channels.get('persisted:{{RANDOM_CHANNEL_NAME}}');
+
+let response = '';
+
+// Subscribe to live messages (implicitly attaches the channel)
+await channel.subscribe('token', (message) => {
+  // Append the token to the end of the response
+  response += message.data;
+});
+
+// Fetch history up until the point of attachment
+let page = await channel.history({ untilAttach: true });
+
+// Paginate backwards through history
+while (page) {
+  // Messages are newest-first, so prepend them to response
+  for (const message of page.items) {
+    response = message.data + response;
+  }
+
+  // Move to next page if available
+  page = page.hasNext() ? await page.next() : null;
+}
+```
+</Code>
+
+### Hydrating an in-progress live response <a id="live-response"/>
+
+A common pattern is to persist complete model responses in your database while using Ably for live token delivery of the in-progress response.
+
+The client loads completed responses from your database, then reaches back into Ably channel history until it encounters a token for a response it's already loaded.
+
+You can retrieve partial history using either the [rewind](#rewind) or [history](#history) pattern.
+
+#### Hydrate using rewind
+
+Load completed responses from your database, then use rewind to catch up on any in-progress responses, skipping any tokens that belong to a response that was already loaded:
+
+<Code>
+```javascript
+// Load completed responses from database
+const completedResponses = await loadResponsesFromDatabase();
+
+// Use rewind to receive recent historical messages
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}', {
+  params: { rewind: '2m' }
+});
+
+// Track in progress responses by ID
+const inProgressResponses = new Map();
+
+// Subscribe to receive both recent historical and live messages,
+// which are delivered in order to the subscription
+await channel.subscribe('token', (message) => {
+  const token = message.data;
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) {
+    console.warn('Token missing responseId');
+    return;
+  }
+
+  // Skip tokens for responses already hydrated from database
+  if (completedResponses.has(responseId)) {
+    return;
+  }
+
+  // Create an empty in-progress response
+  if (!inProgressResponses.has(responseId)) {
+    inProgressResponses.set(responseId, '');
+  }
+
+  // Append tokens for new responses
+  inProgressResponses.set(responseId, inProgressResponses.get(responseId) + token);
+});
+```
+</Code>
+
+#### Hydrate using history
+
+Load completed responses from your database, then paginate backwards through history to catch up on in-progress responses until you reach a token that belongs to a response you've already loaded:
+
+<Code>
+```javascript
+// Load completed responses from database
+const completedResponses = await loadResponsesFromDatabase();
+
+// Use a channel in a namespace called 'persisted', which has persistence enabled
+const channel = realtime.channels.get('persisted:{{RANDOM_CHANNEL_NAME}}');
+
+// Track in progress responses by ID
+const inProgressResponses = new Map();
+
+// Subscribe to live tokens (implicitly attaches)
+await channel.subscribe('token', (message) => {
+  const token = message.data;
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) {
+    console.warn('Token missing responseId');
+    return;
+  }
+
+  // Skip tokens for responses already hydrated from database
+  if (completedResponses.has(responseId)) {
+    return;
+  }
+
+  // Create an empty in-progress response
+  if (!inProgressResponses.has(responseId)) {
+    inProgressResponses.set(responseId, '');
+  }
+
+  // Append live tokens for in-progress responses
+  inProgressResponses.set(responseId, inProgressResponses.get(responseId) + token);
+});
+
+// Paginate backwards through history until we encounter a hydrated response
+let page = await channel.history({ untilAttach: true });
+
+// Paginate backwards through history
+let done = false;
+while (page && !done) {
+  // Messages are newest-first, so prepend them to response
+  for (const message of page.items) {
+    const token = message.data;
+    const responseId = message.extras?.headers?.responseId;
+
+    // Stop when we reach a response already loaded from database
+    if (completedResponses.has(responseId)) {
+      done = true;
+      break;
+    }
+
+    // Create an empty in-progress response
+    if (!inProgressResponses.has(responseId)) {
+      inProgressResponses.set(responseId, '');
+    }
+
+    // Prepend historical tokens for in-progress responses
+    inProgressResponses.set(responseId, token + inProgressResponses.get(responseId));
+  }
+
+  // Move to next page if available
+  page = page.hasNext() ? await page.next() : null;
+}
+```
+</Code>
