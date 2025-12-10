@@ -1,15 +1,11 @@
 import React from 'react';
 import cn from '@ably/ui/core/utils/cn';
+import Aside from 'src/components/blocks/dividers/Aside';
+import { HtmlComponentPropsData } from 'src/components/html-component-props';
 
-type AdmonitionVariant =
-  | 'neutral'
-  | 'note'
-  | 'further-reading'
-  | 'important'
-  | 'new'
-  | 'warning'
-  | 'experimental'
-  | 'updated';
+const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental'];
+
+type AdmonitionVariant = 'neutral' | 'note' | 'further-reading' | 'important' | 'warning';
 
 interface AdmonitionProps extends React.HTMLAttributes<HTMLElement> {
   'data-type'?: AdmonitionVariant;
@@ -43,30 +39,20 @@ const admonitionConfig: Record<
     backgroundColor: 'bg-orange-100 dark:bg-orange-1000',
     title: 'Important',
   },
-  new: {
-    borderColor: 'border-l-yellow-500 dark:border-l-yellow-400',
-    backgroundColor: 'bg-yellow-100 dark:bg-yellow-800',
-    title: 'New',
-  },
   warning: {
     borderColor: 'border-l-yellow-500 dark:border-l-yellow-400',
     backgroundColor: 'bg-yellow-100 dark:bg-yellow-800',
     title: 'Warning',
   },
-  experimental: {
-    borderColor: 'border-l-purple-500 dark:border-l-purple-400',
-    backgroundColor: 'bg-purple-100 dark:bg-purple-800',
-    title: 'Experimental',
-  },
-  updated: {
-    borderColor: 'border-l-pink-500 dark:border-l-pink-400',
-    backgroundColor: 'bg-pink-100 dark:bg-pink-800',
-    title: 'Updated',
-  },
 };
 
 const Admonition: React.FC<AdmonitionProps> = ({ 'data-type': dataType = 'note', children, className, ...rest }) => {
-  const { borderColor, backgroundColor, title } = admonitionConfig[dataType] ?? admonitionConfig.note;
+  // For 'new', 'updated', 'experimental' types, we use the older Aside component instead of the newer Admonitions component
+  if (LEGACY_ADMONITION_TYPES.includes(dataType)) {
+    return <Aside attribs={{ 'data-type': dataType }} data={(<>{children}</>) as unknown as HtmlComponentPropsData} />;
+  }
+
+  const { borderColor, backgroundColor, title } = admonitionConfig[dataType];
 
   return (
     <aside
