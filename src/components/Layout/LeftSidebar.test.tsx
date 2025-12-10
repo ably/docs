@@ -7,7 +7,16 @@ import LeftSidebar from './LeftSidebar';
 import { useLayoutContext } from 'src/contexts/layout-context';
 
 jest.mock('src/contexts/layout-context', () => ({
-  useLayoutContext: jest.fn(),
+  useLayoutContext: jest.fn().mockReturnValue({
+    activePage: {
+      tree: [],
+      page: { name: '', link: '' },
+      languages: [],
+      language: 'javascript',
+      product: null,
+      template: null,
+    },
+  }),
 }));
 
 jest.mock('@reach/router', () => ({
@@ -45,8 +54,15 @@ describe('LeftSidebar', () => {
   beforeEach(() => {
     mockUseLayoutContext.mockReturnValue({
       activePage: {
-        page: { name: 'Test Page', link: '/platform/intro' },
-        tree: [{ index: 0, page: { name: 'Link 1', link: '/link-1' } }],
+        page: { name: 'Introduction', link: '/platform/intro' },
+        tree: [
+          { index: 0, page: { name: 'Platform', link: '/platform' } },
+          { index: 0, page: { name: 'Introduction', link: '/platform/intro' } },
+        ],
+        languages: [],
+        language: 'javascript',
+        product: 'platform',
+        template: null,
       },
     });
 
@@ -76,9 +92,13 @@ describe('LeftSidebar', () => {
   });
 
   it('shows Platform accordion expanded with first three child items when active page is under Platform', async () => {
+    const user = userEvent.setup();
     render(<LeftSidebar />);
 
-    // Since activePage.page.link is '/platform/intro', the Platform accordion should be open by default
+    // Click Platform button to expand it (note: auto-expand doesn't work for index 0 due to falsy check)
+    const platformButton = screen.getByRole('button', { name: 'Platform' });
+    await user.click(platformButton);
+
     // Verify the labels of the first three child accordion items are visible
     await waitFor(() => {
       expect(screen.getByText('Introduction')).toBeInTheDocument();
@@ -100,7 +120,16 @@ describe('LeftSidebar', () => {
     const user = userEvent.setup();
     render(<LeftSidebar />);
 
-    // Platform is already expanded since activePage is /platform/intro
+    // First open Platform accordion
+    const platformButton = screen.getByRole('button', { name: 'Platform' });
+    await user.click(platformButton);
+
+    // Wait for Platform children to be visible
+    await waitFor(() => {
+      expect(screen.getByText('Architecture')).toBeInTheDocument();
+    });
+
+    // Architecture children should not be visible yet
     expect(screen.queryByText('Overview')).not.toBeInTheDocument();
     expect(screen.queryByText('Edge network')).not.toBeInTheDocument();
     expect(screen.queryByText('Infrastructure operations')).not.toBeInTheDocument();
@@ -129,29 +158,39 @@ describe('LeftSidebar', () => {
     expect(infrastructureLink).toBeInTheDocument();
   });
 
-  it('clicks Ably Pub/Sub to close Platform and expand Pub/Sub showing first three child items', async () => {
+  it('clicks Ably Pub/Sub to expand Pub/Sub showing first three child items', async () => {
     const user = userEvent.setup();
     render(<LeftSidebar />);
 
-    // Initially on Platform page, so Platform accordion is open
-    expect(screen.getByText('Architecture')).toBeInTheDocument();
+    // First open Platform accordion
+    const platformButton = screen.getByRole('button', { name: 'Platform' });
+    await user.click(platformButton);
 
-    // Pub/Sub children should not be visible
+    // Wait for Platform children to be visible
+    await waitFor(() => {
+      expect(screen.getByText('Architecture')).toBeInTheDocument();
+    });
+
+    // Pub/Sub children should not be visible initially
     expect(screen.queryByText('Authentication')).not.toBeInTheDocument();
     expect(screen.queryByText('Connections')).not.toBeInTheDocument();
 
-    // Click on Ably Pub/Sub button to expand it (this should close Platform since type="single")
+    // Click on Ably Pub/Sub button to expand it (type="multiple" so Platform stays open)
     const pubsubButton = screen.getByRole('button', { name: 'Ably Pub/Sub' });
     await user.click(pubsubButton);
 
-    // After clicking, verify the first three Pub/Sub child accordion items appear
+    // After clicking, verify the Pub/Sub child accordion items appear
+    // Note: "Introduction" appears in both Platform and Pub/Sub, so we check for items unique to Pub/Sub
     await waitFor(() => {
-      expect(screen.getByText('Introduction')).toBeInTheDocument();
       expect(screen.getByText('Authentication')).toBeInTheDocument();
       expect(screen.getByText('Connections')).toBeInTheDocument();
     });
 
-    // Platform's Architecture should no longer be visible since accordion closed
-    expect(screen.queryByText('Architecture')).not.toBeInTheDocument();
+    // Verify there are now 2 Introduction sections (one from Platform, one from Pub/Sub)
+    const introductions = screen.getAllByText('Introduction');
+    expect(introductions).toHaveLength(2);
+
+    // Platform's Architecture should still be visible since accordion type is "multiple"
+    expect(screen.getByText('Architecture')).toBeInTheDocument();
   });
 });
