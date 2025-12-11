@@ -13,10 +13,10 @@ import { ProductKey } from 'src/data/types';
 
 type PageHeaderProps = {
   title: string;
-  description: string;
+  intro: string;
 };
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
   const { activePage } = useLayoutContext();
   const { language, product, page } = activePage;
   const location = useLocation();
@@ -45,7 +45,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) =>
     <div className="my-8 border-b border-neutral-300 dark:border-neutral-1000 pb-8">
       <h1 className="ui-text-h1 mb-4">{title}</h1>
       <p className="text-neutral-800 dark:text-neutral-500 mb-8 font-serif italic tracking-tight text-lg leading-normal">
-        {description}
+        {intro}
       </p>
 
       <div className="flex items-center gap-5">
