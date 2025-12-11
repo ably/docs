@@ -36,6 +36,11 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
   const layer = tree.length - 1;
   const previousTree = activePage.tree.map(({ index }) => index).slice(0, layer + 2);
 
+  const preExpandedItems = content
+    .map((page, index) => 'expand' in page && page.expand && `item-${tree.join('-')}-${index}`)
+    .filter((item) => typeof item === 'string');
+  const [openSections, setOpenSections] = useState<string[]>([`item-${previousTree.join('-')}`, ...preExpandedItems]);
+
   useEffect(() => {
     if (activeTriggerRef.current) {
       setTimeout(() => {
@@ -45,28 +50,38 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
         });
       }, 200);
     }
-  }, []);
+  }, [activePage.tree]);
 
-  const preExpandedItems = content
-    .map((page, index) => 'expand' in page && page.expand && `item-${tree.join('-')}-${index}`)
-    .filter((item) => typeof item === 'string');
+  const subtreeIdentifier = useMemo(
+    () =>
+      activePage.tree
+        .slice(0, layer + 2)
+        .map(({ index }) => index)
+        .join('-'),
+    [activePage.tree, layer],
+  );
+
+  useEffect(() => {
+    if (activePage.tree.length > 1) {
+      setOpenSections((openSections) => Array.from(new Set([...openSections, `item-${subtreeIdentifier}`])));
+    }
+  }, [activePage.tree.length, subtreeIdentifier]);
 
   return (
     <Accordion.Root
       type="multiple"
       className={cn(layer > 0 ? 'pl-3' : 'px-2 py-3')}
-      defaultValue={[`item-${previousTree.join('-')}`, ...preExpandedItems]}
+      value={openSections}
+      onValueChange={(value) => {
+        setOpenSections(value);
+      }}
     >
       {content.map((page, index) => {
         const hasDeeperLayer = 'pages' in page && page.pages;
         const nodeIdentifier = `${tree.join('-')}-${index}`;
 
         const isSelected = 'link' in page && page.link === activePage.page.link;
-        const isActive =
-          activePage.tree
-            .map(({ index }) => index)
-            .slice(0, layer + 2)
-            .join('-') === nodeIdentifier;
+        const isActive = subtreeIdentifier === nodeIdentifier;
 
         return (
           <Accordion.Item key={page.name} value={`item-${nodeIdentifier}`}>
