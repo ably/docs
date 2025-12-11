@@ -26,6 +26,7 @@ export const languageKeys = [
   'css',
   'laravel',
   'typescript',
+  'jetpack',
 ] as const;
 
 export type LanguageKey = (typeof languageKeys)[number];
