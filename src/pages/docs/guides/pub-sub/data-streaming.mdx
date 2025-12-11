@@ -36,9 +36,9 @@ The following sections explore how Ably's optimization features solve real-world
 
 ## How do I reduce bandwidth and latency when data changes frequently but incrementally?
 
-**The challenge:** Live racing telemetry platforms stream hundreds of datapoints to fan applications during events - speed, RPM, temperature, tire pressure, fuel levels, and more. These updates happen multiple times per second to keep dashboards responsive. However, between consecutive messages, most datapoints change only slightly or not at all, while structural metadata like field names remains constant. Transmitting complete state repeatedly to every consumer wastes massive bandwidth on redundant information.
+**The challenge:** A sports games platform streams live match state to spectators and players as matches progress. The match state naturally grows throughout the game - starting with basic match info, then accumulating player statistics, scores, game events, and other statistics. By mid-game, the full state can be many kilobytes. Publishing the entire state with each update means transmitting increasingly large payloads repeatedly to every spectator, even though only small portions change between updates (a player's ranking shifts, a score increment or some game metric updates). This wastes massive bandwidth on redundant information, especially as the match state grows larger.
 
-**What's needed:** A solution that maintains high update frequency for responsive dashboards while dramatically reducing bandwidth consumption, without requiring publishers to redesign their data publishing logic or consumers to implement complex delta reconstruction themselves.
+**What's needed:** A solution that ensures all users (including those joining mid-match) receive the complete current match state, while only transmitting the changes over the wire. This dramatically reduces bandwidth consumption as the state grows, without requiring publishers to maintain complex delta logic or consumers to implement manual state reconstruction.
 
 ### Solution: Delta compression
 
@@ -48,7 +48,7 @@ Ably's delta implementation uses [VCDIFF](https://tools.ietf.org/html/rfc3284), 
 
 ### Benefits and use cases
 
-Delta compression delivers significant advantages for streaming scenarios with incremental changes on large, consistently structured, payloads:
+Delta compression delivers significant advantages for streaming scenarios with incremental changes, particularly on larger payloads where bandwidth savings outweigh the processing cost:
 
 * **Bandwidth reduction:** Size of each message is now proportional to the changes, not the full state, leading to substantial data savings
 * **Reduced costs:** Lower outbound data transfer translates to reduced billing for high-volume streams
@@ -58,10 +58,11 @@ Delta compression delivers significant advantages for streaming scenarios with i
 
 [//]: # (Think it could be good to have some kind of visiual showing full message vs delta message size comparison so its not just walls of text)
 
-Some things Delta compression is ideal for:
-- **Telemetry and sensor data:** Vehicle systems, IoT devices, industrial monitoring
+Delta compression is ideal for:
+- **Game state synchronization:** Match state, player positions, inventory updates where state grows over time
+- **Telemetry and sensor data:** Vehicle systems, IoT devices, industrial monitoring with many datapoints
 - **Live dashboards:** Real-time analytics where most metrics change incrementally
-- **State synchronization:** Collaborative applications with frequent small updates
+- **Collaborative applications:** Shared documents or design tools with frequent small updates to larger payloads
 
 When combined with the [persist last message](/docs/storage-history/storage#persist-last-message) channel rule, you can query the final complete state even after the stream ends - this can be useful for post-event analysis.
 
@@ -69,8 +70,10 @@ When combined with the [persist last message](/docs/storage-history/storage#pers
 
 Delta compression delivers maximum benefit when:
 
+* **Larger message payloads:** For larger payloads (multiple kilobytes), bandwidth savings typically outweigh the CPU cost of applying deltas on the client side. Smaller messages (under 1KB) may not benefit as much.
 * **High similarity between messages:** The more unchanged data between successive messages, the greater the compression ratio.
 * **Structured data with partial updates:** Objects where only specific fields change frequently
+* **Growing state over time:** Scenarios where the payload naturally grows during a session, making each full transmission increasingly expensive
 * **Bandwidth is a constraint:** Mobile networks, high-volume scenarios, or regions with expensive data transfer
 * **Many consumers:** Bandwidth savings multiply across subscribers
 
@@ -105,17 +108,19 @@ Setting up delta compression requires minimal code changes. Producers continue p
 
 <Code>
 ```javascript
-// Producer: Publish full state - Ably handles delta computation
-const channel = realtime.channels.get('car-telemetry');
+// Producer: Publish full match state - Ably handles delta computation
+const channel = realtime.channels.get('match:12345');
 
+// As the match progresses, state grows naturally
 setInterval(() => {
-  channel.publish('telemetry', {
-    speed: currentSpeed,
-    rpm: currentRPM,
-    temperature: currentTemp,
-    tirePressure: currentTirePressure,
-    fuelLevel: currentFuelLevel,
-    // ... 100s more datapoints
+  channel.publish('match-update', {
+    matchId: '12345',
+    timestamp: Date.now(),
+    players: currentPlayerStates, // positions, score attempts, metadata
+    score: currentScore,
+    events: matchEvents, // accumulated game events
+    statistics: matchStatistics,
+    // State grows as match progresses
   });
 }, 100); // 10 Hz update rate
 
@@ -127,13 +132,14 @@ const realtime = new Ably.Realtime({
   plugins: { vcdiff: vcdiffPlugin }
 });
 
-const channel = realtime.channels.get('car-telemetry', {
+const channel = realtime.channels.get('match:12345', {
   params: { delta: 'vcdiff' }
 });
 
 channel.subscribe(msg => {
   // SDK automatically reconstructs full state from deltas
-  updateDashboard(msg.data);
+  // New joiners will receive full state on their first received message
+  updateMatchDisplay(msg.data);
 });
 ```
 </Code>
@@ -145,21 +151,21 @@ For complete implementation details including plugin installation and browser us
 Here is a simple example illustrating the potential bandwidth savings from delta compression:
 
 **Scenario:**
-- 200 datapoints per message
-- 10 updates per second
-- 100 consumer applications
+- Match state grows from 1KB to 5KB as game progresses
+- 10 updates per second (average state: ~3KB)
+- 1000 spectators watching
 
 **Without delta compression:**
-- Full payload: ~2KB per message
-- Outbound bandwidth: 2KB × 10 msg/s × 100 consumers = **2MB/s**
+- Average full payload: ~3KB per message
+- Outbound bandwidth: 3KB × 10 msg/s × 1000 spectators = **30MB/s**
 
 **With delta compression:**
-- Delta payload: ~600 bytes (assuming avg consecutive message similarity of 70%)
-- Outbound bandwidth: 600B × 10 msg/s × 100 consumers = **600KB/s**
+- Delta payload: ~900 bytes (assuming avg consecutive message similarity of 70%)
+- Outbound bandwidth: 900B × 10 msg/s × 1000 spectators = **9MB/s**
 
 **Result: 70% bandwidth reduction**
 
-This represents both significant cost savings and improved performance for consumers on constrained networks.
+The savings increase as match state grows larger over time. This represents significant cost savings while ensuring all users - including new joiners mid-match - receive the complete current state reconstructed from deltas.
 
 ## How do I prevent clients from being overwhelmed by stale data?
 
