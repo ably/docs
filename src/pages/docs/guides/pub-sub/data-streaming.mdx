@@ -143,6 +143,82 @@ channel.subscribe(msg => {
   updateMatchDisplay(msg.data);
 });
 ```
+```ruby
+# Producer: Publish full match state - Ably handles delta computation
+channel = realtime.channels.get('match:12345')
+
+# As the match progresses, state grows naturally
+loop do
+  channel.publish('match-update', {
+    matchId: '12345',
+    timestamp: Time.now.to_i * 1000,
+    players: current_player_states, # positions, score attempts, metadata
+    score: current_score,
+    events: match_events, # accumulated game events
+    statistics: match_statistics,
+    # State grows as match progresses
+  })
+  sleep 0.1 # 10 Hz update rate
+end
+
+# Consumer: Subscribe with delta compression enabled
+realtime = Ably::Realtime.new(key: 'your-api-key')
+
+channel = realtime.channels.get('match:12345', params: { delta: 'vcdiff' })
+
+channel.subscribe('match-update') do |msg|
+  # SDK automatically reconstructs full state from deltas
+  # New joiners will receive full state on their first received message
+  update_match_display(msg.data)
+end
+```
+```go
+// Producer: Publish full match state - Ably handles delta computation
+channel := realtime.Channels.Get("match:12345")
+
+// As the match progresses, state grows naturally
+ticker := time.NewTicker(100 * time.Millisecond) // 10 Hz update rate
+defer ticker.Stop()
+
+for range ticker.C {
+    matchData := map[string]interface{}{
+        "matchId":    "12345",
+        "timestamp":  time.Now().UnixMilli(),
+        "players":    currentPlayerStates, // positions, score attempts, metadata
+        "score":      currentScore,
+        "events":     matchEvents,    // accumulated game events
+        "statistics": matchStatistics,
+        // State grows as match progresses
+    }
+
+    err := channel.Publish(ctx, "match-update", matchData)
+    if err != nil {
+        log.Printf("Error publishing: %v", err)
+    }
+}
+
+// Consumer: Subscribe with delta compression enabled
+ablyVCDiffPlugin := ably.NewVCDiffPlugin()
+realtime, err := ably.NewRealtime(
+  ably.WithKey("your-api-key"),
+  ably.WithVCDiffPlugin(ablyVCDiffPlugin),
+)
+if err != nil {
+    log.Fatal(err)
+}
+
+channel := realtime.Channels.Get("match:12345",
+  ably.ChannelWithVCDiff())
+
+_, err = channel.Subscribe(ctx, "match-update", func(msg *ably.Message) {
+    // SDK automatically reconstructs full state from deltas
+    // New joiners will receive full state on their first received message
+    updateMatchDisplay(msg.Data)
+})
+if err != nil {
+    log.Fatal(err)
+}
+```
 </Code>
 
 For complete implementation details including plugin installation and browser usage, see the [delta compression documentation](/docs/channels/options/deltas#subscribe).
@@ -207,7 +283,7 @@ Providing consumers only need the latest state, and some latency is acceptable, 
 ### Conflation keys and routing
 
 Conflation keys determine which messages are considered related.
-For example, using the [`message.extras.headers`](/docs/messages#routing) field,
+For example, using the [`message.name`](/docs/messages#routing) field,
 you can stream multiple data sources on the same channel while conflating each independently.
 
 For example, publishing multiple cryptocurrency instruments to a single channel:
@@ -219,11 +295,8 @@ const channel = realtime.channels.get('crypto-prices');
 // Each instrument uses a distinct header value
 const publishPrice = (instrument, price) => {
   channel.publish({
-    name: 'price-update',
+    name: `price-update-${instrument}`, // Conflation key
     data: { instrument, price, timestamp: Date.now() },
-    extras: {
-      headers: { instrument: instrument } // Conflation key
-    }
   });
 };
 
@@ -232,6 +305,50 @@ setInterval(() => {
   publishPrice('ETH-USD', getCurrentPrice('ETH-USD'));
   publishPrice('XRP-USD', getCurrentPrice('XRP-USD'));
 }, 10); // 100 updates per second per instrument
+```
+```ruby
+channel = realtime.channels.get('crypto-prices')
+
+# Each instrument uses a distinct header value
+def publish_price(channel, instrument, price)
+  channel.publish(
+    name: 'price-update-' + instrument, # Conflation key
+    data: {
+      instrument: instrument,
+      price: price,
+      timestamp: Time.now.to_i * 1000
+    },
+  )
+end
+
+loop do
+  publish_price(channel, 'BTC-USD', get_current_price('BTC-USD'))
+  publish_price(channel, 'ETH-USD', get_current_price('ETH-USD'))
+  publish_price(channel, 'XRP-USD', get_current_price('XRP-USD'))
+  sleep 0.01 # 100 updates per second per instrument
+end
+```
+```go
+channel := realtime.Channels.Get("crypto-prices")
+
+// Each instrument uses a distinct header value
+publishPrice := func(instrument string, price float64) error {
+		return channel.Publish(ctx, fmt.sprintf("price-update-%s", instrument),
+				map[string]interface{}{
+					"instrument": instrument,
+					"price":      price,
+					"timestamp":  time.Now().UnixMilli(),
+				})
+}
+
+ticker := time.NewTicker(10 * time.Millisecond) // 100 updates per second per instrument
+defer ticker.Stop()
+
+for range ticker.C {
+    publishPrice("BTC-USD", getCurrentPrice("BTC-USD"))
+    publishPrice("ETH-USD", getCurrentPrice("ETH-USD"))
+    publishPrice("XRP-USD", getCurrentPrice("XRP-USD"))
+}
 ```
 </Code>
 
@@ -279,6 +396,29 @@ channel.subscribe(message => {
   // Only latest value per instrument per time window
   updatePriceDisplay(message.data);
 });
+```
+```ruby
+# Subscriber code remains unchanged
+channel = realtime.channels.get('crypto-prices')
+
+channel.subscribe do |message|
+  # Automatically receives batched, conflated updates
+  # Only latest value per instrument per time window
+  update_price_display(message.data)
+end
+```
+```go
+// Subscriber code remains unchanged
+channel := realtime.Channels.Get("crypto-prices")
+
+_, err := channel.Subscribe(ctx, func(msg *ably.Message) {
+    // Automatically receives batched, conflated updates
+    // Only latest value per instrument per time window
+    updatePriceDisplay(msg.Data)
+})
+if err != nil {
+    log.Fatal(err)
+}
 ```
 </Code>
 
@@ -397,6 +537,54 @@ channel.subscribe(message => {
   // If handling logic is resource-intensive, consider queuing or throttling client-side
   displayReaction(message.data);
 });
+```
+```ruby
+# Producer: No code changes required
+channel = realtime.channels.get('event-reactions')
+
+# Each user publishes reactions as normal
+channel.publish('reaction', {
+  type: '👍',
+  userId: current_user
+})
+
+# Consumer: Subscribe normally
+# Configure channel rule via dashboard:
+# - Server-side batching enabled: true
+# - Batching interval: 100ms
+
+channel.subscribe('reaction') do |message|
+  # Messages are delivered in batches but processed individually
+  # If handling logic is resource-intensive, consider queuing or throttling client-side
+  display_reaction(message.data)
+end
+```
+```go
+// Producer: No code changes required
+channel := realtime.Channels.Get("event-reactions")
+
+// Each user publishes reactions as normal
+err := channel.Publish(ctx, "reaction", map[string]interface{}{
+    "type":   "👍",
+    "userId": currentUser,
+})
+if err != nil {
+    log.Printf("Error publishing: %v", err)
+}
+
+// Consumer: Subscribe normally
+// Configure channel rule via dashboard:
+// - Server-side batching enabled: true
+// - Batching interval: 100ms
+
+_, err = channel.Subscribe(ctx, "reaction", func(msg *ably.Message) {
+    // Messages are delivered in batches but processed individually
+    // If handling logic is resource-intensive, consider queuing or throttling client-side
+    displayReaction(msg.Data)
+})
+if err != nil {
+    log.Fatal(err)
+}
 ```
 </Code>
 
