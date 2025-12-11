@@ -16,7 +16,7 @@ type LeftSidebarProps = {
 };
 
 const accordionContentClassName =
-  'overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up';
+  'overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up p-1 -m-1';
 
 const accordionTriggerClassName = cn(
   interactiveButtonClassName,
