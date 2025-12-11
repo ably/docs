@@ -52,7 +52,10 @@ const Layout: React.FC<LayoutProps> = ({ children, pageContext }) => {
         <LeftSidebar className={cn(!leftSidebar && 'md:hidden')} />
         <div className={cn({ 'flex-1 flex min-w-0 justify-center': !isRedocPage })}>
           <div className={cn({ 'max-w-screen-lg w-full flex md:gap-12 lg:gap-16 xl:gap-20': !isRedocPage })}>
-            <Container as="main" className={cn('flex-1 px-4 -mx-4', { 'overflow-x-auto': !isRedocPage })}>
+            <Container
+              as="main"
+              className={cn('flex-1 px-4 -mx-4', { 'overflow-x-hidden sm:overflow-x-auto': !isRedocPage })}
+            >
               {leftSidebar ? <Breadcrumbs /> : <div />}
               {children}
               <Footer pageContext={pageContext} />
