@@ -71,7 +71,7 @@ export const LanguageSelector = () => {
       <Select.Root value={value} onValueChange={handleValueChange}>
         <Select.Trigger
           className={cn(
-            'border-none inline-flex group/lang-dropdown focus-base rounded px-0',
+            'border-none inline-flex items-center group/lang-dropdown focus-base rounded px-0',
             options.length > 1 ? 'cursor-pointer' : 'cursor-auto',
           )}
           style={{ height: LANGUAGE_SELECTOR_HEIGHT }}
