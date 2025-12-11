@@ -1,15 +1,15 @@
 import React, { useMemo } from 'react';
 import { useLocation } from '@reach/router';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import { LanguageSelector } from '../LanguageSelector';
 import { track } from '@ably/ui/core/insights';
 import { productData } from 'src/data';
-import { languageInfo } from 'src/data/languages';
+import { languageData, languageInfo } from 'src/data/languages';
 import { useLayoutContext } from 'src/contexts/layout-context';
 import { interactiveButtonClassName, tooltipContentClassName } from '../utils/styles';
+import { ProductKey } from 'src/data/types';
 
 type PageHeaderProps = {
   title: string;
@@ -32,6 +32,15 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) =>
     ];
   }, [product, page.name, page.link, language]);
 
+  const showLanguageSelector = useMemo(
+    () =>
+      activePage.languages.length > 0 &&
+      !activePage.languages.every(
+        (language) => !Object.keys(languageData[product as ProductKey] ?? {}).includes(language),
+      ),
+    [activePage.languages, product],
+  );
+
   return (
     <div className="my-8 border-b border-neutral-300 dark:border-neutral-1000 pb-8">
       <h1 className="ui-text-h1 mb-4">{title}</h1>
@@ -40,7 +49,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, description }) =>
       </p>
 
       <div className="flex items-center gap-5">
-        {activePage.languages.length > 0 && (
+        {showLanguageSelector && (
           <div className="flex-shrink-0 border-r border-neutral-300 dark:border-neutral-1000 pr-5">
             <LanguageSelector />
           </div>
