@@ -92,14 +92,9 @@ describe('LeftSidebar', () => {
   });
 
   it('shows Platform accordion expanded with first three child items when active page is under Platform', async () => {
-    const user = userEvent.setup();
     render(<LeftSidebar />);
 
-    // Click Platform button to expand it (note: auto-expand doesn't work for index 0 due to falsy check)
-    const platformButton = screen.getByRole('button', { name: 'Platform' });
-    await user.click(platformButton);
-
-    // Verify the labels of the first three child accordion items are visible
+    // Platform should be auto-expanded since active page is under Platform (index 0)
     await waitFor(() => {
       expect(screen.getByText('Introduction')).toBeInTheDocument();
       expect(screen.getByText('Architecture')).toBeInTheDocument();
@@ -120,11 +115,7 @@ describe('LeftSidebar', () => {
     const user = userEvent.setup();
     render(<LeftSidebar />);
 
-    // First open Platform accordion
-    const platformButton = screen.getByRole('button', { name: 'Platform' });
-    await user.click(platformButton);
-
-    // Wait for Platform children to be visible
+    // Platform should be auto-expanded since active page is under Platform (index 0)
     await waitFor(() => {
       expect(screen.getByText('Architecture')).toBeInTheDocument();
     });
@@ -162,11 +153,7 @@ describe('LeftSidebar', () => {
     const user = userEvent.setup();
     render(<LeftSidebar />);
 
-    // First open Platform accordion
-    const platformButton = screen.getByRole('button', { name: 'Platform' });
-    await user.click(platformButton);
-
-    // Wait for Platform children to be visible
+    // Platform should be auto-expanded since active page is under Platform (index 0)
     await waitFor(() => {
       expect(screen.getByText('Architecture')).toBeInTheDocument();
     });
