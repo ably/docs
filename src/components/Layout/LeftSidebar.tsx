@@ -118,7 +118,7 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
   const { activePage } = useLayoutContext();
 
   const defaultPageItems = useMemo(
-    () => (activePage.tree[0]?.index ? [`item-${activePage.tree[0].index}`] : []),
+    () => (activePage.tree[0]?.index !== undefined ? [`item-${activePage.tree[0].index}`] : []),
     [activePage.tree],
   );
 
@@ -141,7 +141,7 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
   `);
 
   useEffect(() => {
-    if (activePage.tree[0]?.index) {
+    if (activePage.tree[0]?.index !== undefined) {
       setOpenProducts((openProducts) => Array.from(new Set([...openProducts, `item-${activePage.tree[0].index}`])));
     }
   }, [activePage.tree]);
