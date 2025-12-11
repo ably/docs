@@ -329,7 +329,7 @@ export default {
       name: 'Guides',
       pages: [
         {
-          name: 'Data Streaming',
+          name: 'Data streaming',
           link: '/docs/guides/pub-sub/data-streaming',
         },
       ],
