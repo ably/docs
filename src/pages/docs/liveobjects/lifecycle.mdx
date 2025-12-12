@@ -3,15 +3,31 @@ title: Lifecycle events
 meta_description: "Understand lifecycle events for Objects, LiveMap and LiveCounter to track synchronization events and object deletions."
 ---
 
-<Aside data-type='experimental'>
-LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.
+<If lang="javascript">
+  <Aside data-type='public-preview'>
+  LiveObjects JavaScript is in Public Preview. We are committed to supporting the LiveObjects Javascript API and welcome adoption and feedback.
 
-**Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
-</Aside>
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="swift">
+  <Aside data-type='experimental'>
+  LiveObjects Swift is currently Experimental. Its features are still in development and subject to rapid change.
 
-## Objects synchronization events <a id="synchronization"/>
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="java">
+  <Aside data-type='experimental'>
+  LiveObjects Java is currently Experimental. Its features are still in development and subject to rapid change.
 
-The [`channel.objects`](/docs/api/realtime-sdk/channels#objects) instance emits synchronization events that indicate when the local state on the client is being synchronized with the Ably service. These events can be useful for displaying loading indicators, preventing user interactions during synchronization, or triggering application logic when data is first loaded.
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+
+## Handle synchronization events <a id="synchronization"/>
+
+The <If lang="javascript">[channel.object](/docs/liveobjects/concepts/objects#channel-object)</If><If lang="swift,java">[channel.objects](/docs/liveobjects/concepts/objects#root-object)</If> instance emits synchronization events that indicate when the local state on the client is being synchronized with the Ably service. These events can be useful for displaying loading indicators, preventing user interactions during synchronization, or triggering application logic when data is first loaded.
 
 | Event | Description |
 | ----- | ----------- |
@@ -20,12 +36,12 @@ The [`channel.objects`](/docs/api/realtime-sdk/channels#objects) instance emits 
 
 <Code>
 ```javascript
-channel.objects.on('syncing', () => {
+channel.object.on('syncing', () => {
   console.log('Objects are syncing...');
   // Show a loading indicator and disable edits in the application
 });
 
-channel.objects.on('synced', () => {
+channel.object.on('synced', () => {
   console.log('Objects have been synced.');
   // Hide loading indicator
 });
@@ -60,7 +76,42 @@ channel.getObjects().on(ObjectsStateEvent.SYNCED, (stateEvent) -> {
 LiveObjects synchronization events do not replace [connection](/docs/connect/states) or [channel](/docs/channel/states) states. You should still monitor these states and handle [connection](/docs/connect/states#handling-failures) and [channel](/docs/channel/states#failure) failures to ensure your application behaves as expected. LiveObjects synchronization events specifically inform you about the progress of LiveObjects data synchronization and should be used alongside other state management mechanisms.
 </Aside>
 
-## LiveMap/LiveCounter lifecycle events <a id="objects-lifecycle"/>
+## Handle object lifecycle events <a id="objects-lifecycle"/>
+
+<If lang="javascript">
+
+### Detect object deletion <a id="objects-deleted"/>
+
+Objects can become unreachable when they are removed from the object tree using [`remove()`](/docs/liveobjects/map#remove) and never reassigned. Unreachable objects are garbage collected by Ably, typically after 24 hours.
+
+Since deleted objects are unreachable via any path, `object.delete` events can only be received through [Instance](/docs/liveobjects/concepts/instance) subscriptions, which track a specific object by its ID regardless of its location in the object tree:
+
+<Code>
+```javascript
+const counterInstance = myObject.get('visits').instance();
+
+if (counterInstance) {
+  counterInstance.subscribe(({ object, message }) => {
+    if (message?.operation.action === 'object.delete') {
+      console.log('Counter instance was deleted');
+      // The client automatically unsubscribes the subscription after this notification
+      // Remove references to this object from your application
+    } else {
+      console.log('Counter updated:', object.value());
+    }
+  });
+}
+```
+</Code>
+
+In most cases, you don't need to explicitly handle object deletion. Your application should have already reacted to object removal when a corresponding [`LiveMap.remove()`](/docs/liveobjects/map#remove) operation was received. However, if your application separately stores references to object instances and does not properly clear them when objects are orphaned, any later interactions with those objects after they are deleted will result in an error. In such cases, handling deletion events via Instance subscriptions helps ensure that those references are cleaned up and runtime errors are avoided.
+
+<Aside data-type='note'>
+The [channel object](/docs/liveobjects/concepts/objects#channel-object) cannot be deleted, so deletion notifications will never occur for the channel object itself.
+</Aside>
+</If>
+
+<If lang="swift,java">
 
 Lifecycle events enable you to monitor changes in an object's lifecycle.
 
@@ -68,25 +119,17 @@ Currently, only the `deleted` event can be emitted. Understanding the conditions
 
 ### deleted event <a id="objects-deleted"/>
 
-Objects that were created on a channel can become orphaned when they were never assigned to the object tree, or because their reference was removed using [`LiveMap.remove()`](/docs/liveobjects/map#remove) and never reassigned. Orphaned objects will be garbage collected by Ably, typically after 24 hours. When this happens, a `deleted` event is broadcast for the affected object. Once deleted, an object can no longer be interacted with, and any operations performed on it will result in an error.
+Objects that were created on a channel can become orphaned when they were never assigned to the object tree, or because their reference was removed using [`LiveMap.remove()`](/docs/liveobjects/map#remove) and never reassigned. Ably garbage collects orphaned objects, typically after 24 hours. When this happens, a `deleted` event is broadcast for the affected object. Once deleted, an object can no longer be interacted with, and any operations performed on it result in an error.
 
 While the LiveObjects feature internally manages object deletions and removes them from its internal state, your application may still hold references to these deleted objects in separate data structures. The `deleted` event provides a way to react accordingly by removing references to deleted objects and preventing potential errors.
 
-In most cases, subscribing to `deleted` events is unnecessary. Your application should have already reacted to object removal when a corresponding [`LiveMap.remove()`](/docs/liveobjects/map#remove) operation was received. However, if your application separately stores references to object instances and does not properly clear them when objects are orphaned, any later interactions with those objects after they are deleted will result in an error. In such cases, subscribing to `deleted` events helps ensure that those references are cleaned up and runtime errors are avoided.
+In most cases, subscribing to `deleted` events is unnecessary. Your application should have already reacted to object removal when a corresponding [`LiveMap.remove()`](/docs/liveobjects/map#remove) operation was received. However, if your application separately stores references to object instances and does not properly clear them when objects are orphaned, any later interactions with those objects after they are deleted result in an error. In such cases, subscribing to `deleted` events helps ensure that those references are cleaned up and runtime errors are avoided.
 
 <Aside data-type='note'>
 The [root object](/docs/liveobjects/concepts/objects#root-object) cannot be deleted, so there is no need to subscribe to this event on the root object.
 </Aside>
 
 <Code>
-```javascript
-const { off } = counter.on('deleted', () => {
-  console.log('LiveCounter has been deleted.');
-  // Remove references to this object from your application
-  // as it can no longer be interacted with
-});
-```
-
 ```swift
 counter.on(event: .deleted) { _ in
     print("LiveCounter has been deleted.")
@@ -105,3 +148,5 @@ ObjectsSubscription subscription = counter.on(ObjectLifecycleEvent.DELETED, (lif
 </Code>
 
 Read more about subscribing to object lifecycle events for [LiveCounter](/docs/liveobjects/counter#subscribe-lifecycle) and [LiveMap](/docs/liveobjects/map#subscribe-lifecycle).
+
+</If>

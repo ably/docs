@@ -3,7 +3,7 @@ import cn from '@ably/ui/core/utils/cn';
 import Aside from 'src/components/blocks/dividers/Aside';
 import { HtmlComponentPropsData } from 'src/components/html-component-props';
 
-const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental'];
+const LEGACY_ADMONITION_TYPES = ['new', 'updated', 'experimental', 'public-preview'];
 
 type AdmonitionVariant = 'neutral' | 'note' | 'further-reading' | 'important' | 'warning';
 
