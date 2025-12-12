@@ -4,6 +4,7 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
+import copy from 'copy-to-clipboard';
 import { LanguageSelector } from '../LanguageSelector';
 import { track } from '@ably/ui/core/insights';
 import { productData } from 'src/data';
@@ -58,25 +59,26 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
       }
 
       const content = await response.text();
-      await navigator.clipboard.writeText(content);
-      setCopyTooltipContent('Copied!');
-      setCopyTooltipOpen(true);
-      setTimeout(() => {
-        setCopyTooltipOpen(false);
-        setTimeout(() => setCopyTooltipContent('Copy'), 150);
-      }, 2000);
 
-      track('markdown_copy_link_clicked', {
-        location: location.pathname,
-      });
+      // Use copy-to-clipboard package which handles browser compatibility
+      const copySuccessful = copy(content);
+
+      if (copySuccessful) {
+        setCopyTooltipContent('Copied!');
+        setCopyTooltipOpen(true);
+        setTimeout(() => {
+          setCopyTooltipOpen(false);
+          setTimeout(() => setCopyTooltipContent('Copy'), 150);
+        }, 2000);
+
+        track('markdown_copy_link_clicked', {
+          location: location.pathname,
+        });
+      } else {
+        throw new Error('Copy to clipboard failed');
+      }
     } catch (error) {
       console.error('Failed to copy markdown:', error);
-      setCopyTooltipContent('Error!');
-      setCopyTooltipOpen(true);
-      setTimeout(() => {
-        setCopyTooltipOpen(false);
-        setTimeout(() => setCopyTooltipContent('Copy'), 150);
-      }, 2000);
     }
   }, [location.pathname]);
 
