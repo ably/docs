@@ -9,13 +9,14 @@ export default {
   },
   content: [
     {
-      name: 'Introduction',
+      name: 'About Spaces',
+      link: '/docs/spaces',
+      index: true,
+    },
+    {
+      name: 'Setup',
+      expand: true,
       pages: [
-        {
-          name: 'About Spaces',
-          link: '/docs/spaces',
-          index: true,
-        },
         {
           name: 'SDK setup',
           link: '/docs/spaces/setup',
@@ -28,6 +29,7 @@ export default {
     },
     {
       name: 'Space features',
+      expand: true,
       pages: [
         {
           name: 'Space',

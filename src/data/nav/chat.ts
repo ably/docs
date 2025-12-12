@@ -9,60 +9,55 @@ export default {
   },
   content: [
     {
-      name: 'Introduction',
+      name: 'About Chat',
+      link: '/docs/chat',
+      index: true,
+    },
+    {
+      name: 'Getting started',
       pages: [
         {
-          name: 'About Chat',
-          link: '/docs/chat',
+          name: 'Overview',
+          link: '/docs/chat/getting-started',
           index: true,
         },
         {
-          name: 'Getting started',
-          pages: [
-            {
-              name: 'Overview',
-              link: '/docs/chat/getting-started',
-              index: true,
-            },
-            {
-              name: 'JavaScript',
-              link: '/docs/chat/getting-started/javascript',
-            },
-            {
-              name: 'React',
-              link: '/docs/chat/getting-started/react',
-            },
-            {
-              name: 'React Native',
-              link: '/docs/chat/getting-started/react-native',
-            },
-            {
-              name: 'Kotlin (Android)',
-              link: '/docs/chat/getting-started/android',
-            },
-            {
-              name: 'Kotlin (JVM)',
-              link: '/docs/chat/getting-started/jvm',
-            },
-            {
-              name: 'Swift',
-              link: '/docs/chat/getting-started/swift',
-            },
-            {
-              name: 'React UI Kit',
-              link: '/docs/chat/getting-started/react-ui-kit',
-            },
-          ],
+          name: 'JavaScript',
+          link: '/docs/chat/getting-started/javascript',
         },
         {
-          name: 'SDK setup',
-          link: '/docs/chat/setup',
+          name: 'React',
+          link: '/docs/chat/getting-started/react',
+        },
+        {
+          name: 'React Native',
+          link: '/docs/chat/getting-started/react-native',
+        },
+        {
+          name: 'Kotlin (Android)',
+          link: '/docs/chat/getting-started/android',
+        },
+        {
+          name: 'Kotlin (JVM)',
+          link: '/docs/chat/getting-started/jvm',
+        },
+        {
+          name: 'Swift',
+          link: '/docs/chat/getting-started/swift',
+        },
+        {
+          name: 'React UI Kit',
+          link: '/docs/chat/getting-started/react-ui-kit',
         },
       ],
     },
     {
       name: 'Concepts',
       pages: [
+        {
+          name: 'SDK setup',
+          link: '/docs/chat/setup',
+        },
         {
           name: 'Connections',
           link: '/docs/chat/connect',
@@ -155,7 +150,7 @@ export default {
           index: true,
         },
         {
-          name: 'Direct Integrations',
+          name: 'Direct integrations',
           pages: [
             {
               name: 'Hive (Model Only)',
@@ -183,7 +178,7 @@ export default {
           name: 'Custom',
           pages: [
             {
-              name: 'API Overview',
+              name: 'API overview',
               link: '/docs/chat/moderation/custom',
             },
             {
@@ -210,7 +205,7 @@ export default {
   ],
   api: [
     {
-      name: 'API References',
+      name: 'API references',
       pages: [
         {
           link: '/docs/chat/api',

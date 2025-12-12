@@ -9,14 +9,9 @@ export default {
   },
   content: [
     {
-      name: 'Introduction',
-      pages: [
-        {
-          name: 'About Ably',
-          link: '/docs/platform',
-          index: true,
-        },
-      ],
+      name: 'About Ably',
+      link: '/docs/platform',
+      index: true,
     },
     {
       name: 'Architecture',
@@ -307,7 +302,7 @@ export default {
       ],
     },
     {
-      name: 'Debugging and Errors',
+      name: 'Debugging and errors',
       pages: [
         {
           name: 'Overview',
@@ -323,7 +318,7 @@ export default {
   ],
   api: [
     {
-      name: 'API References',
+      name: 'API references',
       pages: [
         {
           link: '/docs/api/control-api',

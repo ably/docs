@@ -9,86 +9,77 @@ export default {
   },
   content: [
     {
-      name: 'Introduction',
+      name: 'About Pub/Sub',
+      link: '/docs/basics',
+      index: true,
+    },
+    {
+      name: 'Getting started',
       pages: [
         {
-          name: 'About Pub/Sub',
-          link: '/docs/basics',
+          name: 'Overview',
+          link: '/docs/getting-started',
           index: true,
         },
         {
-          name: 'Getting started',
-          pages: [
-            {
-              name: 'Overview',
-              link: '/docs/getting-started',
-              index: true,
-            },
-            {
-              name: 'JavaScript',
-              link: '/docs/getting-started/javascript',
-            },
-            {
-              name: 'Node.js',
-              link: '/docs/getting-started/node',
-            },
-            {
-              name: 'React',
-              link: '/docs/getting-started/react',
-            },
-            {
-              name: 'React Native',
-              link: '/docs/getting-started/react-native',
-            },
-            {
-              name: 'Kotlin',
-              link: '/docs/getting-started/kotlin',
-            },
-            {
-              name: 'Swift',
-              link: '/docs/getting-started/swift',
-            },
-            {
-              name: 'Flutter',
-              link: '/docs/getting-started/flutter',
-            },
-            {
-              name: 'Java',
-              link: '/docs/getting-started/java',
-            },
-            {
-              name: 'Go',
-              link: '/docs/getting-started/go',
-            },
-            {
-              name: 'Python',
-              link: '/docs/getting-started/python',
-            },
-            {
-              name: 'Ruby',
-              link: '/docs/getting-started/ruby',
-            },
-            {
-              name: 'C# .NET',
-              link: '/docs/getting-started/dotnet',
-            },
-            {
-              name: 'Objective C',
-              link: '/docs/getting-started/objective-c',
-            },
-            {
-              name: 'PHP',
-              link: '/docs/getting-started/php',
-            },
-            {
-              name: 'Laravel',
-              link: '/docs/getting-started/laravel',
-            },
-          ],
+          name: 'JavaScript',
+          link: '/docs/getting-started/javascript',
         },
         {
-          name: 'React Hooks',
-          link: '/docs/getting-started/react-hooks',
+          name: 'Node.js',
+          link: '/docs/getting-started/node',
+        },
+        {
+          name: 'React',
+          link: '/docs/getting-started/react',
+        },
+        {
+          name: 'React Native',
+          link: '/docs/getting-started/react-native',
+        },
+        {
+          name: 'Kotlin',
+          link: '/docs/getting-started/kotlin',
+        },
+        {
+          name: 'Swift',
+          link: '/docs/getting-started/swift',
+        },
+        {
+          name: 'Flutter',
+          link: '/docs/getting-started/flutter',
+        },
+        {
+          name: 'Java',
+          link: '/docs/getting-started/java',
+        },
+        {
+          name: 'Go',
+          link: '/docs/getting-started/go',
+        },
+        {
+          name: 'Python',
+          link: '/docs/getting-started/python',
+        },
+        {
+          name: 'Ruby',
+          link: '/docs/getting-started/ruby',
+        },
+        {
+          name: 'C# .NET',
+          link: '/docs/getting-started/dotnet',
+        },
+        {
+          name: 'Objective C',
+          link: '/docs/getting-started/objective-c',
+        },
+        {
+          name: 'PHP',
+          link: '/docs/getting-started/php',
+        },
+        {
+          name: 'Laravel',
+          link: '/docs/getting-started/laravel',
         },
       ],
     },
@@ -147,6 +138,10 @@ export default {
         {
           name: 'Advanced pub-sub',
           link: '/docs/pub-sub/advanced',
+        },
+        {
+          name: 'React Hooks',
+          link: '/docs/getting-started/react-hooks',
         },
       ],
     },

@@ -9,29 +9,24 @@ export default {
   },
   content: [
     {
-      name: 'Introduction',
+      name: 'About LiveObjects',
+      link: '/docs/liveobjects',
+      index: true,
+    },
+    {
+      name: 'Getting started',
       pages: [
         {
-          name: 'About LiveObjects',
-          link: '/docs/liveobjects',
-          index: true,
+          name: 'JavaScript',
+          link: '/docs/liveobjects/quickstart/javascript',
         },
         {
-          name: 'Getting started',
-          pages: [
-            {
-              name: 'JavaScript',
-              link: '/docs/liveobjects/quickstart/javascript',
-            },
-            {
-              name: 'Swift',
-              link: '/docs/liveobjects/quickstart/swift',
-            },
-            {
-              name: 'Java',
-              link: '/docs/liveobjects/quickstart/java',
-            },
-          ],
+          name: 'Swift',
+          link: '/docs/liveobjects/quickstart/swift',
+        },
+        {
+          name: 'Java',
+          link: '/docs/liveobjects/quickstart/java',
         },
       ],
     },
@@ -98,7 +93,7 @@ export default {
   ],
   api: [
     {
-      name: 'API References',
+      name: 'API references',
       pages: [
         {
           link: 'https://ably.com/docs/sdk/js/v2.0/interfaces/ably.Objects.html',
