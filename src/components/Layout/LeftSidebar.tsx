@@ -46,10 +46,19 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
   useEffect(() => {
     if (activeTriggerRef.current) {
       setTimeout(() => {
-        activeTriggerRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
+        const element = activeTriggerRef.current;
+        const scrollableContainer = element?.closest('.overflow-y-auto');
+
+        if (element && scrollableContainer) {
+          const elementRect = element.getBoundingClientRect();
+          const containerRect = scrollableContainer.getBoundingClientRect();
+          const scrollOffset = elementRect.top - containerRect.top - containerRect.height / 2 + elementRect.height / 2;
+
+          scrollableContainer.scrollBy({
+            top: scrollOffset,
+            behavior: 'smooth',
+          });
+        }
       }, 200);
     }
   }, [activePage.tree]);
