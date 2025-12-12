@@ -214,28 +214,30 @@ function convertImagePathsToGitHub(content: string): string {
   const githubBaseUrl = 'https://raw.githubusercontent.com/ably/docs/main/src';
   const imageExtensions = '(?:png|jpg|jpeg|gif|svg|webp|bmp|ico)';
 
-  return content
-    // Handle relative paths: ../../../images/...{ext}
-    .replace(
-      new RegExp(`!\\[([^\\]]*)\\]\\(((?:\\.\\.\\/)+)(images\\/[^)]+\\.${imageExtensions})\\)`, 'gi'),
-      (match, altText, relativePath, imagePath) => {
-        return `![${altText}](${githubBaseUrl}/${imagePath})`;
-      }
-    )
-    // Handle absolute paths: /images/...{ext}
-    .replace(
-      new RegExp(`!\\[([^\\]]*)\\]\\(\\/(images\\/[^)]+\\.${imageExtensions})\\)`, 'gi'),
-      (match, altText, imagePath) => {
-        return `![${altText}](${githubBaseUrl}/${imagePath})`;
-      }
-    )
-    // Handle direct paths: images/...{ext} (no prefix)
-    .replace(
-      new RegExp(`!\\[([^\\]]*)\\]\\((images\\/[^)]+\\.${imageExtensions})\\)`, 'gi'),
-      (match, altText, imagePath) => {
-        return `![${altText}](${githubBaseUrl}/${imagePath})`;
-      }
-    );
+  return (
+    content
+      // Handle relative paths: ../../../images/...{ext}
+      .replace(
+        new RegExp(`!\\[([^\\]]*)\\]\\(((?:\\.\\.\\/)+)(images\\/[^)]+\\.${imageExtensions})\\)`, 'gi'),
+        (match, altText, relativePath, imagePath) => {
+          return `![${altText}](${githubBaseUrl}/${imagePath})`;
+        },
+      )
+      // Handle absolute paths: /images/...{ext}
+      .replace(
+        new RegExp(`!\\[([^\\]]*)\\]\\(\\/(images\\/[^)]+\\.${imageExtensions})\\)`, 'gi'),
+        (match, altText, imagePath) => {
+          return `![${altText}](${githubBaseUrl}/${imagePath})`;
+        },
+      )
+      // Handle direct paths: images/...{ext} (no prefix)
+      .replace(
+        new RegExp(`!\\[([^\\]]*)\\]\\((images\\/[^)]+\\.${imageExtensions})\\)`, 'gi'),
+        (match, altText, imagePath) => {
+          return `![${altText}](${githubBaseUrl}/${imagePath})`;
+        },
+      )
+  );
 }
 
 /**
@@ -248,37 +250,32 @@ function convertRelativeUrls(content: string, siteUrl: string): string {
 
   // Match markdown links: [text](url)
   // Only convert URLs that start with / (relative) and are not external URLs or hash-only
-  return content.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    (match, linkText, url) => {
-      // Don't convert external URLs
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        return match;
-      }
-
-      // Don't convert hash-only anchors
-      if (url.startsWith('#')) {
-        return match;
-      }
-
-      // Convert relative URLs (starting with /)
-      if (url.startsWith('/')) {
-        return `[${linkText}](${baseUrl}${url})`;
-      }
-
-      // Keep other URLs as-is (relative paths without leading /)
+  return content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+    // Don't convert external URLs
+    if (url.startsWith('http://') || url.startsWith('https://')) {
       return match;
     }
-  );
+
+    // Don't convert hash-only anchors
+    if (url.startsWith('#')) {
+      return match;
+    }
+
+    // Convert relative URLs (starting with /)
+    if (url.startsWith('/')) {
+      return `[${linkText}](${baseUrl}${url})`;
+    }
+
+    // Keep other URLs as-is (relative paths without leading /)
+    return match;
+  });
 }
 
 /**
  * Replace template variables with readable placeholders
  */
 function replaceTemplateVariables(content: string): string {
-  return content
-    .replace(/{{API_KEY}}/g, 'your-api-key')
-    .replace(/{{RANDOM_CHANNEL_NAME}}/g, 'your-channel-name');
+  return content.replace(/{{API_KEY}}/g, 'your-api-key').replace(/{{RANDOM_CHANNEL_NAME}}/g, 'your-channel-name');
 }
 
 /**
@@ -309,7 +306,10 @@ function calculateOutputPath(relativeDirectory: string, fileName: string): strin
 /**
  * Transform MDX content to clean Markdown
  */
-function transformMdxToMarkdown(sourceContent: string, siteUrl: string): { content: string; title: string } {
+function transformMdxToMarkdown(
+  sourceContent: string,
+  siteUrl: string,
+): { content: string; title: string; intro?: string } {
   // Stage 1: Parse frontmatter
   const parsed = frontMatter<FrontMatterAttributes>(sourceContent);
 
@@ -318,6 +318,7 @@ function transformMdxToMarkdown(sourceContent: string, siteUrl: string): { conte
   }
 
   const title = parsed.attributes.title;
+  const intro = parsed.attributes.intro;
   let content = parsed.body;
 
   // Stage 2: Remove import/export statements
@@ -342,9 +343,9 @@ function transformMdxToMarkdown(sourceContent: string, siteUrl: string): { conte
   content = replaceTemplateVariables(content);
 
   // Stage 9: Prepend title as markdown heading
-  const finalContent = `# ${title}\n\n${content}`;
+  const finalContent = `# ${title}\n\n${intro ? `${intro}\n\n` : ''}${content}`;
 
-  return { content: finalContent, title };
+  return { content: finalContent, title, intro };
 }
 
 /**
@@ -404,9 +405,7 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
   const { data, errors } = await graphql<MdxQueryResult>(query);
 
   if (errors) {
-    reporter.panicOnBuild(
-      `${REPORTER_PREFIX} Error running GraphQL query: ${JSON.stringify(errors)}`
-    );
+    reporter.panicOnBuild(`${REPORTER_PREFIX} Error running GraphQL query: ${JSON.stringify(errors)}`);
     return;
   }
 
@@ -420,7 +419,7 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
 
   if (!siteUrl) {
     reporter.panicOnBuild(
-      `${REPORTER_PREFIX} siteUrl is not configured in siteMetadata. Please check gatsby-config.ts`
+      `${REPORTER_PREFIX} siteUrl is not configured in siteMetadata. Please check gatsby-config.ts`,
     );
     return;
   }
@@ -442,22 +441,16 @@ export const onPostBuild: GatsbyNode['onPostBuild'] = async ({ graphql, reporter
       successCount++;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      reporter.warn(
-        `${REPORTER_PREFIX} Failed to transpile ${node.internal.contentFilePath}: ${errorMessage}`
-      );
+      reporter.warn(`${REPORTER_PREFIX} Failed to transpile ${node.internal.contentFilePath}: ${errorMessage}`);
       failureCount++;
     }
   }
 
   // Report summary
   if (failureCount > 0) {
-    reporter.warn(
-      `${REPORTER_PREFIX} Transpiled ${successCount} files, ${failureCount} failed`
-    );
+    reporter.warn(`${REPORTER_PREFIX} Transpiled ${successCount} files, ${failureCount} failed`);
   } else {
-    reporter.info(
-      `${REPORTER_PREFIX} Successfully transpiled ${successCount} MDX files to Markdown`
-    );
+    reporter.info(`${REPORTER_PREFIX} Successfully transpiled ${successCount} MDX files to Markdown`);
   }
 };
 

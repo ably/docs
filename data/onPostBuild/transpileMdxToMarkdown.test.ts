@@ -20,9 +20,10 @@ describe('MDX to Markdown Transpilation', () => {
       const inputPath = path.join(__dirname, '__fixtures__', 'input.mdx');
       const input = fs.readFileSync(inputPath, 'utf-8');
 
-      const { content, title } = transformMdxToMarkdown(input, siteUrl);
+      const { content, title, intro } = transformMdxToMarkdown(input, siteUrl);
 
       expect(title).toBe('Test Fixture');
+      expect(intro).toBe('This is a test introduction');
       expect(content).toMatchSnapshot();
     });
 
@@ -36,6 +37,16 @@ Content without title`;
       expect(() => {
         transformMdxToMarkdown(input, siteUrl);
       }).toThrow('Missing title in frontmatter');
+    });
+
+    it('should not include intro or throw when it is not present', () => {
+      const input = `---
+title: Test Fixture
+---
+
+Content without intro`;
+
+      expect(() => transformMdxToMarkdown(input, siteUrl)).not.toThrow();
     });
   });
 
