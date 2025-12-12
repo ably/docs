@@ -67,7 +67,10 @@ export const LanguageSelector = () => {
   const selectedLang = languageInfo[selectedOption.label];
 
   return (
-    <div className="md:relative w-full text-right md:text-left -mt-1 md:mt-0 -mr-1 md:mr-0">
+    <div
+      className="flex items-center md:relative w-full text-right md:text-left"
+      style={{ height: LANGUAGE_SELECTOR_HEIGHT }}
+    >
       <Select.Root value={value} onValueChange={handleValueChange}>
         <Select.Trigger
           className={cn(

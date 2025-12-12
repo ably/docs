@@ -30,10 +30,6 @@ jest.mock('@ably/ui/core/LinkButton', () => {
   return MockButton;
 });
 
-jest.mock('../SearchBar', () => ({
-  SearchBar: jest.fn(() => <div>SearchBar</div>),
-}));
-
 jest.mock('./LeftSidebar', () => ({
   __esModule: true,
   default: jest.fn(() => <div>LeftSidebar</div>),

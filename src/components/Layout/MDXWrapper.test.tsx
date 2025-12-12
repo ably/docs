@@ -255,7 +255,7 @@ describe('MDXWrapper structured data', () => {
       meta_description: 'Test description',
     },
     languages: [],
-    layout: { mdx: true, leftSidebar: true, rightSidebar: true, searchBar: true, template: 'docs' },
+    layout: { mdx: true, leftSidebar: true, rightSidebar: true, template: 'docs' },
   };
 
   const defaultLocation = {

@@ -11,7 +11,7 @@ import { createContentMenuDataFromPage } from './createContentMenuDataFromPage';
 import { DEFAULT_LANGUAGE } from './constants';
 import { writeRedirectToConfigFile, getRedirectCount } from './writeRedirectToConfigFile';
 import { siteMetadata } from '../../gatsby-config';
-import { GatsbyNode, Reporter } from 'gatsby';
+import { GatsbyNode } from 'gatsby';
 import { examples, DEFAULT_EXAMPLE_LANGUAGES } from '../../src/data/examples/';
 import { Example } from '../../src/data/examples/types';
 
@@ -252,7 +252,9 @@ export const createPages: GatsbyNode['createPages'] = async ({
             // with nginx redirects
             writeRedirect(redirectFrom, pagePath);
           } else {
-            reporter.info(`[REDIRECTS] Skipping hash fragment redirect: ${redirectFrom} (hash: ${redirectFromUrl.hash})`);
+            reporter.info(
+              `[REDIRECTS] Skipping hash fragment redirect: ${redirectFrom} (hash: ${redirectFromUrl.hash})`,
+            );
           }
 
           createRedirect({
@@ -276,7 +278,7 @@ export const createPages: GatsbyNode['createPages'] = async ({
           contentOrderedList,
           contentMenu: contentMenuObject,
           script,
-          layout: { leftSidebar: true, rightSidebar: true, searchBar: true, template: 'base' },
+          layout: { leftSidebar: true, rightSidebar: true, template: 'base' },
         },
       });
       return slug;
@@ -331,7 +333,7 @@ export const createPages: GatsbyNode['createPages'] = async ({
       component: examplesTemplate,
       context: {
         example,
-        layout: { sidebar: false, searchBar: false, template: 'examples' },
+        layout: { sidebar: false, template: 'examples' },
       },
     });
   };
@@ -350,7 +352,9 @@ export const createPages: GatsbyNode['createPages'] = async ({
           // with nginx redirects
           writeRedirect(redirectFrom, toPath);
         } else {
-          reporter.info(`[REDIRECTS] Skipping MDX hash fragment redirect: ${redirectFrom} (hash: ${redirectFromUrl.hash})`);
+          reporter.info(
+            `[REDIRECTS] Skipping MDX hash fragment redirect: ${redirectFrom} (hash: ${redirectFromUrl.hash})`,
+          );
         }
 
         createRedirect({

@@ -46,10 +46,19 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
   useEffect(() => {
     if (activeTriggerRef.current) {
       setTimeout(() => {
-        activeTriggerRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
+        const element = activeTriggerRef.current;
+        const scrollableContainer = element?.closest('.overflow-y-auto');
+
+        if (element && scrollableContainer) {
+          const elementRect = element.getBoundingClientRect();
+          const containerRect = scrollableContainer.getBoundingClientRect();
+          const scrollOffset = elementRect.top - containerRect.top - containerRect.height / 2 + elementRect.height / 2;
+
+          scrollableContainer.scrollBy({
+            top: scrollOffset,
+            behavior: 'smooth',
+          });
+        }
       }, 200);
     }
   }, [activePage.tree]);
@@ -107,13 +116,24 @@ const ChildAccordion = ({ content, tree }: { content: (NavProductPage | NavProdu
                   <Link
                     className={cn(
                       accordionLinkClassName,
-                      'ui-text-label3 font-medium w-full h-full pr-5',
+                      'ui-text-label3 font-medium w-full h-full pr-5 flex justify-between items-center gap-2',
                       isActive && 'text-neutral-1300 dark:text-neutral-000 font-bold',
                     )}
                     tabIndex={-1}
+                    {...(page.external && {
+                      target: '_blank',
+                      rel: 'noopener noreferrer',
+                    })}
                     to={page.link + (lang ? `?lang=${lang}` : '')}
                   >
                     <span>{page.name}</span>
+                    {page.external && (
+                      <Icon
+                        name="icon-gui-arrow-top-right-on-square-outline"
+                        additionalCSS={cn(iconClassName, '-mr-[22px]')}
+                        size="16px"
+                      />
+                    )}
                   </Link>
                 )
               )}
