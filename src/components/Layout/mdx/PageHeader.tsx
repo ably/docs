@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useLocation } from '@reach/router';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import cn from '@ably/ui/core/utils/cn';
 import Icon from '@ably/ui/core/Icon';
 import { IconName } from '@ably/ui/core/Icon/types';
 import { LanguageSelector } from '../LanguageSelector';
@@ -20,6 +21,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
   const { activePage } = useLayoutContext();
   const { language, product, page } = activePage;
   const location = useLocation();
+  const [copyTooltipOpen, setCopyTooltipOpen] = useState(false);
+  const [copyTooltipContent, setCopyTooltipContent] = useState('Copy');
 
   const llmLinks = useMemo(() => {
     const prompt = `Tell me more about ${product ? productData[product]?.nav.name : 'Ably'}'s '${page.name}' feature from https://ably.com${page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
@@ -41,23 +44,94 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
     [activePage.languages, product],
   );
 
+  const handleCopyMarkdown = useCallback(async () => {
+    try {
+      const response = await fetch(`${location.pathname}.md`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch markdown: ${response.status} ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get('Content-Type');
+      if (!contentType || !contentType.includes('text/markdown')) {
+        throw new Error(`Invalid content type: expected text/markdown, got ${contentType}`);
+      }
+
+      const content = await response.text();
+      await navigator.clipboard.writeText(content);
+      setCopyTooltipContent('Copied!');
+      setCopyTooltipOpen(true);
+      setTimeout(() => {
+        setCopyTooltipOpen(false);
+        setTimeout(() => setCopyTooltipContent('Copy'), 150);
+      }, 2000);
+
+      track('markdown_copy_link_clicked', {
+        location: location.pathname,
+      });
+    } catch (error) {
+      console.error('Failed to copy markdown:', error);
+      setCopyTooltipContent('Error!');
+      setCopyTooltipOpen(true);
+      setTimeout(() => {
+        setCopyTooltipOpen(false);
+        setTimeout(() => setCopyTooltipContent('Copy'), 150);
+      }, 2000);
+    }
+  }, [location.pathname]);
+
   return (
     <div className="my-8 border-b border-neutral-300 dark:border-neutral-1000 pb-8">
-      <h1 className="ui-text-h1 mb-4">{title}</h1>
-      <p className="text-neutral-800 dark:text-neutral-500 mb-8 font-serif italic tracking-tight text-lg leading-normal">
-        {intro}
-      </p>
+      <h1 className={cn('ui-text-h1', intro ? 'mb-4' : 'mb-8')}>{title}</h1>
+      {intro && (
+        <p className="text-neutral-800 dark:text-neutral-500 font-serif italic tracking-tight text-lg leading-normal mb-8">
+          {intro}
+        </p>
+      )}
 
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-5 flex-wrap">
         {showLanguageSelector && (
-          <div className="flex-shrink-0 border-r border-neutral-300 dark:border-neutral-1000 pr-5">
+          <div className="flex items-center h-8 border-r border-neutral-300 dark:border-neutral-1000 pr-5">
             <LanguageSelector />
           </div>
         )}
 
-        <div className="flex items-center gap-0.5">
-          <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 mr-1.5">Open in </span>
-          <Tooltip.Provider delayDuration={0} disableHoverableContent>
+        <Tooltip.Provider delayDuration={0} disableHoverableContent>
+          <div className="flex items-center gap-0.5 border-r border-neutral-300 dark:border-neutral-1000 pr-5">
+            <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 mr-1.5">Markdown</span>
+            <Tooltip.Root open={copyTooltipOpen} onOpenChange={setCopyTooltipOpen}>
+              <Tooltip.Trigger asChild>
+                <button className={interactiveButtonClassName} onClick={handleCopyMarkdown} aria-label="Copy Markdown">
+                  <Icon name="icon-gui-square-2-stack-outline" size="20px" />
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content className={tooltipContentClassName}>{copyTooltipContent}</Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <a
+                  href={`${location.pathname}.md`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={interactiveButtonClassName}
+                  onClick={() => {
+                    track('markdown_preview_link_clicked', {
+                      location: location.pathname,
+                    });
+                  }}
+                >
+                  <Icon name="icon-gui-eye-outline" size="20px" />
+                </a>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content className={tooltipContentClassName}>View</Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 mr-1.5">Open in</span>
             {llmLinks.map(({ model, label, icon, link }) => (
               <Tooltip.Root key={model}>
                 <Tooltip.Trigger asChild>
@@ -83,8 +157,8 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, intro }) => {
                 </Tooltip.Portal>
               </Tooltip.Root>
             ))}
-          </Tooltip.Provider>
-        </div>
+          </div>
+        </Tooltip.Provider>
       </div>
     </div>
   );
