@@ -1,0 +1,506 @@
+---
+title: PathObject
+meta_description: "Learn about PathObject, a path-based API for accessing and manipulating LiveObjects data structures"
+---
+
+<Aside data-type='experimental'>
+LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.
+
+**Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+</Aside>
+
+The `PathObject` API provides a path-based approach to accessing and manipulating LiveObjects data structures. Instead of working with explicit object instances, you work with paths that resolve to objects dynamically at runtime. This approach simplifies common operations and makes your code more resilient to structural changes.
+
+## What is PathObject? <a id="what-is"/>
+
+A `PathObject` represents a path to a specific location within the channel object hierarchy. When you call methods on a `PathObject`, they operate on whatever value exists at that path at the time the method is called.
+
+<Code>
+```javascript
+// Get a PathObject for the channel object
+const myObject = await channel.object.get();
+
+// Navigate to nested paths
+const counter = myObject.get('visits'); // PathObject to the 'visits' key
+const color = myObject.get('settings').get('theme').get('color'); // Deeply nested PathObject
+
+// Operations resolve the path at runtime
+await counter.increment(5); // Increments whatever counter exists at 'visits' right now
+```
+</Code>
+
+<Aside data-type='note'>
+Calling `channel.object.get()` returns a `PathObject` for the [channel object](/docs/liveobjects/concepts/objects#root-object), which is a `LiveMap` that always exists and serves as the entry point for all objects on the channel. This call implicitly attaches to the channel if not already attached and waits for the LiveObjects state to synchronize.
+</Aside>
+
+A `PathObject` doesn't hold actual data - it holds a reference to a location. This makes it safe to store `PathObject` references and reuse them, even if the underlying object instances change.
+
+## Why PathObject? <a id="why"/>
+
+The path-based API solves several common challenges when working with collaborative data structures:
+
+### Resilient subscriptions <a id="resilient-subscriptions"/>
+
+With the path-based approach, subscriptions observe a location rather than a specific object instance. If the object at that location is replaced, the subscription automatically switches to observe the new instance:
+
+<Code>
+```javascript
+const counter = myObject.get('pageViews');
+
+// Subscribe to the path
+counter.subscribe(({ object }) => {
+  console.log('Page views updated:', object.value());
+});
+
+// Even if the counter is replaced, the subscription continues working
+await myObject.set('pageViews', LiveCounter.create(0));
+// The subscription listener is still called for updates to the new counter
+```
+</Code>
+
+Without path-based subscriptions, you would need to manually resubscribe whenever an object is replaced, which is error-prone and cumbersome.
+
+### Safe path references <a id="safe-references"/>
+
+Since `PathObject` references a location rather than a specific instance, you can safely store and reuse them even when the underlying instance changes:
+
+<Code>
+```javascript
+const visits = myObject.get('visits');
+
+// This reference remains valid even if the object is replaced
+await visits.increment(5);
+
+// Someone replaces the visits counter
+await myObject.set('visits', LiveCounter.create(0));
+
+// The same PathObject reference still works with the new counter
+await visits.increment(1);
+```
+</Code>
+
+## Method reference <a id="method-reference"/>
+
+`PathObject` provides the following methods:
+
+| Method | Description | Works on |
+| ------ | ----------- | -------- |
+| `get(key)` | Navigate to a child path | All paths |
+| `at(pathString)` | Navigate using a dot-separated path string | All paths |
+| `path()` | Get the string representation of the path | All paths |
+| `value()` | Get the current value | Primitives, counters |
+| `instance()` | Get the underlying [Instance](/docs/liveobjects/concepts/instance) | Maps, counters |
+| `compact()` | Get a JSON representation of the data | All paths |
+| `entries()` | Iterate over key-value pairs | Maps |
+| `keys()` | Iterate over keys | Maps |
+| `values()` | Iterate over values as PathObjects | Maps |
+| `size()` | Get the number of entries | Maps |
+| `set(key, value)` | Set a map entry | Maps |
+| `remove(key)` | Remove a map entry | Maps |
+| `increment(amount)` | Increment a counter | Counters |
+| `decrement(amount)` | Decrement a counter | Counters |
+| `subscribe(callback, options?)` | Subscribe to changes | All paths |
+| `subscribeIterator(options?)` | Get an async iterator for changes | All paths |
+| `batch(callback)` | Group mutations into a single message | Maps, counters |
+
+## Navigate paths <a id="navigate"/>
+
+PathObject provides three methods for navigation: `get()`, `at()`, and `path()`.
+
+### get() method <a id="get"/>
+
+The `get(key)` method returns a new PathObject representing the child at the specified key:
+
+<Code>
+```javascript
+const myObject = await channel.object.get();
+
+// Navigate to a child path
+const settings = myObject.get('settings');
+
+// Chain get() calls for deeper navigation
+const color = myObject.get('settings').get('theme').get('color');
+```
+</Code>
+
+### at() method <a id="at"/>
+
+The `at(pathString)` method navigates using a dot-separated path string, which is useful for deeply nested paths:
+
+<Code>
+```javascript
+// Navigate using a path string
+const color = myObject.at('settings.theme.color');
+
+// Equivalent to chained get() calls
+const color = myObject.get('settings').get('theme').get('color');
+```
+</Code>
+
+<Aside data-type='note'>
+When using `at()` with a path string, dots (`.`) are treated as path separators. To include a literal dot in a key name, escape it with a backslash (`\.`). Malformed path strings (such as unescaped special characters) may result in unexpected path resolution.
+</Aside>
+
+### path() method <a id="path"/>
+
+The `path()` method returns the string representation of the current path:
+
+<Code>
+```javascript
+const settings = myObject.get('settings');
+console.log(settings.path()); // "settings"
+
+// Paths with dots in keys are escaped
+const value = myObject.get('config').get('api.endpoint'); // Key contains a dot
+console.log(value.path()); // "config.api\.endpoint"
+```
+</Code>
+
+The path string format is compatible with the REST API path format.
+
+## Access values <a id="access"/>
+
+PathObject provides several methods to access the underlying data.
+
+### value() method <a id="value"/>
+
+For primitive values and counters, use the `value()` method to get the current value:
+
+<Code>
+```javascript
+const visits = myObject.get('visits');
+console.log('Visits:', visits.value()); // e.g., 42
+
+const username = myObject.get('username');
+console.log('Username:', username.value()); // e.g., "alice"
+```
+</Code>
+
+If the path doesn't resolve to an entry, `value()` returns `undefined`.
+
+### instance() method <a id="instance"/>
+
+To get the specific [object instance](/docs/liveobjects/concepts/instance) at a path, use the `instance()` method:
+
+<Code>
+```javascript
+const counterInstance = myObject.get('visits').instance();
+
+if (counterInstance) {
+  // Work with the specific counter instance
+  console.log('Counter ID:', counterInstance.id());
+  await counterInstance.increment(1);
+}
+```
+</Code>
+
+The `instance()` method returns `undefined` if no object exists at that path. See the [Instance documentation](/docs/liveobjects/concepts/instance) for more details on working with object instances.
+
+### compact() method <a id="compact"/>
+
+The `compact()` method returns a JavaScript object representation of the data at a path:
+
+<Code>
+```javascript
+const settings = myObject.get('settings');
+const json = settings.compact();
+console.log(json);
+// {
+//   theme: { color: 'dark', fontSize: 14 },
+//   notifications: true
+// }
+
+const counter = myObject.get('visits');
+console.log(counter.compact()); // Just the number, e.g., 42
+```
+</Code>
+
+#### Binary values <a id="compact-binary"/>
+
+Binary values (such as `ArrayBuffer`) are returned as base64-encoded strings:
+
+<Code>
+```javascript
+// Store binary data
+const binaryData = new Uint8Array([72, 101, 108, 108, 111]); // "Hello" in bytes
+await myObject.set('binaryField', binaryData);
+
+// compact() returns base64-encoded string
+console.log(myObject.get('binaryField').compact()); // "SGVsbG8="
+```
+</Code>
+
+#### Cyclic references <a id="compact-cyclic"/>
+
+Objects encountered multiple times during compaction reuse the same compacted value reference. This means the result of `compact()` for maps with cyclic references cannot be directly passed to `JSON.stringify()`. If you need to serialize data with cyclic references, use a custom JSON replacer or a serialization library that supports cycles.
+
+## Subscribe to updates <a id="subscribe"/>
+
+PathObject provides two methods for subscribing to changes: `subscribe()` and `subscribeIterator()`.
+
+### subscribe() method <a id="subscribe-method"/>
+
+The `subscribe(callback, options?)` method registers a callback that is called whenever the value at the path changes:
+
+<Code>
+```javascript
+const counter = myObject.get('visits');
+
+counter.subscribe(({ object, message }) => {
+  console.log('Path:', object.path());
+  console.log('Value:', object.value());
+
+  if (message) {
+    console.log('Operation:', message.operation.action);
+    console.log('Client ID:', message.clientId);
+  }
+});
+```
+</Code>
+
+The callback receives an object with two properties:
+- `object`: A `PathObject` reference to the updated path
+- `message`: The `ObjectMessage` that carried the operation that led to the change
+
+You can subscribe to any path, including paths that represent primitive values stored as keys in a map. When the value at that key is updated or removed, your subscription is notified:
+
+<Code>
+```javascript
+// Subscribe to a primitive value in a map
+myObject.get('username').subscribe(({ object, message }) => {
+  console.log('Username changed to:', object.value());
+});
+
+// The subscription fires when the key is updated
+await myObject.set('username', 'alice');
+// console: "Username changed to: alice"
+
+await myObject.set('username', 'bob');
+// console: "Username changed to: bob"
+```
+</Code>
+
+### Subscription options <a id="subscription-options"/>
+
+You can control the depth of nested changes to observe:
+
+<Code>
+```javascript
+// Only observe changes to the 'settings' map itself, not its nested children
+myObject.get('settings').subscribe(() => {
+  console.log('Settings map updated');
+}, { depth: 1 });
+
+// Observe all nested changes (default behavior)
+myObject.get('settings').subscribe(() => {
+  console.log('Settings or nested values updated');
+});
+```
+</Code>
+
+### subscribeIterator() method <a id="subscribe-iterator"/>
+
+The `subscribeIterator(options?)` method returns an async iterator for a more modern subscription syntax:
+
+<Code>
+```javascript
+for await (const { object, message } of myObject.get('visits').subscribeIterator()) {
+  console.log('Visits updated:', object.value());
+}
+```
+</Code>
+
+## Update data <a id="mutations"/>
+
+PathObject provides mutation methods that operate on the object at the resolved path. The available methods depend on the object type at the path.
+
+### Update map entries <a id="map-mutations"/>
+
+For paths that resolve to a LiveMap, use `set(key, value)` and `remove(key)`:
+
+<Code>
+```javascript
+// set() assigns a value to a key in the map
+await myObject.set('username', 'alice');
+await myObject.set('settings', LiveMap.create({ theme: 'dark' }));
+
+// remove() deletes a key from the map
+await myObject.remove('oldField');
+```
+</Code>
+
+### Update counter values <a id="counter-mutations"/>
+
+For paths that resolve to a LiveCounter, use `increment(amount)` and `decrement(amount)`:
+
+<Code>
+```javascript
+// increment() adds to the counter value
+await myObject.get('visits').increment(5);
+
+// decrement() subtracts from the counter value
+await myObject.get('score').decrement(2);
+
+// Operations resolve the path at runtime
+const visits = myObject.get('visits');
+await visits.increment(1); // Works on whatever counter is at 'visits' right now
+```
+</Code>
+
+### Batch multiple updates <a id="batch"/>
+
+The `batch(callback)` method groups multiple mutations into a single message:
+
+<Code>
+```javascript
+// Batch counter operations
+const visits = myObject.get('visits');
+await visits.batch((ctx) => {
+  ctx.increment(5);
+  ctx.increment(3);
+  ctx.decrement(2);
+});
+
+// Batch map operations
+await myObject.batch((ctx) => {
+  ctx.set('username', 'alice');
+  ctx.set('visits', LiveCounter.create(0));
+  ctx.remove('oldField');
+});
+```
+</Code>
+
+See the [Batch operations documentation](/docs/liveobjects/batch) for more details.
+
+## Iterate over map entries <a id="collection"/>
+
+PathObject provides collection methods for working with maps: `entries()`, `keys()`, `values()`, and `size()`.
+
+### entries() method <a id="entries"/>
+
+The `entries()` method returns an iterator of `[key, PathObject]` pairs:
+
+<Code>
+```javascript
+const settings = myObject.get('settings');
+
+for (const [key, value] of settings.entries()) {
+  console.log(`${key}:`, value.value());
+}
+```
+</Code>
+
+### keys() method <a id="keys"/>
+
+The `keys()` method returns an iterator of key strings:
+
+<Code>
+```javascript
+for (const key of settings.keys()) {
+  console.log('Key:', key);
+}
+```
+</Code>
+
+### values() method <a id="values"/>
+
+The `values()` method returns an iterator of PathObjects for each value:
+
+<Code>
+```javascript
+for (const value of settings.values()) {
+  console.log('Value:', value.value());
+}
+```
+</Code>
+
+### size() method <a id="size"/>
+
+The `size()` method returns the number of entries in a map:
+
+<Code>
+```javascript
+console.log('Settings count:', settings.size());
+```
+</Code>
+
+<Aside data-type='note'>
+Collection methods return empty iterators (and `size()` returns 0) if the path doesn't resolve to a map.
+</Aside>
+
+## Error handling <a id="error-handling"/>
+
+Since PathObject resolves paths at runtime, it's important to understand what happens when a path doesn't resolve as expected.
+
+### Access methods <a id="access-errors"/>
+
+Access methods like `value()`, `instance()`, and collection methods handle unresolved paths gracefully:
+
+<Code>
+```javascript
+// value() returns undefined if path doesn't resolve
+const missing = myObject.get('nonexistent');
+console.log(missing.value()); // undefined
+
+// instance() returns undefined if no object exists at path
+const inst = myObject.get('nonexistent').instance();
+console.log(inst); // undefined
+
+// Collection methods return empty iterators for non-map paths
+const counter = myObject.get('visits'); // This is a counter, not a map
+for (const [key, value] of counter.entries()) {
+  // This loop doesn't execute - entries() returns empty iterator
+}
+console.log(counter.size()); // 0
+```
+</Code>
+
+### Mutation methods <a id="mutation-errors"/>
+
+Mutation methods throw errors when the path cannot be resolved to an appropriate object:
+
+<Code>
+```javascript
+// Throws if path doesn't resolve to an existing object
+try {
+  await myObject.get('nonexistent').get('nested').increment(1);
+} catch (error) {
+  console.error('Path resolution failed');
+}
+
+// Throws if operation doesn't match the object type
+try {
+  await myObject.get('settings').increment(5); // 'settings' is a map, not counter
+} catch (error) {
+  console.error('Cannot call increment on a map');
+}
+```
+</Code>
+
+## Type inference <a id="typing"/>
+
+When using TypeScript, you can provide type parameters to get rich type inference:
+
+<Code>
+```javascript
+type MyObject = {
+  visits: LiveCounter;
+  settings: LiveMap<{
+    theme: string;
+    notifications: boolean;
+  }>;
+};
+
+const myObject = await channel.object.get<MyObject>();
+
+// TypeScript knows 'visits' is a counter
+const visits: PathObject<LiveCounter> = myObject.get('visits');
+await visits.increment(1); // Type-safe
+
+// TypeScript knows the shape of 'settings'
+const theme: PathObject<string> = myObject.get('settings').get('theme');
+await theme.value(); // Returns string | undefined
+```
+</Code>
+
+See the [Typing documentation](/docs/liveobjects/typing) for more details on type safety.

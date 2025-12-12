@@ -11,6 +11,310 @@ LiveObjects is currently Experimental. Its features are still in development and
 
 LiveCounter is a synchronized numerical counter that supports increment and decrement operations. It ensures that all updates are correctly applied and synchronized across users in realtime, preventing inconsistencies when multiple users modify the counter value simultaneously.
 
+<If lang="javascript">
+
+You interact with LiveCounter through the [PathObject](/docs/liveobjects/concepts/path-object) API or by obtaining a specific [Instance](/docs/liveobjects/concepts/instance).
+
+## Create LiveCounter <a id="create"/>
+
+Create a LiveCounter using the `LiveCounter.create()` static method and assign it to a path:
+
+<Code>
+```javascript
+// Create a counter with initial value 0
+await myObject.set('visits', LiveCounter.create(0));
+
+// Create a counter with initial value 100
+await myObject.set('score', LiveCounter.create(100));
+
+// Create a counter without specifying initial value (defaults to 0)
+await myObject.set('clicks', LiveCounter.create());
+```
+</Code>
+
+`LiveCounter.create()` returns a value type that describes the initial value for a new counter. The actual object is created when assigned to a path. Each assignment creates a distinct object with its own unique ID:
+
+<Code>
+```javascript
+const counterValue = LiveCounter.create(0);
+
+// Each assignment creates a different object
+await myObject.set('counter1', counterValue);
+await myObject.set('counter2', counterValue);
+
+// counter1 and counter2 are different objects with different IDs
+const id1 = myObject.get('counter1').instance()?.id();
+const id2 = myObject.get('counter2').instance()?.id();
+console.log(id1 === id2); // false
+```
+</Code>
+
+Creating a LiveCounter sends one billable channel message.
+
+## Access a LiveCounter <a id="access"/>
+
+### Using PathObject <a id="pathobject"/>
+
+Access a LiveCounter through a [PathObject](/docs/liveobjects/concepts/path-object), which provides path-based operations that resolve at runtime:
+
+<Code>
+```javascript
+const myObject = await channel.object.get();
+
+// Get a PathObject to a counter
+const visits = myObject.get('visits');
+
+// Navigate to nested counters
+const userScore = myObject.get('users').get('alice').get('score');
+```
+</Code>
+
+### Using Instance <a id="instance"/>
+
+Get a specific LiveCounter [Instance](/docs/liveobjects/concepts/instance) to work with the underlying object directly:
+
+<Code>
+```javascript
+const visitsInstance = myObject.get('visits').instance();
+
+if (visitsInstance) {
+  console.log('Visits counter ID:', visitsInstance.id());
+  console.log('Current value:', visitsInstance.value());
+}
+```
+</Code>
+
+## Get counter value <a id="value"/>
+
+### Get value using PathObject <a id="value-pathobject"/>
+
+<Code>
+```javascript
+const visits = myObject.get('visits');
+console.log('Visits:', visits.value());  // e.g., 42
+```
+</Code>
+
+Returns `undefined` if the path doesn't resolve to a counter.
+
+### Get value using Instance <a id="value-instance"/>
+
+<Code>
+```javascript
+const visitsInstance = myObject.get('visits').instance();
+
+if (visitsInstance) {
+  console.log('Visits:', visitsInstance.value());
+}
+```
+</Code>
+
+## Increment a counter <a id="increment"/>
+
+### Increment using PathObject <a id="increment-pathobject"/>
+
+<Code>
+```javascript
+// Increment by a specific amount
+await myObject.get('visits').increment(5);
+
+// Increment by 1 (default)
+await myObject.get('visits').increment();
+```
+</Code>
+
+### Increment using Instance <a id="increment-instance"/>
+
+<Code>
+```javascript
+const visitsInstance = myObject.get('visits').instance();
+
+if (visitsInstance) {
+  await visitsInstance.increment(5);
+  await visitsInstance.increment();  // Increment by 1
+}
+```
+</Code>
+
+Incrementing a counter sends one billable channel message.
+
+## Decrement a counter <a id="decrement"/>
+
+### Decrement using PathObject <a id="decrement-pathobject"/>
+
+<Code>
+```javascript
+// Decrement by a specific amount
+await myObject.get('score').decrement(10);
+
+// Decrement by 1 (default)
+await myObject.get('score').decrement();
+```
+</Code>
+
+### Decrement using Instance <a id="decrement-instance"/>
+
+<Code>
+```javascript
+const scoreInstance = myObject.get('score').instance();
+
+if (scoreInstance) {
+  await scoreInstance.decrement(10);
+  await scoreInstance.decrement();  // Decrement by 1
+}
+```
+</Code>
+
+Decrementing a counter sends one billable channel message.
+
+## Subscribe to updates <a id="subscribe"/>
+
+### Subscribe using PathObject <a id="subscribe-pathobject"/>
+
+PathObject subscriptions observe the location and automatically track changes even if the counter instance is replaced:
+
+<Code>
+```javascript
+myObject.get('visits').subscribe(({ object, message }) => {
+  console.log('Visits updated:', object.value());
+  console.log('Path:', object.path());
+
+  // Check operation details
+  if (message) {
+    const operation = message.operation;
+    console.log('Operation:', operation.action);
+    console.log('Amount:', operation.amount);
+    console.log('Client ID:', message.clientId);
+  }
+});
+```
+</Code>
+
+The subscription remains active even if the counter at the path is replaced with a new counter instance.
+
+### Subscribe using Instance <a id="subscribe-instance"/>
+
+Instance subscriptions track a specific counter instance, following it even if it moves in the object tree:
+
+<Code>
+```javascript
+const visitsInstance = myObject.get('visits').instance();
+
+if (visitsInstance) {
+  visitsInstance.subscribe(({ object, message }) => {
+    console.log('This specific counter instance updated');
+    console.log('Instance ID:', object.id());
+    console.log('New value:', object.value());
+
+    if (message?.operation.action === 'object.delete') {
+      console.log('Counter was deleted');
+      // Subscription automatically unsubscribes after this
+    }
+  });
+}
+```
+</Code>
+
+Note that subscribing to data updates on a `LiveCounter` does not affect the number of billable messages received by a client. Any client attached to a channel with the `object-subscribe` capability automatically receives all object messages for that channel. Subscribing to updates on an object simply adds a listener that is called whenever the client receives updates for that object.
+
+### Unsubscribe <a id="unsubscribe"/>
+
+<Code>
+```javascript
+// PathObject subscription
+const subscription = myObject.get('visits').subscribe(() => {
+  console.log('Visits updated');
+});
+subscription.unsubscribe();
+
+// Instance subscription
+const visitsInstance = myObject.get('visits').instance();
+if (visitsInstance) {
+  const subscription = visitsInstance.subscribe(() => {
+    console.log('Updated');
+  });
+  subscription.unsubscribe();
+}
+```
+</Code>
+
+### Async iterators <a id="async-iterators"/>
+
+Both PathObject and Instance support async iterator syntax:
+
+<Code>
+```javascript
+// PathObject iterator
+for await (const { object, message } of myObject.get('visits').subscribeIterator()) {
+  console.log('Visits:', object.value());
+}
+
+// Instance iterator
+const visitsInstance = myObject.get('visits').instance();
+if (visitsInstance) {
+  for await (const { object, message } of visitsInstance.subscribeIterator()) {
+    console.log('Counter updated:', object.value());
+  }
+}
+```
+</Code>
+
+## Get compact representation <a id="compact"/>
+
+Get a numeric representation of the counter:
+
+<Code>
+```javascript
+// Using PathObject
+const visits = myObject.get('visits');
+const value = visits.compact();
+console.log(value);  // e.g., 42
+
+// Using Instance
+const visitsInstance = myObject.get('visits').instance();
+if (visitsInstance) {
+  const value = visitsInstance.compact();
+  console.log(value);  // e.g., 42
+}
+```
+</Code>
+
+For counters, `compact()` returns the same value as `value()`.
+
+## Batch multiple operations <a id="batch"/>
+
+Group multiple counter operations into a single atomic message:
+
+<Code>
+```javascript
+// Using PathObject
+await myObject.get('visits').batch((ctx) => {
+  ctx.increment(5);
+  ctx.increment(3);
+  ctx.decrement(2);
+  // Net result: +6
+});
+
+// Using Instance
+const visitsInstance = myObject.get('visits').instance();
+if (visitsInstance) {
+  await visitsInstance.batch((ctx) => {
+    ctx.increment(10);
+    ctx.decrement(5);
+    // Net result: +5
+  });
+}
+```
+</Code>
+
+All operations in a batch are sent as one billable channel message.
+
+See the [Batch operations documentation](/docs/liveobjects/batch) for more details.
+
+</If>
+
+<If lang="swift,java">
+
 ## Create LiveCounter <a id="create"/>
 
 A `LiveCounter` instance can be created using the `channel.objects.createCounter()` method. It must be stored inside a `LiveMap` object that is reachable from the [root object](/docs/liveobjects/concepts/objects#root-object).
@@ -22,11 +326,6 @@ Note that you need to first [attach to the channel](/docs/liveobjects/quickstart
 </Aside>
 
 <Code>
-```javascript
-const counter = await channel.objects.createCounter();
-await root.set('counter', counter);
-```
-
 ```swift
 let counter = try await channel.objects.createCounter()
 try await root.set("counter", .liveCounter(counter))
@@ -41,10 +340,6 @@ root.set("counter", LiveMapValue.of(counter));
 Optionally, you can specify an initial value when creating the counter:
 
 <Code>
-```javascript
-const counter = await channel.objects.createCounter(100); // Counter starts at 100
-```
-
 ```swift
 let counter = try await channel.objects.createCounter(count: 100) // Counter starts at 100
 ```
@@ -61,10 +356,6 @@ Creating a `LiveCounter` sends one billable channel message.
 Get the current value of a counter using the `LiveCounter.value()` method:
 
 <Code>
-```javascript
-console.log('Counter value:', counter.value());
-```
-
 ```swift
 print("Counter value: \(try counter.value)")
 ```
@@ -85,13 +376,6 @@ You can subscribe to data updates on a counter to receive realtime changes made 
 Subscribe to data updates on a counter using the `LiveCounter.subscribe()` method:
 
 <Code>
-```javascript
-counter.subscribe((update) => {
-  console.log('Counter updated:', counter.value());
-  console.log('Update details:', update);
-});
-```
-
 ```swift
 try counter.subscribe { update, _ in
     do {
@@ -145,13 +429,6 @@ Note that subscribing to data updates on a `LiveCounter` does not affect the num
 Use the `unsubscribe()` function returned in the `subscribe()` response to remove a counter update listener:
 
 <Code>
-```javascript
-// Initial subscription
-const { unsubscribe } = counter.subscribe(() => console.log(counter.value()));
-// To remove the listener
-unsubscribe();
-```
-
 ```swift
 // Initial subscription
 let subscriptionResponse = try counter.subscribe { _, _ in
@@ -189,18 +466,10 @@ try counter.subscribe { _, subscriptionResponse in
 </Code>
 </If>
 
-<If lang="javascript,java">
+<If lang="java">
 Use the `LiveCounter.unsubscribe()` method to deregister a provided listener:
 
 <Code>
-```javascript
-// Initial subscription
-const listener = () => console.log(counter.value());
-counter.subscribe(listener);
-// To remove the listener
-counter.unsubscribe(listener);
-```
-
 ```java
 // Initial subscription
 LiveCounter.Listener listener = (counterUpdate) ->
@@ -215,10 +484,6 @@ counter.unsubscribe(listener);
 Use the `LiveCounter.unsubscribeAll()` method to deregister all counter update listeners:
 
 <Code>
-```javascript
-counter.unsubscribeAll();
-```
-
 ```swift
 counter.unsubscribeAll();
 ```
@@ -230,16 +495,11 @@ counter.unsubscribeAll();
 
 ## Update LiveCounter <a id="update"/>
 
-Update the counter value by calling <If lang="javascript,java">`LiveCounter.increment()` or `LiveCounter.decrement()`</If><If lang="swift">`LiveCounter.increment(amount:)` or `LiveCounter.decrement(amount:)`</If>. These operations are synchronized across all clients and trigger data subscription callbacks for the counter, including on the client making the request.
+Update the counter value by calling <If lang="java">`LiveCounter.increment()` or `LiveCounter.decrement()`</If><If lang="swift">`LiveCounter.increment(amount:)` or `LiveCounter.decrement(amount:)`</If>. These operations are synchronized across all clients and trigger data subscription callbacks for the counter, including on the client making the request.
 
 These operations are asynchronous, as the client sends the corresponding update operation to the Ably system and waits for acknowledgment of the successful counter update.
 
 <Code>
-```javascript
-await counter.increment(5); // Increase value by 5
-await counter.decrement(2); // Decrease value by 2
-```
-
 ```swift
 try await counter.increment(amount: 5) // Increase value by 5
 try await counter.decrement(amount: 2) // Decrease value by 2
@@ -255,15 +515,9 @@ Updating the counter value with `LiveCounter.increment()` or `LiveCounter.decrem
 
 ## Subscribe to lifecycle events <a id="subscribe-lifecycle"/>
 
-Subscribe to lifecycle events on a counter using the <If lang="javascript,java">`LiveCounter.on()`</If><If lang="swift">`LiveCounter.on(event:callback:)`</If> method:
+Subscribe to lifecycle events on a counter using the <If lang="java">`LiveCounter.on()`</If><If lang="swift">`LiveCounter.on(event:callback:)`</If> method:
 
 <Code>
-```javascript
-counter.on('deleted', () => {
-  console.log('Counter has been deleted');
-});
-```
-
 ```swift
 counter.on(event: .deleted) { _ in
   print("Counter has been deleted")
@@ -284,13 +538,6 @@ Read more about [objects lifecycle events](/docs/liveobjects/lifecycle#objects).
 Use the `off()` function returned in the `on()` response to remove a lifecycle event listener:
 
 <Code>
-```javascript
-// Initial subscription
-const { off } = counter.on('deleted', () => console.log('Counter deleted'));
-// To remove the listener
-off();
-```
-
 ```swift
 // Initial subscription
 let eventResponse = counter.on(event: .deleted) { _ in
@@ -310,17 +557,10 @@ subscription.unsubscribe();
 ```
 </Code>
 
-<If lang="javascript,java">
+<If lang="java">
 Use the `LiveCounter.off()` method to deregister a provided lifecycle event listener:
 
 <Code>
-```javascript
-// Initial subscription
-const listener = () => console.log('Counter deleted');
-counter.on('deleted', listener);
-// To remove the listener
-counter.off('deleted', listener);
-```
 
 ```java
 // Initial subscription
@@ -338,9 +578,6 @@ counter.off(listener);
 Use the `LiveCounter.offAll()` method to deregister all lifecycle event listeners:
 
 <Code>
-```javascript
-counter.offAll();
-```
 
 ```swift
 counter.offAll()
@@ -350,3 +587,5 @@ counter.offAll()
 counter.offAll();
 ```
 </Code>
+
+</If>

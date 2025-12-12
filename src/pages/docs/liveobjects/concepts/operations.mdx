@@ -30,11 +30,16 @@ The value of an entry in a `LiveMap` instance can be a [primitive type](/docs/li
 
 <Code>
 ```javascript
-// Set a value for a key
-await map.set('username', 'alice');
+// Using PathObject
+await myObject.get('user').set('username', 'alice');
+await myObject.get('user').remove('status');
 
-// Remove a key
-await map.remove('username');
+// Using Instance
+const userInstance = myObject.get('user').instance();
+if (userInstance) {
+  await userInstance.set('username', 'alice');
+  await userInstance.remove('status');
+}
 ```
 
 ```swift
@@ -69,11 +74,16 @@ The `decrement` operation is just syntactic sugar for `increment` with a negativ
 
 <Code>
 ```javascript
-// Increment counter by 5
-await counter.increment(5);
+// Using PathObject
+await myObject.get('visits').increment(5);
+await myObject.get('score').decrement(2);
 
-// Decrement counter by 2
-await counter.decrement(2);
+// Using Instance
+const visitsInstance = myObject.get('visits').instance();
+if (visitsInstance) {
+  await visitsInstance.increment(5);
+  await visitsInstance.decrement(2);
+}
 ```
 
 ```swift
@@ -97,20 +107,43 @@ counter.decrement(2);
 
 Create operations are used to instantiate new objects of a given type.
 
-A create operation can optionally specify an initial value for the object.
+<If lang="javascript">
+Use `LiveMap.create()` and `LiveCounter.create()` to create new objects. These methods create special value types that can be assigned directly to paths:
 
 <Code>
 ```javascript
-// Create a map with initial values
-const userMap = await channel.objects.createMap({
+// Create and assign a map with initial values
+await myObject.set('user', LiveMap.create({
   username: 'alice',
   status: 'online'
-});
+}));
 
-// Create a counter with initial value
-const scoreCounter = await channel.objects.createCounter(100);
+// Create and assign a counter with initial value
+await myObject.set('score', LiveCounter.create(100));
+
+// Create nested structures
+await myObject.set('profile', LiveMap.create({
+  name: 'Alice',
+  score: LiveCounter.create(0),
+  settings: LiveMap.create({
+    theme: 'dark',
+    notifications: true
+  })
+}));
 ```
+</Code>
 
+When a create operation is processed, an [object ID](/docs/liveobjects/concepts/objects#object-ids) is automatically generated for the new object instance.
+
+<Aside data-type='note'>
+Objects created with `LiveMap.create()` and `LiveCounter.create()` are automatically [reachable](/docs/liveobjects/concepts/objects#reachability) when you assign them to a path. You don't need to worry about [orphaned objects](/docs/liveobjects/lifecycle#objects-deleted) unless you explicitly remove them from the tree afterwards.
+</Aside>
+</If>
+
+<If lang="swift,java">
+A create operation can optionally specify an initial value for the object.
+
+<Code>
 ```swift
 // Create a map with initial values
 let userMap = try await channel.objects.createMap(entries: [
@@ -140,6 +173,7 @@ When a create operation is processed, an [object ID](/docs/liveobjects/concepts/
 <Aside data-type='important'>
 Newly created objects are not automatically [reachable](/docs/liveobjects/concepts/objects#reachability) from the root object. You must explicitly add them to the object tree to prevent garbage collection.
 </Aside>
+</If>
 
 ## Object IDs <a id="object-ids"/>
 
@@ -149,8 +183,15 @@ When using a client library object IDs are handled automatically, allowing you w
 
 <Code>
 ```javascript
-// The published operation targets the object ID of the `userMap` object instance
-await userMap.set('username', 'alice');
+// The published operation targets the object ID of the object at 'user'
+await myObject.get('user').set('username', 'alice');
+
+// Get the specific instance and its ID
+const userInstance = myObject.get('user').instance();
+if (userInstance) {
+  console.log('Object ID:', userInstance.id());
+  await userInstance.set('username', 'alice');
+}
 ```
 
 ```swift
@@ -164,20 +205,65 @@ userMap.set("username", LiveMapValue.of("alice"));
 ```
 </Code>
 
-Therefore it is important that you obtain an up-to-date object instance before performing operations on an object. For example, you can [subscribe](/docs/liveobjects/map#subscribe-data) to a `LiveMap` instance to ensure you always have an up-to-date reference to any child objects in the map:
+<If lang="javascript">
+## Path-based operations <a id="path-based"/>
+
+The [path-based API](/docs/liveobjects/concepts/path-object) makes operations more resilient by operating on paths rather than explicit object instances. When you call a method on a `PathObject`, it operates on whatever object exists at that path at the time:
 
 <Code>
 ```javascript
-const root = await channel.objects.getRoot();
+const myObject = await channel.object.get();
 
-let myCounter = root.get('myCounter');
-root.subscribe(() => { myCounter = root.get('myCounter'); });
+// Store a PathObject reference
+const counter = myObject.get('visits');
 
-// before incrementing, ensure we have an up-to-date object reference if
-// the counter instance at the 'myCounter' key in the root map changes
-await myCounter.increment(1);
+// This will work even if the counter is replaced
+await counter.increment(1);
+
+// Someone replaces the counter with a new instance
+await myObject.set('visits', LiveCounter.create(0));
+
+// The same PathObject reference still works with the new counter
+await counter.increment(1);
 ```
+</Code>
 
+This eliminates the need to track object instance changes and maintain up-to-date references. Subscriptions on `PathObject` are also resilient - they automatically observe whichever object exists at the path:
+
+<Code>
+```javascript
+// Subscribe to the path
+myObject.get('visits').subscribe(({ object }) => {
+  console.log('Visits:', object.value());
+});
+
+// Even if the counter is replaced, the subscription continues working
+await myObject.set('visits', LiveCounter.create(0));
+```
+</Code>
+
+If you need to track a specific object instance regardless of its location, use [Instance](/docs/liveobjects/concepts/instance) instead:
+
+<Code>
+```javascript
+// Get the specific counter instance
+const counterInstance = myObject.get('visits').instance();
+
+if (counterInstance) {
+  // Subscribe to this specific instance
+  // This subscription follows the instance even if it's moved
+  counterInstance.subscribe(({ object }) => {
+    console.log('Counter value:', object.value());
+  });
+}
+```
+</Code>
+</If>
+
+<If lang="swift,java">
+Therefore it is important that you obtain an up-to-date object instance before performing operations on an object. For example, you can [subscribe](/docs/liveobjects/map#subscribe-data) to a `LiveMap` instance to ensure you always have an up-to-date reference to any child objects in the map:
+
+<Code>
 { /* We can't map the JS example directly because Swift concurrency prevents us from mutating local variables in the way that the JS example does, so I tried to show how we might need to handle this scenario in a real-world app where things are isolated to the main actor. But it's long and ugly. */ }
 ```swift
 struct MyView: View {
@@ -232,8 +318,9 @@ root.subscribe((mapUpdate) -> {
 myCounter.increment(1);
 ```
 </Code>
+</If>
 
-In the [REST API](/docs/liveobjects/rest-api-usage#updating-objects-by-id), this relationship is made explicit:
+In the [REST API](/docs/liveobjects/rest-api-usage#updating-objects-by-id), the relationship between operations and object IDs is made explicit:
 
 <Code>
 ```shell
