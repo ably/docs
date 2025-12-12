@@ -1,0 +1,373 @@
+---
+title: Message per response
+meta_description: "Stream individual tokens from AI models into a single message over Ably."
+---
+
+Stream LLM and generative AI responses efficiently by appending individual tokens to a single
+message on an Ably channel. This pattern creates one complete response message in channel history
+while delivering tokens in realtime.
+
+## Overview
+
+The message-per-response pattern enables you to stream AI-generated content as individual tokens in
+realtime, while maintaining a clean, compacted message history. Each AI response becomes a single
+message that grows as tokens are appended, resulting in efficient storage and easy retrieval of
+complete responses.
+
+### When to use this pattern
+
+This approach is ideal when:
+
+- You want each complete AI response stored as a single message in history.
+- You want clients joining mid-stream to catch up efficiently without processing thousands of
+  individual tokens.
+- Your application displays progressive AI responses that build up over time.
+
+### How it works
+
+1. **Initial message**: When an AI response begins, publish an initial message with `message.create`
+   action to the Ably channel with an empty or the first token as content.
+2. **Token streaming**: Append subsequent tokens to the original message by publishing those tokens
+   with the `message.append` action.
+3. **Live Delivery**: Clients subscribed to the channel receive each appended token in realtime, allowing
+   them to progressively render the response.
+4. **Compacted history**: The channel history contains only one message per AI response,
+   which includes all tokens appended to it concatenated together.
+
+You do not need to mark the message or token stream as completed; the final message will
+automatically have the full response with all tokens appended to it.
+
+## Publishing tokens
+
+Publish tokens from a [Realtime](/docs/api/realtime-sdk) client, which maintains a
+persistent connection to the Ably service. This allows you to publish at very high message rates
+with the lowest possible latencies, while preserving guarantees around message delivery order.
+For more information, see [Realtime and REST](/docs/basics#realtime-and-rest).
+
+[Channels](/docs/channels) separate message traffic into different topics.
+For token streaming, each conversation or session typically has its own channel.
+
+Use the [`get()`](/docs/api/realtime-sdk/channels#get) method to create or retrieve a channel instance:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('{{RANDOM_CHANNEL_NAME}}');
+```
+</Code>
+
+
+To start streaming an AI response, publish the initial message. Then append each subsequent token
+to that message as it arrives from the AI model:
+<Code>
+```javascript
+// set the initial data to empty string or the first token
+// capture the msgSerial for appending subsequent tokens
+
+const { serials: [msgSerial] } = await channel.publish('ai-response', { data: '' });
+
+for await (const token of streamedResponse) {
+  // Append each token as it arrives
+  channel.appendMessage(msgSerial, token);
+}
+```
+</Code>
+
+When publishing tokens, don't await the `channel.appendMessage()` call. Ably rolls up acknowledgments
+and debounces them for efficiency, which means awaiting each append would unnecessarily slow down
+your token stream. Messages are still published in the order that `appendMessage()` is called, so delivery
+order is not affected.
+
+Append only supports concatenating data of the same type as the original message. For example, if
+the initial message data is a string, all appended tokens must also be strings. If the initial
+message data is binary, all appended tokens must be binary.
+
+This pattern allows publishing append operations for multiple concurrent model responses on the same
+channel. As long as you append to the correct message serial, tokens from different responses will
+not interfere with each other. And the final concatenated message for each response will contain only the tokens
+from that response.
+
+### Complete publish example
+
+<Code>
+```javascript
+const realtime = new Ably.Realtime('YOUR_API_KEY');
+const channel = realtime.channels.get('ai:responses');
+
+async function streamAIResponse(prompt) {
+  // Get token stream from your AI model
+  const stream = await getAIModelStream(prompt);
+
+  let messageSerial;
+
+  for await (const token of stream) {
+    if (!messageSerial) {
+      // First token: create the message and get serial
+      const response = await channel.publish({
+        name: 'ai-response',
+        data: token,
+        extras: {
+          headers: {
+            requestId: prompt.requestId,
+            model: 'gpt-4'
+          }
+        }
+      });
+      messageSerial = response.serials[0];
+    } else {
+      // Subsequent tokens: append without awaiting
+      channel.appendMessage(messageSerial, token);
+    }
+  }
+}
+
+```
+</Code>
+
+## Subscribing to token streams
+
+Subscribers receive different message actions depending on when they join and how they're retrieving
+messages.
+
+When subscribed to a channel, clients receive the initial message with the `message.create` action,
+followed by each token as a `message.append` action in realtime.
+
+<Code>
+```javascript
+const channel = realtime.channels.get('ai:responses');
+
+await channel.subscribe((msg) => {
+  switch (msg.action) {
+    case 'message.create':
+      console.log('New response started:', msg.data);
+      // Initialize your UI with the first token
+      displayNewResponse(msg.data);
+      break;
+    case 'message.append':
+      console.log('Token received:', msg.data);
+      // Append the token to your UI
+      appendToResponse(msg.data);
+      break;
+    case 'message.update':
+      console.log('Message updated:', msg.data);
+      // Wholesale replacement of message data
+      replaceResponse(msg.data);
+      break;
+  }
+});
+```
+</Code>
+
+Each `message.append` event contains only the new token fragment in `msg.data`, not the full
+concatenated response.
+
+Occasionally you may receive a `message.update` action, which indicates that the channel needs to
+stream the entire message data so far. This can happen if a client has been offline for a while, and
+the channel needs to resynchronize the full message state. In this case, `msg.data` contains the
+complete response up to that point. For `message.update` events, you should replace the entire
+response content in your UI.
+
+## Client hydration
+
+Clients joining a channel or recovering from disconnection can efficiently catchup using rewind or
+history. For temporary disconnections, Ably's automatic [connection recovery](docs/connect/states#connection-state-recovery)
+ensures that clients receive all missed tokens in order.
+
+By using either rewind or history with `untilAttach`, clients can efficiently hydrate the existing
+response state without needing to process every individual token. Both rewind and history deliver
+concatenated responses as `message.update` events and seamlessly transition from historical
+responses to live `message.append` events.
+
+### Using rewind
+
+[Rewind](/docs/channels/options/rewind) attaches to a channel starting from a point in the past, delivering complete concatenated
+messages as `message.update` events.
+
+
+<Code>
+```javascript
+const channel = realtime.channels.get('ai:responses', {
+  params: { rewind: '10' }  // Get last 10 complete responses
+});
+
+await channel.subscribe((msg) => {
+  switch (msg.action) {
+    case 'message.create':
+      console.log('New response started:', msg.data);
+      // A new response has started
+      displayNewResponse(msg.data);
+      break;
+    case 'message.append':
+      console.log('Token received:', msg.data);
+      // New live tokens after catching up
+      appendToResponse(msg.data);
+      break;
+    case 'message.update':
+      console.log('Message updated:', msg.data);
+      // Complete concatenated response from rewind
+      displayCompleteResponse(msg.data);
+      break;
+  }
+});
+
+```
+</Code>
+
+
+### Using history with untilAttach
+
+The `untilAttach` option provides [continuous history](/docs/storage-history/history#continuous-history)
+from the point of attachment backward:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('ai:responses');
+
+// Attach to channel first
+await channel.attach();
+
+// Get history up to the attachment point
+const historyPage = await channel.history({ untilAttach: true });
+
+// Process complete responses from history
+// History items are delivered as complete messages
+// with the most recent messages first.
+for (const msg of historyPage.items.reverse()) {
+  console.log('Complete response:', msg.data);
+  // msg.data contains the full concatenated text
+  displayFullResponse(msg.data);
+}
+
+// Subscribe to new tokens
+await channel.subscribe((msg) => {
+  switch (msg.action) {
+    case 'message.create':
+      // etc
+    case 'message.append':
+      // etc
+    case 'message.update':
+      // etc
+  }
+});
+```
+</Code>
+
+## Headers and metadata
+
+Use the `extras.headers` field to attach metadata to your messages. Headers from the final
+`message.append` replace all previous headers.  Headers are useful for correlating Ably messages
+with external systems.
+
+### Adding metadata to messages
+
+Include metadata in the initial message or any append operation:
+
+<Code>
+```javascript
+ // Initial message with metadata
+const response = await channel.publish({
+  data: 'Hello',
+  extras: {
+    headers: {
+      responseId: 'resp_12345',        // Your database ID
+      modelRequestId: 'req_abc123',    // AI model request ID
+      model: 'claude-3-opus',
+      temperature: '0.7',
+      userId: 'user_789'
+    }
+  }
+});
+
+// Append with updated metadata
+channel.appendMessage(response.serials[0], ' world!', {
+  extras: {
+    headers: {
+      responseId: 'resp_12345',
+      modelRequestId: 'req_abc123',
+      model: 'claude-3-opus',
+      temperature: '0.7',
+      userId: 'user_789',
+      tokensUsed: '150',
+      completionTime: '2.4s'
+    }
+  }
+});
+```
+</Code>
+
+### Metadata best practices
+
+Do not include metadata in the body of an append request. Instead, use the `extras.headers` field to
+keep metadata separate from the message content. This ensures that clients can easily process the
+concatenated response without needing to parse out metadata.
+
+<Code>
+```javascript
+// ✓ GOOD: Metadata in headers
+const response = await channel.publish({
+  data: 'The response text',  // Pure concatenated text
+  extras: {
+    headers: {
+      model: 'gpt-4',
+    }
+  }
+});
+
+// ✗ BAD: Mixing metadata with content
+const response = await channel.publish({
+  data: JSON.stringify({  // Don't do this
+    text: 'The response text',
+    model: 'gpt-4',
+  })
+});
+```
+</Code>
+
+By including metadata in the body of the message, the final concatenated response would contain all
+the metadata from each append, making it difficult to extract the pure response text.
+
+For example, if you appended tokens with metadata in the body, the final message data would look
+like this:
+
+```json
+{
+  "text": "Hello",
+  "model": "gpt-4",
+}{
+  "text": " world",
+  "model": "gpt-4",
+}{
+  "text": "!",
+  "model": "gpt-4",
+}
+```
+
+If you use headers for metadata, and the body only contains the response text, the final message
+data would be simply:
+
+```text
+Hello world!
+```
+
+## Requirements and restrictions
+
+### Channel rule
+
+Message append functionality requires the "Message annotations, updates, and deletes" [channel
+rule](/docs/channels#rules) enabled for your channel or [namespace](/docs/channels#namespaces).
+This rule automatically enables messages persistence.
+
+Enabling the channel rule:
+
+1. Go to the [Ably dashboard](https://www.ably.com/dashboard) and select your app.
+2. Navigate to the "Configuration" > "Rules" section from the left-hand navigation bar.
+3. Choose "Add new rule".
+4. Enter a channel name or namespace pattern (e.g. `ai:*` for all channels starting with `ai:`).
+5. Select the "Message annotations, updates, and deletes" rule from the list.
+6. Click "Create channel rule".
+
+### Message size limits
+
+Standard Ably message [size limits](/docs/platform/pricing/limits#message) apply to the complete
+concatenated message. The system validates size limits before accepting append operations. If
+appending a token would exceed the maximum message size, the append is rejected.
+

@@ -18,6 +18,15 @@ export default {
         },
       ],
     },
+    {
+      name: 'Token streaming',
+      pages: [
+        {
+          name: 'Message per response',
+          link: '/docs/ai-transport/features/token-streaming/message-per-response',
+        },
+      ],
+    },
   ],
   api: [],
 } satisfies NavProduct;
