@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation } from '@reach/router';
 import { graphql, useStaticQuery } from 'gatsby';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -126,6 +126,30 @@ const Header: React.FC = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [activePage]);
+
+  const handleLogout = useCallback(async () => {
+    if (sessionState.logOut.href && sessionState.logOut.token) {
+      try {
+        await fetch(sessionState.logOut.href, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            _method: 'delete',
+            authenticity_token: sessionState.logOut.token,
+          }),
+        });
+
+        track('docs_logout_button_clicked');
+
+        // Reload the current page after successful logout
+        window.location.reload();
+      } catch (error) {
+        console.error('Logout failed:', error);
+      }
+    }
+  }, [sessionState.logOut]);
 
   return (
     <div className="flex items-center justify-between h-16 px-6 fixed w-full z-50 bg-neutral-000 dark:bg-neutral-1300 border-b border-neutral-300 dark:border-neutral-1000">
@@ -263,7 +287,7 @@ const Header: React.FC = () => {
               )}
               <Tooltip.Root>
                 <Tooltip.Trigger asChild>
-                  <button className={iconButtonClassName} onClick={() => track('docs_logout_button_clicked')}>
+                  <button className={iconButtonClassName} onClick={handleLogout}>
                     <Icon name="icon-gui-arrow-right-start-on-rectangle-outline" size="20px" />
                   </button>
                 </Tooltip.Trigger>
