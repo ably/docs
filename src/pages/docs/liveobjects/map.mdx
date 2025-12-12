@@ -3,15 +3,326 @@ title: LiveMap
 meta_description: "Create, update and receive updates for a key/value data structure that synchronizes state across clients in realtime."
 ---
 
-<Aside data-type='experimental'>
-LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.
+<If lang="javascript">
+  <Aside data-type='public-preview'>
+  LiveObjects JavaScript is in Public Preview. We are committed to supporting the LiveObjects Javascript API and welcome adoption and feedback.
 
-**Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="swift">
+  <Aside data-type='experimental'>
+  LiveObjects Swift is currently Experimental. Its features are still in development and subject to rapid change.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+<If lang="java">
+  <Aside data-type='experimental'>
+  LiveObjects Java is currently Experimental. Its features are still in development and subject to rapid change.
+
+  **Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+  </Aside>
+</If>
+
+`LiveMap` is a synchronized key/value data structure that stores [primitive values](/docs/liveobjects/concepts/objects#primitive-types), such as numbers, strings, booleans, binary data, JSON-serializable objects or arrays and other live [object types](/docs/liveobjects/concepts/objects#object-types). It ensures that all updates are correctly applied and synchronized across clients in realtime, automatically resolving conflicts with last-write-wins (LWW) semantics.
+
+<If lang="javascript">
+
+You interact with `LiveMap` through a [PathObject](/docs/liveobjects/concepts/path-object) or by obtaining a specific [Instance](/docs/liveobjects/concepts/instance).
+
+## Create a map <a id="create"/>
+
+Create a `LiveMap` using the `LiveMap.create()` static method and assign it to a path:
+
+<Code>
+```javascript
+import { LiveMap } from 'ably/liveobjects';
+
+// Create an empty map
+await myObject.set('settings', LiveMap.create());
+
+// Create a map with initial data
+await myObject.set('user', LiveMap.create({
+  name: 'Alice',
+  score: 42,
+  active: true
+}));
+
+// Create nested maps
+await myObject.set('config', LiveMap.create({
+  theme: LiveMap.create({
+    color: 'dark',
+    fontSize: 14
+  })
+}));
+```
+</Code>
+
+`LiveMap.create()` returns a value type that describes the initial data for a new map. The actual object is created when assigned to a path. Each assignment creates a distinct object with its own unique ID:
+
+<Code>
+```javascript
+const mapValue = LiveMap.create({ theme: 'dark' });
+
+// Each assignment creates a different object
+await myObject.set('map1', mapValue);
+await myObject.set('map2', mapValue);
+
+// map1 and map2 are different objects with different IDs
+const id1 = myObject.get('map1').instance()?.id();
+const id2 = myObject.get('map2').instance()?.id();
+console.log(id1 === id2); // false
+```
+</Code>
+
+## Get map values <a id="value"/>
+
+Access a `LiveMap` through a [PathObject](/docs/liveobjects/concepts/path-object) for path-based operations, or obtain a specific [Instance](/docs/liveobjects/concepts/instance) to work with the underlying object directly. Use the `get()` method to navigate to entries within the map.
+
+What you can do with the result depends on the type of value stored in the entry:
+
+- For entries containing [primitive values](/docs/liveobjects/concepts/objects#primitive-types) or [`LiveCounter`](/docs/liveobjects/counter) objects, use the `value()` method to get the current value.
+- For entries containing nested `LiveMap` objects, use `get()` to continue navigating deeper into the structure.
+
+<Code>
+```javascript
+const myObject = await channel.object.get();
+
+// PathObject access: path-based operations that resolve at runtime
+const theme = myObject.get('settings').get('theme'); // settings holds a LiveMap with a 'theme' key
+console.log(theme.value()); // e.g. 'dark'
+const visits = myObject.get('visits'); // visits holds a LiveCounter
+console.log(visits.value()); // e.g. 5
+
+// Instance access: reference to a specific map object
+const settingsInstance = myObject.get('settings').instance();
+console.log(settingsInstance?.get('theme')?.value()); // e.g. 'dark' (primitive string)
+```
+</Code>
+
+<Aside data-type="note">
+Calling `value()` on a `PathObject` may return `undefined` if a primitive value or `LiveCounter` instance cannot be found at that path. Calling `value()` on an `Instance` returns `undefined` if the instance is not a primitive or `LiveCounter`. Learn more about reading values on a [`PathObject`](/docs/liveobjects/concepts/path-object#read-values) and [`Instance`](/docs/liveobjects/concepts/instance#read-values).
 </Aside>
 
-LiveMap is a key/value data structure that synchronizes its state across users in realtime. It enables you to store primitive values, such as numbers, strings, booleans, buffers, JSON-serializable objects or arrays and other LiveObjects types, [enabling you to build complex, hierarchical object structure](#composability).
+## Get compact object <a id="compact"/>
 
-Conflicts in a LiveMap are automatically resolved with last-write-wins (LWW) semantics. The latest received operation on a key will be applied to the LiveMap and broadcast to all clients.
+Get a JavaScript object representation of the map using the `compact()` or `compactJson()` methods:
+
+<Code>
+```javascript
+// Get a PathObject to a LiveMap stored in 'settings'
+const settings = myObject.get('settings');
+console.log(settings.compact());
+// e.g. { theme: 'dark', fontSize: 14, notifications: true }
+
+// Get the Instance of a LiveMap stored in 'settings'
+const settingsInstance = myObject.get('settings').instance();
+console.log(settingsInstance?.compact());
+// e.g. { theme: 'dark', fontSize: 14, notifications: true }
+```
+</Code>
+
+<Aside data-type="further-reading">
+Learn more about obtaining compact objects on a [`PathObject`](/docs/liveobjects/concepts/path-object#get-a-compact-object) or an [`Instance`](/docs/liveobjects/concepts/instance#get-a-compact-object).
+</Aside>
+
+## Set map values <a id="set"/>
+
+Set a value for a key in the map using the `set()` method. You can store primitive values or other live [object types](/docs/liveobjects/concepts/objects#object-types):
+
+<Code>
+```javascript
+// PathObject: set values at path
+await myObject.get('settings').set('theme', 'dark');
+await myObject.get('settings').set('fontSize', 14);
+await myObject.get('settings').set('notifications', true);
+
+// Set a nested map
+await myObject.get('settings').set('advanced', LiveMap.create({
+  debugMode: false,
+  logLevel: 'info'
+}));
+
+// Set a counter
+await myObject.get('settings').set('visits', LiveCounter.create(0));
+
+// Instance: set values on specific map instance
+const settingsInstance = myObject.get('settings').instance();
+await settingsInstance?.set('theme', 'dark');
+await settingsInstance?.set('fontSize', 14);
+```
+</Code>
+
+<Aside data-type="note">
+A `LiveMap` can store other `LiveMap` or `LiveCounter` objects as values for its keys, enabling you to build a complex, hierarchical channel object. This enables you to represent complex data models in your applications while ensuring realtime synchronization across clients.
+</Aside>
+
+## Remove a key <a id="remove"/>
+
+Remove a key from the map using the `remove()` method:
+
+<Code>
+```javascript
+// PathObject: remove key at path
+await myObject.get('settings').remove('oldSetting');
+
+// Instance: remove key on specific map instance
+const settingsInstance = myObject.get('settings').instance();
+await settingsInstance?.remove('oldSetting');
+```
+</Code>
+
+## Get map size <a id="size"/>
+
+Get the number of keys in the map using the `size()` method:
+
+<Code>
+```javascript
+// PathObject: get size at path
+const settings = myObject.get('settings');
+console.log(settings.size()); // e.g. 5
+
+// Instance: get size of specific map instance
+const settingsInstance = myObject.get('settings').instance();
+console.log(settingsInstance?.size()); // e.g. 5
+```
+</Code>
+
+<Aside data-type="note">
+Calling `size()` on a `PathObject` may return `undefined` if a `LiveMap` instance cannot be found at that path. Calling `size()` on an `Instance` returns `undefined` if the instance is not a `LiveMap`.
+</Aside>
+
+## Enumerate entries <a id="enumerate"/>
+
+Iterate over the map's keys, values, or entries. When iterating using a `PathObject`, values are returned as a `PathObject` for the nested path. When iterating using an `Instance`, values are returned as an `Instance` for the entry:
+
+<Code>
+```javascript
+// PathObject: iterate with PathObject values
+const settings = myObject.get('settings');
+for (const [key, value] of settings.entries()) {
+  console.log(`${key}:`, value.value());
+}
+for (const key of settings.keys()) {
+  console.log('Key:', key);
+}
+for (const value of settings.values()) {
+  console.log('Value:', value.value());
+}
+
+// Instance: iterate with Instance values
+const settingsInstance = myObject.get('settings').instance();
+if (settingsInstance) {
+  for (const [key, valueInstance] of settingsInstance.entries()) {
+    console.log(`${key}:`, valueInstance.value());
+  }
+  for (const key of settingsInstance.keys()) {
+    console.log('Key:', key);
+  }
+  for (const value of settingsInstance.values()) {
+    console.log('Value:', value.value());
+  }
+}
+```
+</Code>
+
+<Aside data-type="note">
+These methods don't guarantee entries are returned in insertion order.
+</Aside>
+
+## Batch multiple operations <a id="batch"/>
+
+Group multiple map operations into a single atomic message using the `batch()` method. All operations within the batch are sent as one logical unit which succeed or fail together:
+
+<Code>
+```javascript
+// PathObject: batch operations on map at path
+await myObject.get('settings').batch((ctx) => {
+  ctx.set('theme', 'dark');
+  ctx.set('fontSize', 14);
+  ctx.set('notifications', true);
+  ctx.remove('oldSetting');
+});
+
+// Instance: batch operations on specific map instance
+const settingsInstance = myObject.get('settings').instance();
+await settingsInstance?.batch((ctx) => {
+  ctx.set('theme', 'dark');
+  ctx.set('fontSize', 14);
+});
+```
+</Code>
+
+<Aside data-type="further-reading">
+Learn more about [Batch operations](/docs/liveobjects/batch).
+</Aside>
+
+## Subscribe to updates <a id="subscribe"/>
+
+Subscribe to `LiveMap` updates to receive realtime notifications when the map changes.
+
+`PathObject` subscriptions observe a location and automatically track changes even if the `LiveMap` instance at that path is replaced. `Instance` subscriptions track a specific `LiveMap` instance, following it even if it moves in the channel object.
+
+<Aside data-type="further-reading">
+Learn more about [`PathObject`](/docs/liveobjects/concepts/path-object#subscribe) and [`Instance`](/docs/liveobjects/concepts/instance#subscribe) subscriptions.
+</Aside>
+
+<Code>
+```javascript
+// PathObject: observe location - tracks changes even if map instance is replaced
+const settings = myObject.get('settings');
+const { unsubscribe } = settings.subscribe(() => {
+  console.log('Settings:', settings.compact());
+});
+
+// Later, stop listening to changes
+unsubscribe();
+
+// Instance: track specific map instance - follows it even if moved in object tree
+const settingsInstance = myObject.get('settings').instance();
+if (settingsInstance) {
+  const { unsubscribe } = settingsInstance.subscribe(() => {
+    console.log('Settings:', settingsInstance.compact());
+  });
+
+  // Later, stop listening to changes
+  unsubscribe();
+}
+```
+</Code>
+
+Alternatively, use the `subscribeIterator()` method for an async iterator syntax:
+
+<Code>
+```javascript
+// PathObject: observe location - tracks changes even if map instance is replaced
+const settings = myObject.get('settings');
+for await (const _ of settings.subscribeIterator()) {
+  console.log('Settings:', settings.compact());
+
+  if (someCondition) {
+    break; // Unsubscribes
+  }
+}
+
+// Instance: track specific map instance - follows it even if moved in object tree
+const settingsInstance = myObject.get('settings').instance();
+if (settingsInstance) {
+  for await (const _ of settingsInstance.subscribeIterator()) {
+    console.log('Settings:', settingsInstance.compact());
+
+    if (someCondition) {
+      break; // Unsubscribes
+    }
+  }
+}
+```
+</Code>
+
+</If>
+
+<If lang="swift,java">
 
 ## Create LiveMap <a id="create"/>
 
@@ -20,15 +331,10 @@ A `LiveMap` instance can be created using the `channel.objects.createMap()` meth
 `channel.objects.createMap()` is asynchronous, as the client sends the create operation to the Ably system and waits for an acknowledgment of the successful map creation.
 
 <Aside data-type='note'>
-Note that you need to first [attach to the channel](/docs/quickstart#step-3) before creating a new `LiveMap` instance, as this operation requires sending a message to the Ably system.
+Note that you need to first [attach to the channel](/docs/liveobjects/quickstart/javascript#step-3) before creating a new `LiveMap` instance, as this operation requires sending a message to the Ably system.
 </Aside>
 
 <Code>
-```javascript
-const map = await channel.objects.createMap();
-await root.set('myMap', map);
-```
-
 ```swift
 let map = try await channel.objects.createMap()
 try await root.set(key: "myMap", value: .liveMap(map))
@@ -43,13 +349,6 @@ root.set("myMap", LiveMapValue.of(map));
 Optionally, you can specify an initial key/value structure when creating the map:
 
 <Code>
-```javascript
-// Pass a regular JavaScript object reflecting the initial state
-const map = await channel.objects.createMap({ foo: 'bar', baz: 42 });
-// You can also pass other objects as values for keys
-await channel.objects.createMap({ nestedMap: map });
-```
-
 ```swift
 // Pass a Dictionary reflecting the initial state
 let map = try await channel.objects.createMap(entries: ["foo": "bar", "baz": 42])
@@ -73,17 +372,11 @@ channel.getObjects().createMap(nestedEntries);
 ```
 </Code>
 
-Creating a `LiveMap` sends one billable channel message.
-
 ## Get value for a key <a id="get"/>
 
 Get the current value for a key in a map using the `LiveMap.get()` method:
 
 <Code>
-```javascript
-console.log('Value for my-key:', map.get('my-key'));
-```
-
 ```swift
 let value = try map.get(key: "my-key")
 print("Value for my-key: \(String(describing: value))")
@@ -105,19 +398,12 @@ You can subscribe to data updates on a map to receive realtime changes made by y
 Subscribe to data updates on a map using the `LiveMap.subscribe()` method:
 
 <Code>
-```javascript
-map.subscribe((update) => {
-  console.log('Map updated:', [...map.entries()]);
-  console.log('Update details:', update);
-});
-```
-
 ```swift
 try map.subscribe { update, _ in
     do {
         print("Map updated: \(try map.entries)")
     } catch {
-        // Error handling of map.entries for brevity
+        // Error handling of map.entries omitted for brevity
     }
     print("Update details: \(update)")
 }
@@ -149,20 +435,11 @@ Example structure of an update object when the key `foo` is updated and the key 
 ```
 </Code>
 
-Note that subscribing to data updates on a `LiveMap` does not affect the number of billable messages received by a client. Any client attached to a channel with the `object-subscribe` capability automatically receives all object messages for that channel. Subscribing to updates on an object simply adds a listener that is called whenever the client receives updates for that object.
-
 ### Unsubscribe from data updates <a id="unsubscribe-data"/>
 
 Use the `unsubscribe()` function returned in the `subscribe()` response to remove a map update listener:
 
 <Code>
-```javascript
-// Initial subscription
-const { unsubscribe } = map.subscribe(() => console.log('Map updated'));
-// To remove the listener
-unsubscribe();
-```
-
 ```swift
 // Initial subscription
 let subscriptionResponse = try map.subscribe { _, _ in
@@ -180,7 +457,6 @@ ObjectsSubscription subscription = map.subscribe((mapUpdate) ->
 // To remove the listener
 subscription.unsubscribe();
 ```
-
 </Code>
 
 <If lang="swift">
@@ -194,22 +470,13 @@ try map.subscribe { _, subscriptionResponse in
     subscriptionResponse.unsubscribe()
 }
 ```
-
 </Code>
 </If>
 
-<If lang="javascript,java">
+<If lang="java">
 Use the `LiveMap.unsubscribe()` method to deregister a provided listener:
 
 <Code>
-```javascript
-// Initial subscription
-const listener = () => console.log('Map updated');
-map.subscribe(listener);
-// To remove the listener
-map.unsubscribe(listener);
-```
-
 ```java
 // Initial subscription
 LiveMap.Listener listener = (mapUpdate) ->
@@ -224,10 +491,6 @@ map.unsubscribe(listener);
 Use the `LiveMap.unsubscribeAll()` method to deregister all map update listeners:
 
 <Code>
-```javascript
-map.unsubscribeAll();
-```
-
 ```swift
 map.unsubscribeAll();
 ```
@@ -239,22 +502,13 @@ map.unsubscribeAll();
 
 ## Set keys in a LiveMap <a id="set"/>
 
-Set a value for a key in a map by calling <If lang="javascript,java">`LiveMap.set()`</If><If lang="swift">`LiveMap.set(key:value:)`</If>. This operation is synchronized across all clients and triggers data subscription callbacks for the map, including on the client making the request.
+Set a value for a key in a map by calling <If lang="java">`LiveMap.set()`</If><If lang="swift">`LiveMap.set(key:value:)`</If>. This operation is synchronized across all clients and triggers data subscription callbacks for the map, including on the client making the request.
 
-Keys in a map can contain numbers, strings, booleans, <If lang="javascript,java">buffers</If><If lang="swift">`Data`</If>, JSON-serializable objects or arrays and other `LiveMap` and `LiveCounter` objects.
+Keys in a map can contain numbers, strings, booleans, <If lang="java">buffers</If><If lang="swift">`Data`</If>, JSON-serializable objects or arrays and other `LiveMap` and `LiveCounter` objects.
 
 This operation is asynchronous, as the client sends the corresponding update operation to the Ably system and waits for acknowledgment of the successful map key update.
 
 <Code>
-```javascript
-await map.set('foo', 'bar');
-await map.set('baz', 42);
-
-// Can also set a reference to another object
-const counter = await channel.objects.createCounter();
-await map.set('counter', counter);
-```
-
 ```swift
 try await map.set(key: "foo", value: "bar")
 try await map.set(key: "baz", value: 42)
@@ -274,19 +528,13 @@ map.set("counter", LiveMapValue.of(counter));
 ```
 </Code>
 
-Setting a value for a key in a map sends one billable channel message.
-
 ## Remove a key from a LiveMap <a id="remove"/>
 
-Remove a key from a map by calling <If lang="javascript,java">`LiveMap.remove()`</If><If lang="swift">`LiveMap.remove(key:)`</If>. This operation is synchronized across all clients and triggers data subscription callbacks for the map, including on the client making the request.
+Remove a key from a map by calling <If lang="java">`LiveMap.remove()`</If><If lang="swift">`LiveMap.remove(key:)`</If>. This operation is synchronized across all clients and triggers data subscription callbacks for the map, including on the client making the request.
 
 This operation is asynchronous, as the client sends the corresponding remove operation to the Ably system and waits for acknowledgment of the successful map key removal.
 
 <Code>
-```javascript
-await map.remove('foo');
-```
-
 ```swift
 try await map.remove(key: "foo")
 ```
@@ -298,19 +546,12 @@ map.remove("foo");
 
 ## Get the number of entries in a LiveMap <a id="size"/>
 
-Get the number of entries in a map by calling <If lang="javascript">`LiveMap.size()`</If><If lang="swift">`LiveMap.size`</If>.
+Get the number of entries in a map using <If lang="swift">`LiveMap.size`</If><If lang="java">`LiveMap.size()`</If>:
 
 <Code>
-```javascript
-const map = await channel.objects.createMap({ foo: 'bar', baz: 'qux' });
-console.log(map.size());
-// Expected output: 2
-```
-
 ```swift
 let map = try await channel.objects.createMap(entries: ["foo": "bar", "baz": "qux"])
-print(try map.size)
-// Expected output: 2
+print(try map.size) // e.g. 2
 ```
 
 ```java
@@ -318,20 +559,14 @@ LiveMap map = channel.getObjects().createMap(Map.of(
     "foo", LiveMapValue.of("bar"),
     "baz", LiveMapValue.of("qux")
 ));
-System.out.println(map.size());
-// Expected output: 2
+System.out.println(map.size()); // e.g. 2
 ```
 </Code>
 
-Removing a key from a map sends one billable channel message.
-
 ## Iterate over key/value pairs <a id="iterate"/>
 
-Iterate over key/value pairs, keys or values using the <If lang="javascript,java">`LiveMap.entries()`, `LiveMap.keys()` and `LiveMap.values()` methods</If><If lang="swift">`LiveMap.entries`, `LiveMap.keys` and `LiveMap.values` properties</If> respectively.
+Iterate over key/value pairs, keys or values using the <If lang="java">`LiveMap.entries()`, `LiveMap.keys()` and `LiveMap.values()` methods</If><If lang="swift">`LiveMap.entries`, `LiveMap.keys` and `LiveMap.values` properties</If> respectively.
 
-<If lang="javascript">
-These methods return a [map iterator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Iterator) object for convenient traversal. Note that contrary to JavaScript's [Map](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) counterpart, these methods do not guarantee that entries are returned in insertion order.
-</If>
 <If lang="swift">
 These properties are all `Array`-valued. Note that they do not guarantee that entries are returned in insertion order.
 </If>
@@ -340,20 +575,6 @@ These methods return a map iterator for convenient traversal. These methods do n
 </If>
 
 <Code>
-```javascript
-for (const [key, value] of map.entries()) {
-  console.log(`Key: ${key}, Value: ${value}`);
-}
-
-for (const key of map.keys()) {
-  console.log(`Key: ${key}`);
-}
-
-for (const value of map.values()) {
-  console.log(`Value: ${value}`);
-}
-```
-
 ```swift
 for (key, value) in try map.entries {
     print("Key: \(key), Value: \(value)")
@@ -386,21 +607,9 @@ for (LiveMapValue value : map.values()) {
 
 ## Subscribe to lifecycle events <a id="subscribe-lifecycle"/>
 
-<If lang="javascript,java">
-Subscribe to lifecycle events on a map using the `LiveMap.on()` method:
-</If>
-
-<If lang="swift">
-Subscribe to lifecycle events on a map using the `LiveMap.on(event:callback:)` method:
-</If>
+Subscribe to lifecycle events on a map using the <If lang="java">`LiveMap.on()`</If><If lang="swift">`LiveMap.on(event:callback:)`</If> method:
 
 <Code>
-```javascript
-map.on('deleted', () => {
-  console.log('Map has been deleted');
-});
-```
-
 ```swift
 map.on(event: .deleted) { _ in
   print("Map has been deleted")
@@ -421,13 +630,6 @@ Read more about [objects lifecycle events](/docs/liveobjects/lifecycle#objects).
 Use the `off()` function returned in the `on()` response to remove a lifecycle event listener:
 
 <Code>
-```javascript
-// Initial subscription
-const { off } = map.on('deleted', () => console.log('Map deleted'));
-// To remove the listener
-off();
-```
-
 ```swift
 // Initial subscription
 let eventResponse = map.on(event: .deleted) { _ in
@@ -447,18 +649,10 @@ subscription.unsubscribe();
 ```
 </Code>
 
-<If lang="javascript,java">
+<If lang="java">
 Use the `LiveMap.off()` method to deregister a provided lifecycle event listener:
 
 <Code>
-```javascript
-// Initial subscription
-const listener = () => console.log('Map deleted');
-map.on('deleted', listener);
-// To remove the listener
-map.off('deleted', listener);
-```
-
 ```java
 // Initial subscription
 ObjectLifecycleChange.Listener listener = (lifecycleEvent) ->
@@ -475,10 +669,6 @@ map.off(listener);
 Use the `LiveMap.offAll()` method to deregister all lifecycle event listeners:
 
 <Code>
-```javascript
-map.offAll();
-```
-
 ```swift
 map.offAll()
 ```
@@ -488,25 +678,11 @@ map.offAll();
 ```
 </Code>
 
-## Composability <a id="composability"/>
+## Create nested structures <a id="composability"/>
 
 A `LiveMap` can store other `LiveMap` or `LiveCounter` objects as values for its keys, enabling you to build complex, hierarchical object structure. This enables you to represent complex data models in your applications while ensuring realtime synchronization across clients.
 
 <Code>
-```javascript
-// Create a hierarchy of objects using LiveMap
-const counter = await channel.objects.createCounter();
-const map = await channel.objects.createMap({ nestedCounter: counter });
-const outerMap = await channel.objects.createMap({ nestedMap: map });
-await root.set('outerMap', outerMap);
-
-// resulting structure:
-// root (LiveMap)
-// └── outerMap (LiveMap)
-//     └── nestedMap (LiveMap)
-//         └── nestedCounter (LiveCounter)
-```
-
 ```swift
 // Create a hierarchy of objects using LiveMap
 let counter = try await channel.objects.createCounter()
@@ -539,3 +715,5 @@ root.set("outerMap", LiveMapValue.of(outerMap));
 //         └── nestedCounter (LiveCounter)
 ```
 </Code>
+
+</If>
