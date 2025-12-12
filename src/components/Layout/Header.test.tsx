@@ -1,11 +1,21 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/extend-expect';
+import { useStaticQuery } from 'gatsby';
 import Header from './Header';
 import UserContext from 'src/contexts/user-context';
 
 jest.mock('src/contexts/layout-context', () => ({
-  useLayoutContext: jest.fn(),
+  useLayoutContext: jest.fn().mockReturnValue({
+    activePage: {
+      tree: [],
+      page: { name: '', link: '' },
+      languages: [],
+      language: 'javascript',
+      product: null,
+      template: null,
+    },
+  }),
 }));
 
 jest.mock('@ably/ui/core/Icon', () => {
@@ -33,6 +43,21 @@ jest.mock('@reach/router', () => ({
   useLocation: jest.fn().mockReturnValue({ pathname: '/docs' }),
 }));
 
+jest.mock('gatsby', () => ({
+  ...jest.requireActual('gatsby'),
+  useStaticQuery: jest.fn().mockReturnValue({
+    site: {
+      siteMetadata: {
+        externalScriptsData: {
+          inkeepSearchEnabled: true,
+          inkeepChatEnabled: true,
+        },
+      },
+    },
+  }),
+  graphql: jest.fn(),
+}));
+
 jest.mock('./LanguageSelector', () => ({
   LanguageSelector: jest.fn(() => <div>LanguageSelector</div>),
 }));
@@ -56,38 +81,18 @@ describe('Header', () => {
 
   it('renders the header with logo and links', () => {
     render(<Header />);
-    expect(screen.getAllByAltText('Ably logo').length).toBeGreaterThan(0);
+    expect(screen.getByAltText('Ably')).toBeInTheDocument();
 
     expect(screen.getByText('Docs')).toBeInTheDocument();
+    expect(screen.getByText('Documentation')).toBeInTheDocument();
     expect(screen.getByText('Examples')).toBeInTheDocument();
-  });
-
-  it('renders the search bar when searchBar is true', () => {
-    render(<Header searchBar={true} />);
-    expect(screen.getByText('SearchBar')).toBeInTheDocument();
-  });
-
-  it('does not render the search bar when searchBar is false', () => {
-    render(<Header searchBar={false} />);
-    expect(screen.queryByText('SearchBar')).not.toBeInTheDocument();
   });
 
   it('toggles the mobile menu when the burger icon is clicked', () => {
     render(<Header />);
     const burgerIcon = screen.getByText('icon-gui-bars-3-outline');
     fireEvent.click(burgerIcon);
-    expect(screen.getByText('icon-gui-x-mark-outline')).toBeInTheDocument();
     expect(screen.getByText('LeftSidebar')).toBeInTheDocument();
-  });
-
-  it('disables scrolling when the mobile menu is open', () => {
-    render(<Header />);
-    const burgerIcon = screen.getByText('icon-gui-bars-3-outline');
-    fireEvent.click(burgerIcon);
-    expect(document.body).toHaveClass('overflow-hidden');
-    const closeIcon = screen.getByText('icon-gui-x-mark-outline');
-    fireEvent.click(closeIcon);
-    expect(document.body).not.toHaveClass('overflow-hidden');
   });
 
   it('renders the sign in buttons when not signed in', () => {
@@ -122,5 +127,63 @@ describe('Header', () => {
     expect(screen.queryByText('Login')).not.toBeInTheDocument();
     expect(screen.queryByText('Start free')).not.toBeInTheDocument();
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
+  });
+
+  it('does not render search bar when inkeepSearchEnabled is false', () => {
+    (useStaticQuery as jest.Mock).mockReturnValue({
+      site: {
+        siteMetadata: {
+          externalScriptsData: {
+            inkeepSearchEnabled: false,
+            inkeepChatEnabled: true,
+          },
+        },
+      },
+    });
+
+    render(<Header />);
+
+    const searchBar = document.getElementById('inkeep-search');
+    expect(searchBar).not.toBeInTheDocument();
+  });
+
+  it('does not render Ask AI button and chat bar when inkeepChatEnabled is false', () => {
+    (useStaticQuery as jest.Mock).mockReturnValue({
+      site: {
+        siteMetadata: {
+          externalScriptsData: {
+            inkeepSearchEnabled: true,
+            inkeepChatEnabled: false,
+          },
+        },
+      },
+    });
+
+    render(<Header />);
+
+    expect(screen.queryByText('Ask AI')).not.toBeInTheDocument();
+    const chatBar = document.getElementById('inkeep-ai-chat');
+    expect(chatBar).not.toBeInTheDocument();
+  });
+
+  it('does not render search bar or Ask AI button when both flags are false', () => {
+    (useStaticQuery as jest.Mock).mockReturnValue({
+      site: {
+        siteMetadata: {
+          externalScriptsData: {
+            inkeepSearchEnabled: false,
+            inkeepChatEnabled: false,
+          },
+        },
+      },
+    });
+
+    render(<Header />);
+
+    expect(screen.queryByText('Ask AI')).not.toBeInTheDocument();
+    const searchBar = document.getElementById('inkeep-search');
+    const chatBar = document.getElementById('inkeep-ai-chat');
+    expect(searchBar).not.toBeInTheDocument();
+    expect(chatBar).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,3 @@
-import cn from '@ably/ui/core/utils/cn';
-import { AccordionProps } from '@ably/ui/core/Accordion';
-import { HEADER_HEIGHT, componentMaxHeight } from '@ably/ui/core/utils/heights';
 import { ProductData, ProductKey } from 'src/data/types';
 import { NavProductContent, NavProductPage, NavProductPages } from 'src/data/nav/types';
 import { LanguageKey } from 'src/data/languages/types';
@@ -86,26 +83,25 @@ export const determineActivePage = (data: ProductData, targetLink: string): Acti
       on the matched page
     */
     if (data[key].nav.content) {
-      const contentResult = determinePagePresence(data[key].nav.content, []);
-      const apiResult = determinePagePresence(data[key].nav.api, []);
-      if (contentResult || apiResult) {
+      const { content, api } = data[key].nav;
+      const allContent = [...content, ...api];
+      const contentResult = determinePagePresence(allContent, []);
+
+      if (contentResult) {
         const tree = [
           {
             index: Object.keys(data).indexOf(key),
             page: { ...data[key].nav, link: data[key].nav.link ?? '#' },
           },
-          ...((contentResult || apiResult) ?? []),
+          ...(contentResult ?? []),
         ];
-        const page = tree.slice(1).reduce<NavProductPages[]>(
-          (acc, curr) => {
-            if (acc[curr.index] && 'pages' in acc[curr.index]) {
-              return (acc[curr.index] as NavProductContent).pages;
-            }
+        const page = tree.slice(1).reduce<NavProductPages[]>((acc, curr) => {
+          if (acc[curr.index] && 'pages' in acc[curr.index]) {
+            return (acc[curr.index] as NavProductContent).pages;
+          }
 
-            return [acc[curr.index]];
-          },
-          data[key].nav[apiResult ? 'api' : 'content'],
-        );
+          return [acc[curr.index]];
+        }, allContent);
 
         return {
           tree,
@@ -136,41 +132,6 @@ export const formatNavLink = (link: string) => {
 
   return link.replace(/\/$/, '');
 };
-
-export const commonAccordionOptions = (
-  currentPage: NavProductContent | null,
-  openIndex: number | undefined,
-  topLevel: boolean,
-  inHeader: boolean,
-): Omit<AccordionProps, 'data'> => ({
-  icons: { open: { name: 'icon-gui-chevron-up-micro' }, closed: { name: 'icon-gui-chevron-down-micro' } },
-  options: {
-    autoClose: topLevel,
-    headerCSS: cn(
-      'text-neutral-1000 dark:text-neutral-300 md:text-neutral-900 dark:md:text-neutral-400 hover:text-neutral-1100 active:text-neutral-1000 !py-0 pl-0 !mb-0 transition-colors [&_svg]:!w-6 [&_svg]:!h-6 md:[&_svg]:!w-5 md:[&_svg]:!h-5',
-      {
-        'my-3': topLevel && inHeader,
-        'h-10 ui-text-label1 !font-bold md:ui-text-label4 px-4': topLevel,
-        'min-h-[1.625em] md:min-h-[1.375em] ui-text-label2 !font-semibold md:ui-text-label4': !topLevel,
-      },
-    ),
-    selectedHeaderCSS: '!text-neutral-1300 mb-2',
-    contentCSS: '[&>div]:pb-0',
-    rowIconSize: '20px',
-    defaultOpenIndexes: !inHeader && openIndex !== undefined ? [openIndex] : [],
-    hideBorders: true,
-    fullyOpen: !topLevel && currentPage?.expand,
-  },
-});
-
-export const sidebarAlignmentClasses = 'absolute md:sticky w-60 md:pb-32 pt-6';
-
-export const sidebarAlignmentStyles: React.CSSProperties = {
-  top: HEADER_HEIGHT,
-  height: componentMaxHeight(HEADER_HEIGHT),
-};
-
-export const composeNavLinkId = (link: string) => `nav-link-${formatNavLink(link).replaceAll('/', '-')}`;
 
 export const hierarchicalKey = (id: string, depth: number, tree?: PageTreeNode[]) =>
   [...(tree ? tree.slice(0, depth).map((node) => node.index) : []), id].join('-');

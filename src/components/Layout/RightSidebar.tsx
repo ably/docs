@@ -1,256 +1,298 @@
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { useLocation, WindowLocation } from '@reach/router';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useLocation } from '@reach/router';
 import cn from '@ably/ui/core/utils/cn';
-import Icon from '@ably/ui/core/Icon';
-import { IconName } from '@ably/ui/core/Icon/types';
 import { componentMaxHeight, HEADER_HEIGHT, HEADER_BOTTOM_MARGIN } from '@ably/ui/core/utils/heights';
-import Tooltip from '@ably/ui/core/Tooltip';
-import { track } from '@ably/ui/core/insights';
-
-import { LanguageSelector } from './LanguageSelector';
-import { useLayoutContext } from 'src/contexts/layout-context';
-import { productData } from 'src/data';
-import { LanguageKey } from 'src/data/languages/types';
-import { languageInfo } from 'src/data/languages';
-import { ActivePage, sidebarAlignmentClasses, sidebarAlignmentStyles } from './utils/nav';
 import { INKEEP_ASK_BUTTON_HEIGHT } from './utils/heights';
 
 type SidebarHeader = {
   id: string;
   type: string;
   label: string;
+  stepNumber?: string;
 };
 
-const githubBasePathTextile = 'https://github.com/ably/docs/blob/main/content';
-const githubBasePathMDX = 'https://github.com/ably/docs/blob/main/src/pages/docs';
-const requestBasePath = 'https://github.com/ably/docs/issues/new';
+const getHeaderId = (element: Element) =>
+  element.querySelector('a')?.getAttribute('id') ?? element.querySelector('a')?.getAttribute('name') ?? element.id;
 
-const customGithubPaths = {
-  '/how-to/pub-sub': 'https://github.com/ably/docs/blob/main/how-tos/pub-sub/how-to.mdx',
-} as Record<string, string>;
+// Paddings for various indentations of headers, 12px apart
+const INDENT_MAP: Record<string, string> = {
+  H2: 'pl-4',
+  H3: 'pl-7',
+  H4: 'pl-10',
+  H5: 'pl-[52px]', // there is no pl-13
+  H6: 'pl-16',
+} as const;
 
-const externalLinks = (
-  activePage: ActivePage,
-  location: WindowLocation,
-): { label: string; icon: IconName; link: string; type: string }[] => {
-  if (!activePage) {
-    return [];
+// Paddings for various indentations of stepped headers, 12px apart with a 1rem buffer for the step indicators
+const STEPPED_INDENT_MAP: Record<string, string> = {
+  H2: 'pl-8',
+  H3: 'pl-11',
+  H4: 'pl-14',
+  H5: 'pl-[68px]', // there is no pl-17
+  H6: 'pl-20',
+} as const;
+
+// The height of a single line row
+const FALLBACK_HEADER_HEIGHT = 28;
+
+const getElementIndent = (type: string, isStepped: boolean) => {
+  if (isStepped && STEPPED_INDENT_MAP[type]) {
+    return STEPPED_INDENT_MAP[type];
   }
 
-  let githubEditPath = '#';
-  const githubPathName = location.pathname.replace('docs/', '');
-
-  if (customGithubPaths[githubPathName]) {
-    githubEditPath = customGithubPaths[githubPathName];
-  } else if (activePage.template === 'mdx') {
-    githubEditPath =
-      githubBasePathMDX + (activePage.page.index ? `${githubPathName}/index.mdx` : `${githubPathName}.mdx`);
-  } else {
-    githubEditPath =
-      githubBasePathTextile + (activePage.page.index ? `${githubPathName}/index.textile` : `${githubPathName}.textile`);
+  if (INDENT_MAP[type]) {
+    return INDENT_MAP[type];
   }
 
-  const language = activePage.languages.length > 0 ? activePage.language : null;
-  const requestTitle = `Change request for: ${activePage.page.link}`;
-  const requestBody = encodeURIComponent(`
-  **Page name**: ${activePage.page.name}
-  **URL**: [${activePage.page.link}](https://ably.com${activePage.page.link})
-  ${language && languageInfo[language] ? `Language: **${languageInfo[language].label}**` : ''}
-
-  **Requested change or enhancement**:
-`);
-
-  return [
-    {
-      label: 'Edit on GitHub',
-      icon: 'icon-social-github-mono',
-      link: githubEditPath,
-      type: 'github',
-    },
-    {
-      label: 'Request changes',
-      icon: 'icon-gui-hand-raised-outline',
-      link: `${requestBasePath}?title=${requestTitle}&body=${requestBody}`,
-      type: 'request',
-    },
-  ];
-};
-
-const llmLinks = (
-  activePage: ActivePage,
-  language: LanguageKey,
-): { model: string; label: string; icon: IconName; link: string }[] => {
-  const prompt = `Tell me more about ${activePage.product ? productData[activePage.product]?.nav.name : 'Ably'}'s '${activePage.page.name}' feature from https://ably.com${activePage.page.link}${language ? ` for ${languageInfo[language]?.label}` : ''}`;
-  const gptPath = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
-  const claudePath = `https://claude.ai/new?q=${encodeURIComponent(prompt)}`;
-
-  return [
-    { model: 'gpt', label: 'ChatGPT', icon: 'icon-tech-openai', link: gptPath },
-    { model: 'claude', label: 'Claude (must be logged in)', icon: 'icon-tech-claude-mono', link: claudePath },
-  ];
-};
-
-const getHeaderId = (element: Element) => {
-  const customId = element.querySelector('a')?.getAttribute('id') ?? element.querySelector('a')?.getAttribute('name');
-  return customId ?? element.id;
+  return 'pl-0';
 };
 
 const RightSidebar = () => {
   const location = useLocation();
-  const { activePage } = useLayoutContext();
   const [headers, setHeaders] = useState<SidebarHeader[]>([]);
   const [activeHeader, setActiveHeader] = useState<Pick<SidebarHeader, 'id'>>({
     id: location.hash ? location.hash.slice(1) : '#',
   });
+  const [isStepped, setIsStepped] = useState<boolean>(false);
+  const [sidebarDimensions, setSidebarDimensions] = useState<{
+    indicatorHeights: number[];
+    indicatorPosition: { yOffset: number; height: number };
+  }>({
+    indicatorHeights: [],
+    indicatorPosition: { yOffset: 0, height: 28 },
+  });
   const intersectionObserver = useRef<IntersectionObserver | undefined>(undefined);
   const manualSelection = useRef<boolean>(false);
-  const showLanguageSelector = activePage?.languages.length > 0;
-  const language = new URLSearchParams(location.search).get('lang') as LanguageKey;
 
-  const handleHeaderClick = useCallback((headerId: string) => {
-    // Set manual selection flag to prevent intersection observer updates
-    manualSelection.current = true;
-    setActiveHeader({ id: headerId });
+  // Extract headers from article element
+  const extractHeaders = useCallback((articleElement: Element): { headers: SidebarHeader[]; hasSteps: boolean } => {
+    const headerElements = articleElement.querySelectorAll('h2, h3, h4, h5, h6');
+    let hasSteps = false;
 
-    // Reset the flag after scroll animation completes
-    setTimeout(() => {
-      manualSelection.current = false;
-    }, 1000);
+    const headers = Array.from(headerElements)
+      .filter((element) => element.id && element.textContent)
+      .map((header) => {
+        const stepNumber = header.querySelector('[data-step]')?.getAttribute('data-step');
+        if (stepNumber) {
+          hasSteps = true;
+        }
+
+        return {
+          type: header.tagName,
+          label: header.textContent ?? '',
+          id: getHeaderId(header),
+          stepNumber: stepNumber || undefined,
+        };
+      });
+
+    return { headers, hasSteps };
   }, []);
 
+  // Callback that fires when header intersects with the viewport
+  const handleIntersect = useCallback(
+    (
+      entries: {
+        target: Element;
+        isIntersecting: boolean;
+        boundingClientRect: DOMRect;
+      }[],
+    ) => {
+      // Skip updates if the header was manually selected
+      if (manualSelection.current) {
+        return;
+      }
+
+      // Get all currently intersecting headers
+      const intersectingEntries = entries.filter((entry) => entry.isIntersecting);
+
+      if (intersectingEntries.length > 0) {
+        // Find the entry nearest to the top of the viewport
+        const topEntry = intersectingEntries.reduce((nearest, current) => {
+          return current.boundingClientRect.top < nearest.boundingClientRect.top ? current : nearest;
+        }, intersectingEntries[0]);
+
+        if (topEntry.target.id) {
+          setActiveHeader({
+            id: getHeaderId(topEntry.target),
+          });
+        }
+      }
+    },
+    [],
+  );
+
+  // Setup intersection observer and update headers when page changes
   useEffect(() => {
     const articleElement = document.querySelector('article');
     if (!articleElement) {
       return;
     }
 
-    const updateHeaders = () => {
-      const headerElements = articleElement.querySelectorAll('h2, h3, h6') ?? [];
-      const headerData = Array.from(headerElements)
-        .filter((element) => element.id && element.textContent)
-        .map((header) => {
-          const customId =
-            header.querySelector('a')?.getAttribute('id') ?? header.querySelector('a')?.getAttribute('name');
+    // Extract and set headers
+    const { headers: headerData, hasSteps } = extractHeaders(articleElement);
+    setHeaders(headerData);
+    setIsStepped(hasSteps);
 
-          return {
-            type: header.tagName,
-            label: header.textContent ?? '',
-            id: customId ?? header.id,
-            height: header.getBoundingClientRect().height,
-          };
-        });
-
-      setHeaders(headerData);
-
-      // Set the first header as active when page changes
-      if (headerData.length > 0) {
-        setActiveHeader({ id: headerData[0].id });
-      }
-
-      const handleIntersect = (
-        entries: {
-          target: Element;
-          isIntersecting: boolean;
-          boundingClientRect: DOMRect;
-        }[],
-      ) => {
-        // Skip updates if manual selection is active
-        if (manualSelection.current) {
-          return;
-        }
-
-        // Get all currently intersecting headers
-        const intersectingEntries = entries.filter((entry) => entry.isIntersecting);
-
-        if (intersectingEntries.length > 0) {
-          // Find the entry nearest to the top of the viewport
-          const topEntry = intersectingEntries.reduce((nearest, current) => {
-            return current.boundingClientRect.top < nearest.boundingClientRect.top ? current : nearest;
-          }, intersectingEntries[0]);
-
-          if (topEntry.target.id) {
-            setActiveHeader({
-              id: getHeaderId(topEntry.target),
-            });
-          }
-        }
-      };
-
-      // Create a new observer with configuration focused on the top of the viewport
-      intersectionObserver.current = new IntersectionObserver(handleIntersect, {
-        root: null,
-        // Using a small threshold to detect partial visibility
-        threshold: 0,
-        // Account for 64px header bar at top and focus on top portion of viewport
-        rootMargin: '-64px 0px -80% 0px',
-      });
-
-      // Observe each header
-      headerElements.forEach((header) => {
-        intersectionObserver.current?.observe(header);
-      });
-
-      return () => {
-        intersectionObserver.current?.disconnect();
-      };
-    };
-
-    updateHeaders();
-  }, [location.pathname, location.search]);
-
-  const highlightPosition = useMemo(() => {
-    const sidebarElement =
-      typeof document !== 'undefined' ? document.getElementById(`sidebar-${activeHeader?.id}`) : null;
-    const sidebarParentElement = sidebarElement?.parentElement;
-    const sidebarElementDimensions = sidebarElement?.getBoundingClientRect();
-
-    if (!sidebarParentElement || !sidebarElementDimensions) {
-      return {
-        yOffset: 0,
-        height: 21,
-      };
+    // Set the first header as active when page changes
+    if (headerData.length > 0) {
+      setActiveHeader({ id: headerData[0].id });
     }
 
-    return {
-      yOffset: Math.abs(sidebarParentElement.getBoundingClientRect().top - sidebarElementDimensions?.top),
-      height: sidebarElementDimensions?.height,
+    // Create intersection observer
+    const observer = new IntersectionObserver(handleIntersect, {
+      root: null,
+      threshold: 0,
+      rootMargin: '-64px 0px -80% 0px', // Account for header and focus on top of viewport
+    });
+
+    // Observe all headers
+    const headerElements = articleElement.querySelectorAll('h2, h3, h4, h5, h6');
+    headerElements.forEach((header) => observer.observe(header));
+
+    // Store observer reference for cleanup
+    intersectionObserver.current = observer;
+
+    // Cleanup
+    return () => {
+      observer.disconnect();
     };
-  }, [activeHeader]);
+  }, [location.pathname, location.search, extractHeaders, handleIntersect]);
+
+  // Calculate sidebar dimensions after DOM is ready
+  useEffect(() => {
+    if (headers.length === 0) {
+      return;
+    }
+
+    const calculateDimensions = () => {
+      // Calculate step indicator heights (for stepped mode)
+      const indicatorHeights = isStepped
+        ? headers.map((header) => {
+            const sidebarElement = document.getElementById(`sidebar-${header.id}`);
+            const sidebarElementDimensions = sidebarElement?.getBoundingClientRect();
+            return sidebarElementDimensions?.height ?? FALLBACK_HEADER_HEIGHT;
+          })
+        : [];
+
+      // Calculate indicator position (for non-stepped mode)
+      const sidebarElement = document.getElementById(`sidebar-${activeHeader?.id}`);
+      const sidebarParentElement = sidebarElement?.parentElement;
+      const sidebarElementDimensions = sidebarElement?.getBoundingClientRect();
+
+      const indicatorPosition =
+        sidebarParentElement && sidebarElementDimensions
+          ? {
+              yOffset: Math.abs(sidebarParentElement.getBoundingClientRect().top - sidebarElementDimensions.top),
+              height: sidebarElementDimensions.height,
+            }
+          : { yOffset: 0, height: FALLBACK_HEADER_HEIGHT };
+
+      setSidebarDimensions({
+        indicatorHeights,
+        indicatorPosition,
+      });
+    };
+
+    calculateDimensions();
+
+    window.addEventListener('resize', calculateDimensions);
+
+    // Watch each individual sidebar item for dimension changes (catches async updates, i.e. font pop-in)
+    const resizeObservers: ResizeObserver[] = [];
+    headers.forEach((header) => {
+      const sidebarElement = document.getElementById(`sidebar-${header.id}`);
+      if (sidebarElement) {
+        const observer = new ResizeObserver(() => {
+          calculateDimensions();
+        });
+        observer.observe(sidebarElement);
+        resizeObservers.push(observer);
+      }
+    });
+
+    return () => {
+      window.removeEventListener('resize', calculateDimensions);
+      resizeObservers.forEach((observer) => observer.disconnect());
+    };
+  }, [headers, isStepped, activeHeader]);
+
+  const { indicatorHeights, indicatorPosition } = sidebarDimensions;
+
+  const steppedHeader = useCallback(
+    (header: SidebarHeader, index: number) => (
+      <div
+        key={[header.id, 'step-indicator', index].join('-')}
+        className="flex items-center justify-center"
+        style={{
+          height: indicatorHeights[index],
+        }}
+      >
+        <div
+          className={cn(
+            'bg-neutral-000 dark:bg-neutral-1300',
+            header.stepNumber ? 'py-0.5' : 'py-1',
+            index === 0 && 'pt-[100%] -mt-[75%]',
+            index === headers.length - 1 && 'pb-[100%] -mb-[75%]',
+          )}
+        >
+          <div
+            className={cn(
+              'flex items-center justify-center rounded-full text-[10px] font-semibold transition-colors bg-neutral-300 dark:bg-neutral-1000 text-neutral-1000 dark:text-neutral-300',
+              header.id === activeHeader?.id && 'bg-orange-600 text-neutral-000',
+              header.stepNumber ? 'size-4' : 'size-2',
+            )}
+          >
+            {header.stepNumber ?? ''}
+          </div>
+        </div>
+      </div>
+    ),
+    [indicatorHeights, headers.length, activeHeader?.id],
+  );
 
   return (
     <div
-      className={cn(sidebarAlignmentClasses, 'md:pb-20 right-8 md:right-0')}
+      className="absolute md:sticky w-60 top-24 right-6"
       style={{
-        ...sidebarAlignmentStyles,
-        height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, INKEEP_ASK_BUTTON_HEIGHT),
+        height: componentMaxHeight(HEADER_HEIGHT, HEADER_BOTTOM_MARGIN, 32),
       }}
     >
-      {showLanguageSelector ? <LanguageSelector /> : null}
-      <div className="hidden md:flex flex-col h-full">
+      <div className="hidden md:flex flex-col h-full overflow-y-auto">
         {headers.length > 0 ? (
           <>
-            <p className="ui-text-overline2 text-neutral-700 mb-3">On this page</p>
-            <div className="flex gap-4 overflow-auto shadow-[0.5px_0px_var(--color-neutral-000)_inset,1.5px_0px_var(--color-neutral-300)_inset] py-0.5 pl-4">
-              <div
-                className="h-[1.125rem] -ml-4 w-0.5 bg-neutral-1300 dark:bg-neutral-000 rounded-full transition-[transform,height,colors] z-0"
-                style={{
-                  transform: `translateY(${highlightPosition.yOffset}px)`,
-                  height: `${highlightPosition.height}px`,
-                }}
-              ></div>
-              {/* 18px derives from the 2px width of the grey tracker bar plus the 16px between it and the menu items */}
-              <div className="flex flex-col gap-2 w-[calc(100%-18px)] pr-4">
+            <p className="ui-text-label4 font-semibold text-neutral-1300 dark:text-neutral-000 mb-3">On this page</p>
+            <div
+              className={cn(
+                'flex shadow-[0.5px_0px_var(--color-neutral-000)_inset,1.5px_0px_var(--color-neutral-300)_inset]',
+                isStepped && 'ml-2',
+              )}
+            >
+              {isStepped ? (
+                <div className="-ml-[7px]">{headers.map((header, index) => steppedHeader(header, index))}</div>
+              ) : (
+                <div
+                  className="h-7 w-px bg-orange-600 rounded-full transition-[transform,height,colors] z-0 ml-[0.5px]"
+                  style={{
+                    transform: `translateY(${indicatorPosition.yOffset}px)`,
+                    height: `${indicatorPosition.height}px`,
+                  }}
+                ></div>
+              )}
+              <div className="flex flex-col">
                 {headers.map((header, index) => (
                   <a
                     href={`#${header.id}`}
-                    key={[location.pathname, header.id, language, index].join('-')}
+                    key={[location.pathname, header.id, index].join('-')}
                     id={`sidebar-${header.id}`}
+                    tabIndex={0}
+                    data-heading={header.type.toLowerCase()}
                     className={cn(
-                      'ui-text-label4 font-medium text-neutral-900 dark:text-neutral-400 transition-colors scroll-smooth hover:text-neutral-1300 dark:hover:text-neutral-000',
+                      'ui-text-label4 font-medium text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000 active:text-neutral-1100 dark:active:text-neutral-200 py-[5px] pr-2 transition-colors focus-base',
                       { 'text-neutral-1300 dark:text-neutral-000': header.id === activeHeader?.id },
-                      { 'ml-2': header.type !== 'H2' },
+                      isStepped && '-ml-4',
+                      getElementIndent(header.type, isStepped),
                     )}
-                    onClick={() => handleHeaderClick(header.id)}
+                    onClick={() => setActiveHeader({ id: header.id })}
                   >
                     {header.label}
                   </a>
@@ -259,70 +301,6 @@ const RightSidebar = () => {
             </div>
           </>
         ) : null}
-        <div className="bg-neutral-100 dark:bg-neutral-1200 border border-neutral-300 dark:border-neutral-1000 rounded-lg transition-colors mt-6">
-          {externalLinks(activePage, location).map(({ label, icon, link, type }) => (
-            <a
-              key={label}
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group/external-link"
-              data-testid={`external-${type}-link`}
-            >
-              <div className="flex items-center p-4 border-b border-neutral-300 dark:border-neutral-1000">
-                <div className="flex-1 flex items-center gap-3">
-                  <Icon
-                    size="20px"
-                    name={icon}
-                    color="text-neutral-900"
-                    additionalCSS="group-hover/external-link:text-neutral-1300 dark:group-hover/external-link:text-neutral-000 transition-colors"
-                  />
-                  <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400 group-hover/external-link:text-neutral-1300 dark:group-hover/external-link:text-neutral-000 transition-colors">
-                    {label}
-                  </span>
-                </div>
-                <Icon
-                  name="icon-gui-arrow-top-right-on-square-outline"
-                  color="text-neutral-900"
-                  additionalCSS="group-hover/external-link:text-neutral-1300 dark:group-hover/external-link:text-neutral-000 transition-colors"
-                  size="16px"
-                />
-              </div>
-            </a>
-          ))}
-          <div className="flex items-center p-4 gap-2">
-            <span className="text-p4 font-semibold text-neutral-900 dark:text-neutral-400">Open in </span>
-            {llmLinks(activePage, language).map(({ model, label, icon, link }) => (
-              <a
-                key={model}
-                href={link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex h-5 ui-theme-dark group/llm-link cursor-pointer"
-                onClick={() => {
-                  track('llm_link_clicked', {
-                    model,
-                    location: location.pathname,
-                    link,
-                  });
-                }}
-              >
-                <Tooltip
-                  content={label}
-                  triggerElement={
-                    <Icon
-                      name={icon}
-                      size="20px"
-                      additionalCSS="transition-colors text-neutral-900 dark:text-neutral-400 group-hover/llm-link:text-neutral-1300 dark:group-hover/llm-link:text-neutral-000"
-                    />
-                  }
-                >
-                  {label}
-                </Tooltip>
-              </a>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

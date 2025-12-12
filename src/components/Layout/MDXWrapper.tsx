@@ -1,5 +1,4 @@
 import React, {
-  PropsWithChildren,
   useState,
   createContext,
   isValidElement,
@@ -13,26 +12,30 @@ import { navigate, PageProps } from 'gatsby';
 import CodeSnippet from '@ably/ui/core/CodeSnippet';
 import type { CodeSnippetProps, SDKType } from '@ably/ui/core/CodeSnippet';
 import cn from '@ably/ui/core/utils/cn';
+
 import { getRandomChannelName } from '../blocks/software/Code/get-random-channel-name';
 
-import PageTitle from '../PageTitle';
-import { Frontmatter, PageContextType } from './Layout';
-import { MarkdownProvider } from '../Markdown';
-import Article from '../Article';
 import If from './mdx/If';
 import { useCopyableHeaders } from './mdx/headers';
-import { useLayoutContext } from 'src/contexts/layout-context';
-import Aside from '../blocks/dividers/Aside';
-import { HtmlComponentPropsData } from '../html-component-props';
-import { languageData, languageInfo } from 'src/data/languages';
-import { ActivePage } from './utils/nav';
-import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from './mdx/tables';
+import Table from './mdx/Table';
 import { Tiles } from './mdx/tiles';
+import { PageHeader } from './mdx/PageHeader';
+import Admonition from './mdx/Admonition';
+
+import { Frontmatter, PageContextType } from './Layout';
+import { ActivePage } from './utils/nav';
+
+import { MarkdownProvider } from '../Markdown';
+
+import Article from '../Article';
 import { Head, StructuredData } from '../Head';
-import { useSiteMetadata } from 'src/hooks/use-site-metadata';
-import { ProductName } from 'src/templates/template-data';
-import { getMetaTitle } from '../common/meta-title';
+
 import UserContext from 'src/contexts/user-context';
+import { useLayoutContext } from 'src/contexts/layout-context';
+import { languageData, languageInfo } from 'src/data/languages';
+import { useSiteMetadata } from 'src/hooks/use-site-metadata';
+import { getMetaTitle } from '../common/meta-title';
+import { ProductName } from 'src/templates/template-data';
 
 type MDXWrapperProps = PageProps<unknown, PageContextType>;
 
@@ -46,6 +49,8 @@ type Replacement = {
   term: string;
   replacer: () => string;
 };
+
+type ElementProps = { className?: string; children?: ReactNode };
 
 const SDKContext = createContext<SDKContextType | undefined>(undefined);
 
@@ -114,10 +119,12 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
       return null;
     }
 
-    const preElement = child as ReactElement<{ children?: ReactNode }>;
-    const codeElement = isValidElement(preElement.props?.children) ? (preElement.props.children as ReactElement) : null;
+    const preElement = child as ReactElement<ElementProps>;
+    const codeElement = isValidElement(preElement.props?.children)
+      ? (preElement.props.children as ReactElement<ElementProps>)
+      : null;
 
-    if (!codeElement || !codeElement.props?.className) {
+    if (!codeElement || !codeElement.props.className) {
       return null;
     }
 
@@ -149,15 +156,6 @@ const WrappedCodeSnippet: React.FC<{ activePage: ActivePage } & CodeSnippetProps
   );
 };
 
-const WrappedAside = (props: PropsWithChildren<{ 'data-type': string }>) => {
-  return (
-    <Aside
-      attribs={{ 'data-type': props['data-type'] }}
-      data={(<>{props.children}</>) as unknown as HtmlComponentPropsData}
-    />
-  );
-};
-
 const META_DESCRIPTION_FALLBACK = `Ably provides a suite of APIs to build, extend, and deliver powerful digital experiences in realtime. Organizations like Toyota, Bloomberg, HubSpot, and Hopin depend on Ably’s platform to offload the growing complexity of business-critical realtime data synchronization at global scale.`;
 const META_PRODUCT_FALLBACK = 'pub_sub';
 
@@ -178,6 +176,7 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
 
   const title = getFrontmatter(frontmatter, 'title') as string;
   const description = getFrontmatter(frontmatter, 'meta_description', META_DESCRIPTION_FALLBACK) as string;
+  const intro = getFrontmatter(frontmatter, 'intro') as string;
   const keywords = getFrontmatter(frontmatter, 'meta_keywords') as string;
   const metaTitle = getMetaTitle(title, (activePage.product as ProductName) || META_PRODUCT_FALLBACK) as string;
 
@@ -242,17 +241,18 @@ const MDXWrapper: React.FC<MDXWrapperProps> = ({ children, pageContext, location
           components={{
             If,
             Code: (props) => <WrappedCodeSnippet activePage={activePage} apiKeys={apiKeys} {...props} />,
-            Aside: WrappedAside,
-            table: Table,
-            thead: TableHead,
-            tbody: TableBody,
-            tr: TableRow,
-            th: TableHeader,
-            td: TableCell,
+            Aside: Admonition,
+            Table,
+            table: Table.Root,
+            thead: Table.Header,
+            tbody: Table.Body,
+            tr: Table.Row,
+            th: Table.Head,
+            td: Table.Cell,
             Tiles,
           }}
         >
-          <PageTitle>{title}</PageTitle>
+          <PageHeader title={title} intro={intro} />
           {children}
         </MarkdownProvider>
       </Article>

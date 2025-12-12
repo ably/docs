@@ -9,7 +9,17 @@ import UserContext from 'src/contexts/user-context';
 import MDXWrapper from './MDXWrapper';
 
 const mockUseLayoutContext = jest.fn(() => ({
-  activePage: { language: 'javascript', languages: ['javascript'], product: 'pubsub' },
+  activePage: {
+    language: 'javascript',
+    languages: ['javascript'],
+    product: 'pubsub',
+    page: {
+      name: 'Test Page',
+      link: '/docs/test-page',
+    },
+    tree: [],
+    template: 'mdx' as const,
+  },
 }));
 
 // Mock the layout context
@@ -258,6 +268,12 @@ describe('MDXWrapper structured data', () => {
         product: 'pubsub',
         language: 'javascript',
         languages: [],
+        page: {
+          name: 'Test Page',
+          link: '/docs/test-page',
+        },
+        tree: [],
+        template: 'mdx' as const,
       },
     });
   });
@@ -287,6 +303,12 @@ describe('MDXWrapper structured data', () => {
         product: 'pubsub',
         language: 'javascript',
         languages: ['javascript', 'python'],
+        page: {
+          name: 'Test Page',
+          link: '/docs/test-page',
+        },
+        tree: [],
+        template: 'mdx' as const,
       },
     });
 
