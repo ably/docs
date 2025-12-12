@@ -1,0 +1,582 @@
+---
+title: Instance
+meta_description: "Learn about Instance, which represents a specific LiveObject instance for direct manipulation"
+---
+
+<Aside data-type='experimental'>
+LiveObjects is currently Experimental. Its features are still in development and subject to rapid change.
+
+**Building with LiveObjects?** Help shape its future by [sharing your use case](https://44qpp.share.hsforms.com/2fZobHQA1ToyRfB9xqZYQmQ).
+</Aside>
+
+An `Instance` represents a specific LiveObject instance (such as a `LiveMap` or `LiveCounter`) that you can manipulate directly. Unlike [PathObject](/docs/liveobjects/concepts/path-object), which operates on paths that resolve at runtime, an `Instance` is bound to a specific object instance identified by its object ID.
+
+## What is Instance? <a id="what-is"/>
+
+When you need to work with a specific object instance rather than a location in the object tree, you can obtain an `Instance` from a `PathObject` using the [`instance()`](/docs/liveobjects/concepts/path-object#instance) method:
+
+<Code>
+```javascript
+const myObject = await channel.object.get();
+
+// Get the PathObject for the 'visits' key
+const visitsPath = myObject.get('visits');
+
+// Get the specific counter instance at that path
+const visitsInstance = visitsPath.instance();
+
+if (visitsInstance) {
+  console.log('Counter ID:', visitsInstance.id());
+  console.log('Counter value:', visitsInstance.value());
+  await visitsInstance.increment(1);
+}
+```
+</Code>
+
+The `instance()` method returns `undefined` if no object exists at that path.
+
+When you perform operations on an `Instance`, those operations target the specific object by its ID. This means the operation applies to that exact object regardless of where it currently exists in the object tree.
+
+<Aside data-type='note'>
+`Instance` provides a unified interface for all object types. Type checking occurs at runtime: access methods return `undefined` or empty values for incompatible object types, while mutation methods throw errors. See [Error handling](#error-handling) for details.
+</Aside>
+
+## Method reference <a id="method-reference"/>
+
+`Instance` provides the following methods:
+
+| Method | Description | Works on |
+| ------ | ----------- | -------- |
+| `get(key)` | Get the value at a key | Maps |
+| `id()` | Get the object ID | Maps, counters |
+| `value()` | Get the current value | Primitives, counters |
+| `compact()` | Get a JSON representation of the data | All instances |
+| `entries()` | Iterate over key-value pairs | Maps |
+| `keys()` | Iterate over keys | Maps |
+| `values()` | Iterate over values as Instances | Maps |
+| `size()` | Get the number of entries | Maps |
+| `set(key, value)` | Set a map entry | Maps |
+| `remove(key)` | Remove a map entry | Maps |
+| `increment(amount)` | Increment a counter | Counters |
+| `decrement(amount)` | Decrement a counter | Counters |
+| `subscribe(callback, options?)` | Subscribe to changes | Maps, counters |
+| `subscribeIterator(options?)` | Get an async iterator for changes | Maps, counters |
+| `batch(callback)` | Group mutations into a single message | Maps, counters |
+
+## PathObject vs Instance <a id="comparison"/>
+
+Understanding the difference between `PathObject` and `Instance` is key to using the LiveObjects API effectively:
+
+| Aspect | PathObject | Instance |
+|--------|------------|----------|
+| **Represents** | A path to a location | A specific object instance |
+| **Identified by** | Path string (e.g., "visits") | Object ID (e.g., "counter:abc123@1234567890") |
+| **Operations** | Resolve path at runtime | Operate on the specific instance |
+| **Subscriptions** | Follow the location (resilient to replacements) | Follow the specific instance |
+| **Safe to store** | Yes, remains valid even if object changes | Yes, but becomes invalid if instance is deleted |
+
+### When to use PathObject <a id="when-pathobject"/>
+
+Use `PathObject` when you want to:
+- Work with data at a specific location that may change over time
+- Subscribe to changes at a location regardless of which instance is there
+- Perform operations on "whatever is at this path right now"
+
+<Code>
+```javascript
+// Store a PathObject reference
+const counter = myObject.get('pageViews');
+
+// Safe to use even if the counter is replaced
+await counter.increment(1);
+
+// Subscription continues working if the counter is replaced
+counter.subscribe(({ object }) => {
+  console.log('Page views:', object.value());
+});
+```
+</Code>
+
+### When to use Instance <a id="when-instance"/>
+
+Use `Instance` when you need to:
+- Track a specific object instance as it moves through the structure
+- Access the object ID for external storage, logging or making REST API requests
+- Subscribe to changes on a specific instance regardless of its location
+
+<Code>
+```javascript
+// Get a specific counter instance
+const counterInstance = myObject.get('visits').instance();
+
+// Get counter object ID
+const objectId = counterInstance.id();
+
+// Subscribe to this instance
+// Later, even if someone moves this counter to a different key,
+// the subscription still tracks it
+counterInstance.subscribe(({ object }) => {
+  console.log(`Counter ${object.id()} updated to:`, object.value());
+});
+```
+</Code>
+
+## Get an Instance <a id="getting"/>
+
+Get an `Instance` from a `PathObject` using the `instance()` method:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('settings').instance();
+const counterInstance = myObject.get('visits').instance();
+
+// Check if an object exists at the path
+if (counterInstance) {
+  await counterInstance.increment(1);
+} else {
+  // Create a new counter
+  await myObject.set('visits', LiveCounter.create(0));
+}
+```
+</Code>
+
+Once you have an `Instance`, its methods return further `Instance` objects. For example, when iterating over map entries:
+
+<Code>
+```javascript
+const settingsInstance = myObject.get('settings').instance();
+
+if (settingsInstance) {
+  // Iterate over entries - values are Instance objects
+  for (const [key, valueInstance] of settingsInstance.entries()) {
+    console.log(`${key}:`, valueInstance.value());
+  }
+}
+```
+</Code>
+
+## Navigate to child values <a id="navigate"/>
+
+### get() method <a id="get"/>
+
+The `get(key)` method returns an `Instance` for the value at the specified key in a map:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('settings').instance();
+
+if (mapInstance) {
+  // Get child value
+  const themeInstance = mapInstance.get('theme');
+  console.log('Theme:', themeInstance?.value());
+
+  // Chain get() calls for deeper navigation
+  const userInstance = myObject.get('data').instance();
+  if (userInstance) {
+    const profileInstance = userInstance.get('profile');
+    const nameInstance = profileInstance?.get('name');
+    console.log('Name:', nameInstance?.value());
+  }
+}
+```
+</Code>
+
+Returns `undefined` if the key doesn't exist or if the instance is not a map.
+
+## Access values <a id="access"/>
+
+### value() method <a id="value"/>
+
+For counters and primitive values, use the `value()` method to get the current value:
+
+<Code>
+```javascript
+const counterInstance = myObject.get('visits').instance();
+
+if (counterInstance) {
+  console.log('Visits:', counterInstance.value()); // e.g., 42
+}
+```
+</Code>
+
+For map instances, `value()` returns `undefined`. Use collection methods like `entries()` to access map contents.
+
+### id() method <a id="id"/>
+
+Every LiveObject instance has a unique object ID:
+
+<Code>
+```javascript
+const counterInstance = myObject.get('visits').instance();
+
+if (counterInstance) {
+  const objectId = counterInstance.id();
+  console.log('Object ID:', objectId);
+}
+```
+</Code>
+
+The object ID is an opaque string that uniquely identifies the instance. For primitive values, `id()` returns `undefined`.
+
+### compact() method <a id="compact"/>
+
+The `compact()` method returns a JavaScript object representation of the instance:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('user').instance();
+
+if (mapInstance) {
+  const json = mapInstance.compact();
+  console.log(json);
+  // {
+  //   name: "Alice",
+  //   score: 42,
+  //   settings: { theme: "dark" }
+  // }
+}
+
+const counterInstance = myObject.get('visits').instance();
+if (counterInstance) {
+  console.log(counterInstance.compact()); // Just the number, e.g., 42
+}
+```
+</Code>
+
+#### Binary values <a id="compact-binary"/>
+
+Binary values are returned as base64-encoded strings:
+
+<Code>
+```javascript
+const mapInstance = myObject.instance();
+
+if (mapInstance) {
+  const binaryData = new Uint8Array([72, 101, 108, 108, 111]); // "Hello" in bytes
+  await mapInstance.set('binaryField', binaryData);
+
+  // compact() returns base64-encoded string
+  console.log(mapInstance.get('binaryField').compact()); // "SGVsbG8="
+}
+```
+</Code>
+
+#### Cyclic references <a id="compact-cyclic"/>
+
+Objects encountered multiple times during compaction reuse the same compacted value reference. This means the result of `compact()` for maps with cyclic references cannot be directly passed to `JSON.stringify()`. If you need to serialize data with cyclic references, use a custom JSON replacer or a serialization library that supports cycles.
+
+## Subscribe to updates <a id="subscribe"/>
+
+Instance subscriptions track a specific object instance, regardless of its location in the object tree.
+
+<Aside data-type='important'>
+The `subscribe()` and `subscribeIterator()` methods are only available on LiveObject instances (maps and counters). Primitive values do not support subscriptions through the Instance API. To subscribe to changes on a primitive value stored in a map, use [PathObject subscriptions](/docs/liveobjects/concepts/path-object#subscribe) instead.
+</Aside>
+
+### subscribe() method <a id="subscribe-method"/>
+
+The `subscribe(callback, options?)` method registers a callback that is called whenever the instance changes:
+
+<Code>
+```javascript
+const counterInstance = myObject.get('visits').instance();
+
+if (counterInstance) {
+  counterInstance.subscribe(({ object, message }) => {
+    console.log('Counter instance updated');
+    console.log('Object ID:', object.id());
+    console.log('New value:', object.value());
+
+    if (message) {
+      console.log('Operation:', message.operation.action);
+      console.log('Client ID:', message.clientId);
+    }
+  });
+}
+```
+</Code>
+
+The callback receives an object with two properties:
+- `object`: An `Instance` reference to the updated object
+- `message`: The `ObjectMessage` that carried the operation that led to the change
+
+### subscribeIterator() method <a id="subscribe-iterator"/>
+
+The `subscribeIterator(options?)` method returns an async iterator for a more modern subscription syntax:
+
+<Code>
+```javascript
+const counterInstance = myObject.get('visits').instance();
+
+if (counterInstance) {
+  for await (const { object, message } of counterInstance.subscribeIterator()) {
+    console.log('Counter updated:', object.value());
+
+    if (message?.operation.action === 'object.delete') {
+      console.log('Counter deleted, iterator will end');
+      break;
+    }
+  }
+}
+```
+</Code>
+
+### Automatic unsubscription <a id="auto-unsubscribe"/>
+
+When an object instance is deleted (tombstoned), subscriptions to that instance are automatically unsubscribed after one final notification:
+
+<Code>
+```javascript
+const counterInstance = myObject.get('visits').instance();
+
+if (counterInstance) {
+  counterInstance.subscribe(({ object, message }) => {
+    if (message?.operation.action === 'object.delete') {
+      console.log('Counter was deleted');
+      // This listener is automatically unsubscribed after this call
+    }
+  });
+
+  // Make the counter unreachable (which will eventually delete it)
+  await myObject.remove('visits');
+}
+```
+</Code>
+
+## Update data <a id="mutations"/>
+
+Instance provides mutation methods that operate on the specific instance.
+
+### Update map entries <a id="map-mutations"/>
+
+For map instances, use `set(key, value)` and `remove(key)`:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('settings').instance();
+
+if (mapInstance) {
+  // Set a key
+  await mapInstance.set('theme', 'dark');
+
+  // Set a nested object
+  await mapInstance.set('advanced', LiveMap.create({
+    debugMode: false
+  }));
+
+  // Remove a key
+  await mapInstance.remove('oldSetting');
+}
+```
+</Code>
+
+### Update counter values <a id="counter-mutations"/>
+
+For counter instances, use `increment(amount)` and `decrement(amount)`:
+
+<Code>
+```javascript
+const counterInstance = myObject.get('visits').instance();
+
+if (counterInstance) {
+  // Increment the counter
+  await counterInstance.increment(5);
+
+  // Decrement the counter
+  await counterInstance.decrement(2);
+
+  // Get the current value
+  console.log('Current value:', counterInstance.value());
+}
+```
+</Code>
+
+### Batch multiple updates <a id="batch"/>
+
+The `batch(callback)` method groups multiple mutations into a single message:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('settings').instance();
+
+if (mapInstance) {
+  await mapInstance.batch((ctx) => {
+    ctx.set('theme', 'dark');
+    ctx.set('fontSize', 14);
+    ctx.remove('oldSetting');
+  });
+}
+```
+</Code>
+
+See the [Batch operations documentation](/docs/liveobjects/batch) for more details.
+
+## Iterate over map entries <a id="collection"/>
+
+Instance provides collection methods for working with map instances.
+
+### entries() method <a id="entries"/>
+
+The `entries()` method returns an iterator of `[key, Instance]` pairs:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('settings').instance();
+
+if (mapInstance) {
+  for (const [key, valueInstance] of mapInstance.entries()) {
+    console.log(`${key}:`, valueInstance.value());
+  }
+}
+```
+</Code>
+
+### keys() method <a id="keys"/>
+
+The `keys()` method returns an iterator of key strings:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('settings').instance();
+
+if (mapInstance) {
+  for (const key of mapInstance.keys()) {
+    console.log('Key:', key);
+  }
+}
+```
+</Code>
+
+### values() method <a id="values"/>
+
+The `values()` method returns an iterator of `Instance` objects for each value:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('settings').instance();
+
+if (mapInstance) {
+  for (const valueInstance of mapInstance.values()) {
+    console.log('Value:', valueInstance.value());
+  }
+}
+```
+</Code>
+
+### size() method <a id="size"/>
+
+The `size()` method returns the number of entries in the map:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('settings').instance();
+
+if (mapInstance) {
+  console.log('Settings count:', mapInstance.size());
+}
+```
+</Code>
+
+<Aside data-type='note'>
+Collection methods return empty iterators (and `size()` returns 0) if called on a counter instance.
+</Aside>
+
+## Error handling <a id="error-handling"/>
+
+Instance methods behave consistently when called on incompatible types:
+
+### Access methods <a id="access-errors"/>
+
+Access methods return `undefined` or empty values rather than throwing errors:
+
+<Code>
+```javascript
+const counterInstance = myObject.get('visits').instance();
+
+if (counterInstance) {
+  // Calling map methods on a counter returns undefined or empty values
+  const child = counterInstance.get('someKey'); // undefined
+  console.log(counterInstance.size()); // 0
+
+  // Iterating returns empty results
+  for (const [key, value] of counterInstance.entries()) {
+    // This loop doesn't execute
+  }
+}
+```
+</Code>
+
+### Mutation methods <a id="mutation-errors"/>
+
+Mutation methods throw errors when the operation cannot be applied to the instance type:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('settings').instance();
+
+if (mapInstance) {
+  try {
+    // Calling counter methods on a map throws an error
+    await mapInstance.increment(5);
+  } catch (error) {
+    console.error('Cannot call increment on a map instance');
+  }
+}
+```
+</Code>
+
+## Primitive instances <a id="primitive-instances"/>
+
+When you get an instance for a primitive value (string, number, boolean, etc.), you receive a `PrimitiveInstance` which is a snapshot of that value:
+
+<Code>
+```javascript
+const mapInstance = myObject.get('user').instance();
+
+if (mapInstance) {
+  const nameInstance = mapInstance.get('name');
+
+  // For primitives, this is a snapshot
+  console.log('Name:', nameInstance.value()); // e.g., "Alice"
+
+  // If the value changes, this snapshot doesn't update
+  await mapInstance.set('name', 'Bob');
+  console.log('Name snapshot still shows:', nameInstance.value()); // Still "Alice"
+
+  // Get a new instance to see the updated value
+  const updatedNameInstance = mapInstance.get('name');
+  console.log('Updated name:', updatedNameInstance.value()); // "Bob"
+}
+```
+</Code>
+
+`PrimitiveInstance` objects do not have `subscribe()`, `id()`, or mutation methods since they represent immutable snapshots of primitive values.
+
+## Type inference <a id="typing"/>
+
+When using TypeScript, `Instance` objects benefit from the same type inference as `PathObject`:
+
+<Code>
+```javascript
+type UserProfile = {
+  name: string;
+  score: LiveCounter;
+  settings: LiveMap<{
+    theme: string;
+  }>;
+};
+
+const userInstance = myObject.get('user').instance<LiveMap<UserProfile>>();
+
+if (userInstance) {
+  // TypeScript knows the shape
+  const scoreInstance: Instance<LiveCounter> | undefined = userInstance.get('score');
+
+  if (scoreInstance) {
+    await scoreInstance.increment(10); // Type-safe
+  }
+}
+```
+</Code>
+
+See the [Typing documentation](/docs/liveobjects/typing) for more details on type safety.

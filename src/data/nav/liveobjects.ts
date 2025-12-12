@@ -43,6 +43,14 @@ export default {
           link: '/docs/liveobjects/concepts/objects',
         },
         {
+          name: 'PathObject',
+          link: '/docs/liveobjects/concepts/path-object',
+        },
+        {
+          name: 'Object Instance',
+          link: '/docs/liveobjects/concepts/instance',
+        },
+        {
           name: 'Operations',
           link: '/docs/liveobjects/concepts/operations',
         },

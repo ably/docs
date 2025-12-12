@@ -11,72 +11,172 @@ LiveObjects is currently Experimental. Its features are still in development and
 
 If you are using TypeScript in your project, you can leverage LiveObjects' built-in TypeScript support to ensure type safety and enable autocompletion when working with objects on a channel.
 
-## Global AblyObjectsTypes interface <a id="global"/>
+<Aside data-type='note'>
+Types are provided explicitly via `channel.object.get<T>()` rather than using global type declarations. If you previously used `AblyObjectsTypes` for global type definitions, migrate to explicit type parameters as shown below.
+</Aside>
 
-You can type objects on all your channels by defining a global `AblyObjectsTypes` interface. If you only want to type the root object for a specific channel, see the [Typing `channel.objects.getRoot()`](#getroot) section below.
+## Type the channel object <a id="typing-get"/>
 
-Define the `AblyObjectsTypes` interface in a type declaration file. You can create a file named `ably.config.d.ts` in the root of your application:
+You can provide a type parameter to the `channel.object.get<T>()` method to specify the expected structure of the channel object:
 
 <Code>
 ```javascript
-// file: ably.config.d.ts
 import { LiveCounter, LiveMap } from 'ably';
 
-// Define dedicated types and export them for reuse in your application
-export type MyCustomRoot = {
+// Define the expected structure of your channel object
+type MyObject = {
+  visits: LiveCounter;
   reactions: LiveMap<{
-    hearts: LiveCounter;
     likes: LiveCounter;
+    hearts: LiveCounter;
+  }>;
+  settings: LiveMap<{
+    theme: string;
+    notifications: boolean;
   }>;
 };
 
-declare global {
-  export interface AblyObjectsTypes {
-    root: MyCustomRoot;
-  }
+// Get a typed PathObject for the channel
+const myObject = await channel.object.get<MyObject>();
+```
+</Code>
+
+This enables TypeScript to infer the correct types when accessing and mutating objects:
+
+<Code>
+```javascript
+// TypeScript knows 'visits' is a LiveCounter
+const visits = myObject.get('visits');
+await visits.increment(5);  // Type-safe
+
+// TypeScript knows the structure of 'reactions'
+const reactions = myObject.get('reactions');
+const likes = reactions.get('likes');
+await likes.increment(1);  // Type-safe
+
+// TypeScript knows 'theme' is a string
+const theme = myObject.get('settings').get('theme');
+const themeValue: string | undefined = theme.value();
+
+// Type errors are caught at compile time
+await reactions.set('likes', 'invalid');
+// Error: Argument of type 'string' is not assignable to parameter of type 'LiveCounter'
+```
+</Code>
+
+## Define reusable types <a id="reusable-types"/>
+
+You can define and export types for reuse across your application:
+
+<Code>
+```javascript
+// types/liveobjects.ts
+import { LiveCounter, LiveMap } from 'ably';
+
+export type ReactionsType = {
+  likes: LiveCounter;
+  hearts: LiveCounter;
+  fire: LiveCounter;
+};
+
+export type UserProfileType = {
+  name: string;
+  score: LiveCounter;
+  settings: LiveMap<{
+    theme: string;
+    notifications: boolean;
+  }>;
+};
+
+export type ChannelObjectType = {
+  reactions: LiveMap<ReactionsType>;
+  users: LiveMap<{
+    [userId: string]: LiveMap<UserProfileType>;
+  }>;
+};
+```
+</Code>
+
+Then import and use these types where needed:
+
+<Code>
+```javascript
+import { ChannelObjectType } from './types/liveobjects';
+
+const myObject = await channel.object.get<ChannelObjectType>();
+
+// Fully typed access
+const userScore = myObject
+  .get('users')
+  .get('user123')
+  .get('score');
+
+await userScore.increment(10);  // Type-safe
+```
+</Code>
+
+## Use per-channel types <a id="per-channel"/>
+
+When your application uses multiple channels with different object structures, you can specify different types for each:
+
+<Code>
+```javascript
+// Define types for different channels
+type ReactionsChannelObject = {
+  likes: LiveCounter;
+  hearts: LiveCounter;
+};
+
+type LeaderboardChannelObject = {
+  players: LiveMap<{
+    [playerId: string]: LiveMap<{
+      name: string;
+      score: LiveCounter;
+    }>;
+  }>;
+};
+
+// Get typed objects for different channels
+const reactionsChannel = client.channels.get('reactions');
+const reactions = await reactionsChannel.object.get<ReactionsChannelObject>();
+
+const leaderboardChannel = client.channels.get('leaderboard');
+const leaderboard = await leaderboardChannel.object.get<LeaderboardChannelObject>();
+
+// Each channel has its own type safety
+await reactions.get('likes').increment(1);  // Type-safe for reactions
+const players = leaderboard.get('players');  // Type-safe for leaderboard
+```
+</Code>
+
+## Type instances <a id="instance-typing"/>
+
+When obtaining [Instance](/docs/liveobjects/concepts/instance) objects, TypeScript automatically infers the correct instance type:
+
+<Code>
+```javascript
+type MyObject = {
+  visits: LiveCounter;
+  settings: LiveMap<{
+    theme: string;
+  }>;
+};
+
+const myObject = await channel.object.get<MyObject>();
+
+// Get instances with full type information
+const counterInstance = myObject.get('visits').instance();
+if (counterInstance) {
+  // TypeScript knows this is a LiveCounterInstance
+  await counterInstance.increment(1);
+  console.log(counterInstance.value());
+}
+
+const mapInstance = myObject.get('settings').instance();
+if (mapInstance) {
+  // TypeScript knows this is a LiveMapInstance
+  await mapInstance.set('theme', 'dark');
+  const theme = mapInstance.get('theme');
 }
 ```
 </Code>
-
-This enables TypeScript to infer the correct types when accessing and mutating LiveObjects:
-
-<Code>
-```javascript
-// LiveMap<{ reactions: LiveMap<{ hearts: LiveCounter; likes: LiveCounter }> }>
-const root = await channel.objects.getRoot();
-
-// LiveMap<{ hearts: LiveCounter; likes: LiveCounter }>
-const reactions = root.get('reactions');
-
-// LiveCounter
-const likes = reactions.get('likes');
-
-reactions.set('hearts', 1); // Error: Argument of type 'number' is not assignable to parameter of type 'LiveCounter'.ts(2345)
-```
-</Code>
-
-## Typing channel.objects.getRoot() <a id="getroot"/>
-
-You can pass a type parameter directly to the `channel.objects.getRoot<T>()` method call to type the root object for a channel explicitly:
-
-<Code>
-```javascript
-// Define types for different root objects
-type ReactionsRoot = {
-  hearts: LiveCounter;
-  likes: LiveCounter;
-};
-
-type PollsRoot = {
-  currentPoll: LiveMap;
-};
-
-// LiveMap<{ hearts: LiveCounter; likes: LiveCounter }>
-const reactionsRoot = await reactionsChannel.objects.getRoot<ReactionsRoot>();
-
-// LiveMap<{ currentPoll: LiveMap }>
-const pollsRoot = await pollsChannel.objects.getRoot<PollsRoot>();
-```
-</Code>
-
-Typing `channel.objects.getRoot<T>()` is particularly useful when your application uses multiple channels, each with a different object structure.
