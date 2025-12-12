@@ -219,28 +219,40 @@ export const inkeepOnLoad = (
     shouldShowAskAICard: false,
   };
 
+  // Only enable keyboard shortcut for one instance to prevent multiple popups
   if (inkeepSearchEnabled) {
-    loadInkeepSearch(config, 'inkeep-search');
+    loadInkeepSearch(config, 'inkeep-search', false); // Keep keyboard shortcut
   }
 
   if (inkeepChatEnabled) {
-    loadInkeepSearch(config, 'inkeep-ai-chat');
+    loadInkeepSearch(config, 'inkeep-ai-chat', true); // Disable keyboard shortcut
   }
 };
 
-const loadInkeepSearch = (config: object, elementId: string) => {
+const loadInkeepSearch = (config: object, elementId: string, disableShortcut: boolean) => {
   const searchBar = document.getElementById(elementId);
   if (!searchBar) {
     return;
   }
 
+  // Check if already initialized to prevent duplicate instances
+  if (searchBar.hasChildNodes()) {
+    return;
+  }
+
   const defaultView = elementId === 'inkeep-ai-chat' ? 'chat' : 'search';
 
-  window.Inkeep.SearchBar(`#${searchBar.id}`, {
+  const widgetConfig: Record<string, unknown> = {
     ...config,
     defaultView,
     shouldShowAskAICard: false,
-  }).remount();
+  };
+
+  if (disableShortcut) {
+    widgetConfig.modalSettings = { shortcutKey: '' };
+  }
+
+  window.Inkeep.SearchBar(`#${searchBar.id}`, widgetConfig);
 };
 
 export type InkeepUser = {
