@@ -1,0 +1,745 @@
+---
+title: "Guide: Data streaming and distribution with Ably"
+meta_description: "Optimize data streaming at scale with Ably: reduce bandwidth with Deltas, manage bursts with server-side batching, ensure freshness with Conflation."
+meta_keywords: "data streaming, pub/sub, deltas, conflation, server-side batching, bandwidth optimization, message distribution, scalability, cost optimization"
+---
+
+Ably is purpose-built for realtime high-throughput data streaming at scale. Whether you're distributing telemetry data, financial updates, or social media feeds, Ably handles the complexity of message distribution so you can focus on your application.
+
+Data streaming follows a simple pattern: one or more producers publish messages to channels, and many consumers subscribe to receive them.
+Messages published to Ably are referred to as inbound messages, while messages delivered to subscribers are outbound messages.
+Messages can be delivered in batches through Ably's server-side optimizations for significant cost savings and workload reduction.
+
+**Common data streaming applications include:**
+- **Live sports and racing telemetry:** Streaming vehicle or player data to fan applications with hundreds of metrics updating multiple times per second.
+- **Financial market data:** Distributing real-time price updates for stocks, cryptocurrencies, and other instruments to trading platforms and analytics dashboards.
+- **IoT sensor networks:** Aggregating and distributing data from thousands of sensors across industrial facilities, smart cities, or environmental monitoring systems.
+- **Live event platforms:** Managing reactions, chat, and activity feeds during concerts, conferences, or sporting events with thousands of simultaneous participants.
+- **Fleet and asset tracking:** Real-time position and status updates for vehicles, equipment, or goods in logistics and supply chain applications.
+- **Collaborative applications:** Synchronizing state and updates across users in shared documents, design tools, or gaming environments.
+
+This guide addresses three common challenges in data streaming applications and shows how Ably's optimization features provide elegant solutions that reduce costs while improving performance.
+
+## Why Ably for data streaming?
+
+Ably is engineered around the four pillars of dependability:
+
+* **[Performance](/docs/platform/architecture/performance):** Ultra-low latency messaging, even at global scale.
+* **[Integrity](/docs/platform/architecture/message-ordering):** Guaranteed message ordering and delivery, with no duplicates or data loss.
+* **[Reliability](/docs/platform/architecture/fault-tolerance):** 99.999% uptime SLA, with automatic failover and seamless reconnection.
+* **[Availability](/docs/platform/architecture/edge-network):** Global edge infrastructure ensures users connect to the closest point for optimal experience.
+
+Ably's [serverless architecture](/docs/platform/architecture) eliminates infrastructure management.
+It automatically scales to handle millions of concurrent connections without provisioning or maintenance.
+The platform is proven at scale, delivering over 500 billion messages per month for customers,
+with individual channels supporting millions of concurrent subscribers while maintaining low latency and high throughput.
+
+The following sections explore how Ably's optimization features solve real-world streaming challenges at scale for some of our own customers.
+
+## How do I reduce bandwidth and latency when data changes frequently but incrementally?
+
+**The challenge:** A sports games platform streams live match state to spectators and players as matches progress. The match state naturally grows throughout the game - starting with basic match info, then accumulating player statistics, scores, game events, and other statistics. By mid-game, the full state can be many kilobytes. Publishing the entire state with each update means transmitting increasingly large payloads repeatedly to every spectator, even though only small portions change between updates (a player's ranking shifts, a score increment or some game metric updates). This wastes massive bandwidth on redundant information, especially as the match state grows larger.
+
+**What's needed:** A solution that ensures all users (including those joining mid-match) receive the complete current match state, while only transmitting the changes over the wire. This dramatically reduces bandwidth consumption as the state grows, without requiring publishers to maintain complex delta logic or consumers to implement manual state reconstruction.
+
+### Solution: Delta compression
+
+[Delta compression](/docs/channels/options/deltas) enables subscribers to receive only the differences between successive messages rather than the complete payload each time. The producer continues to publish the full state, maintaining simplicity in the publishing logic. Ably handles all the complexity: computing deltas server-side and transmitting only the changes over the wire. The subscriber's SDK then automatically applies these deltas to reconstruct the full state, requiring no manual state management from your application.
+
+Ably's delta implementation uses [VCDIFF](https://tools.ietf.org/html/rfc3284), a standardized binary diff algorithm that works with any payload type - whether string, binary, or JSON-encoded. The delta is calculated based on message ordering in the channel, regardless of how many publishers or subscribers there are.
+
+### Benefits and use cases
+
+Delta compression delivers significant advantages for streaming scenarios with incremental changes, particularly on larger payloads where bandwidth savings outweigh the processing cost:
+
+* **Bandwidth reduction:** Size of each message is now proportional to the changes, not the full state, leading to substantial data savings.
+* **Reduced costs:** Lower outbound data transfer translates to reduced billing for high-volume streams.
+* **Lower latency:** Smaller payloads transit networks faster, improving end-to-end delivery time.
+* **Producer simplicity:** Publishers send complete state; Ably handles the optimization.
+* **Lossless updates:** Subscribers still receive every update, just in a more efficient format.
+
+[//]: # (Think it could be good to have some kind of visiual showing full message vs delta message size comparison so its not just walls of text)
+
+Delta compression is ideal for:
+- **Game state synchronization:** Match state, player positions, inventory updates where state grows over time.
+- **Telemetry and sensor data:** Vehicle systems, IoT devices, industrial monitoring with many datapoints.
+- **Live dashboards:** Real-time analytics where most metrics change incrementally.
+- **Collaborative applications:** Shared documents or design tools with frequent small updates to larger payloads.
+
+When combined with the [persist last message](/docs/storage-history/storage#persist-last-message) channel rule, you can query the final complete state even after the stream ends - this can be useful for post-event analysis.
+
+### When deltas work best
+
+Delta compression delivers maximum benefit when:
+
+* **Larger message payloads:** For larger payloads (multiple kilobytes), bandwidth savings typically outweigh the CPU cost of applying deltas on the client side. Smaller messages (under 1KB) may not benefit as much.
+* **High similarity between messages:** The more unchanged data between successive messages, the greater the compression ratio.
+* **Structured data with partial updates:** Objects where only specific fields change frequently.
+* **Growing state over time:** Scenarios where the payload naturally grows during a session, making each full transmission increasingly expensive.
+* **Bandwidth is a constraint:** Mobile networks, high-volume scenarios, or regions with expensive data transfer.
+* **Many consumers:** Bandwidth savings multiply across subscribers
+
+Delta compression can be combined with [server-side batching](#how-do-i-manage-costs-and-stability-during-massive-bursts-of-activity) for scenarios where the rate of updates is high,
+helping to reduce outbound billable message cost at the cost of some increased latency.
+
+Care should be taken though, as if the Delta compression ratio is low,
+the CPU overhead of applying many consecutive Deltas at once may degragade performance,
+especially on resource-constrained devices like mobile phones.
+It is generally best to start with Deltas alone, and add batching to help address bursty patterns if needed.
+
+### Key considerations
+
+Before implementing delta compression, consider the following:
+
+* **Assess your data patterns:** There is a CPU cost in applying Deltas, which increases with the size of the delta. This should be weighed against the bandwidth savings, especially in power-constrained environments like mobile devices. Continually monitor your actual compression ratios in production to ensure the trade-off remains favorable.
+* **Monitor compression effectiveness:** Ably exposes both compressed and uncompressed outbound data metrics in your [application statistics](/docs/metadata-stats/stats), allowing you to infer your actual compression ratio across all channels in your app. You can consume these stats live via the [`[meta]stats:minute`](/docs/metadata-stats/stats#live) channel to track delta performance in real-time and make data-driven optimization decisions.
+* **Client compatibility:** Not all subscribing clients must include the vcdiff decoder plugin. If some clients cannot support deltas, they will receive full messages as normal.
+* **Encryption compatibility:** Delta compression is [effectively incompatible](/docs/channels/options/deltas#limitations) with channel encryption. If you need encryption, you'll need to choose between security and bandwidth optimization.
+* **Historical data access:** When using [persist last message](/docs/storage-history/storage#persist-last-message), the stored message is the latest full state, not a delta. This ensures historical queries return complete data, without needing to reconstruct from deltas.
+* **Connection recovery:** After any disruption (network issues, rate limiting, server errors), the first message is always full state. Subsequent messages resume delta mode.
+* **Presence limitations:** Delta compression is not supported for presence messages and is not recommended for use on the same channel as delta-compressed messages.
+
+For complete technical details, see [known limitations](/docs/channels/options/deltas#limitations).
+
+### Implementation
+
+Setting up delta compression requires minimal code changes. Producers continue publishing complete state, while subscribers opt into delta mode by specifying the channel parameter and including the vcdiff decoder plugin.
+
+In order to reduce package size, some SDKs exclude the delta decoding library by default, so you'll need to install and include it explicitly.
+
+<Code>
+```javascript
+// Producer: Publish full match state - Ably handles delta computation
+const channel = realtime.channels.get('match:12345');
+
+// As the match progresses, state grows naturally
+setInterval(() => {
+  channel.publish('match-update', {
+    matchId: '12345',
+    timestamp: Date.now(),
+    players: currentPlayerStates, // positions, score attempts, metadata
+    score: currentScore,
+    events: matchEvents, // accumulated game events
+    statistics: matchStatistics,
+    // State grows as match progresses
+  });
+}, 100); // 10 Hz update rate
+
+// Consumer: Subscribe with delta compression enabled
+const vcdiffPlugin = require('@ably/vcdiff-decoder');
+
+const realtime = new Ably.Realtime({
+  key: 'your-api-key',
+  plugins: { vcdiff: vcdiffPlugin }
+});
+
+const channel = realtime.channels.get('match:12345', {
+  params: { delta: 'vcdiff' }
+});
+
+channel.subscribe(msg => {
+  // SDK automatically reconstructs full state from deltas
+  // New joiners will receive full state on their first received message
+  updateMatchDisplay(msg.data);
+});
+```
+```ruby
+# Producer: Publish full match state - Ably handles delta computation
+channel = realtime.channels.get('match:12345')
+
+# As the match progresses, state grows naturally
+loop do
+  channel.publish('match-update', {
+    matchId: '12345',
+    timestamp: Time.now.to_i * 1000,
+    players: current_player_states, # positions, score attempts, metadata
+    score: current_score,
+    events: match_events, # accumulated game events
+    statistics: match_statistics,
+    # State grows as match progresses
+  })
+  sleep 0.1 # 10 Hz update rate
+end
+
+# Consumer: Subscribe with delta compression enabled
+realtime = Ably::Realtime.new(key: 'your-api-key')
+
+channel = realtime.channels.get('match:12345', params: { delta: 'vcdiff' })
+
+channel.subscribe('match-update') do |msg|
+  # SDK automatically reconstructs full state from deltas
+  # New joiners will receive full state on their first received message
+  update_match_display(msg.data)
+end
+```
+```go
+// Producer: Publish full match state - Ably handles delta computation
+channel := realtime.Channels.Get("match:12345")
+
+// As the match progresses, state grows naturally
+ticker := time.NewTicker(100 * time.Millisecond) // 10 Hz update rate
+defer ticker.Stop()
+
+for range ticker.C {
+    matchData := map[string]interface{}{
+        "matchId":    "12345",
+        "timestamp":  time.Now().UnixMilli(),
+        "players":    currentPlayerStates, // positions, score attempts, metadata
+        "score":      currentScore,
+        "events":     matchEvents,    // accumulated game events
+        "statistics": matchStatistics,
+        // State grows as match progresses
+    }
+
+    err := channel.Publish(ctx, "match-update", matchData)
+    if err != nil {
+        log.Printf("Error publishing: %v", err)
+    }
+}
+
+// Consumer: Subscribe with delta compression enabled
+ablyVCDiffPlugin := ably.NewVCDiffPlugin()
+realtime, err := ably.NewRealtime(
+  ably.WithKey("your-api-key"),
+  ably.WithVCDiffPlugin(ablyVCDiffPlugin),
+)
+if err != nil {
+    log.Fatal(err)
+}
+
+channel := realtime.Channels.Get("match:12345",
+  ably.ChannelWithVCDiff())
+
+_, err = channel.Subscribe(ctx, "match-update", func(msg *ably.Message) {
+    // SDK automatically reconstructs full state from deltas
+    // New joiners will receive full state on their first received message
+    updateMatchDisplay(msg.Data)
+})
+if err != nil {
+    log.Fatal(err)
+}
+```
+</Code>
+
+For complete implementation details including plugin installation and browser usage, see the [delta compression documentation](/docs/channels/options/deltas#subscribe).
+
+### Bandwidth reduction in practice
+
+Here is a simple example illustrating the potential bandwidth savings from delta compression:
+
+**Scenario:**
+- Match state grows from 1KB to 5KB as game progresses
+- 10 updates per second (average state: ~3KB)
+- 1000 spectators watching
+
+**Without delta compression:**
+- Average full payload: ~3KB per message
+- Outbound bandwidth: 3KB × 10 msg/s × 1000 spectators = **30MB/s**
+
+**With delta compression:**
+- Delta payload: ~900 bytes (assuming avg consecutive message similarity of 70%)
+- Outbound bandwidth: 900B × 10 msg/s × 1000 spectators = **9MB/s**
+
+**Result: 70% bandwidth reduction**
+
+The savings increase as match state grows larger over time. This represents significant cost savings while ensuring all users - including new joiners mid-match - receive the complete current state reconstructed from deltas.
+
+## How do I prevent clients from being overwhelmed by stale data?
+
+**The challenge:** Cryptocurrency trading platforms face a distribution challenge during volatile markets. Individual financial instruments can update 10+ times per second, generating large volumes of price changes. However, consumer applications typically refresh displays every second at most, meaning users never see the majority of intermediate values. Without optimization, platforms consume high bandwidth and generate many outbound messages that are immediately discarded. Mobile devices and browsers also risk being overwhelmed with unnecessary processing and rendering work for data that's never displayed.
+
+**What's needed:** A solution that allows publishers to continue sending high-frequency updates without modification, while controlling outbound delivery to match actual consumer needs. The system must ensure clients always receive the most current state without processing every intermediate update, reducing both infrastructure costs and client-side load. It should handle multiple independent data streams on shared channels while supporting flexible publishing rates across different data sources.
+
+### Solution: Message conflation
+
+[Message conflation](/docs/messages#conflation) ensures clients receive only the most up-to-date information by delivering the latest message for each [conflation key](docs/messages#routing) over a configured time window. Ably aggregates published messages on the server, discards outdated values, and delivers the current state as a single batch when the window elapses.
+
+With conflation, producers can continue publishing at high rates without modification,
+while controlling outbound delivery to match consumer needs.
+Multiple instrument updates can be conflated independently on the same channel,
+and then published together as a single batch.
+
+### Benefits and use cases
+
+Conflation can reduce outbound message count and bandwidth significantly:
+
+* **Reduced outbound messages:** Multiple messages collapse into one per time-window.
+* **Reduced bandwidth:** Redundant messages are dropped before delivery.
+* **Reduce client-side work:** Prevents overwhelming consumers with processing/rendering loads.
+* **Cost efficiency:** Fewer outbound messages reduce billable message counts.
+* **Granular control:** Publish rates can differ across conflation groups, but still be conflated on the same channel.
+
+[//]: # (Could be good here to have another visual showing messages published at mixed rates with differing conflation keys being conflated into a single batch message)
+
+Conflation is ideal for eventually consistent scenarios like:
+- **Financial instruments:** Stock prices, crypto values, forex rates.
+- **Location updates:** Fleet tracking, ride sharing, asset monitoring.
+- **Sensor readings:** Temperature, humidity, or other measurements where current value matters most.
+
+Providing consumers only need the latest state, and some latency is acceptable, conflation can dramatically reduces both costs and client load.
+
+**Important:** Conflation is unsuitable for scenarios requiring every message, such as chat applications where losing intermediate messages would impact the user experience.
+
+### Conflation keys and routing
+
+Conflation keys determine which messages are considered related.
+For example, using the [`message.name`](/docs/messages#routing) field,
+you can stream multiple data sources on the same channel while conflating each independently.
+
+For example, publishing multiple cryptocurrency instruments to a single channel:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('crypto-prices');
+
+// Each instrument uses a distinct header value
+const publishPrice = (instrument, price) => {
+  channel.publish({
+    name: `price-update-${instrument}`, // Conflation key
+    data: { instrument, price, timestamp: Date.now() },
+  });
+};
+
+setInterval(() => {
+  publishPrice('BTC-USD', getCurrentPrice('BTC-USD'));
+  publishPrice('ETH-USD', getCurrentPrice('ETH-USD'));
+  publishPrice('XRP-USD', getCurrentPrice('XRP-USD'));
+}, 10); // 100 updates per second per instrument
+```
+```ruby
+channel = realtime.channels.get('crypto-prices')
+
+# Each instrument uses a distinct header value
+def publish_price(channel, instrument, price)
+  channel.publish(
+    name: 'price-update-' + instrument, # Conflation key
+    data: {
+      instrument: instrument,
+      price: price,
+      timestamp: Time.now.to_i * 1000
+    },
+  )
+end
+
+loop do
+  publish_price(channel, 'BTC-USD', get_current_price('BTC-USD'))
+  publish_price(channel, 'ETH-USD', get_current_price('ETH-USD'))
+  publish_price(channel, 'XRP-USD', get_current_price('XRP-USD'))
+  sleep 0.01 # 100 updates per second per instrument
+end
+```
+```go
+channel := realtime.Channels.Get("crypto-prices")
+
+// Each instrument uses a distinct header value
+publishPrice := func(instrument string, price float64) error {
+		return channel.Publish(ctx, fmt.sprintf("price-update-%s", instrument),
+				map[string]interface{}{
+					"instrument": instrument,
+					"price":      price,
+					"timestamp":  time.Now().UnixMilli(),
+				})
+}
+
+ticker := time.NewTicker(10 * time.Millisecond) // 100 updates per second per instrument
+defer ticker.Stop()
+
+for range ticker.C {
+    publishPrice("BTC-USD", getCurrentPrice("BTC-USD"))
+    publishPrice("ETH-USD", getCurrentPrice("ETH-USD"))
+    publishPrice("XRP-USD", getCurrentPrice("XRP-USD"))
+}
+```
+</Code>
+
+The conflation key pattern `#{message.name}` would conflate each instrument separately. See the [message routing syntax documentation](/docs/messages#routing) for advanced patterns including filters and interpolation.
+
+### Configuration
+
+Configure conflation through [channel rules](/docs/channels#rules) in your dashboard:
+
+1. Navigate to your app settings
+2. Under channel rules, create a new rule
+3. Specify the channel name or namespace pattern
+4. Enable conflation and set the interval (e.g., 100ms, 1000ms)
+5. Define the conflation key pattern
+
+The conflation interval controls the trade-off between latency and cost savings.
+Shorter intervals deliver updates more frequently but provide less cost reduction.
+Longer intervals maximize savings but increase the delay between state changes and delivery.
+Ably suggests starting with a small interval (100ms) and adjusting based on observed performance and costs.
+
+**Note:** Message conflation is mutually exclusive with [server-side batching](/docs/messages/batch#server-side) on a channel or namespace. Choose the optimization that fits your use case.
+
+For step-by-step configuration details, see [configure message conflation](/docs/messages#configure-conflation).
+
+### Key considerations
+
+Before implementing message conflation, consider the following:
+
+* **Eventual consistency only:** Conflation discards intermediate messages. Only use this for scenarios where clients need the latest state and missing updates is acceptable (prices, positions, metrics). Never use for chat, transactions, or audit logs.
+* **Conflation key design:** Choose conflation keys carefully. Messages with the same key are conflated together, so ensure your key pattern groups related updates of the same state.
+* **Time window trade-offs:** Longer intervals maximize cost savings but increase staleness. A 1-second window means users may see data up to 1 second old during high activity.
+* **Batch delivery:** Conflated messages are delivered as a batch at the end of each window. There is a maximum batch size of 200 messages; if exceeded, multiple batches are sent.
+
+### Implementation
+
+Once conflation is configured as a channel rule, no consumer code changes are needed. Subscribers receive conflated updates transparently:
+
+<Code>
+```javascript
+// Subscriber code remains unchanged
+const channel = realtime.channels.get('crypto-prices');
+
+channel.subscribe(message => {
+  // Automatically receives batched, conflated updates
+  // Only latest value per instrument per time window
+  updatePriceDisplay(message.data);
+});
+```
+```ruby
+# Subscriber code remains unchanged
+channel = realtime.channels.get('crypto-prices')
+
+channel.subscribe do |message|
+  # Automatically receives batched, conflated updates
+  # Only latest value per instrument per time window
+  update_price_display(message.data)
+end
+```
+```go
+// Subscriber code remains unchanged
+channel := realtime.Channels.Get("crypto-prices")
+
+_, err := channel.Subscribe(ctx, func(msg *ably.Message) {
+    // Automatically receives batched, conflated updates
+    // Only latest value per instrument per time window
+    updatePriceDisplay(msg.Data)
+})
+if err != nil {
+    log.Fatal(err)
+}
+```
+</Code>
+
+### Throughput and bandwidth reduction in practice
+
+Here is a simple example illustrating the cost savings from conflation:
+
+**Scenario:**
+- 10 instruments being tracked
+- 100 updates per second per instrument (1000 total inbound msg/s)
+- 1000 consumer applications
+- 1-second conflation window
+
+**Without conflation:**
+- Inbound: 1000 messages/second
+- Outbound: 1000 messages × 1000 consumers = **1,000,000 messages/second**
+- Bandwidth (500B per message): 500KB × 1000 consumers = **500MB/s**
+
+**With 1-second conflation:**
+- Inbound: 1000 messages/second (unchanged)
+- Outbound: 10 instruments × 1 batch/s × 1000 consumers = **10,000 messages/second**
+- Bandwidth (5KB per batch): 5KB × 1000 consumers = **5MB/s**
+
+**Result: 100x reduction in both outbound messages and bandwidth**
+
+The cost savings scale linearly with the number of consumers, making conflation increasingly valuable as your audience grows.
+
+## How do I manage costs and stability during massive bursts of activity?
+
+**The challenge:** Live event platforms for sports, concerts, or conferences face extreme traffic spikes during pivotal moments. When a goal is scored or an exciting moment occurs, thousands of users react simultaneously within seconds. In a 10,000-user room, just 10,000 reactions generate 100 million outbound messages. These burst patterns create multiple risks: unpredictable cost spikes from message volume, potential rate limit violations that could degrade service during critical moments, and the possibility of overwhelming client applications with processing demands they weren't designed to handle.
+
+**What's needed:** A solution that preserves the shared experience during high-intensity moments while ensuring sustainable costs and resource usage at scale. The system must smooth traffic spikes without losing any user contributions, protect against rate limiting during bursts, and prevent client applications from being overwhelmed with processing work. Critically, the optimization must work transparently without requiring changes to publishing or subscribing code.
+
+### Solution: Server-side batching
+
+[Server-side batching](/docs/messages/batch#server-side) groups all messages published to a channel over a configured time window and delivers them as a single outbound message to each subscriber. Unlike conflation which selectively discards messages, batching still delivers every message published.
+
+Messages published during the batching window are held temporarily,
+then combined and distributed to consumers as one batch when the window elapses.
+This dramatically reduces the fan-out message count during bursts of activity,
+while also providing a predictable cost model that scales linearly with the number of users.
+
+### Benefits and use cases
+
+Server-side batching can greatly reduce the cost of high-throughput streaming:
+
+* **Lower costs:** Hundreds of messages become one outbound batch and each batch counts as only a single billable message.
+* **Rate limit protection:** Fewer messages reduce the likelihood of hitting throughput limits.
+* **Traffic spike resilience:** Burst patterns are smoothed through aggregation.
+* **Preserves all messages:** Unlike conflation, no messages are discarded.
+* **Guaranteed ordering:** Message order is preserved within each batch.
+* **Transparent to clients:** No code changes needed for producers or consumers.
+* **Predictable billing:** Costs scale linearly with user count rather than message volume.
+
+[//]: # (Again, might be good to get a diagram or somethign in here so it feels less like a wall of text..)
+
+Server-side batching is best in scenarios like:
+- **Social feeds and reactions:** Likes, emoji reactions, comments during live events.
+- **Chat applications:** High-activity chat rooms during key moments.
+- **Event streams:** Real-time activity feeds with bursty traffic patterns.
+
+### Configuration
+
+Configure server-side batching through [channel rules](/docs/channels#rules):
+
+1. Navigate to your app settings
+2. Under channel rules, create a new rule
+3. Specify the channel name or namespace pattern
+4. Enable server-side batching
+5. Set the batching interval (e.g., 100ms, 500ms, 1000ms)
+
+The batching interval determines the maximum delay before messages are delivered. Shorter intervals maintain lower latency but provide less message reduction. Longer intervals maximize cost savings but increase delivery delay.
+
+Each batch can contain up to 200 messages by count or data size. If more than 200 messages are published in a window, they're split into multiple batches automatically.
+
+**Important considerations:**
+- Server-side batching is mutually exclusive with [message conflation](/docs/messages#conflation)
+- Messages with explicit IDs (for [idempotency](/docs/pub-sub/advanced#idempotency)) are excluded from batching
+
+See [configure server-side batching](/docs/messages/batch#configure) for complete setup instructions.
+
+### Key considerations
+
+Before implementing server-side batching, consider the following:
+
+* **Latency impact:** Messages are delayed by the batching interval. A 100ms interval means 0-100ms additional delay per message. Can you applications tolerate this?
+* **Burst characteristics:** Batching is most effective during traffic spikes. Measure your actual burst patterns to choose optimal intervals. Steady, low-rate traffic may not benefit significantly.
+* **Batch size limits:** Each batch is limited to 200 messages or maximum data size. Higher rates may generate multiple batches per interval.
+* **Idempotency trade-off:** Messages with explicit IDs (for idempotency) are excluded from batching. If you need idempotent publishes, you cannot use server-side batching on those messages.
+* **Monitoring and alerting:** Track actual batch sizes and frequencies in production. Unexpectedly small batches may indicate misconfiguration or changing traffic patterns.
+* **Consumer processing:** Your clients should be able to handle bursts of messages arriving together. Consider client-side queuing or throttling if necessary.
+* **Mutual exclusivity with conflation:** You must choose between batching (deliver all messages) or conflation (deliver only latest). Plan channel namespaces accordingly if you need both patterns.
+
+### Implementation
+
+Server-side batching requires no code changes. Producers publish normally, and consumers receive batched messages transparently:
+
+<Code>
+```javascript
+// Producer: No code changes required
+const channel = realtime.channels.get('event-reactions');
+
+// Each user publishes reactions as normal
+channel.publish('reaction', {
+  type: '👍',
+  userId: currentUser
+});
+
+// Consumer: Subscribe normally
+// Configure channel rule via dashboard:
+// - Server-side batching enabled: true
+// - Batching interval: 100ms
+
+channel.subscribe(message => {
+  // Messages are delivered in batches but processed individually
+  // If handling logic is resource-intensive, consider queuing or throttling client-side
+  displayReaction(message.data);
+});
+```
+```ruby
+# Producer: No code changes required
+channel = realtime.channels.get('event-reactions')
+
+# Each user publishes reactions as normal
+channel.publish('reaction', {
+  type: '👍',
+  userId: current_user
+})
+
+# Consumer: Subscribe normally
+# Configure channel rule via dashboard:
+# - Server-side batching enabled: true
+# - Batching interval: 100ms
+
+channel.subscribe('reaction') do |message|
+  # Messages are delivered in batches but processed individually
+  # If handling logic is resource-intensive, consider queuing or throttling client-side
+  display_reaction(message.data)
+end
+```
+```go
+// Producer: No code changes required
+channel := realtime.Channels.Get("event-reactions")
+
+// Each user publishes reactions as normal
+err := channel.Publish(ctx, "reaction", map[string]interface{}{
+    "type":   "👍",
+    "userId": currentUser,
+})
+if err != nil {
+    log.Printf("Error publishing: %v", err)
+}
+
+// Consumer: Subscribe normally
+// Configure channel rule via dashboard:
+// - Server-side batching enabled: true
+// - Batching interval: 100ms
+
+_, err = channel.Subscribe(ctx, "reaction", func(msg *ably.Message) {
+    // Messages are delivered in batches but processed individually
+    // If handling logic is resource-intensive, consider queuing or throttling client-side
+    displayReaction(msg.Data)
+})
+if err != nil {
+    log.Fatal(err)
+}
+```
+</Code>
+
+The SDK handles batched delivery transparently, presenting each message individually to your subscription handler.
+
+### Cost reduction at scale
+
+Here is a simple example illustrating the cost savings from server-side batching:
+
+**Scenario:**
+- 10,000 users in a chat room
+- 1,000 reactions published in 1 second
+
+**Without server-side batching:**
+- Inbound: 1,000 messages
+- Outbound: 1,000 messages × 10,000 consumers = **10,000,000 messages/second**
+- At $2.00 per million messages (standard tier), that's **$20 per second** or **$1,200 per minute**
+
+**With 100ms batching:**
+- Inbound: 1,000 messages (unchanged)
+- Messages per 100ms window: ~100 messages
+- Batches per window (200 message limit): 1 batch
+- Total batches per second: 10 batches
+- Outbound: 10 batches × 10,000 consumers = **100,000 messages/second**
+- At $2.00 per million messages, that's **$0.20 per second** or **$12 per minute**
+
+**Result: 100x reduction in billable outbound messages, saving ~$1,188 per minute**
+
+The cost grows linearly with the number of users, this makes server-side batching essential for maintaining cost efficiency as your application scales. For a 1-hour event at this activity level, batching would save over **$70,000** compared to unbatched delivery.
+
+## Combining optimization techniques
+
+Ably's optimization features can be combined to address multiple concerns simultaneously, as a rule of thumb:
+
+**Deltas + Server-side batching:**
+When you have large message payloads, incremental changes,
+and bursty traffic, combine delta compression with server-side batching.
+This reduces both bandwidth (via deltas) and smooths bursty outbound message traffic (via batching).
+Due to the overhead of applying many deltas at once, care should be taken when applying both optimizations together.
+If your client devices are resource-constrained, it may be better to process each message individually with just deltas.
+
+
+**Mutually exclusive features:**
+Conflation and server-side batching cannot be used on the same channel because they serve different purposes. Choose based on your requirements:
+- Use **conflation** when only the current state matters and intermediate values can be discarded.
+- Use **server-side batching** when every message must be delivered but you need to reduce message count.
+
+## Cost optimization best practices
+
+Optimizing data streaming requires understanding your message patterns and making informed configuration choices:
+
+* **Monitor your patterns:** Use [statistics](/docs/metadata-stats/stats) to understand message rates, sizes, and traffic patterns before optimizing.
+* **Start conservatively:** Begin with shorter intervals and adjust based on observed performance and costs.
+* **Consider UX tradeoffs:** Balance responsiveness against cost - users may not notice an extra 100ms of latency.
+* **Use channel namespaces:** Apply different optimization rules to different channel patterns based on their use cases.
+
+**Example configurations with namespaces:**
+- Financial data: Conflation with 1000ms interval on `instruments:*` channels
+- Telemetry: Deltas on `sensors:*` channels
+- Social/chat: Server-side batching with ~100ms interval on `rooms:*` channels
+
+Review Ably's [pricing information](/pricing) to understand how these optimizations impact your costs at scale.
+Optimization improves both performance and economics - smaller payloads and fewer messages benefit you and your users.
+
+## Architecture and scale considerations
+
+Ably's optimization features are designed to work at any scale without requiring infrastructure management on your part. However, understanding channel architecture and connection patterns is critical to building efficient, scalable data streaming applications.
+
+### Channel architecture patterns
+
+How you structure channels significantly impacts performance, costs, and scalability:
+
+**Single channel with many subscribers:**
+This is the most common pattern for data streaming, and is recommended in most use-cases.
+Ably uses [consistent hashing](/docs/platform/architecture/platform-scalability) to distribute channel load across instances,
+enabling horizontal scalability to any number of channels.
+Connections to these channels are handled by an independently scalable layer, allowing seamless fanout to millions of subscribers per channel.
+- Delta compression reduces bandwidth per subscriber.
+- Conflation or server-side batching can dramatically reduce outbound message count during high activity.
+- Message ordering is guaranteed within the channel.
+
+**Keep in mind:**
+- Ably rate limits inbound messages to 50 msg/s per channel, though Enterprise plans can request higher limits. Above this, messages will be rejected with a 429 error to preserve platform stability.
+- If different data streams have very different optimization needs (e.g., some need conflation, others need batching), consider using separate channels or namespaces to apply appropriate rules.
+
+**Multiple channels with isolated streams:**
+For applications with independent data streams (e.g., different telemetry sources, separate instrument feeds), or very high throughput, consider using multiple channels.
+This provides:
+- Simple to isolate data, clients only attach to relevant channels.
+- Ability to apply different optimization rules per channel via [namespaces](/docs/channels#rules).
+- Inbound messages rates of one channel do not impact others, enabling higher overall throughput.
+
+**Keep in mind:**
+- Message ordering is **not** guaranteed across channels.
+- Multiple channels incur an increased cost in channel minutes, where possible, consolidate related streams.
+- Unless strict access control to different streams is required, it is more efficient to multiplex related streams on a single channel and filter for events relevant to the client using [subscription filters](/docs/pub-sub/advanced#subscription-filters).
+
+**Channel namespaces for configuration:**
+Use [channel namespaces](/docs/channels#rules) to apply consistent rules across related channels. For example:
+- `telemetry:*` channels use delta compression.
+- `prices:*` channels use conflation with 1-second intervals.
+- `events:*` channels use server-side batching.
+
+This enables you to scale channel count without managing configuration individually.
+
+### Connection management
+
+Efficient connection handling is essential for cost and performance optimization:
+
+**Connection lifecycle:**
+- Establish connections when needed and keep them alive only for the session duration.
+- When a channel is no longer needed, call `detach()` to avoid unnecessary outbound messages and channel minutes billing.
+- Always call `close()` on connections when finished to avoid unnecessary billing for the [2-minute connection timeout](/docs/connect/states#connection-state-recovery).
+- Ably SDKs automatically handle reconnection and recovery during network disruptions.
+
+**Realtime vs REST for publishing:**
+Choose the appropriate client type based on your publisher characteristics:
+- **Use Realtime SDK** when:
+  - Publishing messages at a very high volume.
+  - Need the lowest possible latency.
+  - Need bidirectional communication (publish and subscribe).
+  - Ordering of published messages is critical.
+
+- **Use REST API** when:
+  - You have stateless publishers (e.g., serverless functions).
+  - Publishing from environments where maintaining persistent connections is impractical.
+  - Publishing from some authoritative backend server, or on behalf of multiple users.
+  - Batch publishing many messages to different channels in a single API call.
+
+### Platform capabilities
+
+Ably's architecture provides built-in guarantees:
+
+* **Horizontal scalability:** Channels automatically distribute across instances without configuration.
+* **Proven at scale:** Features support millions of concurrent connections and channels handling thousands of messages per second.
+* **Built-in resilience:** [Connection recovery](/docs/connect/states) and [fault tolerance](/docs/platform/architecture/fault-tolerance) ensure things continue working through disruptions.
+* **Global distribution:** Ably's [edge network](/docs/platform/architecture/edge-network) brings data closer to users for lowest latency.
+* **Rate limits:** Standard accounts support 50 messages per second per channel. Enterprise plans offer higher limits. Contact sales if you need higher per-channel rates.
+
+## Production checklist
+
+Before deploying data streaming optimizations to production:
+
+* Choose appropriate optimization strategy for each channel or namespace.
+* Monitor statistics to validate configuration choices, start conservatively.
+* Test client applications to ensure they handle any added latency or batching behavior.
+* Review [platform limits](/docs/platform/pricing/limits) for your account tier.
+
+## Next steps
+
+* Read the [Deltas documentation](/docs/channels/options/deltas) for complete implementation details.
+* Read the [Conflation documentation](/docs/messages#conflation) for configuration options.
+* Read the [Server-side batching documentation](/docs/messages/batch#server-side) for advanced usage.
+* Explore [Pub/Sub basics](/docs/pub-sub) to understand fundamental concepts.
+* Learn about [channel configuration](/docs/channels) and namespaces.
+* Review [message concepts](/docs/messages) for deeper understanding.
+* See the [livestream chat guide](/docs/guides/chat/build-livestream) for related patterns.
+* Contact sales for enterprise-scale requirements and custom solutions.
