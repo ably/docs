@@ -22,6 +22,11 @@ export default {
       name: 'Token streaming',
       pages: [
         {
+          name: 'Overview',
+          link: '/docs/ai-transport/features/token-streaming',
+          index: true,
+        },
+        {
           name: 'Message per token',
           link: '/docs/ai-transport/features/token-streaming/message-per-token',
         },
