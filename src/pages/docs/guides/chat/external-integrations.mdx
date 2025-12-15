@@ -14,7 +14,7 @@ Integrating external systems with Ably Chat enables you to extend your chat appl
 
 * **AI-powered assistants:** Process commands or questions through language models and respond with helpful information.
 * **Real-time translation:** Automatically translate messages for multilingual chat rooms.
-* **Content enrichment:** Expand URLs into rich previews, detect and process mentions, or add contextual information.
+* **Notifications:** Detect and process mentions, or other notifications.
 * **Analytics and monitoring:** Analyze sentiment, track engagement metrics, or identify trending topics.
 * **Workflow automation:** Trigger external business processes based on chat activity.
 * **Command processing:** Handle slash commands that invoke server-side logic.
@@ -37,12 +37,10 @@ Because Ably Chat rooms use Pub/Sub channels as their underlying transport, you 
 
 Consider the following when integrating external systems with Ably Chat:
 
-* **Processing latency:** Integration adds latency to the message flow. Webhooks offer the lowest latency, while queues add asynchronous processing time. Design your system to handle the expected processing time.
 * **Avoiding infinite loops:** When your integration responds back to chat, ensure responses don't trigger the same integration rule. Use separate channels or the [privileged skip integration flag](/docs/platform/integrations/skip-integrations) to break potential loops.
-* **Scale and reliability:** Different integration methods offer different reliability guarantees. Webhooks have limited retry windows, while queues provide guaranteed delivery with dead letter queues.
+* **Scale and reliability:** Different integration methods offer different reliability guarantees. Webhooks are simpler to implement but have limited retry windows, queues provide at-least-once delivery with dead letter queues, and streaming offers massive scale but requires more infrastructure management.
 * **External system limitations:** Your external service may have rate limits, processing constraints, or availability issues. Implement retry logic, circuit breakers, and caching to handle these limitations gracefully.
-* **Cost optimization:** Only process messages that require processing. Use channel filters and message headers to minimize unnecessary integration executions.
-* **Security:** Validate webhook signatures, use token authentication with limited capabilities, and never embed API keys in client code.
+* **Cost optimization:** Only process messages that require processing. Use channel filters to ensure you only receive messages from relevant chat rooms.
 
 ## Implementation options <a id="implementation-options"/>
 
@@ -52,46 +50,47 @@ With your strategy in mind, choose the technical approach that fits your needs:
 2. Using [Ably queues](#ably-queue).
 3. Using [outbound streaming](#outbound-streaming). Stream to your own [Kafka](/docs/platform/integrations/streaming/kafka), [Kinesis](/docs/platform/integrations/streaming/kinesis), and others.
 
-## Understanding the integration pattern
+## Understanding integrations
 
-Ably Chat integrations follow a message-driven architecture that enables bidirectional communication between your chat application and external systems.
-
-### Core concepts
+Ably Chat rooms are built on Ably Pub/Sub channels, which means you can leverage Ably's integration capabilities to forward messages to external systems for processing:
 
 * **Chat rooms use Pub/Sub channels:** Each chat room is built on an Ably channel, enabling the full range of Ably's integration capabilities.
 * **Message structure:** Chat messages are encoded as Pub/Sub messages with a specific structure. See the [Chat integrations documentation](/docs/chat/integrations) for details on the mapping.
 * **Integration rules:** Configure rules that filter which messages trigger integrations based on channel name patterns and event types.
-* **Bidirectional flow:** Integrations can both receive messages from chat and publish responses back to the chat room.
+* **Bidirectional flow:** Integrations allow you to export messages to external systems, process them, and respond back to chat rooms in real-time.
 
 ### Integration flow
 
 The typical integration flow works as follows:
 
-1. A user sends a message to a chat room, optionally including headers, metadata, or trigger patterns.
-2. The message is published to the Ably Chat channel.
-3. An integration rule evaluates the message based on channel name pattern matching.
-4. If the rule matches, Ably forwards the message to your external system via the configured integration method.
-5. Your external system processes the message (AI inference, translation, business logic, etc.).
-6. The external system publishes a response back to an Ably Chat channel.
-7. All subscribed clients receive the response in real-time.
+1. A user sends a message to a chat room, optionally including headers or metadata to control processing externally.
+2. An integration rule evaluates the message based on room name pattern matching.
+3. If the rule matches, Ably forwards the message to your external system via the configured integration method.
+4. Your external system processes the message (AI inference, translation, business logic, etc.).
+5. The external system sends a response back to an Ably Chat room.
+6. All subscribed clients receive the response in real-time.
 
-**Diagram:** *Integration flow showing: Client → Ably Chat → Integration Rule → External System → Response → Ably Chat → Clients*
+[/TODO/]: # (Add a visual showing somethign like *Client → Ably Chat → Integration Rule → External System → Response → Ably Chat → Clients*)
 
 ## Filtering rooms and event types <a id="filtering"/>
 
-Integrations allow you to filter which Ably channels are forwarded to your external system using a regular expression on the channel name. This is a simple way to reduce the volume of messages you need to process by only receiving messages from the chat rooms you are interested in.
+Integrations allow you to filter which Chat rooms are forwarded to your external system using a regular expression on the room name.
+This is a simple way to reduce the volume of messages you need to process by only receiving messages from the chat rooms you are interested in.
 
 ### Setting up integration rules
 
 When configuring an integration rule in your Ably dashboard:
 
-* **Channel filter:** Use a regular expression to match channel names. For example, `^chat:support.*` will match all channels starting with `chat:support`
-* **Event type:** Use `channel.message` for all integration types. This forwards all messages published to relevant channels and excludes presence messages and channel lifecycle messages
+* **Channel filter:** Use a regular expression to match channel names. For example, `^chat:support.*` will match all channels starting with `chat:support`. See [understanding channel names and room names](#understanding-channel-names-and-room-names) for details on how room names map to channel names.
+* **Event type:** Use `channel.message` for all integration types. This forwards all chat messages published to relevant rooms and excludes presence messages and channel lifecycle messages
 * **Enveloped messages:** Enable this to receive all metadata about the message, including the `serial`, `version`, and `extras` (which include the [`headers`](/docs/chat/rooms/messages#structure) of a chat message)
 
 ### Understanding channel names and room names
 
-When using the Ably Chat SDK, the room name (e.g., `chat:support`) automatically becomes the underlying channel name with a `::$chat` suffix (e.g., `chat:support::$chat`). Integration rules match against the full channel name, but you don't need to include the `::$chat` suffix in your filter pattern - it's handled automatically when using the Chat SDK.
+Chat rooms are underpinned by Ably Pub/Sub channels, but with a specific suffix (`::$chat`) added to form the full channel name.
+When using the Chat SDK to create or get a room, this is done automatically for you, you do not need to include the suffix yourself.
+
+Integration rules match against the full channel name, but you don't need to include the `::$chat` suffix in your filter pattern.
 
 **Example room and channel naming:**
 
@@ -116,12 +115,13 @@ await generalRoom.messages.send({ text: 'Hi' }); // Won't trigger if filter is ^
 
 ## Decoding and processing messages <a id="decoding-and-processing"/>
 
-When your integration receives messages, you need to decode them and extract the relevant information. This section walks through each step of processing integration payloads.
+When your integration receives messages, you need to decode them and extract the relevant information.
 
 ### Understanding enveloped messages
 
 With enveloping enabled (the default), Ably wraps messages in additional metadata like so:
 
+<Code>
 ```javascript
 {
   "source": "channel.message",
@@ -148,6 +148,7 @@ With enveloping enabled (the default), Ably wraps messages in additional metadat
   ]
 }
 ```
+</Code>
 
 ### Extracting the room name
 
@@ -166,13 +167,15 @@ function processIntegrationPayload(envelopeData) {
 
 ### Extracting message data
 
-The Ably SDK provides methods to decode messages from the enveloped payload. From there, you can extract the text content, headers, and metadata:
+The Ably SDK provides methods to decode messages from the enveloped payload.
+From there, you can extract the text content, headers, and metadata and process them as needed.
+You can use custom headers to control how messages are processed by your integration. For example, you might define an `x-integration-action` header to specify different processing actions:
 
 <Code>
 ```javascript
 const Ably = require('ably');
 
-function processIntegrationPayload(envelopeData) {
+async function processIntegrationPayload(envelopeData) {
   // Decode messages using Ably SDK
   const decodedMessages = Ably.Realtime.Message.fromEncodedArray(envelopeData.messages);
 
@@ -186,49 +189,30 @@ function processIntegrationPayload(envelopeData) {
 
     // Extract metadata (custom structured data)
     const metadata = msg.data?.metadata || {};
+
+    // Process each message
+    await processMessage(roomName, text, action);
   }
 }
-```
-</Code>
 
-### Routing based on headers
-
-You can use custom headers to control how messages are processed by your integration. For example, you might define an `x-integration-action` header to specify different processing actions:
-
-<Code>
-```javascript
-const Ably = require('ably');
-
-// In your webhook handler or queue consumer
-async function processMessage(roomName, text, ) {
-  for (const msg of decodedMessages) {
-    // Extract message data
-    const text = msg.data?.text;
-    const headers = msg.extras?.headers || {};
-    const metadata = msg.data?.metadata || {};
-
-    // Step 4: Route based on headers (no string parsing needed)
-    const action = headers['x-integration-action'];
-
+async function processMessage(roomName, text, action) {
     switch (action) {
       case 'weather':
         await handleWeatherRequest(text, roomName);
         break;
 
       case 'translate':
-        const targetLang = headers['x-target-language'] || 'es';
-        await handleTranslation(text, targetLang, roomName);
+        await handleTranslationRequest(text, roomName);
         break;
 
       case 'ai-assist':
-        await handleAIAssistant(text, roomName);
+        await handleAIAssistantRequest(text, roomName);
         break;
 
       default:
         // Ignore messages without integration actions
         break;
     }
-  }
 }
 ```
 </Code>
@@ -244,13 +228,12 @@ Read the guide on [outbound webhooks](/docs/platform/integrations/webhooks) for 
 * No infrastructure to manage with serverless functions
 * Direct HTTP invocation with automatic retries
 * Native support for major cloud providers
-* Lowest latency option
 
 **You need to consider:**
 * **Cold start latency:** Serverless functions may have cold start delays. Consider keeping functions warm for latency-sensitive use cases.
 * **Limited retry window:** Ably will retry delivering the message to your webhook, but only for a short period. Monitor the [`[meta]log` channel](/docs/platform/errors#meta) for delivery failures.
 * **Scale limits:** Webhook scale depends on your function's concurrency configuration. Ensure your function can handle expected message volumes.
-* **[At-least-once delivery](/docs/platform/architecture/idempotency#protocol-support-for-exactly-once-delivery):** You need to handle duplicate messages. Implement idempotency using message IDs.
+* **[At-least-once delivery](/docs/platform/architecture/idempotency#protocol-support-for-exactly-once-delivery):** Deduplication can be done by checking `serial` and `version.serial`.
 * **Ordering:** Messages can arrive out-of-order. Use `serial` and `version.serial` properties to order them correctly if needed.
 
 ## Using an Ably queue <a id="ably-queue"/>
@@ -260,16 +243,15 @@ Ably can forward messages from chat room channels to an [Ably Queue](/docs/platf
 Ably ensures that each message is delivered to only one consumer even if multiple consumers are connected.
 
 **Benefits:**
-* Guaranteed at-least-once delivery with dead letter queue support
-* Backpressure management via queue depth monitoring
-* No message loss if your consumers temporarily disconnect
-* Scale consumers independently by running multiple instances
-* Ably manages the queue infrastructure for you
+* At-least-once delivery with dead letter queue support.
+* No message loss if your consumers temporarily disconnect.
+* Scale consumers independently by running multiple instances.
+* Use multiple queues for different channels, filtering via regex on channel name.
+* Ably manages the queue infrastructure for you.
 
 **You need to consider:**
-* **Processing latency:** Asynchronous queue processing adds latency compared to webhooks. Consider if your use case can tolerate this delay.
-* **Queue limits:** Each message has a time-to-live (TTL) in the queue. The default and maximum is 60 minutes. Monitor queue depth during peak times.
-* **Consumer scaling:** During peak times you may need to scale up your consumers to avoid overloading the queue past the maximum queue length allowed.
+* **Queue limits:** Each message has a time-to-live (TTL) in the queue. The default and maximum is 60 minutes.
+* **Consumer scaling:** During peak times you may need to scale up your consumers to avoid going over the maximum queue length allowed.
 * **Dead letter queue:** Oldest messages are dropped if the maximum queue length is exceeded. Always consume messages from the [dead letter queue](/docs/platform/integrations/queues#deadletter) to monitor errors.
 * **Consumer infrastructure:** You need to manage and maintain your consumer servers or containers that process messages from the queue.
 
@@ -281,13 +263,11 @@ Ably can stream messages directly to your own queueing or streaming service: Kaf
 * Massive scale (millions of messages/second)
 * Multiple consumers can process the same stream
 * Integration with existing data infrastructure
-* Message replay capability for reprocessing
 * Use your existing queue system to process messages from Ably
 
 **You need to consider:**
 * **Infrastructure complexity:** You need to maintain and be responsible for a reliable streaming system. If you don't already have such a system, it increases complexity.
 * **Consistency:** If your streaming system is not reachable, messages may be lost. Errors can be seen in the [`[meta]log` channel](/docs/platform/errors#meta).
-* **Processing latency:** Similar to queues, streaming adds asynchronous processing latency.
 * **Setup complexity:** Most complex integration method to set up and operate.
 
 ## Responding back to chat <a id="responding"/>
