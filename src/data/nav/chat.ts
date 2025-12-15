@@ -200,6 +200,10 @@ export default {
           name: 'Export chat messages',
           link: '/docs/guides/chat/export-chat',
         },
+        {
+          name: 'Export and process chat messages',
+          link: '/docs/guides/chat/external-integrations',
+        },
       ],
     },
   ],
