@@ -32,6 +32,8 @@ const ExamplesGrid = ({
         return 'text-blue-600';
       case 'liveObjects':
         return 'text-green-600';
+      case 'aiTransport':
+        return 'text-cyan-500';
       default:
         return 'text-orange-700';
     }
