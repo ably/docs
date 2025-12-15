@@ -9,17 +9,13 @@ export default {
   },
   content: [
     {
-      name: 'Introduction',
-      pages: [
-        {
-          name: 'About LiveSync',
-          link: '/docs/livesync',
-          index: true,
-        },
-      ],
+      name: 'About LiveSync',
+      link: '/docs/livesync',
+      index: true,
     },
     {
       name: 'MongoDB',
+      expand: true,
       pages: [
         {
           name: 'MongoDB database connector',
@@ -30,6 +26,7 @@ export default {
     },
     {
       name: 'Postgres',
+      expand: true,
       pages: [
         {
           name: 'Postgres database connector',
@@ -49,7 +46,7 @@ export default {
   ],
   api: [
     {
-      name: 'API References',
+      name: 'API references',
       pages: [
         {
           link: 'https://sdk.ably.com/builds/ably-labs/models/main/typedoc/index.html',

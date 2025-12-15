@@ -96,17 +96,17 @@ describe('LeftSidebar', () => {
 
     // Platform should be auto-expanded since active page is under Platform (index 0)
     await waitFor(() => {
-      expect(screen.getByText('Introduction')).toBeInTheDocument();
+      expect(screen.getByText('About Ably')).toBeInTheDocument();
       expect(screen.getByText('Architecture')).toBeInTheDocument();
       expect(screen.getByText('Products and SDKs')).toBeInTheDocument();
     });
 
     // Verify these are clickable accordion triggers
-    const introButton = screen.getByText('Introduction').closest('button');
+    const aboutAblyButton = screen.getByText('About Ably').closest('button');
     const archButton = screen.getByText('Architecture').closest('button');
     const productsButton = screen.getByText('Products and SDKs').closest('button');
 
-    expect(introButton).toBeInTheDocument();
+    expect(aboutAblyButton).toBeInTheDocument();
     expect(archButton).toBeInTheDocument();
     expect(productsButton).toBeInTheDocument();
   });
@@ -159,23 +159,22 @@ describe('LeftSidebar', () => {
     });
 
     // Pub/Sub children should not be visible initially
-    expect(screen.queryByText('Authentication')).not.toBeInTheDocument();
-    expect(screen.queryByText('Connections')).not.toBeInTheDocument();
+    expect(screen.queryByText('About Pub/Sub')).not.toBeInTheDocument();
+    expect(screen.queryByText('Getting started')).not.toBeInTheDocument();
 
     // Click on Ably Pub/Sub button to expand it (type="multiple" so Platform stays open)
     const pubsubButton = screen.getByRole('button', { name: 'Ably Pub/Sub' });
     await user.click(pubsubButton);
 
     // After clicking, verify the Pub/Sub child accordion items appear
-    // Note: "Introduction" appears in both Platform and Pub/Sub, so we check for items unique to Pub/Sub
     await waitFor(() => {
-      expect(screen.getByText('Authentication')).toBeInTheDocument();
-      expect(screen.getByText('Connections')).toBeInTheDocument();
+      expect(screen.getByText('About Pub/Sub')).toBeInTheDocument();
+      expect(screen.getByText('Getting started')).toBeInTheDocument();
     });
 
-    // Verify there are now 2 Introduction sections (one from Platform, one from Pub/Sub)
-    const introductions = screen.getAllByText('Introduction');
-    expect(introductions).toHaveLength(2);
+    // Verify both product sections are visible (Platform has "About Ably", Pub/Sub has "About Pub/Sub")
+    expect(screen.getByText('About Ably')).toBeInTheDocument();
+    expect(screen.getByText('About Pub/Sub')).toBeInTheDocument();
 
     // Platform's Architecture should still be visible since accordion type is "multiple"
     expect(screen.getByText('Architecture')).toBeInTheDocument();
