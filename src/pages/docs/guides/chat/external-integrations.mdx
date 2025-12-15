@@ -219,22 +219,21 @@ async function processMessage(roomName, text, action) {
 
 ## Using a webhook <a id="webhook"/>
 
-Ably can forward messages to your external system via a webhook. This is the simplest to set up and offers the lowest latency. This section covers the simple HTTP endpoint webhook, but the same principles apply to other webhook integrations such as AWS Lambda, Azure Function, Google Cloud Function, and others.
+Ably can forward messages to your external system via a webhook. This is the simplest integration method to set up and works well for most use cases. This section covers HTTP endpoint webhooks, but the same principles apply to other webhook integrations such as AWS Lambda, Azure Function, Google Cloud Function, and others.
 
 Read the guide on [outbound webhooks](/docs/platform/integrations/webhooks) for more details on how to set up a webhook with Ably for the platform of your choice.
 
-**Benefits:**
-* Easiest to set up and understand
-* No infrastructure to manage with serverless functions
-* Direct HTTP invocation with automatic retries
-* Native support for major cloud providers
+Benefits:
+- Simplest integration method to implement and get started quickly.
+- Works with any HTTP endpoint or serverless function.
+- Automatic retry handling with configurable retry windows.
+- No additional infrastructure required beyond your webhook endpoint or function.
 
-**You need to consider:**
-* **Cold start latency:** Serverless functions may have cold start delays. Consider keeping functions warm for latency-sensitive use cases.
-* **Limited retry window:** Ably will retry delivering the message to your webhook, but only for a short period. Monitor the [`[meta]log` channel](/docs/platform/errors#meta) for delivery failures.
-* **Scale limits:** Webhook scale depends on your function's concurrency configuration. Ensure your function can handle expected message volumes.
-* **[At-least-once delivery](/docs/platform/architecture/idempotency#protocol-support-for-exactly-once-delivery):** Deduplication can be done by checking `serial` and `version.serial`.
-* **Ordering:** Messages can arrive out-of-order. Use `serial` and `version.serial` properties to order them correctly if needed.
+You need to consider:
+- Ably retries failed webhook deliveries, but only for a limited retry window. Monitor the [`[meta]log` channel](/docs/platform/errors#meta) for delivery failures.
+- Messages can arrive out-of-order. Use `serial` and `version.serial` properties to order them correctly if needed.
+- Failed webhook calls that exceed the retry window will lead to message loss. Implement monitoring and alerting to detect failures early.
+- [At-least-once delivery](/docs/platform/architecture/idempotency#protocol-support-for-exactly-once-delivery) means you need to handle duplicate messages. Deduplication can be done by tracking `serial` and `version.serial`.
 
 ## Using an Ably queue <a id="ably-queue"/>
 
@@ -242,61 +241,50 @@ Ably can forward messages from chat room channels to an [Ably Queue](/docs/platf
 
 Ably ensures that each message is delivered to only one consumer even if multiple consumers are connected.
 
-**Benefits:**
-* At-least-once delivery with dead letter queue support.
-* No message loss if your consumers temporarily disconnect.
-* Scale consumers independently by running multiple instances.
-* Use multiple queues for different channels, filtering via regex on channel name.
-* Ably manages the queue infrastructure for you.
+Benefits of using an Ably queue:
+- You can consume it from your servers, meaning overall this is fault-tolerant. Ably takes care of the complexity of maintaining a queue.
+- You can use multiple queues and configure which channels go to which queue via regex filters on the channel name.
+- Fault-tolerant: if your systems suffer any temporary downtime, you will not miss messages, up to the queue max size. There is a dead letter queue to handle the situation where messages are dropped from the Ably Queue.
 
-**You need to consider:**
-* **Queue limits:** Each message has a time-to-live (TTL) in the queue. The default and maximum is 60 minutes.
-* **Consumer scaling:** During peak times you may need to scale up your consumers to avoid going over the maximum queue length allowed.
-* **Dead letter queue:** Oldest messages are dropped if the maximum queue length is exceeded. Always consume messages from the [dead letter queue](/docs/platform/integrations/queues#deadletter) to monitor errors.
-* **Consumer infrastructure:** You need to manage and maintain your consumer servers or containers that process messages from the queue.
+You need to consider:
+- During peak times you may need to scale up your consumers to avoid overloading the queue past the maximum queue length allowed.
+- Each message has a time-to-live in the queue. The default and maximum is 60 minutes.
+- Oldest messages are dropped if the maximum queue length is exceeded. Check the [dead letter queue](/docs/platform/integrations/queues#deadletter) to see if this is happening.
+- Always consume messages from the [dead letter queue](/docs/platform/integrations/queues#deadletter) to monitor errors.
 
 ## Using outbound streaming <a id="outbound-streaming"/>
 
 Ably can stream messages directly to your own queueing or streaming service: Kafka, Kinesis, AMQP, SQS, Pulsar. Read the guide on [outbound streaming](/docs/platform/integrations/streaming) for more details on how to set up the streaming integration with Ably for the service of your choice.
 
-**Benefits:**
-* Massive scale (millions of messages/second)
-* Multiple consumers can process the same stream
-* Integration with existing data infrastructure
-* Use your existing queue system to process messages from Ably
+Benefits:
+- Use your existing queue system to process messages from Ably.
+- You control your own queue system, so you have full control over message ingestion in terms of retry strategies, retention policies, queue lengths, and so on.
 
-**You need to consider:**
-* **Infrastructure complexity:** You need to maintain and be responsible for a reliable streaming system. If you don't already have such a system, it increases complexity.
-* **Consistency:** If your streaming system is not reachable, messages may be lost. Errors can be seen in the [`[meta]log` channel](/docs/platform/errors#meta).
-* **Setup complexity:** Most complex integration method to set up and operate.
+You need to consider:
+- You need to maintain and be responsible for a reliable streaming system. If you don't already have such a system, it increases complexity on your end.
+- Consistency. If your streaming system is not reachable, messages may be lost. Errors can be seen in the [`[meta]log` channel](/docs/platform/errors#meta).
 
 ## Responding back to chat <a id="responding"/>
 
 After processing messages through your external system, you will typically want to publish responses back to the chat room. This could be answers from an AI assistant, translated text, enriched content, or status updates.
-To avoid triggering the integration rule on the response message, Use Ably's [skip integrations](/docs/platform/integrations/skip-integrations) feature to publish messages that bypass integration rules.
+To avoid triggering the integration rule on the response message, use Ably's [skip integrations](/docs/platform/integrations/skip-integrations) feature to publish messages that bypass integration rules.
 
 **Note:** Your API key or token must have the [`privileged-headers`](/docs/auth/capabilities#capability-operations) capability to apply the skip integration flag.
 
 <Code>
 ```javascript
-const Ably = require('ably');
-
-async function sendResponseToChat(envelopeData, responseText) {
+async function sendResponseToChat(channelName, responseText) {
   // Extract the room name from the channel name
-  const channelName = envelopeData.channel; // e.g., "chat:support::$chat"
   const roomName = channelName.replace('::$chat', ''); // e.g., "chat:support"
-
-  // Initialize Chat client and get the room
-  const chatClient = new Ably.Chat(realtime);
   const room = await chatClient.rooms.get(roomName);
 
-  // Send response message skipping all integration rules
+  // Send response message skipping some or all integration rules
   await room.messages.send({
     text: responseText
   }, {
     extras: {
-      privileged: {'
-        skipRule: [ruleIdToSkip]  // To skip all rules use '*' instead of an array
+      privileged: {
+        skipRule: '*' // Skip all integration rules
       }
     }
   });
@@ -305,75 +293,6 @@ async function sendResponseToChat(envelopeData, responseText) {
 </Code>
 
 The rule ID is available in the integration webhook envelope's `ruleId` field, or you can find it in your Ably [dashboard](https://ably.com/dashboard) under Integrations.
-
-## Best practices for production
-
-When building production-ready integrations, follow these best practices:
-
-### Error handling and resilience
-
-* **Retry logic:** Implement exponential backoff for failed external API calls to handle transient failures gracefully
-* **Circuit breakers:** Prevent cascading failures by temporarily stopping requests to failing external services
-* **Timeouts:** Set appropriate timeouts for external API calls to avoid indefinite blocking
-* **Graceful degradation:** Design your system to handle external service failures without breaking the entire integration
-* See [Ably's architecture documentation](/docs/platform/architecture/fault-tolerance) for resilience patterns
-
-### Idempotency
-
-* **Message deduplication:** Track processed message IDs to safely handle Ably's [at-least-once delivery](/docs/platform/architecture/idempotency#protocol-support-for-exactly-once-delivery)
-* **Idempotent operations:** Design your external system operations to be safely retryable
-* **Cleanup strategy:** Implement cleanup for tracked message IDs to prevent memory leaks (LRU cache, TTL-based cleanup)
-
-### Rate limiting and caching
-
-* **Cache responses:** Cache frequent external API responses to reduce latency and costs
-* **Rate limits:** Respect external service rate limits with throttling and queuing
-* **Batching:** Consider batching multiple operations to reduce external API calls
-* **CDN integration:** Use CDNs for static content enrichment (images, metadata)
-
-### Security
-
-* **Webhook signatures:** Always validate webhook signatures using Ably's provided signature headers
-* **Token authentication:** Use short-lived [JWT tokens](/docs/auth/token#jwt) with minimal capabilities for client connections
-* **API key security:** Never embed API keys in client code; use server-side endpoints to generate tokens
-* **TLS/HTTPS:** Ensure all connections use TLS encryption
-* **Secret management:** Store API keys and secrets in secure management systems (AWS Secrets Manager, Azure Key Vault, etc.)
-* See [Ably's authentication documentation](/docs/auth) for security best practices
-
-### Monitoring and observability
-
-* **[Meta channel](/docs/metadata-stats/metadata/subscribe) monitoring:** Subscribe to `[meta]log:integration` to track integration errors
-* **Dead letter queues:** Monitor [dead letter queues](/docs/platform/integrations/queues#deadletter) if using Ably Queues
-* **Metrics tracking:** Monitor error rates, latency, throughput, and external service response times
-* **Alerting:** Set up alerts for integration failures, queue depth issues, and performance degradation
-* **Logging:** Implement structured logging with correlation IDs for debugging
-
-## Production checklist
-
-Before deploying your integration to production, verify:
-
-- [ ] Integration rule filters correctly match target channels
-- [ ] External system authenticated and authorized properly
-- [ ] Response messages configured to avoid infinite loops (separate channels or privileged skipRule)
-- [ ] API key has `privileged-headers` capability if using skipRule feature
-- [ ] Error handling and logging implemented
-- [ ] Retry logic and exponential backoff in place
-- [ ] Monitoring and alerting configured
-  - [ ] Subscribe to `[meta]log` channel
-  - [ ] Track error rates and latency
-  - [ ] Monitor queue depths (if using queues)
-  - [ ] Alert on dead letter queue messages
-- [ ] Load tested at expected scale (+ 50% buffer)
-- [ ] Cost estimation validated based on message volume
-- [ ] Security review completed
-  - [ ] No API keys embedded in client code
-  - [ ] TLS/HTTPS enabled for all connections
-  - [ ] Webhook signatures validated
-  - [ ] Secrets stored in secure management system
-- [ ] Idempotency handling implemented
-- [ ] Documentation for your team on how integration works
-- [ ] Rollback plan prepared in case of issues
-- [ ] Test in staging environment before production
 
 ## Next steps
 
