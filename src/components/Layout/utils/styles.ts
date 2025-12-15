@@ -13,6 +13,6 @@ export const iconButtonClassName = cn(secondaryButtonClassName, 'w-9 p-0');
 
 export const interactiveButtonClassName = cn(
   'flex items-center justify-center bg-neutral-000 dark:bg-neutral-1300 hover:bg-neutral-100 dark:hover:bg-neutral-1200 active:bg-neutral-200 dark:active:bg-neutral-1100 cursor-pointer p-1.5',
-  'text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000',
+  'text-neutral-900 dark:text-neutral-400 hover:text-neutral-1300 dark:hover:text-neutral-000 disabled:text-gui-unavailable dark:disabled:text-gui-unavailable-dark disabled:pointer-events-none',
   'focus-base rounded-lg transition-colors',
 );

@@ -66,7 +66,22 @@ jest.mock('@ably/ui/core/Code', () => {
   };
 });
 
+// Mock global fetch
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    headers: {
+      get: (name: string) => (name === 'Content-Type' ? 'text/markdown' : null),
+    },
+    text: () => Promise.resolve('# Mock markdown content'),
+  } as Response),
+);
+
 describe('MDX component integration', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders basic content correctly', () => {
     render(
       <div>
