@@ -25,6 +25,10 @@ export default {
           name: 'Overview',
           link: '/docs/ai-transport/sessions-identity/overview',
         },
+        {
+          name: 'Session abandonment',
+          link: '/docs/ai-transport/sessions-identity/session-abandonment',
+        },
       ],
     },
   ],

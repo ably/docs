@@ -1,0 +1,434 @@
+---
+title: Session abandonment
+meta_description: "Detect when users leave AI sessions and respond with appropriate agent strategies."
+---
+
+Session abandonment occurs when users disconnect from an AI session. This can happen in several ways:
+
+- **Intentional exit**: User closes the browser tab, navigates away, or explicitly ends the session.
+- **Device switch**: User moves from desktop to mobile, leaving the original session behind.
+- **Network interruption**: Connection drops due to poor connectivity, VPN changes, or ISP issues.
+- **Idle timeout**: User walks away from their device without closing the session.
+- **App in background**: On mobile, the app is suspended or terminated by the operating system.
+
+Each scenario presents different challenges. A user switching devices may return on the new device within seconds. A network interruption might resolve in moments, or indicate the user is gone for hours. An idle user might still be watching the screen, even if not actively interacting.
+
+In AI Transport's Pub/Sub channel-oriented architecture, agents run independently from client connections. This decoupling means agents must actively detect when users leave and decide how to respond - whether to stop expensive token generation immediately, complete the current response gracefully, continue background processing, or switch to a cheaper model. The right strategy depends on the cost of the operation, the value of partial results, and the likelihood the user will return.
+
+[Presence](/docs/presence-occupancy/presence) provides the mechanism for detecting user disconnections. When users connect to a session, they enter the channel's presence set. When they disconnect - whether intentionally or due to network issues - they automatically leave the presence set after a brief timeout. Agents subscribed to presence events receive `enter` and `leave` events they can use to trigger appropriate response strategies.
+
+## Detecting abandonment with presence
+
+Users signal their participation in a session by entering the channel's [presence](/docs/presence-occupancy/presence) set. When they disconnect - whether intentionally or due to network issues - they automatically leave the presence set, and agents subscribed to presence events receive a `leave` event.
+
+### Subscribe to presence events
+
+Agents subscribe to presence events on the session channel to detect when users enter or leave:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('conversation:{{USER_ID}}');
+
+await channel.presence.subscribe((member) => {
+  switch (member.action) {
+    case 'leave':
+      console.log(`User ${member.clientId} left the session`);
+      // Trigger abandonment handling logic
+      break;
+    case 'enter':
+      console.log(`User ${member.clientId} joined the session`);
+      break;
+  }
+});
+```
+</Code>
+
+### Tracking multi-device presence
+
+Users may be connected from multiple devices simultaneously. A `leave` event from one device doesn't necessarily mean the user has abandoned the session - they may still be connected from another device.
+
+To determine when a user is completely offline, count the number of presence entries for that user's `clientId`:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('conversation:{{USER_ID}}');
+
+async function isUserCompletelyOffline(clientId) {
+  const members = await channel.presence.get();
+  const userConnections = members.filter(m => m.clientId === clientId);
+  return userConnections.length === 0;
+}
+
+await channel.presence.subscribe('leave', async (member) => {
+  const offline = await isUserCompletelyOffline(member.clientId);
+  if (offline) {
+    console.log(`User ${member.clientId} is completely offline`);
+    // Handle full abandonment
+  } else {
+    console.log(`User ${member.clientId} still connected on another device`);
+  }
+});
+```
+</Code>
+
+<Aside data-type="note">
+A user can have multiple presence entries if they're connected from multiple devices or browser tabs. Each connection has a unique `connectionId`, so the same `clientId` can appear multiple times in the presence set.
+</Aside>
+
+## Agent response strategies
+
+How an agent responds to session abandonment depends on the nature of the work being performed. The following strategies cover common scenarios, from immediately stopping expensive operations to continuing background work.
+
+### Immediate termination
+
+For expensive streaming operations where there's no value in continuing without an active user, stop generation immediately to save costs.
+
+This strategy is appropriate for:
+
+- Token streaming where costs accumulate per token
+- Realtime transcription or translation
+- Any operation where partial results have no value
+
+<Code>
+```javascript
+const channel = realtime.channels.get('conversation:{{USER_ID}}');
+
+let abortController = null;
+
+// Start a streaming response
+async function startStreaming(prompt) {
+  abortController = new AbortController();
+
+  try {
+    const stream = await aiModel.stream(prompt, {
+      signal: abortController.signal
+    });
+
+    for await (const token of stream) {
+      channel.publish('token', token);
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      // Stream was intentionally stopped
+      channel.publish('status', {
+        type: 'terminated',
+        reason: 'user_left'
+      });
+    } else {
+      throw err;
+    }
+  }
+}
+
+// Stop streaming when user leaves
+await channel.presence.subscribe('leave', async (member) => {
+  const offline = await isUserCompletelyOffline(member.clientId);
+  if (offline && abortController) {
+    abortController.abort();
+    abortController = null;
+  }
+});
+```
+</Code>
+
+### Graceful completion
+
+For conversational AI, it often makes sense to complete the current response before stopping. This ensures the conversation ends at a natural point rather than mid-sentence.
+
+This strategy is appropriate for:
+
+- Chat applications where partial responses are confusing
+- Assistants generating structured outputs that need to be complete
+- Any scenario where you want clean conversation boundaries
+
+<Code>
+```javascript
+const channel = realtime.channels.get('conversation:{{USER_ID}}');
+
+let userPresent = true;
+let isGenerating = false;
+
+// Check user presence before starting new responses
+async function generateResponse(prompt) {
+  if (!userPresent) {
+    console.log('User not present, skipping response');
+    return;
+  }
+
+  isGenerating = true;
+
+  try {
+    const stream = await aiModel.stream(prompt);
+
+    for await (const token of stream) {
+      channel.publish('token', token);
+    }
+
+    // Response complete - check if we should continue
+    if (!userPresent) {
+      channel.publish('status', {
+        type: 'paused',
+        reason: 'user_left',
+        message: 'Session paused after completing response'
+      });
+      await cleanup();
+    }
+  } finally {
+    isGenerating = false;
+  }
+}
+
+// Track user presence
+await channel.presence.subscribe('leave', async (member) => {
+  const offline = await isUserCompletelyOffline(member.clientId);
+  if (offline) {
+    userPresent = false;
+    // If not currently generating, clean up immediately
+    if (!isGenerating) {
+      await cleanup();
+    }
+    // Otherwise, let current generation complete
+  }
+});
+
+await channel.presence.subscribe('enter', (member) => {
+  userPresent = true;
+});
+
+async function cleanup() {
+  // Release resources, close connections, etc.
+  console.log('Session cleaned up');
+}
+```
+</Code>
+
+### Background continuation
+
+For long-running tasks like code generation, document analysis, or data processing, the agent may continue working even after the user disconnects. The user can be notified when results are ready.
+
+This strategy is appropriate for:
+
+- Code generation or refactoring tasks
+- Document summarization or analysis
+- Any task where results are valuable even if delivered later
+
+<Code>
+```javascript
+const channel = realtime.channels.get('conversation:{{USER_ID}}');
+
+let backgroundMode = false;
+
+async function processTask(task) {
+  channel.publish('status', { type: 'processing', task: task.id });
+
+  const result = await performLongRunningWork(task);
+
+  if (backgroundMode) {
+    // User left during processing - store result and notify
+    await storeResultForLater(task.userId, result);
+    channel.publish('status', {
+      type: 'completed_background',
+      task: task.id,
+      message: 'Results ready when you return'
+    });
+
+    // Optionally send push notification
+    await sendPushNotification(task.userId, 'Your task is complete');
+  } else {
+    // User still present - deliver result directly
+    channel.publish('result', result);
+  }
+}
+
+await channel.presence.subscribe('leave', async (member) => {
+  const offline = await isUserCompletelyOffline(member.clientId);
+  if (offline) {
+    backgroundMode = true;
+    channel.publish('status', {
+      type: 'continuing_background',
+      message: 'Work will continue in background'
+    });
+  }
+});
+
+await channel.presence.subscribe('enter', (member) => {
+  backgroundMode = false;
+});
+```
+</Code>
+
+### Cost optimization
+
+When users disconnect, switch to a more cost-effective model to complete ongoing work. This balances resource usage against the value of completion.
+
+This strategy is appropriate for:
+
+- Long responses where the user may return
+- Background tasks where latency is less important
+- Any scenario where you want to balance cost against completion
+
+<Code>
+```javascript
+const channel = realtime.channels.get('conversation:{{USER_ID}}');
+
+let currentModel = 'fast-expensive-model';
+let userPresent = true;
+
+async function generateResponse(prompt, conversationHistory) {
+  const model = userPresent ? 'fast-expensive-model' : 'slow-cheap-model';
+
+  if (model !== currentModel) {
+    currentModel = model;
+    channel.publish('status', {
+      type: 'model_switched',
+      model: currentModel,
+      reason: userPresent ? 'user_returned' : 'user_away'
+    });
+  }
+
+  const stream = await aiModel.stream(prompt, {
+    model: currentModel,
+    history: conversationHistory
+  });
+
+  for await (const token of stream) {
+    // Check if model should change mid-stream
+    if (userPresent && currentModel === 'slow-cheap-model') {
+      // User returned - could restart with faster model
+      // or continue with current for consistency
+    }
+    channel.publish('token', token);
+  }
+}
+
+await channel.presence.subscribe('leave', async (member) => {
+  const offline = await isUserCompletelyOffline(member.clientId);
+  if (offline) {
+    userPresent = false;
+  }
+});
+
+await channel.presence.subscribe('enter', (member) => {
+  userPresent = true;
+});
+```
+</Code>
+
+## Re-attachment handling
+
+When users return to a session after disconnecting, agents need to restore state and clients need to catch up on any missed content.
+
+### Agent detects user return
+
+When a user re-enters the presence set, the agent can resume normal operation:
+
+<Code>
+```javascript
+const channel = realtime.channels.get('conversation:{{USER_ID}}');
+
+let sessionState = {
+  mode: 'active',
+  model: 'fast-model',
+  pendingResults: []
+};
+
+await channel.presence.subscribe('enter', async (member) => {
+  console.log(`User ${member.clientId} returned`);
+
+  // Restore active mode
+  sessionState.mode = 'active';
+  sessionState.model = 'fast-model';
+
+  // Notify user of any work completed while away
+  if (sessionState.pendingResults.length > 0) {
+    channel.publish('status', {
+      type: 'resumed',
+      completedWhileAway: sessionState.pendingResults.length
+    });
+
+    // Deliver pending results
+    for (const result of sessionState.pendingResults) {
+      channel.publish('result', result);
+    }
+    sessionState.pendingResults = [];
+  } else {
+    channel.publish('status', { type: 'resumed' });
+  }
+});
+
+await channel.presence.subscribe('leave', async (member) => {
+  const offline = await isUserCompletelyOffline(member.clientId);
+  if (offline) {
+    sessionState.mode = 'background';
+    sessionState.model = 'slow-cheap-model';
+  }
+});
+```
+</Code>
+
+### Client catches up on missed tokens
+
+When a client reconnects, it can use [rewind](/docs/channels/options/rewind) to retrieve messages published while it was disconnected:
+
+<Code>
+```javascript
+// Client reconnecting to a session
+const channel = realtime.channels.get('conversation:{{USER_ID}}', {
+  params: { rewind: '2m' }  // Retrieve last 2 minutes of messages
+});
+
+// Track which responses we've already seen
+const seenResponses = new Set(loadFromLocalStorage('seenResponses'));
+
+await channel.subscribe((message) => {
+  if (message.name === 'token') {
+    const responseId = message.extras?.headers?.responseId;
+
+    // Skip tokens from responses we already have
+    if (seenResponses.has(responseId)) {
+      return;
+    }
+
+    appendToken(message.data, responseId);
+  } else if (message.name === 'status') {
+    handleStatusUpdate(message.data);
+  }
+});
+
+// Enter presence to signal we're back
+await channel.presence.enter({ device: 'web', reconnected: true });
+```
+</Code>
+
+For longer disconnection periods, use [history](/docs/storage-history/history) with persistence enabled to retrieve older messages:
+
+<Code>
+```javascript
+// Client recovering after longer disconnection
+const channel = realtime.channels.get('persisted:conversation:{{USER_ID}}');
+
+// Subscribe to live messages first
+await channel.subscribe((message) => {
+  handleMessage(message);
+});
+
+// Then fetch history to catch up
+let page = await channel.history({ untilAttach: true });
+
+while (page) {
+  // Process historical messages (newest first)
+  for (const message of page.items) {
+    handleHistoricalMessage(message);
+  }
+
+  page = page.hasNext() ? await page.next() : null;
+}
+
+// Signal we're back
+await channel.presence.enter();
+```
+</Code>
+
+<Aside data-type="note">
+The `untilAttach` option ensures continuous history by fetching messages up to the point of channel attachment. This prevents gaps between historical and live messages.
+</Aside>
