@@ -201,7 +201,7 @@ export default {
           link: '/docs/guides/chat/export-chat',
         },
         {
-          name: 'Export and process chat messages',
+          name: 'Integrate external services',
           link: '/docs/guides/chat/external-integrations',
         },
       ],
