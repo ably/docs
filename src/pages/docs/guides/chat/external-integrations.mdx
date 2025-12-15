@@ -26,7 +26,7 @@ Unlike [chat moderation](/docs/chat/moderation), which filters or blocks content
 Ably Chat integrations are built on Ably's proven platform architecture, designed to handle integration workloads at any scale:
 
 * **Reliable message delivery:** Every integration benefits from Ably's [four pillars of dependability](/docs/platform/architecture): Performance, Integrity, Reliability, and Availability.
-* **Flexible routing:** Use channel filters, message headers, and metadata to selectively route only the messages that need processing.
+* **Flexible routing:** Use channel filters to selectively route only the messages on channels that need processing to your integration.
 * **Multiple integration methods:** Choose webhooks, queues, or streaming based on your architecture and scale requirements.
 * **Proven at scale:** Ably processes over 500 million messages per day for customers, with [serverless scalability](/docs/platform/architecture/platform-scalability) that eliminates infrastructure management.
 * **No vendor lock-in:** Integrate with any external service, using any language or platform that can handle HTTP requests or consume from queues.
@@ -38,7 +38,7 @@ Because Ably Chat rooms use Pub/Sub channels as their underlying transport, you 
 Consider the following when integrating external systems with Ably Chat:
 
 * **Processing latency:** Integration adds latency to the message flow. Webhooks offer the lowest latency, while queues add asynchronous processing time. Design your system to handle the expected processing time.
-* **Avoiding infinite loops:** When your integration responds back to chat, ensure responses don't trigger the same integration rule. Use separate channels, skip integration flags, or message headers to break potential loops.
+* **Avoiding infinite loops:** When your integration responds back to chat, ensure responses don't trigger the same integration rule. Use separate channels or the [privileged skip integration flag](/docs/platform/integrations/skip-integrations) to break potential loops.
 * **Scale and reliability:** Different integration methods offer different reliability guarantees. Webhooks have limited retry windows, while queues provide guaranteed delivery with dead letter queues.
 * **External system limitations:** Your external service may have rate limits, processing constraints, or availability issues. Implement retry logic, circuit breakers, and caching to handle these limitations gracefully.
 * **Cost optimization:** Only process messages that require processing. Use channel filters and message headers to minimize unnecessary integration executions.
@@ -60,7 +60,7 @@ Ably Chat integrations follow a message-driven architecture that enables bidirec
 
 * **Chat rooms use Pub/Sub channels:** Each chat room is built on an Ably channel, enabling the full range of Ably's integration capabilities.
 * **Message structure:** Chat messages are encoded as Pub/Sub messages with a specific structure. See the [Chat integrations documentation](/docs/chat/integrations) for details on the mapping.
-* **Integration rules:** Configure rules that filter which messages trigger integrations based on channel patterns, event types, or other criteria.
+* **Integration rules:** Configure rules that filter which messages trigger integrations based on channel name patterns and event types.
 * **Bidirectional flow:** Integrations can both receive messages from chat and publish responses back to the chat room.
 
 ### Integration flow
@@ -69,7 +69,7 @@ The typical integration flow works as follows:
 
 1. A user sends a message to a chat room, optionally including headers, metadata, or trigger patterns.
 2. The message is published to the Ably Chat channel.
-3. An integration rule evaluates the message based on channel name, message headers, or other criteria.
+3. An integration rule evaluates the message based on channel name pattern matching.
 4. If the rule matches, Ably forwards the message to your external system via the configured integration method.
 5. Your external system processes the message (AI inference, translation, business logic, etc.).
 6. The external system publishes a response back to an Ably Chat channel.
@@ -79,40 +79,55 @@ The typical integration flow works as follows:
 
 ### Triggering integrations
 
-You have several options for controlling which messages trigger integrations:
+Integration rules are triggered by **channel name patterns** only. Use consistent channel naming conventions to route messages from specific chat rooms to your integration.
 
 **Channel naming patterns:**
-Use consistent channel naming conventions to route messages selectively. For example, use `chat:support:*` for support channels or `chat:commands:*` for command processing.
 
-**Message headers:**
-Add custom headers to messages that should trigger integration processing:
+Use typical chat room naming patterns like `chat:support` for support channels or `chat:group:123` for group chats. The integration rule's channel filter is a regular expression that matches against the channel name.
 
 ```javascript
-await room.messages.send({
-  text: '/ask What are your business hours?',
-  headers: {
-    'x-integration-trigger': 'assistant',
-    'x-priority': 'high'
-  }
-});
+// Messages sent to these channels will trigger an integration
+// if your rule's channel filter is: ^chat:support.*
+await room.messages.send({ text: 'Need help' }); // channel: chat:support
+
+// Or for a specific group
+await room.messages.send({ text: 'Hello' }); // channel: chat:group:123
+
+// Messages sent to other channel patterns will NOT trigger the integration
+await room.messages.send({ text: 'Hi' }); // channel: chat:general (if filter is ^chat:support.*)
 ```
 
-**Message metadata:**
-Use structured metadata for more complex trigger logic:
+**Filtering messages within your integration:**
+
+Your external system receives all messages from channels matching the integration rule's filter. Your service is responsible for examining each message and deciding which ones to process:
 
 ```javascript
-await room.messages.send({
-  text: 'Please translate this message',
-  metadata: {
-    action: 'translate',
-    targetLanguage: 'es',
-    sourceLanguage: 'en'
+// In your webhook handler or queue consumer
+function processIntegrationPayload(envelopeData) {
+  const messages = Ably.Realtime.Message.fromEncodedArray(envelopeData.messages);
+
+  for (const msg of messages) {
+    const text = msg.data?.text;
+    const headers = msg.extras?.headers || {};
+    const metadata = msg.data?.metadata || {};
+
+    // Your service decides what to process based on message content
+    if (text?.startsWith('/')) {
+      // Handle slash commands
+      processCommand(text, envelopeData.channel);
+    } else if (headers['x-needs-translation']) {
+      // Handle messages marked for translation
+      translateMessage(text, headers, envelopeData.channel);
+    } else if (metadata?.action === 'analyze') {
+      // Handle messages with specific metadata
+      analyzeMessage(text, metadata, envelopeData.channel);
+    }
+    // Otherwise, ignore this message
   }
-});
+}
 ```
 
-**Content patterns:**
-Your integration can detect patterns in the message text itself, such as slash commands (`/weather London`) or specific keywords.
+This approach allows flexible message processing while using simple, logical channel naming conventions like `chat:support` or `chat:group:123`.
 
 ## Filtering rooms and event types <a id="filtering"/>
 
@@ -172,13 +187,13 @@ function processIntegrationPayload(envelopeData) {
   const decodedMessages = Ably.Realtime.Message.fromEncodedArray(
     envelopeData.messages
   );
-  
+
   for (const msg of decodedMessages) {
     // Extract chat message fields
     const text = msg.data?.text;
     const metadata = msg.data?.metadata || {};
     const headers = msg.extras?.headers || {};
-    
+
     // Check for integration triggers
     if (headers['x-integration-trigger']) {
       const trigger = headers['x-integration-trigger'];
@@ -232,14 +247,14 @@ exports.handler = async (event) => {
   if (!verifySignature(event.body, signature)) {
     return { statusCode: 401, body: 'Invalid signature' };
   }
-  
+
   // Parse the enveloped message
   const envelope = JSON.parse(event.body);
   const channel = envelope.channel;
-  
+
   // Decode messages using Ably SDK
   const messages = Ably.Realtime.Message.fromEncodedArray(envelope.messages);
-  
+
   for (const msg of messages) {
     // Check if message should be processed
     const headers = msg.extras?.headers || {};
@@ -249,7 +264,7 @@ exports.handler = async (event) => {
       await sendResponseToChat(channel, response);
     }
   }
-  
+
   return { statusCode: 200 };
 };
 
@@ -296,28 +311,28 @@ async function consumeFromQueue() {
   const url = 'amqps://APPID.KEYID:SECRET@us-east-1-a-queue.ably.io/shared';
   const conn = await amqp.connect(url);
   const channel = await conn.createChannel();
-  
+
   // Consume messages from the queue
   await channel.consume('your-app-id:chat-integrations', async (item) => {
     try {
       // Parse enveloped message
       const envelope = JSON.parse(item.content.toString());
       const chatChannel = envelope.channel;
-      
+
       // Decode messages using Ably SDK
       const messages = Ably.Realtime.Message.fromEncodedArray(envelope.messages);
-      
+
       for (const msg of messages) {
         // Process message with external system
         const text = msg.data?.text;
         const headers = msg.extras?.headers || {};
-        
+
         if (headers['x-integration-trigger']) {
           const response = await processWithExternalSystem(text);
           await sendResponseToChat(chatChannel, response);
         }
       }
-      
+
       // ACK message to remove from queue
       channel.ack(item);
     } catch (error) {
@@ -350,7 +365,7 @@ Ably can stream messages directly to your own queueing or streaming service: Kaf
 
 The critical consideration when responding back to chat is avoiding infinite loops where responses trigger the same integration rule. This section explains strategies to safely publish responses back to the chat room.
 
-### Strategy 1: Use separate channels
+### Strategy 1: Use separate response channels
 
 Respond to a different channel pattern that doesn't trigger the integration:
 
@@ -360,11 +375,12 @@ const Ably = require('ably');
 async function sendResponseToChat(originalChannel, responseText) {
   // Use REST client for efficient one-off publishing
   const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
-  
-  // Respond to a different channel pattern
-  // Integration triggers on 'chat:*', respond to 'chat-responses:*'
-  const responseChannel = originalChannel.replace('chat:', 'chat-responses:');
-  
+
+  // Respond to a different channel that doesn't match your integration filter
+  // If integration triggers on 'chat:support' or 'chat:group:*',
+  // respond to 'responses:support' or 'responses:group:123'
+  const responseChannel = originalChannel.replace('chat:', 'responses:');
+
   await ably.channels.get(responseChannel).publish('assistant-reply', {
     text: responseText,
     metadata: {
@@ -378,58 +394,68 @@ async function sendResponseToChat(originalChannel, responseText) {
 Your client subscribes to both the original chat channel and the response channel:
 
 ```javascript
-// Subscribe to regular chat messages
+// Subscribe to regular chat messages in the room
 room.messages.subscribe((event) => {
   displayMessage(event.message);
 });
 
 // Subscribe to integration responses on a separate channel
 const realtimeClient = new Ably.Realtime({ key: 'your-token' });
-const responseChannel = realtimeClient.channels.get('chat-responses:room-123');
+const responseChannel = realtimeClient.channels.get('responses:support');
 
 responseChannel.subscribe('assistant-reply', (message) => {
   displayIntegrationResponse(message.data);
 });
 ```
 
-### Strategy 2: Skip integrations on response messages
+### Strategy 2: Skip integration rules on response messages
 
-Use Ably's [skip integrations](/docs/platform/integrations/skip-integrations) feature to publish messages that bypass integration rules:
+Use Ably's [skip integrations](/docs/platform/integrations/skip-integrations) feature to publish messages that bypass integration rules.
+
+<Aside data-type='important'>
+Your API key or token must have the [`privileged-headers`](/docs/auth/capabilities#capability-operations) capability to use this feature.
+</Aside>
+
+**Skip all integration rules:**
 
 ```javascript
 async function sendResponseToChat(channel, responseText) {
+  // Requires privileged-headers capability
   const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
-  
+
   await ably.channels.get(channel).publish({
     name: 'assistant-reply',
     data: { text: responseText },
     extras: {
-      push: { 
-        skipIntegrations: true 
+      privileged: {
+        skipRule: '*'  // Skip ALL integration rules
       }
     }
   });
 }
 ```
 
-### Strategy 3: Use message headers to filter
+**Skip specific integration rules:**
 
-Configure your integration rule to exclude messages with specific headers:
+If you only want to skip specific rules (e.g., the one that triggered your integration), you can provide the rule ID:
 
 ```javascript
-// Send response with a header that your integration rule filters out
-await ably.channels.get(channel).publish({
-  name: 'assistant-reply',
-  data: { text: responseText },
-  extras: {
-    headers: {
-      'x-skip-integration': 'true'
+async function sendResponseToChat(channel, responseText, ruleIdToSkip) {
+  const ably = new Ably.Rest({ key: process.env.ABLY_API_KEY });
+
+  await ably.channels.get(channel).publish({
+    name: 'assistant-reply',
+    data: { text: responseText },
+    extras: {
+      privileged: {
+        skipRule: [ruleIdToSkip]  // Skip only this specific rule
+      }
     }
-  }
-});
+  });
+}
 ```
 
-Then configure your integration rule's channel filter to exclude these messages based on the header presence.
+The rule ID is available in the integration webhook envelope's `ruleId` field, or you can find it in your Ably [dashboard](https://ably.com/dashboard) under Integrations.
 
 ## Common integration patterns
 
@@ -451,7 +477,7 @@ Process slash commands that trigger server-side logic:
 function detectCommand(text) {
   const commandPattern = /^\/(\w+)\s*(.*)$/;
   const match = text.match(commandPattern);
-  
+
   if (match) {
     return {
       command: match[1],
@@ -464,17 +490,17 @@ function detectCommand(text) {
 async function handleCommand(text, channel) {
   const cmd = detectCommand(text);
   if (!cmd) return;
-  
+
   switch (cmd.command) {
     case 'weather':
       const weather = await fetchWeatherData(cmd.args);
       await publishResponse(channel, `Weather in ${cmd.args}: ${weather}`);
       break;
-      
+
     case 'help':
       await publishResponse(channel, 'Available commands: /weather, /help');
       break;
-      
+
     default:
       await publishResponse(channel, `Unknown command: /${cmd.command}`);
   }
@@ -497,12 +523,12 @@ Automatically enhance messages with metadata:
 async function enrichMessageWithURLs(text, channel) {
   const urlPattern = /(https?:\/\/[^\s]+)/g;
   const urls = text.match(urlPattern);
-  
+
   if (!urls) return;
-  
+
   for (const url of urls) {
     const metadata = await fetchURLMetadata(url);
-    
+
     await publishEnrichedContent(channel, {
       type: 'url-preview',
       url: url,
@@ -538,13 +564,13 @@ Handle complex processes with status updates:
 ```javascript
 async function handleAnalysisWorkflow(attachmentId, channel) {
   const workflowId = generateWorkflowId();
-  
+
   // Step 1: Acknowledge start
   await publishStatus(channel, workflowId, {
     status: 'started',
     message: 'Starting analysis...'
   });
-  
+
   try {
     // Step 2: Fetch attachment
     const attachment = await fetchAttachment(attachmentId);
@@ -553,7 +579,7 @@ async function handleAnalysisWorkflow(attachmentId, channel) {
       message: 'Processing...',
       progress: 25
     });
-    
+
     // Step 3: Analyze
     const results = await performAnalysis(attachment);
     await publishStatus(channel, workflowId, {
@@ -561,14 +587,14 @@ async function handleAnalysisWorkflow(attachmentId, channel) {
       message: 'Finalizing...',
       progress: 75
     });
-    
+
     // Step 4: Complete
     await publishStatus(channel, workflowId, {
       status: 'complete',
       message: 'Analysis complete',
       results: results
     });
-    
+
   } catch (error) {
     await publishStatus(channel, workflowId, {
       status: 'failed',
@@ -589,13 +615,13 @@ Implement exponential backoff for failed external API calls:
 ```javascript
 async function retryWithBackoff(fn, maxRetries = 3) {
   let delay = 1000; // Start with 1 second
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn();
     } catch (error) {
       if (i === maxRetries - 1) throw error;
-      
+
       await new Promise(resolve => setTimeout(resolve, delay));
       delay *= 2; // Exponential backoff
     }
@@ -625,10 +651,10 @@ async function processMessage(message) {
     console.log('Message already processed, skipping');
     return;
   }
-  
+
   // Process the message
   await handleMessage(message);
-  
+
   // Mark as processed
   markProcessed(message.id);
 }
@@ -643,14 +669,14 @@ const cache = new Map();
 
 async function getCachedTranslation(text, targetLang) {
   const cacheKey = `${targetLang}:${text}`;
-  
+
   if (cache.has(cacheKey)) {
     return cache.get(cacheKey);
   }
-  
+
   const translation = await translateText(text, targetLang);
   cache.set(cacheKey, translation);
-  
+
   return translation;
 }
 ```
@@ -667,7 +693,7 @@ function verifyWebhookSignature(payload, signature, secret) {
     .createHmac('sha256', secret)
     .update(payload)
     .digest('hex');
-  
+
   return crypto.timingSafeEqual(
     Buffer.from(signature),
     Buffer.from(expectedSignature)
@@ -717,21 +743,21 @@ Simulate production message volumes to verify scale:
 ```javascript
 async function loadTest(roomName, messageCount) {
   const room = await chatClient.rooms.get(roomName);
-  
+
   console.log(`Sending ${messageCount} messages...`);
-  
+
   for (let i = 0; i < messageCount; i++) {
     await room.messages.send({
       text: `Load test message ${i}`,
       headers: { 'x-load-test': 'true' }
     });
-    
+
     // Add delay to simulate realistic traffic
     if (i % 100 === 0) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
-  
+
   console.log('Load test complete');
 }
 ```
@@ -742,7 +768,8 @@ Before deploying your integration to production, verify:
 
 - [ ] Integration rule filters correctly match target channels
 - [ ] External system authenticated and authorized properly
-- [ ] Response messages configured to avoid infinite loops (separate channels or skip flag)
+- [ ] Response messages configured to avoid infinite loops (separate channels or privileged skipRule)
+- [ ] API key has `privileged-headers` capability if using skipRule feature
 - [ ] Error handling and logging implemented
 - [ ] Retry logic and exponential backoff in place
 - [ ] Monitoring and alerting configured
