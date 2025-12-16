@@ -12,9 +12,9 @@ Chat rooms are built on Ably Pub/Sub channels, allowing you to leverage the full
 
 Ably provides three primary methods for extracting chat messages:
 
-1. **[Webhooks](#webhooks)** - Forward messages to HTTP endpoints, AWS Lambda, Azure Functions, and more
-2. **[Queues](#queues)** - Route messages to Ably-managed queues for consumption by your services
-3. **[Streaming](#streaming)** - Stream messages to external systems like Kafka, Kinesis, or SQS
+1. **[Webhooks](#webhooks)** - Forward messages to [HTTP endpoints](/docs/platform/integrations/webhooks/generic), [AWS Lambda](/docs/platform/integrations/webhooks/lambda), [Google Cloud Functions](/docs/platform/integrations/webhooks/gcp-function), [Cloudflare Workers](/docs/platform/integrations/webhooks/cloudflare), and more
+2. **[Queues](#queues)** - Route messages to [Ably-managed queues](/docs/platform/integrations/queues) for consumption by your services
+3. **[Streaming](#streaming)** - Stream messages to external systems like [Kafka](/docs/platform/integrations/streaming/kafka), [Kinesis](/docs/platform/integrations/streaming/kinesis), [SQS](/docs/platform/integrations/streaming/sqs), [AMQP](/docs/platform/integrations/streaming/amqp), or [Pulsar](/docs/platform/integrations/streaming/pulsar)
 
 Each method offers different trade-offs in terms of simplicity, reliability, and infrastructure requirements.
 
@@ -175,18 +175,24 @@ Read more about [message versioning and sorting](/docs/chat/rooms/messages#order
 
 ## Using webhooks <a id="webhooks"/>
 
-Forward messages to HTTP endpoints or serverless functions.
+[Outbound webhooks](/docs/platform/integrations/webhooks) enable you to forward messages to HTTP endpoints or serverless functions.
 
 ### Setup
 
-Configure a webhook integration in your Ably dashboard pointing to your endpoint. See [outbound webhooks](/docs/platform/integrations/webhooks) for detailed setup.
+Configure a webhook integration in your Ably dashboard pointing to your endpoint. See the following for platform-specific setup guides:
+
+* [Generic HTTP webhook](/docs/platform/integrations/webhooks/generic) - Forward to any HTTP/HTTPS endpoint
+* [AWS Lambda](/docs/platform/integrations/webhooks/lambda) - Trigger Lambda functions
+* [Google Cloud Functions](/docs/platform/integrations/webhooks/gcp-function) - Invoke GCP functions
+* [Cloudflare Workers](/docs/platform/integrations/webhooks/cloudflare) - Trigger Workers
+* [General webhook documentation](/docs/platform/integrations/webhooks) - Overview and other platforms
 
 ### Considerations
 
-* **Retry window**: Limited automatic retry period for failed deliveries
+* **Retry behavior**: For Lambda, AWS automatically retries failed invocations up to two times with delays (1 minute, then 2 minutes). For generic HTTP webhooks, Ably retries for a limited window
 * **Ordering**: Messages may arrive out-of-order; use `serial` and `version.serial` to sort
-* **Deduplication**: Handle potential duplicates using message serials
-* **Monitoring**: Use [`[meta]log` channel](/docs/platform/errors#meta) to detect failures
+* **Deduplication**: Handle potential duplicates using message serials - webhooks provide at-least-once delivery
+* **Monitoring**: Use [`[meta]log` channel](/docs/metadata-stats/metadata/subscribe#log) to detect failures (see [monitoring section](#monitoring-performance))
 
 ### Example webhook handler
 
@@ -208,11 +214,17 @@ async function handleWebhook(req, res) {
 
 ## Using queues <a id="queues"/>
 
-Route messages to Ably-managed queues for consumption.
+[Ably Queues](/docs/platform/integrations/queues) are traditional message queues that enable you to consume, process, or store chat messages from your servers.
 
 ### Setup
 
-Configure an Ably queue integration in your dashboard. See [Ably queues](/docs/platform/integrations/queues) for setup details.
+Configure an Ably queue integration in your dashboard:
+
+1. [Provision a queue](/docs/platform/integrations/queues#provision) with your desired region, TTL, and max length settings
+2. [Create a queue rule](/docs/platform/integrations/queues#config) to route chat messages to the queue
+3. Consume messages using [AMQP](/docs/platform/integrations/queues#amqp) or [STOMP](/docs/platform/integrations/queues#stomp) protocols
+
+See [Ably queues](/docs/platform/integrations/queues) for complete setup details.
 
 ### Benefits
 
@@ -223,38 +235,104 @@ Configure an Ably queue integration in your dashboard. See [Ably queues](/docs/p
 
 ### Considerations
 
-* **Queue limits**: Monitor queue length during peak times
-* **TTL**: Messages expire after 60 minutes (default/max)
-* **Dead letter queue**: Always consume to monitor for dropped messages
-* **Scaling**: Scale consumers to match message volume
+* **Queue limits**: Default maximum is 10,000 messages. Monitor queue length during peak times to avoid reaching capacity
+* **TTL**: Messages expire after 60 minutes (default/max) if not consumed
+* **Dead letter queue**: Automatically provisioned. Always consume to monitor for dropped or expired messages
+* **Throughput**: Multi-tenanted queues support up to 200 messages/second per account. For higher volumes, consider [dedicated queues or streaming](/docs/platform/integrations/queues#scalability)
+* **Ordering**: Messages maintain order per channel with a single consumer. Multiple consumers or multi-channel messages may affect ordering
 
-### Example queue consumer
+### Example queue consumer (AMQP)
 
 <Code>
 ```javascript
-async function consumeQueue(queueName) {
-  const queue = await client.queues.get(queueName);
+const amqp = require('amqplib');
 
-  queue.subscribe(async (message) => {
-    const roomName = extractRoomName(message.channel);
-    const decoded = decodeMessages(message);
+// Queue name format: APPID:queue-name
+const queueName = 'your-app-id:chat-messages';
+// Avoid hardcoding credentials in production
+const url = 'amqps://APPID.KEYID:SECRET@us-east-1-a-queue.ably.io/shared';
 
-    await processMessages(roomName, decoded);
+amqp.connect(url, (err, conn) => {
+  if (err) { return console.error(err); }
 
-    // Acknowledge message
-    await message.ack();
+  conn.createChannel((err, ch) => {
+    if (err) { return console.error(err); }
+
+    // Subscribe to the queue
+    ch.consume(queueName, (item) => {
+      const envelope = JSON.parse(item.content);
+      const roomName = extractRoomName(envelope.channel);
+
+      // Decode messages using Ably SDK
+      const messages = Ably.Realtime.Message.fromEncodedArray(envelope.messages);
+
+      messages.forEach(async (message) => {
+        await processMessage(roomName, message);
+      });
+
+      // Acknowledge message to remove from queue
+      ch.ack(item);
+    });
+  });
+});
+```
+</Code>
+
+### Monitor the dead letter queue <a id="dead-letter-queue"/>
+
+Ably automatically provisions a [dead letter queue](/docs/platform/integrations/queues#deadletter) when you create a queue. Messages are moved to the dead letter queue when they:
+
+* Are rejected by consumers (`basic.reject` or `basic.nack` with `requeue=false`)
+* Exceed their TTL and expire
+* Cause the queue to reach maximum capacity (oldest messages dropped)
+
+**Important:** Monitor your dead letter queue to detect processing failures and capacity issues.
+
+<Code>
+```javascript
+async function monitorDeadLetterQueue(appID) {
+  // Dead letter queue name format: APPID:deadletter
+  const dlqName = `${appID}:deadletter`;
+  // Avoid hardcoding credentials in production
+  const url = 'amqps://APPID.KEYID:SECRET@us-east-1-a-queue.ably.io/shared';
+
+  amqp.connect(url, (err, conn) => {
+    if (err) { return console.error(err); }
+
+    conn.createChannel((err, ch) => {
+      if (err) { return console.error(err); }
+
+      ch.consume(dlqName, (item) => {
+        const envelope = JSON.parse(item.content);
+        console.error('Message dropped from queue:', envelope);
+
+        // Handle failed message (alert, retry, etc.)
+        handleFailedMessage(envelope);
+
+        ch.ack(item);
+      });
+    });
   });
 }
 ```
 </Code>
 
+**Note:** Only one dead letter queue exists per Ably application, shared across all queues.
+
 ## Using streaming <a id="streaming"/>
 
-Stream messages to external systems like Kafka or Kinesis.
+[Outbound streaming](/docs/platform/integrations/streaming) enables you to stream a constant flow of chat messages to external streaming or queueing services.
 
 ### Setup
 
-Configure streaming to your target system. See [outbound streaming](/docs/platform/integrations/streaming) for setup details.
+Configure streaming to your target system. See the following for platform-specific setup:
+
+* [Apache Kafka](/docs/platform/integrations/streaming/kafka) - Stream to Kafka topics
+* [AWS Kinesis](/docs/platform/integrations/streaming/kinesis) - Stream to Kinesis streams
+* [AWS SQS](/docs/platform/integrations/streaming/sqs) - Stream to SQS queues
+* [AMQP](/docs/platform/integrations/streaming/amqp) - Stream to AMQP brokers
+* [Apache Pulsar](/docs/platform/integrations/streaming/pulsar) - Stream to Pulsar topics
+* [General streaming documentation](/docs/platform/integrations/streaming) - Overview and configuration
 
 ### Benefits
 
@@ -291,6 +369,88 @@ async function consumeFromKafka() {
 }
 ```
 </Code>
+
+## Monitoring integration performance <a id="monitoring-performance"/>
+
+Monitor the health and performance of your integrations in realtime using Ably's [metachannels](/docs/metadata-stats/metadata/subscribe). Metachannels provide app-level metadata about integrations, statistics, and errors.
+
+### Monitor integration errors <a id="monitor-errors"/>
+
+The [`[meta]log` channel](/docs/metadata-stats/metadata/subscribe#log) publishes error events from integrations in realtime. This enables you to detect and respond to integration failures as they occur.
+
+Subscribe to the `[meta]log` channel to receive error events:
+
+<Code>
+```javascript
+const Ably = require('ably');
+const client = new Ably.Realtime({ key: 'YOUR_API_KEY' });
+
+const metaLogChannel = client.channels.get('[meta]log');
+
+await metaLogChannel.subscribe((message) => {
+  if (message.data.error) {
+    alertOperationsTeam(message.data);
+  }
+});
+```
+</Code>
+
+Integration error logs will contain a `tag` field as part of the `data` payload, indicating the integration type - for example, `reactor.generic.http`, for webhooks. This allows you to filter and categorize errors by integration method.
+
+**Note:** The `[meta]log` channel only publishes errors that cannot be directly reported to clients. For example, webhook delivery failures or queue publishing errors.
+
+### Monitor app statistics <a id="monitor-stats"/>
+
+The [`[meta]stats:minute` channel](/docs/metadata-stats/metadata/subscribe#stats) publishes [app-level statistics](/docs/metadata-stats/stats) every minute. Use these statistics to monitor integration throughput, message volumes, and resource usage.
+
+Subscribe to receive [statistics](docs/metadata-stats/stats#outbound) updates:
+
+<Code>
+```javascript
+const statsChannel = client.channels.get('[meta]stats:minute');
+
+statsChannel.subscribe('update', (event) => {
+  const stats = event.data.entries;
+
+  // Monitor integration-specific metrics
+  console.log('Integration stats:', {
+    webhooks: stats['messages.outbound.webhook.messages.count'] || 0,
+    queues: stats['messages.outbound.sharedQueue.messages.count'] || 0,
+    // Add other metrics as needed
+  });
+
+  // Alert on anomalies
+  if (stats['messages.outbound.webhook.all.failed'] > threshold) {
+    alertOnWebhookFailures(stats);
+  }
+});
+```
+</Code>
+
+Use the [rewind channel option](/docs/channels/options/rewind) to retrieve the most recent statistics immediately:
+
+<Code>
+```javascript
+// Get the last statistics event plus subscribe to future updates
+const statsChannel = client.channels.get('[meta]stats:minute', {
+  params: { rewind: '1' }
+});
+
+statsChannel.subscribe('update', (event) => {
+  console.log('Stats:', event.data.entries);
+});
+```
+</Code>
+
+### Integration monitoring best practices <a id="monitoring-best-practices"/>
+
+* **Subscribe to both channels**: Use `[meta]log` for error detection and `[meta]stats:minute` for performance monitoring
+* **Set up alerting**: Create automated alerts for integration failures or throughput anomalies
+* **Track trends**: Store statistics over time to identify patterns and capacity planning needs
+* **Filter by integration type**: Use the statistics entries to monitor specific integration methods (webhooks, queues, streaming)
+* **Correlate with external logs**: Use `requestId` from error events to correlate with your system logs
+
+See [metadata subscriptions documentation](/docs/metadata-stats/metadata/subscribe) for complete details on available metachannels.
 
 ## Handling message reactions <a id="reactions"/>
 
@@ -335,43 +495,6 @@ function processMessage(message) {
 
 Read more about [message reactions](/docs/chat/rooms/message-reactions) and the [reactions annotation mapping](/docs/chat/integrations#how-to-handle-message-reactions).
 
-## Error handling and monitoring <a id="monitoring"/>
-
-### Monitor integration failures
-
-Subscribe to the [`[meta]log` channel](/docs/platform/errors#meta) to detect integration failures:
-
-<Code>
-```javascript
-const metaChannel = client.channels.get('[meta]log:integration-rule-id');
-
-metaChannel.subscribe((message) => {
-  if (message.data.error) {
-    console.error('Integration error:', message.data);
-    alertOnFailure(message.data);
-  }
-});
-```
-</Code>
-
-### Dead letter queues
-
-For queue integrations, monitor the dead letter queue:
-
-<Code>
-```javascript
-async function monitorDeadLetterQueue(appID) {
-  const dlq = await client.queues.get(`${appID}:deadletter`);
-
-  dlq.subscribe(async (message) => {
-    console.error('Message dropped from queue:', message);
-    await alertAndRetry(message);
-  });
-}
-```
-</Code>
-
-**Note:** Only one dead letter queue exists per Ably application, shared across all queues.
 
 ## Related documentation
 
