@@ -234,45 +234,103 @@ while (page) {
 ```
 </Code>
 
-### Hydrating an in-progress response
+### Hydrating an in-progress response <a id="in-progress-response"/>
 
-A common pattern is to persist completed responses in your database while using Ably for streaming in-progress responses. When clients reconnect, they load completed responses from your database first, then use Ably to catch up on any response that was still in progress.
+A common pattern is to persist complete model responses in your database while using Ably for streaming in-progress responses.
+
+The client loads completed responses from your database, then uses Ably to catch up on any response that was still in progress.
+
+You can hydrate in-progress responses using either the [rewind](#rewind) or [history](#history) pattern.
+
+#### Publishing with correlation metadata <a id="publishing-with-metadata"/>
+
+To correlate Ably messages with your database records, include the `responseId` in the message [extras](/docs/messages#properties) when publishing:
+
+<Code>
+```javascript
+// Publish initial message with responseId in extras
+const { serials: [msgSerial] } = await channel.publish({
+  name: 'response',
+  data: '',
+  extras: {
+    headers: {
+      responseId: 'resp_abc123' // Your database response ID
+    }
+  }
+});
+
+// Append tokens, including extras to preserve headers
+for await (const event of stream) {
+  if (event.type === 'token') {
+    channel.appendMessage(msgSerial, event.text, {
+      extras: {
+        headers: {
+          responseId: 'resp_abc123'
+        }
+      }
+    });
+  }
+}
+```
+</Code>
+
+<Aside data-type="note">
+When appending tokens, include the `extras` with all headers to preserve them on the message. If you omit `extras` from an append operation, any existing headers will be removed. If you include `extras`, the headers completely replace any previous headers. This is the same [mixin behavior](/docs/messages/updates-deletes) used for message updates and deletes.
+</Aside>
 
 #### Hydrate using rewind
 
-Load completed responses from your database, then use rewind to catch up on any in-progress response, skipping messages for responses already loaded:
+When hydrating, load completed responses from your database, then use rewind to catch up on any in-progress response. Check the `responseId` from message extras to skip responses already loaded from your database:
 
 <Code>
 ```javascript
 // Load completed responses from your database
+// completedResponses is a Set of responseIds
 const completedResponses = await loadResponsesFromDatabase();
 
+// Use rewind to receive recent historical messages
 const channel = realtime.channels.get('ai:responses', {
   params: { rewind: '2m' }
 });
 
-await channel.subscribe((msg) => {
-  const responseId = msg.extras?.headers?.responseId;
+// Track in-progress responses by responseId
+const inProgressResponses = new Map();
+
+await channel.subscribe((message) => {
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) {
+    console.warn('Message missing responseId');
+    return;
+  }
 
   // Skip messages for responses already loaded from database
   if (completedResponses.has(responseId)) {
     return;
   }
 
-  switch (msg.action) {
+  switch (message.action) {
     case 'message.create':
-      displayNewResponse(msg.data, responseId);
+      // New response started
+      inProgressResponses.set(responseId, message.data);
       break;
     case 'message.append':
-      appendToResponse(msg.data, responseId);
+      // Append token to existing response
+      const current = inProgressResponses.get(responseId) || '';
+      inProgressResponses.set(responseId, current + message.data);
       break;
     case 'message.update':
-      replaceResponse(msg.data, responseId);
+      // Replace entire response content
+      inProgressResponses.set(responseId, message.data);
       break;
   }
 });
 ```
 </Code>
+
+<Aside data-type="note">
+Alternatively, instead of including `responseId` in message extras, you could store the Ably message `serial` alongside each response in your database. When hydrating, skip messages for responses already loaded from database using the message `serial` to identify the response. This approach eliminates the need to include metadata in message extras, but requires storing the `serial` (which is assigned by Ably) in your database after the response is complete.
+</Aside>
 
 #### Hydrate using history
 
