@@ -199,7 +199,7 @@ const LeftSidebar = ({ className, inHeader = false }: LeftSidebarProps) => {
         type="multiple"
         value={openProducts}
         className={cn(
-          'bg-neutral-000 dark:bg-neutral-1300 overflow-y-auto',
+          'bg-neutral-000 dark:bg-neutral-1300 overflow-x-hidden overflow-y-auto',
           inHeader
             ? 'w-full h-[calc(100dvh-64px-128px)]'
             : [
