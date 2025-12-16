@@ -334,53 +334,82 @@ Alternatively, instead of including `responseId` in message extras, you could st
 
 #### Hydrate using history
 
-Load completed responses from your database, then use history to catch up on any in-progress response:
+Load completed responses from your database, then use [channel history](/docs/storage-history/history) with the [`untilAttach` option](/docs/storage-history/history#continuous-history) to catch up on any in-progress responses. Use the timestamp of the last completed response to start pagination from that point forward, ensuring continuity with live message delivery.
 
 <Code>
 ```javascript
-// Load completed responses from your database
+// Load completed responses from database (sorted by timestamp, oldest first)
 const completedResponses = await loadResponsesFromDatabase();
 
-const channel = realtime.channels.get('ai:responses');
+// Get the timestamp of the latest completed response
+const latestTimestamp = completedResponses.latest().timestamp;
+
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
+
+// Track in progress responses by ID
+const inProgressResponses = new Map();
 
 // Subscribe to live messages (implicitly attaches)
-await channel.subscribe((msg) => {
-  const responseId = msg.extras?.headers?.responseId;
+await channel.subscribe((message) => {
+  const responseId = message.extras?.headers?.responseId;
+
+  if (!responseId) {
+    console.warn('Message missing responseId');
+    return;
+  }
 
   // Skip messages for responses already loaded from database
   if (completedResponses.has(responseId)) {
     return;
   }
 
-  switch (msg.action) {
+  switch (message.action) {
     case 'message.create':
-      displayNewResponse(msg.data, responseId);
+      // New response started
+      inProgressResponses.set(responseId, message.data);
       break;
     case 'message.append':
-      appendToResponse(msg.data, responseId);
+      // Append token to existing response
+      const current = inProgressResponses.get(responseId) || '';
+      inProgressResponses.set(responseId, current + message.data);
       break;
     case 'message.update':
-      replaceResponse(msg.data, responseId);
+      // Replace entire response content
+      inProgressResponses.set(responseId, message.data);
       break;
   }
 });
 
-// Fetch history for any in-progress response
-const historyPage = await channel.history({ untilAttach: true });
+// Fetch history from the last completed response until attachment
+let page = await channel.history({
+  untilAttach: true,
+  start: latestTimestamp,
+  direction: 'forwards'
+});
 
-for (const msg of historyPage.items) {
-  const responseId = msg.extras?.headers?.responseId;
+// Paginate through all missed messages
+while (page) {
+  for (const message of page.items) {
+    const responseId = message.extras?.headers?.responseId;
 
-  // Skip responses already loaded from database
-  if (completedResponses.has(responseId)) {
-    continue;
+    if (!responseId) {
+      console.warn('Message missing responseId');
+      continue;
+    }
+
+    // message.data contains the full concatenated text so far
+    inProgressResponses.set(responseId, message.data);
   }
 
-  // msg.data contains the full concatenated text so far
-  displayFullResponse(msg.data, responseId);
+  // Move to next page if available
+  page = page.hasNext() ? await page.next() : null;
 }
 ```
 </Code>
+
+<Aside data-type="note">
+Live messages may arrive via the subscription while you are still processing historical messages. Your application should handle this by queueing live messages and processing them only after all historical messages have been processed.
+</Aside>
 
 ## Headers and metadata
 
