@@ -96,45 +96,41 @@ Append only supports concatenating data of the same type as the original message
 
 This pattern allows publishing append operations for multiple concurrent model responses on the same channel. As long as you append to the correct message serial, tokens from different responses will not interfere with each other, and the final concatenated message for each response will contain only the tokens from that response.
 
-## Subscribing to token streams
+## Subscribing to token streams <a id="subscribing"/>
 
-Subscribers receive different message actions depending on when they join and how they're retrieving
-messages.
+Subscribers receive different message actions depending on when they join and how they're retrieving messages. Each message has an `action` field that indicates how to process it, and a `serial` field that identifies which message the action relates to:
 
-When subscribed to a channel, clients receive the initial message with the `message.create` action,
-followed by each token as a `message.append` action in realtime.
+- `message.create`: Indicates a new response has started (i.e. a new message was created). The message `data` contains the initial content (often empty or the first token). Store this as the beginning of a new response using `serial` as the identifier.
+- `message.append`: Contains a single token fragment to append. The message `data` contains only the new token, not the full concatenated response. Append this token to the existing response identified by `serial`.
+- `message.update`: Contains the complete response up to that point. The message `data` contains the full concatenated text so far. Replace the entire response content with this data for the message identified by `serial`. This action occurs when the channel needs to resynchronize the full message state, such as after a client [resumes](/docs/connect/states#resume) from a transient disconnection.
 
 <Code>
 ```javascript
-const channel = realtime.channels.get('ai:responses');
+const channel = realtime.channels.get('ai:{{RANDOM_CHANNEL_NAME}}');
 
 // Track responses by message serial
 const responses = new Map();
 
-await channel.subscribe((msg) => {
-  switch (msg.action) {
+// Subscribe to live messages (implicitly attaches the channel)
+await channel.subscribe((message) => {
+  switch (message.action) {
     case 'message.create':
       // New response started
-      responses.set(msg.serial, msg.data);
+      responses.set(message.serial, message.data);
       break;
     case 'message.append':
       // Append token to existing response
-      const current = responses.get(msg.serial) || '';
-      responses.set(msg.serial, current + msg.data);
+      const current = responses.get(message.serial) || '';
+      responses.set(message.serial, current + message.data);
       break;
     case 'message.update':
       // Replace entire response content
-      responses.set(msg.serial, msg.data);
+      responses.set(message.serial, message.data);
       break;
   }
 });
 ```
 </Code>
-
-Each `message.append` event contains only the new token fragment in `msg.data`, not the full
-concatenated response.
-
-Occasionally you may receive a `message.update` action, which indicates that the channel needs to stream the entire message data so far. For example, this can happen if the client [resumes](/docs/connect/states#resume) after a transient disconnection and the channel needs to resynchronize the full message state. In this case, `msg.data` contains the complete response up to that point. For `message.update` events, you should replace the entire response content.
 
 ## Client hydration
 
