@@ -9,7 +9,7 @@ import { CodeEditor, sandpackTheme } from 'src/components/CodeEditor';
 import { useSiteMetadata } from 'src/hooks/use-site-metadata';
 import { MarkdownProvider } from 'src/components/Markdown';
 import UserContext from 'src/contexts/user-context';
-import { getRandomChannelName } from 'src/components/blocks/software/Code/get-random-channel-name';
+import { getRandomChannelName } from 'src/utilities/get-random-channel-name';
 import { getApiKey, updateAblyConnectionKey } from 'src/utilities/update-ably-connection-keys';
 
 const chooseFileVersions = (isSolved: boolean, files: Record<string, string>) => {

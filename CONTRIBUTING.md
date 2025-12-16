@@ -144,21 +144,15 @@ They use the following syntax:
 
 ### Tables
 
-Textile tables are supported which are slightly more flexible than Markdown ones. They don't need to use a row of hyphens to separate the header and content either.
-
-For the header row use the following syntax:
+Tables use standard Markdown syntax:
 
 ```plaintext
-|_. Flag |_. Description |
+| Flag | Description |
+| ---- | ----------- |
 | SUBSCRIBE | Can subscribe to receive messages on the channel. |
 ```
 
-To make a cell span two columns:
-
-```plaintext
-|_/2=. Limit |
-|_. Soft |_. Hard |
-```
+For more complex table layouts, HTML table syntax can be used.
 
 ### Admonitions
 
@@ -188,7 +182,7 @@ Three additional types of admonition are used to display features that have been
 
 ### Ordered and unordered lists
 
-Textile accepts several formats for unordered lists, however `*` should be used for consistency.
+Use `*` for unordered lists for consistency.
 
 ```plaintext
 * Strawberry
