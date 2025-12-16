@@ -238,7 +238,7 @@ export default {
       pages: [
         {
           name: 'Overview',
-          link: '/docs/account',
+          link: '/docs/platform/account',
           index: true,
         },
         {
